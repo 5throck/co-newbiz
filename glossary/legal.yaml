@@ -1,0 +1,114 @@
+version: 1.0.0
+last_updated: 2026-08-19
+terms:
+  기업결합신고:
+    ko: 기업결합신고
+    en: Merger Control Filing
+    definition_ko: M&A 시 관할 경쟁당국에 기업결합을 사전 또는 사후 신고하는 절차(한국 공정거래법 기준).
+    why_it_matters_ko: 다중 관할(KR·US·EU·CN 등) 동시 신고가 필요할 수 있고, 신고 지연이 클로징 지연 → IRR 하락으로 직결된다.
+    category: legal
+    aliases: [Merger Control]
+    related: [HSR, Gun-Jumping, HHI]
+    used_in: [antitrust-screening]
+    owner: antitrust-agent
+
+  HSR:
+    ko: HSR 신고
+    en: Hart-Scott-Rodino Filing
+    definition_ko: 미국의 기업결합 사전신고 제도(Hart-Scott-Rodino Antitrust Improvements Act).
+    why_it_matters_ko: 신고 기준액(threshold)을 초과하면 필수이며, 대기기간(waiting period)이 클로징 일정에 직접 영향을 준다.
+    category: legal
+    related: [기업결합신고, CFIUS]
+    used_in: [antitrust-screening]
+    owner: antitrust-agent
+
+  CFIUS:
+    ko: 미국 외국인투자심사위원회
+    en: Committee on Foreign Investment in the United States
+    definition_ko: 외국인의 미국 기업 인수를 국가안보 관점에서 심사하는 미국 정부 위원회.
+    why_it_matters_ko: 해외(미국) M&A 시 외국인투자 심사 필수 검토 축 중 하나이며, region-profiles에서 지역별 요건으로 관리된다.
+    category: legal
+    related: [기업결합신고]
+    used_in: [regulatory-screening]
+    owner: region-lead
+
+  Gun-Jumping:
+    ko: 사전 통합행위 금지
+    en: Gun-Jumping
+    definition_ko: 기업결합신고 승인(클리어런스) 전에 실질적인 통합 행위를 하는 것. 대부분의 관할에서 제재 대상이다.
+    why_it_matters_ko: 신고 필요 관할에서는 승인 전 어떠한 통합 행위도 진행할 수 없다 — 절차 체크리스트에 강제 항목으로 들어간다.
+    category: legal
+    related: [기업결합신고]
+    used_in: [antitrust-screening]
+    owner: antitrust-agent
+
+  HHI:
+    ko: 허핀달-허쉬만 지수
+    en: Herfindahl-Hirschman Index
+    definition_ko: 시장 집중도를 측정하는 지수(시장점유율 제곱의 합).
+    why_it_matters_ko: 기업결합 전후 HHI와 그 델타(변화폭)가 경쟁당국의 시정조치 요구 여부를 좌우한다.
+    category: legal
+    related: [기업결합신고]
+    used_in: [antitrust-screening]
+    owner: antitrust-agent
+
+  Change of Control:
+    ko: 지배구조 변경 (CoC)
+    en: Change of Control
+    definition_ko: 소유권·경영권이 변경되는 사건. M&A에서는 계약 해지권·기한이익상실·경영진 보상 등 다수 조항의 발동 트리거가 된다.
+    why_it_matters_ko: 고객 계약·차입 약정·경영진 보상·인증 승계 네 곳 모두에서 발동하는 단일 최대 M&A 리스크 원인이다.
+    category: legal
+    aliases: [CoC]
+    related: [Golden Parachute, Covenant, Certification Transferability]
+    used_in: [customer-attrition-risk, debt-and-contingent-liability-simulation]
+    owner: brownfield-agent
+
+  NDA:
+    ko: 비밀유지계약
+    en: Non-Disclosure Agreement
+    definition_ko: 딜 관련 정보의 공개를 제한하는 계약.
+    why_it_matters_ko: DD 자료를 시스템에 적재하는 행위 자체가 NDA 위반인지를 착수 시점에 legal-counsel이 판정해야 한다.
+    category: legal
+    related: [MNPI]
+    used_in: [expert-interview]
+    owner: legal-counsel
+
+  MNPI:
+    ko: 미공개중요정보
+    en: Material Non-Public Information
+    definition_ko: 공개되지 않은 투자 판단에 중대한 영향을 미치는 정보. 상장사 관련 딜은 대부분 MNPI에 해당한다.
+    why_it_matters_ko: 내부자거래 규제 대상이며, 세션 단위 insider 등록(명부+스코프+로그) 없이는 MCP로 접근할 수 없다.
+    category: legal
+    related: [Insider List]
+    used_in: [access-control-review]
+    owner: security-engineer
+
+  일감 몰아주기:
+    ko: 일감 몰아주기
+    en: Improper Benefit Provision to Related Parties
+    definition_ko: 공정거래법 제47조가 규제하는, 특수관계인에게 부당한 이익을 제공하는 계열사 간 거래.
+    why_it_matters_ko: 계열사 간 거래가 포함된 M&A 안건에서는 그룹 심의 단계에서 자동으로 이 규제 체크가 발동해야 한다.
+    category: legal
+    related: [Group IC]
+    used_in: [intra-group-transaction-compliance]
+    owner: group-review-agent
+
+  Works Council Consultation:
+    ko: 근로자대표 협의
+    en: Works Council Consultation
+    definition_ko: 사업 변경(M&A 등) 전 근로자 대표 기구와의 사전 협의를 요구하는 EU의 노동법 요건.
+    why_it_matters_ko: 이 절차를 빠뜨리면 클로징이 지연된다 — 지역 프로파일의 필수 검토 축이다.
+    category: legal
+    related: [Certification Transferability]
+    used_in: [regulatory-screening]
+    owner: region-lead
+
+  Certification Transferability:
+    ko: 인증 승계 가능성
+    en: Certification Transferability on Change of Control
+    definition_ko: M&A 시 인수 대상이 보유한 인증이 법인 변경 후에도 유지되는지 여부.
+    why_it_matters_ko: “이미 인증을 보유했다”는 밸류에이션 프리미엄의 주요 근거인데, 일부 인증 스킴은 법인 변경 시 재심사 대상이다. 추정 금지 — 스킴 규정 원문을 확인해야 한다.
+    category: legal
+    related: [Change of Control]
+    used_in: [certification-transferability]
+    owner: certification-agent

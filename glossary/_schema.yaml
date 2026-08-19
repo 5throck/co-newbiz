@@ -1,0 +1,63 @@
+# Glossary Term Entry Schema — co-newbiz
+#
+# Not machine-enforced JSON Schema; documents the contract that glossary/_validate.ts
+# checks and that glossary/*.yaml authors must follow.
+#
+# Design of record: docs/designs/2026-08-19-co-newbiz-design_ko.md section 7.
+# Why this exists: a term with a definition but no rationale still leaves a
+# newcomer asking "so what?" -- why_it_matters_ko is mandatory for exactly that
+# reason, not decoration.
+
+required_fields:
+  ko:
+    type: string
+    description: Korean term (the canonical form used in deliverables and UI)
+  en:
+    type: string
+    description: English term (used in code, agent/skill files, and docs)
+  definition_ko:
+    type: string
+    description: Plain-language definition in Korean
+  why_it_matters_ko:
+    type: string
+    description: >
+      Why this term matters for this project specifically -- not a generic
+      textbook definition. Mandatory because definition alone does not tell a
+      newcomer why they should care.
+  category:
+    type: string
+    enum: [business, financial, legal, technical, unit, industry]
+  owner:
+    type: string
+    description: Agent key responsible for this term's accuracy (e.g. quant-methodologist)
+
+optional_fields:
+  aliases:
+    type: array
+    items: string
+  related:
+    type: array
+    items: string
+    description: Other term keys in this glossary that are conceptually linked
+  used_in:
+    type: array
+    items: string
+    description: Skill or procedure keys where this term is load-bearing
+  source:
+    type: string
+    description: External reference (standards body, statute, industry association)
+
+tooling_integrations:
+  # design doc section 7.3 -- four integration points that keep the glossary alive.
+  # A glossary nobody's tooling reads gets abandoned; these are why it will not.
+  - ui_tooltip: "Registered terms get a dotted underline in the web UI; hover/click shows definition_ko"
+  - report_appendix: "Terms appearing in a generated report are collected into an auto-generated glossary appendix"
+  - glossary_lint: "Skill/doc/UI strings are scanned for undefined jargon and abbreviations; weekly report to glossary-curator"
+  - mcp_lookup_term: "MCP tool lookup_term lets AI clients resolve in-house terminology correctly"
+
+files:
+  - business.yaml    # Stage gates, review process vocabulary (Pre-FS, Kill Criteria, RAG...)
+  - financial.yaml    # WACC, IRR, DSCR, QoE, EBITDA normalization...
+  - legal.yaml         # Merger control, gun-jumping, HSR, CFIUS...
+  - technical.yaml     # System vocabulary: run, assumption kind, proxy chain, RAG dimension...
+  - industry.yaml       # CGT, BHP, DWT, order backlog vs. intake...

@@ -1,0 +1,105 @@
+version: 1.0.0
+last_updated: 2026-08-19
+terms:
+  Green Field:
+    ko: 그린필드
+    en: Green Field
+    definition_ko: 기존 자산 없이 부지·설비를 새로 지어 신규 사업을 시작하는 방식.
+    why_it_matters_ko: 브라운필드(M&A)와 검토 축이 다르다 — 인프라·인재·지역 상생·인허가 리드타임이 핵심 변수이지 딜 구조나 우발채무가 아니다.
+    category: business
+    aliases: [신규 설립, GF]
+    related: [Brown Field, Stage Gate]
+    used_in: [greenfield-feasibility, site-infrastructure-assessment]
+    owner: greenfield-agent
+
+  Brown Field:
+    ko: 브라운필드
+    en: Brown Field
+    definition_ko: 기존 기업이나 사업부를 인수해 신규 사업에 진출하는 방식(M&A).
+    why_it_matters_ko: 딜 구조·우발채무·인증 승계·고객 이탈 같은 그린필드에 없는 리스크 축이 붙는다. 필수 교차검증 6종이 이 방식에만 적용된다.
+    category: business
+    aliases: [M&A, BF]
+    related: [Green Field, Change of Control]
+    used_in: [brownfield-feasibility]
+    owner: brownfield-agent
+
+  Stage Gate:
+    ko: 스테이지 게이트
+    en: Stage Gate
+    definition_ko: Screening → Pre-FS → FS → DD → Entity IC → Group IC 순으로 진행되는 신사업 검토 단계.
+    why_it_matters_ko: 각 게이트마다 필수 산출물과 통과 조건이 다르다. 게이트를 건너뛰면 시스템이 다음 단계 진입을 차단한다.
+    category: business
+    aliases: [게이트]
+    related: [Entity IC, Group IC, Kill Criteria]
+    used_in: [stage-gate-governance]
+    owner: process-governance-manager
+
+  Pre-FS:
+    ko: 예비타당성 검토
+    en: Preliminary Feasibility Study
+    definition_ko: 본 타당성 검토(FS) 이전에 수행하는 약식 검토 단계.
+    why_it_matters_ko: 이 단계에서 이미 데이터 신뢰도·프록시 체인 등급이 산출되므로, Pre-FS의 RAG 등급이 낮으면 FS로 넘어가기 전에 데이터를 보강해야 한다.
+    category: business
+    related: [Stage Gate]
+    used_in: [stage-gate-governance, investment-feasibility-modeling]
+    owner: process-governance-manager
+
+  Entity IC:
+    ko: 각사 투자심의위원회
+    en: Entity Investment Committee
+    definition_ko: 개별 계열사 단위에서 진행되는 투자 승인 심의.
+    why_it_matters_ko: Group IC 진입의 시스템 강제 선행 조건이다. Entity IC 승인 없이 그룹 절차에 들어갈 수 없다.
+    category: business
+    related: [Group IC, Stage Gate]
+    used_in: [two-tier-approval-chain]
+    owner: process-governance-manager
+
+  Group IC:
+    ko: 그룹 투자심의위원회
+    en: Group Investment Committee
+    definition_ko: 계열사 개별 승인과 별개로 그룹 차원에서 진행되는 심의로, 포트폴리오 정합성·자본 배분 우선순위를 본다.
+    why_it_matters_ko: 각사 기준 전부 Green인 안건이 여러 개 올라와도 자본은 하나다. Group IC는 승인/부결이 아니라 순위 결정인 경우가 많다.
+    category: business
+    related: [Entity IC, Group Agenda]
+    used_in: [group-level-review, portfolio-fit-assessment]
+    owner: group-review-agent
+
+  Kill Criteria:
+    ko: 중단 기준
+    en: Kill Criteria
+    definition_ko: 사전에 정의된 조건 충족 시 검토를 자동으로 중단시키는 규칙(예 — 필수 인증 미취득, covenant 위반).
+    why_it_matters_ko: 중단 기준 없는 검토는 표류하고 "검토"가 "정당화"로 변질된다. 낙관편향을 구조적으로 차단하는 장치다.
+    category: business
+    related: [Red Team, Stage Gate]
+    used_in: [stage-gate-governance, assumption-audit]
+    owner: risk-officer
+
+  Waiver:
+    ko: 예외 승인
+    en: Waiver
+    definition_ko: 필수 산출물·체크리스트 미충족 상태에서 게이트를 통과시키는 명시적 예외.
+    why_it_matters_ko: 예외 경로가 없으면 현장이 음성적으로 우회한다. 반드시 만료일이 있어야 하며, 같은 조항에 반복되면 규정 개정 신호다.
+    category: business
+    related: [Kill Criteria, Interpretation Registry]
+    used_in: [waiver-management]
+    owner: compliance-officer
+
+  Interpretation Registry:
+    ko: 해석례 등록부
+    en: Interpretation Registry
+    definition_ko: “이 조항이 우리 케이스에 적용되는가”에 대한 질의·답변을 축적하는 등록부.
+    why_it_matters_ko: 같은 질문에 다른 답이 나가는 것을 막고, 쌓이면 그 자체가 지식자산이 된다.
+    category: business
+    related: [Waiver]
+    used_in: [interpretation-registry]
+    owner: compliance-officer
+
+  Group Agenda:
+    ko: 그룹 안건 비교
+    en: Group Agenda
+    definition_ko: 동일 심의 사이클에서 그룹 IC에 올라온 복수 안건을 우선순위로 비교하는 뷰.
+    why_it_matters_ko: 개별 안건의 승인/부결이 아니라 한정된 자본을 두고 경쟁하는 안건들의 순위를 매기는 게 실제 목적이다.
+    category: business
+    related: [Group IC]
+    used_in: [portfolio-fit-assessment]
+    owner: group-review-agent
