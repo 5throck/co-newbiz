@@ -19,6 +19,7 @@
 | 008 | Delivery Hero / Woowa Brothers (Baemin) (2020-2021) | Brown Field (structural antitrust remedy) | In progress | [pilot-008-delivery-hero-woowa-brothers.md](pilot-008-delivery-hero-woowa-brothers.md) |
 | 009 | Emart (Shinsegae) / eBay Korea (2021) | Brown Field (retail/e-commerce) | In progress | [pilot-009-emart-ebay-korea.md](pilot-009-emart-ebay-korea.md) |
 | 010 | Affinity Equity Partners / Lotte Rental (2025-2026) | Brown Field (rental car — BLOCKED) | In progress (real deal prohibited by KFTC) | [pilot-010-affinity-lotte-rental.md](pilot-010-affinity-lotte-rental.md) |
+| 011 | POSCO / Amberoad (2023-2025) | R&BD (Brown Field sub-type — internal-venture spin-off) | In progress | [pilot-011-posco-amberoad.md](pilot-011-posco-amberoad.md) |
 
 ## Candidate Sourcing
 
@@ -41,6 +42,7 @@ New candidate cases (real, publicly documented — not fabricated, per the desig
 - **F-2 (pilot 009) — no case yet with both acquirer debt AND coverage figures disclosed together**: still open, tracked as a sourcing note for a future pilot.
 - **F-2 (pilot 010) — checklist/procedure text implicitly assumed a direct target-to-target merger, missing the common-ownership/common-control fact pattern**: closed 2026-08-20. `checklists/ma-special-topics-checklist.yaml` (v1.1.0 → v1.2.0) ma-01 and `brownfield-dd` (v1.0.0 → v1.1.0) step 3 both broadened to explicitly name common-ownership combinations.
 - **F-4 (pilot 010) — a blocked deal's real fallout extended to unrelated, contingent financing plans**: still open — flagged as a possible `brownfield-pre-fs` disclosure item, not applied (narrow scenario).
+- **F-2 (pilot 011) — no distinction between internal-spinoff and external-technology-acquisition R&BD sub-sources**: still open, minor — flagged for a future `rbd_source` field when R&BD's system schema is built (Stage 5).
 
 ## Two-Consecutive-Failure Rule (ADR-0034)
 

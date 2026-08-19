@@ -63,6 +63,13 @@
 | `checklists/ma-special-topics-checklist.yaml` ma-11 | FR-MA-09 | `covenant_test` table, +200bp shock scenario | Stage 5 (design §12 verification item): DSCR breach → `covenant_test.breached=1` + Kill Criteria fires |
 | ADR-0030 | FR-MA-10 | Unified `incentive(direction, obligation_json, clawback_rule)` table | Stage 5: a single incentive record surfaces both acquisition NPV and clawback exposure |
 
+## 4.5. R&BD (Brown Field Sub-Type)
+
+| Source | Requirement | Implementation Target | Verification |
+|---|---|---|---|
+| `checklists/rbd-technology-checklist.yaml`, `docs/pilots/pilot-011-posco-amberoad.md` | FR-RBD-01, FR-RBD-03, FR-RBD-04, FR-RBD-05 | `dd_finding.category='rbd'` extension fields (core-tech TRL, IP/FTO status, commercialization-path decision, parent-relationship terms) | Already verified manually: pilot 011 walkthrough confirmed every new checklist item and structure-hypothesis branch on first real-case use |
+| `procedures/_shared/brownfield-pre-fs/schema.yaml` v1.2.0 | FR-RBD-07 | `deal_structure_hypothesis.vehicle` enum extended with `internal_venture_spinoff` | Already verified manually: pilot 011 is a real worked example of exactly this structure |
+
 ## 5. Green Field
 
 | Source | Requirement | Implementation Target | Verification |

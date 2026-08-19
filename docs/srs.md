@@ -89,6 +89,20 @@ This SRS covers Stage 5's system build. It does not re-litigate process content 
 | FR-MA-09 | Covenant-breach scenario tested under a rate shock (+200bp default); CoC acceleration clauses trigger a modeled cash outflow at closing | Must | `checklists/ma-special-topics-checklist.yaml` ma-11 |
 | FR-MA-10 | Incentive table unifies acquisition (`direction=prospective`) and clawback (`direction=granted`) records — obligation and clawback risk on the same row | Must | Design §4-7, ADR-0030 |
 
+## 7.5. R&BD (Brown Field Sub-Type)
+
+Per user decision (2026-08-20): R&BD (Research & Business Development — technology/IP acquisition, license-in, or internal-venture spin-off carve-out) is a **Brown Field sub-type** (`case_subtype: rbd`), not a separate top-level case type — its deal mechanics (equity stake, license terms) are BF-shaped, not GF site-selection-shaped.
+
+| ID | Requirement | Priority | Source |
+|---|---|---|---|
+| FR-RBD-01 | Core-technology TRL assessed distinctly from production-process TRL (`technical-dd-checklist.yaml` tdd-03) — an R&BD target's core risk is whether the underlying technology works, before production readiness is relevant | Must | `checklists/rbd-technology-checklist.yaml` rbd-01 |
+| FR-RBD-02 | Government co-funding conditions (technology-fee repayment, IP walk-away/ownership, employment/localization conditions) identified when applicable — conditional on funding source, not blanket | Should | `checklists/rbd-technology-checklist.yaml` rbd-02, `docs/pilots/pilot-011-posco-amberoad.md` (N/A case) |
+| FR-RBD-03 | Freedom-to-operate/IP ownership diligence — who owns the IP and whether license terms transfer cleanly on the contemplated structure | Must | `checklists/rbd-technology-checklist.yaml` rbd-03 |
+| FR-RBD-04 | Commercialization-path decision (build internal / license out / spin off) documented with explicit rationale, not defaulted | Must | `checklists/rbd-technology-checklist.yaml` rbd-04, validated by `docs/pilots/pilot-011-posco-amberoad.md` |
+| FR-RBD-05 | Continuing parent-entity relationship (equity retained, customer/supplier ties, brand association, non-compete scope) documented as part of deal structure when the target originated as an internal venture | Must | `checklists/rbd-technology-checklist.yaml` rbd-05 |
+| FR-RBD-06 | Track-record evidence independently corroborated, not accepted from the target's own reporting alone | Should | `checklists/rbd-technology-checklist.yaml` rbd-06 |
+| FR-RBD-07 | `deal_structure_hypothesis` names "internal-venture spin-off carve-out" as an explicit structure option alongside direct/SPC/holdco | Must | `procedures/_shared/brownfield-pre-fs/schema.yaml` v1.2.0 |
+
 ## 8. Green Field (Site Selection, Infrastructure, Incentives)
 
 | ID | Requirement | Priority | Source |
