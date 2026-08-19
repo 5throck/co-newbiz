@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-screening
 title: "Green Field Screening"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.2.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -25,6 +25,13 @@ steps:
       Build the site shortlist AFTER applying the hard pre-filter (infrastructure
       minimums, partner-dependency confirmation) per meeting M6 D-M6-1. Sites
       failing the pre-filter are excluded here, not scored lower in step 3.
+      Community-consultation/notification boundary MUST be computed from the
+      legally applicable affected-area radius (e.g. distance-from-coast for
+      power generation facilities), never assumed equal to the site's own
+      administrative jurisdiction — a real project (docs/pilots/pilot-007-punggu-offshore-wind.md)
+      notified only its own province's municipalities and omitted a
+      neighboring province's islands that were legally within the affected
+      radius, triggering a public dispute and re-notification risk.
   - id: 3
     gate: Screening
     agent_key: greenfield-agent
@@ -61,6 +68,7 @@ legal_basis:
   - "Design v1.0 §8.7/§8.8"
   - "Meeting M1, M6 (process-2026-08-20-m1-process-skeleton.md, m6-site-selection-criteria.md)"
   - "docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1"
+  - "docs/pilots/pilot-007-punggu-offshore-wind.md finding F-1"
 
 owner_agent: process-governance-manager
 last_reviewed: "2026-08-20"
