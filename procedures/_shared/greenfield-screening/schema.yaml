@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-screening
 title: "Green Field Screening"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -46,11 +46,21 @@ kill_criteria:
     action: halt
   - condition: partner_dependency_unconfirmed_and_no_alternative
     action: mark_conditional
+  - condition: infrastructure_plan_not_finalized_at_site_announcement
+    action: escalate_to_risk_officer
+    # Added per docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1:
+    # a real large-scale Green Field project (SK hynix Yongin cluster) proceeded
+    # to site designation before power/water infrastructure plans were finalized
+    # (concretized ~2 years later). The hard-pre-filter-first design intent
+    # (meeting M6 D-M6-1) assumes infrastructure is known before scoring; this
+    # condition flags the real-world deviation as elevated risk requiring
+    # explicit escalation, rather than silently passing.
 
 legal_basis:
   - "Group New Business Review Policy §4.1"
   - "Design v1.0 §8.7/§8.8"
   - "Meeting M1, M6 (process-2026-08-20-m1-process-skeleton.md, m6-site-selection-criteria.md)"
+  - "docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1"
 
 owner_agent: process-governance-manager
 last_reviewed: "2026-08-20"

@@ -4,7 +4,7 @@ title: "Site Selection Checklist (Green Field)"
 scope: shared
 enforceability: mixed
 owner_agent: greenfield-agent
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-08-20"
 gate: Pre-FS
 
@@ -31,7 +31,7 @@ items:
     text: "Talent pipeline assessed (local institutions, available labor pool, competing employers)"
     mandatory: false
   - id: ss-08
-    text: "Community acceptance history reviewed (prior disputes, environmental conflict history) — legally compliant sites still stall on this"
+    text: "Community acceptance history reviewed (prior disputes, environmental conflict history) AND inter-regional resource disputes (e.g. upstream water-rights objections from a different jurisdiction than the site itself) — legally compliant sites still stall on either (pilot 005 finding F-2)"
     mandatory: true
   - id: ss-09
     text: "site_candidate scoring completed with a documented weighting rationale, not an unweighted list"
