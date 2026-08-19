@@ -74,9 +74,9 @@ SK Group's semiconductor arm (SK hynix) swung from a KRW 7.73 trillion operating
 
 **Weaker fit than Candidate A**: public reporting covers the *what* (which entities merged/absorbed what) and the *why* (rebalancing away from battery/chemical weakness) at a strategic-narrative level, but not gate-level deliverables (no disclosed valuation dispute, no regulator rejection, no board withdrawal) — less useful for filling the Pre-FS/FS/Entity-IC procedural gap than Candidate A, though it is the more literal "capital competing across sibling businesses" scenario per ADR-0029's own description.
 
-## Recommendation for Pilot 003
+## Recommendation for Pilot 003 — Both Candidates Run (2026-08-20)
 
-**Use Candidate A (Doosan Bobcat / Doosan Robotics)** as pilot 003 — it directly exercises intra-group governance (the design's `group-review-agent` scope) and, more importantly, is the only candidate found so far with a real public paper trail dense enough to walk through Pre-FS/FS/Entity-IC-equivalent content, which is exactly the procedural gap (F-3/F-5) both prior pilots flagged. Hold Candidate B (SK Group rebalancing) in reserve — it is the more literal match for ADR-0029's "capital competing across sibling businesses" description and could become pilot 004 if a ranking exercise specifically (rather than intra-group fairness/governance) is wanted next.
+Per user instruction, both candidates were promoted: Candidate A → `docs/pilots/pilot-003-doosan-bobcat-robotics.md`, Candidate B → `docs/pilots/pilot-004-sk-group-capital-rebalancing.md`. Together they exercise every step of `procedures/_shared/group-investment-review/schema.yaml` — pilot 003 validated intra-group transaction compliance (step 3) most strongly; pilot 004 validated the group-agenda-ranking step (step 4) qualitatively, while confirming its quantitative mechanics have no public-data calibration path (an internal-data-only step, structurally, unlike the antitrust-screening steps).
 
 ## Recommendation (Original — Pilots 001/002)
 
