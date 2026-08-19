@@ -1,0 +1,90 @@
+code: CN
+name_ko: 중국
+
+merger_control:
+  source: "Anti-Monopoly Law of the People's Republic of China (2022 amendment)"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regime: "Concentration of undertakings notification"
+    authority: "State Administration for Market Regulation (SAMR)"
+    waiting_period_days: 30
+    gun_jumping_prohibited: true
+
+foreign_investment_screening:
+  source: "Foreign Investment Law of the PRC (2020), Measures for Security Review of Foreign Investment (2021)"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regime: "National Security Review + Negative List market-access restrictions"
+    authority: "National Development and Reform Commission (NDRC) / Ministry of Commerce (MOFCOM)"
+    mandatory_filing_triggers:
+      - "Investment in a sector on the Negative List for foreign investment"
+      - "Investment affecting national defense, key infrastructure, or critical technology (national security review)"
+
+labor:
+  source: "Labor Contract Law of the PRC"
+  verified_on: "2026-08-19"
+  maintainer: hr-integration-agent
+  data:
+    works_council_consultation: false
+    collective_notice_days: 30
+    cba_succession_default: "Employee consent generally required for material changes to labor contract terms on business transfer; economic-compensation obligations on termination are statutory"
+
+tax:
+  source: "Enterprise Income Tax Law, Special Tax Adjustment rules (transfer pricing)"
+  verified_on: "2026-08-19"
+  maintainer: financial-analyst
+  data:
+    withholding: "10% statutory withholding on dividends/interest/royalties to non-residents, reduced by applicable tax treaty"
+    transfer_pricing_regime: "OECD-aligned, with China-specific documentation and location-savings adjustment practice"
+    exit_tax: "No general exit tax; indirect-transfer rules (Circular 7) can tax offshore restructurings that indirectly dispose of PRC assets"
+    treaty_network_note: "Extensive treaty network; indirect-transfer anti-avoidance rules require separate structuring review"
+
+fx_and_repatriation:
+  source: "State Administration of Foreign Exchange (SAFE) regulations"
+  verified_on: "2026-08-19"
+  maintainer: financial-analyst
+  data:
+    capital_controls: "SAFE registration and approval required for capital-account transactions, including profit repatriation and outbound investment"
+    repatriation_approval_required: true
+
+anti_corruption:
+  source: "PRC Criminal Law (commercial bribery provisions), FCPA (US nexus)"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regimes: ["PRC Criminal Law commercial bribery provisions", "FCPA (where US nexus exists)"]
+
+sanctions_screening:
+  source: "PRC Unreliable Entity List and Anti-Foreign Sanctions Law; overlapping exposure to US/EU sanctions regimes for cross-border deals"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regimes: ["PRC Anti-Foreign Sanctions Law / Unreliable Entity List", "OFAC and EU sanctions (where relevant counterparties are exposed)"]
+
+data_transfer:
+  source: "Personal Information Protection Law (PIPL), Data Security Law, Cybersecurity Law"
+  verified_on: "2026-08-19"
+  maintainer: security-engineer
+  data:
+    regime: "PIPL cross-border transfer restrictions — security assessment, standard contract, or certification required depending on volume/sensitivity"
+    cross_border_transfer_mechanism: "CAC security assessment (large volume/critical), PIPL standard contract, or certification"
+
+environmental_liability_succession:
+  source: "Environmental Protection Law, Soil Pollution Prevention and Control Law"
+  verified_on: "2026-08-19"
+  maintainer: technical-dd-agent
+  data:
+    successor_liability_default: "Original polluter primarily liable; successor/acquirer of land-use rights can face remediation obligations depending on land transfer terms — site-specific diligence required"
+    remediation_fund_available: false
+
+incentives:
+  source: "Regional and free-trade-zone investment incentive policies (varies by province/zone)"
+  verified_on: "2026-08-19"
+  maintainer: incentive-agent
+  data:
+    categories: ["preferential enterprise income tax rate zones", "land-use fee reductions", "free-trade-zone customs/tax incentives", "high-tech enterprise tax credits"]
+    clawback_norm: "Investment-scale and operating-period conditions attached at local-government discretion; clawback practice varies significantly by province — must be confirmed locally"
+
+typical_closing_weeks: 18

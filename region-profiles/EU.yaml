@@ -1,0 +1,90 @@
+code: EU
+name_ko: 유럽연합
+
+merger_control:
+  source: "EU Merger Regulation (EUMR, Regulation (EC) No 139/2004)"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regime: "EUMR — turnover-threshold-based mandatory notification"
+    authority: "European Commission (DG COMP); national authorities for below-threshold deals"
+    waiting_period_days: 25
+    gun_jumping_prohibited: true
+
+foreign_investment_screening:
+  source: "EU FDI Screening Regulation (Regulation (EU) 2019/452)"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regime: "EU FSR — coordination framework; actual screening remains at member-state level"
+    authority: "Member-state national screening body + EU cooperation mechanism"
+    mandatory_filing_triggers:
+      - "Non-EU acquirer in a critical infrastructure, technology, or dual-use sector"
+      - "State-owned or state-linked acquirer (heightened scrutiny)"
+
+labor:
+  source: "EU Works Council Directive (2009/38/EC), Acquired Rights Directive (2001/23/EC)"
+  verified_on: "2026-08-19"
+  maintainer: hr-integration-agent
+  data:
+    works_council_consultation: true
+    collective_notice_days: 30
+    cba_succession_default: "Acquired Rights Directive — employment terms transfer automatically to the acquirer on a business transfer; missing this consultation is a common cause of closing delay"
+
+tax:
+  source: "EU Anti-Tax-Avoidance Directive (ATAD), member-state transfer-pricing rules, EU Exit Taxation (ATAD Art. 5)"
+  verified_on: "2026-08-19"
+  maintainer: financial-analyst
+  data:
+    withholding: "Varies by member state; Parent-Subsidiary Directive exempts qualifying intra-EU dividends"
+    transfer_pricing_regime: "OECD-aligned, ATAD-harmonized across member states"
+    exit_tax: "ATAD Art. 5 — exit taxation on cross-border asset/business transfer out of a member state"
+    treaty_network_note: "Intra-EU: Parent-Subsidiary and Interest-Royalties Directives; extra-EU: member-state-specific treaty network"
+
+fx_and_repatriation:
+  source: "EU free movement of capital (TFEU Art. 63)"
+  verified_on: "2026-08-19"
+  maintainer: financial-analyst
+  data:
+    capital_controls: "None within the Eurozone/EU for ordinary capital movement; non-EU currency exposure handled at member-state level"
+    repatriation_approval_required: false
+
+anti_corruption:
+  source: "OECD Anti-Bribery Convention, EU member-state implementing statutes (e.g. UK Bribery Act for post-Brexit UK counterparties)"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regimes: ["OECD Anti-Bribery Convention", "UK Bribery Act (where UK counterparties involved)", "FCPA (where US nexus exists)"]
+
+sanctions_screening:
+  source: "EU Common Foreign and Security Policy sanctions regime"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regimes: ["EU consolidated sanctions list", "OFAC (where US nexus exists)"]
+
+data_transfer:
+  source: "GDPR Chapter V (Art. 44-50)"
+  verified_on: "2026-08-19"
+  maintainer: security-engineer
+  data:
+    regime: "GDPR — cross-border transfer restricted absent an adequacy decision or approved safeguard"
+    cross_border_transfer_mechanism: "Standard Contractual Clauses (SCCs), adequacy decision, or Binding Corporate Rules"
+
+environmental_liability_succession:
+  source: "EU Environmental Liability Directive (2004/35/EC)"
+  verified_on: "2026-08-19"
+  maintainer: technical-dd-agent
+  data:
+    successor_liability_default: "Polluter-pays principle; successor liability determined at member-state implementing-law level, generally follows the operator/site rather than the corporate entity"
+    remediation_fund_available: true
+
+incentives:
+  source: "EU State Aid framework (TFEU Art. 107-109), member-state investment incentive schemes"
+  verified_on: "2026-08-19"
+  maintainer: incentive-agent
+  data:
+    categories: ["Regional State Aid (Art. 107(3)(a)/(c) assisted areas)", "member-state investment grants", "R&D tax incentives", "Just Transition Fund (in eligible regions)"]
+    clawback_norm: "State Aid approval conditions (minimum investment period, job retention) enforceable at both EU and member-state level; breach can trigger both clawback and Commission investigation"
+
+typical_closing_weeks: 20

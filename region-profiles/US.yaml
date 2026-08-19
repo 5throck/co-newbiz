@@ -1,0 +1,90 @@
+code: US
+name_ko: 미국
+
+merger_control:
+  source: "Hart-Scott-Rodino Antitrust Improvements Act (HSR Act)"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regime: "HSR premerger notification"
+    authority: "FTC / DOJ Antitrust Division"
+    waiting_period_days: 30
+    gun_jumping_prohibited: true
+
+foreign_investment_screening:
+  source: "Defense Production Act §721 (CFIUS), FIRRMA (2018)"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regime: "CFIUS review"
+    authority: "Committee on Foreign Investment in the United States (Treasury-chaired)"
+    mandatory_filing_triggers:
+      - "Foreign control of a US business handling critical technology, critical infrastructure, or sensitive personal data (TID US business)"
+      - "Certain non-controlling investments with governance/access rights in TID businesses"
+
+labor:
+  source: "Worker Adjustment and Retraining Notification (WARN) Act"
+  verified_on: "2026-08-19"
+  maintainer: hr-integration-agent
+  data:
+    works_council_consultation: false
+    collective_notice_days: 60
+    cba_succession_default: "No automatic CBA succession — successor employer obligations determined case-by-case under federal labor law (substantial continuity test)"
+
+tax:
+  source: "Internal Revenue Code, state-level transfer-pricing conformity to IRC §482"
+  verified_on: "2026-08-19"
+  maintainer: financial-analyst
+  data:
+    withholding: "FDAP withholding on US-source income to foreign persons, treaty rate reductions available"
+    transfer_pricing_regime: "IRC §482, OECD-aligned in practice"
+    exit_tax: "No general corporate exit tax; individual expatriation tax (IRC §877A) is a separate, unrelated regime"
+    treaty_network_note: "Extensive bilateral treaty network; state-level taxes generally not covered by federal treaties"
+
+fx_and_repatriation:
+  source: "No general US capital controls; Bank Secrecy Act reporting"
+  verified_on: "2026-08-19"
+  maintainer: financial-analyst
+  data:
+    capital_controls: "None for ordinary commercial capital movement"
+    repatriation_approval_required: false
+
+anti_corruption:
+  source: "Foreign Corrupt Practices Act (FCPA)"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regimes: ["FCPA (anti-bribery and books-and-records provisions)"]
+
+sanctions_screening:
+  source: "OFAC sanctions programs"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regimes: ["OFAC SDN and sectoral sanctions lists", "BIS Entity List (export control overlap)"]
+
+data_transfer:
+  source: "No omnibus federal data-transfer statute; state privacy laws (e.g. CCPA/CPRA) and sector-specific rules apply"
+  verified_on: "2026-08-19"
+  maintainer: security-engineer
+  data:
+    regime: "Sectoral and state-level (no GDPR-equivalent federal cross-border transfer restriction)"
+    cross_border_transfer_mechanism: "Contractual data protection terms; sector-specific rules (e.g. HIPAA) may impose additional requirements"
+
+environmental_liability_succession:
+  source: "Comprehensive Environmental Response, Compensation, and Liability Act (CERCLA)"
+  verified_on: "2026-08-19"
+  maintainer: technical-dd-agent
+  data:
+    successor_liability_default: "CERCLA strict, joint-and-several liability can attach to successor owners/operators of a contaminated site — bona fide prospective purchaser defense available if diligence is documented"
+    remediation_fund_available: true
+
+incentives:
+  source: "State-level economic development incentive programs (varies by state), Inflation Reduction Act sector credits"
+  verified_on: "2026-08-19"
+  maintainer: incentive-agent
+  data:
+    categories: ["state investment tax credits", "site/infrastructure grants", "job-creation tax credits", "IRA sector-specific credits (e.g. clean energy manufacturing)"]
+    clawback_norm: "State-level clawback provisions tied to job-creation and investment-maintenance covenants; terms vary significantly by state — must be checked per site"
+
+typical_closing_weeks: 16

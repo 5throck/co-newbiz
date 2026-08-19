@@ -1,0 +1,54 @@
+# Architecture Decision Records — co-newbiz
+
+**Numbering**: local sequence starting at 0001, distinct from `ai_workspace`'s own ADR numbering. Format follows the workspace convention (`# ADR-NNNN` / Status / Date / Deciders / Context / Decision / Consequences — see `docs/adr/0055-spec-registry-enforcement.md` at the workspace root for the canonical example).
+
+**Trigger list** (from design v1.0 §7 — an ADR is required before proceeding, not optional documentation after the fact): DB schema breaking changes, master-data code-system changes, unit-conversion methodology changes, RAG rule/threshold changes, Stage Gate/Kill Criteria changes, policy/procedure amendments, region-profile required-axis changes, notification policy changes, external data source changes, DB engine/portability exceptions, auth/permission model changes, MCP tool scope expansion, team structure/agent promotion, deployment/rollback strategy changes.
+
+| ADR | Title |
+|---|---|
+| [0001](0001-adopt-sqlite-as-the-database-engine.md) | Adopt SQLite as the database engine |
+| [0002](0002-database-portability-regime.md) | Database portability regime |
+| [0003](0003-master-data-scope-and-code-systems.md) | Master data scope and code systems |
+| [0004](0004-cache-first-fetch-policy-and-revision-preserving-updates.md) | Cache-first fetch policy and revision-preserving updates |
+| [0005](0005-run-based-versioning-and-attribution.md) | Run-based versioning and attribution |
+| [0006](0006-proxy-chain-unit-conversion-methodology.md) | Proxy chain unit-conversion methodology |
+| [0007](0007-document-rendering-stack-is-pure-python.md) | Document rendering stack is pure Python |
+| [0008](0008-stage-gate-and-kill-criteria-model.md) | Stage Gate and Kill Criteria model |
+| [0009](0009-password-hashing-pbkdf2-hmac-sha256.md) | Password hashing: PBKDF2-HMAC-SHA256 |
+| [0010](0010-web-stack-hono-react-vite-echarts.md) | Web stack: Hono + React/Vite + ECharts |
+| [0011](0011-mcp-access-is-rest-only-never-direct-db.md) | MCP access is REST-only, never direct DB |
+| [0012](0012-audit-log-is-append-only.md) | Audit log is append-only |
+| [0013](0013-four-domain-team-structure-with-pm-gateway-coordination.md) | Four-domain team structure with PM Gateway coordination |
+| [0014](0014-deployment-and-rollback-discipline.md) | Deployment and rollback discipline |
+| [0015](0015-operating-rhythm-and-slos.md) | Operating rhythm and SLOs |
+| [0016](0016-rag-scoring-rule-based-not-weighted-average-with-a-data-conf.md) | RAG scoring: rule-based, not weighted average, with a data-confidence cap |
+| [0017](0017-automatic-re-analysis-and-bidirectional-notification-policy.md) | Automatic re-analysis and bidirectional notification policy |
+| [0018](0018-growth-projection-anchoring.md) | Growth projection anchoring |
+| [0019](0019-os-level-scheduler-for-periodic-collection.md) | OS-level scheduler for periodic collection |
+| [0020](0020-procedure-references-overrides-model-for-shared-entity-region.md) | Procedure references: + overrides model for shared/entity/region procedures |
+| [0021](0021-policy-change-to-system-pipeline-and-project-policy-pin.md) | Policy-change-to-system pipeline and project_policy_pin |
+| [0022](0022-glossary-tooling-integration-across-four-surfaces.md) | Glossary tooling integration across four surfaces |
+| [0023](0023-region-profile-schema-and-mandatory-review-axes.md) | Region profile schema and mandatory review axes |
+| [0024](0024-profile-first-principle-for-industry-and-region-with-agent-p.md) | Profile-first principle for industry and region, with agent-promotion threshold |
+| [0025](0025-separate-value-chain-linkage-coefficients-from-proxy-chain-c.md) | Separate value-chain-linkage coefficients from proxy-chain coefficients |
+| [0026](0026-contingent-liability-modeling-probability-weighted-distribut.md) | Contingent liability modeling: probability-weighted distribution, Monte Carlo integration |
+| [0027](0027-compensation-harmonization-upward-bias-default.md) | Compensation harmonization: upward-bias default |
+| [0028](0028-orthogonal-scope-x-level-axes-for-procedures-with-entity-ic.md) | Orthogonal scope x level axes for procedures, with Entity IC gating Group IC |
+| [0029](0029-group-ic-is-a-ranking-decision-not-a-yes-no-approval.md) | Group IC is a ranking decision, not a yes/no approval |
+| [0030](0030-incentive-acquisition-and-clawback-managed-in-one-table.md) | Incentive acquisition and clawback managed in one table |
+| [0031](0031-partner-sourcing-failure-modeled-as-deal-termination-not-del.md) | Partner-sourcing failure modeled as deal termination, not delay |
+| [0032](0032-documents-before-code-stage-2-3-precede-stage-5.md) | Documents before code — Stage 2/3 precede Stage 5 |
+| [0033](0033-mandatory-policy-clause-to-system-feature-traceability-matri.md) | Mandatory policy-clause-to-system-feature traceability matrix |
+| [0034](0034-manual-pilot-precedes-system-development.md) | Manual pilot precedes system development |
+| [0035](0035-five-layer-governance-document-hierarchy-with-differentiated.md) | Five-layer governance document hierarchy with differentiated enforceability |
+| [0036](0036-waiver-mandatory-expiry-and-concentration-triggered-amendmen.md) | Waiver mandatory expiry and concentration-triggered amendment |
+| [0037](0037-gate-blocking-rule-for-missing-mandatory-deliverables-or-che.md) | Gate-blocking rule for missing mandatory deliverables or checklist items |
+| [0038](0038-project-level-need-to-know-access-control-role-x-membership.md) | Project-level need-to-know access control: role x membership, deny by default |
+| [0039](0039-personal-data-minimization-and-aggregate-first-principle.md) | Personal data minimization and aggregate-first principle |
+| [0040](0040-mnpi-handling-insider-list-access-logging-mcp-exposure-restr.md) | MNPI handling: insider list, access logging, MCP exposure restriction |
+| [0041](0041-fx-rate-application-timing-policy-with-run-level-snapshot.md) | FX rate application timing policy with run-level snapshot |
+| [0042](0042-mvp-boundary-and-descope-order.md) | MVP boundary and descope order |
+| [0043](0043-four-domain-structure-functional-technical-industry-region.md) | Four-domain structure (functional/technical/industry/region) with PM-lead coordination model |
+| [0044](0044-industry-and-region-scale-via-profile-count-not-agent-count.md) | Industry and region scale via profile count, not agent count |
+
+All 44 ADRs above are **Accepted** as of 2026-08-20, ratifying decisions already made during Stage 0-1 (scaffold, agent roster, glossary, and the 12 Stage 1 planning meetings) and formalized in Stage 2's regulation book and procedures. Future amendments to any of these decisions require a new ADR referencing the one it supersedes, per the trigger list above — not an edit to the existing record.

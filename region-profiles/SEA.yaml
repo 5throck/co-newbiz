@@ -1,0 +1,90 @@
+code: SEA
+name_ko: 동남아시아 (개괄 프로파일 — 국가별 세부 검토 필요)
+
+merger_control:
+  source: "ASEAN member-state competition laws are not harmonized — this profile is a regional overview, not a substitute for country-level review"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regime: "No unified ASEAN merger-control regime; each member state has its own (e.g. Vietnam's Competition Law, Indonesia's KPPU regime, Singapore's Competition Act)"
+    authority: "Country-specific — e.g. Vietnam Competition Commission, Indonesia KPPU, Singapore CCCS"
+    waiting_period_days: 90
+    gun_jumping_prohibited: true
+
+foreign_investment_screening:
+  source: "Country-specific foreign investment negative/positive lists (varies significantly — Vietnam, Indonesia, Thailand, Malaysia each maintain distinct regimes)"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regime: "No regional regime — each member state maintains its own foreign-ownership caps and sector restrictions"
+    authority: "Country-specific investment authority (e.g. Vietnam MPI, Indonesia BKPM, Thailand BOI)"
+    mandatory_filing_triggers:
+      - "Foreign-ownership cap exceeded in a restricted sector (varies by country)"
+      - "Land-use rights transfer to a foreign-owned entity (common trigger across the region)"
+
+labor:
+  source: "Country-specific labor codes — this section is a regional average, not a substitute for local counsel"
+  verified_on: "2026-08-19"
+  maintainer: hr-integration-agent
+  data:
+    works_council_consultation: false
+    collective_notice_days: 30
+    cba_succession_default: "Varies by country; several jurisdictions (e.g. Vietnam) require statutory severance obligations to be settled or expressly assumed on business transfer"
+
+tax:
+  source: "Country-specific tax codes; ASEAN Comprehensive Investment Agreement does not harmonize tax treatment"
+  verified_on: "2026-08-19"
+  maintainer: financial-analyst
+  data:
+    withholding: "Varies significantly by country (roughly 10-20% on dividends/interest/royalties before treaty relief)"
+    transfer_pricing_regime: "OECD-aligned documentation increasingly adopted regionally, enforcement maturity varies by country"
+    exit_tax: "No regional exit-tax regime; check country-specific asset-disposal tax rules"
+    treaty_network_note: "Treaty coverage is uneven across the region — confirm country-by-country before assuming treaty relief"
+
+fx_and_repatriation:
+  source: "Country-specific central bank regulations (e.g. Vietnam SBV, Indonesia Bank Indonesia)"
+  verified_on: "2026-08-19"
+  maintainer: financial-analyst
+  data:
+    capital_controls: "Several member states require central-bank registration of foreign-currency loans and repatriation of investment capital (e.g. Vietnam's Foreign Investment Capital Account requirement)"
+    repatriation_approval_required: true
+
+anti_corruption:
+  source: "FCPA and UK Bribery Act extraterritorial reach; country-specific anti-corruption statutes vary in enforcement maturity"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regimes: ["FCPA (where US nexus exists)", "UK Bribery Act (where UK nexus exists)", "country-specific anti-corruption law — verify per target jurisdiction"]
+
+sanctions_screening:
+  source: "OFAC and EU sanctions exposure for cross-border deals; regional sanctions regimes are limited"
+  verified_on: "2026-08-19"
+  maintainer: legal-counsel
+  data:
+    regimes: ["OFAC (where US nexus exists)", "EU sanctions (where EU nexus exists)"]
+
+data_transfer:
+  source: "Country-specific data protection laws (e.g. Vietnam's Personal Data Protection Decree, Indonesia's PDP Law, Singapore's PDPA) — no regional GDPR-equivalent"
+  verified_on: "2026-08-19"
+  maintainer: security-engineer
+  data:
+    regime: "Fragmented — each country has its own cross-border transfer conditions; several (e.g. Vietnam) require in-country data storage for certain data categories"
+    cross_border_transfer_mechanism: "Country-specific consent/contractual mechanisms — confirm per jurisdiction, do not assume SCC-equivalent recognition"
+
+environmental_liability_succession:
+  source: "Country-specific environmental laws; enforcement and successor-liability doctrine maturity varies widely"
+  verified_on: "2026-08-19"
+  maintainer: technical-dd-agent
+  data:
+    successor_liability_default: "Generally follows the site/land-use right rather than a harmonized successor-liability doctrine — site-level diligence is essential given uneven regulatory enforcement history"
+    remediation_fund_available: false
+
+incentives:
+  source: "Country-specific investment promotion boards (e.g. Thailand BOI, Vietnam's investment incentive certificates, Indonesia's tax holiday regime)"
+  verified_on: "2026-08-19"
+  maintainer: incentive-agent
+  data:
+    categories: ["corporate income tax holidays", "import-duty exemptions on capital equipment", "special economic zone incentives", "investment promotion certificates"]
+    clawback_norm: "Minimum investment and operating-period conditions are standard; clawback enforcement rigor varies by country — confirm with the country-specific investment promotion board before relying on an incentive in valuation"
+
+typical_closing_weeks: 24
