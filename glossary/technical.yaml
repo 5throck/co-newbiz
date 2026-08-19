@@ -1,0 +1,124 @@
+version: 1.0.0
+last_updated: 2026-08-19
+terms:
+  Run:
+    ko: 실행 (run)
+    en: Run
+    definition_ko: 타당성 모델을 한 번 실행한 결과. 입력 전체 스냅샷(run_input)과 input_hash를 함께 저장하는 불변 레코드.
+    why_it_matters_ko: 두 run을 diff하면 어떤 변수가 얼마나 변해서 NPV가 얼마 움직였는지 금액으로 분해할 수 있다 — "보고서 재작성 없이 데이터 변경이 반영된다"는 핵심 주장의 실체다.
+    category: technical
+    related: [Run Diff, Attribution]
+    used_in: [run-versioning-and-attribution]
+    owner: data-architect
+
+  Run Diff:
+    ko: 실행 비교 (run diff)
+    en: Run Diff
+    definition_ko: 두 run 사이의 입력 변화를 변수별 NPV 기여도(금액)로 분해한 비교 결과.
+    why_it_matters_ko: 순서 의존 잔차는 interaction 항목으로 별도 표기하고 합계를 억지로 맞추지 않는다 — 정직한 귀인분석이 신뢰의 기반이다.
+    category: technical
+    related: [Run, Attribution]
+    used_in: [run-versioning-and-attribution]
+    owner: quant-methodologist
+
+  Attribution:
+    ko: 귀인분석
+    en: Attribution Analysis
+    definition_ko: NPV 변화를 각 입력 변수의 기여도로 분해하는 분석.
+    why_it_matters_ko: 규정 개정 파이프라인·회귀 테스트·IC 재심의 대응까지 이 개념 하나로 연결된다.
+    category: technical
+    related: [Run Diff]
+    used_in: [run-versioning-and-attribution]
+    owner: quant-methodologist
+
+  Proxy Chain:
+    ko: 프록시 체인
+    en: Proxy Industry Chain
+    definition_ko: 대상 산업 데이터가 없을 때 전방(Tier 1)·전전방(Tier 2) 산업 데이터를 단위 환산해 규모를 추정하는 체계.
+    why_it_matters_ko: 크랭크축 → 선박엔진(BHP) → 선박(CGT)처럼 두 단계를 건너뛰는 게 예외가 아니라 표준인 산업이 있다. 체인 신뢰도 등급이 RAG 데이터 신뢰도 캡으로 직결된다.
+    category: technical
+    aliases: [프록시 산업 체인]
+    related: [Value Chain Linkage, Reliability Grade]
+    used_in: [proxy-industry-chain, unit-conversion-calibration]
+    owner: quant-methodologist
+
+  Value Chain Linkage:
+    ko: 가치사슬 연관성
+    en: Value Chain Linkage
+    definition_ko: 전·후방 산업과의 수요 파생·원가 전가력·교섭력·사이클 동조성·수직통합 압력·대체 위협 6축 분석.
+    why_it_matters_ko: 프록시 체인과 목적이 다르다 — 프록시는 데이터 대체 추정, 연관성은 리스크 평가다. 두 계수를 섞으면 둘 다 틀린다.
+    category: technical
+    related: [Proxy Chain]
+    used_in: [value-chain-linkage-analysis]
+    owner: market-intelligence-agent
+
+  RAG Dimension:
+    ko: RAG 판정 차원
+    en: RAG Dimension
+    definition_ko: 재무성·시장·데이터 신뢰도·규제인허가·기술실행·리스크 6개 차원과 종합 등급.
+    why_it_matters_ko: 가중평균이 아니라 규칙 기반이며, 데이터 신뢰도가 종합 등급의 상한을 캡한다 — 이게 이 체계에서 가장 중요한 규칙이다.
+    category: technical
+    aliases: [RAG, Red-Amber-Green]
+    related: [Reliability Grade, Hysteresis]
+    used_in: [rag-scoring-framework]
+    owner: process-governance-manager
+
+  Reliability Grade:
+    ko: 체인 신뢰도 등급
+    en: Chain Reliability Grade
+    definition_ko: 프록시 체인의 각 홉 오차를 종합한 A/B/C 등급.
+    why_it_matters_ko: B등급이면 종합 RAG가 최대 Amber로 캡되고, C등급이면 "판단 보류"로 표기된다. 2홉 프록시로 추정한 시장에 재무만 보고 Green을 줄 수 없다.
+    category: technical
+    related: [Proxy Chain, RAG Dimension]
+    used_in: [proxy-industry-chain]
+    owner: quant-methodologist
+
+  Hysteresis:
+    ko: 히스테리시스
+    en: Hysteresis
+    definition_ko: 등급 승격과 강등의 임계값을 다르게 설정해(승격이 더 엄격) 경계에서 등급이 매일 바뀌는 것을 막는 규칙.
+    why_it_matters_ko: 경계에서 등급이 자주 바뀌면 아무도 신호를 신뢰하지 않는다. 최소 유지 기간과 함께 적용된다.
+    category: technical
+    related: [RAG Dimension]
+    used_in: [rag-scoring-framework]
+    owner: process-governance-manager
+
+  Project Policy Pin:
+    ko: 프로젝트 규정 버전 고정
+    en: Project Policy Pin
+    definition_ko: 프로젝트를 착수 시점의 규정 버전에 고정하는 메커니즘.
+    why_it_matters_ko: 이게 없으면 규정이 바뀐 날 아침 어제 Green이던 프로젝트가 이유 없이 Red가 된다. Group IC도 원칙적으로 이 pin된 버전으로 심의한다.
+    category: technical
+    related: [Policy Change Pipeline]
+    used_in: [policy-change-impact-analysis]
+    owner: process-governance-manager
+
+  References Override:
+    ko: 참조·오버라이드 모델
+    en: References + Override Model
+    definition_ko: 공통 절차를 복사하지 않고 참조(references) + 차분(overrides)만 선언하는 절차 관리 방식. safety_os의 워크플로우 참조 스펙에서 차용.
+    why_it_matters_ko: 그룹 규정이 바뀌면 모든 각사·지역 절차가 자동으로 따라간다 — 복사본이 생기면 이 성질이 깨지므로 감사가 복사본을 차단한다.
+    category: technical
+    related: [Project Policy Pin]
+    used_in: [procedure-reference-override]
+    owner: process-governance-manager
+
+  Assumed:
+    ko: 추정값 (assumed)
+    en: Assumed
+    definition_ko: 가정 레지스트리의 값 종류 중 사람의 판단으로 추정한 값. rationale 필드가 NOT NULL 제약이다.
+    why_it_matters_ko: 근거 없는 숫자가 보고서에 들어가는 것을 스키마 레벨에서 차단하는 장치다.
+    category: technical
+    related: [Assumption Kind]
+    used_in: [assumption-audit]
+    owner: risk-officer
+
+  Staleness Gate:
+    ko: 신선도 게이트
+    en: Staleness Gate
+    definition_ko: as_of + ttl_days를 초과한 live 데이터가 하나라도 있으면 보고서 최종화를 차단하는 규칙.
+    why_it_matters_ko: “데이터가 바뀌면 보고서가 다시 쓰여야 한다”는 문제의 실제 해결 장치다.
+    category: technical
+    related: [Run]
+    used_in: [data-freshness-and-revision-control]
+    owner: data-architect

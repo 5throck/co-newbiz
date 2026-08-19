@@ -1,0 +1,115 @@
+version: 1.0.0
+last_updated: 2026-08-19
+terms:
+  CGT:
+    ko: 표준화물선환산톤수
+    en: Compensated Gross Tonnage
+    definition_ko: 선박의 건조 난이도를 반영해 총톤수(GT)를 보정한 조선업 표준 생산량 단위.
+    why_it_matters_ko: 선박 시장 규모를 척수나 GT가 아닌 CGT로 봐야 건조 물량을 실질적으로 비교할 수 있다. 프록시 체인의 최상위 단위다.
+    category: unit
+    aliases: [보정총톤수]
+    related: [GT, DWT, BHP]
+    used_in: [proxy-industry-chain, unit-conversion-calibration]
+    source: OECD 조선작업부회(WP6)
+    owner: quant-methodologist
+
+  GT:
+    ko: 총톤수
+    en: Gross Tonnage
+    definition_ko: 선박 내부 전체 용적을 기준으로 산출한 톤수. 건조 난이도는 반영하지 않는다.
+    why_it_matters_ko: CGT와 혼동하기 쉽다 — GT만으로는 선박 시장 규모를 비교할 때 건조 난이도 차이를 놓친다.
+    category: unit
+    related: [CGT, DWT]
+    used_in: [unit-conversion-calibration]
+    owner: quant-methodologist
+
+  DWT:
+    ko: 재화중량톤수
+    en: Deadweight Tonnage
+    definition_ko: 선박이 실을 수 있는 화물·연료·승무원 등의 총 중량.
+    why_it_matters_ko: 화물선 시장 규모를 표현할 때 흔히 쓰이는 단위지만, CGT와 목적이 다르므로 프록시 체인에서 섞어 쓰면 안 된다.
+    category: unit
+    related: [CGT, GT]
+    used_in: [unit-conversion-calibration]
+    owner: quant-methodologist
+
+  BHP:
+    ko: 제동마력
+    en: Brake Horsepower
+    definition_ko: 선박엔진의 출력을 나타내는 단위.
+    why_it_matters_ko: 크랭크축 → 선박엔진 → 선박 프록시 체인에서 두 번째 홉(선박엔진)의 표준 단위다.
+    category: unit
+    related: [CGT]
+    used_in: [proxy-industry-chain]
+    owner: quant-methodologist
+
+  수주:
+    ko: 수주
+    en: Order Intake
+    definition_ko: 신규로 계약이 체결된 물량.
+    why_it_matters_ko: 수주잔고·인도량과 혼동하면 예측 전체가 무너진다 — 시계열의 시작점(계약 시점)을 가리킨다.
+    category: industry
+    related: [수주잔고, 인도]
+    used_in: [proxy-industry-chain]
+    owner: market-intelligence-agent
+
+  수주잔고:
+    ko: 수주잔고
+    en: Order Backlog
+    definition_ko: 수주됐으나 아직 인도되지 않은 누적 물량.
+    why_it_matters_ko: 수주(계약 시점)와 인도(완료 시점)의 중간 재고 개념이다. 수주 시계열로 착각해 프록시 체인을 보정하면 시차(lag)가 이중으로 반영되는 오류가 생긴다.
+    category: industry
+    related: [수주, 인도]
+    used_in: [proxy-industry-chain]
+    owner: market-intelligence-agent
+
+  인도:
+    ko: 인도
+    en: Delivery
+    definition_ko: 건조가 완료되어 발주처에 실제로 넘겨지는 시점.
+    why_it_matters_ko: 매출 인식 시점과 가장 가까운 지표이나, 수주 대비 수년의 시차가 있어 수요 예측에 그대로 쓰면 시차 오류가 생긴다.
+    category: industry
+    related: [수주, 수주잔고]
+    used_in: [proxy-industry-chain]
+    owner: market-intelligence-agent
+
+  선급:
+    ko: 선급 (형식승인)
+    en: Classification Society Type Approval
+    definition_ko: DNV·LR·ABS·KR 등 선급 기관이 조선기자재의 안전·품질 기준 부합을 인증하는 제도.
+    why_it_matters_ko: 조선기자재 사업 진출의 필수 인증이며, 인허가(permit)가 아니라 인증(certification)으로 별도 관리된다 — 없으면 팔 수 없다.
+    category: industry
+    aliases: [형식승인]
+    related: [Certification Transferability]
+    used_in: [certification-roadmap]
+    owner: certification-agent
+
+  IMO Tier III:
+    ko: IMO Tier III 규제
+    en: IMO Tier III Regulation
+    definition_ko: 국제해사기구(IMO)의 선박 질소산화물(NOx) 배출 규제 3단계.
+    why_it_matters_ko: 탈탄소·대체연료(메탄올·암모니아) 전환의 계기가 되는 규제로, 크랭크축 등 부품 사양과 수요 구조 자체를 바꾼다 — 대체·전환 위협 축의 대표 사례다.
+    category: industry
+    related: [Value Chain Linkage]
+    used_in: [regulatory-change-response]
+    owner: certification-agent
+
+  KSIC:
+    ko: 한국표준산업분류
+    en: Korean Standard Industrial Classification
+    definition_ko: 통계청이 정한 한국의 표준 산업 분류 체계.
+    why_it_matters_ko: 전방·전전방 산업을 연결하는 축이자 기준정보(md_industry)의 기준 코드 체계다. 이게 없으면 프록시 체인 자체를 구성할 수 없다.
+    category: industry
+    related: [Proxy Chain]
+    used_in: [master-data-governance]
+    owner: data-architect
+
+  corp_code:
+    ko: DART 고유번호
+    en: DART Corporation Code
+    definition_ko: 금융감독원 DART(전자공시시스템)가 부여하는 기업 고유 식별번호.
+    why_it_matters_ko: 기준정보(md_company)의 기준 코드이며 피어그룹(베타 산출)·타겟·경쟁사 식별의 앵커다.
+    category: industry
+    related: [KSIC, Peer Group]
+    used_in: [master-data-governance]
+    owner: data-architect
