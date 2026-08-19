@@ -1,0 +1,57 @@
+governance_doc_id: chk-ma-special-topics
+layer: checklist
+title: "M&A Special Topics Checklist (Brown Field)"
+scope: shared
+enforceability: mixed
+owner_agent: brownfield-agent
+version: "1.0.0"
+effective_from: "2026-08-20"
+gate: DD
+
+# Evaluation order per meeting M5: (1) antitrust + HR integration, (2) customer
+# retention + incentive, (3) certification transferability last — a non-transferable
+# certification can strip the acquisition premium and must not be computed against
+# a valuation that already assumed it. This checklist's item order follows that.
+
+items:
+  - id: ma-01
+    text: "Relevant market defined (product and geographic) and HHI/HHI-delta calculated"
+    mandatory: true
+  - id: ma-02
+    text: "Merger-control filing requirements confirmed for every applicable jurisdiction (multi-jurisdiction filing check, not just the primary market)"
+    mandatory: true
+  - id: ma-03
+    text: "Gun-jumping prohibition acknowledged — no integration action taken before clearance"
+    mandatory: true
+  - id: ma-04
+    text: "Executive compensation package (CoC triggers, golden-parachute payout estimate, accelerated vesting) recorded against management_package"
+    mandatory: true
+  - id: ma-05
+    text: "Non-compete enforceability confirmed per applicable jurisdiction before relying on it for key-person retention"
+    mandatory: false
+  - id: ma-06
+    text: "Employee compensation benchmark completed at job-family/grade level (comp_benchmark), upward-bias harmonization cost calculated in both directions"
+    mandatory: true
+  - id: ma-07
+    text: "Change-of-control clauses scanned across customer contracts, debt covenants, and executive compensation — all three surfaces, not just one"
+    mandatory: true
+  - id: ma-08
+    text: "Customer concentration and competitive-overlap risk assessed for post-acquisition attrition"
+    mandatory: true
+  - id: ma-09
+    text: "Incentive inventory (both prospective and granted) reviewed for clawback exposure on any contemplated relocation or restructuring"
+    mandatory: true
+  - id: ma-10
+    text: "Contingent liabilities (litigation, environmental, unfunded pension, warranty/recall) entered with probability/amount distribution for Monte Carlo integration — no narrative-only entries"
+    mandatory: true
+  - id: ma-11
+    text: "Covenant breach scenario tested under a +200bp rate shock; CoC acceleration clauses on debt instruments identified"
+    mandatory: true
+  - id: ma-12
+    text: "Certification transferability on change of control confirmed last, against the actual certifying body's rules — not inferred (design's explicit rule: inference disallowed here)"
+    mandatory: true
+
+legal_basis:
+  - "docs/ma-special-topics.md (forward reference — Stage 4 documentation)"
+  - "memory/meeting-2026-08-20-m5-ma-model-linkage.md"
+  - "ADR-0026 (contingent liability modeling), ADR-0027 (compensation upward bias)"
