@@ -1,0 +1,36 @@
+governance_doc_id: chk-partnership
+layer: checklist
+title: "Partnership Sourcing and JV Checklist"
+scope: shared
+enforceability: mixed
+owner_agent: partnership-agent
+version: "1.0.0"
+effective_from: "2026-08-20"
+gate: DD
+
+items:
+  - id: pt-01
+    text: "Capability gap defining the need for a partner is stated explicitly before sourcing starts"
+    mandatory: true
+  - id: pt-02
+    text: "Compliance screening (sanctions, anti-corruption history) completed for every shortlisted partner candidate — not optional, since a partner's exposure transfers to us"
+    mandatory: true
+  - id: pt-03
+    text: "Financial stability and capacity scores recorded per candidate with evidence references"
+    mandatory: true
+  - id: pt-04
+    text: "Dependency risk assessed — including the risk the partner becomes a competitor after technology transfer"
+    mandatory: true
+  - id: pt-05
+    text: "Where the business model has a hard partner dependency, partner-sourcing failure is modeled as a Kill Criteria candidate (deal termination), not a schedule delay (ADR-0031)"
+    mandatory: true
+  - id: pt-06
+    text: "For JV structures: governance (board composition, veto matters), contribution valuation, exit clauses (put/call, drag/tag), and deadlock-resolution mechanism all documented before term-sheet negotiation"
+    mandatory: true
+  - id: pt-07
+    text: "Technology contribution independently valued, not accepted at the contributing party's stated figure"
+    mandatory: false
+
+legal_basis:
+  - "docs/partnership-playbook.md (forward reference — Stage 4 documentation)"
+  - "ADR-0031 (partner-sourcing failure modeled as termination)"
