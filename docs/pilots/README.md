@@ -10,6 +10,7 @@
 | # | Case | Type | Status | Report |
 |---|---|---|---|---|
 | 001 | HD Hyundai / STX Heavy Industries (2024) | Brown Field | In progress | [pilot-001-hd-hyundai-stx-heavy-industries.md](pilot-001-hd-hyundai-stx-heavy-industries.md) |
+| 002 | Hanwha Impact / HSD Engine (2023-2024) | Brown Field | In progress | [pilot-002-hanwha-impact-hsd-engine.md](pilot-002-hanwha-impact-hsd-engine.md) |
 
 ## Candidate Sourcing
 

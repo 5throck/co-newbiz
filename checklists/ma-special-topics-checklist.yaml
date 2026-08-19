@@ -4,7 +4,7 @@ title: "M&A Special Topics Checklist (Brown Field)"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-08-20"
 gate: DD
 
@@ -33,10 +33,10 @@ items:
     text: "Employee compensation benchmark completed at job-family/grade level (comp_benchmark), upward-bias harmonization cost calculated in both directions"
     mandatory: true
   - id: ma-07
-    text: "Change-of-control clauses scanned across customer contracts, debt covenants, and executive compensation — all three surfaces, not just one"
+    text: "Change-of-control clauses scanned across customer AND supplier contracts, debt covenants, and executive compensation — a retained seller as an ongoing supplier is the same risk category as a customer contract, not a separate one (pilot 002 finding F-2)"
     mandatory: true
   - id: ma-08
-    text: "Customer concentration and competitive-overlap risk assessed for post-acquisition attrition"
+    text: "Customer/supplier concentration and competitive-overlap risk assessed for post-acquisition attrition — includes a seller who retains a commercial relationship with the target post-close, not customer-side contracts only"
     mandatory: true
   - id: ma-09
     text: "Incentive inventory (both prospective and granted) reviewed for clawback exposure on any contemplated relocation or restructuring"
