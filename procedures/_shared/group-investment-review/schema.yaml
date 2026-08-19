@@ -1,0 +1,61 @@
+schema_version: "1.0"
+procedure_id: shared-group-investment-review
+title: "Group Investment Committee Review"
+scope: shared
+level: group
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: "Group IC"
+
+steps:
+  - id: 1
+    gate: "Group IC"
+    agent_key: process-governance-manager
+    skill_key: two-tier-approval-chain
+    output_type: entity_ic_precondition_check
+    description: >
+      System-enforced check: reject entry if Entity IC approval is not recorded
+      in approval_chain. No soft warning — hard rejection (design §6.4).
+  - id: 2
+    gate: "Group IC"
+    agent_key: group-review-agent
+    skill_key: portfolio-fit-assessment
+    output_type: portfolio_overlap_finding
+    description: Assess overlap/cannibalization against other group companies.
+  - id: 3
+    gate: "Group IC"
+    agent_key: group-review-agent
+    skill_key: intra-group-transaction-compliance
+    output_type: related_party_transaction_finding
+    description: Fair Trade Act Art. 47 screen, only if the deal involves affiliate transactions.
+  - id: 4
+    gate: "Group IC"
+    agent_key: group-review-agent
+    skill_key: portfolio-fit-assessment
+    output_type: group_agenda_ranking
+    description: >
+      Rank this proposal against other concurrent group_agenda entries in the
+      same review cycle using the formula from meeting M2 D-M2-2: IRR-over-hurdle
+      spread + RAG grade + capital requested, normalized to the cycle's capital
+      budget, ties broken by risk-officer flags.
+  - id: 5
+    gate: "Group IC"
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: group_ic_decision
+    description: >
+      Record the Group IC decision as approved / rejected / conditional
+      (meeting M2 D-M2-3 — conditional is first-class, not a note on approved).
+
+kill_criteria: []  # Group IC does not introduce new Kill Criteria beyond those already
+                    # triggered upstream; it is a ranking/portfolio gate, not a new red-team pass.
+
+legal_basis:
+  - "Group New Business Review Policy §3, §4"
+  - "Design v1.0 §6.4"
+  - "Meeting M2 (m2-entity-group-boundary.md)"
+
+owner_agent: group-review-agent
+last_reviewed: "2026-08-20"

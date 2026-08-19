@@ -1,0 +1,38 @@
+schema_version: "1.0"
+procedure_id: TODO-kebab-case-id
+scope: shared   # shared | entity | region | group
+# entity: <entity-id>       # required if scope=entity
+# region_code: <ISO2>        # required if scope=region
+title: "TODO: Human-readable title"
+level: entity   # entity | group — which review tier this procedure belongs to
+version: "1.0.0"
+status: draft   # draft | active | deprecated
+applicability: mandatory   # mandatory | recommended | mixed
+workflow_type: core
+gate: TODO   # Screening | Pre-FS | FS | DD | Entity IC | Group IC
+
+# For a shared procedure: list steps directly.
+# For an entity/region procedure that consumes a shared one: use `references:`
+# instead and declare only `overrides:` — never duplicate the shared steps.
+steps:
+  - id: 1
+    gate: TODO
+    agent_key: TODO
+    skill_key: TODO
+    output_type: TODO
+    description: TODO
+
+# references:
+#   - shared: ../../../_shared/<procedure-name>
+# overrides:
+#   add_steps: []
+#   replace_steps: []
+#   thresholds: {}
+
+kill_criteria: []
+
+legal_basis:
+  - "TODO: at least one policy/design/meeting reference"
+
+owner_agent: TODO
+last_reviewed: "TODO YYYY-MM-DD"
