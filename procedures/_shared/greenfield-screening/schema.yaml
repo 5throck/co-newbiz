@@ -1,0 +1,56 @@
+schema_version: "1.0"
+procedure_id: shared-greenfield-screening
+title: "Green Field Screening"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: Screening
+
+steps:
+  - id: 1
+    gate: Screening
+    agent_key: market-intelligence-agent
+    skill_key: value-chain-linkage-analysis
+    output_type: market_sizing
+    description: TAM/SAM/SOM sizing and initial value-chain linkage read for the target industry.
+  - id: 2
+    gate: Screening
+    agent_key: greenfield-agent
+    skill_key: site-infrastructure-assessment
+    output_type: site_shortlist_prefiltered
+    description: >
+      Build the site shortlist AFTER applying the hard pre-filter (infrastructure
+      minimums, partner-dependency confirmation) per meeting M6 D-M6-1. Sites
+      failing the pre-filter are excluded here, not scored lower in step 3.
+  - id: 3
+    gate: Screening
+    agent_key: greenfield-agent
+    skill_key: regional-incentive-sourcing
+    output_type: site_candidate_scored
+    description: >
+      Weighted score among pre-filtered survivors: infra readiness 30%,
+      incentive NPV 25%, logistics cost 15%, labor availability 15%,
+      permit critical-path (inverted) 15% (meeting M6 D-M6-1/D-M6-3).
+  - id: 4
+    gate: Screening
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: Confirm Screening deliverables complete; open Pre-FS.
+
+kill_criteria:
+  - condition: zero_site_clears_infrastructure_minimums
+    action: halt
+  - condition: partner_dependency_unconfirmed_and_no_alternative
+    action: mark_conditional
+
+legal_basis:
+  - "Group New Business Review Policy §4.1"
+  - "Design v1.0 §8.7/§8.8"
+  - "Meeting M1, M6 (process-2026-08-20-m1-process-skeleton.md, m6-site-selection-criteria.md)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-20"

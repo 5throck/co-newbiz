@@ -1,0 +1,45 @@
+schema_version: "1.0"
+procedure_id: shared-brownfield-screening
+title: "Brown Field Screening"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: Screening
+
+# structured, not prose — dispatch code reads this list directly (meeting M7-3 D-M7-3-1)
+steps:
+  - id: 1
+    gate: Screening
+    agent_key: brownfield-agent
+    skill_key: brownfield-feasibility
+    output_type: target_longlist
+    description: Identify and longlist acquisition targets against the deal thesis.
+  - id: 2
+    gate: Screening
+    agent_key: antitrust-agent
+    skill_key: antitrust-screening
+    output_type: preliminary_hhi_screen
+    description: Rough market definition and HHI pre-screen — full six-way cross-check runs at DD, this is an early filter only.
+  - id: 3
+    gate: Screening
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: Confirm Screening deliverables complete; open Pre-FS.
+
+kill_criteria:
+  - condition: no_viable_target_in_longlist
+    action: halt
+  - condition: preliminary_hhi_flags_certain_block
+    action: escalate_to_risk_officer
+
+legal_basis:
+  - "Group New Business Review Policy §2.3 (six-validator requirement applies from DD, not Screening)"
+  - "Design v1.0 §6.3 (procedure/skill authority split)"
+  - "Meeting M1 (process-2026-08-20-m1-process-skeleton.md) gate deliverable definitions"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-20"

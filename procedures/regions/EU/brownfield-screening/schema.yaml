@@ -1,0 +1,36 @@
+schema_version: "1.0"
+procedure_id: region-eu-brownfield-screening
+scope: region
+region_code: EU
+title: "EU Brown Field Screening"
+status: active
+applicability: mandatory
+workflow_type: core
+
+references:
+  - shared: ../../../_shared/brownfield-screening
+
+# EU deviation: works council consultation, per meeting M7-1/M5 and design's
+# repeated point that missing this axis has caused real closing delays.
+overrides:
+  add_steps:
+    - after: 2   # after the shared procedure's step 2 (preliminary HHI screen)
+      step:
+        id: 2.5
+        gate: Screening
+        agent_key: region-lead
+        skill_key: regulatory-screening
+        output_type: works_council_consultation_requirement
+        description: >
+          Confirm EU works council consultation requirement per
+          region-profiles/EU.yaml. Feeds hr-integration-agent's labor
+          integration inputs (meeting M5 D-M5-4) — this is not a separate
+          model path, it is an input to hr-integration-agent's work.
+
+legal_basis:
+  - "region-profiles/EU.yaml — labor axis"
+  - "Meeting M5 D-M5-4, M7-1"
+  - "Design v1.0 §6.7"
+
+owner_agent: region-lead
+last_reviewed: "2026-08-20"

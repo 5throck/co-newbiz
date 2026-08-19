@@ -1,0 +1,38 @@
+schema_version: "1.0"
+procedure_id: ent-a-brownfield-screening
+scope: entity
+entity: ent-a
+title: "ent-a Brown Field Screening"
+status: active
+applicability: mandatory
+workflow_type: core
+
+# References the shared procedure — does NOT duplicate its steps (design §6.3).
+# Path is relative from this file's directory to the shared procedure's directory.
+references:
+  - shared: ../../../_shared/brownfield-screening
+
+# ent-a's declared deviations only. Everything not listed here is inherited
+# unchanged from the referenced shared procedure.
+overrides:
+  add_steps:
+    - after: 0   # before step 1 of the shared procedure
+      step:
+        id: 0
+        gate: Screening
+        agent_key: process-governance-manager
+        skill_key: policy-and-procedure-governance
+        output_type: internal_prescreen_record
+        description: >
+          ent-a-specific internal strategy-office pre-screen, per
+          policies/entities/ent-a/addendum.md §1. Recorded outside this
+          system for now (manual sign-off) — Stage 2 follow-up to integrate.
+  thresholds:
+    min_deal_size_krw: 10_000_000_000
+
+legal_basis:
+  - "policies/entities/ent-a/addendum.md §1"
+  - "Design v1.0 §6.3 (references + overrides model)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-20"

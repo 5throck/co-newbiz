@@ -32,7 +32,8 @@
     "translate-readme": "bun scripts/translate-readme.ts",
     "verify-scripts": "bun scripts/verify-scripts.ts",
     "clean:sandbox": "bun -e \"import {rmSync, mkdirSync} from 'node:fs'; rmSync('.sandbox', {recursive:true, force:true}); mkdirSync('.sandbox');\"",
-    "glossary:lint": "bun glossary/_validate.ts"
+    "glossary:lint": "bun glossary/_validate.ts",
+    "procedures:lint": "bun procedures/_validate.ts"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
