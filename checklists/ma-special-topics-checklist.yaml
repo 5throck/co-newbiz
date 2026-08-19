@@ -4,7 +4,7 @@ title: "M&A Special Topics Checklist (Brown Field)"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.1.0"
+version: "1.2.0"
 effective_from: "2026-08-20"
 gate: DD
 
@@ -15,7 +15,7 @@ gate: DD
 
 items:
   - id: ma-01
-    text: "Relevant market defined (product and geographic) and HHI/HHI-delta calculated"
+    text: "Relevant market defined (product and geographic) and HHI/HHI-delta calculated — including common-ownership/common-control combinations (e.g. a financial sponsor already controlling one competitor acquiring another), not only direct mergers of the target entities themselves (pilot 010 finding F-2)"
     mandatory: true
   - id: ma-02
     text: "Merger-control filing requirements confirmed for every applicable jurisdiction (multi-jurisdiction filing check, not just the primary market)"

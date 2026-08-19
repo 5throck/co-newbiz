@@ -18,6 +18,7 @@
 | 007 | Punggu Offshore Wind Farm (2017-ongoing) | Green Field | In progress (real project still in permitting pipeline) | [pilot-007-punggu-offshore-wind.md](pilot-007-punggu-offshore-wind.md) |
 | 008 | Delivery Hero / Woowa Brothers (Baemin) (2020-2021) | Brown Field (structural antitrust remedy) | In progress | [pilot-008-delivery-hero-woowa-brothers.md](pilot-008-delivery-hero-woowa-brothers.md) |
 | 009 | Emart (Shinsegae) / eBay Korea (2021) | Brown Field (retail/e-commerce) | In progress | [pilot-009-emart-ebay-korea.md](pilot-009-emart-ebay-korea.md) |
+| 010 | Affinity Equity Partners / Lotte Rental (2025-2026) | Brown Field (rental car — BLOCKED) | In progress (real deal prohibited by KFTC) | [pilot-010-affinity-lotte-rental.md](pilot-010-affinity-lotte-rental.md) |
 
 ## Candidate Sourcing
 
@@ -38,6 +39,8 @@ New candidate cases (real, publicly documented — not fabricated, per the desig
 - **F-1 (pilot 008) — RAG framework never distinguished structural from behavioral antitrust remedies**: closed 2026-08-20. `docs/rag-framework.md` §2.5 (new) documents the two-shape grading rule.
 - **F-3 (pilot 009) — deal-structure-hypothesis step didn't prompt for acquisition vehicle**: closed 2026-08-20. `brownfield-pre-fs` (v1.0.0 → v1.1.0) step 2 now explicitly names direct/SPC/holdco as a structure-hypothesis dimension.
 - **F-2 (pilot 009) — no case yet with both acquirer debt AND coverage figures disclosed together**: still open, tracked as a sourcing note for a future pilot.
+- **F-2 (pilot 010) — checklist/procedure text implicitly assumed a direct target-to-target merger, missing the common-ownership/common-control fact pattern**: closed 2026-08-20. `checklists/ma-special-topics-checklist.yaml` (v1.1.0 → v1.2.0) ma-01 and `brownfield-dd` (v1.0.0 → v1.1.0) step 3 both broadened to explicitly name common-ownership combinations.
+- **F-4 (pilot 010) — a blocked deal's real fallout extended to unrelated, contingent financing plans**: still open — flagged as a possible `brownfield-pre-fs` disclosure item, not applied (narrow scenario).
 
 ## Two-Consecutive-Failure Rule (ADR-0034)
 
