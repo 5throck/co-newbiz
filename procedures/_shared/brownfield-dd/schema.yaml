@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-dd
 title: "Brown Field Due Diligence"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -29,8 +29,12 @@ steps:
     output_type: dd_finding
     description: >
       HHI/HHI-delta finalized, multi-jurisdiction filing confirmed, gun-jumping
-      check — `checklists/ma-special-topics-checklist.yaml` ma-01/02/03.
-      Real-case pattern reference: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md
+      check — `checklists/ma-special-topics-checklist.yaml` ma-01/02/03. Covers
+      common-ownership/common-control combinations (a sponsor already
+      controlling one competitor acquiring another), not only direct mergers
+      of the target entities — docs/pilots/pilot-010-affinity-lotte-rental.md
+      is a real prohibited deal of exactly this shape, the pilot set's first
+      outright-block outcome. Real-case pattern reference: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md
       (horizontal, conditional approval) vs. docs/pilots/pilot-002-hanwha-impact-hsd-engine.md
       (vertical, unconditional approval) — the same step must correctly
       discriminate between these risk shapes, not apply one template.
@@ -103,6 +107,7 @@ legal_basis:
   - "docs/governance-operations.md §2 (no waiver for completeness checks)"
   - "Meeting M5 (m5-ma-model-linkage.md) — fixed evaluation order"
   - "checklists/ma-special-topics-checklist.yaml"
+  - "docs/pilots/pilot-010-affinity-lotte-rental.md finding F-2"
 
 owner_agent: process-governance-manager
 last_reviewed: "2026-08-20"
