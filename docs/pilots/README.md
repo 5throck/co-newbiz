@@ -16,6 +16,8 @@
 | 005 | SK hynix Yongin Semiconductor Cluster (2023-ongoing) | Green Field | In progress (real project still under construction) | [pilot-005-sk-hynix-yongin-cluster.md](pilot-005-sk-hynix-yongin-cluster.md) |
 | 006 | Orion / LigaChem Bio (2024-2025) | Brown Field (pure diversification) | In progress | [pilot-006-orion-ligachem-bio.md](pilot-006-orion-ligachem-bio.md) |
 | 007 | Punggu Offshore Wind Farm (2017-ongoing) | Green Field | In progress (real project still in permitting pipeline) | [pilot-007-punggu-offshore-wind.md](pilot-007-punggu-offshore-wind.md) |
+| 008 | Delivery Hero / Woowa Brothers (Baemin) (2020-2021) | Brown Field (structural antitrust remedy) | In progress | [pilot-008-delivery-hero-woowa-brothers.md](pilot-008-delivery-hero-woowa-brothers.md) |
+| 009 | Emart (Shinsegae) / eBay Korea (2021) | Brown Field (retail/e-commerce) | In progress | [pilot-009-emart-ebay-korea.md](pilot-009-emart-ebay-korea.md) |
 
 ## Candidate Sourcing
 
@@ -33,6 +35,9 @@ New candidate cases (real, publicly documented — not fabricated, per the desig
 - **F-1 (pilot 006) — certification-transferability step assumes an operational/manufacturing-type certification**: still open — needs a Stage 4 SRS branch for R&D-stage/asset-tied-regulatory-pathway targets (biopharma, etc.).
 - **F-2 (pilot 006) — QoE step assumes an operating business with historical EBITDA**: still open — needs a Stage 4 SRS alternate path for pipeline/licensing-value-driven targets.
 - **F-1 (pilot 007) — site pre-filter used administrative jurisdiction instead of the legally applicable affected-area radius**: closed 2026-08-20. `greenfield-screening` (v1.1.0 → v1.2.0) step 2 now explicitly requires the notification boundary be computed from the applicable legal standard, not assumed equal to administrative jurisdiction.
+- **F-1 (pilot 008) — RAG framework never distinguished structural from behavioral antitrust remedies**: closed 2026-08-20. `docs/rag-framework.md` §2.5 (new) documents the two-shape grading rule.
+- **F-3 (pilot 009) — deal-structure-hypothesis step didn't prompt for acquisition vehicle**: closed 2026-08-20. `brownfield-pre-fs` (v1.0.0 → v1.1.0) step 2 now explicitly names direct/SPC/holdco as a structure-hypothesis dimension.
+- **F-2 (pilot 009) — no case yet with both acquirer debt AND coverage figures disclosed together**: still open, tracked as a sourcing note for a future pilot.
 
 ## Two-Consecutive-Failure Rule (ADR-0034)
 

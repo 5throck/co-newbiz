@@ -18,6 +18,15 @@ Financial, Market, Data Confidence, Regulatory/Permit, Technical/Execution, Risk
 
 Precondition: WACC/hurdle must be `assumption.kind = 'user'` (design §4-1) before this dimension can be scored — meeting M1 fixed this as a Pre-FS entry condition, so the sequencing already holds.
 
+## 2.5. Regulatory/Permit Dimension — Structural vs. Behavioral Remedies
+
+An antitrust or regulatory remedy is not a single grading pattern — two real, structurally different shapes have shown up in pilot cases, and they should be graded differently:
+
+- **Behavioral remedy** (an ongoing compliance obligation — e.g. `docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md`'s 3-year supply/pricing conditions): grade Amber **for the full duration of the obligation**. There is no discharge event partway through — the obligation is either still active (Amber) or expired (re-evaluate).
+- **Structural remedy** (a one-time closing condition — e.g. `docs/pilots/pilot-008-delivery-hero-woowa-brothers.md`'s mandatory divestiture): grade Amber **while the condition is open** (real closing risk exists — e.g. a divestiture buyer search could fail), but re-gradable toward Green **once the condition is confirmed discharged**, since nothing remains to monitor post-discharge, unlike a behavioral remedy.
+
+Do not apply one grading pattern to both shapes — a discharged structural remedy and a live behavioral remedy are not the same risk, even if both originated from a "conditional approval."
+
 ## 3. Data Confidence Dimension and Cap (D-M3-2, D-M3-3)
 
 | Chain reliability grade | Data confidence grade |

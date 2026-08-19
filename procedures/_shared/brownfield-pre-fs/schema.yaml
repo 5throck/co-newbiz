@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-pre-fs
 title: "Brown Field Pre-Feasibility"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -26,9 +26,11 @@ steps:
     output_type: deal_structure_hypothesis
     description: >
       Structure hypothesis (asset vs. stock, full vs. partial stake, primary
-      vs. secondary instrument mix) — see docs/pilots/pilot-002-hanwha-impact-hsd-engine.md
-      §2 for a real worked example of a mixed secondary-purchase +
-      primary-rights-issue structure.
+      vs. secondary instrument mix, AND acquisition vehicle — direct / SPC /
+      holdco, per docs/pilots/pilot-009-emart-ebay-korea.md finding F-3, a
+      real case structured through a purpose-built SPC) — see
+      docs/pilots/pilot-002-hanwha-impact-hsd-engine.md §2 for a real worked
+      example of a mixed secondary-purchase + primary-rights-issue structure.
   - id: 3
     gate: Pre-FS
     agent_key: certification-agent
