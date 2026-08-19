@@ -1,6 +1,6 @@
-# Memory Index — co-newbiz
+# Memory Index
 
-Session logs live in `memory/YYYY-MM-DD.md`. This file indexes them.
+## Sessions
 
 | Date | Summary |
 |------|---------|
