@@ -13,6 +13,7 @@
 | 002 | Hanwha Impact / HSD Engine (2023-2024) | Brown Field | In progress | [pilot-002-hanwha-impact-hsd-engine.md](pilot-002-hanwha-impact-hsd-engine.md) |
 | 003 | Doosan Bobcat / Doosan Robotics share exchange (2024) | Intra-group restructuring | In progress (real case suspended) | [pilot-003-doosan-bobcat-robotics.md](pilot-003-doosan-bobcat-robotics.md) |
 | 004 | SK Group cross-subsidiary capital rebalancing (2023-2025) | Group capital allocation | In progress | [pilot-004-sk-group-capital-rebalancing.md](pilot-004-sk-group-capital-rebalancing.md) |
+| 005 | SK hynix Yongin Semiconductor Cluster (2023-ongoing) | Green Field | In progress (real project still under construction) | [pilot-005-sk-hynix-yongin-cluster.md](pilot-005-sk-hynix-yongin-cluster.md) |
 
 ## Candidate Sourcing
 
@@ -24,6 +25,9 @@ New candidate cases (real, publicly documented — not fabricated, per the desig
 - **F-2 (pilot 003) — no decision state for a withdraw-then-resubmit pattern**: closed 2026-08-20. `entity-ic-review` and `group-investment-review` both gained a fourth decision state, `withdrawn_pending_resubmission`.
 - **F-2 (pilot 002) — ma-07/08 customer-only wording**: closed 2026-08-20 (applied directly to `checklists/ma-special-topics-checklist.yaml` v1.1.0 at the time).
 - **F-1 (pilot 004) — step 4 (group agenda ranking) has no public-data calibration path**: still open, tracked in `docs/rag-framework.md` §6 as requiring internal historical cases specifically.
+- **F-1 (pilot 005) — a real Green Field project proceeded before infrastructure plans were finalized**: closed 2026-08-20. `greenfield-screening` (v1.0.0 → v1.1.0) gained a new kill-criteria condition, `infrastructure_plan_not_finalized_at_site_announcement` → escalate to risk-officer.
+- **F-2 (pilot 005) — site-selection-checklist ss-08 framed only for local-community objections**: closed 2026-08-20. Broadened to cover inter-regional resource disputes (`checklists/site-selection-checklist.yaml` v1.1.0), same pattern as pilot 002's ma-07/08 fix.
+- **F-3 (pilot 005) — incentive-NPV mechanics not numerically validated**: still open — a single-site case has no multi-candidate comparison to validate against; would need a future case with disclosed competing finalists.
 
 ## Two-Consecutive-Failure Rule (ADR-0034)
 
