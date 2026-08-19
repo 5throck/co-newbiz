@@ -15,3 +15,13 @@ Session logs live in `memory/YYYY-MM-DD.md`. This file indexes them.
 
 | ID | Title | Status | File |
 |----|-------|--------|------|
+
+## Meetings
+
+| Date | Topic | File |
+|------|-------|------|
+
+## ADRs
+
+| ID | Title | Status | File |
+|----|-------|--------|------|
