@@ -1,7 +1,7 @@
 # Manual Pilot Candidate — Real-Case Research
 
 **Owner**: pm (research), risk-officer (fit review pending)
-**Status**: Confirmed by the user (2026-08-20) — HD Hyundai / STX Heavy Industries promoted to `docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md`. This file remains the candidate-sourcing log for future cases, per the user's instruction that more real cases are expected to follow (see `docs/pilots/README.md`).
+**Status**: Both candidates identified below have been confirmed and promoted (2026-08-20) — HD Hyundai / STX Heavy Industries to `docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md`, Hanwha Impact / HSD Engine to `docs/pilots/pilot-002-hanwha-impact-hsd-engine.md`. This file remains the candidate-sourcing log for future cases, per the user's instruction that more real cases are expected to follow (see `docs/pilots/README.md`).
 **Design of record**: design v1.0 §10 (O-3), `docs/transition-plan.md` §5.5
 
 > Per the O-3 resolution: since no internal deal is available yet, this document researches a real, publicly documented precedent to use as the pilot case, rather than a fabricated synthetic one. All facts below are sourced from public Korean news/regulatory reporting — see citations.
