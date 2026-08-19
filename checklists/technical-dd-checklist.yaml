@@ -1,0 +1,38 @@
+governance_doc_id: chk-technical-dd
+layer: checklist
+title: "Technical Due Diligence Checklist"
+scope: shared
+enforceability: mixed
+owner_agent: technical-dd-agent
+version: "1.0.0"
+effective_from: "2026-08-20"
+gate: DD
+
+items:
+  - id: tdd-01
+    text: "Site visit conducted with pre-visit document request list and on-site observation checklist"
+    mandatory: true
+  - id: tdd-02
+    text: "Evidence captured during site visit (photo, measurement, log) — observations without captured evidence do not survive IC scrutiny"
+    mandatory: true
+  - id: tdd-03
+    text: "Technology readiness level (TRL) assessed for core production processes"
+    mandatory: true
+  - id: tdd-04
+    text: "Bottleneck processes identified"
+    mandatory: true
+  - id: tdd-05
+    text: "Remaining useful life of key equipment assessed"
+    mandatory: true
+  - id: tdd-06
+    text: "EHS liability exposure assessed"
+    mandatory: true
+  - id: tdd-07
+    text: "Capex plan independently verified against physical/technical findings, not accepted from management as-is"
+    mandatory: true
+  - id: tdd-08
+    text: "Certification status of key production lines confirmed (feeds certification-agent, not duplicated here)"
+    mandatory: false
+
+legal_basis:
+  - "skills/technical-due-diligence, skills/site-visit-protocol (design v1.0 section 5.3)"
