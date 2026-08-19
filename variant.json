@@ -1,0 +1,41 @@
+{
+  "name": "co-newbiz",
+  "displayName": "Co Newbiz",
+  "description": "New-business-review AI team and system. Owns the regulations, procedures, guidelines and checklists for new business development and their ongoing operation (axis A), implements and maintains them as a system (axis B), and performs the actual deal reviews on top of that (axis C). Covers Green Field (new establishment) and Brown Field (M&A), with proxy-chain demand estimation for industries that have no direct market data.",
+  "variant_type": "consulting",
+  "status": "beta",
+  "version": "0.1.0",
+  "inherits_common": "templates/common",
+  "designDoc": "https://github.com/5throck/ai-workspace-standards/blob/main/docs/designs/2026-08-19-co-newbiz-design_ko.md",
+  "specId": "2026-08-19-co-newbiz-design-ko",
+  "agent_overrides": {
+    "pm": {
+      "type": "additive",
+      "reason": "PM acts as New Business Review Lead: coordinates four domain leads (functional / technical / industry / region), enforces stage gates including the Entity IC to Group IC chain, approves ADRs, and owns release judgement. Workspace flat PM Gateway is preserved — domain leads are design and review owners, not dispatchers.",
+      "since": "2026-08-19",
+      "reviewed_by": "architect",
+      "overrides": [
+        "agent-roster",
+        "governance-workflow",
+        "dispatch-protocol"
+      ]
+    }
+  },
+  "skill_manifest": {
+    "variant_specific": []
+  },
+  "agent_manifest": {
+    "variant_agents_dir": "agents",
+    "pipeline_order": [],
+    "optional": [],
+    "notes": "Agents are organised into four domains under agents/domains/ with _core/pm.md at the top. Roster of 34 is planned in the design doc section 5; files are created in Stage 0.2. PM dispatches specialists per stage gate as defined in procedures/*.yaml — no strict sequential pipeline."
+  },
+  "lifecycle": {
+    "statusSince": "2026-08-19",
+    "lastTransition": "initial → beta on 2026-08-19",
+    "stablePromotedOn": null
+  },
+  "created_at": "2026-08-19",
+  "phaseAComplete": false,
+  "promotionChecklist": "PROMOTION_CHECKLIST.md"
+}
