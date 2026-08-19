@@ -9,9 +9,27 @@ content_hash: PLACEHOLDER
 > **Status**: ⚠️ Beta — v0.1.0
 > New-business-review AI team and system. Owns the regulations, procedures, guidelines and checklists for new business development and their ongoing operation (axis A), implements and maintains them as a system (axis B), and performs the actual deal reviews on top of that (axis C). Covers Green Field (new establishment) and Brown Field (M&A), with proxy-chain demand estimation for industries that have no direct market data.
 
-## Overview
+## What Is This?
 
-New-business-review AI team and system. Owns the regulations, procedures, guidelines and checklists for new business development and their ongoing operation (axis A), implements and maintains them as a system (axis B), and performs the actual deal reviews on top of that (axis C). Covers Green Field (new establishment) and Brown Field (M&A), with proxy-chain demand estimation for industries that have no direct market data.. See docs/context.md for full architecture and standards.
+`co-newbiz` is an AI-agent team and system for new-business-review — Green Field (new establishment) and Brown Field (M&A). It owns the governance for new business development (regulations, procedures, guidelines, checklists — axis A), implements and maintains that governance as a system (axis B), and performs the actual deal reviews on top of both (axis C). Its signature capability is proxy-chain demand estimation for industries that have no direct market data (e.g. crankshaft → marine engine → ship, with CGT/BHP/ton unit conversion), with the resulting data-confidence grade capping every downstream RAG assessment.
+
+See [docs/context.md](docs/context.md) for full architecture and standards.
+
+## Repository Structure
+
+```
+co-newbiz/
+  agents/            domain agents (functional, technical, industry, region) + _core/_shared
+  policies/           group and entity-level regulations
+  procedures/         shared/entity/region/group procedures with references: + overrides
+  guidelines/         recommended-tier practice docs
+  checklists/         gate checklists, item-level mandatory:true/false
+  templates/          deliverable templates (IC memo, etc.)
+  glossary/           business/financial/legal/technical/industry term sets
+  region-profiles/    per-region regulatory and incentive profiles (Stage 2+)
+  docs/               process map, governance operations, manuals, ADRs
+  memory/             session logs and meeting transcripts
+```
 
 ## Quick Start
 
@@ -96,6 +114,17 @@ Your partners consist of specialized agents, each with a distinct role. The **Pr
 - **validate-docs-links**: 
 - **zod-contract-gate**: 
 
+## Session Start Checklist
+
+1. Read [docs/context.md](docs/context.md) and the design of record it links to.
+2. Confirm the current Stage (per the design's §10 execution order — process/governance docs before code).
+3. Check `memory/MEMORY.md` for the latest session and meeting entries before starting new work.
+4. Route all requests through the PM — see below.
+
+## Multi-Agent Workflow
+
+PM acts as **New Business Review Lead**, coordinating four domain leads (`process-governance-manager`, `platform-lead`, `industry-lead`, `region-lead`) rather than dispatching every specialist directly. See [CLAUDE.md](CLAUDE.md) for the full role override and the three co-equal team axes (governance ownership, system build, deal review).
+
 ## How to Collaborate
 
 Working with us is structured to maximize quality and prevent collisions. Here is our standard workflow:
@@ -135,6 +164,10 @@ This variant focuses on Strategy consulting for AI-assisted business consulting 
 - **Additional Checks**: Pending
 
 See `scripts/helpers/variant-governance-rules.ts` for promotion criteria.
+
+## License
+
+Internal workspace project — not for external distribution. Governed by the same terms as the parent `ai_workspace` repository.
 
 ---
 

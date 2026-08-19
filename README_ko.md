@@ -140,4 +140,5 @@ New-business-review AI team and system. Owns the regulations, procedures, guidel
 
 ---
 
-*최근 업데이트: 2026-08-19*
+*최근 업데이트: 2026-08-20*
+*Last Updated: 2026-08-19*

@@ -1,0 +1,50 @@
+governance_doc_id: chk-greenfield-feasibility
+layer: checklist
+title: "Green Field Feasibility Checklist"
+scope: shared
+enforceability: mixed
+owner_agent: greenfield-agent
+version: "1.0.0"
+effective_from: "2026-08-20"
+gate: Screening/Pre-FS
+
+# Item-level enforceability, per design's rule that a checklist's overall
+# enforceability is "mixed" precisely because individual items differ
+# (design section 6.1). Do not mark the whole checklist mandatory or
+# recommended in one shot.
+items:
+  - id: gf-01
+    text: "All candidate sites screened against mandatory infrastructure minimums (wastewater capacity checked before power)"
+    mandatory: true
+  - id: gf-02
+    text: "Sites failing infrastructure minimums excluded from scoring, not merely penalized"
+    mandatory: true
+  - id: gf-03
+    text: "Regional incentive NPV computed for each surviving candidate (discounted at deal WACC, net of expected clawback risk)"
+    mandatory: true
+  - id: gf-04
+    text: "Permit critical path (DAG-derived, not single-permit lead time) computed for each surviving candidate"
+    mandatory: true
+  - id: gf-05
+    text: "Partner dependency (if any) confirmed or site marked conditional"
+    mandatory: true
+  - id: gf-06
+    text: "Talent pipeline assessment completed (local university/vocational partnerships, regional labor-pool competition)"
+    mandatory: true
+  - id: gf-07
+    text: "Community partnership assessment completed (local supplier development, resident acceptance history)"
+    mandatory: true
+  - id: gf-08
+    text: "Ramp-up curve reflects certification lead time — no revenue modeled before mandatory certifications are obtained"
+    mandatory: true
+  - id: gf-09
+    text: "Competitor capacity-expansion plans reviewed for pricing-assumption risk"
+    mandatory: false
+  - id: gf-10
+    text: "Real options / staged-investment structure considered as an alternative to a single lump-sum capex commitment"
+    mandatory: false
+
+legal_basis:
+  - "Group New Business Review Policy §4.1"
+  - "procedures/_shared/greenfield-screening/schema.yaml"
+  - "Meeting M1, M6"
