@@ -1,0 +1,57 @@
+schema_version: "1.0"
+procedure_id: shared-greenfield-fs
+title: "Green Field Full Feasibility"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: FS
+
+steps:
+  - id: 1
+    gate: FS
+    agent_key: financial-analyst
+    skill_key: growth-projection-modeling
+    output_type: growth_projection
+    description: >
+      Anchored growth projection (design §4-4) — every derived figure carries
+      an anchor_ref. Base-rate check: outside the top decile of historical/peer
+      distribution requires risk-officer sign-off, not a silent pass.
+  - id: 2
+    gate: FS
+    agent_key: greenfield-agent
+    skill_key: site-infrastructure-assessment
+    output_type: capex_schedule_with_permit_critical_path
+    description: >
+      Full capex schedule sequenced against the permit DAG's critical path
+      (permit-pathway-mapping) — permit lead time is a direct IRR input, not
+      a separate footnote.
+  - id: 3
+    gate: FS
+    agent_key: valuation-agent
+    skill_key: investment-feasibility-modeling
+    output_type: valuation_model
+    description: NPV/IRR/Payback/DSCR model assembled from confirmed WACC/hurdle (Pre-FS output) and the anchored growth projection.
+  - id: 4
+    gate: FS
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: Confirm FS deliverables complete; open DD.
+
+kill_criteria:
+  - condition: growth_projection_outside_top_decile_without_risk_officer_signoff
+    action: halt
+  - condition: permit_critical_path_exceeds_incentive_deadline
+    action: escalate_to_risk_officer
+
+legal_basis:
+  - "Group New Business Review Policy §2.3"
+  - "Design v1.0 §4-4"
+  - "docs/process-map.md — FS row"
+  - "docs/rag-framework.md §6 (base-rate calibration)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-20"

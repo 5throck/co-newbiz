@@ -1,0 +1,108 @@
+schema_version: "1.0"
+procedure_id: shared-brownfield-dd
+title: "Brown Field Due Diligence"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: DD
+
+steps:
+  - id: 1
+    gate: DD
+    agent_key: commercial-dd-agent
+    skill_key: commercial-due-diligence
+    output_type: dd_finding
+    description: Customer/channel/pricing-power checks per `checklists/commercial-dd-checklist.yaml`.
+  - id: 2
+    gate: DD
+    agent_key: technical-dd-agent
+    skill_key: technical-due-diligence
+    output_type: dd_finding
+    description: Site visit, remaining equipment life, TRL, EHS per `checklists/technical-dd-checklist.yaml`.
+  - id: 3
+    gate: DD
+    agent_key: antitrust-agent
+    skill_key: antitrust-screening
+    output_type: dd_finding
+    description: >
+      HHI/HHI-delta finalized, multi-jurisdiction filing confirmed, gun-jumping
+      check — `checklists/ma-special-topics-checklist.yaml` ma-01/02/03.
+      Real-case pattern reference: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md
+      (horizontal, conditional approval) vs. docs/pilots/pilot-002-hanwha-impact-hsd-engine.md
+      (vertical, unconditional approval) — the same step must correctly
+      discriminate between these risk shapes, not apply one template.
+  - id: 4
+    gate: DD
+    agent_key: hr-integration-agent
+    skill_key: management-incentive-review
+    output_type: dd_finding
+    description: Executive CoC-trigger compensation and compensation-harmonization-analysis — `checklists/ma-special-topics-checklist.yaml` ma-04 through ma-06.
+  - id: 5
+    gate: DD
+    agent_key: customer-retention-agent
+    skill_key: customer-attrition-risk
+    output_type: dd_finding
+    description: >
+      Change-of-control clause scan across customer AND supplier contracts
+      (checklist ma-07/08, widened per docs/pilots/pilot-002-hanwha-impact-hsd-engine.md
+      finding F-2 — a retained seller-side supply relationship is the same
+      risk category as a customer contract).
+  - id: 6
+    gate: DD
+    agent_key: incentive-agent
+    skill_key: incentive-clawback-assessment
+    output_type: dd_finding
+    description: Clawback exposure on any contemplated relocation/restructuring — checklist ma-09.
+  - id: 7
+    gate: DD
+    agent_key: valuation-agent
+    skill_key: debt-and-contingent-liability-simulation
+    output_type: dd_finding
+    description: Contingent liabilities and covenant-breach scenario — checklist ma-10/11.
+  - id: 8
+    gate: DD
+    agent_key: certification-agent
+    skill_key: permit-pathway-mapping
+    output_type: dd_finding
+    description: >
+      Certification transferability confirmed LAST per meeting M5's fixed
+      evaluation order (checklist ma-12) — a non-transferable certification
+      can strip the entire acquisition premium and must not be computed
+      against a valuation that already assumed it.
+  - id: 9
+    gate: DD
+    agent_key: compliance-officer
+    skill_key: compliance-monitoring
+    output_type: six_validator_completeness_check
+    description: >
+      All six M&A validators (steps 3-8, mapped to antitrust/HR/customer/
+      incentive/contingent-liability/certification) must be present with
+      landed dd_finding records. This is a completeness check with NO
+      WAIVER PATH (design §8.9-1(f), docs/governance-operations.md §2) —
+      not a judgment call.
+  - id: 10
+    gate: DD
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: Confirm DD deliverables complete; open Entity IC.
+
+kill_criteria:
+  - condition: any_of_six_ma_validators_missing_at_dd_exit
+    action: halt   # no waiver path — completeness check, not judgment (design §8.9-1(f))
+  - condition: certification_transferability_computed_by_inference_not_confirmation
+    action: halt   # non-negotiable boundary #5 — inference disallowed
+
+legal_basis:
+  - "Group New Business Review Policy §2.3"
+  - "Design v1.0 §4-6, §8.9-1(f) (six-validator no-waiver completeness check)"
+  - "docs/process-map.md — DD row"
+  - "docs/governance-operations.md §2 (no waiver for completeness checks)"
+  - "Meeting M5 (m5-ma-model-linkage.md) — fixed evaluation order"
+  - "checklists/ma-special-topics-checklist.yaml"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-20"
