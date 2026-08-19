@@ -1,0 +1,63 @@
+schema_version: "1.0"
+procedure_id: shared-greenfield-dd
+title: "Green Field Due Diligence"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: DD
+
+steps:
+  - id: 1
+    gate: DD
+    agent_key: technical-dd-agent
+    skill_key: site-visit-protocol
+    output_type: dd_finding
+    description: >
+      Site visit(s) against `checklists/technical-dd-checklist.yaml` and
+      `checklists/site-selection-checklist.yaml` — findings land as
+      dd_finding records with value_impact, never narrative-only.
+  - id: 2
+    gate: DD
+    agent_key: greenfield-agent
+    skill_key: talent-pipeline-planning
+    output_type: dd_finding
+    description: Talent pipeline and ramp-up curve validation against `checklists/site-selection-checklist.yaml` ss-07.
+  - id: 3
+    gate: DD
+    agent_key: greenfield-agent
+    skill_key: community-partnership-planning
+    output_type: dd_finding
+    description: Community acceptance and prior dispute history check (`checklists/site-selection-checklist.yaml` ss-08).
+  - id: 4
+    gate: DD
+    agent_key: risk-officer
+    skill_key: dd-to-valuation-bridge
+    output_type: dd_valuation_bridge
+    description: >
+      Every dd_finding with value_impact must land in the valuation bridge —
+      design's most-common-failure-mode rule (DD and the model must not run
+      separately).
+  - id: 5
+    gate: DD
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: Confirm DD deliverables complete; open Entity IC.
+
+kill_criteria:
+  - condition: wastewater_capacity_insufficient_and_no_mitigation
+    action: halt
+  - condition: dd_finding_with_value_impact_not_in_valuation_bridge
+    action: halt
+
+legal_basis:
+  - "Group New Business Review Policy §2.3"
+  - "Design v1.0 §5.3, §12 (DD-to-valuation-bridge verification gate)"
+  - "docs/process-map.md — DD row"
+  - "checklists/technical-dd-checklist.yaml, checklists/site-selection-checklist.yaml"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-20"

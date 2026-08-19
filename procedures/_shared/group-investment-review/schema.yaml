@@ -3,7 +3,7 @@ procedure_id: shared-group-investment-review
 title: "Group Investment Committee Review"
 scope: shared
 level: group
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -46,8 +46,13 @@ steps:
     skill_key: stage-gate-governance
     output_type: group_ic_decision
     description: >
-      Record the Group IC decision as approved / rejected / conditional
-      (meeting M2 D-M2-3 — conditional is first-class, not a note on approved).
+      Record the Group IC decision as approved / rejected / conditional /
+      withdrawn_pending_resubmission (meeting M2 D-M2-3 — conditional is
+      first-class, not a note on approved; the fourth state was added per
+      docs/pilots/pilot-003-doosan-bobcat-robotics.md finding F-2, matching
+      entity-ic-review's decision model — a real case can withdraw and
+      re-propose with revised terms rather than landing on any of the
+      original three states).
 
 kill_criteria: []  # Group IC does not introduce new Kill Criteria beyond those already
                     # triggered upstream; it is a ranking/portfolio gate, not a new red-team pass.

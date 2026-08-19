@@ -1,0 +1,61 @@
+schema_version: "1.0"
+procedure_id: shared-brownfield-pre-fs
+title: "Brown Field Pre-Feasibility"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: Pre-FS
+
+steps:
+  - id: 1
+    gate: Pre-FS
+    agent_key: valuation-agent
+    skill_key: wacc-input-session
+    output_type: wacc_hurdle_confirmed
+    description: >
+      WACC/hurdle IRR moved from assumption.kind='assumed' to 'user' — same
+      hard precondition as Green Field (meeting M1). No number is fabricated
+      when this step cannot complete — see pilot findings in docs/pilots/.
+  - id: 2
+    gate: Pre-FS
+    agent_key: brownfield-agent
+    skill_key: brownfield-feasibility
+    output_type: deal_structure_hypothesis
+    description: >
+      Structure hypothesis (asset vs. stock, full vs. partial stake, primary
+      vs. secondary instrument mix) — see docs/pilots/pilot-002-hanwha-impact-hsd-engine.md
+      §2 for a real worked example of a mixed secondary-purchase +
+      primary-rights-issue structure.
+  - id: 3
+    gate: Pre-FS
+    agent_key: certification-agent
+    skill_key: permit-pathway-mapping
+    output_type: certification_transferability_check
+    description: >
+      Confirm certification transferability on change of control where load-bearing
+      to the thesis — inference is explicitly disallowed (design's non-negotiable
+      boundary #5); must be confirmed against the certifying body's own rules.
+  - id: 4
+    gate: Pre-FS
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: Confirm Pre-FS deliverables complete; open FS.
+
+kill_criteria:
+  - condition: wacc_hurdle_still_assumed
+    action: halt
+  - condition: certification_transferability_unconfirmed_and_load_bearing
+    action: escalate_to_risk_officer
+
+legal_basis:
+  - "Group New Business Review Policy §2.3"
+  - "Design v1.0 §4-1, non-negotiable boundary #5 (permit/certification separation, no inference)"
+  - "docs/process-map.md — Pre-FS row"
+  - "Meeting M1 (process-2026-08-20-m1-process-skeleton.md)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-20"

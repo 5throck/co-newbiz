@@ -1,0 +1,66 @@
+schema_version: "1.0"
+procedure_id: shared-greenfield-pre-fs
+title: "Green Field Pre-Feasibility"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: Pre-FS
+
+steps:
+  - id: 1
+    gate: Pre-FS
+    agent_key: valuation-agent
+    skill_key: wacc-input-session
+    output_type: wacc_hurdle_confirmed
+    description: >
+      WACC/hurdle IRR moved from assumption.kind='assumed' to 'user' — hard
+      precondition before FS opens (meeting M1). FS cannot proceed on a
+      provisional discount rate.
+  - id: 2
+    gate: Pre-FS
+    agent_key: greenfield-agent
+    skill_key: site-infrastructure-assessment
+    output_type: infra_lead_time_cost_estimate
+    description: Infrastructure lead-time and cost estimate for the pre-filtered site shortlist from Screening.
+  - id: 3
+    gate: Pre-FS
+    agent_key: greenfield-agent
+    skill_key: regional-incentive-sourcing
+    output_type: incentive_npv_site_comparison
+    description: >
+      Incentive package converted to NPV, compared against infra capex and
+      logistics cost on the same table per site (design §4-7, meeting M6
+      D-M6-3) — never listed as a separate figure from the cost side.
+  - id: 4
+    gate: Pre-FS
+    agent_key: certification-agent
+    skill_key: permit-pathway-mapping
+    output_type: certification_transferability_check
+    description: >
+      Confirm certification transferability where load-bearing to the thesis
+      — only relevant if the site plan depends on an existing certified
+      operation nearby or a certified partner; otherwise mark not-applicable.
+  - id: 5
+    gate: Pre-FS
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: Confirm Pre-FS deliverables complete; open FS.
+
+kill_criteria:
+  - condition: wacc_hurdle_still_assumed
+    action: halt
+  - condition: certification_transferability_unconfirmed_and_load_bearing
+    action: escalate_to_risk_officer
+
+legal_basis:
+  - "Group New Business Review Policy §2.3"
+  - "Design v1.0 §4-1, §4-7"
+  - "docs/process-map.md — Pre-FS row"
+  - "Meeting M1 (process-2026-08-20-m1-process-skeleton.md)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-20"

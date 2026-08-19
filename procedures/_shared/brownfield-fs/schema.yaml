@@ -1,0 +1,53 @@
+schema_version: "1.0"
+procedure_id: shared-brownfield-fs
+title: "Brown Field Full Feasibility"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: FS
+
+steps:
+  - id: 1
+    gate: FS
+    agent_key: financial-analyst
+    skill_key: quality-of-earnings
+    output_type: qoe_normalized_ebitda
+    description: Normalized EBITDA via QoE, feeding the valuation bridge.
+  - id: 2
+    gate: FS
+    agent_key: valuation-agent
+    skill_key: investment-feasibility-modeling
+    output_type: full_valuation
+    description: NPV/IRR/Payback/DSCR model assembled from confirmed WACC/hurdle (Pre-FS output) and normalized EBITDA.
+  - id: 3
+    gate: FS
+    agent_key: antitrust-agent
+    skill_key: antitrust-screening
+    output_type: six_way_cross_check_started
+    description: >
+      Six-way M&A cross-check *started* here per meeting M5's fixed
+      evaluation order — (1) antitrust + HR integration, (2) customer
+      retention + incentive, (3) certification transferability last.
+      Completion (all six landed) is a DD-exit requirement, not FS-exit.
+  - id: 4
+    gate: FS
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: Confirm FS deliverables complete; open DD.
+
+kill_criteria:
+  - condition: qoe_reveals_material_earnings_quality_gap_unexplained
+    action: escalate_to_risk_officer
+
+legal_basis:
+  - "Group New Business Review Policy §2.3"
+  - "Design v1.0 §4-4, §4-6"
+  - "docs/process-map.md — FS row"
+  - "Meeting M5 (m5-ma-model-linkage.md) — fixed evaluation order"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-20"

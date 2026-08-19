@@ -1,0 +1,67 @@
+schema_version: "1.0"
+procedure_id: shared-entity-ic-review
+title: "Entity Investment Committee Review"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: "Entity IC"
+
+steps:
+  - id: 1
+    gate: "Entity IC"
+    agent_key: risk-officer
+    skill_key: rag-scoring-framework
+    output_type: rag_assessment_proposed
+    description: >
+      AI-proposed RAG grade per docs/rag-framework.md — six dimensions,
+      priority-ordered (not averaged), data confidence capping the ceiling.
+      This is a PROPOSAL, never a decision.
+  - id: 2
+    gate: "Entity IC"
+    agent_key: process-governance-manager
+    skill_key: rag-scoring-framework
+    output_type: kill_criteria_check
+    description: Explicit pass/fail against every Kill Criteria condition applicable at this gate — see policies/group/neb-policy.md §4.
+  - id: 3
+    gate: "Entity IC"
+    agent_key: brownfield-agent
+    skill_key: dd-to-valuation-bridge
+    output_type: ic_memo
+    description: >
+      IC memo assembled per templates/deliverables/ic-memo-template.md —
+      RAG table, DD findings, M&A special-topics section (BF only), Kill
+      Criteria check, three-stage reviewer sign-off table.
+  - id: 4
+    gate: "Entity IC"
+    agent_key: entity-ic-reviewer   # human role, not an AI agent — see docs/manuals/business-manual.md §1
+    skill_key: stage-gate-governance
+    output_type: entity_ic_decision
+    description: >
+      Human reviewer confirms or corrects the AI-proposed RAG grade (with a
+      reason if corrected — docs/manuals/business-manual.md §3) and records
+      a decision: approved | rejected | conditional | withdrawn_pending_resubmission.
+      The fourth state is not in the original design and was added per
+      docs/pilots/pilot-003-doosan-bobcat-robotics.md finding F-2 — a real
+      case (Doosan Bobcat/Robotics) withdrew and re-proposed with revised
+      terms, a pattern the original three-state model could not represent.
+      analysis_task.reviewed_by must be non-NULL on every required
+      deliverable before this step can complete (design §8.9-1).
+
+kill_criteria:
+  - condition: analysis_task_reviewed_by_null_on_required_deliverable
+    action: halt
+  - condition: kill_criteria_condition_triggered
+    action: halt
+
+legal_basis:
+  - "Group New Business Review Policy §2.3, §4"
+  - "Design v1.0 §8.9-1, §10.1-2 (three-stage review model)"
+  - "docs/process-map.md — Entity IC row"
+  - "docs/manuals/business-manual.md §1, §3"
+  - "docs/pilots/pilot-003-doosan-bobcat-robotics.md finding F-2 (withdrawn_pending_resubmission state)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-20"

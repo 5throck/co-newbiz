@@ -52,6 +52,8 @@ Per design §4-2, thresholds are declared per `stage_gate` — the bands above a
 
 Action item A-3 from meeting M3: a calibration dry-run tests the bands above against 5-10 historical decisions before they are trusted for live gating. This runs once entity onboarding under `docs/transition-plan.md` produces enough historical cases to calibrate against — tracked as a Stage 3 follow-up, not a blocker to using the bands manually in the interim (manual application lets a human sanity-check every grade before the calibration dataset exists).
 
+**Two different calibration paths, not one** — `docs/pilots/pilot-004-sk-group-capital-rebalancing.md` finding F-1: the antitrust-screening-adjacent steps (RAG's Regulatory/Permit dimension, `brownfield-dd`'s antitrust step) can be backtested against real, public regulatory decisions — pilots 001-003 did exactly this. `group-investment-review`'s group-agenda-ranking step (step 4: IRR-over-hurdle spread + RAG grade + capital requested) **cannot** — its inputs are internal capital-allocation figures no group discloses at that granularity, publicly, ever. This step's calibration must wait for the team's own internal historical cases; there is no public-case substitute path for it, unlike the other steps.
+
 ## 7. Seed Data Shape (Stage 4/5 Forward Reference)
 
 The rules above are written to be directly encodable once the `rag_rule` table exists (design §4-2 schema): each row here becomes a `(stage_gate, dimension, grade, condition_expr, priority)` tuple. No schema work happens in Stage 3 — this section exists so Stage 4's SRS can point back to a settled source rather than re-deriving the thresholds from meeting transcripts.

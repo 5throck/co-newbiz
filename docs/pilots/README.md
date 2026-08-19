@@ -18,6 +18,13 @@
 
 New candidate cases (real, publicly documented — not fabricated, per the design's explicit rule that a synthetic case cannot substitute for the pilot) are researched and logged in `../pilot-candidate-research.md` before being promoted to a numbered entry here. Promotion happens when a candidate is confirmed by the user as the working case for an actual pilot run.
 
+## Findings Resolved
+
+- **F-3/F-5 (pilots 001, 002) — missing Pre-FS/FS/DD/Entity-IC procedure schemas**: closed 2026-08-20. See `docs/process-map.md` §Gate Procedures for the full set of `procedures/_shared/*/schema.yaml` files now covering every gate, informed directly by all four pilots' findings.
+- **F-2 (pilot 003) — no decision state for a withdraw-then-resubmit pattern**: closed 2026-08-20. `entity-ic-review` and `group-investment-review` both gained a fourth decision state, `withdrawn_pending_resubmission`.
+- **F-2 (pilot 002) — ma-07/08 customer-only wording**: closed 2026-08-20 (applied directly to `checklists/ma-special-topics-checklist.yaml` v1.1.0 at the time).
+- **F-1 (pilot 004) — step 4 (group agenda ranking) has no public-data calibration path**: still open, tracked in `docs/rag-framework.md` §6 as requiring internal historical cases specifically.
+
 ## Two-Consecutive-Failure Rule (ADR-0034)
 
 If two pilot cases in a row fail to complete the process end-to-end (not "the deal would have failed the review" — that's a valid outcome — but "the process itself could not be executed as written"), the project halts progression to system development and returns to process design. This applies across cases in this directory, not per-case.

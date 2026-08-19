@@ -38,7 +38,23 @@ Permits (`permit`/`permit_edge`) and certifications (`certification`/`certificat
 ## RACI Legend
 R = Responsible (does the work), A = Accountable (owns the outcome, single name), C = Consulted (two-way input before decision), I = Informed (told after decision).
 
+## Gate Procedures
+
+Every gate in the sequence above now has a formal `procedures/_shared/*/schema.yaml` (closed 2026-08-20, informed by pilots 001-004's findings — see `docs/pilots/`):
+
+| Gate | Green Field | Brown Field |
+|---|---|---|
+| Screening | `procedures/_shared/greenfield-screening/` | `procedures/_shared/brownfield-screening/` |
+| Pre-FS | `procedures/_shared/greenfield-pre-fs/` | `procedures/_shared/brownfield-pre-fs/` |
+| FS | `procedures/_shared/greenfield-fs/` | `procedures/_shared/brownfield-fs/` |
+| DD | `procedures/_shared/greenfield-dd/` | `procedures/_shared/brownfield-dd/` (six-validator no-waiver completeness check, step 9) |
+| Entity IC | `procedures/_shared/entity-ic-review/` (shared — same shape for both) | |
+| Group IC | `procedures/_shared/group-investment-review/` (shared — same shape for both) | |
+
+The Entity IC and Group IC decision models both carry a fourth state, `withdrawn_pending_resubmission`, added per `docs/pilots/pilot-003-doosan-bobcat-robotics.md` finding F-2 — a real case's withdraw-and-re-propose pattern that the original three-state (approved/rejected/conditional) model couldn't represent.
+
 ## Related
 - `skills/stage-gate-governance/SKILL.md` *(not yet created — Stage 2.4)*
 - `docs/stage-gates.md` *(this doc's companion — not yet created — Stage 2.4)*
+- `docs/pilots/` — four real-case manual pilots that informed the gate procedures above
 - [Meeting M1](../memory/meeting-2026-08-20-m1-process-skeleton.md), [M2](../memory/meeting-2026-08-20-m2-entity-group-boundary.md), [M6](../memory/meeting-2026-08-20-m6-site-selection-criteria.md)
