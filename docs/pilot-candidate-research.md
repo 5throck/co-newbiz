@@ -51,7 +51,34 @@ Found during the same research pass — also real, also in the identical industr
 | Completion | 2024-02-28 |
 | Post-acquisition performance (public) | 9-month cumulative operating profit of KRW 82.7 billion vs. full-year 2023 operating profit of KRW 8.7 billion pre-acquisition (>9x) |
 
-## Recommendation
+## Additional Candidates (2026-08-20) — Sourced to Address Two Specific Gaps
+
+Pilots 001/002 (both crankshaft/marine-engine, Korea) validated the antitrust-screening path twice but could not test **Group IC ranking across sibling subsidiaries** (ADR-0029 — the two deals' acquirers are different corporate groups, not comparable) or exercise the **Pre-FS/FS/Entity-IC gates**, since neither deal had enough public paper trail on valuation/deliberation to fill those gates in. This round of research deliberately looked outside shipbuilding for cases with richer intra-group and valuation-dispute disclosure.
+
+### Candidate A (Recommended): Doosan Bobcat / Doosan Robotics Comprehensive Share Exchange (2024)
+
+**Why this is the strongest fit for the two open gaps:**
+
+1. **Intra-group governance, not cross-group M&A** — Doosan Group proposed spinning off Doosan Bobcat (a profitable subsidiary) from Doosan Enerbility and merging it into Doosan Robotics (a loss-making subsidiary), making Bobcat a subsidiary of Robotics. This is exactly the design's "group vs. entity" distinction in action: a transaction between **sibling entities of the same group**, which the design's `group-review-agent` (portfolio fit, intra-group transaction compliance) is built to scrutinize — not comparable to pilots 001/002's cross-group acquisitions.
+2. **Extensive real Pre-FS/FS/Entity-IC-equivalent paper trail** — unlike pilots 001/002 (regulatory-approval press coverage only), this case has: a disclosed exchange ratio (100 Bobcat shares : 63 Robotics shares initially), a regulator (Financial Supervisory Service) **rejecting the securities filing twice** over valuation-methodology transparency, a **board withdrawal** (2024-08-29, 49 days after announcement), a **revised ratio** re-proposed two months later (100:88.5 Enerbility + 4.3 Robotics, up from 100:88.5+3.2), and an activist shareholder (Align Partners) campaign with formal shareholder letters demanding specific board-composition and capital-return commitments. This is real content for exactly the gates pilots 001/002 couldn't reach.
+3. **Real minority-shareholder-protection and valuation-fairness dispute** — directly exercises what a human Entity IC reviewer is supposed to catch: a swap ratio that undervalues the more profitable entity relative to the less profitable one. `docs/manuals/business-manual.md` §3's instruction that a reviewer must "correct the AI-proposed RAG grade with a reason if you correct it" has a real, checkable test case here.
+4. **Real regulatory back-and-forth to test revision cycles against** — two filing rejections plus a full withdrawal-and-restart is a genuine test of how the procedure should handle a deal that fails a gate and comes back, not just a single clean pass.
+
+**Caveat**: as of the last confirmed public reporting, the restructuring was **suspended following the December 2024 martial-law situation** (계엄 사태) and a planned extraordinary shareholder meeting was cancelled — the case's real-world outcome is unresolved/paused, not closed. This pilot would test the process up through the suspension point, not a completed cycle — itself a realistic scenario (real reviews do stall) worth exercising.
+
+### Candidate B: SK Group Cross-Subsidiary Capital Rebalancing (2023-2025)
+
+**Why this fits the literal ADR-0029 ranking scenario better, but with less procedural granularity:**
+
+SK Group's semiconductor arm (SK hynix) swung from a KRW 7.73 trillion operating loss (2023) to KRW 23.5 trillion (2024) and KRW 47.2 trillion (2025) operating profit on the AI/HBM memory boom, while battery (SK On) and chemical/construction subsidiaries remained financially stressed. The group responded with cross-subsidiary capital reallocation: SK Innovation merged with SK E&S (cash-generative), SK On absorbed SK Enmove/Trading International/Entium, and SK Ecoplant received SK Materials Air Plus and SK Enscore — a real example of a group **prioritizing capital toward weaker subsidiaries using a stronger subsidiary's cash flow**, which is close to the design's "capital allocation priority" description of Group IC's job.
+
+**Weaker fit than Candidate A**: public reporting covers the *what* (which entities merged/absorbed what) and the *why* (rebalancing away from battery/chemical weakness) at a strategic-narrative level, but not gate-level deliverables (no disclosed valuation dispute, no regulator rejection, no board withdrawal) — less useful for filling the Pre-FS/FS/Entity-IC procedural gap than Candidate A, though it is the more literal "capital competing across sibling businesses" scenario per ADR-0029's own description.
+
+## Recommendation for Pilot 003
+
+**Use Candidate A (Doosan Bobcat / Doosan Robotics)** as pilot 003 — it directly exercises intra-group governance (the design's `group-review-agent` scope) and, more importantly, is the only candidate found so far with a real public paper trail dense enough to walk through Pre-FS/FS/Entity-IC-equivalent content, which is exactly the procedural gap (F-3/F-5) both prior pilots flagged. Hold Candidate B (SK Group rebalancing) in reserve — it is the more literal match for ADR-0029's "capital competing across sibling businesses" description and could become pilot 004 if a ranking exercise specifically (rather than intra-group fairness/governance) is wanted next.
+
+## Recommendation (Original — Pilots 001/002)
 
 Use **HD Hyundai / STX Heavy Industries** as the primary Stage 3.5 pilot case — it is the stronger fit specifically because of the real antitrust remedy outcome, which a synthetic case cannot produce credibly. Hold the Hanwha Impact / HSD Engine deal in reserve as a secondary case if a two-deal group-ranking exercise (ADR-0029) is wanted later.
 
@@ -71,3 +98,18 @@ Use **HD Hyundai / STX Heavy Industries** as the primary Stage 3.5 pilot case �
 - [HD한국조선해양-STX중공업 기업결합 '조건부 승인' — 경향신문](https://www.khan.co.kr/article/202407151350001)
 - [공정위, HD한국조선해양, STX 중공업 인수 '3년 조건부' 승인 — 한국일보](https://www.hankookilbo.com/News/Read/A2024071514260001235)
 - [韓 크랭크샤프트, 세계 시장 51% 점유 — 한국해운신문](http://www.maritimepress.co.kr/news/articleView.html?idxno=41619)
+
+### Candidate A/B sources (2026-08-20 addendum)
+
+- [얼라인파트너스 "두산밥캣 포괄적 주식교환, 재검토 아닌 영구포기해야" — 뉴스1](https://www.news1.kr/finance/general-stock/5578739)
+- [얼라인파트너스, 두산밥캣에 주주서한…"로보틱스와 포괄적 주식교환 재추진 포기 공표해야" — 한국금융신문](https://www.fntimes.com/html/view.php?ud=202410201726534258179ad43907_18)
+- [두산, 로보틱스·밥캣 합병비율 재조정… 얼라인 공격 막아낼까 — 서울신문](https://www.seoul.co.kr/news/plan/2024/10/22/20241022020001)
+- [두산 밥캣·로보틱스 주식교환 철회… 일반주주들 "꼼수 우회 합병" 반발 — 서울신문](https://www2.seoul.co.kr/news/economy/industry/2024/08/30/20240830016005)
+- [두산밥캣-두산로보틱스 불공정 합병 논란 — 나무위키](https://namu.wiki/w/%EB%91%90%EC%82%B0%EB%B0%A5%EC%BA%A3-%EB%91%90%EC%82%B0%EB%A1%9C%EB%B3%B4%ED%8B%B1%EC%8A%A4%20%EB%B6%88%EA%B3%B5%EC%A0%95%20%ED%95%A9%EB%B3%91%20%EB%85%BC%EB%9E%80)
+- [Doosan scraps controversial Robotics-Bobcat merger plan — The Korea Herald](https://m.koreaherald.com/article/3463890)
+- [Doosan to resume Bobcat, Robotics merger with new ratio — KED Global](https://www.kedglobal.com/corporate-restructuring/newsView/ked202410210006)
+- [Doosan Robotics, Bobcat stock swap called off in face of fierce opposition — Korea JoongAng Daily](https://www.koreajoongangdaily.com/business/doosan-robotics-bobcat-stock-swap-called-off-in-face-of-fierce-opposition/12417371)
+- [Restructurings in Korea test the limits of CG reform — ACGA](https://www.acga-asia.org/blog-detail.php?id=89)
+- [반도체로 흥한 SK, 쌈짓돈 모아 계열사 밸류업 — 아시아타임](https://www.asiatime.co.kr/article/20260507500316)
+- [SK그룹, 반도체 수혜 제한...'배터리·화학' 회복 열쇠 — 블로터](https://www.bloter.net/news/articleView.html?idxno=661048)
+- [\[SK 리밸런싱 그 후\] 반도체 호황 '에너지·화학' 수익성 개선 과제 — 블로터](https://www.bloter.net/news/articleView.html?idxno=661503)
