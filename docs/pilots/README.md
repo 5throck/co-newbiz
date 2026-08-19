@@ -14,6 +14,8 @@
 | 003 | Doosan Bobcat / Doosan Robotics share exchange (2024) | Intra-group restructuring | In progress (real case suspended) | [pilot-003-doosan-bobcat-robotics.md](pilot-003-doosan-bobcat-robotics.md) |
 | 004 | SK Group cross-subsidiary capital rebalancing (2023-2025) | Group capital allocation | In progress | [pilot-004-sk-group-capital-rebalancing.md](pilot-004-sk-group-capital-rebalancing.md) |
 | 005 | SK hynix Yongin Semiconductor Cluster (2023-ongoing) | Green Field | In progress (real project still under construction) | [pilot-005-sk-hynix-yongin-cluster.md](pilot-005-sk-hynix-yongin-cluster.md) |
+| 006 | Orion / LigaChem Bio (2024-2025) | Brown Field (pure diversification) | In progress | [pilot-006-orion-ligachem-bio.md](pilot-006-orion-ligachem-bio.md) |
+| 007 | Punggu Offshore Wind Farm (2017-ongoing) | Green Field | In progress (real project still in permitting pipeline) | [pilot-007-punggu-offshore-wind.md](pilot-007-punggu-offshore-wind.md) |
 
 ## Candidate Sourcing
 
@@ -28,6 +30,9 @@ New candidate cases (real, publicly documented — not fabricated, per the desig
 - **F-1 (pilot 005) — a real Green Field project proceeded before infrastructure plans were finalized**: closed 2026-08-20. `greenfield-screening` (v1.0.0 → v1.1.0) gained a new kill-criteria condition, `infrastructure_plan_not_finalized_at_site_announcement` → escalate to risk-officer.
 - **F-2 (pilot 005) — site-selection-checklist ss-08 framed only for local-community objections**: closed 2026-08-20. Broadened to cover inter-regional resource disputes (`checklists/site-selection-checklist.yaml` v1.1.0), same pattern as pilot 002's ma-07/08 fix.
 - **F-3 (pilot 005) — incentive-NPV mechanics not numerically validated**: still open — a single-site case has no multi-candidate comparison to validate against; would need a future case with disclosed competing finalists.
+- **F-1 (pilot 006) — certification-transferability step assumes an operational/manufacturing-type certification**: still open — needs a Stage 4 SRS branch for R&D-stage/asset-tied-regulatory-pathway targets (biopharma, etc.).
+- **F-2 (pilot 006) — QoE step assumes an operating business with historical EBITDA**: still open — needs a Stage 4 SRS alternate path for pipeline/licensing-value-driven targets.
+- **F-1 (pilot 007) — site pre-filter used administrative jurisdiction instead of the legally applicable affected-area radius**: closed 2026-08-20. `greenfield-screening` (v1.1.0 → v1.2.0) step 2 now explicitly requires the notification boundary be computed from the applicable legal standard, not assumed equal to administrative jurisdiction.
 
 ## Two-Consecutive-Failure Rule (ADR-0034)
 
