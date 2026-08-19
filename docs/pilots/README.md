@@ -11,6 +11,8 @@
 |---|---|---|---|---|
 | 001 | HD Hyundai / STX Heavy Industries (2024) | Brown Field | In progress | [pilot-001-hd-hyundai-stx-heavy-industries.md](pilot-001-hd-hyundai-stx-heavy-industries.md) |
 | 002 | Hanwha Impact / HSD Engine (2023-2024) | Brown Field | In progress | [pilot-002-hanwha-impact-hsd-engine.md](pilot-002-hanwha-impact-hsd-engine.md) |
+| 003 | Doosan Bobcat / Doosan Robotics share exchange (2024) | Intra-group restructuring | In progress (real case suspended) | [pilot-003-doosan-bobcat-robotics.md](pilot-003-doosan-bobcat-robotics.md) |
+| 004 | SK Group cross-subsidiary capital rebalancing (2023-2025) | Group capital allocation | In progress | [pilot-004-sk-group-capital-rebalancing.md](pilot-004-sk-group-capital-rebalancing.md) |
 
 ## Candidate Sourcing
 
