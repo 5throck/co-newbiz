@@ -140,6 +140,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `vulnerability-management` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — CVE-check merge gate, mandatory recorded risk-acceptance for unpatched Critical/High |
 | `access-control-review` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — monthly stale-membership revocation, quarterly admin-count review |
 | `admin-console-operations` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8K — operates the 3 built admin sections, names the 7 not yet built |
+| `investment-vehicle-structuring` | 1.0.0 | active | brownfield-agent | 2026-08-20 | — | ADR-0045 — post-Wave-5.10 addendum, deal-structure-hypothesis vehicle axis (tax/liability-isolation/financing-leverage/exit) flagged during the pilot-001 system re-run |
 
 
 

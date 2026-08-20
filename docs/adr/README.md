@@ -50,5 +50,6 @@
 | [0042](0042-mvp-boundary-and-descope-order.md) | MVP boundary and descope order |
 | [0043](0043-four-domain-structure-functional-technical-industry-region.md) | Four-domain structure (functional/technical/industry/region) with PM-lead coordination model |
 | [0044](0044-industry-and-region-scale-via-profile-count-not-agent-count.md) | Industry and region scale via profile count, not agent count |
+| [0045](0045-investment-vehicle-structuring-as-a-deal-structure-axis.md) | Investment vehicle structuring as a mandatory deal-structure-hypothesis axis |
 
-All 44 ADRs above are **Accepted** as of 2026-08-20, ratifying decisions already made during Stage 0-1 (scaffold, agent roster, glossary, and the 12 Stage 1 planning meetings) and formalized in Stage 2's regulation book and procedures. Future amendments to any of these decisions require a new ADR referencing the one it supersedes, per the trigger list above — not an edit to the existing record.
+ADRs 0001-0044 are **Accepted** as of 2026-08-20, ratifying decisions already made during Stage 0-1 (scaffold, agent roster, glossary, and the 12 Stage 1 planning meetings) and formalized in Stage 2's regulation book and procedures. ADR-0045 (Wave 5.10 system-pilot addendum) is Accepted as of the same date. Future amendments to any of these decisions require a new ADR referencing the one it supersedes, per the trigger list above — not an edit to the existing record.
