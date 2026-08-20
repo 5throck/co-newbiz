@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-08-21](2026-08-21.md) | fix(co-newbiz): rag-engine overall-grade defect + investment-vehicle checklist enforcement |
 | [2026-08-19](2026-08-19.md) | Stage 0.1 — L3 scaffold created, variant context sections added to CLAUDE.md/GEMINI.md, PM agent written, variant.json completed |
 | [2026-08-20](2026-08-20.md) | Stage 1 — all 12 planning meetings run with the real 34-agent roster; Stage 1 closed |
 

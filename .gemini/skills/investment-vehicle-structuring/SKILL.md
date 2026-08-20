@@ -72,7 +72,10 @@ questions, not just an acquisition.
    choice, not forward from vehicle choice to "figure out exit later"
 5. **Record all four findings as part of the deal structure hypothesis
    deliverable** — this is an extension of that existing Pre-FS output,
-   not a separate document
+   not a separate document. Satisfies `checklists/brownfield-feasibility-checklist.yaml`
+   bf-12 / `checklists/greenfield-feasibility-checklist.yaml` gf-11 (both
+   mandatory) — the gate check reads this record directly, so an
+   unrecorded review is indistinguishable from one that never happened
 6. **Flag where the analysis suggests a different vehicle than the deal
    team's initial assumption** — a Pre-FS structure hypothesis that never
    changes after this review either had the right initial instinct or

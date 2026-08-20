@@ -66,7 +66,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `co-newbiz/fin-pipeline.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `fin:pipeline` — full DART->validate->normalize->KPI chain, reuses python/{validate,normalize}.py from co-consult) | —|
 | `co-newbiz/driver-tree.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `fin:driver-tree` — runs python/driver_tree.py, 5-level ROIC value driver tree reused from co-consult) | —|
 | `co-newbiz/report.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `report` — Markdown -> docx/pdf/hwpx via shared AST in python/report/, glossary appendix from glossary/*.yaml, Korean TTF resolution via theme.py) | —|
-| `co-newbiz/rag.ts` | co-newbiz | 1.1.0 | active | —| —| L3-only (project-local, `rag` — six-dimension RAG assessment from a scenario JSON via db/lib/rag-engine.ts; creates a run row keyed by the scenario's SHA-256 input_hash) | —|
+| `co-newbiz/rag.ts` | co-newbiz | 1.2.0 | active | —| —| L3-only (project-local, `rag` — six-dimension RAG assessment from a scenario JSON via db/lib/rag-engine.ts; creates a run row keyed by the scenario's SHA-256 input_hash; Wave 5.10 fix — `complete`/nullable `recorded_overall` for genuinely incomplete assessments) | —|
 | `co-newbiz/watch-run.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `watch:run` — OS-scheduler-driven monitoring cycle: change detection -> auto RAG re-assessment -> transition -> notification, via db/lib/watch-engine.ts) | —|
 | `agent-delete.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `agent-lifecycle-audit.ts` | L0 | 1.1.5 | active | —| —| L0+L1 | —|

@@ -43,8 +43,12 @@ items:
   - id: bf-11
     text: "Gun-jumping compliance confirmed — no integration activity before clearance in any jurisdiction with a filing requirement"
     mandatory: true
+  - id: bf-12
+    text: "Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) as part of the deal structure hypothesis — not just the acquisition mechanics (stake/structure)"
+    mandatory: true
 
 legal_basis:
   - "Group New Business Review Policy §2.3, §4"
   - "procedures/_shared/brownfield-screening/schema.yaml"
   - "Meeting M5"
+  - "ADR-0045 (investment vehicle structuring as a mandatory deal-structure-hypothesis axis)"

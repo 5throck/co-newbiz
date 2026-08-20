@@ -141,11 +141,25 @@ describe("RAG overall grading", () => {
     expect(r.overall.grade).toBe("red");
   });
 
-  test("an unassessed dimension defaults to AMBER — missing data is never Green", () => {
+  test("an unassessed dimension displays AMBER but is not marked assessed, and produces NO overall grade (Wave 5.10 fix)", () => {
     const r = evaluateRag({ stageGate: "fs", chainGrade: "A", financial: ALL_GREEN_INPUT.financial });
     const market = r.dimensions.find((d) => d.dimension === "market");
     expect(market?.grade).toBe("amber");
-    expect(r.overall.grade).toBe("amber");
+    expect(market?.assessed).toBe(false);
+    expect(r.complete).toBe(false);
+    // The two dimensions that WERE provided are marked assessed.
+    expect(r.dimensions.find((d) => d.dimension === "financial")?.assessed).toBe(true);
+    expect(r.dimensions.find((d) => d.dimension === "data_confidence")?.assessed).toBe(true);
+    // No overall grade — an incomplete assessment never defaults to a color
+    // (pilot-001's own manual conclusion; docs/pilots/pilot-001-system-rerun.md).
+    expect(r.overall).toBeNull();
+  });
+
+  test("a Red finding on an assessed dimension still forces overall RED even when the assessment is otherwise incomplete", () => {
+    const r = evaluateRag({ stageGate: "fs", chainGrade: "A", financial: { irr: 0.05, hurdle: 0.1, dscrDownside: 1.5 } });
+    expect(r.dimensions.find((d) => d.dimension === "financial")?.grade).toBe("red");
+    expect(r.complete).toBe(false);
+    expect(r.overall?.grade).toBe("red");
   });
 
   test("screening/pre_fs amber-cap the financial dimension pending a completed model (rag-framework §5)", () => {
@@ -306,6 +320,55 @@ describe("assessRun persistence", () => {
     expect(transitions.length).toBe(2);
     expect(transitions[0].from_grade).toBeNull();
     expect(transitions[1]).toMatchObject({ from_grade: "red", to_grade: "amber" });
+  });
+
+  test("an incomplete assessment (pilot-001 shape) writes only the assessed dimension's row, no overall row, no transition (Wave 5.10 fix)", () => {
+    const p = insertProject();
+    const run1 = insertRun(p);
+    // Exactly pilot-001's real shape: only Regulatory/Permit has real data
+    // (a behavioral remedy) — every other dimension is genuinely unknown.
+    const result = assessRun(db, {
+      projectId: p,
+      runId: run1,
+      input: { stageGate: "dd", regulatory: { remedyType: "behavioral", obligationActive: true } },
+      irrOverHurdlePp: 0,
+      now: NOW,
+    });
+
+    expect(result.complete).toBe(false);
+    expect(result.overall).toBeNull();
+    expect(result.recordedOverall).toBeNull();
+    expect(result.transition).toBeNull();
+
+    const rowCount = (dim: string) =>
+      (db.query("SELECT COUNT(*) AS c FROM rag_assessment WHERE project_id = ? AND dimension = ?").get(p, dim) as { c: number }).c;
+    expect(rowCount("regulatory_permit")).toBe(1); // the one real assessment
+    expect(rowCount("financial")).toBe(0); // never assessed — no placeholder row
+    expect(rowCount("market")).toBe(0);
+    expect(rowCount("overall")).toBe(0); // no overall row at all when incomplete
+
+    const transitionCount = (db.query("SELECT COUNT(*) AS c FROM rag_transition WHERE project_id = ?").get(p) as { c: number }).c;
+    expect(transitionCount).toBe(0);
+  });
+
+  test("a Red dimension still writes an overall row and transition even when the assessment is incomplete", () => {
+    const p = insertProject();
+    const run1 = insertRun(p);
+    const result = assessRun(db, {
+      projectId: p,
+      runId: run1,
+      input: { stageGate: "fs", financial: { irr: 0.02, hurdle: 0.1, dscrDownside: 1.0 } }, // financial RED
+      irrOverHurdlePp: -8,
+      now: NOW,
+    });
+    expect(result.complete).toBe(false);
+    expect(result.recordedOverall).toBe("red");
+    expect(result.transition).toEqual({ from: null, to: "red" });
+
+    const overallRow = db
+      .query("SELECT grade FROM rag_assessment WHERE project_id = ? AND dimension = 'overall'")
+      .get(p) as { grade: string } | null;
+    expect(overallRow?.grade).toBe("red");
   });
 });
 
