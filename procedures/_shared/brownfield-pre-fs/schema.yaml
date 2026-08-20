@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-pre-fs
 title: "Brown Field Pre-Feasibility"
 scope: shared
 level: entity
-version: "1.2.0"
+version: "1.3.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -32,12 +32,19 @@ steps:
       docs/pilots/pilot-002-hanwha-impact-hsd-engine.md §2 for a real worked
       example of a mixed secondary-purchase + primary-rights-issue structure.
       For R&BD deals (case_subtype: rbd — technology/IP acquisition, license-in,
-      or an internal-venture spin-off carve-out): treated as a Brown Field
-      sub-type, not a separate case type (design v1.0 §10 user decision,
-      2026-08-20) — the structure hypothesis must also cover
-      `checklists/rbd-technology-checklist.yaml` rbd-04's build/license/spin-off
-      choice explicitly. See docs/pilots/pilot-011-posco-amberoad.md for a
-      real internal-venture-to-spin-off worked example.
+      internal-venture spin-off carve-out, OR minority venture investment):
+      treated as a Brown Field sub-type, not a separate case type (design
+      v1.0 §10 user decision, 2026-08-20) — the structure hypothesis must
+      also cover `checklists/rbd-technology-checklist.yaml` rbd-04's
+      build/license/spin-off/minority-invest choice explicitly. Minority
+      venture investment was added as a fourth R&BD deal shape per
+      docs/pilots/pilot-014-c2y-university-techholdings.md finding F-4 — not
+      every R&BD review is an acquisition/license/absorption thesis; some are
+      a minority-stake venture-investment thesis in an independently-founded,
+      university- or government-research-backed target. See
+      docs/pilots/pilot-011-posco-amberoad.md for a real internal-venture-to-spin-off
+      worked example and docs/pilots/pilot-014-c2y-university-techholdings.md
+      for a real minority-investment-shaped example.
   - id: 3
     gate: Pre-FS
     agent_key: certification-agent
@@ -66,6 +73,7 @@ legal_basis:
   - "docs/process-map.md — Pre-FS row"
   - "Meeting M1 (process-2026-08-20-m1-process-skeleton.md)"
   - "docs/pilots/pilot-011-posco-amberoad.md (R&BD as a Brown Field sub-type)"
+  - "docs/pilots/pilot-014-c2y-university-techholdings.md finding F-4 (minority venture investment as an R&BD deal shape)"
 
 owner_agent: process-governance-manager
 last_reviewed: "2026-08-20"
