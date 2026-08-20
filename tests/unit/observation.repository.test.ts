@@ -116,7 +116,10 @@ test("forced re-fetch with a changed value inserts a NEW revision, preserving th
 test("every insert (new and revised) is logged to data_change_log", async () => {
   const db = getDb(TEST_DB_PATH);
   const changes = db
-    .query("SELECT change_type, old_value, new_value FROM data_change_log WHERE series_id = ? ORDER BY detected_at")
+    // change_type tiebreak: both rows can land in the same millisecond, and a
+    // bare ORDER BY detected_at is unstable on ties ('new' < 'revised' keeps
+    // insertion order deterministic without relying on rowid).
+    .query("SELECT change_type, old_value, new_value FROM data_change_log WHERE series_id = ? ORDER BY detected_at, change_type")
     .all("SERIES-A") as { change_type: string; old_value: number | null; new_value: number }[];
 
   expect(changes).toHaveLength(2);
