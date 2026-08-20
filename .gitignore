@@ -73,4 +73,7 @@ memory/archive/
 
 # Ignore test temp directories
 tests/.temp/
+
+# Rendered report outputs (docx/pdf/hwpx — regenerate via `report` command)
+render_out/
 <!-- /WORKSPACE-MANAGED -->
