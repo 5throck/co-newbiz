@@ -12,8 +12,12 @@ import {
 import { RagSignalCard } from "../components/RagCard.tsx";
 import { ProcedureViewer } from "../components/ProcedureViewer.tsx";
 import { GlossaryTerm } from "../components/GlossaryTerm.tsx";
+import { DataTab } from "../components/DataTab.tsx";
+import { AssumptionsTab } from "../components/AssumptionsTab.tsx";
+import { DdTab } from "../components/DdTab.tsx";
+import { PermitsTab } from "../components/PermitsTab.tsx";
 
-type Tab = "overview" | "procedure" | "members";
+type Tab = "overview" | "procedure" | "data" | "assumptions" | "dd" | "permits" | "members";
 
 interface ProjectMember {
   user_id: string;
@@ -104,6 +108,18 @@ export function ProjectDetail() {
         <button type="button" aria-current={tab === "procedure"} onClick={() => setTab("procedure")}>
           절차 뷰어
         </button>
+        <button type="button" aria-current={tab === "data"} onClick={() => setTab("data")}>
+          데이터
+        </button>
+        <button type="button" aria-current={tab === "assumptions"} onClick={() => setTab("assumptions")}>
+          가정
+        </button>
+        <button type="button" aria-current={tab === "dd"} onClick={() => setTab("dd")}>
+          실사
+        </button>
+        <button type="button" aria-current={tab === "permits"} onClick={() => setTab("permits")}>
+          법령·인허가
+        </button>
         <button type="button" aria-current={tab === "members"} onClick={() => setTab("members")}>
           멤버십
         </button>
@@ -131,6 +147,30 @@ export function ProjectDetail() {
             </p>
           )}
           {procedure && <ProcedureViewer procedure={procedure} provenance={procedureProvenance} />}
+        </section>
+      )}
+
+      {tab === "data" && (
+        <section aria-label="데이터">
+          <DataTab />
+        </section>
+      )}
+
+      {tab === "assumptions" && id && (
+        <section aria-label="가정">
+          <AssumptionsTab projectId={id} />
+        </section>
+      )}
+
+      {tab === "dd" && id && (
+        <section aria-label="실사">
+          <DdTab projectId={id} />
+        </section>
+      )}
+
+      {tab === "permits" && id && (
+        <section aria-label="법령·인허가">
+          <PermitsTab projectId={id} />
         </section>
       )}
 

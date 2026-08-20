@@ -487,15 +487,306 @@ input {
 
 /* --- tables --- */
 .admin-table,
-.member-table {
+.member-table,
+.data-table {
   width: 100%;
   border-collapse: collapse;
 }
 .admin-table th,
 .admin-table td,
 .member-table th,
-.member-table td {
+.member-table td,
+.data-table th,
+.data-table td {
   border-bottom: 1px solid var(--border);
   padding: 0.5rem;
   text-align: left;
+}
+.data-table {
+  margin: 0.5rem 0 1.5rem;
+}
+.row-selected {
+  background: var(--muted-bg);
+}
+
+.empty-state {
+  color: var(--muted-fg);
+  font-style: italic;
+}
+
+.link-button {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* --- Data tab: change log --- */
+.change-log-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.change-log-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+.change-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.change-revised {
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+}
+.change-new {
+  background: var(--green-bg);
+  color: var(--green-fg);
+}
+.change-deleted {
+  background: var(--red-bg);
+  color: var(--red-fg);
+}
+.change-unknown {
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+}
+.change-series {
+  font-weight: 600;
+}
+.change-values {
+  color: var(--muted-fg);
+}
+.change-detected {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--muted-fg);
+}
+
+/* --- Assumptions tab --- */
+.assumptions-run-note {
+  color: var(--muted-fg);
+  margin-bottom: 0.75rem;
+}
+.kind-chip {
+  display: inline-flex;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+}
+.kind-live {
+  background: var(--green-bg);
+  color: var(--green-fg);
+}
+.kind-user {
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+}
+.kind-derived {
+  background: var(--muted-bg);
+  color: var(--accent);
+}
+.kind-assumed {
+  background: var(--red-bg);
+  color: var(--red-fg);
+}
+.assumption-rationale {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* --- DD tab --- */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.filter-chips button.chip-selected {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+.dd-finding-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.dd-finding-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+.dd-finding-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+.dd-category-badge {
+  display: inline-flex;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.dd-finding-date {
+  color: var(--muted-fg);
+  font-size: 0.85rem;
+}
+.dd-finding-desc {
+  margin: 0 0 0.5rem;
+}
+.dd-finding-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0;
+}
+.dd-finding-facts dt {
+  color: var(--muted-fg);
+  font-size: 0.8rem;
+}
+.dd-finding-facts dd {
+  margin: 0;
+}
+.rbd-subpanel {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px dashed var(--accent);
+  border-radius: 6px;
+  background: var(--muted-bg);
+}
+.rbd-subpanel h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+.rbd-subpanel dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0;
+}
+.rbd-subpanel dt {
+  color: var(--muted-fg);
+  font-size: 0.8rem;
+}
+.rbd-subpanel dd {
+  margin: 0;
+}
+
+/* --- Permits tab --- */
+.permit-section {
+  margin-bottom: 2rem;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.status-not-started {
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+}
+.status-in-progress {
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+}
+.status-approved {
+  background: var(--green-bg);
+  color: var(--green-fg);
+}
+.status-rejected {
+  background: var(--red-bg);
+  color: var(--red-fg);
+}
+.status-unknown {
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+}
+.row-critical {
+  border-left: 3px solid var(--accent);
+}
+.critical-badge {
+  display: inline-flex;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.critical-badge-inline {
+  margin-left: 0.4rem;
+}
+.dag-view {
+  margin-top: 1rem;
+}
+.dag-layers {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.dag-layer {
+  min-width: 160px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+.dag-layer-label {
+  display: block;
+  color: var(--muted-fg);
+  font-size: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+.dag-layer-nodes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.dag-node {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+}
+.dag-node-critical {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+.dag-edge-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--muted-fg);
+  font-size: 0.85rem;
 }

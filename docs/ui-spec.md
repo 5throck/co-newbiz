@@ -2,7 +2,7 @@
 
 **Owner**: frontend-engineer
 **Design of record**: design v1.0 §4-10 (task 4.4), `docs/srs.md` §12
-**Status**: Korean UI (design §4-1 language policy — deliverables/UI Korean, code/docs English). Implemented Stage 5 Wave 5.6 (`app/web/src/pages/`: `Login.tsx`, `PasswordChange.tsx`, `ProjectList.tsx`, `ProjectDetail.tsx`, `AdminConsole.tsx`) — **partial; verified row-by-row against `app/web/src/` on 2026-08-21** (per-node markers in §2, per-rule notes in §1/§3/§4): the Project List page and Project Detail shell are built; 개요 / 절차 뷰어 / 용어집 tooltip are partial; 10 of Project Detail's 13 child views (Data, Financial Analysis, Proxy Chain, Assumptions, Model, Simulation, Version Comparison, Regulatory & Permits, M&A Review, DD) plus Reports are not built at all; and the admin console covers 3 of §5's 10 designed sections (Users, Audit Log, Data Sources; see `skills/admin-console-operations/SKILL.md` for the honest breakdown of what's still missing).
+**Status**: Korean UI (design §4-1 language policy — deliverables/UI Korean, code/docs English). Implemented Stage 5 Wave 5.6 (`app/web/src/pages/`: `Login.tsx`, `PasswordChange.tsx`, `ProjectList.tsx`, `ProjectDetail.tsx`, `AdminConsole.tsx`) plus PR #65's four Project Detail tabs (`app/web/src/components/`: `DataTab.tsx`, `AssumptionsTab.tsx`, `DdTab.tsx`, `PermitsTab.tsx`) — **partial; verified row-by-row against `app/web/src/` on 2026-08-21** (per-node markers in §2, per-rule notes in §1/§3/§4): the Project List page and Project Detail shell are built; 개요 / 절차 뷰어 / 용어집 tooltip are partial; Data / Assumptions / DD / Regulatory & Permits are partial (read views built, write forms and charting deferred, see §2); 6 of Project Detail's 13 child views (Financial Analysis, Proxy Chain, Model, Simulation, Version Comparison, M&A Review) plus Reports are not built at all; and the admin console covers 3 of §5's 10 designed sections (Users, Audit Log, Data Sources; see `skills/admin-console-operations/SKILL.md` for the honest breakdown of what's still missing).
 
 ## 1. Design Rules (Non-Negotiable)
 
@@ -32,16 +32,20 @@ As-built markers, verified against `app/web/src/` on 2026-08-21: ✅ built · �
 │   │   · ⚠️ partial: RAG signal card built per §3; history sparkline and transition log not built
 │   ├── 절차 뷰어 (Procedure Viewer) — merged shared/region/entity view with per-step source attribution
 │   │   · ⚠️ partial: merged view, per-step source badges, and thresholds built (§4); override flag + baseline link and R&BD checklist panel not built
-│   ├── 데이터 (Data) — series browser, staleness indicators · ❌ not built
+│   ├── 데이터 (Data) — series browser, staleness indicators
+│   │   · ⚠️ partial (PR #65): `DataTab.tsx` built — series search (`GET /api/series?q=`), selected series' latest-revision observations (`GET /api/series/:id/observations`, unit/source per row, value wrapped in `SourceTooltip`), and the recent data-change log (`GET /api/data-changes`, icon+label+color per change_type, old→new values). Deferred: series charting/graphing (no chart library), an `all_revisions=1` toggle, and per-series staleness badges (no staleness field in the series-catalog payload today)
 │   ├── 재무 분석 (Financial Analysis) — ROIC driver-tree waterfall, peer boxplot, projection with anchor markers · ❌ not built (no chart library in the SPA)
 │   ├── 프록시 체인 (Proxy Chain) — chain diagram, hop-level reliability grade, error-band display · ❌ not built
-│   ├── 가정 (Assumptions) — assumption registry, kind/rationale/ttl display · ❌ not built
+│   ├── 가정 (Assumptions) — assumption registry, kind/rationale/ttl display
+│   │   · ⚠️ partial (PR #65): `AssumptionsTab.tsx` built — read-only registry table for the project's latest run (`GET /api/projects/:id/runs` then `GET /api/assumptions?run_id=`): assumption_key, kind chip, value (source-tooltipped), as_of, ttl_days, and a mandatory-visible rationale column (never hover-only) for `kind='assumed'` rows. Deferred: the write form (`POST /api/assumptions`) and a run picker (always uses the newest run)
 │   ├── 모델 (Model) — waterfall + tornado charts · ❌ not built
 │   ├── 시뮬레이션 (Simulation) — histogram + CDF, seed display · ❌ not built
 │   ├── 버전 비교 (Version Comparison) — waterfall bridge between two runs · ❌ not built
-│   ├── 법령·인허가 (Regulatory & Permits) — DAG with critical-path highlighting · ❌ not built
+│   ├── 법령·인허가 (Regulatory & Permits) — DAG with critical-path highlighting
+│   │   · ⚠️ partial (PR #65): `PermitsTab.tsx` built — `GET /api/projects/:id/permits?include_dag=1`; permit and certification lists (status icon+label+color) rendered as clearly-separated parallel sections, never merged; DAG shown as a hand-rolled client-side topological layering (Kahn's algorithm, no graph library) plus a plain edge list, critical-path nodes flagged with a border + badge (not color-only). Deferred: a true node-link graph rendering (the layered-list approximation does not show cross-layer edges visually, only in the text list)
 │   ├── M&A 검토 (M&A Review, BF only) — antitrust HHI, customer-attrition risk, clawback exposure; R&BD sub-panel (TRL, IP/FTO status, commercialization-path, rbd_source) when case_subtype=rbd · ❌ not built
-│   ├── 실사 (DD) — dd_finding list with value_impact links · ❌ not built
+│   ├── 실사 (DD) — dd_finding list with value_impact links
+│   │   · ⚠️ partial (PR #65): `DdTab.tsx` built — `GET /api/projects/:id/dd-findings`, category filter chips (derived from the returned rows), finding cards (description, value_impact source-tooltipped by assumption_key, evidence_ref), and a visually distinct R&BD sub-panel (rbd_source, trl_grade, ip_ownership_status, commercialization_path) for `category='rbd'` rows. Deferred: the write form (`POST /api/projects/:id/dd-findings`) and value_impact deep-links into other views
 │   └── 용어집 (Glossary) — searchable, in-context
 │       · ⚠️ partial: tooltip component built and wired to `/api/glossary/:term`; standalone searchable view not built; in-context auto-linking not built (two hand-placed example terms on 개요)
 ├── 관리자 콘솔 (Admin Console) — see §5 · ⚠️ partial: 3 of 10 sections built (Users, Logs, Data Sources)
