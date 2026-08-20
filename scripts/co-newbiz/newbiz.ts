@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.4.0
+// @version 1.5.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -25,12 +25,13 @@ import { resolveProcedure } from "./proc-resolve.ts";
 import { computeKpis } from "./fin-analyze.ts";
 import { runSimulation } from "./simulate.ts";
 import { runFullPipeline } from "./fin-pipeline.ts";
+import { computeDriverTree } from "./driver-tree.ts";
 
 const [command, ...args] = process.argv.slice(2);
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, simulate <scenario-json-path>");
+  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>");
 }
 
 switch (command) {
@@ -125,6 +126,21 @@ switch (command) {
       console.log(JSON.stringify(result, null, 2));
     } catch (err) {
       console.error(`fin:pipeline failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+    break;
+  }
+  case "fin:driver-tree": {
+    const [modelPath] = args;
+    if (!modelPath) {
+      console.error("fin:driver-tree requires a canonical-model JSON path");
+      process.exit(1);
+    }
+    try {
+      const tree = await computeDriverTree(modelPath);
+      console.log(JSON.stringify(tree, null, 2));
+    } catch (err) {
+      console.error(`fin:driver-tree failed: ${(err as Error).message}`);
       process.exit(1);
     }
     break;
