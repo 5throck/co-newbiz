@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.3.0
+// @version 1.4.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -24,12 +24,13 @@ import { getDb } from "../../db/client.ts";
 import { resolveProcedure } from "./proc-resolve.ts";
 import { computeKpis } from "./fin-analyze.ts";
 import { runSimulation } from "./simulate.ts";
+import { runFullPipeline } from "./fin-pipeline.ts";
 
 const [command, ...args] = process.argv.slice(2);
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, simulate <scenario-json-path>");
+  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, simulate <scenario-json-path>");
 }
 
 switch (command) {
@@ -109,6 +110,21 @@ switch (command) {
       console.log(JSON.stringify(result, null, 2));
     } catch (err) {
       console.error(`simulate failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+    break;
+  }
+  case "fin:pipeline": {
+    const [dartPath] = args;
+    if (!dartPath) {
+      console.error("fin:pipeline requires a DART JSON path");
+      process.exit(1);
+    }
+    try {
+      const result = await runFullPipeline(dartPath);
+      console.log(JSON.stringify(result, null, 2));
+    } catch (err) {
+      console.error(`fin:pipeline failed: ${(err as Error).message}`);
       process.exit(1);
     }
     break;

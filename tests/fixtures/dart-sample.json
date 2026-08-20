@@ -1,0 +1,35 @@
+{
+  "company": "Test Marine Engine Co.",
+  "corp_code": "00000000",
+  "data": {
+    "2025": {
+      "accounts": [
+        {"account_id": "ifrs-full_Revenue", "account_nm": "수익(매출액)", "sj_div": "IS", "thstrm_amount": "100000000000", "frmtrm_amount": "88000000000", "bfefrmtrm_amount": "80000000000"},
+        {"account_id": "ifrs-full_CostOfSales", "account_nm": "매출원가", "sj_div": "IS", "thstrm_amount": "65000000000", "frmtrm_amount": "60000000000", "bfefrmtrm_amount": "56000000000"},
+        {"account_id": "ifrs-full_GrossProfit", "account_nm": "매출총이익", "sj_div": "IS", "thstrm_amount": "35000000000", "frmtrm_amount": "28000000000", "bfefrmtrm_amount": "24000000000"},
+        {"account_id": "dart_SellingGeneralAdministrativeExpenses", "account_nm": "판매비와관리비", "sj_div": "IS", "thstrm_amount": "22000000000", "frmtrm_amount": "18000000000", "bfefrmtrm_amount": "16000000000"},
+        {"account_id": "dart_ResearchAndDevelopmentExpense", "account_nm": "연구개발비", "sj_div": "IS", "thstrm_amount": "3500000000", "frmtrm_amount": "3000000000", "bfefrmtrm_amount": "2500000000"},
+        {"account_id": "dart_DepreciationExpense", "account_nm": "감가상각비", "sj_div": "IS", "thstrm_amount": "4000000000", "frmtrm_amount": "3800000000", "bfefrmtrm_amount": "3600000000"},
+        {"account_id": "dart_OperatingIncomeLoss", "account_nm": "영업이익(손실)", "sj_div": "IS", "thstrm_amount": "13000000000", "frmtrm_amount": "10000000000", "bfefrmtrm_amount": "8000000000"},
+        {"account_id": "ifrs-full_ProfitLoss", "account_nm": "당기순이익(손실)", "sj_div": "IS", "thstrm_amount": "8500000000", "frmtrm_amount": "6500000000", "bfefrmtrm_amount": "5000000000"},
+        {"account_id": "ifrs-full_FinanceCosts", "account_nm": "금융비용", "sj_div": "IS", "thstrm_amount": "1200000000", "frmtrm_amount": "1100000000", "bfefrmtrm_amount": "1000000000"},
+
+        {"account_id": "ifrs-full_Assets", "account_nm": "자산총계", "sj_div": "BS", "thstrm_amount": "142000000000", "frmtrm_amount": "130000000000", "bfefrmtrm_amount": "120000000000"},
+        {"account_id": "ifrs-full_CurrentAssets", "account_nm": "유동자산", "sj_div": "BS", "thstrm_amount": "45000000000", "frmtrm_amount": "42000000000", "bfefrmtrm_amount": "40000000000"},
+        {"account_id": "ifrs-full_CashAndCashEquivalents", "account_nm": "현금및현금성자산", "sj_div": "BS", "thstrm_amount": "17500000000", "frmtrm_amount": "16000000000", "bfefrmtrm_amount": "15000000000"},
+        {"account_id": "ifrs-full_TradeAndOtherCurrentReceivables", "account_nm": "매출채권", "sj_div": "BS", "thstrm_amount": "14000000000", "frmtrm_amount": "13000000000", "bfefrmtrm_amount": "12000000000"},
+        {"account_id": "ifrs-full_Inventories", "account_nm": "재고자산", "sj_div": "BS", "thstrm_amount": "11500000000", "frmtrm_amount": "11000000000", "bfefrmtrm_amount": "10000000000"},
+        {"account_id": "ifrs-full_PropertyPlantAndEquipment", "account_nm": "유형자산", "sj_div": "BS", "thstrm_amount": "54500000000", "frmtrm_amount": "52000000000", "bfefrmtrm_amount": "50000000000"},
+        {"account_id": "ifrs-full_Liabilities", "account_nm": "부채총계", "sj_div": "BS", "thstrm_amount": "82000000000", "frmtrm_amount": "76000000000", "bfefrmtrm_amount": "70000000000"},
+        {"account_id": "ifrs-full_CurrentLiabilities", "account_nm": "유동부채", "sj_div": "BS", "thstrm_amount": "32000000000", "frmtrm_amount": "31000000000", "bfefrmtrm_amount": "30000000000"},
+        {"account_id": "dart_ShortTermBorrowings", "account_nm": "단기차입금", "sj_div": "BS", "thstrm_amount": "11500000000", "frmtrm_amount": "11000000000", "bfefrmtrm_amount": "10000000000"},
+        {"account_id": "dart_LongTermBorrowings", "account_nm": "장기차입금", "sj_div": "BS", "thstrm_amount": "32000000000", "frmtrm_amount": "31000000000", "bfefrmtrm_amount": "30000000000"},
+        {"account_id": "ifrs-full_Equity", "account_nm": "자본총계", "sj_div": "BS", "thstrm_amount": "60000000000", "frmtrm_amount": "54000000000", "bfefrmtrm_amount": "50000000000"},
+
+        {"account_id": "ifrs-full_CashFlowsFromUsedInOperatingActivities", "account_nm": "영업활동현금흐름", "sj_div": "CF", "thstrm_amount": "12500000000", "frmtrm_amount": "10500000000", "bfefrmtrm_amount": "9000000000"},
+        {"account_id": "ifrs-full_CashFlowsFromUsedInInvestingActivities", "account_nm": "투자활동현금흐름", "sj_div": "CF", "thstrm_amount": "-7000000000", "frmtrm_amount": "-6500000000", "bfefrmtrm_amount": "-6000000000"},
+        {"account_id": "dart_DividendsPaidClassifiedAsFinancingActivities", "account_nm": "배당금지급", "sj_div": "CF", "thstrm_amount": "1500000000", "frmtrm_amount": "1200000000", "bfefrmtrm_amount": "1000000000"}
+      ]
+    }
+  }
+}

@@ -1,0 +1,19 @@
+# Python dependencies for python/*.py — the analysis-engine scripts
+# orchestrated from scripts/co-newbiz/*.ts (fin-analyze.ts, fin-pipeline.ts,
+# and the correlation/monte_carlo scripts). See design v1.0 section 4-8.
+#
+# Install with: pip install -r python/requirements.txt
+
+# validate.py, normalize.py — DART financial-statement processing, reused
+# from Projects/co-consult/python/{validate,normalize}.py per design §4-4.
+pandas>=2.0,<3.0
+
+# correlation.py (proxy-chain calibration), monte_carlo.py (contingent-
+# liability Monte Carlo simulation) — design §4-5, §4-6, ADR-0026.
+numpy>=1.26,<3.0
+
+# kpi.py has no third-party dependency (Python stdlib only).
+
+# Document renderer (render_docx.py, render_pdf.py, render_hwpx.py — design
+# §4-8) and driver_tree.py are not yet ported; their dependencies
+# (python-docx, reportlab, python-hwpx) will be added here when those land.
