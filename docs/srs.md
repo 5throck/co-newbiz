@@ -102,6 +102,8 @@ Per user decision (2026-08-20): R&BD (Research & Business Development — techno
 | FR-RBD-05 | Continuing parent-entity relationship (equity retained, customer/supplier ties, brand association, non-compete scope) documented as part of deal structure when the target originated as an internal venture | Must | `checklists/rbd-technology-checklist.yaml` rbd-05 |
 | FR-RBD-06 | Track-record evidence independently corroborated, not accepted from the target's own reporting alone | Should | `checklists/rbd-technology-checklist.yaml` rbd-06 |
 | FR-RBD-07 | `deal_structure_hypothesis` names "internal-venture spin-off carve-out" as an explicit structure option alongside direct/SPC/holdco | Must | `procedures/_shared/brownfield-pre-fs/schema.yaml` v1.2.0 |
+| FR-RBD-08 | `dd_finding.rbd_source` distinguishes `internal_only`, `accelerator_partnered`, and `external_technology_acquisition` — each has a materially different public-disclosure/DD profile (real-case-validated across all three) | Must | `docs/pilots/pilot-011-posco-amberoad.md`, `pilot-012-lg-studio341.md`, `pilot-013-hexapro-etri.md` |
+| FR-RBD-09 | For `external_technology_acquisition` deals, rbd-01 (TRL) and rbd-05 (originator relationship) both branch: TRL leans on direct licensor documentation over public corroboration; the continuing relationship is royalty/follow-on-program-shaped, not equity/brand-shaped | Should | `checklists/rbd-technology-checklist.yaml` v1.1.0, `docs/pilots/pilot-013-hexapro-etri.md` findings F-1/F-2 |
 
 ## 8. Green Field (Site Selection, Infrastructure, Incentives)
 

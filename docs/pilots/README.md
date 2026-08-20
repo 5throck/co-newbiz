@@ -21,6 +21,7 @@
 | 010 | Affinity Equity Partners / Lotte Rental (2025-2026) | Brown Field (rental car — BLOCKED) | In progress (real deal prohibited by KFTC) | [pilot-010-affinity-lotte-rental.md](pilot-010-affinity-lotte-rental.md) |
 | 011 | POSCO / Amberoad (2023-2025) | R&BD (Brown Field sub-type — internal-venture spin-off) | In progress | [pilot-011-posco-amberoad.md](pilot-011-posco-amberoad.md) |
 | 012 | LG Electronics / Studio341 (2023-2026) | R&BD (Brown Field sub-type — accelerator-partnered spin-off) | In progress (program ongoing) | [pilot-012-lg-studio341.md](pilot-012-lg-studio341.md) |
+| 013 | Hexapro / ETRI (2024) | R&BD (Brown Field sub-type — external technology license-in) | In progress (limited public disclosure) | [pilot-013-hexapro-etri.md](pilot-013-hexapro-etri.md) |
 
 ## Candidate Sourcing
 
@@ -45,6 +46,8 @@ New candidate cases (real, publicly documented — not fabricated, per the desig
 - **F-4 (pilot 010) — a blocked deal's real fallout extended to unrelated, contingent financing plans**: still open — flagged as a possible `brownfield-pre-fs` disclosure item, not applied (narrow scenario).
 - **F-2 (pilot 011) — no distinction between internal-spinoff and external-technology-acquisition R&BD sub-sources**: refined by pilot 012 F-2 to a three-value `rbd_source` enum (`internal_only` / `accelerator_partnered` / `external_technology_acquisition`) — still a Stage 5 forward reference, not yet built, but the design is now settled. Recorded in `docs/db-schema.md`.
 - **F-1 (pilot 012) — rbd-02 (government co-funding conditions) had no positive real-case test, only pilot 011's N/A**: closed 2026-08-20 — TIPS/DIPS program involvement gives a real positive case.
+- **F-2 (pilot 013) — rbd-05's wording is spin-off-shaped (equity/brand), doesn't fit a research-institute licensor relationship**: closed 2026-08-20. `checklists/rbd-technology-checklist.yaml` (v1.0.0 → v1.1.0) rbd-05 broadened to cover licensor royalty/follow-on-program relationships as an alternate shape.
+- **F-1 (pilot 013) — rbd-01 didn't note that license-in deals have a lower public-corroboration ceiling than spin-offs**: closed 2026-08-20 — rbd-01 guidance updated to prioritize direct licensor documentation for `external_technology_acquisition` deals.
 
 ## Two-Consecutive-Failure Rule (ADR-0034)
 
