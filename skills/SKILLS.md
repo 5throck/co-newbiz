@@ -76,6 +76,13 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `regional-incentive-sourcing` | 1.0.0 | active | greenfield-agent | 2026-08-20 | — | Wave 5.8C (design §9.2 merge) — absorbs site-comparison, incentive-NPV on one comparison table |
 | `talent-pipeline-planning` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8C — Green Field local labor-market supply assessment |
 | `community-partnership-planning` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8C — workforce-development partnerships and community-relations risk |
+| `antitrust-screening` | 1.0.0 | active | antitrust-agent | 2026-08-20 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
+| `customer-attrition-risk` | 1.0.0 | active | customer-retention-agent | 2026-08-20 | — | Wave 5.8D — CoC-clause scan incl. retained-seller-as-supplier (pilot 002 F-2) |
+| `incentive-clawback-assessment` | 1.0.0 | active | incentive-agent | 2026-08-20 | — | Wave 5.8D — ADR-0030 one-table acquisition/clawback design |
+| `management-incentive-review` | 1.0.0 | active | incentive-agent | 2026-08-20 | — | Wave 5.8D — CoC-trigger executive compensation, role-based per PII discipline |
+| `compensation-harmonization-analysis` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8D — ADR-0027 bidirectional upward-bias verification rule |
+| `debt-and-contingent-liability-simulation` | 1.0.0 | active | risk-officer | 2026-08-20 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
+| `pmi-planning` | 1.0.0 | active | pmi-agent | 2026-08-20 | — | Wave 5.8D — synthesis skill sequencing the other five M&A special-topics outputs |
 
 
 
