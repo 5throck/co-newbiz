@@ -2,7 +2,7 @@
 
 **Owner**: pm, platform-lead
 **Design of record**: design v1.0 §10 Stage 5 wave table (task 4.6), `docs/srs.md`, `docs/traceability-matrix.md`
-**Status**: Stage 4 draft — sprint/PR boundary plan for Stage 5's system build. No code written yet.
+**Status**: Stage 5 complete — all waves 5.1 through 5.10 built, tested, and pilot-verified (`docs/pilots/pilot-001-system-rerun.md`). One retroactive correction found and fixed after this plan was written: Wave 5.1's own acceptance criterion below ("all §2-10 tables in `docs/db-schema.md` migrated") was not actually met when 5.1 was marked complete — 24 of the 68 documented tables (including `dd_finding`) had never been migrated. Closed 2026-08-21 via `db/migrations/0011_dd_finding_and_remaining_tables.sql`, found during a routine post-completion doc audit rather than by this plan's own gate.
 
 ## 1. Wave Structure (from Design §10, Confirmed Unchanged)
 
@@ -34,7 +34,7 @@ Wave 5.1 is a hard precondition for 5.2-5.7 (serial); 5.2's four sub-tracks run 
 
 | Wave | Must Pass Before Merge |
 |---|---|
-| 5.1 | `db:export --dialect postgres` diffed clean against ADR-0002 portability constraints; all §2-10 tables in `docs/db-schema.md` migrated |
+| 5.1 | `db:export --dialect postgres` diffed clean against ADR-0002 portability constraints; all §2-10 tables in `docs/db-schema.md` migrated — **met only as of migration 0011 (2026-08-21), see Status above; not actually true when 5.1 first merged** |
 | 5.2a-d | Design §12's crankshaft-scenario E2E steps 1-13 (fetch idempotency, revision preservation, staging_unmapped quarantine, KPI/driver-tree, base-rate warning, calibration, conversion with error bands, seeded simulation) |
 | 5.3 | Design §12 verification item 14 (chain grade C caps overall at Amber regardless of financial strength) + all Must-priority FR-RAG/FR-GOV rows in `docs/traceability-matrix.md` |
 | 5.4 | Design §12 item 17 (watch → auto-run → RAG transition → notification, with cooldown suppressing duplicate sends) |

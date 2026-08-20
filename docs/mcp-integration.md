@@ -2,7 +2,7 @@
 
 **Owner**: backend-engineer
 **Design of record**: design v1.0 §4-11 (task 4.4), ADR-0011
-**Status**: Stage 4 draft. Not yet implemented (Stage 5) — `mcp/co-newbiz/` follows the `Projects/co-architect/mcp/` pattern (`@modelcontextprotocol/sdk` + stdio, `index.ts` + `tools/*.ts` + `shared/{logger,errors,rate-limiter,retry,types}.ts`).
+**Status**: `mcp/co-newbiz/` is implemented and running (Stage 5 Wave 5.7), following the `Projects/co-architect/mcp/` pattern (`@modelcontextprotocol/sdk` + stdio, `index.ts` + `tools/*.ts` + `shared/{logger,errors,rate-limiter,retry,types}.ts`). **Partial tool coverage**: 11 of the ~28 tools in the catalog below are live (`list_projects`, `get_project_status`, `get_rag_assessment`, `list_notifications`, `lookup_term`, `get_procedure`, `manage_watch`, `get_approval_chain`, `get_compliance_status`, `list_waivers`, `search_interpretations`) — the remaining tools (market/financial/proxy-chain queries, the M&A special-topics tools, `list_dd_findings`, all write tools) are catalog entries not yet wired to a handler; most of their underlying REST endpoints and repository layers don't exist yet either (see `docs/co-newbiz.context.md`'s remaining-gaps note).
 
 ## 1. Non-Negotiable Design Rule
 
