@@ -2,7 +2,7 @@
 
 **Owner**: security-engineer (with legal-counsel, compliance-officer)
 **Design of record**: design v1.0 §4-9-1 (task 4.5), ADR-0038/0039/0040/0012
-**Status**: Stage 4 draft — threat model and control mapping. Controls not yet implemented (Stage 5).
+**Status**: Stage 5 — controls implemented (Waves 5.5-5.7) and re-walked against the trust-boundary diagram below (Wave 5.9, first quarterly threat-model refresh per `docs/security-baseline.md` §1). No new trust boundary was introduced since the diagram was drafted (Stage 4): the REST API layer (Wave 5.6A), web SPA (Wave 5.6B), and MCP server (Wave 5.7A) all converge on the repository layer exactly as diagrammed. §9 below records the re-walk's evidence per control.
 
 ## 1. Trust Boundaries
 
@@ -75,8 +75,32 @@
 7. Attempt `audit_log` deletion as any role, including admin/DB-owner; confirm no path succeeds.
 8. Recover a password from a direct DB dump; confirm it is not possible (hash-only storage, correct algorithm).
 
-## 8. Related
+## 9. Wave 5.9 Verification Status (First Quarterly Threat-Model Refresh)
+
+Re-walked against the trust-boundary diagram (§1) for any schema/API change since the last review, per `docs/security-baseline.md` §1's quarterly cadence — executed for real against already-built, already-tested code, not a re-read of this document alone.
+
+| # | §7 Verification Item | Evidence |
+|---|---|---|
+| 1 | Non-member sees the project on no surface | `tests/unit/security.test.ts` §7-1 (repository layer); `tests/unit/api.test.ts` "a non-member's direct fetch is 404" (REST layer); `tests/unit/mcp.test.ts` "a non-member gets the REST 404 unchanged" (MCP layer) — all three trust-boundary paths independently confirmed, not just the repository layer once |
+| 2 | Admin without membership sees no deal data | `tests/unit/security.test.ts` §7-2; `tests/unit/api.test.ts` "admin without membership sees nothing (FR-SEC-02)" |
+| 3 | No repository-layer bypass path exists | `tests/unit/security.test.ts` §7-3 asserts `project.repository.ts`'s exact exported-function set (`createProject`/`getProjectIfVisible`/`listVisibleProjects`) — an added bypass export would fail this test |
+| 4 | MNPI: `insider_list` auto-populates, access logged, excluded from unscoped MCP responses | `tests/unit/security.test.ts` §7-4; `tests/unit/api.test.ts` "MNPI excluded from default list"; `tests/unit/mcp.test.ts`'s `list_projects` never passes `include_mnpi` |
+| 5 | `comp_benchmark` individual-granularity rejected by schema | `tests/unit/security.test.ts` §7-5 (`PRAGMA table_info` confirms the k≥3 CHECK, not a lint warning) |
+| 6 | `management_package.executive_ref` real-name rejected | `tests/unit/security.test.ts` §7-6 (byte-based surrogate-key CHECK) |
+| 7 | `audit_log` deletion impossible for any role | `tests/unit/security.test.ts` §7-7 (DB trigger rejection); `app/server/admin.ts`'s own module comment confirms no DELETE route exists at the API layer either — two independent enforcement layers, not one |
+| 8 | Password unrecoverable from a DB dump | `tests/unit/security.test.ts` §7-8 (hash-only storage, PBKDF2-HMAC-SHA256 confirmed, not just "a hash exists") |
+
+STRIDE-row spot checks against code not covered by the numbered list above:
+
+- **DoS / Unbounded MCP write-tool calls**: `mcp/co-newbiz/shared/rest-client.ts`'s separate read (60/min) and write (10/min) token buckets, confirmed in `tests/unit/mcp.test.ts`'s scope-enforcement tests
+- **Elevation / MCP tool scope creep**: `mcp/co-newbiz/index.ts`'s 11 tools all map 1:1 to real `app/server/` REST endpoints — no tool exists without a matching endpoint (the inverse direction — an endpoint with no MCP tool — is a documented, intentional deferral, not drift)
+- **Tampering / audit log deletion**: confirmed twice as noted in item 7 above (DB trigger + no API route)
+
+No control listed in §2 was found to have regressed or gone unimplemented during this re-walk. No new trust boundary requiring a new STRIDE row was introduced by Waves 5.6-5.9's actual implementation.
+
+## 10. Related
 
 - `docs/security-baseline.md` — the recurring operational security cadence (scans, patching, access review)
 - `docs/api-spec.md` §1 — the access-control rules this model justifies
 - `docs/db-schema.md` §9 — the information-protection tables this model governs
+- `docs/runbooks/backup-restore.md` — the DR-drill counterpart to this quarterly refresh

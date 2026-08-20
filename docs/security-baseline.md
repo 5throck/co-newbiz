@@ -2,7 +2,7 @@
 
 **Owner**: security-engineer
 **Design of record**: design v1.0 §4-12 (task 4.5), `docs/security-model.md`
-**Status**: Stage 4 draft — recurring operational security cadence. Not yet executable (Stage 5, once the system exists).
+**Status**: Stage 5 — executable and first-executed Wave 5.9. §1's weekly dependency/secrets scan (`gitleaks detect`, 0 leaks across 98 commits) and §1's quarterly threat-model refresh (`docs/security-model.md` §9, re-walked against every schema/API change through Wave 5.7A) both ran for real this wave, not only documented as intent. The remaining Stage-5-marked rows (monthly/annual cadence items, scheduler-dependent) activate on their own calendar per `docs/ops-cadence.md` and are not yet due for a first real execution.
 
 ## 1. Recurring Cadence (Reuses `docs/ops-cadence.md` §1's Table Structure)
 
