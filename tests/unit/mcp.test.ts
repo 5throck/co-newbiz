@@ -1,10 +1,12 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Wave 5.7A MCP server tests — docs/mcp-integration.md. Runs the real Hono
  * app (Bun.serve on an ephemeral port) and calls the MCP server's own
  * dispatch() against it over real HTTP with real Bearer tokens — not
  * mocked handlers. A separate describe verifies the actual stdio JSON-RPC
  * transport once, since dispatch() alone doesn't exercise the SDK wiring.
+ * Wave 5.7B added the analysis/deal-review suites; the engine-1 wave
+ * added compare_runs.
  */
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
@@ -95,7 +97,7 @@ describe("ADR-0011 — no direct DB access from the MCP server (FR-SYS-01)", () 
 describe("tool catalog", () => {
   test("every registered tool has a name and an object input schema", async () => {
     const { TOOLS } = await import("../../mcp/co-newbiz/index.ts");
-    expect(TOOLS.length).toBe(27); // 11 (5.7A) + 16 (5.7B) — see mcp-integration.md Status
+    expect(TOOLS.length).toBe(28); // 11 (5.7A) + 16 (5.7B) + 1 (engine-1 compare_runs) — see mcp-integration.md Status
     for (const tool of TOOLS) {
       expect(tool.name.length).toBeGreaterThan(0);
       expect(tool.inputSchema.type).toBe("object");
@@ -347,6 +349,45 @@ describe("Wave 5.7B — analysis and deal-review tools", () => {
   });
 });
 
+describe("Wave engine-1 — compare_runs", () => {
+  let runA: string;
+  let runB: string;
+
+  beforeAll(() => {
+    runA = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [runA, projectId, "engine-1 A", "hash-a", "alice", NOW]);
+    db.run("INSERT INTO run_input (run_id, assumption_key, value) VALUES (?,?,?)", [runA, "x", 1]);
+    db.run("INSERT INTO run_input (run_id, assumption_key, value) VALUES (?,?,?)", [runA, "y", 2]);
+    runB = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [runB, projectId, "engine-1 B", "hash-b", "alice", NOW]);
+    db.run("INSERT INTO run_input (run_id, assumption_key, value) VALUES (?,?,?)", [runB, "x", 1.5]);
+    db.run("INSERT INTO run_input (run_id, assumption_key, value) VALUES (?,?,?)", [runB, "z", 3]);
+  });
+
+  test("compare_runs returns the variable-level bridge for a member", async () => {
+    process.env.CO_NEWBIZ_API_TOKEN = writeToken;
+    const { dispatch } = await import("../../mcp/co-newbiz/index.ts");
+    const result = (await dispatch("compare_runs", { runA, runB })) as {
+      data: { changed: { key: string; from: number; to: number; delta: number }[]; added: { key: string }[]; removed: { key: string }[] };
+    };
+    expect(result.data.changed).toEqual([{ key: "x", from: 1, to: 1.5, delta: 0.5 }]);
+    expect(result.data.added).toEqual([{ key: "z", value: 3 }]);
+    expect(result.data.removed).toEqual([{ key: "y", value: 2 }]);
+  });
+
+  test("a non-member relays the REST 404", async () => {
+    process.env.CO_NEWBIZ_API_TOKEN = readToken;
+    const { dispatch } = await import("../../mcp/co-newbiz/index.ts");
+    const result = (await dispatch("compare_runs", { runA, runB })) as { error: { code: string } | null };
+    expect(result.error?.code).toBe("not_found");
+  });
+
+  test("a missing runA rejects before any REST call", async () => {
+    const { dispatch } = await import("../../mcp/co-newbiz/index.ts");
+    await expect(dispatch("compare_runs", { runB })).rejects.toThrow(/runA/);
+  });
+});
+
 describe("input validation", () => {
   test("a missing required argument throws before any REST call", async () => {
     const { dispatch } = await import("../../mcp/co-newbiz/index.ts");
@@ -377,7 +418,7 @@ describe("real stdio JSON-RPC transport (not just dispatch())", () => {
     try {
       await client.connect(transport);
       const tools = await client.listTools();
-      expect(tools.tools.length).toBeGreaterThanOrEqual(27);
+      expect(tools.tools.length).toBeGreaterThanOrEqual(28);
 
       const result = await client.callTool({ name: "list_projects", arguments: {} });
       const content = (result.content as { type: string; text: string }[])[0];

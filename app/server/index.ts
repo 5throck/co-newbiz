@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * co-newbiz API server — docs/api-spec.md (Wave 5.6A).
  *
@@ -11,9 +11,11 @@
  * (envelope). Wave 5.7B adds the plain membership-filtered table reads:
  * analysis.ts (series/observations/data-changes/assumptions) and
  * deal-review.ts (dd-findings/antitrust/incentives/liabilities/sites/
- * partners/permits/value-chain-links). Engine-dependent surfaces (runs/
- * diffs, proxy chains, simulations, reports) stay deferred — the engines
- * run through the CLI today and need an async job surface, not a
+ * partners/permits/value-chain-links). The engine-1 wave adds run-based
+ * versioning to analysis.ts (runs list/create/detail + diff — synchronous
+ * snapshot writes, not engine invocations). Engine-dependent surfaces
+ * (proxy chains, simulations, model runs, reports) stay deferred — those
+ * engines run through the CLI today and need an async job surface, not a
  * synchronous handler.
  *
  * If app/web/dist exists (Wave 5.6B build output) it is served as the SPA

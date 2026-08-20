@@ -10,14 +10,14 @@
 openapi: 3.1.0
 info:
   title: co-newbiz REST API
-  version: 1.1.0
+  version: 1.2.0
   description: >-
-    REST surface of co-newbiz (Stage 5 Waves 5.6-5.7). Every response uses
-    the standard envelope {data, meta, error} (api-spec.md §9).
-    Project-scoped reads return 404 — identical to "does not exist" — for
-    projects the caller cannot see (FR-SEC-01): membership is resolved
-    first, so project existence itself is never an oracle. Write endpoints
-    are audit-logged (FR-SEC-07).
+    REST surface of co-newbiz (Stage 5 Waves 5.6-5.7 + engine-1 run
+    versioning). Every response uses the standard envelope {data, meta,
+    error} (api-spec.md §9). Project-scoped reads return 404 — identical
+    to "does not exist" — for projects the caller cannot see (FR-SEC-01):
+    membership is resolved first, so project existence itself is never an
+    oracle. Write endpoints are audit-logged (FR-SEC-07).
 servers:
   - url: http://localhost:8787
     description: Default bind (app/server/index.ts; CO_NEWBIZ_PORT overrides)
@@ -35,7 +35,7 @@ tags:
   - name: Governance
     description: RAG, approvals, compliance, waivers, interpretations, procedures (api-spec.md §5).
   - name: Analysis
-    description: Market observations, change log, assumptions (api-spec.md §4/§7; Wave 5.7B).
+    description: Market observations, change log, assumptions, and run-based versioning (api-spec.md §4/§7; Waves 5.7B/engine-1).
   - name: Deal Review
     description: DD findings, antitrust, incentives, liabilities, sites, partners, permits, value chain (api-spec.md §6; Wave 5.7B).
   - name: Monitoring
@@ -527,6 +527,72 @@ paths:
         "200": { $ref: "#/components/responses/Ok" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /api/projects/{id}/runs:
+    get:
+      operationId: listRuns
+      summary: Run list for a visible project, newest first, with each run's input-snapshot size.
+      tags: [Analysis]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createRun
+      summary: Create a versioned input snapshot — NOT a valuation result; the model engine does not exist yet. Analyst+; audited.
+      tags: [Analysis]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label]
+              properties:
+                label: { type: string }
+                from_run_id:
+                  type: string
+                  description: Source run whose inputs are copied; defaults to the project's latest run. Must belong to the same project (400 otherwise).
+                set:
+                  type: object
+                  description: Overrides applied on top of the copied snapshot (assumption_key -> finite number).
+                  additionalProperties: { type: number }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/runs/{id}:
+    get:
+      operationId: getRun
+      summary: Run row plus its immutable run_input snapshot and input_hash (ADR-0005 run-based versioning).
+      tags: [Analysis]
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/runs/{id}/diff/{otherId}:
+    get:
+      operationId: diffRuns
+      summary: Variable-level bridge between two runs of one project — changed/added/removed per assumption_key plus both input hashes. NPV-level decomposition deferred until the valuation engine exists.
+      tags: [Analysis]
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+        - $ref: "#/components/parameters/OtherRunId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/assumptions:
     get:
       operationId: getAssumptions
@@ -935,6 +1001,18 @@ components:
       required: true
       schema: { type: string }
       description: Series id (fact_market_observation.series_id).
+    RunId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      description: Run id. A run in a project the caller cannot see returns 404 (FR-SEC-01).
+    OtherRunId:
+      name: otherId
+      in: path
+      required: true
+      schema: { type: string }
+      description: Comparison run id — must belong to the same project as the base run (400 otherwise).
     TokenId:
       name: id
       in: path

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.2.0
 /**
- * co-newbiz MCP server — docs/mcp-integration.md (Waves 5.7A/5.7B).
+ * co-newbiz MCP server — docs/mcp-integration.md (Waves 5.7A/5.7B/engine-1).
  *
  * Calls the REST API exclusively (ADR-0011, FR-SYS-01) — see
  * shared/rest-client.ts's header for the non-negotiable rule this file
@@ -9,17 +9,18 @@
  * db/lib import anywhere under mcp/co-newbiz/.
  *
  * Wave 5.7A shipped the tools behind the Wave 5.6A REST surface. Wave
- * 5.7B adds every catalog tool whose backing endpoint is a plain
+ * 5.7B added every catalog tool whose backing endpoint is a plain
  * membership-filtered table read: tools/analysis.ts (search_series,
  * get_observations, list_data_changes, get_assumptions, set_assumption✱)
  * and tools/deal-review.ts (list_dd_findings, get_rbd_source_profile,
  * add_dd_finding✱, get_antitrust_assessment, get_incentive_exposure,
  * get_liability_exposure, compare_sites, list_partner_candidates,
  * list_regulatory_requirements, get_permit_path, get_value_chain_linkage).
- * Still deferred — the backing engines run through the CLI today, not a
- * REST endpoint, and need an async job surface, not a synchronous
- * handler: get_financial_analysis, get_peer_benchmark, get_projection,
- * get_proxy_chain, calibrate_chain✱, compare_runs, get_customer_risk,
+ * The engine-1 wave added compare_runs (tools/analysis.ts) over the
+ * runs REST surface. Still deferred — the backing engines run through
+ * the CLI today, not a REST endpoint, and need an async job surface, not
+ * a synchronous handler: get_financial_analysis, get_peer_benchmark,
+ * get_projection, get_proxy_chain, calibrate_chain✱, get_customer_risk,
  * get_compensation_gap, run_model✱, run_simulation✱, generate_report✱,
  * export_report.
  */
@@ -42,6 +43,7 @@ import {
 import { lookupTerm } from "./tools/glossary.ts";
 import { listNotifications, manageWatch, type WatchRuleInput } from "./tools/monitoring.ts";
 import {
+  compareRuns,
   getAssumptions,
   getObservations,
   listDataChanges,
@@ -208,6 +210,18 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: "compare_runs",
+    description: "Variable-level bridge between two runs of one project — changed/added/removed per assumption_key plus both input hashes (NPV-level decomposition deferred until the valuation engine exists).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        runA: { type: "string", description: "Base run id." },
+        runB: { type: "string", description: "Comparison run id." },
+      },
+      required: ["runA", "runB"],
+    },
+  },
+  {
     name: "list_dd_findings",
     description: "DD findings for a project, optionally filtered by category (e.g. 'rbd').",
     inputSchema: {
@@ -321,7 +335,7 @@ export const TOOLS: ToolDefinition[] = [
 ];
 
 export function buildServer(): Server {
-  const server = new Server({ name: "co-newbiz-mcp", version: "1.1.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "co-newbiz-mcp", version: "1.2.0" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
@@ -421,6 +435,10 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
         ttl_days: args.ttl_days as number | undefined,
       });
     }
+    case "compare_runs":
+      requireString(args, "runA");
+      requireString(args, "runB");
+      return compareRuns(args.runA as string, args.runB as string);
     case "list_dd_findings":
       requireString(args, "projectId");
       return listDdFindings(args.projectId as string, args.category as string | undefined);

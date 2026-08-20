@@ -2,7 +2,7 @@
 
 **Owner**: backend-engineer, data-architect
 **Design of record**: design v1.0 §4-11 (task 4.4), `docs/srs.md` §12, `docs/db-schema.md`
-**Status**: Endpoint catalog and access-control contract — implemented Stage 5 Waves 5.6-5.7 (`app/server/*.ts`: `admin.ts`, `analysis.ts`, `auth.ts`, `deal-review.ts`, `envelope.ts`, `glossary.ts`, `governance.ts`, `index.ts`, `middleware.ts`, `monitoring.ts`, `projects.ts`, `tokens.ts`). `docs/openapi.yaml` (OpenAPI 3.1, as-built surface only) is now generated, and `tests/unit/openapi.test.ts` is its executable drift gate — set equality with the `app/server/*.ts` route declarations in both directions (mcp-integration.md §6), so a route without a spec entry, or a spec entry without a route, fails the suite. This document stays the human-readable index; the §4/§6/§7 tables carry an Implementation column separating `as-built` rows from `forward-design` rows (the contract the engine waves will implement: runs/diffs, proxy chains, simulations, group agenda, reports, management package, comp benchmark, customer risk).
+**Status**: Endpoint catalog and access-control contract — implemented Stage 5 Waves 5.6-5.7 plus the engine-1 run-versioning wave (`app/server/*.ts`: `admin.ts`, `analysis.ts`, `auth.ts`, `deal-review.ts`, `envelope.ts`, `glossary.ts`, `governance.ts`, `index.ts`, `middleware.ts`, `monitoring.ts`, `projects.ts`, `tokens.ts`). `docs/openapi.yaml` (OpenAPI 3.1, as-built surface only) is now generated, and `tests/unit/openapi.test.ts` is its executable drift gate — set equality with the `app/server/*.ts` route declarations in both directions (mcp-integration.md §6), so a route without a spec entry, or a spec entry without a route, fails the suite. This document stays the human-readable index; the §4/§6/§7 tables carry an Implementation column separating `as-built` rows from `forward-design` rows (the contract the later engine waves will implement: proxy chains, simulations, group agenda, reports, management package, comp benchmark, customer risk — run versioning landed with engine-1: `model`/`diff` CLI + the §4 runs rows).
 
 ## 1. Design Rules (Non-Negotiable)
 
@@ -39,9 +39,9 @@
 |---|---|---|---|---|
 | `/api/series` | GET | Series catalog from `fact_market_observation` (`?q=` substring filter) | Authenticated | as-built (5.7B) |
 | `/api/series/:id/observations` | GET | Latest revision per period; `?all_revisions=1`, `?period_id=` | Authenticated | as-built (5.7B) |
-| `/api/projects/:id/runs` | GET/POST | List/create analysis runs | Membership | forward-design |
-| `/api/runs/:id` | GET | Run detail (`run_input` snapshot, `input_hash`) | Membership on `run.project_id` | forward-design |
-| `/api/runs/:id/diff/:other_id` | GET | Version-comparison bridge | Membership | forward-design |
+| `/api/projects/:id/runs` | GET/POST | List/create analysis runs — POST records a **versioned input snapshot** (`run_input` copy + `set` overrides + `input_hash`), not a valuation result; `from_run_id` defaults to the project's latest run and must belong to the same project (400 otherwise) | Membership; POST `analyst`+ role, audit-logged | as-built (engine-1) |
+| `/api/runs/:id` | GET | Run detail (`run_input` snapshot, `input_hash`) | Membership on `run.project_id` — 404 for a non-member | as-built (engine-1) |
+| `/api/runs/:id/diff/:other_id` | GET | Variable-level bridge — changed/added/removed per `assumption_key` plus both `input_hash`es; NPV-level decomposition deferred until the valuation engine exists | Membership; both runs must belong to one project (400 otherwise) | as-built (engine-1) |
 | `/api/assumptions` | GET/POST | Assumption registry entries | Membership; `kind='assumed'` write requires non-empty `rationale` | as-built (5.7B) |
 | `/api/proxy-chains/:id` | GET | Chain detail with per-hop reliability grade | Membership | forward-design |
 | `/api/proxy-chains/:id/calibrate` | POST | Recalibration trigger | `quant-methodologist` role | forward-design |

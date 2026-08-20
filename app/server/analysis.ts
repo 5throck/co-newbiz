@@ -1,13 +1,17 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
- * Analysis data routes — docs/api-spec.md §4/§7 (Wave 5.7B).
+ * Analysis data routes — docs/api-spec.md §4/§7 (Waves 5.7B + engine-1).
  *
  * Plain membership-filtered reads over the fact/observation and assumption
  * tables migrated in 0003: the series catalog, per-period latest-revision
  * observations (the idx_obs_latest read path), the data_change_log scan,
- * and the assumption registry. Engine-dependent surfaces (runs, diffs,
- * proxy chains, simulations) stay on the CLI until an async job surface
- * exists — see index.ts's module doc.
+ * and the assumption registry. The engine-1 wave adds run-based versioning
+ * (ADR-0005) over the same migration's run/run_input tables: run
+ * list/create/detail and the variable-level diff bridge, all synchronous
+ * because createRun is a bounded snapshot write, not an engine invocation —
+ * POST records a versioned INPUT snapshot, never a valuation result. Still
+ * deferred to an async job surface: proxy chains, simulations, reports —
+ * see index.ts's module doc.
  *
  * Assumption writes enforce the FR-DATA-07 boundary twice: app code rejects
  * kind='assumed' without a non-empty rationale (400) before the insert, and
@@ -21,6 +25,7 @@ import { getDb } from "../../db/client.ts";
 import { getProjectIfVisible } from "../../db/repositories/project.repository.ts";
 import { appendAudit } from "../../db/lib/access-control.ts";
 import { ulid } from "../../db/lib/ulid.ts";
+import { createRun, diffRuns, type CreateRunResult } from "../../db/lib/versioning.ts";
 import { badRequest, forbidden, notFound, ok } from "./envelope.ts";
 import { requireAuth, type AppEnv, type AuthContext } from "./middleware.ts";
 
@@ -190,4 +195,111 @@ analysisRoutes.post("/api/assumptions", async (c) => {
     now,
   });
   return ok(c, { id }, 201);
+});
+
+/**
+ * GET /api/projects/:id/runs — run list for a visible project, newest
+ * first, with each run's input-snapshot size. id DESC is the deterministic
+ * tiebreak when two runs share a created_at millisecond.
+ */
+analysisRoutes.get("/api/projects/:id/runs", (c) => {
+  const ctx = c.get("auth");
+  const projectId = c.req.param("id");
+  if (!visibleProject(ctx, projectId)) return notFound(c);
+  const rows = getDb()
+    .query(
+      `SELECT r.id, r.label, r.input_hash, r.created_by, r.created_at, r.superseded_by,
+              (SELECT COUNT(*) FROM run_input ri WHERE ri.run_id = r.id) AS input_count
+       FROM run r
+       WHERE r.project_id = ?
+       ORDER BY r.created_at DESC, r.id DESC`,
+    )
+    .all(projectId);
+  return ok(c, rows, 200, { count: rows.length });
+});
+
+/**
+ * POST /api/projects/:id/runs — create a versioned input snapshot
+ * (ADR-0005): copy the source run's inputs (from_run_id, else the
+ * project's latest run, else empty), apply `set` overrides, hash, persist
+ * atomically. This is NOT a valuation — no output is computed (the model
+ * engine does not exist yet). Analyst+; audited. A from_run_id from
+ * another project is 400 — a version chain lives within one project.
+ */
+analysisRoutes.post("/api/projects/:id/runs", async (c) => {
+  const ctx = c.get("auth");
+  const projectId = c.req.param("id");
+  if (!visibleProject(ctx, projectId)) return notFound(c);
+  if (ctx.role === "viewer") {
+    return forbidden(c, "role_required", "Run creation requires the analyst role.");
+  }
+  const body = (await c.req.json().catch(() => null)) as
+    | { label?: string; from_run_id?: string; set?: Record<string, number> }
+    | null;
+  if (!body?.label?.trim()) {
+    return badRequest(c, "invalid_request", "label is required.");
+  }
+  if (body.set !== undefined && (typeof body.set !== "object" || Array.isArray(body.set))) {
+    return badRequest(c, "invalid_request", "set must be an object of assumption_key -> number.");
+  }
+  const db = getDb();
+  const now = new Date().toISOString();
+  let result: CreateRunResult;
+  try {
+    result = createRun(db, {
+      projectId,
+      label: body.label.trim(),
+      createdBy: ctx.userId,
+      fromRunId: body.from_run_id,
+      overrides: body.set,
+      now,
+    });
+  } catch (err) {
+    return badRequest(c, "run_rejected", err instanceof Error ? err.message : "Run creation failed.");
+  }
+  appendAudit(db, { actor: ctx.userId, action: "run_create", target: `${projectId}:${result.run_id}`, now });
+  return ok(c, result, 201);
+});
+
+/**
+ * GET /api/runs/:id — run row plus its immutable run_input snapshot.
+ * Membership resolves through run.project_id; a non-member gets 404,
+ * same as every project-scoped read.
+ */
+analysisRoutes.get("/api/runs/:id", (c) => {
+  const ctx = c.get("auth");
+  const runId = c.req.param("id");
+  const run = getDb()
+    .query("SELECT id, project_id, label, input_hash, created_by, created_at, superseded_by FROM run WHERE id = ?")
+    .get(runId) as { id: string; project_id: string; label: string | null; input_hash: string; created_by: string; created_at: string; superseded_by: string | null } | null;
+  if (!run || !visibleProject(ctx, run.project_id)) return notFound(c);
+  const inputs = getDb()
+    .query("SELECT assumption_key, value FROM run_input WHERE run_id = ? ORDER BY assumption_key")
+    .all(runId) as { assumption_key: string; value: number }[];
+  return ok(c, { run, inputs }, 200, { input_count: inputs.length });
+});
+
+/**
+ * GET /api/runs/:id/diff/:otherId — variable-level bridge between two
+ * runs: changed/added/removed per assumption_key plus both input hashes.
+ * Both runs must be visible and belong to the same project (400
+ * otherwise). NPV-level bridge decomposition is deferred until a
+ * valuation engine exists — this endpoint never fabricates it.
+ */
+analysisRoutes.get("/api/runs/:id/diff/:otherId", (c) => {
+  const ctx = c.get("auth");
+  const db = getDb();
+  const runs = [c.req.param("id"), c.req.param("otherId")].map(
+    (id) => db.query("SELECT id, project_id FROM run WHERE id = ?").get(id) as { id: string; project_id: string } | null,
+  );
+  if (!runs[0] || !visibleProject(ctx, runs[0].project_id)) return notFound(c);
+  if (!runs[1] || !visibleProject(ctx, runs[1].project_id)) return notFound(c);
+  if (runs[0].project_id !== runs[1].project_id) {
+    return badRequest(
+      c,
+      "invalid_request",
+      "Cannot diff runs from different projects — a version chain lives within one project (ADR-0005).",
+    );
+  }
+  return ok(c, diffRuns(db, runs[0].id, runs[1].id));
 });
