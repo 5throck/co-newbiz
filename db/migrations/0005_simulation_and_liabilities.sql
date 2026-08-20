@@ -1,3 +1,4 @@
+-- @reversible: true (additive-only schema, no destructive DDL against existing production data — ADR-0014; rollback mechanism is pre-migration backup restore, see scripts/co-newbiz/restore.ts)
 -- Simulation and contingent-liability tables — docs/db-schema.md §4/§7, ADR-0026.
 -- simulation_draw is the raw-iteration table archived by retention_policy
 -- after N months; simulation_result's quantile summary is retained

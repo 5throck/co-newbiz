@@ -1,3 +1,4 @@
+-- @reversible: true (additive-only schema, no destructive DDL against existing production data — ADR-0014; rollback mechanism is pre-migration backup restore, see scripts/co-newbiz/restore.ts)
 -- Proxy chain hops and chain-level reliability grade — docs/db-schema.md §3,
 -- meeting M4 (D-M4-1 through D-M4-4). Deliberately NO shared FK path to
 -- value_chain_link (ADR-0025, meeting M4 D-M4-4's structural separation

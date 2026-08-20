@@ -1,3 +1,4 @@
+-- @reversible: true (additive-only schema, no destructive DDL against existing production data — ADR-0014; rollback mechanism is pre-migration backup restore, see scripts/co-newbiz/restore.ts)
 -- Master data catalog — docs/db-schema.md §2.
 -- Portability constraints (ADR-0002): TEXT PKs (ULIDs), no AUTOINCREMENT,
 -- no implicit ROWID dependence, ISO-8601 TEXT dates, PRAGMA foreign_keys=ON

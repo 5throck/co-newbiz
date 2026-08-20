@@ -1,3 +1,4 @@
+-- @reversible: true (additive-only schema, no destructive DDL against existing production data — ADR-0014; rollback mechanism is pre-migration backup restore, see scripts/co-newbiz/restore.ts)
 -- Accounts, sessions, and PII tables — Wave 5.5, docs/security-model.md.
 -- Realizes FR-SEC-02/04/05/06/07/09 and design v1.0 §4-9/§4-9-1.
 --

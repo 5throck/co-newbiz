@@ -1,3 +1,4 @@
+-- @reversible: true (additive-only schema, no destructive DDL against existing production data — ADR-0014; rollback mechanism is pre-migration backup restore, see scripts/co-newbiz/restore.ts)
 -- Monitoring, auto-reanalysis, and scheduler tables — docs/db-schema.md §9/§11,
 -- design v1.0 §4-3, ADR-0019, FR-MON-01..04, Wave 5.4.
 --

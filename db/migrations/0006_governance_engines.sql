@@ -1,3 +1,4 @@
+-- @reversible: true (additive-only schema, no destructive DDL against existing production data — ADR-0014; rollback mechanism is pre-migration backup restore, see scripts/co-newbiz/restore.ts)
 -- Governance engines — docs/db-schema.md §5/§6, Wave 5.3.
 --   rag_rule / rag_assessment / rag_transition   (FR-RAG-01..08, ADR-0016)
 --   approval_chain / group_agenda                (FR-GOV-04..06, ADR-0028/0029)

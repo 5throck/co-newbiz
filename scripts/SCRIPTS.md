@@ -59,6 +59,8 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `agent-create.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `co-newbiz/newbiz.ts` | co-newbiz | 1.9.0 | active | —| —| L3-only (project-local analysis-engine CLI, design v1.0 §4-8, not part of L0/L1/L2 lineage) | —|
 | `co-newbiz/proc-resolve.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `proc:resolve` — merges shared+region+entity procedures) | —|
+| `co-newbiz/backup.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, ADR-0014/0015 — checkpointed SQLite backup + row-count manifest) | —|
+| `co-newbiz/restore.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, ADR-0014 rollback mechanism — restore + manifest verification) | —|
 | `co-newbiz/fin-analyze.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `fin:analyze` — runs python/kpi.py, reused from co-consult) | —|
 | `co-newbiz/simulate.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `simulate` — runs python/monte_carlo.py, seeded contingent-liability Monte Carlo) | —|
 | `co-newbiz/fin-pipeline.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `fin:pipeline` — full DART->validate->normalize->KPI chain, reuses python/{validate,normalize}.py from co-consult) | —|

@@ -1,3 +1,4 @@
+-- @reversible: true (additive-only schema, no destructive DDL against existing production data — ADR-0014; rollback mechanism is pre-migration backup restore, see scripts/co-newbiz/restore.ts)
 -- Project membership and information-protection core — docs/db-schema.md §9.
 -- Non-descopable MVP items (ADR-0038/0039/0040/0012). Deny-by-default:
 -- a row here is what grants visibility, not a role alone (FR-SEC-01/02).
