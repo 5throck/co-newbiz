@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-// @version 1.2.0
+// @version 1.3.0
 /**
- * co-newbiz MCP server — docs/mcp-integration.md (Waves 5.7A/5.7B/engine-1).
+ * co-newbiz MCP server — docs/mcp-integration.md (Waves 5.7A/5.7B/engine-1/2).
  *
  * Calls the REST API exclusively (ADR-0011, FR-SYS-01) — see
  * shared/rest-client.ts's header for the non-negotiable rule this file
@@ -17,12 +17,14 @@
  * get_liability_exposure, compare_sites, list_partner_candidates,
  * list_regulatory_requirements, get_permit_path, get_value_chain_linkage).
  * The engine-1 wave added compare_runs (tools/analysis.ts) over the
- * runs REST surface. Still deferred — the backing engines run through
- * the CLI today, not a REST endpoint, and need an async job surface, not
- * a synchronous handler: get_financial_analysis, get_peer_benchmark,
- * get_projection, get_proxy_chain, calibrate_chain✱, get_customer_risk,
- * get_compensation_gap, run_model✱, run_simulation✱, generate_report✱,
- * export_report.
+ * runs REST surface; engine-2 added run_simulation✱ over POST
+ * /api/simulations (the engine spawn lives REST-side, in
+ * db/lib/simulation.ts — this relay never touches it). Still deferred —
+ * the backing engines run through the CLI today, not a REST endpoint,
+ * and need an async job surface, not a synchronous handler:
+ * get_financial_analysis, get_peer_benchmark, get_projection,
+ * get_proxy_chain, calibrate_chain✱, get_customer_risk,
+ * get_compensation_gap, run_model✱, generate_report✱, export_report.
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -47,6 +49,7 @@ import {
   getAssumptions,
   getObservations,
   listDataChanges,
+  runSimulation,
   searchSeries,
   setAssumption,
 } from "./tools/analysis.ts";
@@ -222,6 +225,19 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: "run_simulation",
+    description: "Run the seeded Monte Carlo NPV simulation over a run's input snapshot, integrating the project's contingent liabilities (write-scoped token required). Same seed + inputs reproduce identical quantiles.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        run_id: { type: "string", description: "Run whose sim.* inputs (sim.discount_rate, sim.cf1..N) feed the engine." },
+        seed: { type: "number", description: "Optional seed. Defaults to a value derived from the run's input_hash — identical inputs reproduce identical quantiles either way." },
+        iterations: { type: "number", description: "Optional, 1-100000; defaults to the engine's own 10000." },
+      },
+      required: ["run_id"],
+    },
+  },
+  {
     name: "list_dd_findings",
     description: "DD findings for a project, optionally filtered by category (e.g. 'rbd').",
     inputSchema: {
@@ -335,7 +351,7 @@ export const TOOLS: ToolDefinition[] = [
 ];
 
 export function buildServer(): Server {
-  const server = new Server({ name: "co-newbiz-mcp", version: "1.2.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "co-newbiz-mcp", version: "1.3.0" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
@@ -439,6 +455,14 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
       requireString(args, "runA");
       requireString(args, "runB");
       return compareRuns(args.runA as string, args.runB as string);
+    case "run_simulation": {
+      requireString(args, "run_id");
+      return runSimulation({
+        run_id: args.run_id as string,
+        seed: args.seed as number | undefined,
+        iterations: args.iterations as number | undefined,
+      });
+    }
     case "list_dd_findings":
       requireString(args, "projectId");
       return listDdFindings(args.projectId as string, args.category as string | undefined);

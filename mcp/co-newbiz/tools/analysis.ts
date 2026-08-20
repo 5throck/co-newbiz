@@ -1,14 +1,14 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Market/assumption tools — mcp-integration.md §3. Thin REST wrappers over
- * app/server/analysis.ts (Wave 5.7B + engine-1): the membership gate, the
+ * app/server/analysis.ts (Wave 5.7B + engine-1/2): the membership gate, the
  * FR-DATA-07 rationale rule, and the audit log all live in the REST layer —
- * this file only relays, per ADR-0011. set_assumption (✱ write) follows
- * the manage_watch pattern: required fields are checked here so a
- * malformed call fails before any REST round-trip, scope enforcement stays
- * REST-side. compare_runs (engine-1) relays the variable-level diff
- * bridge — the REST layer refuses cross-project pairs, so this tool never
- * needs to.
+ * this file only relays, per ADR-0011. set_assumption and run_simulation
+ * (✱ write) follow the manage_watch pattern: required fields are checked
+ * here so a malformed call fails before any REST round-trip, scope
+ * enforcement stays REST-side. compare_runs (engine-1) relays the
+ * variable-level diff bridge — the REST layer refuses cross-project pairs,
+ * so this tool never needs to.
  */
 
 import { rest } from "../shared/rest-client.ts";
@@ -76,4 +76,28 @@ export async function compareRuns(runA: string, runB: string) {
   if (!runA?.trim()) throw new Error("runA is required.");
   if (!runB?.trim()) throw new Error("runB is required.");
   return rest.get(`/api/runs/${encodeURIComponent(runA)}/diff/${encodeURIComponent(runB)}`);
+}
+
+export interface RunSimulationInput {
+  run_id: string;
+  seed?: number;
+  iterations?: number;
+}
+
+/**
+ * ✱ write — needs the token's write scope. The REST layer composes the
+ * scenario (sim.* run inputs + the project's contingent liabilities),
+ * spawns the seeded Monte Carlo engine, and returns the persisted quantile
+ * summary; an omitted seed defaults to one derived from the run's
+ * input_hash, so identical inputs stay reproducible either way.
+ */
+export async function runSimulation(input: RunSimulationInput) {
+  if (!input.run_id?.trim()) throw new Error("run_id is required.");
+  if (input.seed !== undefined && (!Number.isInteger(input.seed) || input.seed < 0)) {
+    throw new Error("seed must be a non-negative integer.");
+  }
+  if (input.iterations !== undefined && (!Number.isInteger(input.iterations) || input.iterations < 1)) {
+    throw new Error("iterations must be a positive integer.");
+  }
+  return rest.post("/api/simulations", input);
 }

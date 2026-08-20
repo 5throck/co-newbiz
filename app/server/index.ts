@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.3.0
 /**
  * co-newbiz API server — docs/api-spec.md (Wave 5.6A).
  *
@@ -13,10 +13,12 @@
  * deal-review.ts (dd-findings/antitrust/incentives/liabilities/sites/
  * partners/permits/value-chain-links). The engine-1 wave adds run-based
  * versioning to analysis.ts (runs list/create/detail + diff — synchronous
- * snapshot writes, not engine invocations). Engine-dependent surfaces
- * (proxy chains, simulations, model runs, reports) stay deferred — those
- * engines run through the CLI today and need an async job surface, not a
- * synchronous handler.
+ * snapshot writes, not engine invocations). The engine-2 wave adds the
+ * simulations surface (POST /api/simulations spawns the Monte Carlo engine
+ * synchronously — db/lib/simulation.ts — with results readable at
+ * /api/simulations/:id/results). Engine-dependent surfaces still deferred
+ * (proxy chains, model runs, reports): those engines need an async job
+ * surface, not a synchronous handler.
  *
  * If app/web/dist exists (Wave 5.6B build output) it is served as the SPA
  * with an index.html fallback for client-side routes.
