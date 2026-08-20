@@ -53,6 +53,8 @@ NUL
 
 # Databases
 *.sqlite
+*.sqlite-wal
+*.sqlite-shm
 *.db
 
 # CodeGraph Index
