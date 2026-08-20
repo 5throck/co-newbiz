@@ -1,0 +1,10 @@
+{
+  "seed": 42,
+  "iterations": 5000,
+  "discount_rate": 0.10,
+  "base_cash_flows": [100, 110, 120, 130, 140],
+  "contingent_liabilities": [
+    {"probability": 0.35, "amount_low": 20, "amount_expected": 50, "amount_high": 150, "timing_year": 2},
+    {"probability": 0.15, "amount_low": 10, "amount_expected": 30, "amount_high": 200, "timing_year": 3}
+  ]
+}

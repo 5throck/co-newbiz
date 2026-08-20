@@ -1,0 +1,7 @@
+{
+  "seed": 42,
+  "iterations": 5000,
+  "discount_rate": 0.10,
+  "base_cash_flows": [100, 110, 120, 130, 140],
+  "contingent_liabilities": []
+}
