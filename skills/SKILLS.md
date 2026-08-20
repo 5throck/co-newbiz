@@ -54,6 +54,17 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `sample-driven-report-writing` | 1.0.0 | active | docs-writer | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
 | `hwp-document-processing` | 1.0.0 | active | docs-writer | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — generation path only, extraction not yet ported (see SKILL.md Adaptation Note) |
 | `org-readiness-assessment` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
+| `governance-document-hierarchy` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B (design §9.3 governance-authoring group) — Policy/Procedure/Guideline/Checklist/Template layer classification |
+| `policy-and-procedure-governance` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — Policy/Procedure authoring, entity addenda and shared/entity/region procedure model |
+| `procedure-reference-override` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — ADR-0020 shared/entity/region override mechanics, `proc:resolve` |
+| `two-tier-approval-chain` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — Entity IC gating + Group IC ranking (ADR-0028/0029) |
+| `policy-change-impact-analysis` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — mandatory pre-amendment impact analysis, `project_policy_pin` retroactivity |
+| `regulation-monitoring` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8B — portfolio-wide statute watch feeding the amendment pipeline |
+| `adr-governance` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — design §7 ADR trigger-list check and drafting |
+| `compliance-monitoring` | 1.0.0 | active | compliance-officer | 2026-08-20 | — | Wave 5.8B (design §9.2 merge) — absorbs governance-training-and-notice, governance-kpi-reporting |
+| `waiver-management` | 1.0.0 | active | compliance-officer | 2026-08-20 | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle |
+| `interpretation-registry` | 1.0.0 | active | compliance-officer | 2026-08-20 | — | Wave 5.8B — FR-GOV-12 scoped supersession Q&A registry |
+| `checklist-authoring` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — item-by-item mandatory/waiver_eligible checklist layer |
 
 
 
