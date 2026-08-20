@@ -33,3 +33,5 @@ CHANGELOG.md merge=union
 memory/*.md merge=union
 docs/VERSION_MANIFEST.md merge=union
 scripts/README.md merge=union
+
+docs/context.md merge=ours
