@@ -172,3 +172,92 @@ export interface DataSourceRow {
   key_var: string;
   key_present: boolean;
 }
+
+// --- PR #65: Data / Assumptions / DD / Regulatory & Permits tabs ---
+// Appended only — no existing exports above this line are touched, per the
+// PR #65 boundary (a parallel backend PR may extend ProjectSummary).
+
+export interface SeriesRow {
+  series_id: string;
+  unit_id: string;
+  source_id: string;
+  observation_count: number;
+  min_period_id: string;
+  max_period_id: string;
+}
+
+export interface ObservationRow {
+  period_id: string;
+  revision_no: number;
+  value: number;
+  unit_id: string;
+  source_id: string;
+  fetched_at: string;
+}
+
+export interface DataChangeRow {
+  id: string;
+  series_id: string;
+  detected_at: string;
+  change_type: string;
+  old_value: string | null;
+  new_value: string | null;
+}
+
+export interface AssumptionRow {
+  id: string;
+  run_id: string;
+  assumption_key: string;
+  kind: "live" | "user" | "derived" | "assumed";
+  value: number;
+  rationale: string | null;
+  anchor_ref: string | null;
+  as_of: string;
+  ttl_days: number | null;
+}
+
+export interface RunSummary {
+  id: string;
+  label: string;
+  input_hash: string;
+  created_by: string;
+  created_at: string;
+  superseded_by: string | null;
+  input_count: number;
+}
+
+export interface DdFindingRow {
+  id: string;
+  category: string;
+  description: string;
+  value_impact: number | null;
+  assumption_key: string | null;
+  evidence_ref: string | null;
+  trl_grade: string | null;
+  ip_ownership_status: string | null;
+  commercialization_path: string | null;
+  parent_relationship_json: string | null;
+  rbd_source: string | null;
+  created_at: string;
+}
+
+export interface PermitRow {
+  id: string;
+  name: string;
+  agency: string;
+  statutory_days: number | null;
+  status: string;
+}
+
+export interface PermitDag {
+  permit_edges: { from: string; to: string }[];
+  permit_critical_path: string[];
+  certification_edges: { from: string; to: string }[];
+  certification_critical_path: string[];
+}
+
+export interface PermitsResponse {
+  permits: PermitRow[];
+  certifications: PermitRow[];
+  dag?: PermitDag;
+}
