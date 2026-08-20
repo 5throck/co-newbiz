@@ -130,6 +130,16 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `auth-and-account-management` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8J — existence-never-leaked auth, dual-credential must-change-password gating |
 | `continuous-monitoring-and-alerting` | 1.0.0 | active | sre | 2026-08-20 | — | Wave 5.8J — ADR-0017 bidirectional (deterioration non-optional) notification policy |
 | `notification-channel-management` | 1.0.0 | active | sre | 2026-08-20 | — | Wave 5.8J — real watch_rule/notification schema, channel/bundle/severity discipline |
+| `deployment-and-release` | 1.0.0 | active | release-engineer | 2026-08-20 | — | Wave 5.8K (design §9.3 ops/security group — final Wave 5.8 sub-PR) — ADR-0014 rollback-planned-before-migration discipline |
+| `database-operations` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8K (design §9.2 merge) — absorbs backup-and-dr; ADR-0015 "a backup never restored is not verified" |
+| `observability-and-alerting` | 1.0.0 | active | sre | 2026-08-20 | — | Wave 5.8K — platform-health counterpart to continuous-monitoring-and-alerting |
+| `incident-response` | 1.0.0 | active | sre | 2026-08-20 | — | Wave 5.8K — MNPI evidence pull, audit-log-integrity default-Critical rule |
+| `batch-scheduling-operations` | 1.0.0 | active | infra-automation-engineer | 2026-08-20 | — | Wave 5.8K — ADR-0019 OS-level scheduler, never in-process timer |
+| `infrastructure-automation` | 1.0.0 | active | infra-automation-engineer | 2026-08-20 | — | Wave 5.8K — automation must preserve existing operational discipline gates |
+| `security-baseline-review` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — orchestrates `docs/security-baseline.md`'s real recurring cadence |
+| `vulnerability-management` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — CVE-check merge gate, mandatory recorded risk-acceptance for unpatched Critical/High |
+| `access-control-review` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — monthly stale-membership revocation, quarterly admin-count review |
+| `admin-console-operations` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8K — operates the 3 built admin sections, names the 7 not yet built |
 
 
 
