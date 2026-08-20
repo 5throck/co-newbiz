@@ -67,8 +67,10 @@
 
 | Source | Requirement | Implementation Target | Verification |
 |---|---|---|---|
-| `checklists/rbd-technology-checklist.yaml`, `docs/pilots/pilot-011-posco-amberoad.md` | FR-RBD-01, FR-RBD-03, FR-RBD-04, FR-RBD-05 | `dd_finding.category='rbd'` extension fields (core-tech TRL, IP/FTO status, commercialization-path decision, parent-relationship terms) | Already verified manually: pilot 011 walkthrough confirmed every new checklist item and structure-hypothesis branch on first real-case use |
-| `procedures/_shared/brownfield-pre-fs/schema.yaml` v1.2.0 | FR-RBD-07 | `deal_structure_hypothesis.vehicle` enum extended with `internal_venture_spinoff` | Already verified manually: pilot 011 is a real worked example of exactly this structure |
+| `checklists/rbd-technology-checklist.yaml`, `docs/pilots/pilot-011-posco-amberoad.md`, `docs/pilots/pilot-012-lg-studio341.md` | FR-RBD-01, FR-RBD-03, FR-RBD-04, FR-RBD-05 | `dd_finding.category='rbd'` extension fields (core-tech TRL, IP/FTO status, commercialization-path decision, parent-relationship terms) | Already verified manually across two structurally distinct real cases: pilot 011 (fully internal) and pilot 012 (accelerator-partnered) |
+| `checklists/rbd-technology-checklist.yaml` rbd-02, `docs/pilots/pilot-012-lg-studio341.md` finding F-1 | FR-RBD-02 | `dd_finding.category='rbd'` government-co-funding fields | Already verified manually: pilot 012's TIPS/DIPS involvement is the pilot set's first real positive test of this item |
+| `procedures/_shared/brownfield-pre-fs/schema.yaml` v1.2.0 | FR-RBD-07 | `deal_structure_hypothesis.vehicle` enum extended with `internal_venture_spinoff` | Already verified manually across pilots 011 and 012, two real worked examples of this structure |
+| `docs/pilots/pilot-011-posco-amberoad.md` F-2, `docs/pilots/pilot-012-lg-studio341.md` F-2 | (informs future `dd_finding.rbd_source` field) | `dd_finding.rbd_source` enum (`internal_only` \| `accelerator_partnered` \| `external_technology_acquisition`) | Design settled across two real cases (pilots 011, 012); not yet built (Stage 5 forward reference) |
 
 ## 5. Green Field
 
