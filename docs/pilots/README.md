@@ -22,6 +22,7 @@
 | 011 | POSCO / Amberoad (2023-2025) | R&BD (Brown Field sub-type — internal-venture spin-off) | In progress | [pilot-011-posco-amberoad.md](pilot-011-posco-amberoad.md) |
 | 012 | LG Electronics / Studio341 (2023-2026) | R&BD (Brown Field sub-type — accelerator-partnered spin-off) | In progress (program ongoing) | [pilot-012-lg-studio341.md](pilot-012-lg-studio341.md) |
 | 013 | Hexapro / ETRI (2024) | R&BD (Brown Field sub-type — external technology license-in) | In progress (limited public disclosure) | [pilot-013-hexapro-etri.md](pilot-013-hexapro-etri.md) |
+| 014 | C2Y / Seoul National University Technology Holdings + KRISS | R&BD (Brown Field sub-type — university-holdco-backed active co-research, minority-investment shape) | In progress | [pilot-014-c2y-university-techholdings.md](pilot-014-c2y-university-techholdings.md) |
 
 ## Candidate Sourcing
 
@@ -48,6 +49,10 @@ New candidate cases (real, publicly documented — not fabricated, per the desig
 - **F-1 (pilot 012) — rbd-02 (government co-funding conditions) had no positive real-case test, only pilot 011's N/A**: closed 2026-08-20 — TIPS/DIPS program involvement gives a real positive case.
 - **F-2 (pilot 013) — rbd-05's wording is spin-off-shaped (equity/brand), doesn't fit a research-institute licensor relationship**: closed 2026-08-20. `checklists/rbd-technology-checklist.yaml` (v1.0.0 → v1.1.0) rbd-05 broadened to cover licensor royalty/follow-on-program relationships as an alternate shape.
 - **F-1 (pilot 013) — rbd-01 didn't note that license-in deals have a lower public-corroboration ceiling than spin-offs**: closed 2026-08-20 — rbd-01 guidance updated to prioritize direct licensor documentation for `external_technology_acquisition` deals.
+- **F-1 (pilot 014) — rbd-02 didn't distinguish formal government co-funding from informal research collaboration**: closed 2026-08-20 — rbd-02 broadened.
+- **F-2 (pilot 014) — rbd-03 didn't address joint-IP-ownership from active co-research**: closed 2026-08-20 — rbd-03 broadened.
+- **F-3 (pilot 014) — rbd-04's build/license/spin-off framing didn't fit an independently-founded target**: closed 2026-08-20 — rbd-04 clarified to concern the reviewing entity's path, not the target's origin, and a fourth path (minority venture investment) added.
+- **F-4 (pilot 014) — the R&BD structure-hypothesis note didn't recognize minority venture investment as a deal shape**: closed 2026-08-20 — `brownfield-pre-fs` (v1.2.0 → v1.3.0) step 2 updated.
 
 ## Two-Consecutive-Failure Rule (ADR-0034)
 

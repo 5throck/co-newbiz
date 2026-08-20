@@ -72,6 +72,9 @@
 | `procedures/_shared/brownfield-pre-fs/schema.yaml` v1.2.0 | FR-RBD-07 | `deal_structure_hypothesis.vehicle` enum extended with `internal_venture_spinoff` | Already verified manually across pilots 011 and 012, two real worked examples of this structure |
 | `docs/pilots/pilot-011-posco-amberoad.md` F-2, `docs/pilots/pilot-012-lg-studio341.md` F-2, `docs/pilots/pilot-013-hexapro-etri.md` F-4 | FR-RBD-08 | `dd_finding.rbd_source` enum (`internal_only` \| `accelerator_partnered` \| `external_technology_acquisition`) | Already verified manually: all three enum values now have at least one real supporting case (pilots 011, 012, 013 respectively); not yet built (Stage 5 forward reference) |
 | `checklists/rbd-technology-checklist.yaml` v1.1.0, `docs/pilots/pilot-013-hexapro-etri.md` | FR-RBD-09 | rbd-01/rbd-05 branching logic for `external_technology_acquisition` deals | Already verified manually: pilot 013 (Hexapro/ETRI) is the real case that surfaced and validated both branches |
+| `checklists/rbd-technology-checklist.yaml` v1.2.0, `docs/pilots/pilot-014-c2y-university-techholdings.md` F-1 | FR-RBD-10 | rbd-02 formal-vs-informal government relationship classification | Already verified manually: pilot 014's KRISS relationship is the real ambiguous case that surfaced this gap |
+| `checklists/rbd-technology-checklist.yaml` v1.2.0, `docs/pilots/pilot-014-c2y-university-techholdings.md` F-2 | FR-RBD-11 | rbd-03 joint-IP-ownership diligence branch | Already verified manually: pilot 014's active KRISS co-research is the real case this branch is built for |
+| `procedures/_shared/brownfield-pre-fs/schema.yaml` v1.3.0, `docs/pilots/pilot-014-c2y-university-techholdings.md` F-4 | FR-RBD-12 | `deal_structure_hypothesis` minority-venture-investment option | Already verified manually: pilot 014 (C2Y) is a real minority-investment-shaped R&BD case |
 
 ## 5. Green Field
 
