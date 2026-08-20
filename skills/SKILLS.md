@@ -65,6 +65,17 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `waiver-management` | 1.0.0 | active | compliance-officer | 2026-08-20 | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle |
 | `interpretation-registry` | 1.0.0 | active | compliance-officer | 2026-08-20 | — | Wave 5.8B — FR-GOV-12 scoped supersession Q&A registry |
 | `checklist-authoring` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — item-by-item mandatory/waiver_eligible checklist layer |
+| `group-level-review` | 1.0.0 | active | group-review-agent | 2026-08-20 | — | Wave 5.8C (design §9.3 group review + glossary + GF/BF gate groups) — orchestrates `group-investment-review`'s 5-step Group IC sequence |
+| `portfolio-fit-assessment` | 1.0.0 | active | group-review-agent | 2026-08-20 | — | Wave 5.8C — overlap finding + agenda-ranking formula (meeting M2 D-M2-2) |
+| `intra-group-transaction-compliance` | 1.0.0 | active | group-review-agent | 2026-08-20 | — | Wave 5.8C — Fair Trade Act Art. 47 screen, validated against pilot-003 |
+| `glossary-management` | 1.0.0 | active | glossary-curator | 2026-08-20 | — | Wave 5.8C (design §9.2 merge) — absorbs glossary-lint |
+| `stage-gate-governance` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
+| `greenfield-feasibility` | 1.0.0 | active | greenfield-agent | 2026-08-20 | — | Wave 5.8C — Green Field Screening/Pre-FS |
+| `brownfield-feasibility` | 1.0.0 | active | brownfield-agent | 2026-08-20 | — | Wave 5.8C — Brown Field Screening/Pre-FS/FS/DD incl. six-validator completeness gate |
+| `site-infrastructure-assessment` | 1.0.0 | active | greenfield-agent | 2026-08-20 | — | Wave 5.8C — mandatory infrastructure-minimums exclusion filter |
+| `regional-incentive-sourcing` | 1.0.0 | active | greenfield-agent | 2026-08-20 | — | Wave 5.8C (design §9.2 merge) — absorbs site-comparison, incentive-NPV on one comparison table |
+| `talent-pipeline-planning` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8C — Green Field local labor-market supply assessment |
+| `community-partnership-planning` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8C — workforce-development partnerships and community-relations risk |
 
 
 
