@@ -2,7 +2,7 @@
 
 **Owner**: backend-engineer, data-architect
 **Design of record**: design v1.0 §4-11 (task 4.4), `docs/srs.md` §12, `docs/db-schema.md`
-**Status**: Stage 4 draft — endpoint catalog and access-control contract. Not yet implemented (Stage 5). OpenAPI 3.1 is the SSOT for MCP tool definitions (design §4-11) — this document is the human-readable index that the eventual `openapi.yaml` must match.
+**Status**: Endpoint catalog and access-control contract — implemented Stage 5 Wave 5.6 (`app/server/*.ts`: `admin.ts`, `auth.ts`, `envelope.ts`, `glossary.ts`, `governance.ts`, `monitoring.ts`, `projects.ts`, `tokens.ts`). OpenAPI 3.1 is the SSOT for MCP tool definitions (design §4-11) — **`openapi.yaml` itself has not been generated yet**, so this document remains the only human-readable index; that gap is separate from (and does not block) the REST API being live.
 
 ## 1. Design Rules (Non-Negotiable)
 

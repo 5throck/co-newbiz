@@ -2,7 +2,7 @@
 
 **Owner**: data-architect, backend-engineer, frontend-engineer
 **Design of record**: design v1.0 §4, §10 (Stage 4 task 4.1)
-**Status**: Stage 4 draft — requirements derived from the regulation book (`policies/`, `procedures/`), checklists, `docs/rag-framework.md`, `docs/ops-cadence.md`, and ten real-case manual pilots (`docs/pilots/`). Priority uses MoSCoW, mapped to the MVP tiering already fixed in design v1.0 §10 (ADR-0042): Must = MVP (non-negotiable), Should = Tier 2 (deferrable), Could = Tier 3 (follow-on release).
+**Status**: Requirements derived from the regulation book (`policies/`, `procedures/`), checklists, `docs/rag-framework.md`, `docs/ops-cadence.md`, and ten real-case manual pilots (`docs/pilots/`). Priority uses MoSCoW, mapped to the MVP tiering already fixed in design v1.0 §10 (ADR-0042): Must = MVP (non-negotiable), Should = Tier 2 (deferrable), Could = Tier 3 (follow-on release). Stage 5 has since built every Must-priority requirement below (see `docs/dev-plan.md`); this document remains the requirement source of record, not a status tracker — check `docs/traceability-matrix.md` for per-requirement implementation status.
 
 ## 1. Scope
 

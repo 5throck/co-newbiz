@@ -2,7 +2,7 @@
 
 **Owner**: frontend-engineer
 **Design of record**: design v1.0 §4-10 (task 4.4), `docs/srs.md` §12
-**Status**: Stage 4 draft. Korean UI (design §4-1 language policy — deliverables/UI Korean, code/docs English). Not yet implemented (Stage 5).
+**Status**: Korean UI (design §4-1 language policy — deliverables/UI Korean, code/docs English). Implemented Stage 5 Wave 5.6 (`app/web/src/pages/`: `Login.tsx`, `PasswordChange.tsx`, `ProjectList.tsx`, `ProjectDetail.tsx`, `AdminConsole.tsx`) — **partial**: the admin console covers 3 of §5's 10 designed sections (Users, Audit Log, Data Sources; see `skills/admin-console-operations/SKILL.md` for the honest breakdown of what's still missing), and the analyst-facing views listed in §4 below (RAG dashboard widgets, proxy-chain diagram, driver-tree waterfall, version-bridge comparison, permit DAG) have not all been verified against this spec row-by-row.
 
 ## 1. Design Rules (Non-Negotiable)
 
