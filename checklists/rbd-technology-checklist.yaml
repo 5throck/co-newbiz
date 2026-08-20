@@ -4,7 +4,7 @@ title: "R&BD (Research & Business Development) Technology Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-08-20"
 gate: DD
 
@@ -17,7 +17,7 @@ gate: DD
 
 items:
   - id: rbd-01
-    text: "Technology Readiness Level (TRL) assessed for the core IP/technology itself, distinct from production-process TRL (technical-dd-checklist tdd-03) — an R&BD target's core risk is whether the underlying technology works at all, before production readiness is even relevant"
+    text: "Technology Readiness Level (TRL) assessed for the core IP/technology itself, distinct from production-process TRL (technical-dd-checklist tdd-03) — an R&BD target's core risk is whether the underlying technology works at all, before production readiness is even relevant. For a license-in deal (rbd_source: external_technology_acquisition), prioritize direct technical documentation from the licensor over public-source corroboration — license announcements rarely carry the track-record framing a spin-off announcement does (pilot 013 finding F-1)"
     mandatory: true
   - id: rbd-02
     text: "Government co-funding conditions identified if applicable: technology-fee repayment obligation (기술료), IP walk-away/ownership conditions, employment or localization conditions attached to the grant — these can survive a change of control and are easy to miss in a standard DD pass"
@@ -29,7 +29,7 @@ items:
     text: "Commercialization path decision documented with rationale: build as an internal business unit, license the technology out, or spin off as an independent entity — the three paths have materially different valuation, control, and risk profiles and should not default to one without an explicit comparison"
     mandatory: true
   - id: rbd-05
-    text: "If the target originated as an internal venture/spin-off of another company (a real pattern — see docs/pilots/pilot-011-posco-amberoad.md), the continuing parent-entity relationship (equity retained, customer/supplier relationship, brand association, non-compete scope) is documented as part of the deal structure, not treated as fully independent"
+    text: "The continuing relationship with the technology's originator is documented as part of the deal structure, not treated as fully independent — for a spin-off (rbd_source: internal_only / accelerator_partnered), this is equity retained, customer/supplier relationship, brand association, non-compete scope (see docs/pilots/pilot-011-posco-amberoad.md); for a license-in from an external source such as a research institute (rbd_source: external_technology_acquisition), this is ongoing royalty obligations and eligibility for the licensor's own follow-on co-funding programs, not equity or brand (pilot 013 finding F-2, see docs/pilots/pilot-013-hexapro-etri.md)"
     mandatory: true
   - id: rbd-06
     text: "Track record evidence (prior internal deployments, pilot results, disclosed performance metrics) verified against source, not accepted from the target's own pitch materials without corroboration"
@@ -42,3 +42,5 @@ legal_basis:
   - "design v1.0 §10 user decision (2026-08-20): R&BD treated as a Brown Field sub-type"
   - "docs/pilots/pilot-006-orion-ligachem-bio.md findings F-1/F-2 (certification and QoE steps don't fit R&D-stage/asset-tied-regulatory-pathway targets — the same gap class R&BD targets exercise)"
   - "docs/pilots/pilot-011-posco-amberoad.md"
+  - "docs/pilots/pilot-012-lg-studio341.md"
+  - "docs/pilots/pilot-013-hexapro-etri.md"
