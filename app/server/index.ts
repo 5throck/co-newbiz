@@ -14,6 +14,15 @@
  *
  * If app/web/dist exists (Wave 5.6B build output) it is served as the SPA
  * with an index.html fallback for client-side routes.
+ *
+ * Static serving is registered BEFORE the route modules on purpose: every
+ * route module below applies its own auth middleware with `.use("*", ...)`,
+ * and mounting a sub-app at `app.route("/", subApp)` makes that "*" match
+ * the WHOLE app, not just the sub-app's own paths — registered later, it
+ * would intercept "/" and every static asset before the SPA ever serves.
+ * The static handlers here are plain GET routes on their own path patterns
+ * (never "/api/*"), so they end the chain for those paths without reaching
+ * the auth-gated routers at all.
  */
 
 import { Hono } from "hono";
@@ -28,10 +37,27 @@ import { glossaryRoutes } from "./glossary.ts";
 import { adminRoutes } from "./admin.ts";
 import type { AppEnv } from "./middleware.ts";
 
+const SPA_DIST = "app/web/dist";
+
 export function buildApp(): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
+  const hasSpa = existsSync(SPA_DIST);
 
   app.get("/api/health", (c) => c.json({ status: "ok" }));
+
+  if (hasSpa) {
+    // One middleware, registered before every auth-gated router, so it is
+    // the only thing that ever sees a non-API path: static assets under
+    // /assets, the SPA shell for everything else (including client-side
+    // routes like /projects/:id, which have no server-side route of their
+    // own). Any /api/* path calls next() untouched.
+    app.use("*", async (c, next) => {
+      if (c.req.path.startsWith("/api/")) return next();
+      if (c.req.path.startsWith("/assets/")) return serveStatic({ root: SPA_DIST })(c, next);
+      return serveStatic({ path: `${SPA_DIST}/index.html` })(c, next);
+    });
+  }
+
   app.route("/", authRoutes);
   app.route("/", tokenRoutes);
   app.route("/", projectRoutes);
@@ -39,11 +65,6 @@ export function buildApp(): Hono<AppEnv> {
   app.route("/", monitoringRoutes);
   app.route("/", glossaryRoutes);
   app.route("/", adminRoutes);
-
-  if (existsSync("app/web/dist")) {
-    app.use("*", serveStatic({ root: "app/web/dist" }));
-    app.get("*", serveStatic({ path: "app/web/dist/index.html" }));
-  }
 
   return app;
 }

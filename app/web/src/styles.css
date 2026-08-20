@@ -1,0 +1,336 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --border: #d0d0d0;
+  --accent: #2454ff;
+  --green-bg: #e6f4ea;
+  --green-fg: #1e7a34;
+  --amber-bg: #fff4e0;
+  --amber-fg: #a15c00;
+  --red-bg: #fdeaea;
+  --red-fg: #b3261e;
+  --muted-bg: #f0f0f0;
+  --muted-fg: #555555;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --fg: #e8e8e8;
+    --border: #3a3d42;
+    --accent: #7c9dff;
+    --green-bg: #123320;
+    --green-fg: #7fe0a0;
+    --amber-bg: #3a2a00;
+    --amber-fg: #ffcf7a;
+    --red-bg: #3a1414;
+    --red-fg: #ff9d97;
+    --muted-bg: #23262b;
+    --muted-fg: #a0a4ab;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+a,
+button {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  border-radius: 4px;
+  padding: 0.4rem 0.8rem;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+input {
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4rem;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* --- top nav --- */
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.top-nav nav {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+}
+.top-nav .brand {
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--fg);
+}
+.top-nav-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* --- login --- */
+.login-page {
+  display: flex;
+  justify-content: center;
+  padding-top: 4rem;
+}
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 320px;
+}
+.form-error {
+  color: var(--red-fg);
+}
+
+/* --- tabs --- */
+.tab-bar {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin: 1rem 0;
+}
+.tab-bar button {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+}
+.tab-bar button[aria-current="true"] {
+  border-bottom-color: var(--accent);
+  font-weight: 700;
+}
+
+/* --- project list --- */
+.project-grid {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--fg);
+}
+.project-no {
+  font-weight: 700;
+}
+.project-created {
+  color: var(--muted-fg);
+  font-size: 0.85rem;
+}
+.new-project-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+  margin-bottom: 1.5rem;
+}
+.new-project-form label {
+  display: block;
+  font-size: 0.85rem;
+}
+
+/* --- RAG card (never color-only: icon + label + color) --- */
+.rag-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+}
+.rag-overall {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.rag-dimensions {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.rag-dimension-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.rag-dimension-name {
+  width: 120px;
+  font-weight: 600;
+}
+.rag-rationale {
+  flex-basis: 100%;
+  margin: 0.25rem 0 0;
+  color: var(--muted-fg);
+  font-size: 0.9rem;
+}
+.grade-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.grade-green {
+  background: var(--green-bg);
+  color: var(--green-fg);
+}
+.grade-amber {
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+}
+.grade-red {
+  background: var(--red-bg);
+  color: var(--red-fg);
+}
+.grade-incomplete {
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+}
+
+/* --- MNPI banner --- */
+.mnpi-banner {
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+  border: 1px solid var(--amber-fg);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  font-weight: 600;
+}
+
+/* --- procedure viewer --- */
+.procedure-steps {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.procedure-step {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+.source-badge {
+  flex-shrink: 0;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.source-shared {
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+}
+.source-region {
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+}
+.source-entity {
+  background: var(--green-bg);
+  color: var(--green-fg);
+}
+.procedure-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+/* --- glossary tooltip --- */
+.glossary-term-wrap {
+  position: relative;
+  display: inline-block;
+}
+.glossary-term {
+  border: none;
+  background: none;
+  padding: 0;
+  border-bottom: 1px dashed var(--accent);
+  color: inherit;
+  cursor: help;
+}
+.glossary-popover {
+  position: absolute;
+  z-index: 10;
+  top: 1.5rem;
+  left: 0;
+  width: 260px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.glossary-why {
+  color: var(--muted-fg);
+  font-size: 0.85rem;
+}
+
+/* --- tables --- */
+.admin-table,
+.member-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.admin-table th,
+.admin-table td,
+.member-table th,
+.member-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem;
+  text-align: left;
+}
