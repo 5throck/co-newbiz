@@ -319,75 +319,124 @@ export interface DimensionAssessment {
   grade: RagGrade;
   remedyShape?: "structural" | "behavioral" | "none";
   rationale: string;
+  /**
+   * True only when this dimension has a real input (or is under the
+   * rag-framework.md §5 reduced-check rule, which is itself a deliberate,
+   * policy-mandated grade, not a placeholder). False means "not yet
+   * assessed" — the Amber grade in that case is a display default, not a
+   * finding, and this dimension must never contribute to a rendered
+   * overall grade (Wave 5.10 pilot-001 system re-run finding: the engine
+   * previously computed and persisted an overall grade from a mix of real
+   * and defaulted dimensions, contradicting the design's own rule that an
+   * incomplete assessment renders no overall grade at all — see
+   * docs/pilots/pilot-001-system-rerun.md).
+   */
+  assessed: boolean;
 }
 
 export interface RagEvaluation {
   dimensions: DimensionAssessment[];
-  overall: { grade: RagGrade; rationale: string };
+  /** True only when all six dimensions were genuinely assessed. */
+  complete: boolean;
+  /**
+   * Null when the assessment is incomplete AND no assessed dimension is
+   * Red/Kill-Criteria-triggered — "insufficient data to grade at all" is a
+   * real, distinct outcome, not a state that defaults to any color
+   * (docs/rag-framework.md, docs/ui-spec.md §3). A Red finding or a Kill
+   * Criteria trigger still forces overall=Red even when incomplete —
+   * danger is never hidden behind "not enough data yet" (mirrors the
+   * hysteresis rule that Red always takes effect immediately).
+   */
+  overall: { grade: RagGrade; rationale: string } | null;
 }
 
 /**
- * Evaluate a full six-dimension RAG assessment. Dimensions without any input
- * default to Amber with an explicit "not yet assessed" rationale — an
- * unassessed dimension can never be Green (that would let the FR-RAG-01
- * Green rule fire on missing data), and it is not Red either (that would
- * sink projects whose review simply has not reached that axis yet).
+ * Evaluate a full six-dimension RAG assessment. Every dimension is scored
+ * for display purposes even when unassessed (Amber, "not yet assessed"),
+ * but only genuinely-assessed dimensions (`assessed: true`) count toward
+ * the overall grade. The overall grade is null unless all six are
+ * assessed, UNLESS an assessed dimension is Red or a Kill Criteria
+ * condition triggers, in which case overall is Red immediately regardless
+ * of completeness — a partial "everything checked so far is fine" state
+ * must never suppress a real danger signal.
  */
 export function evaluateRag(input: RagEvaluationInput): RagEvaluation {
   const dims: DimensionAssessment[] = [];
 
-  // Financial — reduced check before FS (rag-framework.md §5).
+  // Financial — reduced check before FS (rag-framework.md §5). The reduced
+  // check IS an assessment (a policy-mandated grade), not a placeholder.
   if (input.stageGate === "screening" || input.stageGate === "pre_fs") {
     dims.push({
       dimension: "financial",
       grade: "amber",
+      assessed: true,
       rationale: "Reduced check — the financial dimension is Amber-capped by default pending a completed model (rag-framework.md §5; full bands apply from FS onward).",
     });
   } else if (input.financial) {
     const f = financialBand(input.financial);
-    dims.push({ dimension: "financial", grade: f.grade, rationale: f.rationale });
+    dims.push({ dimension: "financial", grade: f.grade, assessed: true, rationale: f.rationale });
   } else {
     dims.push({
       dimension: "financial",
       grade: "amber",
-      rationale: "Financial inputs not provided — Amber by default (an unassessed dimension is never Green).",
+      assessed: false,
+      rationale: "Financial inputs not provided — not yet assessed (display default only; does not count toward an overall grade).",
     });
   }
 
   dims.push(
     input.marketGrade
-      ? { dimension: "market", grade: input.marketGrade, rationale: `Market dimension scored ${input.marketGrade} by the market-intelligence review.` }
-      : { dimension: "market", grade: "amber", rationale: "Market dimension not yet assessed — Amber by default." },
+      ? { dimension: "market", grade: input.marketGrade, assessed: true, rationale: `Market dimension scored ${input.marketGrade} by the market-intelligence review.` }
+      : { dimension: "market", grade: "amber", assessed: false, rationale: "Market dimension not yet assessed (display default only; does not count toward an overall grade)." },
   );
 
   if (input.chainGrade || input.stalenessViolated) {
     const dc = dataConfidenceFromChain(input.chainGrade ?? "A", input.stalenessViolated ?? false);
-    dims.push({ dimension: "data_confidence", grade: dc.grade, rationale: dc.rationale });
+    dims.push({ dimension: "data_confidence", grade: dc.grade, assessed: true, rationale: dc.rationale });
   } else {
-    dims.push({ dimension: "data_confidence", grade: "amber", rationale: "Data confidence not yet assessed — Amber by default." });
+    dims.push({ dimension: "data_confidence", grade: "amber", assessed: false, rationale: "Data confidence not yet assessed (display default only; does not count toward an overall grade)." });
   }
 
   if (input.regulatory) {
     const r = regulatoryPermitGrade(input.regulatory);
-    dims.push({ dimension: "regulatory_permit", grade: r.grade, remedyShape: r.remedyShape, rationale: r.rationale });
+    dims.push({ dimension: "regulatory_permit", grade: r.grade, remedyShape: r.remedyShape, assessed: true, rationale: r.rationale });
   } else {
-    dims.push({ dimension: "regulatory_permit", grade: "amber", rationale: "Regulatory/Permit dimension not yet assessed — Amber by default." });
+    dims.push({ dimension: "regulatory_permit", grade: "amber", assessed: false, rationale: "Regulatory/Permit dimension not yet assessed (display default only; does not count toward an overall grade)." });
   }
 
   dims.push(
     input.technicalGrade
-      ? { dimension: "technical_execution", grade: input.technicalGrade, rationale: `Technical/Execution dimension scored ${input.technicalGrade} by the DD review.` }
-      : { dimension: "technical_execution", grade: "amber", rationale: "Technical/Execution dimension not yet assessed — Amber by default." },
+      ? { dimension: "technical_execution", grade: input.technicalGrade, assessed: true, rationale: `Technical/Execution dimension scored ${input.technicalGrade} by the DD review.` }
+      : { dimension: "technical_execution", grade: "amber", assessed: false, rationale: "Technical/Execution dimension not yet assessed (display default only; does not count toward an overall grade)." },
   );
   dims.push(
     input.riskGrade
-      ? { dimension: "risk", grade: input.riskGrade, rationale: `Risk dimension scored ${input.riskGrade} by the risk review.` }
-      : { dimension: "risk", grade: "amber", rationale: "Risk dimension not yet assessed — Amber by default." },
+      ? { dimension: "risk", grade: input.riskGrade, assessed: true, rationale: `Risk dimension scored ${input.riskGrade} by the risk review.` }
+      : { dimension: "risk", grade: "amber", assessed: false, rationale: "Risk dimension not yet assessed (display default only; does not count toward an overall grade)." },
   );
 
-  const dimensionGrades = Object.fromEntries(dims.map((d) => [d.dimension, d.grade])) as Record<RagDimension, RagGrade>;
-  const overall = computeOverall(dimensionGrades, input.killCriteriaTriggered ?? false);
-  return { dimensions: dims, overall };
+  const assessedDims = dims.filter((d) => d.assessed);
+  const complete = assessedDims.length === RAG_DIMENSIONS.length;
+  const anyAssessedRed = assessedDims.some((d) => d.grade === "red");
+  const killCriteriaTriggered = input.killCriteriaTriggered ?? false;
+
+  let overall: RagEvaluation["overall"];
+  if (killCriteriaTriggered) {
+    overall = { grade: "red", rationale: "A Kill Criteria condition is triggered — overall is Red regardless of dimension grades (FR-RAG-01)." };
+  } else if (anyAssessedRed) {
+    const redDims = assessedDims.filter((d) => d.grade === "red").map((d) => d.dimension);
+    overall = {
+      grade: "red",
+      rationale: `Dimension(s) ${redDims.join(", ")} graded Red — overall is Red (FR-RAG-01), even though the assessment is otherwise incomplete: a Red finding is never suppressed by missing data on other axes.`,
+    };
+  } else if (!complete) {
+    overall = null;
+  } else {
+    const dimensionGrades = Object.fromEntries(dims.map((d) => [d.dimension, d.grade])) as Record<RagDimension, RagGrade>;
+    overall = computeOverall(dimensionGrades, false);
+  }
+
+  return { dimensions: dims, complete, overall };
 }
 
 export interface AssessRunOptions {
@@ -406,22 +455,45 @@ export interface AssessRunOptions {
 }
 
 export interface AssessRunResult extends RagEvaluation {
-  /** Grade actually recorded for the overall row (after hysteresis). */
-  recordedOverall: RagGrade;
-  hysteresisRationale: string;
+  /**
+   * Grade actually recorded for the overall row (after hysteresis), or
+   * null when the assessment is incomplete and no assessed dimension
+   * forced Red — no overall row is written to `rag_assessment` in that
+   * case, and no hysteresis/transition logic runs at all (there is
+   * nothing to compare against a prior grade).
+   */
+  recordedOverall: RagGrade | null;
+  hysteresisRationale: string | null;
   transition: { from: RagGrade | null; to: RagGrade } | null;
 }
 
 /**
- * Full persisted assessment: evaluate, apply hysteresis against the
- * project's previous overall grade, write rag_assessment rows (one per
- * dimension + overall) and a rag_transition row when the overall grade
- * changed. Triggered-rule ids are left empty here — they come from the
- * rag_rule seed data once the admin console (Wave 5.6) edits rules; the
- * engine's rationales already cite the governing requirement per row.
+ * Full persisted assessment: evaluate, and ONLY IF a real overall grade
+ * resulted (evaluation.overall !== null — see evaluateRag's doc comment),
+ * apply hysteresis against the project's previous overall grade and write
+ * an `overall` row + `rag_transition` row. Only genuinely-assessed
+ * dimensions (`assessed: true`) are persisted to `rag_assessment` at
+ * all — an unassessed dimension gets no row, so the read side (API/UI/
+ * MCP) sees a genuinely missing dimension, not a defaulted Amber
+ * indistinguishable from a real one. Triggered-rule ids are left empty
+ * here — they come from the rag_rule seed data once the admin console
+ * (Wave 5.6) edits rules; the engine's rationales already cite the
+ * governing requirement per row.
  */
 export function assessRun(db: Database, options: AssessRunOptions): AssessRunResult {
   const evaluation = evaluateRag(options.input);
+
+  for (const d of evaluation.dimensions) {
+    if (!d.assessed) continue;
+    db.run(
+      "INSERT INTO rag_assessment (id, run_id, project_id, dimension, grade, remedy_shape, triggered_rules, rationale, assessed_at) VALUES (?,?,?,?,?,?,?,?,?)",
+      [ulid(), options.runId, options.projectId, d.dimension, d.grade, d.remedyShape ?? null, "[]", d.rationale, options.now],
+    );
+  }
+
+  if (evaluation.overall === null) {
+    return { ...evaluation, recordedOverall: null, hysteresisRationale: null, transition: null };
+  }
 
   const prev = db
     .query(
@@ -442,12 +514,6 @@ export function assessRun(db: Database, options: AssessRunOptions): AssessRunRes
     now: options.now,
   });
 
-  for (const d of evaluation.dimensions) {
-    db.run(
-      "INSERT INTO rag_assessment (id, run_id, project_id, dimension, grade, remedy_shape, triggered_rules, rationale, assessed_at) VALUES (?,?,?,?,?,?,?,?,?)",
-      [ulid(), options.runId, options.projectId, d.dimension, d.grade, d.remedyShape ?? null, "[]", d.rationale, options.now],
-    );
-  }
   // The overall row carries the POST-hysteresis grade — the grade of record.
   db.run(
     "INSERT INTO rag_assessment (id, run_id, project_id, dimension, grade, remedy_shape, triggered_rules, rationale, assessed_at) VALUES (?,?,?,?,?,?,?,?,?)",

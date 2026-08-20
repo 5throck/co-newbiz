@@ -21,5 +21,5 @@ Ownership: `brownfield-agent` (deal-structure ownership generally) coordinates; 
 ## Consequences
 
 - A new skill, `investment-vehicle-structuring`, is added (financial/simulation group extension) to operationalize the four-axis review — distinct from `investment-feasibility-modeling` (the NPV/IRR numbers once a structure is chosen) and `jv-structuring` (partnership governance once a JV vehicle is one of the chosen structures).
-- `checklists/brownfield-feasibility-checklist.yaml` and `checklists/greenfield-feasibility-checklist.yaml` may need a new mandatory item confirming the four-axis review was actually conducted before Pre-FS closes — tracked as a follow-up checklist-authoring task, not added in this ADR to avoid conflating a design decision with its checklist implementation in one change.
+- `checklists/brownfield-feasibility-checklist.yaml` (bf-12, mandatory) and `checklists/greenfield-feasibility-checklist.yaml` (gf-11, mandatory) now carry the item confirming the four-axis review was actually conducted before Pre-FS closes — landed as a same-session follow-up rather than left as an open item.
 - No procedure schema migration is required — this is a deliverable-content extension, not a new step or gate.

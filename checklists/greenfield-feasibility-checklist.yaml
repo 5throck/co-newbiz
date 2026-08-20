@@ -43,8 +43,12 @@ items:
   - id: gf-10
     text: "Real options / staged-investment structure considered as an alternative to a single lump-sum capex commitment"
     mandatory: false
+  - id: gf-11
+    text: "Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) — direct parent incorporation vs. a local holding subsidiary, not assumed by default"
+    mandatory: true
 
 legal_basis:
   - "Group New Business Review Policy §4.1"
   - "procedures/_shared/greenfield-screening/schema.yaml"
   - "Meeting M1, M6"
+  - "ADR-0045 (investment vehicle structuring as a mandatory deal-structure-hypothesis axis)"

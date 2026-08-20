@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.2.0
 /**
  * rag — evaluate and persist a six-dimension RAG assessment from a scenario
  * JSON. Design v1.0 §4-2, docs/rag-framework.md, FR-RAG-01..08, Wave 5.3.
@@ -63,8 +63,10 @@ export interface RagScenario {
 export interface RagCliResult {
   run_id: string;
   project_id: string;
-  recorded_overall: string;
-  dimensions: { dimension: string; grade: string; remedy_shape?: string; rationale: string }[];
+  complete: boolean;
+  /** Null when the assessment is incomplete (see rag-engine.ts's evaluateRag doc comment). */
+  recorded_overall: string | null;
+  dimensions: { dimension: string; grade: string; assessed: boolean; remedy_shape?: string; rationale: string }[];
   overall_rationale: string;
   transition: { from: string | null; to: string } | null;
 }
@@ -146,14 +148,18 @@ export function assessScenario(
   return {
     run_id: runId,
     project_id: project.id,
+    complete: result.complete,
     recorded_overall: result.recordedOverall,
     dimensions: result.dimensions.map((d) => ({
       dimension: d.dimension,
       grade: d.grade,
+      assessed: d.assessed,
       ...(d.remedyShape ? { remedy_shape: d.remedyShape } : {}),
       rationale: d.rationale,
     })),
-    overall_rationale: `${result.overall.rationale} ${result.hysteresisRationale}`,
+    overall_rationale: result.overall
+      ? `${result.overall.rationale} ${result.hysteresisRationale}`
+      : "Assessment incomplete — fewer than six dimensions assessed and no assessed dimension is Red, so no overall grade is produced (docs/rag-framework.md; an incomplete assessment never defaults to a color).",
     transition: result.transition,
   };
 }
