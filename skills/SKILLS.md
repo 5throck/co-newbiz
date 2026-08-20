@@ -83,6 +83,11 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `compensation-harmonization-analysis` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8D — ADR-0027 bidirectional upward-bias verification rule |
 | `debt-and-contingent-liability-simulation` | 1.0.0 | active | risk-officer | 2026-08-20 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
 | `pmi-planning` | 1.0.0 | active | pmi-agent | 2026-08-20 | — | Wave 5.8D — synthesis skill sequencing the other five M&A special-topics outputs |
+| `partner-sourcing-strategy` | 1.0.0 | active | partnership-agent | 2026-08-20 | — | Wave 5.8E (design §9.3 partnership + region/industry groups) — ADR-0031 hard/soft partner-dependency classification |
+| `partner-due-diligence` | 1.0.0 | active | partnership-agent | 2026-08-20 | — | Wave 5.8E — compliance/financial/dependency screening incl. post-transfer competitor risk |
+| `jv-structuring` | 1.0.0 | active | partnership-agent | 2026-08-20 | — | Wave 5.8E — governance/valuation/exit/deadlock documented before term-sheet negotiation |
+| `region-profile-application` | 1.0.0 | active | region-lead | 2026-08-20 | — | Wave 5.8E — ADR-0023's 10 mandatory review axes, real `region-profiles/*.yaml` (KR/EU/US/CN/SEA) |
+| `industry-profile-application` | 1.0.0 | active | industry-lead | 2026-08-20 | — | Wave 5.8E — ADR-0024 profile-first principle; `industry-profiles/` does not exist yet, gap flagged explicitly |
 
 
 
