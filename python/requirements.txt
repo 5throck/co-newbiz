@@ -12,8 +12,16 @@ pandas>=2.0,<3.0
 # liability Monte Carlo simulation) — design §4-5, §4-6, ADR-0026.
 numpy>=1.26,<3.0
 
-# kpi.py has no third-party dependency (Python stdlib only).
+# kpi.py, driver_tree.py — stdlib only (driver_tree.py ported from
+# co-consult with unused math/pandas imports dropped).
 
-# Document renderer (render_docx.py, render_pdf.py, render_hwpx.py — design
-# §4-8) and driver_tree.py are not yet ported; their dependencies
-# (python-docx, reportlab, python-hwpx) will be added here when those land.
+# Document renderer python/report/ (render_docx.py, render_pdf.py,
+# render_hwpx.py, glossary_appendix.py) — design §4-8. Pin convention
+# matches Projects/co-consult/python/requirements.txt (python-hwpx).
+python-docx>=1.1,<2.0
+reportlab>=4.0,<5.0
+python-hwpx>=6.0,<7
+
+# glossary_appendix.py — parses glossary/*.yaml for the report appendix
+# (design §3-3 tooling integration).
+PyYAML>=6.0,<7.0

@@ -1,22 +1,27 @@
 #!/usr/bin/env bun
-// @version 1.5.0
+// @version 1.6.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
  * Usage:
  *   bun scripts/co-newbiz/newbiz.ts <command> [options]
  *
- * Commands implemented so far (Stage 5 Waves 5.1-5.2a):
- *   db:migrate    Apply pending db/migrations/*.sql
- *   status        Print migration status
- *   proc:resolve  Merge a shared procedure with region/entity overrides
+ * Commands implemented so far (Stage 5 Waves 5.1-5.2):
+ *   db:migrate      Apply pending db/migrations/*.sql
+ *   status          Print migration status
+ *   proc:resolve    Merge a shared procedure with region/entity overrides
+ *   fin:analyze     KPI report from a canonical financial model
+ *   fin:pipeline    Full DART → canonical-model pipeline
+ *   fin:driver-tree 5-level ROIC value driver tree
+ *   simulate        Monte-Carlo simulation (contingent liabilities)
+ *   report          Render Markdown to docx/pdf/hwpx with glossary appendix
  *
  * Remaining commands (md:sync, fetch, law:sync, policy:sync, policy:impact,
  * glossary:lint [reuse bun glossary/_validate.ts directly for now — see
- * package.json], fin:analyze, fin:project, assume, calibrate, convert,
- * model, simulate, rag, diff, watch:run, report, export, adr:new, user:*)
- * land in their respective Wave 5.2-5.7 PRs per docs/dev-plan.md — not
- * stubbed here to avoid a command that silently does nothing.
+ * package.json], fin:project, assume, calibrate, convert, model, rag, diff,
+ * watch:run, export, adr:new, user:*) land in their respective Wave 5.3-5.7
+ * PRs per docs/dev-plan.md — not stubbed here to avoid a command that
+ * silently does nothing.
  */
 
 import { runMigrations } from "../../db/migrate.ts";
@@ -26,12 +31,13 @@ import { computeKpis } from "./fin-analyze.ts";
 import { runSimulation } from "./simulate.ts";
 import { runFullPipeline } from "./fin-pipeline.ts";
 import { computeDriverTree } from "./driver-tree.ts";
+import { renderReport, type ReportFormat } from "./report.ts";
 
 const [command, ...args] = process.argv.slice(2);
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>");
+  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary]");
 }
 
 switch (command) {
@@ -141,6 +147,29 @@ switch (command) {
       console.log(JSON.stringify(tree, null, 2));
     } catch (err) {
       console.error(`fin:driver-tree failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+    break;
+  }
+  case "report": {
+    const [markdownPath, ...rest] = args;
+    if (!markdownPath) {
+      console.error("report requires a Markdown path");
+      process.exit(1);
+    }
+    const fmtIdx = rest.indexOf("--format");
+    const outDirIdx = rest.indexOf("--out-dir");
+    const formats = (fmtIdx >= 0 ? rest[fmtIdx + 1] : "docx,pdf,hwpx")
+      .split(",")
+      .map((s) => s.trim()) as ReportFormat[];
+    try {
+      const results = await renderReport(markdownPath, formats, {
+        outDir: outDirIdx >= 0 ? rest[outDirIdx + 1] : undefined,
+        noGlossary: rest.includes("--no-glossary"),
+      });
+      console.log(JSON.stringify(results, null, 2));
+    } catch (err) {
+      console.error(`report failed: ${(err as Error).message}`);
       process.exit(1);
     }
     break;
