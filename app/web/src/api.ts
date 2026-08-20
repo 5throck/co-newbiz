@@ -51,6 +51,63 @@ export interface ProjectSummary {
   id: string;
   project_no: string;
   created_at: string;
+  // Client-gated card enrichment: GET /api/projects returns only
+  // id/project_no/created_at today, so the RAG and staleness badges render
+  // only if a future list payload carries these fields — never a fabricated
+  // default grade on the card.
+  rag_overall?: "green" | "amber" | "red";
+  rag_assessed_at?: string;
+  stale?: boolean;
+}
+
+// FR-SYS-03 provenance — the envelope `meta` fields a source tooltip may
+// show. The server's ok() injects `as_of` on every response; the other
+// fields appear only where a route actually carries them (e.g.
+// /api/projects/:id/rag adds `assessed_at`). No route populates
+// assumption_key/source/anchor_ref in meta yet, so callers may also merge
+// in per-row provenance columns the payload already carries
+// (RagDimension.run_id/assessed_at) — both sources are API-sourced, and
+// neither is ever hand-typed.
+export interface ProvenanceMeta {
+  assumption_key?: string;
+  as_of?: string;
+  source?: string;
+  anchor_ref?: string;
+  run_id?: string;
+  assessed_at?: string;
+}
+
+const PROVENANCE_FIELDS = ["assumption_key", "as_of", "source", "anchor_ref", "run_id", "assessed_at"] as const;
+
+/**
+ * Pick only the known provenance fields out of an envelope meta block (or an
+ * already-partially-built provenance object). Non-provenance meta entries
+ * (count, limit, include_mnpi, ...) never leak into a source tooltip, and
+ * absent fields stay absent — the tooltip omits them rather than rendering
+ * empty placeholders.
+ */
+export function provenanceOf(meta: ProvenanceMeta | Record<string, unknown> | undefined): ProvenanceMeta {
+  const out: ProvenanceMeta = {};
+  if (!meta) return out;
+  const record = meta as Record<string, unknown>;
+  for (const key of PROVENANCE_FIELDS) {
+    const v = record[key];
+    if (typeof v === "string" && v.trim() !== "") out[key] = v;
+  }
+  return out;
+}
+
+// GET /api/notifications rows (monitoring.ts). The notification table has no
+// read/unread state — sent_at is the only lifecycle timestamp — so any UI
+// count derived from this is a recent-total, never an unread count.
+export interface NotificationRow {
+  project_id: string;
+  trigger_type: string;
+  severity: "opportunity" | "warning" | "urgent" | "info" | "ops";
+  payload: string;
+  channel: string;
+  bundle: "immediate" | "daily";
+  sent_at: string;
 }
 
 export interface RagDimension {

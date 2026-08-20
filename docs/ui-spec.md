@@ -7,7 +7,7 @@
 ## 1. Design Rules (Non-Negotiable)
 
 - **Every numeric figure carries a source tooltip** (`assumption_key`, `as_of`, `source`, `anchor_ref`) sourced directly from the API response envelope's `meta` block (FR-SYS-03) — never hand-typed.
-  *As-built (2026-08-21): not implemented — no source-tooltip mechanism exists anywhere in the built UI; the only envelope `meta` field read is `mnpi_banner`. The numeric values rendered today (procedure thresholds, dates) carry no meta attribution.*
+  *As-built (2026-08-21, PR #63): mechanism built — `SourceTooltip.tsx` (hover/focus/click-pin popover, keyboard + `aria-expanded`/`aria-describedby`, dark-mode via the existing custom properties) plus `provenanceOf()` in `api.ts`, which reads the envelope `meta` and merges per-row provenance columns the payload already carries (the RAG endpoint puts `run_id`/`assessed_at` per dimension in rows, not meta — both sources are API-sourced, neither hand-typed; absent fields are omitted, never placeholder-filled). Applied to: the RAG card's assessed-count figure and per-dimension grade badges (`run_id`, `assessed_at`, envelope `as_of`), and procedure threshold values (envelope `as_of` only). Backend gap: no route populates `assumption_key`/`source`/`anchor_ref` in `meta` today — api-spec §9's contract is not yet realized server-side — and the endpoints carrying per-row provenance (assumptions, observations, dd-findings) have no consuming view yet, so those unwritten figures stay un-wrapped rather than wearing empty tooltips.*
 - **Color is never the sole differentiator** for RAG status — icon + label + color together (FR-SYS-05), verified by `accessibility-audit` (WCAG 2.1 AA).
   *As-built: met in `RagCard.tsx` — every grade badge renders icon + label + color together. The WCAG 2.1 AA audit itself is a runtime `accessibility-audit` run; not verifiable from source.*
 - **No "PASS" stamp anywhere in the human review surface** — output is always split verified / could-not-verify / needs-judgement (FR-REV-02).
@@ -26,7 +26,7 @@ As-built markers, verified against `app/web/src/` on 2026-08-21: ✅ built · �
 ```
 대시보드 (Dashboard)
 ├── 프로젝트 목록 (Project List) — RAG card grid, staleness badges, notification center
-│   · ⚠️ partial: page, card grid, and create-form built; cards show project_no and created date only (no RAG status, no staleness badges, no notification center)
+│   · ⚠️ partial: page, card grid, and create-form built; a notification-center entry (`NotificationBell.tsx` — one-shot `GET /api/notifications`, popover listing recent items with severity chips) added in PR #63, honestly counting recent-total because the notification table has no read/unread state (backend gap: no `read_at` column, no mark-read endpoint). RAG and staleness badges are implemented client-side but gated on optional list-payload fields (`rag_overall`, `rag_assessed_at`, `stale`) that `GET /api/projects` does not return yet (backend gap; no per-card `/rag` fetch was added to avoid an N+1 storm), so against today's backend cards still render project_no + created date only
 ├── 프로젝트 상세 (Project Detail) · ✅ shell built (MNPI banner, tab navigation; see deltas below)
 │   ├── 개요 (Overview) — RAG signal card, history sparkline, transition log
 │   │   · ⚠️ partial: RAG signal card built per §3; history sparkline and transition log not built
@@ -56,7 +56,7 @@ As-built deltas not in the tree above:
 ## 3. RAG Display Contract
 
 - **RAG signal card**: overall badge (icon + label + color) + six dimension sub-badges.
-  *As-built: built in `RagCard.tsx` — overall badge plus six hardcoded dimension sub-badges (`run_id`/`assessed_at` arrive in the payload but are not rendered).*
+  *As-built: built in `RagCard.tsx` — overall badge plus six hardcoded dimension sub-badges; since PR #63 each sub-badge and the assessed-count figure carry a source tooltip rendering the payload's `run_id`/`assessed_at` plus the envelope's `as_of`/`assessed_at` (FR-SYS-03).*
 - **Never render an overall grade without checking whether all six dimensions completed** — a partial assessment shows "평가 미완료" (assessment incomplete), never defaults to a color.
   *As-built: built — an incomplete set renders 평가 미완료 for the overall grade and 미평가 per missing dimension; there is no default-color path.*
 - **Rationale line is mandatory display**, not a hover-only detail — "데이터 신뢰도 B등급으로 상한" (capped at Amber by Grade-B data confidence) must be visible without an extra click.

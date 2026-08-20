@@ -1,8 +1,12 @@
-import type { ResolvedProcedure } from "../api.ts";
+import type { ProvenanceMeta, ResolvedProcedure } from "../api.ts";
+import { SourceTooltip } from "./SourceTooltip.tsx";
 
 // Procedure viewer — ui-spec.md §4. Renders proc:resolve's merged result
 // with a per-step source badge (공통/지역/각사) so an override is always
-// visually traceable back to which layer introduced it.
+// visually traceable back to which layer introduced it. Threshold values
+// carry the resolve envelope's provenance (FR-SYS-03) — which today is
+// as_of only; no per-threshold assumption/source meta exists yet, so the
+// tooltip shows exactly what the envelope carries and nothing invented.
 
 const SOURCE_LABEL: Record<string, string> = {
   shared: "공통",
@@ -10,7 +14,13 @@ const SOURCE_LABEL: Record<string, string> = {
   entity: "각사",
 };
 
-export function ProcedureViewer({ procedure }: { procedure: ResolvedProcedure }) {
+export function ProcedureViewer({
+  procedure,
+  provenance,
+}: {
+  procedure: ResolvedProcedure;
+  provenance?: ProvenanceMeta | Record<string, unknown>;
+}) {
   return (
     <div className="procedure-viewer">
       <p className="procedure-layers">
@@ -33,7 +43,9 @@ export function ProcedureViewer({ procedure }: { procedure: ResolvedProcedure })
             {Object.entries(procedure.thresholds).map(([k, v]) => (
               <div key={k} className="threshold-row">
                 <dt>{k}</dt>
-                <dd>{String(v)}</dd>
+                <dd>
+                  <SourceTooltip provenance={provenance}>{String(v)}</SourceTooltip>
+                </dd>
               </div>
             ))}
           </dl>
