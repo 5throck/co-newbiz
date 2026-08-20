@@ -1,0 +1,156 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { useParams } from "react-router-dom";
+import { api, ApiError, type ProjectSummary, type RagDimension, type ResolvedProcedure } from "../api.ts";
+import { RagSignalCard } from "../components/RagCard.tsx";
+import { ProcedureViewer } from "../components/ProcedureViewer.tsx";
+import { GlossaryTerm } from "../components/GlossaryTerm.tsx";
+
+type Tab = "overview" | "procedure" | "members";
+
+interface ProjectMember {
+  user_id: string;
+  project_role: string;
+  granted_by: string;
+  granted_at: string;
+  need_to_know_basis: string;
+}
+
+// Tabs are client-side state, not nested routes — ui-spec §1's 3-depth
+// navigation maximum stays /projects/:id regardless of which tab is active.
+export function ProjectDetail() {
+  const { id } = useParams<{ id: string }>();
+  const [tab, setTab] = useState<Tab>("overview");
+  const [project, setProject] = useState<ProjectSummary | null>(null);
+  const [mnpiBanner, setMnpiBanner] = useState(false);
+  const [dimensions, setDimensions] = useState<RagDimension[]>([]);
+  const [members, setMembers] = useState<ProjectMember[] | null>(null);
+  const [procedure, setProcedure] = useState<ResolvedProcedure | null>(null);
+  const [procedureKey, setProcedureKey] = useState("brownfield-screening");
+  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    api
+      .get<ProjectSummary>(`/api/projects/${id}`)
+      .then((res) => {
+        setProject(res.data);
+        setMnpiBanner(res.meta.mnpi_banner === true);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 404) setNotFound(true);
+      });
+    api
+      .get<{ project_id: string; dimensions: RagDimension[] }>(`/api/projects/${id}/rag`)
+      .then((res) => setDimensions(res.data.dimensions))
+      .catch(() => setDimensions([]));
+  }, [id]);
+
+  useEffect(() => {
+    if (tab === "members" && id && members === null) {
+      api
+        .get<ProjectMember[]>(`/api/projects/${id}/members`)
+        .then((res) => setMembers(res.data))
+        .catch(() => setMembers([]));
+    }
+  }, [tab, id, members]);
+
+  async function resolveProcedure(e: FormEvent) {
+    e.preventDefault();
+    try {
+      const res = await api.get<ResolvedProcedure>(`/api/procedures/resolve?procedure=${encodeURIComponent(procedureKey)}`);
+      setProcedure(res.data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "절차를 찾을 수 없습니다.");
+      setProcedure(null);
+    }
+  }
+
+  if (notFound) {
+    return (
+      <main>
+        <p>프로젝트를 찾을 수 없습니다.</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="project-detail-page">
+      <h1>{project?.project_no ?? "..."}</h1>
+      {mnpiBanner && (
+        <div role="alert" className="mnpi-banner">
+          ⚠ 본 프로젝트는 미공개중요정보(MNPI)로 분류되어 있습니다. 모든 열람은 감사 로그에 기록됩니다.
+        </div>
+      )}
+      <nav className="tab-bar" aria-label="프로젝트 탭">
+        <button type="button" aria-current={tab === "overview"} onClick={() => setTab("overview")}>
+          개요
+        </button>
+        <button type="button" aria-current={tab === "procedure"} onClick={() => setTab("procedure")}>
+          절차 뷰어
+        </button>
+        <button type="button" aria-current={tab === "members"} onClick={() => setTab("members")}>
+          멤버십
+        </button>
+      </nav>
+
+      {tab === "overview" && (
+        <section aria-label="개요">
+          <RagSignalCard dimensions={dimensions} />
+          <p className="glossary-hint">
+            용어 예: <GlossaryTerm term="WACC">WACC</GlossaryTerm>, <GlossaryTerm term="CGT">CGT</GlossaryTerm>
+          </p>
+        </section>
+      )}
+
+      {tab === "procedure" && (
+        <section aria-label="절차 뷰어">
+          <form onSubmit={resolveProcedure} className="procedure-form">
+            <label htmlFor="procedureKey">절차 키</label>
+            <input id="procedureKey" value={procedureKey} onChange={(e) => setProcedureKey(e.target.value)} />
+            <button type="submit">조회</button>
+          </form>
+          {error && (
+            <p role="alert" className="form-error">
+              {error}
+            </p>
+          )}
+          {procedure && <ProcedureViewer procedure={procedure} />}
+        </section>
+      )}
+
+      {tab === "members" && (
+        <section aria-label="멤버십">
+          {members === null ? (
+            <p>불러오는 중...</p>
+          ) : (
+            <table className="member-table">
+              <caption className="sr-only">프로젝트 멤버 목록</caption>
+              <thead>
+                <tr>
+                  <th scope="col">사용자</th>
+                  <th scope="col">역할</th>
+                  <th scope="col">부여자</th>
+                  <th scope="col">부여일</th>
+                  <th scope="col">Need-to-know 근거</th>
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((m) => (
+                  <tr key={m.user_id}>
+                    <td>{m.user_id}</td>
+                    <td>{m.project_role}</td>
+                    <td>{m.granted_by}</td>
+                    <td>{new Date(m.granted_at).toLocaleDateString("ko-KR")}</td>
+                    <td>{m.need_to_know_basis}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      )}
+    </main>
+  );
+}
