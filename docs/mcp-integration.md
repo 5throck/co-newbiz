@@ -2,7 +2,7 @@
 
 **Owner**: backend-engineer
 **Design of record**: design v1.0 §4-11 (task 4.4), ADR-0011
-**Status**: `mcp/co-newbiz/` is implemented and running (Stage 5 Wave 5.7), following the `Projects/co-architect/mcp/` pattern (`@modelcontextprotocol/sdk` + stdio, `index.ts` + `tools/*.ts` + `shared/{logger,errors,rate-limiter,retry,types}.ts`). **Partial tool coverage**: 11 of the ~28 tools in the catalog below are live (`list_projects`, `get_project_status`, `get_rag_assessment`, `list_notifications`, `lookup_term`, `get_procedure`, `manage_watch`, `get_approval_chain`, `get_compliance_status`, `list_waivers`, `search_interpretations`) — the remaining tools (market/financial/proxy-chain queries, the M&A special-topics tools, `list_dd_findings`, all write tools) are catalog entries not yet wired to a handler; most of their underlying REST endpoints and repository layers don't exist yet either (see `docs/co-newbiz.context.md`'s remaining-gaps note).
+**Status**: `mcp/co-newbiz/` is implemented and running (Stage 5 Waves 5.7A/5.7B), following the `Projects/co-architect/mcp/` pattern (`@modelcontextprotocol/sdk` + stdio, `index.ts` + `tools/*.ts` + `shared/{logger,errors,rate-limiter,retry,types}.ts`). **27 of the ~28 catalog tools below are live**: Wave 5.7A shipped the 11 behind the Wave 5.6A REST surface; Wave 5.7B wired every tool whose backing endpoint is a plain membership-filtered table read (`tools/analysis.ts`: `search_series`, `get_observations`, `list_data_changes`, `get_assumptions`, `set_assumption`✱; `tools/deal-review.ts`: `list_dd_findings`, `get_rbd_source_profile`, `add_dd_finding`✱, `get_antitrust_assessment`, `get_incentive_exposure`, `get_liability_exposure`, `compare_sites`, `list_partner_candidates`, `list_regulatory_requirements`, `get_permit_path`, `get_value_chain_linkage`). Still deferred, because their engines run through the CLI (`newbiz.ts`) and need an async job/analysis surface rather than a synchronous REST handler: `get_financial_analysis`, `get_peer_benchmark`, `get_projection`, `get_proxy_chain`, `calibrate_chain`✱, `compare_runs`, `get_customer_risk`, `get_compensation_gap`, `run_model`✱, `run_simulation`✱, `generate_report`✱, `export_report` (see `docs/co-newbiz.context.md`'s remaining-gaps note).
 
 ## 1. Non-Negotiable Design Rule
 
@@ -78,7 +78,7 @@ Common stdio command, all clients: `{"command":"bun","args":["run","--env-file",
 
 ## 6. OpenAPI as SSOT
 
-Per design §4-11, the same `openapi.yaml` that documents `docs/api-spec.md`'s REST surface is the source MCP tool definitions are generated or validated against — a tool exposed here without a matching REST endpoint (or vice versa) is a Stage 5 CI failure, not a silent drift.
+Per design §4-11, the same `openapi.yaml` that documents `docs/api-spec.md`'s REST surface is the source MCP tool definitions are generated or validated against — a tool exposed here without a matching REST endpoint (or vice versa) is a Stage 5 CI failure, not a silent drift. `docs/openapi.yaml` (OpenAPI 3.1) documents the as-built REST surface, and `tests/unit/openapi.test.ts` makes the REST half of that equality executable: it asserts set equality between the spec and the `app/server/*.ts` route declarations in both directions.
 
 ## 7. Verification (Design §12 Forward Reference)
 

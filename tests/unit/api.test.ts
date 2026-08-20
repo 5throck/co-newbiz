@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Wave 5.6A API tests — docs/api-spec.md, exercising the real Hono app via
  * app.request() against a scratch SQLite file (deleted after), not mocked
@@ -329,6 +329,284 @@ describe("watch and notifications", () => {
   test("notifications endpoint responds", async () => {
     const res = await req("/api/notifications", { headers: { cookie: aliceCookie } });
     expect(res.status).toBe(200);
+  });
+});
+
+// Wave 5.7B fixtures — dave (viewer, non-member) exercises the 404 side of
+// the membership gate; erin (viewer, member) exercises the 403 role gate.
+let daveCookie: string;
+let erinCookie: string;
+const SERIES_ID = "TEST.SHIP.CGT";
+let analysisRunId: string;
+
+describe("analysis — series, observations, changes, assumptions (Wave 5.7B)", () => {
+  beforeAll(async () => {
+    await createUser(db, { userId: "dave", role: "viewer", password: "pw-dave-123456", createdBy: "test", now: NOW });
+    approveUser(db, { userId: "dave", approvedBy: "test", now: NOW });
+    await createUser(db, { userId: "erin", role: "viewer", password: "pw-erin-123456", createdBy: "test", now: NOW });
+    approveUser(db, { userId: "erin", approvedBy: "test", now: NOW });
+    daveCookie = await loginCookie("dave", "pw-dave-123456");
+    erinCookie = await loginCookie("erin", "pw-erin-123456");
+    grantProjectMembership(db, { projectId, userId: "erin", projectRole: "observer", grantedBy: "alice", needToKnowBasis: "5.7B viewer role-gate test", now: NOW });
+
+    const unitId = ulid();
+    const sourceId = ulid();
+    db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [unitId, "TEST.UNIT", "dimensionless", 1, NOW]);
+    db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, "TESTSRC", "A", NOW]);
+    for (const [periodId, fiscalYear] of [["2025", 2025], ["2026", 2026]] as const) {
+      db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)", [periodId, "year", `${fiscalYear}-01-01`, `${fiscalYear}-12-31`, fiscalYear, NOW]);
+    }
+    for (const [periodId, revisionNo, value] of [["2025", 1, 100.0], ["2025", 2, 110.0], ["2026", 1, 120.0]] as const) {
+      db.run(
+        "INSERT INTO fact_market_observation (series_id, period_id, revision_no, value, unit_id, source_id, content_hash, fetched_at) VALUES (?,?,?,?,?,?,?,?)",
+        [SERIES_ID, periodId, revisionNo, value, unitId, sourceId, `hash-${periodId}-${revisionNo}`, NOW],
+      );
+    }
+    db.run("INSERT INTO data_change_log (id, series_id, detected_at, change_type, old_value, new_value) VALUES (?,?,?,?,?,?)", [ulid(), SERIES_ID, NOW, "revised", 100, 110]);
+
+    analysisRunId = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [analysisRunId, projectId, "5.7B test", "cafebabe", "alice", NOW]);
+  });
+
+  test("series catalog aggregates observations per series", async () => {
+    const res = await req("/api/series", { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.meta.count).toBe(1);
+    expect(body.data[0]).toMatchObject({ series_id: SERIES_ID, observation_count: 3, min_period_id: "2025", max_period_id: "2026" });
+  });
+
+  test("?q= filters the catalog by substring", async () => {
+    const res = await req("/api/series?q=nomatch", { headers: { cookie: aliceCookie } });
+    expect((await res.json()).data).toHaveLength(0);
+  });
+
+  test("observations default to the latest revision per period", async () => {
+    const res = await req(`/api/series/${SERIES_ID}/observations`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(body.data).toHaveLength(2);
+    expect(body.data.find((r: { period_id: string }) => r.period_id === "2025")).toMatchObject({ revision_no: 2, value: 110 });
+  });
+
+  test("?all_revisions=1 returns every revision row", async () => {
+    const res = await req(`/api/series/${SERIES_ID}/observations?all_revisions=1`, { headers: { cookie: aliceCookie } });
+    expect((await res.json()).data).toHaveLength(3);
+  });
+
+  test("data-changes scan returns the seeded revision", async () => {
+    const res = await req(`/api/data-changes?series_id=${SERIES_ID}`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]).toMatchObject({ change_type: "revised", old_value: 100, new_value: 110 });
+  });
+
+  test("assumption write lands for an analyst member", async () => {
+    const res = await req("/api/assumptions", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: analysisRunId, assumption_key: "test.wacc", kind: "live", value: 0.08, as_of: "2026-08-21" }),
+    });
+    expect(res.status).toBe(201);
+    const read = await req(`/api/assumptions?run_id=${analysisRunId}&key=test.wacc`, { headers: { cookie: aliceCookie } });
+    expect((await read.json()).data).toHaveLength(1);
+  });
+
+  test("kind='assumed' without rationale is 400 (FR-DATA-07)", async () => {
+    const res = await req("/api/assumptions", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: analysisRunId, assumption_key: "test.churn", kind: "assumed", value: 0.12, as_of: "2026-08-21" }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("rationale_required");
+  });
+
+  test("a viewer member cannot write assumptions — 403 role gate", async () => {
+    const res = await req("/api/assumptions", {
+      method: "POST",
+      headers: { cookie: erinCookie },
+      body: JSON.stringify({ run_id: analysisRunId, assumption_key: "test.churn", kind: "assumed", value: 0.12, as_of: "2026-08-21", rationale: "x" }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe("role_required");
+  });
+
+  test("run-scoped assumption read is 404 for a non-member — existence protected", async () => {
+    const res = await req(`/api/assumptions?run_id=${analysisRunId}`, { headers: { cookie: daveCookie } });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("not_found");
+  });
+});
+
+describe("deal review — membership-gated reads and audited writes (Wave 5.7B)", () => {
+  let permitA: string;
+  let permitB: string;
+  let permitC: string;
+  let certX: string;
+  let certY: string;
+
+  beforeAll(() => {
+    db.run("INSERT INTO dd_finding (id, project_id, category, description, value_impact, created_at) VALUES (?,?,?,?,?,?)", [ulid(), projectId, "commercial", "Customer concentration 42% of revenue", -1.2, NOW]);
+    db.run(
+      "INSERT INTO dd_finding (id, project_id, category, description, trl_grade, parent_relationship_json, rbd_source, created_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), projectId, "rbd", "Crankshaft coating process", "6", '{"parent":"HD","spinout":false}', "internal_only", NOW],
+    );
+
+    permitA = ulid();
+    permitB = ulid();
+    permitC = ulid();
+    for (const [id, name, days] of [[permitA, "Factory establishment permit", 30], [permitB, "Emissions approval", 60], [permitC, "Fire safety inspection", 90]] as const) {
+      db.run("INSERT INTO permit (id, project_id, name, agency, statutory_days, status) VALUES (?,?,?,?,?,?)", [id, projectId, name, "MOIS", days, "not_started"]);
+    }
+    db.run("INSERT INTO permit_edge (from_permit_id, to_permit_id) VALUES (?,?)", [permitA, permitB]);
+    db.run("INSERT INTO permit_edge (from_permit_id, to_permit_id) VALUES (?,?)", [permitB, permitC]);
+
+    certX = ulid();
+    certY = ulid();
+    for (const [id, name, days] of [[certX, "Type approval", 40], [certY, "Class society certification", 120]] as const) {
+      db.run("INSERT INTO certification (id, project_id, name, agency, statutory_days, status) VALUES (?,?,?,?,?,?)", [id, projectId, name, "KR", days, "not_started"]);
+    }
+    db.run("INSERT INTO certification_edge (from_certification_id, to_certification_id) VALUES (?,?)", [certX, certY]);
+
+    db.run(
+      "INSERT INTO debt_instrument (id, project_id, lender, principal, rate_type, rate) VALUES (?,?,?,?,?,?)",
+      [ulid(), projectId, "KB", 50_000_000_000, "fixed", 3.5],
+    );
+    db.run(
+      "INSERT INTO contingent_liability (id, project_id, category, description, probability, amount_low, amount_expected, amount_high, expected_timing_year) VALUES (?,?,?,?,?,?,?,?,?)",
+      [ulid(), projectId, "litigation", "Patent suit", 0.3, 1e9, 2e9, 4e9, 1],
+    );
+    const simRunId = ulid();
+    const simId = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [simRunId, projectId, "5.7B sim", "seeded", "alice", NOW]);
+    db.run("INSERT INTO simulation (id, run_id, seed, iterations, discount_rate, created_at) VALUES (?,?,?,?,?,?)", [simId, simRunId, 42, 1000, 0.08, NOW]);
+    db.run(
+      "INSERT INTO covenant_test (simulation_id, period_id, covenant_key, threshold, projected_value, breached) VALUES (?,?,?,?,?,?)",
+      [simId, "2027", "debt_ebitda", 3.5, 2.8, 1],
+    );
+
+    for (const [name, rank] of [["Ulsan", 2], ["Changwon", 1], ["Pohang", null]] as const) {
+      db.run("INSERT INTO site_candidate (id, project_id, name, rank) VALUES (?,?,?,?)", [ulid(), projectId, name, rank]);
+    }
+    db.run("INSERT INTO partner_candidate (id, project_id, name, partner_type) VALUES (?,?,?,?)", [ulid(), projectId, "Acme Marine", "supplier"]);
+    db.run(
+      "INSERT INTO antitrust_finding (id, project_id, market_definition, hhi_before, hhi_after, remedy_type, created_at) VALUES (?,?,?,?,?,?,?)",
+      [ulid(), projectId, "KR marine crankshaft", 1200, 1650, "none", NOW],
+    );
+    db.run("INSERT INTO incentive (id, project_id, direction, type, status) VALUES (?,?,?,?,?)", [ulid(), projectId, "prospective", "cash_grant", "prospective"]);
+    db.run("INSERT INTO incentive (id, project_id, direction, type, status) VALUES (?,?,?,?,?)", [ulid(), projectId, "granted", "tax_credit", "granted"]);
+
+    const fromIndustry = ulid();
+    const toIndustry = ulid();
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [fromIndustry, "30110", "선박용 엔진", "Marine engines", NOW]);
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [toIndustry, "30111", "조선업", "Shipbuilding", NOW]);
+    db.run(
+      "INSERT INTO value_chain_link (id, project_id, from_industry_id, to_industry_id, direction, assessed_at) VALUES (?,?,?,?,?,?)",
+      [ulid(), projectId, fromIndustry, toIndustry, "upstream", NOW],
+    );
+  });
+
+  test("dd-findings list with count meta", async () => {
+    const res = await req(`/api/projects/${projectId}/dd-findings`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.meta.count).toBe(2);
+  });
+
+  test("?category=rbd filters to the R&BD row", async () => {
+    const res = await req(`/api/projects/${projectId}/dd-findings?category=rbd`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(body.meta.count).toBe(1);
+    expect(body.data[0].rbd_source).toBe("internal_only");
+  });
+
+  test("dd-findings are invisible to a non-member — 404, not 403", async () => {
+    const res = await req(`/api/projects/${projectId}/dd-findings`, { headers: { cookie: daveCookie } });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("not_found");
+  });
+
+  test("dd-finding POST lands for an analyst member", async () => {
+    const res = await req(`/api/projects/${projectId}/dd-findings`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ category: "legal", description: "Pending arbitration", value_impact: -0.4 }),
+    });
+    expect(res.status).toBe(201);
+  });
+
+  test("category='rbd' without rbd_source is 400 before the DB CHECK", async () => {
+    const res = await req(`/api/projects/${projectId}/dd-findings`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ category: "rbd", description: "Missing provenance" }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("rbd_source_required");
+  });
+
+  test("a viewer member cannot record findings — 403 role gate", async () => {
+    const res = await req(`/api/projects/${projectId}/dd-findings`, {
+      method: "POST",
+      headers: { cookie: erinCookie },
+      body: JSON.stringify({ category: "legal", description: "x" }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe("role_required");
+  });
+
+  test("permits default response is flat — parallel lists, no dag", async () => {
+    const res = await req(`/api/projects/${projectId}/permits`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.data.permits).toHaveLength(3);
+    expect(body.data.certifications).toHaveLength(2);
+    expect(body.data).not.toHaveProperty("dag");
+  });
+
+  test("?include_dag=1 adds edges and the statutory-days critical path for both kinds", async () => {
+    const res = await req(`/api/projects/${projectId}/permits?include_dag=1`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.data.dag.permit_edges).toHaveLength(2);
+    expect(body.data.dag.permit_critical_path).toEqual([permitA, permitB, permitC]);
+    expect(body.data.dag.certification_edges).toHaveLength(1);
+    expect(body.data.dag.certification_critical_path).toEqual([certX, certY]);
+  });
+
+  test("liabilities combines debt, contingencies and the latest simulation's covenant tests", async () => {
+    const res = await req(`/api/projects/${projectId}/liabilities`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.data.debt_instruments).toHaveLength(1);
+    expect(body.data.contingent_liabilities).toHaveLength(1);
+    expect(body.data.covenant_tests).toHaveLength(1);
+    expect(body.data.covenant_tests[0]).toMatchObject({ covenant_key: "debt_ebitda", breached: 1 });
+    expect(typeof body.meta.simulation_id).toBe("string");
+  });
+
+  test("sites order rank-first, nulls last", async () => {
+    const res = await req(`/api/projects/${projectId}/sites`, { headers: { cookie: aliceCookie } });
+    const names = (await res.json()).data.map((s: { name: string }) => s.name);
+    expect(names).toEqual(["Changwon", "Ulsan", "Pohang"]);
+  });
+
+  test("value-chain links carry industry names on both ends", async () => {
+    const res = await req(`/api/projects/${projectId}/value-chain-links`, { headers: { cookie: aliceCookie } });
+    const rows = (await res.json()).data;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ from_industry_en: "Marine engines", to_industry_en: "Shipbuilding" });
+  });
+
+  test("antitrust / incentives / partners respond for a member, with direction counts", async () => {
+    const antitrust = await req(`/api/projects/${projectId}/antitrust`, { headers: { cookie: aliceCookie } });
+    expect((await antitrust.json()).data).toHaveLength(1);
+    const incentives = await req(`/api/projects/${projectId}/incentives`, { headers: { cookie: aliceCookie } });
+    const incentiveBody = await incentives.json();
+    expect(incentiveBody.data).toHaveLength(2);
+    expect(incentiveBody.meta).toMatchObject({ prospective: 1, granted: 1 });
+    const partners = await req(`/api/projects/${projectId}/partners`, { headers: { cookie: aliceCookie } });
+    expect((await partners.json()).data).toHaveLength(1);
   });
 });
 
