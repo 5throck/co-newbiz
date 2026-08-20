@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "company": "Test Marine Engine Co.",
+    "unit": "KRW billion",
+    "years": ["2023", "2024", "2025"]
+  },
+  "data": {
+    "2023": {
+      "revenue": 1000, "cogs": 700, "gross_profit": 300,
+      "operating_income": 80, "sg_and_a": 220, "rd_expense": 30,
+      "net_income": 50, "depreciation": 40, "ebit": 85, "fin_expense": 10,
+      "total_assets": 1200, "total_equity": 500, "total_liabilities": 700,
+      "current_assets": 400, "current_liabilities": 300, "inventory": 100,
+      "cash": 150, "receivables": 120, "ppe": 500,
+      "st_debt": 100, "lt_debt": 300,
+      "operating_cf": 90, "investing_cf": -60, "dividends_paid": 10,
+      "nopat": 60, "invested_capital": 800
+    },
+    "2024": {
+      "revenue": 1100, "cogs": 750, "gross_profit": 350,
+      "operating_income": 100, "sg_and_a": 220, "rd_expense": 35,
+      "net_income": 65, "depreciation": 42, "ebit": 105, "fin_expense": 11,
+      "total_assets": 1300, "total_equity": 540, "total_liabilities": 760,
+      "current_assets": 420, "current_liabilities": 310, "inventory": 110,
+      "cash": 160, "receivables": 130, "ppe": 520,
+      "st_debt": 110, "lt_debt": 310,
+      "operating_cf": 105, "investing_cf": -65, "dividends_paid": 12,
+      "nopat": 75, "invested_capital": 850
+    },
+    "2025": {
+      "revenue": 1250, "cogs": 820, "gross_profit": 430,
+      "operating_income": 130, "sg_and_a": 260, "rd_expense": 40,
+      "net_income": 85, "depreciation": 45, "ebit": 135, "fin_expense": 12,
+      "total_assets": 1420, "total_equity": 600, "total_liabilities": 820,
+      "current_assets": 450, "current_liabilities": 320, "inventory": 115,
+      "cash": 175, "receivables": 140, "ppe": 545,
+      "st_debt": 115, "lt_debt": 320,
+      "operating_cf": 125, "investing_cf": -70, "dividends_paid": 15,
+      "nopat": 95, "invested_capital": 900
+    }
+  }
+}
