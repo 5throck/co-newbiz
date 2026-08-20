@@ -1,6 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "react-router-dom";
-import { api, ApiError, type ProjectSummary, type RagDimension, type ResolvedProcedure } from "../api.ts";
+import {
+  api,
+  ApiError,
+  provenanceOf,
+  type ProjectSummary,
+  type ProvenanceMeta,
+  type RagDimension,
+  type ResolvedProcedure,
+} from "../api.ts";
 import { RagSignalCard } from "../components/RagCard.tsx";
 import { ProcedureViewer } from "../components/ProcedureViewer.tsx";
 import { GlossaryTerm } from "../components/GlossaryTerm.tsx";
@@ -25,7 +33,9 @@ export function ProjectDetail() {
   const [dimensions, setDimensions] = useState<RagDimension[]>([]);
   const [members, setMembers] = useState<ProjectMember[] | null>(null);
   const [procedure, setProcedure] = useState<ResolvedProcedure | null>(null);
+  const [procedureProvenance, setProcedureProvenance] = useState<ProvenanceMeta>({});
   const [procedureKey, setProcedureKey] = useState("brownfield-screening");
+  const [ragProvenance, setRagProvenance] = useState<ProvenanceMeta>({});
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +52,10 @@ export function ProjectDetail() {
       });
     api
       .get<{ project_id: string; dimensions: RagDimension[] }>(`/api/projects/${id}/rag`)
-      .then((res) => setDimensions(res.data.dimensions))
+      .then((res) => {
+        setDimensions(res.data.dimensions);
+        setRagProvenance(provenanceOf(res.meta));
+      })
       .catch(() => setDimensions([]));
   }, [id]);
 
@@ -60,6 +73,7 @@ export function ProjectDetail() {
     try {
       const res = await api.get<ResolvedProcedure>(`/api/procedures/resolve?procedure=${encodeURIComponent(procedureKey)}`);
       setProcedure(res.data);
+      setProcedureProvenance(provenanceOf(res.meta));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "절차를 찾을 수 없습니다.");
@@ -97,7 +111,7 @@ export function ProjectDetail() {
 
       {tab === "overview" && (
         <section aria-label="개요">
-          <RagSignalCard dimensions={dimensions} />
+          <RagSignalCard dimensions={dimensions} provenance={ragProvenance} />
           <p className="glossary-hint">
             용어 예: <GlossaryTerm term="WACC">WACC</GlossaryTerm>, <GlossaryTerm term="CGT">CGT</GlossaryTerm>
           </p>
@@ -116,7 +130,7 @@ export function ProjectDetail() {
               {error}
             </p>
           )}
-          {procedure && <ProcedureViewer procedure={procedure} />}
+          {procedure && <ProcedureViewer procedure={procedure} provenance={procedureProvenance} />}
         </section>
       )}
 

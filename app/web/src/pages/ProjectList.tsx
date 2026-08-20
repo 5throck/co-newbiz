@@ -2,6 +2,14 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api, type ProjectSummary } from "../api.ts";
 import { useAuth } from "../auth.tsx";
+import { GradeBadge } from "../components/RagCard.tsx";
+import { NotificationBell } from "../components/NotificationBell.tsx";
+
+// Card enrichment is gated on optional list-payload fields (rag_overall,
+// rag_assessed_at, stale): GET /api/projects returns only id/project_no/
+// created_at today, and no per-card /rag fetch is made here — an N+1 fetch
+// storm is worse than a plain card. When the backend starts populating the
+// fields, the badges below light up with no further client change.
 
 export function ProjectList() {
   const { me } = useAuth();
@@ -32,7 +40,10 @@ export function ProjectList() {
 
   return (
     <main className="project-list-page">
-      <h1>프로젝트 목록</h1>
+      <div className="project-list-header">
+        <h1>프로젝트 목록</h1>
+        <NotificationBell />
+      </div>
       {error && (
         <p role="alert" className="form-error">
           {error}
@@ -55,6 +66,18 @@ export function ProjectList() {
             <li key={p.id}>
               <Link to={`/projects/${p.id}`} className="project-card">
                 <span className="project-no">{p.project_no}</span>
+                {(p.rag_overall || p.stale) && (
+                  <span className="card-badges">
+                    {p.rag_overall && (
+                      <GradeBadge grade={p.rag_overall} />
+                    )}
+                    {p.stale && (
+                      <span className="grade-badge grade-amber">
+                        <span aria-hidden="true">▲</span> 데이터 갱신 필요
+                      </span>
+                    )}
+                  </span>
+                )}
                 <span className="project-created">{new Date(p.created_at).toLocaleDateString("ko-KR")}</span>
               </Link>
             </li>
