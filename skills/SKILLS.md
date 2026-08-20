@@ -88,6 +88,10 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `jv-structuring` | 1.0.0 | active | partnership-agent | 2026-08-20 | — | Wave 5.8E — governance/valuation/exit/deadlock documented before term-sheet negotiation |
 | `region-profile-application` | 1.0.0 | active | region-lead | 2026-08-20 | — | Wave 5.8E — ADR-0023's 10 mandatory review axes, real `region-profiles/*.yaml` (KR/EU/US/CN/SEA) |
 | `industry-profile-application` | 1.0.0 | active | industry-lead | 2026-08-20 | — | Wave 5.8E — ADR-0024 profile-first principle; `industry-profiles/` does not exist yet, gap flagged explicitly |
+| `proxy-industry-chain` | 1.0.0 | active | quant-methodologist | 2026-08-20 | — | Wave 5.8F (design §9.3 market/proxy-chain group) — ADR-0006 statistical-hop-only grading rule |
+| `value-chain-linkage-analysis` | 1.0.0 | active | quant-methodologist | 2026-08-20 | — | Wave 5.8F — ADR-0025 deliberate separation from proxy-chain betas |
+| `unit-conversion-calibration` | 1.0.0 | active | quant-methodologist | 2026-08-20 | — | Wave 5.8F — lead-lag OLS regression, `python/correlation.py` |
+| `market-data-pipeline` | 1.0.0 | active | data-architect | 2026-08-20 | — | Wave 5.8F — ADR-0004 cache-first/revision-preserving policy; `fetch`/`md:sync` CLI not yet implemented, gap flagged explicitly |
 
 
 
