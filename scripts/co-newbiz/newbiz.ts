@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.2.0
+// @version 1.3.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -23,12 +23,13 @@ import { runMigrations } from "../../db/migrate.ts";
 import { getDb } from "../../db/client.ts";
 import { resolveProcedure } from "./proc-resolve.ts";
 import { computeKpis } from "./fin-analyze.ts";
+import { runSimulation } from "./simulate.ts";
 
 const [command, ...args] = process.argv.slice(2);
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>");
+  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, simulate <scenario-json-path>");
 }
 
 switch (command) {
@@ -93,6 +94,21 @@ switch (command) {
       console.log(JSON.stringify(report, null, 2));
     } catch (err) {
       console.error(`fin:analyze failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+    break;
+  }
+  case "simulate": {
+    const [scenarioPath] = args;
+    if (!scenarioPath) {
+      console.error("simulate requires a scenario JSON path");
+      process.exit(1);
+    }
+    try {
+      const result = await runSimulation(scenarioPath);
+      console.log(JSON.stringify(result, null, 2));
+    } catch (err) {
+      console.error(`simulate failed: ${(err as Error).message}`);
       process.exit(1);
     }
     break;

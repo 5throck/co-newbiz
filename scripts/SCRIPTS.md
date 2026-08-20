@@ -57,9 +57,10 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | script | source | version | status | removal-date | security-advisory | layer | pair |
 |--------|--------|---------|--------|--------------|-------------------|-------|------|
 | `agent-create.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
-| `co-newbiz/newbiz.ts` | co-newbiz | 1.2.0 | active | —| —| L3-only (project-local analysis-engine CLI, design v1.0 §4-8, not part of L0/L1/L2 lineage) | —|
+| `co-newbiz/newbiz.ts` | co-newbiz | 1.3.0 | active | —| —| L3-only (project-local analysis-engine CLI, design v1.0 §4-8, not part of L0/L1/L2 lineage) | —|
 | `co-newbiz/proc-resolve.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `proc:resolve` — merges shared+region+entity procedures) | —|
 | `co-newbiz/fin-analyze.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `fin:analyze` — runs python/kpi.py, reused from co-consult) | —|
+| `co-newbiz/simulate.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `simulate` — runs python/monte_carlo.py, seeded contingent-liability Monte Carlo) | —|
 | `agent-delete.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `agent-lifecycle-audit.ts` | L0 | 1.1.5 | active | —| —| L0+L1 | —|
 | `agent-list.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
