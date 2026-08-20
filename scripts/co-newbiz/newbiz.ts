@@ -1,31 +1,33 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
  * Usage:
  *   bun scripts/co-newbiz/newbiz.ts <command> [options]
  *
- * Commands implemented so far (Stage 5 Wave 5.1):
- *   db:migrate   Apply pending db/migrations/*.sql
- *   db:analyze   (Wave 5.1 stub — query-plan check, not yet implemented)
- *   status       Print migration status
+ * Commands implemented so far (Stage 5 Waves 5.1-5.2a):
+ *   db:migrate    Apply pending db/migrations/*.sql
+ *   status        Print migration status
+ *   proc:resolve  Merge a shared procedure with region/entity overrides
  *
  * Remaining commands (md:sync, fetch, law:sync, policy:sync, policy:impact,
- * proc:resolve, glossary:lint, fin:analyze, fin:project, assume, calibrate,
- * convert, model, simulate, rag, diff, watch:run, report, export, adr:new,
- * user:*) land in their respective Wave 5.2-5.7 PRs per docs/dev-plan.md —
- * not stubbed here to avoid a command that silently does nothing.
+ * glossary:lint [reuse bun glossary/_validate.ts directly for now — see
+ * package.json], fin:analyze, fin:project, assume, calibrate, convert,
+ * model, simulate, rag, diff, watch:run, report, export, adr:new, user:*)
+ * land in their respective Wave 5.2-5.7 PRs per docs/dev-plan.md — not
+ * stubbed here to avoid a command that silently does nothing.
  */
 
 import { runMigrations } from "../../db/migrate.ts";
 import { getDb } from "../../db/client.ts";
+import { resolveProcedure } from "./proc-resolve.ts";
 
 const [command, ...args] = process.argv.slice(2);
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status");
+  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json]");
 }
 
 switch (command) {
@@ -43,6 +45,39 @@ switch (command) {
     console.log(`Applied migrations (${rows.length}):`);
     for (const r of rows as { filename: string; applied_at: string }[]) {
       console.log(`  ${r.filename} — ${r.applied_at}`);
+    }
+    break;
+  }
+  case "proc:resolve": {
+    const procedureIdx = args.indexOf("--procedure");
+    const entityIdx = args.indexOf("--entity");
+    const regionIdx = args.indexOf("--region");
+    const jsonMode = args.includes("--json");
+
+    const procedureName = procedureIdx >= 0 ? args[procedureIdx + 1] : undefined;
+    if (!procedureName) {
+      console.error("proc:resolve requires --procedure <name>");
+      process.exit(1);
+    }
+    const result = resolveProcedure(procedureName, {
+      entity: entityIdx >= 0 ? args[entityIdx + 1] : undefined,
+      region: regionIdx >= 0 ? args[regionIdx + 1] : undefined,
+    });
+    if (jsonMode) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(`Procedure: ${result.procedureKey}`);
+      console.log(`Layers applied: ${result.layersApplied.join(" -> ")}`);
+      console.log(`\nSteps:`);
+      for (const s of result.steps) {
+        console.log(`  [${s._source}] ${s.id}. (${s.gate}) ${s.agent_key} / ${s.skill_key} -> ${s.output_type}`);
+      }
+      if (Object.keys(result.thresholds).length > 0) {
+        console.log(`\nThresholds:`);
+        for (const [k, v] of Object.entries(result.thresholds)) {
+          console.log(`  ${k}: ${v}`);
+        }
+      }
     }
     break;
   }
