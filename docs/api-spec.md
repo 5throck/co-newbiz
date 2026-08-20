@@ -2,7 +2,7 @@
 
 **Owner**: backend-engineer, data-architect
 **Design of record**: design v1.0 §4-11 (task 4.4), `docs/srs.md` §12, `docs/db-schema.md`
-**Status**: Endpoint catalog and access-control contract — implemented Stage 5 Wave 5.6 (`app/server/*.ts`: `admin.ts`, `auth.ts`, `envelope.ts`, `glossary.ts`, `governance.ts`, `monitoring.ts`, `projects.ts`, `tokens.ts`). OpenAPI 3.1 is the SSOT for MCP tool definitions (design §4-11) — **`openapi.yaml` itself has not been generated yet**, so this document remains the only human-readable index; that gap is separate from (and does not block) the REST API being live.
+**Status**: Endpoint catalog and access-control contract — implemented Stage 5 Waves 5.6-5.7 (`app/server/*.ts`: `admin.ts`, `analysis.ts`, `auth.ts`, `deal-review.ts`, `envelope.ts`, `glossary.ts`, `governance.ts`, `index.ts`, `middleware.ts`, `monitoring.ts`, `projects.ts`, `tokens.ts`). `docs/openapi.yaml` (OpenAPI 3.1, as-built surface only) is now generated, and `tests/unit/openapi.test.ts` is its executable drift gate — set equality with the `app/server/*.ts` route declarations in both directions (mcp-integration.md §6), so a route without a spec entry, or a spec entry without a route, fails the suite. This document stays the human-readable index; the §4/§6/§7 tables carry an Implementation column separating `as-built` rows from `forward-design` rows (the contract the engine waves will implement: runs/diffs, proxy chains, simulations, group agenda, reports, management package, comp benchmark, customer risk).
 
 ## 1. Design Rules (Non-Negotiable)
 
@@ -35,16 +35,18 @@
 
 ## 4. Analysis and Runs
 
-| Endpoint | Method | Purpose | Access Control |
-|---|---|---|---|
-| `/api/projects/:id/runs` | GET/POST | List/create analysis runs | Membership |
-| `/api/runs/:id` | GET | Run detail (`run_input` snapshot, `input_hash`) | Membership on `run.project_id` |
-| `/api/runs/:id/diff/:other_id` | GET | Version-comparison bridge | Membership |
-| `/api/assumptions` | GET/POST | Assumption registry entries | Membership; `kind='assumed'` write requires non-empty `rationale` |
-| `/api/proxy-chains/:id` | GET | Chain detail with per-hop reliability grade | Membership |
-| `/api/proxy-chains/:id/calibrate` | POST | Recalibration trigger | `quant-methodologist` role |
-| `/api/simulations` | POST | Monte Carlo run (seeded) | Membership |
-| `/api/simulations/:id/results` | GET | Quantile summary (`simulation_result`) — raw draws not exposed after archival (retention_policy) | Membership |
+| Endpoint | Method | Purpose | Access Control | Implementation |
+|---|---|---|---|---|
+| `/api/series` | GET | Series catalog from `fact_market_observation` (`?q=` substring filter) | Authenticated | as-built (5.7B) |
+| `/api/series/:id/observations` | GET | Latest revision per period; `?all_revisions=1`, `?period_id=` | Authenticated | as-built (5.7B) |
+| `/api/projects/:id/runs` | GET/POST | List/create analysis runs | Membership | forward-design |
+| `/api/runs/:id` | GET | Run detail (`run_input` snapshot, `input_hash`) | Membership on `run.project_id` | forward-design |
+| `/api/runs/:id/diff/:other_id` | GET | Version-comparison bridge | Membership | forward-design |
+| `/api/assumptions` | GET/POST | Assumption registry entries | Membership; `kind='assumed'` write requires non-empty `rationale` | as-built (5.7B) |
+| `/api/proxy-chains/:id` | GET | Chain detail with per-hop reliability grade | Membership | forward-design |
+| `/api/proxy-chains/:id/calibrate` | POST | Recalibration trigger | `quant-methodologist` role | forward-design |
+| `/api/simulations` | POST | Monte Carlo run (seeded) | Membership | forward-design |
+| `/api/simulations/:id/results` | GET | Quantile summary (`simulation_result`) — raw draws not exposed after archival (retention_policy) | Membership | forward-design |
 
 ## 5. RAG and Governance
 
@@ -61,27 +63,29 @@
 
 ## 6. M&A Special Topics and Green Field
 
-| Endpoint | Method | Purpose | Access Control |
-|---|---|---|---|
-| `/api/projects/:id/dd-findings` | GET/POST | `dd_finding` records, including `category='rbd'` fields | Membership |
-| `/api/projects/:id/antitrust` | GET | HHI/remedy-type/discharge-status | Membership |
-| `/api/projects/:id/contingent-liabilities` | GET/POST | Feeds Monte Carlo | Membership |
-| `/api/projects/:id/management-package` | GET | **`executive_ref` only, never a real name** (FR-MA-06/SEC-05) — response schema has no name field to accidentally populate | Membership + elevated role (compensation data) |
-| `/api/projects/:id/comp-benchmark` | GET | Aggregate-only rows | Membership + elevated role |
-| `/api/projects/:id/sites` | GET | `site_candidate` comparison table | Membership |
-| `/api/projects/:id/permits` | GET | Permit DAG with critical path | Membership |
-| `/api/projects/:id/incentives` | GET/POST | Unified acquisition/clawback record | Membership |
-| `/api/projects/:id/partners` | GET/POST | Partner candidate screening | Membership |
+| Endpoint | Method | Purpose | Access Control | Implementation |
+|---|---|---|---|---|
+| `/api/projects/:id/dd-findings` | GET/POST | `dd_finding` records, including `category='rbd'` fields | Membership | as-built (5.7B) |
+| `/api/projects/:id/antitrust` | GET | HHI/remedy-type/discharge-status | Membership | as-built (5.7B) |
+| `/api/projects/:id/liabilities` | GET | Combined exposure — `debt_instrument` + `contingent_liability` + the latest simulation's `covenant_test` | Membership | as-built (5.7B) |
+| `/api/projects/:id/contingent-liabilities` | POST | Feeds Monte Carlo | Membership | forward-design (read side served by `/liabilities`) |
+| `/api/projects/:id/management-package` | GET | **`executive_ref` only, never a real name** (FR-MA-06/SEC-05) — response schema has no name field to accidentally populate | Membership + elevated role (compensation data) | forward-design |
+| `/api/projects/:id/comp-benchmark` | GET | Aggregate-only rows | Membership + elevated role | forward-design |
+| `/api/projects/:id/sites` | GET | `site_candidate` comparison table | Membership | as-built (5.7B) |
+| `/api/projects/:id/permits` | GET | Permit DAG with critical path (`?include_dag=1`); certifications returned in parallel, never merged | Membership | as-built (5.7B) |
+| `/api/projects/:id/incentives` | GET/POST | Unified acquisition/clawback record | Membership | GET as-built (5.7B); POST forward-design |
+| `/api/projects/:id/partners` | GET/POST | Partner candidate screening | Membership | GET as-built (5.7B); POST forward-design |
+| `/api/projects/:id/value-chain-links` | GET | `value_chain_link` with industry names (ADR-0025: separate table from proxy chains) | Membership | as-built (5.7B) |
 
 ## 7. Monitoring, Notifications, Reports
 
-| Endpoint | Method | Purpose | Access Control |
-|---|---|---|---|
-| `/api/watch` | GET/POST/DELETE | User subscriptions | Session (own subscriptions only) |
-| `/api/notifications` | GET | Delivered/pending, per-user | Session |
-| `/api/data-changes` | GET | `data_change_log` scan | Membership on affected projects |
-| `/api/reports/:run_id` | POST | Generate deliverable (docx/pdf/hwpx) — staleness gate blocks if inputs exceed `ttl_days` | Membership |
-| `/api/glossary/:term` | GET | Glossary lookup (also backs UI tooltip, MCP `lookup_term`) | Public within the workspace |
+| Endpoint | Method | Purpose | Access Control | Implementation |
+|---|---|---|---|---|
+| `/api/watch` | GET/POST/DELETE | User subscriptions | Session (own subscriptions only) | as-built (5.6A) |
+| `/api/notifications` | GET | Delivered/pending, per-user | Session | as-built (5.6A) |
+| `/api/data-changes` | GET | `data_change_log` scan | Authenticated — market data is workspace-level (`fact_market_observation` carries no project binding) | as-built (5.7B) |
+| `/api/reports/:run_id` | POST | Generate deliverable (docx/pdf/hwpx) — staleness gate blocks if inputs exceed `ttl_days` | Membership | forward-design |
+| `/api/glossary/:term` | GET | Glossary lookup (also backs UI tooltip, MCP `lookup_term`) | Public within the workspace | as-built (5.6A) |
 
 ## 8. Admin Console (Never MCP-Exposed)
 

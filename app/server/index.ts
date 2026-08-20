@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * co-newbiz API server — docs/api-spec.md (Wave 5.6A).
  *
@@ -8,9 +8,13 @@
  * Wave 5.6A scope: api-spec §2 (auth/tokens), §3 (projects/membership/
  * classification), §5 (RAG/approval/compliance/waivers/interpretations/
  * procedures), §7 (watch/notifications/glossary), §8 (admin console), §9
- * (envelope). §4 analysis runs/simulations and §6 M&A topic reads are
- * deferred to a later sub-PR — the engines run through the CLI today and
- * need an async job surface, not a synchronous handler.
+ * (envelope). Wave 5.7B adds the plain membership-filtered table reads:
+ * analysis.ts (series/observations/data-changes/assumptions) and
+ * deal-review.ts (dd-findings/antitrust/incentives/liabilities/sites/
+ * partners/permits/value-chain-links). Engine-dependent surfaces (runs/
+ * diffs, proxy chains, simulations, reports) stay deferred — the engines
+ * run through the CLI today and need an async job surface, not a
+ * synchronous handler.
  *
  * If app/web/dist exists (Wave 5.6B build output) it is served as the SPA
  * with an index.html fallback for client-side routes.
@@ -32,6 +36,8 @@ import { authRoutes } from "./auth.ts";
 import { tokenRoutes } from "./tokens.ts";
 import { projectRoutes } from "./projects.ts";
 import { governanceRoutes } from "./governance.ts";
+import { analysisRoutes } from "./analysis.ts";
+import { dealReviewRoutes } from "./deal-review.ts";
 import { monitoringRoutes } from "./monitoring.ts";
 import { glossaryRoutes } from "./glossary.ts";
 import { adminRoutes } from "./admin.ts";
@@ -62,6 +68,8 @@ export function buildApp(): Hono<AppEnv> {
   app.route("/", tokenRoutes);
   app.route("/", projectRoutes);
   app.route("/", governanceRoutes);
+  app.route("/", analysisRoutes);
+  app.route("/", dealReviewRoutes);
   app.route("/", monitoringRoutes);
   app.route("/", glossaryRoutes);
   app.route("/", adminRoutes);
