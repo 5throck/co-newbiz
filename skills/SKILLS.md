@@ -100,6 +100,19 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `investment-feasibility-modeling` | 1.0.0 | active | valuation-agent | 2026-08-20 | — | Wave 5.8G — synthesis skill assembling confirmed WACC/EBITDA/growth/site-cost inputs |
 | `scenario-planning` | 1.0.0 | active | risk-officer | 2026-08-20 | — | Wave 5.8G — discrete downside/base/upside cases incl. mandatory +200bp rate-shock test |
 | `monte-carlo-simulation` | 1.0.0 | active | risk-officer | 2026-08-20 | — | Wave 5.8G — ADR-0026 seeded, deterministic `python/monte_carlo.py` P50/P95 NPV |
+| `regulatory-screening` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H (design §9.3 legal/certification/DD group) — Screening-gate region/foreign-investment/sanctions checks |
+| `permit-pathway-mapping` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — permit DAG + critical path, strictly separate from certification |
+| `certification-roadmap` | 1.0.0 | active | certification-agent | 2026-08-20 | — | Wave 5.8H — certification gap analysis, strictly separate from permits |
+| `certification-transferability` | 1.0.0 | active | certification-agent | 2026-08-20 | — | Wave 5.8H — CoC transferability confirmed against the certifying body's own rules; inference disallowed |
+| `regulatory-change-response` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — pre-effective-date response planning |
+| `customer-qualification` | 1.0.0 | active | commercial-dd-agent | 2026-08-20 | — | Wave 5.8H — PPAP/FAI/vendor-registration, distinct from regulatory certification |
+| `statute-change-monitoring` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — project-scoped DD counterpart to regulation-monitoring |
+| `legal-risk-register` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — consolidated per-project legal-risk view |
+| `commercial-due-diligence` | 1.0.0 | active | commercial-dd-agent | 2026-08-20 | — | Wave 5.8H — checklist cdd-01-07, no-narrative-only-finding rule |
+| `technical-due-diligence` | 1.0.0 | active | technical-dd-agent | 2026-08-20 | — | Wave 5.8H — checklist tdd-01-08, independently-verified capex plan |
+| `site-visit-protocol` | 1.0.0 | active | technical-dd-agent | 2026-08-20 | — | Wave 5.8H — evidence-capture discipline (photo/measurement/log) |
+| `expert-interview` | 1.0.0 | active | commercial-dd-agent | 2026-08-20 | — | Wave 5.8H — 2-3 source triangulation, disconfirming-question structure |
+| `dd-to-valuation-bridge` | 1.0.0 | active | valuation-agent | 2026-08-20 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams |
 
 
 
