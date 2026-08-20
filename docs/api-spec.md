@@ -2,7 +2,7 @@
 
 **Owner**: backend-engineer, data-architect
 **Design of record**: design v1.0 §4-11 (task 4.4), `docs/srs.md` §12, `docs/db-schema.md`
-**Status**: Endpoint catalog and access-control contract — implemented Stage 5 Waves 5.6-5.7 plus the engine-1 run-versioning wave (`app/server/*.ts`: `admin.ts`, `analysis.ts`, `auth.ts`, `deal-review.ts`, `envelope.ts`, `glossary.ts`, `governance.ts`, `index.ts`, `middleware.ts`, `monitoring.ts`, `projects.ts`, `tokens.ts`). `docs/openapi.yaml` (OpenAPI 3.1, as-built surface only) is now generated, and `tests/unit/openapi.test.ts` is its executable drift gate — set equality with the `app/server/*.ts` route declarations in both directions (mcp-integration.md §6), so a route without a spec entry, or a spec entry without a route, fails the suite. This document stays the human-readable index; the §4/§6/§7 tables carry an Implementation column separating `as-built` rows from `forward-design` rows (the contract the later engine waves will implement: proxy chains, simulations, group agenda, reports, management package, comp benchmark, customer risk — run versioning landed with engine-1: `model`/`diff` CLI + the §4 runs rows).
+**Status**: Endpoint catalog and access-control contract — implemented Stage 5 Waves 5.6-5.7 plus the engine-1 run-versioning and engine-2 simulations waves (`app/server/*.ts`: `admin.ts`, `analysis.ts`, `auth.ts`, `deal-review.ts`, `envelope.ts`, `glossary.ts`, `governance.ts`, `index.ts`, `middleware.ts`, `monitoring.ts`, `projects.ts`, `tokens.ts`). `docs/openapi.yaml` (OpenAPI 3.1, as-built surface only) is now generated, and `tests/unit/openapi.test.ts` is its executable drift gate — set equality with the `app/server/*.ts` route declarations in both directions (mcp-integration.md §6), so a route without a spec entry, or a spec entry without a route, fails the suite. This document stays the human-readable index; the §4/§6/§7 tables carry an Implementation column separating `as-built` rows from `forward-design` rows (the contract the later engine waves will implement: proxy chains, group agenda, reports, management package, comp benchmark, customer risk — run versioning landed with engine-1: `model`/`diff` CLI + the §4 runs rows; simulations landed with engine-2: the §4 simulations rows + `run_simulation` MCP).
 
 ## 1. Design Rules (Non-Negotiable)
 
@@ -45,8 +45,8 @@
 | `/api/assumptions` | GET/POST | Assumption registry entries | Membership; `kind='assumed'` write requires non-empty `rationale` | as-built (5.7B) |
 | `/api/proxy-chains/:id` | GET | Chain detail with per-hop reliability grade | Membership | forward-design |
 | `/api/proxy-chains/:id/calibrate` | POST | Recalibration trigger | `quant-methodologist` role | forward-design |
-| `/api/simulations` | POST | Monte Carlo run (seeded) | Membership | forward-design |
-| `/api/simulations/:id/results` | GET | Quantile summary (`simulation_result`) — raw draws not exposed after archival (retention_policy) | Membership | forward-design |
+| `/api/simulations` | POST | Monte Carlo run (seeded) — composes the scenario from the run's `sim.*` inputs (`sim.discount_rate`, `sim.cf1..N`) plus the project's `contingent_liability` rows, spawns `python/monte_carlo.py` with an args array (never shell), and persists `simulation` + `simulation_result`; omitted seed defaults to a value derived from the run's `input_hash` (identical inputs stay reproducible), omitted iterations to the engine's 10000; no `label` — the table has no such column | Membership via `run.project_id`; `analyst`+ role, audit-logged; input problems 400, engine failures 500 | as-built (engine-2) |
+| `/api/simulations/:id/results` | GET | Quantile summary (`simulation_result`) ONLY — `simulation_draw` is never read (retention_policy archives raw draws; the permanent record is the summary); meta carries seed + iterations | Membership via simulation → run → project | as-built (engine-2) |
 
 ## 5. RAG and Governance
 

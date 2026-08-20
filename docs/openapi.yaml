@@ -10,14 +10,15 @@
 openapi: 3.1.0
 info:
   title: co-newbiz REST API
-  version: 1.2.0
+  version: 1.3.0
   description: >-
     REST surface of co-newbiz (Stage 5 Waves 5.6-5.7 + engine-1 run
-    versioning). Every response uses the standard envelope {data, meta,
-    error} (api-spec.md §9). Project-scoped reads return 404 — identical
-    to "does not exist" — for projects the caller cannot see (FR-SEC-01):
-    membership is resolved first, so project existence itself is never an
-    oracle. Write endpoints are audit-logged (FR-SEC-07).
+    versioning + engine-2 simulations). Every response uses the standard
+    envelope {data, meta, error} (api-spec.md §9). Project-scoped reads
+    return 404 — identical to "does not exist" — for projects the caller
+    cannot see (FR-SEC-01): membership is resolved first, so project
+    existence itself is never an oracle. Write endpoints are audit-logged
+    (FR-SEC-07).
 servers:
   - url: http://localhost:8787
     description: Default bind (app/server/index.ts; CO_NEWBIZ_PORT overrides)
@@ -35,7 +36,7 @@ tags:
   - name: Governance
     description: RAG, approvals, compliance, waivers, interpretations, procedures (api-spec.md §5).
   - name: Analysis
-    description: Market observations, change log, assumptions, and run-based versioning (api-spec.md §4/§7; Waves 5.7B/engine-1).
+    description: Market observations, change log, assumptions, run-based versioning, and Monte Carlo simulations (api-spec.md §4/§7; Waves 5.7B/engine-1/engine-2).
   - name: Deal Review
     description: DD findings, antitrust, incentives, liabilities, sites, partners, permits, value chain (api-spec.md §6; Wave 5.7B).
   - name: Monitoring
@@ -637,6 +638,58 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/simulations:
+    post:
+      operationId: createSimulation
+      summary: >-
+        Run the seeded Monte Carlo engine over a run's inputs — the scenario
+        is composed from the run's sim.* keys plus the project's contingent
+        liabilities; python/monte_carlo.py is spawned args-array-only (never
+        shell) and the quantile summary is persisted. Analyst+; audited.
+      tags: [Analysis]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id]
+              properties:
+                run_id:
+                  type: string
+                  description: Run whose inputs feed the engine; its project gates visibility (404 for a non-member).
+                seed:
+                  type: integer
+                  minimum: 0
+                  maximum: 2147483647
+                  description: Omitted = deterministic default derived from the run's input_hash, so identical inputs stay reproducible either way.
+                iterations:
+                  type: integer
+                  minimum: 1
+                  maximum: 100000
+                  default: 10000
+                  description: The engine's own default when omitted.
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500":
+          description: Engine failure (spawn error, timeout kill, or unparseable output) — error.code simulation_failed.
+
+  /api/simulations/{id}/results:
+    get:
+      operationId: getSimulationResults
+      summary: Quantile summary from simulation_result ONLY — raw draws are never exposed here (retention_policy archives simulation_draw; the permanent record is the summary). meta carries seed + iterations.
+      tags: [Analysis]
+      parameters:
+        - $ref: "#/components/parameters/SimulationId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/projects/{id}/dd-findings:
     get:
       operationId: listDdFindings
@@ -1013,6 +1066,12 @@ components:
       required: true
       schema: { type: string }
       description: Comparison run id — must belong to the same project as the base run (400 otherwise).
+    SimulationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      description: Simulation id. Membership resolves simulation -> run -> project; a non-member gets 404 (FR-SEC-01).
     TokenId:
       name: id
       in: path

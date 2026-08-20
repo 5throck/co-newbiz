@@ -1,15 +1,17 @@
-// @version 1.2.0
+// @version 1.3.0
 /**
  * Wave 5.6A API tests — docs/api-spec.md, exercising the real Hono app via
  * app.request() against a scratch SQLite file (deleted after), not mocked
  * handlers. Every assertion here was first verified with a throwaway smoke
  * run (bun smoke.api.ts, now removed) before being encoded. Wave 5.7B
  * added the analysis/deal-review suites; the engine-1 wave added the
- * runs/versioning suite.
+ * runs/versioning suite; engine-2 added the simulations suite, whose POST
+ * tests spawn the real python engine (same discipline as simulate.test.ts).
  */
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
+import { resolve } from "node:path";
 
 const TEST_DB_PATH = "db/data/test-api.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
@@ -759,6 +761,172 @@ describe("runs — versioned input snapshots (Wave engine-1)", () => {
     const res = await req(`/api/runs/${createdRun}`, { headers: { cookie: daveCookie } });
     expect(res.status).toBe(404);
     expect((await res.json()).error.code).toBe("not_found");
+  });
+});
+
+describe("simulations — Monte Carlo engine over REST (Wave engine-2)", () => {
+  // NP-2026-103 carries NO contingent_liability rows and its run holds
+  // exactly the simulation-no-liabilities.json inputs, so a POST with the
+  // fixture's seed/iterations must reproduce the fixture's quantiles —
+  // REST and CLI hit the same engine (design §12 verification item 13).
+  // The "no sim inputs" run is created FIRST (empty snapshot — the
+  // project has no prior run); "sim v1" then layers the six sim.* keys on
+  // top of that empty copy.
+  let simRunId: string;
+  let noSimInputsRunId: string;
+  let createdSimId: string;
+  let fixture: { base_npv: number; p05: number; p50: number; p95: number; mean: number; std: number };
+
+  beforeAll(async () => {
+    const res = await req("/api/projects", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ project_no: "NP-2026-103" }),
+    });
+    const simProjectId = (await res.json()).data.id;
+    // erin joins as observer so the viewer role gate fires after the
+    // membership check passes (dave stays out entirely for the 404 side).
+    grantProjectMembership(db, { projectId: simProjectId, userId: "erin", projectRole: "observer", grantedBy: "alice", needToKnowBasis: "engine-2 viewer role-gate test", now: NOW });
+
+    const emptyRes = await req(`/api/projects/${simProjectId}/runs`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ label: "no sim inputs" }),
+    });
+    noSimInputsRunId = (await emptyRes.json()).data.run_id;
+
+    const runRes = await req(`/api/projects/${simProjectId}/runs`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({
+        label: "sim v1",
+        set: { "sim.discount_rate": 0.1, "sim.cf1": 100, "sim.cf2": 110, "sim.cf3": 120, "sim.cf4": 130, "sim.cf5": 140 },
+      }),
+    });
+    simRunId = (await runRes.json()).data.run_id;
+
+    const { runSimulation } = await import("../../scripts/co-newbiz/simulate.ts");
+    fixture = await runSimulation(resolve(import.meta.dirname, "..", "fixtures", "simulation-no-liabilities.json"));
+  });
+
+  test("POST runs the engine and reproduces the CLI fixture's quantiles (same seed + inputs)", async () => {
+    const res = await req("/api/simulations", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: simRunId, seed: 42, iterations: 5000 }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(201);
+    expect(body.data.run_id).toBe(simRunId);
+    expect(body.data.seed).toBe(42);
+    expect(body.data.iterations).toBe(5000);
+    expect(body.data.discount_rate).toBe(0.1);
+    expect(body.data.contingent_liability_count).toBe(0);
+    expect(body.data.simulation_id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    for (const key of ["base_npv", "p05", "p50", "p95", "mean", "std"] as const) {
+      expect(body.data[key]).toBe(fixture[key]);
+    }
+    createdSimId = body.data.simulation_id;
+  });
+
+  test("the same seed twice reproduces identical quantiles", async () => {
+    const posts: number[][] = [];
+    for (let i = 0; i < 2; i++) {
+      const res = await req("/api/simulations", {
+        method: "POST",
+        headers: { cookie: aliceCookie },
+        body: JSON.stringify({ run_id: simRunId, seed: 7, iterations: 500 }),
+      });
+      expect(res.status).toBe(201);
+      const d = (await res.json()).data;
+      posts.push([d.p05, d.p50, d.p95, d.mean, d.std]);
+    }
+    expect(posts[0]).toEqual(posts[1]);
+  });
+
+  test("GET results returns the quantile summary only — never raw draws", async () => {
+    const res = await req(`/api/simulations/${createdSimId}/results`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.data.simulation).toMatchObject({ id: createdSimId, run_id: simRunId, seed: 42, iterations: 5000 });
+    expect(body.data.simulation).not.toHaveProperty("project_id"); // internal join column, not part of the contract
+    expect(body.data.results).toEqual([
+      { metric: "npv", p05: fixture.p05, p50: fixture.p50, p95: fixture.p95, mean: fixture.mean, std: fixture.std },
+    ]);
+    expect(body.data).not.toHaveProperty("draws"); // retention_policy: simulation_draw is never exposed
+    expect(body.meta.seed).toBe(42);
+    expect(body.meta.iterations).toBe(5000);
+  });
+
+  test("a run without sim.* inputs is 400 before the engine spawns", async () => {
+    const res = await req("/api/simulations", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: noSimInputsRunId, seed: 1, iterations: 10 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("simulation_rejected");
+    expect(body.error.message).toContain("sim.discount_rate");
+  });
+
+  test("iterations outside 1..100000 is 400", async () => {
+    const res = await req("/api/simulations", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: simRunId, iterations: 0 }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("simulation_rejected");
+  });
+
+  test("POST without run_id is 400", async () => {
+    const res = await req("/api/simulations", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ seed: 1 }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_request");
+  });
+
+  test("POST for an unknown run is 404", async () => {
+    const res = await req("/api/simulations", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: "01NOEXISTINGRUNID0000000" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test("a viewer member cannot run simulations — 403 role gate", async () => {
+    const res = await req("/api/simulations", {
+      method: "POST",
+      headers: { cookie: erinCookie },
+      body: JSON.stringify({ run_id: simRunId, seed: 1, iterations: 10 }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe("role_required");
+  });
+
+  test("a non-member cannot run a simulation — 404, existence protected", async () => {
+    const res = await req("/api/simulations", {
+      method: "POST",
+      headers: { cookie: daveCookie },
+      body: JSON.stringify({ run_id: simRunId, seed: 1, iterations: 10 }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test("simulation results are 404 for a non-member", async () => {
+    const res = await req(`/api/simulations/${createdSimId}/results`, { headers: { cookie: daveCookie } });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("not_found");
+  });
+
+  test("GET for an unknown simulation is 404", async () => {
+    const res = await req(`/api/simulations/01NOSUCHSIMULATION000000000/results`, { headers: { cookie: aliceCookie } });
+    expect(res.status).toBe(404);
   });
 });
 

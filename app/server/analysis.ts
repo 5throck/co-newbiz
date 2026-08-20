@@ -1,6 +1,6 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
- * Analysis data routes — docs/api-spec.md §4/§7 (Waves 5.7B + engine-1).
+ * Analysis data routes — docs/api-spec.md §4/§7 (Waves 5.7B + engine-1/2).
  *
  * Plain membership-filtered reads over the fact/observation and assumption
  * tables migrated in 0003: the series catalog, per-period latest-revision
@@ -9,9 +9,13 @@
  * (ADR-0005) over the same migration's run/run_input tables: run
  * list/create/detail and the variable-level diff bridge, all synchronous
  * because createRun is a bounded snapshot write, not an engine invocation —
- * POST records a versioned INPUT snapshot, never a valuation result. Still
- * deferred to an async job surface: proxy chains, simulations, reports —
- * see index.ts's module doc.
+ * POST records a versioned INPUT snapshot, never a valuation result. The
+ * engine-2 wave adds the simulations surface (ADR-0026): POST /api/simulations
+ * composes the scenario from a run's sim.* inputs plus the project's
+ * contingent_liability rows, spawns python/monte_carlo.py (args array,
+ * shell:false, 120s kill timer — see db/lib/simulation.ts), and persists
+ * simulation + simulation_result synchronously. Still deferred to an async
+ * job surface: proxy chains, reports — see index.ts's module doc.
  *
  * Assumption writes enforce the FR-DATA-07 boundary twice: app code rejects
  * kind='assumed' without a non-empty rationale (400) before the insert, and
@@ -26,7 +30,8 @@ import { getProjectIfVisible } from "../../db/repositories/project.repository.ts
 import { appendAudit } from "../../db/lib/access-control.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { createRun, diffRuns, type CreateRunResult } from "../../db/lib/versioning.ts";
-import { badRequest, forbidden, notFound, ok } from "./envelope.ts";
+import { runSimulationForRun, SimulationInputError } from "../../db/lib/simulation.ts";
+import { badRequest, fail, forbidden, notFound, ok } from "./envelope.ts";
 import { requireAuth, type AppEnv, type AuthContext } from "./middleware.ts";
 
 export const analysisRoutes = new Hono<AppEnv>();
@@ -302,4 +307,78 @@ analysisRoutes.get("/api/runs/:id/diff/:otherId", (c) => {
     );
   }
   return ok(c, diffRuns(db, runs[0].id, runs[1].id));
+});
+
+/**
+ * POST /api/simulations — run the seeded Monte Carlo engine (ADR-0026) over
+ * a run's input snapshot: sim.* keys + the project's contingent_liability
+ * rows compose the scenario, python/monte_carlo.py is spawned with an args
+ * array (never shell — no quoting surface), and the quantile summary is
+ * persisted to simulation/simulation_result. Omitted seed defaults to a
+ * value derived from the run's input_hash, so identical inputs stay
+ * reproducible even without an explicit seed (design §12 item 13).
+ * Analyst+; audited. Caller-fixable input problems are 400
+ * (simulation_rejected); engine failures (spawn/timeout/parse) are 500.
+ */
+analysisRoutes.post("/api/simulations", async (c) => {
+  const ctx = c.get("auth");
+  const body = (await c.req.json().catch(() => null)) as
+    | { run_id?: string; seed?: number; iterations?: number }
+    | null;
+  if (!body?.run_id?.trim()) {
+    return badRequest(c, "invalid_request", "run_id is required.");
+  }
+  const runId = body.run_id.trim();
+  const run = getDb().query("SELECT project_id FROM run WHERE id = ?").get(runId) as { project_id: string } | null;
+  if (!run || !visibleProject(ctx, run.project_id)) return notFound(c);
+  if (ctx.role === "viewer") {
+    return forbidden(c, "role_required", "Simulation runs require the analyst role.");
+  }
+  try {
+    const result = await runSimulationForRun(getDb(), {
+      runId,
+      seed: body.seed,
+      iterations: body.iterations,
+    });
+    appendAudit(getDb(), {
+      actor: ctx.userId,
+      action: "simulation_run",
+      target: `${run.project_id}:${result.simulation_id}`,
+      now: new Date().toISOString(),
+    });
+    return ok(c, result, 201);
+  } catch (err) {
+    if (err instanceof SimulationInputError) {
+      return badRequest(c, "simulation_rejected", err.message);
+    }
+    return fail(c, 500, "simulation_failed", err instanceof Error ? err.message : "Simulation engine failed.");
+  }
+});
+
+/**
+ * GET /api/simulations/:id/results — the quantile summary from
+ * simulation_result ONLY. simulation_draw is never read here: raw draws are
+ * subject to retention_policy archival, and the permanent record is the
+ * quantile summary (migration 0005 header — "raw draws not exposed after
+ * archival"). Membership resolves simulation -> run -> project; a non-member
+ * gets the same 404 as for a nonexistent simulation.
+ */
+analysisRoutes.get("/api/simulations/:id/results", (c) => {
+  const ctx = c.get("auth");
+  const simulationId = c.req.param("id");
+  const simulation = getDb()
+    .query(
+      `SELECT s.id, s.run_id, s.seed, s.iterations, s.discount_rate, s.created_at, r.project_id
+       FROM simulation s JOIN run r ON r.id = s.run_id
+       WHERE s.id = ?`,
+    )
+    .get(simulationId) as
+    | { id: string; run_id: string; seed: number; iterations: number; discount_rate: number; created_at: string; project_id: string }
+    | null;
+  if (!simulation || !visibleProject(ctx, simulation.project_id)) return notFound(c);
+  const results = getDb()
+    .query("SELECT metric, p05, p50, p95, mean, std FROM simulation_result WHERE simulation_id = ? ORDER BY metric")
+    .all(simulationId) as { metric: string; p05: number; p50: number; p95: number; mean: number; std: number }[];
+  const { project_id: _projectId, ...row } = simulation;
+  return ok(c, { simulation: row, results }, 200, { seed: simulation.seed, iterations: simulation.iterations });
 });
