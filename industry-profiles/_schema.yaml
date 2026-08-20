@@ -1,0 +1,38 @@
+schema_version: "1.0"
+description: >
+  Industry profile contract (design v1.0 section 1-7 / agents/industry-lead.md).
+  Each top-level section is a provenance-bearing unit: source, verified_on,
+  and maintainer are mandatory on every section, not just on the file as a
+  whole — _validate.ts rejects a section missing any of the three (CLAUDE.md
+  Co Newbiz Lifecycle Rules, industry-profiles/** row). Mirrors the
+  region-profiles/_schema.yaml contract exactly, substituting the four
+  industry-specific axes industry-lead is chartered to own: value-chain
+  structure, cycle position indicators, regulatory landscape, and known
+  technology transitions.
+
+required_top_level:
+  - code            # KSIC code (md_industry.ksic_code anchor, docs/db-schema.md §2)
+  - name_ko
+  - value_chain_structure
+  - cycle_position_indicators
+  - regulatory_landscape
+  - technology_transitions
+
+section_shape:
+  # every section listed above except code/name_ko must have this shape
+  source: string            # citation — statistical agency, trade association, or named advisory source
+  verified_on: date         # ISO-8601 — when a human last confirmed this section against source
+  maintainer: string        # agent_key responsible for keeping this section current
+  data: object              # the actual field content, shape is section-specific (see examples below)
+
+section_field_reference:
+  value_chain_structure: [upstream_tiers, downstream_tiers, typical_proxy_chain_depth, unit_of_output]
+  cycle_position_indicators: [cycle_driver, typical_cycle_length_years, current_phase_note, peak_earnings_caveat]
+  regulatory_landscape: [primary_regimes, licensing_or_certification_bodies, cross_border_notes]
+  technology_transitions: [known_transitions, transition_driver, expected_timeline, demand_structure_impact]
+
+validation_rules:
+  - "Every required_top_level key must be present."
+  - "Every section (except code/name_ko) must carry source, verified_on, maintainer, and data."
+  - "A section with an empty data object is rejected — an unsourced placeholder is worse than a missing file, since it looks authoritative."
+  - "verified_on must parse as ISO-8601 and must not be in the future."

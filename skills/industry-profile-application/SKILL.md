@@ -6,9 +6,10 @@ description: >
   principle: one `industry-lead` agent, coverage expressed as
   `industry-profiles/*.yaml`, a dedicated agent warranted only past a
   5-judgment-heavy-procedure maturity threshold) to a project's target
-  industry. As of this skill's authoring, `industry-profiles/*.yaml`
-  itself has not yet been created — this is a real, explicitly flagged gap,
-  not a claim of existing coverage.
+  industry. As of 2026-08-21, `industry-profiles/_schema.yaml` and
+  `_validate.ts` exist (mirroring `region-profiles/`'s contract exactly),
+  but zero actual profile `.yaml` files have been authored — this is a
+  real, explicitly flagged gap, not a claim of existing coverage.
 
   Use when: "apply the industry profile", "industry-specific review",
   "industry profile gap".
@@ -28,11 +29,18 @@ metadata:
 ## Context
 
 **Adaptation note**: unlike `region-profiles/` (5 profiles already exist:
-KR, EU, US, CN, SEA, each with a validated schema and `_validate.ts`), no
-`industry-profiles/*.yaml` files exist yet in this repo as of Wave 5.8. The
-design principle (ADR-0024) is clear — industry coverage scales via profile
-count under one `industry-lead` agent, the same pattern as region — but the
-actual profile data has not been authored. This skill describes the intended
+KR, EU, US, CN, SEA, each with a validated schema and `_validate.ts`),
+`industry-profiles/` gained its schema contract (`_schema.yaml`,
+`_validate.ts` — four sourced sections: `value_chain_structure`,
+`cycle_position_indicators`, `regulatory_landscape`,
+`technology_transitions`, same source/verified_on/maintainer provenance
+rule as region) on 2026-08-21, but zero actual `<KSIC-code>.yaml` profiles
+exist yet. Populating a real profile requires genuine cited research per
+industry — the same discipline that produced the 5 real region profiles —
+so the schema landing ahead of any profile is deliberate, not an oversight:
+fabricating `source`/`verified_on` fields to fill the schema would produce
+exactly the "unsourced placeholder that looks authoritative" the schema's
+own validation rules exist to reject. This skill describes the intended
 application discipline for when profiles exist; until then, industry-specific
 analysis draws on `industry-lead`'s direct research per project rather than a
 reusable profile file, and that gap should be named explicitly rather than
@@ -48,13 +56,14 @@ silently worked around.
 ## Execution Steps
 
 1. **Check whether an industry profile exists** for the target industry —
-   today, none do; this step itself is the gap-detection mechanism
-2. **If a profile exists** (future state): load it, apply its
-   industry-specific fields (analogous in spirit to region-profiles' axes —
-   likely candidates include typical margin/capex benchmarks, standard
-   proxy-chain relationships, common certification requirements, typical
-   deal-structure patterns) to the project at hand, following the same
-   provenance discipline as `region-profile-application` (source,
+   today, none do (`bun industry-profiles/_validate.ts` exits 1 with "No
+   industry-profiles/*.yaml files found" until the first one is authored);
+   this step itself is the gap-detection mechanism
+2. **If a profile exists** (future state): load it, apply its four sourced
+   sections (`value_chain_structure`, `cycle_position_indicators`,
+   `regulatory_landscape`, `technology_transitions` —
+   `industry-profiles/_schema.yaml`) to the project at hand, following the
+   same provenance discipline as `region-profile-application` (source,
    verified_on, maintainer per section)
 3. **If no profile exists** (current state): `industry-lead` conducts the
    research directly for this project, and separately flags whether this
