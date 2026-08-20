@@ -1,9 +1,11 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Wave 5.6A API tests — docs/api-spec.md, exercising the real Hono app via
  * app.request() against a scratch SQLite file (deleted after), not mocked
  * handlers. Every assertion here was first verified with a throwaway smoke
- * run (bun smoke.api.ts, now removed) before being encoded.
+ * run (bun smoke.api.ts, now removed) before being encoded. Wave 5.7B
+ * added the analysis/deal-review suites; the engine-1 wave added the
+ * runs/versioning suite.
  */
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
@@ -607,6 +609,156 @@ describe("deal review — membership-gated reads and audited writes (Wave 5.7B)"
     expect(incentiveBody.meta).toMatchObject({ prospective: 1, granted: 1 });
     const partners = await req(`/api/projects/${projectId}/partners`, { headers: { cookie: aliceCookie } });
     expect((await partners.json()).data).toHaveLength(1);
+  });
+});
+
+describe("runs — versioned input snapshots (Wave engine-1)", () => {
+  // Seed source runs with strictly increasing created_at. Note the main
+  // project already holds analysisRunId (created at wall-clock NOW, later
+  // than these seeds) — so the latest-run DEFAULT is exercised on
+  // NP-2026-102, which has exactly one prior run, not here.
+  const T1 = "2026-01-01T00:00:00.000Z";
+  const T2 = "2026-01-02T00:00:00.000Z";
+  let seedRunA: string;
+  let seedRunB: string;
+  let createdRun: string;
+  let v2Run: string;
+  let otherProjectId: string;
+  let otherProjectRun: string;
+
+  beforeAll(async () => {
+    seedRunA = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [seedRunA, projectId, "seed A", "hash-a", "alice", T1]);
+    db.run("INSERT INTO run_input (run_id, assumption_key, value) VALUES (?,?,?)", [seedRunA, "run.wacc", 0.08]);
+    seedRunB = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [seedRunB, projectId, "seed B", "hash-b", "alice", T2]);
+    db.run("INSERT INTO run_input (run_id, assumption_key, value) VALUES (?,?,?)", [seedRunB, "run.wacc", 0.08]);
+    db.run("INSERT INTO run_input (run_id, assumption_key, value) VALUES (?,?,?)", [seedRunB, "run.growth", 0.03]);
+
+    const res = await req("/api/projects", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ project_no: "NP-2026-102" }),
+    });
+    otherProjectId = (await res.json()).data.id;
+    otherProjectRun = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [otherProjectRun, otherProjectId, "other project", "hash-o", "alice", T2]);
+    db.run("INSERT INTO run_input (run_id, assumption_key, value) VALUES (?,?,?)", [otherProjectRun, "o.x", 7]);
+  });
+
+  test("POST with from_run_id copies that snapshot and layers overrides on top", async () => {
+    const res = await req(`/api/projects/${projectId}/runs`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ label: "v1 Pre-FS", from_run_id: seedRunB, set: { "run.tax": 0.25 } }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(201);
+    expect(body.data.from_run_id).toBe(seedRunB);
+    expect(body.data.input_count).toBe(3); // wacc + growth copied, tax added
+    createdRun = body.data.run_id;
+    expect(body.data.input_hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  test("POST without from_run_id defaults to the project's latest run", async () => {
+    // NP-2026-102 has exactly one prior run (otherProjectRun), so the
+    // latest-run default is deterministic here.
+    const res = await req(`/api/projects/${otherProjectId}/runs`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ label: "first by default", set: { "o.y": 1 } }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(201);
+    expect(body.data.from_run_id).toBe(otherProjectRun);
+    expect(body.data.input_count).toBe(2); // o.x copied, o.y added
+  });
+
+  test("GET run detail returns the run row and its sorted input snapshot", async () => {
+    const res = await req(`/api/runs/${createdRun}`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.meta.input_count).toBe(3);
+    expect(body.data.run.id).toBe(createdRun);
+    expect(body.data.inputs.map((i: { assumption_key: string }) => i.assumption_key)).toEqual(["run.growth", "run.tax", "run.wacc"]);
+  });
+
+  test("POST from an explicitly named earlier run snapshots that run, not the latest", async () => {
+    const res = await req(`/api/projects/${projectId}/runs`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ label: "v2 sensitivity", from_run_id: seedRunA, set: { "run.wacc": 0.09 } }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(201);
+    expect(body.data.from_run_id).toBe(seedRunA);
+    expect(body.data.input_count).toBe(1);
+    v2Run = body.data.run_id;
+  });
+
+  test("runs list is newest first with per-run input counts", async () => {
+    const res = await req(`/api/projects/${projectId}/runs`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.meta.count).toBeGreaterThanOrEqual(5); // analysisRunId + 2 seeds + 2 created
+    expect(body.data[0].id).toBe(v2Run); // created last (wall clock > T2 seeds)
+    expect(body.data.find((r: { id: string }) => r.id === createdRun).input_count).toBe(3);
+  });
+
+  test("diff returns the variable-level bridge between two runs", async () => {
+    const res = await req(`/api/runs/${createdRun}/diff/${v2Run}`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.data.changed).toHaveLength(1);
+    expect(body.data.changed[0]).toMatchObject({ key: "run.wacc", from: 0.08, to: 0.09 });
+    expect(body.data.removed.map((r: { key: string }) => r.key)).toEqual(["run.growth", "run.tax"]);
+    expect(body.data.added).toEqual([]);
+    expect(typeof body.data.input_hash_a).toBe("string");
+  });
+
+  test("POST without a label is 400", async () => {
+    const res = await req(`/api/projects/${projectId}/runs`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ set: { x: 1 } }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test("a from_run_id from another project is 400 — version chains stay in one project", async () => {
+    const res = await req(`/api/projects/${projectId}/runs`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ label: "bad chain", from_run_id: otherProjectRun }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("run_rejected");
+  });
+
+  test("diffing runs from different projects is 400", async () => {
+    const res = await req(`/api/runs/${createdRun}/diff/${otherProjectRun}`, { headers: { cookie: aliceCookie } });
+    expect(res.status).toBe(400);
+  });
+
+  test("a viewer member cannot create runs — 403 role gate", async () => {
+    const res = await req(`/api/projects/${projectId}/runs`, {
+      method: "POST",
+      headers: { cookie: erinCookie },
+      body: JSON.stringify({ label: "viewer attempt" }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe("role_required");
+  });
+
+  test("a non-member cannot list runs — 404, existence protected", async () => {
+    const res = await req(`/api/projects/${projectId}/runs`, { headers: { cookie: daveCookie } });
+    expect(res.status).toBe(404);
+  });
+
+  test("run detail is 404 for a non-member", async () => {
+    const res = await req(`/api/runs/${createdRun}`, { headers: { cookie: daveCookie } });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("not_found");
   });
 });
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.9.0
+// @version 1.10.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -16,6 +16,10 @@
  *   simulate        Monte-Carlo simulation (contingent liabilities)
  *   rag             Six-dimension RAG assessment from a scenario JSON
  *   watch:run       Monitoring cycle — change detection, auto re-assess, notify
+ *   model           Create a versioned run — input snapshot + overrides (v1:
+ *                   records inputs only; valuation output arrives with the
+ *                   model engine, scripts/co-newbiz/model.ts)
+ *   diff            Variable-level bridge between two runs (model.ts)
  *   report          Render Markdown to docx/pdf/hwpx with glossary appendix
  *   user:create     Create an account (pending) — password via stdin
  *   user:approve    Approve a pending account
@@ -24,10 +28,11 @@
  *
  * Remaining commands (md:sync, fetch, law:sync, policy:sync, policy:impact,
  * glossary:lint [reuse bun glossary/_validate.ts directly for now — see
- * package.json], fin:project, assume, calibrate, convert, model, diff,
- * export, adr:new) land in their respective Wave 5.6-5.7 PRs per
- * docs/dev-plan.md — not stubbed here to avoid a command that silently does
- * nothing.
+ * package.json], fin:project, assume, calibrate, convert, export, adr:new)
+ * land in their respective Wave 5.6-5.7 PRs per docs/dev-plan.md — model and
+ * diff landed with the run-versioning engine wave (scripts/co-newbiz/model.ts
+ * + db/lib/versioning.ts) — the rest are not stubbed here to avoid a command
+ * that silently does nothing.
  */
 
 import { runMigrations } from "../../db/migrate.ts";
@@ -40,6 +45,7 @@ import { computeDriverTree } from "./driver-tree.ts";
 import { renderReport, type ReportFormat } from "./report.ts";
 import { runRagAssessment } from "./rag.ts";
 import { runWatchCycle, loadRescenariosDir } from "./watch-run.ts";
+import { runModelCreate, runModelDiff } from "./model.ts";
 import {
   createUser,
   approveUser,
@@ -51,7 +57,7 @@ const [command, ...args] = process.argv.slice(2);
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>]");
+  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>]");
 }
 
 switch (command) {
@@ -296,6 +302,56 @@ switch (command) {
       console.log(`✅ Password reset for '${userId}' — must_change_password=1, all sessions revoked.`);
     } catch (err) {
       console.error(`user:reset-password failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+    break;
+  }
+  case "model": {
+    const projectIdx = args.indexOf("--project");
+    const labelIdx = args.indexOf("--label");
+    const fromRunIdx = args.indexOf("--from-run");
+    const dbPathIdx = args.indexOf("--db-path");
+    const dbPath = dbPathIdx >= 0 ? args[dbPathIdx + 1] : undefined;
+    // Repeated flag: every "--set key=value" contributes one pair, so
+    // collect values positionally rather than via indexOf (first-match only).
+    const setPairs = args.filter((_, i) => i > 0 && args[i - 1] === "--set");
+    const projectId = projectIdx >= 0 ? args[projectIdx + 1] : undefined;
+    const label = labelIdx >= 0 ? args[labelIdx + 1] : undefined;
+    if (!projectId || !label) {
+      console.error('model requires --project <id> and --label "v1 Pre-FS"');
+      console.error("(v1 records the versioned input snapshot; valuation output arrives with the model engine)");
+      process.exit(1);
+    }
+    try {
+      const result = runModelCreate(
+        {
+          projectId,
+          label,
+          fromRunId: fromRunIdx >= 0 ? args[fromRunIdx + 1] : undefined,
+          setPairs,
+        },
+        dbPath,
+      );
+      console.log(JSON.stringify(result, null, 2));
+    } catch (err) {
+      console.error(`model failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+    break;
+  }
+  case "diff": {
+    const [runA, runB] = args;
+    const dbPathIdx = args.indexOf("--db-path");
+    const dbPath = dbPathIdx >= 0 ? args[dbPathIdx + 1] : undefined;
+    if (!runA || !runB) {
+      console.error("diff requires <runA> <runB>");
+      process.exit(1);
+    }
+    try {
+      const bridge = runModelDiff(runA, runB, dbPath);
+      console.log(JSON.stringify(bridge, null, 2));
+    } catch (err) {
+      console.error(`diff failed: ${(err as Error).message}`);
       process.exit(1);
     }
     break;
