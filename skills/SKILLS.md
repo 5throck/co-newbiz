@@ -119,6 +119,17 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `deal-execution-playbook` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — navigates `docs/process-map.md`/`docs/raci.md`'s real per-gate RACI, never restates |
 | `agent-output-provenance` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — `analysis_task.reviewed_by` design intent; table not yet migrated, gap flagged explicitly |
 | `deal-workspace-operations` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — open/membership real and live; closure/archival not yet implemented, gap flagged explicitly |
+| `master-data-governance` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J (design §9.3 platform group) — real `staging_unmapped` queue resolution |
+| `data-normalization` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — generalizes `financial-statement-analysis`'s real mapping-table pattern |
+| `data-freshness-and-revision-control` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — ADR-0004 operational counterpart to market-data-pipeline |
+| `db-migration-governance` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — ADR-0001/0002 SQLite portability-regime conventions |
+| `query-performance-tuning` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — membership-filtering join as the highest-traffic query pattern |
+| `rest-api-design` | 1.0.0 | active | backend-engineer | 2026-08-20 | — | Wave 5.8J — api-spec.md non-negotiables, 404-not-403, envelope shape |
+| `mcp-server-integration` | 1.0.0 | active | backend-engineer | 2026-08-20 | — | Wave 5.8J — ADR-0011 REST-only, enforced by the real bun:test DB-import scan |
+| `ui-information-architecture` | 1.0.0 | active | frontend-engineer | 2026-08-20 | — | Wave 5.8J — ui-spec.md non-negotiables, real component patterns from Wave 5.6B |
+| `auth-and-account-management` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8J — existence-never-leaked auth, dual-credential must-change-password gating |
+| `continuous-monitoring-and-alerting` | 1.0.0 | active | sre | 2026-08-20 | — | Wave 5.8J — ADR-0017 bidirectional (deterioration non-optional) notification policy |
+| `notification-channel-management` | 1.0.0 | active | sre | 2026-08-20 | — | Wave 5.8J — real watch_rule/notification schema, channel/bundle/severity discipline |
 
 
 
