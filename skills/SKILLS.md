@@ -113,6 +113,12 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `site-visit-protocol` | 1.0.0 | active | technical-dd-agent | 2026-08-20 | — | Wave 5.8H — evidence-capture discipline (photo/measurement/log) |
 | `expert-interview` | 1.0.0 | active | commercial-dd-agent | 2026-08-20 | — | Wave 5.8H — 2-3 source triangulation, disconfirming-question structure |
 | `dd-to-valuation-bridge` | 1.0.0 | active | valuation-agent | 2026-08-20 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams |
+| `rag-scoring-framework` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I (design §9.3 RAG/quality + deal-execution axis C groups) — ADR-0016 priority-ordered (not weighted-average) overall grade |
+| `run-versioning-and-attribution` | 1.0.0 | active | data-architect | 2026-08-20 | — | Wave 5.8I — ADR-0005 immutable run_input/input_hash, superseded_by chains |
+| `assumption-audit` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — user/assumed/derived kind-tag correctness audit |
+| `deal-execution-playbook` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — navigates `docs/process-map.md`/`docs/raci.md`'s real per-gate RACI, never restates |
+| `agent-output-provenance` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — `analysis_task.reviewed_by` design intent; table not yet migrated, gap flagged explicitly |
+| `deal-workspace-operations` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — open/membership real and live; closure/archival not yet implemented, gap flagged explicitly |
 
 
 
