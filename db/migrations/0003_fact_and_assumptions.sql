@@ -1,3 +1,4 @@
+-- @reversible: true (additive-only schema, no destructive DDL against existing production data — ADR-0014; rollback mechanism is pre-migration backup restore, see scripts/co-newbiz/restore.ts)
 -- Fact/observation and assumption/run tables — docs/db-schema.md §3-4.
 -- Revision-preserving by design (FR-DATA-05): fact_market_observation's PK
 -- includes revision_no, so ensure_fresh() never overwrites a prior value,

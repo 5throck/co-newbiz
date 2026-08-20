@@ -1,3 +1,4 @@
+-- @reversible: true (additive-only schema, no destructive DDL against existing production data — ADR-0014; rollback mechanism is pre-migration backup restore, see scripts/co-newbiz/restore.ts)
 -- 0009_api_tokens.sql — Wave 5.6, api-spec.md §2 (Bearer API tokens).
 --
 -- Scoped API tokens for MCP/CLI clients (design §4-11: session cookie for the
