@@ -92,6 +92,14 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `value-chain-linkage-analysis` | 1.0.0 | active | quant-methodologist | 2026-08-20 | — | Wave 5.8F — ADR-0025 deliberate separation from proxy-chain betas |
 | `unit-conversion-calibration` | 1.0.0 | active | quant-methodologist | 2026-08-20 | — | Wave 5.8F — lead-lag OLS regression, `python/correlation.py` |
 | `market-data-pipeline` | 1.0.0 | active | data-architect | 2026-08-20 | — | Wave 5.8F — ADR-0004 cache-first/revision-preserving policy; `fetch`/`md:sync` CLI not yet implemented, gap flagged explicitly |
+| `historical-financial-analysis` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G (design §9.3 financial/simulation group) — historical distribution feeding the growth-projection anchor |
+| `peer-benchmarking` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G — cross-sectional peer distribution, the other anchor input |
+| `growth-projection-modeling` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G — ADR-0018 anchor_ref + top-decile base-rate warning, feeds the Kill Criterion |
+| `quality-of-earnings` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G — EBITDA normalization bridge for Brown Field DD |
+| `wacc-input-session` | 1.0.0 | active | valuation-agent | 2026-08-20 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
+| `investment-feasibility-modeling` | 1.0.0 | active | valuation-agent | 2026-08-20 | — | Wave 5.8G — synthesis skill assembling confirmed WACC/EBITDA/growth/site-cost inputs |
+| `scenario-planning` | 1.0.0 | active | risk-officer | 2026-08-20 | — | Wave 5.8G — discrete downside/base/upside cases incl. mandatory +200bp rate-shock test |
+| `monte-carlo-simulation` | 1.0.0 | active | risk-officer | 2026-08-20 | — | Wave 5.8G — ADR-0026 seeded, deterministic `python/monte_carlo.py` P50/P95 NPV |
 
 
 
