@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * rag — evaluate and persist a six-dimension RAG assessment from a scenario
  * JSON. Design v1.0 §4-2, docs/rag-framework.md, FR-RAG-01..08, Wave 5.3.
@@ -34,6 +34,7 @@
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
+import type { Database } from "bun:sqlite";
 import { getDb } from "../../db/client.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import {
@@ -43,7 +44,7 @@ import {
   type StageGate,
 } from "../../db/lib/rag-engine.ts";
 
-interface RagScenario {
+export interface RagScenario {
   project_no: string;
   stage_gate: StageGate;
   chain_grade?: "A" | "B" | "C";
@@ -68,12 +69,17 @@ export interface RagCliResult {
   transition: { from: string | null; to: string } | null;
 }
 
-export function runRagAssessment(scenarioPath: string, dbPath?: string): RagCliResult {
-  const absPath = resolve(scenarioPath);
-  if (!existsSync(absPath)) {
-    throw new Error(`Scenario file not found: ${absPath}`);
-  }
-  const scenario: RagScenario = JSON.parse(readFileSync(absPath, "utf-8"));
+/**
+ * DB-object-based core: shared by the `rag` CLI (reads a scenario file) and
+ * `watch-run.ts` (re-assesses in-process on a detected data change, no
+ * filesystem round-trip). Both callers get identical run/hash/persistence
+ * semantics from one place.
+ */
+export function assessScenario(
+  db: Database,
+  scenario: RagScenario,
+  options?: { runLabelPrefix?: string; createdBy?: string },
+): RagCliResult {
   if (!scenario.project_no) {
     throw new Error("Scenario is missing 'project_no' (md_project.project_no).");
   }
@@ -81,7 +87,6 @@ export function runRagAssessment(scenarioPath: string, dbPath?: string): RagCliR
     throw new Error("Scenario is missing 'stage_gate'.");
   }
 
-  const db = getDb(dbPath);
   const project = db
     .query("SELECT id FROM md_project WHERE project_no = ?")
     .get(scenario.project_no) as { id: string } | null;
@@ -99,7 +104,14 @@ export function runRagAssessment(scenarioPath: string, dbPath?: string): RagCliR
   const runId = ulid();
   db.run(
     "INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [runId, project.id, `rag ${scenario.stage_gate} ${now}`, inputHash, "cli", now],
+    [
+      runId,
+      project.id,
+      `${options?.runLabelPrefix ?? "rag"} ${scenario.stage_gate} ${now}`,
+      inputHash,
+      options?.createdBy ?? "cli",
+      now,
+    ],
   );
 
   const input: RagEvaluationInput = {
@@ -144,6 +156,16 @@ export function runRagAssessment(scenarioPath: string, dbPath?: string): RagCliR
     overall_rationale: `${result.overall.rationale} ${result.hysteresisRationale}`,
     transition: result.transition,
   };
+}
+
+export function runRagAssessment(scenarioPath: string, dbPath?: string): RagCliResult {
+  const absPath = resolve(scenarioPath);
+  if (!existsSync(absPath)) {
+    throw new Error(`Scenario file not found: ${absPath}`);
+  }
+  const scenario: RagScenario = JSON.parse(readFileSync(absPath, "utf-8"));
+  const db = getDb(dbPath);
+  return assessScenario(db, scenario);
 }
 
 if (import.meta.main) {

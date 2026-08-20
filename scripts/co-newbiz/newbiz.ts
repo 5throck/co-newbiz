@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
-// @version 1.7.0
+// @version 1.8.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
  * Usage:
  *   bun scripts/co-newbiz/newbiz.ts <command> [options]
  *
- * Commands implemented so far (Stage 5 Waves 5.1-5.3):
+ * Commands implemented so far (Stage 5 Waves 5.1-5.4):
  *   db:migrate      Apply pending db/migrations/*.sql
  *   status          Print migration status
  *   proc:resolve    Merge a shared procedure with region/entity overrides
@@ -15,14 +15,15 @@
  *   fin:driver-tree 5-level ROIC value driver tree
  *   simulate        Monte-Carlo simulation (contingent liabilities)
  *   rag             Six-dimension RAG assessment from a scenario JSON
+ *   watch:run       Monitoring cycle — change detection, auto re-assess, notify
  *   report          Render Markdown to docx/pdf/hwpx with glossary appendix
  *
  * Remaining commands (md:sync, fetch, law:sync, policy:sync, policy:impact,
  * glossary:lint [reuse bun glossary/_validate.ts directly for now — see
  * package.json], fin:project, assume, calibrate, convert, model, diff,
- * watch:run, export, adr:new, user:*) land in their respective Wave 5.4-5.7
- * PRs per docs/dev-plan.md — not stubbed here to avoid a command that
- * silently does nothing.
+ * export, adr:new, user:*) land in their respective Wave 5.5-5.7 PRs per
+ * docs/dev-plan.md — not stubbed here to avoid a command that silently does
+ * nothing.
  */
 
 import { runMigrations } from "../../db/migrate.ts";
@@ -34,12 +35,13 @@ import { runFullPipeline } from "./fin-pipeline.ts";
 import { computeDriverTree } from "./driver-tree.ts";
 import { renderReport, type ReportFormat } from "./report.ts";
 import { runRagAssessment } from "./rag.ts";
+import { runWatchCycle, loadRescenariosDir } from "./watch-run.ts";
 
 const [command, ...args] = process.argv.slice(2);
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary]");
+  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary]");
 }
 
 switch (command) {
@@ -136,6 +138,21 @@ switch (command) {
       console.log(JSON.stringify(result, null, 2));
     } catch (err) {
       console.error(`rag failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+    break;
+  }
+  case "watch:run": {
+    const dirIdx = args.indexOf("--rescenarios-dir");
+    const dbPathIdx = args.indexOf("--db-path");
+    const dbPath = dbPathIdx >= 0 ? args[dbPathIdx + 1] : undefined;
+    const db = getDb(dbPath);
+    try {
+      const rescenarios = dirIdx >= 0 ? loadRescenariosDir(args[dirIdx + 1]) : undefined;
+      const result = runWatchCycle(db, { now: new Date().toISOString(), rescenarios });
+      console.log(JSON.stringify(result, null, 2));
+    } catch (err) {
+      console.error(`watch:run failed: ${(err as Error).message}`);
       process.exit(1);
     }
     break;
