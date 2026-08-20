@@ -2,7 +2,7 @@
 
 **Owner**: data-architect
 **Design of record**: design v1.0 §4-1 (data architecture), §10 (Stage 4 task 4.3), ADR-0001/0002/0003
-**Status**: Stage 4 draft — table catalog and index rationale, realizing `docs/srs.md`'s Must-priority requirements. Not yet migrated (Stage 5). SQLite (`bun:sqlite`, WAL) per ADR-0001, written to the portability constraint of ADR-0002 (no `AUTOINCREMENT`, no implicit `ROWID` dependence, no dynamic-type dependence, no `INSERT OR REPLACE`; ISO-8601 `TEXT` dates; no floating-point money columns; `PRAGMA foreign_keys=ON`).
+**Status**: All 68 documented tables are migrated as of `db/migrations/0011_dd_finding_and_remaining_tables.sql` (2026-08-21) — the last 24 (M&A special-topics, Green Field, governance policy/procedure, review/access, and fact_financial/fact_industry/value_chain_link/document/fx_policy) had been documented since Stage 4 but never migrated; closed in one pass after a routine doc-vs-schema audit found the gap. SQLite (`bun:sqlite`, WAL) per ADR-0001, written to the portability constraint of ADR-0002 (no `AUTOINCREMENT`, no implicit `ROWID` dependence, no dynamic-type dependence, no `INSERT OR REPLACE`; ISO-8601 `TEXT` dates; no floating-point money columns; `PRAGMA foreign_keys=ON`).
 
 ## 1. Three-Layer Model
 
