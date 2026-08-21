@@ -125,6 +125,7 @@ input {
 /* --- tabs --- */
 .tab-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   border-bottom: 1px solid var(--border);
   margin: 1rem 0;
@@ -961,4 +962,78 @@ input {
 .risk-low {
   background: var(--green-bg);
   color: var(--green-fg);
+}
+
+/* --- Model / Simulation / Version-compare tabs --- */
+.helper-note {
+  margin: 0 0 0.75rem;
+  color: var(--muted-fg);
+  font-size: 0.85rem;
+}
+.run-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 480px;
+  margin-bottom: 1rem;
+}
+.run-form-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.run-form-row label {
+  flex-shrink: 0;
+  width: 130px;
+  font-size: 0.9rem;
+}
+.run-form-row input,
+.run-form-row select {
+  flex: 1;
+}
+.override-fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.override-row button {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+}
+.chip-like {
+  align-self: flex-start;
+  font-size: 0.85rem;
+}
+.form-success {
+  color: var(--green-fg);
+}
+.hash-short {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+.compare-selectors {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+.compare-selectors .run-form-row {
+  flex: 1;
+  min-width: 260px;
+}
+.compare-tab h3 {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+}
+.delta {
+  font-weight: 600;
+}
+.delta-up {
+  color: var(--green-fg);
+}
+.delta-down {
+  color: var(--red-fg);
 }
