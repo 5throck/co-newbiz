@@ -3,15 +3,17 @@ name: admin-console-operations
 scope: co-newbiz
 description: >
   Operates the admin console's built sections (users, audit log, data
-  sources — Wave 5.6A/5.6B) and documents the remaining 7 of `docs/ui-spec.md`
+  sources — Wave 5.6A/5.6B; batch-schedule and retention — 2026-08-21
+  batch 4) and documents the remaining 5 of `docs/ui-spec.md`
   §5's 10 designed sections not yet implemented. Admin role never grants
   project data visibility (FR-SEC-02); audit log renders no delete control
   anywhere (FR-SEC-07); a notification-threshold edit without a linked ADR
   reference is a client-side hard block, not a warning.
 
   Use when: "admin console operation", "user approval workflow", "audit
-  log review via admin UI", "threshold edit ADR requirement".
-version: 1.0.0
+  log review via admin UI", "threshold edit ADR requirement", "schedule
+  job enable/disable", "retention policy management".
+version: 1.1.0
 last_reviewed: 2026-08-20
 status: active
 owner: process-governance-manager
@@ -30,10 +32,13 @@ metadata:
 
 **Adaptation note**: `docs/ui-spec.md` §5 designs 10 admin console sections
 (User Management, Database, Batch-Schedule, Notifications, Governance,
-Glossary, Data Sources, Master Data, ADR/Stage-Gate, Logs). Wave 5.6B built 3 of them: Users,
-Audit Log, Data Sources — `app/web/src/pages/AdminConsole.tsx`'s own module
-comment confirms this scoping. Schedule/notification/governance/glossary/
-master-data admin sections remain backend follow-ups, not yet built — this
+Glossary, Data Sources, Master Data, ADR/Stage-Gate, Logs). 5 of them are
+built: Users, Audit Log, Data Sources (Wave 5.6B) plus Batch-Schedule
+(enable/disable per `PUT /api/admin/schedule-jobs/:jobKey`, latest-run
+status) and the retention-policy part of Database (`GET`/`POST /api/admin/retention`)
+— the migration-status/backup-history parts of the Database row and the
+notification/governance/glossary/master-data/ADR sections remain backend
+follow-ups, not yet built — this
 skill operates what exists and names what doesn't, following the pattern
 established by other Wave 5.8 skills' honest gap-flagging.
 

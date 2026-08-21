@@ -483,3 +483,26 @@ export interface SimulationResultsResponse {
   simulation: SimulationSummary;
   results: SimulationResultRow[];
 }
+
+// --- PR #65 batch 4: admin schedule/retention sections (the glossary list
+// reuses GlossaryTermSummary above) — appended only. ---
+
+// GET /api/admin/schedule-jobs rows: job registry plus the latest job_run
+// per job (null when the job has never run).
+export interface ScheduleJobRow {
+  id: string;
+  job_key: string;
+  cron_expr: string;
+  enabled: number; // SQLite INTEGER 0/1
+  created_at: string;
+  last_run: { job_key: string; status: string; finished_at: string | null; error: string | null } | null;
+}
+
+// GET /api/admin/retention rows (retention_policy table).
+export interface RetentionPolicyRow {
+  table_key: string;
+  basis: string;
+  retention_months: number;
+  action: string;
+  last_run_at: string | null;
+}
