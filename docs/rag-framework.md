@@ -57,6 +57,27 @@ Data confidence caps the ceiling structurally, since it is one of the six dimens
 
 Per design §4-2, thresholds are declared per `stage_gate` — the bands above apply from FS onward, once a full financial model exists. Screening and Pre-FS use a reduced check (financial dimension is Amber-capped by default pending a completed model; the other five dimensions score normally).
 
+## 5-1. Stage-Gate Threshold Applicability — Market Dimension (Decision 6, draft)
+
+The `market` dimension is unformalized today (no scoring function exists — see the 2026-08-22 RAG formalization design, `docs/designs/2026-08-22-rag-formalization-and-case-classification-design.md` §1.1). This subsection documents the staged rule agreed in that design's Decision 6, ahead of PR-6's implementation, following the same pattern as §5's `financial` treatment.
+
+| Stage gate | Rule |
+|---|---|
+| Screening | `market` is Amber-capped by default. Only `TAM` and `growth_rate` are evaluated, sourced from `fact_industry`. The other market axes (bargaining power, competitive intensity, switching cost, entry barriers, right-to-win) stay unassessed. |
+| Pre-FS | `TAM`/`growth_rate` must be evidence-backed (not merely present — an `evidence_ref` is required, not just a non-null value). The full six-axis `value_chain_link` evidence is still not expected at this stage. |
+| DD | The full six-axis `value_chain_link` evidence activates, and the Amber cap lifts. |
+
+This mirrors the financial dimension's staged approach (§5): a dimension without a completed evidentiary base cannot produce a Green grade, but Amber/Red signal is still live where the available evidence supports it.
+
+### Corrected evidence mapping (Decision 6)
+
+The design's meeting review corrected a mapping error in the original plan (see the design doc's "뒤집힘 4"): `value_chain_link.concentration_hhi` measures upstream/downstream bargaining power (industry concentration in adjacent supply-chain tiers), not horizontal competitive intensity — the two can point in opposite directions, and conflating them silently mis-grades. The corrected mapping:
+
+- `concentration_hhi` → `bargaining_power` (its original meaning), **not** `competitive_intensity`.
+- `competitive_intensity` is a **new, still-unsourced** var — to be sourced from `fact_industry` convention or `dimension_input`, not from `concentration_hhi`.
+- `switching_cost_grade` / `substitution_threat` are currently unconstrained `TEXT` columns and need a `CHECK` constraint before they can be trusted by an `in`-predicate (an unconstrained column lets a typo silently fail to match, producing a false unassessed/mismatch).
+- Vars sourced from `value_chain_link` require `r2 >= 0.6` (mirroring `gradeChain()`'s own reliability threshold) — below that, the var is excluded as low-confidence rather than treated as present. This distinction (missing vs. low-confidence) does not exist yet in the current implementation.
+
 ## 6. Calibration (Stage 3 Follow-Up)
 
 Action item A-3 from meeting M3: a calibration dry-run tests the bands above against 5-10 historical decisions before they are trusted for live gating. This runs once entity onboarding under `docs/transition-plan.md` produces enough historical cases to calibrate against — tracked as a Stage 3 follow-up, not a blocker to using the bands manually in the interim (manual application lets a human sanity-check every grade before the calibration dataset exists).
