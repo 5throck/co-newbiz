@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, Link, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth.tsx";
+import { GlossaryProvider } from "./glossary.tsx";
 import { Login } from "./pages/Login.tsx";
 import { PasswordChange } from "./pages/PasswordChange.tsx";
 import { ProjectList } from "./pages/ProjectList.tsx";
@@ -53,7 +54,8 @@ export function App() {
   return (
     <AuthProvider>
       <TopNav />
-      <Routes>
+      <GlossaryProvider>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route
           path="/password-change"
@@ -99,7 +101,8 @@ export function App() {
         />
         <Route path="/" element={<Navigate to="/projects" replace />} />
         <Route path="*" element={<p>페이지를 찾을 수 없습니다.</p>} />
-      </Routes>
+        </Routes>
+      </GlossaryProvider>
     </AuthProvider>
   );
 }
