@@ -2,7 +2,7 @@
 
 **Owner**: frontend-engineer
 **Design of record**: design v1.0 §4-10 (task 4.4), `docs/srs.md` §12
-**Status**: Korean UI (design §4-1 language policy — deliverables/UI Korean, code/docs English). Implemented Stage 5 Wave 5.6 (`app/web/src/pages/`: `Login.tsx`, `PasswordChange.tsx`, `ProjectList.tsx`, `ProjectDetail.tsx`, `AdminConsole.tsx`) plus PR #65's eight Project Detail tabs (`app/web/src/components/`: `DataTab.tsx`, `AssumptionsTab.tsx`, `ModelTab.tsx`, `SimulationTab.tsx`, `VersionCompareTab.tsx`, `DdTab.tsx`, `PermitsTab.tsx`, `MaReviewTab.tsx`) — **partial; verified row-by-row against `app/web/src/` on 2026-08-21** (per-node markers in §2, per-rule notes in §1/§3/§4): the Project List page and Project Detail shell are built; 개요 / 절차 뷰어 / 용어집 tooltip are partial; Data / Assumptions / Model / Simulation / Version Comparison / DD / Regulatory & Permits / M&A Review are partial (read views built, write forms and charting deferred, see §2); 2 of Project Detail's 13 child views (Financial Analysis, Proxy Chain) plus Reports are not built at all; and the admin console covers 3 of §5's 10 designed sections (Users, Audit Log, Data Sources; see `skills/admin-console-operations/SKILL.md` for the honest breakdown of what's still missing).
+**Status**: Korean UI (design §4-1 language policy — deliverables/UI Korean, code/docs English). Implemented Stage 5 Wave 5.6 (`app/web/src/pages/`: `Login.tsx`, `PasswordChange.tsx`, `ProjectList.tsx`, `ProjectDetail.tsx`, `AdminConsole.tsx`) plus PR #65's eight Project Detail tabs (`app/web/src/components/`: `DataTab.tsx`, `AssumptionsTab.tsx`, `ModelTab.tsx`, `SimulationTab.tsx`, `VersionCompareTab.tsx`, `DdTab.tsx`, `PermitsTab.tsx`, `MaReviewTab.tsx`) — **partial; verified row-by-row against `app/web/src/` on 2026-08-21** (per-node markers in §2, per-rule notes in §1/§3/§4): the Project List page and Project Detail shell are built; 개요 / 절차 뷰어 / 용어집 (tooltip + standalone searchable view at `/glossary`) are partial; Data / Assumptions / Model / Simulation / Version Comparison / DD / Regulatory & Permits / M&A Review are partial (read views built, write forms and charting deferred, see §2); 2 of Project Detail's 13 child views (Financial Analysis, Proxy Chain) plus Reports are not built at all; and the admin console covers 5 of §5's 10 designed sections (Users, Audit Log, Data Sources, Batch/Schedule, Database — the last one partial: retention only; see `skills/admin-console-operations/SKILL.md` for the section-by-section breakdown, which predates batch 4's two additions).
 
 ## 1. Design Rules (Non-Negotiable)
 
@@ -51,15 +51,16 @@ As-built markers, verified against `app/web/src/` on 2026-08-21: ✅ built · �
 │   ├── 실사 (DD) — dd_finding list with value_impact links
 │   │   · ⚠️ partial (PR #65): `DdTab.tsx` built — `GET /api/projects/:id/dd-findings`, category filter chips (derived from the returned rows), finding cards (description, value_impact source-tooltipped by assumption_key, evidence_ref), and a visually distinct R&BD sub-panel (rbd_source, trl_grade, ip_ownership_status, commercialization_path) for `category='rbd'` rows. Deferred: the write form (`POST /api/projects/:id/dd-findings`) and value_impact deep-links into other views
 │   └── 용어집 (Glossary) — searchable, in-context
-│       · ⚠️ partial: tooltip component built and wired to `/api/glossary/:term`; standalone searchable view not built; in-context auto-linking not built (two hand-placed example terms on 개요)
-├── 관리자 콘솔 (Admin Console) — see §5 · ⚠️ partial: 3 of 10 sections built (Users, Logs, Data Sources)
+│       · ⚠️ partial: tooltip component built and wired to `/api/glossary/:term`; searchable view built in PR #65 batch 4 as a top-level route (`/glossary`, `Glossary.tsx`) rather than a ProjectDetail tab — the glossary is workspace reference data with no project binding, and ProjectDetail's tab bar already carries 11 project-scoped tabs (route choice recorded here; the IA tree above keeps the node under Project Detail as the design target). Search is client-side over the fields the list payload carries (key/ko/en/category); alias search is not possible — `GET /api/glossary` returns no aliases (backend gap; aliases exist only on the per-term detail endpoint, which the cards' tooltip reuses for definition/why_it_matters). In-context auto-linking still not built (two hand-placed example terms on 개요)
+├── 관리자 콘솔 (Admin Console) — see §5 · ⚠️ partial: 5 of 10 sections built (Users, Logs, Data Sources, Batch/Schedule, Database — the DB row is itself partial: retention-policy table + upsert form built, migration-status/backup-history have no endpoints and render an explicit "no API yet" note)
 └── 보고서 (Reports) — generated deliverable list, export controls · ❌ not built (no route, no nav entry)
 ```
 
 As-built deltas not in the tree above:
 
 - The 대시보드 (Dashboard) root is not a separate screen — `/` redirects to `/projects`.
-- Project Detail ships a fourth tab, 멤버십 (Membership: user, project role, grantor, need-to-know basis), which this tree does not list — an addition, not a substitution.
+- Project Detail ships a 멤버십 (Membership: user, project role, grantor, need-to-know basis) tab which this tree does not list — an addition, not a substitution.
+- 용어집's searchable view is a top-level route (`/glossary`), not a ProjectDetail child tab — the glossary is workspace reference data with no project binding (route choice rationale in the 용어집 node marker above).
 
 ## 3. RAG Display Contract
 
@@ -86,8 +87,8 @@ As-built deltas not in the tree above:
 | Section | Contents | Notes |
 |---|---|---|
 | 사용자 관리 (User Management) | Approve/suspend, role assignment | Does not grant project visibility (FR-SEC-02) |
-| 데이터베이스 관리 (Database) | Migration status, backup history | Read-heavy, links to `job_run` |
-| 배치·스케줄 관리 (Batch/Schedule) | `job_run` history, retry, `schedule_job` edit | — |
+| 데이터베이스 관리 (Database) | Migration status, backup history | Read-heavy, links to `job_run` — *As-built (PR #65 batch 4): partial — the retention-policy half is built (table from `GET /api/admin/retention` + audited upsert form `POST /api/admin/retention`); migration status and backup history have no endpoints and render an explicit "아직 API가 없습니다" note, never placeholders* |
+| 배치·스케줄 관리 (Batch/Schedule) | `job_run` history, retry, `schedule_job` edit | — *As-built (PR #65 batch 4): job registry + last-run status/time + enable/disable toggle (optimistic, revert-on-error) built; `job_run` history beyond the latest run and the retry action are not built* |
 | 알림 관리 (Notifications) | `rag_rule` threshold editing (with mandatory ADR reference before save) | Editing a threshold without a linked ADR ref is a client-side hard block, not just a warning |
 | 규정·절차 관리 (Governance) | `governance_doc` version list, `project_policy_pin` status, impact-analysis viewer | — |
 | 용어집 관리 (Glossary) | Undefined-term queue from `glossary:lint`, registration workflow | — |

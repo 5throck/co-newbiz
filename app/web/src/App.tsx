@@ -5,6 +5,7 @@ import { PasswordChange } from "./pages/PasswordChange.tsx";
 import { ProjectList } from "./pages/ProjectList.tsx";
 import { ProjectDetail } from "./pages/ProjectDetail.tsx";
 import { AdminConsole } from "./pages/AdminConsole.tsx";
+import { GlossaryView } from "./pages/Glossary.tsx";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { me, loading } = useAuth();
@@ -33,6 +34,7 @@ function TopNav() {
       </Link>
       <nav aria-label="주 메뉴">
         <Link to="/projects">프로젝트</Link>
+        <Link to="/glossary">용어집</Link>
         {me.role === "admin" && <Link to="/admin">관리자 콘솔</Link>}
       </nav>
       <div className="top-nav-user">
@@ -74,6 +76,14 @@ export function App() {
           element={
             <RequireAuth>
               <ProjectDetail />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/glossary"
+          element={
+            <RequireAuth>
+              <GlossaryView />
             </RequireAuth>
           }
         />

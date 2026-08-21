@@ -1037,3 +1037,25 @@ input {
 .delta-down {
   color: var(--red-fg);
 }
+
+/* --- glossary searchable view --- */
+.glossary-grid {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+.glossary-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+.glossary-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
