@@ -1,4 +1,4 @@
-// @version 1.3.0
+// @version 1.4.0
 /**
  * Analysis data routes — docs/api-spec.md §4/§7 (Waves 5.7B + engine-1/2).
  *
@@ -28,7 +28,7 @@ import { Hono } from "hono";
 import { getDb } from "../../db/client.ts";
 import { getProjectIfVisible } from "../../db/repositories/project.repository.ts";
 import { appendAudit } from "../../db/lib/access-control.ts";
-import { ulid } from "../../db/lib/ulid.ts";
+import { recordAssumption, AssumptionValidationError } from "../../db/lib/assumption.ts";
 import { createRun, diffRuns, type CreateRunResult } from "../../db/lib/versioning.ts";
 import { runSimulationForRun, SimulationInputError } from "../../db/lib/simulation.ts";
 import { badRequest, fail, forbidden, notFound, ok, provenance } from "./envelope.ts";
@@ -36,8 +36,6 @@ import { requireAuth, type AppEnv, type AuthContext } from "./middleware.ts";
 
 export const analysisRoutes = new Hono<AppEnv>();
 analysisRoutes.use("*", requireAuth);
-
-const ASSUMPTION_KINDS = new Set(["live", "user", "derived", "assumed"]);
 
 function visibleProject(ctx: AuthContext, projectId: string) {
   return getProjectIfVisible(ctx.userId, projectId, { excludeMnpi: false });
@@ -138,7 +136,9 @@ analysisRoutes.get("/api/assumptions", (c) => {
 /**
  * POST /api/assumptions — analyst+; kind='assumed' requires a non-empty
  * rationale (FR-DATA-07). The run must exist and be project-visible (404
- * otherwise). Audited like every other write.
+ * otherwise). Field validation and the audited insert live in
+ * db/lib/assumption.ts — the same write path the `assume` CLI case uses,
+ * so the two surfaces cannot drift on the rules.
  */
 analysisRoutes.post("/api/assumptions", async (c) => {
   const ctx = c.get("auth");
@@ -164,52 +164,26 @@ analysisRoutes.post("/api/assumptions", async (c) => {
   if (ctx.role === "viewer") {
     return forbidden(c, "role_required", "Assumption writes require the analyst role.");
   }
-  if (!body.kind || !ASSUMPTION_KINDS.has(body.kind)) {
-    return badRequest(c, "invalid_request", `kind must be one of ${[...ASSUMPTION_KINDS].join("|")}.`);
-  }
-  if (typeof body.value !== "number" || !Number.isFinite(body.value)) {
-    return badRequest(c, "invalid_request", "value must be a number.");
-  }
-  if (!body.as_of?.trim()) {
-    return badRequest(c, "invalid_request", "as_of is required (ISO-8601 date).");
-  }
-  const rationale = body.rationale?.trim() ?? "";
-  if (body.kind === "assumed" && !rationale) {
-    return badRequest(
-      c,
-      "rationale_required",
-      "kind='assumed' requires a non-empty rationale (FR-DATA-07) — the DB CHECK backs this, but it is refused here first.",
-    );
-  }
-  const db = getDb();
-  const now = new Date().toISOString();
-  const id = ulid();
   try {
-    db.run(
-      `INSERT INTO assumption (id, run_id, assumption_key, kind, value, rationale, anchor_ref, as_of, ttl_days)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-      [
-        id,
-        body.run_id.trim(),
-        body.assumption_key.trim(),
-        body.kind,
-        body.value,
-        rationale || null,
-        body.anchor_ref?.trim() || null,
-        body.as_of.trim(),
-        Number.isInteger(body.ttl_days) ? body.ttl_days : null,
-      ],
-    );
+    const row = recordAssumption(getDb(), {
+      runId: body.run_id.trim(),
+      assumptionKey: body.assumption_key.trim(),
+      kind: body.kind ?? "",
+      value: body.value,
+      asOf: body.as_of ?? "",
+      rationale: body.rationale,
+      anchorRef: body.anchor_ref,
+      ttlDays: Number.isInteger(body.ttl_days) ? body.ttl_days : null,
+      actor: ctx.userId,
+      now: new Date().toISOString(),
+    });
+    return ok(c, { id: row.id }, 201);
   } catch (err) {
+    if (err instanceof AssumptionValidationError) {
+      return badRequest(c, err.code, err.message);
+    }
     return badRequest(c, "assumption_rejected", err instanceof Error ? err.message : "Assumption write failed.");
   }
-  appendAudit(db, {
-    actor: ctx.userId,
-    action: "assumption_set",
-    target: `${body.run_id.trim()}:${body.assumption_key.trim()}:${body.kind}`,
-    now,
-  });
-  return ok(c, { id }, 201);
 });
 
 /**

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type AssumptionRow, type RunSummary } from "../api.ts";
 import { SourceTooltip } from "./SourceTooltip.tsx";
+import { GlossaryText } from "../glossary.tsx";
 
 // 가정 (Assumptions) tab — ui-spec §2: read-only registry for the
 // project's latest run (GET /api/projects/:id/runs, newest-first — the
@@ -94,9 +95,17 @@ export function AssumptionsTab({ projectId }: { projectId: string }) {
                   <td>{a.ttl_days ?? "—"}</td>
                   <td>
                     {a.kind === "assumed" ? (
-                      <p className="assumption-rationale">{a.rationale?.trim() || "근거 미기재"}</p>
+                      a.rationale?.trim() ? (
+                        <p className="assumption-rationale">
+                          <GlossaryText text={a.rationale.trim()} />
+                        </p>
+                      ) : (
+                        <p className="assumption-rationale">근거 미기재</p>
+                      )
+                    ) : a.rationale?.trim() ? (
+                      <GlossaryText text={a.rationale.trim()} />
                     ) : (
-                      a.rationale?.trim() || "—"
+                      "—"
                     )}
                   </td>
                 </tr>

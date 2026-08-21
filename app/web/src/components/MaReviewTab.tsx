@@ -10,6 +10,7 @@ import {
   type ValueChainLinkRow,
 } from "../api.ts";
 import { SourceTooltip } from "./SourceTooltip.tsx";
+import { GlossaryText } from "../glossary.tsx";
 
 // M&A 검토 (M&A Review) tab — ui-spec §2 batch 2. Six sections over the
 // Wave 5.7B endpoints (api-spec §6): antitrust, incentives, liabilities,
@@ -157,7 +158,11 @@ function AntitrustSection({ projectId }: { projectId: string }) {
                     </dd>
                   </div>
                 </dl>
-                {r.remedy_detail?.trim() && <p className="antitrust-remedy-detail">{r.remedy_detail}</p>}
+                {r.remedy_detail?.trim() && (
+                  <p className="antitrust-remedy-detail">
+                    <GlossaryText text={r.remedy_detail.trim()} />
+                  </p>
+                )}
               </li>
             );
           })}
@@ -349,7 +354,9 @@ function LiabilitiesSection({ projectId }: { projectId: string }) {
                 <tr key={c.id}>
                   <td>{c.category}</td>
                   <td>
-                    <span className="cell-primary">{c.description}</span>
+                    <span className="cell-primary">
+                      <GlossaryText text={c.description} />
+                    </span>
                     {c.distribution?.trim() && <p className="cell-sub">분포: {c.distribution}</p>}
                   </td>
                   <td>

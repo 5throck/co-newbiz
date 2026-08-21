@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type DdFindingRow } from "../api.ts";
 import { SourceTooltip } from "./SourceTooltip.tsx";
+import { GlossaryText } from "../glossary.tsx";
 
 // 실사 (DD) tab — ui-spec §2: GET /api/projects/:id/dd-findings with a
 // category filter, description/value_impact/evidence_ref table; category
@@ -69,7 +70,9 @@ export function DdTab({ projectId }: { projectId: string }) {
                 <span className="dd-category-badge">{f.category}</span>
                 <span className="dd-finding-date">{new Date(f.created_at).toLocaleDateString("ko-KR")}</span>
               </div>
-              <p className="dd-finding-desc">{f.description}</p>
+              <p className="dd-finding-desc">
+                <GlossaryText text={f.description} />
+              </p>
               <dl className="dd-finding-facts">
                 <div>
                   <dt>가치 영향</dt>
