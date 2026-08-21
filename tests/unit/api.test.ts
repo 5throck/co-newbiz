@@ -1,4 +1,4 @@
-// @version 1.3.0
+// @version 1.4.0
 /**
  * Wave 5.6A API tests — docs/api-spec.md, exercising the real Hono app via
  * app.request() against a scratch SQLite file (deleted after), not mocked
@@ -6,7 +6,10 @@
  * run (bun smoke.api.ts, now removed) before being encoded. Wave 5.7B
  * added the analysis/deal-review suites; the engine-1 wave added the
  * runs/versioning suite; engine-2 added the simulations suite, whose POST
- * tests spawn the real python engine (same discipline as simulate.test.ts).
+ * tests spawn the real python engine (same discipline as simulate.test.ts);
+ * the badge/provenance wave added the list-card enrichment + envelope
+ * provenance suite (rag_overall list fields, observations meta.source,
+ * dd-finding run linkage).
  */
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
@@ -611,6 +614,133 @@ describe("deal review — membership-gated reads and audited writes (Wave 5.7B)"
     expect(incentiveBody.meta).toMatchObject({ prospective: 1, granted: 1 });
     const partners = await req(`/api/projects/${projectId}/partners`, { headers: { cookie: aliceCookie } });
     expect((await partners.json()).data).toHaveLength(1);
+  });
+});
+
+// Backend badge/provenance wave: GET /api/projects list-row enrichment
+// (rag_overall/rag_assessed_at — stale deliberately omitted, no honest
+// per-project freshness signal exists) and FR-SYS-03 meta provenance on
+// observations/dd-findings. projectId is MNPI-classified by now, so list
+// reads go through ?include_mnpi=1.
+describe("list-card enrichment and envelope provenance", () => {
+  let plainProjectId: string;
+  let mixedSeriesId: string;
+
+  beforeAll(async () => {
+    // Two overall rows on the main project — the later one must win.
+    const runId = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [runId, projectId, "badge test", "baadf00d", "alice", NOW]);
+    db.run(
+      "INSERT INTO rag_assessment (id, run_id, project_id, dimension, grade, rationale, assessed_at) VALUES (?,?,?,?,?,?,?)",
+      [ulid(), runId, projectId, "overall", "amber", "earlier partial assessment", "2026-01-01T00:00:00.000Z"],
+    );
+    db.run(
+      "INSERT INTO rag_assessment (id, run_id, project_id, dimension, grade, rationale, assessed_at) VALUES (?,?,?,?,?,?,?)",
+      [ulid(), runId, projectId, "overall", "green", "later complete assessment", "2026-02-01T00:00:00.000Z"],
+    );
+
+    // A fresh project with no assessments — its rows must stay unenriched.
+    const res = await req("/api/projects", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ project_no: "NP-2026-901" }),
+    });
+    plainProjectId = (await res.json()).data.id;
+
+    // A series whose periods trace to two different sources — the shared-
+    // source meta rule must decline to pick one.
+    const unit = db.query("SELECT unit_id FROM fact_market_observation WHERE series_id = ? LIMIT 1").get(SERIES_ID) as { unit_id: string };
+    const sourceA = ulid();
+    const sourceB = ulid();
+    db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceA, "MIXSRCA", "A", NOW]);
+    db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceB, "MIXSRCB", "B", NOW]);
+    mixedSeriesId = "TEST.SHIP.MIX";
+    for (const [periodId, source] of [["2025", sourceA], ["2026", sourceB]] as const) {
+      db.run(
+        "INSERT INTO fact_market_observation (series_id, period_id, revision_no, value, unit_id, source_id, content_hash, fetched_at) VALUES (?,?,?,?,?,?,?,?)",
+        [mixedSeriesId, periodId, 1, 100.0, unit.unit_id, source, `hash-mix-${periodId}`, NOW],
+      );
+    }
+
+    // A newer registry row for test.wacc — dd-finding provenance must link
+    // to the LATEST row for the key, not the first.
+    const newerRun = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [newerRun, projectId, "wacc v2", "wacc2", "alice", NOW]);
+    db.run(
+      "INSERT INTO assumption (id, run_id, assumption_key, kind, value, anchor_ref, as_of) VALUES (?,?,?,?,?,?,?)",
+      [ulid(), newerRun, "test.wacc", "user", 0.07, "FS§5.2", "2026-08-22"],
+    );
+  });
+
+  test("list rows carry the latest overall grade and its timestamp", async () => {
+    const res = await req("/api/projects?include_mnpi=1", { headers: { cookie: aliceCookie } });
+    const row = (await res.json()).data.find((p: { id: string }) => p.id === projectId);
+    expect(row).toMatchObject({ rag_overall: "green", rag_assessed_at: "2026-02-01T00:00:00.000Z" });
+  });
+
+  test("rows without an overall assessment carry no badge fields — absence is meaningful", async () => {
+    const res = await req("/api/projects?include_mnpi=1", { headers: { cookie: aliceCookie } });
+    const row = (await res.json()).data.find((p: { id: string }) => p.id === plainProjectId);
+    expect(row).toBeDefined();
+    expect("rag_overall" in row).toBe(false);
+    expect("rag_assessed_at" in row).toBe(false);
+    // No honest per-project freshness signal exists (observations carry no
+    // project binding), so the server never emits a fabricated one.
+    expect("stale" in row).toBe(false);
+  });
+
+  test("observations meta.source carries the shared source of the returned rows", async () => {
+    const res = await req(`/api/series/${SERIES_ID}/observations`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    const expected = (db.query("SELECT source_id FROM fact_market_observation WHERE series_id = ? LIMIT 1").get(SERIES_ID) as { source_id: string }).source_id;
+    expect(body.meta.source).toBe(expected);
+  });
+
+  test("observations with mixed sources omit meta.source — provenance stays per-row", async () => {
+    const res = await req(`/api/series/${mixedSeriesId}/observations`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(body.data).toHaveLength(2);
+    expect(new Set(body.data.map((r: { source_id: string }) => r.source_id)).size).toBe(2);
+    expect("source" in body.meta).toBe(false);
+  });
+
+  test("dd-finding POST meta links the assumption key to its latest registry row", async () => {
+    const res = await req(`/api/projects/${projectId}/dd-findings`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ category: "financial_model", description: "WACC sensitivity", value_impact: -0.3, assumption_key: "test.wacc" }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(201);
+    const newerRun = db
+      .query("SELECT run_id FROM assumption WHERE assumption_key = ? ORDER BY as_of DESC, id DESC LIMIT 1")
+      .get("test.wacc") as { run_id: string };
+    expect(body.meta).toMatchObject({ assumption_key: "test.wacc", run_id: newerRun.run_id, anchor_ref: "FS§5.2" });
+  });
+
+  test("dd-finding POST echoes an unregistered key without inventing a run linkage", async () => {
+    const res = await req(`/api/projects/${projectId}/dd-findings`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ category: "legal", description: "Unregistered key probe", assumption_key: "test.no-registry" }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(201);
+    expect(body.meta.assumption_key).toBe("test.no-registry");
+    expect("run_id" in body.meta).toBe(false);
+  });
+
+  test("dd-finding POST without an assumption key carries no provenance meta", async () => {
+    const res = await req(`/api/projects/${projectId}/dd-findings`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ category: "commercial", description: "No provenance fields" }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(201);
+    expect("assumption_key" in body.meta).toBe(false);
+    expect("run_id" in body.meta).toBe(false);
+    expect("anchor_ref" in body.meta).toBe(false);
   });
 });
 

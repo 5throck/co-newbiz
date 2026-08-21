@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Project routes — docs/api-spec.md §3 (Wave 5.6A).
  *
@@ -56,11 +56,53 @@ function visibleProject(ctx: AuthContext, projectId: string) {
   return getProjectIfVisible(ctx.userId, projectId, { excludeMnpi: false });
 }
 
-/** GET /api/projects — membership-filtered list; MNPI excluded by default. */
+/**
+ * Latest `overall`-grade rag_assessment per project, one aggregate query
+ * (ROW_NUMBER window over assessed_at DESC, id DESC — the same recency
+ * ordering the /rag route uses), not a per-project subrequest. `overall`
+ * rows are written only by assessRun when a real overall grade resulted
+ * (rag-engine.ts), so a missing entry genuinely means "no overall grade
+ * yet" and the list row carries no RAG fields at all — the same
+ * absence-is-meaningful rule as the /rag read side (never a default color).
+ *
+ * `stale` is deliberately NOT derived here: fact_market_observation rows
+ * carry no project binding (api-spec §7's own /api/data-changes note), and
+ * ttl_days is per (run, assumption_key) with no design rule defining a
+ * project-level freshness boolean — no honest server-side staleness signal
+ * exists yet, so the field is omitted rather than fabricated.
+ */
+function latestOverallGrades(projectIds: string[]): Map<string, { grade: string; assessed_at: string }> {
+  const byProject = new Map<string, { grade: string; assessed_at: string }>();
+  if (projectIds.length === 0) return byProject;
+  const rows = getDb()
+    .query(
+      `SELECT project_id, grade, assessed_at FROM (
+         SELECT project_id, grade, assessed_at,
+                ROW_NUMBER() OVER (PARTITION BY project_id ORDER BY assessed_at DESC, id DESC) AS rn
+         FROM rag_assessment
+         WHERE dimension = 'overall' AND project_id IN (${projectIds.map(() => "?").join(", ")})
+       ) WHERE rn = 1`,
+    )
+    .all(...projectIds) as { project_id: string; grade: string; assessed_at: string }[];
+  for (const row of rows) byProject.set(row.project_id, { grade: row.grade, assessed_at: row.assessed_at });
+  return byProject;
+}
+
+/**
+ * GET /api/projects — membership-filtered list; MNPI excluded by default.
+ * Rows carry rag_overall/rag_assessed_at only when a latest overall
+ * assessment exists (see latestOverallGrades) — the list-card RAG badge
+ * renders on field presence, never on a defaulted grade.
+ */
 projectRoutes.get("/api/projects", (c) => {
   const includeMnpi = ["1", "true"].includes(c.req.query("include_mnpi") ?? "");
   const projects = listVisibleProjects(c.get("auth").userId, { excludeMnpi: !includeMnpi });
-  return ok(c, projects, 200, { include_mnpi: includeMnpi, count: projects.length });
+  const overall = latestOverallGrades(projects.map((p) => p.id));
+  const rows = projects.map((p) => {
+    const grade = overall.get(p.id);
+    return grade ? { ...p, rag_overall: grade.grade, rag_assessed_at: grade.assessed_at } : p;
+  });
+  return ok(c, rows, 200, { include_mnpi: includeMnpi, count: rows.length });
 });
 
 /** GET /api/projects/:id — 404 for non-members; MNPI banner flag in meta. */

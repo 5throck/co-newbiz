@@ -27,7 +27,7 @@
 
 | Endpoint | Method | Purpose | Access Control |
 |---|---|---|---|
-| `/api/projects` | GET | List projects — **filtered to caller's `project_member` rows only**, `mnpi_flag` projects further gated | `project_member` deny-by-default |
+| `/api/projects` | GET | List projects — **filtered to caller's `project_member` rows only**, `mnpi_flag` projects further gated. Rows carry `rag_overall` + `rag_assessed_at` (the latest overall-grade `rag_assessment` row, one aggregate query) only when an overall assessment exists — absence means "no overall grade yet" (never a default color, same rule as `/api/projects/:id/rag`). `stale` is deliberately not emitted: `fact_market_observation` carries no project binding and `ttl_days` is per (run, assumption_key), so no honest per-project freshness signal exists to report | `project_member` deny-by-default |
 | `/api/projects` | POST | Create project (`md_project`) | `analyst`+ role |
 | `/api/projects/:id` | GET | Project detail | Membership required — 404, not 403, for a non-member (existence itself is protected, FR-SEC-01) |
 | `/api/projects/:id/members` | GET/POST/DELETE | Membership management | `lead` role on the project |
@@ -82,7 +82,7 @@
 | Endpoint | Method | Purpose | Access Control | Implementation |
 |---|---|---|---|---|
 | `/api/watch` | GET/POST/DELETE | User subscriptions | Session (own subscriptions only) | as-built (5.6A) |
-| `/api/notifications` | GET | Delivered/pending, per-user | Session | as-built (5.6A) |
+| `/api/notifications` | GET | Delivered/pending, per-user — no read/unread state: `notification` has no `read_at` and no cleanly-fitting column exists elsewhere (`session`/`app_user` carry no last-seen; `watch.last_checked_at` is a change-detection watermark), so adding one requires a migration; `sent_at` is the only lifecycle timestamp | Session | as-built (5.6A) |
 | `/api/data-changes` | GET | `data_change_log` scan | Authenticated — market data is workspace-level (`fact_market_observation` carries no project binding) | as-built (5.7B) |
 | `/api/reports/:run_id` | POST | Generate deliverable (docx/pdf/hwpx) — staleness gate blocks if inputs exceed `ttl_days` | Membership | forward-design |
 | `/api/glossary/:term` | GET | Glossary lookup (also backs UI tooltip, MCP `lookup_term`) | Public within the workspace | as-built (5.6A) |
@@ -108,6 +108,8 @@
 ```
 
 Every numeric figure in `data` that traces to an `assumption` carries its `assumption_key`, `as_of`, `source`, and `anchor_ref` in `meta` — this is the API-level realization of FR-SYS-03 (UI source tooltips read directly from this envelope, no separate lookup).
+
+Landing state: `ok()` carries provenance fields into `meta` via `envelope.ts`'s `provenance()` normalizer (`assumption_key`/`source`/`anchor_ref`/`run_id`; null/blank values are dropped so absent stays absent), attached **only where a route derives them from the rows it returns**: `GET /api/series/:id/observations` sets `source` when every returned row shares one `source_id`, and `POST /api/projects/:id/dd-findings` links the finding's `assumption_key` to the latest assumption-registry row for that key (`run_id`, `anchor_ref`). A multi-row response whose rows carry differing provenance keeps it per-row — the rows already carry their own columns — and never collapses it into one fabricated meta entry.
 
 ## 10. Rate Limiting and Abuse Prevention
 
