@@ -261,3 +261,137 @@ export interface PermitsResponse {
   certifications: PermitRow[];
   dag?: PermitDag;
 }
+
+// --- PR #65 batch 2: M&A review tab (antitrust / incentives /
+// liabilities / sites / partners / value-chain links) — appended only,
+// same boundary as batch 1. ---
+
+export interface AntitrustRow {
+  id: string;
+  market_definition: string;
+  hhi_before: number | null;
+  hhi_after: number | null;
+  combination_type: string | null;
+  filing_jurisdictions: string | null;
+  remedy_type: string;
+  remedy_detail: string | null;
+  discharge_confirmed_at: string | null;
+  created_at: string;
+}
+
+export interface IncentiveRow {
+  id: string;
+  site_id: string | null;
+  direction: "prospective" | "granted";
+  type: string;
+  grantor: string | null;
+  program_name: string | null;
+  amount: number | null;
+  npv_value: number | null;
+  currency_id: string | null;
+  granted_on: string | null;
+  application_deadline: string | null;
+  construction_deadline: string | null;
+  obligation_json: string | null;
+  clawback_rule: string | null;
+  estimated_clawback: number | null;
+  negotiability: string | null;
+  status: string;
+  evidence_ref: string | null;
+}
+
+export interface DebtInstrumentRow {
+  id: string;
+  lender: string | null;
+  principal: number;
+  currency_id: string | null;
+  rate_type: "fixed" | "floating";
+  rate: number;
+  maturity: string | null;
+  amortization: string | null;
+  covenant_json: string | null;
+  coc_acceleration: number;
+  security: string | null;
+  seniority: string | null;
+}
+
+export interface ContingentLiabilityRow {
+  id: string;
+  category: string;
+  description: string;
+  probability: number | null;
+  amount_low: number | null;
+  amount_expected: number | null;
+  amount_high: number | null;
+  distribution: string | null;
+  expected_timing_year: number | null;
+  evidence_ref: string | null;
+  value_impact: number | null;
+}
+
+// SQLite INTEGER 0/1 — the server does not coerce to boolean.
+export interface CovenantTestRow {
+  period_id: string;
+  covenant_key: string;
+  threshold: number;
+  projected_value: number;
+  breached: number;
+}
+
+export interface LiabilitiesResponse {
+  debt_instruments: DebtInstrumentRow[];
+  contingent_liabilities: ContingentLiabilityRow[];
+  covenant_tests: CovenantTestRow[];
+}
+
+export interface SiteRow {
+  id: string;
+  name: string;
+  region_code: string | null;
+  infra_score: number | null;
+  infra_capex: number | null;
+  incentive_npv: number | null;
+  logistics_cost: number | null;
+  labor_availability: number | null;
+  permit_lead_time_days: number | null;
+  affected_area_notification_status: string | null;
+  total_score: number | null;
+  rank: number | null;
+}
+
+export interface PartnerRow {
+  id: string;
+  name: string;
+  partner_type: string;
+  region_code: string | null;
+  capability_score: number | null;
+  capacity_score: number | null;
+  financial_score: number | null;
+  compliance_risk: string | null;
+  customer_base_fit: number | null;
+  dependency_risk: string | null;
+  status: string;
+  contacted_at: string | null;
+  nda_signed: number;
+  evidence_ref: string | null;
+}
+
+export interface ValueChainLinkRow {
+  id: string;
+  direction: "upstream" | "downstream";
+  elasticity: number | null;
+  lag_months: number | null;
+  correlation: number | null;
+  r2: number | null;
+  pass_through_rate: number | null;
+  pass_through_lag_months: number | null;
+  concentration_hhi: number | null;
+  switching_cost_grade: string | null;
+  substitution_threat: string | null;
+  evidence_ref: string | null;
+  assessed_at: string;
+  from_industry_ko: string;
+  from_industry_en: string;
+  to_industry_ko: string;
+  to_industry_en: string;
+}

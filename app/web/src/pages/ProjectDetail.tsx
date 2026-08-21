@@ -16,8 +16,9 @@ import { DataTab } from "../components/DataTab.tsx";
 import { AssumptionsTab } from "../components/AssumptionsTab.tsx";
 import { DdTab } from "../components/DdTab.tsx";
 import { PermitsTab } from "../components/PermitsTab.tsx";
+import { MaReviewTab } from "../components/MaReviewTab.tsx";
 
-type Tab = "overview" | "procedure" | "data" | "assumptions" | "dd" | "permits" | "members";
+type Tab = "overview" | "procedure" | "data" | "assumptions" | "dd" | "permits" | "ma" | "members";
 
 interface ProjectMember {
   user_id: string;
@@ -120,6 +121,11 @@ export function ProjectDetail() {
         <button type="button" aria-current={tab === "permits"} onClick={() => setTab("permits")}>
           법령·인허가
         </button>
+        {/* ui-spec §2 marks M&A 검토 BF-only, but GET /api/projects/:id carries
+            no case-type indicator — rendered unconditionally; gap noted in ui-spec. */}
+        <button type="button" aria-current={tab === "ma"} onClick={() => setTab("ma")}>
+          M&A 검토
+        </button>
         <button type="button" aria-current={tab === "members"} onClick={() => setTab("members")}>
           멤버십
         </button>
@@ -171,6 +177,12 @@ export function ProjectDetail() {
       {tab === "permits" && id && (
         <section aria-label="법령·인허가">
           <PermitsTab projectId={id} />
+        </section>
+      )}
+
+      {tab === "ma" && id && (
+        <section aria-label="M&A 검토">
+          <MaReviewTab projectId={id} />
         </section>
       )}
 

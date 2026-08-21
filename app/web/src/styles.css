@@ -790,3 +790,175 @@ input {
   color: var(--muted-fg);
   font-size: 0.85rem;
 }
+
+/* --- M&A review tab --- */
+.ma-section {
+  margin-bottom: 2rem;
+}
+.ma-section h2 {
+  margin: 0 0 0.75rem;
+}
+.ma-section h3 {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+}
+.ma-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin: 0;
+}
+.ma-facts dt {
+  color: var(--muted-fg);
+  font-size: 0.8rem;
+}
+.ma-facts dd {
+  margin: 0;
+}
+.cell-primary {
+  font-weight: 600;
+}
+.cell-sub {
+  margin: 0.15rem 0 0;
+  color: var(--muted-fg);
+  font-size: 0.85rem;
+}
+
+/* antitrust */
+.antitrust-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.antitrust-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+.antitrust-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.remedy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.remedy-none {
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+}
+.remedy-behavioral {
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+}
+.remedy-structural {
+  background: var(--green-bg);
+  color: var(--green-fg);
+}
+.remedy-prohibited {
+  background: var(--red-bg);
+  color: var(--red-fg);
+}
+.antitrust-remedy-detail {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+
+/* incentives */
+.incentive-group {
+  margin-bottom: 1rem;
+}
+.row-clawback td {
+  border-left: 3px solid var(--amber-fg);
+}
+.clawback-note {
+  margin: 0.3rem 0 0;
+  padding: 0.25rem 0.5rem;
+  border: 1px dashed var(--amber-fg);
+  border-radius: 4px;
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+  font-size: 0.8rem;
+}
+
+/* liabilities */
+.row-breached td {
+  border-left: 3px solid var(--red-fg);
+}
+.breached-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--red-bg);
+  color: var(--red-fg);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.covenant-held {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--muted-fg);
+  font-size: 0.85rem;
+}
+
+/* sites */
+.site-table {
+  font-size: 0.9rem;
+}
+
+/* partners */
+.partner-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.partner-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+.partner-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+.risk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.risk-high {
+  background: var(--red-bg);
+  color: var(--red-fg);
+}
+.risk-medium {
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+}
+.risk-low {
+  background: var(--green-bg);
+  color: var(--green-fg);
+}
