@@ -78,7 +78,9 @@ Decision-state enum for `approval_chain.decision` (Entity IC) and `group_agenda.
 
 | Table | Purpose | Key Fields |
 |---|---|---|
-| `rag_rule` | Threshold/priority definition per stage gate | `id`, `stage_gate`, `dimension`, `grade`, `condition_expr`, `priority`, `enabled`, `policy_id` |
+| `rag_rule` | Threshold/priority rule per stage gate — rebuilt in migration 0012 (typed-predicate rules, 2026-08-22 design Decision 1). `enabled` **defaults to 0** and the table CHECK requires both `policy_id` and `thresholds_source` to enable a rule (anti-tamper staging: enabling is a deliberate attributable act, not the silent default) | `id`, `rule_key`, `version`, `stage_gate`, `dimension`, `grade`, `condition_expr`, `priority`, `enabled`, `policy_id`, `thresholds_source`, `created_at` |
+| `evidence_var` | Evidence registry — every variable the RAG predicate language can reference (2026-08-22 design Decision 2). `label_ko` feeds `renderKo`'s governance artifact | `var_key`, `label_ko`, `value_type` (`number`\|`string`\|`boolean`), `unit`, `source_kind` (`column`\|`computed`\|`asserted`), `requires_evidence_ref`, `max_age_days`, `created_at` |
+| `rag_rule_variable` | Rule↔variable join — answers "which rules break if this var_key is renamed" in SQL instead of an unindexable LIKE over `condition_expr` | `rule_id`, `var_key` (composite PK) |
 | `rag_assessment` | Per-run dimension grade | `id`, `run_id`, `project_id`, `dimension`, `grade`, `triggered_rules`, `rationale`, `assessed_at` |
 | `rag_transition` | Grade-change event | `id`, `project_id`, `from_grade`, `to_grade`, `run_id`, `at`, `reason`, `notified` |
 
@@ -104,7 +106,7 @@ Decision-state enum for `approval_chain.decision` (Entity IC) and `group_agenda.
 |---|---|---|
 | `site_candidate` | Scored site | `id`, `project_id`, `name`, `region_code`, `infra_score`, `infra_capex`, `incentive_npv`, `logistics_cost`, `labor_availability`, `permit_lead_time_days`, `affected_area_notification_status`, `total_score`, `rank` |
 | `permit` / `permit_edge` | Permit DAG node/edge | `permit.id`, `permit.agency`, `permit.statutory_days`; `permit_edge.from_permit_id`, `permit_edge.to_permit_id` |
-| `certification` / `certification_edge` | Certification DAG — **kept structurally separate from permits** | same shape as `permit`/`permit_edge` |
+| `certification` / `certification_edge` | Certification DAG — **kept structurally separate from permits**. Since migration 0012, `certification` carries transferability columns (2026-08-22 design, overturn 7): `transferability_basis` (`verified`\|`inferred` — `inferred` is hard-blocked at the repository write layer; inference is disallowed for certification transferability on change of control), `transferable_on_coc`, `transferability_evidence_ref`, `load_bearing` (1 = the business case depends on this certification), `confirmed_at` | `permit`-shaped core (`id`, `project_id`, `name`, `agency`, `statutory_days`, `status`) + the five transferability columns |
 | `partner_candidate` | Partner sourcing/screening | `id`, `project_id`, `name`, `partner_type`, `compliance_risk`, `dependency_risk`, `status` |
 | `jv_term` | JV structuring terms | `id`, `project_id`, `partner_id`, `equity_split`, `governance_json`, `veto_matters`, `exit_clause`, `deadlock_mechanism` |
 
@@ -142,6 +144,7 @@ Decision-state enum for `approval_chain.decision` (Entity IC) and `group_agenda.
 | `idx_change_log(series_id, detected_at DESC)` | `data_change_log` | `watch:run`'s change-detection scan |
 | `idx_audit(actor_user_id, created_at DESC)` | `audit_log` | Compliance/incident-response lookups |
 | `idx_rag(project_id, assessed_at DESC)` | `rag_assessment` | Dashboard's current-grade lookup |
+| `idx_rag_rule_variable_var(var_key)` | `rag_rule_variable` | Reverse rule-impact lookup when a `var_key` is renamed (2026-08-22 design Decision 2) |
 | `idx_procedure(procedure_key, scope, entity_id)` | `procedure` | `proc:resolve`'s merge-lookup path |
 | `idx_project_member(user_id, project_id)` | `project_member` | Every repository-layer access-filter check (FR-SEC-01) — this index is on the hottest path in the entire system |
 
