@@ -286,16 +286,20 @@ describe("rag_rule shape (old table dropped, Decision-1 shape in place)", () => 
 // ---------------------------------------------------------------------------
 
 describe("migration idempotence", () => {
-  test("re-running runMigrations applies nothing and skips all 12", () => {
+  // Count/last-position assertions were pinned to "12 applied" when this file
+  // shipped; migration 0013+ necessarily broke them. Containment + lower-bound
+  // keeps the intent (0012 applied exactly once, re-runs are no-ops) without
+  // re-coupling this file to the total migration count.
+  test("re-running runMigrations applies nothing and skips all applied files", () => {
     const { applied, skipped } = runMigrations(TEST_DB_PATH);
     expect(applied).toEqual([]);
     expect(skipped).toContain("0012_rag_rule_rebuild_and_evidence_var.sql");
-    expect(skipped.length).toBe(12);
+    expect(skipped.length).toBeGreaterThanOrEqual(12);
   });
 
   test("0012 is recorded in schema_migrations", () => {
     const rows = db.query("SELECT filename FROM schema_migrations ORDER BY filename").all() as { filename: string }[];
-    expect(rows[rows.length - 1].filename).toBe("0012_rag_rule_rebuild_and_evidence_var.sql");
-    expect(rows.length).toBe(12);
+    expect(rows.map((r) => r.filename)).toContain("0012_rag_rule_rebuild_and_evidence_var.sql");
+    expect(rows.length).toBeGreaterThanOrEqual(12);
   });
 });
