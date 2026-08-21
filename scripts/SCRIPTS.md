@@ -60,6 +60,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `co-newbiz/newbiz.ts` | co-newbiz | 1.11.0 | active | —| —| L3-only (project-local analysis-engine CLI, design v1.0 §4-8, not part of L0/L1/L2 lineage) | —|
 | `co-newbiz/model.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `model`/`diff` — run-based versioning via db/lib/versioning.ts: createRun input snapshot + overrides + input_hash, diffRuns variable-level bridge; NPV-level decomposition deferred until the valuation engine exists) | —|
 | `co-newbiz/proc-resolve.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `proc:resolve` — merges shared+region+entity procedures) | —|
+| `co-newbiz/graph-map.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, procedure→agent/skill graph mapping; `--check` gates referential integrity, `--json` emits full mapping) | —|
 | `co-newbiz/backup.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, ADR-0014/0015 — checkpointed SQLite backup + row-count manifest) | —|
 | `co-newbiz/restore.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, ADR-0014 rollback mechanism — restore + manifest verification) | —|
 | `co-newbiz/fin-analyze.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `fin:analyze` — runs python/kpi.py, reused from co-consult) | —|
