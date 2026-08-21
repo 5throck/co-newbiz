@@ -395,3 +395,91 @@ export interface ValueChainLinkRow {
   to_industry_ko: string;
   to_industry_en: string;
 }
+
+// --- PR #65 batch 3: Model / Simulation / Version-comparison tabs
+// (engine-1 run versioning + engine-2 simulations) — appended only. ---
+
+// POST /api/projects/:id/runs response (db/lib/versioning.ts
+// CreateRunResult) — only the fields this UI reads are typed.
+export interface CreateRunResult {
+  run_id: string;
+  input_hash: string;
+}
+
+// GET /api/runs/:id — run row plus its immutable run_input snapshot.
+export interface RunInputRow {
+  assumption_key: string;
+  value: number;
+}
+
+export interface RunDetail {
+  run: RunSummary & { project_id: string };
+  inputs: RunInputRow[];
+}
+
+// GET /api/runs/:id/diff/:otherId — variable-level bridge, A -> B
+// (added = only in B, removed = only in A, changed delta = to - from).
+export interface DiffChangedRow {
+  key: string;
+  from: number;
+  to: number;
+  delta: number;
+}
+
+export interface DiffValueRow {
+  key: string;
+  value: number;
+}
+
+export interface RunDiff {
+  run_a: string;
+  run_b: string;
+  input_hash_a: string;
+  input_hash_b: string;
+  changed: DiffChangedRow[];
+  added: DiffValueRow[];
+  removed: DiffValueRow[];
+}
+
+// POST /api/simulations response (db/lib/simulation.ts SimulationRunResult).
+export interface SimulationRunResult {
+  simulation_id: string;
+  run_id: string;
+  project_id: string;
+  seed: number;
+  iterations: number;
+  discount_rate: number;
+  base_npv: number;
+  p05: number;
+  p50: number;
+  p95: number;
+  mean: number;
+  std: number;
+  contingent_liability_count: number;
+}
+
+// GET /api/simulations/:id/results — quantile summary ONLY; raw draws are
+// never exposed (retention_policy archives them, the permanent record is
+// this summary). meta carries seed + iterations.
+export interface SimulationSummary {
+  id: string;
+  run_id: string;
+  seed: number;
+  iterations: number;
+  discount_rate: number;
+  created_at: string;
+}
+
+export interface SimulationResultRow {
+  metric: string;
+  p05: number;
+  p50: number;
+  p95: number;
+  mean: number;
+  std: number;
+}
+
+export interface SimulationResultsResponse {
+  simulation: SimulationSummary;
+  results: SimulationResultRow[];
+}

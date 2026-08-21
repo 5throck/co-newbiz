@@ -17,8 +17,22 @@ import { AssumptionsTab } from "../components/AssumptionsTab.tsx";
 import { DdTab } from "../components/DdTab.tsx";
 import { PermitsTab } from "../components/PermitsTab.tsx";
 import { MaReviewTab } from "../components/MaReviewTab.tsx";
+import { ModelTab } from "../components/ModelTab.tsx";
+import { SimulationTab } from "../components/SimulationTab.tsx";
+import { VersionCompareTab } from "../components/VersionCompareTab.tsx";
 
-type Tab = "overview" | "procedure" | "data" | "assumptions" | "dd" | "permits" | "ma" | "members";
+type Tab =
+  | "overview"
+  | "procedure"
+  | "data"
+  | "assumptions"
+  | "model"
+  | "simulation"
+  | "compare"
+  | "dd"
+  | "permits"
+  | "ma"
+  | "members";
 
 interface ProjectMember {
   user_id: string;
@@ -115,6 +129,15 @@ export function ProjectDetail() {
         <button type="button" aria-current={tab === "assumptions"} onClick={() => setTab("assumptions")}>
           가정
         </button>
+        <button type="button" aria-current={tab === "model"} onClick={() => setTab("model")}>
+          모델
+        </button>
+        <button type="button" aria-current={tab === "simulation"} onClick={() => setTab("simulation")}>
+          시뮬레이션
+        </button>
+        <button type="button" aria-current={tab === "compare"} onClick={() => setTab("compare")}>
+          버전 비교
+        </button>
         <button type="button" aria-current={tab === "dd"} onClick={() => setTab("dd")}>
           실사
         </button>
@@ -165,6 +188,24 @@ export function ProjectDetail() {
       {tab === "assumptions" && id && (
         <section aria-label="가정">
           <AssumptionsTab projectId={id} />
+        </section>
+      )}
+
+      {tab === "model" && id && (
+        <section aria-label="모델">
+          <ModelTab projectId={id} />
+        </section>
+      )}
+
+      {tab === "simulation" && id && (
+        <section aria-label="시뮬레이션">
+          <SimulationTab projectId={id} />
+        </section>
+      )}
+
+      {tab === "compare" && id && (
+        <section aria-label="버전 비교">
+          <VersionCompareTab projectId={id} />
         </section>
       )}
 
