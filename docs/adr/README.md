@@ -51,5 +51,12 @@
 | [0043](0043-four-domain-structure-functional-technical-industry-region.md) | Four-domain structure (functional/technical/industry/region) with PM-lead coordination model |
 | [0044](0044-industry-and-region-scale-via-profile-count-not-agent-count.md) | Industry and region scale via profile count, not agent count |
 | [0045](0045-investment-vehicle-structuring-as-a-deal-structure-axis.md) | Investment vehicle structuring as a mandatory deal-structure-hypothesis axis |
+| [0046](0046-typed-json-predicate-ast-and-evidence-variable-registry.md) | Typed JSON predicate AST and an evidence-variable registry with run-scoped snapshots *(Proposed)* |
+| [0047](0047-three-axis-case-classification-model-retiring-case-subtype.md) | Three-axis case classification model (case_type x origin x technology_track), retiring `case_subtype` *(Proposed)* |
+| [0048](0048-amend-adr-0037-applicable-validators-and-not-applicable-result.md) | Amend ADR-0037 — no-waiver scope becomes "applicable validators", with an auditable `not_applicable` result *(Proposed)* |
+| [0049](0049-amend-adr-0016-unassessed-as-a-fourth-grade-state-and-green-cap.md) | Amend ADR-0016 — UNASSESSED as a fourth grade state, and a Green cap on uncalibrated rules *(Proposed)* |
+| [0050](0050-errata-adr-0045-dangling-reference-to-a-nonexistent-adr.md) | Errata to ADR-0045 — dangling reference to a nonexistent ADR *(Proposed)* |
+
+ADRs 0046-0050 are **Proposed** as of 2026-08-22 — drafted ahead of implementation per ADR-0032 (documents before code). Each takes effect only when its paired PR lands (PR-1/PR-2 for 0046; PR-4/PR-5 for 0047; PR-4/PR-5c for 0048; PR-4/PR-9 for 0049; 0050 is an errata record with no implementation). Until then the decisions they amend — ADR-0037 and ADR-0016 — stand unamended.
 
 ADRs 0001-0044 are **Accepted** as of 2026-08-20, ratifying decisions already made during Stage 0-1 (scaffold, agent roster, glossary, and the 12 Stage 1 planning meetings) and formalized in Stage 2's regulation book and procedures. ADR-0045 (Wave 5.10 system-pilot addendum) is Accepted as of the same date. Future amendments to any of these decisions require a new ADR referencing the one it supersedes, per the trigger list above — not an edit to the existing record.
