@@ -1,0 +1,11 @@
+{
+  "procedure": "greenfield-fs",
+  "criterion_id": "growth_projection_outside_top_decile_without_risk_officer_signoff",
+  "title": "Growth projection outside the top decile without risk-officer sign-off",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+}

@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-dd",
+  "criterion_id": "any_of_six_ma_validators_missing_at_dd_exit",
+  "title": "Any of the six M&A validators missing at DD exit",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). No waiver path: completeness check, not judgment (design section 8.9-1(f))."
+}

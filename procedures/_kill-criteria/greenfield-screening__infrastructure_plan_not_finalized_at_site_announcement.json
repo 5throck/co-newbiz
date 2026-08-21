@@ -1,0 +1,11 @@
+{
+  "procedure": "greenfield-screening",
+  "criterion_id": "infrastructure_plan_not_finalized_at_site_announcement",
+  "title": "Infrastructure plan not finalized at site announcement",
+  "action": "escalate_to_risk_officer",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Added per docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1 — a real large-scale green-field project proceeded to site designation before power/water infrastructure plans were finalized."
+}

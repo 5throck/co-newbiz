@@ -1,0 +1,11 @@
+{
+  "procedure": "greenfield-screening",
+  "criterion_id": "zero_site_clears_infrastructure_minimums",
+  "title": "Zero candidate sites clear the infrastructure minimums",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+}

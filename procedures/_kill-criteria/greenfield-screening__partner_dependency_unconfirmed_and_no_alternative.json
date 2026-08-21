@@ -1,0 +1,11 @@
+{
+  "procedure": "greenfield-screening",
+  "criterion_id": "partner_dependency_unconfirmed_and_no_alternative",
+  "title": "Partner dependency unconfirmed with no alternative",
+  "action": "mark_conditional",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+}

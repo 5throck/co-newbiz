@@ -1,0 +1,11 @@
+{
+  "procedure": "greenfield-dd",
+  "criterion_id": "wastewater_capacity_insufficient_and_no_mitigation",
+  "title": "Wastewater capacity insufficient with no mitigation",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+}

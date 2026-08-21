@@ -1,0 +1,11 @@
+{
+  "procedure": "entity-ic-review",
+  "criterion_id": "kill_criteria_condition_triggered",
+  "title": "Any upstream kill-criteria condition triggered (meta-criterion)",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Meta-criterion: refers to any upstream procedure's triggered criterion, so its executable form will depend on the other entries first."
+}

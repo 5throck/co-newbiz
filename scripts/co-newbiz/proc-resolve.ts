@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * proc:resolve — merges a shared procedure with its region/entity overrides,
  * per design v1.0 §6.3's references:/overrides: model (safety_os
@@ -10,6 +10,10 @@
  * caller (CLI output, and eventually the UI's Procedure Viewer per
  * docs/ui-spec.md §4) can show provenance per step, not just the merge
  * result.
+ *
+ * v1.1.0 (design of record 2026-08-22, Decision 8 / PR-3): also parses and
+ * merges `kill_criteria`. Merge semantics differ from thresholds on purpose
+ * — see appendKillCriteria.
  */
 
 import * as yaml from "js-yaml";
@@ -39,6 +43,17 @@ interface Overrides {
   thresholds?: Record<string, unknown>;
 }
 
+/**
+ * One declared kill criterion, typed to the YAML's actual shape
+ * (`{condition, action}` — actions observed in-tree: halt,
+ * escalate_to_risk_officer, mark_conditional). `condition` doubles as the
+ * criterion id used by the procedures/_kill-criteria/ registry.
+ */
+export interface KillCriterion {
+  condition: string;
+  action: string;
+}
+
 interface ProcedureDoc {
   procedure_id: string;
   scope: "shared" | "entity" | "region" | "group";
@@ -46,6 +61,7 @@ interface ProcedureDoc {
   references?: { shared: string }[];
   overrides?: Overrides;
   thresholds?: Record<string, unknown>;
+  kill_criteria?: KillCriterion[];
   [key: string]: unknown;
 }
 
@@ -95,10 +111,35 @@ function applyOverrides(
   return steps;
 }
 
+/**
+ * Kill-criteria merge: UNION with shared-first precedence. A region/entity
+ * layer may ADD criteria to a procedure but never drop or weaken one
+ * declared in _shared — a layer re-declaring an existing condition is
+ * ignored (the shared declaration stands). This deliberately differs from
+ * the later-layer-wins thresholds merge: weakening or removing a kill
+ * criterion is not expressible by merge at all; it has its own separate
+ * exception path (supersession records per a higher-tier regulation,
+ * design of record 2026-08-22 legal-review #5) that must leave an
+ * explicit record.
+ */
+function appendKillCriteria(base: KillCriterion[], extra: KillCriterion[] | undefined): KillCriterion[] {
+  if (!extra || extra.length === 0) return base;
+  const seen = new Set(base.map((k) => k.condition));
+  const out = [...base];
+  for (const k of extra) {
+    if (!seen.has(k.condition)) {
+      seen.add(k.condition);
+      out.push(k);
+    }
+  }
+  return out;
+}
+
 export interface ResolveResult {
   procedureKey: string;
   steps: Step[];
   thresholds: Record<string, unknown>;
+  kill_criteria: KillCriterion[];
   layersApplied: string[];
 }
 
@@ -114,6 +155,7 @@ export function resolveProcedure(
 
   let steps: Step[] = shared.steps.map((s) => ({ ...s, _source: "shared" as const }));
   let thresholds: Record<string, unknown> = { ...(shared.thresholds ?? {}) };
+  let killCriteria: KillCriterion[] = [...(shared.kill_criteria ?? [])];
   const layersApplied = ["shared"];
 
   // Precedence: _shared -> regions/<code> -> entities/<company> (design §2-2).
@@ -123,6 +165,7 @@ export function resolveProcedure(
       const regionDoc = loadProcedure(regionDir);
       steps = applyOverrides(steps, regionDoc.overrides, "region");
       thresholds = { ...thresholds, ...(regionDoc.overrides?.thresholds ?? {}) };
+      killCriteria = appendKillCriteria(killCriteria, regionDoc.kill_criteria);
       layersApplied.push(`region:${opts.region}`);
     }
   }
@@ -133,11 +176,12 @@ export function resolveProcedure(
       const entityDoc = loadProcedure(entityDir);
       steps = applyOverrides(steps, entityDoc.overrides, "entity");
       thresholds = { ...thresholds, ...(entityDoc.overrides?.thresholds ?? {}) };
+      killCriteria = appendKillCriteria(killCriteria, entityDoc.kill_criteria);
       layersApplied.push(`entity:${opts.entity}`);
     }
   }
 
-  return { procedureKey: procedureName, steps, thresholds, layersApplied };
+  return { procedureKey: procedureName, steps, thresholds, kill_criteria: killCriteria, layersApplied };
 }
 
 function printResult(result: ResolveResult): void {
@@ -151,6 +195,12 @@ function printResult(result: ResolveResult): void {
     console.log(`\nThresholds:`);
     for (const [k, v] of Object.entries(result.thresholds)) {
       console.log(`  ${k}: ${v}`);
+    }
+  }
+  if (result.kill_criteria.length > 0) {
+    console.log(`\nKill criteria:`);
+    for (const k of result.kill_criteria) {
+      console.log(`  ${k.condition} -> ${k.action}`);
     }
   }
 }

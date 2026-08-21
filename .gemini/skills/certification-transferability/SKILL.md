@@ -11,10 +11,10 @@ description: >
 
   Use when: "certification transferability", "change of control
   certification", "certification survives acquisition".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-22
 status: active
-owner: certification-agent
+owner: legal-counsel
 prerequisites:
   - certification-roadmap
 metadata:
@@ -37,6 +37,13 @@ transferability. `checklists/ma-special-topics-checklist.yaml`'s evaluation
 order places this check **last**, specifically because a non-transferable
 certification can strip the acquisition premium and must not be computed
 against a valuation that already assumed it survives.
+
+Ownership note (v1.1.0, design of record 2026-08-22 §5 PR-3): the
+change-of-control transferability **judgment is legal-counsel's call** —
+`agents/legal-counsel.md` claims this responsibility and the procedure
+(brownfield-dd step 9) dispatches legal-counsel here; certification-agent
+acts as input provider (requirement identification, roadmap,
+source-regulation pointers), not as the judge.
 
 ## When to Use
 

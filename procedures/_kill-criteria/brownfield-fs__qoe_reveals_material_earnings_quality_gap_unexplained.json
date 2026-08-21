@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-fs",
+  "criterion_id": "qoe_reveals_material_earnings_quality_gap_unexplained",
+  "title": "QoE reveals a material, unexplained earnings-quality gap",
+  "action": "escalate_to_risk_officer",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+}

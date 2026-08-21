@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-screening",
+  "criterion_id": "no_viable_target_in_longlist",
+  "title": "No viable target in the long list",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+}

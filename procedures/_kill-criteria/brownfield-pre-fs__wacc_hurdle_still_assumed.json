@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-pre-fs",
+  "criterion_id": "wacc_hurdle_still_assumed",
+  "title": "WACC hurdle still assumed (no sourced input)",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in greenfield-pre-fs (separate registry entry)."
+}
