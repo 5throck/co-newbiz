@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-screening",
+  "criterion_id": "preliminary_hhi_flags_certain_block",
+  "title": "Preliminary HHI flags a certain block",
+  "action": "escalate_to_risk_officer",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+}

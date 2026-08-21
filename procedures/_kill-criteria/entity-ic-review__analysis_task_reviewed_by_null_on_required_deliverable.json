@@ -1,0 +1,11 @@
+{
+  "procedure": "entity-ic-review",
+  "criterion_id": "analysis_task_reviewed_by_null_on_required_deliverable",
+  "title": "analysis_task.reviewed_by is null on a required deliverable",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+}

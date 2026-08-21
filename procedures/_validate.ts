@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Procedure Schema Validator — co-newbiz
  *
@@ -18,15 +18,28 @@
  * unless --verbose); --verbose is still accepted as a no-op for backwards
  * compatibility. Exit code is unchanged: 1 only on errors, never on warnings.
  *
+ * Since 1.2.0 (design of record 2026-08-22, Decision 8 / PR-3) it also runs
+ * a kill-criteria registry pass against procedures/_kill-criteria/:
+ *   (a) every YAML-declared criterion must have a registry entry (error);
+ *   (b) every registry entry with predicate null warns "declared-but-inert";
+ *   (c) enabled:true without policy_id AND thresholds_source is an error
+ *       (anti-tamper — mirrors rag_rule's CHECK, meeting 2026-08-22
+ *       classification-practice #6c);
+ *   (d) a registry entry no YAML declares is an error (orphan);
+ *   (e) --strict fails when the executable count drops below the checked-in
+ *       baseline in procedures/_kill-criteria/_baseline.json (risk-officer
+ *       F7 — never auto-lowers; re-baseline consciously in the same change).
+ *
  * Usage:
  *   bun procedures/_validate.ts
+ *   bun procedures/_validate.ts --strict    (also gate the executable-ratio baseline)
  *   bun procedures/_validate.ts --verbose   (no-op; warnings always print)
  */
 
 import * as yaml from "js-yaml";
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join, resolve, dirname } from "node:path";
+import { join, resolve, dirname, basename } from "node:path";
 import { resolveProcedure } from "../scripts/co-newbiz/proc-resolve.ts";
 
 const ROOT = resolve(import.meta.dirname);
@@ -297,6 +310,169 @@ async function walkAllSteps(): Promise<Issue[]> {
   return issues;
 }
 
+// ── Kill-criteria registry pass (design of record 2026-08-22, Decision 8) ──
+
+const KILL_CRITERIA_DIR = join(ROOT, "_kill-criteria");
+const BASELINE_FILE = join(KILL_CRITERIA_DIR, "_baseline.json");
+
+/** One declared criterion, keyed `${procedure}::${condition}` across passes. */
+interface DeclaredCriterion {
+  procedure: string;
+  condition: string;
+  file: string;
+}
+
+interface RegistryEntry {
+  procedure: string;
+  criterion_id: string;
+  predicate: unknown;
+  enabled: unknown;
+  policy_id: unknown;
+  thresholds_source: unknown;
+}
+
+interface KillCriteriaStats {
+  declaredCount: number;
+  entryCount: number;
+  executable: number;
+}
+
+/**
+ * Cross-checks the procedures/_kill-criteria/ registry against what the
+ * schema.yaml files actually declare. JSON has no CHECK constraints, so this
+ * pass is where the rag_rule-style anti-tamper gate lives for the registry:
+ * enabled:true requires policy_id AND thresholds_source (check c). With
+ * --strict, an executable-count drop below the checked-in baseline is an
+ * error (check e, risk-officer F7) — the baseline never auto-lowers.
+ */
+async function validateKillCriteria(
+  declared: Map<string, DeclaredCriterion>,
+  strict: boolean
+): Promise<{ issues: Issue[]; stats: KillCriteriaStats }> {
+  const issues: Issue[] = [];
+  const entries: { entry: RegistryEntry; file: string }[] = [];
+
+  let files: string[] = [];
+  try {
+    files = (await readdir(KILL_CRITERIA_DIR)).filter(
+      (f) => f.endsWith(".json") && f !== "_baseline.json"
+    );
+  } catch {
+    issues.push({
+      file: KILL_CRITERIA_DIR,
+      message: "kill-criteria registry directory missing — expected procedures/_kill-criteria/ (design Decision 8)",
+      severity: "error",
+    });
+    return { issues, stats: { declaredCount: declared.size, entryCount: 0, executable: 0 } };
+  }
+
+  for (const f of files) {
+    const file = join(KILL_CRITERIA_DIR, f);
+    let raw: unknown;
+    try {
+      raw = JSON.parse(await readFile(file, "utf-8"));
+    } catch (e) {
+      issues.push({ file, message: `JSON parse error: ${(e as Error).message}`, severity: "error" });
+      continue;
+    }
+    const entry = raw as RegistryEntry;
+    if (
+      typeof entry.procedure !== "string" ||
+      typeof entry.criterion_id !== "string" ||
+      entry.predicate === undefined ||
+      entry.enabled === undefined
+    ) {
+      issues.push({
+        file,
+        message: "registry entry missing required fields (procedure, criterion_id, predicate, enabled) — see procedures/_kill-criteria/README.md",
+        severity: "error",
+      });
+      continue;
+    }
+    entries.push({ entry, file });
+  }
+
+  // (a) coverage: every declared criterion must have a registry entry.
+  const registered = new Set(entries.map(({ entry }) => `${entry.procedure}::${entry.criterion_id}`));
+  for (const d of declared.values()) {
+    if (!registered.has(`${d.procedure}::${d.condition}`)) {
+      issues.push({
+        file: d.file,
+        message: `kill criterion '${d.condition}' has no registry entry — expected procedures/_kill-criteria/${d.procedure}__${d.condition}.json (the registry is the single inventory)`,
+        severity: "error",
+      });
+    }
+  }
+
+  const executable = entries.filter(({ entry }) => entry.predicate !== null).length;
+
+  for (const { entry, file } of entries) {
+    const key = `${entry.procedure}::${entry.criterion_id}`;
+
+    // (d) orphan: a registry entry no YAML declares.
+    if (!declared.has(key)) {
+      issues.push({
+        file,
+        message: `orphan registry entry — no schema.yaml declares kill criterion '${entry.criterion_id}' for procedure '${entry.procedure}'`,
+        severity: "error",
+      });
+    }
+
+    // (b) inert: declared but not executable — visible every run, by design.
+    if (entry.predicate === null) {
+      issues.push({
+        file,
+        message: `declared-but-inert: '${entry.criterion_id}' has no executable predicate (design Decision 8 — set thresholds before adding one)`,
+        severity: "warn",
+      });
+    }
+
+    // (c) anti-tamper: enabling requires both governance anchors (meeting
+    // 2026-08-22 classification-practice #6c — same gate as rag_rule).
+    if (entry.enabled === true) {
+      const missing: string[] = [];
+      if (typeof entry.policy_id !== "string" || entry.policy_id.trim() === "") missing.push("policy_id");
+      if (typeof entry.thresholds_source !== "string" || entry.thresholds_source.trim() === "") missing.push("thresholds_source");
+      if (missing.length > 0) {
+        issues.push({
+          file,
+          message: `anti-tamper violation: enabled=true without ${missing.join(" and ")} — enabling a kill criterion requires its governance anchor (mirrors rag_rule CHECK, migration 0012)`,
+          severity: "error",
+        });
+      }
+    }
+  }
+
+  // (e) --strict: executable count must not regress below the baseline.
+  if (strict) {
+    let baseline: number | null = null;
+    try {
+      baseline = (JSON.parse(await readFile(BASELINE_FILE, "utf-8")) as { executable_count: number }).executable_count;
+    } catch {
+      issues.push({
+        file: BASELINE_FILE,
+        message: "--strict requires a readable {\"executable_count\": N} baseline",
+        severity: "error",
+      });
+    }
+    if (baseline !== null) {
+      if (executable < baseline) {
+        issues.push({
+          file: BASELINE_FILE,
+          message: `executable kill criteria regressed: ${executable} < baseline ${baseline}. If the drop is a conscious decision, re-baseline by editing _baseline.json IN THE SAME CHANGE (never auto-lowered) — otherwise restore the predicates`,
+          severity: "error",
+        });
+      } else if (executable > baseline) {
+        console.log(
+          `ℹ️ executable kill criteria rose to ${executable} (baseline ${baseline}) — bump _baseline.json in the same change so regressions stay gated.`
+        );
+      }
+    }
+  }
+
+  return { issues, stats: { declaredCount: declared.size, entryCount: entries.length, executable } };
+}
+
 async function main() {
   const files = await findSchemaFiles(ROOT);
   if (files.length === 0) {
@@ -306,6 +482,7 @@ async function main() {
 
   const allIssues: Issue[] = [];
   const standaloneStepDocs: { label: string; steps: unknown[] }[] = [];
+  const declaredKillCriteria = new Map<string, DeclaredCriterion>();
   for (const file of files) {
     const raw = await readFile(file, "utf-8");
     let doc: unknown;
@@ -317,9 +494,30 @@ async function main() {
     }
     allIssues.push(...validateSchema(file, doc));
 
+    const p = doc as Record<string, unknown>;
+
+    // Collect declared kill criteria for the registry pass. The procedure
+    // namespace is the schema.yaml's parent directory name (identical for
+    // _shared/<name>/ and regions|entities/<code>/<name>/), matching how
+    // proc-resolve merges kill_criteria: they belong to the procedure.
+    if (Array.isArray(p.kill_criteria)) {
+      const procedure = basename(dirname(file));
+      for (const kc of p.kill_criteria as unknown[]) {
+        if (typeof kc !== "object" || kc === null) continue;
+        const condition = (kc as Record<string, unknown>).condition;
+        if (typeof condition !== "string" || condition.trim() === "") {
+          allIssues.push({ file, message: "kill_criteria item without a non-empty 'condition'", severity: "error" });
+          continue;
+        }
+        const key = `${procedure}::${condition}`;
+        if (!declaredKillCriteria.has(key)) {
+          declaredKillCriteria.set(key, { procedure, condition, file });
+        }
+      }
+    }
+
     // Standalone-scope docs (scope: entity/region) that declare their own
     // steps get the same referential-integrity check as merged combos.
-    const p = doc as Record<string, unknown>;
     if ((p.scope === "entity" || p.scope === "region") && Array.isArray(p.steps) && p.steps.length > 0) {
       standaloneStepDocs.push({ label: `${p.procedure_id ?? file} @ standalone`, steps: p.steps });
     }
@@ -332,6 +530,12 @@ async function main() {
 
   allIssues.push(...(await lintSkillsForGateSteps()));
 
+  const { issues: killCriteriaIssues, stats: killCriteriaStats } = await validateKillCriteria(
+    declaredKillCriteria,
+    process.argv.includes("--strict")
+  );
+  allIssues.push(...killCriteriaIssues);
+
   const errors = allIssues.filter((i) => i.severity === "error");
   const warnings = allIssues.filter((i) => i.severity === "warn");
 
@@ -342,6 +546,9 @@ async function main() {
   }
 
   console.log(`\nProcedure validation: ${files.length} procedure(s), ${errors.length} error(s), ${warnings.length} warning(s).`);
+  console.log(
+    `kill-criteria: ${killCriteriaStats.declaredCount} declared / ${killCriteriaStats.executable} executable (registry)`
+  );
   if (errors.length > 0) {
     console.error("❌ Procedure validation failed.");
     process.exit(1);

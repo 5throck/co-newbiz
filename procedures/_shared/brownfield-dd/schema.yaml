@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-dd
 title: "Brown Field Due Diligence"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.2.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -84,14 +84,17 @@ steps:
     description: Contingent liabilities and covenant-breach scenario — checklist ma-10/11.
   - id: 9
     gate: DD
-    agent_key: certification-agent
-    skill_key: permit-pathway-mapping
+    agent_key: legal-counsel
+    skill_key: certification-transferability
     output_type: dd_finding
     description: >
       Certification transferability confirmed LAST per meeting M5's fixed
       evaluation order (checklist ma-12) — a non-transferable certification
       can strip the entire acquisition premium and must not be computed
-      against a valuation that already assumed it.
+      against a valuation that already assumed it. The transferability
+      judgment is legal-counsel's call (design of record 2026-08-22 §5 PR-3,
+      meeting legal-review findings #1/#6); certification-agent provides
+      the requirement/roadmap input.
   - id: 10
     gate: DD
     agent_key: compliance-officer
@@ -127,4 +130,4 @@ legal_basis:
   - "checklists/rbd-technology-checklist.yaml (R&BD sub-type, design v1.0 §10 user decision 2026-08-20)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-20"
+last_reviewed: "2026-08-22"

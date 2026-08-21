@@ -59,7 +59,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `agent-create.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `co-newbiz/newbiz.ts` | co-newbiz | 1.11.0 | active | —| —| L3-only (project-local analysis-engine CLI, design v1.0 §4-8, not part of L0/L1/L2 lineage) | —|
 | `co-newbiz/model.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `model`/`diff` — run-based versioning via db/lib/versioning.ts: createRun input snapshot + overrides + input_hash, diffRuns variable-level bridge; NPV-level decomposition deferred until the valuation engine exists) | —|
-| `co-newbiz/proc-resolve.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `proc:resolve` — merges shared+region+entity procedures) | —|
+| `co-newbiz/proc-resolve.ts` | co-newbiz | 1.1.0 | active | —| —| L3-only (project-local, `proc:resolve` — merges shared+region+entity procedures; v1.1.0 also merges `kill_criteria`, union with shared-first precedence) | —|
 | `co-newbiz/graph-map.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, procedure→agent/skill graph mapping; `--check` gates referential integrity, `--json` emits full mapping) | —|
 | `co-newbiz/backup.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, ADR-0014/0015 — checkpointed SQLite backup + row-count manifest) | —|
 | `co-newbiz/restore.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, ADR-0014 rollback mechanism — restore + manifest verification) | —|
@@ -79,7 +79,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `archive-memory.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `audit.ts` | L0 | 2.13.2 | active | —| —| L0+L1 | —|
+| `audit.ts` | L0 | 2.14.0 | active | —| —| L0+L1 | —|
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|

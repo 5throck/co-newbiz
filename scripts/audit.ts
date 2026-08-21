@@ -1,4 +1,8 @@
-// @version 2.13.2
+// @version 2.14.0
+// v2.14.0: Kill-criteria registry report (design of record 2026-08-22, Decision 8 /
+//   risk-officer F7) — non-fatal "kill-criteria: N declared / M executable
+//   (registry)" line sourced from procedures/_validate.ts output. The gate
+//   itself (coverage, anti-tamper, --strict baseline) lives in _validate.ts.
 // v2.13.1: Homoglyph check (3.7) now skips docs/adr/ and docs/designs/ — these
 //   legitimately use Greek letters as math notation, not homoglyph-attack candidates.
 import { $ } from 'bun';
@@ -496,6 +500,19 @@ if (hasBun) {
             Fail("Agent validation detected issues (run 'bun scripts/validate-agents.ts' to see details)");
         else
             Pass("Agent validation: all agents valid");
+    }
+    // Kill-criteria registry report (design of record 2026-08-22, Decision 8 /
+    // risk-officer F7): informational, deliberately NON-FATAL here — the
+    // enforcement gate (coverage, anti-tamper, --strict executable-baseline)
+    // is procedures/_validate.ts, which pre-commit and CI run directly.
+    if (fs.existsSync(path.join('procedures', '_validate.ts'))) {
+        const out = await $`bun ${path.join('procedures', '_validate.ts')}`.quiet().nothrow();
+        const report = out.text().match(/kill-criteria: (\d+) declared \/ (\d+) executable \(registry\)/);
+        if (report) {
+            Pass(`kill-criteria: ${report[1]} declared / ${report[2]} executable (registry)`);
+        } else {
+            Warn('kill-criteria registry report unavailable — run bun procedures/_validate.ts to inspect');
+        }
     }
     if (fs.existsSync(path.join('scripts', 'readme-lifecycle-audit.ts')) && fs.existsSync('templates')) {
         const out = await $`bun ${path.join('scripts', 'readme-lifecycle-audit.ts')} --json`.quiet().nothrow();

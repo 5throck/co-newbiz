@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-dd",
+  "criterion_id": "certification_transferability_computed_by_inference_not_confirmation",
+  "title": "Certification transferability computed by inference, not confirmation",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Non-negotiable boundary #5; the write-time repository hard block on transferability_basis='inferred' (design overturn 7) is the companion control at a different layer."
+}

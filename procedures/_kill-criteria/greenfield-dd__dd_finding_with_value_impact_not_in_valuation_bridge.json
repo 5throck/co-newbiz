@@ -1,0 +1,11 @@
+{
+  "procedure": "greenfield-dd",
+  "criterion_id": "dd_finding_with_value_impact_not_in_valuation_bridge",
+  "title": "DD finding with value impact not reflected in the valuation bridge",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+}

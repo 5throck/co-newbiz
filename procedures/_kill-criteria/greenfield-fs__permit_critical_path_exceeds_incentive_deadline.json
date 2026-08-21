@@ -1,0 +1,11 @@
+{
+  "procedure": "greenfield-fs",
+  "criterion_id": "permit_critical_path_exceeds_incentive_deadline",
+  "title": "Permit critical path exceeds the incentive deadline",
+  "action": "escalate_to_risk_officer",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+}
