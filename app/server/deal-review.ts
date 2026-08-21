@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Deal-review routes — docs/api-spec.md §6 (Wave 5.7B).
  *
@@ -20,7 +20,7 @@ import { getDb } from "../../db/client.ts";
 import { getProjectIfVisible } from "../../db/repositories/project.repository.ts";
 import { appendAudit } from "../../db/lib/access-control.ts";
 import { ulid } from "../../db/lib/ulid.ts";
-import { badRequest, forbidden, notFound, ok } from "./envelope.ts";
+import { badRequest, forbidden, notFound, ok, provenance } from "./envelope.ts";
 import { requireAuth, type AppEnv, type AuthContext } from "./middleware.ts";
 
 export const dealReviewRoutes = new Hono<AppEnv>();
@@ -54,7 +54,12 @@ dealReviewRoutes.get("/api/projects/:id/dd-findings", (c) => {
 /**
  * POST /api/projects/:id/dd-findings — analyst+; category='rbd' requires
  * rbd_source (validated here first; the engine's CHECK violations still map
- * to 400, never a 500). Audited.
+ * to 400, never a 500). Audited. FR-SYS-03: when the finding traces to an
+ * assumption_key, the response meta links to where that assumption is
+ * recorded — the latest registry row for the key (same as_of DESC, id DESC
+ * recency convention as GET /api/assumptions). A key with no registry row
+ * yet still echoes the key itself; nothing beyond the row's own fields is
+ * fabricated.
  */
 dealReviewRoutes.post("/api/projects/:id/dd-findings", async (c) => {
   const ctx = c.get("auth");
@@ -87,6 +92,7 @@ dealReviewRoutes.post("/api/projects/:id/dd-findings", async (c) => {
       "category='rbd' requires rbd_source (internal_only|accelerator_partnered|external_technology_acquisition).",
     );
   }
+  const assumptionKey = body.assumption_key?.trim() || null;
   const db = getDb();
   const now = new Date().toISOString();
   const id = ulid();
@@ -102,7 +108,7 @@ dealReviewRoutes.post("/api/projects/:id/dd-findings", async (c) => {
         body.category.trim(),
         body.description.trim(),
         typeof body.value_impact === "number" ? body.value_impact : null,
-        body.assumption_key?.trim() || null,
+        assumptionKey,
         body.evidence_ref?.trim() || null,
         body.trl_grade?.trim() || null,
         body.ip_ownership_status?.trim() || null,
@@ -115,8 +121,15 @@ dealReviewRoutes.post("/api/projects/:id/dd-findings", async (c) => {
   } catch (err) {
     return badRequest(c, "dd_finding_rejected", err instanceof Error ? err.message : "DD finding write failed.");
   }
+  let meta: Record<string, unknown> = {};
+  if (assumptionKey) {
+    const assumption = db
+      .query("SELECT run_id, anchor_ref FROM assumption WHERE assumption_key = ? ORDER BY as_of DESC, id DESC LIMIT 1")
+      .get(assumptionKey) as { run_id: string; anchor_ref: string | null } | null;
+    meta = provenance({ assumption_key: assumptionKey, run_id: assumption?.run_id, anchor_ref: assumption?.anchor_ref });
+  }
   appendAudit(db, { actor: ctx.userId, action: "dd_finding_add", target: `${project.id}:${body.category.trim()}`, now });
-  return ok(c, { id }, 201);
+  return ok(c, { id }, 201, meta);
 });
 
 /** GET /api/projects/:id/antitrust — antitrust_finding rows. */

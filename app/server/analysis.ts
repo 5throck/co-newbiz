@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.3.0
 /**
  * Analysis data routes — docs/api-spec.md §4/§7 (Waves 5.7B + engine-1/2).
  *
@@ -31,7 +31,7 @@ import { appendAudit } from "../../db/lib/access-control.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { createRun, diffRuns, type CreateRunResult } from "../../db/lib/versioning.ts";
 import { runSimulationForRun, SimulationInputError } from "../../db/lib/simulation.ts";
-import { badRequest, fail, forbidden, notFound, ok } from "./envelope.ts";
+import { badRequest, fail, forbidden, notFound, ok, provenance } from "./envelope.ts";
 import { requireAuth, type AppEnv, type AuthContext } from "./middleware.ts";
 
 export const analysisRoutes = new Hono<AppEnv>();
@@ -62,7 +62,11 @@ analysisRoutes.get("/api/series", (c) => {
 /**
  * GET /api/series/:id/observations — default: latest revision per period
  * (revision-preserving reads, FR-DATA-05); ?all_revisions=1 returns every
- * revision row; ?period_id= narrows to one period.
+ * revision row; ?period_id= narrows to one period. FR-SYS-03: when every
+ * returned row traces to one source, that source is the response-level
+ * provenance in meta; rows carrying mixed sources keep provenance per row
+ * (each row already carries source_id) — a single meta source would be
+ * fabricated for the list, so it is omitted instead.
  */
 analysisRoutes.get("/api/series/:id/observations", (c) => {
   const seriesId = c.req.param("id");
@@ -80,8 +84,14 @@ analysisRoutes.get("/api/series/:id/observations", (c) => {
       }
        ORDER BY f.period_id DESC, f.revision_no DESC`,
     )
-    .all(seriesId, periodId, periodId);
-  return ok(c, rows, 200, { series_id: seriesId, all_revisions: allRevisions, count: rows.length });
+    .all(seriesId, periodId, periodId) as { source_id: string }[];
+  const sources = new Set(rows.map((r) => r.source_id));
+  return ok(c, rows, 200, {
+    series_id: seriesId,
+    all_revisions: allRevisions,
+    count: rows.length,
+    ...(sources.size === 1 ? provenance({ source: rows[0].source_id }) : {}),
+  });
 });
 
 /** GET /api/data-changes — data_change_log scan, newest detection first. */
