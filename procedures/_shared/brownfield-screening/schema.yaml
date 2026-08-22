@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-screening
 title: "Brown Field Screening"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.2.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -16,7 +16,17 @@ steps:
     agent_key: brownfield-agent
     skill_key: brownfield-feasibility
     output_type: target_longlist
-    description: Identify and longlist acquisition targets against the deal thesis.
+    # origin-gated (design Decision 5e): internal origin exempts ONLY this step —
+    # a carve-out has no external longlist to build. Evaluated by db/lib/applies-when.ts;
+    # an unassessed origin APPLIES the step by default (fail-closed), and a skip is
+    # recorded with the rendered predicate reason, never silent — for internal origin
+    # the skip record carries the Decision 7 needs-judgement note ("not yet judged",
+    # not "not applicable") until PR-9 lands the internal-pathway content.
+    applies_when: { op: "in", var: "project.origin", values: ["external", "hybrid", "joint"] }
+    description: >
+      Identify and longlist acquisition targets against the deal thesis.
+      Internal origin exempts only this step; every other Screening step —
+      including the HHI pre-screen — runs for internal-origin carve-outs.
   - id: 2
     gate: Screening
     agent_key: process-governance-manager
@@ -36,7 +46,18 @@ steps:
     agent_key: antitrust-agent
     skill_key: antitrust-screening
     output_type: preliminary_hhi_screen
-    description: Rough market definition and HHI pre-screen — full six-way cross-check runs at DD, this is an early filter only.
+    # fact-gated (design Decision 5e / reversal #6): the gate is whether the target
+    # CURRENTLY competes externally (an asserted, cross-domain-reviewed fact var) —
+    # never the origin classification label. Unassessed fact var => step APPLIES by
+    # default with an applied-by-default note (fail-closed).
+    applies_when: { op: "in", var: "target.has_external_market_presence", values: [true] }
+    description: >
+      Rough market definition and HHI pre-screen — full six-way cross-check
+      runs at DD, this is an early filter only. Gated on the fact of external
+      market presence, not on origin: a carved-out business unit already
+      competing in the external market can carry MORE antitrust exposure after
+      combining with a new partner (2026-08-22 design of record, Decision 5e /
+      reversal #6 — an internal-origin label must never suppress this screen).
   - id: 4
     gate: Screening
     agent_key: process-governance-manager
@@ -56,7 +77,8 @@ legal_basis:
   - "Meeting M1 (process-2026-08-20-m1-process-skeleton.md) gate deliverable definitions"
   - "checklists/strategic-fit-screening-checklist.yaml (chk-strategic-fit)"
   - "ADR-0051 (workflow gap closure — strategic fit at first screen)"
+  - "2026-08-22 RAG formalization design Decision 5e / reversal #6 (fact-gated HHI pre-screen; origin exempts the longlist step only — applies_when evaluated by db/lib/applies-when.ts)"
   - "Cooper Stage-Gate Gate 1 (Idea Screen) / HM Treasury Green Book Strategic Outline Case — strategic filter precedes heavy analysis (docs/research/venture-governance-best-practice.md Area A)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-22"
+last_reviewed: "2026-08-23"

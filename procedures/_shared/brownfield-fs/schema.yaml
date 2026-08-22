@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-fs
 title: "Brown Field Full Feasibility"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.2.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -15,7 +15,16 @@ steps:
     agent_key: financial-analyst
     skill_key: quality-of-earnings
     output_type: qoe_normalized_ebitda
-    description: Normalized EBITDA via QoE, feeding the valuation bridge.
+    description: >
+      Normalized EBITDA via QoE, feeding the valuation bridge. Scope is
+      mandatory-light for internal-origin carve-outs (2026-08-22 design of
+      record, Decision 5e): full third-party QoE scope drops, but
+      cost-allocation integrity and transfer-pricing review remain in full —
+      carve-out cost allocations and transfer prices are manipulable and
+      survive the carve-out, so this is a scope reduction, never a skip.
+      This step states the scope; the conditional per-origin scoping table
+      lands with PR-5c's applicability engine (no per-origin QoE step
+      variants here).
   - id: 2
     gate: FS
     agent_key: valuation-agent
@@ -67,6 +76,7 @@ legal_basis:
   - "ADR-0045 (investment-vehicle-structuring as a deal-structure axis — four mandatory review axes)"
   - "ADR-0051 (workflow gap closure — four-axis review step added at FS)"
   - "db/migrations/0013_classification_infra.sql — deal_structure_hypothesis table incl. four_axis_review_completed"
+  - "2026-08-22 RAG formalization design Decision 5e (QoE mandatory-light for internal-origin carve-outs — cost-allocation integrity and transfer-pricing review remain)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-22"
+last_reviewed: "2026-08-23"

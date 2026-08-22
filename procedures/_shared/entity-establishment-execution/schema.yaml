@@ -3,10 +3,23 @@ procedure_id: shared-entity-establishment-execution
 title: "Entity Establishment Execution"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: conditional
-applies_when: "origin ∈ {'internal','joint'} (ADR-0047 origin axis) — post-approval execution after Entity IC; routing on the origin classification activates with PR-5, until then this procedure is declared here but not auto-dispatched"
+# origin in {internal, joint} (ADR-0047 origin axis) — post-approval execution
+# after Entity IC. The is_null guard is THE deliberate fail-closed exception
+# direction: everywhere else an unassessed routing var APPLIES the step, but
+# firing entity formation for an UNCLASSIFIED project is wrong in the other
+# direction — with no live classification row the predicate evaluates FALSE
+# (skip), and the companion kill criterion
+# origin_classification_missing_at_entity_ic_exit (action: halt) blocks Entity
+# IC exit until the classification exists, so this skip is never silent.
+# Evaluated by db/lib/applies-when.ts (PR-5a).
+applies_when:
+  op: "all_of"
+  of:
+    - { op: "in", var: "project.origin", values: ["internal", "joint"] }
+    - { op: "none_of", of: [{ op: "is_null", var: "project.origin" }] }
 workflow_type: core
 gate: "Entity IC"
 
@@ -87,7 +100,7 @@ kill_criteria:
   - condition: employment_transfer_without_consent_determination
     action: escalate_to_risk_officer
   - condition: origin_classification_missing_at_entity_ic_exit
-    action: halt   # conditional procedure cannot route without the origin axis (ADR-0047); fill until PR-5 lands
+    action: halt   # conditional procedure cannot route without the origin axis (ADR-0047); with PR-5a routing live, an unclassified project skips the procedure (is_null guard) and halts HERE — never a silent skip
 
 legal_basis:
   - "Group New Business Review Policy §2.3"
@@ -98,4 +111,4 @@ legal_basis:
   - "docs/research/venture-governance-best-practice.md Area B.3/B.4 (formation + JV governance synthesis)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-22"
+last_reviewed: "2026-08-23"

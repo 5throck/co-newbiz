@@ -131,7 +131,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `verify-platform-lifecycle.ts` | L0 | 1.1.2 | active | —| —| L0+L1 | —|
 | `verify-readme-sync.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `verify-scripts.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
-| `verify-skills.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
+| `verify-skills.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `validate-pm-extends.ts` | L0 | 0.3.1 | active | —| —| L0+L1 | —|
 
 ---
@@ -294,8 +294,10 @@ skills still being modified, dependency graph, circular dependencies, `scope` fi
 
 #### `verify-skills.ts`
 **Purpose**: Cross-validates skills referenced in `docs/context.md` against actual
-skill files on disk. Detects missing or orphaned skill references.
-**Usage**: `bun scripts/verify-skills.ts`
+skill files on disk. Detects missing or orphaned skill references. SKILLS.md
+index generation is opt-in (`--write-index`); the default run validates and
+reports only and never writes SKILLS.md, which is hand-maintained.
+**Usage**: `bun scripts/verify-skills.ts [--write-index]`
 
 #### `sync-skill-status.ts`
 **Purpose**: Synchronizes skill status between SKILL.md and registry tables.
