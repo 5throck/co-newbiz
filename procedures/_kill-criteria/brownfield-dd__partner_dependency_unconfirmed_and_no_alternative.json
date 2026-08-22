@@ -4,8 +4,8 @@
   "title": "Partner dependency unconfirmed with no alternative",
   "action": "mark_conditional",
   "predicate": { "op": "all_of", "of": [ { "op": "count", "var": "risk.partner_candidates_active", "cmp": "lte", "value": 1 }, { "op": "in", "var": "risk.partner_dependency_risk", "values": ["high"] } ] },
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "risk-thresholds.md AI-1 - the brownfield counterpart of greenfield-screening's criterion of the same name. Predicate is the D-M-RISK-3 conjunction verbatim ('no alternative' = fewer than two active candidates: status in {contacted, in_negotiation, signed}; dependency = the max-severity aggregation reading high). Same evidence as the graded amber rule risk-dd-partner-sourcing - D-M-RISK-3's 'both, non-competing' boundary: the graded signal fires at pre_fs, this kill path marks the case conditional at the DD exit; the kill action is never weakened by the graded signal and never substitutes for it. action mirrors the greenfield original (mark_conditional). enabled=false until a kill-criteria evaluator exists (anti-tamper gate, registry check c)."
+  "enabled": true,
+  "policy_id": "gd-0022-risk-thresholds",
+  "thresholds_source": "docs/decisions/risk-thresholds.md — D-M-RISK-3 + AI-1; activated by ADR-0057",
+  "notes": "risk-thresholds.md AI-1 - the brownfield counterpart of greenfield-screening's criterion of the same name. Predicate is the D-M-RISK-3 conjunction verbatim ('no alternative' = fewer than two active candidates: status in {contacted, in_negotiation, signed}; dependency = the max-severity aggregation reading high). Same evidence as the graded amber rule risk-dd-partner-sourcing - D-M-RISK-3's 'both, non-competing' boundary: the graded signal fires at pre_fs, this kill path marks the case conditional at the DD exit; the kill action is never weakened by the graded signal and never substitutes for it. action mirrors the greenfield original (mark_conditional). Activated by ADR-0057 together with the db/lib/kill-criteria.ts evaluator: enabled=true with policy_id + thresholds_source satisfies the anti-tamper gate (registry check c), and the evaluator enforces the same gate at runtime."
 }

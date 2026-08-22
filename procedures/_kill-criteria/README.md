@@ -31,9 +31,9 @@ procedure, so the file prefix disambiguates):
 - `predicate` — the executable form, using the same predicate AST type as
   `rag_rule.condition_expr` (`db/lib/predicate.ts`, PR-1). `null` means
   declared-but-inert: the criterion exists in governance prose but cannot
-  be evaluated by machine yet. All entries ship with `null` because
-  `evidence_var` has no seeded rows — predicates are added only when their
-  evidence variables actually exist (do not invent predicates).
+  be evaluated by machine yet. Predicates are added only when their
+  evidence variables actually exist (do not invent predicates); the two
+  risk entries activated by ADR-0057 are the current non-null exceptions.
 - `action` — the action declared in the YAML (`halt` /
   `escalate_to_risk_officer` / `mark_conditional`), carried here for
   traceability; the YAML remains authoritative.
@@ -42,7 +42,8 @@ procedure, so the file prefix disambiguates):
   criterion requires BOTH a governance anchor (`policy_id`) and a
   thresholds source. JSON has no CHECK constraints, so
   `procedures/_validate.ts` enforces it: an entry with `enabled: true` but
-  a missing `policy_id` or `thresholds_source` is a validation **error**.
+  a missing `policy_id` or `thresholds_source` is a validation **error** —
+  and the runtime loader (below) rejects the same shape at evaluation time.
 
 ## What `_validate.ts` checks
 
@@ -61,9 +62,33 @@ procedure, so the file prefix disambiguates):
   baseline never auto-lowers; re-baseline consciously by editing
   `_baseline.json` in the same change that made the count drop.
 
+## Runtime evaluation + activation convention (ADR-0057)
+
+`db/lib/kill-criteria.ts` (`evaluateKillCriteria`) is the runtime consumer:
+per run it loads the procedure's entries, validates every one (the same
+anti-tamper gate as check (c) above, plus action-vocabulary and
+predicate-parse guards — violations **throw**, never silently skip), and
+evaluates the **enabled, predicate-carrying** entries against the run's
+`project_variable_snapshot` through the ADR-0046 predicate engine — the
+same engine and var coercion `rule-assessment.ts` uses, with
+fill-once composition (supported order: assess first, then evaluate).
+TRUE ⇒ `triggered` carrying the action; UNASSESSED ⇒ the criterion_id is
+listed in `unassessed` and the caller decides — never a silent pass, never
+a defaulted halt; FALSE ⇒ determinately not triggered. Read-only: nothing
+is persisted (gate-flow recording of a triggered criterion is future work
+and needs its own decision record).
+
+**Activation convention**: an entry flips to `enabled: true` only when
+(a) its predicate's evidence vars exist (the "do not invent predicates"
+rule above) and (b) an ADR records why the criterion is now
+machine-evaluable. ADR-0057 set the precedent, activating the two
+ADR-0055 entries with `policy_id: gd-0022-risk-thresholds` — registry
+state: 23 declared / 2 executable / 2 enabled.
+
 ## Related
 
 - `procedures/_validate.ts` — enforcement
+- `db/lib/kill-criteria.ts` — the runtime evaluator (ADR-0057)
 - `scripts/co-newbiz/proc-resolve.ts` — merged `kill_criteria` in resolved
   procedures (union semantics: shared list first, layer additions appended,
   deduped by condition — a layer can add criteria, never drop or weaken a

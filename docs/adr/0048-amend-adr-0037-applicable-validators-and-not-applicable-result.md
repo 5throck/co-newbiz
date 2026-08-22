@@ -1,10 +1,10 @@
 # ADR-0048: Amend ADR-0037 — no-waiver scope becomes "applicable validators", with an auditable `not_applicable` result
 
-**Status**: Proposed
-**Date**: 2026-08-22
+**Status**: Accepted
+**Date**: 2026-08-22 (accepted 2026-08-23)
 **Deciders**: compliance-officer, process-governance-manager, risk-officer
 
-> **Supersedes [ADR-0037](0037-gate-blocking-rule-for-missing-mandatory-deliverables-or-che.md).** Proposed, not Accepted — takes effect when PR-4 (`compliance_check.result` enum extension) and PR-5c (completeness check) land. Until then ADR-0037 stands unamended and all six validators are required unconditionally.
+> **Supersedes [ADR-0037](0037-gate-blocking-rule-for-missing-mandatory-deliverables-or-che.md).** Accepted 2026-08-23 — the proposal's effect condition is met: PR-4 (`compliance_check.result` enum extension) and PR-5c (completeness check, `db/repositories/compliance.repository.ts` three-number record) landed. ADR-0037 stands amended.
 
 ## Context
 
