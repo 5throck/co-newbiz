@@ -1,10 +1,10 @@
 # ADR-0046: Typed JSON predicate AST and an evidence-variable registry with run-scoped snapshots
 
-**Status**: Proposed
-**Date**: 2026-08-22
+**Status**: Accepted
+**Date**: 2026-08-22 (accepted 2026-08-23)
 **Deciders**: process-governance-manager, platform-lead, risk-officer, compliance-officer, quant-methodologist
 
-> **Proposed, not Accepted.** This decision takes effect when PR-1 (predicate engine) and PR-2 (migration: `rag_rule` DROP+CREATE, `evidence_var`, `rag_rule_variable`, `project_variable_snapshot`) land. Until then `rag_rule` remains 0 rows / 0 readers and nothing in the running system depends on this format.
+> **Accepted 2026-08-23** — the proposal's effect condition is met: PR-1 (predicate engine, `db/lib/predicate.ts`) and PR-2 (migration: `rag_rule` DROP+CREATE, `evidence_var`, `rag_rule_variable`, `project_variable_snapshot`) landed. The engine now also carries the kill-criteria evaluation path (ADR-0057).
 
 ## Context
 

@@ -1,8 +1,10 @@
 # ADR-0051: Workflow gap closure — fifteen-step chain concretization
 
-**Status**: Proposed
-**Date**: 2026-08-22
+**Status**: Accepted
+**Date**: 2026-08-22 (accepted 2026-08-23)
 **Deciders**: process-governance-manager, compliance-officer, legal-counsel, valuation-agent, hr-integration-agent
+
+> **Accepted 2026-08-23** — the implementation landed as PR-10 (#77, commit 1e05e49): six checklists, seven procedure files, three skills, the six-validator no-waiver core unchanged at steps 6-11.
 
 ## Context
 

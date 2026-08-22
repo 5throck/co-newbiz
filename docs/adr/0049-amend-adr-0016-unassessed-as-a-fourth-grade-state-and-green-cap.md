@@ -1,10 +1,10 @@
 # ADR-0049: Amend ADR-0016 — UNASSESSED as a fourth grade state, and a Green cap on uncalibrated rules
 
-**Status**: Proposed
-**Date**: 2026-08-22
+**Status**: Accepted
+**Date**: 2026-08-22 (accepted 2026-08-23)
 **Deciders**: compliance-officer, process-governance-manager, risk-officer, quant-methodologist, platform-lead
 
-> **Supersedes [ADR-0016](0016-rag-scoring-rule-based-not-weighted-average-with-a-data-conf.md).** Proposed, not Accepted — takes effect when PR-4 (grade-state handling, `rankGroupAgenda` and UI null handling) and PR-9 (rule activation under the Green cap) land. Until then ADR-0016's strict trichotomy stands.
+> **Supersedes [ADR-0016](0016-rag-scoring-rule-based-not-weighted-average-with-a-data-conf.md).** Accepted 2026-08-23 — the proposal's effect condition is met: PR-4 (grade-state handling, `rankGroupAgenda` and UI null handling) and PR-9 (rule activation under the Green cap, migration 0022 = PR #89) landed. ADR-0016's strict trichotomy is amended; the UNASSESSED honesty rule is extended to kill criteria by ADR-0057.
 
 ## Context
 

@@ -4,8 +4,8 @@
   "title": "Covenant breach under the downside scenario, with change-of-control acceleration",
   "action": "halt",
   "predicate": { "op": "count", "var": "risk.covenants_breached", "cmp": "gte", "value": 1 },
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "risk-thresholds.md AI-1 (risk-officer dissent on D-M-RISK-2, carried by chair ruling). Deliberately over-inclusive in the halt direction: risk.covenants_breached counts ALL breached covenant tests of the latest simulation (the mandatory ma-11 +200bp rate-shock downside run), because covenant type / CoC-acceleration membership is indistinguishable in current evidence (debt_instrument.covenant_json is free TEXT, no type column - D-M-RISK-2 defers type semantics for cause). A halt routes the case to the human gate, where the CoC question is asked directly; narrowing the predicate requires covenant-type schema (first-recalibration agenda, AI-3). enabled=false until a kill-criteria evaluator exists - the anti-tamper gate (registry check c) demands policy_id + thresholds_source before any flip to enabled=true."
+  "enabled": true,
+  "policy_id": "gd-0022-risk-thresholds",
+  "thresholds_source": "docs/decisions/risk-thresholds.md — D-M-RISK-2 + AI-1 (chair ruling carrying the risk-officer dissent); activated by ADR-0057",
+  "notes": "risk-thresholds.md AI-1 (risk-officer dissent on D-M-RISK-2, carried by chair ruling). Deliberately over-inclusive in the halt direction: risk.covenants_breached counts ALL breached covenant tests of the latest simulation (the mandatory ma-11 +200bp rate-shock downside run), because covenant type / CoC-acceleration membership is indistinguishable in current evidence (debt_instrument.covenant_json is free TEXT, no type column - D-M-RISK-2 defers type semantics for cause). A halt routes the case to the human gate, where the CoC question is asked directly; narrowing the predicate requires covenant-type schema (first-recalibration agenda, AI-3). Activated by ADR-0057 together with the db/lib/kill-criteria.ts evaluator: enabled=true with policy_id + thresholds_source satisfies the anti-tamper gate (registry check c), and the evaluator enforces the same gate at runtime."
 }
