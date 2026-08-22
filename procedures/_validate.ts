@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.3.0
+// @version 1.4.0
 /**
  * Procedure Schema Validator — co-newbiz
  *
@@ -38,6 +38,24 @@
  * statically from db/migrations/0014_routing_vars.sql (no database
  * dependency in the validator).
  *
+ * Since 1.4.0 (design of record 2026-08-22, PR-8 — skill graph hardening):
+ *   (a) output_type closed vocabulary — every non-placeholder steps[].output_type
+ *       in every schema.yaml must be a key of procedures/_output-types.yaml
+ *       (error); a registry entry no step anywhere produces is dead vocabulary
+ *       (warn). Placeholder values are skipped here — validateSchema already
+ *       warns about those (duplicate-signal principle).
+ *   (b) ADR-0053 human-role registry — agent_key values listed in
+ *       procedures/_human-roles.yaml are exempt from the missing-agents-file
+ *       warn in checkStepReferences/walkAllSteps (the missing file is the
+ *       point: the key names a person-role). Unreadable registry ⇒ error +
+ *       empty set (mirrors loadSeedSet — the check degrades loudly).
+ *   (c) ADR-0053 authority marker — a step's decision_authority, when
+ *       present, must be the literal string "human" (error otherwise — one
+ *       marker, one spelling). Which steps may lawfully carry the marker
+ *       (human-role keys and recorder-pattern agents, per ADR-0053) is
+ *       checked by scripts/co-newbiz/graph-map.ts --check, which sees the
+ *       registry-consistency direction that per-file validation cannot.
+ *
  * Usage:
  *   bun procedures/_validate.ts
  *   bun procedures/_validate.ts --strict    (also gate the executable-ratio baseline)
@@ -56,6 +74,8 @@ const ROOT = resolve(import.meta.dirname);
 const PROJECT_ROOT = resolve(ROOT, "..");
 const SKILLS_DIR = join(PROJECT_ROOT, "skills");
 const ROUTING_VARS_MIGRATION = join(PROJECT_ROOT, "db", "migrations", "0014_routing_vars.sql");
+const HUMAN_ROLES_FILE = join(ROOT, "_human-roles.yaml");
+const OUTPUT_TYPES_FILE = join(ROOT, "_output-types.yaml");
 
 interface Issue {
   file: string;
@@ -78,7 +98,44 @@ async function findSchemaFiles(dir: string): Promise<string[]> {
   return out;
 }
 
-function validateSchema(file: string, doc: unknown): Issue[] {
+/**
+ * All step objects a doc declares, wherever they live: top-level steps[],
+ * overrides.add_steps[].step, overrides.replace_steps[].step (both use the
+ * singular `step` key — same shapes proc-resolve.ts merges). PR-8: the
+ * closed-vocabulary/authority-marker/usage passes must see layer files'
+ * nested steps too, not just top-level ones.
+ */
+function declaredSteps(p: Record<string, unknown>): { label: string; step: Record<string, unknown> }[] {
+  const out: { label: string; step: Record<string, unknown> }[] = [];
+  if (Array.isArray(p.steps)) {
+    for (const [i, step] of (p.steps as unknown[]).entries()) {
+      if (typeof step === "object" && step !== null) {
+        out.push({ label: `steps[${i}]`, step: step as Record<string, unknown> });
+      }
+    }
+  }
+  const overrides = p.overrides;
+  if (typeof overrides === "object" && overrides !== null) {
+    const o = overrides as Record<string, unknown>;
+    const nested: [string, unknown[]][] = [
+      ["add_steps", o.add_steps],
+      ["replace_steps", o.replace_steps],
+    ];
+    for (const [kind, list] of nested) {
+      if (!Array.isArray(list)) continue;
+      for (const [j, entry] of list.entries()) {
+        if (typeof entry !== "object" || entry === null) continue;
+        const s = (entry as Record<string, unknown>).step;
+        if (typeof s === "object" && s !== null) {
+          out.push({ label: `overrides.${kind}[${j}].step`, step: s as Record<string, unknown> });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function validateSchema(file: string, doc: unknown, outputTypes: Set<string>): Issue[] {
   const issues: Issue[] = [];
   if (typeof doc !== "object" || doc === null) {
     return [{ file, message: "Document is not a YAML mapping", severity: "error" }];
@@ -122,15 +179,37 @@ function validateSchema(file: string, doc: unknown): Issue[] {
     issues.push({ file, message: "'legal_basis' is empty — at least one real reference is required", severity: "error" });
   }
 
-  if (Array.isArray(p.steps)) {
-    for (const [i, step] of (p.steps as unknown[]).entries()) {
-      if (typeof step !== "object" || step === null) continue;
-      const s = step as Record<string, unknown>;
-      for (const f of ["agent_key", "skill_key", "output_type"]) {
-        if (typeof s[f] !== "string" || (s[f] as string).trim() === "" || s[f] === "TODO") {
-          issues.push({ file, message: `steps[${i}].${f} is missing or a placeholder`, severity: "warn" });
-        }
+  // PR-8: declaredSteps() also descends into overrides.add_steps[].step and
+  // overrides.replace_steps[].step — layer files' steps get the same
+  // placeholder / output_type / decision_authority checks as top-level ones.
+  for (const { label, step: s } of declaredSteps(p)) {
+    for (const f of ["agent_key", "skill_key", "output_type"]) {
+      if (typeof s[f] !== "string" || (s[f] as string).trim() === "" || s[f] === "TODO") {
+        issues.push({ file, message: `${label}.${f} is missing or a placeholder`, severity: "warn" });
       }
+    }
+    // PR-8 closed vocabulary: a non-placeholder output_type must be a key of
+    // procedures/_output-types.yaml — an unregistered deliverable type is a
+    // contract nobody recognizes (typo, drift, or an undeclared new
+    // deliverable). Placeholders are skipped here; the warn above already
+    // covers them (duplicate-signal principle).
+    const ot = s.output_type;
+    if (typeof ot === "string" && ot.trim() !== "" && ot !== "TODO" && !outputTypes.has(ot)) {
+      issues.push({
+        file,
+        message: `${label}.output_type '${ot}' is not registered in procedures/_output-types.yaml — add the registry entry in the same change`,
+        severity: "error",
+      });
+    }
+    // ADR-0053: the authority marker has exactly one legal value. Which
+    // steps may lawfully carry it is graph-map's registry-consistency
+    // check, not this per-file one.
+    if (s.decision_authority !== undefined && s.decision_authority !== "human") {
+      issues.push({
+        file,
+        message: `${label}.decision_authority must be the literal 'human' (got ${JSON.stringify(s.decision_authority)}) — see ADR-0053`,
+        severity: "error",
+      });
     }
   }
 
@@ -250,8 +329,12 @@ function combosFor(name: string, regions: string[], entities: string[]): LayerCo
  * values ("TODO", empty, non-string) are skipped here — validateSchema
  * already warns about those on the raw doc, so flagging them again as
  * "file does not exist" would be a duplicate signal.
+ *
+ * ADR-0053: agent_key values in the human-role registry are exempt from the
+ * missing-agents-file warn — the key names a person-role, and no
+ * agents/<key>.md may exist for it.
  */
-function checkStepReferences(label: string, steps: unknown[]): Issue[] {
+function checkStepReferences(label: string, steps: unknown[], humanRoles: Set<string>): Issue[] {
   const issues: Issue[] = [];
   for (const step of steps) {
     if (typeof step !== "object" || step === null) continue;
@@ -261,6 +344,7 @@ function checkStepReferences(label: string, steps: unknown[]): Issue[] {
       typeof agentKey === "string" &&
       agentKey.trim() !== "" &&
       agentKey !== "TODO" &&
+      !humanRoles.has(agentKey) &&
       !existsSync(join(PROJECT_ROOT, "agents", `${agentKey}.md`))
     ) {
       issues.push({
@@ -296,7 +380,7 @@ function checkStepReferences(label: string, steps: unknown[]): Issue[] {
  * checks every merged step against the real agents/ and skills/ trees.
  * A resolve failure is a warn, never a crash.
  */
-async function walkAllSteps(): Promise<Issue[]> {
+async function walkAllSteps(humanRoles: Set<string>): Promise<Issue[]> {
   const issues: Issue[] = [];
   const sharedProcedures = await discoverSharedProcedures();
   const regions = await discoverLayerCodes("regions");
@@ -315,7 +399,7 @@ async function walkAllSteps(): Promise<Issue[]> {
         });
         continue;
       }
-      issues.push(...checkStepReferences(`${name} @ ${combo.label}`, steps));
+      issues.push(...checkStepReferences(`${name} @ ${combo.label}`, steps, humanRoles));
     }
   }
   return issues;
@@ -389,6 +473,55 @@ async function loadSeedSet(): Promise<{ seeded: Set<string>; error: Issue | null
       error: {
         file: ROUTING_VARS_MIGRATION,
         message: `cannot read the evidence_var seed migration — applies_when var_key checks skipped blind: ${(e as Error).message}`,
+        severity: "error",
+      },
+    };
+  }
+}
+
+// ── Human-role registry + output_type vocabulary (design of record 2026-08-22, PR-8 / ADR-0053) ──
+
+/**
+ * Load the human-role registry once per run. Unreadable ⇒ error + empty set,
+ * mirroring loadSeedSet: with an empty set no key earns the exemption, so the
+ * missing-agent warn fires for entity-ic-reviewer — the check degrades
+ * loudly, never silently.
+ */
+async function loadHumanRoles(): Promise<{ roles: Set<string>; error: Issue | null }> {
+  try {
+    const doc = yaml.load(await readFile(HUMAN_ROLES_FILE, "utf-8"), { schema: yaml.JSON_SCHEMA }) as
+      | { human_roles?: Record<string, unknown> }
+      | null;
+    return { roles: new Set(Object.keys(doc?.human_roles ?? {})), error: null };
+  } catch (e) {
+    return {
+      roles: new Set<string>(),
+      error: {
+        file: HUMAN_ROLES_FILE,
+        message: `cannot read the human-role registry — the agent_key exemption check ran blind: ${(e as Error).message}`,
+        severity: "error",
+      },
+    };
+  }
+}
+
+/**
+ * Load the output_type vocabulary once per run. Unreadable ⇒ error + empty
+ * set, in which case every non-placeholder output_type errors — fail-closed:
+ * a vocabulary gate that silently passes on a broken registry is no gate.
+ */
+async function loadOutputTypes(): Promise<{ types: Set<string>; error: Issue | null }> {
+  try {
+    const doc = yaml.load(await readFile(OUTPUT_TYPES_FILE, "utf-8"), { schema: yaml.JSON_SCHEMA }) as
+      | { output_types?: Record<string, unknown> }
+      | null;
+    return { types: new Set(Object.keys(doc?.output_types ?? {})), error: null };
+  } catch (e) {
+    return {
+      types: new Set<string>(),
+      error: {
+        file: OUTPUT_TYPES_FILE,
+        message: `cannot read the output_type registry — every non-placeholder output_type below will be flagged until it is fixed: ${(e as Error).message}`,
         severity: "error",
       },
     };
@@ -574,6 +707,14 @@ async function main() {
   const { seeded, error: seedError } = await loadSeedSet();
   if (seedError) allIssues.push(seedError);
 
+  // PR-8 / ADR-0053: load the human-role registry and the output_type
+  // vocabulary once — threaded into every pass below.
+  const { roles: humanRoles, error: humanRolesError } = await loadHumanRoles();
+  if (humanRolesError) allIssues.push(humanRolesError);
+  const { types: outputTypes, error: outputTypesError } = await loadOutputTypes();
+  if (outputTypesError) allIssues.push(outputTypesError);
+  const usedOutputTypes = new Set<string>();
+
   for (const file of files) {
     const raw = await readFile(file, "utf-8");
     let doc: unknown;
@@ -583,7 +724,7 @@ async function main() {
       allIssues.push({ file, message: `YAML parse error: ${(e as Error).message}`, severity: "error" });
       continue;
     }
-    allIssues.push(...validateSchema(file, doc));
+    allIssues.push(...validateSchema(file, doc, outputTypes));
 
     const p = doc as Record<string, unknown>;
 
@@ -593,15 +734,14 @@ async function main() {
     if (p.applies_when !== undefined) {
       allIssues.push(...checkAppliesWhen(file, "procedure-level", p.applies_when, seeded));
     }
-    if (Array.isArray(p.steps)) {
-      for (const [i, step] of (p.steps as unknown[]).entries()) {
-        if (typeof step !== "object" || step === null) continue;
-        const s = step as Record<string, unknown>;
-        if (s.applies_when !== undefined) {
-          const where = `steps[${i}]${s.id !== undefined ? ` (id ${String(s.id)})` : ""}`;
-          allIssues.push(...checkAppliesWhen(file, where, s.applies_when, seeded));
-        }
+    for (const { label, step: s } of declaredSteps(p)) {
+      if (s.applies_when !== undefined) {
+        const where = `${label}${s.id !== undefined ? ` (id ${String(s.id)})` : ""}`;
+        allIssues.push(...checkAppliesWhen(file, where, s.applies_when, seeded));
       }
+      // Track real (non-placeholder) output_type usage for the dead-vocabulary warn.
+      const ot = s.output_type;
+      if (typeof ot === "string" && ot.trim() !== "" && ot !== "TODO") usedOutputTypes.add(ot);
     }
 
     // Collect declared kill criteria for the registry pass. The procedure
@@ -631,9 +771,21 @@ async function main() {
     }
   }
 
-  allIssues.push(...(await walkAllSteps()));
+  // PR-8 dead-vocabulary pass: a registry entry no schema.yaml produces is
+  // visible every run — wire it up or remove it consciously.
+  for (const key of outputTypes) {
+    if (!usedOutputTypes.has(key)) {
+      allIssues.push({
+        file: OUTPUT_TYPES_FILE,
+        message: `unused output_type registry entry '${key}' — no step in any schema.yaml produces it (dead vocabulary; wire it up or remove it in a conscious change)`,
+        severity: "warn",
+      });
+    }
+  }
+
+  allIssues.push(...(await walkAllSteps(humanRoles)));
   for (const d of standaloneStepDocs) {
-    allIssues.push(...checkStepReferences(d.label, d.steps));
+    allIssues.push(...checkStepReferences(d.label, d.steps, humanRoles));
   }
 
   allIssues.push(...(await lintSkillsForGateSteps()));
@@ -657,6 +809,7 @@ async function main() {
   console.log(
     `kill-criteria: ${killCriteriaStats.declaredCount} declared / ${killCriteriaStats.executable} executable (registry)`
   );
+  console.log(`output_types: ${usedOutputTypes.size} used / ${outputTypes.size} registered (vocabulary)`);
   if (errors.length > 0) {
     console.error("❌ Procedure validation failed.");
     process.exit(1);

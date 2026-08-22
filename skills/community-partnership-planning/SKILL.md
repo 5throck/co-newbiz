@@ -10,8 +10,8 @@ description: >
 
   Use when: "community partnership", "local workforce development",
   "community relations", "social license to operate".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: hr-integration-agent
 prerequisites: none
@@ -22,6 +22,9 @@ metadata:
     - local workforce development
     - community relations
     - social license to operate
+
+  procedure_keys:
+    - greenfield-dd
 ---
 
 ## Context

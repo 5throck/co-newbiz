@@ -10,8 +10,8 @@ description: >
 
   Use when: "portfolio overlap", "cannibalization", "portfolio fit",
   "group agenda ranking", "rank against other group companies".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: group-review-agent
 prerequisites: none
@@ -23,6 +23,9 @@ metadata:
     - portfolio fit
     - group agenda ranking
     - rank against other group companies
+
+  procedure_keys:
+    - group-investment-review
 ---
 
 ## Context

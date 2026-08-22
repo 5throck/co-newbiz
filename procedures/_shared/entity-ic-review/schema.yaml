@@ -3,7 +3,7 @@ procedure_id: shared-entity-ic-review
 title: "Entity Investment Committee Review"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.2.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -50,7 +50,8 @@ steps:
       weakens the bid and belongs to no reviewer's discretion.
   - id: 5
     gate: "Entity IC"
-    agent_key: entity-ic-reviewer   # human role, not an AI agent — see docs/manuals/business-manual.md §1
+    agent_key: entity-ic-reviewer   # human role — procedures/_human-roles.yaml registry (ADR-0053)
+    decision_authority: human
     skill_key: stage-gate-governance
     output_type: entity_ic_decision
     description: >
@@ -80,4 +81,4 @@ legal_basis:
   - "ADR-0051 (workflow gap closure — certainty of funds evidenced before final IC)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-22"
+last_reviewed: "2026-08-23"

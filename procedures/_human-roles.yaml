@@ -1,0 +1,29 @@
+# procedures/_human-roles.yaml — the closed registry of agent_key values that
+# name HUMAN ROLES, not AI agents (ADR-0053, design boundary #2: gate approval
+# and the investment decision belong to humans).
+#
+# A step whose agent_key appears here is EXEMPT from the agents/<key>.md
+# existence checks in scripts/co-newbiz/graph-map.ts (--check) and
+# procedures/_validate.ts (walkAllSteps warn pass) — the missing file is the
+# POINT: the key names a person-role, and no AI agent definition may exist for
+# it. The registry is the anti-gaming surface: a step cannot dodge the
+# missing-agent-file check by marking itself decision_authority: human with an
+# arbitrary key — only keys listed here earn the skip.
+#
+# Consistency rule (graph-map --check, error): a registry key used on a step
+# WITHOUT `decision_authority: human` on that same step. A human role appearing
+# as an unmarked executor is a modeling defect.
+#
+# Adding a human role = a registry entry in the same change (mirrors the
+# kill-criteria baseline discipline: never extended by accident).
+#
+# Read statically by graph-map.ts and _validate.ts — no database dependency.
+
+human_roles:
+  entity-ic-reviewer:
+    description: >-
+      Entity Investment Committee reviewer — confirms or corrects the
+      AI-proposed RAG grade (with a reason if corrected) and records the gate
+      decision: approved | rejected | conditional |
+      withdrawn_pending_resubmission.
+    reference: docs/manuals/business-manual.md §1

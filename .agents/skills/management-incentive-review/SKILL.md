@@ -12,8 +12,8 @@ description: >
   Use when: "executive compensation review", "golden parachute",
   "change of control triggers", "key-person retention", "non-compete
   enforceability".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: incentive-agent
 prerequisites: none
@@ -25,6 +25,9 @@ metadata:
     - change of control triggers
     - key-person retention
     - non-compete enforceability
+
+  procedure_keys:
+    - brownfield-dd
 ---
 
 ## Context

@@ -9,8 +9,8 @@ description: >
 
   Use when: "talent pipeline", "labor market assessment", "hiring ramp-up
   plan", "workforce availability".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: hr-integration-agent
 prerequisites: none
@@ -21,6 +21,9 @@ metadata:
     - labor market assessment
     - hiring ramp-up plan
     - workforce availability
+
+  procedure_keys:
+    - greenfield-dd
 ---
 
 ## Context

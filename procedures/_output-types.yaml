@@ -1,0 +1,58 @@
+# procedures/_output-types.yaml — the closed output_type vocabulary (PR-8,
+# design of record 2026-08-22-rag-formalization-and-case-classification-design.md
+# plan row PR-8: "output_type registry").
+#
+# Every `steps[].output_type` in every procedures/**/schema.yaml (shared,
+# region/entity layer overrides, and standalone docs alike) must be a key of
+# `output_types` below — enforced as an ERROR by procedures/_validate.ts.
+# An unregistered output_type is a deliverable contract nobody recognizes: the
+# step claims to produce an artifact type the system has never heard of (typo,
+# drift, or an undeclared new deliverable). A registry entry that no step uses
+# anywhere is a WARN — dead vocabulary, visible every run, so it can be either
+# wired up or consciously removed.
+#
+# Adding a new output_type = a registry entry in the same change. Descriptions
+# are one line each — the registry is a vocabulary, not documentation; the
+# producing procedure's step description owns the detail.
+#
+# Read statically by procedures/_validate.ts — no database dependency.
+
+output_types:
+  capex_schedule_with_permit_critical_path: "GF FS — capex schedule with the permit critical path folded into the timing"
+  certification_transferability_check: "Six-validator result — CoC certification transferability confirmed against the certifying body's own rules (inference disallowed)"
+  dd_finding: "Brown Field DD — one finding row with value_impact, linked to an assumption_key (never prose-only)"
+  dd_valuation_bridge: "Audit of the assumption_key / value_impact connections across all DD workstreams"
+  deal_structure_hypothesis: "BF — four-axis structure hypothesis (asset/stock, stake, instrument mix, vehicle) with rationale"
+  deal_structure_review: "Review of the four-axis hypothesis on the tax / liability-isolation / financing-leverage / exit axes"
+  entity_ic_decision: "Entity IC — approved | rejected | conditional | withdrawn_pending_resubmission (human authority, ADR-0053)"
+  entity_ic_precondition_check: "Entity IC — precondition evidence verified before the decision step"
+  financing_readiness_check: "Certainty-of-funds evidence pack — commitment papers, sources-and-uses, covenant headroom, funds-flow, FX plan"
+  formation_readiness_check: "Internal-origin — entity formation readiness (legal entity, IP assignment, TUPE-shaped people transfer)"
+  full_valuation: "FS — the completed valuation over the confirmed input set"
+  gate_pass_record: "Stage-gate pass/fail record incl. the applicable Kill Criteria results"
+  group_agenda_ranking: "Group IC — IRR-over-hurdle spread + RAG grade + capital requested, normalized to the cycle budget"
+  group_ic_decision: "Group IC — approved | rejected | conditional | withdrawn_pending_resubmission (human authority, ADR-0053)"
+  growth_projection: "Growth projection anchored on historical distribution and peer benchmark (top-decile warning rule)"
+  ic_memo: "IC memo per templates/deliverables/ic-memo-template.md — RAG table, DD findings, special topics, sign-off table"
+  incentive_npv_site_comparison: "GF — site comparison with incentive NPV on one table"
+  infra_lead_time_cost_estimate: "GF — infrastructure lead-time and connection-cost estimate"
+  internal_prescreen_record: "GF-internal — pre-feasibility self-check before the full procedure entry"
+  kill_criteria_check: "Explicit pass/fail against every Kill Criterion applicable at the gate"
+  market_sizing: "TAM / growth estimate — proxy chain where no direct market data exists"
+  people_transfer_record: "Internal-origin — employment / IP transfer record for the entity formation"
+  portfolio_overlap_finding: "Group IC — overlap finding against the existing portfolio"
+  pre_feasibility_self_check: "Pre-FS — the gate's self-check against its own checklist"
+  preliminary_hhi_screen: "Screening — rough HHI antitrust pre-filter (the full six-way cross-check runs at DD)"
+  qoe_normalized_ebitda: "QoE — normalized EBITDA bridge for Brown Field DD"
+  rag_assessment_proposed: "Six-dimension AI-PROPOSED RAG grade — a proposal, never a decision"
+  related_party_transaction_finding: "Intra-group Fair Trade Act Art. 47 screen finding"
+  site_candidate_scored: "GF — one scored site candidate against the mandatory infrastructure minimums"
+  site_shortlist_prefiltered: "GF — prefiltered site shortlist surviving the exclusion filters"
+  six_validator_completeness_check: "The 3-number record — 6 declared / N applicable / M completed (ADR-0048)"
+  six_way_cross_check_started: "BF FS — record that the six-validator cross-check has started"
+  statutory_filing_record: "Entity establishment — statutory filing record"
+  strategic_fit_screening_result: "Entity-level knock-out + scorecard strategic-fit screen (chk-strategic-fit)"
+  target_longlist: "BF Screening — the target longlist"
+  valuation_model: "The valuation model artifact itself (inputs, structure, outputs)"
+  wacc_hurdle_confirmed: "kind=user WACC / hurdle-IRR confirmation record (checklist bf-02)"
+  works_council_consultation_requirement: "Region layer — labor/works-council consultation requirement finding"

@@ -3,7 +3,7 @@ procedure_id: shared-group-investment-review
 title: "Group Investment Committee Review"
 scope: shared
 level: group
-version: "1.1.0"
+version: "1.2.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -43,6 +43,7 @@ steps:
   - id: 5
     gate: "Group IC"
     agent_key: process-governance-manager
+    decision_authority: human   # recorder pattern (ADR-0053): PGM records the committee's decision — the authority is the human Group IC, not the agent
     skill_key: stage-gate-governance
     output_type: group_ic_decision
     description: >
@@ -63,4 +64,4 @@ legal_basis:
   - "Meeting M2 (m2-entity-group-boundary.md)"
 
 owner_agent: group-review-agent
-last_reviewed: "2026-08-20"
+last_reviewed: "2026-08-23"

@@ -10,8 +10,8 @@ description: >
 
   Use when: "site infrastructure", "wastewater capacity", "power supply
   capacity", "logistics access assessment", "site selection".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: greenfield-agent
 prerequisites: none
@@ -23,6 +23,11 @@ metadata:
     - power supply capacity
     - logistics access assessment
     - site selection
+
+  procedure_keys:
+    - greenfield-fs
+    - greenfield-pre-fs
+    - greenfield-screening
 ---
 
 ## Context

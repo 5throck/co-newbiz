@@ -10,8 +10,8 @@ description: >
 
   Use when: "DD to valuation bridge", "value_impact", "does this finding
   move the valuation", "narrative-only finding check".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: valuation-agent
 prerequisites:
@@ -24,6 +24,10 @@ metadata:
     - value_impact
     - does this finding move the valuation
     - narrative-only finding check
+
+  procedure_keys:
+    - entity-ic-review
+    - greenfield-dd
 ---
 
 ## Context

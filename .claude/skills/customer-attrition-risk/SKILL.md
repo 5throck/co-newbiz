@@ -11,8 +11,8 @@ description: >
 
   Use when: "customer attrition risk", "change of control clause",
   "customer concentration risk", "retained seller as supplier".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: customer-retention-agent
 prerequisites: none
@@ -23,6 +23,9 @@ metadata:
     - change of control clause
     - customer concentration risk
     - retained seller as supplier
+
+  procedure_keys:
+    - brownfield-dd
 ---
 
 ## Context

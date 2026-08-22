@@ -12,8 +12,8 @@ description: >
 
   Use when: "contingent liability", "covenant breach test", "rate shock",
   "Monte Carlo liability integration", "CoC debt acceleration".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: risk-officer
 prerequisites: none
@@ -25,6 +25,9 @@ metadata:
     - rate shock
     - Monte Carlo liability integration
     - CoC debt acceleration
+
+  procedure_keys:
+    - brownfield-dd
 ---
 
 ## Context

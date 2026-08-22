@@ -14,8 +14,8 @@ description: >
   Use when: "investment vehicle structure", "SPV structuring", "direct
   investment vs SPV", "holding company routing", "deal structure hypothesis
   vehicle axis".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: brownfield-agent
 prerequisites: none
@@ -27,6 +27,9 @@ metadata:
     - direct investment vs SPV
     - holding company routing
     - deal structure hypothesis vehicle axis
+
+  procedure_keys:
+    - brownfield-fs
 ---
 
 ## Context

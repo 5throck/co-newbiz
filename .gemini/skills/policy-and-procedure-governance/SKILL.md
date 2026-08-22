@@ -10,8 +10,8 @@ description: >
 
   Use when: "draft a policy", "draft a procedure", "entity addendum",
   "amend the group policy", "new procedure".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: process-governance-manager
 prerequisites: governance-document-hierarchy
@@ -23,6 +23,9 @@ metadata:
     - entity addendum
     - amend the group policy
     - new procedure
+
+  procedure_keys:
+    - brownfield-screening
 ---
 
 ## Context

@@ -10,8 +10,8 @@ description: >
 
   Use when: "commercial due diligence", "customer concentration analysis",
   "pricing power assessment", "win loss analysis".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: commercial-dd-agent
 prerequisites: none
@@ -22,6 +22,9 @@ metadata:
     - customer concentration analysis
     - pricing power assessment
     - win loss analysis
+
+  procedure_keys:
+    - brownfield-dd
 ---
 
 ## Context

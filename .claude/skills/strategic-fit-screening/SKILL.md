@@ -9,8 +9,8 @@ description: >
   on every rejection.
 
   Use when: "strategic fit screen", "knock-out criteria", "hunt zone fit".
-version: 1.0.0
-last_reviewed: 2026-08-22
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: process-governance-manager
 prerequisites: none
@@ -20,6 +20,10 @@ metadata:
     - strategic fit screen
     - knock-out criteria
     - hunt zone fit
+
+  procedure_keys:
+    - brownfield-screening
+    - greenfield-screening
 ---
 
 ## Context

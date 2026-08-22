@@ -10,8 +10,8 @@ description: >
 
   Use when: "WACC input", "hurdle IRR confirmation", "CAPM components",
   "discount rate session".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: valuation-agent
 prerequisites: none
@@ -22,6 +22,10 @@ metadata:
     - hurdle IRR confirmation
     - CAPM components
     - discount rate session
+
+  procedure_keys:
+    - brownfield-pre-fs
+    - greenfield-pre-fs
 ---
 
 ## Context

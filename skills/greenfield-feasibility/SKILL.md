@@ -11,8 +11,8 @@ description: >
 
   Use when: "green field feasibility", "new plant feasibility",
   "new establishment review", "greenfield screening".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: greenfield-agent
 prerequisites: none
@@ -23,6 +23,9 @@ metadata:
     - new plant feasibility
     - new establishment review
     - greenfield screening
+
+  procedure_keys:
+    - greenfield-pre-fs
 ---
 
 ## Context
