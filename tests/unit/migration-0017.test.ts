@@ -241,8 +241,11 @@ describe("evidence_var seeds", () => {
       .query("SELECT var_key FROM evidence_var WHERE var_key LIKE 'market.%' OR var_key LIKE 'right_to_win.%' ORDER BY var_key")
       .all() as { var_key: string }[];
     expect(rows.map((r) => r.var_key)).toEqual([...SEEDED_VARS].sort());
-    // and the total registry is 0014's four routing vars + these ten
-    expect((db.query("SELECT COUNT(*) AS c FROM evidence_var").get() as { c: number }).c).toBe(14);
+    // 0017's seeds are 0017's to pin (the 0014→0017 knock-on lesson, applied to
+    // this file by 0018): exact count scoped to this migration's prefixes,
+    // registry total as a lower bound — future migrations may only ADD vars.
+    expect((db.query("SELECT COUNT(*) AS c FROM evidence_var WHERE var_key LIKE 'market.%' OR var_key LIKE 'right_to_win.%'").get() as { c: number }).c).toBe(10);
+    expect((db.query("SELECT COUNT(*) AS c FROM evidence_var").get() as { c: number }).c).toBeGreaterThanOrEqual(14);
   });
 
   test("market.competitive_intensity is deliberately NOT seeded (agenda §5.1)", () => {
@@ -449,8 +452,9 @@ describe("migration idempotence", () => {
 
     const rows = db.query("SELECT filename FROM schema_migrations ORDER BY filename").all() as { filename: string }[];
     expect(rows.map((r) => r.filename)).toContain("0017_market_evidence_layer.sql");
-    // and the seed sets survived untouched — exactly 5 staged rules, 14 registry vars
+    // and the seed sets survived untouched — the 5 staged market rules + 0017's
+    // 10 vars (total pin scoped per the 0014→0017 knock-on precedent)
     expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE rule_key LIKE 'market-dd-%'").get() as { c: number }).c).toBe(5);
-    expect((db.query("SELECT COUNT(*) AS c FROM evidence_var").get() as { c: number }).c).toBe(14);
+    expect((db.query("SELECT COUNT(*) AS c FROM evidence_var WHERE var_key LIKE 'market.%' OR var_key LIKE 'right_to_win.%'").get() as { c: number }).c).toBe(10);
   });
 });
