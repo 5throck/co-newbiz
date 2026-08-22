@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-dd
 title: "Brown Field Due Diligence"
 scope: shared
 level: entity
-version: "1.5.0"
+version: "1.6.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -195,6 +195,10 @@ kill_criteria:
     action: halt   # no waiver path — completeness check, not judgment (design §8.9-1(f))
   - condition: certification_transferability_computed_by_inference_not_confirmation
     action: halt   # non-negotiable boundary #5 — inference disallowed
+  - condition: covenant_breach_with_coc_acceleration_under_downside
+    action: halt   # risk-thresholds AI-1 / D-M-RISK-2 — downside covenant breach is a kill-grade fact; CoC-acceleration subset is indistinguishable in evidence (no type column), so the halt is deliberately over-inclusive in the safe direction (ADR-0055)
+  - condition: partner_dependency_unconfirmed_and_no_alternative
+    action: mark_conditional   # risk-thresholds AI-1 / D-M-RISK-3 — brownfield counterpart of greenfield-screening's criterion; "no alternative" = fewer than two active candidates AND high dependency, the same evidence as the graded amber rule (ADR-0055)
 
 legal_basis:
   - "Group New Business Review Policy §2.3"

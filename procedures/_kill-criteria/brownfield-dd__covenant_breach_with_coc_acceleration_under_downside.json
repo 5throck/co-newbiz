@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-dd",
+  "criterion_id": "covenant_breach_with_coc_acceleration_under_downside",
+  "title": "Covenant breach under the downside scenario, with change-of-control acceleration",
+  "action": "halt",
+  "predicate": { "op": "count", "var": "risk.covenants_breached", "cmp": "gte", "value": 1 },
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "risk-thresholds.md AI-1 (risk-officer dissent on D-M-RISK-2, carried by chair ruling). Deliberately over-inclusive in the halt direction: risk.covenants_breached counts ALL breached covenant tests of the latest simulation (the mandatory ma-11 +200bp rate-shock downside run), because covenant type / CoC-acceleration membership is indistinguishable in current evidence (debt_instrument.covenant_json is free TEXT, no type column - D-M-RISK-2 defers type semantics for cause). A halt routes the case to the human gate, where the CoC question is asked directly; narrowing the predicate requires covenant-type schema (first-recalibration agenda, AI-3). enabled=false until a kill-criteria evaluator exists - the anti-tamper gate (registry check c) demands policy_id + thresholds_source before any flip to enabled=true."
+}
