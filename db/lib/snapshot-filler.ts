@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -24,14 +24,16 @@
  * Runs are immutable (ADR-0005), so a run is filled exactly once — a second
  * fill of the same run fails on the composite PRIMARY KEY, by design.
  *
- * ── KNOWN GAP (record-vs-schema, reported) ────────────────────────────────
- * D-M-MKT-3 resolves fact_industry metrics per industry_id, but NO schema
- * binding exists between a project and the industries it reviews
- * (value_chain_link endpoints are the only project→industry carrier and
- * their from/to semantics at Screening — where TAM must already be live,
- * D-M-MKT-9 — are undocumented). Until a binding lands, the industryIds
- * option is the caller-supplied binding and the DEFAULT is fail-closed: no
- * binding → the three fact vars are written `missing`, never guessed.
+ * ── INDUSTRY BINDING (ADR-0054, migration 0021) — the 1.0.0 gap, closed ──
+ * project_industry is the binding of record between a project and the
+ * industries it reviews: LIVE rows (superseded_by IS NULL) are the DEFAULT
+ * industry set for the fact_industry family, and the industryIds option
+ * UNIONS with the bound set (explicit caller supplement for tests/direct
+ * runs) — it never replaces it. No bindings and no option → still
+ * fail-closed: the three fact vars are written `missing`, never guessed.
+ * Multiple DISTINCT live bindings are legal (multi-industry targets are
+ * real); the multi-industry reading below (ambiguous → `missing`, no
+ * invented aggregation) is unchanged and now reachable via bindings.
  *
  * ── DOCUMENTED READINGS (contract ambiguities resolved conservatively) ────
  *   growth (D-M-MKT-3)     read as the latest period's market_growth_yoy_ratio
@@ -82,8 +84,10 @@ export interface SnapshotFillOptions {
   runId: string;
   projectId: string;
   /**
-   * The project→industry binding for the fact_industry family (see module
-   * docs — no schema binding exists). Default: none → fail-closed missing.
+   * Caller-supplied industries for the fact_industry family — UNIONS with
+   * the project's live project_industry bindings (ADR-0054, migration
+   * 0021), never replaces them. Kept for tests and direct runs. Default
+   * (none): the bound set alone; no bindings → fail-closed missing.
    */
   industryIds?: readonly string[];
   /** Staleness reference clock; tests pin it. Default: now. */
@@ -603,6 +607,9 @@ function fillPartnerVars(db: Database, projectId: string): SnapshotWrite[] {
 const SQL_INSERT_SNAPSHOT =
   "INSERT INTO project_variable_snapshot (run_id, project_id, var_key, value_num, value_text, evidence_ref, observed_at, status) VALUES (?,?,?,?,?,?,?,?)";
 
+/** ADR-0054: the project's LIVE target-market industries — the default fact-family set. */
+const SQL_BOUND_INDUSTRIES = "SELECT industry_id FROM project_industry WHERE project_id = ? AND superseded_by IS NULL ORDER BY industry_id";
+
 /**
  * Fill a run's variable snapshot: one explicit row per evidence var the
  * 0017/0018/0019 seed set defines (22), statuses per the record contracts.
@@ -615,7 +622,11 @@ export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()):
   if (run.project_id !== opts.projectId) {
     throw new Error(`snapshot-filler: run '${opts.runId}' belongs to project '${run.project_id}', not '${opts.projectId}'`);
   }
-  const industryIds = opts.industryIds ?? [];
+  // ADR-0054: live project_industry rows are the DEFAULT set; the option
+  // supplements (unions), never replaces. Union order is bound-first; the
+  // dedupe below keeps one row per industry regardless of who supplied it.
+  const boundIndustryIds = (db.query(SQL_BOUND_INDUSTRIES).all(opts.projectId) as unknown as Array<{ industry_id: string }>).map((r) => r.industry_id);
+  const industryIds = [...new Set([...boundIndustryIds, ...(opts.industryIds ?? [])])];
   const rows: SnapshotWrite[] = [
     ...fillFactVars(db, opts.projectId, industryIds, now),
     ...fillValueChainVars(db, opts.projectId),

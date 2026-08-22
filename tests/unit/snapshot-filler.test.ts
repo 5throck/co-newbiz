@@ -11,7 +11,10 @@
  * Coverage per family: happy path, empty-table → missing, r2 < 0.6 →
  * low_confidence WITH the value written, NULL r2 → missing, arg-max HHI tie
  * handling, DAG longest path with NULL statutory_days, and the reviewed_by
- * gate on asserted vars. Fixed clock literals throughout (ADR-0002 spirit).
+ * gate on asserted vars. Since ADR-0054/migration 0021: binding-driven fact
+ * resolution (live project_industry rows as the default set, the multi-
+ * industry conservative rule reachable via bindings, and the industryIds
+ * UNION semantics). Fixed clock literals throughout (ADR-0002 spirit).
  */
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
@@ -102,6 +105,23 @@ function insertFact(industryId: string, periodId: string, metricKey: string, val
   db.run("INSERT INTO fact_industry (id, industry_id, period_id, metric_key, value, revision_no, source_id, created_at) VALUES (?,?,?,?,?,?,?,?)", [
     ulid(), industryId, periodId, metricKey, value, opts.revisionNo ?? 1, opts.sourceId === undefined ? sourceA : opts.sourceId, NOW,
   ]);
+}
+
+/** ADR-0054 / migration 0021: bind an industry to a project. bornSupersededBy seeds a NON-live successor (the flip pattern). */
+function bindIndustry(projectId: string, industryId: string, opts: { bornSupersededBy?: string } = {}): string {
+  const id = ulid();
+  db.run("INSERT INTO project_industry (id, project_id, industry_id, bound_by, bound_at, rationale, superseded_by) VALUES (?,?,?,?,?,?,?)", [
+    id, projectId, industryId, U1, NOW, "test binding rationale", opts.bornSupersededBy ?? null,
+  ]);
+  return id;
+}
+
+/** Supersede a binding the way the repository flip pattern does: successor born non-live, then the pointers swap. */
+function supersedeBinding(oldId: string, projectId: string, industryId: string): string {
+  const successor = bindIndustry(projectId, industryId, { bornSupersededBy: oldId });
+  db.run("UPDATE project_industry SET superseded_by = ? WHERE id = ?", [successor, oldId]);
+  db.run("UPDATE project_industry SET superseded_by = NULL WHERE id = ?", [successor]);
+  return successor;
 }
 
 function insertLink(projectId: string, opts: { hhi?: number | null; grade?: string | null; r2?: number | null; assessedAt?: string } = {}): string {
@@ -270,13 +290,13 @@ describe("fact family — D-M-MKT-3", () => {
     expect(tam.evidence_ref).toBeNull();
   });
 
-  test("no industry binding → fail-closed missing (the known record-vs-schema gap)", () => {
+  test("no binding rows and no industryIds → fail-closed missing (absence is never guessed, ADR-0054)", () => {
     const pid = insertProject();
     const ind = insertIndustry();
     const y = insertPeriod("year", endDaysAgo(100), 2026);
     insertFact(ind, y, "market_tam_krw", 80e12);
     const runId = insertRun(pid);
-    fill(pid, runId); // no industryIds
+    fill(pid, runId); // no industryIds, no project_industry rows
     expect(snap(runId, "market.tam").status).toBe("missing");
     expect(snap(runId, "market.tam").value_num).toBeNull();
   });
@@ -311,6 +331,102 @@ describe("fact family — D-M-MKT-3", () => {
     expect(snap(runId, "market.tam").status).toBe("missing");
     expect(snap(runId, "market.growth_rate").status).toBe("missing");
     expect(snap(runId, "market.top3_share").status).toBe("missing");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Family A — binding-driven resolution (ADR-0054 / migration 0021)
+// ---------------------------------------------------------------------------
+
+describe("fact family — project_industry binding (ADR-0054)", () => {
+  test("a single live binding resolves the three fact vars — no industryIds option needed", () => {
+    const pid = insertProject();
+    const ind = insertIndustry();
+    bindIndustry(pid, ind);
+    const y = insertPeriod("year", endDaysAgo(100), 2026);
+    insertFact(ind, y, "market_tam_krw", 88e12);
+    insertFact(ind, y, "market_growth_yoy_ratio", 0.04);
+    insertFact(ind, y, "market_top3_share_ratio", 0.61);
+    const runId = insertRun(pid);
+    fill(pid, runId); // no industryIds — the binding is the default set
+    expect(snap(runId, "market.tam")).toMatchObject({ status: "present", value_num: 88e12, evidence_ref: "KIS-2025" });
+    expect(snap(runId, "market.growth_rate")).toMatchObject({ status: "present", value_num: 0.04 });
+    expect(snap(runId, "market.top3_share")).toMatchObject({ status: "present", value_num: 0.61 });
+  });
+
+  test("two live bindings → fact vars missing (the conservative multi-industry rule, reachable via bindings)", () => {
+    const pid = insertProject();
+    const indA = insertIndustry();
+    const indB = insertIndustry();
+    bindIndustry(pid, indA);
+    bindIndustry(pid, indB); // DISTINCT live industry — legal at write time (0021)
+    const y = insertPeriod("year", endDaysAgo(100), 2026);
+    insertFact(indA, y, "market_tam_krw", 80e12);
+    insertFact(indB, y, "market_tam_krw", 70e12);
+    const runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "market.tam").status).toBe("missing");
+    expect(snap(runId, "market.growth_rate").status).toBe("missing");
+    expect(snap(runId, "market.top3_share").status).toBe("missing");
+  });
+
+  test("only LIVE rows count — retiring one of two bindings restores single-industry resolution", () => {
+    const pid = insertProject();
+    const indA = insertIndustry();
+    const indB = insertIndustry();
+    bindIndustry(pid, indA);
+    const bindB = bindIndustry(pid, indB);
+    const y = insertPeriod("year", endDaysAgo(100), 2026);
+    insertFact(indA, y, "market_tam_krw", 80e12);
+    insertFact(indB, y, "market_tam_krw", 70e12);
+    // Retire B from the live set. The exact repository write for unbinding is
+    // deliberately undecided (ADR-0054 leaves it to the writer PR); the schema
+    // primitive is "superseded_by IS NOT NULL leaves the live set", so this
+    // test uses the flip pattern WITHOUT the go-live step: B and its successor
+    // point at each other, both non-live, history preserved either way.
+    const retireB = bindIndustry(pid, indB, { bornSupersededBy: bindB });
+    db.run("UPDATE project_industry SET superseded_by = ? WHERE id = ?", [retireB, bindB]);
+    const runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "market.tam")).toMatchObject({ status: "present", value_num: 80e12 });
+  });
+
+  test("industryIds UNIONS with the binding — a duplicate set stays single-industry and resolves", () => {
+    const pid = insertProject();
+    const ind = insertIndustry();
+    bindIndustry(pid, ind);
+    const y = insertPeriod("year", endDaysAgo(100), 2026);
+    insertFact(ind, y, "market_tam_krw", 80e12);
+    const runId = insertRun(pid);
+    fill(pid, runId, { industryIds: [ind] }); // the same industry, supplied twice (bound + param)
+    expect(snap(runId, "market.tam")).toMatchObject({ status: "present", value_num: 80e12 });
+  });
+
+  test("industryIds UNIONS with the binding — a distinct param industry makes it two → missing", () => {
+    const pid = insertProject();
+    const bound = insertIndustry();
+    const param = insertIndustry();
+    bindIndustry(pid, bound);
+    const y = insertPeriod("year", endDaysAgo(100), 2026);
+    insertFact(bound, y, "market_tam_krw", 80e12);
+    insertFact(param, y, "market_tam_krw", 70e12);
+    const runId = insertRun(pid);
+    fill(pid, runId, { industryIds: [param] }); // supplements, does not replace
+    expect(snap(runId, "market.tam").status).toBe("missing");
+  });
+
+  test("re-binding via the repository flip pattern keeps the industry live (the successor carries it)", () => {
+    const pid = insertProject();
+    const ind = insertIndustry();
+    const original = bindIndustry(pid, ind);
+    const y = insertPeriod("year", endDaysAgo(100), 2026);
+    insertFact(ind, y, "market_tam_krw", 80e12);
+    supersedeBinding(original, pid, ind); // one live successor, one history row
+    const live = db.query("SELECT COUNT(*) AS n FROM project_industry WHERE project_id = ? AND industry_id = ? AND superseded_by IS NULL").get(pid, ind) as { n: number };
+    expect(live.n).toBe(1);
+    const runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "market.tam")).toMatchObject({ status: "present", value_num: 80e12 });
   });
 });
 
