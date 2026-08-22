@@ -51,10 +51,13 @@ const HYPOTHESIS_COLUMNS = [
   "four_axis_review_completed", "hypothesized_by", "hypothesized_at", "rationale",
 ] as const;
 
-/** Migration 0006's column set — the (e) rebuild must preserve it exactly. */
+/** Migration 0006's column set — the (e) rebuild must preserve it exactly.
+ * (0016 later APPENDS invalidated_at + invalidated_by_classification — the
+ * post-0016 live shape; the rebuild-preservation claim under test is that the
+ * first ten columns and their order are untouched.) */
 const COMPLIANCE_CHECK_COLUMNS = [
   "id", "project_id", "gate", "rule_key", "layer", "result", "detail",
-  "waiver_id", "detected_at", "resolved_at",
+  "waiver_id", "detected_at", "resolved_at", "invalidated_at", "invalidated_by_classification",
 ] as const;
 
 function insertProject(currentStageGate?: string): string {

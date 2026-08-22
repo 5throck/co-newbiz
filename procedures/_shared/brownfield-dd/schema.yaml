@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-dd
 title: "Brown Field Due Diligence"
 scope: shared
 level: entity
-version: "1.3.0"
+version: "1.4.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -159,15 +159,29 @@ steps:
     skill_key: compliance-monitoring
     output_type: six_validator_completeness_check
     description: >
-      All six M&A validators (steps 6-11, mapped to antitrust/HR/customer/
-      incentive/contingent-liability/certification — certification LAST,
-      unchanged relative order) must be present with landed dd_finding
-      records. This is a completeness check with NO WAIVER PATH (design
-      §8.9-1(f), docs/governance-operations.md §2) — not a judgment call.
-      The four DD-expansion steps (4 market, 5 legal, 12 financing, 13 HR)
-      are OUTSIDE the no-waiver core: mandatory but with the standard
-      waiver path (ADR-0051; whether legal DD joins the core is an open
-      question for the thresholds meeting, not decided here).
+      Six-validator completeness is recorded as THREE numbers — declared 6 /
+      applicable N / completed M (ADR-0048 §4; the durable record is written
+      by db/repositories/compliance.repository.ts). All six M&A validators
+      (steps 6-11, mapped to antitrust/HR/customer/incentive/contingent-
+      liability/certification — certification LAST, unchanged relative
+      order) are DECLARED for every project. A validator the applicability
+      registry does not apply to the live classification (ADR-0048 — the
+      only skip family is greenfield+internal, contingent-liability
+      regained when technology_track=rbd) is covered-with-reason: a
+      compliance_check row result='not_applicable' carrying the rendered
+      applies_when sentence plus the classification and approver trace —
+      NEVER 'pass'. The no-waiver halt (kill criterion below) fires when an
+      APPLICABLE validator is missing; an applicable validator with no
+      coverage row fails this step regardless of anything else. This is a
+      completeness check with NO WAIVER PATH (design §8.9-1(f),
+      docs/governance-operations.md §2) — not a judgment call. The DD
+      cross-validation (Decisions 5f/5g) runs alongside: classification-
+      independent DD evidence contradicting the classification blocks DD
+      exit only when the classification's provenance is weak. The four
+      DD-expansion steps (4 market, 5 legal, 12 financing, 13 HR) are
+      OUTSIDE the no-waiver core: mandatory but with the standard waiver
+      path (ADR-0051; whether legal DD joins the core is an open question
+      for the thresholds meeting, not decided here).
   - id: 15
     gate: DD
     agent_key: process-governance-manager
@@ -195,6 +209,7 @@ legal_basis:
   - "checklists/financing-plan-checklist.yaml (chk-financing, step 12 — ADR-0051)"
   - "checklists/hr-dd-checklist.yaml (chk-hr-dd, step 13 — ADR-0051)"
   - "ADR-0051 (workflow gap closure — six-validator no-waiver core unchanged at steps 6-11; new steps mandatory with standard waiver path)"
+  - "ADR-0048 (no-waiver scope = APPLICABLE validators; 3-number completeness record; not_applicable rows + invalidation on reclassification)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-22"
+last_reviewed: "2026-08-23"

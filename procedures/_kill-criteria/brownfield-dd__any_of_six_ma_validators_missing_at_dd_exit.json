@@ -1,11 +1,11 @@
 {
   "procedure": "brownfield-dd",
   "criterion_id": "any_of_six_ma_validators_missing_at_dd_exit",
-  "title": "Any of the six M&A validators missing at DD exit",
+  "title": "Any APPLICABLE one of the six M&A validators missing at DD exit",
   "action": "halt",
   "predicate": null,
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). No waiver path: completeness check, not judgment (design section 8.9-1(f))."
+  "notes": "Scope is APPLICABLE validators (ADR-0048): all six are declared for every project; a validator the applicability registry does not apply is covered-with-reason via a live not_applicable compliance_check row and is NOT missing. The 3-number record (6 declared / N applicable / M completed) is computed by db/lib/validator-completeness.ts (migration 0016). Still declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). No waiver path: completeness check, not judgment (design section 8.9-1(f))."
 }
