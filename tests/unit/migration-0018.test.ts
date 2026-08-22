@@ -237,12 +237,14 @@ describe("rag_rule staged skeleton", () => {
     expect(byKey.get("risk-dd-partner-sourcing")!.priority).toBe(8);
   });
 
-  test("version 1 and enabled=0 with both governance anchors NULL; gate/grade per the records' restatements", () => {
+  test("version 1 across the 0022 activation — anchors flipped on, content untouched; gate/grade per the records' restatements", () => {
     for (const row of ruleRows()) {
       expect(row.version, row.rule_key).toBe(1);
-      expect(row.enabled, row.rule_key).toBe(0);
-      expect(row.policy_id, row.rule_key).toBeNull();
-      expect(row.thresholds_source, row.rule_key).toBeNull();
+      // 0022 (PR-9) activated all eight rows: a data flip with both anchors,
+      // not a content change — version stays 1
+      expect(row.enabled, row.rule_key).toBe(1);
+      expect(row.policy_id, row.rule_key).not.toBeNull();
+      expect(row.thresholds_source, row.rule_key).not.toBeNull();
     }
     const byKey = new Map(ruleRows().map((r) => [r.rule_key, r]));
     // 'dd' was the 0018 staging default; D-M-RISK-3 restated partner to pre_fs
@@ -368,27 +370,31 @@ describe("rag_rule_variable wiring", () => {
 describe("staging guard on the 0018 rows", () => {
   test("enabled=1 with both policy_id and thresholds_source NULL is rejected", () => {
     expect(() =>
-      db.run("UPDATE rag_rule SET enabled = 1 WHERE rule_key = 'risk-dd-covenant-breach'"),
+      db.run("UPDATE rag_rule SET enabled = 1, policy_id = NULL, thresholds_source = NULL WHERE rule_key = 'risk-dd-covenant-breach'"),
     ).toThrow(/CHECK constraint failed/);
   });
 
   test("enabled=1 with only one anchor present is still rejected (the CHECK requires BOTH)", () => {
     expect(() =>
-      db.run("UPDATE rag_rule SET enabled = 1, thresholds_source = 'D-MX-1 2026-99-99' WHERE rule_key = 'tech-dd-trl-grade'"),
+      db.run("UPDATE rag_rule SET enabled = 1, policy_id = NULL, thresholds_source = 'D-MX-1 2026-99-99' WHERE rule_key = 'tech-dd-trl-grade'"),
     ).toThrow(/CHECK constraint failed/);
     expect(() =>
-      db.run("UPDATE rag_rule SET enabled = 1, policy_id = 'gov-nonexistent' WHERE rule_key = 'risk-dd-partner-sourcing'"),
+      db.run("UPDATE rag_rule SET enabled = 1, policy_id = 'gov-nonexistent', thresholds_source = NULL WHERE rule_key = 'risk-dd-partner-sourcing'"),
     ).toThrow(/CHECK constraint failed/);
   });
 
-  test("even a CHECK-satisfying enablement fails on the policy FK — governance_doc has no citable row yet", () => {
+  test("even a CHECK-satisfying enablement fails on the policy FK — the anchor must name a governance_doc row that exists", () => {
     expect(() =>
       db.run("UPDATE rag_rule SET enabled = 1, policy_id = 'gov-nonexistent', thresholds_source = 'D-MX-1 2026-99-99' WHERE rule_key = 'tech-dd-permit-critical-path'"),
     ).toThrow(/FOREIGN KEY constraint failed/);
   });
 
-  test("the failed UPDATEs left every staged row still disabled", () => {
-    for (const row of ruleRows()) expect(row.enabled, row.rule_key).toBe(0);
+  test("the failed UPDATEs rolled back — every 0018 row is still exactly as 0022 activated it", () => {
+    for (const row of ruleRows()) {
+      expect(row.enabled, row.rule_key).toBe(1);
+      expect(row.policy_id, row.rule_key).not.toBeNull();
+      expect(row.thresholds_source, row.rule_key).not.toBeNull();
+    }
   });
 });
 

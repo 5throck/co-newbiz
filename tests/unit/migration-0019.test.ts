@@ -404,12 +404,18 @@ describe("rag_rule finalization — the three records' mapping tables", () => {
     }
   });
 
-  test("every row stays enabled=0 with both governance anchors NULL — activation is PR-9's act", () => {
+  test("0022 (PR-9) activated 18 of 19 with both anchors; the capped right-to-win alone stays disabled with NULL anchors (D-M-MKT-11.2)", () => {
     for (const ruleKey of Object.keys(FINAL_RULES)) {
       const row = ruleRow(ruleKey);
-      expect(row.enabled, ruleKey).toBe(0);
-      expect(row.policy_id, ruleKey).toBeNull();
-      expect(row.thresholds_source, ruleKey).toBeNull();
+      if (ruleKey === "market-dd-right-to-win") {
+        expect(row.enabled, ruleKey).toBe(0);
+        expect(row.policy_id, ruleKey).toBeNull();
+        expect(row.thresholds_source, ruleKey).toBeNull();
+      } else {
+        expect(row.enabled, ruleKey).toBe(1);
+        expect(row.policy_id, ruleKey).not.toBeNull();
+        expect(row.thresholds_source, ruleKey).not.toBeNull();
+      }
     }
   });
 
@@ -484,7 +490,8 @@ describe("migration idempotence", () => {
     expect(skipped.length).toBe(readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).length);
 
     expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE dimension IN ('market','technical_execution','risk')").get() as { c: number }).c).toBe(19);
-    expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE enabled = 1").get() as { c: number }).c).toBe(0);
+    // 0022 (PR-9) activated 18 rows; right-to-win stays disabled under the cap
+    expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE enabled = 1").get() as { c: number }).c).toBe(18);
     expect((db.query("SELECT COUNT(*) AS c FROM evidence_var WHERE var_key LIKE 'cert.%'").get() as { c: number }).c).toBe(2);
   });
 });
