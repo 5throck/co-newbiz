@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-08-23](2026-08-23.md) | feat(procedures): PR-10 workflow gap closure - strategic fit, market/legal/financing/HR DD, entity establishment, ADR-0051 |
 | [2026-08-22](2026-08-22.md) | docs(design): RAG formalization + case classification design (Stage 0, ADR-0032) |
 | [2026-08-21](2026-08-21.md) | fix(co-newbiz): rag-engine overall-grade defect + investment-vehicle checklist enforcement |
 | [2026-08-19](2026-08-19.md) | Stage 0.1 — L3 scaffold created, variant context sections added to CLAUDE.md/GEMINI.md, PM agent written, variant.json completed |

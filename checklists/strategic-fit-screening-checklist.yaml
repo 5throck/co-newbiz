@@ -1,0 +1,69 @@
+governance_doc_id: chk-strategic-fit
+layer: checklist
+title: "Strategic Fit Screening Checklist"
+scope: shared
+enforceability: mixed
+owner_agent: process-governance-manager
+version: "1.0.0"
+effective_from: "2026-08-22"
+gate: Screening
+
+# Two-part structure per Cooper Gate 1 / HM Treasury Green Book SOC practice:
+# Part 1 (sf-01..sf-05) = must-meet knock-outs (Pass/Fail — any Fail terminates or
+# recycles, no further analysis). Part 2 (sf-06..sf-12) = should-meet rated criteria,
+# scored 0-10 weighted on a visible scorecard. Evidence allowed at this gate: desk
+# research and the sponsor's own knowledge only — no commissioned analysis.
+#
+# THRESHOLDS ARE ILLUSTRATIVE: the scoring weights and advance thresholds cited in
+# item texts (e.g. >=60/100 advance, 45-59 Hold/Recycle, <45 Kill, from Cooper Gate 1
+# and Green Book SOC practice) are illustrations from published practice, NOT activated
+# policy. Activation requires the thresholds meeting recorded under docs/decisions/open/
+# — the same rule that keeps rag_rule rows at enabled=0 until a dated decision record
+# exists (ADR-0051 open question (b)).
+
+items:
+  # Part 1 — must-meet knock-outs (any Fail = reject at screen)
+  - id: sf-01
+    text: "Strategic alignment cited by name — the opportunity advances at least one named objective of the current corporate/business-unit strategy, quoted or referenced by identifier (not 'aligns with strategy' in the abstract)"
+    mandatory: true
+  - id: sf-02
+    text: "Portfolio/hunt-zone fit — the opportunity falls within a pre-declared investment thesis area (hunt zone), or carries an explicit exception approval from the portfolio owner recorded before the screen concludes"
+    mandatory: true
+  - id: sf-03
+    text: "No disqualifying constraint — no known fatal safety, environmental, regulatory, sanctions, or reputational barrier"
+    mandatory: true
+    waiver_eligible: false   # a safety/regulatory showstopper is a completeness fact, not a judgment call
+  - id: sf-04
+    text: "Strategic intent category declared (core-enhancement / adjacent-expansion / transformational bet) and that category's risk tolerance acknowledged by the sponsor"
+    mandatory: true
+  - id: sf-05
+    text: "Named executive sponsor — one named executive owns the opportunity through the next gate and controls the seed budget"
+    mandatory: true
+  # Part 2 — should-meet rated criteria (0-10, weighted; scored and recorded)
+  - id: sf-06
+    text: "Preliminary market attractiveness scored and recorded, with the scorecard total meeting the advance threshold set for the declared intent category (desk research only at this gate)"
+    mandatory: true
+  - id: sf-07
+    text: "Right-to-win hypothesis scored and recorded — at least one articulable advantage the company brings (asset, capability, channel, brand, data, license) that a generic entrant lacks"
+    mandatory: true
+  - id: sf-08
+    text: "Synergy thesis scored and recorded — identifiable synergies with existing operations (channels, plants, technology, customer base) beyond standalone value"
+    mandatory: true
+  - id: sf-09
+    text: "Capability-fit gap statement scored and recorded — required vs. current capabilities assessed, every material gap named with a plausible source (build / partner / buy)"
+    mandatory: true
+  - id: sf-10
+    text: "Preliminary feasibility scored and recorded — no known insurmountable technical or operational obstacle, and rough time-to-market acceptable for the declared intent category"
+    mandatory: true
+  - id: sf-11
+    text: "Reward-vs-risk scale scored and recorded — preliminary size of the prize is material relative to effort and risk, per the category's thresholds"
+    mandatory: true
+  - id: sf-12
+    text: "Options discipline — the proposal is one of at least two routes to the stated objective, with a do-minimum/status-quo baseline recorded for comparison"
+    mandatory: true
+
+legal_basis:
+  - "ADR-0051 (workflow gap closure — strategic fit at first screen)"
+  - "procedures/_shared/brownfield-screening/schema.yaml step 2, procedures/_shared/greenfield-screening/schema.yaml step 1"
+  - "Cooper Stage-Gate Gate 1 (Idea Screen) knock-out + scorecard design — Stage-Gate Institute"
+  - "HM Treasury Green Book Five Case Model — Strategic Outline Case (strategic filter precedes full appraisal)"

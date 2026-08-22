@@ -1,0 +1,90 @@
+governance_doc_id: chk-legal-dd
+layer: checklist
+title: "Legal Due Diligence Checklist (Brown Field DD)"
+scope: shared
+enforceability: mixed
+owner_agent: legal-counsel
+version: "1.0.0"
+effective_from: "2026-08-22"
+gate: DD
+
+# DD-grade legal workstream — distinct from screening-level chk-legal-regulatory
+# (lr-* items are NOT duplicated here; where a topic appears at both grades, this
+# checklist extends it to DD depth). Merger-control specifics stay in
+# chk-ma-special-topics (ma-01..03); permit/certification transferability classification
+# below cross-references certification-transferability rather than restating it.
+
+items:
+  - id: ldd-01
+    text: "Good standing of the target and every subsidiary confirmed — certificates of incorporation, bylaws, and board minutes for the last 3 years obtained and reviewed"
+    mandatory: true
+  - id: ldd-02
+    text: "Capitalization table reconstructed — authorized vs. outstanding by class; all options, warrants, convertibles listed with vesting/expiry"
+    mandatory: true
+  - id: ldd-03
+    text: "Equity-holder votes/consents required to approve the deal identified, with transfer restrictions, preemptive rights, and ROFR/tag-along/drag-along mapped"
+    mandatory: true
+  - id: ldd-04
+    text: "Signing authority verified — who can bind the target and each subsidiary, stated explicitly"
+    mandatory: true
+  - id: ldd-05
+    text: "Restrictions on borrowing, refinancing, and guarantees mapped; anti-takeover defenses (staggered board, poison pill) identified where present"
+    mandatory: true
+  - id: ldd-06
+    text: "Change-of-control / anti-assignment clause scan completed across the top-20 customer and supplier contracts by revenue/cost — for each, counterparty notice period, consent requirement, and termination/payment consequences recorded; exclusivity, MFN, and minimum-volume commitments captured"
+    mandatory: true
+  - id: ldd-07
+    text: "Asset-deal vs. share-deal assignment split determined — which contracts require consent to assign in an asset deal vs. pass automatically in a share deal"
+    mandatory: true
+  - id: ldd-08
+    text: "Loan and security documents needing consent or refinancing at close flagged"
+    mandatory: true
+  - id: ldd-09
+    text: "Pending/threatened litigation, arbitration, and regulatory investigations listed with exposure estimate and provision adequacy; judgment-lien, enforcement, and bankruptcy searches run against the target and key subsidiaries"
+    mandatory: true
+  - id: ldd-10
+    text: "IP inventory complete (patents, trademarks, copyrights, domains, trade secrets) with the inventor-to-company assignment chain verified for title gaps"
+    mandatory: true
+  - id: ldd-11
+    text: "Inbound and outbound licenses reviewed for exclusivity, sublicensing, assignability, and CoC triggers"
+    mandatory: true
+  - id: ldd-12
+    text: "IP security interests/encumbrances searched; maintenance/renewal fee compliance confirmed; ongoing or threatened IP disputes listed"
+    mandatory: true
+  - id: ldd-13
+    text: "Employee and contractor PIIA coverage confirmed — every employee and contractor has executed IP assignment + confidentiality agreements"
+    mandatory: true
+  - id: ldd-14
+    text: "Where a unionized workforce or pension plan exists: CBA successorship clauses, grievance backlog, and CBA expiry vs. deal timeline checked; pension/benefits exposure quantified (mark not-applicable with rationale where none exists)"
+    mandatory: true
+  - id: ldd-15
+    text: "Permit/licence transfer classification stated for every business licence — transfers automatically / requires consent / must be re-issued (legal basis for the certification-transferability determination at brownfield-dd step 11; does not restate that step)"
+    mandatory: true
+  - id: ldd-16
+    text: "Environmental notices, prior site assessments, and contamination history obtained"
+    mandatory: true
+  - id: ldd-17
+    text: "Real-estate title/leasehold verified for owned and leased sites; CoC clauses in leases checked"
+    mandatory: true
+  - id: ldd-18
+    text: "Data-protection review — privacy notices, breach/incident records, lawful basis for cross-border data transfers"
+    mandatory: true
+  - id: ldd-19
+    text: "Anti-bribery controls tested and sanctions screening run on counterparties AND beneficial owners"
+    mandatory: true
+  - id: ldd-20
+    text: "Tax filings confirmed current; open audits and assessments identified"
+    mandatory: true
+  - id: ldd-21
+    text: "Findings register produced with RAG severity — red = deal-structural/remediation required, amber = warranty/indemnity protection, green = acceptable — feeding SPA protections (specific indemnities, escrow sizing, conditions precedent) and valuation adjustments via dd-to-valuation-bridge"
+    mandatory: true
+  - id: ldd-22
+    text: "Korea note (where the target has Korean employees and an asset/business-transfer route is contemplated): employment succession on business transfer is judicial doctrine (영업양도, Supreme Court decision 2000다8448 line) — the individual-consent path is the safe practice. Verify against current statute and with Korean counsel before enforcement use."
+    mandatory: false
+
+legal_basis:
+  - "ADR-0051 (workflow gap closure — legal DD step added at brownfield-dd step 5)"
+  - "procedures/_shared/brownfield-dd/schema.yaml step 5 (legal-counsel / legal-due-diligence)"
+  - "Thomson Reuters Practical Law M&A DD guide; datarooms.org legal DD checklist; Lumenci IP DD checklist"
+  - "checklists/legal-regulatory-checklist.yaml (screening-grade — this checklist extends, not replaces, lr-*)"
+  - "checklists/ma-special-topics-checklist.yaml ma-01..03 (merger control), ma-12 (certification transferability)"

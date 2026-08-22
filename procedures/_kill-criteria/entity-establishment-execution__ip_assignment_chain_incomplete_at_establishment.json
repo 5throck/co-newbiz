@@ -1,0 +1,11 @@
+{
+  "procedure": "entity-establishment-execution",
+  "criterion_id": "ip_assignment_chain_incomplete_at_establishment",
+  "title": "IP assignment chain incomplete at establishment",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). No waiver path: title integrity is a completeness fact, not a judgment call (ADR-0051; chk-entity-formation ef-07 is waiver_eligible: false for the same reason)."
+}

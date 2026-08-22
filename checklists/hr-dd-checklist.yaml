@@ -1,0 +1,60 @@
+governance_doc_id: chk-hr-dd
+layer: checklist
+title: "HR Due Diligence Checklist (Brown Field DD)"
+scope: shared
+enforceability: mixed
+owner_agent: hr-integration-agent
+version: "1.0.0"
+effective_from: "2026-08-22"
+gate: DD
+
+# HR DD workstream (key person / organization / labor relations / culture / day-1) —
+# deliberately does NOT duplicate compensation topics, which stay in
+# chk-ma-special-topics: ma-04..06 (executive CoC compensation, non-compete,
+# comp benchmark) and ma-09 (incentive clawback). Employment-transfer regime
+# determination cross-references chk-entity-formation (ef-08) rather than restating it.
+#
+# BENCHMARKS ARE ILLUSTRATIVE: the stay-bonus coverage window cited in hdd-02
+# (12-24 months post-closing) is a market-practice benchmark, not activated policy —
+# whether it becomes policy is ADR-0051 open question (c) for the thresholds meeting.
+
+items:
+  - id: hdd-01
+    text: "Key-person map produced — every person/role whose loss would damage operations or integration, each mapped to a named retention action"
+    mandatory: true
+  - id: hdd-02
+    text: "Stay/retention bonus budget covering critical talent for the post-closing window (illustrative benchmark: 12-24 months — see header note)"
+    mandatory: true
+  - id: hdd-03
+    text: "Day-1 retention plan prepared — pre-drafted retention offers, stay bonuses, and communication scripts for critical staff"
+    mandatory: true
+  - id: hdd-04
+    text: "Organization documented — org charts, management structure, headcount by function, job descriptions"
+    mandatory: true
+  - id: hdd-05
+    text: "Leadership bench assessed — who is needed for the first 100 days vs. who will exit"
+    mandatory: true
+  - id: hdd-06
+    text: "Where CBAs exist: successorship clauses, open grievance backlog, and CBA expiry vs. deal timeline reviewed (mark not-applicable with rationale where no CBA exists)"
+    mandatory: true
+  - id: hdd-07
+    text: "Pension/benefits liabilities quantified — unfunded status, multiemployer withdrawal liability, retiree medical where applicable"
+    mandatory: true
+  - id: hdd-08
+    text: "Works-council information & consultation plan prepared for EU targets — can gate timing and structure"
+    mandatory: false
+  - id: hdd-09
+    text: "Employment-transfer regime determined per jurisdiction for the contemplated deal structure (TUPE / EU ARD analogues / Korean business-transfer doctrine) — cross-references chk-entity-formation ef-08; the regime determination is made here for acquisition routes"
+    mandatory: true
+  - id: hdd-10
+    text: "Culture distance assessed with a standardized instrument (e.g. OCAI / Denison-model), covering decision-making speed, risk appetite, and management style — feeding integration design"
+    mandatory: true
+  - id: hdd-11
+    text: "Day-1 and first-100-days HR plan drafted — payroll and benefits continuity, HR policy alignment, leadership communication to all staff, HR systems integration"
+    mandatory: true
+
+legal_basis:
+  - "ADR-0051 (workflow gap closure — HR DD step added at brownfield-dd step 13; chain step 14 management linkage)"
+  - "procedures/_shared/brownfield-dd/schema.yaml step 13 (hr-integration-agent / org-readiness-assessment)"
+  - "Soteria HR, MergerIntegration.com, MA Science (key person/retention); Acas TUPE guidance; Denison & Ko cultural due diligence"
+  - "checklists/ma-special-topics-checklist.yaml ma-04..06, ma-09 (compensation topics — not duplicated here)"

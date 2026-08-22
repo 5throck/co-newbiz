@@ -78,7 +78,7 @@ This SRS covers Stage 5's system build. It does not re-litigate process content 
 
 | ID | Requirement | Priority | Source |
 |---|---|---|---|
-| FR-MA-01 | Six-validator BF completeness check at DD exit: antitrust, customer-retention, incentive, hr-integration, contingent-liability, certification — **no waiver path** | Must | Design §8.9-1(f), `procedures/_shared/brownfield-dd/schema.yaml` step 9 |
+| FR-MA-01 | Six-validator BF completeness check at DD exit: antitrust, customer-retention, incentive, hr-integration, contingent-liability, certification — **no waiver path** | Must | Design §8.9-1(f), `procedures/_shared/brownfield-dd/schema.yaml` step 14 |
 | FR-MA-02 | Antitrust screening covers HHI/HHI-delta including **common-ownership/common-control** combinations (a sponsor controlling one competitor acquiring another), not only direct target-to-target mergers | Must | `docs/pilots/pilot-010-affinity-lotte-rental.md` finding F-2 |
 | FR-MA-03 | Multi-jurisdiction filing determination — real cases confirm both single-jurisdiction (pilots 001, 008) and multi-jurisdiction (pilot 002) shapes occur | Must | `checklists/ma-special-topics-checklist.yaml` ma-02 |
 | FR-MA-04 | Gun-jumping prohibition enforced procedurally, not just checked retrospectively | Must | Design §4-6 |

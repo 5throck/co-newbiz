@@ -81,7 +81,7 @@
 | Source | Requirement | Implementation Target | Verification |
 |---|---|---|---|
 | Meeting M6 D-M6-1 | FR-GF-01 | `site_candidate` two-stage filter-then-score pipeline | Already verified manually: `docs/pilots/pilot-007-punggu-offshore-wind.md` §4 F-3 confirms the design choice by contrast with a real flawed alternative |
-| `docs/pilots/pilot-007-punggu-offshore-wind.md` F-1 | FR-GF-02 | Legal-standard-driven affected-area radius calculation, applied to `greenfield-screening` step 2 | Already applied to `procedures/_shared/greenfield-screening/schema.yaml` v1.2.0 (Stage 3) |
+| `docs/pilots/pilot-007-punggu-offshore-wind.md` F-1 | FR-GF-02 | Legal-standard-driven affected-area radius calculation, applied to `greenfield-screening` step 2 (now step 3 after the ADR-0051 strategic-fit insertion) | Already applied to `procedures/_shared/greenfield-screening/schema.yaml` v1.2.0 (Stage 3) |
 | `docs/pilots/pilot-005-sk-hynix-yongin-cluster.md` F-1 | FR-GF-03 | `infrastructure_plan_not_finalized_at_site_announcement` kill criteria | Already applied to `greenfield-screening` v1.1.0 (Stage 3) |
 | Design §4-7 | FR-GF-04 | `site_candidate.incentive_npv`, `infra_capex`, `logistics_cost` on one comparable row | Stage 5: `compare_sites` output has all three on one table |
 | Design §4-7, §5-2 | FR-GF-05 | `permit`/`permit_edge` DAG + deadline-vs-critical-path check | Stage 5 (design §12 verification item): construction deadline shorter than permit critical path → warning fires |

@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-dd
 title: "Brown Field Due Diligence"
 scope: shared
 level: entity
-version: "1.2.0"
+version: "1.3.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -40,6 +40,36 @@ steps:
       applicable (skip) for non-R&BD deals.
   - id: 4
     gate: DD
+    agent_key: market-intelligence-agent
+    skill_key: competitive-intelligence
+    output_type: dd_finding
+    description: >
+      Market DD per `checklists/market-dd-checklist.yaml` (mdd-01..) —
+      TAM/SAM triangulation, competitive set, moat, customer concentration,
+      churn, 80/20 revenue vs. thesis. Thesis-by-thesis validation verdicts
+      (validated/partially/invalidated) feed the valuation bridge via
+      retention-adjusted revenue impact and bid-adjustment recommendations.
+      Runs alongside, not inside, commercial DD (step 1): step 1 tests the
+      TARGET's commercial position; this step tests the MARKET the target
+      sits in (ADR-0051).
+  - id: 5
+    gate: DD
+    agent_key: legal-counsel
+    skill_key: legal-due-diligence
+    output_type: dd_finding
+    description: >
+      Legal DD per `checklists/legal-dd-checklist.yaml` (ldd-01..) — corporate
+      standing/cap table, CoC/anti-assignment contract scan, litigation,
+      IP title chain, employment/legal exposure, environmental/real-estate/
+      data-protection/anti-bribery/tax. Output is a RAG findings register:
+      red = deal-structural/remediation, amber = warranty/indemnity, green =
+      acceptable. Red/amber findings map to SPA protections (specific
+      indemnities, escrow sizing, CPs) and valuation adjustments through the
+      dd-to-valuation-bridge. Distinct from the certification-transferability
+      step (step 11) and from screening-level chk-legal-regulatory — legal
+      basis for transferability lives there, this step supplies the evidence.
+  - id: 6
+    gate: DD
     agent_key: antitrust-agent
     skill_key: antitrust-screening
     output_type: dd_finding
@@ -54,13 +84,13 @@ steps:
       (horizontal, conditional approval) vs. docs/pilots/pilot-002-hanwha-impact-hsd-engine.md
       (vertical, unconditional approval) — the same step must correctly
       discriminate between these risk shapes, not apply one template.
-  - id: 5
+  - id: 7
     gate: DD
     agent_key: hr-integration-agent
     skill_key: management-incentive-review
     output_type: dd_finding
     description: Executive CoC-trigger compensation and compensation-harmonization-analysis — `checklists/ma-special-topics-checklist.yaml` ma-04 through ma-06.
-  - id: 6
+  - id: 8
     gate: DD
     agent_key: customer-retention-agent
     skill_key: customer-attrition-risk
@@ -70,43 +100,75 @@ steps:
       (checklist ma-07/08, widened per docs/pilots/pilot-002-hanwha-impact-hsd-engine.md
       finding F-2 — a retained seller-side supply relationship is the same
       risk category as a customer contract).
-  - id: 7
+  - id: 9
     gate: DD
     agent_key: incentive-agent
     skill_key: incentive-clawback-assessment
     output_type: dd_finding
     description: Clawback exposure on any contemplated relocation/restructuring — checklist ma-09.
-  - id: 8
+  - id: 10
     gate: DD
     agent_key: valuation-agent
     skill_key: debt-and-contingent-liability-simulation
     output_type: dd_finding
     description: Contingent liabilities and covenant-breach scenario — checklist ma-10/11.
-  - id: 9
+  - id: 11
     gate: DD
     agent_key: legal-counsel
     skill_key: certification-transferability
     output_type: dd_finding
     description: >
-      Certification transferability confirmed LAST per meeting M5's fixed
-      evaluation order (checklist ma-12) — a non-transferable certification
-      can strip the entire acquisition premium and must not be computed
-      against a valuation that already assumed it. The transferability
-      judgment is legal-counsel's call (design of record 2026-08-22 §5 PR-3,
-      meeting legal-review findings #1/#6); certification-agent provides
-      the requirement/roadmap input.
-  - id: 10
+      Certification transferability confirmed LAST among the validators per
+      meeting M5's fixed evaluation order (checklist ma-12) — a
+      non-transferable certification can strip the entire acquisition
+      premium and must not be computed against a valuation that already
+      assumed it. The transferability judgment is legal-counsel's call
+      (design of record 2026-08-22 §5 PR-3, meeting legal-review findings
+      #1/#6); certification-agent provides the requirement/roadmap input.
+  - id: 12
+    gate: DD
+    agent_key: valuation-agent
+    skill_key: financing-plan-review
+    output_type: financing_readiness_check
+    description: >
+      Financing evidence pack per `checklists/financing-plan-checklist.yaml`
+      (fin-01..) — cash/debt/equity mix with sources-and-uses, executed
+      commitment papers or documented internal-funds approval path,
+      covenant headroom, funds-flow memorandum draft, FX plan, escrow
+      sizing, reverse-termination-fee sizing where buyer retains funding
+      risk (4-7% EV benchmark ILLUSTRATIVE until the thresholds meeting —
+      ADR-0051 open question (c)). Certainty of funds is evidenced here so
+      the IC package carries a financing_readiness_check, not a financing
+      contingency.
+  - id: 13
+    gate: DD
+    agent_key: hr-integration-agent
+    skill_key: org-readiness-assessment
+    output_type: dd_finding
+    description: >
+      HR DD per `checklists/hr-dd-checklist.yaml` (hdd-01..) — key-person
+      map with retention actions, stay-bonus budget (12-24 month benchmark
+      ILLUSTRATIVE — ADR-0051 open question (c)), org/leadership bench,
+      CBA successorship and pension exposure, employment-transfer regime
+      per jurisdiction, culture distance, day-1 and first-100-days plan.
+      Compensation review stays in the validator step (step 7); this step
+      is the wider organizational and labor-relations picture.
+  - id: 14
     gate: DD
     agent_key: compliance-officer
     skill_key: compliance-monitoring
     output_type: six_validator_completeness_check
     description: >
-      All six M&A validators (steps 4-9, mapped to antitrust/HR/customer/
-      incentive/contingent-liability/certification) must be present with
-      landed dd_finding records. This is a completeness check with NO
-      WAIVER PATH (design §8.9-1(f), docs/governance-operations.md §2) —
-      not a judgment call.
-  - id: 11
+      All six M&A validators (steps 6-11, mapped to antitrust/HR/customer/
+      incentive/contingent-liability/certification — certification LAST,
+      unchanged relative order) must be present with landed dd_finding
+      records. This is a completeness check with NO WAIVER PATH (design
+      §8.9-1(f), docs/governance-operations.md §2) — not a judgment call.
+      The four DD-expansion steps (4 market, 5 legal, 12 financing, 13 HR)
+      are OUTSIDE the no-waiver core: mandatory but with the standard
+      waiver path (ADR-0051; whether legal DD joins the core is an open
+      question for the thresholds meeting, not decided here).
+  - id: 15
     gate: DD
     agent_key: process-governance-manager
     skill_key: stage-gate-governance
@@ -128,6 +190,11 @@ legal_basis:
   - "checklists/ma-special-topics-checklist.yaml"
   - "docs/pilots/pilot-010-affinity-lotte-rental.md finding F-2"
   - "checklists/rbd-technology-checklist.yaml (R&BD sub-type, design v1.0 §10 user decision 2026-08-20)"
+  - "checklists/market-dd-checklist.yaml (chk-market-dd, step 4 — ADR-0051)"
+  - "checklists/legal-dd-checklist.yaml (chk-legal-dd, step 5 — ADR-0051)"
+  - "checklists/financing-plan-checklist.yaml (chk-financing, step 12 — ADR-0051)"
+  - "checklists/hr-dd-checklist.yaml (chk-hr-dd, step 13 — ADR-0051)"
+  - "ADR-0051 (workflow gap closure — six-validator no-waiver core unchanged at steps 6-11; new steps mandatory with standard waiver path)"
 
 owner_agent: process-governance-manager
 last_reviewed: "2026-08-22"
