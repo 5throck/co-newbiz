@@ -6,16 +6,24 @@
  * (the migration-0013/0016/0017 pattern: runMigrations on a temp WAL DB,
  * resetDb in afterAll) so the CHECKs and FKs are exercised by SQLite itself.
  *
- * PR-7 is evidence-layer-only by design — the threshold agendas
- * (docs/decisions/open/technical-execution-thresholds.md §5 and
- * docs/decisions/open/risk-thresholds.md §5) own every number, vocabulary,
- * enum, and gate assignment. These tests pin the exact seed set (the
- * all-computed, zero-asserted property included), the placeholder discipline
- * inside condition_expr (with the two sanctioned degenerate-count rules that
- * carry no string placeholder by schema force), the join-table wiring (via
+ * PR-7 is evidence-layer-only by design — the threshold agendas owned every
+ * number, vocabulary, enum, and gate assignment until the records
+ * (docs/decisions/technical-execution-thresholds.md and
+ * docs/decisions/risk-thresholds.md, 2026-08-23) approved them. These tests
+ * pin the exact seed set (the all-computed, zero-asserted property included),
+ * the placeholder discipline at its 0018 layer, the join-table wiring (via
  * collectPredicateVars — reuse, not re-implementation), the antitrust
  * exclusion asserted positively, and the staging guard, so the post-meeting
  * PRs build against a contract that cannot drift.
+ *
+ * 0019 KNOCK-ON (the 0014→0017→0018 lesson, applied again): this file runs
+ * the FULL migration chain, and migration 0019 finalized the eight staged
+ * rows per the records — placeholders replaced by real scalars, covenant
+ * re-graded amber→red with priority 7→5 (D-M-RISK-4 layer 2), partner gate
+ * dd→pre_fs with lte 0→lte 1 (D-M-RISK-3), tech priorities restated 2/4/6/7
+ * (D-M-TE-8) — and added three new tech rules under other keys. Rule-row
+ * assertions are scoped to the rule-0018-* ids; the final values are pinned
+ * by tests/unit/migration-0019.test.ts.
  */
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
@@ -85,12 +93,17 @@ interface RuleRow {
 }
 
 function seededVarWhere(): string {
-  return SEED_PREFIXES.map((p) => `var_key LIKE '${p}'`).join(" OR ");
+  // cert.% is a SHARED prefix post-0019 (it seeded
+  // cert.load_bearing_non_transferable_on_coc, pinned in
+  // migration-0019.test.ts) — exclude that one so this file pins 0018's own 11
+  return "(var_key LIKE 'tech.%' OR var_key LIKE 'permit.%' OR var_key LIKE 'risk.%' OR (var_key LIKE 'cert.%' AND var_key != 'cert.load_bearing_non_transferable_on_coc'))";
 }
 
 function ruleRows(): RuleRow[] {
+  // scoped to 0018's own rows: 0019 added three tech rules under the same
+  // rule_key prefixes and restated the staged rows' values per the records
   return db
-    .query("SELECT id, rule_key, version, stage_gate, dimension, grade, condition_expr, priority, enabled, policy_id, thresholds_source FROM rag_rule WHERE rule_key LIKE 'tech-dd-%' OR rule_key LIKE 'risk-dd-%' ORDER BY priority")
+    .query("SELECT id, rule_key, version, stage_gate, dimension, grade, condition_expr, priority, enabled, policy_id, thresholds_source FROM rag_rule WHERE id LIKE 'rule-0018-%'")
     .all() as never[];
 }
 
@@ -205,26 +218,37 @@ describe("evidence_var seeds", () => {
 // ---------------------------------------------------------------------------
 
 describe("rag_rule staged skeleton", () => {
-  test("exactly eight rows, priorities 1..8, dimension split 4 technical_execution + 4 risk", () => {
+  test("exactly eight 0018 rows, dimension split 4 technical_execution + 4 risk, priorities restated by 0019", () => {
     const rows = ruleRows();
-    expect(rows.map((r) => r.rule_key)).toEqual([...STAGED_RULES]);
-    expect(rows.map((r) => r.priority)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(rows.map((r) => r.rule_key).sort()).toEqual([...STAGED_RULES].sort());
     expect(rows.filter((r) => r.dimension === "technical_execution")).toHaveLength(4);
     expect(rows.filter((r) => r.dimension === "risk")).toHaveLength(4);
+    // 0019's restatements per the records (final values pinned in
+    // migration-0019.test.ts): D-M-TE-8 tech 2/4/6/7 and D-M-RISK-4 layer 2
+    // risk 5/6/7/8 — Red before Amber within a dimension
+    const byKey = new Map(rows.map((r) => [r.rule_key, r]));
+    expect(byKey.get("tech-dd-trl-grade")!.priority).toBe(2);
+    expect(byKey.get("tech-dd-ip-clarity")!.priority).toBe(4);
+    expect(byKey.get("tech-dd-cert-transferability")!.priority).toBe(6);
+    expect(byKey.get("tech-dd-permit-critical-path")!.priority).toBe(7);
+    expect(byKey.get("risk-dd-covenant-breach")!.priority).toBe(5);
+    expect(byKey.get("risk-dd-contingent-expected-value")!.priority).toBe(6);
+    expect(byKey.get("risk-dd-contingent-two-factor")!.priority).toBe(7);
+    expect(byKey.get("risk-dd-partner-sourcing")!.priority).toBe(8);
   });
 
-  test("all rows are dd/amber/version 1, enabled=0 with both governance anchors NULL", () => {
+  test("version 1 and enabled=0 with both governance anchors NULL; gate/grade per the records' restatements", () => {
     for (const row of ruleRows()) {
       expect(row.version, row.rule_key).toBe(1);
-      // 'dd' is the STAGING DEFAULT (tech agenda §3.1 refuses to assume DD; the
-      // risk agenda assigns no gates) — inert while enabled=0, restated at
-      // activation from the decision record
-      expect(row.stage_gate, row.rule_key).toBe("dd");
-      expect(row.grade, row.rule_key).toBe("amber"); // the only grade surviving the Decision-9 Green cap
       expect(row.enabled, row.rule_key).toBe(0);
       expect(row.policy_id, row.rule_key).toBeNull();
       expect(row.thresholds_source, row.rule_key).toBeNull();
     }
+    const byKey = new Map(ruleRows().map((r) => [r.rule_key, r]));
+    // 'dd' was the 0018 staging default; D-M-RISK-3 restated partner to pre_fs
+    expect(byKey.get("risk-dd-partner-sourcing")!.stage_gate).toBe("pre_fs");
+    // amber was the placeholder grade; D-M-RISK-2/4 re-graded covenant Red
+    expect(byKey.get("risk-dd-covenant-breach")!.grade).toBe("red");
   });
 
   test("every condition_expr PARSES under the real PredicateSchema gate", () => {
@@ -233,26 +257,21 @@ describe("rag_rule staged skeleton", () => {
     }
   });
 
-  test("every parse carries a placeholder OR is one of the two sanctioned degenerate-count rules", () => {
+  test("no _threshold_placeholder leaf remains — 0019 replaced them with the records' scalars", () => {
+    // the ≥1-placeholder contract held while the rows were staged (the two
+    // degenerate-count rules excepted); both records filled every scalar in 0019
     for (const row of ruleRows()) {
-      const placeholders = countPlaceholderLeaves(parseRule(row));
-      if (DEGENERATE_COUNT_RULES.has(row.rule_key)) {
-        // count.value is zod z.number() — no string placeholder is possible;
-        // these carry the documented gte-1 "any exists" integer instead
-        expect(placeholders, row.rule_key).toBe(0);
-      } else {
-        expect(placeholders, row.rule_key).toBeGreaterThanOrEqual(1);
-      }
+      expect(countPlaceholderLeaves(parseRule(row)), row.rule_key).toBe(0);
     }
   });
 
-  test("the degenerate count integers are exactly gte 1 (any) — maximal sensitivity, never leniency", () => {
+  test("the two count-only rules remain bare gte-1 counts (values confirmed, not degenerate, post-0019)", () => {
     for (const key of DEGENERATE_COUNT_RULES) {
       const row = ruleRows().find((r) => r.rule_key === key)!;
       const parsed = parseRule(row);
       if (parsed.op !== "count") throw new Error(`${key} is not a bare count`);
       expect(parsed.cmp, key).toBe("gte");
-      expect(parsed.value, key).toBe(1);
+      expect(parsed.value, key).toBe(1); // confirmed by D-M-RISK-6 #3 and D-M-TE-8 row 6
     }
   });
 
@@ -298,10 +317,12 @@ describe("rag_rule staged skeleton", () => {
     } else {
       throw new Error("risk-dd-contingent-two-factor is not all_of");
     }
-    // risk §3.3: the conjunction — thin pool (lte 0: none) AND high dependency
+    // risk §3.3: the conjunction — thin pool AND high dependency. The staged
+    // lte 0 (degenerate "none exist") was re-decided to lte 1 by D-M-RISK-3
+    // ("no alternative" ≡ fewer than two viable candidates)
     const partner = parseRule(byKey.get("risk-dd-partner-sourcing")!);
     if (partner.op === "all_of") {
-      expect(partner.of[0]).toMatchObject({ op: "count", var: "risk.partner_candidates_active", cmp: "lte", value: 0 });
+      expect(partner.of[0]).toMatchObject({ op: "count", var: "risk.partner_candidates_active", cmp: "lte", value: 1 });
       expect(partner.of[1]).toMatchObject({ op: "in", var: "risk.partner_dependency_risk" });
     } else {
       throw new Error("risk-dd-partner-sourcing is not all_of");
@@ -330,10 +351,10 @@ describe("rag_rule_variable wiring", () => {
     expect(joined).toEqual([{ var_key: "tech.ip_ownership_status" }]);
   });
 
-  test("11 join rows total for the staged rules; every target is a 0018 seed", () => {
+  test("11 join rows total for the 0018 rules (0019's three new rules wired separately); every target is a 0018 seed", () => {
     const seeded = new Set<string>(SEEDED_VARS);
     const rows = db
-      .query("SELECT rv.var_key FROM rag_rule_variable rv JOIN rag_rule r ON r.id = rv.rule_id WHERE r.rule_key LIKE 'tech-dd-%' OR r.rule_key LIKE 'risk-dd-%'")
+      .query("SELECT rv.var_key FROM rag_rule_variable rv JOIN rag_rule r ON r.id = rv.rule_id WHERE r.id LIKE 'rule-0018-%'")
       .all() as { var_key: string }[];
     expect(rows).toHaveLength(11);
     for (const row of rows) expect(seeded.has(row.var_key), row.var_key).toBe(true);
@@ -384,9 +405,10 @@ describe("migration idempotence", () => {
 
     const rows = db.query("SELECT filename FROM schema_migrations ORDER BY filename").all() as { filename: string }[];
     expect(rows.map((r) => r.filename)).toContain("0018_technical_risk_evidence_layer.sql");
-    // and the seed sets survived untouched — 8 staged rules, registry total
-    // lower-bounded (prefix-scoped counts are exact; see the pin-hazard note above)
-    expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE rule_key LIKE 'tech-dd-%' OR rule_key LIKE 'risk-dd-%'").get() as { c: number }).c).toBe(8);
+    // and the seed sets survived untouched — 0018's eight rules (scoped to its
+    // own ids; 0019's three additions are pinned in migration-0019.test.ts),
+    // registry total lower-bounded (see the pin-hazard note above)
+    expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE id LIKE 'rule-0018-%'").get() as { c: number }).c).toBe(8);
     expect((db.query("SELECT COUNT(*) AS c FROM evidence_var").get() as { c: number }).c).toBeGreaterThanOrEqual(25);
   });
 });

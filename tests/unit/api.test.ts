@@ -456,7 +456,7 @@ describe("deal review — membership-gated reads and audited writes (Wave 5.7B)"
     db.run("INSERT INTO dd_finding (id, project_id, category, description, value_impact, created_at) VALUES (?,?,?,?,?,?)", [ulid(), projectId, "commercial", "Customer concentration 42% of revenue", -1.2, NOW]);
     db.run(
       "INSERT INTO dd_finding (id, project_id, category, description, trl_grade, parent_relationship_json, rbd_source, created_at) VALUES (?,?,?,?,?,?,?,?)",
-      [ulid(), projectId, "rbd", "Crankshaft coating process", "6", '{"parent":"HD","spinout":false}', "internal_only", NOW],
+      [ulid(), projectId, "rbd", "Crankshaft coating process", "TRL6", '{"parent":"HD","spinout":false}', "internal_only", NOW],
     );
 
     permitA = ulid();

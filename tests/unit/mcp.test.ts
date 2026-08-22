@@ -223,7 +223,7 @@ describe("Wave 5.7B — analysis and deal-review tools", () => {
     db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [runId, projectId, "5.7B test", "cafebabe", "alice", NOW]);
     db.run(
       "INSERT INTO dd_finding (id, project_id, category, description, trl_grade, parent_relationship_json, rbd_source, created_at) VALUES (?,?,?,?,?,?,?,?)",
-      [ulid(), projectId, "rbd", "Crankshaft coating process", "6", '{"parent":"HD"}', "internal_only", NOW],
+      [ulid(), projectId, "rbd", "Crankshaft coating process", "TRL6", '{"parent":"HD"}', "internal_only", NOW],
     );
     const permitA = ulid();
     const permitB = ulid();
@@ -285,7 +285,7 @@ describe("Wave 5.7B — analysis and deal-review tools", () => {
       data: { rbd_source: string; trl_grade: string; parent_relationship: unknown }[];
     };
     expect(profile.data[0].rbd_source).toBe("internal_only");
-    expect(profile.data[0].trl_grade).toBe("6");
+    expect(profile.data[0].trl_grade).toBe("TRL6");
     expect(profile.data[0].parent_relationship).toEqual({ parent: "HD" });
   });
 

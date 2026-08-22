@@ -74,7 +74,7 @@ function classifyInternal(pid: string, rationale: string): void {
 function insertCertCoc(pid: string): void {
   db.run(
     "INSERT INTO certification (id, project_id, name, status, transferability_basis, transferable_on_coc) VALUES (?,?,?,?,?,?)",
-    [ulid(), pid, "ISO 9001", "active", "verified", 1],
+    [ulid(), pid, "ISO 9001", "active", "verified", "no"],
   );
 }
 
