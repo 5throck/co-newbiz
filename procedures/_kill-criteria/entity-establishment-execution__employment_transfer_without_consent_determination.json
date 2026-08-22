@@ -1,0 +1,11 @@
+{
+  "procedure": "entity-establishment-execution",
+  "criterion_id": "employment_transfer_without_consent_determination",
+  "title": "Employment transfer executed without a consent-regime determination",
+  "action": "escalate_to_risk_officer",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Escalation, not halt: the jurisdiction's employment-transfer regime (TUPE / Korean 영업양도 doctrine) must be determined and applied before people move; Korean succession is judicial doctrine (Supreme Court 2000다8448 line) — individual-consent path is the safe practice (ADR-0051, verify with counsel)."
+}

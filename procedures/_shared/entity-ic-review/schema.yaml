@@ -3,7 +3,7 @@ procedure_id: shared-entity-ic-review
 title: "Entity Investment Committee Review"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -36,6 +36,20 @@ steps:
       Criteria check, three-stage reviewer sign-off table.
   - id: 4
     gate: "Entity IC"
+    agent_key: valuation-agent
+    skill_key: financing-plan-review
+    output_type: financing_readiness_check
+    description: >
+      Financing PRECONDITION before the decision step — the IC package must
+      contain the chk-financing evidence: executed commitment papers (equity
+      commitment letter; debt commitment letter + fee letter + term sheet)
+      or a documented internal-funds approval path, sources-and-uses,
+      covenant headroom/leverage analysis, funds-flow memorandum draft, FX
+      plan where currencies differ. No committed financing evidence =
+      precondition FAIL, not a judgment call — a financing contingency
+      weakens the bid and belongs to no reviewer's discretion.
+  - id: 5
+    gate: "Entity IC"
     agent_key: entity-ic-reviewer   # human role, not an AI agent — see docs/manuals/business-manual.md §1
     skill_key: stage-gate-governance
     output_type: entity_ic_decision
@@ -62,6 +76,8 @@ legal_basis:
   - "docs/process-map.md — Entity IC row"
   - "docs/manuals/business-manual.md §1, §3"
   - "docs/pilots/pilot-003-doosan-bobcat-robotics.md finding F-2 (withdrawn_pending_resubmission state)"
+  - "checklists/financing-plan-checklist.yaml (chk-financing — precondition evidence list)"
+  - "ADR-0051 (workflow gap closure — certainty of funds evidenced before final IC)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-20"
+last_reviewed: "2026-08-22"

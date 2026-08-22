@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-screening
 title: "Green Field Screening"
 scope: shared
 level: entity
-version: "1.2.0"
+version: "1.3.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -12,11 +12,25 @@ gate: Screening
 steps:
   - id: 1
     gate: Screening
+    agent_key: process-governance-manager
+    skill_key: strategic-fit-screening
+    output_type: strategic_fit_screening_result
+    description: >
+      Strategic-fit screen BEFORE market sizing — the strategic filter
+      precedes attractiveness rating (Cooper Gate 1; Green Book SOC). Knock-out
+      criteria (sf-01..sf-05) plus the rated scorecard (sf-06..sf-12) per
+      `checklists/strategic-fit-screening-checklist.yaml`, desk research and
+      sponsor knowledge only. Decision vocabulary is Go/Kill/Hold/Recycle with
+      written feedback recorded on every rejection. Scorecard weights and
+      advance thresholds are ILLUSTRATIVE until the thresholds meeting under
+      docs/decisions/open/ (ADR-0051 open question (b)).
+  - id: 2
+    gate: Screening
     agent_key: market-intelligence-agent
     skill_key: value-chain-linkage-analysis
     output_type: market_sizing
     description: TAM/SAM/SOM sizing and initial value-chain linkage read for the target industry.
-  - id: 2
+  - id: 3
     gate: Screening
     agent_key: greenfield-agent
     skill_key: site-infrastructure-assessment
@@ -24,7 +38,7 @@ steps:
     description: >
       Build the site shortlist AFTER applying the hard pre-filter (infrastructure
       minimums, partner-dependency confirmation) per meeting M6 D-M6-1. Sites
-      failing the pre-filter are excluded here, not scored lower in step 3.
+      failing the pre-filter are excluded here, not scored lower in step 4.
       Community-consultation/notification boundary MUST be computed from the
       legally applicable affected-area radius (e.g. distance-from-coast for
       power generation facilities), never assumed equal to the site's own
@@ -32,7 +46,7 @@ steps:
       notified only its own province's municipalities and omitted a
       neighboring province's islands that were legally within the affected
       radius, triggering a public dispute and re-notification risk.
-  - id: 3
+  - id: 4
     gate: Screening
     agent_key: greenfield-agent
     skill_key: regional-incentive-sourcing
@@ -41,7 +55,7 @@ steps:
       Weighted score among pre-filtered survivors: infra readiness 30%,
       incentive NPV 25%, logistics cost 15%, labor availability 15%,
       permit critical-path (inverted) 15% (meeting M6 D-M6-1/D-M6-3).
-  - id: 4
+  - id: 5
     gate: Screening
     agent_key: process-governance-manager
     skill_key: stage-gate-governance
@@ -69,6 +83,9 @@ legal_basis:
   - "Meeting M1, M6 (process-2026-08-20-m1-process-skeleton.md, m6-site-selection-criteria.md)"
   - "docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1"
   - "docs/pilots/pilot-007-punggu-offshore-wind.md finding F-1"
+  - "checklists/strategic-fit-screening-checklist.yaml (chk-strategic-fit)"
+  - "ADR-0051 (workflow gap closure — strategic fit at first screen)"
+  - "Cooper Stage-Gate Gate 1 / HM Treasury Green Book Strategic Outline Case — strategic filter precedes attractiveness rating (docs/research/venture-governance-best-practice.md Area A)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-20"
+last_reviewed: "2026-08-22"

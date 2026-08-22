@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-fs
 title: "Brown Field Full Feasibility"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -24,6 +24,22 @@ steps:
     description: NPV/IRR/Payback/DSCR model assembled from confirmed WACC/hurdle (Pre-FS output) and normalized EBITDA.
   - id: 3
     gate: FS
+    agent_key: legal-counsel
+    skill_key: investment-vehicle-structuring
+    output_type: deal_structure_review
+    description: >
+      Four-axis review of the Pre-FS deal_structure_hypothesis — the shape
+      axes (asset_or_stock, stake_type, instrument_mix, vehicle +
+      commercialization_path) each reviewed against ADR-0045's four
+      mandatory axes (tax structure, liability isolation, financing
+      leverage, exit structure); legal-counsel owns the tax and liability
+      axes. Completing the review sets four_axis_review_completed on the
+      deal_structure_hypothesis record (column and table land via migration
+      0013; completion is a deliberate act, default 0 — referenced here,
+      no DDL in this procedure). The deal_structure_review output records
+      per-axis findings and any hypothesis revision for the IC package.
+  - id: 4
+    gate: FS
     agent_key: antitrust-agent
     skill_key: antitrust-screening
     output_type: six_way_cross_check_started
@@ -32,7 +48,7 @@ steps:
       evaluation order — (1) antitrust + HR integration, (2) customer
       retention + incentive, (3) certification transferability last.
       Completion (all six landed) is a DD-exit requirement, not FS-exit.
-  - id: 4
+  - id: 5
     gate: FS
     agent_key: process-governance-manager
     skill_key: stage-gate-governance
@@ -48,6 +64,9 @@ legal_basis:
   - "Design v1.0 §4-4, §4-6"
   - "docs/process-map.md — FS row"
   - "Meeting M5 (m5-ma-model-linkage.md) — fixed evaluation order"
+  - "ADR-0045 (investment-vehicle-structuring as a deal-structure axis — four mandatory review axes)"
+  - "ADR-0051 (workflow gap closure — four-axis review step added at FS)"
+  - "db/migrations/0013_classification_infra.sql — deal_structure_hypothesis table incl. four_axis_review_completed"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-20"
+last_reviewed: "2026-08-22"

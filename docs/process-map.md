@@ -47,7 +47,7 @@ Every gate in the sequence above now has a formal `procedures/_shared/*/schema.y
 | Screening | `procedures/_shared/greenfield-screening/` | `procedures/_shared/brownfield-screening/` |
 | Pre-FS | `procedures/_shared/greenfield-pre-fs/` | `procedures/_shared/brownfield-pre-fs/` |
 | FS | `procedures/_shared/greenfield-fs/` | `procedures/_shared/brownfield-fs/` |
-| DD | `procedures/_shared/greenfield-dd/` | `procedures/_shared/brownfield-dd/` (six-validator no-waiver completeness check, step 9) |
+| DD | `procedures/_shared/greenfield-dd/` | `procedures/_shared/brownfield-dd/` (six-validator no-waiver completeness check, step 14; validators at steps 6-11 per ADR-0051) |
 | Entity IC | `procedures/_shared/entity-ic-review/` (shared — same shape for both) | |
 | Group IC | `procedures/_shared/group-investment-review/` (shared — same shape for both) | |
 

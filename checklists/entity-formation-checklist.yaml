@@ -1,0 +1,83 @@
+governance_doc_id: chk-entity-formation
+layer: checklist
+title: "Entity Formation Checklist (Internal / Joint Origin Execution)"
+scope: shared
+enforceability: mixed
+owner_agent: legal-counsel
+version: "1.0.0"
+effective_from: "2026-08-22"
+gate: "Entity IC"
+
+# Applies at EXECUTION after Entity IC approval, for origin = internal or joint
+# (ADR-0047 four-value origin). Items ef-01..ef-12 are the standard formation
+# sequence; ef-13..ef-18 are the JV addendum — mandatory ONLY for joint-origin
+# entities (mark not-applicable for internal origin, mirroring brownfield-dd step 3's
+# conditional-applicability pattern). JV governance design cross-references the
+# jv-structuring skill rather than restating it.
+
+items:
+  - id: ef-01
+    text: "Jurisdiction and entity type selected with the tax/regulatory rationale documented and approved"
+    mandatory: true
+  - id: ef-02
+    text: "Name availability cleared with the registry and preliminary trademark clearance completed"
+    mandatory: true
+  - id: ef-03
+    text: "Share structure and parent/founder allocations fixed; initial directors and officers identified"
+    mandatory: true
+  - id: ef-04
+    text: "Originating parent's internal approvals obtained — board/GM resolution authorizing formation, funding, and IP contribution"
+    mandatory: true
+  - id: ef-05
+    text: "Charter/articles filed, registered address and agent appointed, registered capital paid in"
+    mandatory: true
+  - id: ef-06
+    text: "Organizational documents executed — bylaws, incorporator action, board consents, director indemnification agreements"
+    mandatory: true
+  - id: ef-07
+    text: "IP assignment into the entity complete — all pre-formation IP (parent background IP and originating team's work) assigned or licensed in writing; every employee and contractor signs a PIIA agreement"
+    mandatory: true
+    waiver_eligible: false   # title integrity is a completeness fact — a gap here is an unwaivable establishment blocker (kill criterion ip_assignment_chain_incomplete_at_establishment)
+  - id: ef-08
+    text: "People transfer executed — new employment agreements + PIIAs signed; where staff come from the parent, a secondment or transfer agreement per applicable consent rules (Korea: business-transfer succession is judicial doctrine — 영업양도 — individual consent is the safe path; verify with counsel)"
+    mandatory: true
+  - id: ef-09
+    text: "Intra-group agreements executed — intra-group services agreement, IP/brand license, supply or distribution agreements, cost-sharing/transfer-pricing policy documented"
+    mandatory: true
+  - id: ef-10
+    text: "Statutory registrations completed — tax IDs, employer registrations, business licenses, sector permits; foreign-investment filings where cross-border"
+    mandatory: true
+  - id: ef-11
+    text: "Banking, insurance, and accounting/audit arrangements opened; statutory books and registers established"
+    mandatory: true
+  - id: ef-12
+    text: "Governance baseline set — first board minutes, delegated-authority matrix, compliance calendar, and a data room containing all of the above"
+    mandatory: true
+  # JV addendum — joint-origin only (mandatory when origin = joint)
+  - id: ef-13
+    text: "Joint-origin only: board of 5-9 members with equal seats in a 50/50 and deadlock design (independent chair, casting vote, or rotating chair) agreed at formation"
+    mandatory: true
+  - id: ef-14
+    text: "Joint-origin only: reserved-matters list requiring mutual consent — narrow, category-based, threshold-driven (strategy/scope, annual plan/budget, major capex/financing, CEO/CFO appointment, material related-party transactions, constitutional changes, ownership economics, dissolution)"
+    mandatory: true
+  - id: ef-15
+    text: "Joint-origin only: deadlock ladder with binding deadlines — management reconciliation, board decision memo, shareholder principals, cooling-off/standstill, expert determination for defined factual/valuation issues, mediation, final remedy"
+    mandatory: true
+  - id: ef-16
+    text: "Joint-origin only: exit clauses agreed — put/call with pre-agreed valuation formula, ROFR/ROFO and tag/drag rights, termination events, completion mechanics"
+    mandatory: true
+  - id: ef-17
+    text: "Joint-origin only: one-voice management confirmed — direction to the venture only via board decisions and the CEO, with a written delegated-authority matrix (variance bands, emergency limits)"
+    mandatory: true
+  - id: ef-18
+    text: "Joint-origin only: firewall/clean-team protocols established where the parents compete in adjacent markets"
+    mandatory: true
+  - id: ef-19
+    text: "Korea note (only where a company split is the formation route): a split (물적분할/인적분할) requires a shareholders' special resolution and the creditor-protection procedure — individual notice to known creditors plus public notice with an objection window of at least one month (Commercial Act arts. 527-2/527-5). Verify against the current KLRI statute text before enforcement use."
+    mandatory: false
+
+legal_basis:
+  - "ADR-0051 (workflow gap closure — internal-origin entity-formation chain step)"
+  - "procedures/_shared/entity-establishment-execution/schema.yaml (execution procedure consuming this checklist)"
+  - "DLA Piper pre/post-incorporation checklists; Robinson+Cole employee IP assignment; Umbrex JV governance architecture; KLRI Commercial Act English text"
+  - "skills/jv-structuring (JV governance design — cross-referenced, not restated)"

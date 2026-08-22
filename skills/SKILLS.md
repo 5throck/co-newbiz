@@ -141,6 +141,9 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `access-control-review` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — monthly stale-membership revocation, quarterly admin-count review |
 | `admin-console-operations` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8K — operates the 3 built admin sections, names the 7 not yet built |
 | `investment-vehicle-structuring` | 1.0.0 | active | brownfield-agent | 2026-08-20 | — | ADR-0045 — post-Wave-5.10 addendum, deal-structure-hypothesis vehicle axis (tax/liability-isolation/financing-leverage/exit) flagged during the pilot-001 system re-run |
+| `strategic-fit-screening` | 1.0.0 | active | process-governance-manager | 2026-08-22 | — | ADR-0051 (PR-10 workflow concretization) — entity-level knock-out + scorecard screen at first gate per chk-strategic-fit; thresholds illustrative until the thresholds meeting |
+| `legal-due-diligence` | 1.0.0 | active | legal-counsel | 2026-08-22 | — | ADR-0051 (PR-10 workflow concretization) — DD-grade legal workstream per chk-legal-dd; RAG findings register mapped to SPA protections |
+| `financing-plan-review` | 1.0.0 | active | valuation-agent | 2026-08-22 | — | ADR-0051 (PR-10 workflow concretization) — certainty-of-funds evidence pack per chk-financing; DD step 12 + Entity IC precondition |
 
 
 

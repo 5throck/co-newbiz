@@ -1,0 +1,54 @@
+governance_doc_id: chk-financing
+layer: checklist
+title: "Financing Plan Checklist"
+scope: shared
+enforceability: mixed
+owner_agent: valuation-agent
+version: "1.0.0"
+effective_from: "2026-08-22"
+gate: FS
+
+# Certainty of funds must be evidenced BEFORE final IC — a financing contingency
+# shifts risk to the seller and weakens the bid (Goodwin). The evidence pack below
+# is assembled at FS (financing-plan-review at brownfield-dd step 12) and re-tested
+# as a precondition at entity-ic-review.
+#
+# BENCHMARKS ARE ILLUSTRATIVE: the reverse-termination-fee range cited in fin-08
+# (4-7% of enterprise value) is a market-practice benchmark from published deal
+# practice, not activated policy — whether it becomes policy is ADR-0051 open
+# question (c) for the thresholds meeting.
+
+items:
+  - id: fin-01
+    text: "Cash/debt/equity mix decided with tenor and amortization profile, and the sources-and-uses table attached"
+    mandatory: true
+  - id: fin-02
+    text: "Executed commitment papers obtained — equity commitment letter; debt commitment letter + fee letter + term sheet — OR a documented internal-funds approval path where the deal is balance-sheet funded"
+    mandatory: true
+  - id: fin-03
+    text: "Covenant headroom / leverage analysis completed against the lender's terms"
+    mandatory: true
+  - id: fin-04
+    text: "Funds-flow memorandum drafted — every inflow/outflow, account, timing, and FX leg of closing day mapped"
+    mandatory: true
+  - id: fin-05
+    text: "FX plan stated (forwards, options, deal-contingent FX) whenever the consideration spans more than one currency"
+    mandatory: true
+  - id: fin-06
+    text: "Limited-conditionality ('certain funds') structure reviewed by legal-counsel — funding conditioned only on the specified acquisition-agreement representations, closing substantially per the agreement, and closing certificates; no market-MAC out"
+    mandatory: true
+  - id: fin-07
+    text: "Escrow/paying agent appointed and escrow sized against indemnity exposure"
+    mandatory: true
+  - id: fin-08
+    text: "Reverse-termination fee sized where the buyer retains debt-funding risk (illustrative benchmark: 4-7% of enterprise value — see header note)"
+    mandatory: false
+  - id: fin-09
+    text: "Certainty of funds evidenced in the IC package before final IC — commitment letters or internal-funds approval per fin-02, sources & uses, covenant headroom, funds-flow draft, and FX plan all present; missing financing evidence is a precondition fail at entity-ic-review, not a judgment call"
+    mandatory: true
+    waiver_eligible: false   # completeness fact: the evidence pack is either present or it is not
+
+legal_basis:
+  - "ADR-0051 (workflow gap closure — financing workstream added; chain step 13)"
+  - "procedures/_shared/brownfield-dd/schema.yaml step 12 (financing-plan-review), procedures/_shared/entity-ic-review/schema.yaml (precondition step)"
+  - "Goodwin (deal and financing certainty); Practical Law commitment-letter and funds-flow resources; SRS Acquiom (escrow sizing)"

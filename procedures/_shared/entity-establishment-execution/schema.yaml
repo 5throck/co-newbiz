@@ -1,0 +1,101 @@
+schema_version: "1.0"
+procedure_id: shared-entity-establishment-execution
+title: "Entity Establishment Execution"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: conditional
+applies_when: "origin ∈ {'internal','joint'} (ADR-0047 origin axis) — post-approval execution after Entity IC; routing on the origin classification activates with PR-5, until then this procedure is declared here but not auto-dispatched"
+workflow_type: core
+gate: "Entity IC"
+
+# Execution-phase procedure (after entity_ic_decision = approved), NOT a review
+# gate: no RAG grade is produced here. It exists because an internal or joint
+# venture needs formation, IP-assignment, and people-transfer steps that no
+# acquisition-shaped procedure provides (ADR-0051 gap: internal origin absent).
+
+steps:
+  - id: 1
+    gate: "Entity IC"
+    agent_key: legal-counsel
+    skill_key: legal-due-diligence
+    output_type: formation_readiness_check
+    description: >
+      Formation readiness per `checklists/entity-formation-checklist.yaml`
+      pre-incorporation items (ef-01..ef-04) — jurisdiction/entity type with
+      documented tax/regulatory rationale, name and trademark clearance,
+      share structure and directors/officers, parent board/GM resolutions
+      authorizing formation, funding, and IP contribution. Nothing files
+      until the readiness check confirms every pre-incorporation item.
+  - id: 2
+    gate: "Entity IC"
+    agent_key: legal-counsel
+    skill_key: k-law
+    output_type: statutory_filing_record
+    description: >
+      Charter filed, registered capital paid in, organizational documents
+      executed, statutory registrations (tax, employer, licenses,
+      foreign-investment filings), banking/insurance/audit opened, statutory
+      books established — per chk-entity-formation formation-and-legal-wiring
+      items. Where a company split (물적분할/인적분할) is the route: Commercial
+      Act art. 527-2 shareholders' special resolution and art. 527-5
+      creditor-protection procedure (individual notice + public notice,
+      >=1-month objection window) — verify against the current KLRI statute
+      text before enforcement use.
+  - id: 3
+    gate: "Entity IC"
+    agent_key: legal-counsel
+    skill_key: certification-transferability
+    output_type: certification_transferability_check
+    description: >
+      Permits and certifications for the NEW entity classified as
+      transfer / consent-required / re-issue — a permit lets you operate, a
+      certification lets you sell (boundary #5); the classification feeds the
+      compliance calendar. Confirms against the issuing body's own rules;
+      inference disallowed.
+  - id: 4
+    gate: "Entity IC"
+    agent_key: hr-integration-agent
+    skill_key: org-readiness-assessment
+    output_type: people_transfer_record
+    description: >
+      People transfer into the entity — new employment agreements + PIIA per
+      employee/contractor, secondment or transfer per applicable consent
+      rules. Korea: employment succession on business transfer (영업양도) is
+      judicial doctrine (Supreme Court 2000다8448 line), not statute — the
+      individual-consent path is the safe practice; verify with counsel
+      before enforcement use.
+  - id: 5
+    gate: "Entity IC"
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: >
+      Completion confirm — every chk-entity-formation item evidenced in the
+      entity data room, IP assignment chain closed (parent background IP +
+      team work, written assignment/license), governance baseline set (first
+      board minutes, delegated-authority matrix, compliance calendar). For
+      joint origin additionally verify the JV addendum items (ef-13.. :
+      board 5-9 with deadlock design, reserved matters, deadlock ladder,
+      exit clauses, one-voice management, firewall where parents compete) —
+      cross-ref the `jv-structuring` skill, which owns the how.
+
+kill_criteria:
+  - condition: ip_assignment_chain_incomplete_at_establishment
+    action: halt   # no waiver — title integrity is a completeness fact, not a judgment call
+  - condition: employment_transfer_without_consent_determination
+    action: escalate_to_risk_officer
+  - condition: origin_classification_missing_at_entity_ic_exit
+    action: halt   # conditional procedure cannot route without the origin axis (ADR-0047); fill until PR-5 lands
+
+legal_basis:
+  - "Group New Business Review Policy §2.3"
+  - "ADR-0047 (origin classification axis — internal/joint ventures need an establishment path acquisition steps cannot provide)"
+  - "ADR-0051 (workflow gap closure — internal-origin chain step)"
+  - "checklists/entity-formation-checklist.yaml (chk-entity-formation)"
+  - "Korean Commercial Act arts. 527-2/527-5 (company split — special resolution + creditor-protection procedure; verify against current KLRI text before enforcement use)"
+  - "docs/research/venture-governance-best-practice.md Area B.3/B.4 (formation + JV governance synthesis)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-08-22"

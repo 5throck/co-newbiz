@@ -1,0 +1,11 @@
+{
+  "procedure": "entity-establishment-execution",
+  "criterion_id": "origin_classification_missing_at_entity_ic_exit",
+  "title": "Origin classification missing at Entity IC exit",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Interim guard until PR-5 routing lands: this conditional procedure (applies_when origin in {internal, joint}) cannot route without the ADR-0047 origin axis; a missing classification halts rather than defaults to skip — a skip would be a waiver with none of a waiver's controls (ADR-0047)."
+}

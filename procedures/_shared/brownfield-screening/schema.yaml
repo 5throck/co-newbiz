@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-screening
 title: "Brown Field Screening"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -19,11 +19,25 @@ steps:
     description: Identify and longlist acquisition targets against the deal thesis.
   - id: 2
     gate: Screening
+    agent_key: process-governance-manager
+    skill_key: strategic-fit-screening
+    output_type: strategic_fit_screening_result
+    description: >
+      Strategic-fit screen BEFORE any market-concentration work — knock-out
+      criteria (sf-01..sf-05) plus the rated scorecard (sf-06..sf-12) per
+      `checklists/strategic-fit-screening-checklist.yaml`, desk research and
+      sponsor knowledge only, no commissioned analysis. Decision vocabulary
+      is Go/Kill/Hold/Recycle with written feedback recorded on every
+      rejection. Scorecard weights and advance thresholds are ILLUSTRATIVE
+      until the thresholds meeting under docs/decisions/open/ (ADR-0051
+      open question (b)).
+  - id: 3
+    gate: Screening
     agent_key: antitrust-agent
     skill_key: antitrust-screening
     output_type: preliminary_hhi_screen
     description: Rough market definition and HHI pre-screen — full six-way cross-check runs at DD, this is an early filter only.
-  - id: 3
+  - id: 4
     gate: Screening
     agent_key: process-governance-manager
     skill_key: stage-gate-governance
@@ -40,6 +54,9 @@ legal_basis:
   - "Group New Business Review Policy §2.3 (six-validator requirement applies from DD, not Screening)"
   - "Design v1.0 §6.3 (procedure/skill authority split)"
   - "Meeting M1 (process-2026-08-20-m1-process-skeleton.md) gate deliverable definitions"
+  - "checklists/strategic-fit-screening-checklist.yaml (chk-strategic-fit)"
+  - "ADR-0051 (workflow gap closure — strategic fit at first screen)"
+  - "Cooper Stage-Gate Gate 1 (Idea Screen) / HM Treasury Green Book Strategic Outline Case — strategic filter precedes heavy analysis (docs/research/venture-governance-best-practice.md Area A)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-20"
+last_reviewed: "2026-08-22"

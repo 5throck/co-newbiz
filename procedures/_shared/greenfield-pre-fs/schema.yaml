@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-pre-fs
 title: "Green Field Pre-Feasibility"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -12,6 +12,22 @@ gate: Pre-FS
 steps:
   - id: 1
     gate: Pre-FS
+    agent_key: greenfield-agent
+    skill_key: greenfield-feasibility
+    output_type: pre_feasibility_self_check
+    applies_when: "origin = 'internal' (classification cell 9/10) — external-origin Green Field keeps the existing flow from step 2"
+    description: >
+      GF-internal pre-feasibility gate BEFORE FS opens: a pure internal
+      venture (no external counterparty — ADR-0047 origin axis) must show
+      (a) market evidence via a proxy-chain demand estimate (cross-ref
+      `proxy-industry-chain`; chain reliability caps downstream confidence),
+      (b) technical feasibility, and (c) right-to-win PROOF, not hypothesis —
+      the Cooper Gate 2-to-3 escalation: right-to-win may be hypothesized at
+      Screening but must be evidenced before the first major resource
+      commitment. Not applicable (skip) for external-origin Green Field,
+      where the counterparty's own evidence carries the feasibility case.
+  - id: 2
+    gate: Pre-FS
     agent_key: valuation-agent
     skill_key: wacc-input-session
     output_type: wacc_hurdle_confirmed
@@ -19,13 +35,13 @@ steps:
       WACC/hurdle IRR moved from assumption.kind='assumed' to 'user' — hard
       precondition before FS opens (meeting M1). FS cannot proceed on a
       provisional discount rate.
-  - id: 2
+  - id: 3
     gate: Pre-FS
     agent_key: greenfield-agent
     skill_key: site-infrastructure-assessment
     output_type: infra_lead_time_cost_estimate
     description: Infrastructure lead-time and cost estimate for the pre-filtered site shortlist from Screening.
-  - id: 3
+  - id: 4
     gate: Pre-FS
     agent_key: greenfield-agent
     skill_key: regional-incentive-sourcing
@@ -34,7 +50,7 @@ steps:
       Incentive package converted to NPV, compared against infra capex and
       logistics cost on the same table per site (design §4-7, meeting M6
       D-M6-3) — never listed as a separate figure from the cost side.
-  - id: 4
+  - id: 5
     gate: Pre-FS
     agent_key: certification-agent
     skill_key: permit-pathway-mapping
@@ -43,7 +59,7 @@ steps:
       Confirm certification transferability where load-bearing to the thesis
       — only relevant if the site plan depends on an existing certified
       operation nearby or a certified partner; otherwise mark not-applicable.
-  - id: 5
+  - id: 6
     gate: Pre-FS
     agent_key: process-governance-manager
     skill_key: stage-gate-governance
@@ -61,6 +77,9 @@ legal_basis:
   - "Design v1.0 §4-1, §4-7"
   - "docs/process-map.md — Pre-FS row"
   - "Meeting M1 (process-2026-08-20-m1-process-skeleton.md)"
+  - "ADR-0047 (origin classification axis — internal ventures must not ride acquisition-shaped steps)"
+  - "ADR-0051 (workflow gap closure — GF-internal pre-feasibility gate)"
+  - "Cooper Stage-Gate Gate 2-to-3 escalation — right-to-win proven before the business-case build (docs/research/venture-governance-best-practice.md cross-cutting answer 1)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-20"
+last_reviewed: "2026-08-22"
