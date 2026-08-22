@@ -321,11 +321,19 @@ describe("rag_rule staged skeleton", () => {
     }
   });
 
-  test("all rows are enabled=0 with policy_id and thresholds_source NULL (the CHECK's other branch)", () => {
+  test("post-0022 activation: the four live rows carry both anchors; only the capped right-to-win stays disabled with NULL anchors", () => {
     for (const row of ruleRows()) {
-      expect(row.enabled, row.rule_key).toBe(0);
-      expect(row.policy_id, row.rule_key).toBeNull();
-      expect(row.thresholds_source, row.rule_key).toBeNull();
+      if (row.rule_key === "market-dd-right-to-win") {
+        // Decision 9 cap (D-M-MKT-11.2): the one green rule stays staged
+        expect(row.enabled, row.rule_key).toBe(0);
+        expect(row.policy_id, row.rule_key).toBeNull();
+        expect(row.thresholds_source, row.rule_key).toBeNull();
+      } else {
+        // 0022 (PR-9) activated every non-green row with both governance anchors
+        expect(row.enabled, row.rule_key).toBe(1);
+        expect(row.policy_id, row.rule_key).toBe("gd-0022-market-thresholds");
+        expect(row.thresholds_source, row.rule_key).not.toBeNull();
+      }
     }
   });
 
@@ -437,27 +445,28 @@ describe("rag_rule_variable wiring", () => {
 describe("staging guard on the market rows", () => {
   test("enabled=1 with both policy_id and thresholds_source NULL is rejected", () => {
     expect(() =>
-      db.run("UPDATE rag_rule SET enabled = 1 WHERE rule_key = 'market-dd-switching-cost'"),
+      db.run("UPDATE rag_rule SET enabled = 1, policy_id = NULL, thresholds_source = NULL WHERE rule_key = 'market-dd-switching-cost'"),
     ).toThrow(/CHECK constraint failed/);
   });
 
   test("enabled=1 with only one anchor present is still rejected (the CHECK requires BOTH)", () => {
     expect(() =>
-      db.run("UPDATE rag_rule SET enabled = 1, thresholds_source = 'D-MX-1 2026-99-99' WHERE rule_key = 'market-dd-tam-growth'"),
+      db.run("UPDATE rag_rule SET enabled = 1, policy_id = NULL, thresholds_source = 'D-MX-1 2026-99-99' WHERE rule_key = 'market-dd-tam-growth'"),
     ).toThrow(/CHECK constraint failed/);
     expect(() =>
       db.run("UPDATE rag_rule SET enabled = 1, policy_id = 'gov-nonexistent' WHERE rule_key = 'market-dd-right-to-win'"),
     ).toThrow(/CHECK constraint failed/);
   });
 
-  test("even a CHECK-satisfying enablement fails on the policy FK — governance_doc has no citable row yet", () => {
+  test("even a CHECK-satisfying enablement fails on the policy FK — the anchor must name a governance_doc row that exists", () => {
     expect(() =>
       db.run("UPDATE rag_rule SET enabled = 1, policy_id = 'gov-nonexistent', thresholds_source = 'D-MX-1 2026-99-99' WHERE rule_key = 'market-dd-bargaining-power'"),
     ).toThrow(/FOREIGN KEY constraint failed/);
   });
 
-  test("the failed UPDATEs left every staged row still disabled", () => {
-    for (const row of ruleRows()) expect(row.enabled, row.rule_key).toBe(0);
+  test("the failed UPDATEs rolled back — the enabled set is still exactly 0022's four; right-to-win stays 0", () => {
+    const enabled = ruleRows().filter((r) => r.enabled === 1).map((r) => r.rule_key).sort();
+    expect(enabled).toEqual([...STAGED_RULES].filter((k) => k !== "market-dd-right-to-win").sort());
   });
 });
 
