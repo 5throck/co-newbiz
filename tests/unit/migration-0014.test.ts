@@ -34,10 +34,18 @@ function migrationCount(): number {
   return readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).length;
 }
 
-/** The seed set, as var_key -> full row, in seed order. */
+/** The four routing var_keys 0014 owns (scoped since 0017 seeded the market scoring vars — this file pins ITS seed set, not the registry size). */
+const ROUTING_KEYS = [
+  "target.has_external_market_presence",
+  "project.case_type",
+  "project.origin",
+  "project.technology_track",
+] as const;
+
+/** 0014's seed set, as var_key -> full row, in seed order (routing prefixes only). */
 function seedRows(): { var_key: string; label_ko: string; value_type: string; unit: string | null; source_kind: string; requires_evidence_ref: number; max_age_days: number | null; created_at: string }[] {
   return db
-    .query("SELECT var_key, label_ko, value_type, unit, source_kind, requires_evidence_ref, max_age_days, created_at FROM evidence_var ORDER BY rowid")
+    .query("SELECT var_key, label_ko, value_type, unit, source_kind, requires_evidence_ref, max_age_days, created_at FROM evidence_var WHERE var_key LIKE 'target.%' OR var_key LIKE 'project.%' ORDER BY rowid")
     .all() as never[];
 }
 
@@ -63,13 +71,8 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe("0014 seed set", () => {
-  test("evidence_var holds exactly the four routing var_keys (0012 created the table empty)", () => {
-    expect(seedRows().map((r) => r.var_key)).toEqual([
-      "target.has_external_market_presence",
-      "project.case_type",
-      "project.origin",
-      "project.technology_track",
-    ]);
+  test("evidence_var holds exactly the four routing var_keys under their prefixes (0012 created the table empty; the market scoring vars seeded by 0017 live under market.*/right_to_win.* and are 0017's to pin)", () => {
+    expect(seedRows().map((r) => r.var_key)).toEqual([...ROUTING_KEYS]);
   });
 
   test("the asserted fact: boolean, asserted, requires evidence (Decision 5e's fact gate)", () => {
@@ -138,7 +141,9 @@ describe("0014 idempotence", () => {
   });
 
   test("seed row count is unchanged after the re-run", () => {
-    expect(seedRows().length).toBe(4);
+    const before = seedRows().length;
+    runMigrations(TEST_DB_PATH);
+    expect(seedRows().length).toBe(before); // before/after-relative — a later seed migration must not break this pin
   });
 
   test("re-executing the 0014 SQL duplicates nothing (bun multi-statement run silently no-ops; the PK is the hard guard)", () => {
@@ -148,9 +153,10 @@ describe("0014 idempotence", () => {
     // changes: 0. So the whole-file re-exec is asserted non-duplicating,
     // and the PK guard is proven separately with a single-statement INSERT
     // (which bun does let fail loudly).
+    const before = seedRows().length;
     const sql = readFileSync(join(MIGRATIONS_DIR, MIGRATION_FILE), "utf-8");
     db.run(sql);
-    expect(seedRows().length).toBe(4);
+    expect(seedRows().length).toBe(before);
     expect(() =>
       db.run(
         "INSERT INTO evidence_var (var_key, label_ko, value_type, source_kind, created_at) VALUES ('target.has_external_market_presence', 'x', 'boolean', 'asserted', ?)",
