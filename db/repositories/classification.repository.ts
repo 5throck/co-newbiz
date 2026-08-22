@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Classification repository — the single write path for
  * `project_case_classification` rows (PR-5b, design of record
@@ -32,6 +32,11 @@
 import { getDb } from "../client.ts";
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit, logDataAccess, requireActiveMember, requireInsiderIfMnpi } from "../lib/access-control.ts";
+// The PR-5c wiring below is the other half of the ONE deliberate import
+// cycle in the db layer (compliance.repository.ts imports isReducingOrigin
+// from this file). Both sides use the other's binding only inside functions,
+// so ESM live bindings resolve it after both modules initialize.
+import { invalidateNotApplicable } from "./compliance.repository.ts";
 
 export interface ClassificationRow {
   id: string;
@@ -247,6 +252,13 @@ export function classify(input: ClassifyInput, db: ReturnType<typeof getDb> = ge
  * index — the database itself rejects any other order, which is why the
  * sequence is a fact about the schema, not a convention of this file.
  *
+ * (4) not_applicable invalidation sweep (PR-5c, ADR-0048 §5, constraint 4):
+ * once the successor is live, every live not_applicable compliance row of
+ * the project is marked invalidated IN THIS SAME TRANSACTION — a skip can
+ * never outlive the classification that justified it, and a reclassification
+ * plus the retirement of its skips is one atomic event. The affected
+ * validators re-enter the required set on the next completeness evaluation.
+ *
  * Downgrade protection (constraint 5): the Decision-5a checks run against
  * the NEW row regardless of what the OLD row was — superseding a live
  * external classification with a reducing origin still needs the full
@@ -269,6 +281,14 @@ export function supersede(input: ClassifyInput, db: ReturnType<typeof getDb> = g
     db.run("UPDATE project_case_classification SET superseded_by = ? WHERE id = ?", [id, predecessor.id]);
     // (3) successor goes live — claims the freed slot
     db.run("UPDATE project_case_classification SET superseded_by = NULL WHERE id = ?", [id]);
+    // (4) skips retired with their justification (same transaction — ADR-0048 §5)
+    invalidateNotApplicable(db, {
+      project_id: input.project_id,
+      retired_classification_id: predecessor.id,
+      superseded_by_classification_id: id,
+      actor: input.classified_by,
+      now,
+    });
     logDataAccess(db, {
       userId: input.classified_by,
       tableKey: "project_case_classification",
