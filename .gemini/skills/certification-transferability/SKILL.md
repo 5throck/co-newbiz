@@ -11,8 +11,8 @@ description: >
 
   Use when: "certification transferability", "change of control
   certification", "certification survives acquisition".
-version: 1.1.0
-last_reviewed: 2026-08-22
+version: 1.2.0
+last_reviewed: 2026-08-23
 status: active
 owner: legal-counsel
 prerequisites:
@@ -23,6 +23,10 @@ metadata:
     - certification transferability
     - change of control certification
     - certification survives acquisition
+
+  procedure_keys:
+    - brownfield-dd
+    - entity-establishment-execution
 ---
 
 ## Context

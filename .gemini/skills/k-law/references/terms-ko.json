@@ -1,0 +1,20 @@
+{
+  "_note": "Korean query-trigger keywords and service terminology for the k-law skill. Non-Markdown reference asset — exempt from the workspace English-only doc policy (CONSTITUTION.md — Non-English Reference Material in Skills). SKILL.md stays English-only and links here.",
+  "query_triggers": {
+    "법령": "statute(s) / decrees (generic)",
+    "법률": "law / act",
+    "법령정보": "statute information",
+    "법령검색": "statute search",
+    "판례": "precedent / case law"
+  },
+  "service_terminology": {
+    "법제처": "Ministry of Government Legislation (MOLEG)",
+    "국가법령정보 공동활용": "National Law Information Center shared-use Open API",
+    "법령해석례": "legal interpretation case",
+    "행정규칙": "administrative rule",
+    "자치법규": "municipal ordinance",
+    "헌재결정례": "Constitutional Court decision",
+    "조약": "treaty",
+    "법령용어": "statutory terminology"
+  }
+}

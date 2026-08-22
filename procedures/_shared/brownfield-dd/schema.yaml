@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-dd
 title: "Brown Field Due Diligence"
 scope: shared
 level: entity
-version: "1.4.0"
+version: "1.5.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -28,9 +28,10 @@ steps:
     skill_key: technical-due-diligence
     output_type: dd_finding
     description: >
-      R&BD deals only (case_subtype: rbd — technology/IP acquisition,
-      license-in, or internal-venture spin-off carve-out, treated as a Brown
-      Field sub-type per design v1.0 §10 user decision 2026-08-20): run
+      R&BD deals only (technology_track: rbd on the 3-axis classification —
+      technology/IP acquisition, license-in, or internal-venture spin-off
+      carve-out; the `case_subtype` field this step previously cited was
+      retired by ADR-0047): run
       `checklists/rbd-technology-checklist.yaml` in addition to step 2 —
       covers core-technology TRL (distinct from production-process TRL),
       government co-funding conditions, IP/freedom-to-operate diligence, the

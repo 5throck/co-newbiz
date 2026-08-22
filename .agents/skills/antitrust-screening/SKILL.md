@@ -12,8 +12,8 @@ description: >
 
   Use when: "antitrust screening", "HHI calculation", "merger control
   filing", "gun-jumping", "relevant market definition".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: antitrust-agent
 prerequisites: none
@@ -25,6 +25,11 @@ metadata:
     - merger control filing
     - gun-jumping
     - relevant market definition
+
+  procedure_keys:
+    - brownfield-dd
+    - brownfield-fs
+    - brownfield-screening
 ---
 
 ## Context

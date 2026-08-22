@@ -10,8 +10,8 @@ description: >
 
   Use when: "regional incentive", "investment incentive package",
   "site comparison", "incentive NPV", "compare candidate sites".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: greenfield-agent
 prerequisites:
@@ -24,6 +24,10 @@ metadata:
     - site comparison
     - incentive NPV
     - compare candidate sites
+
+  procedure_keys:
+    - greenfield-pre-fs
+    - greenfield-screening
 ---
 
 ## Context

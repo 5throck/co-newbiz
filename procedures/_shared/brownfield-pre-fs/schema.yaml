@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-pre-fs
 title: "Brown Field Pre-Feasibility"
 scope: shared
 level: entity
-version: "1.3.0"
+version: "1.4.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -31,10 +31,11 @@ steps:
       real case structured through a purpose-built SPC) — see
       docs/pilots/pilot-002-hanwha-impact-hsd-engine.md §2 for a real worked
       example of a mixed secondary-purchase + primary-rights-issue structure.
-      For R&BD deals (case_subtype: rbd — technology/IP acquisition, license-in,
-      internal-venture spin-off carve-out, OR minority venture investment):
-      treated as a Brown Field sub-type, not a separate case type (design
-      v1.0 §10 user decision, 2026-08-20) — the structure hypothesis must
+      For R&BD deals (technology_track: rbd on the 3-axis classification —
+      technology/IP acquisition, license-in, internal-venture spin-off
+      carve-out, OR minority venture investment; the retired `case_subtype`
+      field was folded into `technology_track` by ADR-0047) — the structure
+      hypothesis must
       also cover `checklists/rbd-technology-checklist.yaml` rbd-04's
       build/license/spin-off/minority-invest choice explicitly. Minority
       venture investment was added as a fourth R&BD deal shape per
@@ -76,4 +77,4 @@ legal_basis:
   - "docs/pilots/pilot-014-c2y-university-techholdings.md finding F-4 (minority venture investment as an R&BD deal shape)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-20"
+last_reviewed: "2026-08-23"

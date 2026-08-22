@@ -42,5 +42,14 @@
     "사용할수없는키": "unusable key",
     "접근할수없는IP": "inaccessible IP",
     "조회된데이터가없음": "no data found"
+  },
+  "query_triggers": {
+    "_note": "Korean query phrases that should activate this skill. They cannot live in SKILL.md metadata.triggers (English-only doc policy); match user input against these when resolving skills.",
+    "DART 공시": "DART disclosure",
+    "공시검색": "disclosure search",
+    "기업개황": "company overview",
+    "재무제표": "financial statements",
+    "재무제표 조회": "financial statement retrieval",
+    "재무정보": "financial information"
   }
 }

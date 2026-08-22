@@ -1,5 +1,7 @@
-// @version 2.14.0
-// v2.14.0: Kill-criteria registry report (design of record 2026-08-22, Decision 8 /
+// @version 2.14.1
+// v2.14.1: Language-check double-count fix — Fail() already increments errors, so the
+//   stray errors++ after the language-validation Fail inflated "N check(s) failed" to 2
+//   on a single real failure. v2.14.0: Kill-criteria registry report (design of record 2026-08-22, Decision 8 /
 //   risk-officer F7) — non-fatal "kill-criteria: N declared / M executable
 //   (registry)" line sourced from procedures/_validate.ts output. The gate
 //   itself (coverage, anti-tamper, --strict baseline) lives in _validate.ts.
@@ -643,8 +645,7 @@ if (!LIFECYCLE_ONLY) {
 if (langValidate.exitCode === 0) {
     Pass('Language validation: no Korean-only markdown files found');
 } else {
-    Fail('Language validation: Korean-only markdown files detected');
-    errors++;
+    Fail('Language validation: Korean-only markdown files detected'); // Fail() already increments errors — no double-count
 }
 }
 

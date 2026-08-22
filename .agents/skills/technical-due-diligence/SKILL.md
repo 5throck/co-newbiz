@@ -10,8 +10,8 @@ description: >
 
   Use when: "technical due diligence", "capex plan verification",
   "bottleneck process identification", "remaining useful life assessment".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: technical-dd-agent
 prerequisites:
@@ -23,6 +23,9 @@ metadata:
     - capex plan verification
     - bottleneck process identification
     - remaining useful life assessment
+
+  procedure_keys:
+    - brownfield-dd
 ---
 
 ## Context

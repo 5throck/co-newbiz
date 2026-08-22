@@ -10,8 +10,8 @@ description: >
 
   Use when: "permit pathway", "permit DAG", "permit critical path",
   "operating permit requirements".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: legal-counsel
 prerequisites: none
@@ -22,6 +22,10 @@ metadata:
     - permit DAG
     - permit critical path
     - operating permit requirements
+
+  procedure_keys:
+    - brownfield-pre-fs
+    - greenfield-pre-fs
 ---
 
 ## Context

@@ -11,8 +11,8 @@ description: >
 
   Use when: "regulatory screening", "foreign investment screening trigger",
   "sanctions screening all counterparties", "region profile confirmation".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: legal-counsel
 prerequisites:
@@ -24,6 +24,9 @@ metadata:
     - foreign investment screening trigger
     - sanctions screening all counterparties
     - region profile confirmation
+
+  procedure_keys:
+    - brownfield-screening
 ---
 
 ## Context

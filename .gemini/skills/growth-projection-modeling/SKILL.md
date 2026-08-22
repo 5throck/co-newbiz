@@ -12,8 +12,8 @@ description: >
 
   Use when: "growth projection", "revenue forecast", "base rate warning",
   "anchor_ref", "hockey stick check".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: financial-analyst
 prerequisites:
@@ -27,6 +27,9 @@ metadata:
     - base rate warning
     - anchor_ref
     - hockey stick check
+
+  procedure_keys:
+    - greenfield-fs
 ---
 
 ## Context

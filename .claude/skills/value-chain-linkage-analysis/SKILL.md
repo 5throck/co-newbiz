@@ -10,8 +10,8 @@ description: >
 
   Use when: "value chain linkage", "pass-through rate", "upstream downstream
   risk exposure", "margin risk from supplier or customer industry".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: quant-methodologist
 prerequisites: none
@@ -22,6 +22,9 @@ metadata:
     - pass-through rate
     - upstream downstream risk exposure
     - margin risk from supplier or customer industry
+
+  procedure_keys:
+    - greenfield-screening
 ---
 
 ## Context

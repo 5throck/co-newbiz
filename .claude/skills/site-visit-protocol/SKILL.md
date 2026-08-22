@@ -10,8 +10,8 @@ description: >
 
   Use when: "site visit protocol", "pre-visit document request",
   "on-site evidence capture", "site visit checklist".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: technical-dd-agent
 prerequisites: none
@@ -22,6 +22,9 @@ metadata:
     - pre-visit document request
     - on-site evidence capture
     - site visit checklist
+
+  procedure_keys:
+    - greenfield-dd
 ---
 
 ## Context

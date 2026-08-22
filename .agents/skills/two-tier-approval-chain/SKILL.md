@@ -10,8 +10,8 @@ description: >
 
   Use when: "entity IC", "group IC", "approval chain", "IC gate",
   "group agenda ranking", "submit to group IC".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: process-governance-manager
 prerequisites: none
@@ -24,6 +24,9 @@ metadata:
     - IC gate
     - group agenda ranking
     - submit to group IC
+
+  procedure_keys:
+    - group-investment-review
 ---
 
 ## Context

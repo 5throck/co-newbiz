@@ -10,8 +10,8 @@ description: >
 
   Use when: "investment feasibility model", "NPV IRR calculation",
   "feasibility financial model".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: valuation-agent
 prerequisites:
@@ -23,6 +23,10 @@ metadata:
     - investment feasibility model
     - NPV IRR calculation
     - feasibility financial model
+
+  procedure_keys:
+    - brownfield-fs
+    - greenfield-fs
 ---
 
 ## Context

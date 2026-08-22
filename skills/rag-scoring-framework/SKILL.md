@@ -11,8 +11,8 @@ description: >
 
   Use when: "RAG grade", "RAG scoring", "overall grade calculation",
   "hysteresis", "structural vs behavioral remedy grading".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: process-governance-manager
 prerequisites:
@@ -25,6 +25,9 @@ metadata:
     - overall grade calculation
     - hysteresis
     - structural vs behavioral remedy grading
+
+  procedure_keys:
+    - entity-ic-review
 ---
 
 ## Context

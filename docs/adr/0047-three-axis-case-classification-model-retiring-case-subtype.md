@@ -1,10 +1,10 @@
 # ADR-0047: Three-axis case classification model (case_type × origin × technology_track), retiring `case_subtype`
 
-**Status**: Proposed
-**Date**: 2026-08-22
+**Status**: Accepted
+**Date**: 2026-08-22 (Accepted 2026-08-23)
 **Deciders**: process-governance-manager, compliance-officer, brownfield-agent, greenfield-agent, risk-officer
 
-> **Proposed, not Accepted.** This decision takes effect when PR-4 (classification infrastructure) and PR-5 (classification routing, landed as 5a → 5b → 5c) land. The `project_policy_pin` backfill in §4 below is a **precondition of PR-5**, not a follow-up.
+> **Accepted 2026-08-23.** The condition set at Proposal — PR-4 (classification infrastructure, PR #76) and PR-5 (classification routing, landed as 5a → 5b → 5c, PRs #79/#80/#81) — has landed. The §4 `project_policy_pin` backfill shipped as a precondition of PR-5 as required. PR-8 (skill graph hardening) completes §5's mirror-sweep obligation: the retired `case_subtype` token is now absent from all four copies (`skills/` + `.claude/` + `.gemini/` + `.agents/`), verified by `diff -rq` mirror parity and a zero-match grep over the operational trees.
 
 ## Context
 

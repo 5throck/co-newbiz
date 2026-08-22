@@ -11,8 +11,8 @@ description: >
 
   Use when: "compliance check", "is this gate blocked", "governance KPI",
   "gate cycle time", "checklist completion rate", "waiver concentration".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: compliance-officer
 prerequisites: none
@@ -25,6 +25,9 @@ metadata:
     - gate cycle time
     - checklist completion rate
     - waiver concentration
+
+  procedure_keys:
+    - brownfield-dd
 ---
 
 ## Context

@@ -10,8 +10,8 @@ description: >
 
   Use when: "related party transaction", "Fair Trade Act Art. 47",
   "intra-group transaction", "affiliate transaction screen".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: group-review-agent
 prerequisites:
@@ -23,6 +23,9 @@ metadata:
     - Fair Trade Act Art. 47
     - intra-group transaction
     - affiliate transaction screen
+
+  procedure_keys:
+    - group-investment-review
 ---
 
 ## Context

@@ -4,16 +4,17 @@ title: "R&BD (Research & Business Development) Technology Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.2.0"
+version: "1.2.1"
 effective_from: "2026-08-20"
 gate: DD
 
-# R&BD is treated as a Brown Field sub-type (case_subtype: rbd), not a
-# separate top-level review type — the deal is structured as an equity
+# R&BD is routed by the 3-axis classification's technology_track=rbd axis
+# value (case_type stays brownfield — the deal is structured as an equity
 # stake, license-in, or spin-off carve-out, all BF mechanics, not a new
-# physical site (design v1.0 §10 user decision, 2026-08-20). This checklist
-# runs IN ADDITION TO checklists/technical-dd-checklist.yaml and
-# checklists/ma-special-topics-checklist.yaml when case_subtype=rbd.
+# physical site; the retired `case_subtype` field was folded into
+# `technology_track` by ADR-0047). This checklist runs IN ADDITION TO
+# checklists/technical-dd-checklist.yaml and
+# checklists/ma-special-topics-checklist.yaml when technology_track=rbd.
 
 items:
   - id: rbd-01

@@ -7,8 +7,8 @@ description: >
   event reports. Includes structured parsing rules, data normalization,
   and accounting line-item extraction for consulting intelligence.
   Requires DART_API_KEY environment variable.
-version: 2.0.0
-last_reviewed: 2026-08-09
+version: 2.0.2
+last_reviewed: 2026-08-23
 status: active
 owner: strategy-analyst
 prerequisites: DART_API_KEY environment variable
@@ -20,12 +20,7 @@ metadata:
     - /k-dart
     - DART
     - DART OpenAPI
-    - `DART 공시`
-    - `공시검색`
-    - `기업개황`
-    - `재무제표`
-    - `재무정보`
-    - `재무제표 조회`
+    - Korean disclosure search
     - financial statement
     - corporate disclosure
 ---
@@ -86,7 +81,7 @@ Structured JSON output for financial metrics:
 
 ## Reference Material
 
-- `references/terms-ko.json`: Korean-original DART terminology mapping (report types, corporate actions, financial statement line items, audit opinions, entity classes, status messages). Non-Markdown reference asset, exempt from the workspace English-only doc policy.
+- `references/terms-ko.json`: Korean-original DART terminology mapping (report types, corporate actions, financial statement line items, audit opinions, entity classes, status messages) **and the Korean query-trigger keywords** (disclosure search, company overview, financial statements). Non-Markdown reference asset, exempt from the workspace English-only doc policy — `SKILL.md` stays English-only, so Korean trigger phrases live there, not in `metadata.triggers`.
 
 ## Related Skills
 

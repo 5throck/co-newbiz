@@ -10,8 +10,8 @@ description: >
 
   Use when: "stage gate", "kill criteria", "gate sequence", "halt the
   project", "does this trigger a kill criterion".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: process-governance-manager
 prerequisites: none
@@ -23,6 +23,19 @@ metadata:
     - gate sequence
     - halt the project
     - does this trigger a kill criterion
+
+  procedure_keys:
+    - brownfield-dd
+    - brownfield-fs
+    - brownfield-pre-fs
+    - brownfield-screening
+    - entity-establishment-execution
+    - entity-ic-review
+    - greenfield-dd
+    - greenfield-fs
+    - greenfield-pre-fs
+    - greenfield-screening
+    - group-investment-review
 ---
 
 ## Context

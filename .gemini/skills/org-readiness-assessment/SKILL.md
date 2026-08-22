@@ -9,8 +9,8 @@ description: >
 
   Use when: "organizational readiness", "change readiness", "change capacity",
   "readiness assessment", "transformation readiness".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: hr-integration-agent
 prerequisites: none
@@ -22,6 +22,10 @@ metadata:
     - change capacity
     - readiness assessment
     - transformation readiness
+
+  procedure_keys:
+    - brownfield-dd
+    - entity-establishment-execution
 ---
 
 ## Context

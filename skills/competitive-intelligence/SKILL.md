@@ -9,8 +9,8 @@ description: >
   Use when: "competitive analysis", "market analysis", "competitor profiling",
   "market entry analysis", "industry attractiveness", "competitive intelligence",
   "five forces".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: market-intelligence-agent
 prerequisites: none
@@ -24,6 +24,9 @@ metadata:
     - industry attractiveness
     - competitive intelligence
     - five forces
+
+  procedure_keys:
+    - brownfield-dd
 ---
 
 ## Context

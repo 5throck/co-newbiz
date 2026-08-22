@@ -14,8 +14,8 @@ description: >
 
   Use when: "brown field feasibility", "M&A feasibility", "acquisition
   screening", "brownfield DD".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: brownfield-agent
 prerequisites: none
@@ -26,12 +26,26 @@ metadata:
     - M&A feasibility
     - acquisition screening
     - brownfield DD
+
+  procedure_keys:
+    - brownfield-pre-fs
+    - brownfield-screening
+  related_skills:
+    - antitrust-screening
+    - certification-transferability
+    - commercial-due-diligence
+    - customer-attrition-risk
+    - incentive-clawback-assessment
+    - org-readiness-assessment
+    - stage-gate-governance
+    - technical-due-diligence
 ---
 
 ## Context
 
 R&BD (research & business development licensing/co-development
-arrangements) is a Brown Field subtype (`case_subtype=rbd`) — when flagged,
+arrangements) runs under `technology_track=rbd` on the 3-axis
+classification (`case_type` × `origin` × `technology_track`, ADR-0047) — when flagged,
 `checklists/rbd-technology-checklist.yaml` runs alongside this checklist,
 not instead of it. The six mandatory M&A validators are a completeness
 check with **no waiver path** (`waiver_eligible: false` on
@@ -57,7 +71,7 @@ from every other mandatory-but-waivable item on the same checklist.
    `incentive-clawback-assessment`, `org-readiness-assessment` (HR
    integration), certification transferability
    (`certification-transferability`), and region-lead labor review
-4. **R&BD subtype check**: if `case_subtype=rbd`, additionally run
+4. **R&BD track check**: if `technology_track=rbd`, additionally run
    `checklists/rbd-technology-checklist.yaml` (TRL, IP/FTO status,
    commercialization-path, `rbd_source`)
 5. **Confirm WACC/hurdle-IRR is `kind='user'`**, not `assumed`, before
