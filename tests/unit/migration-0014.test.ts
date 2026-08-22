@@ -46,7 +46,7 @@ beforeAll(() => {
   process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
   resetDb();
   const { applied } = runMigrations(TEST_DB_PATH);
-  expect(applied[applied.length - 1]).toBe(MIGRATION_FILE); // 0014 is the newest, applied last
+  expect(applied).toContain(MIGRATION_FILE); // applied, position-independent — 0015 broke the old "newest, applied last" pin, exactly the future-coupling this header forbids
   db = getDb(TEST_DB_PATH);
 });
 
