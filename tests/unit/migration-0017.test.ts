@@ -5,13 +5,21 @@
  * pattern: runMigrations on a temp WAL DB, resetDb in afterAll) so the CHECKs,
  * FKs, and the composite PK are exercised by SQLite itself, not mocked.
  *
- * PR-6 is evidence-layer-only by design — the thresholds agenda
- * (docs/decisions/open/market-thresholds.md §5) owns every number. These
- * tests pin the snapshot shape (including the documented fourth status), the
- * exact seed set, the placeholder discipline inside condition_expr, the
- * join-table wiring (via collectPredicateVars — reuse, not re-implementation),
- * and the staging guard, so the post-meeting PRs build against a contract
- * that cannot drift.
+ * PR-6 is evidence-layer-only by design — the thresholds agenda owned every
+ * number until docs/decisions/market-thresholds.md (2026-08-23) approved them.
+ * These tests pin the snapshot shape (including the documented fourth status),
+ * the exact seed set, the placeholder discipline inside condition_expr at its
+ * 0017 layer, the join-table wiring (via collectPredicateVars — reuse, not
+ * re-implementation), and the staging guard, so the post-meeting PRs build
+ * against a contract that cannot drift.
+ *
+ * 0019 KNOCK-ON (the 0014→0017 lesson, applied again): this file runs the
+ * FULL migration chain, and migration 0019 finalized the five staged rows per
+ * the record — placeholders replaced by real scalars, right-to-win re-graded
+ * amber→green (D-M-MKT-10.1) — and added gate-split/new rules under other
+ * keys. Rule-row assertions are therefore scoped to the rule-0017-* ids and
+ * state only what 0017 itself still guarantees; the final values are pinned
+ * by tests/unit/migration-0019.test.ts.
  */
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
@@ -126,8 +134,10 @@ function indexSql(table: string): { name: string; sql: string | null }[] {
 }
 
 function ruleRows(): RuleRow[] {
+  // scoped to 0017's own rows: 0019 added market-dd-right-to-win-absent under
+  // the same rule_key prefix and re-graded/filled the originals per the record
   return db
-    .query("SELECT id, rule_key, version, stage_gate, dimension, grade, condition_expr, priority, enabled, policy_id, thresholds_source FROM rag_rule WHERE rule_key LIKE 'market-dd-%' ORDER BY priority")
+    .query("SELECT id, rule_key, version, stage_gate, dimension, grade, condition_expr, priority, enabled, policy_id, thresholds_source FROM rag_rule WHERE id LIKE 'rule-0017-%' ORDER BY priority")
     .all() as never[];
 }
 
@@ -296,7 +306,7 @@ describe("evidence_var seeds", () => {
 // ---------------------------------------------------------------------------
 
 describe("rag_rule staged skeleton", () => {
-  test("exactly five market-dd rows, priorities 1..5, all dd/market/amber/version 1", () => {
+  test("exactly five 0017 rows, priorities 1..5, all dd/market/version 1; grade amber except the 0019 re-grade", () => {
     const rows = ruleRows();
     expect(rows.map((r) => r.rule_key)).toEqual([...STAGED_RULES]);
     expect(rows.map((r) => r.priority)).toEqual([1, 2, 3, 4, 5]);
@@ -304,7 +314,10 @@ describe("rag_rule staged skeleton", () => {
       expect(row.version, row.rule_key).toBe(1);
       expect(row.stage_gate, row.rule_key).toBe("dd");
       expect(row.dimension, row.rule_key).toBe("market");
-      expect(row.grade, row.rule_key).toBe("amber"); // the placeholder grade — the only one surviving the Decision 9 Green cap
+      // amber was the 0017 placeholder grade (the only one surviving the
+      // Decision 9 Green cap); 0019 re-graded the merit rule green per
+      // D-M-MKT-10.1 — still enabled=0 until calibration lifts the cap
+      expect(row.grade, row.rule_key).toBe(row.rule_key === "market-dd-right-to-win" ? "green" : "amber");
     }
   });
 
@@ -322,10 +335,12 @@ describe("rag_rule staged skeleton", () => {
     }
   });
 
-  test("every parse contains at least one _threshold_placeholder leaf (deep-walk)", () => {
+  test("no _threshold_placeholder leaf remains — 0019 replaced them with the record's scalars", () => {
+    // the ≥1-placeholder contract held while the rows were staged; the record
+    // (docs/decisions/market-thresholds.md) filled every scalar in 0019
     for (const row of ruleRows()) {
       const parsed = parseRule(row);
-      expect(countPlaceholderLeaves(parsed), row.rule_key).toBeGreaterThanOrEqual(1);
+      expect(countPlaceholderLeaves(parsed), row.rule_key).toBe(0);
     }
   });
 
@@ -391,11 +406,18 @@ describe("rag_rule_variable wiring", () => {
     }
   });
 
-  test("growth_rate is wired to both rules that reference it (the shared-var case)", () => {
+  test("growth_rate is wired to every rule that references it (the shared-var case)", () => {
+    // 0017 wired the two dd rules; 0019 added the two gate-split tam-growth
+    // rows (D-M-MKT-9) with the same expr — four wirings now
     const rules = (db
       .query("SELECT rule_id FROM rag_rule_variable WHERE var_key = 'market.growth_rate'")
       .all() as { rule_id: string }[]).map((r) => r.rule_id);
-    expect(rules.sort()).toEqual(["rule-0017-market-dd-competitive-demerit", "rule-0017-market-dd-tam-growth"].sort());
+    expect(rules.sort()).toEqual([
+      "rule-0017-market-dd-competitive-demerit",
+      "rule-0017-market-dd-tam-growth",
+      "rule-0019-market-pre-fs-tam-growth",
+      "rule-0019-market-screening-tam-growth",
+    ].sort());
   });
 
   test("every join row for the staged rules targets a seeded var (FK-enforced, asserted anyway)", () => {
@@ -452,9 +474,10 @@ describe("migration idempotence", () => {
 
     const rows = db.query("SELECT filename FROM schema_migrations ORDER BY filename").all() as { filename: string }[];
     expect(rows.map((r) => r.filename)).toContain("0017_market_evidence_layer.sql");
-    // and the seed sets survived untouched — the 5 staged market rules + 0017's
-    // 10 vars (total pin scoped per the 0014→0017 knock-on precedent)
-    expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE rule_key LIKE 'market-dd-%'").get() as { c: number }).c).toBe(5);
+    // and the seed sets survived untouched — 0017's five staged rules + 10 vars
+    // (counts scoped to 0017's own rows per the 0014→0017 knock-on precedent;
+    // 0019's additional market rows are pinned in migration-0019.test.ts)
+    expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE id LIKE 'rule-0017-%'").get() as { c: number }).c).toBe(5);
     expect((db.query("SELECT COUNT(*) AS c FROM evidence_var WHERE var_key LIKE 'market.%' OR var_key LIKE 'right_to_win.%'").get() as { c: number }).c).toBe(10);
   });
 });
