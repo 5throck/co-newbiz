@@ -213,7 +213,9 @@ beforeAll(() => {
 
   projectId = insertProject();
   runId = insertRun();
-  insertEvidenceVar("right_to_win.customer_overlap", { label_ko: "고객 중첩도", value_type: "boolean" });
+  // right_to_win.customer_overlap needs no fixture insert since migration 0017
+  // seeds it (the var_key is now a PK-conflicting duplicate); the dimension_input
+  // rows below only need the var to EXIST for the FK.
   insertEvidenceVar("market.competitive_intensity", { label_ko: "경쟁강도", value_type: "number", unit: "ratio" });
   insertEvidenceVar("market.entry_barrier_grade", { label_ko: "진입장벽 등급" });
 });

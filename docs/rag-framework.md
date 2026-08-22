@@ -59,7 +59,7 @@ Per design §4-2, thresholds are declared per `stage_gate` — the bands above a
 
 ## 5-1. Stage-Gate Threshold Applicability — Market Dimension (Decision 6, draft)
 
-The `market` dimension is unformalized today (no scoring function exists — see the 2026-08-22 RAG formalization design, `docs/designs/2026-08-22-rag-formalization-and-case-classification-design.md` §1.1). This subsection documents the staged rule agreed in that design's Decision 6, ahead of PR-6's implementation, following the same pattern as §5's `financial` treatment.
+The `market` dimension's **evidence layer has landed** (migration 0017, PR-6): the `project_variable_snapshot` table, the first scoring-var seeds (9 market / right-to-win vars + `market.link_fit_quality`), and five `market-dd-*` rule rows staged `enabled=0` with `_threshold_placeholder` scalars — the anti-tamper skeleton the thresholds meeting fills in. **Grading itself remains unformalized**: no scoring function exists, no rule is executable, and PR-9 activation stays blocked until `docs/decisions/open/market-thresholds.md` is replaced by a dated decision record (its §5 owns every number, the fillers, the `switching_cost_grade` CHECK enum, and `competitive_intensity`'s source). This subsection documents the staged rule agreed in the design's Decision 6 (2026-08-22 RAG formalization design, §1.1), following the same pattern as §5's `financial` treatment.
 
 | Stage gate | Rule |
 |---|---|
@@ -76,7 +76,7 @@ The design's meeting review corrected a mapping error in the original plan (see 
 - `concentration_hhi` → `bargaining_power` (its original meaning), **not** `competitive_intensity`.
 - `competitive_intensity` is a **new, still-unsourced** var — to be sourced from `fact_industry` convention or `dimension_input`, not from `concentration_hhi`.
 - `switching_cost_grade` / `substitution_threat` are currently unconstrained `TEXT` columns and need a `CHECK` constraint before they can be trusted by an `in`-predicate (an unconstrained column lets a typo silently fail to match, producing a false unassessed/mismatch).
-- Vars sourced from `value_chain_link` require `r2 >= 0.6` (mirroring `gradeChain()`'s own reliability threshold) — below that, the var is excluded as low-confidence rather than treated as present. This distinction (missing vs. low-confidence) does not exist yet in the current implementation.
+- Vars sourced from `value_chain_link` require `r2 >= 0.6` (mirroring `gradeChain()`'s own reliability threshold) — below that, the var is excluded as low-confidence rather than treated as present. The missing-vs-low-confidence distinction now exists at schema level: `project_variable_snapshot.status` carries a fourth member `low_confidence` (migration 0017 — the design DDL sketched three statuses, but Decision 6's own text requires the distinction). The *enforcement* (the value_chain_link filler that writes such rows) lands with the thresholds meeting, so no writer produces the status yet.
 
 ## 6. Calibration (Stage 3 Follow-Up)
 
