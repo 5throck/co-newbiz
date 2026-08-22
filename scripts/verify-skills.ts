@@ -1,8 +1,20 @@
 #!/usr/bin/env bun
 /**
  * Skill Verification Script
- * @version 1.2.0
+ * @version 1.3.0
  * Verifies all skills in skills/ directory are loadable and properly formatted
+ *
+ * 1.3.0: fixed the crash on every run — `Bun.glob(...)` is not a callable
+ * API (Glob is a constructor); directory scanning now uses
+ * `new Bun.Glob(...).scan({ cwd, absolute, onlyFiles })`. Also guards the
+ * scan roots: a nonexistent directory (e.g. templates/common/skills in an
+ * L3 variant that has no L1 snapshot) is skipped instead of crashing
+ * Bun.Glob.scan's cwd handling. And index generation into skills/SKILLS.md
+ * is now OPT-IN via --write-index: the default run validates and reports
+ * only and NEVER writes SKILLS.md — that file is a hand-maintained Skill
+ * Lifecycle Registry (no generator owns it), so an unconditional regenerate
+ * clobbered it (PR-5a finding (d)); the default run warns about the
+ * divergence instead of reconciling it.
  */
 
 import path from "node:path";
@@ -94,8 +106,17 @@ async function main(): Promise<void> {
     console.log("✅ All skills verified");
   }
 
-  // Generate skills index
-  await generateSkillsIndex(checks);
+  // Generate skills index — OPT-IN ONLY. The default run is a verification
+  // pass: validate + report, never write (PR-5a finding (d) — the default
+  // run used to regenerate skills/SKILLS.md unconditionally, clobbering the
+  // hand-maintained Skill Lifecycle Registry).
+  if (process.argv.includes("--write-index")) {
+    await generateSkillsIndex(checks);
+  } else {
+    console.warn(
+      "⚠️  skills/SKILLS.md is hand-maintained; generation is opt-in via --write-index — this run did not write it."
+    );
+  }
 }
 
 async function scanSkills(): Promise<SkillCheck[]> {
@@ -106,7 +127,14 @@ async function scanSkills(): Promise<SkillCheck[]> {
     const files: string[] = [];
     const skillsPath = path.isAbsolute(dir) ? dir : path.join(projectRoot, dir);
 
-    for await (const entry of Bun.glob(`${skillsPath}/**/*`)) {
+    // Bun.Glob is a constructor, not a callable — the previous Bun.glob(...)
+    // call threw on every run. cwd + absolute keeps the pattern portable
+    // (no backslash/forward-slash dependence on Windows). A nonexistent
+    // scan root is skipped: Bun.Glob.scan crashes on a missing cwd.
+    const { existsSync: dirExists } = await import('node:fs');
+    if (!dirExists(skillsPath)) return files;
+    const glob = new Bun.Glob("**/*");
+    for await (const entry of glob.scan({ cwd: skillsPath, absolute: true, onlyFiles: true })) {
       if (entry.endsWith("SKILL.md")) {
         files.push(entry);
       }
@@ -208,7 +236,13 @@ function extractSkillMetadata(content: string, skillPath: string): SkillMetadata
 }
 
 /**
- * Generate SKILLS.md index from discovered skills
+ * Generate SKILLS.md index from discovered skills.
+ *
+ * OPT-IN ONLY — reached solely behind the --write-index flag in main().
+ * WARNING for operators: this OVERWRITES skills/SKILLS.md wholesale. In this
+ * project SKILLS.md is the hand-maintained Skill Lifecycle Registry (PR-10
+ * rows are added by hand); running with --write-index replaces that registry
+ * with the generated index. The default verification run never calls this.
  */
 async function generateSkillsIndex(checks: SkillCheck[]): Promise<void> {
   const indexPath = path.join(projectRoot, "skills", "SKILLS.md");

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.2.0
+// @version 1.3.0
 /**
  * Procedure Schema Validator — co-newbiz
  *
@@ -30,6 +30,14 @@
  *       baseline in procedures/_kill-criteria/_baseline.json (risk-officer
  *       F7 — never auto-lowers; re-baseline consciously in the same change).
  *
+ * Since 1.3.0 (design of record 2026-08-22, Decision 7 / PR-5a) it also runs
+ * a structured applies_when pass: every applies_when (procedure-level and
+ * step-level) across all YAMLs must parse via PredicateSchema
+ * (db/lib/predicate.ts) — free text is an ERROR, not a warning — and every
+ * var_key it references must exist in the evidence_var seed list read
+ * statically from db/migrations/0014_routing_vars.sql (no database
+ * dependency in the validator).
+ *
  * Usage:
  *   bun procedures/_validate.ts
  *   bun procedures/_validate.ts --strict    (also gate the executable-ratio baseline)
@@ -41,10 +49,13 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve, dirname, basename } from "node:path";
 import { resolveProcedure } from "../scripts/co-newbiz/proc-resolve.ts";
+import { parsePredicate } from "../db/lib/predicate.ts";
+import { collectPredicateVars } from "../db/lib/applies-when.ts";
 
 const ROOT = resolve(import.meta.dirname);
 const PROJECT_ROOT = resolve(ROOT, "..");
 const SKILLS_DIR = join(PROJECT_ROOT, "skills");
+const ROUTING_VARS_MIGRATION = join(PROJECT_ROOT, "db", "migrations", "0014_routing_vars.sql");
 
 interface Issue {
   file: string;
@@ -310,6 +321,80 @@ async function walkAllSteps(): Promise<Issue[]> {
   return issues;
 }
 
+// ── Structured applies_when pass (design of record 2026-08-22, Decision 7 / PR-5a) ──
+
+/**
+ * Extract the evidence_var seed list from the migration SQL, statically —
+ * the validator must not depend on a database. Approach (documented per the
+ * PR-5a spec): take the INSERT INTO evidence_var statement, then each
+ * tuple's first quoted literal (the var_key column is first in the column
+ * list; the column list itself contains no quoted literals, so the
+ * `\(\s*'([^']+)'` tuple-shape match cannot pick up anything else).
+ * Exported for tests/unit/applies-when.test.ts.
+ */
+export function seededVarKeys(sql: string): Set<string> {
+  const keys = new Set<string>();
+  const block = sql.match(/INSERT\s+INTO\s+evidence_var[\s\S]*?;/i);
+  if (!block) return keys;
+  for (const tuple of block[0].matchAll(/\(\s*'([^']+)'/g)) {
+    keys.add(tuple[1]);
+  }
+  return keys;
+}
+
+/**
+ * Validate one applies_when value (already loaded from YAML). Free text is
+ * an ERROR — a prose sentence can never be evaluated, so it is the exact
+ * silent-skip vector this pass exists to close. An unparsable AST and a
+ * var_key outside the 0014 seed list are errors for the same reason: the
+ * predicate would evaluate UNASSESSED forever with no surfaced defect.
+ * Exported for tests/unit/applies-when.test.ts.
+ */
+export function checkAppliesWhen(file: string, where: string, appliesWhen: unknown, seeded: Set<string>): Issue[] {
+  if (typeof appliesWhen === "string") {
+    return [
+      {
+        file,
+        message: `${where}: applies_when is free text ('${appliesWhen.slice(0, 60)}${appliesWhen.length > 60 ? "…" : ""}') — must be a structured predicate AST per PredicateSchema (db/lib/predicate.ts), design Decision 7 / PR-5a`,
+        severity: "error",
+      },
+    ];
+  }
+  let pred;
+  try {
+    pred = parsePredicate(appliesWhen);
+  } catch (e) {
+    return [{ file, message: `${where}: applies_when does not parse as a predicate AST — ${(e as Error).message}`, severity: "error" }];
+  }
+  const issues: Issue[] = [];
+  for (const varKey of collectPredicateVars(pred)) {
+    if (!seeded.has(varKey)) {
+      issues.push({
+        file,
+        message: `${where}: applies_when references var_key '${varKey}' — not seeded in db/migrations/0014_routing_vars.sql (the registry is the only legal var vocabulary)`,
+        severity: "error",
+      });
+    }
+  }
+  return issues;
+}
+
+/** Load the seed set once per run; a missing/unreadable migration file is itself an error. */
+async function loadSeedSet(): Promise<{ seeded: Set<string>; error: Issue | null }> {
+  try {
+    return { seeded: seededVarKeys(await readFile(ROUTING_VARS_MIGRATION, "utf-8")), error: null };
+  } catch (e) {
+    return {
+      seeded: new Set<string>(),
+      error: {
+        file: ROUTING_VARS_MIGRATION,
+        message: `cannot read the evidence_var seed migration — applies_when var_key checks skipped blind: ${(e as Error).message}`,
+        severity: "error",
+      },
+    };
+  }
+}
+
 // ── Kill-criteria registry pass (design of record 2026-08-22, Decision 8) ──
 
 const KILL_CRITERIA_DIR = join(ROOT, "_kill-criteria");
@@ -483,6 +568,12 @@ async function main() {
   const allIssues: Issue[] = [];
   const standaloneStepDocs: { label: string; steps: unknown[] }[] = [];
   const declaredKillCriteria = new Map<string, DeclaredCriterion>();
+
+  // PR-5a: load the var_key vocabulary once — every applies_when below is
+  // checked against it in the same pass that parses it.
+  const { seeded, error: seedError } = await loadSeedSet();
+  if (seedError) allIssues.push(seedError);
+
   for (const file of files) {
     const raw = await readFile(file, "utf-8");
     let doc: unknown;
@@ -495,6 +586,23 @@ async function main() {
     allIssues.push(...validateSchema(file, doc));
 
     const p = doc as Record<string, unknown>;
+
+    // Structured applies_when pass (Decision 7 / PR-5a) — procedure-level and
+    // step-level, on the raw per-file docs (merge never invents predicates,
+    // so the per-file pass covers every layer file too).
+    if (p.applies_when !== undefined) {
+      allIssues.push(...checkAppliesWhen(file, "procedure-level", p.applies_when, seeded));
+    }
+    if (Array.isArray(p.steps)) {
+      for (const [i, step] of (p.steps as unknown[]).entries()) {
+        if (typeof step !== "object" || step === null) continue;
+        const s = step as Record<string, unknown>;
+        if (s.applies_when !== undefined) {
+          const where = `steps[${i}]${s.id !== undefined ? ` (id ${String(s.id)})` : ""}`;
+          allIssues.push(...checkAppliesWhen(file, where, s.applies_when, seeded));
+        }
+      }
+    }
 
     // Collect declared kill criteria for the registry pass. The procedure
     // namespace is the schema.yaml's parent directory name (identical for
@@ -556,4 +664,6 @@ async function main() {
   console.log("✅ Procedure validation passed.");
 }
 
-main();
+// Guarded so tests can import the pass functions without running the CLI
+// (same pattern as db/migrate.ts).
+if (import.meta.main) main();

@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-pre-fs
 title: "Green Field Pre-Feasibility"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.2.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -15,7 +15,13 @@ steps:
     agent_key: greenfield-agent
     skill_key: greenfield-feasibility
     output_type: pre_feasibility_self_check
-    applies_when: "origin = 'internal' (classification cell 9/10) — external-origin Green Field keeps the existing flow from step 2"
+    # classification-cell gate (cell 9/10, ADR-0047 origin axis). Note the AST
+    # form: the predicate language's equality leaf is {op:"cmp", cmp:"eq"} —
+    # there is no bare {op:"eq"}. Evaluated by db/lib/applies-when.ts:
+    # internal -> applies; external/hybrid/joint -> skip with rendered reason;
+    # UNASSESSED origin -> APPLIES (fail-closed — an unclassified Green Field
+    # project must CLEAR pre-feasibility, not skip it).
+    applies_when: { op: "cmp", var: "project.origin", cmp: "eq", value: "internal" }
     description: >
       GF-internal pre-feasibility gate BEFORE FS opens: a pure internal
       venture (no external counterparty — ADR-0047 origin axis) must show
@@ -25,7 +31,9 @@ steps:
       the Cooper Gate 2-to-3 escalation: right-to-win may be hypothesized at
       Screening but must be evidenced before the first major resource
       commitment. Not applicable (skip) for external-origin Green Field,
-      where the counterparty's own evidence carries the feasibility case.
+      where the counterparty's own evidence carries the feasibility case. An
+      UNCLASSIFIED project does not skip this gate — unassessed origin
+      applies the step by default (fail-closed).
   - id: 2
     gate: Pre-FS
     agent_key: valuation-agent
@@ -82,4 +90,4 @@ legal_basis:
   - "Cooper Stage-Gate Gate 2-to-3 escalation — right-to-win proven before the business-case build (docs/research/venture-governance-best-practice.md cross-cutting answer 1)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-22"
+last_reviewed: "2026-08-23"

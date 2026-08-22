@@ -485,7 +485,9 @@ describe("compliance_check result extension", () => {
     // in filename order on a scratch WAL DB (client.ts connection — same
     // statement path and schema_migrations bookkeeping as db/migrate.ts),
     // seed one old-shape compliance_check row, then let the REAL runner
-    // apply only 0013 from the real file and read the row back.
+    // apply 0013 (and anything newer, in filename order) and read the row
+    // back. The `f < "0013"` filter keeps the scratch DB at exactly
+    // pre-0013 state regardless of how many migrations ship later.
     resetDb();
     const sdb = getDb(SURVIVAL_DB_PATH);
     sdb.run(`
@@ -495,7 +497,7 @@ describe("compliance_check result extension", () => {
         applied_at TEXT NOT NULL
       );
     `);
-    const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql") && !f.startsWith("0013")).sort();
+    const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql") && f < "0013").sort();
     for (const file of files) {
       sdb.run(readFileSync(join(MIGRATIONS_DIR, file), "utf-8"));
       sdb.run("INSERT INTO schema_migrations (id, filename, applied_at) VALUES (?, ?, ?)", [file, file, NOW]);
@@ -523,7 +525,7 @@ describe("compliance_check result extension", () => {
     const before = sdb.query("SELECT * FROM compliance_check WHERE id = ?").get(seedId);
 
     const { applied } = runMigrations(SURVIVAL_DB_PATH);
-    expect(applied).toEqual(["0013_classification_infra.sql"]);
+    expect(applied[0]).toBe("0013_classification_infra.sql"); // first in filename order; later migrations may follow
 
     const after = sdb.query("SELECT * FROM compliance_check WHERE id = ?").get(seedId);
     expect(after).toEqual(before);
@@ -561,16 +563,15 @@ describe("md_project.current_stage_gate", () => {
 // ---------------------------------------------------------------------------
 
 describe("migration idempotence", () => {
-  test("re-running runMigrations applies nothing and skips all 13", () => {
+  test("re-running runMigrations applies nothing and skips every present migration", () => {
     const { applied, skipped } = runMigrations(TEST_DB_PATH);
     expect(applied).toEqual([]);
     expect(skipped).toContain("0013_classification_infra.sql");
-    expect(skipped.length).toBe(13);
+    expect(skipped.length).toBe(readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).length); // directory-derived — future migrations must not break this pin
   });
 
   test("0013 is recorded in schema_migrations", () => {
     const rows = db.query("SELECT filename FROM schema_migrations ORDER BY filename").all() as { filename: string }[];
-    expect(rows[rows.length - 1].filename).toBe("0013_classification_infra.sql");
-    expect(rows.length).toBe(13);
+    expect(rows.map((r) => r.filename)).toContain("0013_classification_infra.sql");
   });
 });
