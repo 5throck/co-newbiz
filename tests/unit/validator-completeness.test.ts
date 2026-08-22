@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Unit tests for db/lib/validator-completeness.ts + the persist path in
  * db/repositories/compliance.repository.ts (PR-5c §2.2-§2.3) — the 3-number
@@ -30,6 +30,7 @@ import {
 } from "../../db/lib/validator-completeness.ts";
 import { resolveValidatorApplicability } from "../../db/lib/validator-applicability.ts";
 import { persistCompletenessRecord } from "../../db/repositories/compliance.repository.ts";
+import { supersede } from "../../db/repositories/classification.repository.ts";
 
 const TEST_DB_PATH = "db/data/test-validator-completeness.sqlite";
 const NOW = "2026-08-23T00:00:00.000Z";
@@ -39,7 +40,14 @@ type Db = ReturnType<typeof GetDb>;
 let db: Db;
 
 const U1 = "user-001"; // member everywhere
+const U2 = "user-002"; // approver — member everywhere, distinct from U1
 const U3 = "user-003"; // member nowhere
+
+const TRIO = {
+  approver_role: "process-governance-manager",
+  approved_by: U2,
+  approved_at: NOW,
+};
 
 function insertUser(userId: string): void {
   db.run(
@@ -51,10 +59,12 @@ function insertUser(userId: string): void {
 function insertProject(): string {
   const id = ulid();
   db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [id, `NP-${id.slice(-6)}`, NOW]);
-  db.run(
-    "INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
-    [id, U1, "contributor", "admin", NOW, "test fixture basis"],
-  );
+  for (const user of [U1, U2]) {
+    db.run(
+      "INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
+      [id, user, "contributor", "admin", NOW, "test fixture basis"],
+    );
+  }
   return id;
 }
 
@@ -64,11 +74,13 @@ function insertRun(pid: string): string {
   return id;
 }
 
-function classifyRaw(pid: string, origin: string, caseType = "brownfield", track = "none"): void {
+function classifyRaw(pid: string, origin: string, caseType = "brownfield", track = "none"): string {
+  const id = ulid();
   db.run(
     "INSERT INTO project_case_classification (id, project_id, case_type, origin, technology_track, classified_by, classified_at, rationale) VALUES (?,?,?,?,?,?,?,?)",
-    [ulid(), pid, caseType, origin, track, U1, NOW, `test classification — origin ${origin}`],
+    [id, pid, caseType, origin, track, U1, NOW, `test classification — origin ${origin}`],
   );
+  return id;
 }
 
 /** Write one coverage row for a validator, defaulting to the common shape. */
@@ -93,6 +105,7 @@ beforeAll(() => {
   runMigrations(TEST_DB_PATH);
   db = getDb(TEST_DB_PATH);
   insertUser(U1);
+  insertUser(U2);
   insertUser(U3);
 });
 
@@ -208,6 +221,47 @@ describe("3-number math", () => {
     expect(detailField(detail, "classified_by")).toBe("user-001");
     expect(detailField(detail, "absent")).toBeNull();
     expect(detailField(null, "classification")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// skipStillLive's detail-citation half (constraint 2, defense in depth): a
+// null invalidated_at is necessary but NOT sufficient — the row must still
+// cite the CURRENT live classification row. The invalidated_at half is
+// pinned above; these two restore the direct coverage of the citation half.
+// ---------------------------------------------------------------------------
+
+describe("skipStillLive depth defense (the detail-citation half)", () => {
+  test("a not_applicable row whose detail cites NO classification is refused — a null invalidated_at alone is not trust", () => {
+    const pid = insertProject();
+    classifyRaw(pid, "internal", "greenfield");
+    // a legacy-shape row: invalidated_at NULL but no citation line at all
+    writeValidatorRow(pid, "antitrust", "not_applicable", { detail: "not_applicable: antitrust\nreason: legacy row, no citation" });
+    const ev = evaluateValidatorCompleteness(pid, null, db, { now: FIXED_NOW });
+    const antitrust = ev.validators.find((v) => v.key === "antitrust")!;
+    expect(antitrust.status).toBe("missing"); // no citation → no live justification
+    expect(ev.undocumented_skips).toContain("antitrust");
+    expect(ev.halt.missing).not.toContain("antitrust"); // not-applicable validator: surfaced, never halting
+  });
+
+  test("a not_applicable row citing a SUPERSEDED classification is refused — a skip cannot outlive the classification it cited", () => {
+    const pid = insertProject();
+    const first = classifyRaw(pid, "internal", "greenfield");
+    // re-baseline through the REAL supersede() (greenfield/internal → same
+    // shape: no approver trio required — not a reducing move). The sweep
+    // invalidates rows that exist NOW; the row below is written AFTER it, so
+    // it keeps invalidated_at NULL by construction — exactly the
+    // missed-the-sweep shape only the citation check can catch.
+    const successor = supersede(
+      { project_id: pid, case_type: "greenfield", origin: "internal", classified_by: U1, rationale: "re-baselined internal venture — boundary memo updated", approval: TRIO, now: NOW },
+      db,
+    );
+    writeValidatorRow(pid, "antitrust", "not_applicable", { detail: `not_applicable: antitrust\nclassification: ${first}` });
+    const ev = evaluateValidatorCompleteness(pid, null, db, { now: FIXED_NOW });
+    expect(ev.classification?.id).toBe(successor.id); // the successor is what the header sees
+    const antitrust = ev.validators.find((v) => v.key === "antitrust")!;
+    expect(antitrust.status).toBe("missing"); // stale citation → the skip died with its classification
+    expect(ev.undocumented_skips).toContain("antitrust");
   });
 });
 
