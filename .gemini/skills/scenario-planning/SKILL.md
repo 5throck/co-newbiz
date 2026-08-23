@@ -9,14 +9,17 @@ description: >
 
   Use when: "scenario analysis", "downside case", "upside case", "rate
   shock scenario", "structural scenario planning".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: risk-officer
 prerequisites:
   - investment-feasibility-modeling
 metadata:
   type: domain
+  procedure_keys:
+    - greenfield-fs
+    - brownfield-fs
   triggers:
     - scenario analysis
     - downside case

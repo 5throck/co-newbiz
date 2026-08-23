@@ -11,14 +11,17 @@ description: >
 
   Use when: "Monte Carlo simulation", "seeded simulation", "P50 P95 NPV",
   "contingent liability integration".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: risk-officer
 prerequisites:
   - debt-and-contingent-liability-simulation
 metadata:
   type: implementation
+  procedure_keys:
+    - greenfield-fs
+    - brownfield-fs
   triggers:
     - Monte Carlo simulation
     - seeded simulation

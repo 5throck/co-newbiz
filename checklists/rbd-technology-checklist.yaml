@@ -4,10 +4,19 @@ title: "R&BD (Research & Business Development) Technology Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.2.1"
-effective_from: "2026-08-20"
+version: "1.3.0"
+effective_from: "2026-08-23"
 gate: DD
 
+# ADR-0052 §D.1 TRL/MRL evidence matrix (items rbd-08..rbd-13): each item
+# names the OUR-gate it binds at; the readiness cutoffs are ILLUSTRATIVE
+# until the thresholds meeting (ADR-0052 open question (a)). Enforcement
+# wiring: this checklist is referenced by brownfield-pre-fs and brownfield-dd
+# (their gates); at the other gates the applicable rows ride the
+# gate_pass_record completeness check via stage-gate-governance. The gate
+# vocabulary for tech bets adds Hold/Recycle alongside Go/Kill — evidence
+# immaturity holds rather than kills (design §D.1).
+#
 # R&BD is routed by the 3-axis classification's technology_track=rbd axis
 # value (case_type stays brownfield — the deal is structured as an equity
 # stake, license-in, or spin-off carve-out, all BF mechanics, not a new
@@ -38,9 +47,34 @@ items:
   - id: rbd-07
     text: "Technology-obsolescence/substitution risk assessed on the same horizon as the investment's expected holding period — a technology that is state-of-the-art today may not be in 3-5 years"
     mandatory: false
+  - id: rbd-08
+    text: "TRL/MRL evidence matrix — SCREENING row (ADR-0052 §D.1; cutoff ILLUSTRATIVE until the thresholds meeting): scientific basis, roadmap pull, preliminary prior-art/FTO screen; readiness floor TRL 1-2. Typical kill: no plausible principle-to-application path; roadmap absent"
+    mandatory: true
+  - id: rbd-09
+    text: "TRL/MRL evidence matrix — PRE-FS row: concept memo, critical-function list, POC experiment protocol; readiness floor TRL 2. Typical kill: concept not credible vs state of the art"
+    mandatory: true
+  - id: rbd-10
+    text: "TRL/MRL evidence matrix — FS-ENTRY row: POC results demonstrating the critical function, reproducible; readiness floor TRL 3. Typical kill: technical feasibility wall"
+    mandatory: true
+  - id: rbd-11
+    text: "TRL/MRL evidence matrix — FS/DD row: integrated test data, relevant-environment validation plan, FTO opinion, patent strategy, updated cost model; readiness floor TRL 4-5 / MRL 4-5. Typical kill: FTO failure (blocking third-party IP); unit cost over value ceiling"
+    mandatory: true
+  - id: rbd-12
+    text: "TRL/MRL evidence matrix — ENTITY-IC (business-case gate) row: full business case; make/buy/partner decision (routes into the deal-shape chain, ADR-0052 §A); real-options valuation; staged funding request for the NEXT stage only; readiness floor TRL 5-6 / MRL 5-6. Typical kill: no viable business model; option value below stage premium"
+    mandatory: true
+  - id: rbd-13
+    text: "TRL/MRL evidence matrix — POST-IC EXECUTION row: operational-environment demonstration, pilot-line capability, regulatory pathway; readiness floor TRL 7-8 / MRL 7-8. Typical kill: manufacturability failure; regulatory rejection"
+    mandatory: true
+  - id: rbd-14
+    text: "Evidence quality rules (GAO TRA Guide, GAO-20-48G — ADR-0052 §D.2): every TRL/MRL claim supported by named tests, test environments, and data artifacts — not assertion; readiness assessments reviewed by a reviewer NOT reporting to the project champion; the assessment records HOW maturity was demonstrated, not only the level claimed; known limitations of readiness scales noted in gate records"
+    mandatory: true
+  - id: rbd-15
+    text: "Staged funding as real options (ADR-0052 §D.3): each stage approval is the exercise of a sequential option — the stage budget is the premium, the next gate the exercise decision; the funding request covers the next stage only, with the option-value vs stage-premium comparison recorded. A negative static NPV does not by itself kill an early technology bet when staging options carry positive value; kill discipline remains when option value sits below the next premium even under favorable scenarios"
+    mandatory: true
 
 legal_basis:
   - "design v1.0 §10 user decision (2026-08-20): R&BD treated as a Brown Field sub-type"
+  - "ADR-0052 §D.1-D.3 (TRL/MRL evidence matrix, GAO evidence-quality rules, staged funding as real options — items rbd-08..rbd-15)"
   - "docs/pilots/pilot-006-orion-ligachem-bio.md findings F-1/F-2 (certification and QoE steps don't fit R&D-stage/asset-tied-regulatory-pathway targets — the same gap class R&BD targets exercise)"
   - "docs/pilots/pilot-011-posco-amberoad.md"
   - "docs/pilots/pilot-012-lg-studio341.md"
