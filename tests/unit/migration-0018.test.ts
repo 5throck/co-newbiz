@@ -95,8 +95,10 @@ interface RuleRow {
 function seededVarWhere(): string {
   // cert.% is a SHARED prefix post-0019 (it seeded
   // cert.load_bearing_non_transferable_on_coc, pinned in
-  // migration-0019.test.ts) — exclude that one so this file pins 0018's own 11
-  return "(var_key LIKE 'tech.%' OR var_key LIKE 'permit.%' OR var_key LIKE 'risk.%' OR (var_key LIKE 'cert.%' AND var_key != 'cert.load_bearing_non_transferable_on_coc'))";
+  // migration-0019.test.ts) ? exclude that one so this file pins 0018's own 11
+  // permit.critical_path_exceeds_incentive_deadline is likewise excluded —
+  // migration 0026 (ADR-0063) added it under the shared permit.% prefix.
+  return "(var_key LIKE 'tech.%' OR var_key LIKE 'permit.%' OR var_key LIKE 'risk.%' OR (var_key LIKE 'cert.%' AND var_key != 'cert.load_bearing_non_transferable_on_coc')) AND var_key != 'permit.critical_path_exceeds_incentive_deadline'";
 }
 
 function ruleRows(): RuleRow[] {

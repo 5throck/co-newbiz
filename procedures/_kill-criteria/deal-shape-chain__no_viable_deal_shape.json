@@ -3,9 +3,9 @@
   "criterion_id": "no_viable_deal_shape",
   "title": "No deal shape meets the strategic-fit threshold",
   "action": "mark_conditional",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
+  "predicate": { "op": "count", "var": "dealshape.viable_shapes", "cmp": "lt", "value": 1 },
+  "enabled": true,
+  "policy_id": "gd-0024-class-c-decisions",
+  "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (d) — two-stage selection: intent split, then five equal-weight criteria with the lexicographic tacit-knowledge override; viable = survives both stages. Var seeded by migration 0026 per ADR-0063",
   "notes": "Design section A.4 [rbd 1.1]: RECYCLE semantics, not Kill — the need returns to the scouting funnel (P0) with the screen's written feedback. The registry action vocabulary (halt / mark_conditional / escalate_to_risk_officer) has no Recycle member, so the closest action is mark_conditional and the recycle routing lives in this note plus the P1 step description (written feedback on every rejection). THRESHOLD UPDATE (2026-08-24): the (d) selection logic is DECIDED by docs/decisions/2026-08-24-class-c-decisions.md (anchor gd-0024-class-c-decisions) — two-stage: intent split, then five equal-weight criteria with a lexicographic tacit-knowledge override; viable = survives both stages. The VAR half (dealshape.viable_shapes count over surviving candidates) needs its extension round per ADR-0060 §3 — entry stays inert until then. Declared in YAML, not yet executable — predicate null by design until that var exists (activation convention per ADR-0057). Classification (ADR-0060): class (iii) — no snapshot var; proposed: dealshape.viable_shapes (count); was 'strategic-fit thresholds open question (d)' — now decided."
 }

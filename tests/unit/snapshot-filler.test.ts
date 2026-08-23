@@ -897,14 +897,14 @@ describe("partner family — active pool + dependency", () => {
 // ---------------------------------------------------------------------------
 
 describe("fillSnapshot entry point", () => {
-  test("a bare project fills exactly 23 rows — one per seeded var, every FK valid; covenant is the one present 0", () => {
+  test("a bare project fills exactly 27 rows — one per seeded var, every FK valid; covenant is the one present 0", () => {
     const pid = insertProject();
     const runId = insertRun(pid);
     const result = fillSnapshot({ runId, projectId: pid, now: FILL_NOW }, db);
-    expect(result.rows).toHaveLength(23);
+    expect(result.rows).toHaveLength(27);
     expect(result.rows.map((r) => r.var_key).sort()).toEqual([...SNAPSHOT_VAR_KEYS].sort());
     const stored = db.query("SELECT var_key, status, value_num FROM project_variable_snapshot WHERE run_id = ?").all(runId) as Array<{ var_key: string; status: string; value_num: number | null }>;
-    expect(stored).toHaveLength(23);
+    expect(stored).toHaveLength(27);
     // Bare project: everything missing except covenant — no debt → present 0 (D-M-RISK-5)
     const present = stored.filter((r) => r.status === "present");
     expect(present.map((r) => r.var_key)).toEqual(["risk.covenants_breached"]);
@@ -972,5 +972,108 @@ describe("antitrust early-screen family (ADR-0062)", () => {
     const row = result.rows.find((r) => r.var_key === "antitrust.presumption_screens_triggered");
     expect(row?.evidence_ref).toBe("antitrust_finding");
     expect(row?.observed_at).toBe("2026-08-24T00:00:00Z");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Family G — Class C extension vars (ADR-0063, migration 0026)
+// ---------------------------------------------------------------------------
+
+describe("Class C extension families (ADR-0063)", () => {
+  function insertTalent(pid: string, status: string, exitDate: string | null, lockedAt: string): void {
+    db.run(
+      "INSERT INTO pmi_key_talent (id, project_id, role_ref, status, exit_date, locked_at, created_at) VALUES (?,?,?,?,?,?,?)",
+      [ulid(), pid, `C-EO-001`, status, exitDate, lockedAt, NOW],
+    );
+  }
+
+  test("#28 attrition: no roster → missing; roster with one in-window regretted of four → ratio 0.25", () => {
+    const pid = insertProject();
+    let runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "pmi.key_talent_attrition_90d")).toMatchObject({ status: "missing" });
+
+    insertTalent(pid, "departed_regretted", "2026-09-15T00:00:00Z", NOW); // 22 days after lock → in window
+    for (const s of ["active", "departed_planned", "active"]) insertTalent(pid, s, s === "active" ? null : "2026-10-01T00:00:00Z", NOW);
+    runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "pmi.key_talent_attrition_90d")).toMatchObject({ status: "present", value_num: 0.25 });
+  });
+
+  test("#28: a regretted departure AFTER the 90-day window does not count", () => {
+    const pid = insertProject();
+    insertTalent(pid, "departed_regretted", "2027-01-15T00:00:00Z", NOW); // ~5 months after lock
+    const runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "pmi.key_talent_attrition_90d")).toMatchObject({ status: "present", value_num: 0 });
+  });
+
+  test("#29 certification: no roster and no cert → missing; closed-but-uncertified → 'not_certified'; qualifying cert row → 'certified'", () => {
+    const pid = insertProject();
+    let runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "pmi.synergy_run_rate_certified")).toMatchObject({ status: "missing" });
+
+    insertTalent(pid, "active", null, NOW); // close happened
+    runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "pmi.synergy_run_rate_certified")).toMatchObject({ status: "present", value_text: "not_certified" });
+
+    db.run(
+      "INSERT INTO pmi_synergy_certification (id, project_id, run_rate_bp, sustained_quarters, certified_by, baseline_locked_at, signed_at, created_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), pid, 8500, 2, "C-CFO-001", NOW, "2026-11-01T00:00:00Z", NOW], // 85% < 90% floor
+    );
+    runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "pmi.synergy_run_rate_certified")).toMatchObject({ value_text: "not_certified" });
+
+    db.run(
+      "INSERT INTO pmi_synergy_certification (id, project_id, run_rate_bp, sustained_quarters, certified_by, baseline_locked_at, signed_at, created_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), pid, 9200, 2, "C-CFO-001", NOW, "2026-12-01T00:00:00Z", NOW], // 92% AND >=2 quarters → certified
+    );
+    runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "pmi.synergy_run_rate_certified")).toMatchObject({ value_text: "certified" });
+  });
+
+  test("#14 viable shapes: no evaluations → missing; evaluations count only viable=1 rows", () => {
+    const pid = insertProject();
+    let runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "dealshape.viable_shapes")).toMatchObject({ status: "missing" });
+
+    db.run("INSERT INTO deal_shape_evaluation (id, project_id, shape, intent, viable, evaluated_by, evaluated_at) VALUES (?,?,?,?,?,?,?)", [ulid(), pid, "minority_stake", "capability_access", 1, U1, NOW]);
+    db.run("INSERT INTO deal_shape_evaluation (id, project_id, shape, intent, viable, evaluated_by, evaluated_at) VALUES (?,?,?,?,?,?,?)", [ulid(), pid, "full_acquisition", "integration", 0, U1, NOW]);
+    runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "dealshape.viable_shapes")).toMatchObject({ status: "present", value_num: 1 });
+  });
+
+  test("#4 deadline var: no deadline record or no permits → missing; deadline inside the critical path → 'yes', outside → 'no'", () => {
+    const pid = insertProject();
+    const permitA = ulid();
+    const permitB = ulid();
+    db.run("INSERT INTO permit (id, project_id, name, statutory_days, status) VALUES (?,?,?,?,?)", [permitA, pid, "P-A", 365, "not_started"]);
+    db.run("INSERT INTO permit (id, project_id, name, statutory_days, status) VALUES (?,?,?,?,?)", [permitB, pid, "P-B", 30, "not_started"]);
+    db.run("INSERT INTO permit_edge (from_permit_id, to_permit_id) VALUES (?,?)", [permitA, permitB]);
+
+    let runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "permit.critical_path_exceeds_incentive_deadline")).toMatchObject({ status: "missing" }); // no deadline yet
+
+    // Critical path = 365+30 days ≈ 12.98 months. Deadline 3 months out → exceeded.
+    const soon = new Date(FILL_NOW.getTime() + 90 * 86_400_000).toISOString();
+    db.run("INSERT INTO project_incentive_deadline (id, project_id, incentive_ref, deadline, source, created_at) VALUES (?,?,?,?,?,?)", [ulid(), pid, "INC-001", soon, "test", NOW]);
+    runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "permit.critical_path_exceeds_incentive_deadline")).toMatchObject({ status: "present", value_text: "yes" });
+
+    // Deadline far outside the path → not exceeded.
+    db.run("DELETE FROM project_incentive_deadline");
+    const far = new Date(FILL_NOW.getTime() + 5 * 365 * 86_400_000).toISOString();
+    db.run("INSERT INTO project_incentive_deadline (id, project_id, incentive_ref, deadline, source, created_at) VALUES (?,?,?,?,?,?)", [ulid(), pid, "INC-002", far, "test", NOW]);
+    runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "permit.critical_path_exceeds_incentive_deadline")).toMatchObject({ value_text: "no" });
   });
 });
