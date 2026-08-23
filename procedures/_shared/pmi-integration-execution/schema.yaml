@@ -1,0 +1,122 @@
+schema_version: "1.0"
+procedure_id: shared-pmi-integration-execution
+title: "PMI Integration Execution (post-approval, Brown Field)"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+# Design §B.1 frame: applies_when covers the CLASSIFICATION part only —
+# case_type = brownfield. "Approval granted at entity/group IC, activated at
+# signing" is temporal state, not a classification fact: no routing var
+# exists for it and inventing one is out of scope (migration-0014 is the
+# only legal var vocabulary).
+#
+# Partial-stake scope (design §B.1 note, open decision 2 resolved in
+# ADR-0052): acquisitions WITHOUT control run a REDUCED phase set — phases
+# 1-2 (steps 1-2) plus monitoring only; steps 3-5 are control-scope.
+# Control scope is determined by the stake per ADR-0045's stake axis, which
+# lives in deal_structure_hypothesis, NOT in the routing registry — so this
+# scope rule is deliberately prose, not a step-level applies_when.
+applicability: conditional
+applies_when: { op: "cmp", var: "project.case_type", cmp: "eq", value: "brownfield" }
+workflow_type: core
+gate: post_close   # NEW gate slot after entity_ic (design §B.1, ADR-0052)
+owner_agent: pmi-agent
+legal_basis:
+  - "ADR-0052 §B (PMI procedure design)"
+  - "docs/designs/2026-08-23-track-coverage-extension-design.md §B"
+  - "ADR-0045 (stake axis — determines the reduced-phase scope for non-control acquisitions)"
+  - "ADR-0051 (brownfield-dd step 13 HR DD produces this procedure's retention inputs — B.5 boundary)"
+  - "docs/research/pmi-jv-lifecycle-best-practice.md [pmi-jv A.1-A.6]"
+
+steps:
+  - id: 1
+    gate: post_close
+    agent_key: pmi-agent
+    skill_key: pmi-planning
+    output_type: pmi_integration_plan
+    description: >
+      Pre-close, signing → close [pmi-jv A.1]: stand up the IMO at signing
+      staffed from both companies; write the integration thesis derived from
+      the deal thesis; charter a clean team under agreed legal protocols for
+      pre-close sensitive-data work (gun-jumping exposure is real — EC fines
+      up to 10% of revenue is the statutory ceiling, ILLUSTRATIVE as a
+      planning prior; verify against current enforcement practice before it
+      is cited in a live checklist). Set top-down stretch synergy targets
+      validated bottom-up, filter initiatives through the five synergy stage
+      gates (ideas → quantified ranges → vetted plans → budget-embedded →
+      impact accrual — ILLUSTRATIVE as a gate count). Key talent and
+      retention packages are identified during diligence with day-1
+      appointments decided — consuming brownfield-dd step 13's HR DD outputs
+      (key-person map, retention plan inputs — B.5 boundary: consumed, not
+      restated). Set the revenue baseline so revenue synergies are
+      attributable; assess culture fault-lines; decide the interim operating
+      model SEPARATELY from end-state; maintain the day-1 readiness
+      checklist. Standing bodies per design §B.3: steering committee
+      (approves targets, stage-gates, pivotal decisions, escalations), IMO
+      (plan, risk/interdependency management, decision rights, value
+      tracking), workstream leads from both companies (finance, HR, IT,
+      operations, commercial, legal, comms — seven standard workstreams),
+      one accountable synergy owner per initiative; escalation path
+      workstream lead → IMO weekly issue log → steering committee →
+      CEO/board with decision SLAs.
+  - id: 2
+    gate: post_close
+    agent_key: pmi-agent
+    skill_key: pmi-planning
+    output_type: day1_handover_record
+    description: >
+      Day-1 [pmi-jv A.2]: continuity is the objective. Top 2-3 leadership
+      layers announced; interim operating model live; pre-planned
+      customer/supplier communications; synergy tracker activated (owner,
+      baseline, timing, dependency, financial impact per initiative);
+      control handover executed — treasury authority, statutory filings,
+      delegation-of-authority matrix.
+  - id: 3
+    gate: post_close
+    agent_key: pmi-agent
+    skill_key: pmi-planning
+    output_type: hundred_day_review
+    description: >
+      First 100 days [pmi-jv A.3] — control-scope steps begin here for
+      control acquisitions (non-control stakes stop at step 2 plus
+      monitoring). Standing cadence: weekly workstream stand-ups, weekly IMO
+      escalation, monthly steering committee, quarterly board. Pivotal
+      cross-functional decisions resolved early; culture perceptions
+      workshop; MONTHLY promised-vs-actual synergy comparison with
+      escalation of late/unowned items; key-talent attrition tracked at
+      30/60/90 (feeding the attrition kill criterion below); approved
+      initiatives folded into line budgets.
+  - id: 4
+    gate: post_close
+    agent_key: pmi-agent
+    skill_key: pmi-planning
+    output_type: bau_exit_evidence_pack
+    description: >
+      Value-up → BAU exit, evidence [pmi-jv A.4]: the precondition pack the
+      certifier (step 5) rules on — synergy run-rate presented for Finance
+      certification; end-state operating model announced; retention
+      milestones passed; open-item transfer list in which NO item lacks a
+      named line-executive owner and date; final synergy accounting; deal
+      post-mortem feeding the M&A playbook.
+  - id: 5
+    gate: post_close
+    agent_key: bau-exit-certifier   # human role — procedures/_human-roles.yaml registry (ADR-0053)
+    decision_authority: human
+    skill_key: stage-gate-governance
+    output_type: bau_exit_decision
+    description: >
+      Human certification decision (design §B.2 phase 4): certify the
+      synergy run-rate and release or hold IMO demobilization. The BAU exit
+      is a completeness fact, not a judgment call — the same logic as
+      PR-10's financing precondition: an uncertified run-rate HALTS the
+      handover (kill criterion below), it is not weighed against other
+      merits. Decision vocabulary: demobilization_approved | held_pending_certification | conditional_with_named_gaps.
+
+kill_criteria:
+  - condition: synergy_run_rate_uncertified_at_bau_handover
+    action: halt   # completeness fact, not judgment (design §B.4 — same logic as PR-10's financing precondition); blocks IMO demobilization
+  - condition: key_talent_attrition_above_threshold_at_90d
+    action: escalate_to_risk_officer   # threshold ILLUSTRATIVE until the thresholds meeting (ADR-0052 open question c)
+  - condition: clean_team_protocol_breach
+    action: halt   # immediate, with legal-counsel — gun-jumping exposure (design §B.4)

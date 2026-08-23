@@ -27,3 +27,12 @@ human_roles:
       decision: approved | rejected | conditional |
       withdrawn_pending_resubmission.
     reference: docs/manuals/business-manual.md §1
+  bau-exit-certifier:
+    description: >-
+      Finance-function certifier of the post-close BAU exit (PMI procedure,
+      design §B.2 phase 4 / ADR-0052): certifies the synergy run-rate and
+      releases or holds IMO demobilization — demobilization_approved |
+      held_pending_certification | conditional_with_named_gaps. The exit is
+      a completeness fact, not a judgment call: an uncertified run-rate
+      halts the handover.
+    reference: docs/designs/2026-08-23-track-coverage-extension-design.md §B.2

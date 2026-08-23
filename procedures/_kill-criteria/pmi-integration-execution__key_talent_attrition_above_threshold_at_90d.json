@@ -1,0 +1,11 @@
+{
+  "procedure": "pmi-integration-execution",
+  "criterion_id": "key_talent_attrition_above_threshold_at_90d",
+  "title": "Key-talent attrition above threshold at 90 days",
+  "action": "escalate_to_risk_officer",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "Design §B.4: key-talent attrition tracked at 30/60/90 in phase 3; crossing the 90-day threshold escalates to the risk officer. The threshold value is ILLUSTRATIVE until the thresholds meeting (ADR-0052 open question c). Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057)."
+}
