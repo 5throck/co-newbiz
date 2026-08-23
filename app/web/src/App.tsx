@@ -5,6 +5,7 @@ import { Login } from "./pages/Login.tsx";
 import { PasswordChange } from "./pages/PasswordChange.tsx";
 import { ProjectList } from "./pages/ProjectList.tsx";
 import { ProjectDetail } from "./pages/ProjectDetail.tsx";
+import { PortfolioScorecard } from "./pages/PortfolioScorecard.tsx";
 import { AdminConsole } from "./pages/AdminConsole.tsx";
 import { GlossaryView } from "./pages/Glossary.tsx";
 
@@ -35,6 +36,7 @@ function TopNav() {
       </Link>
       <nav aria-label="주 메뉴">
         <Link to="/projects">프로젝트</Link>
+        <Link to="/portfolio-scorecard">포트폴리오 스코어카드</Link>
         <Link to="/glossary">용어집</Link>
         {me.role === "admin" && <Link to="/admin">관리자 콘솔</Link>}
       </nav>
@@ -78,6 +80,14 @@ export function App() {
           element={
             <RequireAuth>
               <ProjectDetail />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/portfolio-scorecard"
+          element={
+            <RequireAuth>
+              <PortfolioScorecard />
             </RequireAuth>
           }
         />

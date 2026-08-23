@@ -1,4 +1,4 @@
-// @version 1.4.0
+// @version 1.5.0
 /**
  * Wave 5.6A API tests — docs/api-spec.md, exercising the real Hono app via
  * app.request() against a scratch SQLite file (deleted after), not mocked
@@ -9,7 +9,9 @@
  * tests spawn the real python engine (same discipline as simulate.test.ts);
  * the badge/provenance wave added the list-card enrichment + envelope
  * provenance suite (rag_overall list fields, observations meta.source,
- * dd-finding run linkage).
+ * dd-finding run linkage); the ADR-0059 E.4 wave added the scorecard
+ * routes suite (portfolio rollup scope honesty, per-project reads, MNPI
+ * inclusion).
  */
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
@@ -29,7 +31,8 @@ const db = getDb(TEST_DB_PATH);
 
 const { buildApp } = await import("../../app/server/index.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
-const { grantProjectMembership } = await import("../../db/lib/access-control.ts");
+const { grantProjectMembership, setMnpiFlag } = await import("../../db/lib/access-control.ts");
+const { recordVentureScorecardCycle } = await import("../../db/repositories/venture-scorecard.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 
 const app = buildApp();
@@ -1101,5 +1104,189 @@ describe("admin console", () => {
       body: JSON.stringify({ table_key: "simulation_draw", basis: "G5 capacity", retention_months: 6, action: "archive" }),
     });
     expect(res.status).toBe(201);
+  });
+});
+
+// ADR-0059 E.4 scorecard routes. This describe runs BEFORE any
+// venture_scorecard row exists (the seeding describe below follows it in
+// file order), so the empty-table contract is asserted on a genuinely
+// empty table.
+describe("scorecard routes — unauthenticated + empty-table reads (E.4)", () => {
+  test("both routes reject an unauthenticated caller", async () => {
+    expect((await req("/api/portfolio-scorecard")).status).toBe(401);
+    expect((await req(`/api/projects/${projectId}/scorecard`)).status).toBe(401);
+  });
+
+  test("a portfolio read over an empty table is an honestly empty envelope", async () => {
+    const res = await req("/api/portfolio-scorecard", { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.data.review_cycle).toBe(null);
+    expect(body.data.resolved_from).toBe("latest");
+    expect(body.data.financial).toEqual([]);
+    expect(body.data.strategic).toEqual([]);
+    expect(body.data.class_rollup).toEqual([]);
+    expect(body.data.insufficient_evidence).toEqual([]);
+    expect(body.meta).toMatchObject({
+      scope: "membership-filtered",
+      scope_incomplete: false,
+      projects_with_rows_total: 0,
+      projects_excluded: 0,
+    });
+    expect(body.meta.projects_visible).toBeGreaterThanOrEqual(1); // alice's projects exist; none carry scorecard rows yet
+    expect(body.meta.review_cycles_available).toEqual([]);
+  });
+});
+
+// E.4 seeding: frank is a member of project A ONLY (until the MNPI test
+// adds M), so his rollup exercises the membership filter while B's rows
+// exist group-wide. Rows go in through recordVentureScorecardCycle — the
+// reads here see exactly what production writes.
+describe("scorecard routes — membership scope, cycles, MNPI (E.4)", () => {
+  type ScRow = Parameters<typeof recordVentureScorecardCycle>[0]["rows"][number];
+  function scoreRow(overrides: Partial<ScRow> = {}): ScRow {
+    return {
+      venture_class: "driving",
+      section: "financial",
+      measure_key: "sc.revenue_growth",
+      target_value: ">= 0pp",
+      actual_value: "+3pp",
+      status: "on_target",
+      evidence_ref: "doc:cim-2026-001",
+      observed_at: NOW,
+      ...overrides,
+    };
+  }
+  function seedRun(projectId: string, label: string): string {
+    const runId = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [runId, projectId, label, `hash-${label}`, "alice", NOW]);
+    return runId;
+  }
+
+  let frankCookie: string;
+  let projectA: string;
+  let projectB: string;
+
+  beforeAll(async () => {
+    await createUser(db, { userId: "frank", role: "analyst", password: "pw-frank-123456", createdBy: "test", now: NOW });
+    approveUser(db, { userId: "frank", approvedBy: "test", now: NOW });
+    frankCookie = await loginCookie("frank", "pw-frank-123456");
+
+    const resA = await req("/api/projects", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ project_no: "NP-2026-110" }) });
+    projectA = (await resA.json()).data.id;
+    grantProjectMembership(db, { projectId: projectA, userId: "frank", projectRole: "contributor", grantedBy: "alice", needToKnowBasis: "E.4 portfolio scope test", now: NOW });
+
+    const resB = await req("/api/projects", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ project_no: "NP-2026-111" }) });
+    projectB = (await resB.json()).data.id;
+
+    recordVentureScorecardCycle(
+      { runId: seedRun(projectA, "sc-a-q2"), projectId: projectA, sourceProcedure: "portfolio-venture-monitoring", reviewCycle: "2026-Q2", rows: [scoreRow()], actor: "alice", now: NOW },
+      db,
+    );
+    recordVentureScorecardCycle(
+      {
+        runId: seedRun(projectA, "sc-a-q3"),
+        projectId: projectA,
+        sourceProcedure: "portfolio-venture-monitoring",
+        reviewCycle: "2026-Q3",
+        rows: [scoreRow(), scoreRow({ section: "strategic", measure_key: "sc.market_share", actual_value: "-1pp", status: "deviation" })],
+        actor: "alice",
+        now: NOW,
+      },
+      db,
+    );
+    recordVentureScorecardCycle(
+      { runId: seedRun(projectB, "sc-b-q3"), projectId: projectB, sourceProcedure: "portfolio-venture-monitoring", reviewCycle: "2026-Q3", rows: [scoreRow({ venture_class: "enabling" })], actor: "alice", now: NOW },
+      db,
+    );
+  });
+
+  test("the rollup carries only the caller's visible projects — and says it is a subset", async () => {
+    const res = await req("/api/portfolio-scorecard", { headers: { cookie: frankCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.data.review_cycle).toBe("2026-Q3"); // latest within frank's scope
+    const allRows = [...body.data.financial, ...body.data.strategic];
+    expect(allRows.length).toBe(2); // A's Q3 rows only (Q2's row is out of cycle)
+    expect(allRows.every((r: { project_id: string }) => r.project_id === projectA)).toBe(true);
+    expect(body.data.class_rollup).toHaveLength(1); // driving only — B's enabling row is out of scope
+    expect(body.data.insufficient_evidence).toEqual([]);
+    expect(body.meta).toMatchObject({
+      scope: "membership-filtered",
+      projects_visible: 1,
+      projects_with_rows_total: 2, // A + B have rows in 2026-Q3, visibility ignored
+      scope_incomplete: true,
+      projects_excluded: 1,
+      review_cycle: "2026-Q3",
+    });
+    expect(body.meta.review_cycles_available).toEqual(["2026-Q2", "2026-Q3"]); // the selector axis, scoped to frank
+  });
+
+  test("?review_cycle=2026-Q2 resolves that cycle explicitly", async () => {
+    const res = await req("/api/portfolio-scorecard?review_cycle=2026-Q2", { headers: { cookie: frankCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.data.review_cycle).toBe("2026-Q2");
+    expect(body.data.resolved_from).toBe("explicit");
+    expect(body.meta.review_cycle).toBe("2026-Q2");
+    expect([...body.data.financial, ...body.data.strategic]).toHaveLength(1);
+  });
+
+  test("a malformed review_cycle is 400, never a silent latest fallback", async () => {
+    const res = await req("/api/portfolio-scorecard?review_cycle=2026-Q9", { headers: { cookie: frankCookie } });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_review_cycle");
+  });
+
+  test("project scorecard is 404 for a non-member — existence protected", async () => {
+    const res = await req(`/api/projects/${projectB}/scorecard`, { headers: { cookie: frankCookie } });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("not_found");
+  });
+
+  test("project scorecard returns a member's rows, explicit cycle and latest fallback alike", async () => {
+    const explicit = await req(`/api/projects/${projectA}/scorecard?review_cycle=2026-Q2`, { headers: { cookie: frankCookie } });
+    const explicitBody = await explicit.json();
+    expect(explicit.status).toBe(200);
+    expect(explicitBody.meta).toMatchObject({ project_id: projectA, review_cycle: "2026-Q2", count: 1 });
+
+    const latest = await req(`/api/projects/${projectA}/scorecard`, { headers: { cookie: frankCookie } });
+    const latestBody = await latest.json();
+    expect(latest.status).toBe(200);
+    expect(latestBody.meta).toMatchObject({ project_id: projectA, review_cycle: "2026-Q3", count: 2 });
+    expect(latestBody.data.every((r: { review_cycle: string }) => r.review_cycle === "2026-Q3")).toBe(true);
+  });
+
+  test("an MNPI venture's rows stay in a member's rollup and the read is logged (FR-SEC-06)", async () => {
+    // Seed the MNPI venture through the sanctioned paths: classification
+    // row, setMnpiFlag 0→1 (retroactive insider enrollment for alice),
+    // then frank's grant (insider enrollment at grant time).
+    const resM = await req("/api/projects", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ project_no: "NP-2026-112" }) });
+    const projectM = (await resM.json()).data.id;
+    db.run("INSERT INTO project_classification (project_id, sensitivity, mnpi_flag, classified_by, classified_at) VALUES (?,?,?,?,?)", [projectM, "restricted", 0, "test", NOW]);
+    setMnpiFlag(db, { projectId: projectM, mnpiFlag: 1, setBy: "alice", reason: "E.4 MNPI portfolio fixture", now: NOW });
+    grantProjectMembership(db, { projectId: projectM, userId: "frank", projectRole: "observer", grantedBy: "alice", needToKnowBasis: "E.4 MNPI inclusion test", now: NOW });
+    recordVentureScorecardCycle(
+      { runId: seedRun(projectM, "sc-m-q3"), projectId: projectM, sourceProcedure: "jv-lifecycle-governance", reviewCycle: "2026-Q3", rows: [scoreRow({ venture_class: "jv", section: "strategic", measure_key: "sc.jv.synergy" })], actor: "alice", now: NOW },
+      db,
+    );
+
+    const rollup = await req("/api/portfolio-scorecard?review_cycle=2026-Q3", { headers: { cookie: frankCookie } });
+    const body = await rollup.json();
+    expect(rollup.status).toBe(200);
+    expect([...body.data.financial, ...body.data.strategic].some((r: { project_id: string }) => r.project_id === projectM)).toBe(true);
+    expect(body.meta).toMatchObject({ projects_visible: 2, projects_with_rows_total: 3, projects_excluded: 1, scope_incomplete: true });
+    expect(body.data.class_rollup.find((e: { venture_class: string }) => e.venture_class === "jv")).toMatchObject({ ventures: 1 });
+
+    // The access trail: the route's own scorecard read, plus the visibility
+    // layer's MNPI read of the project itself.
+    const routeLog = db
+      .query("SELECT COUNT(*) AS n FROM data_access_log WHERE user_id = ? AND table_key = 'venture_scorecard' AND record_ref = ? AND action = 'read'")
+      .get("frank", "portfolio:2026-Q3") as { n: number };
+    expect(routeLog.n).toBeGreaterThan(0);
+    const mnpiLog = db
+      .query("SELECT COUNT(*) AS n FROM data_access_log WHERE user_id = ? AND table_key = 'project' AND record_ref = ? AND action = 'read'")
+      .get("frank", projectM) as { n: number };
+    expect(mnpiLog.n).toBeGreaterThan(0);
   });
 });

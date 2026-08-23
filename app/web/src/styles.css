@@ -1059,3 +1059,89 @@ input {
   gap: 0.5rem;
   flex-wrap: wrap;
 }
+
+/* --- Portfolio scorecard page (E.4) --- */
+.scorecard-cycle-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 1rem;
+}
+.scorecard-cycle-bar label {
+  font-size: 0.9rem;
+}
+.scorecard-cycle-bar select {
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.35rem;
+  background: var(--bg);
+  color: var(--fg);
+}
+.scope-banner {
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+  border: 1px solid var(--amber-fg);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  font-weight: 600;
+}
+.scorecard-section {
+  margin-bottom: 2rem;
+}
+.scorecard-section h2 {
+  margin: 0 0 0.75rem;
+}
+.class-group-row th {
+  background: var(--muted-bg);
+  font-size: 0.85rem;
+}
+.scorecard-rollup-grid {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0 0;
+}
+.scorecard-rollup-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+.scorecard-rollup-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.scorecard-rollup-rows {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.scorecard-rollup-rows li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.scorecard-footer {
+  margin-top: 2rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+.scorecard-footer h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+.scorecard-footer code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}

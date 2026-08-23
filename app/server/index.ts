@@ -1,4 +1,4 @@
-// @version 1.3.0
+// @version 1.4.0
 /**
  * co-newbiz API server — docs/api-spec.md (Wave 5.6A).
  *
@@ -16,7 +16,10 @@
  * snapshot writes, not engine invocations). The engine-2 wave adds the
  * simulations surface (POST /api/simulations spawns the Monte Carlo engine
  * synchronously — db/lib/simulation.ts — with results readable at
- * /api/simulations/:id/results). Engine-dependent surfaces still deferred
+ * /api/simulations/:id/results). The ADR-0059 E.4 wave adds scorecard.ts
+ * (the portfolio rollup + per-project scorecard reads over migration
+ * 0024's venture_scorecard, with membership-filtered scope honesty).
+ * Engine-dependent surfaces still deferred
  * (proxy chains, model runs, reports): those engines need an async job
  * surface, not a synchronous handler.
  *
@@ -43,6 +46,7 @@ import { governanceRoutes } from "./governance.ts";
 import { analysisRoutes } from "./analysis.ts";
 import { dealReviewRoutes } from "./deal-review.ts";
 import { monitoringRoutes } from "./monitoring.ts";
+import { scorecardRoutes } from "./scorecard.ts";
 import { glossaryRoutes } from "./glossary.ts";
 import { adminRoutes } from "./admin.ts";
 import type { AppEnv } from "./middleware.ts";
@@ -75,6 +79,7 @@ export function buildApp(): Hono<AppEnv> {
   app.route("/", analysisRoutes);
   app.route("/", dealReviewRoutes);
   app.route("/", monitoringRoutes);
+  app.route("/", scorecardRoutes);
   app.route("/", glossaryRoutes);
   app.route("/", adminRoutes);
 
