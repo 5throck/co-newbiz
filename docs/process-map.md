@@ -66,5 +66,6 @@ The Entity IC and Group IC decision models both carry a fourth state, `withdrawn
 ## Related
 - `skills/stage-gate-governance/SKILL.md` *(not yet created — Stage 2.4)*
 - `docs/stage-gates.md` *(this doc's companion — not yet created — Stage 2.4)*
+- `docs/audits/2026-08-23-readiness-audit.md` — four-axis readiness audit of the procedures described above (verdicts + residual register R1–R10)
 - `docs/pilots/` — four real-case manual pilots that informed the gate procedures above
 - [Meeting M1](../memory/meeting-2026-08-20-m1-process-skeleton.md), [M2](../memory/meeting-2026-08-20-m2-entity-group-boundary.md), [M6](../memory/meeting-2026-08-20-m6-site-selection-criteria.md)
