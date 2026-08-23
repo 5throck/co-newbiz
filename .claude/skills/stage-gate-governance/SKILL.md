@@ -73,7 +73,16 @@ cannot proceed without.
 4. **At each gate transition**: confirm `compliance-monitoring`'s gate check
    passes (deliverables + mandatory checklist items, or an active waiver)
    before advancing
-5. **Record the gate decision** via `two-tier-approval-chain`'s
+5. **Read the recorded kill-criteria ledger** for the run via
+   `getRecordedEvaluation` (`db/repositories/kill-criteria.repository.ts`,
+   ADR-0058): it groups `kill_criteria_evaluation` into
+   halt / mark_conditional / escalate_to_risk_officer / unassessed /
+   evaluated_false with an explicit `never_evaluated` status. A
+   `never_evaluated` scope is NOT clearance — the gate_pass_record states
+   it. Each `unassessed` criterion is resolved by explicit human decision,
+   never silently; whether a triggered criterion blocks the gate is the
+   human gate's call (only Group IC can override a hit, step 3)
+6. **Record the gate decision** via `two-tier-approval-chain`'s
    `recordDecision()` for Entity IC gates, or `group-level-review` for the
    Group IC gate
 

@@ -25,7 +25,7 @@ import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { evaluateKillCriteria, validateRegistryEntry } from "../../db/lib/kill-criteria.ts";
-import { recordKillCriteriaEvaluation } from "../../db/repositories/kill-criteria.repository.ts";
+import { recordKillCriteriaEvaluation, getRecordedEvaluation } from "../../db/repositories/kill-criteria.repository.ts";
 import { assessRulesForRun } from "../../db/lib/rule-assessment.ts";
 
 const TEST_DB_PATH = "db/data/test-kill-criteria.sqlite";
@@ -398,5 +398,114 @@ describe("recordKillCriteriaEvaluation — guards", () => {
     const runId = insertRun(projectId);
 
     expect(() => record(projectId, runId, "brownfield-dd", "")).toThrow(/evaluated_by is mandatory/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getRecordedEvaluation — the gate-flow reader (ADR-0058 §1, 1.1.0)
+// ---------------------------------------------------------------------------
+
+describe("getRecordedEvaluation — the gate-impact summary", () => {
+  test("a recorded ledger groups triggered rows by action, unassessed and false separately, with parsed predicates and anchors", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    insertSimulationWithBreach(projectId); // covenant → halt
+    insertHypothesis(projectId, "jv");     // partner → mark_conditional (both partner vars present)
+    insertPartner(projectId, { status: "contacted", dependency: "high" });
+    const triggeredRun = insertRun(projectId);
+    record(projectId, triggeredRun);
+
+    const hit = getRecordedEvaluation({ runId: triggeredRun, projectId, actor: U1 }, db);
+    expect(hit.status).toBe("recorded");
+    expect(hit.scope).toBe("*");
+    expect(hit.halt).toHaveLength(1);
+    expect(hit.halt[0].criterion_id).toBe(COVENANT);
+    expect(hit.halt[0].predicate).toHaveProperty("op"); // parsed from predicate_json, not a string
+    expect(hit.halt[0].policy_id).toBe("gd-0022-risk-thresholds");
+    expect(hit.mark_conditional).toHaveLength(1);
+    expect(hit.mark_conditional[0].criterion_id).toBe(PARTNER);
+    expect(hit.unassessed).toHaveLength(0);
+    expect(hit.evaluated_false).toHaveLength(0);
+    expect(hit.procedures).toEqual(["brownfield-dd"]);
+
+    // The no-evidence run: covenant FALSE (auditable proof), partner UNASSESSED (caller decides)
+    const quietProject = insertProject();
+    grantMember(quietProject, U1);
+    const quietRun = insertRun(quietProject);
+    record(quietProject, quietRun);
+    const quiet = getRecordedEvaluation({ runId: quietRun, projectId: quietProject, actor: U1 }, db);
+    expect(quiet.halt).toHaveLength(0);
+    expect(quiet.unassessed.map((r) => r.criterion_id)).toEqual([PARTNER]);
+    expect(quiet.evaluated_false.map((r) => r.criterion_id)).toEqual([COVENANT]);
+  });
+
+  test("zero rows in the asked scope → status 'never_evaluated' — never an empty-looking pass (ADR-0049 at read time)", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+    record(projectId, runId, "brownfield-dd");
+
+    const summary = getRecordedEvaluation({ runId, projectId, procedure: "greenfield-screening", actor: U1 }, db);
+    expect(summary.status).toBe("never_evaluated");
+    expect(summary.scope).toBe("greenfield-screening");
+    expect(summary.procedures).toEqual([]);
+    expect(summary.halt).toHaveLength(0); // all groups empty — but the STATUS is what the gate must record
+
+    const recorded = getRecordedEvaluation({ runId, projectId, procedure: "brownfield-dd", actor: U1 }, db);
+    expect(recorded.status).toBe("recorded");
+  });
+
+  test("the read is logged as a data_access row (action=read, scoped recordRef)", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+    record(projectId, runId);
+
+    getRecordedEvaluation({ runId, projectId, procedure: "brownfield-dd", actor: U1 }, db);
+    const reads = db.query("SELECT record_ref FROM data_access_log WHERE table_key = 'kill_criteria_evaluation' AND action = 'read'").all() as Array<{ record_ref: string }>;
+    expect(reads.some((r) => r.record_ref === `${projectId}:${runId}:brownfield-dd`)).toBe(true);
+  });
+});
+
+describe("getRecordedEvaluation — read guards (listVisibleProjects precedent)", () => {
+  test("a non-member reader is rejected (FR-SEC-08)", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+    record(projectId, runId);
+
+    expect(() => getRecordedEvaluation({ runId, projectId, actor: U3 }, db)).toThrow(new RegExp(`'${U3}' is not an active project_member`));
+  });
+
+  test("an MNPI project rejects a non-insider reader (FR-SEC-06); enrolled → readable", () => {
+    const projectId = insertMnpiProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+    enrollInsider(projectId, U1); // needed to record at all
+    record(projectId, runId);
+
+    const U4 = "user-004";
+    db.run("INSERT INTO app_user (id, user_id, role, status, password_salt, password_hash, password_iterations, created_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), U4, "analyst", "active", "salt", "hash", 1, NOW]);
+    grantMember(projectId, U4); // member but NOT insider
+
+    expect(() => getRecordedEvaluation({ runId, projectId, actor: U4 }, db)).toThrow(/insider/);
+    expect(getRecordedEvaluation({ runId, projectId, actor: U1 }, db).status).toBe("recorded");
+  });
+
+  test("an unknown run and a cross-project run are rejected", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    expect(() => getRecordedEvaluation({ runId: "01NOSUCHRUN000000002", projectId, actor: U1 }, db)).toThrow(/run.*does not exist.*run-scoped/);
+
+    const otherProject = insertProject();
+    const otherRun = insertRun(otherProject);
+    expect(() => getRecordedEvaluation({ runId: otherRun, projectId, actor: U1 }, db)).toThrow(/cannot be read across projects/);
+  });
+
+  test("an empty actor is rejected — a ledger read without its reader is unauditable", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+    expect(() => getRecordedEvaluation({ runId, projectId, actor: "" }, db)).toThrow(/actor is mandatory/);
   });
 });
