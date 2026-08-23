@@ -411,6 +411,89 @@ describe("brownfield-screening — the ADR-0062 antitrust tripwire (Class C reco
   });
 });
 
+// ADR-0063: the four Class-C criteria arm together — threshold halves from
+// gd-0024-class-c-decisions, var halves from migration 0026's tables.
+describe("Class C armed criteria (ADR-0063)", () => {
+  const ATTRITION = "key_talent_attrition_above_threshold_at_90d";
+  const SYNERGY = "synergy_run_rate_uncertified_at_bau_handover";
+  const NO_SHAPE = "no_viable_deal_shape";
+  const DEADLINE = "permit_critical_path_exceeds_incentive_deadline";
+
+  function insertTalent(pid: string, status: string, exitDate: string | null): void {
+    db.run("INSERT INTO pmi_key_talent (id, project_id, role_ref, status, exit_date, locked_at, created_at) VALUES (?,?,?,?,?,?,?)", [ulid(), pid, "C-EO-001", status, exitDate, NOW, NOW]);
+  }
+
+  function insertCert(pid: string, runRateBp: number): void {
+    db.run("INSERT INTO pmi_synergy_certification (id, project_id, run_rate_bp, sustained_quarters, certified_by, baseline_locked_at, signed_at, created_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), pid, runRateBp, 2, "C-CFO-001", NOW, NOW, NOW]);
+  }
+
+  function insertShape(pid: string, viable: number): void {
+    db.run("INSERT INTO deal_shape_evaluation (id, project_id, shape, intent, viable, evaluated_by, evaluated_at) VALUES (?,?,?,?,?,?,?)", [ulid(), pid, "minority_stake", "capability_access", viable, U1, NOW]);
+  }
+
+  function ev(proc: string, projectId: string, runId: string) {
+    return evaluateKillCriteria(db, { runId, projectId, procedure: proc, now: EVALUATED_AT });
+  }
+
+  test("#28+#29: closed deal, 1-in-4 regretted inside 90d, no certification → BOTH fire (escalate + halt)", () => {
+    const pid = insertProject();
+    insertTalent(pid, "departed_regretted", "2026-09-10T00:00:00Z");
+    for (const s of ["active", "active", "departed_planned"]) insertTalent(pid, s, s === "active" ? null : "2026-10-01T00:00:00Z");
+    const runId = insertRun(pid);
+
+    const result = ev("pmi-integration-execution", pid, runId);
+
+    expect(result.triggered.map((t) => t.criterion_id).sort()).toEqual([ATTRITION, SYNERGY].sort());
+    expect(result.triggered.find((t) => t.criterion_id === SYNERGY)!.action).toBe("halt");
+  });
+
+  test("#28+#29: full roster retained AND a qualifying certification (92% / 2 quarters) → neither fires", () => {
+    const pid = insertProject();
+    for (const _ of [1, 2, 3]) insertTalent(pid, "active", null);
+    insertCert(pid, 9200);
+    const runId = insertRun(pid);
+
+    const result = ev("pmi-integration-execution", pid, runId);
+    expect(result.triggered).toHaveLength(0);
+    expect(result.unassessed).toEqual([]);
+  });
+
+  test("#14: every evaluated shape non-viable → mark_conditional (recycle); no evaluations → unassessed", () => {
+    const pid = insertProject();
+    insertShape(pid, 0);
+    insertShape(pid, 0);
+    let runId = insertRun(pid);
+
+    let result = ev("deal-shape-chain", pid, runId);
+    expect(result.triggered.map((t) => t.criterion_id)).toEqual([NO_SHAPE]);
+    expect(result.triggered[0].action).toBe("mark_conditional");
+
+    const pid2 = insertProject();
+    runId = insertRun(pid2);
+    result = ev("deal-shape-chain", pid2, runId);
+    expect(result.unassessed).toContain(NO_SHAPE);
+  });
+
+  test("#4: incentive deadline inside the permit critical path → escalation", () => {
+    const pid = insertProject();
+    const permitA = ulid();
+    const permitB = ulid();
+    db.run("INSERT INTO permit (id, project_id, name, statutory_days, status) VALUES (?,?,?,?,?)", [permitA, pid, "P-A", 365, "not_started"]);
+    db.run("INSERT INTO permit (id, project_id, name, statutory_days, status) VALUES (?,?,?,?,?)", [permitB, pid, "P-B", 30, "not_started"]);
+    db.run("INSERT INTO permit_edge (from_permit_id, to_permit_id) VALUES (?,?)", [permitA, permitB]);
+    const soon = new Date(Date.parse(EVALUATED_AT) + 90 * 86_400_000).toISOString();
+    db.run("INSERT INTO project_incentive_deadline (id, project_id, incentive_ref, deadline, source, created_at) VALUES (?,?,?,?,?,?)", [ulid(), pid, "INC-001", soon, "test", NOW]);
+    const runId = insertRun(pid);
+
+    const result = ev("greenfield-fs", pid, runId);
+    expect(result.triggered.map((t) => t.criterion_id)).toEqual([DEADLINE]);
+    // Anti-tamper anchors ride the outcome record (same shape as the ADR-0060 twin test)
+    const outcome = result.outcomes.find((o) => o.criterion_id === DEADLINE);
+    expect(outcome?.policy_id).toBe("gd-0024-class-c-decisions");
+    expect(outcome?.thresholds_source).toContain("2026-08-24-class-c-decisions.md");
+  });
+});
+
 describe("fill-once semantics (ADR-0005) and composition with rule-assessment", () => {
   test("re-evaluating the same run is idempotent — no re-fill, no throw, same result", () => {
     const projectId = insertProject();

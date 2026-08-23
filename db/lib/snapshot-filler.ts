@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.3.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -136,6 +136,11 @@ export const SNAPSHOT_VAR_KEYS: readonly string[] = [
   "cert.load_bearing_non_transferable_on_coc",
   // 0025 — ADR-0062 antitrust early-screen tripwire (the 0018-D4 reversal)
   "antitrust.presumption_screens_triggered",
+  // 0026 — ADR-0063 Class C evidence extension (the #4/#14/#28/#29 var halves)
+  "pmi.key_talent_attrition_90d",
+  "pmi.synergy_run_rate_certified",
+  "dealshape.viable_shapes",
+  "permit.critical_path_exceeds_incentive_deadline",
 ];
 
 function missing(varKey: string): SnapshotWrite {
@@ -462,11 +467,21 @@ function longestPermitPath(unresolved: Map<string, number>, edges: ReadonlyArray
 }
 
 function fillPermitVars(db: Database, projectId: string): SnapshotWrite[] {
-  const permits = db.query("SELECT id, statutory_days, status FROM permit WHERE project_id = ?").all(projectId) as unknown as PermitRow[];
-  if (permits.length === 0) {
+  const resolved = resolvePermitCriticalPath(db, projectId);
+  if (resolved === null) {
     // No permit rows at all → UNASSESSED (D-M-TE-8).
     return [missing("permit.critical_path_duration"), missing("permit.unresolved_on_critical_path")];
   }
+  return [
+    { var_key: "permit.critical_path_duration", value_num: resolved.durationMonths, value_text: null, evidence_ref: null, observed_at: null, status: "present" },
+    { var_key: "permit.unresolved_on_critical_path", value_num: resolved.unresolvedNodes, value_text: null, evidence_ref: null, observed_at: null, status: "present" },
+  ];
+}
+
+/** Shared by the D-M-TE-8 pair and the ADR-0063 deadline-exceeds var. Null = no permit rows (nothing to resolve). */
+function resolvePermitCriticalPath(db: Database, projectId: string): { durationMonths: number; unresolvedNodes: number } | null {
+  const permits = db.query("SELECT id, statutory_days, status FROM permit WHERE project_id = ?").all(projectId) as unknown as PermitRow[];
+  if (permits.length === 0) return null;
   // Granted/denied/withdrawn permits leave the graph — a resolved permit is
   // no longer on any critical path. Isolated unresolved permits are paths of one.
   const unresolved = new Map<string, number>();
@@ -478,11 +493,8 @@ function fillPermitVars(db: Database, projectId: string): SnapshotWrite[] {
   const edgeRows = db.query("SELECT from_permit_id, to_permit_id FROM permit_edge").all() as unknown as Array<{ from_permit_id: string; to_permit_id: string }>;
   const edges = edgeRows.map((e) => [e.from_permit_id, e.to_permit_id] as const);
   const { days, nodes } = unresolved.size === 0 ? { days: 0, nodes: 0 } : longestPermitPath(unresolved, edges);
-  const months = Math.round((days / DAYS_PER_MONTH) * 10) / 10; // D-M-TE-8: ÷30.44, 1 decimal
-  return [
-    { var_key: "permit.critical_path_duration", value_num: months, value_text: null, evidence_ref: null, observed_at: null, status: "present" },
-    { var_key: "permit.unresolved_on_critical_path", value_num: nodes, value_text: null, evidence_ref: null, observed_at: null, status: "present" },
-  ];
+  const durationMonths = Math.round((days / DAYS_PER_MONTH) * 10) / 10; // D-M-TE-8: ÷30.44, 1 decimal
+  return { durationMonths, unresolvedNodes: nodes };
 }
 
 // ---------------------------------------------------------------------------
@@ -633,6 +645,94 @@ function fillAntitrustVar(db: Database, projectId: string): SnapshotWrite {
 }
 
 // ---------------------------------------------------------------------------
+// Family G — Class C extension (ADR-0063, migration 0026): PMI / deal-shape /
+// incentive-deadline vars. Threshold halves live in
+// docs/decisions/2026-08-24-class-c-decisions.md (gd-0024-class-c-decisions);
+// this filler owns the VAR halves only.
+// ---------------------------------------------------------------------------
+
+/**
+ * #28: regretted key-talent departures within 90 days of each roster row's
+ * close-lock, over the whole locked roster. No roster = not measured =
+ * missing (the close-locked list is a day-1 artifact; its absence means the
+ * ratio does not exist yet, never zero).
+ */
+function fillKeyTalentAttritionVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("pmi.key_talent_attrition_90d");
+  const total = (db.query("SELECT COUNT(*) AS n FROM pmi_key_talent WHERE project_id = ?").get(projectId) as unknown as { n: number }).n;
+  if (total === 0) return row;
+  const regretted = (db.query(
+    "SELECT COUNT(*) AS n FROM pmi_key_talent WHERE project_id = ? AND status = 'departed_regretted' AND exit_date IS NOT NULL AND exit_date <= date(locked_at, '+90 days')",
+  ).get(projectId) as unknown as { n: number }).n;
+  row.value_num = Math.round((regretted / total) * 10000) / 10000;
+  row.evidence_ref = "pmi_key_talent";
+  const latest = db.query("SELECT MAX(locked_at) AS at FROM pmi_key_talent WHERE project_id = ?").get(projectId) as unknown as { at: string | null };
+  row.observed_at = latest.at;
+  row.status = "present";
+  return row;
+}
+
+/**
+ * #29: 'certified' requires a certification row meeting the decided rule
+ * verbatim — run-rate >=90% (>=9000 bp of committed cost-synergy run-rate)
+ * AND sustained >=2 quarters. A closed deal (roster exists) with no cert row
+ * is determinately 'not_certified' — the halt condition, honestly stated.
+ * No roster either = pre-close, missing.
+ */
+function fillSynergyCertVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("pmi.synergy_run_rate_certified");
+  const rosterCount = (db.query("SELECT COUNT(*) AS n FROM pmi_key_talent WHERE project_id = ?").get(projectId) as unknown as { n: number }).n;
+  const certs = db.query("SELECT run_rate_bp, sustained_quarters, signed_at FROM pmi_synergy_certification WHERE project_id = ? ORDER BY signed_at DESC").all(projectId) as unknown as Array<{ run_rate_bp: number; sustained_quarters: number; signed_at: string }>;
+  if (certs.length > 0) {
+    const best = certs.some((c) => c.run_rate_bp >= 9000 && c.sustained_quarters >= 2);
+    row.value_text = best ? "certified" : "not_certified";
+    row.observed_at = certs[0].signed_at;
+    row.status = "present";
+    return row;
+  }
+  if (rosterCount > 0) {
+    row.value_text = "not_certified";
+    row.status = "present";
+    return row;
+  }
+  return row;
+}
+
+/** #14: P3 evaluations exist → present count of viable=1 shapes; none evaluated → missing (P3 not reached). */
+function fillViableShapesVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("dealshape.viable_shapes");
+  const total = (db.query("SELECT COUNT(*) AS n FROM deal_shape_evaluation WHERE project_id = ?").get(projectId) as unknown as { n: number }).n;
+  if (total === 0) return row;
+  row.value_num = (db.query("SELECT COUNT(*) AS n FROM deal_shape_evaluation WHERE project_id = ? AND viable = 1").get(projectId) as unknown as { n: number }).n;
+  row.evidence_ref = "deal_shape_evaluation";
+  const latest = db.query("SELECT MAX(evaluated_at) AS at FROM deal_shape_evaluation WHERE project_id = ?").get(projectId) as unknown as { at: string | null };
+  row.observed_at = latest.at;
+  row.status = "present";
+  return row;
+}
+
+/**
+ * #4: the earliest recorded incentive deadline vs the permit critical path.
+ * Time-relative by nature (months remaining shrinks daily), so observed_at is
+ * pinned to the fill moment and the snapshot's immutability carries the rest.
+ * Missing when EITHER side is unmeasured — never a defaulted no.
+ */
+function fillPermitDeadlineVar(db: Database, projectId: string, now: Date): SnapshotWrite {
+  const row = missing("permit.critical_path_exceeds_incentive_deadline");
+  const deadlineRow = db.query("SELECT MIN(deadline) AS deadline FROM project_incentive_deadline WHERE project_id = ?").get(projectId) as unknown as { deadline: string | null };
+  if (!deadlineRow?.deadline) return row;
+  const cp = resolvePermitCriticalPath(db, projectId);
+  if (cp === null) return row;
+  const daysRemaining = (Date.parse(deadlineRow.deadline) - now.getTime()) / 86_400_000;
+  const monthsRemaining = daysRemaining / DAYS_PER_MONTH;
+  row.value_text = cp.durationMonths > monthsRemaining ? "yes" : "no";
+  row.evidence_ref = "project_incentive_deadline";
+  row.observed_at = now.toISOString();
+  row.status = "present";
+  return row;
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -644,7 +744,7 @@ const SQL_BOUND_INDUSTRIES = "SELECT industry_id FROM project_industry WHERE pro
 
 /**
  * Fill a run's variable snapshot: one explicit row per evidence var the
- * 0017/0018/0019/0025 seed sets define (23), statuses per the record
+ * 0017/0018/0019/0025/0026 seed sets define (27), statuses per the record
  * contracts. Runs are immutable — filling an already-filled run throws on
  * the PK.
  */
@@ -672,6 +772,10 @@ export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()):
     fillCovenantVar(db, opts.projectId),
     ...fillPartnerVars(db, opts.projectId),
     fillAntitrustVar(db, opts.projectId),
+    fillKeyTalentAttritionVar(db, opts.projectId),
+    fillSynergyCertVar(db, opts.projectId),
+    fillViableShapesVar(db, opts.projectId),
+    fillPermitDeadlineVar(db, opts.projectId, now instanceof Date ? now : new Date(now)),
   ];
   const written = new Set(rows.map((r) => r.var_key));
   if (rows.length !== SNAPSHOT_VAR_KEYS.length || SNAPSHOT_VAR_KEYS.some((k) => !written.has(k))) {

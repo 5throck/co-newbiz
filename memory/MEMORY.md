@@ -96,6 +96,7 @@
 | ADR-0060 | Kill-criteria executability classification (29 entries), greenfield twin activation, and the registry-extension backlog | Accepted (2026-08-24) | [0060-kill-criteria-executability-classification.md](0060-kill-criteria-executability-classification.md) |
 | ADR-0061 | Correct REAL money columns to integer minor units (schema debt F-3) | Proposed | [0061-correct-real-money-columns-to-integer-minor-units-schema-deb.md](0061-correct-real-money-columns-to-integer-minor-units-schema-deb.md) |
 | ADR-0062 | Reverse migration-0018 Decision 4 — antitrust early-screen var + kill-criteria #13 activation | Accepted (2026-08-24) | [0062-antitrust-premise-reversal-early-screen-var.md](0062-antitrust-premise-reversal-early-screen-var.md) |
+| ADR-0063 | Class C evidence-plane extension — PMI/deal-shape/incentive-deadline vars; #4/#14/#28/#29 armed; baseline 4→8 | Accepted (2026-08-24) | [0063-class-c-evidence-extension.md](0063-class-c-evidence-extension.md) |
 
 > Index generated from `docs/adr/*.md` front matter on 2026-08-24. Long
 > statuses are abbreviated here; the ADR file is authoritative.
