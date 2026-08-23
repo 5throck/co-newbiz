@@ -39,6 +39,32 @@ function sessionCookieOpts(secure: boolean) {
   };
 }
 
+// Per-address failed-login throttle (defense-in-depth alongside the
+// per-account lockout): the account limit stops one targeted account being
+// hammered, but an unauthenticated password-spray ACROSS accounts was
+// previously unthrottled. Sliding window of failed attempts keyed by source
+// address (X-Forwarded-Proto-style first hop), bounded memory via pruning on
+// every check. Successes never count — this measures attack pressure, not use.
+const LOGIN_WINDOW_MS = 15 * 60_000;
+const LOGIN_MAX_FAILURES = 10;
+const failedLoginsByAddress = new Map<string, number[]>();
+
+function clientAddress(c: { req: { header(name: string): string | undefined } }): string {
+  return (c.req.header("x-forwarded-for") ?? "").split(",")[0].trim() || "direct";
+}
+
+function loginThrottled(address: string): boolean {
+  const now = Date.now();
+  const recent = (failedLoginsByAddress.get(address) ?? []).filter((t) => now - t < LOGIN_WINDOW_MS);
+  failedLoginsByAddress.set(address, recent);
+  return recent.length >= LOGIN_MAX_FAILURES;
+}
+
+function recordLoginFailure(address: string): void {
+  if (!failedLoginsByAddress.has(address)) failedLoginsByAddress.set(address, []);
+  failedLoginsByAddress.get(address)!.push(Date.now());
+}
+
 export const authRoutes = new Hono<AppEnv>();
 
 /** POST /api/auth/register — self-signup, always role=viewer, status=pending. */
@@ -72,8 +98,13 @@ authRoutes.post("/api/auth/login", async (c) => {
   if (!body?.userId || !body?.password) {
     return badRequest(c, "invalid_request", "userId and password are required.");
   }
+  const address = clientAddress(c);
+  if (loginThrottled(address)) {
+    return fail(c, 429, "too_many_attempts", "Too many failed logins from this address — try again later.");
+  }
   const result = await authenticate(getDb(), { userId: body.userId, password: body.password, now: new Date().toISOString() });
   if (!result.ok) {
+    recordLoginFailure(address);
     const status = result.reason === "locked" ? 423 : result.reason === "invalid_credentials" ? 401 : 403;
     return fail(c, status, result.reason, result.lockedUntil ? `Locked until ${result.lockedUntil}.` : "Login refused.");
   }

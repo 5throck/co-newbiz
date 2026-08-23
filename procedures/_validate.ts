@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.4.0
+// @version 1.5.0
 /**
  * Procedure Schema Validator — co-newbiz
  *
@@ -166,6 +166,17 @@ function validateSchema(file: string, doc: unknown, outputTypes: Set<string>): I
         file,
         message: "scope=entity/region procedure must declare either 'references' (preferred) or its own 'steps'",
         severity: "error",
+      });
+    }
+    // ADR-0020's "never a full duplicate" rule: a layer file declaring its own
+    // complete steps array instead of referencing the shared baseline would be
+    // a wholesale duplicate that silently drifts. Not an error (a genuinely
+    // standalone layer procedure could exist one day), but always surfaced.
+    if (!hasReferences && hasSteps) {
+      issues.push({
+        file,
+        message: "scope=entity/region declares its own 'steps' without 'references' — prefer the shared baseline reference + overrides model (ADR-0020); verify this is not a full duplicate",
+        severity: "warn",
       });
     }
     // Rule: an entity/region procedure with `overrides` must also have `references` —
