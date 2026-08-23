@@ -36,3 +36,13 @@ human_roles:
       a completeness fact, not a judgment call: an uncertified run-rate
       halts the handover.
     reference: docs/designs/2026-08-23-track-coverage-extension-design.md §B.2
+  venture-portfolio-ic:
+    description: >-
+      The small senior investment committee for venture-portfolio stage
+      transitions (design §E.2 integrity guardrails; ADR-0052 §E): releases
+      the next funding tranche and makes the kill/graduate call in one
+      sitting — next_tranche_released | held_evidence_incomplete |
+      graduate_to_core | reduce_or_divest | kill_with_learning_captured.
+      Tranche releases and kills are investment decisions: human authority
+      (boundary #2).
+    reference: docs/designs/2026-08-23-track-coverage-extension-design.md §E.2/E.3
