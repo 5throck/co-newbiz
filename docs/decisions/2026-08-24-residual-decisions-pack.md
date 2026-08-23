@@ -1,6 +1,6 @@
 # Decision Pack — Residual Threshold Decisions (ADR-0052 (a)–(d), calibration corpus, antitrust premise)
 
-**Status**: OPEN — awaiting user decisions
+**Status**: OPEN — awaiting user decisions — best-practice research annotations added 2026-08-24 under each agenda item (non-binding decision support; all DECISION fields remain blank; evidence: docs/research/residual-decisions-best-practice.md)
 **Date**: 2026-08-24
 **Owner**: pm (assembled per the 2026-08-24 leads' meeting disposition)
 **Answers**: ADR-0052 open questions (a)–(d); the calibration-corpus data request; the antitrust premise-withdrawal question (ADR-0060 row 13)
@@ -55,6 +55,11 @@ Storage fact: `review_cycle` is the shared time axis (`'YYYY-Qn'`, CHECK `GLOB '
 
 **DECISION (item 1b): C__** — cadence: ______________________
 
+### Best-practice input (2026-08-24)
+
+Externally, **flat/unweighted dimension scoring is the only published JV-governance pattern** (the Ankura/Watermark JV Governance Index rolls standard-level ratings into a 0–10 index with no disclosed weights); weights appear in the literature only at selection/screening gates, and the balanced-scorecard lineage deliberately refuses aggregation. Cadence is layered — quarterly JV-board oversight with an annual strategy off-site / parent-scorecard layer and a triennial external governance review; no source endorses semiannual, and none prescribes quarterly full re-scoring beyond the board cycle that consumes the signal. Research-suggested default (non-binding): **W1** equal weights + per-dimension red-flag thresholds (revisit differential weights after 4–6 quarters of accumulated cycles) and **C1** quarterly scoring on the landed `'YYYY-Qn'` axis, with annual deepening + triennial external review and event-driven re-scores on defined triggers.
+evidence: docs/research/residual-decisions-best-practice.md §1
+
 ---
 
 ## 2. Agenda item 2 — (a) TRL/MRL cutoffs per gate
@@ -78,6 +83,11 @@ Notes:
 - **These cutoffs are a different instrument from the DD RAG bands.** The approved D-M-TE-2 rule (Red TRL1–3, Amber TRL4–5 at DD, on `dd_finding` evidence) grades a case at DD; this matrix sets the R&BD track's per-gate evidence *floor* with the Hold/Recycle vocabulary. The A2-4 floor (TRL 4–5) is consistent with D-M-TE-2's Amber band — deciding here does not reopen that rule.
 - **MRL vocabulary**: D-M-TE-1 constrained TRL only. If any MRL cutoff is adopted, the MRL scale convention (deskbook 1–10) needs the same enum/vocabulary treatment TRL received before a rule or checklist validator enforces it — flagged now so it is not discovered by the reflection PR.
 - Deciding A2-* retires the "cutoffs ILLUSTRATIVE" residuals on cells 2/4/6/8 of the design's §G matrix.
+
+### Best-practice input (2026-08-24)
+
+Every external anchor family cross-validates the drafted floors: EIC funding-gate windows (Pathfinder TRL 1–4; Transition 4→5/6; Accelerator 6–8) and DoD milestone/MRL congruence (MS-A ≈ 4, MS-B ≈ 6, MS-C ≈ 8) match A2-4/5/6; Stage-Gate's validated contribution is the research front-end pattern (screening→pre-FS→FS joining the commercial track at business-case), not per-gate TRL numbers — it publishes none. MRL floors are a late-gate, hardware-only concern even in the system that invented them (mandatory only at source selection since 2011); non-defense practice (EIC/Horizon) gates on TRL alone. Research-suggested default (non-binding): confirm all six rows as drafted (the blanket option), with an MRL-applicability condition (hardware-making ventures only, from A2-4) and, if MRL cutoffs are adopted, an `MRL1..MRL10` enum mirroring D-M-TE-1's membership treatment.
+evidence: docs/research/residual-decisions-best-practice.md §2
 
 ---
 
@@ -114,6 +124,11 @@ Also decide the numerator: all departures, or regretted voluntary departures onl
 
 **DECISION (item 3b)**: threshold ____ % ; numerator: ______________________
 
+### Best-practice input (2026-08-24)
+
+No public source publishes a numeric certification floor — practice is structural: Finance owns validation against a locked pre-deal baseline, one accountable owner per initiative, measurement approach agreed before execution, monthly tracking to CFO/steering. Attrition benchmarks (≈50% of acquired senior managers leave in year 1, three of four by year 3; 21%/yr executive loss for ten years; 4-in-10 managers in 24 months; AMA 25% of top performers within 90 days of a major change event) calibrate regretted key-talent loss at 90 days to ≤5% good / 10% elevated (escalation) / 15% alarming / 20%+ severe. 90 days is a recognized attrition checkpoint but not a synergy horizon — synergy sustainment is a 12–24-month concept. Research-suggested default (non-binding): floor ≥90% of committed cost-synergy run-rate in P&L actuals sustained 2 consecutive quarters (option (i) direction); CFO signs (option (ii)) with the deal controller preparing, each synergy owner countersigning, IMO lead co-signing, steering committee minuted; 10% regretted-only numerator at 90d (15%/20% as severity bands) plus a 12-month ≤20% cumulative retention milestone for demob.
+evidence: docs/research/residual-decisions-best-practice.md §3
+
 ---
 
 ## 4. Agenda item 4 — (d) Deal-shape selection thresholds
@@ -129,6 +144,11 @@ Also decide the numerator: all departures, or regretted voluntary departures onl
 
 **DECISION (item 4): D__** — weights/minimums: ______________________
 
+### Best-practice input (2026-08-24)
+
+The citable external anchors are a four-criterion decision core — "control, risk, flexibility, and speed" (J. Management & Governance 2022 systematic review) — plus trust/value-certainty drivers (SMJ 2017: trust predicts alliance, value confidence predicts acquisition) and a five-factor Forrester framework; no canonical "3C" framework exists. Research-suggested default (non-binding), presented honestly as a **refinement combining D3 (lexicographic first stage) with D2 (knockout minimums / rights floor)** rather than a fifth option: (1) intent split first — integration intent ⇒ majority/M&A shapes; capability-access intent ⇒ control bounded by an NVCA-derived minimum-rights floor; (2) within the surviving branch, five criteria at equal 20% weights (flat beats false precision at zero calibration history) with a lexicographic override BEFORE the weighted sum (control need = high AND partner knowledge tacit ⇒ license/co-dev disallowed regardless of total). Staging default: high uncertainty + moderate control need ⇒ minority/co-dev with a pre-negotiated step-up (call option / ROFR / conversion trigger at the next gate).
+evidence: docs/research/residual-decisions-best-practice.md §4
+
 ---
 
 ## 5. Agenda item 5 — Calibration corpus (data request, NOT a decision)
@@ -143,6 +163,11 @@ With the corpus, the dry-run scores each case under the current enabled rules, r
 
 **CORPUS: provided / partially provided (n = __) / not available** — notes: ______________________
 
+### Best-practice input (2026-08-24)
+
+RCF practice is silent on minimum n; comparables must be "similar in structure, not 'similar in name'", measured against the **original** approved estimate (never a later re-baseline), with a picked percentile (UK Treasury defaults to the 80th) and published base rates as the fallback when no own class exists. n = 5–10 sits between analogous estimating and a full distribution — below ~20 cases a class percentile is not estimable. Research-suggested default (non-binding): treat the corpus as a bounded **analogy corpus, not a distribution** — any Green-cap lift must be justified by wider-class base rate + corpus consistency, never corpus hit-rate alone. Field minimum per case: (1) class-membership properties (industry, deal shape, size band, capability-vs-integration intent, gate reached); (2) original gate estimate vs realized outcome + the estimate's evidence tier; (3) date + regime context; (4) decision taken + which kill/risk criteria fired; (5) verifiable source for the realized outcome. Overfitting guards: corpus evidence moves the Green cap at most one confidence tier per revision; class entry requires ≥2 pre-declared membership properties; <3 matching cases ⇒ widen the class, don't fit the rule; pre-register which rules the corpus may calibrate (Green-cap lift + threshold nudges, NOT new kill criteria); no rule fitted to a single case; retire cases beyond 5–7 years.
+evidence: docs/research/residual-decisions-best-practice.md §5
+
 ---
 
 ## 6. Agenda item 6 — Antitrust kill-criteria extension (#13): premise withdrawal (yes/no only)
@@ -155,6 +180,11 @@ With the corpus, the dry-run scores each case under the current enabled rules, r
 | **NO** | The premise stands. #13 stays procedural — preliminary antitrust block judgment remains a human screening step, never a machine-evaluated criterion. |
 
 **DECISION (item 6): YES / NO**
+
+### Best-practice input (2026-08-24)
+
+Mature practice treats antitrust as an **early feasibility/risk-allocation screen at bid/LOI stage** ("early, substantive antitrust assessment is now essential, even for deals previously considered low-risk" — Ropes & Gray 2026), with the risk landing in CPs, break-fees, and long-stop dates; automatic kill is reserved for presumption-level overlaps (2023 DOJ/FTC: post-merger HHI >1,800 with delta >100; >30% share presumption) with no divestiture path. The premise reversal (YES) is therefore externally supported **in direction** — with a design constraint: the resulting criterion should be flag-first (Amber screen at P1/P3; Red/kill-path only at plausibly-presumption territory with no remedy path), deep filing analysis staying in `regulatory_permit` (compatible with migration-0018 D4). Numeric screens exist (HSR 2026 $133.9M; KFTC 300bn/30bn; EU EUR 5bn + 250M) but index-adjust annually — store as verified_on-dated fields, never constants. Decision stays YES/NO.
+evidence: docs/research/residual-decisions-best-practice.md §6
 
 ---
 
