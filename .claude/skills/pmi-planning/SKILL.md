@@ -11,14 +11,16 @@ description: >
 
   Use when: "PMI planning", "post-merger integration", "integration
   timeline", "day-one integration plan".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: pmi-agent
 prerequisites:
   - org-readiness-assessment
 metadata:
   type: process
+  procedure_keys:
+    - pmi-integration-execution
   triggers:
     - PMI planning
     - post-merger integration

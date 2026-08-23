@@ -55,6 +55,8 @@ The Entity IC and Group IC decision models both carry a fourth state, `withdrawn
 
 **Parallel entry chain — deal-shape selection (ADR-0052 §A)**: `procedures/_shared/deal-shape-chain/` is a SECOND entry route alongside the market-shaped chains above, for capability-gap closures that want a partner before (or instead of) an acquisition: P0 need & funnel → P1 partnership screen → P2 partner DD → P3 deal-shape selection → P4 contracting (shape-keyed pre-signing gate, `checklists/deal-shape-presigning-checklist.yaml`) → P5 post-launch review. The full-M&A outcome routes OUT to the brownfield chain unchanged; the P3 decision *writes* the classification axes (ADR-0047 §A.5), which is why the chain itself carries no `applies_when` — it runs before classification exists.
 
+**Post-close chain — PMI (ADR-0052 §B)**: where a Brown Field acquisition completes, `procedures/_shared/pmi-integration-execution/` owns signing → close → integration → BAU at the NEW `post_close` gate slot after Group IC: pre-close (IMO, integration thesis, clean team, staged synergy targets) → day-1 (continuity, control handover) → first 100 days (cadence, promised-vs-actual synergy, 30/60/90 attrition) → BAU exit — a human Finance certification (`bau-exit-certifier`); an uncertified synergy run-rate halts the handover. Non-control acquisitions run the reduced phase set (pre-close + day-1 + monitoring only), scoped by ADR-0045's stake axis.
+
 ## Related
 - `skills/stage-gate-governance/SKILL.md` *(not yet created — Stage 2.4)*
 - `docs/stage-gates.md` *(this doc's companion — not yet created — Stage 2.4)*

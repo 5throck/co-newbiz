@@ -1,0 +1,11 @@
+{
+  "procedure": "pmi-integration-execution",
+  "criterion_id": "synergy_run_rate_uncertified_at_bau_handover",
+  "title": "Synergy run-rate uncertified at BAU handover",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "Design §B.4: blocks IMO demobilization — the BAU exit is a completeness fact, not a judgment call (same logic as PR-10's financing precondition). What 'certified by Finance' requires is a thresholds-meeting item (ADR-0052 open question c). Declared in YAML, not yet executable — predicate null by design until that record exists (activation convention per ADR-0057)."
+}

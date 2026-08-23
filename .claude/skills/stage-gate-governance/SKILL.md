@@ -10,7 +10,7 @@ description: >
 
   Use when: "stage gate", "kill criteria", "gate sequence", "halt the
   project", "does this trigger a kill criterion".
-version: 1.1.0
+version: 1.2.0
 last_reviewed: 2026-08-23
 status: active
 owner: process-governance-manager
@@ -36,13 +36,18 @@ metadata:
     - greenfield-pre-fs
     - greenfield-screening
     - group-investment-review
+    - pmi-integration-execution
 ---
 
 ## Context
 
 The gate sequence per procedure `gate` fields is Screening → Pre-FS → FS →
 DD → Entity IC → Group IC (Green Field and Brown Field each have their own
-per-stage procedures under `procedures/_shared/`). Kill Criteria are policy
+per-stage procedures under `procedures/_shared/`). Brown Field acquisitions
+add a post-approval `post_close` slot governed by
+`procedures/_shared/pmi-integration-execution/` (ADR-0052 §B) — its BAU-exit
+decision is a human completeness certification, and an uncertified synergy
+run-rate halts the handover. Kill Criteria are policy
 content (`policies/group/neb-policy.md` §4), not code — an amendment goes
 through `policy-change-impact-analysis`, never an ad hoc edit. The six
 binding criteria: zero Green Field site candidate clears mandatory

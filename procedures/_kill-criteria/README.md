@@ -97,9 +97,11 @@ surfaced for the caller to decide.
 rule above) and (b) an ADR records why the criterion is now
 machine-evaluable. ADR-0057 set the precedent, activating the two
 ADR-0055 entries with `policy_id: gd-0022-risk-thresholds` — registry
-state: 26 declared / 2 executable / 2 enabled (the three ADR-0052 §A.4
+state: 29 declared / 2 executable / 2 enabled (the three ADR-0052 §A.4
 deal-shape-chain entries — partner_dd_red_ip_chain, partner_dd_red_financial_distress,
-no_viable_deal_shape — joined 2026-08-23 as declared-but-inert; `no_viable_deal_shape`
+no_viable_deal_shape — and the three §B.4 pmi-integration-execution entries —
+synergy_run_rate_uncertified_at_bau_handover, key_talent_attrition_above_threshold_at_90d,
+clean_team_protocol_breach — joined 2026-08-23 as declared-but-inert; `no_viable_deal_shape`
 carries recycle semantics in its notes under action `mark_conditional`, the
 closest member of the action vocabulary).
 

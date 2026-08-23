@@ -1,0 +1,11 @@
+{
+  "procedure": "pmi-integration-execution",
+  "criterion_id": "clean_team_protocol_breach",
+  "title": "Clean-team protocol breach during pre-close sensitive-data work",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "Design §B.4: immediate halt with legal-counsel involvement — gun-jumping exposure (pre-close exchange of competitively sensitive information outside the clean-team protocol; EC fines up to 10% of revenue is the statutory ceiling, ILLUSTRATIVE as a planning prior). Declared in YAML, not yet executable — predicate null by design; a breach is an auditable event, not a snapshot variable, so the executable form (if any) depends on how breaches come to be recorded (activation convention per ADR-0057)."
+}
