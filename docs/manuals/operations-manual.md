@@ -1,5 +1,7 @@
 # Operations Manual — System Operators
 
+> **Language**: **English** · [한국어](operations-manual_ko.md)
+
 **Audience**: dba, sre, release-engineer, infra-automation-engineer (or their human counterparts once Stage 5 ships)
 **Not for**: analysts (see `business-manual.md`) or administrators (see `admin-manual.md`)
 

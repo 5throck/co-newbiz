@@ -9,11 +9,29 @@ lang_reason: source-material
 
 > **언어**: [English](README.md) · **한국어**
 > **상태**: ⚠️ Beta — v0.1.0
-> New-business-review AI team and system. Owns the regulations, procedures, guidelines and checklists for new business development and their ongoing operation (axis A), implements and maintains them as a system (axis B), and performs the actual deal reviews on top of that (axis C). Covers Green Field (new establishment) and Brown Field (M&A), with proxy-chain demand estimation for industries that have no direct market data.
+> 신사업 검토(new-business-review) AI 팀이자 시스템. 신사업 개발의 규정·절차·가이드라인·체크리스트와 그 상시 운영을 소유하고(axis A), 이를 시스템으로 구현·유지하며(axis B), 그 위에서 실제 딜 리뷰를 수행한다(axis C). 직접 시장 데이터가 없는 산업을 위한 proxy-chain 수요 추정과 함께 Green Field(신설)와 Brown Field(M&A)를 다룬다.
 
 ## 개요
 
-New-business-review AI team and system. Owns the regulations, procedures, guidelines and checklists for new business development and their ongoing operation (axis A), implements and maintains them as a system (axis B), and performs the actual deal reviews on top of that (axis C). Covers Green Field (new establishment) and Brown Field (M&A), with proxy-chain demand estimation for industries that have no direct market data.. 전체 아키텍처와 표준은 docs/context.md를 참고하세요.
+`co-newbiz`는 신사업 검토 — Green Field(신설)와 Brown Field(M&A) — 를 위한 AI 에이전트 팀이자 시스템이다. 신사업 개발의 거버넌스(규정, 절차, 가이드라인, 체크리스트 — axis A)를 소유하고, 그 거버넌스를 시스템으로 구현·유지하며(axis B), 양자 위에서 실제 딜 리뷰를 수행한다(axis C). 이 팀의 시그니처 역량은 직접 시장 데이터가 없는 산업을 위한 proxy-chain 수요 추정이다(예: 크랭크축 → 선박용 엔진 → 선박, CGT/BHP/ton 단위환산 포함). 여기서 나오는 data-confidence 등급이 모든 하류 RAG 평가의 상한을 제한한다.
+
+전체 아키텍처와 표준은 [docs/context.md](docs/context.md)를 참고하세요.
+
+## 저장소 구조
+
+```
+co-newbiz/
+  agents/            도메인 에이전트(기능, 기술, 산업, 지역) + _core/_shared
+  policies/          그룹 및 개별 법인(entity) 수준 규정
+  procedures/        references: + overrides를 갖춘 shared/entity/region/group 절차
+  guidelines/        권장 등급(tier) 실무 문서
+  checklists/        게이트 체크리스트, 항목 단위 mandatory:true/false
+  templates/         산출물 템플릿(IC 메모 등)
+  glossary/          비즈니스/재무/법무/기술/산업 용어 집합
+  region-profiles/   지역별 규제·인센티브 프로필 (Stage 2+)
+  docs/              프로세스 맵, 거버넌스 운영, 매뉴얼, ADR
+  memory/            세션 로그와 회의록
+```
 
 ## 빠른 시작
 
@@ -29,7 +47,7 @@ New-business-review AI team and system. Owns the regulations, procedures, guidel
 
 ## 팀 미션
 
-**미션:** New-business-review AI team and system. Owns the regulations, procedures, guidelines and checklists for new business development and their ongoing operation (axis A), implements and maintains them as a system (axis B), and performs the actual deal reviews on top of that (axis C). Covers Green Field (new establishment) and Brown Field (M&A), with proxy-chain demand estimation for industries that have no direct market data.
+**미션:** 신사업 검토 AI 팀이자 시스템. 신사업 개발의 규정·절차·가이드라인·체크리스트와 그 상시 운영을 소유하고(axis A), 이를 시스템으로 구현·유지하며(axis B), 그 위에서 실제 딜 리뷰를 수행한다(axis C). 직접 시장 데이터가 없는 산업을 위한 proxy-chain 수요 추정과 함께 Green Field(신설)와 Brown Field(M&A)를 다룬다.
 
 ## AI 팀 소개
 
@@ -37,39 +55,39 @@ New-business-review AI team and system. Owns the regulations, procedures, guidel
 
 | 에이전트 | 역할 | 티어 | 모델 |
 |---------|------|------|------|
-| **antitrust-agent** | Antitrust and merger-control review: market definition, HHI calculation, multi-j | high | inherit |
-| **backend-engineer** | Hono REST API, authentication, MCP server, the analysis-engine CLI, and the moni | medium | inherit |
-| **brownfield-agent** | M&A review lead: target screening, deal structuring, and carve-out assessment | high | inherit |
-| **certification-agent** | Certification and regulatory response, kept structurally distinct from permits | high | inherit |
-| **commercial-dd-agent** | Commercial due diligence: customer concentration, pricing power, channel checks, | medium | inherit |
-| **compliance-officer** | Owns governance operation: the standing work of running the rules the team write | high | inherit |
-| **customer-retention-agent** | Post-acquisition customer attrition risk: change-of-control clause scanning, cus | medium | inherit |
-| **data-architect** | ERD, master data governance, normalization, indexing, migration, and portability | high | inherit |
-| **dba** | Database operations: backup/restore, monthly recovery drills, performance tuning | medium | inherit |
-| **docs-writer** | Document formatting and language-policy enforcement across all four domains | medium | inherit |
-| **financial-analyst** | Historical financial analysis, peer benchmarking, quality-of-earnings, and growt | high | inherit |
-| **frontend-engineer** | React/Vite UI, ECharts visualizations, the RAG dashboard, the admin console, and | medium | inherit |
-| **glossary-curator** | Owns the glossary: registration, review, duplicate merging, and the four tooling | medium | inherit |
-| **greenfield-agent** | New-establishment review lead: site selection, infrastructure assessment, talent | high | inherit |
-| **group-review-agent** | Group-level review distinct from entity-level review: portfolio fit, intra-group | high | inherit |
-| **hr-integration-agent** | Executive compensation review, employee pay-and-benefits parity analysis, and la | high | inherit |
-| **incentive-agent** | Bidirectional policy-benefit management: sourcing regional tax and infrastructur | medium | inherit |
-| **industry-lead** | Domain lead for industry, owning the industry profile system used across the ros | high | inherit |
-| **infra-automation-engineer** | OS configuration, service registration, the scheduled-collection scheduler, and  | medium | inherit |
-| **legal-counsel** | Domestic and overseas statute, contract, and regulatory advisory | high | inherit |
-| **market-intelligence-agent** | TAM/SAM/SOM sizing, demand forecasting, competitor capacity-expansion tracking,  | high | inherit |
-| **partnership-agent** | Partner sourcing strategy, partner due diligence including compliance screening, | medium | inherit |
-| **platform-lead** | Domain lead for technical | high | inherit |
-| **pmi-agent** | Post-merger integration planning: synergy realization tracking and integration r | medium | inherit |
-| **process-governance-manager** | Domain lead for functional | high | inherit |
-| **quant-methodologist** | Owns the proxy industry chain methodology: unit conversion, regression calibrati | high | inherit |
-| **region-lead** | Domain lead for region, owning the region profile system covering domestic and o | high | inherit |
-| **release-engineer** | Build and deployment pipeline, migration execution ordering, and rollback proced | medium | inherit |
-| **risk-officer** | Red-team function | high | inherit |
-| **security-engineer** | Threat modeling, security baseline, vulnerability and secrets management, and im | high | inherit |
-| **sre** | Monitoring and alerting, log pipeline, and incident response with post-incident  | medium | inherit |
-| **technical-dd-agent** | Technical due diligence: site visits, remaining equipment life, TRL assessment,  | medium | inherit |
-| **valuation-agent** | DCF/NPV/IRR/Payback/DSCR modeling, WACC assembly from live and user-supplied inp | high | inherit |
+| **antitrust-agent** | Antitrust 및 기업결합 통제 리뷰: 시장 정의, HHI 계산, 다중 관할 대응 | high | inherit |
+| **backend-engineer** | Hono REST API, 인증, MCP 서버, analysis-engine CLI, 모니터링 | medium | inherit |
+| **brownfield-agent** | M&A 리뷰 리드: 타깃 스크리닝, 딜 구조화, 부문 분리(carve-out) 평가 | high | inherit |
+| **certification-agent** | 인증 및 규제 대응 — 허가(permit)와 구조적으로 분리하여 관리 | high | inherit |
+| **commercial-dd-agent** | 상업적 DD: 고객 집중도, 가격 결정력, 채널 체크 | medium | inherit |
+| **compliance-officer** | 거버넌스 운영 소유: 팀이 작성한 규칙을 실제로 굴리는 상시 업무 | high | inherit |
+| **customer-retention-agent** | 인수 후 고객 이탈 리스크: 경영권 변동 조항 스캐닝, 고객 관련 리스크 평가 | medium | inherit |
+| **data-architect** | ERD, 마스터 데이터 거버넌스, 정규화, 인덱싱, 마이그레이션, 이식성 | high | inherit |
+| **dba** | 데이터베이스 운영: 백업/복원, 월간 복구 훈련, 성능 튜닝 | medium | inherit |
+| **docs-writer** | 4개 도메인 전반의 문서 포맷팅과 언어 정책 집행 | medium | inherit |
+| **financial-analyst** | 과거 재무 분석, 동종 비교 벤치마킹, 실적 품질(QoE) 분석, 성장 전망 | high | inherit |
+| **frontend-engineer** | React/Vite UI, ECharts 시각화, RAG 대시보드, 관리 콘솔 | medium | inherit |
+| **glossary-curator** | 용어집 소유: 등록, 검토, 중복 병합, 4개 도구 연동 | medium | inherit |
+| **greenfield-agent** | 신설 리뷰 리드: 입지 선정, 인프라 평가, 인재 확보 | high | inherit |
+| **group-review-agent** | 개별 법인 리뷰와 구별되는 그룹 레벨 리뷰: 포트폴리오 적합성, 그룹 내 정합성 | high | inherit |
+| **hr-integration-agent** | 임원 보상 리뷰, 임직원 급여·복리후생 형평성 분석, 노무 관련 검토 | high | inherit |
+| **incentive-agent** | 양방향 정책 혜택 관리: 지역 세제·인프라 지원 소싱 및 사후 관리 | medium | inherit |
+| **industry-lead** | 산업 도메인 리드: 로스터 전반에서 쓰이는 산업 프로필 시스템 소유 | high | inherit |
+| **infra-automation-engineer** | OS 설정, 서비스 등록, 예약 수집 스케줄러 | medium | inherit |
+| **legal-counsel** | 국내외 법령, 계약, 규제 자문 | high | inherit |
+| **market-intelligence-agent** | TAM/SAM/SOM 산정, 수요 전망, 경쟁사 증설 추적 | high | inherit |
+| **partnership-agent** | 파트너 소싱 전략, 컴플라이언스 스크리닝을 포함한 파트너 실사 | medium | inherit |
+| **platform-lead** | 기술(technical) 도메인 리드 | high | inherit |
+| **pmi-agent** | 인수 후 통합(PMI) 기획: 시너지 실현 추적과 통합 리스크 관리 | medium | inherit |
+| **process-governance-manager** | 기능(functional) 도메인 리드 | high | inherit |
+| **quant-methodologist** | proxy 산업 체인 방법론 소유: 단위 환산, 회귀 캘리브레이션 | high | inherit |
+| **region-lead** | 지역 도메인 리드: 국내외를 포괄하는 지역 프로필 시스템 소유 | high | inherit |
+| **release-engineer** | 빌드 및 배포 파이프라인, 마이그레이션 실행 순서, 롤백 절차 | medium | inherit |
+| **risk-officer** | 레드팀(red-team) 기능 | high | inherit |
+| **security-engineer** | 위협 모델링, 보안 베이스라인, 취약점·시크릿 관리 | high | inherit |
+| **sre** | 모니터링과 알림, 로그 파이프라인, 사고 대응 및 사후 분석 | medium | inherit |
+| **technical-dd-agent** | 기술 DD: 현장 방문, 잔여 설비 수명, TRL 평가 | medium | inherit |
+| **valuation-agent** | DCF/NPV/IRR/Payback/DSCR 모델링, 실측·사용자 입력 기반 WACC 조립 | high | inherit |
 
 ## 스킬
 
@@ -97,6 +115,17 @@ New-business-review AI team and system. Owns the regulations, procedures, guidel
 - **update-bun-packages**: 
 - **validate-docs-links**: 
 - **zod-contract-gate**: 
+
+## 세션 시작 체크리스트
+
+1. [docs/context.md](docs/context.md)와 여기서 링크하는 설계 기록(design of record)을 읽을 것.
+2. 현재 Stage를 확인할 것(설계서 §10 실행 순서 기준 — 코드보다 프로세스/거버넌스 문서가 먼저).
+3. 새 작업을 시작하기 전에 `memory/MEMORY.md`에서 최신 세션·회의 항목을 확인할 것.
+4. 모든 요청은 PM으로 라우팅 — 아래 참조.
+
+## 멀티 에이전트 워크플로
+
+PM이 **New Business Review Lead**로서 모든 전문가를 직접 디스패치하는 대신 4명의 도메인 리드(`process-governance-manager`, `platform-lead`, `industry-lead`, `region-lead`)를 조율합니다. 전체 역할 오버라이드와 3개 동등 축(거버넌스 소유, 시스템 구축, 딜 리뷰)은 [CLAUDE.md](CLAUDE.md)를 참고하세요.
 
 ## 협업 방법
 
@@ -128,7 +157,7 @@ New-business-review AI team and system. Owns the regulations, procedures, guidel
 
 **유형**: consulting
 
-이 변형은 Strategy consulting for AI-assisted business consulting engagements에 중점을 둡니다.
+이 변형은 AI 지원 비즈니스 컨설팅 engagement를 위한 전략 컨설팅에 중점을 둡니다.
 
 > **⚠️ 베타 변형** — 프로덕션 용도가 아닙니다.
 
@@ -138,7 +167,11 @@ New-business-review AI team and system. Owns the regulations, procedures, guidel
 
 승급 기준은 `scripts/helpers/variant-governance-rules.ts`를 참조하세요.
 
+## 라이선스
+
+내부 워크스페이스 프로젝트 — 외부 배포용이 아닙니다. 상위 `ai_workspace` 저장소와 동일한 약관의 적용을 받습니다.
+
 ---
 
 *최근 업데이트: 2026-08-20*
-*Last Updated: 2026-08-19*
+*Last Updated: 2026-08-23*

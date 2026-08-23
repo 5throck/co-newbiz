@@ -1,5 +1,7 @@
 # Admin Manual — System Administrators
 
+> **Language**: **English** · [한국어](admin-manual_ko.md)
+
 **Audience**: system administrators (not the same as investment-committee "administrators" of the review process — this is technical system administration)
 **Not for**: analysts (see `business-manual.md`) or operators running the batch/backup pipeline day-to-day (see `operations-manual.md`)
 
