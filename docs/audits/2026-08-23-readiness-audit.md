@@ -46,7 +46,7 @@ Four axes audited against the post-PR-12e baseline (main `2b61403`, clean):
 
 - **Governance tooling is the strongest layer**: `_validate.ts --strict`, `graph-map.ts --check`, `audit.ts`, `sync-skills.ts`, `test-runner.ts` — all green, all wired into the sync pipeline.
 - **Domain runtime exists**: `newbiz.ts` CLI (db:migrate, status, proc:resolve, fin:analyze, fin:pipeline, fin:driver-tree, simulate, rag, watch:run, model); `app/server` hono API (admin, analysis, auth, deal-review, envelope, glossary, governance, monitoring, projects) + `app/web` Vite UI; 23 migrations, 9 repositories.
-- **Three genuine residuals**: (1) no table stores JV/venture scorecards — the prerequisite for the portfolio script and view (open question (e); cells 5/6/9 of the classification matrix stay thin until it completes); (2) kill-criteria executability 2/29; (3) deliverable templates cover 1 of 59 output types (`ic-memo` only).
+- **Three genuine residuals** (audit-time): (1) no table stores JV/venture scorecards — the prerequisite for the portfolio script and view (open question (e); cells 5/6/9 of the classification matrix stay thin until it completes) — **closed 2026-08-24**: the full chain landed (migration 0024 `venture_scorecard`, venture-scorecard repository, `scorecard:rollup` CLI, portfolio-view server routes + web page — see R8); (2) kill-criteria executability 2/29; (3) deliverable templates cover 1 of 59 output types (`ic-memo` only).
 
 ## 4. Residual Register
 
@@ -61,7 +61,7 @@ Classes: **A** = remediated this round · **B** = designed this round (docs only
 | R5 | Kill criteria 29 declared / 2 executable | workflows | A (step 2 landed via ADR-0060) + C (thresholds) | ADR-0060 classifies all 29 (3 class (i) / 1 (ii) / 25 (iii)); greenfield partner-dependency twin activated (baseline 2→3); the 25 proposed vars = the explicit registry-extension backlog, nothing seeded. Thresholds themselves stay class C (calibration meeting) |
 | R6 | D.5 Korea co-funding (TIPS / KONEX / KOSDAQ) unverified | workflows | B | Verification-pending flag restated in PR-2; nothing depends on it |
 | R7 | Thresholds (a)–(d) + market/technical/risk RAG thresholds + Green cap | workflows | C | `docs/decisions/open/` agendas await user decisions |
-| R8 | E.4 full chain: scorecard migration → portfolio script → portfolio view; cells 5/6/9 thin | scripts | A (storage + rollup script) + D (view) | In progress — storage + rollup script landed (E.4 PR-2: migration 0024, venture-scorecard repository, `scorecard:rollup` CLI); portfolio view pending the follow-on PR |
+| R8 | E.4 full chain: scorecard migration → portfolio script → portfolio view; cells 5/6/9 thin | scripts | A | Chain complete (2026-08-24) — storage + rollup script landed (E.4 PR-2: migration 0024, venture-scorecard repository, `scorecard:rollup` CLI), then the portfolio view (E.4 PR-3: server routes `app/server/scorecard.ts` + web page `app/web/src/pages/PortfolioScorecard.tsx`); cells 5/6/9 closure annotated in the track-coverage design §G |
 | R9 | Procedure execution orchestrator (proc:resolve merges but does not run) | scripts | D | Runtime-hardening round; build/run agent class activates there |
 | R10 | Calibration on 5–10 historical cases | workflows | C | User-supplied cases; gates the Green-cap lift |
 
@@ -83,8 +83,9 @@ Registered here so the state is auditable; none blocks this round's PRs:
 | PR-3 | Deliverable templates under `templates/deliverables/` | R1 (implementation) |
 | D-round PR-1 (2026-08-24) | ADR-0060 kill-criteria executability classification + registry classification landing (29 entries, greenfield twin activation, baseline 2→3) | R5 (step 2 → class A) |
 | D-round PR-2 (2026-08-24) | E.4 storage + rollup script — migration 0024 (`venture_scorecard`), venture-scorecard repository, `scorecard:rollup` CLI, 36 tests | R8 (storage + script links of the chain), R3 (implementation landed) |
+| D-round PR-3 (2026-08-24) | E.4 portfolio view — server routes (`app/server/scorecard.ts` 1.0.0: membership-filtered `GET /api/portfolio-scorecard` + `GET /api/projects/:id/scorecard`), web page + route/nav (`app/web/src/pages/PortfolioScorecard.tsx`), openapi spec entries (`info.version` 1.4.0), 8 api tests | R8 (view link — chain closed) |
 
-Deferred (class D): R9 (procedure execution orchestrator — runtime-hardening round). R8's remaining link is the portfolio view (storage + rollup script landed 2026-08-24, E.4 PR-2).
+Deferred (class D): R9 (procedure execution orchestrator — runtime-hardening round). R8 is fully closed — the portfolio view, its last link, landed 2026-08-24 (E.4 PR-3).
 
 ## 7. Sources
 

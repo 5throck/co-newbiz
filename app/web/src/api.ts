@@ -506,3 +506,101 @@ export interface RetentionPolicyRow {
   action: string;
   last_run_at: string | null;
 }
+
+// --- PR-3b: portfolio scorecard (E.4) — appended only, same boundary as
+// the PR #65 batches: no existing export above this line is touched (a
+// parallel backend PR may extend earlier interfaces). ---
+
+export type ScorecardVentureClass = "driving" | "enabling" | "emergent" | "passive" | "jv";
+export type ScorecardSection = "financial" | "strategic";
+export type ScorecardStatus = "on_target" | "deviation" | "insufficient_evidence";
+
+// GET /api/portfolio-scorecard data rows: one measure per venture per
+// review cycle, split into financial / strategic sections.
+export interface PortfolioScorecardRow {
+  id: string;
+  run_id: string;
+  project_id: string;
+  project_no: string;
+  source_procedure: string;
+  review_cycle: string;
+  venture_class: ScorecardVentureClass;
+  section: ScorecardSection;
+  measure_key: string;
+  target_value: string | null;
+  actual_value: string | null;
+  status: ScorecardStatus;
+  evidence_ref: string;
+  observed_at: string;
+  created_at: string;
+}
+
+export interface ScorecardClassRollup {
+  venture_class: ScorecardVentureClass;
+  ventures: number;
+  measures: number;
+  on_target: number;
+  deviation: number;
+  insufficient_evidence: number;
+}
+
+export interface ScorecardInsufficientEvidence {
+  project_id: string;
+  section: ScorecardSection;
+  measure_key: string;
+}
+
+export interface PortfolioScorecard {
+  review_cycle: string | null;
+  resolved_from: "explicit" | "latest";
+  financial: PortfolioScorecardRow[];
+  strategic: PortfolioScorecardRow[];
+  class_rollup: ScorecardClassRollup[];
+  insufficient_evidence: ScorecardInsufficientEvidence[];
+  provenance: { runs: string[]; review_cycles_available: string[] };
+}
+
+export interface PortfolioScorecardMeta {
+  scope: "membership-filtered";
+  projects_visible: number;
+  projects_with_rows_total: number;
+  scope_incomplete: boolean;
+  projects_excluded: number;
+  review_cycle: string | null;
+  review_cycles_available: string[];
+  as_of?: string; // additive: the server's ok() injects as_of on every response
+}
+
+// Narrow the envelope's Record<string, unknown> meta into the typed
+// PortfolioScorecardMeta using the same defensive typeof guards the tabs
+// apply to as_of/seed/iterations — a malformed or absent field degrades to
+// its empty value instead of crashing the page.
+function toScorecardMeta(meta: Record<string, unknown>): PortfolioScorecardMeta {
+  const cycles = Array.isArray(meta.review_cycles_available)
+    ? meta.review_cycles_available.filter((c): c is string => typeof c === "string")
+    : [];
+  const num = (v: unknown) => (typeof v === "number" ? v : 0);
+  return {
+    scope: "membership-filtered",
+    projects_visible: num(meta.projects_visible),
+    projects_with_rows_total: num(meta.projects_with_rows_total),
+    scope_incomplete: meta.scope_incomplete === true,
+    projects_excluded: num(meta.projects_excluded),
+    review_cycle: typeof meta.review_cycle === "string" ? meta.review_cycle : null,
+    review_cycles_available: cycles,
+    as_of: typeof meta.as_of === "string" ? meta.as_of : undefined,
+  };
+}
+
+// GET /api/portfolio-scorecard?review_cycle=YYYY-Qn — omit reviewCycle for
+// the latest recorded cycle (response carries resolved_from: "latest").
+export async function getPortfolioScorecard(
+  reviewCycle?: string,
+): Promise<{ data: PortfolioScorecard; meta: PortfolioScorecardMeta }> {
+  const path =
+    reviewCycle !== undefined && reviewCycle !== ""
+      ? `/api/portfolio-scorecard?review_cycle=${encodeURIComponent(reviewCycle)}`
+      : "/api/portfolio-scorecard";
+  const res = await api.get<PortfolioScorecard>(path);
+  return { data: res.data, meta: toScorecardMeta(res.meta) };
+}

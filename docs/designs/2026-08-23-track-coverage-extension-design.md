@@ -111,7 +111,7 @@ Stage skeleton adapted from the R&BD gate table [rbd 1.3], with PR-10 assets reu
 
 **C.2 Operate** [pmi-jv B.1]: board-approved JV governance framework — only 45% of JVs have one (ILLUSTRATIVE; cite as the practice gap the design closes); directors-only board attendance; quarterly board + one annual strategy off-site; reserved-matters map (board vs shareholder) with conflict-prone decisions moved to shareholders; conflict-of-interest protocol covering the three JV conflict types (business opportunity, self-dealing, information disclosure) with a deliberately-chosen fiduciary-duty approach; arm's-length pricing for parent-JV commercial relationships. The `jv-structuring` skill (currently zero-dispatch) owns the formation-side counterpart; the operate phase dispatches it for governance reviews.
 
-**C.3 Monitor** [pmi-jv B.2]: per-JV health scorecard across **seven dimensions** — performance, people, partner alignment, decision health, milestones & funding, governance health, value-distribution symmetry. Portfolio-level: annual strategic asset review per JV; independent external governance review every 3 years (ILLUSTRATIVE cadence). Scorecard weights and cadence are a thresholds-meeting item (ADR-0052 open question b). **Storage gap**: no schema holds scorecards — Section E flags the prerequisite.
+**C.3 Monitor** [pmi-jv B.2]: per-JV health scorecard across **seven dimensions** — performance, people, partner alignment, decision health, milestones & funding, governance health, value-distribution symmetry. Portfolio-level: annual strategic asset review per JV; independent external governance review every 3 years (ILLUSTRATIVE cadence). Scorecard weights and cadence are a thresholds-meeting item (ADR-0052 open question b). **Storage gap**: no schema holds scorecards — Section E flags the prerequisite. [closed 2026-08-24 — migration 0024 + repository + rollup CLI + portfolio view landed; see Honest summary]
 
 **C.4 Restructure** [pmi-jv B.3, B.4]: formal triggers tied to metrics, not crisis-waiting — baseline expectation that at least half of JVs fail on ≥1 owner objective and a median 39-month restructuring lag vs comparable wholly-owned businesses (both ILLUSTRATIVE, cited as the reason triggers must be metric-tied); restructuring menu (scope, ownership, governance, economics, operating model, leadership); deadlock ladder with binding time-boxes — functional managers 15–30d → senior executives 30–60d → CEOs → institutional mediation (day ranges ILLUSTRATIVE); pre-agreed evolution paths in the JV agreement ("inability to evolve" is a named failure cause).
 
@@ -173,7 +173,7 @@ The gate vocabulary adds **Hold/Recycle** alongside Go/Kill for tech bets whose 
 | Inputs | `md_project` (classification axes), gate records (`gate_pass_record` outputs), Section C.3 JV scorecards, Section B synergy tracker data |
 | Outputs | stage-progression ledger, capital-vs-milestone comparison, kill/graduate decision ledger, per-venture scorecard rollup |
 | Consumers | process-governance-manager (portfolio review cadence), pmi-agent (BAU exit evidence), the thresholds meeting (empirical basis for E.1 benchmarks) |
-| Prerequisite — flagged | **JV/venture scorecard storage does not exist yet** — a schema addition is required before the script can read what Section C.3 produces. This is an ADR trigger per the design's ADR-trigger list (DB schema change); recorded as ADR-0052 open question (e). |
+| Prerequisite — flagged | **JV/venture scorecard storage does not exist yet** — a schema addition is required before the script can read what Section C.3 produces. This is an ADR trigger per the design's ADR-trigger list (DB schema change); recorded as ADR-0052 open question (e). [resolved 2026-08-24 — ADR-0059 → migration 0024 + repository + `scorecard:rollup` CLI (PR #103) + portfolio view (PR #104); open question (e) resolved] |
 
 ---
 
@@ -221,16 +221,16 @@ Coverage = which procedure chain serves the cell post-PR-11-design. "Thin" cells
 | 2 | greenfield | external | rbd | same, no TRL/MRL evidence demands | + Section D TRL/MRL matrix at every gate | cutoffs ILLUSTRATIVE until thresholds meeting |
 | 3 | greenfield | internal | none | + PR-10 `entity-establishment-execution` | unchanged (PR-10 closed it) | post-IC portfolio view only via Section E |
 | 4 | greenfield | internal | rbd | + PR-10 pre-FS gate (step 1) | + Section D full matrix (pre-FS was the anchor; D generalizes) | same as cell 2 |
-| 5 | greenfield | hybrid | none | (passive minority) thin | + Section A P3 minority shape + NVCA rights checklist | **thin**: monitoring depends on Section E script + schema (open question e) |
-| 6 | greenfield | hybrid | rbd | thin | + Section A minority + Section D | both cells' residuals stack |
-| 7 | greenfield | joint | none | formation only (PR-10 JV addendum) | + Section C operate/monitor/restructure/exit | scorecard schema gap (open question e) |
-| 8 | greenfield | joint | rbd | formation only | + Section C + Section D | both residuals |
-| 9 | greenfield | internal | none (internal-venture-specific) | PR-10 pre-FS right-to-win gate | + Section E portfolio monitoring (kill/graduate, tranche funding) | **thin**: depends on Section E script + scorecard schema follow-up |
+| 5 | greenfield | hybrid | none | (passive minority) thin | + Section A P3 minority shape + NVCA rights checklist | **thin**: monitoring depends on Section E script + schema (open question e) [closed 2026-08-24 — chain landed, see Honest summary] |
+| 6 | greenfield | hybrid | rbd | thin | + Section A minority + Section D | both cells' residuals stack [monitoring/schema half closed 2026-08-24 — chain landed, see Honest summary; Section D cutoffs stay ILLUSTRATIVE] |
+| 7 | greenfield | joint | none | formation only (PR-10 JV addendum) | + Section C operate/monitor/restructure/exit | scorecard schema gap (open question e) [closed 2026-08-24 — chain landed, see Honest summary] |
+| 8 | greenfield | joint | rbd | formation only | + Section C + Section D | both residuals [Section C schema half closed 2026-08-24 — see Honest summary; Section D cutoffs stay ILLUSTRATIVE] |
+| 9 | greenfield | internal | none (internal-venture-specific) | PR-10 pre-FS right-to-win gate | + Section E portfolio monitoring (kill/graduate, tranche funding) | **thin**: depends on Section E script + scorecard schema follow-up [closed 2026-08-24 — chain landed, see Honest summary] |
 | 10 | greenfield | internal | rbd (internal-venture-specific) | PR-10 gate | + Section D + Section E | same as 9 |
 | 11 | brownfield | external | none | full DD→FS→IC chain (PR-10) | + Section B PMI post-approval (the post-close gap) | PMI procedure itself is PR-12 |
 | 12 | brownfield | internal | none | carve-out/intra-group: PR-10 `entity-establishment-execution` | unchanged + Section B reduced-phase PMI where control transfers | B.1 partial-stake scope rule needs PR-12 detail |
 
-**Honest summary**: cells 3 and 12 are genuinely closed; cells 1/2/4/7/8/11 gain designed chains pending PR-12; cells 5/6/9 remain **thin** until the Section E script and its scorecard schema prerequisite exist — that dependency chain (schema ADR → script → portfolio view) is the longest lead item and is flagged in ADR-0052 open question (e).
+**Honest summary**: cells 3 and 12 are genuinely closed; cells 1/2/4/7/8/11 gain designed chains pending PR-12; cells 5/6/9 remain **thin** until the Section E script and its scorecard schema prerequisite exist — that dependency chain (schema ADR → script → portfolio view) is the longest lead item and is flagged in ADR-0052 open question (e). [chain landed 2026-08-24 — schema ADR (ADR-0059, PR #100) → storage + rollup script (PR #103) → portfolio view: server routes + web page (PR #104); open question (e) resolved. D-round R8 context: PRs #102–#104, where PR #102 is the parallel kill-criteria classification, not part of this chain.]
 
 ---
 
