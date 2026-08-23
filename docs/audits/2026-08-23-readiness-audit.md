@@ -60,7 +60,7 @@ Classes: **A** = remediated this round · **B** = designed this round (docs only
 | R4 | §F residuals: `proxy-industry-chain`, `expert-interview` prose-wired | skills | B | PR-2 verdict with research basis (elicitation protocols / reference-class method) |
 | R5 | Kill criteria 29 declared / 2 executable | workflows | A (step 2 landed via ADR-0060) + C (thresholds) | ADR-0060 classifies all 29 (3 class (i) / 1 (ii) / 25 (iii)); greenfield partner-dependency twin activated (baseline 2→3); the 25 proposed vars = the explicit registry-extension backlog, nothing seeded. Thresholds themselves stay class C (calibration meeting) |
 | R6 | D.5 Korea co-funding (TIPS / KONEX / KOSDAQ) unverified | workflows | B | Verification-pending flag restated in PR-2; nothing depends on it |
-| R7 | Thresholds (a)–(d) + market/technical/risk RAG thresholds + Green cap | workflows | C | `docs/decisions/open/` agendas await user decisions |
+| R7 | Thresholds (a)–(d) + market/technical/risk RAG thresholds + Green cap | workflows | C | [corrected 2026-08-24 — stale on arrival: the market/technical-execution/risk RAG thresholds and the substitution vocabulary were already APPROVED by the user on 2026-08-23 ("go"; #86 `dbed8f1`, which predates this audit's baseline `2b61403`) and the rule layer is active (migration 0022, 18/19 rows `enabled=1`, Green cap preserved). Remaining open: ADR-0052 (a)–(d), calibration corpus → Green-cap lift, antitrust reversal — assembled as `docs/decisions/2026-08-24-residual-decisions-pack.md`] |
 | R8 | E.4 full chain: scorecard migration → portfolio script → portfolio view; cells 5/6/9 thin | scripts | A | Chain complete (2026-08-24) — storage + rollup script landed (E.4 PR-2: migration 0024, venture-scorecard repository, `scorecard:rollup` CLI), then the portfolio view (E.4 PR-3: server routes `app/server/scorecard.ts` + web page `app/web/src/pages/PortfolioScorecard.tsx`); cells 5/6/9 closure annotated in the track-coverage design §G |
 | R9 | Procedure execution orchestrator (proc:resolve merges but does not run) | scripts | D | Runtime-hardening round; build/run agent class activates there |
 | R10 | Calibration on 5–10 historical cases | workflows | C | User-supplied cases; gates the Green-cap lift |
@@ -70,7 +70,7 @@ Classes: **A** = remediated this round · **B** = designed this round (docs only
 Registered here so the state is auditable; none blocks this round's PRs:
 
 1. **Open questions (a)–(d)** (ADR-0052): TRL/MRL cutoffs; JV scorecard weights/cadence; synergy certification criteria + 90-day attrition threshold; deal-shape selection thresholds. All ILLUSTRATIVE until the thresholds meeting.
-2. **market / technical-execution / risk RAG thresholds** — `docs/decisions/open/` drafts awaiting approval.
+2. **market / technical-execution / risk RAG thresholds** — `docs/decisions/open/` drafts awaiting approval. [corrected 2026-08-24 — false at audit time: approved by the user 2026-08-23 (#86, in the audit's baseline); the approved records are `docs/decisions/{market,risk,technical-execution}-thresholds.md` + `substitution-threat-vocabulary.md`, and the `open/` agendas were superseded and removed in that change. See the decision pack `docs/decisions/2026-08-24-residual-decisions-pack.md` for what genuinely remains blocked on the user]
 3. **Calibration corpus** — 5–10 historical cases; without it the unverified-dimension Green cap stays.
 4. **Green-cap lift** — contingent on (3).
 

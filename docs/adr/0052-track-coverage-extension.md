@@ -25,13 +25,15 @@ Adopt `docs/designs/2026-08-23-track-coverage-extension-design.md` Sections A–
 
 **Six-validator invariant: untouched.** All of the above is post-IC or front-of-funnel; no DD-side validator changes are proposed or permitted by this design.
 
-**Illustrative-numbers discipline**: every research-derived benchmark (83% integration failure, JV 65% buyout endings, 79% vs 33% restructuring outcome, 45% governance-framework prevalence, 39-month restructuring lag, 20–30% CVC success, TRL/MRL cutoffs, synergy stage-gate count, deadlock time-boxes) is marked ILLUSTRATIVE in the design and is not enforcement-active; activation requires the thresholds meeting under `docs/decisions/open/` — the same rule as `rag_rule` `enabled=0` and ADR-0051's scorecard bands.
+**Illustrative-numbers discipline**: every research-derived benchmark (83% integration failure, JV 65% buyout endings, 79% vs 33% restructuring outcome, 45% governance-framework prevalence, 39-month restructuring lag, 20–30% CVC success, TRL/MRL cutoffs, synergy stage-gate count, deadlock time-boxes) is marked ILLUSTRATIVE in the design and is not enforcement-active; activation requires the thresholds meeting under `docs/decisions/open/` — the same rule as `rag_rule` `enabled=0` and ADR-0051's scorecard bands. [status sync 2026-08-24: the dimension-threshold half of that meeting was held and user-approved 2026-08-23 (records under `docs/decisions/`; the `open/` agendas were superseded and removed). The track-coverage benchmarks above remain ILLUSTRATIVE until the (a)–(d) decisions.]
 
 **Attribution correction**: JV-lifecycle practice is cited to the Watermark / Water Street Partners → Ankura lineage (Bamford, Ernst, Branding Pyle, Walker, Bhargava, Mogstad, Kwicinski). "Vann & Willis-Shore" is unlocatable and must not appear in governance documents.
 
 **TIPS / tech-holding verification flag**: Korea co-funding content (TIPS program mechanics, KONEX/KOSDAQ technology-special listing) arrived without primary-source verification and carries that flag wherever referenced; nothing in this design depends on it.
 
 ## Open Questions (for the thresholds meeting — `docs/decisions/open/`)
+
+> [status sync 2026-08-24: the RAG dimension thresholds were decided 2026-08-23 (`docs/decisions/` records); (e) is resolved by ADR-0059 + the landed E.4 chain (PRs #103–#104). (a)–(d) remain open and are assembled as a decision pack: `docs/decisions/2026-08-24-residual-decisions-pack.md`.]
 
 - **(a)** TRL/MRL cutoffs per gate (Section D.1 table — all ILLUSTRATIVE).
 - **(b)** JV health-scorecard weights and review cadence (Section C.3 — seven dimensions, no weights yet).
