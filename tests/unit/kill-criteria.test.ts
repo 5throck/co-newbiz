@@ -25,12 +25,14 @@ import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { evaluateKillCriteria, validateRegistryEntry } from "../../db/lib/kill-criteria.ts";
+import { recordKillCriteriaEvaluation } from "../../db/repositories/kill-criteria.repository.ts";
 import { assessRulesForRun } from "../../db/lib/rule-assessment.ts";
 
 const TEST_DB_PATH = "db/data/test-kill-criteria.sqlite";
 const NOW = "2026-08-23T00:00:00.000Z";
 const EVALUATED_AT = "2026-08-23T10:00:00Z";
-const U1 = "user-001";
+const U1 = "user-001"; // member everywhere
+const U3 = "user-003"; // app_user only — never a project_member
 
 type Db = ReturnType<typeof GetDb>;
 let db: Db;
@@ -42,6 +44,7 @@ beforeAll(() => {
   runMigrations(TEST_DB_PATH);
   db = getDb(TEST_DB_PATH);
   db.run("INSERT INTO app_user (id, user_id, role, status, password_salt, password_hash, password_iterations, created_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), U1, "analyst", "active", "salt", "hash", 1, NOW]);
+  db.run("INSERT INTO app_user (id, user_id, role, status, password_salt, password_hash, password_iterations, created_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), U3, "analyst", "active", "salt", "hash", 1, NOW]);
 });
 
 afterAll(() => {
@@ -61,6 +64,20 @@ function insertProject(): string {
   const id = ulid();
   db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [id, `NP-${id.slice(-6)}`, NOW]);
   return id;
+}
+
+function insertMnpiProject(): string {
+  const id = insertProject();
+  db.run("INSERT INTO project_classification (project_id, sensitivity, mnpi_flag, classified_by, classified_at) VALUES (?,?,?,?,?)", [id, "restricted", 1, "legal", NOW]);
+  return id;
+}
+
+function grantMember(projectId: string, userId: string): void {
+  db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, userId, "contributor", "admin", NOW, "test fixture basis"]);
+}
+
+function enrollInsider(projectId: string, userId: string): void {
+  db.run("INSERT INTO insider_list (project_id, user_id, added_at, reason) VALUES (?,?,?,?)", [projectId, userId, NOW, "test fixture enrollment"]);
 }
 
 function insertRun(projectId: string): string {
@@ -241,5 +258,145 @@ describe("validateRegistryEntry — runtime anti-tamper (registry check c, at lo
 
   test("an anchored, parseable, in-vocabulary entry passes", () => {
     expect(() => validateRegistryEntry({ ...base })).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// recordKillCriteriaEvaluation — the durable ledger (ADR-0058 §1, migration 0023)
+// ---------------------------------------------------------------------------
+
+function record(projectId: string, runId: string, procedure = "brownfield-dd", evaluatedBy = U1) {
+  return recordKillCriteriaEvaluation({ runId, projectId, procedure, evaluatedBy, now: EVALUATED_AT }, db);
+}
+
+function ledgerRows(runId: string) {
+  return db.query("SELECT * FROM kill_criteria_evaluation WHERE run_id = ? ORDER BY criterion_id").all(runId) as Array<Record<string, unknown>>;
+}
+
+describe("recordKillCriteriaEvaluation — the complete ledger", () => {
+  test("a triggered evaluation writes one row per evaluated criterion with anchors + predicate, and both log rows", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    insertSimulationWithBreach(projectId); // covenant TRUE on its own run
+    const runId = insertRun(projectId);
+
+    const { result, rowIds } = record(projectId, runId);
+
+    expect(result.triggered).toHaveLength(1);
+    expect(rowIds).toHaveLength(2); // covenant (triggered) + partner (unassessed) — the COMPLETE ledger, false included
+
+    const rows = ledgerRows(runId);
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.policy_id).toBe("gd-0022-risk-thresholds"); // anchors snapshotted (ADR-0005)
+      expect(String(row.thresholds_source)).toContain("risk-thresholds.md");
+      expect(JSON.parse(row.predicate_json as string)).toHaveProperty("op");
+      expect(row.evaluated_by).toBe(U1);
+      expect(row.evaluated_at).toBe(EVALUATED_AT);
+    }
+    const covenant = rows.find((r) => r.criterion_id === COVENANT);
+    expect(covenant?.outcome).toBe("triggered"); // 'true' recorded under the act's name
+    expect(covenant?.action).toBe("halt");
+    const partner = rows.find((r) => r.criterion_id === PARTNER);
+    expect(partner?.outcome).toBe("unassessed");
+
+    const audit = db.query("SELECT target FROM audit_log WHERE action = 'kill_criteria_evaluated' AND actor_user_id = ?").all(U1) as Array<{ target: string }>;
+    expect(audit.some((a) => a.target.startsWith(`${projectId}:${runId}:brownfield-dd`) && a.target.includes("evaluated=2") && a.target.endsWith(":HALT-PATH"))).toBe(true);
+    const access = db.query("SELECT record_ref FROM data_access_log WHERE table_key = 'kill_criteria_evaluation'").all() as Array<{ record_ref: string }>;
+    expect(access.some((a) => a.record_ref === `${projectId}:${runId}:brownfield-dd`)).toBe(true);
+  });
+
+  test("a determinate-false criterion is recorded as outcome='false' — auditable proof of evaluation, not absence", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId); // no simulation → covenants_breached present 0
+
+    record(projectId, runId);
+
+    const covenant = ledgerRows(runId).find((r) => r.criterion_id === COVENANT);
+    expect(covenant?.outcome).toBe("false");
+  });
+
+  test("a second record for the same run+procedure throws (ADR-0005 immutability), leaving no partial state", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+    record(projectId, runId);
+
+    expect(() => record(projectId, runId)).toThrow(/already has a recorded.*ADR-0005/);
+    expect(ledgerRows(runId)).toHaveLength(2); // exactly the first record's rows
+  });
+
+  test("read-only evaluate still works on a recorded run (re-check without re-recording)", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+    record(projectId, runId);
+
+    const recheck = evaluate(projectId, runId); // no throw — the ledger is append-only, the evaluator is pure
+    expect(recheck.evaluated).toBe(2);
+    expect(ledgerRows(runId)).toHaveLength(2);
+  });
+
+  test("a procedure with no enabled entries records zero rows — and still writes the audit trail", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+
+    const { rowIds } = record(projectId, runId, "greenfield-screening"); // registry has no such files
+
+    expect(rowIds).toHaveLength(0);
+    expect(ledgerRows(runId)).toHaveLength(0);
+    const audit = db.query("SELECT target FROM audit_log WHERE action = 'kill_criteria_evaluated'").all() as Array<{ target: string }>;
+    expect(audit.some((a) => a.target.startsWith(`${projectId}:${runId}:greenfield-screening`))).toBe(true); // the empty evaluation is itself an audited act
+  });
+});
+
+describe("recordKillCriteriaEvaluation — guards", () => {
+  test("a non-member evaluator is rejected (FR-SEC-08), zero rows", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+
+    expect(() => record(projectId, runId, "brownfield-dd", U3)).toThrow(new RegExp(`'${U3}' is not an active project_member`));
+    expect(ledgerRows(runId)).toHaveLength(0);
+  });
+
+  test("an MNPI project rejects a member who is not on the insider list (FR-SEC-06); enrolled → accepted", () => {
+    const projectId = insertMnpiProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+
+    expect(() => record(projectId, runId)).toThrow(/insider/);
+    expect(ledgerRows(runId)).toHaveLength(0);
+
+    enrollInsider(projectId, U1);
+    expect(record(projectId, runId).rowIds).toHaveLength(2);
+  });
+
+  test("an unknown run is rejected", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    insertRun(projectId);
+
+    expect(() => record(projectId, "01NOSUCHRUN000000002")).toThrow(/run.*does not exist.*migration 0023/);
+  });
+
+  test("another project's run is rejected (a record cannot cross projects)", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const otherProject = insertProject();
+    const otherRun = insertRun(otherProject);
+
+    expect(() => record(projectId, otherRun)).toThrow(/belongs to project.*cannot cross projects/);
+    expect(ledgerRows(otherRun)).toHaveLength(0);
+  });
+
+  test("an empty evaluated_by is rejected — an evaluation without its actor is unauditable", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+
+    expect(() => record(projectId, runId, "brownfield-dd", "")).toThrow(/evaluated_by is mandatory/);
   });
 });

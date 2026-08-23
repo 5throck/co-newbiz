@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Dimension-input repository — the single write path for `dimension_input`
  * rows (PR-5b, design of record Decision 3, migration 0013).
@@ -26,6 +26,7 @@
 import { getDb } from "../client.ts";
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit, logDataAccess, requireActiveMember, requireInsiderIfMnpi } from "../lib/access-control.ts";
+import { isValidEvidenceRef, EVIDENCE_REF_SHAPES } from "../lib/evidence-ref.ts";
 
 export interface DimensionInputRow {
   id: string;
@@ -153,10 +154,18 @@ export function assert(input: AssertInput, db: ReturnType<typeof getDb> = getDb(
       `dimension_input_write_rejected: value_kind '${input.value.kind}' is incoherent with the registry — '${input.var_key}' is value_type '${registry.value_type}' and must be asserted as '${expectedKind}' (the registry's type is not reinterpretable at assertion time).`,
     );
   }
-  if (registry.requires_evidence_ref === 1 && !(input.evidence_ref ?? "").trim()) {
-    throw new Error(
-      `dimension_input_write_rejected: '${input.var_key}' requires an evidence_ref — an evidenced variable asserted without its citation is an unsupported claim.`,
-    );
+  if (registry.requires_evidence_ref === 1) {
+    const ref = (input.evidence_ref ?? "").trim();
+    if (!ref) {
+      throw new Error(
+        `dimension_input_write_rejected: '${input.var_key}' requires an evidence_ref — an evidenced variable asserted without its citation is an unsupported claim.`,
+      );
+    }
+    if (!isValidEvidenceRef(ref)) {
+      throw new Error(
+        `dimension_input_write_rejected: evidence_ref '${ref}' for '${input.var_key}' is not in the citation vocabulary (${EVIDENCE_REF_SHAPES.join(" | ")}) — a free-text citation names evidence only its author can find again (v1.1 hardening, ADR-0058 §2).`,
+      );
+    }
   }
   if (input.value.kind === "num" && (typeof input.value.value !== "number" || !Number.isFinite(input.value.value))) {
     throw new Error(`dimension_input_write_rejected: a num assertion of '${input.var_key}' requires a finite value_num.`);
