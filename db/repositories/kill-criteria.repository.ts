@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Kill-criteria evaluation recorder — ADR-0058 §1: the durable record the
  * read-only evaluator (db/lib/kill-criteria.ts, ADR-0057) deferred. One call
@@ -20,9 +20,17 @@
  * FR-SEC-08 membership + FR-SEC-06 insider status for evaluated_by (agents
  * inherit the calling user's identity — design boundary #1).
  *
+ * The gate-flow reader (1.1.0, same ADR): `getRecordedEvaluation` groups
+ * the recorded ledger into the gate-impact summary `stage-gate-governance`
+ * (brownfield-dd step 15's gate_pass_record output) consumes. Facts only —
+ * whether a triggered criterion blocks the gate is the human gate's call
+ * (non-negotiable boundary #2); the reader never decides, and an unrecorded
+ * procedure surfaces as status 'never_evaluated', never as an empty pass
+ * (ADR-0049 at read time). Reads are member-guarded and MNPI insider-guarded
+ * (listVisibleProjects precedent) and log one data_access row.
+ *
  * Consumers: none in production yet (same posture as assessRulesForRun) —
- * the future gate-flow step (brownfield-dd step 15's gate_pass_record
- * output) READS this table; compliance_check deliberately does not
+ * the gate-flow step READS this table; compliance_check deliberately does not
  * (project-scoped, no run provenance, and its rule_key namespace feeds the
  * six-validator newest-row-wins machinery — ADR-0058 §1 records the choice).
  */
@@ -137,4 +145,147 @@ export function recordKillCriteriaEvaluation(input: RecordKillCriteriaInput, db:
   })();
 
   return { result, rowIds };
+}
+
+// ---------------------------------------------------------------------------
+// The gate-flow reader (1.1.0) — the gate_pass_record decision input
+// ---------------------------------------------------------------------------
+
+/** One recorded criterion as the gate sees it: table columns, predicate parsed. */
+export interface RecordedCriterion {
+  procedure_key: string;
+  criterion_id: string;
+  action: string;
+  outcome: "triggered" | "false" | "unassessed";
+  /** The snapshotted predicate AST (parsed from predicate_json — ADR-0005). */
+  predicate: unknown;
+  policy_id: string;
+  thresholds_source: string;
+  evaluated_at: string;
+  evaluated_by: string;
+}
+
+export interface GetRecordedEvaluationInput {
+  runId: string;
+  projectId: string;
+  /** Scope to one procedure's ledger (the gate step knows its procedure). Omit for the run's full ledger. */
+  procedure?: string;
+  /** The reading user — FR-SEC-08 member + FR-SEC-06 insider guarded; logged. */
+  actor: string;
+  now?: string;
+}
+
+export interface GateImpactSummary {
+  runId: string;
+  projectId: string;
+  /** The asked-about scope: the procedure passed in, or "all rows this run has". */
+  scope: string;
+  /**
+   * 'recorded' = at least one row in scope. 'never_evaluated' = zero rows in
+   * scope — the gate CANNOT read that as clearance (ADR-0049 at read time);
+   * a gate_pass_record over a never_evaluated scope records exactly that.
+   */
+  status: "recorded" | "never_evaluated";
+  /** Triggered criteria by their action — the facts the human gate routes on. */
+  halt: RecordedCriterion[];
+  mark_conditional: RecordedCriterion[];
+  escalate_to_risk_officer: RecordedCriterion[];
+  /** Recorded unassessed — the CALLER decides each one; never a silent pass, never a defaulted halt. */
+  unassessed: RecordedCriterion[];
+  /** Recorded 'false' — auditable proof of evaluation, grouped for the record. */
+  evaluated_false: RecordedCriterion[];
+  /** Distinct procedure_keys present in the returned rows. */
+  procedures: string[];
+}
+
+/**
+ * Read the recorded kill-criteria ledger for one run and group it into the
+ * gate-impact summary the gate-flow step (brownfield-dd step 15's
+ * gate_pass_record output) consumes. Facts only — the reader never blocks,
+ * never grades, never resolves an unassessed criterion (non-negotiable
+ * boundary #2: gate approval is human). Guards follow the read-path
+ * precedent (listVisibleProjects): run exists → same project → actor is an
+ * active member (deny-by-default) → on an MNPI project, actor is a current
+ * insider; one data_access row (action "read") per call.
+ */
+export function getRecordedEvaluation(input: GetRecordedEvaluationInput, db: Database = getDb()): GateImpactSummary {
+  const now = input.now ?? new Date().toISOString();
+
+  const run = db.query("SELECT id, project_id FROM run WHERE id = ?").get(input.runId) as
+    | { id: string; project_id: string }
+    | undefined;
+  if (!run) {
+    throw new Error(`kill_criteria_read_rejected: run '${input.runId}' does not exist — the evaluation ledger is run-scoped (migration 0023).`);
+  }
+  if (run.project_id !== input.projectId) {
+    throw new Error(
+      `kill_criteria_read_rejected: run '${input.runId}' belongs to project '${run.project_id}', not '${input.projectId}' — a run's evaluation ledger cannot be read across projects.`,
+    );
+  }
+  if (!(input.actor ?? "").trim()) {
+    throw new Error(`kill_criteria_read_rejected: actor is mandatory — a ledger read without its reader is unauditable (design boundary #1).`);
+  }
+  requireActiveMember(db, input.projectId, input.actor);
+  requireInsiderIfMnpi(db, input.projectId, input.actor);
+
+  const rows = (
+    input.procedure
+      ? db.query("SELECT * FROM kill_criteria_evaluation WHERE run_id = ? AND procedure_key = ? ORDER BY procedure_key, criterion_id").all(input.runId, input.procedure)
+      : db.query("SELECT * FROM kill_criteria_evaluation WHERE run_id = ? ORDER BY procedure_key, criterion_id").all(input.runId)
+  ) as Array<{
+    procedure_key: string;
+    criterion_id: string;
+    action: string;
+    outcome: string;
+    predicate_json: string;
+    policy_id: string;
+    thresholds_source: string;
+    evaluated_at: string;
+    evaluated_by: string;
+  }>;
+
+  logDataAccess(db, {
+    userId: input.actor,
+    tableKey: "kill_criteria_evaluation",
+    recordRef: `${input.projectId}:${input.runId}:${input.procedure ?? "*"}`,
+    projectId: input.projectId,
+    action: "read",
+    at: now,
+  });
+
+  const toRecorded = (r: (typeof rows)[number]): RecordedCriterion => ({
+    procedure_key: r.procedure_key,
+    criterion_id: r.criterion_id,
+    action: r.action,
+    outcome: r.outcome as RecordedCriterion["outcome"],
+    predicate: JSON.parse(r.predicate_json),
+    policy_id: r.policy_id,
+    thresholds_source: r.thresholds_source,
+    evaluated_at: r.evaluated_at,
+    evaluated_by: r.evaluated_by,
+  });
+
+  const summary: GateImpactSummary = {
+    runId: input.runId,
+    projectId: input.projectId,
+    scope: input.procedure ?? "*",
+    status: rows.length > 0 ? "recorded" : "never_evaluated",
+    halt: [],
+    mark_conditional: [],
+    escalate_to_risk_officer: [],
+    unassessed: [],
+    evaluated_false: [],
+    procedures: [...new Set(rows.map((r) => r.procedure_key))],
+  };
+  for (const r of rows) {
+    const recorded = toRecorded(r);
+    if (recorded.outcome === "unassessed") summary.unassessed.push(recorded);
+    else if (recorded.outcome === "false") summary.evaluated_false.push(recorded);
+    else if (recorded.action === "halt") summary.halt.push(recorded);
+    else if (recorded.action === "mark_conditional") summary.mark_conditional.push(recorded);
+    else if (recorded.action === "escalate_to_risk_officer") summary.escalate_to_risk_officer.push(recorded);
+    // A triggered row with an action outside the vocabulary cannot exist —
+    // the recorder routes on the same vocabulary the table CHECK enforces.
+  }
+  return summary;
 }

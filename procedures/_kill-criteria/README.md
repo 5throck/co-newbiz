@@ -82,9 +82,15 @@ ADR-0058 §1) evaluates and persists the **complete ledger** to
 in all three outcomes — `triggered`/`false`/`unassessed` — each row
 snapshotting its predicate, action, and both governance anchors
 (ADR-0005); a second record for the same run+procedure throws. Row
-absence means never-evaluated, the only silent state. What remains future
-work is the gate-flow **reader** (brownfield-dd step 15's `gate_pass_record`
-output consuming the table).
+absence means never-evaluated, the only silent state. The gate-flow
+**reader** is `getRecordedEvaluation` in the same repository (1.1.0): a
+member/MNPI-guarded, read-logged lookup that groups the ledger into the
+gate-impact summary (`halt` / `mark_conditional` / `escalate_to_risk_officer`
+/ `unassessed` / `evaluated_false`) with an explicit `never_evaluated`
+status when the asked scope has zero rows — never an empty-looking pass.
+Facts only: whether a triggered criterion blocks the gate stays the human
+gate's call (non-negotiable boundary #2), and each recorded `unassessed` is
+surfaced for the caller to decide.
 
 **Activation convention**: an entry flips to `enabled: true` only when
 (a) its predicate's evidence vars exist (the "do not invent predicates"
@@ -97,7 +103,7 @@ state: 23 declared / 2 executable / 2 enabled.
 
 - `procedures/_validate.ts` — enforcement
 - `db/lib/kill-criteria.ts` — the runtime evaluator (ADR-0057)
-- `db/repositories/kill-criteria.repository.ts` — the evaluation recorder, `kill_criteria_evaluation` (ADR-0058 §1)
+- `db/repositories/kill-criteria.repository.ts` — the evaluation recorder (`recordKillCriteriaEvaluation`) + gate-flow reader (`getRecordedEvaluation`), `kill_criteria_evaluation` (ADR-0058 §1)
 - `scripts/co-newbiz/proc-resolve.ts` — merged `kill_criteria` in resolved
   procedures (union semantics: shared list first, layer additions appended,
   deduped by condition — a layer can add criteria, never drop or weaken a
