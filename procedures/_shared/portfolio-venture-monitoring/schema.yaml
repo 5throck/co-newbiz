@@ -1,0 +1,85 @@
+schema_version: "1.0"
+procedure_id: shared-portfolio-venture-monitoring
+title: "Venture Portfolio Monitoring (post-approval, group level)"
+scope: shared
+level: group
+version: "1.0.0"
+status: active
+# Design §E: cells with venture character — internal venture (cells 9/10),
+# minority/hybrid (5/6), JV (7/8, feeding in via jv-lifecycle-governance
+# step 3). The origin predicate is a NECESSARY-not-sufficient filter: it
+# excludes external acquisitions (the PMI track owns those), but
+# origin=internal ALSO includes cell-12 carve-outs, which lack venture
+# character — the venture scope is prose keyed to the classification
+# matrix (ADR-0047 §G), the same pattern as PMI's case_type-only predicate.
+applicability: conditional
+applies_when: { op: "in", var: "project.origin", values: ["internal", "hybrid", "joint"] }
+workflow_type: core
+gate: post_close
+owner_agent: process-governance-manager
+legal_basis:
+  - "ADR-0052 §E (venture portfolio monitoring)"
+  - "docs/designs/2026-08-23-track-coverage-extension-design.md §E"
+  - "ADR-0047 (12-cell classification matrix — venture-character cells)"
+  - "docs/research/pmi-jv-lifecycle-best-practice.md [pmi-jv C.1-C.3]"
+
+# Group-level cadence, not a per-project one-shot: step 1 runs per review
+# cycle, steps 2-3 at each venture's stage transitions.
+
+steps:
+  - id: 1
+    gate: post_close
+    agent_key: group-review-agent
+    skill_key: portfolio-fit-assessment
+    output_type: portfolio_scorecard_rollup
+    description: >
+      Bifurcated metrics rollup [pmi-jv C.1]: FINANCIAL — IRR vs hurdle,
+      cash-on-cash multiples, capital deployed vs milestone plan, revenue
+      growth, valuation marks by stage normalized for time in market;
+      STRATEGIC — introductions (BU-startup / partner), learning
+      progressing to tangible products/partnerships/JVs (leading ->
+      lagging), stage-progression rate, kill/graduate decision counts.
+      Benchmark odds: 20-30% success is normal for CVC (ILLUSTRATIVE) —
+      continued funding beyond that band requires explicit evidence.
+      Inputs today: gate_pass_record outputs, jv-lifecycle-governance
+      step 2 scorecards, the PMI synergy tracker. The per-venture
+      scorecard STORAGE schema does not exist yet — until ADR-0052 open
+      question (e) resolves (schema ADR -> portfolio-monitoring script ->
+      portfolio view, the longest-lead chain), this rollup is a procedure
+      artifact assembled per review cycle, not a scripted read.
+  - id: 2
+    gate: post_close
+    agent_key: process-governance-manager
+    skill_key: project-review
+    output_type: venture_transition_evidence
+    description: >
+      Stage-transition evidence pack [pmi-jv C.2, C.3]: tranche
+      preconditions — blueprint milestones met, metrics current,
+      documented parent + venture contribution responsibilities,
+      parent-side capability commitments tracked as obligations;
+      "freedom within financial guardrails" honored. Exit-path evaluation
+      with a clear rationale for each option: integrate / standalone /
+      spinout / reduce ownership / divest / kill. Time-boxed evidence
+      windows — ventures that cannot show measurable impact lose
+      management support (window length is a thresholds-meeting item);
+      the graduation/integration concept is prepared BEFORE absorbing a
+      venture into the core.
+  - id: 3
+    gate: post_close
+    agent_key: venture-portfolio-ic   # human role — procedures/_human-roles.yaml registry (ADR-0053)
+    decision_authority: human
+    skill_key: stage-gate-governance
+    output_type: venture_transition_decision
+    description: >
+      Human transition decision by the small senior IC with integrity
+      guardrails (design §E.2): the tranche release for the next stage AND
+      the kill/graduate call in one sitting — both fire at stage
+      transitions. Decision vocabulary: next_tranche_released |
+      held_evidence_incomplete | graduate_to_core | reduce_or_divest |
+      kill_with_learning_captured. Kill decisions are recorded with
+      rationale and learning capture recycled into the playbook — a kill
+      is a governed decision, not a silent starve.
+
+# No kill-criteria registry entries: design §E names no candidates — the
+# kill/graduate decision here is portfolio governance OUTPUT (step 3's
+# decision vocabulary), not a gate-time condition that halts a procedure.

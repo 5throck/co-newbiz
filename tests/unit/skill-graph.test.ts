@@ -160,11 +160,11 @@ describe("buildGraphMap over the live repo (PR-8 gates)", () => {
     expect(map.missing.agents).not.toContain("entity-ic-reviewer");
   });
 
-  test("exactly three human-authority steps — the two IC decisions plus the PMI BAU-exit certification (ADR-0053 / ADR-0052 §B)", () => {
+  test("exactly four human-authority steps — the two IC decisions, the PMI BAU-exit certification, and the venture-portfolio transition decision (ADR-0053 / ADR-0052 §B/§E)", () => {
     const marked = map.procedures.flatMap((p) =>
       p.steps.filter((s) => s.decision_authority === "human").map((s) => `${p.procedure}#${s.id}`)
     );
-    expect(marked.sort()).toEqual(["entity-ic-review#5", "group-investment-review#5", "pmi-integration-execution#5"]);
+    expect(marked.sort()).toEqual(["entity-ic-review#5", "group-investment-review#5", "pmi-integration-execution#5", "portfolio-venture-monitoring#3"]);
   });
 
   test("bidirectional contract: every (procedure → skill) edge is in the skill's metadata.procedure_keys", () => {

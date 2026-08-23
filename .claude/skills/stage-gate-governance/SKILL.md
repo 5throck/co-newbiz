@@ -10,7 +10,7 @@ description: >
 
   Use when: "stage gate", "kill criteria", "gate sequence", "halt the
   project", "does this trigger a kill criterion".
-version: 1.2.0
+version: 1.3.0
 last_reviewed: 2026-08-23
 status: active
 owner: process-governance-manager
@@ -37,6 +37,7 @@ metadata:
     - greenfield-screening
     - group-investment-review
     - pmi-integration-execution
+    - portfolio-venture-monitoring
 ---
 
 ## Context
