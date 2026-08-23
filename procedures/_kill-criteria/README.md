@@ -32,8 +32,9 @@ procedure, so the file prefix disambiguates):
   `rag_rule.condition_expr` (`db/lib/predicate.ts`, PR-1). `null` means
   declared-but-inert: the criterion exists in governance prose but cannot
   be evaluated by machine yet. Predicates are added only when their
-  evidence variables actually exist (do not invent predicates); the two
-  risk entries activated by ADR-0057 are the current non-null exceptions.
+  evidence variables actually exist (do not invent predicates); the three
+  risk entries activated by ADR-0057/ADR-0060 are the current non-null
+  exceptions.
 - `action` — the action declared in the YAML (`halt` /
   `escalate_to_risk_officer` / `mark_conditional`), carried here for
   traceability; the YAML remains authoritative.
@@ -96,14 +97,50 @@ surfaced for the caller to decide.
 (a) its predicate's evidence vars exist (the "do not invent predicates"
 rule above) and (b) an ADR records why the criterion is now
 machine-evaluable. ADR-0057 set the precedent, activating the two
-ADR-0055 entries with `policy_id: gd-0022-risk-thresholds` — registry
-state: 29 declared / 2 executable / 2 enabled (the three ADR-0052 §A.4
+ADR-0055 entries with `policy_id: gd-0022-risk-thresholds`; ADR-0060
+activated the greenfield-screening partner-dependency twin under the same
+record — registry state: 29 declared / 3 executable / 3 enabled (the three
+ADR-0052 §A.4
 deal-shape-chain entries — partner_dd_red_ip_chain, partner_dd_red_financial_distress,
 no_viable_deal_shape — and the three §B.4 pmi-integration-execution entries —
 synergy_run_rate_uncertified_at_bau_handover, key_talent_attrition_above_threshold_at_90d,
 clean_team_protocol_breach — joined 2026-08-23 as declared-but-inert; `no_viable_deal_shape`
 carries recycle semantics in its notes under action `mark_conditional`, the
 closest member of the action vocabulary).
+
+## Classification (ADR-0060)
+
+ADR-0060 (`docs/adr/0060-kill-criteria-executability-classification.md`)
+classifies all 29 entries against the registry's actual evidence plane —
+the 22 snapshot vars the filler owns (`SNAPSHOT_VAR_KEYS` in
+`db/lib/snapshot-filler.ts`, migrations 0017-0019):
+
+- **class (i) — 3 entries**: var exists AND threshold decided; predicate
+  expressed and enabled (the two ADR-0057 brownfield-dd risk entries plus
+  the greenfield-screening partner-dependency twin activated by ADR-0060);
+- **class (ii) — 1 entry**: var exists (`permit.critical_path_duration`)
+  but the threshold is a per-project incentive deadline — registered as a
+  new thresholds-agenda item; stays inert with both pointers recorded;
+- **class (iii) — 25 entries**: no snapshot var exists; each entry's
+  `notes` carries its proposed var and form. The 25 proposed vars are the
+  explicit, prioritized registry-extension backlog — nothing is seeded
+  this round (extension is an explicit decision, never silent).
+
+## TRAP: `is_null` over never-snapshotted vars is a false-halt machine
+
+Predicates may only reference vars the snapshot filler actually snapshots
+(`SNAPSHOT_VAR_KEYS`, migrations 0017-0019). `evaluateKillCriteria` reads
+`project_variable_snapshot` only, while the four routing vars of
+migration 0014 — `project.case_type`, `project.origin`,
+`project.technology_track`, `target.has_external_market_presence` — are
+read live by `db/lib/applies-when.ts` and are **never snapshotted**: a
+never-snapshotted var is always `missing`, so `is_null` over a routing
+var is ALWAYS true. Expressing such a predicate would halt every routed
+project unconditionally. Never write a predicate over a non-snapshotted
+var — mirror the var into the snapshot or add a computed boolean var
+first, as an explicit ADR-recorded decision (see the
+`origin_classification_missing_at_entity_ic_exit` entry, held inert for
+exactly this reason).
 
 ## Related
 

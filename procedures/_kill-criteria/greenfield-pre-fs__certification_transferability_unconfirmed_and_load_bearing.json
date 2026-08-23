@@ -7,5 +7,5 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in brownfield-pre-fs (separate registry entry)."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in brownfield-pre-fs (separate registry entry). Classification (ADR-0060): class (iii) — no snapshot var; proposed: cert.load_bearing_unconfirmed (count: load_bearing=1 AND transferability_basis IS NULL) — twin of the brownfield-pre-fs entry, same proposed var."
 }

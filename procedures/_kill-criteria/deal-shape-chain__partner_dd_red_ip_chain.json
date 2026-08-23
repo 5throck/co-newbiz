@@ -7,5 +7,5 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "Design section A.4 [rbd 2.3, 2.6]: a red partner-DD finding on IP title/chain or encumbrances that conflicts with the exclusivity the deal shape depends on. Declared in YAML, not yet executable — predicate null by design until the thresholds meeting sets what counts as a red finding in machine-readable form (ADR-0052 open questions; activation convention per ADR-0057)."
+  "notes": "Design section A.4 [rbd 2.3, 2.6]: a red partner-DD finding on IP title/chain or encumbrances that conflicts with the exclusivity the deal shape depends on. Declared in YAML, not yet executable — predicate null by design until the thresholds meeting sets what counts as a red finding in machine-readable form (ADR-0052 open questions; activation convention per ADR-0057). Classification (ADR-0060): class (iii) — no snapshot var; proposed: partner.dd_ip_red (boolean) — tech.ip_ownership_status covers the target's dd_finding, not partner DD."
 }

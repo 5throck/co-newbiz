@@ -7,5 +7,5 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Meta-criterion: refers to any upstream procedure's triggered criterion, so its executable form will depend on the other entries first."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Meta-criterion: refers to any upstream procedure's triggered criterion, so its executable form will depend on the other entries first. Classification (ADR-0060): class (iii) — meta: evidence is the kill_criteria_evaluation ledger (migration 0023), not a snapshot var; getRecordedEvaluation is the reader — meta-criteria stay procedural gate-flow readers, not predicates."
 }
