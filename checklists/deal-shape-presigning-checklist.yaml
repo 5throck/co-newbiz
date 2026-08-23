@@ -21,67 +21,87 @@ items:
   - id: lic-01
     text: "Grant scope explicit; any exclusivity justified against a public-interest-style test, not assumed"
     mandatory: true
+    waiver_eligible: true
   - id: lic-02
     text: "Field of use and territory no broader than what we can actually exploit"
     mandatory: true
+    waiver_eligible: true
   - id: lic-03
     text: "Complete financial stack documented — upfront payment, milestones, royalties, minimums (no element left 'to be discussed')"
     mandatory: true
+    waiver_eligible: true
   - id: lic-04
     text: "Development benchmarks dated, with annual reporting obligations against them"
     mandatory: true
+    waiver_eligible: true
   - id: lic-05
     text: "Anti-shelving revocation for non-use (NIH-style) included — a license we can sit on is a license the licensor can take back"
     mandatory: true
+    waiver_eligible: true
   - id: lic-06
     text: "Grantback terms for improvements we create stated explicitly"
     mandatory: false
+    waiver_eligible: true
   - id: lic-07
     text: "Audit rights over the licensor's royalty/compliance accounting"
     mandatory: true
+    waiver_eligible: true
   - id: lic-08
     text: "Government strings identified where applicable (Bayh-Dole-style march-in, manufacture preference) and their consequence for exclusivity assessed"
     mandatory: true
+    waiver_eligible: true
   - id: lic-09
     text: "Inventor-assignment title chain verified BEFORE term sheet — chain-of-title defects discovered after signing are the classic license-in failure"
     mandatory: true
+    waiver_eligible: true
 
   # ── Co-development [rbd 3.2] ────────────────────────────────────────
   - id: cdv-01
     text: "Background-IP defined per party, exhaustively — the #1 co-dev dispute source is 'we thought that was ours'"
     mandatory: true
+    waiver_eligible: true
   - id: cdv-02
     text: "Foreground-IP ownership rule chosen deliberately (joint vs by-field vs by-inventor) with the choice rationale recorded — never defaulted"
     mandatory: true
+    waiver_eligible: true
   - id: cdv-03
     text: "Joint steering committee with named decision rights AND a deadlock ladder (who breaks ties at which level)"
     mandatory: true
+    waiver_eligible: true
   - id: cdv-04
     text: "Budgets milestone-tranched, with explicit failure-to-fund consequences for each party"
     mandatory: true
+    waiver_eligible: true
   - id: cdv-05
     text: "Publication review windows agreed (protection of patentable findings before disclosure)"
     mandatory: true
+    waiver_eligible: true
   - id: cdv-06
     text: "Exit/step-in triggers stated, with data handover and sublicense survival on exit"
     mandatory: true
+    waiver_eligible: true
 
   # ── Minority investment [rbd 3.3] ────────────────────────────────────
   - id: min-01
     text: "NVCA-standard rights package enumerated and negotiated as a package — board designation, information rights, registration rights, ROFR/co-sale, management rights letter, pro-rata participation"
     mandatory: true
+    waiver_eligible: true
   - id: min-02
     text: "Technology access licensed SEPARATELY from equity — the stake is not the license, and the license is not the stake"
     mandatory: true
+    waiver_eligible: true
   - id: min-03
     text: "Any exclusivity window carries a sunset date — perpetual exclusivity via a minority stake is a control right bought at a non-control price"
     mandatory: true
+    waiver_eligible: true
   - id: min-04
     text: "Standstill and information-barrier terms agreed (protects both sides' MNPI handling)"
     mandatory: true
+    waiver_eligible: true
   - id: min-05
     text: "Foreign-investment screening assessment completed where the stake or nationality triggers it"
     mandatory: true
+    waiver_eligible: true
 
   # ── JV (origin=joint) [rbd 3.4] ─────────────────────────────────────
   # Formation mechanics ride `entity-formation` ef-13..17 (PR-10) — the
@@ -89,21 +109,27 @@ items:
   - id: jvd-01
     text: "Parent contributions committed and valued (technology contributions independently valued — pt-07 of chk-partnership, never at the contributing party's stated figure)"
     mandatory: true
+    waiver_eligible: true
   - id: jvd-02
     text: "Board composition, reserved-matters map, and deadlock terms documented before term-sheet negotiation (extends pt-06 of chk-partnership)"
     mandatory: true
+    waiver_eligible: true
   - id: jvd-03
     text: "IP licenses in and out of the JV each documented — scope, term, and what happens at JV exit"
     mandatory: true
+    waiver_eligible: true
   - id: jvd-04
     text: "Exit architecture designed AT SIGNING: put/call, ROFR, drag/tag, and the valuation mechanism (incl. the two-appraisers-then-third process where used)"
     mandatory: true
+    waiver_eligible: true
   - id: jvd-05
     text: "JV-specific antitrust clearance assessed (a JV can concentrate markets its parents do not)"
     mandatory: true
+    waiver_eligible: true
   - id: jvd-06
     text: "Wind-down terms agreed — who takes what people, IP, and liabilities if the JV dissolves"
     mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "ADR-0052 (track coverage extension, Section A.2)"

@@ -12,24 +12,31 @@ items:
   - id: cdd-01
     text: "Customer concentration analyzed (top-N revenue share)"
     mandatory: true
+    waiver_eligible: true
   - id: cdd-02
     text: "Customer churn history reviewed"
     mandatory: true
+    waiver_eligible: true
   - id: cdd-03
     text: "Pricing power assessed (ability to pass through cost increases)"
     mandatory: true
+    waiver_eligible: true
   - id: cdd-04
     text: "Win/loss analysis conducted against named competitors"
     mandatory: false
+    waiver_eligible: true
   - id: cdd-05
     text: "Channel checks completed with distributors/resellers where applicable"
     mandatory: false
+    waiver_eligible: true
   - id: cdd-06
     text: "Every material finding tied to an assumption_key or dd_finding.value_impact — no finding left as narrative-only"
     mandatory: true
+    waiver_eligible: true
   - id: cdd-07
     text: "Expert interviews follow the triangulation guideline (2-3 independent sources per material claim)"
     mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "skills/commercial-due-diligence (design v1.0 section 5.3)"

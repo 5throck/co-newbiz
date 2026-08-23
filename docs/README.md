@@ -1,67 +1,66 @@
 # Project Documentation
 
-This directory contains all project documentation and architecture artifacts.
+Index of `docs/` — the governance documents, engineering specifications, and
+operational records of the co-newbiz system. For project identity and
+standards start at [`context.md`](context.md); variant-specific configuration
+lives in [`co-newbiz.context.md`](co-newbiz.context.md).
 
-## Files
+## Specifications and Contracts
 
 | File | Purpose |
 |------|---------|
-| `context.md` | Single source of truth for all AI tools - architecture, tech stack, coding guidelines, multi-agent workflow |
-| `adr/` | Architecture Decision Records - significant technical decisions with rationale |
-| `security.md` | Security policies, vulnerability reporting, and secure development guidelines |
-| `manuals/` | Three-audience user guides — business (analysts/IC reviewers), admin (system administrators), operations (dba/sre) — each with a Korean counterpart (`*_ko.md`) |
-| `_examples/` | Reference templates for creating documentation (NOT copied to new projects) |
+| [`context.md`](context.md) | Immutable project identity shared by all AI tools (architecture, workflow, language policy) |
+| [`co-newbiz.context.md`](co-newbiz.context.md) | Variant config — tech stack, agents, skills, scripts, workflow |
+| [`srs.md`](srs.md) | Software requirements specification (~85 FRs across 13 domains, MoSCoW-prioritized) |
+| [`traceability-matrix.md`](traceability-matrix.md) | Policy clause → procedure → requirement → implementation → verification mapping |
+| [`db-schema.md`](db-schema.md) | Database table catalog across 10 domains with index rationale |
+| [`api-spec.md`](api-spec.md) | REST endpoint catalog and access-control contract (`app/server/*.ts`) |
+| [`openapi.yaml`](openapi.yaml) | OpenAPI 3.1 as-built surface — enforced against routes by `tests/unit/openapi.test.ts` |
+| [`mcp-integration.md`](mcp-integration.md) | MCP tool catalog over the REST API (ADR-0011: REST-only access) |
+| [`ui-spec.md`](ui-spec.md) | SPA information architecture and the RAG display contract |
+| [`rag-framework.md`](rag-framework.md) | Six-dimension RAG grading rules, bands, hysteresis, per-gate reductions |
 
-## Context File (`context.md`)
+## Governance and Operations
 
-The `context.md` file is the primary reference for:
+| File | Purpose |
+|------|---------|
+| [`process-map.md`](process-map.md) | Screening → Pre-FS → FS → DD → Entity IC → Group IC gate map with kill criteria |
+| [`raci.md`](raci.md) | Gate-level and domain-lead RACI tables |
+| [`governance-operations.md`](governance-operations.md) | Compliance monitoring, waivers, interpretation registry, policy-change pipeline |
+| [`ops-cadence.md`](ops-cadence.md) | Operating rhythm: recurring cadences and reviewer-capacity computation |
+| [`transition-plan.md`](transition-plan.md) | Workspace adoption order and in-flight-review handling |
+| [`dev-plan.md`](dev-plan.md) | Stage/wave implementation plan with acceptance criteria |
+| [`security-model.md`](security-model.md) | Trust boundaries, STRIDE matrix, verification checklist (§8 status) |
+| [`security-baseline.md`](security-baseline.md) | Recurring security cadence and pre-deployment gate |
+| [`VERSION_MANIFEST.md`](VERSION_MANIFEST.md) | Component versions (common overlay / variant) |
 
-- **Project Overview**: Tech stack, architecture, folder structure
-- **Development Workflow**: Git conventions, PR process, sync pipeline
-- **Coding Guidelines**: Language rules, file encoding, open-source policy
-- **Multi-Agent System**: Agent roles, skills, dispatch protocols
-- **Key Files**: Reference to all important project files
+## Directories
 
-All AI tools (Claude Code, Gemini CLI, Codex) load this file at session start.
+| Directory | Contents |
+|-----------|----------|
+| [`adr/`](adr/) | Architecture Decision Records — index in `adr/README.md`, mirrored into [memory/MEMORY.md](../memory/MEMORY.md) |
+| [`audits/`](audits/) | Readiness and compliance audit reports |
+| [`decisions/`](decisions/) | Dated decision records (threshold approvals, vocabularies, agenda packs) |
+| [`designs/`](designs/) | Design documents of record for major work rounds |
+| [`lifecycle/`](lifecycle/) | Agent/skill/script governance records (one per agent under `agents/`) |
+| [`manuals/`](manuals/) | Three-audience user guides — business / admin / operations — each with a Korean counterpart (`*_ko.md`) |
+| [`pilots/`](pilots/) | Real-case manual pilot records that validated the procedures |
+| [`research/`](research/) | Sourced external research inputs |
+| [`runbooks/`](runbooks/) | Operational runbooks (deployment, backup/restore) |
 
-## Documentation Templates (`_examples/`)
+## Architecture Decision Records (ADRs)
 
-The `_examples/` folder contains reference templates for creating documentation:
+ADRs document significant decisions with Context / Decision / Consequences.
+The authoritative index is [`adr/README.md`](adr/README.md).
 
-| Category | Templates |
-|----------|-----------|
-| **ADRs** | Decision record template |
-| **Workflows** | PRD, task handoff, dispatch patterns |
-| **Guides** | Testing guidelines, tooling matrix |
-| **Skills** | Example skill definitions |
-| **Agents** | Example agent definitions |
-
-> **Note**: When creating documentation, reference templates from `docs/_examples/` in the workspace templates, not from your individual project.
-
-## Architecture Decision Records (ADR)
-
-ADRs document significant architectural decisions with:
-
-- **Context**: Why the decision was needed
-- **Decision**: What was decided
-- **Consequences**: Positive and negative impacts
-- **Alternatives considered**: Other options that were evaluated
-
-### Creating an ADR
-
-1. Copy the template from `docs/_examples/adr/0001-example-decision.md`
-2. Rename with sequential number: `adr/NNNN-title.md`
-3. Fill in the decision details
-
-### ADR Lifecycle
+### Lifecycle
 
 | Status | Meaning |
 |--------|---------|
 | Proposed | Under consideration |
 | Accepted | Current approach |
 | Deprecated | No longer recommended |
-| Superseded | Replaced by newer ADR |
+| Superseded | Replaced by a newer ADR |
 
----
-
-*Project documentation template - customize as needed*
+New ADRs follow `scripts/co-newbiz/adr-new.ts` (numbering sequence and
+trigger list per design §7); see the `adr-governance` skill.

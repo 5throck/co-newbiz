@@ -1,4 +1,4 @@
-// @version 1.4.0
+// @version 1.5.0
 /**
  * co-newbiz API server — docs/api-spec.md (Wave 5.6A).
  *
@@ -49,13 +49,17 @@ import { monitoringRoutes } from "./monitoring.ts";
 import { scorecardRoutes } from "./scorecard.ts";
 import { glossaryRoutes } from "./glossary.ts";
 import { adminRoutes } from "./admin.ts";
-import type { AppEnv } from "./middleware.ts";
+import { securityHeaders, type AppEnv } from "./middleware.ts";
 
 const SPA_DIST = "app/web/dist";
 
 export function buildApp(): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   const hasSpa = existsSync(SPA_DIST);
+
+  // Baseline response headers first, so every response below (health probe,
+  // static SPA assets, API routes) carries them.
+  app.use("*", securityHeaders);
 
   app.get("/api/health", (c) => c.json({ status: "ok" }));
 

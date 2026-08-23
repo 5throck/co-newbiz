@@ -12,24 +12,31 @@ items:
   - id: pt-01
     text: "Capability gap defining the need for a partner is stated explicitly before sourcing starts"
     mandatory: true
+    waiver_eligible: true
   - id: pt-02
     text: "Compliance screening (sanctions, anti-corruption history) completed for every shortlisted partner candidate — not optional, since a partner's exposure transfers to us"
     mandatory: true
+    waiver_eligible: true
   - id: pt-03
     text: "Financial stability and capacity scores recorded per candidate with evidence references"
     mandatory: true
+    waiver_eligible: true
   - id: pt-04
     text: "Dependency risk assessed — including the risk the partner becomes a competitor after technology transfer"
     mandatory: true
+    waiver_eligible: true
   - id: pt-05
     text: "Where the business model has a hard partner dependency, partner-sourcing failure is modeled as a Kill Criteria candidate (deal termination), not a schedule delay (ADR-0031)"
     mandatory: true
+    waiver_eligible: true
   - id: pt-06
     text: "For JV structures: governance (board composition, veto matters), contribution valuation, exit clauses (put/call, drag/tag), and deadlock-resolution mechanism all documented before term-sheet negotiation"
     mandatory: true
+    waiver_eligible: true
   - id: pt-07
     text: "Technology contribution independently valued, not accepted at the contributing party's stated figure"
     mandatory: false
+    waiver_eligible: true
   # pt-08..pt-12 added v1.1.0 — the P1 partnership-screen criteria families of
   # the deal-shape chain (ADR-0052 §A.1 P1 / [rbd 2.2]): the screen scores the
   # PARTNERSHIP, not the market, reusing the strategic-fit knock-out+scorecard
@@ -37,18 +44,23 @@ items:
   - id: pt-08
     text: "Strategic complementarity assessed — what we bring plus what the partner brings jointly closes the named capability gap (pt-01), with the combination rationale written down"
     mandatory: true
+    waiver_eligible: true
   - id: pt-09
     text: "Partner technical capability evidenced against OUR next gate's requirement — test data, certifications, or demonstrated delivery, not marketing claims"
     mandatory: true
+    waiver_eligible: true
   - id: pt-10
     text: "Operational and cultural fit assessed — working style, decision speed, and the geographic/timezone operating reality of the collaboration"
     mandatory: true
+    waiver_eligible: true
   - id: pt-11
     text: "Alliance track record assessed, with references to at least two of the partner's other alliance partners as required evidence [rbd 2.4]"
     mandatory: true
+    waiver_eligible: true
   - id: pt-12
     text: "Organizational readiness on both sides — dedicated resources, a named executive sponsor, and decision authority delegated for the negotiation itself"
     mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "docs/partnership-playbook.md (forward reference — Stage 4 documentation)"

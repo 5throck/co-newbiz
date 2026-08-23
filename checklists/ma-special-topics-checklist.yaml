@@ -17,39 +17,51 @@ items:
   - id: ma-01
     text: "Relevant market defined (product and geographic) and HHI/HHI-delta calculated — including common-ownership/common-control combinations (e.g. a financial sponsor already controlling one competitor acquiring another), not only direct mergers of the target entities themselves (pilot 010 finding F-2)"
     mandatory: true
+    waiver_eligible: true
   - id: ma-02
     text: "Merger-control filing requirements confirmed for every applicable jurisdiction (multi-jurisdiction filing check, not just the primary market)"
     mandatory: true
+    waiver_eligible: true
   - id: ma-03
     text: "Gun-jumping prohibition acknowledged — no integration action taken before clearance"
     mandatory: true
+    waiver_eligible: true
   - id: ma-04
     text: "Executive compensation package (CoC triggers, golden-parachute payout estimate, accelerated vesting) recorded against management_package"
     mandatory: true
+    waiver_eligible: true
   - id: ma-05
     text: "Non-compete enforceability confirmed per applicable jurisdiction before relying on it for key-person retention"
     mandatory: false
+    waiver_eligible: true
   - id: ma-06
     text: "Employee compensation benchmark completed at job-family/grade level (comp_benchmark), upward-bias harmonization cost calculated in both directions"
     mandatory: true
+    waiver_eligible: true
   - id: ma-07
     text: "Change-of-control clauses scanned across customer AND supplier contracts, debt covenants, and executive compensation — a retained seller as an ongoing supplier is the same risk category as a customer contract, not a separate one (pilot 002 finding F-2)"
     mandatory: true
+    waiver_eligible: true
   - id: ma-08
     text: "Customer/supplier concentration and competitive-overlap risk assessed for post-acquisition attrition — includes a seller who retains a commercial relationship with the target post-close, not customer-side contracts only"
     mandatory: true
+    waiver_eligible: true
   - id: ma-09
     text: "Incentive inventory (both prospective and granted) reviewed for clawback exposure on any contemplated relocation or restructuring"
     mandatory: true
+    waiver_eligible: true
   - id: ma-10
     text: "Contingent liabilities (litigation, environmental, unfunded pension, warranty/recall) entered with probability/amount distribution for Monte Carlo integration — no narrative-only entries"
     mandatory: true
+    waiver_eligible: true
   - id: ma-11
     text: "Covenant breach scenario tested under a +200bp rate shock; CoC acceleration clauses on debt instruments identified"
     mandatory: true
+    waiver_eligible: true
   - id: ma-12
     text: "Certification transferability on change of control confirmed last, against the actual certifying body's rules — not inferred (design's explicit rule: inference disallowed here)"
     mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "docs/ma-special-topics.md (forward reference — Stage 4 documentation)"

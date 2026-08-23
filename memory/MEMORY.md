@@ -94,6 +94,7 @@
 | ADR-0058 | Kill-criteria evaluation record and the evidence_ref citation vocabulary | Accepted | [0058-kill-criteria-evaluation-record-and-evidence-ref-vocabulary.md](0058-kill-criteria-evaluation-record-and-evidence-ref-vocabulary.md) |
 | ADR-0059 | Venture/JV Scorecard Storage Schema (design-stage) | Accepted (design stage; E.4 chain implemented end to end as of 2026-08-24 — see ADR file for the full update trail) | [0059-venture-scorecard-storage-schema.md](0059-venture-scorecard-storage-schema.md) |
 | ADR-0060 | Kill-criteria executability classification (29 entries), greenfield twin activation, and the registry-extension backlog | Accepted (2026-08-24) | [0060-kill-criteria-executability-classification.md](0060-kill-criteria-executability-classification.md) |
+| ADR-0061 | Correct REAL money columns to integer minor units (schema debt F-3) | Proposed | [0061-correct-real-money-columns-to-integer-minor-units-schema-deb.md](0061-correct-real-money-columns-to-integer-minor-units-schema-deb.md) |
 
 > Index generated from `docs/adr/*.md` front matter on 2026-08-24. Long
 > statuses are abbreviated here; the ADR file is authoritative.
