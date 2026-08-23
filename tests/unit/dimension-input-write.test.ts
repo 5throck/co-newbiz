@@ -102,7 +102,7 @@ afterAll(() => {
 describe("assert(): registry coherence", () => {
   test("boolean var asserted with kind=bool + evidence_ref → ACCEPTED, born unreviewed (the flag)", () => {
     const [pid, runId] = plainProjectWithRun();
-    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "cim.pdf#p12", asserted_by: U1, rationale: "carve-out sells to external customers", now: NOW });
+    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:cim-p12", asserted_by: U1, rationale: "carve-out sells to external customers", now: NOW });
     expect(row.value_text).toBe("true");
     expect(row.reviewed_by).toBeNull(); // unreviewed insert OK but flagged — review is a separate act
     expect(getLiveAssertion(pid, SEEDED_BOOL_VAR)?.id).toBe(row.id);
@@ -111,7 +111,7 @@ describe("assert(): registry coherence", () => {
   test("value_kind incoherent with the registry → REJECTED (num payload on a boolean var)", () => {
     const [pid, runId] = plainProjectWithRun();
     expect(() =>
-      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "num", value: 1 }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW }),
+      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "num", value: 1 }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW }),
     ).toThrow(/incoherent with the registry.*boolean.*'bool'/s);
   });
 
@@ -125,14 +125,14 @@ describe("assert(): registry coherence", () => {
   test("unknown var_key → REJECTED (only registered variables are assertable)", () => {
     const [pid, runId] = plainProjectWithRun();
     expect(() =>
-      assert({ project_id: pid, run_id: runId, var_key: "no.such.var", value: { kind: "text", value: "x" }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW }),
+      assert({ project_id: pid, run_id: runId, var_key: "no.such.var", value: { kind: "text", value: "x" }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW }),
     ).toThrow(/not in the evidence registry/);
   });
 
   test("empty rationale → REJECTED", () => {
     const [pid, runId] = plainProjectWithRun();
     expect(() =>
-      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "", now: NOW }),
+      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "", now: NOW }),
     ).toThrow(/rationale is mandatory/);
   });
 
@@ -154,8 +154,39 @@ describe("assert(): registry coherence", () => {
     expect(text.value_text).toBe("high");
 
     expect(() =>
-      assert({ project_id: pid, run_id: runId, var_key: "t.entry_barrier_grade", value: { kind: "num", value: 3 }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW }),
+      assert({ project_id: pid, run_id: runId, var_key: "t.entry_barrier_grade", value: { kind: "num", value: 3 }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW }),
     ).toThrow(/incoherent with the registry.*string.*'text'/s);
+  });
+});
+
+describe("assert(): evidence_ref citation vocabulary (v1.1, ADR-0058 §2)", () => {
+  test("each vocabulary shape is ACCEPTED for a requires_evidence_ref=1 var", () => {
+    const [pid, runId] = plainProjectWithRun();
+    // three distinct runs so each assert has its own snapshot scope — vars are
+    // (project, var) live-slot keyed, and re-asserting supersedes; distinct
+    // var keys would need registry rows, so reuse runs of the same project.
+    for (const ref of ["doc:cim-2026-08-01", "src:KIS-2025", "https://example.com/cim#p12"]) {
+      const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: ref, asserted_by: U1, rationale: "vocabulary member", now: NOW });
+      expect(row.evidence_ref).toBe(ref);
+    }
+  });
+
+  test("free-text citations → REJECTED for a requires_evidence_ref=1 var (the shapes v1.1 retires)", () => {
+    const [pid, runId] = plainProjectWithRun();
+    for (const ref of ["cim.pdf#p12", "expert-interview-3", "x", "doc:", "src:", "https://", "http://example.com/cim", "doc:a b", "src:KIS 2025"]) {
+      expect(() =>
+        assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: ref, asserted_by: U1, rationale: "r", now: NOW }),
+      ).toThrow(/not in the citation vocabulary.*ADR-0058/s);
+    }
+  });
+
+  test("requires_evidence_ref=0 vars keep format-free refs (enforcement is scoped to flagged vars)", () => {
+    const [pid, runId] = plainProjectWithRun();
+    db.run("INSERT INTO evidence_var (var_key, label_ko, value_type, source_kind, requires_evidence_ref, created_at) VALUES (?,?,?,?,?,?)", [
+      "t.freeform_note", "자유 인용 허용 변수", "string", "asserted", 0, NOW,
+    ]);
+    const row = assert({ project_id: pid, run_id: runId, var_key: "t.freeform_note", value: { kind: "text", value: "note" }, evidence_ref: "cim.pdf#p12", asserted_by: U1, rationale: "unflagged vars are out of v1.1 scope", now: NOW });
+    expect(row.evidence_ref).toBe("cim.pdf#p12");
   });
 });
 
@@ -163,7 +194,7 @@ describe("assert(): run scoping", () => {
   test("phantom run → REJECTED", () => {
     const [pid] = plainProjectWithRun();
     expect(() =>
-      assert({ project_id: pid, run_id: "01NOSUCHRUN000000002", var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW }),
+      assert({ project_id: pid, run_id: "01NOSUCHRUN000000002", var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW }),
     ).toThrow(/run.*does not exist.*run-scoped/s);
   });
 
@@ -171,7 +202,7 @@ describe("assert(): run scoping", () => {
     const [pid] = plainProjectWithRun();
     const [otherPid, otherRun] = plainProjectWithRun();
     expect(() =>
-      assert({ project_id: pid, run_id: otherRun, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW }),
+      assert({ project_id: pid, run_id: otherRun, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW }),
     ).toThrow(/belongs to project.*not/s);
     expect(otherPid).toBeTruthy();
   });
@@ -185,7 +216,7 @@ describe("assert(): membership + MNPI", () => {
   test("non-member asserter → REJECTED", () => {
     const [pid, runId] = plainProjectWithRun();
     expect(() =>
-      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U3, rationale: "r", now: NOW }),
+      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U3, rationale: "r", now: NOW }),
     ).toThrow(new RegExp(`'${U3}' is not an active project_member`));
   });
 
@@ -195,11 +226,11 @@ describe("assert(): membership + MNPI", () => {
     const runId = ulid();
     db.run("INSERT INTO run (id, project_id, input_hash, created_by, created_at) VALUES (?,?,?,?,?)", [runId, pid, `hash-${runId.slice(-6)}`, U1, NOW]);
     expect(() =>
-      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW }),
+      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW }),
     ).toThrow(/MNPI project.*not on its active insider list/);
     enrollInsider(pid, U1);
     expect(
-      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW }).value_text,
+      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW }).value_text,
     ).toBe("true");
   });
 });
@@ -211,10 +242,10 @@ describe("assert(): membership + MNPI", () => {
 describe("live-row semantics", () => {
   test("a second assertion for the same (project, var) supersedes the live row in the SAME transaction and resets the review state", () => {
     const [pid, runId] = plainProjectWithRun();
-    const first = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "a#1", asserted_by: U1, rationale: "first read", now: NOW });
+    const first = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:a-1", asserted_by: U1, rationale: "first read", now: NOW });
     review({ input_id: first.id, reviewed_by: U2, now: NOW }); // reviewed → would drive routing
 
-    const second = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: false }, evidence_ref: "a#2", asserted_by: U1, rationale: "corrected after re-reading the CIM", now: NOW });
+    const second = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: false }, evidence_ref: "doc:a-2", asserted_by: U1, rationale: "corrected after re-reading the CIM", now: NOW });
     expect(second.superseded_by).toBeNull();
     expect(second.reviewed_by).toBeNull(); // re-assertion RESETS review — routing drops the var until re-reviewed
     expect((db.query("SELECT superseded_by FROM dimension_input WHERE id = ?").get(first.id) as { superseded_by: string }).superseded_by).toBe(second.id);
@@ -224,7 +255,7 @@ describe("live-row semantics", () => {
 
   test("reversing the supersede statement order trips the partial unique live index (raw SQL proof)", () => {
     const [pid, runId] = plainProjectWithRun();
-    const first = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "a#1", asserted_by: U1, rationale: "first", now: NOW });
+    const first = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:a-1", asserted_by: U1, rationale: "first", now: NOW });
     const second = ulid();
     db.run(
       "INSERT INTO dimension_input (id, run_id, project_id, var_key, value_kind, value_text, evidence_ref, asserted_by, rationale, observed_at, superseded_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
@@ -241,7 +272,7 @@ describe("live-row semantics", () => {
 describe("review()", () => {
   test("review by the asserter themselves → REJECTED", () => {
     const [pid, runId] = plainProjectWithRun();
-    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW });
+    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW });
     expect(() => review({ input_id: row.id, reviewed_by: U1, now: NOW })).toThrow(
       /reviewed_by must differ from asserted_by.*cross-domain second review/s,
     );
@@ -249,13 +280,13 @@ describe("review()", () => {
 
   test("review by a non-member → REJECTED", () => {
     const [pid, runId] = plainProjectWithRun();
-    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW });
+    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW });
     expect(() => review({ input_id: row.id, reviewed_by: U3, now: NOW })).toThrow(new RegExp(`'${U3}' is not an active project_member`));
   });
 
   test("cross-domain review by a different member → ACCEPTED; the row then reads live+reviewed (routing-grade)", () => {
     const [pid, runId] = plainProjectWithRun();
-    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW });
+    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW });
     const reviewed = review({ input_id: row.id, reviewed_by: U2, now: NOW });
     expect(reviewed.reviewed_by).toBe(U2);
     const live = getLiveAssertion(pid, SEEDED_BOOL_VAR)!;
@@ -264,15 +295,15 @@ describe("review()", () => {
 
   test("second review of an already-reviewed assertion → REJECTED", () => {
     const [pid, runId] = plainProjectWithRun();
-    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW });
+    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW });
     review({ input_id: row.id, reviewed_by: U2, now: NOW });
     expect(() => review({ input_id: row.id, reviewed_by: U2, now: NOW })).toThrow(/already reviewed/);
   });
 
   test("reviewing a superseded (history) row → REJECTED", () => {
     const [pid, runId] = plainProjectWithRun();
-    const first = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW });
-    assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: false }, evidence_ref: "y", asserted_by: U1, rationale: "r2", now: NOW });
+    const first = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW });
+    assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: false }, evidence_ref: "doc:y", asserted_by: U1, rationale: "r2", now: NOW });
     expect(() => review({ input_id: first.id, reviewed_by: U2, now: NOW })).toThrow(/superseded \(history\)/);
   });
 
@@ -283,7 +314,7 @@ describe("review()", () => {
     enrollInsider(pid, U1); // asserter yes, reviewer no
     const runId = ulid();
     db.run("INSERT INTO run (id, project_id, input_hash, created_by, created_at) VALUES (?,?,?,?,?)", [runId, pid, `hash-${runId.slice(-6)}`, U1, NOW]);
-    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW });
+    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW });
     expect(() => review({ input_id: row.id, reviewed_by: U2, now: NOW })).toThrow(/MNPI project.*not on its active insider list/);
   });
 });
@@ -296,12 +327,12 @@ describe("write logging", () => {
   test("assert and review each log a write; a rejected assert logs nothing", () => {
     const [pid, runId] = plainProjectWithRun();
     const before = writeLogCount(pid);
-    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW });
+    const row = assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "bool", value: true }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW });
     expect(writeLogCount(pid)).toBe(before + 1);
     review({ input_id: row.id, reviewed_by: U2, now: NOW });
     expect(writeLogCount(pid)).toBe(before + 2);
     expect(() =>
-      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "num", value: 1 }, evidence_ref: "x", asserted_by: U1, rationale: "r", now: NOW }),
+      assert({ project_id: pid, run_id: runId, var_key: SEEDED_BOOL_VAR, value: { kind: "num", value: 1 }, evidence_ref: "doc:x", asserted_by: U1, rationale: "r", now: NOW }),
     ).toThrow();
     expect(writeLogCount(pid)).toBe(before + 2);
   });

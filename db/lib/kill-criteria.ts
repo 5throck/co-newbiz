@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Kill-criteria evaluator — ADR-0057. The runtime consumer the registry was
  * staged for: evaluates a procedure's ENABLED registry entries
@@ -15,11 +15,11 @@
  *   * UNASSESSED ⇒ NOT triggered and NOT silently passed: the criterion_id
  *     lands in `unassessed`, and the caller decides. No defaulted halt, no
  *     defaulted pass — the ADR-0049 honesty rule applied to kill criteria.
- *   * Read-only: nothing is persisted. The gate-flow consumer that records a
- *     triggered criterion (compliance_check / gate_pass_record wiring) is the
- *     next PR's scope — this module is the evaluation path only, the same
- *     posture rule-assessment.ts landed with (lib + tests; MCP/API wiring
- *     after).
+ *   * Read-only: nothing is persisted. The durable record lives one layer up —
+ *     db/repositories/kill-criteria.repository.ts (ADR-0058) persists the
+ *     complete per-criterion ledger (`outcomes`) to kill_criteria_evaluation;
+ *     this module remains the pure evaluation path, same posture
+ *     rule-assessment.ts landed with (lib + tests; MCP/API wiring after).
  *
  * Composability with rule-assessment: both read the same run snapshot. The
  * snapshot is filled ONCE per run (ADR-0005 immutability — fillSnapshot
@@ -89,6 +89,16 @@ export interface KillCriteriaResult {
   unassessed: string[];
   /** Declared-but-inert entries (predicate null or enabled false) — visible count, not evaluated. */
   inert: number;
+  /** COMPLETE per-criterion ledger (1.1.0): every evaluated entry with its TriState outcome AND governance anchors, registry file order — the recorder persists one row per entry from this list ('false' rows are the auditable proof a criterion was evaluated and measured false). */
+  outcomes: Array<{
+    criterion_id: string;
+    title?: string;
+    action: string;
+    predicate: unknown;
+    outcome: "true" | "false" | "unassessed";
+    policy_id: string;
+    thresholds_source: string;
+  }>;
 }
 
 /**
@@ -190,6 +200,7 @@ export function evaluateKillCriteria(db: Database, opts: KillCriteriaOptions): K
     triggered: [],
     unassessed: [],
     inert: 0,
+    outcomes: [],
   };
 
   for (const entry of entries) {
@@ -199,12 +210,22 @@ export function evaluateKillCriteria(db: Database, opts: KillCriteriaOptions): K
     }
     result.evaluated++;
     const outcome = evaluatePredicate(parsePredicate(entry.predicate), lookup);
+    result.outcomes.push({
+      criterion_id: entry.criterion_id,
+      title: entry.title,
+      action: entry.action,
+      predicate: entry.predicate,
+      outcome,
+      // Non-null by construction for enabled entries — load-time validation threw otherwise.
+      policy_id: entry.policy_id as string,
+      thresholds_source: entry.thresholds_source as string,
+    });
     if (outcome === "true") {
       result.triggered.push({ criterion_id: entry.criterion_id, title: entry.title, action: entry.action, predicate: entry.predicate });
     } else if (outcome === "unassessed") {
       result.unassessed.push(entry.criterion_id);
     }
-    // "false" — determinately not triggered; nothing to report.
+    // "false" — determinately not triggered; in `outcomes` (complete ledger), not in triggered/unassessed.
   }
 
   return result;

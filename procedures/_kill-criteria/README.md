@@ -74,9 +74,17 @@ same engine and var coercion `rule-assessment.ts` uses, with
 fill-once composition (supported order: assess first, then evaluate).
 TRUE ⇒ `triggered` carrying the action; UNASSESSED ⇒ the criterion_id is
 listed in `unassessed` and the caller decides — never a silent pass, never
-a defaulted halt; FALSE ⇒ determinately not triggered. Read-only: nothing
-is persisted (gate-flow recording of a triggered criterion is future work
-and needs its own decision record).
+a defaulted halt; FALSE ⇒ determinately not triggered. The evaluator itself
+is read-only; the durable record lives one layer up —
+`db/repositories/kill-criteria.repository.ts` (`recordKillCriteriaEvaluation`,
+ADR-0058 §1) evaluates and persists the **complete ledger** to
+`kill_criteria_evaluation` (migration 0023): one row per evaluated criterion
+in all three outcomes — `triggered`/`false`/`unassessed` — each row
+snapshotting its predicate, action, and both governance anchors
+(ADR-0005); a second record for the same run+procedure throws. Row
+absence means never-evaluated, the only silent state. What remains future
+work is the gate-flow **reader** (brownfield-dd step 15's `gate_pass_record`
+output consuming the table).
 
 **Activation convention**: an entry flips to `enabled: true` only when
 (a) its predicate's evidence vars exist (the "do not invent predicates"
@@ -89,6 +97,7 @@ state: 23 declared / 2 executable / 2 enabled.
 
 - `procedures/_validate.ts` — enforcement
 - `db/lib/kill-criteria.ts` — the runtime evaluator (ADR-0057)
+- `db/repositories/kill-criteria.repository.ts` — the evaluation recorder, `kill_criteria_evaluation` (ADR-0058 §1)
 - `scripts/co-newbiz/proc-resolve.ts` — merged `kill_criteria` in resolved
   procedures (union semantics: shared list first, layer additions appended,
   deduped by condition — a layer can add criteria, never drop or weaken a
