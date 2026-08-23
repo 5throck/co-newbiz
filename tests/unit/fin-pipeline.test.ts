@@ -1,10 +1,16 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Unit tests for fin:pipeline (scripts/co-newbiz/fin-pipeline.ts), the full
  * DART -> validate -> normalize -> KPI chain, design v1.0 §4-4. Runs the
  * real subprocess chain against a real fixture — genuinely realistic DART
  * fnlttSinglAcntAll-shaped data (tests/fixtures/dart-sample.json), not a
  * pre-flattened canonical model.
+ *
+ * Every test carries an explicit 20s timeout: bun test's default is 5s, and
+ * these tests spawn the real python chain (pandas import + interpreter boot),
+ * which under the parallel test runner intermittently exceeds 5s and kills a
+ * dangling subprocess mid-flight — observed as flaky CI failures, not slow
+ * machines.
  */
 
 import { test, expect } from "bun:test";
@@ -19,7 +25,7 @@ test("accounting-equation validation passes for a balanced fixture (Assets = Lia
   const eqCheck = validation.checks.find((c: any) => c.rule === "accounting_equation");
   expect(eqCheck.status).toBe("pass");
   expect(eqCheck.residual).toBe(0);
-});
+}, 20000);
 
 test("normalize.py correctly converts raw won amounts to KRW billions", async () => {
   const { canonicalModel } = (await runFullPipeline(FIXTURE)) as any;
@@ -27,13 +33,13 @@ test("normalize.py correctly converts raw won amounts to KRW billions", async ()
   // 100,000,000,000 won -> 100.0 billion
   expect(canonicalModel.data["2025"].revenue).toBe(100.0);
   expect(canonicalModel.data["2025"].total_assets).toBe(142.0);
-});
+}, 20000);
 
 test("field-mapping coverage is reported and non-trivial", async () => {
   const { canonicalModel } = (await runFullPipeline(FIXTURE)) as any;
   expect(canonicalModel.meta.coverage.mapped).toBeGreaterThan(20);
   expect(canonicalModel.meta.coverage.coverage_pct).toBeGreaterThan(50);
-});
+}, 20000);
 
 test("KPI stage produces correct ratios chained from the normalized model", async () => {
   const { kpiReport } = (await runFullPipeline(FIXTURE)) as any;
@@ -44,14 +50,14 @@ test("KPI stage produces correct ratios chained from the normalized model", asyn
   expect(p.net_margin.value).toBe(8.5);
   // total_liabilities 82.0 / total_equity 60.0 = 1.3667 -> 1.37
   expect(kpiReport.kpi["2025"].leverage_liquidity.de_ratio.value).toBe(1.37);
-});
+}, 20000);
 
 test("cleans up its temporary canonical-model file after each run", async () => {
   await runFullPipeline(FIXTURE);
   const tmpPath = FIXTURE.replace(/\.json$/, ".canonical-model.tmp.json");
   expect(existsSync(tmpPath)).toBe(false);
-});
+}, 20000);
 
 test("throws a clear error for a missing DART file", async () => {
   await expect(runFullPipeline("tests/fixtures/does-not-exist.json")).rejects.toThrow(/not found/);
-});
+}, 20000);

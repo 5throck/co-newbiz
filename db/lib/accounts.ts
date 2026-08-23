@@ -1,18 +1,18 @@
 // @version 1.1.0
 /**
- * Account/session engine — Wave 5.5, docs/security-model.md §4,
- * ADR-0009 (PBKDF2 reuse), design v1.0 §4-9.
+ * Account/session engine ??Wave 5.5, docs/security-model.md 짠4,
+ * ADR-0009 (PBKDF2 reuse), design v1.0 짠4-9.
  *
  * Passwords: PBKDF2-HMAC-SHA256 / 210,000 iterations / 16B salt / 32B key,
  * imported from scripts/lib/auth.ts (FR-SEC-09 requires REUSE, not a copy).
  * Only salt+hash+iterations ever touch the DB; plaintext exists as a function
- * argument and nowhere else — not in logs, not in audit payloads.
+ * argument and nowhere else ??not in logs, not in audit payloads.
  *
  * Sessions: server-side rows; the bearer token is random 32 bytes and only
  * its SHA-256 is stored, so a DB dump cannot be replayed as a login.
  *
  * Lockout: 5 consecutive failures lock the account for 30 minutes
- * (security-model §4). `locked` status and `locked_until` move together.
+ * (security-model 짠4). `locked` status and `locked_until` move together.
  *
  * Authentication trail: lockout AND successful login are both audited
  * (`account_locked` / `login`), so repudiation resistance does not depend
@@ -44,6 +44,21 @@ function storedHashOf(row: StoredHash) {
   return { salt: row.password_salt, hash: row.password_hash, iterations: row.password_iterations };
 }
 
+/**
+ * verifyPassword with a corrupted-row guard: a malformed stored hash (bad
+ * hex, truncated digest, garbage iteration count) makes timingSafeEqual
+ * THROW on unequal lengths ??an exception here would turn a login attempt
+ * against one damaged row into a 500. A hash that cannot be verified is,
+ * by definition, not the right password: fail the comparison cleanly.
+ */
+async function verifyPasswordSafe(password: string, row: StoredHash): Promise<boolean> {
+  try {
+    return await verifyPassword(password, storedHashOf(row));
+  } catch {
+    return false;
+  }
+}
+
 function lockoutDeadline(now: string): string {
   return new Date(new Date(now).getTime() + LOCKOUT_MINUTES * 60_000).toISOString();
 }
@@ -64,7 +79,7 @@ export interface CreateUserOptions {
 
 /**
  * Create an account in `pending` status. Self-signup and admin creation both
- * land here; nothing authenticates until an admin approves (design §4-9).
+ * land here; nothing authenticates until an admin approves (design 짠4-9).
  */
 export async function createUser(db: Database, opts: CreateUserOptions): Promise<void> {
   if (opts.password.length < MIN_PASSWORD_LENGTH) {
@@ -95,7 +110,7 @@ export interface UserSummary {
 
 /**
  * List accounts for the admin console / CLI. Deliberately selects identity
- * columns only — no hash material ever leaves the engine (FR-SEC-09: not
+ * columns only ??no hash material ever leaves the engine (FR-SEC-09: not
  * even an admin surface renders password data).
  */
 export function listUsers(db: Database): UserSummary[] {
@@ -155,7 +170,7 @@ export async function authenticate(db: Database, opts: AuthenticateOptions): Pro
     return { ok: false, reason: "locked", lockedUntil: row.locked_until };
   }
 
-  const valid = await verifyPassword(opts.password, storedHashOf(row));
+  const valid = await verifyPasswordSafe(opts.password, row);
   if (!valid) {
     const attempts = row.failed_attempts + 1;
     if (attempts >= MAX_FAILED_ATTEMPTS) {
@@ -226,12 +241,12 @@ export function revokeSessions(db: Database, opts: { userId: string; exceptSessi
 
 async function isPasswordReused(db: Database, userId: string, candidate: string): Promise<boolean> {
   const current = db.query("SELECT password_salt, password_hash, password_iterations FROM app_user WHERE user_id = ?").get(userId) as StoredHash | null;
-  if (current && (await verifyPassword(candidate, storedHashOf(current)))) return true;
+  if (current && (await verifyPasswordSafe(candidate, current))) return true;
   const history = db
     .query("SELECT password_salt, password_hash, password_iterations FROM password_history WHERE user_id = ?")
     .all(userId) as StoredHash[];
   for (const h of history) {
-    if (await verifyPassword(candidate, storedHashOf(h))) return true;
+    if (await verifyPasswordSafe(candidate, h)) return true;
   }
   return false;
 }
@@ -261,14 +276,14 @@ export interface ChangePasswordOptions {
  * User-initiated change (also the completion step of the forced
  * must-change-password flow). The current password must verify; the new one
  * is checked against the current hash and every password_history row; all
- * other sessions are revoked and a fresh one issued (security-model §4).
+ * other sessions are revoked and a fresh one issued (security-model 짠4).
  */
 export async function changePassword(db: Database, opts: ChangePasswordOptions): Promise<SessionIssued> {
   const row = db
     .query("SELECT password_salt, password_hash, password_iterations FROM app_user WHERE user_id = ?")
     .get(opts.userId) as StoredHash | null;
   if (!row) throw new Error(`User '${opts.userId}' does not exist.`);
-  if (!(await verifyPassword(opts.currentPassword, storedHashOf(row)))) {
+  if (!(await verifyPasswordSafe(opts.currentPassword, row))) {
     throw new Error("Current password does not match.");
   }
   if (opts.newPassword.length < MIN_PASSWORD_LENGTH) {
@@ -299,16 +314,16 @@ export interface ResetPasswordOptions {
 }
 
 /**
- * Admin-initiated reset (security-model §4): sets a temporary password,
+ * Admin-initiated reset (security-model 짠4): sets a temporary password,
  * forces the change flow (must_change_password=1), clears the failure
  * counter/lockout, and revokes every existing session. A disabled account
- * cannot be resurrected this way — re-enabling is a separate, audited
+ * cannot be resurrected this way ??re-enabling is a separate, audited
  * decision, not a side effect of a reset.
  */
 export async function resetPassword(db: Database, opts: ResetPasswordOptions): Promise<void> {
   const row = db.query("SELECT status FROM app_user WHERE user_id = ?").get(opts.userId) as { status: string } | null;
   if (!row) throw new Error(`User '${opts.userId}' does not exist.`);
-  if (row.status === "disabled") throw new Error("A disabled account cannot be reset — re-enable it first (separate audited decision).");
+  if (row.status === "disabled") throw new Error("A disabled account cannot be reset ??re-enable it first (separate audited decision).");
   if (opts.tempPassword.length < MIN_PASSWORD_LENGTH) {
     throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
