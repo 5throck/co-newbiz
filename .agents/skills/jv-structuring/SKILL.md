@@ -12,8 +12,8 @@ description: >
   Use when: "JV structuring", "joint venture governance", "veto matters",
   "drag-along tag-along", "deadlock resolution", "technology contribution
   valuation".
-version: 1.1.0
-last_reviewed: 2026-08-20
+version: 1.2.0
+last_reviewed: 2026-08-23
 status: active
 owner: partnership-agent
 prerequisites:
@@ -22,6 +22,7 @@ metadata:
   type: domain
   procedure_keys:
     - deal-shape-chain
+    - jv-lifecycle-governance
   triggers:
     - JV structuring
     - joint venture governance

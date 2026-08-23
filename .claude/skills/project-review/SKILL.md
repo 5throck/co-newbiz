@@ -12,13 +12,14 @@ description: >
   phase schema changes, workspace-schema.json modified, new variant added);
   QA escalation from auditor (audit.ts ERROR >= 3 or security Critical finding).
 owner: pm
-version: 1.2.0
-last_reviewed: 2026-07-10
+version: 1.3.0
+last_reviewed: 2026-08-23
 prerequisites: []
 metadata:
   type: process
   procedure_keys:
     - deal-shape-chain
+    - jv-lifecycle-governance
   triggers:
     - project review
     - review project

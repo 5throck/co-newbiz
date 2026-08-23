@@ -1,0 +1,113 @@
+schema_version: "1.0"
+procedure_id: shared-jv-lifecycle-governance
+title: "JV Lifecycle Governance (post-formation, origin=joint)"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+# Design §C.1 open decision 1 — RESOLVED as a SIBLING procedure (ADR-0052):
+# entity-establishment-execution is formation-scoped with a clean completion
+# gate (step 5); the lifecycle phases have different cadence and gate
+# semantics, so they do not extend the formation file.
+applicability: conditional
+applies_when: { op: "cmp", var: "project.origin", cmp: "eq", value: "joint" }
+workflow_type: core
+gate: post_close   # begins after entity-establishment-execution completes formation (ef-13..17 verified)
+owner_agent: partnership-agent
+legal_basis:
+  - "ADR-0052 §C (JV lifecycle governance)"
+  - "docs/designs/2026-08-23-track-coverage-extension-design.md §C"
+  - "ADR-0047 (origin=joint routing value)"
+  - "docs/research/pmi-jv-lifecycle-best-practice.md [pmi-jv B.1-B.6]"
+
+# Four phases: operate -> monitor -> restructure -> exit. Between formation
+# and exit — typically a decade (median JV lifespan 10 years, ILLUSTRATIVE
+# [pmi-jv B framing]) — the venture operates, drifts, and usually
+# restructures: JVs that undergo at least one major restructuring were more
+# than twice as likely (79% vs 33%, ILLUSTRATIVE) to meet owner objectives
+# [pmi-jv B.3, B.4]. Steps are phases, not one-shot gates: 1-2 run on
+# standing cadence, 3 on annual cadence, 4-5 on trigger.
+
+steps:
+  - id: 1
+    gate: post_close
+    agent_key: legal-counsel
+    skill_key: jv-structuring
+    output_type: jv_governance_review
+    description: >
+      Operate [pmi-jv B.1]: board-approved JV governance framework review —
+      only 45% of JVs have one (ILLUSTRATIVE; cited as the practice gap this
+      step closes). Directors-only board attendance; quarterly board cadence
+      plus one annual strategy off-site; reserved-matters map (board vs
+      shareholder) with conflict-prone decisions moved to shareholders;
+      conflict-of-interest protocol covering the three JV conflict types
+      (business opportunity, self-dealing, information disclosure) with a
+      deliberately-chosen fiduciary-duty approach; arm's-length pricing for
+      parent-JV commercial relationships. Formation wrote these terms
+      (deal-shape-chain P3/P4 + entity-formation JV addendum ef-14); this
+      step reviews governance as it actually operates.
+  - id: 2
+    gate: post_close
+    agent_key: partnership-agent
+    skill_key: project-review
+    output_type: jv_health_scorecard
+    description: >
+      Monitor [pmi-jv B.2]: per-JV health scorecard across seven dimensions
+      — performance, people, partner alignment, decision health, milestones
+      & funding, governance health, value-distribution symmetry. Scorecard
+      weights and cadence are a thresholds-meeting item (ADR-0052 open
+      question b); independent external governance review every 3 years
+      (ILLUSTRATIVE cadence). Storage gap: no schema holds scorecards yet —
+      outputs are procedure artifacts until the Section E scorecard schema
+      lands (ADR-0052 open question (e)).
+  - id: 3
+    gate: post_close
+    agent_key: group-review-agent
+    skill_key: portfolio-fit-assessment
+    output_type: jv_strategic_asset_review
+    description: >
+      Annual strategic asset review per JV [pmi-jv B.2] carrying the
+      parent-side disciplines of B.6: designated executive accountability
+      for JVs (only 38% of companies have it, ILLUSTRATIVE), no "corporate
+      adhocracy", a JV portfolio gameboard by venture type × lifecycle
+      phase, post-close lookbacks feeding standards. Feeds the Section E
+      portfolio rollup (portfolio-venture-monitoring step 1).
+  - id: 4
+    gate: post_close
+    agent_key: legal-counsel
+    skill_key: jv-structuring
+    output_type: jv_restructuring_decision
+    description: >
+      Restructure [pmi-jv B.3, B.4]: formal triggers tied to metrics, not
+      crisis-waiting — the baseline expectation that at least half of JVs
+      fail on >=1 owner objective and the median 39-month restructuring lag
+      vs comparable wholly-owned businesses (both ILLUSTRATIVE) are the
+      reason triggers must be metric-tied. Restructuring menu: scope,
+      ownership, governance, economics, operating model, leadership.
+      Deadlock ladder with binding time-boxes — functional managers 15-30d
+      -> senior executives 30-60d -> CEOs -> institutional mediation (day
+      ranges ILLUSTRATIVE). Pre-agreed evolution paths in the JV agreement
+      ("inability to evolve" is a named failure cause).
+  - id: 5
+    gate: post_close
+    agent_key: legal-counsel
+    skill_key: jv-structuring
+    output_type: jv_exit_execution
+    description: >
+      Exit — designed at formation, executed here [pmi-jv B.5]: the
+      five-step exit-design practice (strategic end-game; trigger selection
+      from 16 categories, typically 4-8 adopted (ILLUSTRATIVE); mechanisms
+      put/call/buy-sell with ROFR/tag-drag protections; valuation including
+      the two-appraisers-then-third process; post-exit transition across six
+      areas — IP licensing, people/secondees, services, supply & purchase,
+      non-competes, debt/guarantees). Exit paths: sale to partner (65% of
+      endings, ILLUSTRATIVE), third-party sale, IPO, unwind. Consumes the
+      formation-time exit clauses the entity-formation JV addendum (ef-16)
+      wrote — no duplication: this step exercises the mechanics formation
+      created. Decision to exercise routes through Group IC (investment
+      decisions are human, boundary #2).
+
+# No kill_criteria: design §C names no kill-criteria candidates (unlike
+# §A.4/§B.4). The lifecycle phases are monitoring/restructuring governance;
+# exit triggers are pre-agreed contractual mechanics, not gate-time kill
+# conditions. Do not add one without a design amendment.
