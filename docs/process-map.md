@@ -64,7 +64,7 @@ The Entity IC and Group IC decision models both carry a fourth state, `withdrawn
 **Portfolio monitoring — venture cells (ADR-0052 §E)**: `procedures/_shared/portfolio-venture-monitoring/` (group level, `applies_when: origin in [internal, hybrid, joint]`) gives the venture-character cells (5/6/7/8/9/10) post-IC visibility: a bifurcated financial/strategic scorecard rollup per review cycle, a stage-transition evidence pack (tranche preconditions, contribution-responsibility obligations, time-boxed windows, six-option exit-path evaluation: integrate / standalone / spinout / reduce ownership / divest / kill), and a human tranche + kill/graduate decision (`venture-portfolio-ic` — a kill is a governed decision with learning capture, not a silent starve). The scripted view (stage-progression ledger, capital-vs-milestone comparison) waits on the scorecard-storage schema — ADR-0052 open question (e), the longest-lead chain.
 
 ## Related
-- `skills/stage-gate-governance/SKILL.md` *(not yet created — Stage 2.4)*
+- `skills/stage-gate-governance/SKILL.md` — the gate sequence and the 6-item binding Kill Criteria list as an operational skill
 - `docs/stage-gates.md` *(this doc's companion — not yet created — Stage 2.4)*
 - `docs/audits/2026-08-23-readiness-audit.md` — four-axis readiness audit of the procedures described above (verdicts + residual register R1–R10)
 - `docs/pilots/` — four real-case manual pilots that informed the gate procedures above

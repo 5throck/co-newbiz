@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Account/session engine — Wave 5.5, docs/security-model.md §4,
  * ADR-0009 (PBKDF2 reuse), design v1.0 §4-9.
@@ -13,6 +13,10 @@
  *
  * Lockout: 5 consecutive failures lock the account for 30 minutes
  * (security-model §4). `locked` status and `locked_until` move together.
+ *
+ * Authentication trail: lockout AND successful login are both audited
+ * (`account_locked` / `login`), so repudiation resistance does not depend
+ * on which way the attempt went (logout is audited by app/server/auth.ts).
  *
  * Agents have no accounts (FR-SEC-08): every userId here refers to a human.
  */
@@ -167,6 +171,7 @@ export async function authenticate(db: Database, opts: AuthenticateOptions): Pro
   // Success clears the failure slate (also unlocks an expired lockout).
   db.run("UPDATE app_user SET failed_attempts = 0, locked_until = NULL, status = 'active' WHERE user_id = ?", [opts.userId]);
   const session = issueSession(db, { userId: opts.userId, now: opts.now });
+  appendAudit(db, { actor: opts.userId, action: "login", target: session.sessionId, now: opts.now });
   return { ok: true, mustChangePassword: row.must_change_password === 1, session };
 }
 

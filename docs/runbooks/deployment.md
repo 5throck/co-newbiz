@@ -11,7 +11,7 @@ Run before every release, no exceptions:
 1. **Secrets/dependency scan**: `gitleaks detect -v --source .` — 0 leaks required. Weekly cadence also covers this; a release doesn't skip it because the weekly scan ran recently.
 2. **Test suite**: `bun test` — 0 failures required.
 3. **Audit gate**: `bun scripts/audit.ts` — 0 errors required (warnings reviewed, not necessarily blocking).
-4. **Threat-model currency check**: if this release touches a trust boundary (new API endpoint, new MCP tool, new auth path), confirm `docs/security-model.md` §2's STRIDE matrix and §9's verification-status table are still accurate — update them in the same PR, not as a follow-up.
+4. **Threat-model currency check**: if this release touches a trust boundary (new API endpoint, new MCP tool, new auth path), confirm `docs/security-model.md` §2's STRIDE matrix and §8's verification-status table are still accurate — update them in the same PR, not as a follow-up.
 
 ## 2. Build
 

@@ -16,9 +16,11 @@ items:
   - id: bf-02
     text: "WACC and hurdle IRR confirmed kind=user (not assumed) before FS gate opened"
     mandatory: true
+    waiver_eligible: false   # policy §2.2 — a provisional discount rate invalidates the analysis; load-bearing figures are never waivable into 'assumed'
   - id: bf-03
     text: "Certification change-of-control transferability confirmed against the certification body's own regulations (not the target's characterization), where load-bearing to the deal thesis"
     mandatory: true
+    waiver_eligible: false   # design non-negotiable rule — inference about transferability is disallowed, so a waiver cannot substitute for confirmation
   - id: bf-04
     text: "Golden parachute / CoC-trigger executive compensation identified and modeled as a day-one cash outflow"
     mandatory: true

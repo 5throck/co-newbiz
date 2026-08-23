@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Governance routes — docs/api-spec.md §5 (Wave 5.6A).
  *
@@ -17,6 +17,7 @@ import { Hono } from "hono";
 import { getDb } from "../../db/client.ts";
 import { getProjectIfVisible } from "../../db/repositories/project.repository.ts";
 import { issueWaiver, recordInterpretation, searchInterpretations } from "../../db/lib/compliance.ts";
+import { appendAudit } from "../../db/lib/access-control.ts";
 import { resolveProcedure } from "../../scripts/co-newbiz/proc-resolve.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "./envelope.ts";
 import { requireAuth, type AppEnv, type AuthContext } from "./middleware.ts";
@@ -142,6 +143,7 @@ governanceRoutes.post("/api/projects/:id/waivers", async (c) => {
       approvedAt: body.approve ? now : undefined,
       now,
     });
+    appendAudit(getDb(), { actor: ctx.userId, action: "waiver_file", target: `${project.id}:${id}`, now });
     return ok(c, { id, status: body.approve ? "active" : "pending" }, 201);
   } catch (err) {
     return badRequest(c, "waiver_failed", err instanceof Error ? err.message : "Waiver filing failed.");
@@ -161,7 +163,8 @@ governanceRoutes.get("/api/interpretations", (c) => {
 /**
  * POST /api/interpretations — record a Q&A pair. Admin-mapped (the account
  * model has no compliance-officer role; see projects.ts module doc) and
- * audited by the engine's supersession guard for contradiction safety.
+ * audited (`interpretation_record`); the engine's supersession guard refuses
+ * contradictions against the same doc+clause (FR-GOV-12).
  */
 governanceRoutes.post("/api/interpretations", async (c) => {
   const ctx = c.get("auth");
@@ -186,6 +189,7 @@ governanceRoutes.post("/api/interpretations", async (c) => {
       supersedes: body.supersedes ?? null,
       published: body.published ?? true,
     });
+    appendAudit(getDb(), { actor: ctx.userId, action: "interpretation_record", target: id, now: new Date().toISOString() });
     return ok(c, { id }, 201);
   } catch (err) {
     return fail(c, 409, "interpretation_conflict", err instanceof Error ? err.message : "Interpretation rejected.");

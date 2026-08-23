@@ -34,6 +34,7 @@
     "clean:sandbox": "bun -e \"import {rmSync, mkdirSync} from 'node:fs'; rmSync('.sandbox', {recursive:true, force:true}); mkdirSync('.sandbox');\"",
     "glossary:lint": "bun glossary/_validate.ts",
     "procedures:lint": "bun procedures/_validate.ts",
+    "checklists:lint": "bun checklists/_validate.ts",
     "db:migrate": "bun scripts/co-newbiz/newbiz.ts db:migrate",
     "db:status": "bun scripts/co-newbiz/newbiz.ts status"
   },
