@@ -62,12 +62,13 @@ export interface ProjectSummary {
 
 // FR-SYS-03 provenance — the envelope `meta` fields a source tooltip may
 // show. The server's ok() injects `as_of` on every response; the other
-// fields appear only where a route actually carries them (e.g.
-// /api/projects/:id/rag adds `assessed_at`). No route populates
-// assumption_key/source/anchor_ref in meta yet, so callers may also merge
-// in per-row provenance columns the payload already carries
-// (RagDimension.run_id/assessed_at) — both sources are API-sourced, and
-// neither is ever hand-typed.
+// fields appear only where a route actually derives them from the rows it
+// returns (per api-spec §9: POST dd-findings links assumption_key/run_id/
+// anchor_ref to the assumption registry; series observations set source
+// when rows share one source_id). Routes that do not carry provenance in
+// meta stay bare, so callers may also merge in per-row provenance columns
+// the payload already carries (RagDimension.run_id/assessed_at) — both
+// sources are API-sourced, and neither is ever hand-typed.
 export interface ProvenanceMeta {
   assumption_key?: string;
   as_of?: string;

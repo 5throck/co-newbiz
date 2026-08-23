@@ -18,10 +18,12 @@
 |---|---|---|---|
 | `/api/auth/register` | POST | Self-registration → `pending` status | None |
 | `/api/auth/login` | POST | Session cookie issuance | Credentials |
+| `/api/auth/me` | GET | Current identity (`user_id`, `role`, `must_change_password`) — part of the must-change-password allowlist | Session |
 | `/api/auth/logout` | POST | Session invalidation | Session |
 | `/api/auth/password-reset` | POST | Admin-initiated reset, forces `must_change_password` | Admin |
 | `/api/auth/password-change` | POST | User-initiated change, checked against `password_history` | Session |
-| `/api/tokens` | POST/GET/DELETE | API token issuance/list/revoke, scope-limited | Session |
+| `/api/tokens` | POST/GET | API token issuance/list, scope-limited | Session |
+| `/api/tokens/:id` | DELETE | Revoke one own API token — foreign ids resolve to 404, never 403 | Session |
 
 ## 3. Projects and Membership
 
@@ -47,6 +49,8 @@
 | `/api/proxy-chains/:id/calibrate` | POST | Recalibration trigger | `quant-methodologist` role | forward-design |
 | `/api/simulations` | POST | Monte Carlo run (seeded) — composes the scenario from the run's `sim.*` inputs (`sim.discount_rate`, `sim.cf1..N`) plus the project's `contingent_liability` rows, spawns `python/monte_carlo.py` with an args array (never shell), and persists `simulation` + `simulation_result`; omitted seed defaults to a value derived from the run's `input_hash` (identical inputs stay reproducible), omitted iterations to the engine's 10000; no `label` — the table has no such column | Membership via `run.project_id`; `analyst`+ role, audit-logged; input problems 400, engine failures 500 | as-built (engine-2) |
 | `/api/simulations/:id/results` | GET | Quantile summary (`simulation_result`) ONLY — `simulation_draw` is never read (retention_policy archives raw draws; the permanent record is the summary); meta carries seed + iterations | Membership via simulation → run → project | as-built (engine-2) |
+| `/api/portfolio-scorecard` | GET | Cross-project rollup over projects where the caller holds membership; meta self-discloses the subset when `mnpi_flag` projects are excluded | Authenticated, membership-filtered | as-built |
+| `/api/projects/:id/scorecard` | GET | Per-project dimension scores for the venture scorecard | Membership + elevated role | as-built |
 
 ## 5. RAG and Governance
 
@@ -55,11 +59,11 @@
 | `/api/projects/:id/rag` | GET | Current RAG assessment, all six dimensions + rationale | Membership |
 | `/api/projects/:id/rag/history` | GET | `rag_transition` timeline | Membership |
 | `/api/procedures/resolve` | GET | Merged procedure (shared+region+entity), with source attribution per step | Membership on the requesting entity/region context |
-| `/api/approval-chain/:project_id` | GET | Entity/Group IC status, `blocked_reason` if applicable | Membership |
+| `/api/projects/:id/approval-chain` | GET | Entity/Group IC status, `blocked_reason` if applicable | Membership |
 | `/api/group-agenda/:cycle` | GET | Ranked comparison view for a review cycle | Group IC role |
-| `/api/compliance-checks/:project_id` | GET | Gate-blocking status | Membership |
-| `/api/waivers` | GET/POST | Waiver list/request — `expires_at` required on POST, no waiver path for the six-validator completeness check (rejected server-side, not just client-validated) | Role per `docs/governance-operations.md` §2 approval table |
-| `/api/interpretations` | GET/POST | Interpretation registry, search by clause | Public within the workspace (not project-scoped) |
+| `/api/projects/:id/compliance-checks` | GET | Gate-blocking status | Membership |
+| `/api/projects/:id/waivers` | GET/POST | Waiver list/request for the project — `expires_at` required on POST, no waiver path for the six-validator completeness check (rejected server-side, not just client-validated); as-built role mapping: project lead files, admin activates at filing time (the account model has three roles — see module doc in `app/server/projects.ts`) | Membership (GET); project `lead` + `admin` (POST activate) |
+| `/api/interpretations` | GET/POST | Interpretation registry, search by clause; POST audit-logged (`interpretation_record`) | Public within the workspace (not project-scoped); POST `admin` only |
 
 ## 6. M&A Special Topics and Green Field
 
@@ -85,6 +89,7 @@
 | `/api/notifications` | GET | Delivered/pending, per-user — no read/unread state: `notification` has no `read_at` and no cleanly-fitting column exists elsewhere (`session`/`app_user` carry no last-seen; `watch.last_checked_at` is a change-detection watermark), so adding one requires a migration; `sent_at` is the only lifecycle timestamp | Session | as-built (5.6A) |
 | `/api/data-changes` | GET | `data_change_log` scan | Authenticated — market data is workspace-level (`fact_market_observation` carries no project binding) | as-built (5.7B) |
 | `/api/reports/:run_id` | POST | Generate deliverable (docx/pdf/hwpx) — staleness gate blocks if inputs exceed `ttl_days` | Membership | forward-design |
+| `/api/glossary` | GET | Glossary term list (collection view) | Public within the workspace | as-built (5.6A) |
 | `/api/glossary/:term` | GET | Glossary lookup (also backs UI tooltip, MCP `lookup_term`) | Public within the workspace | as-built (5.6A) |
 
 ## 8. Admin Console (Never MCP-Exposed)

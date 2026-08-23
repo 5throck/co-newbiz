@@ -8,7 +8,7 @@ lang_reason: source-material
 # co-newbiz
 
 > **언어**: [English](README.md) · **한국어**
-> **상태**: ⚠️ Beta — v0.1.0
+> **상태**: 🔧 활발한 개발 중 — v1.0.0
 > 신사업 검토(new-business-review) AI 팀이자 시스템. 신사업 개발의 규정·절차·가이드라인·체크리스트와 그 상시 운영을 소유하고(axis A), 이를 시스템으로 구현·유지하며(axis B), 그 위에서 실제 딜 리뷰를 수행한다(axis C). 직접 시장 데이터가 없는 산업을 위한 proxy-chain 수요 추정과 함께 Green Field(신설)와 Brown Field(M&A)를 다룬다.
 
 ## 개요
@@ -78,6 +78,7 @@ co-newbiz/
 | **market-intelligence-agent** | TAM/SAM/SOM 산정, 수요 전망, 경쟁사 증설 추적 | high | inherit |
 | **partnership-agent** | 파트너 소싱 전략, 컴플라이언스 스크리닝을 포함한 파트너 실사 | medium | inherit |
 | **platform-lead** | 기술(technical) 도메인 리드 | high | inherit |
+| **pm** | 신사업 검토 리드(New Business Review Lead) — 4개 도메인 리드를 조율하고 스테이지 게이트를 집행하며 ADR을 승인 | high | inherit |
 | **pmi-agent** | 인수 후 통합(PMI) 기획: 시너지 실현 추적과 통합 리스크 관리 | medium | inherit |
 | **process-governance-manager** | 기능(functional) 도메인 리드 | high | inherit |
 | **quant-methodologist** | proxy 산업 체인 방법론 소유: 단위 환산, 회귀 캘리브레이션 | high | inherit |
@@ -91,30 +92,7 @@ co-newbiz/
 
 ## 스킬
 
-- **accessibility-audit**: 
-- **agent-lifecycle-manager**: 
-- **explain-me**: 
-- **gateguard**: 
-- **k-dart**: 
-- **k-law**: 
-- **mece-logic-auditor**: 
-- **meeting-facilitation**: 
-- **presenter-mode**: 
-- **project-review**: 
-- **sarif-exporter**: 
-- **script-lifecycle-manager**: 
-- **security-scan**: 
-- **skill-lifecycle-manager**: 
-- **sound-synth**: 
-- **standup-synthesizer**: 
-- **stride-threat-matrix**: 
-- **swe-solve**: 
-- **sync**: 
-- **team-builder**: 
-- **translate**: 
-- **update-bun-packages**: 
-- **validate-docs-links**: 
-- **zod-contract-gate**: 
+팀은 120개 이상의 워크플로 스킬(거버넌스 문서 작성, 실사 플레이북, 재무 분석, 플랫폼 운영)을 갖추고 있습니다. 관리되는 인덱스는 [skills/SKILLS.md](skills/SKILLS.md)에 있으며, 개별 스킬 지침은 `skills/<name>/SKILL.md`와 그 미러 복사본(`.claude/skills/`, `.gemini/skills/`, `.agents/skills/`)에 있습니다.
 
 ## 세션 시작 체크리스트
 
@@ -155,17 +133,13 @@ PM이 **New Business Review Lead**로서 모든 전문가를 직접 디스패치
 
 ## 변형 유형
 
-**유형**: consulting
+**유형**: web | cli | api | mcp
 
-이 변형은 AI 지원 비즈니스 컨설팅 engagement를 위한 전략 컨설팅에 중점을 둡니다.
+이 변형은 신사업 검토 거버넌스 팀과 그 지원 시스템을 구현합니다: 정책·절차·체크리스트 작성 및 운영, SQLite 기반 Hono REST API, 그 위의 MCP 서버, Python 연산 레이어, Green Field 및 Brown Field 딜 리뷰 워크플로.
 
-> **⚠️ 베타 변형** — 프로덕션 용도가 아닙니다.
+> ⚠️ 프로토타입 변형 — 프로덕션 용도가 아닙니다.
 
-- **클라이언트 참여**: 0/2 (변형 거버넌스 규칙 참조)
-- **베타 기간**: 0/2개월
-- **추가 검증**: 대기 중
-
-승급 기준은 `scripts/helpers/variant-governance-rules.ts`를 참조하세요.
+에이전트/스킬/스크립트 수명주기 규칙은 [AGENTS.md](AGENTS.md) §8(Lifecycle Management)과 `docs/context.md`를 참조하세요.
 
 ## 라이선스
 
@@ -173,5 +147,5 @@ PM이 **New Business Review Lead**로서 모든 전문가를 직접 디스패치
 
 ---
 
-*최근 업데이트: 2026-08-20*
+*최근 업데이트: 2026-08-24*
 *Last Updated: 2026-08-23*

@@ -6,7 +6,7 @@ content_hash: PLACEHOLDER
 # co-newbiz
 
 > **Language**: **English** · [한국어](README_ko.md)
-> **Status**: ⚠️ Beta — v0.1.0
+> **Status**: 🔧 Active development — v1.0.0
 > New-business-review AI team and system. Owns the regulations, procedures, guidelines and checklists for new business development and their ongoing operation (axis A), implements and maintains them as a system (axis B), and performs the actual deal reviews on top of that (axis C). Covers Green Field (new establishment) and Brown Field (M&A), with proxy-chain demand estimation for industries that have no direct market data.
 
 ## What Is This?
@@ -76,6 +76,7 @@ Your partners consist of specialized agents, each with a distinct role. The **Pr
 | **market-intelligence-agent** | TAM/SAM/SOM sizing, demand forecasting, competitor capacity-expansion tracking,  | high | inherit |
 | **partnership-agent** | Partner sourcing strategy, partner due diligence including compliance screening, | medium | inherit |
 | **platform-lead** | Domain lead for technical | high | inherit |
+| **pm** | New Business Review Lead — coordinates four domain leads, enforces stage gates, approves ADRs | high | inherit |
 | **pmi-agent** | Post-merger integration planning: synergy realization tracking and integration r | medium | inherit |
 | **process-governance-manager** | Domain lead for functional | high | inherit |
 | **quant-methodologist** | Owns the proxy industry chain methodology: unit conversion, regression calibrati | high | inherit |
@@ -89,30 +90,7 @@ Your partners consist of specialized agents, each with a distinct role. The **Pr
 
 ## Skills
 
-- **accessibility-audit**: 
-- **agent-lifecycle-manager**: 
-- **explain-me**: 
-- **gateguard**: 
-- **k-dart**: 
-- **k-law**: 
-- **mece-logic-auditor**: 
-- **meeting-facilitation**: 
-- **presenter-mode**: 
-- **project-review**: 
-- **sarif-exporter**: 
-- **script-lifecycle-manager**: 
-- **security-scan**: 
-- **skill-lifecycle-manager**: 
-- **sound-synth**: 
-- **standup-synthesizer**: 
-- **stride-threat-matrix**: 
-- **swe-solve**: 
-- **sync**: 
-- **team-builder**: 
-- **translate**: 
-- **update-bun-packages**: 
-- **validate-docs-links**: 
-- **zod-contract-gate**: 
+The team ships 120+ workflow skills (governance authoring, due diligence playbooks, financial analysis, platform operations). The maintained index lives at [skills/SKILLS.md](skills/SKILLS.md); per-skill instructions are in `skills/<name>/SKILL.md`, with mirrored copies under `.claude/skills/`, `.gemini/skills/`, and `.agents/skills/`.
 
 ## Session Start Checklist
 
@@ -153,17 +131,13 @@ Our daily operations are driven by slash commands (registered as Skills by Claud
 
 ## Variant Type
 
-**Type**: consulting
+**Type**: web | cli | api | mcp
 
-This variant focuses on Strategy consulting for AI-assisted business consulting engagements.
+This variant implements a new-business-review governance team and its supporting system: policy/procedure/checklist authoring and operation, a Hono REST API with SQLite persistence, an MCP server over that API, a Python computational layer, and deal-review workflows for Green Field and Brown Field cases.
 
-> **⚠️ Beta variant** — not for production use.
+> ⚠️ Prototype variant — not for production use.
 
-- **Client Engagements**: 0/2 (see variant governance rules)
-- **Beta Duration**: 0/2 months
-- **Additional Checks**: Pending
-
-See `scripts/helpers/variant-governance-rules.ts` for promotion criteria.
+See [AGENTS.md](AGENTS.md) §8 (Lifecycle Management) for agent/skill/script lifecycle rules and `docs/context.md` for project identity.
 
 ## License
 
@@ -171,4 +145,4 @@ Internal workspace project — not for external distribution. Governed by the sa
 
 ---
 
-*Last Updated: 2026-08-19*
+*Last Updated: 2026-08-23*

@@ -4,7 +4,7 @@
 **Facilitator**: pm
 **Participants**: pm, process-governance-manager, platform-lead, industry-lead, region-lead
 **Objective**: Fix functional/technical/industry/region responsibility boundaries, interface contracts, and confirm the cross-validation matrix before any other Stage 1 meeting runs.
-**Related**: [Design v1.0](../docs/designs/2026-08-19-co-newbiz-design_ko.md) section 5
+**Related**: [Design v1.0](https://github.com/5throck/ai-workspace-standards/blob/main/docs/designs/2026-08-19-co-newbiz-design_ko.md) section 5
 
 ---
 
