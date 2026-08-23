@@ -12,30 +12,39 @@ items:
   - id: ss-01
     text: "Wastewater/effluent treatment capacity confirmed for every candidate site — checked before power, since its absence blocks expansion outright"
     mandatory: true
+    waiver_eligible: true
   - id: ss-02
     text: "Power supply capacity, connection lead time, and outage history obtained per candidate site"
     mandatory: true
+    waiver_eligible: true
   - id: ss-03
     text: "Industrial water supply capacity and quality confirmed"
     mandatory: true
+    waiver_eligible: true
   - id: ss-04
     text: "Road/logistics access assessed for heavy-vehicle entry and port/rail proximity"
     mandatory: true
+    waiver_eligible: true
   - id: ss-05
     text: "Regional incentive package identified and converted to NPV, on the same comparison table as infrastructure capex and logistics cost — not listed separately"
     mandatory: true
+    waiver_eligible: true
   - id: ss-06
     text: "Incentive application/construction deadlines checked against the permit critical path — a missed deadline forfeits the incentive"
     mandatory: true
+    waiver_eligible: true
   - id: ss-07
     text: "Talent pipeline assessed (local institutions, available labor pool, competing employers)"
     mandatory: false
+    waiver_eligible: true
   - id: ss-08
     text: "Community acceptance history reviewed (prior disputes, environmental conflict history) AND inter-regional resource disputes (e.g. upstream water-rights objections from a different jurisdiction than the site itself) — legally compliant sites still stall on either (pilot 005 finding F-2)"
     mandatory: true
+    waiver_eligible: true
   - id: ss-09
     text: "site_candidate scoring completed with a documented weighting rationale, not an unweighted list"
     mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "docs/greenfield-site-guide.md (forward reference — Stage 4 documentation)"

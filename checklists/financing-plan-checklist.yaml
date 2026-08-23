@@ -22,27 +22,35 @@ items:
   - id: fin-01
     text: "Cash/debt/equity mix decided with tenor and amortization profile, and the sources-and-uses table attached"
     mandatory: true
+    waiver_eligible: true
   - id: fin-02
     text: "Executed commitment papers obtained — equity commitment letter; debt commitment letter + fee letter + term sheet — OR a documented internal-funds approval path where the deal is balance-sheet funded"
     mandatory: true
+    waiver_eligible: true
   - id: fin-03
     text: "Covenant headroom / leverage analysis completed against the lender's terms"
     mandatory: true
+    waiver_eligible: true
   - id: fin-04
     text: "Funds-flow memorandum drafted — every inflow/outflow, account, timing, and FX leg of closing day mapped"
     mandatory: true
+    waiver_eligible: true
   - id: fin-05
     text: "FX plan stated (forwards, options, deal-contingent FX) whenever the consideration spans more than one currency"
     mandatory: true
+    waiver_eligible: true
   - id: fin-06
     text: "Limited-conditionality ('certain funds') structure reviewed by legal-counsel — funding conditioned only on the specified acquisition-agreement representations, closing substantially per the agreement, and closing certificates; no market-MAC out"
     mandatory: true
+    waiver_eligible: true
   - id: fin-07
     text: "Escrow/paying agent appointed and escrow sized against indemnity exposure"
     mandatory: true
+    waiver_eligible: true
   - id: fin-08
     text: "Reverse-termination fee sized where the buyer retains debt-funding risk (illustrative benchmark: 4-7% of enterprise value — see header note)"
     mandatory: false
+    waiver_eligible: true
   - id: fin-09
     text: "Certainty of funds evidenced in the IC package before final IC — commitment letters or internal-funds approval per fin-02, sources & uses, covenant headroom, funds-flow draft, and FX plan all present; missing financing evidence is a precondition fail at entity-ic-review, not a judgment call"
     mandatory: true

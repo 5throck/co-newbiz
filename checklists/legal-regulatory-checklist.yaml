@@ -12,24 +12,31 @@ items:
   - id: lr-01
     text: "Applicable permit pathway identified and mapped as a DAG with critical-path lead time (permit-pathway-mapping)"
     mandatory: true
+    waiver_eligible: true
   - id: lr-02
     text: "Certification requirements identified separately from permits, with transferability-on-change-of-control assessed for Brown Field (design's permit/certification separation rule)"
     mandatory: true
+    waiver_eligible: true
   - id: lr-03
     text: "Applicable region profile(s) confirmed present and validated (region-profiles/_validate.ts) for every jurisdiction the deal touches"
     mandatory: true
+    waiver_eligible: true
   - id: lr-04
     text: "Foreign investment screening trigger checked against the region profile's mandatory_filing_triggers"
     mandatory: true
+    waiver_eligible: true
   - id: lr-05
     text: "Sanctions and anti-corruption screening run against all counterparties, not just the primary target"
     mandatory: true
+    waiver_eligible: true
   - id: lr-06
     text: "Data transfer mechanism confirmed for any cross-border data flow the deal requires"
     mandatory: false
+    waiver_eligible: true
   - id: lr-07
     text: "NDA/confidentiality review completed before any DD material is loaded into the system (design §4-9-1 rule: loading itself can be an NDA violation)"
     mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "region-profiles/_schema.yaml mandatory review axes (design v1.0 section 2-6)"

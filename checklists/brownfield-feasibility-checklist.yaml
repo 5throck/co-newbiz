@@ -24,30 +24,39 @@ items:
   - id: bf-04
     text: "Golden parachute / CoC-trigger executive compensation identified and modeled as a day-one cash outflow"
     mandatory: true
+    waiver_eligible: true
   - id: bf-05
     text: "Compensation harmonization cost estimated with upward-bias default applied (never modeled as a savings line)"
     mandatory: true
+    waiver_eligible: true
   - id: bf-06
     text: "Customer contracts scanned for change-of-control termination clauses"
     mandatory: true
+    waiver_eligible: true
   - id: bf-07
     text: "Quality-of-earnings normalization completed (one-off items stripped, owner compensation normalized)"
     mandatory: true
+    waiver_eligible: true
   - id: bf-08
     text: "Contingent liabilities modeled as probability x amount x timing distributions feeding Monte Carlo, not narrative-only"
     mandatory: true
+    waiver_eligible: true
   - id: bf-09
     text: "Covenant breach tested under the +200bp downside scenario"
     mandatory: true
+    waiver_eligible: true
   - id: bf-10
     text: "PMI synergy assumptions reconciled against valuation-agent's deal model (not independently optimistic)"
     mandatory: false
+    waiver_eligible: true
   - id: bf-11
     text: "Gun-jumping compliance confirmed — no integration activity before clearance in any jurisdiction with a filing requirement"
     mandatory: true
+    waiver_eligible: true
   - id: bf-12
     text: "Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) as part of the deal structure hypothesis — not just the acquisition mechanics (stake/structure)"
     mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "Group New Business Review Policy §2.3, §4"

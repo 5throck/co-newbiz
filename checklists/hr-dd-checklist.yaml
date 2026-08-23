@@ -22,36 +22,47 @@ items:
   - id: hdd-01
     text: "Key-person map produced — every person/role whose loss would damage operations or integration, each mapped to a named retention action"
     mandatory: true
+    waiver_eligible: true
   - id: hdd-02
     text: "Stay/retention bonus budget covering critical talent for the post-closing window (illustrative benchmark: 12-24 months — see header note)"
     mandatory: true
+    waiver_eligible: true
   - id: hdd-03
     text: "Day-1 retention plan prepared — pre-drafted retention offers, stay bonuses, and communication scripts for critical staff"
     mandatory: true
+    waiver_eligible: true
   - id: hdd-04
     text: "Organization documented — org charts, management structure, headcount by function, job descriptions"
     mandatory: true
+    waiver_eligible: true
   - id: hdd-05
     text: "Leadership bench assessed — who is needed for the first 100 days vs. who will exit"
     mandatory: true
+    waiver_eligible: true
   - id: hdd-06
     text: "Where CBAs exist: successorship clauses, open grievance backlog, and CBA expiry vs. deal timeline reviewed (mark not-applicable with rationale where no CBA exists)"
     mandatory: true
+    waiver_eligible: true
   - id: hdd-07
     text: "Pension/benefits liabilities quantified — unfunded status, multiemployer withdrawal liability, retiree medical where applicable"
     mandatory: true
+    waiver_eligible: true
   - id: hdd-08
     text: "Works-council information & consultation plan prepared for EU targets — can gate timing and structure"
     mandatory: false
+    waiver_eligible: true
   - id: hdd-09
     text: "Employment-transfer regime determined per jurisdiction for the contemplated deal structure (TUPE / EU ARD analogues / Korean business-transfer doctrine) — cross-references chk-entity-formation ef-08; the regime determination is made here for acquisition routes"
     mandatory: true
+    waiver_eligible: true
   - id: hdd-10
     text: "Culture distance assessed with a standardized instrument (e.g. OCAI / Denison-model), covering decision-making speed, risk appetite, and management style — feeding integration design"
     mandatory: true
+    waiver_eligible: true
   - id: hdd-11
     text: "Day-1 and first-100-days HR plan drafted — payroll and benefits continuity, HR policy alignment, leadership communication to all staff, HR systems integration"
     mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "ADR-0051 (workflow gap closure — HR DD step added at brownfield-dd step 13; chain step 14 management linkage)"

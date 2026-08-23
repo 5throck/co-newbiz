@@ -17,36 +17,47 @@ items:
   - id: mdd-01
     text: "TAM/SAM triangulated via at least two independent methods (top-down industry data, bottom-up build, demand/supply-side check) reconciling within a stated tolerance — including reconciliation against any proxy-chain demand estimate produced at Screening/Pre-FS (proxy-industry-chain)"
     mandatory: true
+    waiver_eligible: true
   - id: mdd-02
     text: "Market growth drivers and disruptors stated, with management's growth assumption tested against independent market forecasts"
     mandatory: true
+    waiver_eligible: true
   - id: mdd-03
     text: "Competitive set built as described by customers, not management — win/loss dynamics captured ('chosen as best' vs. 'cheapest/first/already integrated')"
     mandatory: true
+    waiver_eligible: true
   - id: mdd-04
     text: "Market shares and concentration estimated; each competitor's pricing power classified"
     mandatory: true
+    waiver_eligible: true
   - id: mdd-05
     text: "Target's moat rated on the standard ladder — proprietary data (strong) > integration depth (moderate) > brand/relationship (weak) > price (weakest)"
     mandatory: true
+    waiver_eligible: true
   - id: mdd-06
     text: "Customer concentration computed — top-10 customers as % of revenue, with relationship depth and switching costs captured for the top accounts"
     mandatory: true
+    waiver_eligible: true
   - id: mdd-07
     text: "Churn/retention analyzed over 2-3 years by segment, with leading churn indicators listed (executive sponsor departure, budget reallocation, active competitive evaluations, single-champion relationships)"
     mandatory: true
+    waiver_eligible: true
   - id: mdd-08
     text: "80/20 revenue analysis performed and validated against the investment thesis"
     mandatory: true
+    waiver_eligible: true
   - id: mdd-09
     text: "Expansion-revenue breadth tested — broad-based vs. concentrated in few accounts (a concentration red flag)"
     mandatory: true
+    waiver_eligible: true
   - id: mdd-10
     text: "Channel structure mapped — distributors, pricing logic, customer mix from the data room"
     mandatory: true
+    waiver_eligible: true
   - id: mdd-11
     text: "Thesis-by-thesis validation verdicts produced (validated / partially validated / invalidated) with retention-adjusted revenue impact feeding the valuation bridge (dd-to-valuation-bridge) and bid-adjustment recommendations (base-case adjustments, downside scenario, earnout structuring)"
     mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "ADR-0051 (workflow gap closure — market DD step added at brownfield-dd step 4)"

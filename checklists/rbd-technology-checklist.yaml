@@ -29,48 +29,63 @@ items:
   - id: rbd-01
     text: "Technology Readiness Level (TRL) assessed for the core IP/technology itself, distinct from production-process TRL (technical-dd-checklist tdd-03) — an R&BD target's core risk is whether the underlying technology works at all, before production readiness is even relevant. For a license-in deal (rbd_source: external_technology_acquisition), prioritize direct technical documentation from the licensor over public-source corroboration — license announcements rarely carry the track-record framing a spin-off announcement does (pilot 013 finding F-1)"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-02
     text: "Government co-funding conditions identified if applicable: technology-fee repayment obligation (기술료), IP walk-away/ownership conditions, employment or localization conditions attached to the grant — these can survive a change of control and are easy to miss in a standard DD pass. First classify any government-research-institute relationship as a formal co-funded grant (binding conditions apply) or an informal/in-kind research collaboration (conditions may not apply) — the two carry materially different DD implications (pilot 014 finding F-1, see docs/pilots/pilot-014-c2y-university-techholdings.md)"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-03
     text: "Freedom-to-operate (FTO) / IP ownership diligence completed — who actually owns the IP (the target entity, a parent/spin-off originator, a co-development partner, or a government-funded research institute) and whether license terms transfer cleanly on the contemplated deal structure. For active co-research/co-development relationships (as opposed to a completed transfer of pre-existing IP), explicitly diligence joint-IP-ownership terms with the research partner — this is a materially different question from a simple license-in chain (pilot 014 finding F-2)"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-04
     text: "Commercialization path decision documented with rationale: build as an internal business unit, license the technology out, spin off as an independent entity, or acquire a minority venture stake — the paths have materially different valuation, control, and risk profiles and should not default to one without an explicit comparison. This item concerns the REVIEWING ENTITY's chosen path to the technology, not the target's own founding history (captured separately via rbd_source) — an independently-founded, university/government-research-backed startup that was never anyone's spin-off still requires this decision from the reviewing entity's side (pilot 014 finding F-3)"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-05
     text: "The continuing relationship with the technology's originator is documented as part of the deal structure, not treated as fully independent — for a spin-off (rbd_source: internal_only / accelerator_partnered), this is equity retained, customer/supplier relationship, brand association, non-compete scope (see docs/pilots/pilot-011-posco-amberoad.md); for a license-in from an external source such as a research institute (rbd_source: external_technology_acquisition), this is ongoing royalty obligations and eligibility for the licensor's own follow-on co-funding programs, not equity or brand (pilot 013 finding F-2, see docs/pilots/pilot-013-hexapro-etri.md)"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-06
     text: "Track record evidence (prior internal deployments, pilot results, disclosed performance metrics) verified against source, not accepted from the target's own pitch materials without corroboration"
     mandatory: false
+    waiver_eligible: true
   - id: rbd-07
     text: "Technology-obsolescence/substitution risk assessed on the same horizon as the investment's expected holding period — a technology that is state-of-the-art today may not be in 3-5 years"
     mandatory: false
+    waiver_eligible: true
   - id: rbd-08
     text: "TRL/MRL evidence matrix — SCREENING row (ADR-0052 §D.1; cutoff ILLUSTRATIVE until the thresholds meeting): scientific basis, roadmap pull, preliminary prior-art/FTO screen; readiness floor TRL 1-2. Typical kill: no plausible principle-to-application path; roadmap absent"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-09
     text: "TRL/MRL evidence matrix — PRE-FS row: concept memo, critical-function list, POC experiment protocol; readiness floor TRL 2. Typical kill: concept not credible vs state of the art"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-10
     text: "TRL/MRL evidence matrix — FS-ENTRY row: POC results demonstrating the critical function, reproducible; readiness floor TRL 3. Typical kill: technical feasibility wall"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-11
     text: "TRL/MRL evidence matrix — FS/DD row: integrated test data, relevant-environment validation plan, FTO opinion, patent strategy, updated cost model; readiness floor TRL 4-5 / MRL 4-5. Typical kill: FTO failure (blocking third-party IP); unit cost over value ceiling"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-12
     text: "TRL/MRL evidence matrix — ENTITY-IC (business-case gate) row: full business case; make/buy/partner decision (routes into the deal-shape chain, ADR-0052 §A); real-options valuation; staged funding request for the NEXT stage only; readiness floor TRL 5-6 / MRL 5-6. Typical kill: no viable business model; option value below stage premium"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-13
     text: "TRL/MRL evidence matrix — POST-IC EXECUTION row: operational-environment demonstration, pilot-line capability, regulatory pathway; readiness floor TRL 7-8 / MRL 7-8. Typical kill: manufacturability failure; regulatory rejection"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-14
     text: "Evidence quality rules (GAO TRA Guide, GAO-20-48G — ADR-0052 §D.2): every TRL/MRL claim supported by named tests, test environments, and data artifacts — not assertion; readiness assessments reviewed by a reviewer NOT reporting to the project champion; the assessment records HOW maturity was demonstrated, not only the level claimed; known limitations of readiness scales noted in gate records"
     mandatory: true
+    waiver_eligible: true
   - id: rbd-15
     text: "Staged funding as real options (ADR-0052 §D.3): each stage approval is the exercise of a sequential option — the stage budget is the premium, the next gate the exercise decision; the funding request covers the next stage only, with the option-value vs stage-premium comparison recorded. A negative static NPV does not by itself kill an early technology bet when staging options carry positive value; kill discipline remains when option value sits below the next premium even under favorable scenarios"
     mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "design v1.0 §10 user decision (2026-08-20): R&BD treated as a Brown Field sub-type"

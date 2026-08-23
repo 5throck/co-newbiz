@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Auth routes — docs/api-spec.md §2 (Wave 5.6A).
  *
@@ -6,6 +6,10 @@
  * (design §4-9). Self-signup always lands as `viewer` — an unauthenticated
  * caller can never mint analyst/admin, and role elevation is a separate,
  * audited admin action.
+ *
+ * The session cookie's Secure flag keys off requestIsSecure(): direct TLS
+ * or a TLS-terminating reverse proxy (X-Forwarded-Proto) — never the
+ * internal URL scheme alone, which is http:// behind a proxy.
  *
  * Login failure reasons map: invalid_credentials -> 401 (existence is not
  * leaked), locked -> 423, pending_approval / disabled -> 403.
@@ -23,7 +27,7 @@ import {
 } from "../../db/lib/accounts.ts";
 import { appendAudit } from "../../db/lib/access-control.ts";
 import { badRequest, forbidden, ok, fail } from "./envelope.ts";
-import { SESSION_COOKIE, requireAdmin, requireAuth, type AppEnv } from "./middleware.ts";
+import { SESSION_COOKIE, requireAdmin, requireAuth, requestIsSecure, type AppEnv } from "./middleware.ts";
 
 function sessionCookieOpts(secure: boolean) {
   return {
@@ -73,7 +77,7 @@ authRoutes.post("/api/auth/login", async (c) => {
     const status = result.reason === "locked" ? 423 : result.reason === "invalid_credentials" ? 401 : 403;
     return fail(c, status, result.reason, result.lockedUntil ? `Locked until ${result.lockedUntil}.` : "Login refused.");
   }
-  setCookie(c, SESSION_COOKIE, result.session.token, sessionCookieOpts(c.req.url.startsWith("https://")));
+  setCookie(c, SESSION_COOKIE, result.session.token, sessionCookieOpts(requestIsSecure(c)));
   const row = getDb().query("SELECT role FROM app_user WHERE user_id = ?").get(body.userId) as { role: string };
   return ok(c, { userId: body.userId, role: row.role, mustChangePassword: result.mustChangePassword, expiresAt: result.session.expiresAt });
 });
@@ -122,8 +126,7 @@ authRoutes.post("/api/auth/password-change", requireAuth, async (c) => {
   } catch (err) {
     return badRequest(c, "password_change_failed", err instanceof Error ? err.message : "Password change failed.");
   }
-  const secure = c.req.url.startsWith("https://");
-  setCookie(c, SESSION_COOKIE, issued.token, sessionCookieOpts(secure));
+  setCookie(c, SESSION_COOKIE, issued.token, sessionCookieOpts(requestIsSecure(c)));
   return ok(
     c,
     a.via === "bearer" ? { ok: true, session: { token: issued.token, expiresAt: issued.expiresAt } } : { ok: true },

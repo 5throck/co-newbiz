@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Checklist Validator — co-newbiz
  *
@@ -11,17 +11,17 @@
  * What is an ERROR:
  *   - missing/empty id, text, or mandatory on any item
  *   - non-boolean mandatory / waiver_eligible
+ *   - MISSING waiver_eligible on any item — every item must declare it
+ *     explicitly; the engine's undeclared-default (`?? true`) is no longer
+ *     allowed to act as invisible policy (all items declared as of
+ *     2026-08-24; `true` values codify the then-current engine default,
+ *     amendable per item through normal governance)
  *   - duplicate item ids within one file
  *   - item ids not matching the <prefix>-<number> convention
  *   - waiver_eligible: false on a RECOMMENDED item (a recommended item never
  *     blocks, so a no-waiver flag on it is a contradiction)
  *
- * What is a WARN (deliberately not an error yet):
- *   - missing waiver_eligible: the engine defaults undeclared mandatory items
- *     to waivable (db/lib/compliance.ts), so every gap here is silent policy.
- *     Closing each gap needs an explicit per-item judgment, so this validator
- *     surfaces them without failing the build. Once all items declare the
- *     field, flip this severity to "error".
+ * What is a WARN:
  *   - legal_basis entries pointing at repo paths that do not exist
  *
  * Usage:
@@ -87,8 +87,8 @@ function validateItem(file: string, item: ItemShape, seenIds: Set<string>): Issu
     issues.push({
       file,
       item: label,
-      message: "Missing 'waiver_eligible' — undeclared mandatory items default to WAIVABLE at runtime (db/lib/compliance.ts); declare it explicitly",
-      severity: "warn",
+      message: "Missing 'waiver_eligible' — every item must declare it explicitly (undeclared items default to WAIVABLE at runtime)",
+      severity: "error",
     });
   } else if (typeof item.waiver_eligible !== "boolean") {
     issues.push({ file, item: label, message: "'waiver_eligible' must be a boolean when present", severity: "error" });
@@ -181,8 +181,6 @@ async function main() {
       const tag = i.severity === "error" ? "ERROR" : "WARN";
       console.log(`[${tag}] ${i.file} :: ${i.item} — ${i.message}`);
     }
-  } else if (warnings.length > 0) {
-    console.log(`[WARN] ${warnings.length} checklist item(s) do not declare 'waiver_eligible' — run with --verbose to list them.`);
   }
 
   console.log(`\nChecklist validation: ${files.length} file(s), ${totalItems} item(s), ${errors.length} error(s), ${warnings.length} warning(s).`);

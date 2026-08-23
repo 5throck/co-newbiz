@@ -1,5 +1,13 @@
 # security.md
 
+> **Superseded notice (2026-08-24)**: the operative security documents for
+> this project are [`security-model.md`](security-model.md) (threat model,
+> STRIDE matrix, verification checklist) and
+> [`security-baseline.md`](security-baseline.md) (recurring cadence,
+> pre-deployment gate). This file remains as a generic committed-files /
+> sanitization policy and is no longer the security index. Vulnerability
+> disclosure goes through the root [SECURITY.md](../SECURITY.md).
+
 Security policy and data sanitization rules for this project.
 
 > For dev context, architecture, and agent instructions, see [context.md](context.md).
