@@ -1,5 +1,7 @@
 # Business Manual — Analysts & Committee Reviewers
 
+> **Language**: **English** · [한국어](business-manual_ko.md)
+
 **Audience**: Analysts, Entity IC / Group IC reviewers
 **Not for**: system operators (see `operations-manual.md`) or administrators (see `admin-manual.md`) — this separation is deliberate; merging the three means nobody reads any of them (design section 10.5).
 

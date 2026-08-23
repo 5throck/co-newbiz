@@ -9,6 +9,7 @@ This directory contains all project documentation and architecture artifacts.
 | `context.md` | Single source of truth for all AI tools - architecture, tech stack, coding guidelines, multi-agent workflow |
 | `adr/` | Architecture Decision Records - significant technical decisions with rationale |
 | `security.md` | Security policies, vulnerability reporting, and secure development guidelines |
+| `manuals/` | Three-audience user guides — business (analysts/IC reviewers), admin (system administrators), operations (dba/sre) — each with a Korean counterpart (`*_ko.md`) |
 | `_examples/` | Reference templates for creating documentation (NOT copied to new projects) |
 
 ## Context File (`context.md`)
