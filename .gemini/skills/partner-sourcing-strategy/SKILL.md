@@ -10,13 +10,15 @@ description: >
 
   Use when: "partner sourcing", "capability gap for a partner", "hard
   partner dependency", "JV partner search".
-version: 1.0.0
+version: 1.1.0
 last_reviewed: 2026-08-20
 status: active
 owner: partnership-agent
 prerequisites: none
 metadata:
   type: domain
+  procedure_keys:
+    - deal-shape-chain
   triggers:
     - partner sourcing
     - capability gap for a partner

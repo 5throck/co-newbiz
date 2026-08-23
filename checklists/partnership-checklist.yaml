@@ -4,8 +4,8 @@ title: "Partnership Sourcing and JV Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: partnership-agent
-version: "1.0.0"
-effective_from: "2026-08-20"
+version: "1.1.0"
+effective_from: "2026-08-23"   # v1.1.0 adds pt-08..pt-12 (P1 partnership screen criteria, ADR-0052 §A / [rbd 2.2]); pt-01..pt-07 unchanged
 gate: DD
 
 items:
@@ -30,7 +30,28 @@ items:
   - id: pt-07
     text: "Technology contribution independently valued, not accepted at the contributing party's stated figure"
     mandatory: false
+  # pt-08..pt-12 added v1.1.0 — the P1 partnership-screen criteria families of
+  # the deal-shape chain (ADR-0052 §A.1 P1 / [rbd 2.2]): the screen scores the
+  # PARTNERSHIP, not the market, reusing the strategic-fit knock-out+scorecard
+  # method with partner-facing criteria.
+  - id: pt-08
+    text: "Strategic complementarity assessed — what we bring plus what the partner brings jointly closes the named capability gap (pt-01), with the combination rationale written down"
+    mandatory: true
+  - id: pt-09
+    text: "Partner technical capability evidenced against OUR next gate's requirement — test data, certifications, or demonstrated delivery, not marketing claims"
+    mandatory: true
+  - id: pt-10
+    text: "Operational and cultural fit assessed — working style, decision speed, and the geographic/timezone operating reality of the collaboration"
+    mandatory: true
+  - id: pt-11
+    text: "Alliance track record assessed, with references to at least two of the partner's other alliance partners as required evidence [rbd 2.4]"
+    mandatory: true
+  - id: pt-12
+    text: "Organizational readiness on both sides — dedicated resources, a named executive sponsor, and decision authority delegated for the negotiation itself"
+    mandatory: true
 
 legal_basis:
   - "docs/partnership-playbook.md (forward reference — Stage 4 documentation)"
   - "ADR-0031 (partner-sourcing failure modeled as termination)"
+  - "ADR-0052 §A (deal-shape chain, P1 partnership screen)"
+  - "docs/research/rbd-partnership-best-practice.md [rbd 2.2, 2.4]"
