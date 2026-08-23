@@ -12,13 +12,20 @@ output_type: jv_health_scorecard
 
 <!--
   output_type: jv_health_scorecard — "JV lifecycle monitor — seven-dimension
-  health scorecard; weights/cadence pending ADR-0052 open question (b)".
+  health scorecard; weights/cadence DECIDED by
+  docs/decisions/2026-08-24-class-c-decisions.md (b)".
   Produced by jv-lifecycle-governance step 2 (partnership-agent /
   project-review). Field shape mirrors ADR-0059's venture_scorecard table
   (section/measure/target/actual/status + evidence_ref) so a filled
-  scorecard maps 1:1 onto rows when the E.4 migration lands. Weights are
-  NOT set here — they are open question (b); record raw assessments, not
-  weighted composites, until the thresholds meeting decides otherwise.
+  scorecard maps 1:1 onto rows now that the E.4 migration has landed.
+  Weights: EQUAL/UNWEIGHTED dimension scores with per-dimension red-flag
+  thresholds (Ankura/Watermark flat-rollup precedent); differential weights
+  revisited after 4-6 quarters of accumulated cycles on cross-case evidence.
+  Cadence: QUARTERLY scoring cycle feeding the quarterly JV board; annual
+  deepening layer; triennial external governance review; event-driven
+  re-score on defined triggers. Record raw assessments, not weighted
+  composites — the flat-rollup rule stands until a calibration-backed
+  amendment changes it.
   ~20 measures across the card is the cap (balanced-scorecard discipline).
 -->
 
@@ -28,11 +35,11 @@ output_type: jv_health_scorecard
 
 ## Seven dimensions (jv-lifecycle-governance step 2)
 
-Per dimension: 2-3 measures. Every measure carries a target — a measure without a target is invalid; if the target is undetermined pending open question (b), status MUST be `insufficient_evidence`, not a guessed grade.
+Per dimension: 2-3 measures. Every measure carries a target — a measure without a target is invalid; if the target is undetermined for THIS JV, status MUST be `insufficient_evidence`, not a guessed grade.
 
 | Dimension | Measure | Target | Actual | Status | Evidence (ADR-0058 ref) |
 |---|---|---|---|---|---|
-| Performance | [measure] | [target / PENDING (b)] | [actual] | on_target / deviation / insufficient_evidence | [ref] |
+| Performance | [measure] | [target] | [actual] | on_target / deviation / insufficient_evidence | [ref] |
 | People | [measure] | [target] | [actual] | [status] | [ref] |
 | Partner alignment | [measure] | [target] | [actual] | [status] | [ref] |
 | Decision health | [measure] | [target] | [actual] | [status] | [ref] |
@@ -46,7 +53,7 @@ For every `deviation`: [what changed vs. last cycle · trigger implication — d
 
 ## Cadence & review
 
-- **This review cycle**: [cycle] · **Independent external governance review**: every 3 years (ILLUSTRATIVE — open question (b))
+- **This review cycle**: [cycle — quarterly per the (b) decision] · **Independent external governance review**: every 3 years (decided cadence layer)
 - **Feeds**: the annual strategic asset review (step 3) and the Section E portfolio rollup (portfolio-venture-monitoring step 1)
 
 ## Sign-off

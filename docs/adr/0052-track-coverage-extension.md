@@ -33,12 +33,12 @@ Adopt `docs/designs/2026-08-23-track-coverage-extension-design.md` Sections A–
 
 ## Open Questions (for the thresholds meeting — `docs/decisions/open/`)
 
-> [status sync 2026-08-24: the RAG dimension thresholds were decided 2026-08-23 (`docs/decisions/` records); (e) is resolved by ADR-0059 + the landed E.4 chain (PRs #103–#104). (a)–(d) remain open and are assembled as a decision pack: `docs/decisions/2026-08-24-residual-decisions-pack.md`.]
+> [status sync 2026-08-24: the RAG dimension thresholds were decided 2026-08-23 (`docs/decisions/` records); (e) is resolved by ADR-0059 + the landed E.4 chain (PRs #103–#104). **(a)–(d) are now DECIDED** — user-approved async 2026-08-24 in `docs/decisions/2026-08-24-class-c-decisions.md`: (a) TRL/MRL cutoffs confirmed with MRL hardware-only from A2-4; (b) equal weights + quarterly cycle; (c) ≥90%/2Q CFO-signed certification + 90d 10/15/20 attrition bands; (d) two-stage intent-split selection. The calibration corpus remains outstanding as the Green-cap-lift gate. Implementation lands via threshold PRs per that record's sequence section; the antitrust reversal rides ADR-0062.]
 
-- **(a)** TRL/MRL cutoffs per gate (Section D.1 table — all ILLUSTRATIVE).
-- **(b)** JV health-scorecard weights and review cadence (Section C.3 — seven dimensions, no weights yet).
-- **(c)** Synergy certification criteria for BAU demobilization (Section B.4 — what "certified by Finance" requires, and the 90-day attrition threshold).
-- **(d)** Deal-shape selection thresholds (Section A.3 — criterion weights/minimums at gate P3).
+- ~~**(a)** TRL/MRL cutoffs per gate~~ — **DECIDED 2026-08-24**, see above.
+- ~~**(b)** JV health-scorecard weights and review cadence~~ — **DECIDED 2026-08-24**, see above.
+- ~~**(c)** Synergy certification criteria for BAU demobilization~~ — **DECIDED 2026-08-24**, see above.
+- ~~**(d)** Deal-shape selection thresholds~~ — **DECIDED 2026-08-24**, see above.
 - **(e)** Whether portfolio-monitoring scorecards need a schema addition (Section E.4 — **ADR trigger**: no table stores JV/venture scorecards today; the monitoring script is blocked until this is decided).
 
 ## Consequences

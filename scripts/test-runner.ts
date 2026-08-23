@@ -1,6 +1,6 @@
 /**
  * test-runner.ts — Test Runner for TypeScript Test Suites
- * @version 1.1.0
+ * @version 1.2.0
  */
 import { readdirSync, existsSync, rmSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -32,7 +32,10 @@ interface TestFileResult {
 }
 
 const suites: TestSuite[] = [
-  { name: 'unit', pattern: '*.test.ts', timeout: 30000, dir: 'tests/unit', ext: '.test.ts' },
+  // unit: 120s per FILE — several files spawn the real python engine
+  // (pandas/numpy boot), which under the parallel runner's CPU contention
+  // legitimately exceeds 30s at file level even with per-test timeouts.
+  { name: 'unit', pattern: '*.test.ts', timeout: 120000, dir: 'tests/unit', ext: '.test.ts' },
   { name: 'integration', pattern: '*.test.ts', timeout: 120000, dir: 'tests', ext: '.test.ts' },
   { name: 'scenarios', pattern: '*', timeout: 300000, dir: 'tests/scenarios', ext: '' },
   { name: 'scripts', pattern: 'test-*.ts', timeout: 120000, dir: 'scripts', ext: '.ts' }
