@@ -41,12 +41,15 @@ steps:
       lagging), stage-progression rate, kill/graduate decision counts.
       Benchmark odds: 20-30% success is normal for CVC (ILLUSTRATIVE) —
       continued funding beyond that band requires explicit evidence.
-      Inputs today: gate_pass_record outputs, jv-lifecycle-governance
-      step 2 scorecards, the PMI synergy tracker. The per-venture
-      scorecard STORAGE schema does not exist yet — until ADR-0052 open
-      question (e) resolves (schema ADR -> portfolio-monitoring script ->
-      portfolio view, the longest-lead chain), this rollup is a procedure
-      artifact assembled per review cycle, not a scripted read.
+      Inputs: gate_pass_record outputs, jv-lifecycle-governance step 2
+      scorecards, the PMI synergy tracker. Per-venture rows persist via
+      db/repositories/venture-scorecard.repository.ts
+      recordVentureScorecardCycle (ADR-0059, migration 0024), and the
+      group rollup reads them via `bun scripts/co-newbiz/newbiz.ts
+      scorecard:rollup` — one review cycle as JSON: bifurcated
+      financial/strategic sections, venture_class rollup,
+      insufficient_evidence exceptions. The portfolio VIEW (server
+      routes + web page) is the remaining E.4 link.
   - id: 2
     gate: post_close
     agent_key: process-governance-manager

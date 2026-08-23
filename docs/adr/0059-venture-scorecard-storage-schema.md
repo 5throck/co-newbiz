@@ -1,6 +1,6 @@
 # ADR-0059: Venture/JV Scorecard Storage Schema (design-stage)
 
-**Status**: Accepted (2026-08-23 — design-stage decision answering ADR-0052 open question (e); the migration, monitoring script, and portfolio view are explicitly deferred to the follow-up E.4 implementation round per the user-approved 2026-08-23 scope)
+**Status**: Accepted (2026-08-23 — design-stage decision answering ADR-0052 open question (e); updated 2026-08-24 — storage + rollup script IMPLEMENTED: migration `db/migrations/0024_venture_scorecard.sql`, repository `db/repositories/venture-scorecard.repository.ts`, and the `scorecard:rollup` CLI (`scripts/co-newbiz/scorecard-rollup.ts` via `newbiz.ts`). The portfolio view — server routes + web page — is explicitly still pending the follow-on E.4 PR.)
 **Date**: 2026-08-23
 **Deciders**: process-governance-manager, platform-lead (design owner), pm
 
@@ -54,6 +54,15 @@ CREATE INDEX idx_venture_scorecard_rollup ON venture_scorecard(review_cycle, sec
 - `evidence_ref` reuses the ADR-0058 citation vocabulary — no new citation format.
 - No kill-criteria impact (scorecard rows are evidence, not gate-time halts — same boundary PR-12e drew).
 - Policy impact: none — no procedure/policy document changes; this ADR is the decision record for the future migration.
+
+### Implementation notes (2026-08-24)
+
+The storage + rollup-script links of the E.4 chain landed (migration 0024, repository, `scorecard:rollup` CLI); the design-stage text above stands unchanged. What implementation added or fixed beyond the sketch:
+
+- **Two tightenings beyond the original DDL sketch.** (1) `review_cycle TEXT NOT NULL CHECK (review_cycle GLOB '????-Q[1-4]')` — pinning the cycle shape is what makes the repository's lexicographic `MAX(review_cycle)` latest-cycle resolution safe. `GLOB` is a SQLite-only construct: this ADR's §1 sketch ratifies it as a deliberate exception to ADR-0002's portability rule (the repo is `bun:sqlite`-only per `db/client.ts`); a future `db:export --dialect postgres` path would need a portable rewrite of this CHECK. (2) `UNIQUE (run_id, source_procedure, section, measure_key)` — one row per measure per section per procedure per run, as double-write defense-in-depth (same precedent as migration 0023's kill-criteria record); the actual policy is the repository's one-record-per `(project_id, source_procedure, review_cycle)` guard.
+- **JV seven dimensions** map into the financial/strategic sections at the producing step (jv-lifecycle-governance#2, `source_procedure = 'jv-lifecycle-governance'`); `measure_key` preserves dimension identity so the shared rollup surface never flattens what the JV procedure measured.
+- **The ~20 measure cap is enforced by the repository, not SQL** — `SCORECARD_MEASURE_CAP = 20` per section in `venture-scorecard.repository.ts` (`recordVentureScorecardCycle` rejects an oversized section), per Decision 2's "the cap is a practice, not a schema constant".
+- **Access model for the future view** (the pending E.4 link): membership-filtered rollup — the server route intersects the portfolio with `listVisibleProjects` (deny-by-default, no admin bypass) and the payload carries scope-honesty meta stating which projects were excluded; `venture-portfolio-ic` reaches ventures through need-to-know memberships, never a blanket grant. The `scorecard:rollup` CLI keeps the group-operator posture of `rag`/`watch:run` (no actor guard — it is the group operator's aggregate view and performs no writes).
 
 ## Cross-references
 

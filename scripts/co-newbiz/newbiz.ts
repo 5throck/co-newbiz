@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.11.0
+// @version 1.12.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -21,6 +21,8 @@
  *                   model engine, scripts/co-newbiz/model.ts)
  *   diff            Variable-level bridge between two runs (model.ts)
  *   report          Render Markdown to docx/pdf/hwpx with glossary appendix
+ *   scorecard:rollup  Portfolio venture-scorecard rollup as JSON (ADR-0059;
+ *                   empty DB is a valid zero point, exit 0)
  *   user:create     Create an account (pending) — password via stdin
  *   user:approve    Approve a pending account
  *   user:list       List accounts (identity columns only, never hashes)
@@ -50,6 +52,7 @@ import { runSimulation } from "./simulate.ts";
 import { runFullPipeline } from "./fin-pipeline.ts";
 import { computeDriverTree } from "./driver-tree.ts";
 import { renderReport, type ReportFormat } from "./report.ts";
+import { runScorecardRollup } from "./scorecard-rollup.ts";
 import { runRagAssessment } from "./rag.ts";
 import { runWatchCycle, loadRescenariosDir } from "./watch-run.ts";
 import { runModelCreate, runModelDiff } from "./model.ts";
@@ -68,7 +71,7 @@ const [command, ...args] = process.argv.slice(2);
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
+  console.log("Commands: db:migrate, status, proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
 }
 
 switch (command) {
@@ -233,6 +236,21 @@ switch (command) {
       console.log(JSON.stringify(results, null, 2));
     } catch (err) {
       console.error(`report failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+    break;
+  }
+  case "scorecard:rollup": {
+    // Group-operator aggregate view (ADR-0059 E.4) — no actor guard by
+    // design; see scorecard-rollup.ts for the posture rationale.
+    const cycleIdx = args.indexOf("--review-cycle");
+    const dbPathIdx = args.indexOf("--db-path");
+    const reviewCycle = cycleIdx >= 0 ? args[cycleIdx + 1] : undefined;
+    const dbPath = dbPathIdx >= 0 ? args[dbPathIdx + 1] : undefined;
+    try {
+      console.log(runScorecardRollup({ reviewCycle, dbPath }));
+    } catch (err) {
+      console.error(`scorecard:rollup failed: ${(err as Error).message}`);
       process.exit(1);
     }
     break;

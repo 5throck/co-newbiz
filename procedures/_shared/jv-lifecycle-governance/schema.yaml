@@ -57,9 +57,12 @@ steps:
       & funding, governance health, value-distribution symmetry. Scorecard
       weights and cadence are a thresholds-meeting item (ADR-0052 open
       question b); independent external governance review every 3 years
-      (ILLUSTRATIVE cadence). Storage gap: no schema holds scorecards yet —
-      outputs are procedure artifacts until the Section E scorecard schema
-      lands (ADR-0052 open question (e)).
+      (ILLUSTRATIVE cadence). Outputs persist via
+      db/repositories/venture-scorecard.repository.ts
+      recordVentureScorecardCycle with source_procedure
+      'jv-lifecycle-governance' (ADR-0059, migration 0024): the seven
+      dimensions map into the financial/strategic sections, and
+      measure_key preserves dimension identity.
   - id: 3
     gate: post_close
     agent_key: group-review-agent
