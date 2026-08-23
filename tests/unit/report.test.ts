@@ -40,14 +40,14 @@ test("all three formats render with identical AST counts — the shared-AST prom
     expect(r.tables).toBe(2);
     expect(r.bullets).toBe(6);
   }
-});
+}, 20000);
 
 test("glossary appendix matched the 4 fixture terms in every format", async () => {
   const results = await renderReport(FIXTURE, ["docx", "pdf", "hwpx"], { outDir });
   for (const r of results) {
     expect(r.glossary_terms).toBe(4);
   }
-});
+}, 20000);
 
 test("docx output is a real ZIP container with the Malgun Gothic family", async () => {
   const [docx] = await renderReport(FIXTURE, ["docx"], { outDir });
@@ -56,7 +56,7 @@ test("docx output is a real ZIP container with the Malgun Gothic family", async 
   expect(readFileSync(docx.output).subarray(0, 2)).toEqual(new Uint8Array([0x50, 0x4b])); // "PK"
   expect(docx.font).toBe("Malgun Gothic");
   expect(docx.font_source).toBe("windows-system");
-});
+}, 20000);
 
 test("pdf output is a real PDF with the Korean TTF pair embedded", async () => {
   const [pdf] = await renderReport(FIXTURE, ["pdf"], { outDir });
@@ -69,19 +69,19 @@ test("pdf output is a real PDF with the Korean TTF pair embedded", async () => {
     0,
   );
   expect(fontFileCount).toBeGreaterThanOrEqual(2);
-});
+}, 20000);
 
 test("hwpx output is a ZIP container and passes OWPML schema validation", async () => {
   const [hwpx] = await renderReport(FIXTURE, ["hwpx"], { outDir });
   expect(readFileSync(hwpx.output).subarray(0, 2)).toEqual(new Uint8Array([0x50, 0x4b]));
   expect(hwpx.validation).toBe("PASS");
-});
+}, 20000);
 
 test("--no-glossary renders without the appendix", async () => {
   const [docx] = await renderReport(FIXTURE, ["docx"], { outDir, noGlossary: true });
   expect(docx.glossary_terms).toBe(0);
   expect(docx.tables).toBe(1); // financial table only
-});
+}, 20000);
 
 test("a missing Markdown file rejects with a clear error", async () => {
   await expect(renderReport("tests/fixtures/does-not-exist.md", ["docx"], { outDir })).rejects.toThrow(

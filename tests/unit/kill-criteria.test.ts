@@ -344,6 +344,73 @@ describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)
   });
 });
 
+// ADR-0062: the migration-0018 Decision 4 premise-lock reversal — antitrust
+// enters the evidence plane as ONE computed var (migration 0025), and
+// brownfield-screening's #13 arms as the screening-stage tripwire. The
+// trigger ESCALATES to the human gate; it never auto-kills.
+describe("brownfield-screening — the ADR-0062 antitrust tripwire (Class C record)", () => {
+  const HHI = "preliminary_hhi_flags_certain_block";
+
+  function insertFinding(projectId: string, hhiBefore: number | null, hhiAfter: number | null): void {
+    db.run(
+      "INSERT INTO antitrust_finding (id, project_id, market_definition, hhi_before, hhi_after, created_at) VALUES (?,?,?,?,?,?)",
+      [ulid(), projectId, "test-market", hhiBefore, hhiAfter, NOW],
+    );
+  }
+
+  function evaluateBScreening(projectId: string, runId: string) {
+    return evaluateKillCriteria(db, { runId, projectId, procedure: "brownfield-screening", now: EVALUATED_AT });
+  }
+
+  test("the registry loads 2 entries: the enabled tripwire (escalate_to_risk_officer, both anchors) + 1 predicate-null inert", () => {
+    const projectId = insertProject();
+    const runId = insertRun(projectId);
+
+    const result = evaluateBScreening(projectId, runId);
+
+    expect(result.evaluated).toBe(1);
+    expect(result.inert).toBe(1);
+    expect(result.outcomes[0].criterion_id).toBe(HHI);
+    expect(result.outcomes[0].action).toBe("escalate_to_risk_officer");
+    expect(result.outcomes[0].policy_id).toBe("gd-0024-class-c-decisions");
+    expect(result.outcomes[0].thresholds_source).toContain("2026-08-24-class-c-decisions.md");
+  });
+
+  test("no antitrust_finding rows → the var fills missing → UNASSESSED-listed, never a silent pass", () => {
+    const projectId = insertProject();
+    const runId = insertRun(projectId);
+
+    const result = evaluateBScreening(projectId, runId);
+
+    expect(result.triggered).toHaveLength(0);
+    expect(result.unassessed).toEqual([HHI]);
+  });
+
+  test("a finding inside the presumption zone (HHI>1800 AND delta>100) triggers the escalation", () => {
+    const projectId = insertProject();
+    insertFinding(projectId, 1500, 1950);
+    const runId = insertRun(projectId);
+
+    const result = evaluateBScreening(projectId, runId);
+
+    expect(result.triggered).toHaveLength(1);
+    expect(result.triggered[0].criterion_id).toBe(HHI);
+    expect(result.triggered[0].action).toBe("escalate_to_risk_officer");
+    expect(result.unassessed).toEqual([]);
+  });
+
+  test("concentrated but sub-delta movement (HHI>1800, delta=100 exactly) does NOT trigger", () => {
+    const projectId = insertProject();
+    insertFinding(projectId, 1750, 1850);
+    const runId = insertRun(projectId);
+
+    const result = evaluateBScreening(projectId, runId);
+
+    expect(result.triggered).toHaveLength(0);
+    expect(result.unassessed).toEqual([]);
+  });
+});
+
 describe("fill-once semantics (ADR-0005) and composition with rule-assessment", () => {
   test("re-evaluating the same run is idempotent — no re-fill, no throw, same result", () => {
     const projectId = insertProject();

@@ -206,8 +206,13 @@ describe("evidence_var seeds", () => {
     for (const row of rows) expect(row.created_at, row.var_key).toBe(SEED_CREATED_AT);
   });
 
-  test("antitrust is excluded BY PREMISE (risk agenda §2.1) — no var, no rule reference, no join row", () => {
-    expect((db.query("SELECT COUNT(*) AS c FROM evidence_var WHERE var_key LIKE '%antitrust%'").get() as { c: number }).c).toBe(0);
+  test("antitrust was excluded BY PREMISE at 0018 — ADR-0062 (Class C record) reversed it to exactly ONE tripwire var, still no RAG rule", () => {
+    // The 0018 premise held until 2026-08-24: docs/decisions/2026-08-24-class-c-decisions.md
+    // reversed it and ADR-0062 scoped the reversal to ONE computed var seeded by
+    // migration 0025 — a kill-criteria tripwire, deliberately NOT a grading input.
+    const vars = (db.query("SELECT var_key FROM evidence_var WHERE var_key LIKE '%antitrust%'").all() as { var_key: string }[]).map((r) => r.var_key);
+    expect(vars).toEqual(["antitrust.presumption_screens_triggered"]);
+    // The double-counting guard survives the reversal: no rag_rule grades over it.
     expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE condition_expr LIKE '%antitrust%'").get() as { c: number }).c).toBe(0);
     expect((db.query("SELECT COUNT(*) AS c FROM rag_rule_variable WHERE var_key LIKE '%antitrust%'").get() as { c: number }).c).toBe(0);
   });

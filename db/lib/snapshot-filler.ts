@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -134,6 +134,8 @@ export const SNAPSHOT_VAR_KEYS: readonly string[] = [
   "risk.partner_dependency_risk",
   // 0019 — the D-M-TE-8 load-bearing count
   "cert.load_bearing_non_transferable_on_coc",
+  // 0025 — ADR-0062 antitrust early-screen tripwire (the 0018-D4 reversal)
+  "antitrust.presumption_screens_triggered",
 ];
 
 function missing(varKey: string): SnapshotWrite {
@@ -601,6 +603,36 @@ function fillPartnerVars(db: Database, projectId: string): SnapshotWrite[] {
 }
 
 // ---------------------------------------------------------------------------
+// Family F — antitrust early screen (ADR-0062, migration 0025)
+// ---------------------------------------------------------------------------
+
+/**
+ * Count of antitrust_finding rows inside the 2023 DOJ/FTC structural-
+ * presumption zone (post-merger HHI > 1,800 AND delta > 100 — thresholds of
+ * record live in docs/decisions/2026-08-24-class-c-decisions.md + ADR-0062;
+ * regulators index-adjust them, so they are registry-predicate constants,
+ * never schema or profile constants).
+ *
+ * Honesty rule: NO antitrust_finding row means the screen has not been run —
+ * `missing` (UNASSESSED at evaluation), never present-0. Any finding row
+ * (including remedy_type='none' outcomes) makes the count determinate.
+ */
+function fillAntitrustVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("antitrust.presumption_screens_triggered");
+  const any = (db.query("SELECT COUNT(*) AS n FROM antitrust_finding WHERE project_id = ?").get(projectId) as unknown as { n: number }).n;
+  if (any === 0) return row;
+  const tripped = (db.query(
+    "SELECT COUNT(*) AS n FROM antitrust_finding WHERE project_id = ? AND hhi_after IS NOT NULL AND hhi_before IS NOT NULL AND hhi_after > 1800 AND (hhi_after - hhi_before) > 100",
+  ).get(projectId) as unknown as { n: number }).n;
+  row.value_num = tripped;
+  row.evidence_ref = "antitrust_finding";
+  const latest = db.query("SELECT MAX(created_at) AS at FROM antitrust_finding WHERE project_id = ?").get(projectId) as unknown as { at: string | null };
+  row.observed_at = latest.at;
+  row.status = "present";
+  return row;
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -612,8 +644,9 @@ const SQL_BOUND_INDUSTRIES = "SELECT industry_id FROM project_industry WHERE pro
 
 /**
  * Fill a run's variable snapshot: one explicit row per evidence var the
- * 0017/0018/0019 seed set defines (22), statuses per the record contracts.
- * Runs are immutable — filling an already-filled run throws on the PK.
+ * 0017/0018/0019/0025 seed sets define (23), statuses per the record
+ * contracts. Runs are immutable — filling an already-filled run throws on
+ * the PK.
  */
 export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()): SnapshotFillResult {
   const now = opts.now ?? new Date();
@@ -638,6 +671,7 @@ export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()):
     ...fillContingentVars(db, opts.projectId, opts.runId, now),
     fillCovenantVar(db, opts.projectId),
     ...fillPartnerVars(db, opts.projectId),
+    fillAntitrustVar(db, opts.projectId),
   ];
   const written = new Set(rows.map((r) => r.var_key));
   if (rows.length !== SNAPSHOT_VAR_KEYS.length || SNAPSHOT_VAR_KEYS.some((k) => !written.has(k))) {

@@ -9,8 +9,11 @@ effective_from: "2026-08-23"
 gate: DD
 
 # ADR-0052 §D.1 TRL/MRL evidence matrix (items rbd-08..rbd-13): each item
-# names the OUR-gate it binds at; the readiness cutoffs are ILLUSTRATIVE
-# until the thresholds meeting (ADR-0052 open question (a)). Enforcement
+# names the OUR-gate it binds at; the readiness cutoffs were ILLUSTRATIVE
+# until APPROVED by docs/decisions/2026-08-24-class-c-decisions.md (a) —
+# confirmed verbatim with MRL hardware-making-ventures-only from A2-4 and the
+# TRL 5→7 rows as the recycle/hold zone (external anchors: EU EIC windows,
+# DoD milestone congruence). Enforcement
 # wiring: this checklist is referenced by brownfield-pre-fs and brownfield-dd
 # (their gates); at the other gates the applicable rows ride the
 # gate_pass_record completeness check via stage-gate-governance. The gate
@@ -55,7 +58,7 @@ items:
     mandatory: false
     waiver_eligible: true
   - id: rbd-08
-    text: "TRL/MRL evidence matrix — SCREENING row (ADR-0052 §D.1; cutoff ILLUSTRATIVE until the thresholds meeting): scientific basis, roadmap pull, preliminary prior-art/FTO screen; readiness floor TRL 1-2. Typical kill: no plausible principle-to-application path; roadmap absent"
+    text: "TRL/MRL evidence matrix — SCREENING row (ADR-0052 §D.1; cutoff APPROVED per docs/decisions/2026-08-24-class-c-decisions.md (a)): scientific basis, roadmap pull, preliminary prior-art/FTO screen; readiness floor TRL 1-2. Typical kill: no plausible principle-to-application path; roadmap absent"
     mandatory: true
     waiver_eligible: true
   - id: rbd-09

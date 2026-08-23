@@ -120,7 +120,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `sync-skill-status.ts` | L0 | 1.0.1 | active | — | — | L0+L1 | — |
 | `sync-skills.ts` | L0 | 1.4.1 | active | `--dir <path>`, `--all-variants` | — | L0+L1 | — |
 | `team-builder.ts` | L0 | 1.2.1 | active | —| —| L0+L1 | —|
-| `test-runner.ts` | L0 | 1.1.0 | active | `--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms>` | —| L0+L1 | —|
+| `test-runner.ts` | L0 | 1.2.0 | active | `--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms>` | —| L0+L1 | v1.2.0: unit per-file timeout 30s→120s — python-engine test files legitimately exceed 30s at file level under parallel CPU contention (per-test timeouts alone cannot cover the file budget) |
 | `translate-readme.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `validate-agents.ts` | L0 | 1.0.5 | active | —| —| L0+L1 | —|
 | `validate-doc-folder.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|

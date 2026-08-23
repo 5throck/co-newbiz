@@ -166,7 +166,9 @@ describe("governance_doc seeds — the records anchor the rules they authorize",
   });
 
   test("exactly three rows land, each field verbatim — the doc of record IS the decision record file", () => {
-    expect((db.query("SELECT COUNT(*) AS c FROM governance_doc").get() as { c: number }).c).toBe(3);
+    // 0025 later adds gd-0024-class-c-decisions — scope this assertion to
+    // THIS migration's own seeds (the verbatim contract is per-seed).
+    expect((db.query("SELECT COUNT(*) AS c FROM governance_doc WHERE id LIKE 'gd-0022-%'").get() as { c: number }).c).toBe(3);
     for (const expected of GOVERNANCE_DOCS) {
       const row = db
         .query("SELECT id, layer, key, title, version, enforceability, owner_agent, doc_path, effective_from FROM governance_doc WHERE id = ?")
@@ -176,7 +178,7 @@ describe("governance_doc seeds — the records anchor the rules they authorize",
   });
 
   test("the (layer, key) uniqueness index discipline holds — three distinct keys", () => {
-    const keys = (db.query("SELECT key FROM governance_doc ORDER BY key").all() as { key: string }[]).map((r) => r.key);
+    const keys = (db.query("SELECT key FROM governance_doc WHERE id LIKE 'gd-0022-%' ORDER BY key").all() as { key: string }[]).map((r) => r.key);
     expect(keys).toEqual(["market-thresholds", "risk-thresholds", "technical-execution-thresholds"]);
   });
 });
@@ -301,9 +303,9 @@ describe("D-M-TE-5 double-counting guard (join rows)", () => {
     }
   });
 
-  test("premise lock: no antitrust_finding var exists in the registry at all (0018 premise, re-verified at activation)", () => {
+  test("premise lock history: the 0018 antitrust exclusion held at activation; ADR-0062 later reversed it to exactly ONE tripwire var", () => {
     const antitrust = (db.query("SELECT var_key FROM evidence_var WHERE var_key LIKE 'antitrust%'").all() as { var_key: string }[]).map((r) => r.var_key);
-    expect(antitrust).toEqual([]);
+    expect(antitrust).toEqual(["antitrust.presumption_screens_triggered"]);
   });
 });
 
@@ -318,7 +320,8 @@ describe("migration idempotence", () => {
     expect(skipped.length).toBe(readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).length);
 
     expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE enabled = 1").get() as { c: number }).c).toBe(18);
-    expect((db.query("SELECT COUNT(*) AS c FROM governance_doc").get() as { c: number }).c).toBe(3);
+    // 0022's three + 0025's gd-0024-class-c-decisions
+    expect((db.query("SELECT COUNT(*) AS c FROM governance_doc").get() as { c: number }).c).toBe(4);
     expect(ruleRow("market-dd-right-to-win").enabled).toBe(0);
   });
 });

@@ -3,9 +3,9 @@
   "criterion_id": "preliminary_hhi_flags_certain_block",
   "title": "Preliminary HHI flags a certain block",
   "action": "escalate_to_risk_officer",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; premise-locked by migration-0018 Decision 4 (antitrust vars locked out of evidence_var) — extension needs a reversal ADR, not a seed; market.bargaining_power_hhi is value-chain HHI, not antitrust screening HHI — do not reuse."
+  "predicate": { "op": "count", "var": "antitrust.presumption_screens_triggered", "cmp": "gte", "value": 1 },
+  "enabled": true,
+  "policy_id": "gd-0024-class-c-decisions",
+  "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (antitrust #13 reversal, user-approved async) + ADR-0062; presumption zone = 2023 DOJ/FTC Merger Guidelines (post-merger HHI > 1800 AND delta > 100)",
+  "notes": "Activated by ADR-0062 — the migration-0018 Decision 4 premise-lock reversal the Class C record authorized. antitrust.presumption_screens_triggered (migration 0025) counts antitrust_finding rows in the structural-presumption zone; NO finding row means not-yet-screened and fills missing (ADR-0049 UNASSESSED at evaluation, never a silent pass). The trigger ESCALATES to the human gate — it does not auto-kill; remedy-path existence is asked there. Scope guard: this var feeds no rag_rule (regulatory_permit keeps exclusive grading claim on antitrust_finding); the >30% share screen awaits a market-share column; filing thresholds (HSR-2026 $133.9M / KFTC 300bn-30bn / EUR 5bn-250M) stay dated profile fields. Classification history: ADR-0060 class (iii) premise-locked -> unlocked by the Class C decision."
 }

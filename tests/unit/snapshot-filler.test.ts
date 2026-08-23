@@ -897,14 +897,14 @@ describe("partner family — active pool + dependency", () => {
 // ---------------------------------------------------------------------------
 
 describe("fillSnapshot entry point", () => {
-  test("a bare project fills exactly 22 rows — one per seeded var, every FK valid; covenant is the one present 0", () => {
+  test("a bare project fills exactly 23 rows — one per seeded var, every FK valid; covenant is the one present 0", () => {
     const pid = insertProject();
     const runId = insertRun(pid);
     const result = fillSnapshot({ runId, projectId: pid, now: FILL_NOW }, db);
-    expect(result.rows).toHaveLength(22);
+    expect(result.rows).toHaveLength(23);
     expect(result.rows.map((r) => r.var_key).sort()).toEqual([...SNAPSHOT_VAR_KEYS].sort());
     const stored = db.query("SELECT var_key, status, value_num FROM project_variable_snapshot WHERE run_id = ?").all(runId) as Array<{ var_key: string; status: string; value_num: number | null }>;
-    expect(stored).toHaveLength(22);
+    expect(stored).toHaveLength(23);
     // Bare project: everything missing except covenant — no debt → present 0 (D-M-RISK-5)
     const present = stored.filter((r) => r.status === "present");
     expect(present.map((r) => r.var_key)).toEqual(["risk.covenants_breached"]);
@@ -928,5 +928,49 @@ describe("fillSnapshot entry point", () => {
   test("a nonexistent run is rejected", () => {
     const pid = insertProject();
     expect(() => fillSnapshot({ runId: "run-does-not-exist", projectId: pid, now: FILL_NOW }, db)).toThrow(/does not exist/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Family F — antitrust.presumption_screens_triggered (ADR-0062, migration 0025)
+// ---------------------------------------------------------------------------
+
+describe("antitrust early-screen family (ADR-0062)", () => {
+  function insertFinding(pid: string, hhiBefore: number | null, hhiAfter: number | null, at = "2026-08-24T00:00:00Z"): void {
+    db.run(
+      "INSERT INTO antitrust_finding (id, project_id, market_definition, hhi_before, hhi_after, created_at) VALUES (?,?,?,?,?,?)",
+      [ulid(), pid, "test-market", hhiBefore, hhiAfter, at],
+    );
+  }
+
+  test("no antitrust_finding rows → missing — not-yet-screened is never present-0 (ADR-0049)", () => {
+    const pid = insertProject();
+    const runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "antitrust.presumption_screens_triggered")).toMatchObject({ status: "missing", value_num: null });
+  });
+
+  test("findings exist but none reach the presumption zone → present 0", () => {
+    const pid = insertProject();
+    // 2,400 with delta 60: concentrated but below the >100 delta half of the conjunction.
+    insertFinding(pid, 2340, 2400);
+    // delta 300 but post-HHI 1,500: movement without presumption-level concentration.
+    insertFinding(pid, 1200, 1500);
+    const runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "antitrust.presumption_screens_triggered")).toMatchObject({ status: "present", value_num: 0 });
+  });
+
+  test("a row inside the 2023-guidelines zone (HHI>1800 AND delta>100) counts; boundary values excluded", () => {
+    const pid = insertProject();
+    insertFinding(pid, 1500, 1950); // HHI 1950 > 1800, delta 450 > 100 → trips
+    insertFinding(pid, 1750, 1850); // delta exactly 100 → NOT > 100 → excluded
+    insertFinding(pid, null, 2000); // unassessed before-HHI → excluded
+    const runId = insertRun(pid);
+    const result = fillSnapshot({ runId, projectId: pid, now: FILL_NOW }, db);
+    expect(snap(runId, "antitrust.presumption_screens_triggered")).toMatchObject({ status: "present", value_num: 1 });
+    const row = result.rows.find((r) => r.var_key === "antitrust.presumption_screens_triggered");
+    expect(row?.evidence_ref).toBe("antitrust_finding");
+    expect(row?.observed_at).toBe("2026-08-24T00:00:00Z");
   });
 });
