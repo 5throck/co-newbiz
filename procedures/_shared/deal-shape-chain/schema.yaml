@@ -1,0 +1,116 @@
+schema_version: "1.0"
+procedure_id: shared-deal-shape-chain
+title: "Deal-Shape Selection Chain (Partner Track)"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+# Entry is a human funnel-entry decision (a named capability gap justifies an
+# external search), made BEFORE any case classification exists — the P3
+# outcome WRITES the classification axes (ADR-0047 §A.5), so no pre-existing
+# routing var can gate this procedure. applies_when is deliberately absent:
+# the migration-0014 registry is the only legal var vocabulary, and inventing
+# a "partner need" var is out of scope for PR-12a (design §A.1 P0 / preamble
+# rule 2 — nothing here is enforcement-active).
+applicability: conditional
+workflow_type: core
+gate: Screening   # entry station; the chain runs parallel to the market-shaped chains, not inside the six-gate sequence
+owner_agent: partnership-agent
+legal_basis:
+  - "ADR-0031 (partner-sourcing failure modeled as deal termination, not delay)"
+  - "ADR-0047 §A.5 (the P3 outcome writes the classification axes — never a fifth origin value)"
+  - "ADR-0052 (track coverage extension: Section A)"
+  - "docs/designs/2026-08-23-track-coverage-extension-design.md §A"
+
+steps:
+  - id: 1
+    gate: P0
+    agent_key: partnership-agent
+    skill_key: partner-sourcing-strategy
+    output_type: partner_sourcing_funnel
+    description: >
+      Need & funnel entry [rbd 4.1, 4.2]: a named technology-roadmap gap
+      justifies an external search before any candidate work starts — pt-01 of
+      `checklists/partnership-checklist.yaml` (capability gap stated before
+      sourcing) is the entry condition. The scouting funnel assigns each
+      candidate a recommended deal shape and route; funnel discipline follows
+      ADR-0031 (a hard partner dependency that fails to source is a kill
+      candidate, never a schedule delay — pt-05).
+  - id: 2
+    gate: P1
+    agent_key: partnership-agent
+    skill_key: partner-sourcing-strategy
+    output_type: partner_fit_screen_result
+    description: >
+      Strategic fit & partner screen — knock-out + scorecard on the
+      PARTNERSHIP, not the market [rbd 2.2], reusing the knock-out+scorecard
+      method of `strategic-fit-screening` (PR-10) with partner-facing
+      criteria: strategic complementarity, technical capability against our
+      next gate, operational/cultural fit, financial health, alliance track
+      record, readiness (pt-02..pt-04, pt-08..pt-12 of
+      `checklists/partnership-checklist.yaml` v1.1.0). Scorecard weights are
+      ILLUSTRATIVE until the thresholds meeting (ADR-0052 open question d).
+      Every rejection records written feedback (screen decision vocabulary
+      Go/Kill/Hold/Recycle).
+  - id: 3
+    gate: P2
+    agent_key: partnership-agent
+    skill_key: partner-due-diligence
+    output_type: partner_dd_report
+    description: >
+      Partner due diligence — the seven workstreams [rbd 2.3, 2.6]: legal/
+      title, technical (TRL/MRL evidence against OUR next gate), collaboration
+      capability, financial, commercial-conflict, cultural, exit/
+      reversibility — producing the standard report with a deal-shape
+      recommendation. Referencing at least two of the partner's other alliance
+      partners is a required evidence item [rbd 2.4]. Red findings here feed
+      the kill criteria below.
+  - id: 4
+    gate: P3
+    agent_key: legal-counsel
+    skill_key: jv-structuring
+    output_type: deal_shape_decision
+    description: >
+      Deal-shape selection on the five criteria (design §A.3: control need,
+      IP position, capital at risk, exit optionality, time-to-market) with
+      the P2 report's recommendation as input; JV-shaped outcomes get the
+      full `jv-structuring` method [rbd 3.4]. The full-M&A outcome ROUTES OUT
+      to the brownfield chain unchanged (design §A.2 last row — this chain
+      stops there). The decision writes the classification axes per ADR-0047
+      §A.5: license-in/co-development typically greenfield+external, minority
+      greenfield+hybrid, JV greenfield+joint, M&A brownfield+external — the
+      chain never invents a fifth origin value.
+  - id: 5
+    gate: P4
+    agent_key: legal-counsel
+    skill_key: investment-vehicle-structuring
+    output_type: presigning_shape_check
+    description: >
+      Contracting & execution: the pre-signing gate is keyed to the selected
+      shape's checklist in `checklists/deal-shape-presigning-checklist.yaml`
+      (license-in / co-development / minority / JV — design §A.2), with
+      structure review reusing `investment-vehicle-structuring` (PR-10). For
+      entity-bearing shapes, formation ROUTES INTO
+      `entity-establishment-execution` (this chain owns the decision to
+      choose the shape, not the formation itself — design §A.2 JV row); JV
+      formation mechanics ride the `entity-formation` JV addendum ef-13..17.
+  - id: 6
+    gate: P5
+    agent_key: partnership-agent
+    skill_key: project-review
+    output_type: alliance_post_launch_review
+    description: >
+      Launch & post-launch review [rbd 2.1 phase 6-7]: kickoff plan, then a
+      dated review of the alliance against its SELECTION RATIONALE (the P3
+      decision, not a generic health check). Owned by partnership-agent
+      (design open decision 4, PM decision 2026-08-23); feeds JV lifecycle
+      monitoring (design §C) for JV-shaped outcomes or portfolio monitoring
+      (design §E) for minority stakes — both PR-12-sequenced.
+
+kill_criteria:
+  - condition: partner_dd_red_ip_chain
+    action: halt   # partner DD red finding on IP title/chain or encumbrances conflicting with our exclusivity [rbd 2.3, 2.6]
+  - condition: partner_dd_red_financial_distress
+    action: halt   # partner cannot survive the alliance horizon including the exit tail [rbd 2.2]
+  - condition: no_viable_deal_shape
+    action: mark_conditional   # registry action vocabulary has no "Recycle" [rbd 1.1]; recycle semantics — the need returns to the scouting funnel (P0) with the screen's written feedback, it is not a Kill

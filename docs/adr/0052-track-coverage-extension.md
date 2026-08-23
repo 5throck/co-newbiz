@@ -1,6 +1,6 @@
 # ADR-0052: Track coverage extension — deal-shape chain, PMI, JV lifecycle, R&BD gating, portfolio monitoring
 
-**Status**: Proposed
+**Status**: Accepted (2026-08-23 — user approval to proceed with implementation; Section A landed as PR-12a, Sections B–F sequenced)
 **Date**: 2026-08-23
 **Deciders**: process-governance-manager, compliance-officer, legal-counsel, market-intelligence-agent, quant-methodologist
 
@@ -45,7 +45,9 @@ Adopt `docs/designs/2026-08-23-track-coverage-extension-design.md` Sections A–
 - **graph-map coverage grows** once PR-12 lands: `partnership-agent`, `pmi-agent`, `quant-methodologist` gain dispatches; eight zero-dispatch skills gain skill_key references. Until PR-12, the zero-dispatch audit findings stand unchanged.
 - **No six-validator impact**: `brownfield-dd` steps 6–11 (validators, certification last at 11) and the no-waiver completeness check at 14 are outside this design's blast radius.
 - **Sequencing dependency**: the portfolio-monitoring script follows, not precedes, open-question (e) — schema ADR → script → portfolio view is the longest lead chain; cells 5/6/9 of the classification matrix stay thin until it completes.
-- **PM's flagged decisions carried**: JV lifecycle extension-vs-sibling, PMI partial-stake scope predicate, P1 checklist reuse depth, P5 review ownership (design doc §"Decisions this spec left open").
+- **Section A landed (PR-12a, 2026-08-23)**: `procedures/_shared/deal-shape-chain/` — six steps P0–P5, closing `partnership-agent`'s zero-dispatch status; three kill-criteria registry entries (all inert — predicates null until open questions (a)–(d) resolve; registry executable baseline stays 2); six new output types; `checklists/deal-shape-presigning-checklist.yaml` (§A.2 shape gate sets); `checklists/partnership-checklist.yaml` v1.1.0 (+pt-08..pt-12, the P1 screen criteria). `applies_when` is deliberately absent: entry is a human funnel-entry decision made before case classification exists — the P3 outcome *writes* the classification axes, so no legal routing var can gate it (the migration-0014 registry is the only var vocabulary).
+- **PM decisions on the design's four open items (2026-08-23)**: (1) JV lifecycle — **sibling procedure** remains the lean, decided at PR-12c; (2) PMI partial-stake predicate — deferred to PR-12b as the design states; (3) P1 checklist — **reuse `chk-partnership`, extended to v1.1.0** (no separate chk-partner-fit; the shape-specific pre-signing content lives in its own `chk-deal-shape-presigning`); (4) P5 review ownership — **partnership-agent** (the design default), review executed via the existing `project-review` skill, feeding Section C/E monitoring.
+- **Policy impact (lifecycle rule, `procedures/**` + `checklists/**` modified)**: additions only — no existing procedure, step, or checklist item was modified or removed (`partnership-checklist.yaml` gains items; pt-01..pt-07 text unchanged). No in-flight `project_policy_pin` is affected: pins bind policy documents, and this change binds no new policy. This ADR is the required decision record.
 
 ## Source basis
 

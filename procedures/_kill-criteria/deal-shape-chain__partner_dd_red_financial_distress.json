@@ -1,0 +1,11 @@
+{
+  "procedure": "deal-shape-chain",
+  "criterion_id": "partner_dd_red_financial_distress",
+  "title": "Partner cannot survive the alliance horizon including the exit tail",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "Design section A.4 [rbd 2.2]: partner financial distress such that the partner cannot survive the alliance horizon INCLUDING the exit tail (post-exit obligations, wind-down costs). Declared in YAML, not yet executable — predicate null by design until the thresholds meeting (ADR-0052 open questions; activation convention per ADR-0057)."
+}

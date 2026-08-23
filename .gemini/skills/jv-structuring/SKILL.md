@@ -12,7 +12,7 @@ description: >
   Use when: "JV structuring", "joint venture governance", "veto matters",
   "drag-along tag-along", "deadlock resolution", "technology contribution
   valuation".
-version: 1.0.0
+version: 1.1.0
 last_reviewed: 2026-08-20
 status: active
 owner: partnership-agent
@@ -20,6 +20,8 @@ prerequisites:
   - partner-due-diligence
 metadata:
   type: domain
+  procedure_keys:
+    - deal-shape-chain
   triggers:
     - JV structuring
     - joint venture governance

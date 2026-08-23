@@ -18,10 +18,12 @@
 # Read statically by procedures/_validate.ts — no database dependency.
 
 output_types:
+  alliance_post_launch_review: "Deal-shape chain P5 — post-launch review of the alliance against its P3 selection rationale (ADR-0052 §A)"
   capex_schedule_with_permit_critical_path: "GF FS — capex schedule with the permit critical path folded into the timing"
   certification_transferability_check: "Six-validator result — CoC certification transferability confirmed against the certifying body's own rules (inference disallowed)"
   dd_finding: "Brown Field DD — one finding row with value_impact, linked to an assumption_key (never prose-only)"
   dd_valuation_bridge: "Audit of the assumption_key / value_impact connections across all DD workstreams"
+  deal_shape_decision: "Deal-shape chain P3 — selected shape on the five criteria, with the classification axes it writes (ADR-0052 §A.3/A.5)"
   deal_structure_hypothesis: "BF — four-axis structure hypothesis (asset/stock, stake, instrument mix, vehicle) with rationale"
   deal_structure_review: "Review of the four-axis hypothesis on the tax / liability-isolation / financing-leverage / exit axes"
   entity_ic_decision: "Entity IC — approved | rejected | conditional | withdrawn_pending_resubmission (human authority, ADR-0053)"
@@ -39,10 +41,14 @@ output_types:
   internal_prescreen_record: "GF-internal — pre-feasibility self-check before the full procedure entry"
   kill_criteria_check: "Explicit pass/fail against every Kill Criterion applicable at the gate"
   market_sizing: "TAM / growth estimate — proxy chain where no direct market data exists"
+  partner_dd_report: "Deal-shape chain P2 — seven-workstream partner DD report with deal-shape recommendation (ADR-0052 §A)"
+  partner_fit_screen_result: "Deal-shape chain P1 — knock-out + scorecard screen on the partnership, not the market (ADR-0052 §A)"
+  partner_sourcing_funnel: "Deal-shape chain P0 — scouting funnel with per-candidate recommended deal shape and route (ADR-0052 §A)"
   people_transfer_record: "Internal-origin — employment / IP transfer record for the entity formation"
   portfolio_overlap_finding: "Group IC — overlap finding against the existing portfolio"
   pre_feasibility_self_check: "Pre-FS — the gate's self-check against its own checklist"
   preliminary_hhi_screen: "Screening — rough HHI antitrust pre-filter (the full six-way cross-check runs at DD)"
+  presigning_shape_check: "Deal-shape chain P4 — pre-signing gate check against the selected shape's checklist (ADR-0052 §A.2)"
   qoe_normalized_ebitda: "QoE — normalized EBITDA bridge for Brown Field DD"
   rag_assessment_proposed: "Six-dimension AI-PROPOSED RAG grade — a proposal, never a decision"
   related_party_transaction_finding: "Intra-group Fair Trade Act Art. 47 screen finding"

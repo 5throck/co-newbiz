@@ -11,7 +11,7 @@ description: >
 
   Use when: "partner due diligence", "partner compliance screening",
   "sanctions screening for a partner", "post-transfer competitor risk".
-version: 1.0.0
+version: 1.1.0
 last_reviewed: 2026-08-20
 status: active
 owner: partnership-agent
@@ -19,6 +19,8 @@ prerequisites:
   - partner-sourcing-strategy
 metadata:
   type: domain
+  procedure_keys:
+    - deal-shape-chain
   triggers:
     - partner due diligence
     - partner compliance screening
