@@ -11,8 +11,8 @@ description: >
 
   Use when: "expert interview", "expert network call", "source
   triangulation", "disconfirming questions".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: commercial-dd-agent
 prerequisites: none
@@ -58,11 +58,28 @@ single-source claim.
    the claim's downstream assumption is tagged `assumed` with the
    limitation in `rationale`, never `derived` — the confidence label must
    match the actual evidentiary strength
+6. **Run structured elicitation, not a conversation** (v1.1.0 — SHELF /
+   Stanford-SRI protocol discipline per
+   `docs/research/readiness-gap-best-practice.md` Area 3): (a) frame the
+   question set BEFORE the interview (what quantity, over what period,
+   under what definition); (b) pin the probability vocabulary — unpinned
+   words like "likely" mean different things to different people and are
+   not usable as recorded evidence; (c) elicit ranges/quantiles, not point
+   answers, and record the uncertainty; (d) where multiple experts are
+   interviewed, aggregate explicitly (which experts, how combined) rather
+   than quoting the most quotable one
+7. **Reference this protocol from the R&BD evidence rows**: when a
+   checklist item in `checklists/rbd-technology-checklist.yaml` calls for
+   expert-based validation evidence, the writeup cites which protocol
+   elements above were applied — "we asked an expert" is not a validation
+   evidence row
 
 ## Output Format
 
 - Interview writeup with source count/independence noted per claim,
   triangulation status, `assumed`-vs-`derived` tagging applied correctly downstream
+- Elicitation record: pre-framed question set · pinned vocabulary used ·
+  ranges/quantiles with uncertainty · expert aggregation method
 
 ## Related Skills
 

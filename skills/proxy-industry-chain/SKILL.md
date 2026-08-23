@@ -11,8 +11,8 @@ description: >
 
   Use when: "proxy chain", "no direct market data", "chain reliability
   grade", "demand estimation via proxy industry".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: quant-methodologist
 prerequisites:
@@ -68,11 +68,22 @@ chain reliability caps the confidence of every downstream conclusion.
    `proxy_link` betas are never shared with or read by
    `value-chain-linkage-analysis`'s `value_chain_link` table (ADR-0025) —
    they answer different questions
+7. **Record the reference-class inputs explicitly** (v1.1.0 — reference-class
+   forecasting discipline per `docs/research/readiness-gap-best-practice.md`
+   Area 3): a proxy chain IS a reference class — record (a) the reference
+   class used, (b) its base rate / outcome distribution, (c) the dispersion,
+   and (d) the adjustment rationale for why THIS target tracks the class.
+   These four are named inputs to `distributional_valuation`
+   (monte-carlo-simulation consumes the dispersion as demand-driver spread,
+   ADR-0052 §D.4) — an unrecorded reference class is an undocumented
+   assumption, not a method
 
 ## Output Format
 
 - Proxy chain with per-hop classification and grade, overall chain
   reliability grade (A/B/C), the resulting data-confidence cap for the RAG dimension
+- Reference-class record: class used · base rate/distribution · dispersion ·
+  adjustment rationale (feeds `distributional_valuation`)
 
 ## Related Skills
 
