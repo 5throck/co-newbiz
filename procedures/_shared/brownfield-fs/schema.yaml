@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-fs
 title: "Brown Field Full Feasibility"
 scope: shared
 level: entity
-version: "1.2.0"
+version: "1.3.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -33,6 +33,17 @@ steps:
     description: NPV/IRR/Payback/DSCR model assembled from confirmed WACC/hurdle (Pre-FS output) and normalized EBITDA.
   - id: 3
     gate: FS
+    agent_key: quant-methodologist
+    skill_key: monte-carlo-simulation
+    output_type: distributional_valuation
+    description: >
+      Distributional valuation on the step-2 model (ADR-0052 §D.4): seeded
+      Monte Carlo over the value drivers, integrating contingent
+      liabilities as probability/triangular-distribution draws on every
+      iteration — P50/P95 NPV and value-at-risk, never a point estimate
+      with a narrative footnote.
+  - id: 4
+    gate: FS
     agent_key: legal-counsel
     skill_key: investment-vehicle-structuring
     output_type: deal_structure_review
@@ -47,7 +58,7 @@ steps:
       0013; completion is a deliberate act, default 0 — referenced here,
       no DDL in this procedure). The deal_structure_review output records
       per-axis findings and any hypothesis revision for the IC package.
-  - id: 4
+  - id: 5
     gate: FS
     agent_key: antitrust-agent
     skill_key: antitrust-screening
@@ -57,7 +68,17 @@ steps:
       evaluation order — (1) antitrust + HR integration, (2) customer
       retention + incentive, (3) certification transferability last.
       Completion (all six landed) is a DD-exit requirement, not FS-exit.
-  - id: 5
+  - id: 6
+    gate: FS
+    agent_key: quant-methodologist
+    skill_key: scenario-planning
+    output_type: scenario_risk_assessment
+    description: >
+      FS risk assessment as discrete downside/base/upside scenarios
+      (ADR-0052 §D.4) — including the standard +200bp rate-shock covenant
+      test and any deal-specific structural scenario. Feeds the
+      covenant-breach kill criterion and the DD risk workstreams.
+  - id: 7
     gate: FS
     agent_key: process-governance-manager
     skill_key: stage-gate-governance
@@ -77,6 +98,7 @@ legal_basis:
   - "ADR-0051 (workflow gap closure — four-axis review step added at FS)"
   - "db/migrations/0013_classification_infra.sql — deal_structure_hypothesis table incl. four_axis_review_completed"
   - "2026-08-22 RAG formalization design Decision 5e (QoE mandatory-light for internal-origin carve-outs — cost-allocation integrity and transfer-pricing review remain)"
+  - "ADR-0052 §D.4 (quant-methodologist FS dispatches — steps 3 and 6)"
 
 owner_agent: process-governance-manager
 last_reviewed: "2026-08-23"

@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-fs
 title: "Green Field Full Feasibility"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -36,6 +36,30 @@ steps:
     description: NPV/IRR/Payback/DSCR model assembled from confirmed WACC/hurdle (Pre-FS output) and the anchored growth projection.
   - id: 4
     gate: FS
+    agent_key: quant-methodologist
+    skill_key: monte-carlo-simulation
+    output_type: distributional_valuation
+    description: >
+      Distributional valuation on the step-3 model (ADR-0052 §D.4): seeded
+      Monte Carlo over the value drivers — P50/P95 NPV and value-at-risk,
+      never a point estimate with a narrative footnote. The proxy-chain
+      confidence problem (a two-hop proxy estimate cannot reach Green,
+      boundary #4) is exactly where distributional valuation earns its
+      keep: chain reliability enters as the dispersion of the demand
+      driver, and step 1's anchored growth projection is the input
+      contract.
+  - id: 5
+    gate: FS
+    agent_key: quant-methodologist
+    skill_key: scenario-planning
+    output_type: scenario_risk_assessment
+    description: >
+      FS risk assessment as discrete downside/base/upside scenarios
+      (ADR-0052 §D.4) — including the rate-shock covenant test where
+      project financing covenants bind. Feeds the covenant-breach kill
+      criterion and the DD risk workstreams.
+  - id: 6
+    gate: FS
     agent_key: process-governance-manager
     skill_key: stage-gate-governance
     output_type: gate_pass_record
@@ -52,6 +76,7 @@ legal_basis:
   - "Design v1.0 §4-4"
   - "docs/process-map.md — FS row"
   - "docs/rag-framework.md §6 (base-rate calibration)"
+  - "ADR-0052 §D.4 (quant-methodologist FS dispatches — steps 4-5)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-20"
+last_reviewed: "2026-08-23"
