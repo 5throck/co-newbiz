@@ -7,5 +7,5 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Added per docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1 — a real large-scale green-field project proceeded to site designation before power/water infrastructure plans were finalized."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Added per docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1 — a real large-scale green-field project proceeded to site designation before power/water infrastructure plans were finalized. Classification (ADR-0060): class (iii) — no snapshot var; proposed: infra.plan_finalized (boolean)."
 }

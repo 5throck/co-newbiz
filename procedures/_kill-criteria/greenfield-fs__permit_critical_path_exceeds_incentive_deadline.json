@@ -7,5 +7,5 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (ii) — var exists (permit.critical_path_duration); threshold pending — per-project incentive deadline, registered as a new thresholds-agenda item (ADR-0060)."
 }

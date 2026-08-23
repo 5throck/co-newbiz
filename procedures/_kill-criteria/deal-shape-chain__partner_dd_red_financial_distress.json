@@ -7,5 +7,5 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "Design section A.4 [rbd 2.2]: partner financial distress such that the partner cannot survive the alliance horizon INCLUDING the exit tail (post-exit obligations, wind-down costs). Declared in YAML, not yet executable — predicate null by design until the thresholds meeting (ADR-0052 open questions; activation convention per ADR-0057)."
+  "notes": "Design section A.4 [rbd 2.2]: partner financial distress such that the partner cannot survive the alliance horizon INCLUDING the exit tail (post-exit obligations, wind-down costs). Declared in YAML, not yet executable — predicate null by design until the thresholds meeting (ADR-0052 open questions; activation convention per ADR-0057). Classification (ADR-0060): class (iii) — no snapshot var; proposed: partner.financial_distress (form TBD) — 'red finding in machine-readable form' is itself the pending item."
 }

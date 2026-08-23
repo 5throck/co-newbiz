@@ -7,5 +7,5 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "Design §B.4: blocks IMO demobilization — the BAU exit is a completeness fact, not a judgment call (same logic as PR-10's financing precondition). What 'certified by Finance' requires is a thresholds-meeting item (ADR-0052 open question c). Declared in YAML, not yet executable — predicate null by design until that record exists (activation convention per ADR-0057)."
+  "notes": "Design §B.4: blocks IMO demobilization — the BAU exit is a completeness fact, not a judgment call (same logic as PR-10's financing precondition). What 'certified by Finance' requires is a thresholds-meeting item (ADR-0052 open question c). Declared in YAML, not yet executable — predicate null by design until that record exists (activation convention per ADR-0057). Classification (ADR-0060): class (iii) — no snapshot var; proposed: pmi.synergy_run_rate_certified (boolean) — 'certified by Finance' criteria pending open question (c)."
 }

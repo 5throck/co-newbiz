@@ -58,7 +58,7 @@ Classes: **A** = remediated this round · **B** = designed this round (docs only
 | R2 | `agents/README.md` / `README_ko.md` TODO stubs | agents | A | Filled in this change (PR-1) |
 | R3 | JV/venture scorecard storage schema (ADR-0052 open question (e)) | scripts | B (+D impl.) | Schema ADR drafted this round (design only); migration/script/view stay deferred (E.4 chain) |
 | R4 | §F residuals: `proxy-industry-chain`, `expert-interview` prose-wired | skills | B | PR-2 verdict with research basis (elicitation protocols / reference-class method) |
-| R5 | Kill criteria 29 declared / 2 executable | workflows | B + C | Executability roadmap in PR-2; thresholds themselves blocked on the calibration meeting |
+| R5 | Kill criteria 29 declared / 2 executable | workflows | A (step 2 landed via ADR-0060) + C (thresholds) | ADR-0060 classifies all 29 (3 class (i) / 1 (ii) / 25 (iii)); greenfield partner-dependency twin activated (baseline 2→3); the 25 proposed vars = the explicit registry-extension backlog, nothing seeded. Thresholds themselves stay class C (calibration meeting) |
 | R6 | D.5 Korea co-funding (TIPS / KONEX / KOSDAQ) unverified | workflows | B | Verification-pending flag restated in PR-2; nothing depends on it |
 | R7 | Thresholds (a)–(d) + market/technical/risk RAG thresholds + Green cap | workflows | C | `docs/decisions/open/` agendas await user decisions |
 | R8 | E.4 full chain: scorecard migration → portfolio script → portfolio view; cells 5/6/9 thin | scripts | D | Follows R3's ADR landing; longest-lead chain per ADR-0052 |
@@ -81,6 +81,7 @@ Registered here so the state is auditable; none blocks this round's PRs:
 | PR-1 (this change) | This audit report; research addendum; ADR-0052 status/consequence sync; agents README fill | R2, register publication |
 | PR-2 | Gap-remediation design doc + scorecard-storage schema ADR (design only) | R1 (selection), R3, R4, R5, R6 |
 | PR-3 | Deliverable templates under `templates/deliverables/` | R1 (implementation) |
+| D-round PR-1 (2026-08-24) | ADR-0060 kill-criteria executability classification + registry classification landing (29 entries, greenfield twin activation, baseline 2→3) | R5 (step 2 → class A) |
 
 Deferred (class D): R8, R9 — next round after the scorecard ADR lands.
 

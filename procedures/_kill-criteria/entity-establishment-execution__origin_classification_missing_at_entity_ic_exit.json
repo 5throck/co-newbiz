@@ -7,5 +7,5 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Interim guard until PR-5 routing lands: this conditional procedure (applies_when origin in {internal, joint}) cannot route without the ADR-0047 origin axis; a missing classification halts rather than defaults to skip — a skip would be a waiver with none of a waiver's controls (ADR-0047)."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Interim guard until PR-5 routing lands: this conditional procedure (applies_when origin in {internal, joint}) cannot route without the ADR-0047 origin axis; a missing classification halts rather than defaults to skip — a skip would be a waiver with none of a waiver's controls (ADR-0047). Classification (ADR-0060): class (iii) — no snapshot var; is_null-over-routing-var trap: project.origin exists in the registry but is never snapshotted, so is_null over it is ALWAYS true (a false-halt machine) — stays inert until an explicit mirror/computed-var decision."
 }

@@ -7,5 +7,5 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8)."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; premise-locked by migration-0018 Decision 4 (antitrust vars locked out of evidence_var) — extension needs a reversal ADR, not a seed; market.bargaining_power_hhi is value-chain HHI, not antitrust screening HHI — do not reuse."
 }

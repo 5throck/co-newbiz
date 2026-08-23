@@ -7,5 +7,5 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "Design §B.4: key-talent attrition tracked at 30/60/90 in phase 3; crossing the 90-day threshold escalates to the risk officer. The threshold value is ILLUSTRATIVE until the thresholds meeting (ADR-0052 open question c). Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057)."
+  "notes": "Design §B.4: key-talent attrition tracked at 30/60/90 in phase 3; crossing the 90-day threshold escalates to the risk officer. The threshold value is ILLUSTRATIVE until the thresholds meeting (ADR-0052 open question c). Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). Classification (ADR-0060): class (iii) — no snapshot var; proposed: pmi.key_talent_attrition_90d (ratio) — dual-blocked: no var AND the threshold stays ILLUSTRATIVE until open question (c)."
 }
