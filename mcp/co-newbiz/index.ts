@@ -50,6 +50,7 @@ import {
   listDealShapeEvaluations, addDealShapeEvaluation, type DealShapeEvaluationInput,
   listIncentiveDeadlines, addIncentiveDeadline, type IncentiveDeadlineInput,
 } from "./tools/pmi.ts";
+import { runStructureSimulation, getStructureSimulationResults } from "./tools/structure.ts";
 import {
   compareRuns,
   getAssumptions,
@@ -363,10 +364,12 @@ export const TOOLS: ToolDefinition[] = [
   { name: "add_deal_shape_evaluation✱", description: "Record one candidate shape's two-stage verdict (intent split -> five equal-weight criteria).", inputSchema: { type: "object", properties: { projectId: { type: "string" }, shape: { type: "string", enum: ["full_acquisition", "majority_stake", "spv", "holdco_route", "joint_venture", "minority_stake", "license_in", "co_development"] }, intent: { type: "string", enum: ["integration", "capability_access"] }, viable: { type: "boolean" }, evaluated_at: { type: "string" } }, required: ["projectId", "shape", "intent", "viable"] } },
   { name: "list_incentive_deadlines", description: "Recorded incentive-package deadlines (earliest binds; feeds the permit-path tripwire).", inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] } },
   { name: "add_incentive_deadline✱", description: "Record an incentive-package deadline for the project.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, incentive_ref: { type: "string" }, deadline: { type: "string" }, source: { type: "string" } }, required: ["projectId", "incentive_ref", "deadline"] } },
+  { name: "run_structure_simulation✱", description: "ADR-0066 Phase C — propagate driver deltas (rate/fx/commodity/regulation from the run's drv.* assumptions) through the value chain (elasticity + pass-through), persisting P05/P50/P95 per node/metric. Analyst role at REST.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, runId: { type: "string" }, seed: { type: "integer" }, iterations: { type: "integer" }, scenario: { type: "string", enum: ["downside", "base", "upside", "custom"] } }, required: ["projectId", "runId"] } },
+  { name: "get_structure_simulation_results", description: "Persisted structure-simulation quantile rows (?run_id narrows; newest first).", inputSchema: { type: "object", properties: { projectId: { type: "string" }, runId: { type: "string" } }, required: ["projectId"] } },
 ];
 
 export function buildServer(): Server {
-  const server = new Server({ name: "co-newbiz-mcp", version: "1.4.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "co-newbiz-mcp", version: "1.5.0" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
@@ -448,6 +451,20 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
       requireString(args, "deadline");
       return addIncentiveDeadline(args as unknown as IncentiveDeadlineInput);
     }
+    case "run_structure_simulation✱": {
+      requireString(args, "projectId");
+      requireString(args, "runId");
+      return runStructureSimulation({
+        projectId: args.projectId as string,
+        runId: args.runId as string,
+        seed: args.seed as number | undefined,
+        iterations: args.iterations as number | undefined,
+        scenario: args.scenario as "downside" | "base" | "upside" | "custom" | undefined,
+      });
+    }
+    case "get_structure_simulation_results":
+      requireString(args, "projectId");
+      return getStructureSimulationResults(args.projectId as string, args.runId as string | undefined);
     case "list_notifications":
       return listNotifications();
     case "manage_watch": {

@@ -688,6 +688,46 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/projects/{id}/structure-simulations:
+    post:
+      operationId: runStructureSimulation
+      summary: "ADR-0066 Phase C — compose the structure scenario from the run's drv.* assumptions + chain_node_sensitivity + value_chain_link, spawn python/structure_sim.py (seeded MC), persist quantile rows for assessed nodes. Analyst+, audited; engine failures 500."
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id]
+              properties:
+                run_id: { type: string }
+                seed: { type: integer }
+                iterations: { type: integer, minimum: 100 }
+                scenario: { type: string, enum: [downside, base, upside, custom] }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { description: Engine failure envelope }
+    get:
+      operationId: listStructureSimulationResults
+      summary: Persisted quantile rows (?run_id= narrows; newest first, capped 200).
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: run_id
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/interpretations:
     get:
       operationId: searchInterpretations
