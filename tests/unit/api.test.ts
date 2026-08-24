@@ -1507,3 +1507,49 @@ describe("value-chain topology + financials + import fallback (ADR-0066 Phase A)
     expect(data.filter((r) => r.metric_key === "revenue")).toHaveLength(2);
   });
 });
+
+describe("structure simulation REST (ADR-0066 Phase C)", () => {
+  test("composes drv.* assumptions + sensitivities + links, persists assessed quantiles, discloses defaults", async () => {
+    const projRes = await req("/api/projects", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ project_no: "NP-STRUCT-1" }) });
+    const pid = (await projRes.json()).data.id;
+    const runRes = await req(`/api/projects/${pid}/runs`, { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ label: "struct sim", set: { "drv.rate_bp": 150, "drv.commodity_pct": 10 } }) });
+    const runId = (await runRes.json()).data.run_id;
+
+    const indUp = ulid();
+    const indDown = ulid();
+    for (const id of [indUp, indDown]) db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [id, `T-${id.slice(-4)}`, "t", "t", NOW]);
+    db.run("INSERT INTO value_chain_link (id, project_id, from_industry_id, to_industry_id, direction, elasticity, pass_through_rate, assessed_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), pid, indUp, indDown, "downstream", 0.7, 0.75, NOW]);
+    db.run("INSERT INTO chain_node_sensitivity (id, project_id, industry_id, driver_id, sensitivity, lag_months, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), pid, indDown, "drv-rate", -0.5, 0, "mia", NOW]);
+
+    const res = await req(`/api/projects/${pid}/structure-simulations`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: runId, seed: 42, iterations: 800, scenario: "downside" }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.data.scenario).toBe("downside");
+    // fx/regulation were never recorded — disclosed, not silently defaulted.
+    expect([...body.meta.defaulted_drivers].sort()).toEqual(["drv.fx_pct", "drv.regulation_severity"]);
+    // Two assessed nodes × two metrics persisted.
+    expect(body.data.results).toHaveLength(4);
+    expect(body.meta.unassessed_nodes).toEqual([]);
+
+    const list = await req(`/api/projects/${pid}/structure-simulations?run_id=${runId}`, { headers: { cookie: aliceCookie } });
+    expect((await list.json()).meta.count).toBe(4);
+
+    const audit = db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'structure_simulation_run'").get() as { n: number };
+    expect(audit.n).toBeGreaterThan(0);
+  });
+
+  test("unknown run is a 400 envelope, not a 500", async () => {
+    const res = await req(`/api/projects/${projectId}/structure-simulations`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: "01NOSUCHRUN000000000000000000" }),
+    });
+    expect(res.status).toBe(400);
+  });
+});

@@ -11,9 +11,10 @@ import { Hono } from "hono";
 import { getDb } from "../../db/client.ts";
 import { getProjectIfVisible } from "../../db/repositories/project.repository.ts";
 import { resolveChainTopology } from "../../db/lib/value-chain-topology.ts";
+import { runStructureSimulation, type StructureSimSummary } from "../../db/lib/structure-simulation.ts";
 import { appendAudit } from "../../db/lib/access-control.ts";
 import { ulid } from "../../db/lib/ulid.ts";
-import { badRequest, notFound, ok } from "./envelope.ts";
+import { badRequest, fail, forbidden, notFound, ok } from "./envelope.ts";
 import { requireAuth, type AppEnv } from "./middleware.ts";
 
 export const marketRoutes = new Hono<AppEnv>();
@@ -107,4 +108,68 @@ marketRoutes.post("/api/projects/:id/financial-imports", async (c) => {
   })();
   appendAudit(db, { actor: ctx.userId, action: "financial_import", target: `${project.id}:${body.industry_id}:${inserted.length}`, now: new Date().toISOString() });
   return ok(c, { imported: inserted.length }, 201, { note: "Rows appended with revision_no=1 — re-importing the same period/metric adds a newer revision." });
+});
+
+/**
+ * POST /api/projects/:id/structure-simulations — ADR-0066 Phase C. Composes
+ * the scenario from the run's drv.* assumptions + chain_node_sensitivity +
+ * value_chain_link, spawns python/structure_sim.py (args array, never shell),
+ * persists structure_simulation_result rows for assessed nodes. Analyst+;
+ * audited; engine failures 500.
+ */
+marketRoutes.post("/api/projects/:id/structure-simulations", async (c) => {
+  const ctx = c.get("auth");
+  const project = getProjectIfVisible(ctx.userId, c.req.param("id"), { excludeMnpi: false });
+  if (!project) return notFound(c);
+  if (ctx.role === "viewer") return forbidden(c, "role_required", "Structure simulation requires the analyst role.");
+  const body = await c.req.json().catch(() => null) as
+    | { run_id?: string; seed?: number; iterations?: number; scenario?: string }
+    | null;
+  if (!body?.run_id) return badRequest(c, "invalid_request", "run_id is required.");
+  const scenario = body.scenario ?? "custom";
+  try {
+    const summary: StructureSimSummary = await runStructureSimulation(
+      {
+        runId: body.run_id,
+        projectId: project.id,
+        scenario: scenario as StructureSimSummary["scenario"],
+        seed: body.seed,
+        iterations: body.iterations,
+      },
+      getDb(),
+    );
+    appendAudit(getDb(), {
+      actor: ctx.userId,
+      action: "structure_simulation_run",
+      target: `${project.id}:${body.run_id}:${summary.results.length}`,
+      now: new Date().toISOString(),
+    });
+    return ok(c, summary, 201, {
+      unassessed_nodes: summary.unassessed_nodes,
+      defaulted_drivers: summary.defaulted_drivers,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Structure simulation failed.";
+    if (message.includes("does not exist") || message.includes("belongs to project")) return badRequest(c, "invalid_run", message);
+    return fail(c, 500, "engine_failed", message);
+  }
+});
+
+/** GET /api/projects/:id/structure-simulations?run_id= — persisted quantile rows (newest first, capped 200). */
+marketRoutes.get("/api/projects/:id/structure-simulations", (c) => {
+  const project = getProjectIfVisible(c.get("auth").userId, c.req.param("id"), { excludeMnpi: false });
+  if (!project) return notFound(c);
+  const runId = c.req.query("run_id");
+  const rows = runId
+    ? getDb()
+        .query(
+          "SELECT srr.run_id, srr.scenario, srr.industry_id, srr.metric, srr.p05, srr.p50, srr.p95, srr.created_at FROM structure_simulation_result srr WHERE srr.run_id = ? AND EXISTS (SELECT 1 FROM run r WHERE r.id = srr.run_id AND r.project_id = ?) ORDER BY srr.created_at DESC LIMIT 200",
+        )
+        .all(runId, project.id)
+    : getDb()
+        .query(
+          "SELECT srr.run_id, srr.scenario, srr.industry_id, srr.metric, srr.p05, srr.p50, srr.p95, srr.created_at FROM structure_simulation_result srr JOIN run r ON r.id = srr.run_id WHERE r.project_id = ? ORDER BY srr.created_at DESC LIMIT 200",
+        )
+        .all(project.id);
+  return ok(c, rows, 200, { count: rows.length });
 });
