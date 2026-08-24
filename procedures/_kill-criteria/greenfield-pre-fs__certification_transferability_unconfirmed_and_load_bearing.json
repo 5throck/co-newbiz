@@ -3,9 +3,14 @@
   "criterion_id": "certification_transferability_unconfirmed_and_load_bearing",
   "title": "Certification transferability unconfirmed while load-bearing for the deal thesis",
   "action": "escalate_to_risk_officer",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in brownfield-pre-fs (separate registry entry). Classification (ADR-0060): class (iii) — no snapshot var; proposed: cert.load_bearing_unconfirmed (count: load_bearing=1 AND transferability_basis IS NULL) — twin of the brownfield-pre-fs entry, same proposed var."
+  "predicate": {
+    "op": "count",
+    "var": "cert.load_bearing_unconfirmed",
+    "cmp": "gte",
+    "value": 1
+  },
+  "enabled": true,
+  "policy_id": "gd-0024-class-c-decisions",
+  "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (gd-0024-class-c-decisions); var seeded by migration 0027 per ADR-0064 + certification_transferability_unconfirmed_and_load_bearing wording (ADR-0060)",
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in brownfield-pre-fs (separate registry entry). Classification (ADR-0060): class (iii) — no snapshot var; proposed: cert.load_bearing_unconfirmed (count: load_bearing=1 AND transferability_basis IS NULL) — twin of the brownfield-pre-fs entry, same proposed var. ADR-0064 arms this (twin): same cert.load_bearing_unconfirmed count semantics."
 }

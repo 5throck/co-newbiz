@@ -3,9 +3,14 @@
   "criterion_id": "certification_transferability_unconfirmed_and_load_bearing",
   "title": "Certification transferability unconfirmed while load-bearing for the deal thesis",
   "action": "escalate_to_risk_officer",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in greenfield-pre-fs (separate registry entry). Classification (ADR-0060): class (iii) — no snapshot var; proposed: cert.load_bearing_unconfirmed (count: load_bearing=1 AND transferability_basis IS NULL) — distinct from cert.load_bearing_non_transferable_on_coc, which counts confirmed-'no' rows, not unconfirmed ones."
+  "predicate": {
+    "op": "count",
+    "var": "cert.load_bearing_unconfirmed",
+    "cmp": "gte",
+    "value": 1
+  },
+  "enabled": true,
+  "policy_id": "gd-0024-class-c-decisions",
+  "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (gd-0024-class-c-decisions); var seeded by migration 0027 per ADR-0064 + certification_transferability_unconfirmed_and_load_bearing wording (ADR-0060)",
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in greenfield-pre-fs (separate registry entry). Classification (ADR-0060): class (iii) — no snapshot var; proposed: cert.load_bearing_unconfirmed (count: load_bearing=1 AND transferability_basis IS NULL) — distinct from cert.load_bearing_non_transferable_on_coc, which counts confirmed-'no' rows, not unconfirmed ones. ADR-0064 arms this: cert.load_bearing_unconfirmed counts load_bearing=1 rows whose transferability_basis was never confirmed — 'unconfirmed' is a different condition from the confirmed-'no' count the 0019 pair carries."
 }

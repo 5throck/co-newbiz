@@ -1,4 +1,4 @@
-// @version 1.3.0
+// @version 1.4.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -141,6 +141,13 @@ export const SNAPSHOT_VAR_KEYS: readonly string[] = [
   "pmi.synergy_run_rate_certified",
   "dealshape.viable_shapes",
   "permit.critical_path_exceeds_incentive_deadline",
+  // 0027 — ADR-0064 extension round 2 (#5/#6/#7/#8/#9/#10/#17/#19 var halves)
+  "fin.wacc_source_status",
+  "cert.load_bearing_unconfirmed",
+  "cert.transferability_inferred_count",
+  "validators.applicable_missing",
+  "legal.employment_transfer_consent_regime_determined",
+  "classification.origin_live_missing",
 ];
 
 function missing(varKey: string): SnapshotWrite {
@@ -285,12 +292,13 @@ function fillValueChainVars(db: Database, projectId: string): SnapshotWrite[] {
 // Family C — asserted dimension_input (live + reviewed only)
 // ---------------------------------------------------------------------------
 
-/** The four asserted 0017 vars; value column per the registry's value_type. */
+/** The five asserted vars (0017 market set + ADR-0063 legal fact); value column per the registry's value_type. */
 const ASSERTED_VARS: ReadonlyArray<{ varKey: string; kind: "text" | "num" }> = [
   { varKey: "market.entry_barrier", kind: "text" },
   { varKey: "right_to_win.customer_overlap", kind: "num" },
   { varKey: "right_to_win.tech_overlap", kind: "num" },
   { varKey: "right_to_win.brand_transferability", kind: "num" },
+  { varKey: "legal.employment_transfer_consent_regime_determined", kind: "text" },
 ];
 
 interface DimensionInputRow {
@@ -304,7 +312,7 @@ interface DimensionInputRow {
 const SQL_ASSERTED_ROWS =
   "SELECT var_key, value_text, value_num, evidence_ref, observed_at FROM dimension_input " +
   "WHERE project_id = ? AND superseded_by IS NULL AND reviewed_by IS NOT NULL AND var_key IN " +
-  "('market.entry_barrier','right_to_win.customer_overlap','right_to_win.tech_overlap','right_to_win.brand_transferability')";
+  "('market.entry_barrier','right_to_win.customer_overlap','right_to_win.tech_overlap','right_to_win.brand_transferability','legal.employment_transfer_consent_regime_determined')";
 
 function fillAssertedVars(db: Database, projectId: string): SnapshotWrite[] {
   // The reviewed_by gate is the write path's approval step (repository
@@ -733,6 +741,67 @@ function fillPermitDeadlineVar(db: Database, projectId: string, now: Date): Snap
 }
 
 // ---------------------------------------------------------------------------
+// Family H — extension round 2 (ADR-0064, migration 0027): finance-source,
+// certification trio, six-validator completeness, classification presence.
+// All sources pre-exist; thresholds were wording-decided in ADR-0060 rows
+// 5-10 with the Class C record supplying governance discipline.
+// ---------------------------------------------------------------------------
+
+/**
+ * #5/#6: WACC and hurdle IRR must be kind='user' (the wacc-input-session
+ * convention). Any 'assumed' row among the two keys marks the whole status
+ * assumed — a provisional discount rate invalidates the analysis (policy
+ * §2.2); both keys absent = not yet sessioned = missing.
+ */
+function fillWaccSourceVar(db: Database, runId: string): SnapshotWrite {
+  const row = missing("fin.wacc_source_status");
+  const rows = db.query("SELECT assumption_key, kind FROM assumption WHERE run_id = ? AND assumption_key IN ('wacc','hurdle_irr')").all(runId) as unknown as Array<{ assumption_key: string; kind: string }>;
+  const byKey = new Map(rows.map((r) => [r.assumption_key, r.kind]));
+  if (!byKey.has("wacc") && !byKey.has("hurdle_irr")) return row;
+  row.value_text = [byKey.get("wacc"), byKey.get("hurdle_irr")].some((k) => k === "assumed") ? "assumed" : "sourced";
+  row.evidence_ref = "assumption";
+  const latest = db.query("SELECT MAX(as_of) AS at FROM assumption WHERE run_id = ? AND assumption_key IN ('wacc','hurdle_irr')").get(runId) as unknown as { at: string | null };
+  row.observed_at = latest.at;
+  row.status = "present";
+  return row;
+}
+
+/** #7/#8 tripwire: load-bearing certifications whose transferability was never confirmed. Present-always count (sibling of the 0019 pair). */
+function fillCertUnconfirmedVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("cert.load_bearing_unconfirmed");
+  row.value_num = (db.query("SELECT COUNT(*) AS n FROM certification WHERE project_id = ? AND load_bearing = 1 AND transferability_basis IS NULL").get(projectId) as unknown as { n: number }).n;
+  row.status = "present";
+  return row;
+}
+
+/** #9 tripwire: rows whose basis is 'inferred'. The repository write-block keeps this at zero through the API — a nonzero count proves a raw-SQL bypass. */
+function fillCertInferredVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("cert.transferability_inferred_count");
+  row.value_num = (db.query("SELECT COUNT(*) AS n FROM certification WHERE project_id = ? AND transferability_basis = 'inferred'").get(projectId) as unknown as { n: number }).n;
+  row.status = "present";
+  return row;
+}
+
+/** #10: APPLICABLE validators without coverage — the completeness engine's own halt set, surfaced as a snapshot var. */
+function fillValidatorsMissingVar(db: Database, projectId: string, runId: string, now: Date): SnapshotWrite {
+  const row = missing("validators.applicable_missing");
+  const evaluation = evaluateValidatorCompleteness(projectId, runId, db, { now });
+  row.value_num = evaluation.halt.missing.length;
+  row.evidence_ref = "validator_completeness";
+  row.observed_at = now.toISOString();
+  row.status = "present";
+  return row;
+}
+
+/** #19: live origin classification present? Zero live rows at the entity-establishment gate IS the finding. */
+function fillClassificationPresenceVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("classification.origin_live_missing");
+  row.value_num = (db.query("SELECT COUNT(*) AS n FROM project_case_classification WHERE project_id = ? AND superseded_by IS NULL").get(projectId) as unknown as { n: number }).n;
+  row.status = "present";
+  return row;
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -744,7 +813,7 @@ const SQL_BOUND_INDUSTRIES = "SELECT industry_id FROM project_industry WHERE pro
 
 /**
  * Fill a run's variable snapshot: one explicit row per evidence var the
- * 0017/0018/0019/0025/0026 seed sets define (27), statuses per the record
+ * 0017-0027 seed sets define (33), statuses per the record
  * contracts. Runs are immutable — filling an already-filled run throws on
  * the PK.
  */
@@ -776,6 +845,11 @@ export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()):
     fillSynergyCertVar(db, opts.projectId),
     fillViableShapesVar(db, opts.projectId),
     fillPermitDeadlineVar(db, opts.projectId, now instanceof Date ? now : new Date(now)),
+    fillWaccSourceVar(db, opts.runId),
+    fillCertUnconfirmedVar(db, opts.projectId),
+    fillCertInferredVar(db, opts.projectId),
+    fillValidatorsMissingVar(db, opts.projectId, opts.runId, now instanceof Date ? now : new Date(now)),
+    fillClassificationPresenceVar(db, opts.projectId),
   ];
   const written = new Set(rows.map((r) => r.var_key));
   if (rows.length !== SNAPSHOT_VAR_KEYS.length || SNAPSHOT_VAR_KEYS.some((k) => !written.has(k))) {

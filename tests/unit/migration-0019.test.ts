@@ -361,9 +361,16 @@ describe("evidence_var seed (D-M-TE-8)", () => {
     });
   });
 
-  test("the cert.% prefix now holds exactly the two count vars (0018's + the new one)", () => {
+  test("the cert.% prefix holds the two count vars this migration seeded — plus ADR-0064's tripwire additions", () => {
+    // 0027 (ADR-0064) added two more cert.% tripwires under the shared
+    // prefix; this file pins its OWN seeds exactly and acknowledges the rest.
     const keys = (db.query("SELECT var_key FROM evidence_var WHERE var_key LIKE 'cert.%' ORDER BY var_key").all() as { var_key: string }[]).map((r) => r.var_key);
-    expect(keys).toEqual(["cert.load_bearing_non_transferable_on_coc", "cert.non_transferable_on_coc"]);
+    expect(keys).toEqual([
+      "cert.load_bearing_non_transferable_on_coc",
+      "cert.load_bearing_unconfirmed",
+      "cert.non_transferable_on_coc",
+      "cert.transferability_inferred_count",
+    ]);
   });
 });
 
@@ -492,6 +499,6 @@ describe("migration idempotence", () => {
     expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE dimension IN ('market','technical_execution','risk')").get() as { c: number }).c).toBe(19);
     // 0022 (PR-9) activated 18 rows; right-to-win stays disabled under the cap
     expect((db.query("SELECT COUNT(*) AS c FROM rag_rule WHERE enabled = 1").get() as { c: number }).c).toBe(18);
-    expect((db.query("SELECT COUNT(*) AS c FROM evidence_var WHERE var_key LIKE 'cert.%'").get() as { c: number }).c).toBe(2);
+    expect((db.query("SELECT COUNT(*) AS c FROM evidence_var WHERE var_key LIKE 'cert.%'").get() as { c: number }).c).toBe(4); // 0018+0019's two, + ADR-0064's two tripwires (0027)
   });
 });

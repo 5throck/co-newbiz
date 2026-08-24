@@ -123,6 +123,7 @@ function snapshotCount(runId: string): number {
 
 const COVENANT = "covenant_breach_with_coc_acceleration_under_downside";
 const PARTNER = "partner_dependency_unconfirmed_and_no_alternative";
+const VALIDATORS = "any_of_six_ma_validators_missing_at_dd_exit";
 
 describe("covenant halt — D-M-RISK-2 / AI-1", () => {
   test("a breached covenant test in the latest simulation triggers the halt", () => {
@@ -132,14 +133,13 @@ describe("covenant halt — D-M-RISK-2 / AI-1", () => {
 
     const result = evaluate(projectId, runId);
 
-    // The activated set of this PR: covenant + partner. (A registry gaining a
-    // new enabled entry changes observable behavior — this line updates with it.)
-    expect(result.evaluated).toBe(2);
-    expect(result.inert).toBe(2); // the two predicate-null halts of brownfield-dd
+    // ADR-0063/0064 armed all four brownfield-dd entries: covenant, partner,
+    // cert-inferred tripwire, six-validator completeness. A registry gaining
+    // a new enabled entry changes observable behavior — lines update with it.
+    expect(result.evaluated).toBe(4);
+    expect(result.inert).toBe(0);
 
-    expect(result.triggered).toHaveLength(1);
-    expect(result.triggered[0].criterion_id).toBe(COVENANT);
-    expect(result.triggered[0].action).toBe("halt");
+    expect(result.triggered.map((t) => t.criterion_id).sort()).toEqual([COVENANT, VALIDATORS].sort());
 
     // Partner half: no deal_structure_hypothesis recorded → both partner vars
     // missing → UNASSESSED — listed, never a silent pass.
@@ -152,7 +152,9 @@ describe("covenant halt — D-M-RISK-2 / AI-1", () => {
 
     const result = evaluate(projectId, runId);
 
-    expect(result.triggered).toHaveLength(0);
+    // The six-validator count IS determinately 6 here (nothing covered) — its
+    // halt fires even though the covenant path does not.
+    expect(result.triggered.map((t) => t.criterion_id)).toEqual([VALIDATORS]);
     expect(result.unassessed).toEqual([PARTNER]); // covenant FALSE, not unassessed — the var is present
   });
 });
@@ -166,9 +168,8 @@ describe("partner mark_conditional — D-M-RISK-3 / AI-1", () => {
 
     const result = evaluate(projectId, runId);
 
-    expect(result.triggered).toHaveLength(1);
-    expect(result.triggered[0].criterion_id).toBe(PARTNER);
-    expect(result.triggered[0].action).toBe("mark_conditional");
+    expect(result.triggered.map((t) => t.criterion_id).sort()).toEqual([PARTNER, VALIDATORS].sort());
+    expect(result.triggered.find((t) => t.criterion_id === PARTNER)!.action).toBe("mark_conditional");
     expect(result.unassessed).toEqual([]);
   });
 
@@ -180,7 +181,7 @@ describe("partner mark_conditional — D-M-RISK-3 / AI-1", () => {
     const runId = insertRun(projectId);
 
     const result = evaluate(projectId, runId);
-    expect(result.triggered).toHaveLength(0);
+    expect(result.triggered.map((t) => t.criterion_id)).toEqual([VALIDATORS]);
     expect(result.unassessed).toEqual([]);
   });
 
@@ -191,7 +192,7 @@ describe("partner mark_conditional — D-M-RISK-3 / AI-1", () => {
     const runId = insertRun(projectId);
 
     const result = evaluate(projectId, runId);
-    expect(result.triggered).toHaveLength(0);
+    expect(result.triggered.map((t) => t.criterion_id)).toEqual([VALIDATORS]);
     expect(result.unassessed).toEqual([]);
   });
 });
@@ -588,14 +589,16 @@ describe("recordKillCriteriaEvaluation — the complete ledger", () => {
 
     const { result, rowIds } = record(projectId, runId);
 
-    expect(result.triggered).toHaveLength(1);
-    expect(rowIds).toHaveLength(2); // covenant (triggered) + partner (unassessed) — the COMPLETE ledger, false included
+    expect(result.triggered.map((t) => t.criterion_id).sort()).toEqual([COVENANT, VALIDATORS].sort());
+    expect(rowIds).toHaveLength(4); // covenant+validators (triggered) + partner+cert-inferred (false) — the COMPLETE ledger
 
     const rows = ledgerRows(runId);
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(4);
     for (const row of rows) {
-      expect(row.policy_id).toBe("gd-0022-risk-thresholds"); // anchors snapshotted (ADR-0005)
-      expect(String(row.thresholds_source)).toContain("risk-thresholds.md");
+      // Anchors snapshotted (ADR-0005); two governance generations coexist:
+      // 0018-era entries under risk-thresholds, ADR-0063/64 arms under Class C.
+      expect(["gd-0022-risk-thresholds", "gd-0024-class-c-decisions"]).toContain(row.policy_id);
+      expect(String(row.thresholds_source)).toContain("docs/decisions/");
       expect(JSON.parse(row.predicate_json as string)).toHaveProperty("op");
       expect(row.evaluated_by).toBe(U1);
       expect(row.evaluated_at).toBe(EVALUATED_AT);
@@ -607,7 +610,7 @@ describe("recordKillCriteriaEvaluation — the complete ledger", () => {
     expect(partner?.outcome).toBe("unassessed");
 
     const audit = db.query("SELECT target FROM audit_log WHERE action = 'kill_criteria_evaluated' AND actor_user_id = ?").all(U1) as Array<{ target: string }>;
-    expect(audit.some((a) => a.target.startsWith(`${projectId}:${runId}:brownfield-dd`) && a.target.includes("evaluated=2") && a.target.endsWith(":HALT-PATH"))).toBe(true);
+    expect(audit.some((a) => a.target.startsWith(`${projectId}:${runId}:brownfield-dd`) && a.target.includes("evaluated=4") && a.target.endsWith(":HALT-PATH"))).toBe(true);
     const access = db.query("SELECT record_ref FROM data_access_log WHERE table_key = 'kill_criteria_evaluation'").all() as Array<{ record_ref: string }>;
     expect(access.some((a) => a.record_ref === `${projectId}:${runId}:brownfield-dd`)).toBe(true);
   });
@@ -630,7 +633,7 @@ describe("recordKillCriteriaEvaluation — the complete ledger", () => {
     record(projectId, runId);
 
     expect(() => record(projectId, runId)).toThrow(/already has a recorded.*ADR-0005/);
-    expect(ledgerRows(runId)).toHaveLength(2); // exactly the first record's rows
+    expect(ledgerRows(runId)).toHaveLength(4); // exactly the first record's rows
   });
 
   test("read-only evaluate still works on a recorded run (re-check without re-recording)", () => {
@@ -640,8 +643,8 @@ describe("recordKillCriteriaEvaluation — the complete ledger", () => {
     record(projectId, runId);
 
     const recheck = evaluate(projectId, runId); // no throw — the ledger is append-only, the evaluator is pure
-    expect(recheck.evaluated).toBe(2);
-    expect(ledgerRows(runId)).toHaveLength(2);
+    expect(recheck.evaluated).toBe(4);
+    expect(ledgerRows(runId)).toHaveLength(4);
   });
 
   test("a procedure with no enabled entries records zero rows — and still writes the audit trail", () => {
@@ -679,7 +682,7 @@ describe("recordKillCriteriaEvaluation — guards", () => {
     expect(ledgerRows(runId)).toHaveLength(0);
 
     enrollInsider(projectId, U1);
-    expect(record(projectId, runId).rowIds).toHaveLength(2);
+    expect(record(projectId, runId).rowIds).toHaveLength(4);
   });
 
   test("an unknown run is rejected", () => {
@@ -726,14 +729,18 @@ describe("getRecordedEvaluation — the gate-impact summary", () => {
     const hit = getRecordedEvaluation({ runId: triggeredRun, projectId, actor: U1 }, db);
     expect(hit.status).toBe("recorded");
     expect(hit.scope).toBe("*");
-    expect(hit.halt).toHaveLength(1);
-    expect(hit.halt[0].criterion_id).toBe(COVENANT);
+    // Two halts now: covenant (D-M-RISK-2) + the six-validator completeness
+    // count (ADR-0063/64 — nothing covered on this bare-dd run).
+    expect(hit.halt).toHaveLength(2);
+    expect(hit.halt.map((h) => h.criterion_id).sort()).toEqual([COVENANT, VALIDATORS].sort());
     expect(hit.halt[0].predicate).toHaveProperty("op"); // parsed from predicate_json, not a string
-    expect(hit.halt[0].policy_id).toBe("gd-0022-risk-thresholds");
+    expect(hit.halt.map((h) => h.policy_id).sort()).toEqual(["gd-0022-risk-thresholds", "gd-0024-class-c-decisions"].sort());
     expect(hit.mark_conditional).toHaveLength(1);
     expect(hit.mark_conditional[0].criterion_id).toBe(PARTNER);
     expect(hit.unassessed).toHaveLength(0);
-    expect(hit.evaluated_false).toHaveLength(0);
+    // cert-inferred tripwire is determinately FALSE on an API-only run —
+    // recorded as auditable proof, not absence.
+    expect(hit.evaluated_false.map((r) => r.criterion_id)).toEqual(["certification_transferability_computed_by_inference_not_confirmation"]);
     expect(hit.procedures).toEqual(["brownfield-dd"]);
 
     // The no-evidence run: covenant FALSE (auditable proof), partner UNASSESSED (caller decides)
@@ -742,9 +749,9 @@ describe("getRecordedEvaluation — the gate-impact summary", () => {
     const quietRun = insertRun(quietProject);
     record(quietProject, quietRun);
     const quiet = getRecordedEvaluation({ runId: quietRun, projectId: quietProject, actor: U1 }, db);
-    expect(quiet.halt).toHaveLength(0);
+    expect(quiet.halt.map((h) => h.criterion_id)).toEqual([VALIDATORS]);
     expect(quiet.unassessed.map((r) => r.criterion_id)).toEqual([PARTNER]);
-    expect(quiet.evaluated_false.map((r) => r.criterion_id)).toEqual([COVENANT]);
+    expect(quiet.evaluated_false.map((r) => r.criterion_id).sort()).toEqual([COVENANT, "certification_transferability_computed_by_inference_not_confirmation"].sort());
   });
 
   test("zero rows in the asked scope → status 'never_evaluated' — never an empty-looking pass (ADR-0049 at read time)", () => {

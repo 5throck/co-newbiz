@@ -98,7 +98,7 @@ function seededVarWhere(): string {
   // migration-0019.test.ts) ? exclude that one so this file pins 0018's own 11
   // permit.critical_path_exceeds_incentive_deadline is likewise excluded —
   // migration 0026 (ADR-0063) added it under the shared permit.% prefix.
-  return "(var_key LIKE 'tech.%' OR var_key LIKE 'permit.%' OR var_key LIKE 'risk.%' OR (var_key LIKE 'cert.%' AND var_key != 'cert.load_bearing_non_transferable_on_coc')) AND var_key != 'permit.critical_path_exceeds_incentive_deadline'";
+  return "(var_key LIKE 'tech.%' OR var_key LIKE 'permit.%' OR var_key LIKE 'risk.%' OR (var_key LIKE 'cert.%' AND var_key != 'cert.load_bearing_non_transferable_on_coc')) AND var_key NOT IN ('permit.critical_path_exceeds_incentive_deadline','cert.load_bearing_unconfirmed','cert.transferability_inferred_count','validators.applicable_missing')";
 }
 
 function ruleRows(): RuleRow[] {

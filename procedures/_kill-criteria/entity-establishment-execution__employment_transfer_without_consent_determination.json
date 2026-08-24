@@ -3,9 +3,15 @@
   "criterion_id": "employment_transfer_without_consent_determination",
   "title": "Employment transfer executed without a consent-regime determination",
   "action": "escalate_to_risk_officer",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Escalation, not halt: the jurisdiction's employment-transfer regime (TUPE / Korean 영업양도 doctrine) must be determined and applied before people move; Korean succession is judicial doctrine (Supreme Court 2000다8448 line) — individual-consent path is the safe practice (ADR-0051, verify with counsel). Classification (ADR-0060): class (iii) — no snapshot var; proposed: legal.employment_transfer_consent_regime_determined (boolean — a jurisdictional determination fact)."
+  "predicate": {
+    "op": "in",
+    "var": "legal.employment_transfer_consent_regime_determined",
+    "values": [
+      "not_determined"
+    ]
+  },
+  "enabled": true,
+  "policy_id": "gd-0024-class-c-decisions",
+  "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (gd-0024-class-c-decisions); var seeded by migration 0027 per ADR-0064 + employment_transfer_without_consent_determination wording (ADR-0060)",
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Escalation, not halt: the jurisdiction's employment-transfer regime (TUPE / Korean 영업양도 doctrine) must be determined and applied before people move; Korean succession is judicial doctrine (Supreme Court 2000다8448 line) — individual-consent path is the safe practice (ADR-0051, verify with counsel). Classification (ADR-0060): class (iii) — no snapshot var; proposed: legal.employment_transfer_consent_regime_determined (boolean — a jurisdictional determination fact). ADR-0064 arms this: an ASSERTED var (dimension_input write path, reviewed-only) — the jurisdictional determination is a human fact, not derivable; asserted 'not_determined' at this gate escalates."
 }
