@@ -19,10 +19,23 @@ export class ApiError extends Error {
   }
 }
 
+/** Read a cookie by name from document.cookie (for the CSRF double-submit pattern). */
+function readCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(init?.headers as Record<string, string>) };
+  const method = init?.method ?? "GET";
+  if (method !== "GET" && method !== "HEAD") {
+    // Double-submit CSRF: echo the readable csrf cookie in a custom header.
+    const csrf = readCookie("co_newbiz_csrf");
+    if (csrf) headers["X-CSRF-Token"] = csrf;
+  }
   const res = await fetch(path, {
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers,
     ...init,
   });
   const body = (await res.json()) as Envelope<T>;

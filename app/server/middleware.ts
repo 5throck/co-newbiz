@@ -25,6 +25,7 @@ import { validateApiToken, type TokenScope } from "../../db/lib/api-tokens.ts";
 import { forbidden, unauthorized } from "./envelope.ts";
 
 export const SESSION_COOKIE = "co_newbiz_session";
+export const CSRF_COOKIE = "co_newbiz_csrf";
 
 export interface AuthContext {
   userId: string;
@@ -129,9 +130,15 @@ export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
     return forbidden(c, "insufficient_scope", "This token is read-scoped; the requested mutation needs the 'write' scope.");
   }
 
-  // CSRF for cookie-authenticated mutations: SameSite=Lax is the primary
-  // defense; if a browser still sends Origin on a cross-site POST, it must
-  // match Host. Bearer requests are exempt (no ambient credential involved).
+  // CSRF for cookie-authenticated mutations: three defense layers.
+  //   Layer 1: SameSite=Lax (primary — the browser won't send the session
+  //            cookie cross-site for non-top-level navigations).
+  //   Layer 2: Origin/Host cross-check when the browser sends Origin.
+  //   Layer 3: double-submit token — a readable `co_newbiz_csrf` cookie is
+  //            issued at login; the SPA reads it and echoes it in
+  //            X-CSRF-Token. A cross-site attacker can neither read the
+  //            cookie (SOP) nor set the header without it.
+  // Bearer requests are exempt from all three (no ambient credential).
   if (auth.via === "cookie" && c.req.method !== "GET" && c.req.method !== "HEAD") {
     const origin = c.req.header("Origin");
     if (origin) {
@@ -139,6 +146,16 @@ export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
       const host = c.req.header("Host");
       if (originHost && host && originHost !== host) {
         return forbidden(c, "csrf_rejected", "Cross-origin request rejected.");
+      }
+    }
+    // Layer 3 — only enforced when the csrf cookie exists (backward compat
+    // with sessions created before this layer was added; new logins always
+    // carry it, so old sessions age out naturally).
+    if (getCookie(c, CSRF_COOKIE)) {
+      const headerToken = c.req.header("X-CSRF-Token");
+      const cookieToken = getCookie(c, CSRF_COOKIE);
+      if (!headerToken || headerToken !== cookieToken) {
+        return forbidden(c, "csrf_token_mismatch", "CSRF token mismatch — refresh and retry.");
       }
     }
   }

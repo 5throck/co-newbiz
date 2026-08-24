@@ -77,3 +77,28 @@ export async function addIncentiveDeadline(input: IncentiveDeadlineInput) {
   const { projectId, ...body } = input;
   return rest.post(`/api/projects/${encodeURIComponent(projectId)}/incentive-deadlines`, body);
 }
+
+// ── dimension_input assertion/review (ADR-0063 write paths) ──────────────
+
+export async function listDimensionInputs(projectId: string, varKey?: string) {
+  const suffix = varKey ? `?var_key=${encodeURIComponent(varKey)}` : "";
+  return rest.get(`/api/projects/${encodeURIComponent(projectId)}/dimension-inputs${suffix}`);
+}
+
+export interface DimensionInputAssertInput {
+  projectId: string;
+  run_id: string;
+  var_key: string;
+  value: { kind: "num" | "text" | "bool"; value: unknown };
+  evidence_ref: string;
+  rationale: string;
+}
+
+export async function assertDimensionInput(input: DimensionInputAssertInput) {
+  const { projectId, ...body } = input;
+  return rest.post(`/api/projects/${encodeURIComponent(projectId)}/dimension-inputs`, body);
+}
+
+export async function reviewDimensionInput(projectId: string, rowId: string) {
+  return rest.post(`/api/projects/${encodeURIComponent(projectId)}/dimension-inputs/${encodeURIComponent(rowId)}/review`);
+}

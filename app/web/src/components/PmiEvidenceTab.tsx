@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { formatBp } from "../lib/format.ts";
 import {
   pmiApi,
   type DealShapeEvaluationRow,
@@ -161,7 +162,7 @@ export function PmiEvidenceTab({ projectId }: { projectId: string }) {
         <tbody>
           {certs.map((row) => (
             <tr key={row.id}>
-              <td>{(row.run_rate_bp / 100).toFixed(0)}%</td>
+              <td>{formatBp(row.run_rate_bp)}</td>
               <td>{row.sustained_quarters}</td>
               <td>{row.certified_by}</td>
               <td>{row.signed_at}</td>
