@@ -124,6 +124,7 @@ function snapshotCount(runId: string): number {
 const COVENANT = "covenant_breach_with_coc_acceleration_under_downside";
 const PARTNER = "partner_dependency_unconfirmed_and_no_alternative";
 const VALIDATORS = "any_of_six_ma_validators_missing_at_dd_exit";
+const INFRA_PLAN = "infrastructure_plan_not_finalized_at_site_announcement";
 
 describe("covenant halt — D-M-RISK-2 / AI-1", () => {
   test("a breached covenant test in the latest simulation triggers the halt", () => {
@@ -203,24 +204,27 @@ describe("partner mark_conditional — D-M-RISK-3 / AI-1", () => {
 // enabled twin plus the two predicate-null class-(iii) entries (infrastructure
 // plan not finalized / zero sites clear minimums).
 describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)", () => {
-  test("the registry loads 3 entries: the enabled twin (mark_conditional, both anchors) + 2 predicate-null inert", () => {
+  test("the registry loads 4 entries: the enabled twin + the ADR-0065 infra-plan tripwire + 2 predicate-null inert", () => {
     const projectId = insertProject();
     const runId = insertRun(projectId);
 
     const result = evaluateScreening(projectId, runId);
 
-    expect(result.evaluated).toBe(1);
-    expect(result.inert).toBe(2);
-    expect(result.outcomes).toHaveLength(1);
-    expect(result.outcomes[0].criterion_id).toBe(PARTNER);
-    expect(result.outcomes[0].action).toBe("mark_conditional");
-    // Anti-tamper contract (registry check c, enforced at runtime too): the
+    expect(result.evaluated).toBe(2);
+    expect(result.inert).toBe(1);
+    const byId = new Map(result.outcomes.map((o) => [o.criterion_id, o]));
+    expect(byId.get(PARTNER)).toMatchObject({ action: "mark_conditional", outcome: "unassessed" });
+    // Anti-tamper contract (registry check c, enforced at runtime too): each
     // enabled entry carries BOTH governance anchors.
-    expect(result.outcomes[0].policy_id).toBe("gd-0022-risk-thresholds");
-    expect(result.outcomes[0].thresholds_source).toContain("risk-thresholds.md");
+    expect(byId.get(PARTNER)?.policy_id).toBe("gd-0022-risk-thresholds");
+    expect(byId.get(PARTNER)?.thresholds_source).toContain("risk-thresholds.md");
+    expect(byId.get(INFRA_PLAN)?.policy_id).toBe("gd-0024-class-c-decisions");
+    expect(byId.get(INFRA_PLAN)?.thresholds_source).toContain("2026-08-24-class-c-decisions.md");
+    // Bare project: infra.plan_finalized is asserted-var → missing → UNASSESSED
+    expect(result.unassessed.sort()).toEqual([INFRA_PLAN, PARTNER].sort());
   });
 
-  test("jv hypothesis + one active high-dependency candidate triggers mark_conditional", () => {
+  test("jv hypothesis + one active high-dependency candidate triggers mark_conditional; infra plan unasserted stays UNASSESSED", () => {
     const projectId = insertProject();
     insertHypothesis(projectId, "jv");
     insertPartner(projectId, { status: "contacted", dependency: "high" });
@@ -231,8 +235,8 @@ describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)
     expect(result.triggered).toHaveLength(1);
     expect(result.triggered[0].criterion_id).toBe(PARTNER);
     expect(result.triggered[0].action).toBe("mark_conditional");
-    expect(result.unassessed).toEqual([]);
-    expect(result.outcomes[0].outcome).toBe("true");
+    expect(result.unassessed).toEqual([INFRA_PLAN]);
+    expect(result.outcomes.find((o) => o.criterion_id === PARTNER)!.outcome).toBe("true");
   });
 
   test("two active candidates → 'no alternative' is false → conjunction false, no trigger", () => {
@@ -244,8 +248,8 @@ describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)
 
     const result = evaluateScreening(projectId, runId);
     expect(result.triggered).toHaveLength(0);
-    expect(result.unassessed).toEqual([]);
-    expect(result.outcomes[0].outcome).toBe("false");
+    expect(result.unassessed).toEqual([INFRA_PLAN]);
+    expect(result.outcomes.find((o) => o.criterion_id === PARTNER)!.outcome).toBe("false");
   });
 
   test("determinate non-high dependency → in-set conjunct false, no trigger", () => {
@@ -256,8 +260,8 @@ describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)
 
     const result = evaluateScreening(projectId, runId);
     expect(result.triggered).toHaveLength(0);
-    expect(result.unassessed).toEqual([]);
-    expect(result.outcomes[0].outcome).toBe("false");
+    expect(result.unassessed).toEqual([INFRA_PLAN]);
+    expect(result.outcomes.find((o) => o.criterion_id === PARTNER)!.outcome).toBe("false");
   });
 
   test("no deal_structure_hypothesis → the filler seeds neither partner var → UNASSESSED, never a silent false (ADR-0060 Decision 2)", () => {
@@ -266,7 +270,7 @@ describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)
 
     const result = evaluateScreening(projectId, runId);
 
-    expect(result.unassessed).toEqual([PARTNER]);
+    expect(result.unassessed.sort()).toEqual([INFRA_PLAN, PARTNER].sort());
     expect(result.triggered).toHaveLength(0);
     expect(result.outcomes[0].outcome).toBe("unassessed");
     // Pin the screening premise at the filler layer: with no hypothesis the
@@ -289,17 +293,19 @@ describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)
     const { result, rowIds } = record(projectId, runId, "greenfield-screening");
 
     expect(result.triggered).toHaveLength(1);
-    expect(rowIds).toHaveLength(1); // the complete ledger: exactly the enabled twin — inert entries claim nothing
+    // The complete ledger: the triggered twin + the ADR-0065 infra-plan
+    // tripwire (UNASSESSED on an unasserted project) — inert entries claim nothing.
+    expect(rowIds).toHaveLength(2);
 
     const rows = ledgerRows(runId);
-    expect(rows).toHaveLength(1);
-    expect(rows[0].criterion_id).toBe(PARTNER);
-    expect(rows[0].outcome).toBe("triggered");
-    expect(rows[0].action).toBe("mark_conditional");
-    expect(rows[0].policy_id).toBe("gd-0022-risk-thresholds"); // anchors snapshotted (ADR-0005)
-    expect(String(rows[0].thresholds_source)).toContain("risk-thresholds.md");
-    expect(rows[0].evaluated_by).toBe(U1);
-    expect(rows[0].evaluated_at).toBe(EVALUATED_AT);
+    expect(rows).toHaveLength(2);
+    const partnerRow = rows.find((r) => r.criterion_id === PARTNER)!;
+    expect(partnerRow.outcome).toBe("triggered");
+    expect(partnerRow.action).toBe("mark_conditional");
+    expect(partnerRow.policy_id).toBe("gd-0022-risk-thresholds"); // anchors snapshotted (ADR-0005)
+    expect(String(partnerRow.thresholds_source)).toContain("risk-thresholds.md");
+    expect(partnerRow.evaluated_by).toBe(U1);
+    expect(partnerRow.evaluated_at).toBe(EVALUATED_AT);
 
     const summary = getRecordedEvaluation({ runId, projectId, procedure: "greenfield-screening", actor: U1 }, db);
     expect(summary.status).toBe("recorded");
@@ -307,7 +313,7 @@ describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)
     expect(summary.mark_conditional[0].criterion_id).toBe(PARTNER);
     expect(summary.mark_conditional[0].predicate).toHaveProperty("op"); // parsed from predicate_json, not a string
     expect(summary.halt).toHaveLength(0);
-    expect(summary.unassessed).toHaveLength(0);
+    expect(summary.unassessed.map((r) => r.criterion_id)).toEqual([INFRA_PLAN]);
     expect(summary.evaluated_false).toHaveLength(0);
     expect(summary.procedures).toEqual(["greenfield-screening"]);
   });
@@ -321,12 +327,12 @@ describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)
 
     record(projectId, runId, "greenfield-screening");
 
-    expect(ledgerRows(runId)).toHaveLength(1);
-    expect(ledgerRows(runId)[0].outcome).toBe("false");
+    expect(ledgerRows(runId)).toHaveLength(2);
+    expect(ledgerRows(runId).find((r) => r.criterion_id === PARTNER)!.outcome).toBe("false");
     const summary = getRecordedEvaluation({ runId, projectId, procedure: "greenfield-screening", actor: U1 }, db);
     expect(summary.evaluated_false.map((r) => r.criterion_id)).toEqual([PARTNER]);
     expect(summary.mark_conditional).toHaveLength(0);
-    expect(summary.unassessed).toHaveLength(0);
+    expect(summary.unassessed.map((r) => r.criterion_id)).toEqual([INFRA_PLAN]);
   });
 
   test("no hypothesis → the twin records outcome 'unassessed' — the gate reads it in the caller-decides group", () => {
@@ -336,10 +342,10 @@ describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)
 
     record(projectId, runId, "greenfield-screening");
 
-    expect(ledgerRows(runId)).toHaveLength(1);
-    expect(ledgerRows(runId)[0].outcome).toBe("unassessed");
+    expect(ledgerRows(runId)).toHaveLength(2);
+    expect(ledgerRows(runId).find((r) => r.criterion_id === PARTNER)!.outcome).toBe("unassessed");
     const summary = getRecordedEvaluation({ runId, projectId, procedure: "greenfield-screening", actor: U1 }, db);
-    expect(summary.unassessed.map((r) => r.criterion_id)).toEqual([PARTNER]);
+    expect(summary.unassessed.map((r) => r.criterion_id).sort()).toEqual([INFRA_PLAN, PARTNER].sort());
     expect(summary.mark_conditional).toHaveLength(0);
     expect(summary.evaluated_false).toHaveLength(0);
   });
