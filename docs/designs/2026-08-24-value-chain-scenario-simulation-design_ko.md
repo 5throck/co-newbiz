@@ -37,7 +37,7 @@
 1. 드라이버 델타를 삼각분포 불확실성으로 샘플링
 2. 수요 전파: 링크 elasticity×Δ(선행 노드 수요/가격 변화) → 후속 노드, lag 반영
 3. 비용 전파: pass_through_rate × Δ원가(업스트림) → 마진률 영향
-4. 노드별 산출: 수요 변화%, 마진률 변화%p, 집중도(HHI) 변화 — P05/P50/P95
+4. 노드별 산출: 수요 변화%, 마진률 변화%p, 집중도(HHI) 변화 — P05/P50/P95  ※실행 정정(ADR-0066): v1 엔진은 수요/마진 두 채널만 계산하며, HHI 변화는 방어 가능한 산식 확정까지 CHECK만 허용(미계)
 5. 결과 저장: `structure_simulation_result`(run_id, scenario, industry_id, metric, p05/p50/p95)
 
 REST/MCP는 simulation.ts 패턴 그대로(POST spawn + GET results, MCP thin wrapper).

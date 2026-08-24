@@ -150,7 +150,9 @@ marketRoutes.post("/api/projects/:id/structure-simulations", async (c) => {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Structure simulation failed.";
-    if (message.includes("does not exist") || message.includes("belongs to project")) return badRequest(c, "invalid_run", message);
+    // Validation/ownership/re-run guards throw with the module prefix — those
+    // are caller mistakes (400). Anything else is an engine failure (500).
+    if (message.startsWith("structure-simulation:")) return badRequest(c, "invalid_request", message.replace(/^structure-simulation:\s*/, ""));
     return fail(c, 500, "engine_failed", message);
   }
 });
