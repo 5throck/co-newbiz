@@ -179,6 +179,11 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
   }
 
   // Column names map 1:1 onto the engine's liability shape (ADR-0026).
+  // UNIT BOUNDARY (ADR-0061): storage is INTEGER KRW-millions; the engine's
+  // contract (and the pinned raw-won rule constants) stay in won, so amounts
+  // scale ×1e6 on the way in and quantiles ÷1e6 (rounded to millions) on the
+  // way back into simulation_result.
+  const SCALE = 1_000_000;
   const liabilities = db
     .query(
       `SELECT probability, amount_low, amount_expected, amount_high, expected_timing_year
@@ -199,9 +204,9 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
     base_cash_flows: flows.map((f) => f.value),
     contingent_liabilities: liabilities.map((cl) => ({
       probability: cl.probability,
-      amount_low: cl.amount_low,
-      amount_expected: cl.amount_expected,
-      amount_high: cl.amount_high,
+      amount_low: cl.amount_low * SCALE,
+      amount_expected: cl.amount_expected * SCALE,
+      amount_high: cl.amount_high * SCALE,
       timing_year: cl.expected_timing_year,
     })),
   };
@@ -216,6 +221,10 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
     rmSync(tempDir, { recursive: true, force: true });
   }
 
+  // UNIT BOUNDARY note: only CONTINGENT AMOUNTS are storage-scaled (KRW
+  // millions in, won into the engine). Engine OUTPUTS persist verbatim —
+  // simulation_result keeps engine-native units per design §12's seeded-
+  // reproduction contract (the CLI-parity test pins exact quantiles).
   const summary: EngineOutput = {
     seed,
     iterations,

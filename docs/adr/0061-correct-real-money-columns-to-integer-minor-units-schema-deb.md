@@ -1,8 +1,8 @@
 # ADR-0061: Correct REAL money columns to integer minor units (schema debt F-3)
 
-**Status**: Proposed
+**Status**: Accepted — EXECUTED 2026-08-24 (migration 0028; scale convention and two scope corrections recorded below)
 **Date**: 2026-08-24
-**Deciders**: TBD (data-architect owns the migration design; user approves)
+**Deciders**: user (scale convention: **KRW millions**, async 2026-08-24); data-architect (migration design); process-governance-manager (governance)
 
 ## Context
 
@@ -50,17 +50,23 @@ unit-aware via `md_unit`, a separate normalization concern).
 
 ## Decision
 
-Migrate every listed money column from REAL to INTEGER minor units using the
-migration-0019 table-rebuild pattern (create-with-CHECKs → INSERT..SELECT with
-explicit scale conversion → DROP → RENAME → recreate indexes verbatim, inside
-the runner transaction with `PRAGMA foreign_keys=ON`), and update the write/
-read paths (`db/lib/simulation.ts`, affected repositories, API envelope, web
-formatting) to compose and render minor units explicitly.
+Migrate every listed money column from REAL to INTEGER **in units of KRW millions** (user convention, 2026-08-24: "KRW 백만원 기준" — a stored 20,000 reads as 200억). FX-exposed amounts convert via fx_policy upstream before storage. Use the migration-0019 table-rebuild pattern (create-with-CHECKs → INSERT..SELECT with explicit scale conversion `CAST(ROUND(old * 1e6) AS INTEGER)`, legacy REAL interpreted as raw won → DROP → RENAME → indexes verbatim, inside the runner transaction with `PRAGMA foreign_keys=ON`), and update the unit boundaries (snapshot filler, simulation engine composition) in the same release window.
 
-Scale decision required at implementation time: KRW has no circulating minor
-unit (1 KRW = 1 minor unit) while USD/EUR use 100 — each column's scale must be
-pinned per currency of record, defaulting to the project currency with the
-scale recorded on the row or table comment, never implied.
+**Scale decision (recorded per this ADR's own requirement)**: single house unit — KRW millions — for every converted column regardless of deal currency; FX normalization happens at intake.
+
+**Execution scope corrections (2026-08-24, recorded honestly vs the draft table above)**:
+
+1. **covenant_test.threshold/projected_value EXCLUDED**: they are DSCR-style RATIOS (fixtures and pilot usage compare 1.25 vs 1.0), not money. The draft table had mislisted them.
+2. **simulation_result/simulation_draw EXCLUDED**: engine outputs keep ENGINE-NATIVE units (REAL) — design §12's seeded-reproduction contract pins exact quantiles against the CLI path, and rounding to millions would break byte-parity for small-NPV scenarios. Only contingent INPUT amounts are unit-boundary-scaled.
+3. **benefit_item correction**: its 0011 DDL has no value_impact column; nothing to convert (target/acquirer/per_capita/harmonization stay REAL per the exclusions below).
+4. contingent_liability.value_impact ADDED to the converted set (it is money; the draft table had missed it).
+
+## Execution record
+
+- Migration `db/migrations/0028_money_columns_integer_krw_millions.sql`, tagged `@reversible: false` (ROUND loses sub-million precision; backup-restore is the only reverse).
+- Converted: contingent_liability amount_low/expected/high + value_impact · dd_finding.value_impact · debt_instrument.principal · incentive amount/npv_value/estimated_clawback · site_candidate infra_capex/incentive_npv/logistics_cost. dd_finding rebuild carries 0019's trl_grade/ip_ownership_status enum CHECKs forward verbatim.
+- Unit boundaries: snapshot-filler contingent family ×1e6 (storage M → raw-won vars; pinned gd-0022 rule constants untouched); db/lib/simulation.ts composes engine scenarios ×1e6 and persists quantiles verbatim.
+- API writers (POST dd-findings value_impact) now take KRW-millions integers — documented at the route; UI formatting follows the same unit.
 
 ## Consequences
 

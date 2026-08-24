@@ -268,7 +268,7 @@ describe("risk dimension", () => {
   test("covenant Red (priority 5) is not masked by the contingent Amber (priority 6) that also fires (D-M-RISK-4 layer 2)", () => {
     const projectId = insertProject();
     insertSimulationWithBreach(projectId); // covenants_breached present >= 1 → covenant rule TRUE (red, prio 5)
-    insertContingent(projectId, 1.0, 20_000_000_000); // EV 2e10 >= 1e10 → expected-value rule TRUE (amber, prio 6)
+    insertContingent(projectId, 1.0, 20_000); // storage M -> filler x1e6: EV 2e10 raw-won >= 1e10 → expected-value rule TRUE (amber, prio 6)
     const runId = insertRun(projectId);
 
     const risk = assess(projectId, runId, "dd").outcomes.find((o) => o.dimension === "risk");
