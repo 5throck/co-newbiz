@@ -1,4 +1,4 @@
-// @version 1.4.0
+// @version 1.5.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -141,7 +141,9 @@ export const SNAPSHOT_VAR_KEYS: readonly string[] = [
   "pmi.synergy_run_rate_certified",
   "dealshape.viable_shapes",
   "permit.critical_path_exceeds_incentive_deadline",
-  // 0027 — ADR-0064 extension round 2 (#5/#6/#7/#8/#9/#10/#17/#19 var halves)
+  // 0029 — ADR-0065 extension round 3 (#18/#25 asserted completeness facts)
+  "legal.ip_assignment_chain_complete",
+  "infra.plan_finalized",
   "fin.wacc_source_status",
   "cert.load_bearing_unconfirmed",
   "cert.transferability_inferred_count",
@@ -299,6 +301,8 @@ const ASSERTED_VARS: ReadonlyArray<{ varKey: string; kind: "text" | "num" }> = [
   { varKey: "right_to_win.tech_overlap", kind: "num" },
   { varKey: "right_to_win.brand_transferability", kind: "num" },
   { varKey: "legal.employment_transfer_consent_regime_determined", kind: "text" },
+  { varKey: "legal.ip_assignment_chain_complete", kind: "text" },
+  { varKey: "infra.plan_finalized", kind: "text" },
 ];
 
 interface DimensionInputRow {
@@ -312,7 +316,7 @@ interface DimensionInputRow {
 const SQL_ASSERTED_ROWS =
   "SELECT var_key, value_text, value_num, evidence_ref, observed_at FROM dimension_input " +
   "WHERE project_id = ? AND superseded_by IS NULL AND reviewed_by IS NOT NULL AND var_key IN " +
-  "('market.entry_barrier','right_to_win.customer_overlap','right_to_win.tech_overlap','right_to_win.brand_transferability','legal.employment_transfer_consent_regime_determined')";
+  "('market.entry_barrier','right_to_win.customer_overlap','right_to_win.tech_overlap','right_to_win.brand_transferability','legal.employment_transfer_consent_regime_determined','legal.ip_assignment_chain_complete','infra.plan_finalized')";
 
 function fillAssertedVars(db: Database, projectId: string): SnapshotWrite[] {
   // The reviewed_by gate is the write path's approval step (repository
@@ -817,7 +821,7 @@ const SQL_BOUND_INDUSTRIES = "SELECT industry_id FROM project_industry WHERE pro
 
 /**
  * Fill a run's variable snapshot: one explicit row per evidence var the
- * 0017-0027 seed sets define (33), statuses per the record
+ * 0017-0029 seed sets define (35), statuses per the record
  * contracts. Runs are immutable — filling an already-filled run throws on
  * the PK.
  */
