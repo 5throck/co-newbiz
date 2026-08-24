@@ -3,9 +3,14 @@
   "criterion_id": "partner_dd_red_ip_chain",
   "title": "Partner DD red finding on IP title, chain, or encumbrances conflicting with our exclusivity",
   "action": "halt",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "Design section A.4 [rbd 2.3, 2.6]: a red partner-DD finding on IP title/chain or encumbrances that conflicts with the exclusivity the deal shape depends on. Declared in YAML, not yet executable — predicate null by design until the thresholds meeting sets what counts as a red finding in machine-readable form (ADR-0052 open questions; activation convention per ADR-0057). Classification (ADR-0060): class (iii) — no snapshot var; proposed: partner.dd_ip_red (boolean) — tech.ip_ownership_status covers the target's dd_finding, not partner DD."
+  "predicate": {
+    "op": "count",
+    "var": "partner.dd_ip_chain_red_count",
+    "cmp": "gte",
+    "value": 1
+  },
+  "enabled": true,
+  "policy_id": "gd-0024-class-c-decisions",
+  "thresholds_source": "docs/decisions/2026-08-24-evidence-source-backlog-disposition.md (round 4) + ADR-0060 row wording; surfaces via migration 0031 — threshold by criterion wording (ADR-0060)",
+  "notes": "Design section A.4 [rbd 2.3, 2.6]: a red partner-DD finding on IP title/chain or encumbrances that conflicts with the exclusivity the deal shape depends on. Declared in YAML, not yet executable — predicate null by design until the thresholds meeting sets what counts as a red finding in machine-readable form (ADR-0052 open questions; activation convention per ADR-0057). Classification (ADR-0060): class (iii) — no snapshot var; proposed: partner.dd_ip_red (boolean) — tech.ip_ownership_status covers the target's dd_finding, not partner DD. ADR-0067 arms this: partner.dd_ip_chain_red_count >= 1 halts — red findings on IP title/chain/encumbrance conflicting with deal exclusivity (workstream='ip_chain', severity='red')."
 }

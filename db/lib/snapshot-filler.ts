@@ -1,4 +1,4 @@
-// @version 1.5.0
+// @version 1.6.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -141,6 +141,10 @@ export const SNAPSHOT_VAR_KEYS: readonly string[] = [
   "pmi.synergy_run_rate_certified",
   "dealshape.viable_shapes",
   "permit.critical_path_exceeds_incentive_deadline",
+  // 0031 — ADR-0067 extension round 4 (#12/#15/#16 var halves)
+  "screening.viable_targets",
+  "partner.financial_distress_red_count",
+  "partner.dd_ip_chain_red_count",
   // 0029 — ADR-0065 extension round 3 (#18/#25 asserted completeness facts)
   "legal.ip_assignment_chain_complete",
   "infra.plan_finalized",
@@ -810,6 +814,47 @@ function fillClassificationPresenceVar(db: Database, projectId: string): Snapsho
 }
 
 // ---------------------------------------------------------------------------
+// Family I — screening & partner DD (ADR-0067, migration 0031): extension
+// round 4. Thresholds by criterion wording (ADR-0060 rows 12/15/16); the
+// disposition doc routed these surfaces to this round.
+// ---------------------------------------------------------------------------
+
+/**
+ * #12: viable candidates on the Screening longlist. No longlist rows = not
+ * yet screened = missing; rows present but zero passing knock-outs IS the
+ * determinate finding.
+ */
+function fillViableTargetsVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("screening.viable_targets");
+  const total = (db.query("SELECT COUNT(*) AS n FROM screening_longlist WHERE project_id = ?").get(projectId) as unknown as { n: number }).n;
+  if (total === 0) return row;
+  row.value_num = (db.query("SELECT COUNT(*) AS n FROM screening_longlist WHERE project_id = ? AND knock_out_passed = 1").get(projectId) as unknown as { n: number }).n;
+  row.evidence_ref = "screening_longlist";
+  const latest = db.query("SELECT MAX(created_at) AS at FROM screening_longlist WHERE project_id = ?").get(projectId) as unknown as { at: string | null };
+  row.observed_at = latest.at;
+  row.status = "present";
+  return row;
+}
+
+/** #15 tripwire: RED partner-DD findings on the financial-distress workstream. Present-always count. */
+function fillPartnerDistressVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("partner.financial_distress_red_count");
+  row.value_num = (db.query("SELECT COUNT(*) AS n FROM partner_dd_finding WHERE project_id = ? AND workstream = 'financial_distress' AND severity = 'red'").get(projectId) as unknown as { n: number }).n;
+  row.evidence_ref = "partner_dd_finding";
+  row.status = "present";
+  return row;
+}
+
+/** #16 tripwire: RED partner-DD findings on the IP title/chain/encumbrance workstream. Present-always count. */
+function fillPartnerIpRedVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("partner.dd_ip_chain_red_count");
+  row.value_num = (db.query("SELECT COUNT(*) AS n FROM partner_dd_finding WHERE project_id = ? AND workstream = 'ip_chain' AND severity = 'red'").get(projectId) as unknown as { n: number }).n;
+  row.evidence_ref = "partner_dd_finding";
+  row.status = "present";
+  return row;
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -821,7 +866,7 @@ const SQL_BOUND_INDUSTRIES = "SELECT industry_id FROM project_industry WHERE pro
 
 /**
  * Fill a run's variable snapshot: one explicit row per evidence var the
- * 0017-0029 seed sets define (35), statuses per the record
+ * 0017–0031 seed sets define (38), statuses per the record
  * contracts. Runs are immutable — filling an already-filled run throws on
  * the PK.
  */
@@ -858,6 +903,9 @@ export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()):
     fillCertInferredVar(db, opts.projectId),
     fillValidatorsMissingVar(db, opts.projectId, opts.runId, now instanceof Date ? now : new Date(now)),
     fillClassificationPresenceVar(db, opts.projectId),
+    fillViableTargetsVar(db, opts.projectId),
+    fillPartnerDistressVar(db, opts.projectId),
+    fillPartnerIpRedVar(db, opts.projectId),
   ];
   const written = new Set(rows.map((r) => r.var_key));
   if (rows.length !== SNAPSHOT_VAR_KEYS.length || SNAPSHOT_VAR_KEYS.some((k) => !written.has(k))) {
