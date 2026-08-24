@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-fs
 title: "Green Field Full Feasibility"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.2.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -59,6 +59,18 @@ steps:
       project financing covenants bind. Feeds the covenant-breach kill
       criterion and the DD risk workstreams.
   - id: 6
+    gate: FS
+    agent_key: market-intelligence-agent
+    skill_key: scenario-planning
+    output_type: industry_structure_simulation
+    description: >
+      Industry-structure scenario simulation (ADR-0066 Phase C) — driver
+      deltas (rate/fx/commodity/regulation from the run's drv.* assumptions)
+      propagated through the value chain's elasticity and pass-through
+      coefficients, persisting P05/P50/P95 demand/margin deltas per node.
+      Owned by market-intelligence-agent per its six-axis charter;
+      coefficient-less links surface as UNASSESSED nodes, never zero impact.
+  - id: 7
     gate: FS
     agent_key: process-governance-manager
     skill_key: stage-gate-governance

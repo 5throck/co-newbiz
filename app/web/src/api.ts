@@ -699,3 +699,67 @@ export const pmiApi = {
       `/api/projects/${encodeURIComponent(projectId)}/dimension-inputs/${encodeURIComponent(rowId)}/review`,
     ),
 };
+// ── ADR-0066 value-chain scenario simulation (Phase A/C surfaces) ──
+
+export interface ChainLayer {
+  layer: number;
+  industryIds: string[];
+}
+
+export interface ChainLinkLite {
+  id: string;
+  from_industry_id: string;
+  to_industry_id: string;
+  direction: "upstream" | "downstream";
+  elasticity: number | null;
+  pass_through_rate: number | null;
+}
+
+export interface ChainTopologyResponse {
+  layers: ChainLayer[];
+  links: ChainLinkLite[];
+  nodeCount: number;
+}
+
+export interface StageFinancialRow {
+  fiscal_year: number;
+  metric_key: string;
+  value: number;
+}
+
+export interface StructureSimQuantileRow {
+  run_id: string;
+  scenario: string;
+  industry_id: string;
+  metric: string;
+  p05: number;
+  p50: number;
+  p95: number;
+  created_at: string;
+}
+
+export interface RunSummaryRow {
+  id: string;
+  label: string | null;
+  created_at: string;
+}
+
+export const marketApi = {
+  topology: (projectId: string) =>
+    api.get<ChainTopologyResponse>(`/api/projects/${encodeURIComponent(projectId)}/value-chain/topology`),
+  stageFinancials: (projectId: string, industryId: string, years = 5) =>
+    api.get<StageFinancialRow[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/industries/${encodeURIComponent(industryId)}/financials?years=${years}`,
+    ),
+  importFinancials: (
+    projectId: string,
+    body: { industry_id: string; source?: string; rows: Array<{ fiscal_year: number; metric_key: string; value: number }> },
+  ) => api.post<{ imported: number }>(`/api/projects/${encodeURIComponent(projectId)}/financial-imports`, body),
+  runs: (projectId: string) => api.get<RunSummaryRow[]>(`/api/projects/${encodeURIComponent(projectId)}/runs`),
+  runStructureSimulation: (
+    projectId: string,
+    body: { run_id: string; seed?: number; iterations?: number; scenario?: "downside" | "base" | "upside" | "custom" },
+  ) => api.post<unknown>(`/api/projects/${encodeURIComponent(projectId)}/structure-simulations`, body),
+  structureResults: (projectId: string, runId?: string) =>
+    api.get<StructureSimQuantileRow[]>(`/api/projects/${encodeURIComponent(projectId)}/structure-simulations${runId ? `?run_id=${encodeURIComponent(runId)}` : ""}`),
+};

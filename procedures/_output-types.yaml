@@ -75,5 +75,6 @@ output_types:
   valuation_model: "The valuation model artifact itself (inputs, structure, outputs)"
   venture_transition_decision: "Portfolio monitoring — human tranche + kill/graduate decision: next_tranche_released | held_evidence_incomplete | graduate_to_core | reduce_or_divest | kill_with_learning_captured (ADR-0052 §E.2/E.3)"
   venture_transition_evidence: "Portfolio monitoring — stage-transition evidence pack: tranche preconditions, obligation tracking, exit-path evaluation, time-boxed windows (ADR-0052 §E.2/E.3)"
+  industry_structure_simulation: "ADR-0066 Phase C — industry-structure scenario simulation output: per-node demand/margin/HHI quantiles from driver propagation (market-intelligence-agent)"
   wacc_hurdle_confirmed: "kind=user WACC / hurdle-IRR confirmation record (checklist bf-02)"
   works_council_consultation_requirement: "Region layer — labor/works-council consultation requirement finding"
