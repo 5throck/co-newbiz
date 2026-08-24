@@ -728,6 +728,117 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/projects/{id}/screening-longlist:
+    get:
+      operationId: listScreeningLonglist
+      summary: Screening candidate register with knock-out verdicts (feeds the #12 halt).
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: addScreeningLonglistEntry
+      summary: Register a candidate with its knock-out verdict — analyst+; audited.
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [candidate_name, knock_out_passed]
+              properties:
+                candidate_name: { type: string }
+                knock_out_passed: { type: boolean }
+                notes: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/partner-dd-findings:
+    get:
+      operationId: listPartnerDDFindings
+      summary: Partner DD findings with workstream and severity (#15/#16 tripwire inputs).
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: addPartnerDDFinding
+      summary: Record a partner DD finding — analyst+; audited; severity drives kill-criteria tripwires.
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [partner_id, workstream, severity, description]
+              properties:
+                partner_id: { type: string }
+                workstream: { type: string, enum: [financial_distress, ip_chain, general] }
+                severity: { type: string, enum: [red, amber, green] }
+                description: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/chain-sensitivities:
+    get:
+      operationId: listChainSensitivities
+      summary: Driver sensitivities per chain node (?industry_id narrows) — feeds the structure-simulation engine.
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: industry_id
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: upsertChainSensitivity
+      summary: Upsert a driver sensitivity for one node — analyst+; UNIQUE(project,industry,driver) makes this a natural upsert; audited.
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [industry_id, driver_code, sensitivity]
+              properties:
+                industry_id: { type: string }
+                driver_code: { type: string, enum: [rate, fx, commodity, regulation] }
+                sensitivity: { type: number }
+                lag_months: { type: integer, minimum: 0 }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/interpretations:
     get:
       operationId: searchInterpretations
