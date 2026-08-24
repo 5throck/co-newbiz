@@ -58,6 +58,25 @@ so downstream output can show which value came from which mode.
 5. **Block the FS gate** if either figure is still `kind='assumed'` —
    `compliance-monitoring`'s gate check reads this directly
 
+## Snapshot Integration (ADR-0064 — how the session feeds kill criteria #5/#6)
+
+The session's output must land in the run's assumption registry under the
+EXACT keys `wacc` and `hurdle_irr` — these two key names are the contract
+`db/lib/snapshot-filler.ts`'s `fin.wacc_source_status` var reads:
+
+- Record via `bun scripts/co-newbiz/newbiz.ts assume --run <run_id> --key wacc
+  --kind user --value <rate> ...` (and again with `--key hurdle_irr`), or via
+  the `set_assumption`✱ MCP tool — both write the same FR-DATA-07 path.
+- The var's semantics: ANY `kind='assumed'` row among the two keys ⇒ status
+  `'assumed'`; both keys present and none assumed ⇒ `'sourced'`; neither key
+  recorded for the run ⇒ `missing` (the criterion evaluates UNASSESSED, never
+  a silent pass).
+- Armed consequence: kill-criteria #5/#6 (`wacc_hurdle_still_assumed`,
+  ADR-0064) HALT when the status is `'assumed'` at FS. Running this skill to
+  completion — both figures `kind='user'` — is what disarms them.
+- Key-name discipline: do not invent variants (`WACC`, `discount_rate`);
+  the filler matches exactly `wacc` and `hurdle_irr`.
+
 ## Output Format
 
 - Confirmed WACC (with mode and component provenance) and hurdle IRR, both `kind='user'`

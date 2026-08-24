@@ -415,6 +415,150 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/projects/{id}/pmi/key-talent:
+    get:
+      operationId: listKeyTalent
+      summary: Close-locked key-talent roster (feeds the 90d attrition tripwire).
+      tags: [PMI]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: addKeyTalent
+      summary: Add a roster row — analyst+; role_ref is a role key, never a person's name (ADR-0039); audited.
+      tags: [PMI]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role_ref, locked_at]
+              properties:
+                role_ref: { type: string, description: "Role key like C-EO-001" }
+                status: { type: string, enum: [active, departed_regretted, departed_planned] }
+                exit_date: { type: [string, "null"] }
+                locked_at: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/pmi/synergy-certifications:
+    get:
+      operationId: listSynergyCertifications
+      summary: Finance synergy run-rate certifications (the BAU-exit completeness fact).
+      tags: [PMI]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: addSynergyCertification
+      summary: Record a certification row — analyst+; certified means >=9000 bp AND >=2 quarters; audited.
+      tags: [PMI]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_rate_bp, sustained_quarters, certified_by, baseline_locked_at, signed_at]
+              properties:
+                run_rate_bp: { type: integer, minimum: 0, maximum: 10000, description: "Basis points of committed cost-synergy run-rate achieved (9000 = 90%)" }
+                sustained_quarters: { type: integer, minimum: 1 }
+                certified_by: { type: string }
+                baseline_locked_at: { type: string }
+                signed_at: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/deal-shape-evaluations:
+    get:
+      operationId: listDealShapeEvaluations
+      summary: P3 deal-shape candidate evaluations (feeds the zero-viable recycle criterion).
+      tags: [DealShape]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: addDealShapeEvaluation
+      summary: Record one candidate shape's two-stage verdict — analyst+; audited.
+      tags: [DealShape]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shape, intent, viable]
+              properties:
+                shape: { type: string, enum: [full_acquisition, majority_stake, spv, holdco_route, joint_venture, minority_stake, license_in, co_development] }
+                intent: { type: string, enum: [integration, capability_access] }
+                viable: { type: boolean }
+                evaluated_at: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/incentive-deadlines:
+    get:
+      operationId: listIncentiveDeadlines
+      summary: Recorded incentive-package deadlines (earliest binds; feeds the permit-path tripwire).
+      tags: [GreenField]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: addIncentiveDeadline
+      summary: Record an incentive deadline — analyst+; audited.
+      tags: [GreenField]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [incentive_ref, deadline]
+              properties:
+                incentive_ref: { type: string }
+                deadline: { type: string, format: date-time }
+                source: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/interpretations:
     get:
       operationId: searchInterpretations
