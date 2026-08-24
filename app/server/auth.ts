@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Auth routes — docs/api-spec.md §2 (Wave 5.6A).
  *
@@ -15,6 +15,7 @@
  * leaked), locked -> 423, pending_approval / disabled -> 403.
  */
 
+import { randomBytes } from "node:crypto";
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { getDb } from "../../db/client.ts";
@@ -27,7 +28,8 @@ import {
 } from "../../db/lib/accounts.ts";
 import { appendAudit } from "../../db/lib/access-control.ts";
 import { badRequest, forbidden, ok, fail } from "./envelope.ts";
-import { SESSION_COOKIE, requireAdmin, requireAuth, requestIsSecure, type AppEnv } from "./middleware.ts";
+import { SESSION_COOKIE, CSRF_COOKIE, requireAdmin, requireAuth, requestIsSecure, type AppEnv } from "./middleware.ts";
+
 
 function sessionCookieOpts(secure: boolean) {
   return {
@@ -109,6 +111,10 @@ authRoutes.post("/api/auth/login", async (c) => {
     return fail(c, status, result.reason, result.lockedUntil ? `Locked until ${result.lockedUntil}.` : "Login refused.");
   }
   setCookie(c, SESSION_COOKIE, result.session.token, sessionCookieOpts(requestIsSecure(c)));
+  // Double-submit CSRF token: readable cookie (NOT httpOnly) so the SPA can
+  // echo it in the X-CSRF-Token header on mutations. Random per login.
+  const csrfToken = randomBytes(32).toString("hex");
+  setCookie(c, CSRF_COOKIE, csrfToken, { httpOnly: false, sameSite: "Lax" as const, path: "/", secure: requestIsSecure(c), maxAge: SESSION_HOURS * 3600 });
   const row = getDb().query("SELECT role FROM app_user WHERE user_id = ?").get(body.userId) as { role: string };
   return ok(c, { userId: body.userId, role: row.role, mustChangePassword: result.mustChangePassword, expiresAt: result.session.expiresAt });
 });

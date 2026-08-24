@@ -51,6 +51,7 @@ import {
   listIncentiveDeadlines, addIncentiveDeadline, type IncentiveDeadlineInput,
 } from "./tools/pmi.ts";
 import { runStructureSimulation, getStructureSimulationResults } from "./tools/structure.ts";
+import { listDimensionInputs, assertDimensionInput, reviewDimensionInput, type DimensionInputAssertInput } from "./tools/pmi.ts";
 import {
   compareRuns,
   getAssumptions,
@@ -366,10 +367,13 @@ export const TOOLS: ToolDefinition[] = [
   { name: "add_incentive_deadline✱", description: "Record an incentive-package deadline for the project.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, incentive_ref: { type: "string" }, deadline: { type: "string" }, source: { type: "string" } }, required: ["projectId", "incentive_ref", "deadline"] } },
   { name: "run_structure_simulation✱", description: "ADR-0066 Phase C — propagate driver deltas (rate/fx/commodity/regulation from the run's drv.* assumptions) through the value chain (elasticity + pass-through), persisting P05/P50/P95 per node/metric. Analyst role at REST.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, runId: { type: "string" }, seed: { type: "integer" }, iterations: { type: "integer" }, scenario: { type: "string", enum: ["downside", "base", "upside", "custom"] } }, required: ["projectId", "runId"] } },
   { name: "get_structure_simulation_results", description: "Persisted structure-simulation quantile rows (?run_id narrows; newest first).", inputSchema: { type: "object", properties: { projectId: { type: "string" }, runId: { type: "string" } }, required: ["projectId"] } },
+  { name: "list_dimension_inputs", description: "Live judged-variable assertions for a project (?var_key narrows).", inputSchema: { type: "object", properties: { projectId: { type: "string" }, var_key: { type: "string" } }, required: ["projectId"] } },
+  { name: "assert_dimension_input✱", description: "Assert a judged fact — analyst+; lands UNREVIEWED by design (cross-domain review is a separate act); audited.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, run_id: { type: "string" }, var_key: { type: "string" }, value: { type: "object", properties: { kind: { type: "string", enum: ["num","text","bool"] }, value: {} }, required: ["kind","value"] }, evidence_ref: { type: "string" }, rationale: { type: "string" } }, required: ["projectId", "run_id", "var_key", "value", "evidence_ref", "rationale"] } },
+  { name: "review_dimension_input✱", description: "Cross-domain second review of a judged-variable assertion — reviewer must differ from the asserter.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, rowId: { type: "string" } }, required: ["projectId", "rowId"] } },
 ];
 
 export function buildServer(): Server {
-  const server = new Server({ name: "co-newbiz-mcp", version: "1.5.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "co-newbiz-mcp", version: "1.6.0" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
@@ -465,6 +469,20 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
     case "get_structure_simulation_results":
       requireString(args, "projectId");
       return getStructureSimulationResults(args.projectId as string, args.runId as string | undefined);
+    case "list_dimension_inputs": {
+      requireString(args, "projectId");
+      return listDimensionInputs(args.projectId as string, args.var_key as string | undefined);
+    }
+    case "assert_dimension_input✱": {
+      for (const k of ["projectId", "run_id", "var_key", "evidence_ref", "rationale"]) requireString(args, k);
+      if (typeof args.value !== "object" || args.value === null) throw new MCPValidationError("value must be an object with kind and value.");
+      return assertDimensionInput(args as unknown as DimensionInputAssertInput);
+    }
+    case "review_dimension_input✱": {
+      requireString(args, "projectId");
+      requireString(args, "rowId");
+      return reviewDimensionInput(args.projectId as string, args.rowId as string);
+    }
     case "list_notifications":
       return listNotifications();
     case "manage_watch": {
