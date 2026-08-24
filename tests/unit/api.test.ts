@@ -1551,5 +1551,31 @@ describe("structure simulation REST (ADR-0066 Phase C)", () => {
       body: JSON.stringify({ run_id: "01NOSUCHRUN000000000000000000" }),
     });
     expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_request");
+  });
+
+  test("re-running the same run+scenario is rejected BEFORE the engine spawn (dup guard)", async () => {
+    const projRes = await req("/api/projects", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ project_no: "NP-STRUCT-2" }) });
+    const pid = (await projRes.json()).data.id;
+    const runRes = await req(`/api/projects/${pid}/runs`, { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ label: "dup guard" }) });
+    const runId = (await runRes.json()).data.run_id;
+    // A node + a coefficient-less-free link so the engine emits assessed rows.
+    const indUp = ulid();
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [indUp, `T-${indUp.slice(-4)}`, "t", "t", NOW]);
+    db.run("INSERT INTO chain_node_sensitivity (id, project_id, industry_id, driver_id, sensitivity, lag_months, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), pid, indUp, "drv-rate", -0.5, 0, "mia", NOW]);
+    const first = await req(`/api/projects/${pid}/structure-simulations`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: runId, seed: 7, iterations: 100, scenario: "base" }),
+    });
+    expect(first.status).toBe(201);
+    const dup = await req(`/api/projects/${pid}/structure-simulations`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: runId, scenario: "base" }),
+    });
+    expect(dup.status).toBe(400);
+    expect((await dup.json()).error.message).toContain("already recorded");
   });
 });

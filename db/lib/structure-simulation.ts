@@ -18,13 +18,16 @@
 
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Database } from "bun:sqlite";
 import { getDb } from "../client.ts";
 import { ulid } from "./ulid.ts";
 
-const ENGINE_SCRIPT = "python/structure_sim.py";
+const ENGINE_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "python", "structure_sim.py");
+const PYTHON_BIN = process.platform === "win32" ? "python" : "python3";
 const ENGINE_TIMEOUT_MS = 120_000;
+const SCENARIOS = ["downside", "base", "upside", "custom"] as const;
 
 export interface StructureSimulationOptions {
   runId: string;
@@ -76,10 +79,13 @@ function requireFinite(value: unknown, label: string): number {
 
 function spawnEngine(scenarioPath: string, timeoutMs: number): Promise<EngineOutput> {
   return new Promise((resolve, reject) => {
-    const proc = Bun.spawn(["python", ENGINE_SCRIPT, scenarioPath], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    let proc: ReturnType<typeof Bun.spawn>;
+    try {
+      proc = Bun.spawn([PYTHON_BIN, ENGINE_SCRIPT, scenarioPath], { stdout: "pipe", stderr: "pipe" });
+    } catch (err) {
+      reject(err instanceof Error ? err : new Error(String(err)));
+      return;
+    }
     const timer = setTimeout(() => proc.kill(), timeoutMs);
     void proc.exited.then((code) => {
       clearTimeout(timer);
@@ -101,10 +107,35 @@ function band(base: number): { mode: number; low: number; high: number } {
 }
 
 export async function runStructureSimulation(opts: StructureSimulationOptions, db: Database = getDb()): Promise<StructureSimSummary> {
+  // Input validation BEFORE any spawn — bad parameters are 400s, never a
+  // post-compute engine failure (the simulation.ts sibling validates too).
+  if (opts.seed !== undefined && (!Number.isInteger(opts.seed) || opts.seed < 0)) {
+    throw new Error("structure-simulation: seed must be a non-negative integer.");
+  }
+  const iterations = opts.iterations ?? 5000;
+  if (!Number.isInteger(iterations) || iterations < 100 || iterations > 100_000) {
+    throw new Error("structure-simulation: iterations must be an integer between 100 and 100000.");
+  }
+  const scenario = opts.scenario ?? "custom";
+  if (!(SCENARIOS as readonly string[]).includes(scenario)) {
+    throw new Error(`structure-simulation: scenario must be one of ${SCENARIOS.join(", ")}.`);
+  }
+
   const run = db.query("SELECT project_id FROM run WHERE id = ?").get(opts.runId) as { project_id: string } | null;
   if (run === null) throw new Error(`structure-simulation: run '${opts.runId}' does not exist`);
   if (run.project_id !== opts.projectId) {
     throw new Error(`structure-simulation: run '${opts.runId}' belongs to project '${run.project_id}', not '${opts.projectId}'`);
+  }
+  // Re-run guard BEFORE the spawn: identical run+scenario already recorded is
+  // a caller decision point (choose another label / another run), not a
+  // post-120s-compute UNIQUE collision surfacing as a 500.
+  const existing = db
+    .query("SELECT COUNT(*) AS n FROM structure_simulation_result WHERE run_id = ? AND scenario = ?")
+    .get(opts.runId, scenario) as { n: number };
+  if (existing.n > 0) {
+    throw new Error(
+      `structure-simulation: results for run '${opts.runId}' + scenario '${scenario}' are already recorded — pass a different scenario or re-run under a fresh run (ADR-0005).`,
+    );
   }
 
   // Driver deltas: the run's OWN input snapshot (drv.* keys recorded via the
@@ -154,10 +185,7 @@ export async function runStructureSimulation(opts: StructureSimulationOptions, d
   }
   const nodes = [...nodeIds].sort().map((industry_id) => ({ industry_id, sensitivities: sensByIndustry.get(industry_id) ?? {} }));
 
-  const seed = opts.seed ?? 42;
-  const iterations = opts.iterations ?? 5000;
-  const scenario = opts.scenario ?? "custom";
-
+  const seed = opts.seed ?? (parseInt(opts.runId.slice(-8), 36) % 2_147_483_647);
   const tempDir = mkdtempSync(join(tmpdir(), "co-newbiz-struct-"));
   let output: EngineOutput;
   try {

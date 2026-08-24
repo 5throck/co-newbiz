@@ -64,8 +64,13 @@ def _quantiles(samples: list[float]) -> dict[str, float]:
     }
 
 
-def _triangular(rng: np.random.Generator, spec: dict[str, Any]) -> float:
-    return float(rng.triangular(spec["low"], spec["mode"], spec["high"]))
+def _triangular(rng: np.random.Generator, spec: dict[str, Any]) -> list[float]:
+    low, mode, high = float(spec["low"]), float(spec["mode"]), float(spec["high"])
+    if low == high:
+        # Degenerate band (e.g. a recorded delta of exactly 0) — a constant,
+        # not a crash: numpy's triangular raises on left == right.
+        return [mode]
+    return [float(rng.triangular(low, mode, high))]
 
 
 def _rate_contribution(sample_bp: float, sensitivity: float) -> float:
@@ -95,7 +100,7 @@ def run_simulation(
     }
     for name, build in specs.items():
         if name in drivers:
-            samples[name] = [_triangular(rng, build(drivers[name])) for _ in range(iterations)]
+            samples[name] = [s for _ in range(iterations) for s in _triangular(rng, build(drivers[name]))]
 
     # Node-level own demand contributions per iteration (%).
     own: dict[str, list[float]] = {nid: [0.0] * iterations for nid in node_ids}
@@ -113,10 +118,18 @@ def run_simulation(
     preds: dict[str, list[tuple[str, float | None]]] = {nid: [] for nid in node_ids}
     out_edges: dict[str, list[tuple[str, float | None]]] = {nid: [] for nid in node_ids}
     indeg: dict[str, int] = {nid: 0 for nid in node_ids}
+    seen_pairs: set[tuple[str, str]] = set()
     for l in links:
         f, t = l.get("from"), l.get("to")
         if f not in node_set or t not in node_set or f == t:
             continue
+        pair = (f, t)
+        if pair in seen_pairs:
+            raise ValueError(
+                f"duplicate value_chain_link rows for {f} -> {t} - each ordered pair must appear once; "
+                "aggregate or deduplicate the links before simulating."
+            )
+        seen_pairs.add(pair)
         out_edges[f].append((t, l.get("elasticity")))
         preds[t].append((f, l.get("elasticity")))
         indeg[t] += 1
@@ -130,6 +143,14 @@ def run_simulation(
             indeg[t] -= 1
             if indeg[t] == 0:
                 queue.append(t)
+
+    if len(topo) != len(node_ids):
+        resolved = set(topo)
+        stuck = sorted(nid for nid in node_ids if nid not in resolved)
+        raise ValueError(
+            f"value-chain cycle detected among {len(stuck)} unresolved node(s): {', '.join(stuck[:5])} - "
+            "fix the value_chain_link rows before simulating."
+        )
 
     # Demand propagation in topological order: each edge transmits the source
     # node's total demand delta scaled by its elasticity. An edge without a
@@ -156,25 +177,51 @@ def run_simulation(
         leakage = [(1.0 - float(p)) * c for c in commodity]
         margin[t] = [m - lk for m, lk in zip(margin[t], leakage)]
 
-    unassessed: list[str] = []
+    # Honesty taint, TRANSITIVE: a node whose inflow edges ALL lack elasticity
+    # has an unproven demand foundation; every node downstream of it inherits
+    # that taint (its numbers rest on the unproven source). Tainted nodes are
+    # reported unassessed — their quantiles still compute for inspection but
+    # the bridge refuses to persist them.
+    tainted: set[str] = set()
+    for l in links:
+        t = l.get("to")
+        if t not in node_set:
+            continue
+        # Source need not be a declared node: an inflow whose elasticity is
+        # missing leaves the target's demand foundation unproven regardless.
+        if l.get("from") and l.get("elasticity") is None:
+            tainted.add(t)
+    changed = True
+    while changed:
+        changed = False
+        for l in links:
+            f, t = l.get("from"), l.get("to")
+            if f in tainted and t in node_set and t not in tainted:
+                tainted.add(t)
+                changed = True
+
+    unassessed = sorted(nid for nid in node_ids if nid in tainted)
     results: list[dict[str, Any]] = []
     for nid in node_ids:
         coeff_inflow = any(e is not None for _f, e in preds[nid])
         if not coeff_inflow and len(preds[nid]) > 0:
             # every inflow lacked elasticity → demand transmission unproven
-            unassessed.append(nid)
+            if nid not in tainted:
+                tainted.add(nid)
+                if nid not in unassessed:
+                    unassessed = sorted(unassessed + [nid])
         results.append(
             {
                 "industry_id": nid,
                 "demand_delta_pct": _quantiles(total_demand[nid]),
                 "margin_delta_pp": _quantiles(margin[nid]),
-                "unassessed": nid in unassessed,
+                "unassessed": nid in tainted,
             }
         )
 
     return {
         "results": results,
-        "unassessed_nodes": sorted(unassessed),
+        "unassessed_nodes": sorted(set(unassessed) | tainted),
         "seed": seed,
         "iterations": iterations,
     }

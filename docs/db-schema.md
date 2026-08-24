@@ -94,6 +94,18 @@ Decision-state enum for `approval_chain.decision` (Entity IC) and `group_agenda.
 
 Evidence-var increments since the 0017–0019 seed base (all `source_kind='computed'` unless noted): migration 0025 added `antitrust.presumption_screens_triggered` (ADR-0062 reversal — the sole antitrust var, kill-tripwire only); 0026 added `pmi.key_talent_attrition_90d`, `pmi.synergy_run_rate_certified`, `dealshape.viable_shapes`, `permit.critical_path_exceeds_incentive_deadline`; 0027 added `fin.wacc_source_status`, `cert.load_bearing_unconfirmed`, `cert.transferability_inferred_count`, `validators.applicable_missing`, and asserted `legal.employment_transfer_consent_regime_determined`; 0029 added asserted `legal.ip_assignment_chain_complete` and `infra.plan_finalized` (ADR-0063/0064/0065 — the Class C evidence extension, 35 snapshot vars total).
 
+Evidence-var increments since the 0017–0019 seed base (all `source_kind='computed'` unless noted): migration 0025 added `antitrust.presumption_screens_triggered` (ADR-0062 reversal — the sole antitrust var, kill-tripwire only); 0026 added `pmi.key_talent_attrition_90d`, `pmi.synergy_run_rate_certified`, `dealshape.viable_shapes`, `permit.critical_path_exceeds_incentive_deadline`; 0027 added `fin.wacc_source_status`, `cert.load_bearing_unconfirmed`, `cert.transferability_inferred_count`, `validators.applicable_missing`, and asserted `legal.employment_transfer_consent_regime_determined`; 0029 added asserted `legal.ip_assignment_chain_complete` and `infra.plan_finalized` (ADR-0063/0064/0065 — the Class C evidence extension, 35 snapshot vars total).
+
+### 7.1 Chain scenario schema (migration 0030 — ADR-0066, Phase B)
+
+| Table | Purpose | Key Fields |
+|---|---|---|
+| `industry_driver` | External-driver registry — v1 quartet rate/fx/commodity/regulation (stable `drv-*` ids); growth is INSERT-only (code UNIQUE, no enum CHECK) | `id`, `code` (UNIQUE), `label_ko`, `description`, `source_series_id` → `md_source`, `created_at` |
+| `chain_node_sensitivity` | Per-(project, industry, driver) elasticity + lag from the six-axis analysis — UNIQUE per triple; sensitivity ±10 CHECK, lag ≥ 0 | `id`, `project_id`, `industry_id`, `driver_id`, `sensitivity`, `lag_months`, `evidence_ref`, `assessed_by`, `assessed_at` |
+| `structure_simulation_result` | Quantile output of `python/structure_sim.py` (ADR-0066 Phase C) — one row per (run, scenario, industry, metric); scenario ∈ downside/base/upside/custom; metric ∈ demand_delta_pct/margin_delta_pp/hhi_delta (hhi_delta CHECK-admitted but not yet computed by the engine) | `id`, `run_id`, `scenario`, `industry_id`, `metric`, `p05`, `p50`, `p95`, `created_at` |
+
+Scenario inputs ride run-versioning as exact `drv.rate_bp` / `drv.fx_pct` / `drv.commodity_pct` / `drv.regulation_severity` assumption keys (`run_input`) — no separate input table.
+
 ## 7. M&A Special-Topics Tables
 
 > **Money-unit convention (migration 0028, ADR-0061 EXECUTED 2026-08-24)**:

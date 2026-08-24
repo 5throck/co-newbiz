@@ -105,6 +105,16 @@ All project-scoped via membership (404-not-403); writes analyst-gated and audit-
 | `/api/projects/:id/dimension-inputs` | GET/POST | Judged-variable assertions (`?var_key=` narrows; POST lands UNREVIEWED by design) | Membership; POST `analyst`+ |
 | `/api/projects/:id/dimension-inputs/:rowId/review` | POST | Cross-domain second review (reviewer ≠ asserter) | Membership; POST `analyst`+ |
 
+### 7.2 Market and Value-Chain Simulation (as-built — ADR-0066 Phases A/C)
+
+| Endpoint | Method | Purpose | Access Control |
+|---|---|---|---|
+| `/api/projects/:id/value-chain/topology` | GET | Layered chain graph (upstream→end-market); cycle → 400 `topology_cycle` | Membership |
+| `/api/projects/:id/industries/:industryId/financials` | GET | Per-year metric aggregates for one node (`?years=1..10`) | Membership |
+| `/api/projects/:id/financial-imports` | POST | User-provided fallback ingestion into `fact_industry` (DART collector unavailable) — analyst+, audited | Membership; POST `analyst`+ |
+| `/api/projects/:id/structure-simulations` | POST | ADR-0066 Phase C engine run: drv.* assumptions + sensitivities + links → per-node quantiles persisted; re-run same run+scenario rejected pre-spawn | Membership; POST `analyst`+ |
+| `/api/projects/:id/structure-simulations` | GET | Persisted quantile rows (`?run_id=` narrows) | Membership |
+
 ## 8. Admin Console (Never MCP-Exposed)
 
 | Endpoint | Method | Purpose | Access Control |
