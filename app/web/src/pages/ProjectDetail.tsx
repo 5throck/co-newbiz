@@ -20,6 +20,7 @@ import { MaReviewTab } from "../components/MaReviewTab.tsx";
 import { ModelTab } from "../components/ModelTab.tsx";
 import { SimulationTab } from "../components/SimulationTab.tsx";
 import { VersionCompareTab } from "../components/VersionCompareTab.tsx";
+import { PmiEvidenceTab } from "../components/PmiEvidenceTab.tsx";
 
 type Tab =
   | "overview"
@@ -32,6 +33,7 @@ type Tab =
   | "dd"
   | "permits"
   | "ma"
+  | "pmi"
   | "members";
 
 interface ProjectMember {
@@ -149,7 +151,8 @@ export function ProjectDetail() {
         <button type="button" aria-current={tab === "ma"} onClick={() => setTab("ma")}>
           M&A 검토
         </button>
-        <button type="button" aria-current={tab === "members"} onClick={() => setTab("members")}>
+        <button type="button" aria-current={tab === "pmi"} onClick={() => setTab("pmi")}>PMI·증거</button>
+      <button type="button" aria-current={tab === "members"} onClick={() => setTab("members")}>
           멤버십
         </button>
       </nav>
@@ -224,6 +227,12 @@ export function ProjectDetail() {
       {tab === "ma" && id && (
         <section aria-label="M&A 검토">
           <MaReviewTab projectId={id} />
+        </section>
+      )}
+
+      {tab === "pmi" && id && (
+        <section aria-label="PMI 및 증거 팩">
+          <PmiEvidenceTab projectId={id} />
         </section>
       )}
 
