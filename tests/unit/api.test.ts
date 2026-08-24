@@ -1290,3 +1290,112 @@ describe("scorecard routes — membership scope, cycles, MNPI (E.4)", () => {
     expect(mnpiLog.n).toBeGreaterThan(0);
   });
 });
+
+
+describe("PMI / deal-shape / incentive-deadline surfaces (ADR-0063 write paths)", () => {
+  test("unauthenticated GET is rejected", async () => {
+    const res = await req(`/api/projects/${projectId}/pmi/key-talent`);
+    expect(res.status).toBe(401);
+  });
+
+  test("a non-member gets 404 on GET and POST — never an existence oracle", async () => {
+    const g = await req(`/api/projects/${projectId}/pmi/key-talent`, { headers: { cookie: daveCookie } });
+    expect(g.status).toBe(404);
+    const p = await req(`/api/projects/${projectId}/incentive-deadlines`, {
+      method: "POST",
+      headers: { cookie: daveCookie },
+      body: JSON.stringify({ incentive_ref: "INC-X", deadline: "2027-06-30" }),
+    });
+    expect(p.status).toBe(404);
+  });
+
+  test("empty roster lists as an empty array for a member", async () => {
+    const res = await req(`/api/projects/${projectId}/pmi/key-talent`, { headers: { cookie: aliceCookie } });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ data: [] });
+  });
+
+  test("key-talent happy path writes an audit row; observer role is 403; bad status is 400", async () => {
+    const post = await req(`/api/projects/${projectId}/pmi/key-talent`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ role_ref: "C-EO-001", status: "active", locked_at: "2026-08-24T00:00:00Z" }),
+    });
+    expect(post.status).toBe(201);
+
+    const audit = db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'pmi_key_talent_write'").get() as { n: number };
+    expect(audit.n).toBeGreaterThan(0);
+
+    const observer = await req(`/api/projects/${projectId}/pmi/key-talent`, {
+      method: "POST",
+      headers: { cookie: erinCookie },
+      body: JSON.stringify({ role_ref: "C-CTO-001", locked_at: "2026-08-24T00:00:00Z" }),
+    });
+    expect(observer.status).toBe(403);
+
+    const bad = await req(`/api/projects/${projectId}/pmi/key-talent`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ role_ref: "C-EO-002", status: "resigned", locked_at: "2026-08-24T00:00:00Z" }),
+    });
+    expect(bad.status).toBe(400);
+  });
+
+  test("synergy certification validates the bp range and persists a qualifying row", async () => {
+    const bad = await req(`/api/projects/${projectId}/pmi/synergy-certifications`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_rate_bp: 12000, sustained_quarters: 2, certified_by: "C-CFO-001", baseline_locked_at: NOW, signed_at: NOW }),
+    });
+    expect(bad.status).toBe(400);
+
+    const good = await req(`/api/projects/${projectId}/pmi/synergy-certifications`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_rate_bp: 9200, sustained_quarters: 2, certified_by: "C-CFO-001", baseline_locked_at: NOW, signed_at: NOW }),
+    });
+    expect(good.status).toBe(201);
+
+    const list = await req(`/api/projects/${projectId}/pmi/synergy-certifications`, { headers: { cookie: aliceCookie } });
+    expect((await list.json()).data.length).toBeGreaterThan(0);
+  });
+
+  test("deal-shape evaluation validates the shape enum and records viability", async () => {
+    const bad = await req(`/api/projects/${projectId}/deal-shape-evaluations`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ shape: "hostile_takeover", intent: "integration", viable: true }),
+    });
+    expect(bad.status).toBe(400);
+
+    const good = await req(`/api/projects/${projectId}/deal-shape-evaluations`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ shape: "minority_stake", intent: "capability_access", viable: false }),
+    });
+    expect(good.status).toBe(201);
+  });
+
+  test("incentive deadline requires a parseable date and lists earliest-first", async () => {
+    const bad = await req(`/api/projects/${projectId}/incentive-deadlines`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ incentive_ref: "INC-BAD", deadline: "not-a-date" }),
+    });
+    expect(bad.status).toBe(400);
+
+    await req(`/api/projects/${projectId}/incentive-deadlines`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ incentive_ref: "INC-101", deadline: "2028-03-31T00:00:00Z" }),
+    });
+    await req(`/api/projects/${projectId}/incentive-deadlines`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ incentive_ref: "INC-102", deadline: "2027-06-30T00:00:00Z" }),
+    });
+    const list = await req(`/api/projects/${projectId}/incentive-deadlines`, { headers: { cookie: aliceCookie } });
+    const data = (await list.json()).data as Array<{ incentive_ref: string }>;
+    expect(data[0].incentive_ref).toBe("INC-102"); // earliest binds
+  });
+});

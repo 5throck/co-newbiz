@@ -1,4 +1,4 @@
-// @version 1.5.0
+// @version 1.6.0
 /**
  * co-newbiz API server — docs/api-spec.md (Wave 5.6A).
  *
@@ -49,6 +49,7 @@ import { monitoringRoutes } from "./monitoring.ts";
 import { scorecardRoutes } from "./scorecard.ts";
 import { glossaryRoutes } from "./glossary.ts";
 import { adminRoutes } from "./admin.ts";
+import { pmiRoutes } from "./pmi.ts";
 import { securityHeaders, type AppEnv } from "./middleware.ts";
 
 const SPA_DIST = "app/web/dist";
@@ -85,6 +86,11 @@ export function buildApp(): Hono<AppEnv> {
   app.route("/", monitoringRoutes);
   app.route("/", scorecardRoutes);
   app.route("/", glossaryRoutes);
+  // pmiRoutes mounts BEFORE adminRoutes deliberately: admin's module-level
+  // `use("*", requireAuth, requireAdmin)` flattens to a parent-level catch-all
+  // at its mount position, so any route module mounted after it inherits the
+  // admin gate on every unmatched path. Mount new modules ABOVE this line.
+  app.route("/", pmiRoutes);
   app.route("/", adminRoutes);
 
   return app;

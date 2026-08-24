@@ -45,6 +45,12 @@ import {
 import { lookupTerm } from "./tools/glossary.ts";
 import { listNotifications, manageWatch, type WatchRuleInput } from "./tools/monitoring.ts";
 import {
+  listKeyTalent, addKeyTalent, type KeyTalentInput,
+  listSynergyCertifications, addSynergyCertification, type SynergyCertificationInput,
+  listDealShapeEvaluations, addDealShapeEvaluation, type DealShapeEvaluationInput,
+  listIncentiveDeadlines, addIncentiveDeadline, type IncentiveDeadlineInput,
+} from "./tools/pmi.ts";
+import {
   compareRuns,
   getAssumptions,
   getObservations,
@@ -348,10 +354,19 @@ export const TOOLS: ToolDefinition[] = [
       required: ["projectId"],
     },
   },
+  // ── ADR-0063 Class C evidence surfaces (write tools ✱) ──
+  { name: "list_key_talent", description: "Close-locked key-talent roster for a project (feeds the 90d attrition tripwire).", inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] } },
+  { name: "add_key_talent✱", description: "Add a key-talent roster row — analyst role at the REST layer; audited. Money-free; role_ref is a role key, never a person's name.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, role_ref: { type: "string" }, status: { type: "string", enum: ["active", "departed_regretted", "departed_planned"] }, exit_date: { type: "string" }, locked_at: { type: "string" } }, required: ["projectId", "role_ref", "locked_at"] } },
+  { name: "list_synergy_certifications", description: "Finance synergy run-rate certifications (BAU-exit completeness fact).", inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] } },
+  { name: "add_synergy_certification✱", description: "Record a certification — certified means >=9000 bp AND >=2 sustained quarters (Class C record c).", inputSchema: { type: "object", properties: { projectId: { type: "string" }, run_rate_bp: { type: "integer" }, sustained_quarters: { type: "integer" }, certified_by: { type: "string" }, baseline_locked_at: { type: "string" }, signed_at: { type: "string" } }, required: ["projectId", "run_rate_bp", "sustained_quarters", "certified_by", "baseline_locked_at", "signed_at"] } },
+  { name: "list_deal_shape_evaluations", description: "P3 deal-shape candidate evaluations (feeds the zero-viable recycle criterion).", inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] } },
+  { name: "add_deal_shape_evaluation✱", description: "Record one candidate shape's two-stage verdict (intent split -> five equal-weight criteria).", inputSchema: { type: "object", properties: { projectId: { type: "string" }, shape: { type: "string", enum: ["full_acquisition", "majority_stake", "spv", "holdco_route", "joint_venture", "minority_stake", "license_in", "co_development"] }, intent: { type: "string", enum: ["integration", "capability_access"] }, viable: { type: "boolean" }, evaluated_at: { type: "string" } }, required: ["projectId", "shape", "intent", "viable"] } },
+  { name: "list_incentive_deadlines", description: "Recorded incentive-package deadlines (earliest binds; feeds the permit-path tripwire).", inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] } },
+  { name: "add_incentive_deadline✱", description: "Record an incentive-package deadline for the project.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, incentive_ref: { type: "string" }, deadline: { type: "string" }, source: { type: "string" } }, required: ["projectId", "incentive_ref", "deadline"] } },
 ];
 
 export function buildServer(): Server {
-  const server = new Server({ name: "co-newbiz-mcp", version: "1.3.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "co-newbiz-mcp", version: "1.4.0" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
@@ -401,6 +416,38 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
     case "lookup_term":
       requireString(args, "term");
       return lookupTerm(args.term as string);
+    case "list_key_talent":
+      requireString(args, "projectId");
+      return listKeyTalent(args.projectId as string);
+    case "add_key_talent✱": {
+      requireString(args, "projectId");
+      requireString(args, "role_ref");
+      requireString(args, "locked_at");
+      return addKeyTalent(args as unknown as KeyTalentInput);
+    }
+    case "list_synergy_certifications":
+      requireString(args, "projectId");
+      return listSynergyCertifications(args.projectId as string);
+    case "add_synergy_certification✱": {
+      for (const k of ["projectId", "run_rate_bp", "sustained_quarters", "certified_by", "baseline_locked_at", "signed_at"]) requireString(args, k);
+      return addSynergyCertification(args as unknown as SynergyCertificationInput);
+    }
+    case "list_deal_shape_evaluations":
+      requireString(args, "projectId");
+      return listDealShapeEvaluations(args.projectId as string);
+    case "add_deal_shape_evaluation✱": {
+      for (const k of ["projectId", "shape", "intent", "viable"]) requireString(args, k);
+      return addDealShapeEvaluation(args as unknown as DealShapeEvaluationInput);
+    }
+    case "list_incentive_deadlines":
+      requireString(args, "projectId");
+      return listIncentiveDeadlines(args.projectId as string);
+    case "add_incentive_deadline✱": {
+      requireString(args, "projectId");
+      requireString(args, "incentive_ref");
+      requireString(args, "deadline");
+      return addIncentiveDeadline(args as unknown as IncentiveDeadlineInput);
+    }
     case "list_notifications":
       return listNotifications();
     case "manage_watch": {
