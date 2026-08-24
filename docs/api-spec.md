@@ -47,8 +47,8 @@
 | `/api/assumptions` | GET/POST | Assumption registry entries | Membership; `kind='assumed'` write requires non-empty `rationale` | as-built (5.7B) |
 | `/api/proxy-chains/:id` | GET | Chain detail with per-hop reliability grade | Membership | forward-design |
 | `/api/proxy-chains/:id/calibrate` | POST | Recalibration trigger | `quant-methodologist` role | forward-design |
-| `/api/simulations` | POST | Monte Carlo run (seeded) — composes the scenario from the run's `sim.*` inputs (`sim.discount_rate`, `sim.cf1..N`) plus the project's `contingent_liability` rows, spawns `python/monte_carlo.py` with an args array (never shell), and persists `simulation` + `simulation_result`; omitted seed defaults to a value derived from the run's `input_hash` (identical inputs stay reproducible), omitted iterations to the engine's 10000; no `label` — the table has no such column | Membership via `run.project_id`; `analyst`+ role, audit-logged; input problems 400, engine failures 500 | as-built (engine-2) |
-| `/api/simulations/:id/results` | GET | Quantile summary (`simulation_result`) ONLY — `simulation_draw` is never read (retention_policy archives raw draws; the permanent record is the summary); meta carries seed + iterations | Membership via simulation → run → project | as-built (engine-2) |
+| `/api/simulations` | POST | Monte Carlo run (seeded) — composes the scenario from the run's `sim.*` inputs (`sim.discount_rate`, `sim.cf1..N`) plus the project's `contingent_liability` rows (stored **KRW millions**, scaled ×1e6 into the engine's raw-won contract), spawns `python/monte_carlo.py` with an args array (never shell), and persists `simulation` + `simulation_result`; omitted seed defaults to a value derived from the run's `input_hash` (identical inputs stay reproducible), omitted iterations to the engine's 10000; no `label` — the table has no such column | Membership via `run.project_id`; `analyst`+ role, audit-logged; input problems 400, engine failures 500 | as-built (engine-2) |
+| `/api/simulations/:id/results` | GET | Quantile summary (`simulation_result`) ONLY — `simulation_draw` is never read (retention_policy archives raw draws; the permanent record is the summary); meta carries seed + iterations. Quantiles are **engine-native units** (the seeded-reproduction contract, ADR-0061 scope correction #2 — not rescaled) | Membership via simulation → run → project | as-built (engine-2) |
 | `/api/portfolio-scorecard` | GET | Cross-project rollup over projects where the caller holds membership; meta self-discloses the subset when `mnpi_flag` projects are excluded | Authenticated, membership-filtered | as-built |
 | `/api/projects/:id/scorecard` | GET | Per-project dimension scores for the venture scorecard | Membership + elevated role | as-built |
 
@@ -69,9 +69,9 @@
 
 | Endpoint | Method | Purpose | Access Control | Implementation |
 |---|---|---|---|---|
-| `/api/projects/:id/dd-findings` | GET/POST | `dd_finding` records, including `category='rbd'` fields | Membership | as-built (5.7B) |
+| `/api/projects/:id/dd-findings` | GET/POST | `dd_finding` records, including `category='rbd'` fields; POST `value_impact` is an **INTEGER in KRW millions** (ADR-0061) | Membership | as-built (5.7B) |
 | `/api/projects/:id/antitrust` | GET | HHI/remedy-type/discharge-status | Membership | as-built (5.7B) |
-| `/api/projects/:id/liabilities` | GET | Combined exposure — `debt_instrument` + `contingent_liability` + the latest simulation's `covenant_test` | Membership | as-built (5.7B) |
+| `/api/projects/:id/liabilities` | GET | Combined exposure — `debt_instrument` + `contingent_liability` + the latest simulation's `covenant_test` (money fields **KRW millions** per ADR-0061; covenant thresholds/ratios are ratios) | Membership | as-built (5.7B) |
 | `/api/projects/:id/contingent-liabilities` | POST | Feeds Monte Carlo | Membership | forward-design (read side served by `/liabilities`) |
 | `/api/projects/:id/management-package` | GET | **`executive_ref` only, never a real name** (FR-MA-06/SEC-05) — response schema has no name field to accidentally populate | Membership + elevated role (compensation data) | forward-design |
 | `/api/projects/:id/comp-benchmark` | GET | Aggregate-only rows | Membership + elevated role | forward-design |

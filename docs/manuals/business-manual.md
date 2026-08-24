@@ -18,7 +18,7 @@ See `docs/process-map.md` for the authoritative deliverable/approver/RACI table.
 | Screening | Build the initial deliverable (site shortlist or target longlist) | Not yet involved |
 | Pre-FS | Confirm WACC/hurdle IRR inputs with the deal sponsor | Not yet involved |
 | FS | Complete the valuation, growth projection, and (BF) start the six-validator cross-check | Not yet involved |
-| DD | Land every DD finding as a `dd_finding` with `value_impact` — never leave a finding as prose only | Not yet involved |
+| DD | Land every DD finding as a `dd_finding` with `value_impact` (INTEGER, unit = KRW millions — ADR-0061) — never leave a finding as prose only | Not yet involved |
 | Entity IC | Prepare the IC memo (see template) | Review, confirm or correct the AI-proposed RAG grade **with a reason if you correct it**, approve/reject/request more work |
 | Group IC | Support the ranking discussion if asked | Rank this proposal against concurrent `group_agenda` entries; decide approved/rejected/**conditional** |
 

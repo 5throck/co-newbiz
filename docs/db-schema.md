@@ -49,8 +49,8 @@ v_*           → query-optimized views, derived, never a source of truth
 | `run` | Immutable analysis snapshot | `id`, `project_id`, `label`, `input_hash`, `created_by`, `created_at`, `superseded_by` |
 | `run_input` | Frozen input set per run | PK `(run_id, assumption_key)`, `value` |
 | `simulation` | Monte Carlo run | `id`, `run_id`, `seed`, `iterations`, `created_at` |
-| `simulation_draw` | Raw iteration output — **archived after N months (`retention_policy`)** | `simulation_id`, `iteration_no`, `metric`, `value` |
-| `simulation_result` | Quantile summary — **retained permanently** | `simulation_id`, `metric`, `p05`, `p50`, `p95` |
+| `simulation_draw` | Raw iteration output — **archived after N months (`retention_policy`)** | `simulation_id`, `iteration_no`, `metric`, `value` — **engine-native REAL units** (design §12 seeded-reproduction contract; deliberately NOT unit-scaled, ADR-0061 execution scope correction #2) |
+| `simulation_result` | Quantile summary — **retained permanently** | `simulation_id`, `metric`, `p05`, `p50`, `p95` — **engine-native REAL units**, same ADR-0061 exclusion as `simulation_draw` |
 | `document` | Rendered deliverable | `id`, `run_id`, `version`, `superseded_by`, `document_section_hash` |
 | `fx_policy` | FX rate-type assignment per item category | `id`, `scope`, `rate_type`, `source_series_id` |
 | `retention_policy` | Archival rule per table | `table_key`, `basis`, `retention_months`, `action`, `last_run_at` |
@@ -94,24 +94,32 @@ Decision-state enum for `approval_chain.decision` (Entity IC) and `group_agenda.
 
 ## 7. M&A Special-Topics Tables
 
+> **Money-unit convention (migration 0028, ADR-0061 EXECUTED 2026-08-24)**:
+> monetary quantities are stored as **INTEGER, unit = KRW millions** ("KRW
+> 백만원 기준" — user decision). FX-exposed amounts normalize via `fx_policy`
+> upstream before storage. Ratio/index/score columns stay REAL by design.
+> Unit boundaries: the snapshot filler multiplies storage ×1e6 into raw-won
+> snapshot vars (pinned rule constants untouched); the simulation engine
+> composes ×1e6 and persists quantiles verbatim into the engine-native tables.
+
 | Table | Purpose | Key Fields |
 |---|---|---|
-| `dd_finding` | Every DD observation with financial consequence. `category='rbd'` findings (R&BD sub-type — technology/IP acquisition, license-in, internal-venture spin-off) additionally carry `trl_grade`, `ip_ownership_status`, `commercialization_path`, `parent_relationship_json`, `rbd_source` (`internal_only` \| `accelerator_partnered` \| `external_technology_acquisition` — pilot 011 F-2, refined by pilot 012 F-2). `trl_grade` (`TRL1`..`TRL9`, D-M-TE-1) and `ip_ownership_status` (`owned_by_target` \| `owned_by_originator` \| `licensed_in` \| `jointly_owned` \| `disputed`, D-M-TE-3) are CHECK enums since migration 0019, NULL = unassessed | `id`, `project_id`, `category`, `description`, `value_impact`, `assumption_key`, `evidence_ref` |
+| `dd_finding` | Every DD observation with financial consequence. `category='rbd'` findings (R&BD sub-type — technology/IP acquisition, license-in, internal-venture spin-off) additionally carry `trl_grade`, `ip_ownership_status`, `commercialization_path`, `parent_relationship_json`, `rbd_source` (`internal_only` \| `accelerator_partnered` \| `external_technology_acquisition` — pilot 011 F-2, refined by pilot 012 F-2). `trl_grade` (`TRL1`..`TRL9`, D-M-TE-1) and `ip_ownership_status` (`owned_by_target` \| `owned_by_originator` \| `licensed_in` \| `jointly_owned` \| `disputed`, D-M-TE-3) are CHECK enums since migration 0019, NULL = unassessed | `id`, `project_id`, `category`, `description`, `value_impact` (**INTEGER, KRW millions** — ADR-0061), `assumption_key`, `evidence_ref` |
 | `antitrust_finding` | Antitrust screen result | `id`, `project_id`, `market_definition`, `hhi_before`, `hhi_after`, `combination_type` (`direct_merger`\|`common_ownership`), `filing_jurisdictions`, `remedy_type` (`none`\|`behavioral`\|`structural`\|`prohibited`), `remedy_detail`, `discharge_confirmed_at` |
 | `management_package` | Executive comp — **no real names** | `id`, `project_id`, `executive_ref` (role-based key), `role`, `base_pay`, `coc_trigger`, `coc_payout_estimate`, `accelerated_vesting`, `non_compete_months`, `non_compete_enforceable`, `flight_risk`, `value_impact` |
 | `comp_benchmark` | Pay-parity aggregate — **no individual rows** | `id`, `project_id`, `job_family`, `grade`, `headcount`, `target_median`, `acquirer_median`, `gap_pct`, `annual_cost_delta` |
-| `benefit_item` | Benefits harmonization | `id`, `project_id`, `category`, `target_value`, `acquirer_value`, `per_capita_delta`, `harmonization_cost` |
-| `debt_instrument` | Target debt structure | `id`, `project_id`, `lender`, `principal`, `rate_type`, `rate`, `maturity`, `covenant_json`, `coc_acceleration` |
-| `contingent_liability` | Contingent liability for Monte Carlo | `id`, `project_id`, `category`, `probability`, `amount_low`, `amount_expected`, `amount_high`, `distribution`, `expected_timing`, `value_impact` |
-| `covenant_test` | Per-scenario covenant check | `simulation_id`, `period_id`, `covenant_key`, `threshold`, `projected_value`, `breached` |
-| `incentive` | Unified acquisition/clawback record | `id`, `project_id`, `site_id`, `direction` (`prospective`\|`granted`), `type`, `grantor`, `amount`, `npv_value`, `obligation_json`, `clawback_rule`, `estimated_clawback` |
+| `benefit_item` | Benefits harmonization — its columns are ratio/aggregate fields outside the money-column conversion (ADR-0061 execution correction #3) | `id`, `project_id`, `category`, `target_value`, `acquirer_value`, `per_capita_delta`, `harmonization_cost` |
+| `debt_instrument` | Target debt structure | `id`, `project_id`, `lender`, `principal` (**INTEGER, KRW millions** — ADR-0061), `rate_type`, `rate` (REAL — a rate, not money), `maturity`, `covenant_json`, `coc_acceleration` |
+| `contingent_liability` | Contingent liability for Monte Carlo | `id`, `project_id`, `category`, `probability` (REAL 0–1), `amount_low`, `amount_expected`, `amount_high` (**INTEGER, KRW millions** — ADR-0061), `distribution`, `expected_timing`, `value_impact` (**INTEGER, KRW millions**) |
+| `covenant_test` | Per-scenario covenant check — threshold/projected_value are **RATIOS (REAL)**, not money (ADR-0061 execution correction #1) | `simulation_id`, `period_id`, `covenant_key`, `threshold`, `projected_value`, `breached` |
+| `incentive` | Unified acquisition/clawback record | `id`, `project_id`, `site_id`, `direction` (`prospective`\|`granted`), `type`, `grantor`, `amount`, `npv_value`, `obligation_json`, `clawback_rule`, `estimated_clawback` — the three money fields are **INTEGER, KRW millions** (ADR-0061) |
 | `deal_structure_hypothesis` | Deal-structure hypothesis with real columns — until migration 0013 this existed only as a procedure `output_type` string (`procedures/_shared/brownfield-pre-fs/schema.yaml`). Carries ADR-0045's four mandatory review axes (`tax_structure_note`, `liability_isolation_note`, `financing_leverage_note`, `exit_structure_note`; `four_axis_review_completed` defaults 0 — completion is a deliberate act) plus the acquisition-shape axes, for both Brown Field and Green Field tracks. `run_id` is nullable: a hypothesis can precede any analysis run | `id`, `project_id`, `run_id` (nullable), `asset_or_stock` (`asset`\|`stock`\|`mixed`), `stake_type` (`full`\|`majority`\|`minority`\|`joint_control`), `instrument_mix` (`primary`\|`secondary`\|`mixed`), `vehicle` (`direct`\|`spc`\|`holdco`\|`internal_venture_spinoff`\|`jv`), `commercialization_path` (`build`\|`license_in`\|`license_out`\|`spin_off`\|`minority_venture_investment`), the four ADR-0045 note columns, `four_axis_review_completed`, `hypothesized_by`, `hypothesized_at`, `rationale` — all five shape enums nullable at hypothesis time |
 
 ## 8. Green Field Tables
 
 | Table | Purpose | Key Fields |
 |---|---|---|
-| `site_candidate` | Scored site | `id`, `project_id`, `name`, `region_code`, `infra_score`, `infra_capex`, `incentive_npv`, `logistics_cost`, `labor_availability`, `permit_lead_time_days`, `affected_area_notification_status`, `total_score`, `rank` |
+| `site_candidate` | Scored site | `id`, `project_id`, `name`, `region_code`, `infra_score` (REAL), `infra_capex` / `incentive_npv` / `logistics_cost` (**INTEGER, KRW millions** — ADR-0061), `labor_availability` (REAL), `permit_lead_time_days`, `affected_area_notification_status`, `total_score`, `rank` |
 | `permit` / `permit_edge` | Permit DAG node/edge | `permit.id`, `permit.agency`, `permit.statutory_days`, `permit.status` (`not_started`\|`in_progress`\|`granted`\|`denied`\|`withdrawn` — CHECK since 0019, D-M-TE-5); `permit_edge.from_permit_id`, `permit_edge.to_permit_id` |
 | `certification` / `certification_edge` | Certification DAG — **kept structurally separate from permits**. Since migration 0012, `certification` carries transferability columns (2026-08-22 design, overturn 7): `transferability_basis` (`verified`\|`inferred` — `inferred` is hard-blocked at the repository write layer; inference is disallowed for certification transferability on change of control), `transferable_on_coc` (`yes`\|`no`, NULL = no position taken — CHECK since 0019, D-M-TE-4), `transferability_evidence_ref`, `load_bearing` (1 = the business case depends on this certification), `confirmed_at` | `permit`-shaped core (`id`, `project_id`, `name`, `agency`, `statutory_days`, `status`) + the five transferability columns |
 | `partner_candidate` | Partner sourcing/screening | `id`, `project_id`, `name`, `partner_type`, `compliance_risk`, `dependency_risk` (`high`\|`medium`\|`low`\|`none` — the `none` member makes the sourcing rule determinately FALSE for no-dependency deals), `status` (`sourcing`\|`contacted`\|`in_negotiation`\|`signed`\|`withdrawn`\|`rejected`) — both CHECK enums since 0019 (D-M-RISK-3) |
