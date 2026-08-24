@@ -369,28 +369,33 @@ describe("brownfield-screening — the ADR-0062 antitrust tripwire (Class C reco
     return evaluateKillCriteria(db, { runId, projectId, procedure: "brownfield-screening", now: EVALUATED_AT });
   }
 
-  test("the registry loads 2 entries: the enabled tripwire (escalate_to_risk_officer, both anchors) + 1 predicate-null inert", () => {
+  test("the registry loads 2 entries: both enabled tripwires (antitrust + longlist) — zero inert", () => {
     const projectId = insertProject();
     const runId = insertRun(projectId);
 
     const result = evaluateBScreening(projectId, runId);
 
-    expect(result.evaluated).toBe(1);
-    expect(result.inert).toBe(1);
-    expect(result.outcomes[0].criterion_id).toBe(HHI);
-    expect(result.outcomes[0].action).toBe("escalate_to_risk_officer");
-    expect(result.outcomes[0].policy_id).toBe("gd-0024-class-c-decisions");
-    expect(result.outcomes[0].thresholds_source).toContain("2026-08-24-class-c-decisions.md");
+    expect(result.evaluated).toBe(2);
+    expect(result.inert).toBe(0);
+    const byId = new Map(result.outcomes.map((o) => [o.criterion_id, o]));
+    const anti = byId.get(HHI)!;
+    expect(anti.action).toBe("escalate_to_risk_officer");
+    expect(anti.policy_id).toBe("gd-0024-class-c-decisions");
+    expect(anti.thresholds_source).toContain("2026-08-24-class-c-decisions.md");
+    // The round-4 longlist tripwire shares the same anchor generation.
+    const longlist = byId.get("no_viable_target_in_longlist")!;
+    expect(longlist.action).toBe("halt");
+    expect(longlist.policy_id).toBe("gd-0024-class-c-decisions");
   });
 
-  test("no antitrust_finding rows → the var fills missing → UNASSESSED-listed, never a silent pass", () => {
+  test("no antitrust_finding rows and no longlist → both tripwires UNASSESSED-listed, never a silent pass", () => {
     const projectId = insertProject();
     const runId = insertRun(projectId);
 
     const result = evaluateBScreening(projectId, runId);
 
     expect(result.triggered).toHaveLength(0);
-    expect(result.unassessed).toEqual([HHI]);
+    expect(result.unassessed.sort()).toEqual([HHI, "no_viable_target_in_longlist"].sort());
   });
 
   test("a finding inside the presumption zone (HHI>1800 AND delta>100) triggers the escalation", () => {
@@ -400,10 +405,8 @@ describe("brownfield-screening — the ADR-0062 antitrust tripwire (Class C reco
 
     const result = evaluateBScreening(projectId, runId);
 
-    expect(result.triggered).toHaveLength(1);
-    expect(result.triggered[0].criterion_id).toBe(HHI);
-    expect(result.triggered[0].action).toBe("escalate_to_risk_officer");
-    expect(result.unassessed).toEqual([]);
+    expect(result.triggered.map((t) => t.criterion_id)).toEqual([HHI]);
+    expect(result.unassessed).toEqual(["no_viable_target_in_longlist"]);
   });
 
   test("concentrated but sub-delta movement (HHI>1800, delta=100 exactly) does NOT trigger", () => {
@@ -414,7 +417,9 @@ describe("brownfield-screening — the ADR-0062 antitrust tripwire (Class C reco
     const result = evaluateBScreening(projectId, runId);
 
     expect(result.triggered).toHaveLength(0);
-    expect(result.unassessed).toEqual([]);
+    // Longlist tripwire is determinately false here: the finding exists and
+    // no knock-out-passing candidate was recorded on this fixture.
+    expect(result.unassessed).toEqual(["no_viable_target_in_longlist"]);
   });
 });
 

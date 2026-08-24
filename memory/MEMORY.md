@@ -101,6 +101,7 @@
 | ADR-0064 | Kill-criteria extension round 2 — six vars over existing tables; #5-#10/#17/#19 armed; baseline 8→16 | Accepted (2026-08-24) | [0064-kill-criteria-extension-round-2.md](0064-kill-criteria-extension-round-2.md) |
 | ADR-0065 | Kill-criteria extension round 3 — two asserted completeness facts (#18/#25); baseline 16→18 | Accepted (2026-08-24) | [0065-kill-criteria-extension-round-3.md](0065-kill-criteria-extension-round-3.md) |
 | ADR-0066 | Value-chain driver/scenario schema + structure-simulation plane (Phase B) | Accepted (2026-08-24) | [0066-value-chain-driver-scenario-schema.md](0066-value-chain-driver-scenario-schema.md) |
+| ADR-0067 | Kill-criteria extension round 4 — screening longlist + partner DD finding surfaces; #12/#15/#16 armed; baseline 18→21 | Accepted (2026-08-25) | [0067-kill-criteria-extension-round-4.md](0067-kill-criteria-extension-round-4.md) |
 
 > Index generated from `docs/adr/*.md` front matter on 2026-08-24. Long
 > statuses are abbreviated here; the ADR file is authoritative.
