@@ -3,9 +3,15 @@
   "criterion_id": "wacc_hurdle_still_assumed",
   "title": "WACC hurdle still assumed (no sourced input)",
   "action": "halt",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in greenfield-pre-fs (separate registry entry). Classification (ADR-0060): class (iii) — no snapshot var; proposed: fin.wacc_source_status (sourced|assumed) — threshold 'assumed' is decided by the criterion wording; the var is the blocker."
+  "predicate": {
+    "op": "in",
+    "var": "fin.wacc_source_status",
+    "values": [
+      "assumed"
+    ]
+  },
+  "enabled": true,
+  "policy_id": "gd-0024-class-c-decisions",
+  "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (gd-0024-class-c-decisions); var seeded by migration 0027 per ADR-0064 + wacc_hurdle_still_assumed wording (ADR-0060)",
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in greenfield-pre-fs (separate registry entry). Classification (ADR-0060): class (iii) — no snapshot var; proposed: fin.wacc_source_status (sourced|assumed) — threshold 'assumed' is decided by the criterion wording; the var is the blocker. ADR-0064 arms this: fin.wacc_source_status (migration 0027) reads the run's wacc/hurdle_irr assumptions — any kind='assumed' marks the whole status assumed (policy §2.2: a provisional rate invalidates the analysis); both keys absent = not sessioned = UNASSESSED, never a silent pass."
 }

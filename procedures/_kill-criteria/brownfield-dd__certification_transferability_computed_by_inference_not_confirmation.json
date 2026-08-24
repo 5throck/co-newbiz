@@ -3,9 +3,14 @@
   "criterion_id": "certification_transferability_computed_by_inference_not_confirmation",
   "title": "Certification transferability computed by inference, not confirmation",
   "action": "halt",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Non-negotiable boundary #5; the write-time repository hard block on transferability_basis='inferred' (design overturn 7) is the companion control at a different layer. Classification (ADR-0060): class (iii) — no snapshot var; proposed: cert.transferability_inferred_count (count of certification rows with transferability_basis='inferred'); the write-time repository block is the companion control and this predicate is the tripwire."
+  "predicate": {
+    "op": "count",
+    "var": "cert.transferability_inferred_count",
+    "cmp": "gte",
+    "value": 1
+  },
+  "enabled": true,
+  "policy_id": "gd-0024-class-c-decisions",
+  "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (gd-0024-class-c-decisions); var seeded by migration 0027 per ADR-0064 + certification_transferability_computed_by_inference_not_confirmation wording (ADR-0060)",
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Non-negotiable boundary #5; the write-time repository hard block on transferability_basis='inferred' (design overturn 7) is the companion control at a different layer. Classification (ADR-0060): class (iii) — no snapshot var; proposed: cert.transferability_inferred_count (count of certification rows with transferability_basis='inferred'); the write-time repository block is the companion control and this predicate is the tripwire. ADR-0064 arms this: cert.transferability_inferred_count proves any raw-SQL bypass of the repository's write-block (the API path can never produce one) — a nonzero count IS the inference leak."
 }
