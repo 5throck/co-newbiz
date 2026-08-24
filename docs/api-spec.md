@@ -92,6 +92,19 @@
 | `/api/glossary` | GET | Glossary term list (collection view) | Public within the workspace | as-built (5.6A) |
 | `/api/glossary/:term` | GET | Glossary lookup (also backs UI tooltip, MCP `lookup_term`) | Public within the workspace | as-built (5.6A) |
 
+### 7.1 PMI and Class-C Evidence Surfaces (as-built — ADR-0063 write paths)
+
+All project-scoped via membership (404-not-403); writes analyst-gated and audit-logged. Money fields INTEGER KRW millions; `run_rate_bp` is basis points.
+
+| Endpoint | Method | Purpose | Access Control |
+|---|---|---|---|
+| `/api/projects/:id/pmi/key-talent` | GET/POST | Close-locked key-talent roster (#28 attrition input) | Membership; POST project `analyst`+ |
+| `/api/projects/:id/pmi/synergy-certifications` | GET/POST | Synergy run-rate certifications (#29 BAU-exit halt input) | Membership; POST `analyst`+ |
+| `/api/projects/:id/deal-shape-evaluations` | GET/POST | P3 candidate-shape verdicts (#14 viable count) | Membership; POST `analyst`+ |
+| `/api/projects/:id/incentive-deadlines` | GET/POST | Incentive deadlines (#4 permit-path tripwire) | Membership; POST `analyst`+ |
+| `/api/projects/:id/dimension-inputs` | GET/POST | Judged-variable assertions (`?var_key=` narrows; POST lands UNREVIEWED by design) | Membership; POST `analyst`+ |
+| `/api/projects/:id/dimension-inputs/:rowId/review` | POST | Cross-domain second review (reviewer ≠ asserter) | Membership; POST `analyst`+ |
+
 ## 8. Admin Console (Never MCP-Exposed)
 
 | Endpoint | Method | Purpose | Access Control |
