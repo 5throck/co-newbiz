@@ -1,6 +1,6 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
- * Market / value-chain routes — ADR-0066 design Phase A.
+ * Market / value-chain routes — ADR-0066 Phases A+C, ADR-0067 round 4.
  *
  * Chain topology view + per-node 5-year financial series (fact_industry) +
  * the user-provided financial-import fallback (DART collector is the primary
@@ -174,4 +174,120 @@ marketRoutes.get("/api/projects/:id/structure-simulations", (c) => {
         )
         .all(project.id);
   return ok(c, rows, 200, { count: rows.length });
+});
+
+// ── ADR-0067 round 4 surfaces: screening longlist + partner DD findings ──
+
+/** GET /api/projects/:id/screening-longlist — the candidate register. */
+marketRoutes.get("/api/projects/:id/screening-longlist", (c) => {
+  const project = getProjectIfVisible(c.get("auth").userId, c.req.param("id"), { excludeMnpi: false });
+  if (!project) return notFound(c);
+  const rows = getDb().query("SELECT id, candidate_name, knock_out_passed, notes, created_at FROM screening_longlist WHERE project_id = ? ORDER BY created_at DESC").all(project.id);
+  return ok(c, rows);
+});
+
+/** POST /api/projects/:id/screening-longlist — register a candidate with its knock-out verdict. Analyst+; audited. */
+marketRoutes.post("/api/projects/:id/screening-longlist", async (c) => {
+  const ctx = c.get("auth");
+  const project = getProjectIfVisible(ctx.userId, c.req.param("id"), { excludeMnpi: false });
+  if (!project) return notFound(c);
+  if (ctx.role === "viewer") return forbidden(c, "role_required", "Longlist writes require the analyst role.");
+  const body = await c.req.json().catch(() => null) as { candidate_name?: string; knock_out_passed?: boolean; notes?: string } | null;
+  if (!body?.candidate_name?.trim() || typeof body.knock_out_passed !== "boolean") {
+    return badRequest(c, "invalid_request", "candidate_name and knock_out_passed are required.");
+  }
+  const db = getDb();
+  const id = ulid();
+  db.run("INSERT INTO screening_longlist (id, project_id, candidate_name, knock_out_passed, notes, created_at) VALUES (?,?,?,?,?,?)",
+    [id, project.id, body.candidate_name.trim(), body.knock_out_passed ? 1 : 0, body.notes?.trim() || null, new Date().toISOString()]);
+  appendAudit(db, { actor: ctx.userId, action: "screening_longlist_write", target: `${project.id}:${id}`, now: new Date().toISOString() });
+  return ok(c, { id }, 201);
+});
+
+/** GET /api/projects/:id/partner-dd-findings — partner DD findings. */
+marketRoutes.get("/api/projects/:id/partner-dd-findings", (c) => {
+  const project = getProjectIfVisible(c.get("auth").userId, c.req.param("id"), { excludeMnpi: false });
+  if (!project) return notFound(c);
+  const rows = getDb().query(
+    `SELECT f.id, f.partner_id, p.name AS partner_name, f.workstream, f.severity, f.description, f.created_at
+     FROM partner_dd_finding f JOIN partner_candidate p ON p.id = f.partner_id
+     WHERE f.project_id = ? ORDER BY f.created_at DESC`,
+  ).all(project.id);
+  return ok(c, rows);
+});
+
+/** POST /api/projects/:id/partner-dd-findings — record a partner DD finding. Analyst+; audited. */
+marketRoutes.post("/api/projects/:id/partner-dd-findings", async (c) => {
+  const ctx = c.get("auth");
+  const project = getProjectIfVisible(ctx.userId, c.req.param("id"), { excludeMnpi: false });
+  if (!project) return notFound(c);
+  if (ctx.role === "viewer") return forbidden(c, "role_required", "Partner DD finding writes require the analyst role.");
+  const body = await c.req.json().catch(() => null) as
+    | { partner_id?: string; workstream?: string; severity?: string; description?: string }
+    | null;
+  if (!body?.partner_id || !body?.workstream || !body?.severity?.trim() || !body?.description?.trim()) {
+    return badRequest(c, "invalid_request", "partner_id, workstream, severity and description are required.");
+  }
+  if (ctx.role === "viewer") return forbidden(c, "role_required", "Analyst role required.");
+  const WORKSTREAMS = ["financial_distress", "ip_chain", "general"];
+  const SEVERITIES = ["red", "amber", "green"];
+  if (!WORKSTREAMS.includes(body.workstream)) return badRequest(c, "invalid_workstream", `workstream must be one of ${WORKSTREAMS.join(", ")}.`);
+  if (!SEVERITIES.includes(body.severity)) return badRequest(c, "invalid_severity", `severity must be one of ${SEVERITIES.join(", ")}.`);
+  const partnerExists = getDb().query("SELECT id FROM partner_candidate WHERE id = ? AND project_id = ?").get(body.partner_id, project.id);
+  if (!partnerExists) return notFound(c, "Unknown partner on this project.");
+  const db = getDb();
+  const id = ulid();
+  db.run("INSERT INTO partner_dd_finding (id, project_id, partner_id, workstream, severity, description, created_at) VALUES (?,?,?,?,?,?,?)",
+    [id, project.id, body.partner_id, body.workstream, body.severity, body.description.trim(), new Date().toISOString()]);
+  appendAudit(db, { actor: ctx.userId, action: "partner_dd_finding_write", target: `${project.id}:${id}`, now: new Date().toISOString() });
+  return ok(c, { id }, 201);
+});
+
+// ── ADR-0068 round 5 surface: chain_node_sensitivity ────────────────────
+
+/** GET /api/projects/:id/chain-sensitivities — driver sensitivities per node. */
+marketRoutes.get("/api/projects/:id/chain-sensitivities", (c) => {
+  const project = getProjectIfVisible(c.get("auth").userId, c.req.param("id"), { excludeMnpi: false });
+  if (!project) return notFound(c);
+  const industryId = c.req.query("industry_id");
+  const rows = industryId
+    ? getDb().query("SELECT s.id, s.industry_id, d.code AS driver_code, s.sensitivity, s.lag_months, s.assessed_by, s.assessed_at FROM chain_node_sensitivity s JOIN industry_driver d ON d.id = s.driver_id WHERE s.project_id = ? AND s.industry_id = ? ORDER BY s.assessed_at DESC").all(project.id, industryId)
+    : getDb().query("SELECT s.id, s.industry_id, d.code AS driver_code, s.sensitivity, s.lag_months, s.assessed_by, s.assessed_at FROM chain_node_sensitivity s JOIN industry_driver d ON d.id = s.driver_id WHERE s.project_id = ? ORDER BY s.assessed_at DESC").all(project.id);
+  return ok(c, rows, 200, { count: rows.length });
+});
+
+/**
+ * POST /api/projects/:id/chain-sensitivities — upsert a sensitivity.
+ * The UNIQUE(project, industry, driver) constraint makes this a natural
+ * upsert: re-assertion replaces the previous sensitivity for the same node
+ * + driver pair (the dimension_input supersede pattern applied to sensitivities).
+ */
+marketRoutes.post("/api/projects/:id/chain-sensitivities", async (c) => {
+  const ctx = c.get("auth");
+  const project = getProjectIfVisible(ctx.userId, c.req.param("id"), { excludeMnpi: false });
+  if (!project) return notFound(c);
+  if (ctx.role === "viewer") return forbidden(c, "role_required", "Sensitivity writes require the analyst role.");
+  const body = await c.req.json().catch(() => null) as
+    | { industry_id?: string; driver_code?: string; sensitivity?: number; lag_months?: number }
+    | null;
+  if (!body?.industry_id || !body?.driver_code?.trim() || typeof body.sensitivity !== "number") {
+    return badRequest(c, "invalid_request", "industry_id, driver_code and sensitivity are required.");
+  }
+  const db = getDb();
+  const driver = db.query("SELECT id FROM industry_driver WHERE code = ?").get(body.driver_code.trim()) as { id: string } | undefined;
+  if (!driver) return badRequest(c, "unknown_driver", `Unknown driver code '${body.driver_code}'.`);
+  const existing = db.query(
+    "SELECT id FROM chain_node_sensitivity WHERE project_id = ? AND industry_id = ? AND driver_id = ?",
+  ).get(project.id, body.industry_id, driver.id) as { id: string } | undefined;
+  if (existing) {
+    db.run("UPDATE chain_node_sensitivity SET sensitivity = ?, lag_months = ?, assessed_by = ?, assessed_at = ? WHERE id = ?",
+      [body.sensitivity, body.lag_months ?? 0, ctx.userId, new Date().toISOString(), existing.id]);
+    appendAudit(db, { actor: ctx.userId, action: "chain_sensitivity_update", target: `${project.id}:${existing.id}`, now: new Date().toISOString() });
+    return ok(c, { id: existing.id, updated: true }, 200);
+  }
+  const id = ulid();
+  db.run("INSERT INTO chain_node_sensitivity (id, project_id, industry_id, driver_id, sensitivity, lag_months, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?,?)",
+    [id, project.id, body.industry_id, driver.id, body.sensitivity, body.lag_months ?? 0, ctx.userId, new Date().toISOString()]);
+  appendAudit(db, { actor: ctx.userId, action: "chain_sensitivity_create", target: `${project.id}:${id}`, now: new Date().toISOString() });
+  return ok(c, { id }, 201);
 });

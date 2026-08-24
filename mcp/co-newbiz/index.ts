@@ -52,6 +52,7 @@ import {
 } from "./tools/pmi.ts";
 import { runStructureSimulation, getStructureSimulationResults } from "./tools/structure.ts";
 import { listDimensionInputs, assertDimensionInput, reviewDimensionInput, type DimensionInputAssertInput } from "./tools/pmi.ts";
+import { listScreeningLonglist, addScreeningLonglistEntry, listPartnerDDFindings, addPartnerDDFinding, listChainSensitivities, upsertChainSensitivity } from "./tools/market.ts";
 import {
   compareRuns,
   getAssumptions,
@@ -370,6 +371,12 @@ export const TOOLS: ToolDefinition[] = [
   { name: "list_dimension_inputs", description: "Live judged-variable assertions for a project (?var_key narrows).", inputSchema: { type: "object", properties: { projectId: { type: "string" }, var_key: { type: "string" } }, required: ["projectId"] } },
   { name: "assert_dimension_input✱", description: "Assert a judged fact — analyst+; lands UNREVIEWED by design (cross-domain review is a separate act); audited.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, run_id: { type: "string" }, var_key: { type: "string" }, value: { type: "object", properties: { kind: { type: "string", enum: ["num","text","bool"] }, value: {} }, required: ["kind","value"] }, evidence_ref: { type: "string" }, rationale: { type: "string" } }, required: ["projectId", "run_id", "var_key", "value", "evidence_ref", "rationale"] } },
   { name: "review_dimension_input✱", description: "Cross-domain second review of a judged-variable assertion — reviewer must differ from the asserter.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, rowId: { type: "string" } }, required: ["projectId", "rowId"] } },
+  { name: "list_screening_longlist", description: "Screening candidate register with knock-out verdicts (feeds the #12 halt).", inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] } },
+  { name: "add_screening_longlist_entry✱", description: "Register a candidate with its knock-out verdict — analyst+; audited.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, candidate_name: { type: "string" }, knock_out_passed: { type: "boolean" }, notes: { type: "string" } }, required: ["projectId", "candidate_name", "knock_out_passed"] } },
+  { name: "list_partner_dd_findings", description: "Partner DD findings with workstream and severity (#15/#16 tripwire inputs).", inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] } },
+  { name: "add_partner_dd_finding✱", description: "Record a partner DD finding — analyst+; audited; severity drives kill-criteria tripwires.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, partner_id: { type: "string" }, workstream: { type: "string", enum: ["financial_distress", "ip_chain", "general"] }, severity: { type: "string", enum: ["red", "amber", "green"] }, description: { type: "string" } }, required: ["projectId", "partner_id", "workstream", "severity", "description"] } },
+  { name: "list_chain_sensitivities", description: "Driver sensitivities per chain node (?industry_id narrows) — feeds the structure-simulation engine.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, industry_id: { type: "string" } }, required: ["projectId"] } },
+  { name: "upsert_chain_sensitivity✱", description: "Upsert a driver sensitivity for one node — analyst+; UNIQUE triple makes this a natural upsert.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, industry_id: { type: "string" }, driver_code: { type: "string", enum: ["rate", "fx", "commodity", "regulation"] }, sensitivity: { type: "number" }, lag_months: { type: "integer" } }, required: ["projectId", "industry_id", "driver_code", "sensitivity"] } },
 ];
 
 export function buildServer(): Server {
@@ -482,6 +489,33 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
       requireString(args, "projectId");
       requireString(args, "rowId");
       return reviewDimensionInput(args.projectId as string, args.rowId as string);
+    }
+    case "list_screening_longlist": {
+      requireString(args, "projectId");
+      return listScreeningLonglist(args.projectId as string);
+    }
+    case "add_screening_longlist_entry✱": {
+      requireString(args, "projectId");
+      requireString(args, "candidate_name");
+      return addScreeningLonglistEntry(args.projectId as string, args as unknown as { candidate_name: string; knock_out_passed: boolean; notes?: string });
+    }
+    case "list_partner_dd_findings": {
+      requireString(args, "projectId");
+      return listPartnerDDFindings(args.projectId as string);
+    }
+    case "add_partner_dd_finding✱": {
+      for (const k of ["projectId", "partner_id", "workstream", "severity", "description"]) requireString(args, k);
+      return addPartnerDDFinding(args.projectId as string, args as unknown as { partner_id: string; workstream: string; severity: string; description: string });
+    }
+    case "list_chain_sensitivities": {
+      requireString(args, "projectId");
+      return listChainSensitivities(args.projectId as string, args.industry_id as string | undefined);
+    }
+    case "upsert_chain_sensitivity✱": {
+      requireString(args, "projectId");
+      requireString(args, "industry_id");
+      requireString(args, "driver_code");
+      return upsertChainSensitivity(args.projectId as string, args as unknown as { industry_id: string; driver_code: string; sensitivity: number; lag_months?: number });
     }
     case "list_notifications":
       return listNotifications();

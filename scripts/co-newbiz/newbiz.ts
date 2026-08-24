@@ -35,6 +35,12 @@
  *                   (workspace ADR format; refuses a duplicate title)
  *   db:export       SQLite → postgres-dialect schema+data dump (ADR-0002's
  *                   portability verification mechanism; db-export.ts)
+ *   graph           Multi-element graph projection over skills/agents/
+ *                   procedures/rules/decisions (design 2026-08-24 pilot;
+ *                   --check drift-gates, --include-consumes enables the
+ *                   suppressed exact-token consumes inference)
+ *   context         Contextual bundle over the derived graph
+ *                   (--skill <name> | --gate <Gate>)
  *
  * Remaining commands (fetch, md:sync, law:sync, policy:sync, policy:impact,
  * fin:project, calibrate, convert) land in their later PRs per
@@ -63,6 +69,7 @@ import { ASSUMPTION_KINDS } from "../../db/lib/assumption.ts";
 import { lintGlossaryUsage, printGlossaryLintReport } from "./glossary-lint.ts";
 import { scaffoldAdr } from "./adr-new.ts";
 import { runExportCommand } from "./db-export.ts";
+import { runGraphCommand, runContextCommand } from "./graph.ts";
 import {
   createUser,
   approveUser,
@@ -74,7 +81,7 @@ const [command, ...args] = process.argv.slice(2);
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
+  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--include-consumes], context --skill <name> | --gate <Gate>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
 }
 
 switch (command) {
@@ -478,6 +485,16 @@ switch (command) {
       console.error(`adr:new failed: ${(err as Error).message}`);
       process.exit(1);
     }
+    break;
+  }
+  case "graph": {
+    // Multi-element graph projection (design 2026-08-24) — emit or drift-check.
+    runGraphCommand(args);
+    break;
+  }
+  case "context": {
+    // Contextual bundle over the derived graph — skill- or gate-scoped.
+    runContextCommand(args);
     break;
   }
   default:
