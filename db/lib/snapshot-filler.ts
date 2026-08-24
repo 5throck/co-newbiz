@@ -1,4 +1,4 @@
-// @version 1.6.0
+// @version 1.7.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -145,6 +145,10 @@ export const SNAPSHOT_VAR_KEYS: readonly string[] = [
   "screening.viable_targets",
   "partner.financial_distress_red_count",
   "partner.dd_ip_chain_red_count",
+  // 0032 — ADR-0068 extension round 5 (#20/#23/#26 var halves)
+  "deliverables.required_unreviewed",
+  "infra.wastewater_insufficient_no_mitigation",
+  "infra.sites_clearing_minimums",
   // 0029 — ADR-0065 extension round 3 (#18/#25 asserted completeness facts)
   "legal.ip_assignment_chain_complete",
   "infra.plan_finalized",
@@ -805,6 +809,74 @@ function fillValidatorsMissingVar(db: Database, projectId: string, runId: string
   return row;
 }
 
+/** #16 tripwire: RED partner-DD findings on the IP title/chain/encumbrance workstream. Present-always count. */
+function fillPartnerIpRedVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("partner.dd_ip_chain_red_count");
+  row.value_num = (db.query("SELECT COUNT(*) AS n FROM partner_dd_finding WHERE project_id = ? AND workstream = 'ip_chain' AND severity = 'red'").get(projectId) as unknown as { n: number }).n;
+  row.evidence_ref = "partner_dd_finding";
+  row.status = "present";
+  return row;
+}
+
+// ---------------------------------------------------------------------------
+// Family J — site infrastructure + analysis_task review plane (ADR-0068,
+// migration 0032): extension round 5. Thresholds by criterion wording
+// (ADR-0060 rows 20/23/26).
+// ---------------------------------------------------------------------------
+
+/** #20 halt input: analysis_task rows still awaiting their cross-domain review. Present-always count. */
+function fillRequiredUnreviewedVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("deliverables.required_unreviewed");
+  row.value_num = (db.query("SELECT COUNT(*) AS n FROM analysis_task WHERE project_id = ? AND reviewed_by IS NULL").get(projectId) as unknown as { n: number }).n;
+  row.evidence_ref = "analysis_task";
+  row.status = "present";
+  return row;
+}
+
+const SITE_INFRA_FLAGS = "wastewater_capacity_sufficient, power_capacity_sufficient, industrial_water_sufficient, logistics_access_sufficient";
+
+/**
+ * #23 tripwire: sites where wastewater capacity is insufficient AND no
+ * mitigation is documented. Missing until at least one site has its
+ * wastewater assessment populated — an unassessed portfolio is never a
+ * determinate pass.
+ */
+function fillWastewaterInsufficientVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("infra.wastewater_insufficient_no_mitigation");
+  const assessed = (db.query("SELECT COUNT(*) AS n FROM site_candidate WHERE project_id = ? AND wastewater_capacity_sufficient IS NOT NULL").get(projectId) as unknown as { n: number }).n;
+  if (assessed === 0) return row;
+  row.value_num = (db.query(
+    "SELECT COUNT(*) AS n FROM site_candidate WHERE project_id = ? AND wastewater_capacity_sufficient = 0 AND COALESCE(infrastructure_mitigation_documented, 0) = 0",
+  ).get(projectId) as unknown as { n: number }).n;
+  row.evidence_ref = "site_candidate";
+  row.status = "present";
+  return row;
+}
+
+/**
+ * #26 tripwire: sites clearing ALL four infrastructure minimums. Missing
+ * until at least one site has a complete four-flag assessment — partial
+ * assessments cannot manufacture a clearance count.
+ */
+function fillSitesClearingMinimumsVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("infra.sites_clearing_minimums");
+  const total = (db.query("SELECT COUNT(*) AS n FROM site_candidate WHERE project_id = ?").get(projectId) as unknown as { n: number }).n;
+  if (total === 0) return row;
+  const fullyAssessed = (db.query(
+    `SELECT COUNT(*) AS n FROM site_candidate WHERE project_id = ?
+     AND ${["wastewater", "power", "industrial_water", "logistics_access"].map((c) => `${c}_sufficient IS NOT NULL`).join(" AND ")}`,
+  ).get(projectId) as unknown as { n: number }).n;
+  if (fullyAssessed === 0) return row;
+  row.value_num = (db.query(
+    `SELECT COUNT(*) AS n FROM site_candidate WHERE project_id = ?
+     AND wastewater_capacity_sufficient = 1 AND power_capacity_sufficient = 1
+     AND industrial_water_sufficient = 1 AND logistics_access_sufficient = 1`,
+  ).get(projectId) as unknown as { n: number }).n;
+  row.evidence_ref = "site_candidate";
+  row.status = "present";
+  return row;
+}
+
 /** #19: live origin classification present? Zero live rows at the entity-establishment gate IS the finding. */
 function fillClassificationPresenceVar(db: Database, projectId: string): SnapshotWrite {
   const row = missing("classification.origin_live_missing");
@@ -866,7 +938,7 @@ const SQL_BOUND_INDUSTRIES = "SELECT industry_id FROM project_industry WHERE pro
 
 /**
  * Fill a run's variable snapshot: one explicit row per evidence var the
- * 0017–0031 seed sets define (38), statuses per the record
+ * 0017–0032 seed sets define (41), statuses per the record
  * contracts. Runs are immutable — filling an already-filled run throws on
  * the PK.
  */
@@ -906,6 +978,9 @@ export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()):
     fillViableTargetsVar(db, opts.projectId),
     fillPartnerDistressVar(db, opts.projectId),
     fillPartnerIpRedVar(db, opts.projectId),
+    fillRequiredUnreviewedVar(db, opts.projectId),
+    fillWastewaterInsufficientVar(db, opts.projectId),
+    fillSitesClearingMinimumsVar(db, opts.projectId),
   ];
   const written = new Set(rows.map((r) => r.var_key));
   if (rows.length !== SNAPSHOT_VAR_KEYS.length || SNAPSHOT_VAR_KEYS.some((k) => !written.has(k))) {

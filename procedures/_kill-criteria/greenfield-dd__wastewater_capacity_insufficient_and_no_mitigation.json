@@ -3,9 +3,14 @@
   "criterion_id": "wastewater_capacity_insufficient_and_no_mitigation",
   "title": "Wastewater capacity insufficient with no mitigation",
   "action": "halt",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; proposed: infra.wastewater_capacity_sufficient plus a mitigation flag (no infrastructure var)."
+  "predicate": {
+    "op": "count",
+    "var": "infra.wastewater_insufficient_no_mitigation",
+    "cmp": "gte",
+    "value": 1
+  },
+  "enabled": true,
+  "policy_id": "gd-0024-class-c-decisions",
+  "thresholds_source": "docs/decisions/2026-08-24-evidence-source-backlog-disposition.md (round 5) + ADR-0060 row wording; surfaces via migration 0032 — threshold by criterion wording (ADR-0060)",
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; proposed: infra.wastewater_capacity_sufficient plus a mitigation flag (no infrastructure var). ADR-0068 arms this: infra.wastewater_insufficient_no_mitigation counts sites where wastewater capacity is insufficient AND no mitigation is documented; missing until at least one site has its wastewater assessment populated (ADR-0049)."
 }
