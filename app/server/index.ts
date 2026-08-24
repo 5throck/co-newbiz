@@ -50,6 +50,7 @@ import { scorecardRoutes } from "./scorecard.ts";
 import { glossaryRoutes } from "./glossary.ts";
 import { adminRoutes } from "./admin.ts";
 import { pmiRoutes } from "./pmi.ts";
+import { marketRoutes } from "./market.ts";
 import { securityHeaders, type AppEnv } from "./middleware.ts";
 
 const SPA_DIST = "app/web/dist";
@@ -86,6 +87,7 @@ export function buildApp(): Hono<AppEnv> {
   app.route("/", monitoringRoutes);
   app.route("/", scorecardRoutes);
   app.route("/", glossaryRoutes);
+  app.route("/", marketRoutes);
   // pmiRoutes mounts BEFORE adminRoutes deliberately: admin's module-level
   // `use("*", requireAuth, requireAdmin)` flattens to a parent-level catch-all
   // at its mount position, so any route module mounted after it inherits the

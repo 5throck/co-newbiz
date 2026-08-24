@@ -623,6 +623,71 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/projects/{id}/value-chain/topology:
+    get:
+      operationId: getChainTopology
+      summary: Layered value-chain graph (upstream→end-market) resolved from value_chain_link; cycle → 400.
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/industries/{industryId}/financials:
+    get:
+      operationId: getStageFinancials
+      summary: Per-year metric aggregates for one chain node (fact_industry), default last 5 years (?years=1..10).
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: industryId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: years
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 10 }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/financial-imports:
+    post:
+      operationId: importChainFinancials
+      summary: User-provided fallback ingestion for chain-node financials (when DART collection is unavailable) — analyst+; audited; rows append with revision_no=1.
+      tags: [Market]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [industry_id, rows]
+              properties:
+                industry_id: { type: string }
+                source: { type: string, description: "md_source code — created on first use" }
+                rows:
+                  type: array
+                  items:
+                    type: object
+                    required: [fiscal_year, metric_key, value]
+                    properties:
+                      fiscal_year: { type: integer }
+                      metric_key: { type: string }
+                      value: { type: number }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/interpretations:
     get:
       operationId: searchInterpretations

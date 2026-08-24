@@ -1445,3 +1445,65 @@ describe("dimension-input assertion/review surface (ADR-0065 write path)", () =>
     expect([400, 403]).toContain(selfReview.status);
   });
 });
+
+describe("value-chain topology + financials + import fallback (ADR-0066 Phase A)", () => {
+  test("empty chain resolves to zero layers; cycle is a 400; non-member 404", async () => {
+    const projRes = await req("/api/projects", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ project_no: "NP-CHAIN-A" }) });
+    const chainProjectId = (await projRes.json()).data.id;
+    const empty = await req(`/api/projects/${chainProjectId}/value-chain/topology`, { headers: { cookie: aliceCookie } });
+    expect(empty.status).toBe(200);
+    expect((await empty.json()).data.layers).toEqual([]);
+
+    const unauth = await req(`/api/projects/${chainProjectId}/value-chain/topology`);
+    expect(unauth.status).toBe(401);
+
+    const ghost = await req("/api/projects/01GHOSTPROJECT0000000000000000/value-chain/topology", { headers: { cookie: aliceCookie } });
+    expect(ghost.status).toBe(404);
+
+    const industryA = ulid();
+    const industryB = ulid();
+    const industryC = ulid();
+    for (const id of [industryA, industryB, industryC]) {
+      db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [id, `T-${id.slice(-4)}`, "t", "t", NOW]);
+    }
+    db.run("INSERT INTO value_chain_link (id, project_id, from_industry_id, to_industry_id, direction, elasticity, assessed_at) VALUES (?,?,?,?,?,?,?)", [ulid(), chainProjectId, industryA, industryB, "downstream", 0.5, NOW]);
+    db.run("INSERT INTO value_chain_link (id, project_id, from_industry_id, to_industry_id, direction, elasticity, assessed_at) VALUES (?,?,?,?,?,?,?)", [ulid(), chainProjectId, industryB, industryC, "downstream", 0.4, NOW]);
+    db.run("INSERT INTO value_chain_link (id, project_id, from_industry_id, to_industry_id, direction, elasticity, assessed_at) VALUES (?,?,?,?,?,?,?)", [ulid(), chainProjectId, industryC, industryA, "upstream", 0.3, NOW]);
+
+    const cycled = await req(`/api/projects/${chainProjectId}/value-chain/topology`, { headers: { cookie: aliceCookie } });
+    expect(cycled.status).toBe(400);
+    expect((await cycled.json()).error.code).toBe("topology_cycle");
+  });
+
+  test("financial fallback imports rows and the stage financials view serves them", async () => {
+    const industry = ulid();
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [industry, `T-${industry.slice(-4)}`, "t", "t", NOW]);
+
+    const bad = await req(`/api/projects/${projectId}/financial-imports`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ industry_id: industry, rows: [] }),
+    });
+    expect(bad.status).toBe(400);
+
+    const good = await req(`/api/projects/${projectId}/financial-imports`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({
+        industry_id: industry,
+        source: "USER-FALLBACK",
+        rows: [
+          { fiscal_year: 2022, metric_key: "revenue", value: 100.0 },
+          { fiscal_year: 2023, metric_key: "revenue", value: 110.0 },
+        ],
+      }),
+    });
+    expect(good.status).toBe(201);
+    expect((await good.json()).data.imported).toBe(2);
+
+    const financials = await req(`/api/projects/${projectId}/industries/${industry}/financials?years=5`, { headers: { cookie: aliceCookie } });
+    expect(financials.status).toBe(200);
+    const data = (await financials.json()).data as Array<{ fiscal_year: number; metric_key: string; value: number }>;
+    expect(data.filter((r) => r.metric_key === "revenue")).toHaveLength(2);
+  });
+});
