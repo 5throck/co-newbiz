@@ -66,6 +66,19 @@ needed on the same deal — one is not a lighter-weight version of the other.
 - Scenario table (downside/base/upside, plus deal-specific scenarios),
   NPV/IRR per scenario, covenant-breach test result under the downside case
 
+## Structure-Simulation Extension (ADR-0066 Phase C)
+
+The quantitative arm of this skill for FS gates: driver deltas recorded on
+the run as `drv.rate_bp` / `drv.fx_pct` / `drv.commodity_pct` /
+`drv.regulation_severity` assumption keys are propagated through the value
+chain's elasticity and pass-through coefficients by
+`python/structure_sim.py` (seeded MC — same determinism discipline as
+monte_carlo.py). Outputs land per node as P05/P50/P95
+demand/margin quantiles (`industry_structure_simulation` output_type).
+REST: `POST /api/projects/:id/structure-simulations`; MCP:
+`run_structure_simulation✱`. Boundary: value_chain coefficients ONLY —
+proxy-chain estimates may enter as input values, never as shared
+coefficients (ADR-0025). Coefficient-less links surface UNASSESSED nodes.
 ## Related Skills
 
 - `monte-carlo-simulation` — the continuous-distribution counterpart

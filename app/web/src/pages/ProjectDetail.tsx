@@ -21,6 +21,7 @@ import { ModelTab } from "../components/ModelTab.tsx";
 import { SimulationTab } from "../components/SimulationTab.tsx";
 import { VersionCompareTab } from "../components/VersionCompareTab.tsx";
 import { PmiEvidenceTab } from "../components/PmiEvidenceTab.tsx";
+import { MarketChainTab } from "../components/MarketChainTab.tsx";
 
 type Tab =
   | "overview"
@@ -33,6 +34,7 @@ type Tab =
   | "dd"
   | "permits"
   | "ma"
+  | "market"
   | "pmi"
   | "members";
 
@@ -125,7 +127,8 @@ export function ProjectDetail() {
         <button type="button" aria-current={tab === "procedure"} onClick={() => setTab("procedure")}>
           절차 뷰어
         </button>
-        <button type="button" aria-current={tab === "data"} onClick={() => setTab("data")}>
+        <button type="button" aria-current={tab === "market"} onClick={() => setTab("market")}>시장·체인</button>
+      <button type="button" aria-current={tab === "data"} onClick={() => setTab("data")}>
           데이터
         </button>
         <button type="button" aria-current={tab === "assumptions"} onClick={() => setTab("assumptions")}>
@@ -221,6 +224,12 @@ export function ProjectDetail() {
       {tab === "permits" && id && (
         <section aria-label="법령·인허가">
           <PermitsTab projectId={id} />
+        </section>
+      )}
+
+      {tab === "market" && id && (
+        <section aria-label="시장·체인">
+          <MarketChainTab projectId={id} />
         </section>
       )}
 

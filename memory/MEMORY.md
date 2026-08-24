@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-08-25](2026-08-25.md) | feat: value-chain simulation phase D - market-chain SPA tab, FS procedure dispatch, scenario-planning skill extension |
 | [2026-08-24](2026-08-24.md) | feat(kill-criteria): ADR-0060 executability classification + greenfield partner twin activation (R5 step 2) |
 | [2026-08-23](2026-08-23.md) | feat(procedures): PR-10 workflow gap closure - strategic fit, market/legal/financing/HR DD, entity establishment, ADR-0051 |
 | [2026-08-22](2026-08-22.md) | docs(design): RAG formalization + case classification design (Stage 0, ADR-0032) |
