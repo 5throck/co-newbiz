@@ -756,8 +756,8 @@ describe("permit critical path — DAG longest path (D-M-TE-8)", () => {
 describe("contingent family — EV / max amount / max probability", () => {
   test("rows exist → present: EV = sum of probability x amount, MAX amount, MAX probability", () => {
     const pid = insertProject();
-    insertContingent(pid, 0.5, 10e9);
-    insertContingent(pid, 0.25, 40e9);
+    insertContingent(pid, 0.5, 10000);
+    insertContingent(pid, 0.25, 40000); // storage: KRW millions (40,000M = 400억)
     const runId = insertRun(pid);
     fill(pid, runId);
     expect(snap(runId, "risk.contingent_expected_value")).toMatchObject({ status: "present", value_num: 15e9 }); // 5e9 + 10e9

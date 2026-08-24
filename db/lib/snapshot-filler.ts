@@ -526,6 +526,10 @@ function contingentCoverageComplete(db: Database, projectId: string, runId: stri
 }
 
 function fillContingentVars(db: Database, projectId: string, runId: string, now: Date): SnapshotWrite[] {
+  // Storage convention (ADR-0061): money columns are INTEGER KRW-millions.
+  // The pinned risk rules compare raw won (1e10 = 100억), so the filler is
+  // the unit boundary: storage ×1e6 → snapshot raw-won. Rules stay untouched.
+  const SCALE = 1_000_000;
   const rows = db.query("SELECT probability, amount_expected FROM contingent_liability WHERE project_id = ?").all(projectId) as unknown as ContingentRow[];
   const ev = missing("risk.contingent_expected_value");
   const maxAmount = missing("risk.contingent_max_amount");
@@ -533,9 +537,9 @@ function fillContingentVars(db: Database, projectId: string, runId: string, now:
   if (rows.length > 0) {
     let expectedValue = 0;
     for (const r of rows) expectedValue += r.probability * r.amount_expected;
-    ev.value_num = expectedValue;
+    ev.value_num = expectedValue * SCALE;
     ev.status = "present";
-    maxAmount.value_num = Math.max(...rows.map((r) => r.amount_expected));
+    maxAmount.value_num = Math.max(...rows.map((r) => r.amount_expected)) * SCALE;
     maxAmount.status = "present";
     maxProb.value_num = Math.max(...rows.map((r) => r.probability));
     maxProb.status = "present";

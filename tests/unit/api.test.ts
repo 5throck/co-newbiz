@@ -480,11 +480,11 @@ describe("deal review — membership-gated reads and audited writes (Wave 5.7B)"
 
     db.run(
       "INSERT INTO debt_instrument (id, project_id, lender, principal, rate_type, rate) VALUES (?,?,?,?,?,?)",
-      [ulid(), projectId, "KB", 50_000_000_000, "fixed", 3.5],
+      [ulid(), projectId, "KB", 50_000, "fixed", 3.5],
     );
     db.run(
       "INSERT INTO contingent_liability (id, project_id, category, description, probability, amount_low, amount_expected, amount_high, expected_timing_year) VALUES (?,?,?,?,?,?,?,?,?)",
-      [ulid(), projectId, "litigation", "Patent suit", 0.3, 1e9, 2e9, 4e9, 1],
+      [ulid(), projectId, "litigation", "Patent suit", 0.3, 1000, 2000, 4000, 1],
     );
     const simRunId = ulid();
     const simId = ulid();
