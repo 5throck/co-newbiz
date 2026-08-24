@@ -99,6 +99,7 @@
 | ADR-0063 | Class C evidence-plane extension — PMI/deal-shape/incentive-deadline vars; #4/#14/#28/#29 armed; baseline 4→8 | Accepted (2026-08-24) | [0063-class-c-evidence-extension.md](0063-class-c-evidence-extension.md) |
 | ADR-0064 | Kill-criteria extension round 2 — six vars over existing tables; #5-#10/#17/#19 armed; baseline 8→16 | Accepted (2026-08-24) | [0064-kill-criteria-extension-round-2.md](0064-kill-criteria-extension-round-2.md) |
 | ADR-0065 | Kill-criteria extension round 3 — two asserted completeness facts (#18/#25); baseline 16→18 | Accepted (2026-08-24) | [0065-kill-criteria-extension-round-3.md](0065-kill-criteria-extension-round-3.md) |
+| ADR-0066 | Value-chain driver/scenario schema + structure-simulation plane (Phase B) | Accepted (2026-08-24) | [0066-value-chain-driver-scenario-schema.md](0066-value-chain-driver-scenario-schema.md) |
 
 > Index generated from `docs/adr/*.md` front matter on 2026-08-24. Long
 > statuses are abbreviated here; the ADR file is authoritative.
