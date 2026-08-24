@@ -3,9 +3,14 @@
   "criterion_id": "analysis_task_reviewed_by_null_on_required_deliverable",
   "title": "analysis_task.reviewed_by is null on a required deliverable",
   "action": "halt",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; proposed: deliverables.required_unreviewed (count over analysis_task × required outputs)."
+  "predicate": {
+    "op": "count",
+    "var": "deliverables.required_unreviewed",
+    "cmp": "gte",
+    "value": 1
+  },
+  "enabled": true,
+  "policy_id": "gd-0024-class-c-decisions",
+  "thresholds_source": "docs/decisions/2026-08-24-evidence-source-backlog-disposition.md (round 5) + ADR-0060 row wording; surfaces via migration 0032 — threshold by criterion wording (ADR-0060)",
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; proposed: deliverables.required_unreviewed (count over analysis_task × required outputs). ADR-0068 arms this: deliverables.required_unreviewed counts analysis_task rows still awaiting their cross-domain review — the Entity-IC blocking condition docs/process-map.md named, now machine-evaluable."
 }
