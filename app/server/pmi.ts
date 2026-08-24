@@ -16,6 +16,7 @@
 import { Hono } from "hono";
 import { getDb } from "../../db/client.ts";
 import { getProjectIfVisible } from "../../db/repositories/project.repository.ts";
+import { assert as assertDimensionInput, review as reviewDimensionInput } from "../../db/repositories/dimension-input.repository.ts";
 import { appendAudit } from "../../db/lib/access-control.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { badRequest, forbidden, notFound, ok } from "./envelope.ts";
@@ -186,4 +187,101 @@ pmiRoutes.post("/api/projects/:id/incentive-deadlines", async (c) => {
   }
   appendAudit(db, { actor: ctx.userId, action: "incentive_deadline_write", target: `${project.id}:${id}`, now: new Date().toISOString() });
   return ok(c, { id }, 201);
+});
+
+// ── dimension_input — the ASSERTED-fact writer surface ────────────────────
+// The entry point for judged variables (legal facts, infrastructure flags,
+// sign-offs): an assertion lands unreviewed, a SECOND member reviews it
+// cross-domain (Decision 3), and only then does the snapshot filler read it.
+// The repository owns every guard — registry coherence, requires_evidence_ref
+// citation vocabulary, membership (FR-SEC-08), insider list (FR-SEC-06),
+// reviewer≠asserter — this route only relays and audits.
+
+/** GET /api/projects/:id/dimension-inputs — live assertions (?var_key= narrows). */
+pmiRoutes.get("/api/projects/:id/dimension-inputs", (c) => {
+  const ctx = c.get("auth");
+  const project = visibleProject(ctx, c.req.param("id"));
+  if (!project) return notFound(c);
+  const varKey = c.req.query("var_key");
+  const rows = varKey
+    ? getDb()
+        .query(
+          "SELECT id, run_id, var_key, value_kind, value_text, value_num, unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at FROM dimension_input WHERE project_id = ? AND var_key = ? AND superseded_by IS NULL ORDER BY observed_at DESC",
+        )
+        .all(project.id, varKey)
+    : getDb()
+        .query(
+          "SELECT id, run_id, var_key, value_kind, value_text, value_num, unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at FROM dimension_input WHERE project_id = ? AND superseded_by IS NULL ORDER BY observed_at DESC",
+        )
+        .all(project.id);
+  return ok(c, rows, 200, { count: rows.length, reviewed: rows.filter((r) => r.reviewed_by !== null).length });
+});
+
+/**
+ * POST /api/projects/:id/dimension-inputs — assert a judged fact.
+ * Body: {run_id, var_key, value: {kind: num|text|bool, value}, evidence_ref,
+ * rationale, observed_at?}. Analyst+; the assertion lands UNREVIEWED by design.
+ */
+pmiRoutes.post("/api/projects/:id/dimension-inputs", async (c) => {
+  const ctx = c.get("auth");
+  const project = visibleProject(ctx, c.req.param("id"));
+  if (!project) return notFound(c);
+  if (ctx.role === "viewer") return forbidden(c, "role_required", "Assertion writes require the analyst role.");
+  const body = await c.req.json().catch(() => null) as {
+    run_id?: string;
+    var_key?: string;
+    value?: { kind?: string; value?: unknown };
+    evidence_ref?: string;
+    rationale?: string;
+    observed_at?: string;
+  } | null;
+  if (!body?.run_id || !body?.var_key?.trim() || !body?.value || !body?.evidence_ref?.trim() || !body?.rationale?.trim()) {
+    return badRequest(c, "invalid_request", "run_id, var_key, value {kind,value}, evidence_ref and rationale are required.");
+  }
+  const kind = body.value.kind;
+  if (kind !== "num" && kind !== "text" && kind !== "bool") {
+    return badRequest(c, "invalid_value_kind", "value.kind must be num, text or bool.");
+  }
+  try {
+    const row = assertDimensionInput(
+      {
+        project_id: project.id,
+        run_id: body.run_id,
+        var_key: body.var_key.trim(),
+        value: { kind, value: body.value.value } as never,
+        evidence_ref: body.evidence_ref.trim(),
+        asserted_by: ctx.userId,
+        rationale: body.rationale.trim(),
+        observed_at: body.observed_at,
+      },
+      getDb(),
+    );
+    appendAudit(getDb(), { actor: ctx.userId, action: "dimension_input_assert", target: `${project.id}:${row.id}`, now: new Date().toISOString() });
+    return ok(c, { id: row.id, var_key: row.var_key, reviewed: false }, 201);
+  } catch (err) {
+    return badRequest(c, "assertion_failed", err instanceof Error ? err.message : "Assertion rejected.");
+  }
+});
+
+/**
+ * POST /api/projects/:id/dimension-inputs/:rowId/review — the cross-domain
+ * second pair of eyes. Reviewer must be an active member AND differ from the
+ * asserter (the repository enforces both); until reviewed, the assertion
+ * never reaches a snapshot.
+ */
+pmiRoutes.post("/api/projects/:id/dimension-inputs/:rowId/review", async (c) => {
+  const ctx = c.get("auth");
+  const project = visibleProject(ctx, c.req.param("id"));
+  if (!project) return notFound(c);
+  if (ctx.role === "viewer") return forbidden(c, "role_required", "Reviews require the analyst role.");
+  const rowId = c.req.param("rowId");
+  const row = getDb().query("SELECT project_id FROM dimension_input WHERE id = ?").get(rowId) as { project_id: string } | null;
+  if (!row || row.project_id !== project.id) return notFound(c);
+  try {
+    const reviewed = reviewDimensionInput({ input_id: rowId, reviewed_by: ctx.userId }, getDb());
+    appendAudit(getDb(), { actor: ctx.userId, action: "dimension_input_review", target: `${project.id}:${rowId}`, now: new Date().toISOString() });
+    return ok(c, { id: reviewed.id, var_key: reviewed.var_key, reviewed_by: reviewed.reviewed_by });
+  } catch (err) {
+    return badRequest(c, "review_failed", err instanceof Error ? err.message : "Review rejected.");
+  }
 });

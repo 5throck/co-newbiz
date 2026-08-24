@@ -605,3 +605,97 @@ export async function getPortfolioScorecard(
   const res = await api.get<PortfolioScorecard>(path);
   return { data: res.data, meta: toScorecardMeta(res.meta) };
 }
+
+// ── ADR-0063 Class C evidence surfaces (PMI / deal-shape / deadlines) ──
+// Money fields are INTEGER KRW millions (ADR-0061); run_rate_bp is basis
+// points of committed cost-synergy run-rate.
+
+export interface KeyTalentRow {
+  id: string;
+  role_ref: string;
+  status: "active" | "departed_regretted" | "departed_planned";
+  exit_date: string | null;
+  locked_at: string;
+}
+
+export interface SynergyCertificationRow {
+  id: string;
+  run_rate_bp: number;
+  sustained_quarters: number;
+  certified_by: string;
+  baseline_locked_at: string;
+  signed_at: string;
+}
+
+export interface DealShapeEvaluationRow {
+  id: string;
+  shape: string;
+  intent: "integration" | "capability_access";
+  viable: number;
+  evaluated_by: string;
+  evaluated_at: string;
+}
+
+export interface IncentiveDeadlineRow {
+  id: string;
+  incentive_ref: string;
+  deadline: string;
+  source: string | null;
+  created_at: string;
+}
+
+export interface DimensionInputRow {
+  id: string;
+  run_id: string;
+  var_key: string;
+  value_kind: "num" | "text" | "bool";
+  value_text: string | null;
+  value_num: number | null;
+  unit: string | null;
+  evidence_ref: string;
+  asserted_by: string;
+  reviewed_by: string | null;
+  rationale: string;
+  observed_at: string;
+}
+
+export interface DimensionInputsMeta {
+  count: number;
+  reviewed: number;
+}
+
+export const pmiApi = {
+  keyTalent: (projectId: string) => api.get<KeyTalentRow[]>(`/api/projects/${encodeURIComponent(projectId)}/pmi/key-talent`),
+  addKeyTalent: (
+    projectId: string,
+    body: { role_ref: string; status?: KeyTalentRow["status"]; exit_date?: string | null; locked_at: string },
+  ) => api.post<KeyTalentRow>(`/api/projects/${encodeURIComponent(projectId)}/pmi/key-talent`, body),
+  synergyCertifications: (projectId: string) =>
+    api.get<SynergyCertificationRow[]>(`/api/projects/${encodeURIComponent(projectId)}/pmi/synergy-certifications`),
+  addSynergyCertification: (
+    projectId: string,
+    body: { run_rate_bp: number; sustained_quarters: number; certified_by: string; baseline_locked_at: string; signed_at: string },
+  ) => api.post<SynergyCertificationRow>(`/api/projects/${encodeURIComponent(projectId)}/pmi/synergy-certifications`, body),
+  dealShapeEvaluations: (projectId: string) =>
+    api.get<DealShapeEvaluationRow[]>(`/api/projects/${encodeURIComponent(projectId)}/deal-shape-evaluations`),
+  addDealShapeEvaluation: (
+    projectId: string,
+    body: { shape: string; intent: "integration" | "capability_access"; viable: boolean; evaluated_at?: string },
+  ) => api.post<DealShapeEvaluationRow>(`/api/projects/${encodeURIComponent(projectId)}/deal-shape-evaluations`, body),
+  incentiveDeadlines: (projectId: string) =>
+    api.get<IncentiveDeadlineRow[]>(`/api/projects/${encodeURIComponent(projectId)}/incentive-deadlines`),
+  addIncentiveDeadline: (projectId: string, body: { incentive_ref: string; deadline: string; source?: string }) =>
+    api.post<IncentiveDeadlineRow>(`/api/projects/${encodeURIComponent(projectId)}/incentive-deadlines`, body),
+  dimensionInputs: (projectId: string, varKey?: string) =>
+    api.get<DimensionInputRow[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/dimension-inputs${varKey ? `?var_key=${encodeURIComponent(varKey)}` : ""}`,
+    ),
+  assertDimensionInput: (
+    projectId: string,
+    body: { run_id: string; var_key: string; value: { kind: "num" | "text" | "bool"; value: unknown }; evidence_ref: string; rationale: string },
+  ) => api.post<{ id: string }>(`/api/projects/${encodeURIComponent(projectId)}/dimension-inputs`, body),
+  reviewDimensionInput: (projectId: string, rowId: string) =>
+    api.post<{ id: string; reviewed_by: string }>(
+      `/api/projects/${encodeURIComponent(projectId)}/dimension-inputs/${encodeURIComponent(rowId)}/review`,
+    ),
+};

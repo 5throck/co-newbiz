@@ -559,6 +559,70 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/projects/{id}/dimension-inputs:
+    get:
+      operationId: listDimensionInputs
+      summary: Live judged-variable assertions (?var_key= narrows) — meta.count / meta.reviewed.
+      tags: [Evidence]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: var_key
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: assertDimensionInput
+      summary: Assert a judged fact — analyst+; lands UNREVIEWED by design (a cross-domain review is a separate act); audited.
+      tags: [Evidence]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id, var_key, value, evidence_ref, rationale]
+              properties:
+                run_id: { type: string }
+                var_key: { type: string }
+                value:
+                  type: object
+                  required: [kind, value]
+                  properties:
+                    kind: { type: string, enum: [num, text, bool] }
+                    value: {}
+                evidence_ref: { type: string, description: "Citation vocabulary required on requires_evidence_ref vars" }
+                rationale: { type: string }
+                observed_at: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/dimension-inputs/{rowId}/review:
+    post:
+      operationId: reviewDimensionInput
+      summary: Cross-domain second review — reviewer must differ from the asserter; reviewed assertions are what snapshots read; audited.
+      tags: [Evidence]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: rowId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/interpretations:
     get:
       operationId: searchInterpretations
