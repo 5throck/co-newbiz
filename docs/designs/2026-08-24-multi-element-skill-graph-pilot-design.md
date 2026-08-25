@@ -96,6 +96,7 @@ Deliverable: `docs/graph/backfill-report.md` recording per-skill disposition and
 
 1. **Decision-record prose parsing** relies on `Supersedes:/Amends:/anchor` conventions staying consistent; malformed records degrade to missing edges (visible as orphan nodes in the report, never wrong edges).
 2. **`consumes` inference from prose** is the weakest extractor; it ships suppressed-by-default and is excluded from `--check` failure conditions until precision is reviewed against pilots 001–010 walkthroughs.
+   → **RESOLVED 2026-08-25 (v0.4.0)**: corpus-wide inference yielded exactly ONE edge (`greenfield-dd#4 ← dd_finding`) — a TRUE positive, independently corroborated by the kill-criteria predicate `dd_finding_with_value_impact_not_in_valuation_bridge`. Promoted to default-on; `--no-consumes` opts out.
 3. **Registry growth** (kill-criteria extension rounds continue per ADR-0064/0065) increases node counts; generation cost is linear and negligible, but the human catalog needs stable section ordering (alphabetical by id).
 
 ## 9. Implementation checklist
