@@ -1,8 +1,10 @@
-// @version 0.3.0
+// @version 0.4.0
 /**
  * Multi-element skill graph extractor — pilot per
  * docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md.
  *
+ * v0.4.0: consumes inference promoted to DEFAULT (precision 1/1 vs pilots;
+ *         the surviving edge is kill-criteria-corroborated). --no-consumes opts out.
  * v0.3.0: workspace-roster fallback resolves platform-skill owners cross-repo.` + [char]10 + ` * v0.2.0: honors the ADR-0053 human-role registry (procedures/
  * _human-roles.yaml) — agent_key values registered there are person-roles,
  * emitted as agent nodes with `human_role: true` instead of missing-file
@@ -680,7 +682,7 @@ function renderJson(g: Graph): string {
       {
         meta: {
           generator: "scripts/co-newbiz/graph.ts",
-          generator_version: "0.3.0",
+          generator_version: "0.4.0",
           design_doc:
             "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
           node_count: g.nodes.length,
@@ -848,7 +850,7 @@ function generateAll(includeConsumes: boolean): {
 }
 
 export function runGraphCommand(args: string[]): void {
-  const includeConsumes = args.includes("--include-consumes");
+  const includeConsumes = !args.includes("--no-consumes");
   const check = args.includes("--check");
   const { json, md, graph } = generateAll(includeConsumes);
 
@@ -893,11 +895,12 @@ export function runGraphCommand(args: string[]): void {
 export function checkGraphDrift(
   json?: string,
   md?: string,
+  includeConsumes = true,
 ): string[] {
-  const jsonPath = join(OUT_DIR, "graph.json");
-  const mdPath = join(OUT_DIR, "graph.md");
+  const jsonPath = join(OUT_DIR, 'graph.json');
+  const mdPath = join(OUT_DIR, 'graph.md');
   if (json === undefined || md === undefined) {
-    ({ json, md } = generateAll(false));
+    ({ json, md } = generateAll(includeConsumes));
   }
   const problems: string[] = [];
   if (!existsSync(jsonPath) || !existsSync(mdPath)) {

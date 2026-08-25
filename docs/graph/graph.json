@@ -1,10 +1,10 @@
 {
   "meta": {
     "generator": "scripts/co-newbiz/graph.ts",
-    "generator_version": "0.3.0",
+    "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
     "node_count": 449,
-    "edge_count": 768
+    "edge_count": 769
   },
   "nodes": [
     {
@@ -3730,6 +3730,12 @@
       "from": "rule:pmi-integration-execution__synergy_run_rate_uncertified_at_bau_handover",
       "to": "adr:0068",
       "source_ref": "procedures/_kill-criteria/pmi-integration-execution__synergy_run_rate_uncertified_at_bau_handover.json"
+    },
+    {
+      "type": "consumes",
+      "from": "proc:greenfield-dd#4",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[4] (inferred: exact token)"
     },
     {
       "type": "evaluates",
