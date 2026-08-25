@@ -775,4 +775,26 @@ export const marketApi = {
   ) => api.post<unknown>(`/api/projects/${encodeURIComponent(projectId)}/structure-simulations`, body),
   structureResults: (projectId: string, runId?: string) =>
     api.get<StructureSimQuantileRow[]>(`/api/projects/${encodeURIComponent(projectId)}/structure-simulations${runId ? `?run_id=${encodeURIComponent(runId)}` : ""}`),
+  screeningLonglist: (projectId: string) =>
+    api.get<Array<{ id: string; candidate_name: string; knock_out_passed: number; notes: string | null; created_at: string }>>(
+      `/api/projects/${encodeURIComponent(projectId)}/screening-longlist`,
+    ),
+  addScreeningLonglistEntry: (projectId: string, body: { candidate_name: string; knock_out_passed: boolean; notes?: string }) =>
+    api.post<{ id: string }>(`/api/projects/${encodeURIComponent(projectId)}/screening-longlist`, body),
+  partnerDDFindings: (projectId: string) =>
+    api.get<Array<{ id: string; partner_id: string; workstream: string; severity: string; description: string; created_at: string }>>(
+      `/api/projects/${encodeURIComponent(projectId)}/partner-dd-findings`,
+    ),
+  addPartnerDDFinding: (
+    projectId: string,
+    body: { partner_id: string; workstream: string; severity: string; description: string },
+  ) => api.post<{ id: string }>(`/api/projects/${encodeURIComponent(projectId)}/partner-dd-findings`, body),
+  chainSensitivities: (projectId: string, industryId?: string) =>
+    api.get<Array<{ id: string; industry_id: string; driver_code: string; sensitivity: number; lag_months: number }>>(
+      `/api/projects/${encodeURIComponent(projectId)}/chain-sensitivities${industryId ? `?industry_id=${encodeURIComponent(industryId)}` : ""}`,
+    ),
+  upsertChainSensitivity: (
+    projectId: string,
+    body: { industry_id: string; driver_code: string; sensitivity: number; lag_months?: number },
+  ) => api.post<{ id: string }>(`/api/projects/${encodeURIComponent(projectId)}/chain-sensitivities`, body),
 };
