@@ -16,6 +16,8 @@ status: active
 owner: legal-counsel
 prerequisites: none
 metadata:
+  procedure_keys:
+    - brownfield-dd
   type: domain
   triggers:
     - statute change affecting this project

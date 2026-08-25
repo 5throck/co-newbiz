@@ -17,6 +17,8 @@ owner: group-review-agent
 prerequisites:
   - two-tier-approval-chain
 metadata:
+  procedure_keys:
+    - group-investment-review
   type: process
   triggers:
     - group IC review

@@ -16,6 +16,8 @@ status: active
 owner: process-governance-manager
 prerequisites: none
 metadata:
+  procedure_keys:
+    - entity-ic-review
   type: process
   triggers:
     - synthesize insights

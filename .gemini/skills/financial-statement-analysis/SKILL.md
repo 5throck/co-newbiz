@@ -19,6 +19,9 @@ prerequisites:
   - k-dart
 l2_propagate: false
 metadata:
+  procedure_keys:
+    - brownfield-fs
+    - greenfield-fs
   type: analysis
   tier: medium
   triggers:

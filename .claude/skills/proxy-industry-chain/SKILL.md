@@ -18,6 +18,9 @@ owner: quant-methodologist
 prerequisites:
   - unit-conversion-calibration
 metadata:
+  procedure_keys:
+    - brownfield-fs
+    - greenfield-fs
   type: domain
   triggers:
     - proxy chain

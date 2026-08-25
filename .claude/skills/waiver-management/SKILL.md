@@ -17,6 +17,8 @@ status: active
 owner: compliance-officer
 prerequisites: none
 metadata:
+  procedure_keys:
+    - brownfield-dd
   type: process
   triggers:
     - file a waiver

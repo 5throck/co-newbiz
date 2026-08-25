@@ -17,6 +17,8 @@ status: active
 owner: hr-integration-agent
 prerequisites: none
 metadata:
+  procedure_keys:
+    - pmi-integration-execution
   type: domain
   triggers:
     - compensation harmonization

@@ -17,6 +17,9 @@ owner: financial-analyst
 prerequisites:
   - financial-statement-analysis
 metadata:
+  procedure_keys:
+    - greenfield-fs
+    - brownfield-fs
   type: domain
   triggers:
     - historical financial trend

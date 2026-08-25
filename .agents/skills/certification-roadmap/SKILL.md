@@ -16,6 +16,9 @@ status: active
 owner: certification-agent
 prerequisites: none
 metadata:
+  procedure_keys:
+    - brownfield-pre-fs
+    - greenfield-pre-fs
   type: domain
   triggers:
     - certification requirements
