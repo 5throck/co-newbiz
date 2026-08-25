@@ -99,6 +99,17 @@ steps:
       milestones passed; open-item transfer list in which NO item lacks a
       named line-executive owner and date; final synergy accounting; deal
       post-mortem feeding the M&A playbook.
+  - id: 4.5
+    gate: post_close
+    agent_key: hr-integration-agent
+    skill_key: compensation-harmonization-analysis
+    output_type: compensation_harmonization_result
+    description: >
+      Post-close compensation harmonization analysis (graph-pilot wiring,
+      backfill-report §4.1): benchmark pay at job-family/grade level and
+      model upward-bias harmonization ahead of BAU-exit certification, so
+      the certifier sees compensation exposure alongside the synergy
+      run-rate.
   - id: 5
     gate: post_close
     agent_key: bau-exit-certifier   # human role — procedures/_human-roles.yaml registry (ADR-0053)

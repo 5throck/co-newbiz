@@ -48,6 +48,25 @@ steps:
       plan where currencies differ. No committed financing evidence =
       precondition FAIL, not a judgment call — a financing contingency
       weakens the bid and belongs to no reviewer's discretion.
+  - id: 4.5
+    gate: "Entity IC"
+    agent_key: process-governance-manager
+    skill_key: insight-synthesis
+    output_type: integrated_insight_review
+    description: >
+      Integrate market, financial, legal/regulatory and M&A special-topic
+      outputs into a single strategic view with a mandatory cross-check,
+      giving the human reviewer one coherent pre-IC package (graph-pilot
+      wiring, backfill-report §4.1).
+  - id: 4.6
+    gate: "Entity IC"
+    agent_key: docs-writer
+    skill_key: executive-presentation
+    output_type: entity_ic_decision_deck
+    description: >
+      Build the Entity IC decision deck (Pyramid-Principle structure,
+      one-page summary) from the integrated insight and valuation inputs
+      (graph-pilot wiring).
   - id: 5
     gate: "Entity IC"
     agent_key: entity-ic-reviewer   # human role — procedures/_human-roles.yaml registry (ADR-0053)

@@ -90,6 +90,40 @@ steps:
       coefficients, persisting P05/P50/P95 demand/margin deltas per node.
       Owned by market-intelligence-agent per its six-axis charter;
       coefficient-less links surface as UNASSESSED nodes, never zero impact.
+  - id: 7.5
+    gate: FS
+    agent_key: financial-analyst
+    skill_key: financial-statement-analysis
+    output_type: fs_canonical_kpi_baseline
+    description: >
+      Canonical-model KPI baseline (profitability, growth, leverage, cash
+      flow) feeding QoE and feasibility inputs (graph-pilot wiring,
+      backfill-report §4.1).
+  - id: 7.6
+    gate: FS
+    agent_key: financial-analyst
+    skill_key: peer-benchmarking
+    output_type: peer_benchmark_set
+    description: >
+      Comparable-company benchmark of target KPIs — cross-sectional
+      counterpart to historical trend analysis (graph-pilot wiring).
+  - id: 7.7
+    gate: FS
+    agent_key: quant-methodologist
+    skill_key: proxy-industry-chain
+    output_type: proxy_demand_chain
+    description: >
+      Proxy-chain demand estimation where direct market data is absent;
+      chain reliability graded A/B/C on statistical hops only (graph-pilot
+      wiring).
+  - id: 7.8
+    gate: FS
+    agent_key: quant-methodologist
+    skill_key: unit-conversion-calibration
+    output_type: unit_conversion_calibration
+    description: >
+      OLS calibration of a proxy-chain hop with lead-lag search and 95%
+      confidence interval (graph-pilot wiring).
   - id: 8
     gate: FS
     agent_key: process-governance-manager
