@@ -16,6 +16,9 @@ prerequisites:
   - financial-statement-analysis
   - rag-scoring-framework
 metadata:
+  procedure_keys:
+    - entity-ic-review
+    - group-investment-review
   type: process
   triggers:
     - executive presentation

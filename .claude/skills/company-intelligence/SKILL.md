@@ -16,6 +16,8 @@ status: active
 owner: market-intelligence-agent
 prerequisites: none
 metadata:
+  procedure_keys:
+    - brownfield-dd
   source: workspace
   type: research
   triggers:

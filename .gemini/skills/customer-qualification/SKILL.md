@@ -16,6 +16,8 @@ status: active
 owner: commercial-dd-agent
 prerequisites: none
 metadata:
+  procedure_keys:
+    - brownfield-dd
   type: domain
   triggers:
     - customer qualification

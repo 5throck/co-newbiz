@@ -15,6 +15,9 @@ status: active
 owner: financial-analyst
 prerequisites: none
 metadata:
+  procedure_keys:
+    - greenfield-fs
+    - brownfield-fs
   type: domain
   triggers:
     - peer benchmarking

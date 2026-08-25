@@ -17,6 +17,13 @@ owner: process-governance-manager
 prerequisites:
   - stage-gate-governance
 metadata:
+  procedure_keys:
+    - brownfield-screening
+    - brownfield-pre-fs
+    - brownfield-dd
+    - brownfield-fs
+    - entity-ic-review
+    - group-investment-review
   type: process
   triggers:
     - what happens at this gate

@@ -16,6 +16,9 @@ status: active
 owner: quant-methodologist
 prerequisites: none
 metadata:
+  procedure_keys:
+    - brownfield-fs
+    - greenfield-fs
   type: implementation
   triggers:
     - calibrate a proxy hop
