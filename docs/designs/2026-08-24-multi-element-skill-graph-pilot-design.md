@@ -101,6 +101,8 @@ Deliverable: `docs/graph/backfill-report.md` recording per-skill disposition and
 
 ## 9. Implementation checklist
 
+> **Status (2026-08-25): COMPLETE** — items 1–5 landed across PRs #133/#134/#136/#137/#138; item 4's disposition pass = `docs/graph/backfill-report.md` (16 wired / 40 explicit N/A). Post-plan additions: human-role registry honored (v0.2.0), consumes default-on after a 1/1 precision review (v0.4.0), workspace-roster owner fallback (v0.3.0).
+
 1. `scripts/co-newbiz/graph.ts` module (extractors per §1–§3) + `newbiz.ts` `case "graph"` / `case "context"` wiring
 2. First emission of `docs/graph/graph.{json,md}`, committed
 3. `audit-variant.ts` drift wiring
