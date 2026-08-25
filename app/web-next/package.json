@@ -1,0 +1,29 @@
+{
+  "name": "co-newbiz-web-next",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Phase 1 scaffold — ADR-0069 (Proposed). Not the system of record until Phase 5 cutover; app/web (Hono/Vite) remains authoritative until then.",
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "prisma:pull": "prisma db pull",
+    "prisma:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "better-sqlite3": "^12.11.1",
+    "next": "16.2.2",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "prisma": "^7.8.0",
+    "typescript": "^5.7.2"
+  }
+}

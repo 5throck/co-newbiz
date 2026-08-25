@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 473,
+    "node_count": 476,
     "edge_count": 825
   },
   "nodes": [
@@ -346,6 +346,21 @@
       "id": "adr:0068",
       "type": "adr",
       "label": "ADR-0068: Kill-criteria extension round 5 — site infrastructure and analysis_task review plane"
+    },
+    {
+      "id": "adr:0069",
+      "type": "adr",
+      "label": "ADR-0069: Adopt Next.js + Prisma web stack, superseding ADR-0010"
+    },
+    {
+      "id": "adr:0070",
+      "type": "adr",
+      "label": "ADR-0070: MCP enforcement point under Next.js, superseding ADR-0011's implementation"
+    },
+    {
+      "id": "adr:0071",
+      "type": "adr",
+      "label": "ADR-0071: Primary-key NOT NULL rebuild (migration 0033)"
     },
     {
       "id": "agent:antitrust-agent",

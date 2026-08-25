@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * proc:resolve — merges a shared procedure with its region/entity overrides,
  * per design v1.0 §6.3's references:/overrides: model (safety_os
@@ -14,13 +14,39 @@
  * v1.1.0 (design of record 2026-08-22, Decision 8 / PR-3): also parses and
  * merges `kill_criteria`. Merge semantics differ from thresholds on purpose
  * — see appendKillCriteria.
+ *
+ * v1.2.0 (ADR-0069/0070 Phase 2 port): PROCEDURES_ROOT gained a cwd-walk-up
+ * fallback for when `import.meta.dirname` is undefined — found empirically
+ * when this module is dynamically imported from a Next.js/Turbopack Route
+ * Handler (app/web-next/app/api/procedures/resolve/route.ts), where
+ * `import.meta.dirname` does not survive the bundling of a dynamically
+ * imported module outside the app directory. The CLI (`bun
+ * scripts/co-newbiz/newbiz.ts`) and app/server's Hono route both still hit
+ * the primary `import.meta.dirname` branch unchanged — the fallback only
+ * activates when that value is absent, so neither existing call site's
+ * behavior changes.
  */
 
 import * as yaml from "js-yaml";
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 
-const PROCEDURES_ROOT = resolvePath(import.meta.dirname, "..", "..", "procedures");
+function findProceduresRoot(): string {
+  if (import.meta.dirname) {
+    return resolvePath(import.meta.dirname, "..", "..", "procedures");
+  }
+  let dir = process.cwd();
+  for (let i = 0; i < 6; i++) {
+    const candidate = join(dir, "procedures");
+    if (existsSync(candidate)) return candidate;
+    const parent = resolvePath(dir, "..");
+    if (parent === dir) break;
+    dir = parent;
+  }
+  throw new Error(`Could not locate the procedures/ directory by walking up from cwd=${process.cwd()} (import.meta.dirname was unavailable).`);
+}
+
+const PROCEDURES_ROOT = findProceduresRoot();
 
 interface Step {
   id: number | string;
