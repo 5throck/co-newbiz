@@ -40,6 +40,15 @@ steps:
       same review cycle using the formula from meeting M2 D-M2-2: IRR-over-hurdle
       spread + RAG grade + capital requested, normalized to the cycle's capital
       budget, ties broken by risk-officer flags.
+  - id: 4.5
+    gate: "Group IC"
+    agent_key: docs-writer
+    skill_key: executive-presentation
+    output_type: group_ic_decision_deck
+    description: >
+      Build the Group IC decision deck from the portfolio-fit ranking and
+      intra-group transaction compliance outputs (graph-pilot wiring,
+      backfill-report §4.1).
   - id: 5
     gate: "Group IC"
     agent_key: process-governance-manager

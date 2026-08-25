@@ -55,6 +55,16 @@ steps:
       Confirm certification transferability on change of control where load-bearing
       to the thesis — inference is explicitly disallowed (design's non-negotiable
       boundary #5); must be confirmed against the certifying body's own rules.
+  - id: 3.5
+    gate: Pre-FS
+    agent_key: certification-agent
+    skill_key: certification-roadmap
+    output_type: certification_roadmap_map
+    description: >
+      Required-certification gap map with dependency DAG — sell-side access
+      requirements tracked separately from permits, mirroring the
+      greenfield-pre-fs placement (graph-pilot wiring, backfill-report
+      §4.1).
   - id: 4
     gate: Pre-FS
     agent_key: process-governance-manager

@@ -67,6 +67,15 @@ steps:
       Confirm certification transferability where load-bearing to the thesis
       — only relevant if the site plan depends on an existing certified
       operation nearby or a certified partner; otherwise mark not-applicable.
+  - id: 5.5
+    gate: Pre-FS
+    agent_key: certification-agent
+    skill_key: certification-roadmap
+    output_type: certification_roadmap_map
+    description: >
+      Required-certification gap map with dependency DAG — sell-side access
+      requirements tracked separately from permits (graph-pilot wiring,
+      backfill-report §4.1).
   - id: 6
     gate: Pre-FS
     agent_key: process-governance-manager
