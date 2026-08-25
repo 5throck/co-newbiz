@@ -1,9 +1,9 @@
-// @version 0.2.0
+// @version 0.3.0
 /**
  * Multi-element skill graph extractor — pilot per
  * docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md.
  *
- * v0.2.0: honors the ADR-0053 human-role registry (procedures/
+ * v0.3.0: workspace-roster fallback resolves platform-skill owners cross-repo.` + [char]10 + ` * v0.2.0: honors the ADR-0053 human-role registry (procedures/
  * _human-roles.yaml) — agent_key values registered there are person-roles,
  * emitted as agent nodes with `human_role: true` instead of missing-file
  * warnings, mirroring graph-map.ts's exemption.
@@ -234,6 +234,30 @@ function extractAgents(): Set<string> {
 }
 
 /**
+ * Workspace-root roster fallback (ADR-0057 country-scoped copies et al):
+ * platform-common skills shipped from templates/common keep their upstream
+ * `owner:` names, which legitimately live in OTHER rosters (workspace root,
+ * sibling variants). Resolving them turns false missing-owner warnings into
+ * real cross-repo provenance. Guarded: a standalone clone of this repo has
+ * no parent workspace, and the fallback simply stays empty.
+ */
+function extractWorkspaceRoster(): Set<string> {
+  const roster = new Set<string>();
+  const rootAgentsDir = join(ROOT, "..", "..", "agents");
+  if (!existsSync(rootAgentsDir)) return roster;
+  try {
+    for (const f of readdirSync(rootAgentsDir)) {
+      if (!f.endsWith(".md")) continue;
+      if (/^README/i.test(f)) continue;
+      roster.add(f.replace(/\.md$/, ""));
+    }
+  } catch {
+    // unreadable parent — treat as standalone
+  }
+  return roster;
+}
+
+/**
  * Human-authority roles (ADR-0053, boundary #2): agent_key values registered
  * in procedures/_human-roles.yaml name PERSON-ROLES, not AI agents — the
  * missing agents/<key>.md is the point. Mirrors graph-map.ts's exemption so
@@ -377,6 +401,7 @@ function buildGraph(includeConsumes: boolean): Graph {
 
   const { skills, order: skillOrder } = extractSkills(warnings);
   const agents = extractAgents();
+  const workspaceRoster = extractWorkspaceRoster();
   const humanRoles = extractHumanRoles();
   const procs = extractProcedures();
   const rules = extractRules();
@@ -415,6 +440,16 @@ function buildGraph(includeConsumes: boolean): Graph {
     if (s.owner) {
       if (agents.has(s.owner)) {
         addNode({ id: `agent:${s.owner}`, type: "agent", label: s.owner });
+        addEdge("owns", `agent:${s.owner}`, `skill:${s.name}`, `skills/${s.name}/SKILL.md`);
+      } else if (workspaceRoster.has(s.owner)) {
+        // Platform-common skill owned by a workspace-root roster name — real
+        // cross-repo provenance, surfaced as an attribute instead of a warning.
+        addNode({
+          id: `agent:${s.owner}`,
+          type: "agent",
+          label: s.owner,
+          roster: "workspace-root",
+        });
         addEdge("owns", `agent:${s.owner}`, `skill:${s.name}`, `skills/${s.name}/SKILL.md`);
       } else {
         warnings.unknown_owner_agents.push(`${s.name}: ${s.owner}`);
@@ -645,7 +680,7 @@ function renderJson(g: Graph): string {
       {
         meta: {
           generator: "scripts/co-newbiz/graph.ts",
-          generator_version: "0.2.0",
+          generator_version: "0.3.0",
           design_doc:
             "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
           node_count: g.nodes.length,
