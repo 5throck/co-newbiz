@@ -1,6 +1,6 @@
 # 설계 — 웹 스택 전면 재구축 (Hono/Vite/bun:sqlite → Next.js/Prisma)
 
-**상태**: Phase 1 진행 중 (스캐폴딩 + 스키마 역산 완료, ADR-0071로 PK 차단 이슈 해결; ADR-0069/0070은 여전히 Proposed — Phase 2 착수는 그 승인과 무관하게 사용자 지시로 진행)
+**상태**: Phase 4 진행 중 (Phase 0-3 완료·PR #141 병합 대기; ADR-0069/0070은 여전히 Proposed — 각 Phase 착수는 그 승인과 무관하게 사용자 지시로 진행). Phase 1(스캐폴딩+스키마), Phase 2(REST 34개 엔드포인트 포팅), Phase 3(페이지 7개+컴포넌트 14개 포팅) 완료. Phase 4(섀도 트래픽)는 `scripts/co-newbiz/shadow-compare.ts`로 자동화 — 37개 대표 엔드포인트 전수 비교 결과 **불일치 0건** (2026-08-26 최초 실행).
 **소유**: platform-lead(아키텍처), security-expert(ADR-0011 경계 보존), architect(마이그레이션 시퀀싱)
 **관련**: ADR-0001(SQLite 채택), ADR-0002(DB 이식성), ADR-0010(현 웹 스택 — 본 설계로 대체 제안), ADR-0011(MCP는 REST-only — 본 설계로 대체 제안), ADR-0038/0039/0040(접근제어·PII·MNPI — 영향 확인 필요)
 
@@ -57,14 +57,14 @@ Next.js 전환 시 위험: Next.js는 Route Handler(REST 등가)와 **Server Act
 
 ## 6. 단계별 컷오버 시퀀스 (무중단 원칙)
 
-1. **Phase 1 — 스캐폴딩**: `app/web-next/`(임시 경로)에 Next.js 프로젝트 생성, Prisma 스키마를 32개 마이그레이션에서 역산(`prisma db pull` 또는 수동 변환 — 정확도 검증 필요), 기존 SQLite 파일을 그대로 재사용(엔진 동일, ADR-0001 유지)
-2. **Phase 2 — 라우트 포팅**: §4 매핑표 순서대로 라우트 파일 단위 포팅 + 단위 테스트 이식(`tests/unit/`의 REST 테스트를 Next.js Route Handler 테스트로 재작성)
-3. **Phase 3 — 프론트엔드 포팅**: 7개 페이지 + 14개 컴포넌트를 App Router 구조로 이관, plain CSS → Tailwind 클래스 변환
-4. **Phase 4 — 병행 운영(섀도 트래픽)**: 두 스택을 동시에 띄우고 MCP는 계속 Hono(8787)를 바라보게 유지, Next.js는 별도 포트에서 응답 정합성만 비교
-5. **Phase 5 — 컷오버**: `.mcp.json`/`.env`의 `CO_NEWBIZ_API_BASE_URL`을 Next.js 포트로 전환, Hono 서버 결정적 종료
-6. **Phase 6 — 폐기**: `app/server/`, 구 `app/web/`, `db/lib`·`db/repositories`의 raw-SQL 코드 삭제, `package.json` 스크립트 정리
+1. **Phase 1 — 스캐폴딩** ✅ 완료 (2026-08-25): `app/web-next/`에 Next.js 프로젝트 생성, Prisma 스키마를 `bunx prisma db pull`로 역산(수동 변환 불필요 — 자동 역산이 실제로 96개 모델을 정확히 잡아냈고, ADR-0071로 PK 이슈만 해결하면 됐다). 기존 SQLite 파일을 그대로 재사용(엔진 동일, ADR-0001 유지).
+2. **Phase 2 — 라우트 포팅** ✅ 완료 (2026-08-25): §4 매핑표 순서대로 34개 라우트 파일 단위 포팅, `db/lib`·`db/repositories` 그대로 재사용(비즈니스 로직 재작성 없음). **계획에서 벗어난 점**: "단위 테스트 이식"은 진행하지 않았다 — 대신 실행 중인 두 서버에 실제 요청을 보내 응답을 직접 비교하는 방식(§4의 검증)으로 대체했고, Phase 4에서 이를 `shadow-compare.ts`로 자동화했다. 정적 단위 테스트 이식은 여전히 남은 작업이다(§7 갱신 참조).
+3. **Phase 3 — 프론트엔드 포팅** ✅ 완료 (2026-08-26): 7개 페이지 + 14개 컴포넌트를 App Router 구조로 이관. **계획에서 벗어난 점**: "plain CSS → Tailwind 클래스 변환"은 진행하지 않았다 — `styles.css`를 그대로 재사용했다(Tailwind는 `app/web-next/package.json`에 추가되지 않음). 이는 ADR-0069가 이름 붙인 스택(Tailwind+Recharts)과의 의도적 축소 — 포팅 리스크를 낮추기 위해 이번 단계는 라우팅 프레임워크 전환에만 집중했다. Tailwind 전환이 필요하다면 별도 후속 결정(및 ADR-0069 갱신)이 필요하다.
+4. **Phase 4 — 병행 운영(섀도 트래픽)** ✅ 완료 (2026-08-26): `scripts/co-newbiz/shadow-compare.ts`가 동일 bearer 토큰으로 Hono(8787)·Next.js(3001) 양쪽에 GET 요청을 보내 정규화 후 JSON diff. 37개 대표 엔드포인트(§4 매핑표의 모든 소스 라우트 파일에서 최소 1개씩) 전수 비교 결과 **불일치 0건**. MCP는 이 세션 내내 계속 Hono(8787)를 바라보는 상태로 유지했다 — 실제 컷오버는 아직 하지 않았다.
+5. **Phase 5 — 컷오버** (미착수): `.mcp.json`/`.env`의 `CO_NEWBIZ_API_BASE_URL`을 Next.js 포트로 전환, Hono 서버 결정적 종료
+6. **Phase 6 — 폐기** (미착수): `app/server/`, 구 `app/web/`, `db/lib`·`db/repositories`의 raw-SQL 코드 삭제, `package.json` 스크립트 정리
 
-각 Phase는 별도 PR/세션으로 진행 — 본 세션에서는 실행하지 않는다.
+Phase 1-4는 모두 같은 세션·같은 PR(#141)에서 실행됐다 — 원래 "각 Phase는 별도 PR/세션으로"라는 계획에서 벗어난 결정이었지만, 매 Phase마다 실제 요청으로 즉시 검증하며 진행했기 때문에 리스크가 누적되지 않았다고 판단했다(각 Phase 완료 시점의 실측 결과가 위 항목별로 기록되어 있다). Phase 5(컷오버)는 실제 트래픽 전환을 수반하는 만큼 별도 승인 후 진행하는 것을 권고한다.
 
 ## 7. 미해결 질문 (Phase 0에서 답하지 않고 이관)
 
