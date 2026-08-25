@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+// (marketApi already imported above) from "../api.ts";
 import {
   marketApi,
   type ChainTopologyResponse,
@@ -261,3 +262,55 @@ export function MarketChainTab({ projectId }: { projectId: string }) {
     </section>
   );
 }
+
+// ── Chain Sensitivity Editor (ADR-0068 round 5 surface) ──────────────────
+
+export function ChainSensitivityEditor({ projectId }: { projectId: string }) {
+  const [rows, setRows] = useState<Array<{ id: string; industry_id: string; driver_code: string; sensitivity: number; lag_months: number }> | null>(null);
+  const [form, setForm] = useState({ industry_id: "", driver_code: "rate", sensitivity: "", lag_months: "0" });
+  const [error, setError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    try {
+      const res = await marketApi.chainSensitivities(projectId);
+      setRows(res.data ?? []);
+      setError(null);
+    } catch (e) { setError(errText(e)); }
+  }, [projectId]);
+  useEffect(() => { void reload(); }, [reload]);
+
+  return (
+    <section aria-label="드라이버 민감도 편집기">
+      <h3>드라이버 민감도 (구조 시뮬레이션 입력)</h3>
+      {error && <p role="alert">{error}</p>}
+      <table>
+        <thead><tr><th>산업</th><th>드라이버</th><th>민감도</th><th>지연(월)</th></tr></thead>
+        <tbody>
+          {(rows ?? []).map((r) => (
+            <tr key={r.id}><td>{r.industry_id.slice(0,10)}…</td><td>{r.driver_code}</td><td>{r.sensitivity}</td><td>{r.lag_months}</td></tr>
+          ))}
+          {rows !== null && rows.length === 0 && <tr><td colSpan={4}>민감도 미평가</td></tr>}
+        </tbody>
+      </table>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          try {
+            await marketApi.upsertChainSensitivity(projectId, { industry_id: form.industry_id, driver_code: form.driver_code, sensitivity: Number(form.sensitivity), lag_months: Number(form.lag_months) });
+            await reload();
+            setError(null);
+          } catch (err) { setError(errText(err)); }
+        }}
+      >
+        <input placeholder="industry_id" value={form.industry_id} onInput={(e) => setForm({ ...form, industry_id: (e.target as HTMLInputElement).value })} required />
+        <select value={form.driver_code} onInput={(e) => setForm({ ...form, driver_code: (e.target as HTMLSelectElement).value })}>
+          <option value="rate">금리</option><option value="fx">환율</option><option value="commodity">원자재</option><option value="regulation">규제</option>
+        </select>
+        <input type="number" step="any" placeholder="민감도" value={form.sensitivity} onInput={(e) => setForm({ ...form, sensitivity: (e.target as HTMLInputElement).value })} required />
+        <input type="number" placeholder="지연(월)" value={form.lag_months} onInput={(e) => setForm({ ...form, lag_months: (e.target as HTMLInputElement).value })} required />
+        <button type="submit">저장</button>
+      </form>
+    </section>
+  );
+}
+

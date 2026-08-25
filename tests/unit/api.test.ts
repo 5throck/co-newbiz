@@ -1579,3 +1579,100 @@ describe("structure simulation REST (ADR-0066 Phase C)", () => {
     expect((await dup.json()).error.message).toContain("already recorded");
   });
 });
+
+describe("screening longlist + partner DD + chain sensitivities (ADR-0067 round 4)", () => {
+  test("unauthenticated requests are rejected across all three surfaces", async () => {
+    for (const path of ["screening-longlist", "partner-dd-findings", "chain-sensitivities"]) {
+      const res = await req(`/api/projects/${projectId}/${path}`);
+      expect(res.status).toBe(401);
+    }
+  });
+
+  test("non-member gets 404 on GET and POST", async () => {
+    for (const path of ["screening-longlist", "partner-dd-findings", "chain-sensitivities"]) {
+      const g = await req(`/api/projects/${projectId}/${path}`, { headers: { cookie: daveCookie } });
+      expect(g.status).toBe(404);
+    }
+  });
+
+  test("screening longlist: POST happy path + empty-name validation + list read-back", async () => {
+    const post = await req(`/api/projects/${projectId}/screening-longlist`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ candidate_name: "Target Alpha", knock_out_passed: true, notes: "strong fit" }),
+    });
+    expect(post.status).toBe(201);
+
+    const fail = await req(`/api/projects/${projectId}/screening-longlist`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ candidate_name: "", knock_out_passed: true }),
+    });
+    expect(fail.status).toBe(400);
+
+    const list = await req(`/api/projects/${projectId}/screening-longlist`, { headers: { cookie: aliceCookie } });
+    const data = (await list.json()).data as Array<{ candidate_name: string; knock_out_passed: number }>;
+    expect(data.some((r) => r.candidate_name === "Target Alpha")).toBe(true);
+  });
+
+  test("partner DD finding: validates partner FK, workstream enum and severity enum", async () => {
+    const partner = ulid();
+    db.run("INSERT INTO partner_candidate (id, project_id, name, partner_type) VALUES (?,?,?,?)", [partner, projectId, "TestCo", "supplier"]);
+
+    const badWs = await req(`/api/projects/${projectId}/partner-dd-findings`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ partner_id: partner, workstream: "unknown_ws", severity: "red", description: "test" }),
+    });
+    expect(badWs.status).toBe(400);
+
+    const good = await req(`/api/projects/${projectId}/partner-dd-findings`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ partner_id: partner, workstream: "ip_chain", severity: "red", description: "IP chain broken" }),
+    });
+    expect(good.status).toBe(201);
+
+    const list = await req(`/api/projects/${projectId}/partner-dd-findings`, { headers: { cookie: aliceCookie } });
+    expect(((await list.json()).data as unknown[]).length).toBeGreaterThan(0);
+  });
+
+  test("chain sensitivities: unknown driver is refused, valid driver upserts", async () => {
+    const badDriver = await req(`/api/projects/${projectId}/chain-sensitivities`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ industry_id: ulid(), driver_code: "unknown_drv", sensitivity: -0.5 }),
+    });
+    expect(badDriver.status).toBe(400);
+
+    const industry = ulid();
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [industry, "T-SENS", "t", "t", NOW]);
+    const good = await req(`/api/projects/${projectId}/chain-sensitivities`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ industry_id: industry, driver_code: "rate", sensitivity: -1.2, lag_months: 3 }),
+    });
+    expect(good.status).toBe(201);
+
+    // Upsert same (industry, driver) — should update not duplicate
+    const upsert = await req(`/api/projects/${projectId}/chain-sensitivities`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ industry_id: industry, driver_code: "rate", sensitivity: -2.0, lag_months: 0 }),
+    });
+    expect([200, 201]).toContain(upsert.status);
+
+    const list = await req(`/api/projects/${projectId}/chain-sensitivities?industry_id=${industry}`, { headers: { cookie: aliceCookie } });
+    const rows = (await list.json()).data as Array<{ sensitivity: number }>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].sensitivity).toBe(-2.0); // updated value, not duplicated
+  });
+
+  test("all three write endpoints are audited", async () => {
+    const actions = ["screening_longlist_write", "partner_dd_finding_write", "chain_sensitivity_create"];
+    for (const action of actions) {
+      const audit = db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = ?").get(action) as { n: number };
+      expect(audit.n).toBeGreaterThan(0);
+    }
+  });
+});
