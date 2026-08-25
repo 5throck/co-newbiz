@@ -1,10 +1,10 @@
 {
   "meta": {
     "generator": "scripts/co-newbiz/graph.ts",
-    "generator_version": "0.1.0",
+    "generator_version": "0.2.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 444,
-    "edge_count": 762
+    "node_count": 447,
+    "edge_count": 765
   },
   "nodes": [
     {
@@ -358,6 +358,12 @@
       "label": "backend-engineer"
     },
     {
+      "id": "agent:bau-exit-certifier",
+      "type": "agent",
+      "label": "bau-exit-certifier",
+      "human_role": true
+    },
+    {
       "id": "agent:brownfield-agent",
       "type": "agent",
       "label": "brownfield-agent"
@@ -396,6 +402,12 @@
       "id": "agent:docs-writer",
       "type": "agent",
       "label": "docs-writer"
+    },
+    {
+      "id": "agent:entity-ic-reviewer",
+      "type": "agent",
+      "label": "entity-ic-reviewer",
+      "human_role": true
     },
     {
       "id": "agent:financial-analyst",
@@ -516,6 +528,12 @@
       "id": "agent:valuation-agent",
       "type": "agent",
       "label": "valuation-agent"
+    },
+    {
+      "id": "agent:venture-portfolio-ic",
+      "type": "agent",
+      "label": "venture-portfolio-ic",
+      "human_role": true
     },
     {
       "id": "artifact:alliance_post_launch_review",
@@ -4135,6 +4153,12 @@
     },
     {
       "type": "executes_agent",
+      "from": "proc:entity-ic-review#5",
+      "to": "agent:entity-ic-reviewer",
+      "source_ref": "procedures/_shared/entity-ic-review/schema.yaml#steps[5]"
+    },
+    {
+      "type": "executes_agent",
       "from": "proc:greenfield-dd#1",
       "to": "agent:technical-dd-agent",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[1]"
@@ -4357,6 +4381,12 @@
     },
     {
       "type": "executes_agent",
+      "from": "proc:pmi-integration-execution#5",
+      "to": "agent:bau-exit-certifier",
+      "source_ref": "procedures/_shared/pmi-integration-execution/schema.yaml#steps[5]"
+    },
+    {
+      "type": "executes_agent",
       "from": "proc:portfolio-venture-monitoring#1",
       "to": "agent:group-review-agent",
       "source_ref": "procedures/_shared/portfolio-venture-monitoring/schema.yaml#steps[1]"
@@ -4366,6 +4396,12 @@
       "from": "proc:portfolio-venture-monitoring#2",
       "to": "agent:process-governance-manager",
       "source_ref": "procedures/_shared/portfolio-venture-monitoring/schema.yaml#steps[2]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:portfolio-venture-monitoring#3",
+      "to": "agent:venture-portfolio-ic",
+      "source_ref": "procedures/_shared/portfolio-venture-monitoring/schema.yaml#steps[3]"
     },
     {
       "type": "executes_skill",

@@ -1,7 +1,12 @@
-// @version 0.1.0
+// @version 0.2.0
 /**
  * Multi-element skill graph extractor — pilot per
  * docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md.
+ *
+ * v0.2.0: honors the ADR-0053 human-role registry (procedures/
+ * _human-roles.yaml) — agent_key values registered there are person-roles,
+ * emitted as agent nodes with `human_role: true` instead of missing-file
+ * warnings, mirroring graph-map.ts's exemption.
  *
  * Derives ONE committed projection (docs/graph/graph.json + graph.md) over
  * 7 node types (skill / agent / procedure / step / artifact / rule /
@@ -36,6 +41,7 @@ const SKILLS_DIR = join(ROOT, "skills");
 const AGENTS_DIR = join(ROOT, "agents");
 const PROCEDURES_SHARED = join(ROOT, "procedures", "_shared");
 const RULES_DIR = join(ROOT, "procedures", "_kill-criteria");
+const HUMAN_ROLES_PATH = join(ROOT, "procedures", "_human-roles.yaml");
 const DECISIONS_DIR = join(ROOT, "docs", "decisions");
 const ADRS_DIR = join(ROOT, "docs", "adr");
 const OUT_DIR = join(ROOT, "docs", "graph");
@@ -227,6 +233,32 @@ function extractAgents(): Set<string> {
   return agents;
 }
 
+/**
+ * Human-authority roles (ADR-0053, boundary #2): agent_key values registered
+ * in procedures/_human-roles.yaml name PERSON-ROLES, not AI agents — the
+ * missing agents/<key>.md is the point. Mirrors graph-map.ts's exemption so
+ * the projection does not re-flag what the integrity gate already blessed.
+ */
+function extractHumanRoles(): Set<string> {
+  const roles = new Set<string>();
+  if (!existsSync(HUMAN_ROLES_PATH)) return roles;
+  try {
+    const doc = yaml.load(readFileSync(HUMAN_ROLES_PATH, "utf-8")) as
+      | Record<string, unknown>
+      | undefined;
+    const hr = doc?.["human_roles"];
+    if (hr && typeof hr === "object") {
+      for (const key of Object.keys(hr as Record<string, unknown>)) {
+        roles.add(key);
+      }
+    }
+  } catch {
+    // fail-open here would reintroduce false warnings; fail-closed instead:
+    // an unreadable registry yields no exemptions and the warnings surface it.
+  }
+  return roles;
+}
+
 function extractProcedures(): Map<string, ProcedureInfo> {
   const procs = new Map<string, ProcedureInfo>();
   for (const dir of readdirSync(PROCEDURES_SHARED, { withFileTypes: true })) {
@@ -345,6 +377,7 @@ function buildGraph(includeConsumes: boolean): Graph {
 
   const { skills, order: skillOrder } = extractSkills(warnings);
   const agents = extractAgents();
+  const humanRoles = extractHumanRoles();
   const procs = extractProcedures();
   const rules = extractRules();
   const docs = extractDocs();
@@ -427,6 +460,21 @@ function buildGraph(includeConsumes: boolean): Graph {
       if (st.agentKey) {
         if (agents.has(st.agentKey)) {
           addNode({ id: `agent:${st.agentKey}`, type: "agent", label: st.agentKey });
+          addEdge(
+            "executes_agent",
+            stepId,
+            `agent:${st.agentKey}`,
+            `procedures/_shared/${key}/schema.yaml#steps[${st.id}]`,
+          );
+        } else if (humanRoles.has(st.agentKey)) {
+          // Human-authority step (ADR-0053): the person-role is the executor
+          // by design; node carries the marker, no missing-file warning.
+          addNode({
+            id: `agent:${st.agentKey}`,
+            type: "agent",
+            label: st.agentKey,
+            human_role: true,
+          });
           addEdge(
             "executes_agent",
             stepId,
@@ -597,7 +645,7 @@ function renderJson(g: Graph): string {
       {
         meta: {
           generator: "scripts/co-newbiz/graph.ts",
-          generator_version: "0.1.0",
+          generator_version: "0.2.0",
           design_doc:
             "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
           node_count: g.nodes.length,
