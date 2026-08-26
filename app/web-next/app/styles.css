@@ -94,13 +94,9 @@
    stylesheet. @layer components keeps these at lower specificity than any
    Tailwind utility a future component might add alongside them. */
 @layer components {
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-  }
+  /* .sr-only removed 2026-08-26 — Tailwind ships an identical built-in
+     utility of the same name (@layer utilities), so className="sr-only"
+     continues to work unchanged; this custom copy was redundant. */
 
   /* --- top nav --- */
   .top-nav {
@@ -112,8 +108,13 @@
   }
   .top-nav nav {
     display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
     flex: 1;
+    min-width: 0;
+  }
+  .top-nav nav a {
+    white-space: nowrap;
   }
   .top-nav .brand {
     font-weight: 700;
@@ -138,28 +139,16 @@
     gap: 0.5rem;
     width: 320px;
   }
-  .form-error {
-    color: var(--red-fg);
-  }
+  /* .form-error removed 2026-08-26 — converted to inline Tailwind arbitrary
+     value className="text-[color:var(--red-fg)]" (same CSS variable). */
 
-  /* --- tabs --- */
-  .tab-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    border-bottom: 1px solid var(--border);
-    margin: 1rem 0;
-  }
-  .tab-bar button {
-    border: none;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-    background: none;
-  }
-  .tab-bar button[aria-current="true"] {
-    border-bottom-color: var(--accent);
-    font-weight: 700;
-  }
+  /* .tab-bar removed 2026-08-26 — converted to inline Tailwind utilities on
+     the <nav> element using arbitrary child-selector variants:
+       "flex flex-wrap gap-2 border-b border-[color:var(--border)] my-4
+        [&>button]:border-0 [&>button]:border-b-2 [&>button]:border-b-transparent
+        [&>button]:rounded-none [&>button]:bg-transparent
+        [&>button[aria-current=true]]:border-b-[color:var(--accent)]
+        [&>button[aria-current=true]]:font-bold" */
 
   /* --- project list --- */
   .project-grid {
@@ -506,43 +495,21 @@
     gap: 0.4rem;
   }
 
-  /* --- tables --- */
-  .admin-table,
-  .member-table,
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .admin-table th,
-  .admin-table td,
-  .member-table th,
-  .member-table td,
-  .data-table th,
-  .data-table td {
-    border-bottom: 1px solid var(--border);
-    padding: 0.5rem;
-    text-align: left;
-  }
-  .data-table {
-    margin: 0.5rem 0 1.5rem;
-  }
+  /* .admin-table, .member-table, .data-table removed 2026-08-26 — converted
+     to inline Tailwind utilities on each <table> element using arbitrary
+     descendant-selector variants:
+       admin-table/member-table -> "w-full border-collapse
+         [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left
+         [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left"
+       data-table -> same, plus "mt-2 mb-6" (data-table's extra margin rule) */
   .row-selected {
     background: var(--muted-bg);
   }
 
-  .empty-state {
-    color: var(--muted-fg);
-    font-style: italic;
-  }
-
-  .link-button {
-    border: none;
-    background: none;
-    padding: 0;
-    color: var(--accent);
-    text-decoration: underline;
-    cursor: pointer;
-  }
+  /* .empty-state, .link-button removed 2026-08-26 — converted to inline
+     Tailwind arbitrary-value utilities (same CSS variables):
+       .empty-state  -> "text-[color:var(--muted-fg)] italic"
+       .link-button  -> "border-0 bg-transparent p-0 text-[color:var(--accent)] underline cursor-pointer" */
 
   /* --- Data tab: change log --- */
   .change-log-list {
@@ -836,14 +803,9 @@
   .ma-facts dd {
     margin: 0;
   }
-  .cell-primary {
-    font-weight: 600;
-  }
-  .cell-sub {
-    margin: 0.15rem 0 0;
-    color: var(--muted-fg);
-    font-size: 0.85rem;
-  }
+  /* .cell-primary, .cell-sub removed 2026-08-26 — converted to inline
+     Tailwind utilities: "font-semibold" and
+     "mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]". */
 
   /* antitrust */
   .antitrust-list {
@@ -985,11 +947,8 @@
   }
 
   /* --- Model / Simulation / Version-compare tabs --- */
-  .helper-note {
-    margin: 0 0 0.75rem;
-    color: var(--muted-fg);
-    font-size: 0.85rem;
-  }
+  /* .helper-note removed 2026-08-26 — converted to inline Tailwind utility
+     "mb-3 text-[color:var(--muted-fg)] text-[0.85rem]". */
   .run-form {
     display: flex;
     flex-direction: column;
@@ -1027,13 +986,9 @@
     align-self: flex-start;
     font-size: 0.85rem;
   }
-  .form-success {
-    color: var(--green-fg);
-  }
-  .hash-short {
-    font-family: ui-monospace, monospace;
-    font-size: 0.85rem;
-  }
+  /* .form-success, .hash-short removed 2026-08-26 — converted to inline
+     Tailwind utilities: "text-[color:var(--green-fg)]" and
+     "font-mono text-[0.85rem]". */
   .compare-selectors {
     display: flex;
     gap: 1rem;
@@ -1164,5 +1119,13 @@
   .scorecard-footer code {
     font-family: ui-monospace, monospace;
     font-size: 0.85rem;
+  }
+
+  /* Region×segment×scenario pivot matrix — background color is computed
+     per-cell in MarketChainTab.tsx (rgba from --cell-intensity/--cell-sign)
+     and passed via the style prop; this class only sets layout. */
+  .matrix-cell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 }

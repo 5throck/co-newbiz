@@ -53,12 +53,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const rows = runId
     ? getDb()
         .query(
-          "SELECT srr.run_id, srr.scenario, srr.industry_id, srr.metric, srr.p05, srr.p50, srr.p95, srr.created_at FROM structure_simulation_result srr WHERE srr.run_id = ? AND EXISTS (SELECT 1 FROM run r WHERE r.id = srr.run_id AND r.project_id = ?) ORDER BY srr.created_at DESC LIMIT 200",
+          "SELECT srr.run_id, srr.scenario, srr.industry_id, srr.metric, srr.p05, srr.p50, srr.p95, srr.created_at, srr.region_code, srr.segment_code FROM structure_simulation_result srr WHERE srr.run_id = ? AND EXISTS (SELECT 1 FROM run r WHERE r.id = srr.run_id AND r.project_id = ?) ORDER BY srr.created_at DESC LIMIT 200",
         )
         .all(runId, project.id)
     : getDb()
         .query(
-          "SELECT srr.run_id, srr.scenario, srr.industry_id, srr.metric, srr.p05, srr.p50, srr.p95, srr.created_at FROM structure_simulation_result srr JOIN run r ON r.id = srr.run_id WHERE r.project_id = ? ORDER BY srr.created_at DESC LIMIT 200",
+          "SELECT srr.run_id, srr.scenario, srr.industry_id, srr.metric, srr.p05, srr.p50, srr.p95, srr.created_at, srr.region_code, srr.segment_code FROM structure_simulation_result srr JOIN run r ON r.id = srr.run_id WHERE r.project_id = ? ORDER BY srr.created_at DESC LIMIT 200",
         )
         .all(project.id);
   return ok(rows, 200, { count: rows.length });

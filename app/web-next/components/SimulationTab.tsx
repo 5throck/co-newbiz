@@ -120,7 +120,7 @@ export function SimulationTab({ projectId }: { projectId: string }) {
   if (runs.length === 0) {
     return (
       <div className="simulation-tab">
-        <p className="empty-state">데이터 없음 — 시뮬레이션할 실행이 없습니다. 모델 탭에서 실행을 먼저 생성하세요.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 시뮬레이션할 실행이 없습니다. 모델 탭에서 실행을 먼저 생성하세요.</p>
       </div>
     );
   }
@@ -129,7 +129,7 @@ export function SimulationTab({ projectId }: { projectId: string }) {
     <div className="simulation-tab">
       <section aria-label="시뮬레이션 실행">
         <h2>몬테카를로 시뮬레이션</h2>
-        <p className="helper-note">
+        <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
           시나리오는 실행의 sim.* 입력과 프로젝트의 우발채무로 구성됩니다. 시드를 비우면 입력 해시에서 파생된 기본
           시드가 사용됩니다 — 동일한 입력은 항상 동일한 결과를 냅니다.
         </p>
@@ -169,7 +169,7 @@ export function SimulationTab({ projectId }: { projectId: string }) {
           </button>
         </form>
         {formError && (
-          <p role="alert" className="form-error">
+          <p role="alert" className="text-[color:var(--red-fg)]">
             {formError}
           </p>
         )}
@@ -178,19 +178,19 @@ export function SimulationTab({ projectId }: { projectId: string }) {
       {results && (
         <section aria-label="시뮬레이션 결과">
           <h2>결과 — 분위수 요약</h2>
-          <p className="cell-sub">
+          <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
             시드 {metaSeed ?? "—"} · 반복 {metaIterations ?? "—"}회 · 할인율{" "}
             {num(results.simulation.discount_rate)} · 생성{" "}
             {new Date(results.simulation.created_at).toLocaleString("ko-KR")}
           </p>
-          <p className="helper-note">
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
             원시 드로우(raw draws)는 보존 정책에 따라 아카이브되며 화면에 제공되지 않습니다 — 영구 기록은 이 분위수
             요약입니다.
           </p>
           {results.results.length === 0 ? (
-            <p className="empty-state">데이터 없음 — 이 시뮬레이션에 결과 행이 없습니다.</p>
+            <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 이 시뮬레이션에 결과 행이 없습니다.</p>
           ) : (
-            <table className="data-table">
+            <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
               <caption className="sr-only">시뮬레이션 분위수 요약</caption>
               <thead>
                 <tr>

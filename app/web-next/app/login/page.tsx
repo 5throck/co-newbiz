@@ -36,7 +36,7 @@ export default function LoginPage() {
         <label htmlFor="password">비밀번호</label>
         <input id="password" name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         {error && (
-          <p role="alert" className="form-error">
+          <p role="alert" className="text-[color:var(--red-fg)]">
             {error}
           </p>
         )}

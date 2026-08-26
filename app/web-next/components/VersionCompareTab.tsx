@@ -92,7 +92,7 @@ export function VersionCompareTab({ projectId }: { projectId: string }) {
   if (runs.length < 2) {
     return (
       <div className="compare-tab">
-        <p className="empty-state">데이터 없음 — 비교하려면 실행이 2개 이상 필요합니다. 모델 탭에서 실행을 생성하세요.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 비교하려면 실행이 2개 이상 필요합니다. 모델 탭에서 실행을 생성하세요.</p>
       </div>
     );
   }
@@ -103,7 +103,7 @@ export function VersionCompareTab({ projectId }: { projectId: string }) {
     <div className="compare-tab">
       <section aria-label="버전 비교">
         <h2>실행 비교 (A → B)</h2>
-        <p className="helper-note">
+        <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
           변수 수준 브리지입니다. NPV 수준의 분해는 밸류에이션 엔진 도입과 함께 제공됩니다.
         </p>
         <div className="compare-selectors">
@@ -129,23 +129,23 @@ export function VersionCompareTab({ projectId }: { projectId: string }) {
           </div>
         </div>
         {error && (
-          <p role="alert" className="form-error">
+          <p role="alert" className="text-[color:var(--red-fg)]">
             {error}
           </p>
         )}
 
         {diff && (
           <>
-            <p className="cell-sub">
+            <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
               {runLabel(diff.run_a)} ({diff.input_hash_a.slice(0, 12)}…) → {runLabel(diff.run_b)} (
               {diff.input_hash_b.slice(0, 12)}…)
             </p>
 
             <h3>변경 ({diff.changed.length}건)</h3>
             {diff.changed.length === 0 ? (
-              <p className="empty-state">변경된 변수가 없습니다.</p>
+              <p className="text-[color:var(--muted-fg)] italic">변경된 변수가 없습니다.</p>
             ) : (
-              <table className="data-table">
+              <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
                 <caption className="sr-only">변경된 변수</caption>
                 <thead>
                   <tr>
@@ -176,9 +176,9 @@ export function VersionCompareTab({ projectId }: { projectId: string }) {
 
             <h3>B에 신규 ({diff.added.length}건)</h3>
             {diff.added.length === 0 ? (
-              <p className="empty-state">신규 추가된 변수가 없습니다.</p>
+              <p className="text-[color:var(--muted-fg)] italic">신규 추가된 변수가 없습니다.</p>
             ) : (
-              <table className="data-table">
+              <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
                 <caption className="sr-only">B에 신규 추가된 변수</caption>
                 <thead>
                   <tr>
@@ -201,9 +201,9 @@ export function VersionCompareTab({ projectId }: { projectId: string }) {
 
             <h3>A에서 제거됨 ({diff.removed.length}건)</h3>
             {diff.removed.length === 0 ? (
-              <p className="empty-state">제거된 변수가 없습니다.</p>
+              <p className="text-[color:var(--muted-fg)] italic">제거된 변수가 없습니다.</p>
             ) : (
-              <table className="data-table">
+              <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
                 <caption className="sr-only">A에만 존재하고 B에서 제거된 변수</caption>
                 <thead>
                   <tr>

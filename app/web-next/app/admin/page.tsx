@@ -123,7 +123,10 @@ export function AdminConsole() {
   return (
     <main className="admin-console-page">
       <h1>관리자 콘솔</h1>
-      <nav className="tab-bar" aria-label="관리자 콘솔 섹션">
+      <nav
+        className="flex flex-wrap gap-2 border-b border-[color:var(--border)] my-4 [&>button]:border-0 [&>button]:border-b-2 [&>button]:border-b-transparent [&>button]:rounded-none [&>button]:bg-transparent [&>button[aria-current=true]]:border-b-[color:var(--accent)] [&>button[aria-current=true]]:font-bold"
+        aria-label="관리자 콘솔 섹션"
+      >
         <button type="button" aria-current={section === "users"} onClick={() => setSection("users")}>
           사용자 관리
         </button>
@@ -141,7 +144,7 @@ export function AdminConsole() {
         </button>
       </nav>
       {error && (
-        <p role="alert" className="form-error">
+        <p role="alert" className="text-[color:var(--red-fg)]">
           {error}
         </p>
       )}
@@ -150,7 +153,7 @@ export function AdminConsole() {
         (users === null ? (
           <p>불러오는 중...</p>
         ) : (
-          <table className="admin-table">
+          <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
             <caption className="sr-only">사용자 목록</caption>
             <thead>
               <tr>
@@ -185,7 +188,7 @@ export function AdminConsole() {
         (auditLog === null ? (
           <p>불러오는 중...</p>
         ) : (
-          <table className="admin-table">
+          <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
             <caption className="sr-only">감사 로그 (append-only — 삭제 기능 없음)</caption>
             <thead>
               <tr>
@@ -212,7 +215,7 @@ export function AdminConsole() {
         (sources === null ? (
           <p>불러오는 중...</p>
         ) : (
-          <table className="admin-table">
+          <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
             <caption className="sr-only">데이터 소스 — 키 존재 여부만 표시, 값은 절대 표시되지 않음</caption>
             <thead>
               <tr>
@@ -241,9 +244,9 @@ export function AdminConsole() {
         (jobs === null ? (
           <p>불러오는 중...</p>
         ) : jobs.length === 0 ? (
-          <p className="empty-state">데이터 없음 — 등록된 스케줄 작업이 없습니다.</p>
+          <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 스케줄 작업이 없습니다.</p>
         ) : (
-          <table className="admin-table">
+          <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
             <caption className="sr-only">스케줄 작업 목록</caption>
             <thead>
               <tr>
@@ -263,11 +266,11 @@ export function AdminConsole() {
                   </td>
                   <td>
                     {j.enabled === 1 ? (
-                      <span className="status-chip status-approved">
+                      <span className="inline-flex items-center gap-[0.3rem] px-[0.55rem] py-[0.15rem] rounded-full text-[0.8rem] bg-[color:var(--green-bg)] text-[color:var(--green-fg)]">
                         <span aria-hidden="true">●</span> 활성
                       </span>
                     ) : (
-                      <span className="status-chip status-not-started">
+                      <span className="inline-flex items-center gap-[0.3rem] px-[0.55rem] py-[0.15rem] rounded-full text-[0.8rem] bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]">
                         <span aria-hidden="true">○</span> 비활성
                       </span>
                     )}
@@ -277,7 +280,7 @@ export function AdminConsole() {
                       <>
                         {j.last_run.status}
                         {j.last_run.finished_at && ` · ${new Date(j.last_run.finished_at).toLocaleString("ko-KR")}`}
-                        {j.last_run.error && <p className="cell-sub">{j.last_run.error}</p>}
+                        {j.last_run.error && <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">{j.last_run.error}</p>}
                       </>
                     ) : (
                       "실행 이력 없음"
@@ -296,16 +299,16 @@ export function AdminConsole() {
 
       {section === "database" && (
         <div>
-          <p className="helper-note">
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
             이 섹션의 나머지(마이그레이션 상태·백업 이력)는 아직 API가 없습니다.
           </p>
           <h2>보존 정책 (Retention)</h2>
           {retention === null ? (
             <p>불러오는 중...</p>
           ) : retention.length === 0 ? (
-            <p className="empty-state">데이터 없음 — 등록된 보존 정책이 없습니다.</p>
+            <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 보존 정책이 없습니다.</p>
           ) : (
-            <table className="admin-table">
+            <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
               <caption className="sr-only">보존 정책 목록</caption>
               <thead>
                 <tr>
@@ -331,7 +334,7 @@ export function AdminConsole() {
           )}
 
           <h2>정책 생성/수정</h2>
-          <p className="helper-note">
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
             같은 테이블 키로 저장하면 기존 정책이 수정됩니다(upsert). 모든 변경은 감사 로그에 기록됩니다.
           </p>
           <form onSubmit={saveRetention} className="run-form">
@@ -363,11 +366,11 @@ export function AdminConsole() {
             <button type="submit">정책 저장</button>
           </form>
           {retentionFormError && (
-            <p role="alert" className="form-error">
+            <p role="alert" className="text-[color:var(--red-fg)]">
               {retentionFormError}
             </p>
           )}
-          {retentionNotice && <p className="form-success">{retentionNotice}</p>}
+          {retentionNotice && <p className="text-[color:var(--green-fg)]">{retentionNotice}</p>}
         </div>
       )}
     </main>

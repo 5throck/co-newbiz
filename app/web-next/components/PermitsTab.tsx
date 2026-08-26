@@ -85,7 +85,7 @@ function PermitSection({
     <section className="permit-section" aria-label={title}>
       <h2>{title}</h2>
       {rows.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 등록된 {title}이(가) 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 {title}이(가) 없습니다.</p>
       ) : (
         <>
           <table className="data-table permit-table">

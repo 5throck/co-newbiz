@@ -55,7 +55,7 @@ export function AssumptionsTab({ projectId }: { projectId: string }) {
   }
 
   if (!latestRun) {
-    return <p className="empty-state">데이터 없음 — 이 프로젝트에 생성된 분석 실행(run)이 없습니다.</p>;
+    return <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 이 프로젝트에 생성된 분석 실행(run)이 없습니다.</p>;
   }
 
   return (
@@ -66,7 +66,7 @@ export function AssumptionsTab({ projectId }: { projectId: string }) {
       {assumptions === null ? (
         <p>불러오는 중...</p>
       ) : assumptions.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 이 실행에 등록된 가정이 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 이 실행에 등록된 가정이 없습니다.</p>
       ) : (
         <table className="data-table assumptions-table">
           <caption className="sr-only">가정 목록</caption>

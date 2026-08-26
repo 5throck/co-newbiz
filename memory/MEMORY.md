@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-08-27](2026-08-27.md) | chore: update |
 | [2026-08-26](2026-08-26.md) | feat(web-stack): Next.js/Prisma migration Phase 0-3 - schema fix, REST API port, frontend port |
 | [2026-08-25](2026-08-25.md) | feat: value-chain simulation phase D - market-chain SPA tab, FS procedure dispatch, scenario-planning skill extension |
 | [2026-08-24](2026-08-24.md) | feat(kill-criteria): ADR-0060 executability classification + greenfield partner twin activation (R5 step 2) |

@@ -113,7 +113,7 @@ function AntitrustSection({ projectId }: { projectId: string }) {
       {rows === null ? (
         <p>불러오는 중...</p>
       ) : rows.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 등록된 독과점 검토 결과가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 독과점 검토 결과가 없습니다.</p>
       ) : (
         <ul className="antitrust-list">
           {rows.map((r) => {
@@ -181,9 +181,9 @@ function IncentiveGroup({ rows, direction, asOf }: { rows: IncentiveRow[]; direc
     <div className="incentive-group">
       <h3>{DIRECTION_LABEL[direction] ?? direction}</h3>
       {rows.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 해당 방향의 인센티브가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 해당 방향의 인센티브가 없습니다.</p>
       ) : (
-        <table className="data-table">
+        <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
           <caption className="sr-only">{DIRECTION_LABEL[direction] ?? direction} 목록</caption>
           <thead>
             <tr>
@@ -203,8 +203,8 @@ function IncentiveGroup({ rows, direction, asOf }: { rows: IncentiveRow[]; direc
               return (
                 <tr key={r.id} className={clawback ? "row-clawback" : undefined}>
                   <td>
-                    <span className="cell-primary">{r.program_name?.trim() || "—"}</span>
-                    {obligations && <p className="cell-sub">의무: {obligations}</p>}
+                    <span className="font-semibold">{r.program_name?.trim() || "—"}</span>
+                    {obligations && <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">의무: {obligations}</p>}
                     {clawback && (
                       <p className="clawback-note">
                         <span aria-hidden="true">⚠</span> 클로백 노출
@@ -259,7 +259,7 @@ function IncentivesSection({ projectId }: { projectId: string }) {
       {rows === null ? (
         <p>불러오는 중...</p>
       ) : rows.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 등록된 인센티브가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 인센티브가 없습니다.</p>
       ) : (
         <>
           <IncentiveGroup rows={rows.filter((r) => r.direction === "prospective")} direction="prospective" asOf={asOf} />
@@ -301,9 +301,9 @@ function LiabilitiesSection({ projectId }: { projectId: string }) {
 
       <h3>부채 수단</h3>
       {data.debt_instruments.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 등록된 부채 수단이 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 부채 수단이 없습니다.</p>
       ) : (
-        <table className="data-table">
+        <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
           <caption className="sr-only">부채 수단 목록</caption>
           <thead>
             <tr>
@@ -335,9 +335,9 @@ function LiabilitiesSection({ projectId }: { projectId: string }) {
 
       <h3>우발채무</h3>
       {data.contingent_liabilities.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 등록된 우발채무가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 우발채무가 없습니다.</p>
       ) : (
-        <table className="data-table">
+        <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
           <caption className="sr-only">우발채무 목록</caption>
           <thead>
             <tr>
@@ -356,10 +356,10 @@ function LiabilitiesSection({ projectId }: { projectId: string }) {
                 <tr key={c.id}>
                   <td>{c.category}</td>
                   <td>
-                    <span className="cell-primary">
+                    <span className="font-semibold">
                       <GlossaryText text={c.description} />
                     </span>
-                    {c.distribution?.trim() && <p className="cell-sub">분포: {c.distribution}</p>}
+                    {c.distribution?.trim() && <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">분포: {c.distribution}</p>}
                   </td>
                   <td>
                     <Figure provenance={provenance} value={num(c.probability)} />
@@ -381,12 +381,12 @@ function LiabilitiesSection({ projectId }: { projectId: string }) {
 
       <h3>
         코베넌트 테스트
-        {simulationId && <span className="cell-sub"> — 최신 시뮬레이션({simulationId}) 기준</span>}
+        {simulationId && <span className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]"> — 최신 시뮬레이션({simulationId}) 기준</span>}
       </h3>
       {data.covenant_tests.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 기록된 코베넌트 테스트가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 기록된 코베넌트 테스트가 없습니다.</p>
       ) : (
-        <table className="data-table">
+        <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
           <caption className="sr-only">코베넌트 테스트 목록</caption>
           <thead>
             <tr>
@@ -450,7 +450,7 @@ function SitesSection({ projectId }: { projectId: string }) {
       {rows === null ? (
         <p>불러오는 중...</p>
       ) : rows.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 등록된 부지 후보가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 부지 후보가 없습니다.</p>
       ) : (
         // FR-GF-04: every site's full factor set on one comparable row —
         // no factor split across sub-tables.
@@ -528,7 +528,7 @@ function PartnersSection({ projectId }: { projectId: string }) {
       {rows === null ? (
         <p>불러오는 중...</p>
       ) : rows.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 등록된 파트너 후보가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 파트너 후보가 없습니다.</p>
       ) : (
         <ul className="partner-list">
           {rows.map((p) => {
@@ -546,7 +546,7 @@ function PartnersSection({ projectId }: { projectId: string }) {
                     </span>
                   )}
                 </div>
-                <p className="cell-sub">
+                <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
                   {p.partner_type}
                   {p.region_code ? ` · ${p.region_code}` : ""} · {p.status}
                   {p.contacted_at ? ` · 접촉 ${new Date(p.contacted_at).toLocaleDateString("ko-KR")}` : ""}
@@ -613,15 +613,15 @@ function ValueChainSection({ projectId }: { projectId: string }) {
   return (
     <section className="ma-section" aria-label="밸류체인 연관성">
       <h2>밸류체인 연관성 (Value-chain Linkage)</h2>
-      <p className="cell-sub">
+      <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
         업스트림→다운스트림 산업 연관 지표입니다. 수요 추정용 프록시 체인(`proxy_link`)과는 별개 테이블입니다(ADR-0025).
       </p>
       {rows === null ? (
         <p>불러오는 중...</p>
       ) : rows.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 등록된 밸류체인 연관이 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 밸류체인 연관이 없습니다.</p>
       ) : (
-        <table className="data-table">
+        <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
           <caption className="sr-only">밸류체인 연관 목록</caption>
           <thead>
             <tr>

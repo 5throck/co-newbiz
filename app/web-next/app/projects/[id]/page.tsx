@@ -26,7 +26,7 @@ import { ModelTab } from "../../../components/ModelTab.tsx";
 import { SimulationTab } from "../../../components/SimulationTab.tsx";
 import { VersionCompareTab } from "../../../components/VersionCompareTab.tsx";
 import { PmiEvidenceTab } from "../../../components/PmiEvidenceTab.tsx";
-import { MarketChainTab } from "../../../components/MarketChainTab.tsx";
+import { MarketChainTab, ChainSensitivityEditor } from "../../../components/MarketChainTab.tsx";
 
 type Tab =
   | "overview"
@@ -124,7 +124,10 @@ export default function ProjectDetailPage() {
           ⚠ 본 프로젝트는 미공개중요정보(MNPI)로 분류되어 있습니다. 모든 열람은 감사 로그에 기록됩니다.
         </div>
       )}
-      <nav className="tab-bar" aria-label="프로젝트 탭">
+      <nav
+        className="flex flex-wrap gap-2 border-b border-[color:var(--border)] my-4 [&>button]:border-0 [&>button]:border-b-2 [&>button]:border-b-transparent [&>button]:rounded-none [&>button]:bg-transparent [&>button[aria-current=true]]:border-b-[color:var(--accent)] [&>button[aria-current=true]]:font-bold"
+        aria-label="프로젝트 탭"
+      >
         <button type="button" aria-current={tab === "overview"} onClick={() => setTab("overview")}>
           개요
         </button>
@@ -179,7 +182,7 @@ export default function ProjectDetailPage() {
             <button type="submit">조회</button>
           </form>
           {error && (
-            <p role="alert" className="form-error">
+            <p role="alert" className="text-[color:var(--red-fg)]">
               {error}
             </p>
           )}
@@ -232,6 +235,7 @@ export default function ProjectDetailPage() {
       {tab === "market" && id && (
         <section aria-label="시장·체인">
           <MarketChainTab projectId={id} />
+          <ChainSensitivityEditor projectId={id} />
         </section>
       )}
 
@@ -252,7 +256,7 @@ export default function ProjectDetailPage() {
           {members === null ? (
             <p>불러오는 중...</p>
           ) : (
-            <table className="member-table">
+            <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
               <caption className="sr-only">프로젝트 멤버 목록</caption>
               <thead>
                 <tr>
