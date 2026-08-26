@@ -1,0 +1,1469 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model analysis_task {
+  id               String     @id
+  project_id       String
+  deliverable_type String
+  reviewed_by      String?
+  reviewed_at      String?
+  md_project       md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_analysis_task_project")
+}
+
+model antitrust_finding {
+  id                     String     @id
+  project_id             String
+  market_definition      String
+  hhi_before             Float?
+  hhi_after              Float?
+  combination_type       String?
+  filing_jurisdictions   String?
+  remedy_type            String     @default("none")
+  remedy_detail          String?
+  discharge_confirmed_at String?
+  created_at             String
+  md_project             md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_antitrust_finding_project")
+}
+
+model api_token {
+  id           String   @id
+  user_id      String
+  token_hash   String   @unique(map: "sqlite_autoindex_api_token_2")
+  label        String
+  scopes       String
+  created_at   String
+  last_used_at String?
+  revoked_at   String?
+  app_user     app_user @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_api_token_user")
+}
+
+model app_user {
+  id                   String             @id
+  user_id              String             @unique(map: "sqlite_autoindex_app_user_2")
+  display_name         String?
+  role                 String
+  status               String
+  password_salt        String
+  password_hash        String
+  password_iterations  Int
+  must_change_password Int                @default(0)
+  failed_attempts      Int                @default(0)
+  locked_until         String?
+  wall_group           String?
+  created_at           String
+  approved_by          String?
+  approved_at          String?
+  api_token            api_token[]
+  password_history     password_history[]
+  session              session[]
+
+  @@index([status, user_id], map: "idx_app_user_status")
+}
+
+model approval_chain {
+  id                    String     @id
+  project_id            String
+  level                 String
+  gate                  String
+  sequence              Int
+  required_procedure_id String?
+  approver_role         String
+  entity_id             String?
+  status                String
+  decision              String?
+  decided_at            String?
+  conditions            String?
+  blocked_reason        String?
+  created_at            String
+  updated_at            String
+  md_entity             md_entity? @relation(fields: [entity_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project            md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id, level, sequence], map: "idx_approval_chain_project")
+}
+
+model assumption {
+  id             String  @id
+  run_id         String
+  assumption_key String
+  kind           String
+  value          Float
+  rationale      String?
+  anchor_ref     String?
+  as_of          String
+  ttl_days       Int?
+
+  @@index([run_id, assumption_key], map: "idx_assumption_run")
+}
+
+model audit_log {
+  id            String @id
+  actor_user_id String
+  action        String
+  target        String
+  created_at    String
+
+  @@index([created_at(sort: Desc), id(sort: Desc)], map: "idx_audit_log_created_at")
+  @@index([actor_user_id, created_at(sort: Desc)], map: "idx_audit_log_actor")
+}
+
+model benefit_item {
+  id                   String     @id
+  project_id           String
+  category             String
+  target_value         Float?
+  acquirer_value       Float?
+  per_capita_delta     Float?
+  harmonization_cost   Float?
+  statutory_constraint String?
+  md_project           md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_benefit_item_project")
+}
+
+model certification {
+  id                                                                         String               @id
+  project_id                                                                 String
+  name                                                                       String
+  agency                                                                     String?
+  statutory_days                                                             Int?
+  status                                                                     String               @default("not_started")
+  transferability_basis                                                      String?
+  transferable_on_coc                                                        String?
+  transferability_evidence_ref                                               String?
+  load_bearing                                                               Int                  @default(0)
+  confirmed_at                                                               String?
+  md_project                                                                 md_project           @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  certification_edge_certification_edge_to_certification_idTocertification   certification_edge[] @relation("certification_edge_to_certification_idTocertification")
+  certification_edge_certification_edge_from_certification_idTocertification certification_edge[] @relation("certification_edge_from_certification_idTocertification")
+
+  @@index([project_id], map: "idx_certification_project")
+}
+
+model certification_edge {
+  from_certification_id                                                 String
+  to_certification_id                                                   String
+  certification_certification_edge_to_certification_idTocertification   certification @relation("certification_edge_to_certification_idTocertification", fields: [to_certification_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  certification_certification_edge_from_certification_idTocertification certification @relation("certification_edge_from_certification_idTocertification", fields: [from_certification_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([from_certification_id, to_certification_id])
+}
+
+model chain_node_sensitivity {
+  id              String          @id
+  project_id      String
+  industry_id     String
+  driver_id       String
+  sensitivity     Float
+  lag_months      Int             @default(0)
+  evidence_ref    String?
+  assessed_by     String
+  assessed_at     String
+  industry_driver industry_driver @relation(fields: [driver_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_industry     md_industry     @relation(fields: [industry_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project      md_project      @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([project_id, industry_id, driver_id], map: "sqlite_autoindex_chain_node_sensitivity_2")
+  @@index([project_id], map: "idx_chain_node_sensitivity_project")
+}
+
+model comp_benchmark {
+  id                String     @id
+  project_id        String
+  job_family        String
+  grade             String
+  headcount         Int
+  target_median     Int
+  acquirer_median   Int
+  gap_pct           Float
+  annual_cost_delta Int
+  evidence_ref      String?
+  md_project        md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id, job_family], map: "idx_comp_benchmark_project")
+}
+
+model compliance_check {
+  id                            String                       @id
+  project_id                    String
+  gate                          String
+  rule_key                      String
+  layer                         String
+  result                        String
+  detail                        String?
+  waiver_id                     String?
+  detected_at                   String
+  resolved_at                   String?
+  invalidated_at                String?
+  invalidated_by_classification String?
+  project_case_classification   project_case_classification? @relation(fields: [invalidated_by_classification], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project                    md_project                   @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id, gate], map: "idx_compliance_check")
+}
+
+model contingent_liability {
+  id                   String     @id
+  project_id           String
+  category             String
+  description          String?
+  probability          Float
+  amount_low           Int
+  amount_expected      Int
+  amount_high          Int
+  distribution         String     @default("triangular")
+  expected_timing_year Int        @default(0)
+  evidence_ref         String?
+  value_impact         Int?
+  md_project           md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_contingent_liability_project")
+}
+
+model covenant_test {
+  simulation_id   String
+  period_id       String
+  covenant_key    String
+  threshold       Float
+  projected_value Float
+  breached        Int        @default(0)
+  simulation      simulation @relation(fields: [simulation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([simulation_id, period_id, covenant_key])
+}
+
+model data_access_log {
+  id         String  @id
+  user_id    String
+  table_key  String
+  record_ref String
+  project_id String?
+  action     String
+  at         String
+  ip         String?
+
+  @@index([user_id, at(sort: Desc)], map: "idx_data_access_log_user")
+}
+
+model data_change_log {
+  id          String @id
+  series_id   String
+  detected_at String
+  change_type String
+  old_value   Float?
+  new_value   Float?
+
+  @@index([series_id, detected_at(sort: Desc)], map: "idx_change_log_series")
+}
+
+model dd_finding {
+  id                       String     @id
+  project_id               String
+  category                 String
+  description              String
+  value_impact             Int?
+  assumption_key           String?
+  evidence_ref             String?
+  trl_grade                String?
+  ip_ownership_status      String?
+  commercialization_path   String?
+  parent_relationship_json String?
+  rbd_source               String?
+  created_at               String
+  md_project               md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_dd_finding_project")
+}
+
+model deal_shape_evaluation {
+  id           String     @id
+  project_id   String
+  shape        String
+  intent       String
+  viable       Int
+  evaluated_by String
+  evaluated_at String
+  md_project   md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_deal_shape_evaluation_project")
+}
+
+model deal_structure_hypothesis {
+  id                         String     @id
+  project_id                 String
+  run_id                     String?
+  asset_or_stock             String?
+  stake_type                 String?
+  instrument_mix             String?
+  vehicle                    String?
+  commercialization_path     String?
+  tax_structure_note         String?
+  liability_isolation_note   String?
+  financing_leverage_note    String?
+  exit_structure_note        String?
+  four_axis_review_completed Int        @default(0)
+  hypothesized_by            String
+  hypothesized_at            String
+  rationale                  String
+  run                        run?       @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project                 md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model debt_instrument {
+  id               String       @id
+  project_id       String
+  lender           String?
+  principal        Int
+  currency_id      String?
+  rate_type        String
+  rate             Float
+  maturity         String?
+  amortization     String?
+  covenant_json    String?
+  coc_acceleration Int          @default(0)
+  security         String?
+  seniority        String?
+  md_currency      md_currency? @relation(fields: [currency_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project       md_project   @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_debt_instrument_project")
+}
+
+model dimension_input {
+  id                    String            @id
+  run_id                String
+  project_id            String
+  var_key               String
+  value_kind            String
+  value_text            String?
+  value_num             Decimal?
+  unit                  String?
+  evidence_ref          String
+  asserted_by           String
+  reviewed_by           String?
+  rationale             String
+  observed_at           String
+  superseded_by         String?
+  dimension_input       dimension_input?  @relation("dimension_inputTodimension_input", fields: [superseded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_dimension_input dimension_input[] @relation("dimension_inputTodimension_input")
+  evidence_var          evidence_var      @relation(fields: [var_key], references: [var_key], onDelete: NoAction, onUpdate: NoAction)
+  md_project            md_project        @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run                   run               @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([project_id, var_key], map: "idx_dimension_input_live", where: raw("superseded_by IS NULL"))
+  @@index([project_id, observed_at(sort: Desc)], map: "idx_dimension_input_project")
+}
+
+model document {
+  id                    String     @id
+  run_id                String
+  version               Int        @default(1)
+  superseded_by         String?
+  document_section_hash String?
+  created_at            String
+  document              document?  @relation("documentTodocument", fields: [superseded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_document        document[] @relation("documentTodocument")
+  run                   run        @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([run_id], map: "idx_document_run")
+}
+
+model evidence_var {
+  var_key                   String                      @id
+  label_ko                  String
+  value_type                String
+  unit                      String?
+  source_kind               String
+  requires_evidence_ref     Int                         @default(0)
+  max_age_days              Int?
+  created_at                String
+  dimension_input           dimension_input[]
+  project_variable_snapshot project_variable_snapshot[]
+  rag_rule_variable         rag_rule_variable[]
+}
+
+model fact_financial {
+  id          String     @id
+  company_id  String
+  period_id   String
+  account_id  String
+  value       Float
+  revision_no Int        @default(1)
+  source_id   String?
+  created_at  String
+  md_source   md_source? @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_account  md_account @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_period   md_period  @relation(fields: [period_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_company  md_company @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([company_id, period_id, account_id, revision_no(sort: Desc)], map: "idx_fact_financial_latest")
+}
+
+model fact_industry {
+  id          String      @id
+  industry_id String
+  period_id   String
+  metric_key  String
+  value       Float
+  revision_no Int         @default(1)
+  source_id   String?
+  created_at  String
+  md_source   md_source?  @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_period   md_period   @relation(fields: [period_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_industry md_industry @relation(fields: [industry_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([industry_id, period_id], map: "idx_fact_industry_ind")
+}
+
+model fact_market_observation {
+  series_id    String
+  period_id    String
+  revision_no  Int
+  value        Float
+  unit_id      String
+  source_id    String
+  content_hash String
+  fetched_at   String
+  md_source    md_source @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_unit      md_unit   @relation(fields: [unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_period    md_period @relation(fields: [period_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([series_id, period_id, revision_no])
+  @@index([series_id, period_id(sort: Desc)], map: "idx_obs_latest")
+}
+
+model fx_policy {
+  id               String  @id
+  scope            String
+  rate_type        String
+  source_series_id String?
+  created_at       String
+}
+
+model governance_doc {
+  id                   String           @id
+  layer                String
+  key                  String
+  title                String
+  scope                String           @default("shared")
+  entity_id            String?
+  region_code          String?
+  version              String
+  enforceability       String
+  owner_agent          String
+  doc_path             String
+  effective_from       String
+  superseded_by        String?
+  review_cycle_months  Int?
+  governance_doc       governance_doc?  @relation("governance_docTogovernance_doc", fields: [superseded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_governance_doc governance_doc[] @relation("governance_docTogovernance_doc")
+  md_entity            md_entity?       @relation(fields: [entity_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  interpretation       interpretation[]
+  rag_rule             rag_rule[]
+  waiver               waiver[]
+
+  @@index([layer, key], map: "idx_governance_doc_key")
+}
+
+model governance_kpi {
+  id         String  @id
+  period_id  String
+  entity_id  String?
+  metric_key String
+  value      Float
+  note       String?
+
+  @@index([period_id, metric_key], map: "idx_governance_kpi_period")
+}
+
+model group_agenda {
+  id                 String     @id
+  cycle              String
+  project_id         String
+  entity_id          String?
+  submitted_at       String
+  capital_request    Float
+  irr_over_hurdle_pp Float?
+  rag_grade          String?
+  priority_rank      Int?
+  decision           String?
+  rationale          String?
+  md_entity          md_entity? @relation(fields: [entity_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project         md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([cycle, priority_rank], map: "idx_group_agenda_cycle")
+}
+
+model incentive {
+  id                    String       @id
+  project_id            String
+  site_id               String?
+  direction             String
+  type                  String
+  grantor               String?
+  program_name          String?
+  amount                Int?
+  npv_value             Int?
+  currency_id           String?
+  granted_on            String?
+  application_deadline  String?
+  construction_deadline String?
+  obligation_json       String?
+  clawback_rule         String?
+  estimated_clawback    Int?
+  negotiability         String?
+  status                String       @default("prospective")
+  evidence_ref          String?
+  md_currency           md_currency? @relation(fields: [currency_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project            md_project   @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_incentive_project")
+}
+
+model industry_driver {
+  id                     String                   @id
+  code                   String                   @unique(map: "sqlite_autoindex_industry_driver_2")
+  label_ko               String
+  description            String?
+  source_series_id       String?
+  created_at             String
+  chain_node_sensitivity chain_node_sensitivity[]
+  md_source              md_source?               @relation(fields: [source_series_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model insider_list {
+  project_id      String
+  user_id         String
+  added_at        String
+  removed_at      String?
+  reason          String
+  acknowledged_at String?
+  md_project      md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([project_id, user_id])
+}
+
+model interpretation {
+  id                   String           @id
+  governance_doc_id    String
+  clause_ref           String
+  question             String
+  answer               String
+  asked_by             String
+  answered_by          String
+  answered_at          String
+  supersedes           String?
+  published            Int              @default(0)
+  interpretation       interpretation?  @relation("interpretationTointerpretation", fields: [supersedes], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_interpretation interpretation[] @relation("interpretationTointerpretation")
+  governance_doc       governance_doc   @relation(fields: [governance_doc_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([governance_doc_id, clause_ref], map: "idx_interpretation")
+}
+
+model job_run {
+  id          String  @id
+  job_key     String
+  started_at  String
+  finished_at String?
+  status      String
+  error       String?
+
+  @@index([job_key, started_at(sort: Desc)], map: "idx_job_run_key")
+}
+
+model jv_term {
+  id                 String            @id
+  project_id         String
+  partner_id         String
+  equity_split       String?
+  governance_json    String?
+  veto_matters       String?
+  contribution_json  String?
+  exit_clause        String?
+  deadlock_mechanism String?
+  non_compete_scope  String?
+  partner_candidate  partner_candidate @relation(fields: [partner_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project         md_project        @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_jv_term_project")
+}
+
+model kill_criteria_evaluation {
+  id                String     @id
+  run_id            String
+  project_id        String
+  procedure_key     String
+  criterion_id      String
+  action            String
+  outcome           String
+  predicate_json    String
+  policy_id         String
+  thresholds_source String
+  evaluated_at      String
+  evaluated_by      String
+  md_project        md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run               run        @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([run_id, procedure_key, criterion_id], map: "sqlite_autoindex_kill_criteria_evaluation_2")
+  @@index([project_id, evaluated_at(sort: Desc)], map: "idx_kill_criteria_eval_project")
+}
+
+model management_package {
+  id                      String     @id
+  project_id              String
+  executive_ref           String
+  role_title              String
+  base_pay                Int
+  coc_trigger             Int        @default(0)
+  coc_payout_estimate     Int?
+  accelerated_vesting     Int        @default(0)
+  non_compete_months      Int?
+  non_compete_enforceable Int?
+  retention_plan_cost     Int?
+  flight_risk             String?
+  value_impact            Int?
+  evidence_ref            String?
+  md_project              md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_management_package_project")
+}
+
+model md_account {
+  id             String           @id
+  ifrs_code      String           @unique(map: "sqlite_autoindex_md_account_2")
+  name_ko        String
+  name_en        String
+  created_at     String
+  fact_financial fact_financial[]
+}
+
+model md_company {
+  id             String           @id
+  dart_corp_code String?          @unique(map: "idx_md_company_dart", where: raw("dart_corp_code IS NOT NULL"))
+  biz_reg_no     String?
+  lei            String?
+  name_ko        String
+  name_en        String?
+  created_at     String
+  fact_financial fact_financial[]
+}
+
+model md_country {
+  id         String @id
+  iso_code   String @unique(map: "sqlite_autoindex_md_country_2")
+  created_at String
+}
+
+model md_currency {
+  id              String            @id
+  iso_code        String            @unique(map: "sqlite_autoindex_md_currency_2")
+  created_at      String
+  debt_instrument debt_instrument[]
+  incentive       incentive[]
+}
+
+model md_entity {
+  id             String           @id
+  entity_code    String           @unique(map: "sqlite_autoindex_md_entity_2")
+  name_ko        String
+  created_at     String
+  approval_chain approval_chain[]
+  governance_doc governance_doc[]
+  group_agenda   group_agenda[]
+}
+
+model md_industry {
+  id                                                              String                        @id
+  ksic_code                                                       String                        @unique(map: "idx_md_industry_ksic")
+  naics_code                                                      String?
+  isic_code                                                       String?
+  name_ko                                                         String
+  name_en                                                         String
+  created_at                                                      String
+  chain_node_sensitivity                                          chain_node_sensitivity[]
+  fact_industry                                                   fact_industry[]
+  project_industry                                                project_industry[]
+  proxy_chain                                                     proxy_chain[]
+  proxy_link_proxy_link_to_industry_idTomd_industry               proxy_link[]                  @relation("proxy_link_to_industry_idTomd_industry")
+  proxy_link_proxy_link_from_industry_idTomd_industry             proxy_link[]                  @relation("proxy_link_from_industry_idTomd_industry")
+  structure_simulation_result                                     structure_simulation_result[]
+  value_chain_link_value_chain_link_to_industry_idTomd_industry   value_chain_link[]            @relation("value_chain_link_to_industry_idTomd_industry")
+  value_chain_link_value_chain_link_from_industry_idTomd_industry value_chain_link[]            @relation("value_chain_link_from_industry_idTomd_industry")
+}
+
+model md_period {
+  id                      String                    @id
+  period_type             String
+  start_date              String
+  end_date                String
+  fiscal_year             Int
+  created_at              String
+  fact_financial          fact_financial[]
+  fact_industry           fact_industry[]
+  fact_market_observation fact_market_observation[]
+
+  @@index([start_date, end_date], map: "idx_md_period_range")
+}
+
+model md_project {
+  id                            String                          @id
+  project_no                    String                          @unique(map: "sqlite_autoindex_md_project_2")
+  created_at                    String
+  current_stage_gate            String?
+  analysis_task                 analysis_task[]
+  antitrust_finding             antitrust_finding[]
+  approval_chain                approval_chain[]
+  benefit_item                  benefit_item[]
+  certification                 certification[]
+  chain_node_sensitivity        chain_node_sensitivity[]
+  comp_benchmark                comp_benchmark[]
+  compliance_check              compliance_check[]
+  contingent_liability          contingent_liability[]
+  dd_finding                    dd_finding[]
+  deal_shape_evaluation         deal_shape_evaluation[]
+  deal_structure_hypothesis     deal_structure_hypothesis[]
+  debt_instrument               debt_instrument[]
+  dimension_input               dimension_input[]
+  group_agenda                  group_agenda[]
+  incentive                     incentive[]
+  insider_list                  insider_list[]
+  jv_term                       jv_term[]
+  kill_criteria_evaluation      kill_criteria_evaluation[]
+  management_package            management_package[]
+  notification                  notification[]
+  partner_candidate             partner_candidate[]
+  partner_dd_finding            partner_dd_finding[]
+  permit                        permit[]
+  pmi_key_talent                pmi_key_talent[]
+  pmi_synergy_certification     pmi_synergy_certification[]
+  project_case_classification   project_case_classification?
+  project_classification        project_classification?
+  project_incentive_deadline    project_incentive_deadline[]
+  project_industry              project_industry[]
+  project_member                project_member[]
+  project_policy_pin            project_policy_pin[]
+  project_variable_snapshot     project_variable_snapshot[]
+  rag_assessment                rag_assessment[]
+  rag_transition                rag_transition[]
+  run                           run[]
+  screening_longlist            screening_longlist[]
+  site_candidate                site_candidate[]
+  validator_completeness_record validator_completeness_record[]
+  value_chain_link              value_chain_link[]
+  venture_scorecard             venture_scorecard[]
+  waiver                        waiver[]
+  watch                         watch[]
+}
+
+model md_source {
+  id                      String                    @id
+  code                    String                    @unique(map: "sqlite_autoindex_md_source_2")
+  reliability_grade       String
+  created_at              String
+  fact_financial          fact_financial[]
+  fact_industry           fact_industry[]
+  fact_market_observation fact_market_observation[]
+  industry_driver         industry_driver[]
+  raw_payload             raw_payload[]
+}
+
+model md_statute {
+  id                    String  @id
+  korea_statute_id      String?
+  foreign_framework_key String?
+  created_at            String
+}
+
+model md_unit {
+  id                      String                    @id
+  code                    String                    @unique(map: "sqlite_autoindex_md_unit_2")
+  dimension               String
+  si_coefficient          Float
+  created_at              String
+  fact_market_observation fact_market_observation[]
+}
+
+model notification {
+  id           String     @id
+  user_id      String
+  project_id   String
+  trigger_type String
+  severity     String
+  payload      String
+  channel      String
+  bundle       String
+  sent_at      String
+  md_project   md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id, sent_at(sort: Desc)], map: "idx_notification_user")
+  @@index([project_id, trigger_type, sent_at(sort: Desc)], map: "idx_notification_cooldown")
+}
+
+model partner_candidate {
+  id                 String               @id
+  project_id         String
+  name               String
+  partner_type       String
+  region_code        String?
+  capability_score   Float?
+  capacity_score     Float?
+  financial_score    Float?
+  compliance_risk    String?
+  customer_base_fit  Float?
+  dependency_risk    String?
+  status             String               @default("sourcing")
+  contacted_at       String?
+  nda_signed         Int                  @default(0)
+  evidence_ref       String?
+  jv_term            jv_term[]
+  md_project         md_project           @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  partner_dd_finding partner_dd_finding[]
+
+  @@index([project_id], map: "idx_partner_candidate_project")
+}
+
+model partner_dd_finding {
+  id                String            @id
+  project_id        String
+  partner_id        String
+  workstream        String
+  severity          String
+  description       String
+  created_at        String
+  partner_candidate partner_candidate @relation(fields: [partner_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project        md_project        @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_partner_dd_finding_project")
+  @@index([partner_id], map: "idx_partner_dd_finding_partner")
+}
+
+model password_history {
+  id                  String   @id
+  user_id             String
+  password_salt       String
+  password_hash       String
+  password_iterations Int
+  changed_at          String
+  app_user            app_user @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id, changed_at(sort: Desc)], map: "idx_password_history_user")
+}
+
+model permit {
+  id                                             String        @id
+  project_id                                     String
+  name                                           String
+  agency                                         String?
+  statutory_days                                 Int?
+  status                                         String        @default("not_started")
+  md_project                                     md_project    @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  permit_edge_permit_edge_to_permit_idTopermit   permit_edge[] @relation("permit_edge_to_permit_idTopermit")
+  permit_edge_permit_edge_from_permit_idTopermit permit_edge[] @relation("permit_edge_from_permit_idTopermit")
+
+  @@index([project_id], map: "idx_permit_project")
+}
+
+model permit_edge {
+  from_permit_id                            String
+  to_permit_id                              String
+  permit_permit_edge_to_permit_idTopermit   permit @relation("permit_edge_to_permit_idTopermit", fields: [to_permit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  permit_permit_edge_from_permit_idTopermit permit @relation("permit_edge_from_permit_idTopermit", fields: [from_permit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([from_permit_id, to_permit_id])
+}
+
+model pmi_key_talent {
+  id         String     @id
+  project_id String
+  role_ref   String
+  status     String     @default("active")
+  exit_date  String?
+  locked_at  String
+  created_at String
+  md_project md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_pmi_key_talent_project")
+}
+
+model pmi_synergy_certification {
+  id                 String     @id
+  project_id         String
+  run_rate_bp        Int
+  sustained_quarters Int
+  certified_by       String
+  baseline_locked_at String
+  signed_at          String
+  created_at         String
+  md_project         md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_pmi_synergy_cert_project")
+}
+
+model policy {
+  id             String          @id
+  scope          String
+  entity_id      String?
+  region_code    String?
+  name           String
+  version        String
+  effective_from String
+  superseded_by  String?
+  doc_path       String?
+  policy         policy?         @relation("policyTopolicy", fields: [superseded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_policy   policy[]        @relation("policyTopolicy")
+  policy_change  policy_change[]
+}
+
+model policy_change {
+  id            String          @id
+  policy_id     String
+  from_version  String?
+  to_version    String
+  summary       String
+  adr_ref       String?
+  detected_at   String
+  applied_at    String?
+  policy        policy          @relation(fields: [policy_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  policy_impact policy_impact[]
+}
+
+model policy_impact {
+  id               String        @id
+  policy_change_id String
+  target_type      String
+  target_id        String
+  impact           String?
+  action           String?
+  status           String        @default("pending")
+  policy_change    policy_change @relation(fields: [policy_change_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([policy_change_id], map: "idx_policy_impact_change")
+}
+
+model procedure {
+  id              String      @id
+  procedure_key   String
+  scope           String
+  entity_id       String?
+  region_code     String?
+  version         String
+  references_id   String?
+  spec_json       String
+  effective_from  String
+  procedure       procedure?  @relation("procedureToprocedure", fields: [references_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_procedure procedure[] @relation("procedureToprocedure")
+
+  @@index([procedure_key, scope, entity_id], map: "idx_procedure_key")
+}
+
+model project_case_classification {
+  id                                String                        @id
+  project_id                        String                        @unique(map: "idx_case_classification_live", where: raw("superseded_by IS NULL"))
+  case_type                         String
+  origin                            String
+  technology_track                  String                        @default("none")
+  classified_by                     String
+  approver_role                     String?
+  approved_by                       String?
+  approved_at                       String?
+  classified_at                     String
+  rationale                         String
+  superseded_by                     String?
+  compliance_check                  compliance_check[]
+  project_case_classification       project_case_classification?  @relation("project_case_classificationToproject_case_classification", fields: [superseded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_project_case_classification project_case_classification[] @relation("project_case_classificationToproject_case_classification")
+  md_project                        md_project                    @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model project_classification {
+  project_id    String     @id
+  sensitivity   String
+  mnpi_flag     Int        @default(0)
+  wall_group    String?
+  classified_by String
+  classified_at String
+  md_project    md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model project_incentive_deadline {
+  id            String     @id
+  project_id    String
+  incentive_ref String
+  deadline      String
+  source        String?
+  created_at    String
+  md_project    md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_incentive_deadline_project")
+}
+
+model project_industry {
+  id                     String             @id
+  project_id             String
+  industry_id            String
+  bound_by               String
+  bound_at               String
+  rationale              String
+  superseded_by          String?
+  project_industry       project_industry?  @relation("project_industryToproject_industry", fields: [superseded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_project_industry project_industry[] @relation("project_industryToproject_industry")
+  md_industry            md_industry        @relation(fields: [industry_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project             md_project         @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([project_id, industry_id], map: "idx_project_industry_live", where: raw("superseded_by IS NULL"))
+  @@index([project_id, bound_at(sort: Desc)], map: "idx_project_industry_project")
+}
+
+model project_member {
+  project_id         String
+  user_id            String
+  project_role       String
+  granted_by         String
+  granted_at         String
+  revoked_at         String?
+  need_to_know_basis String
+  md_project         md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([project_id, user_id])
+  @@index([user_id, project_id], map: "idx_project_member_user")
+}
+
+model project_policy_pin {
+  id                       String               @id
+  project_id               String
+  policy_doc_id            String
+  pinned_version           String
+  pinned_at                String
+  pinned_by                String
+  superseded_by            String?
+  project_policy_pin       project_policy_pin?  @relation("project_policy_pinToproject_policy_pin", fields: [superseded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_project_policy_pin project_policy_pin[] @relation("project_policy_pinToproject_policy_pin")
+  md_project               md_project           @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([project_id, policy_doc_id], map: "idx_project_policy_pin_live", where: raw("superseded_by IS NULL"))
+}
+
+model project_variable_snapshot {
+  run_id       String
+  project_id   String
+  var_key      String
+  value_num    Decimal?
+  value_text   String?
+  evidence_ref String?
+  observed_at  String?
+  status       String
+  evidence_var evidence_var @relation(fields: [var_key], references: [var_key], onDelete: NoAction, onUpdate: NoAction)
+  md_project   md_project   @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run          run          @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, project_id, var_key])
+  @@index([project_id, var_key], map: "idx_project_variable_snapshot_project")
+}
+
+model proxy_chain {
+  id                 String      @id
+  target_industry_id String
+  hop_ids            String
+  reliability_grade  String
+  grade_rationale    String
+  compounded_ci_low  Float?
+  compounded_ci_high Float?
+  calibrated_at      String
+  md_industry        md_industry @relation(fields: [target_industry_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model proxy_link {
+  id                                                   String      @id
+  from_industry_id                                     String
+  to_industry_id                                       String
+  hop_type                                             String
+  coefficient                                          Float?
+  beta                                                 Float?
+  r2                                                   Float?
+  lag_months                                           Int?
+  ci_low                                               Float?
+  ci_high                                              Float?
+  evidence_ref                                         String
+  calibrated_at                                        String?
+  md_industry_proxy_link_to_industry_idTomd_industry   md_industry @relation("proxy_link_to_industry_idTomd_industry", fields: [to_industry_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_industry_proxy_link_from_industry_idTomd_industry md_industry @relation("proxy_link_from_industry_idTomd_industry", fields: [from_industry_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([from_industry_id, to_industry_id], map: "idx_proxy_link_chain")
+}
+
+model rag_assessment {
+  id              String     @id
+  run_id          String
+  project_id      String
+  dimension       String
+  grade           String
+  remedy_shape    String?
+  triggered_rules String     @default("[]")
+  rationale       String
+  assessed_at     String
+  md_project      md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run             run        @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id, assessed_at(sort: Desc)], map: "idx_rag")
+}
+
+model rag_rule {
+  id                String              @id
+  rule_key          String
+  version           Int                 @default(1)
+  stage_gate        String
+  dimension         String
+  grade             String
+  condition_expr    String
+  priority          Int
+  enabled           Int                 @default(0)
+  policy_id         String?
+  thresholds_source String?
+  created_at        String
+  governance_doc    governance_doc?     @relation(fields: [policy_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rag_rule_variable rag_rule_variable[]
+
+  @@unique([rule_key, version], map: "idx_rag_rule_key")
+  @@index([stage_gate, dimension, priority], map: "idx_rag_rule")
+}
+
+model rag_rule_variable {
+  rule_id      String
+  var_key      String
+  evidence_var evidence_var @relation(fields: [var_key], references: [var_key], onDelete: NoAction, onUpdate: NoAction)
+  rag_rule     rag_rule     @relation(fields: [rule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([rule_id, var_key])
+  @@index([var_key], map: "idx_rag_rule_variable_var")
+}
+
+model rag_transition {
+  id         String     @id
+  project_id String
+  from_grade String?
+  to_grade   String
+  run_id     String
+  at         String
+  reason     String
+  notified   Int        @default(0)
+  run        run        @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id, at(sort: Desc)], map: "idx_rag_transition")
+}
+
+model raw_payload {
+  id           String    @id
+  source_id    String
+  fetched_at   String
+  content_hash String
+  payload      String
+  md_source    md_source @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([source_id, fetched_at(sort: Desc)], map: "idx_raw_payload_source")
+}
+
+model retention_policy {
+  table_key        String  @id
+  basis            String
+  retention_months Int
+  action           String
+  last_run_at      String?
+}
+
+model review_stage {
+  id                     String  @id
+  run_id                 String
+  stage                  String
+  reviewer_agent_or_user String
+  reviewer_domain        String?
+  unverified_items_json  String
+  result                 String?
+  created_at             String
+  run                    run     @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([run_id], map: "idx_review_stage_run")
+}
+
+model run {
+  id                            String                          @id
+  project_id                    String
+  label                         String?
+  input_hash                    String
+  created_by                    String
+  created_at                    String
+  superseded_by                 String?
+  deal_structure_hypothesis     deal_structure_hypothesis[]
+  dimension_input               dimension_input[]
+  document                      document[]
+  kill_criteria_evaluation      kill_criteria_evaluation[]
+  project_variable_snapshot     project_variable_snapshot[]
+  rag_assessment                rag_assessment[]
+  rag_transition                rag_transition[]
+  review_stage                  review_stage[]
+  run                           run?                            @relation("runTorun", fields: [superseded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_run                     run[]                           @relation("runTorun")
+  md_project                    md_project                      @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run_input                     run_input[]
+  simulation                    simulation[]
+  structure_simulation_result   structure_simulation_result[]
+  validator_completeness_record validator_completeness_record[]
+  venture_scorecard             venture_scorecard[]
+
+  @@index([project_id, created_at(sort: Desc)], map: "idx_run_project")
+}
+
+model run_input {
+  run_id         String
+  assumption_key String
+  value          Float
+  run            run    @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([run_id, assumption_key])
+}
+
+model schedule_job {
+  id         String @id
+  job_key    String @unique(map: "sqlite_autoindex_schedule_job_2")
+  cron_expr  String
+  enabled    Int    @default(1)
+  created_at String
+}
+
+model schema_migrations {
+  id         String @id
+  filename   String @unique(map: "sqlite_autoindex_schema_migrations_2")
+  applied_at String
+}
+
+model screening_longlist {
+  id               String     @id
+  project_id       String
+  candidate_name   String
+  knock_out_passed Int
+  notes            String?
+  created_at       String
+  md_project       md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_screening_longlist_project")
+}
+
+model session {
+  id         String   @id
+  user_id    String
+  token_hash String   @unique(map: "sqlite_autoindex_session_2")
+  created_at String
+  expires_at String
+  revoked_at String?
+  app_user   app_user @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id, expires_at(sort: Desc)], map: "idx_session_user")
+}
+
+model simulation {
+  id                String              @id
+  run_id            String
+  seed              Int
+  iterations        Int
+  discount_rate     Float
+  created_at        String
+  covenant_test     covenant_test[]
+  run               run                 @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  simulation_draw   simulation_draw[]
+  simulation_result simulation_result[]
+}
+
+model simulation_draw {
+  simulation_id String
+  iteration_no  Int
+  metric        String
+  value         Float
+  simulation    simulation @relation(fields: [simulation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([simulation_id, iteration_no, metric])
+  @@index([simulation_id, metric], map: "idx_sim_draw")
+}
+
+model simulation_result {
+  simulation_id String
+  metric        String
+  p05           Float
+  p50           Float
+  p95           Float
+  mean          Float
+  std           Float
+  simulation    simulation @relation(fields: [simulation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([simulation_id, metric])
+}
+
+model site_candidate {
+  id                                   String     @id
+  project_id                           String
+  name                                 String
+  region_code                          String?
+  infra_score                          Float?
+  infra_capex                          Int?
+  incentive_npv                        Int?
+  logistics_cost                       Int?
+  labor_availability                   Float?
+  permit_lead_time_days                Int?
+  affected_area_notification_status    String?
+  total_score                          Float?
+  rank                                 Int?
+  wastewater_capacity_sufficient       Int?
+  power_capacity_sufficient            Int?
+  industrial_water_sufficient          Int?
+  logistics_access_sufficient          Int?
+  infrastructure_mitigation_documented Int?
+  md_project                           md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_site_candidate_project")
+}
+
+model staging_unmapped {
+  id                     String @id
+  raw_value              String
+  attempted_master_table String
+  first_seen_at          String
+
+  @@index([attempted_master_table], map: "idx_staging_unmapped_table")
+}
+
+model structure_simulation_result {
+  id          String      @id
+  run_id      String
+  scenario    String
+  industry_id String
+  metric      String
+  p05         Float
+  p50         Float
+  p95         Float
+  created_at  String
+  md_industry md_industry @relation(fields: [industry_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run         run         @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([run_id, scenario, industry_id, metric], map: "sqlite_autoindex_structure_simulation_result_2")
+  @@index([run_id], map: "idx_structure_sim_result_run")
+}
+
+model validator_completeness_record {
+  id               String     @id
+  project_id       String
+  run_id           String?
+  gate             String
+  declared         Int
+  applicable_count Int
+  completed_count  Int
+  validator_rows   String
+  created_at       String
+  run              run?       @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project       md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id, gate, created_at(sort: Desc)], map: "idx_validator_completeness_record")
+}
+
+model value_chain_link {
+  id                                                         String      @id
+  project_id                                                 String
+  from_industry_id                                           String
+  to_industry_id                                             String
+  direction                                                  String
+  elasticity                                                 Float?
+  lag_months                                                 Int?
+  correlation                                                Float?
+  r2                                                         Float?
+  pass_through_rate                                          Float?
+  pass_through_lag_months                                    Int?
+  concentration_hhi                                          Float?
+  switching_cost_grade                                       String?
+  substitution_threat                                        String?
+  evidence_ref                                               String?
+  assessed_at                                                String
+  md_industry_value_chain_link_to_industry_idTomd_industry   md_industry @relation("value_chain_link_to_industry_idTomd_industry", fields: [to_industry_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_industry_value_chain_link_from_industry_idTomd_industry md_industry @relation("value_chain_link_from_industry_idTomd_industry", fields: [from_industry_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project                                                 md_project  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_value_chain_link_project")
+}
+
+model venture_scorecard {
+  id               String     @id
+  run_id           String
+  project_id       String
+  source_procedure String
+  review_cycle     String
+  venture_class    String
+  section          String
+  measure_key      String
+  target_value     String?
+  actual_value     String?
+  status           String
+  evidence_ref     String
+  observed_at      String
+  created_at       String
+  md_project       md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run              run        @relation(fields: [run_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([run_id, source_procedure, section, measure_key], map: "sqlite_autoindex_venture_scorecard_2")
+  @@index([review_cycle, section], map: "idx_venture_scorecard_rollup")
+  @@index([project_id, review_cycle], map: "idx_venture_scorecard_project")
+}
+
+model waiver {
+  id                String         @id
+  project_id        String
+  governance_doc_id String
+  clause_ref        String
+  reason            String
+  requested_by      String
+  approver_role     String
+  approved_by       String?
+  approved_at       String?
+  expires_at        String
+  status            String
+  created_at        String
+  governance_doc    governance_doc @relation(fields: [governance_doc_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  md_project        md_project     @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id, status], map: "idx_waiver_project")
+  @@index([governance_doc_id, clause_ref], map: "idx_waiver_clause")
+}
+
+model watch {
+  id              String       @id
+  project_id      String
+  user_id         String
+  last_checked_at String?
+  created_at      String
+  md_project      md_project   @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  watch_rule      watch_rule[]
+
+  @@index([project_id], map: "idx_watch_project")
+}
+
+model watch_rule {
+  id             String @id
+  watch_id       String
+  trigger_type   String
+  threshold      Float?
+  cooldown_hours Int    @default(24)
+  channel        String
+  enabled        Int    @default(1)
+  watch          watch  @relation(fields: [watch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([watch_id], map: "idx_watch_rule_watch")
+}

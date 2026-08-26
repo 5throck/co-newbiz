@@ -4,6 +4,21 @@
  * in schema_migrations. Pure-SQL migrations only (ADR-0002 portability
  * constraint) — no ORM-generated DDL.
  *
+ * Every migration is normally wrapped in db.transaction(...) for
+ * all-or-nothing application. ADR-0071 (migration 0033, the PK NOT NULL
+ * table-rebuild) needed PRAGMA foreign_keys=OFF for its duration — SQLite
+ * documents that pragma as a no-op while a transaction is open, and a
+ * table-rebuild (DROP+RENAME) of a table with live FK-referencing child
+ * rows otherwise fails ("FOREIGN KEY constraint failed") under
+ * foreign_keys=ON. A migration file may opt out of the transaction wrapper
+ * by starting with the exact first line `-- @notransaction` — its
+ * statements then run directly (no implicit BEGIN), so a leading
+ * `PRAGMA foreign_keys = OFF;` (and a trailing `= ON;`) actually takes
+ * effect. This trades the all-or-nothing guarantee for that one file (a
+ * failure partway through leaves a partially-rebuilt schema) — used only
+ * when the FK-toggle requirement leaves no other option; a pre-migration
+ * backup (ADR-0014) is the recovery path if it fails partway.
+ *
  * Usage: bun db/migrate.ts [--db-path <path>]
  */
 
@@ -44,13 +59,22 @@ export function runMigrations(dbPath?: string): { applied: string[]; skipped: st
       continue;
     }
     const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf-8");
-    db.transaction(() => {
+    const noTransaction = sql.startsWith("-- @notransaction");
+    if (noTransaction) {
       db.run(sql);
       db.run(
         "INSERT INTO schema_migrations (id, filename, applied_at) VALUES (?, ?, ?)",
         [basename(file), file, new Date().toISOString()]
       );
-    })();
+    } else {
+      db.transaction(() => {
+        db.run(sql);
+        db.run(
+          "INSERT INTO schema_migrations (id, filename, applied_at) VALUES (?, ?, ?)",
+          [basename(file), file, new Date().toISOString()]
+        );
+      })();
+    }
     applied.push(file);
   }
 
