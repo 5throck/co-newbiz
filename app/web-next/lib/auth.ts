@@ -24,6 +24,27 @@ import { forbidden, unauthorized } from "./envelope.ts";
 export const SESSION_COOKIE = "co_newbiz_session";
 export const CSRF_COOKIE = "co_newbiz_csrf";
 
+// Port of app/server/middleware.ts's requestIsSecure/sessionCookieOpts —
+// used by the /api/auth/* routes (login/password-change) when setting the
+// session cookie. Same X-Forwarded-Proto-aware logic: a TLS-terminating
+// reverse proxy leaves the internal request http://, so the header is
+// authoritative when present.
+export function requestIsSecure(request: Request): boolean {
+  const forwarded = request.headers.get("x-forwarded-proto");
+  if (forwarded) return forwarded.split(",")[0].trim() === "https";
+  return request.url.startsWith("https://");
+}
+
+export function sessionCookieOpts(secure: boolean) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    path: "/",
+    secure,
+    maxAge: 12 * 3600, // SESSION_HOURS from db/lib/accounts.ts
+  };
+}
+
 export interface AuthContext {
   userId: string;
   role: UserRole;

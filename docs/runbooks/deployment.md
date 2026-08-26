@@ -2,7 +2,7 @@
 
 **Owner**: release-engineer, platform-lead
 **Design of record**: ADR-0014, `docs/security-baseline.md` §2 (pre-deployment gate)
-**Status**: Stage 5 Wave 5.9. Covers what actually exists today — `app/server/` (Hono API + static-served SPA) and `mcp/co-newbiz/` (stdio MCP server). No containerization/orchestration layer exists yet; this runbook is for a direct-process deployment.
+**Status**: Post-cutover (ADR-0069/0070, Phase 5/6, 2026-08-26). Covers what actually exists today — `app/web-next/` (Next.js, serves both the REST API under `/api/**` and the web UI) and `mcp/co-newbiz/` (stdio MCP server). `app/server/` (Hono) and the old `app/web/` (Vite SPA) were decommissioned in Phase 6 — see `docs/designs/2026-08-25-web-stack-migration-nextjs-prisma_ko.md` for the migration record. No containerization/orchestration layer exists yet; this runbook is for a direct-process deployment.
 
 ## 1. Pre-Deployment Gate (`docs/security-baseline.md` §2)
 
@@ -16,10 +16,10 @@ Run before every release, no exceptions:
 ## 2. Build
 
 ```bash
-cd app/web && bun install && bun run build   # SPA -> app/web/dist
+cd app/web-next && bun install && bun run build
 ```
 
-`app/server/index.ts` serves `app/web/dist` automatically once it exists (checked via `existsSync` at `buildApp()` time — see the routing-precedence comment in that file, which documents a real bug Wave 5.6B found and fixed: static-serve middleware must be registered before the auth-gated API routers, not after, or it never gets a chance to run).
+Next.js's own build serves both `/api/**` (Route Handlers) and the App Router pages from one process — no separate static-serve step or dist-directory existence check is needed (that was `app/server/index.ts`'s Hono-era mechanism, retired in Phase 6).
 
 ## 3. Database
 
@@ -30,8 +30,10 @@ cd app/web && bun install && bun run build   # SPA -> app/web/dist
 ## 4. Start the Server
 
 ```bash
-CO_NEWBIZ_PORT=8787 bun run app/server/index.ts
+cd app/web-next && bun --bun run start
 ```
+
+Runs on port 8787 by default (`package.json`'s `start` script — the same port `app/server` used, chosen deliberately in Phase 5 so `CO_NEWBIZ_API_BASE_URL` and every doc/script referencing `localhost:8787` needed no change). `bun --bun` is required, not plain `bun run` — Next's dev/start scripts otherwise execute under Node, which cannot resolve `bun:sqlite` (`db/client.ts`'s import), found empirically during Phase 2.
 
 Health check: `GET /api/health` should return `{"status":"ok"}`. This is the "health check immediately after" step ADR-0014 requires — confirm it before considering the release complete, not just that the process started without crashing.
 

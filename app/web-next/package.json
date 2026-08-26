@@ -2,11 +2,11 @@
   "name": "co-newbiz-web-next",
   "version": "0.0.1",
   "private": true,
-  "description": "Phase 1 scaffold — ADR-0069 (Proposed). Not the system of record until Phase 5 cutover; app/web (Hono/Vite) remains authoritative until then.",
+  "description": "co-newbiz web + API (Next.js/Prisma). System of record as of Phase 5 cutover (ADR-0069/0070, still Proposed pending formal architecture/security sign-off). Runs on port 8787 — the same port app/server (Hono, decommissioned Phase 6) used, so CO_NEWBIZ_API_BASE_URL and every doc/script referencing localhost:8787 needed no change.",
   "scripts": {
-    "dev": "next dev -p 3001",
+    "dev": "next dev -p 8787",
     "build": "next build",
-    "start": "next start -p 3001",
+    "start": "next start -p 8787",
     "prisma:pull": "prisma db pull",
     "prisma:generate": "prisma generate"
   },
