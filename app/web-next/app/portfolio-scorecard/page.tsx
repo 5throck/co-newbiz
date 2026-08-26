@@ -93,7 +93,7 @@ function ScorecardTable({ section, rows }: { section: "financial" | "strategic";
     <section className="scorecard-section" aria-label={`${SECTION_LABELS[section]} 지표`}>
       <h2>{SECTION_LABELS[section]}</h2>
       {rows.length === 0 ? (
-        <p className="empty-state">{SECTION_LABELS[section]} 섹션에 표시할 행이 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">{SECTION_LABELS[section]} 섹션에 표시할 행이 없습니다.</p>
       ) : (
         <table className="data-table scorecard-table">
           <caption className="sr-only">{SECTION_LABELS[section]} 지표 — 벤처 클래스별 분류</caption>
@@ -118,7 +118,7 @@ function ScorecardTable({ section, rows }: { section: "financial" | "strategic";
                 </tr>,
                 ...groupRows.map((row) => (
                   <tr key={row.id}>
-                    <td className="cell-primary">{row.project_no}</td>
+                    <td className="font-semibold">{row.project_no}</td>
                     <td>
                       <code>{row.measure_key}</code>
                     </td>
@@ -156,7 +156,7 @@ function ScorecardBody({ data, meta }: { data: PortfolioScorecard; meta: Portfol
   const availableCycles = meta?.review_cycles_available ?? data.provenance.review_cycles_available;
 
   if (data.review_cycle === null) {
-    return <p className="empty-state">기록된 스코어카드가 없습니다.</p>;
+    return <p className="text-[color:var(--muted-fg)] italic">기록된 스코어카드가 없습니다.</p>;
   }
 
   return (
@@ -168,11 +168,11 @@ function ScorecardBody({ data, meta }: { data: PortfolioScorecard; meta: Portfol
             <li key={r.venture_class} className="scorecard-rollup-card">
               <div className="scorecard-rollup-head">
                 <strong>
-                  {CLASS_LABELS[r.venture_class] ?? r.venture_class} <span className="cell-sub">({r.venture_class})</span>
+                  {CLASS_LABELS[r.venture_class] ?? r.venture_class} <span className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">({r.venture_class})</span>
                 </strong>
               </div>
               <SourceTooltip provenance={{ as_of: meta?.as_of }}>
-                <p className="cell-sub">
+                <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
                   벤처 {r.ventures} · 측정 {r.measures}
                 </p>
               </SourceTooltip>
@@ -198,7 +198,7 @@ function ScorecardBody({ data, meta }: { data: PortfolioScorecard; meta: Portfol
       {data.insufficient_evidence.length > 0 && (
         <section aria-label="근거부족 항목" className="scorecard-section">
           <h2>근거부족 항목</h2>
-          <table className="data-table">
+          <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
             <caption className="sr-only">근거가 부족해 평가되지 못한 측정 항목</caption>
             <thead>
               <tr>
@@ -210,7 +210,7 @@ function ScorecardBody({ data, meta }: { data: PortfolioScorecard; meta: Portfol
             <tbody>
               {data.insufficient_evidence.map((item, i) => (
                 <tr key={`${item.project_id}-${item.section}-${item.measure_key}-${i}`}>
-                  <td className="cell-primary">{projectNoById.get(item.project_id) ?? item.project_id}</td>
+                  <td className="font-semibold">{projectNoById.get(item.project_id) ?? item.project_id}</td>
                   <td>{SECTION_LABELS[item.section] ?? item.section}</td>
                   <td>
                     <code>{item.measure_key}</code>
@@ -224,17 +224,17 @@ function ScorecardBody({ data, meta }: { data: PortfolioScorecard; meta: Portfol
 
       <footer className="scorecard-footer">
         <h2>출처 및 이력</h2>
-        <p className="cell-sub">
+        <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
           적용 리뷰 사이클: {data.review_cycle}
           {data.resolved_from === "latest" ? " (최신 자동 선택)" : ""}
         </p>
-        <p className="cell-sub">
+        <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
           관련 분석 실행(run):{" "}
           {data.provenance.runs.length > 0 ? data.provenance.runs.map((run) => <code key={run}>{run}</code>) : "—"}
         </p>
-        <p className="cell-sub">가용 리뷰 사이클: {availableCycles.length > 0 ? availableCycles.join(", ") : "—"}</p>
+        <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">가용 리뷰 사이클: {availableCycles.length > 0 ? availableCycles.join(", ") : "—"}</p>
         {meta && (
-          <p className="cell-sub">
+          <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
             멤버십 범위 내 프로젝트 {meta.projects_visible}개 중 {meta.projects_with_rows_total}개가 스코어카드 행을
             보유합니다.
           </p>
@@ -272,7 +272,7 @@ export function PortfolioScorecard() {
     <main>
       <h1>포트폴리오 스코어카드</h1>
 
-      <p className="helper-note">
+      <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
         참조: CVC 성공확률 20–30% 구간(ILLUSTRATIVE) — 이 밴드를 넘는 자금 투입은 명시적 근거가 필요합니다.
       </p>
 
@@ -294,7 +294,7 @@ export function PortfolioScorecard() {
           ))}
         </select>
         {data?.review_cycle != null && (
-          <span className="cell-sub">
+          <span className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
             적용 사이클: {data.review_cycle}
             {data.resolved_from === "latest" ? " (최신 자동 선택)" : ""}
           </span>
@@ -302,7 +302,7 @@ export function PortfolioScorecard() {
       </div>
 
       {error && (
-        <p role="alert" className="form-error">
+        <p role="alert" className="text-[color:var(--red-fg)]">
           {error}
         </p>
       )}

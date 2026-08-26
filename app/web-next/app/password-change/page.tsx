@@ -39,7 +39,7 @@ export default function PasswordChangePage() {
         <label htmlFor="newPassword">새 비밀번호</label>
         <input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} />
         {error && (
-          <p role="alert" className="form-error">
+          <p role="alert" className="text-[color:var(--red-fg)]">
             {error}
           </p>
         )}

@@ -42,7 +42,7 @@ export default function ProjectListPage() {
         <NotificationBell />
       </div>
       {error && (
-        <p role="alert" className="form-error">
+        <p role="alert" className="text-[color:var(--red-fg)]">
           {error}
         </p>
       )}

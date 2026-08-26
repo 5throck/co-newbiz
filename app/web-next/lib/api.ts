@@ -749,6 +749,8 @@ export interface StructureSimQuantileRow {
   p50: number;
   p95: number;
   created_at: string;
+  region_code: string | null;
+  segment_code: string | null;
 }
 
 export interface RunSummaryRow {
@@ -790,11 +792,11 @@ export const marketApi = {
     body: { partner_id: string; workstream: string; severity: string; description: string },
   ) => api.post<{ id: string }>(`/api/projects/${encodeURIComponent(projectId)}/partner-dd-findings`, body),
   chainSensitivities: (projectId: string, industryId?: string) =>
-    api.get<Array<{ id: string; industry_id: string; driver_code: string; sensitivity: number; lag_months: number }>>(
+    api.get<Array<{ id: string; industry_id: string; driver_code: string; sensitivity: number; lag_months: number; region_code: string | null; segment_code: string | null }>>(
       `/api/projects/${encodeURIComponent(projectId)}/chain-sensitivities${industryId ? `?industry_id=${encodeURIComponent(industryId)}` : ""}`,
     ),
   upsertChainSensitivity: (
     projectId: string,
-    body: { industry_id: string; driver_code: string; sensitivity: number; lag_months?: number },
+    body: { industry_id: string; driver_code: string; sensitivity: number; lag_months?: number; region_code?: string; segment_code?: string },
   ) => api.post<{ id: string }>(`/api/projects/${encodeURIComponent(projectId)}/chain-sensitivities`, body),
 };

@@ -63,7 +63,7 @@ export function DdTab({ projectId }: { projectId: string }) {
       {findings === null ? (
         <p>불러오는 중...</p>
       ) : findings.length === 0 ? (
-        <p className="empty-state">데이터 없음 — 조건에 맞는 실사 항목이 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 조건에 맞는 실사 항목이 없습니다.</p>
       ) : (
         <ul className="dd-finding-list">
           {findings.map((f) => (

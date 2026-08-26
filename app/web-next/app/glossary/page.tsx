@@ -50,17 +50,17 @@ export function GlossaryView() {
         onChange={(e) => setQuery(e.target.value)}
       />
       {error && (
-        <p role="alert" className="form-error">
+        <p role="alert" className="text-[color:var(--red-fg)]">
           {error}
         </p>
       )}
       {filtered === null ? (
         <p>불러오는 중...</p>
       ) : filtered.length === 0 ? (
-        <p className="empty-state">검색어와 일치하는 용어가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">검색어와 일치하는 용어가 없습니다.</p>
       ) : (
         <>
-          <p className="cell-sub">총 {filtered.length}건</p>
+          <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">총 {filtered.length}건</p>
           <ul className="glossary-grid">
             {filtered.map((t) => (
               <li key={t.key} className="glossary-card">
@@ -70,13 +70,13 @@ export function GlossaryView() {
                   </GlossaryTerm>
                   {t.category && <span className="dd-category-badge">{t.category}</span>}
                 </div>
-                <p className="cell-sub">
+                <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
                   {t.en} · <code>{t.key}</code>
                 </p>
               </li>
             ))}
           </ul>
-          <p className="helper-note">
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
             용어를 클릭하면 정의와 “왜 중요한가”가 열립니다. 용어명·영문명·분류로 검색할 수 있습니다(별칭 검색은
             목록 API에 별칭이 포함되지 않아 제공되지 않습니다).
           </p>

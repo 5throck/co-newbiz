@@ -1,4 +1,6 @@
-// @version 2.14.1
+// @version 2.15.0
+// v2.15.0: co-newbiz ADR-0070 server-boundary check (scripts/co-newbiz/lint-server-boundary.ts)
+//   wired into the full audit pass — was standalone; see docs/adr/0070-mcp-enforcement-point-under-nextjs.md.
 // v2.14.1: Language-check double-count fix — Fail() already increments errors, so the
 //   stray errors++ after the language-validation Fail inflated "N check(s) failed" to 2
 //   on a single real failure. v2.14.0: Kill-criteria registry report (design of record 2026-08-22, Decision 8 /
@@ -1850,6 +1852,20 @@ if (SPEC_CHECK) {
         if (missingSpecFiles === 0 && registry.specs.length > 0) {
             Pass(`Spec check: all ${registry.specs.length} spec file(s) exist`);
         }
+    }
+}
+
+// ADR-0070 Decision §2 mechanical boundary check (co-newbiz-specific,
+// not part of the shared workspace template) — was standalone since
+// 2026-08-26 pending this CI wiring; see scripts/co-newbiz/lint-server-boundary.ts
+// header and docs/adr/0070-mcp-enforcement-point-under-nextjs.md.
+if (!LIFECYCLE_ONLY) {
+    try {
+        execFileSync('bun', [path.join('scripts', 'co-newbiz', 'lint-server-boundary.ts')], { stdio: 'pipe', encoding: 'utf-8' });
+        Pass('ADR-0070 server boundary check: 0 violations');
+    } catch (err) {
+        const out = (err as { stdout?: string; stderr?: string }).stdout ?? (err as { stderr?: string }).stderr ?? String(err);
+        Fail(`ADR-0070 server boundary check failed:\n${out}`);
     }
 }
 

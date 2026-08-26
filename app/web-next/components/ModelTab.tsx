@@ -123,7 +123,7 @@ export function ModelTab({ projectId }: { projectId: string }) {
     <div className="model-tab">
       <section aria-label="실행 생성">
         <h2>새 실행 생성</h2>
-        <p className="helper-note">
+        <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
           실행(run)은 버전화된 입력 스냅샷을 기록합니다. 밸류에이션 결과값은 모델 엔진 도입과 함께 제공됩니다.
         </p>
         <form onSubmit={createRun} className="run-form">
@@ -192,11 +192,11 @@ export function ModelTab({ projectId }: { projectId: string }) {
           </button>
         </form>
         {formError && (
-          <p role="alert" className="form-error">
+          <p role="alert" className="text-[color:var(--red-fg)]">
             {formError}
           </p>
         )}
-        {notice && <p className="form-success">{notice}</p>}
+        {notice && <p className="text-[color:var(--green-fg)]">{notice}</p>}
       </section>
 
       <section aria-label="실행 목록">
@@ -204,9 +204,9 @@ export function ModelTab({ projectId }: { projectId: string }) {
         {runs === null ? (
           <p>불러오는 중...</p>
         ) : runs.length === 0 ? (
-          <p className="empty-state">데이터 없음 — 생성된 실행이 없습니다.</p>
+          <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 생성된 실행이 없습니다.</p>
         ) : (
-          <table className="data-table">
+          <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
             <caption className="sr-only">분석 실행 목록 (최신순)</caption>
             <thead>
               <tr>
@@ -221,12 +221,12 @@ export function ModelTab({ projectId }: { projectId: string }) {
               {runs.map((r) => (
                 <tr key={r.id} className={selectedRunId === r.id ? "row-selected" : undefined}>
                   <td>
-                    <button type="button" className="link-button" onClick={() => setSelectedRunId(r.id)}>
+                    <button type="button" className="border-0 bg-transparent p-0 text-[color:var(--accent)] underline cursor-pointer" onClick={() => setSelectedRunId(r.id)}>
                       {r.label ?? r.id}
                     </button>
                   </td>
                   <td>
-                    <span className="hash-short" title={r.input_hash}>
+                    <span className="font-mono text-[0.85rem]" title={r.input_hash}>
                       {shortHash(r.input_hash)}
                     </span>
                   </td>
@@ -243,13 +243,13 @@ export function ModelTab({ projectId }: { projectId: string }) {
       {selectedRunId && detail && (
         <section aria-label="실행 입력 스냅샷">
           <h2>입력 스냅샷 — {detail.run.label ?? detail.run.id}</h2>
-          <p className="cell-sub">
-            입력 해시: <span className="hash-short">{detail.run.input_hash}</span> (스냅샷은 불변입니다)
+          <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
+            입력 해시: <span className="font-mono text-[0.85rem]">{detail.run.input_hash}</span> (스냅샷은 불변입니다)
           </p>
           {detail.inputs.length === 0 ? (
-            <p className="empty-state">데이터 없음 — 이 실행에 입력이 없습니다.</p>
+            <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 이 실행에 입력이 없습니다.</p>
           ) : (
-            <table className="data-table">
+            <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
               <caption className="sr-only">실행 입력 스냅샷</caption>
               <thead>
                 <tr>

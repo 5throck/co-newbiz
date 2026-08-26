@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 // (marketApi already imported above) from "../lib/api.ts";
 import {
   marketApi,
@@ -85,7 +85,7 @@ export function MarketChainTab({ projectId }: { projectId: string }) {
   return (
     <section aria-label="시장·체인">
       {error && (
-        <p role="alert" className="form-error">
+        <p role="alert" className="text-[color:var(--red-fg)]">
           {error}
         </p>
       )}
@@ -235,41 +235,154 @@ export function MarketChainTab({ projectId }: { projectId: string }) {
       {simMeta && simMeta.defaulted_drivers.length > 0 && (
         <p role="status">기본값 처리된 드라이버: {simMeta.defaulted_drivers.join(", ")}</p>
       )}
-      {results.length > 0 && (
+      {results.length > 0 && <StructureResultsMatrix results={results} />}
+    </section>
+  );
+}
+
+// ── Region × Segment × Scenario pivot matrix ──────────────────────────────
+// Axis-pivot pattern adapted from Projects/co-price's IntelligenceMatrix.tsx
+// (tab buttons swap which two dimensions form the row/column axes; a
+// client-side useMemo builds a {row}{col} -> value map). Implemented as a
+// plain heat-shaded HTML table (no chart library) since region/segment
+// results are point estimates (p50), not distributions worth charting, and
+// app/web-next has no charting dependency installed.
+
+type MatrixDimension = "region" | "segment" | "scenario";
+type MatrixTab = "region_segment" | "segment_scenario" | "region_scenario";
+
+const MATRIX_TABS: Array<{ id: MatrixTab; label: string; y: MatrixDimension; x: MatrixDimension }> = [
+  { id: "region_segment", label: "지역 × 세그먼트", y: "region", x: "segment" },
+  { id: "segment_scenario", label: "세그먼트 × 시나리오", y: "segment", x: "scenario" },
+  { id: "region_scenario", label: "지역 × 시나리오", y: "region", x: "scenario" },
+];
+
+const SCENARIO_KO: Record<string, string> = { downside: "다운사이드", base: "베이스", upside: "업사이드", custom: "커스텀" };
+
+function dimValue(r: StructureSimQuantileRow, dim: MatrixDimension): string {
+  if (dim === "region") return r.region_code ?? "(미지정)";
+  if (dim === "segment") return r.segment_code ?? "(미지정)";
+  return r.scenario;
+}
+
+function dimLabel(dim: MatrixDimension, id: string): string {
+  if (dim === "scenario") return SCENARIO_KO[id] ?? id;
+  return id;
+}
+
+function StructureResultsMatrix({ results }: { results: StructureSimQuantileRow[] }) {
+  const [activeTab, setActiveTab] = useState<MatrixTab>("region_segment");
+  const tab = MATRIX_TABS.find((t) => t.id === activeTab)!;
+
+  // Only rows carrying region/segment axes are pivotable; industry-only
+  // (legacy) results have no region_code/segment_code and are shown below
+  // the matrix instead of being silently dropped.
+  const pivotable = useMemo(() => results.filter((r) => r.region_code !== null || r.segment_code !== null), [results]);
+  const legacy = useMemo(() => results.filter((r) => r.region_code === null && r.segment_code === null), [results]);
+
+  const { yIds, xIds, cellMap } = useMemo(() => {
+    const yIdSet = new Set<string>();
+    const xIdSet = new Set<string>();
+    const map = new Map<string, number>();
+    for (const r of pivotable) {
+      const yId = dimValue(r, tab.y);
+      const xId = dimValue(r, tab.x);
+      yIdSet.add(yId);
+      xIdSet.add(xId);
+      map.set(`${yId}|${xId}`, r.p50);
+    }
+    return { yIds: [...yIdSet].sort(), xIds: [...xIdSet].sort(), cellMap: map };
+  }, [pivotable, tab]);
+
+  const maxAbs = useMemo(() => Math.max(0.001, ...[...cellMap.values()].map((v) => Math.abs(v))), [cellMap]);
+
+  return (
+    <div>
+      <div role="tablist" aria-label="매트릭스 축 전환" style={{ display: "flex", gap: "0.5rem", marginBlock: "0.5rem" }}>
+        {MATRIX_TABS.map((t) => (
+          <button key={t.id} type="button" role="tab" aria-selected={t.id === activeTab} onClick={() => setActiveTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {pivotable.length === 0 ? (
+        <p>지역/세그먼트가 지정된 결과가 없습니다.</p>
+      ) : (
         <table>
+          <caption className="sr-only">
+            {tab.label} 매트릭스 (값: demand_delta_pct P50)
+          </caption>
           <thead>
             <tr>
-              <th>시나리오</th>
-              <th>산업</th>
-              <th>지표</th>
-              <th>P05</th>
-              <th>P50</th>
-              <th>P95</th>
+              <th>{tab.y === "region" ? "지역" : tab.y === "segment" ? "세그먼트" : "시나리오"}</th>
+              {xIds.map((xId) => (
+                <th key={xId}>{dimLabel(tab.x, xId)}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {results.map((r, i) => (
-              <tr key={`${r.run_id}-${r.scenario}-${r.industry_id}-${r.metric}-${i}`}>
-                <td>{r.scenario}</td>
-                <td>{r.industry_id.slice(0, 10)}…</td>
-                <td>{METRIC_KO[r.metric] ?? r.metric}</td>
-                <td>{r.p05}</td>
-                <td>{r.p50}</td>
-                <td>{r.p95}</td>
+            {yIds.map((yId) => (
+              <tr key={yId}>
+                <th scope="row">{dimLabel(tab.y, yId)}</th>
+                {xIds.map((xId) => {
+                  const v = cellMap.get(`${yId}|${xId}`);
+                  const intensity = v === undefined ? 0 : Math.min(1, Math.abs(v) / maxAbs);
+                  // Positive deltas shade green, negative shade red; alpha scales with magnitude.
+                  const bg =
+                    v === undefined
+                      ? undefined
+                      : v < 0
+                        ? `rgba(220, 38, 38, ${(intensity * 0.35).toFixed(2)})`
+                        : `rgba(22, 163, 74, ${(intensity * 0.35).toFixed(2)})`;
+                  return (
+                    <td key={xId} className="matrix-cell" style={{ backgroundColor: bg }}>
+                      {v === undefined ? "—" : `${(v * 100).toFixed(1)}%`}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
         </table>
       )}
-    </section>
+      {legacy.length > 0 && (
+        <details>
+          <summary>지역/세그먼트 미지정 결과 ({legacy.length}건)</summary>
+          <table>
+            <thead>
+              <tr>
+                <th>시나리오</th>
+                <th>산업</th>
+                <th>지표</th>
+                <th>P05</th>
+                <th>P50</th>
+                <th>P95</th>
+              </tr>
+            </thead>
+            <tbody>
+              {legacy.map((r, i) => (
+                <tr key={`${r.run_id}-${r.scenario}-${r.industry_id}-${r.metric}-${i}`}>
+                  <td>{r.scenario}</td>
+                  <td>{r.industry_id.slice(0, 10)}…</td>
+                  <td>{METRIC_KO[r.metric] ?? r.metric}</td>
+                  <td>{r.p05}</td>
+                  <td>{r.p50}</td>
+                  <td>{r.p95}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      )}
+    </div>
   );
 }
 
 // ── Chain Sensitivity Editor (ADR-0068 round 5 surface) ──────────────────
 
 export function ChainSensitivityEditor({ projectId }: { projectId: string }) {
-  const [rows, setRows] = useState<Array<{ id: string; industry_id: string; driver_code: string; sensitivity: number; lag_months: number }> | null>(null);
-  const [form, setForm] = useState({ industry_id: "", driver_code: "rate", sensitivity: "", lag_months: "0" });
+  const [rows, setRows] = useState<Array<{ id: string; industry_id: string; driver_code: string; sensitivity: number; lag_months: number; region_code: string | null; segment_code: string | null }> | null>(null);
+  const [form, setForm] = useState({ industry_id: "", driver_code: "rate", sensitivity: "", lag_months: "0", region_code: "", segment_code: "" });
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -286,19 +399,33 @@ export function ChainSensitivityEditor({ projectId }: { projectId: string }) {
       <h3>드라이버 민감도 (구조 시뮬레이션 입력)</h3>
       {error && <p role="alert">{error}</p>}
       <table>
-        <thead><tr><th>산업</th><th>드라이버</th><th>민감도</th><th>지연(월)</th></tr></thead>
+        <thead><tr><th>산업</th><th>드라이버</th><th>지역</th><th>세그먼트</th><th>민감도</th><th>지연(월)</th></tr></thead>
         <tbody>
           {(rows ?? []).map((r) => (
-            <tr key={r.id}><td>{r.industry_id.slice(0,10)}…</td><td>{r.driver_code}</td><td>{r.sensitivity}</td><td>{r.lag_months}</td></tr>
+            <tr key={r.id}>
+              <td>{r.industry_id.slice(0,10)}…</td>
+              <td>{r.driver_code}</td>
+              <td>{r.region_code ?? "—"}</td>
+              <td>{r.segment_code ?? "—"}</td>
+              <td>{r.sensitivity}</td>
+              <td>{r.lag_months}</td>
+            </tr>
           ))}
-          {rows !== null && rows.length === 0 && <tr><td colSpan={4}>민감도 미평가</td></tr>}
+          {rows !== null && rows.length === 0 && <tr><td colSpan={6}>민감도 미평가</td></tr>}
         </tbody>
       </table>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
           try {
-            await marketApi.upsertChainSensitivity(projectId, { industry_id: form.industry_id, driver_code: form.driver_code, sensitivity: Number(form.sensitivity), lag_months: Number(form.lag_months) });
+            await marketApi.upsertChainSensitivity(projectId, {
+              industry_id: form.industry_id,
+              driver_code: form.driver_code,
+              sensitivity: Number(form.sensitivity),
+              lag_months: Number(form.lag_months),
+              region_code: form.region_code.trim() || undefined,
+              segment_code: form.segment_code.trim() || undefined,
+            });
             await reload();
             setError(null);
           } catch (err) { setError(errText(err)); }
@@ -308,6 +435,8 @@ export function ChainSensitivityEditor({ projectId }: { projectId: string }) {
         <select value={form.driver_code} onInput={(e) => setForm({ ...form, driver_code: (e.target as HTMLSelectElement).value })}>
           <option value="rate">금리</option><option value="fx">환율</option><option value="commodity">원자재</option><option value="regulation">규제</option>
         </select>
+        <input placeholder="지역 코드 (선택)" value={form.region_code} onInput={(e) => setForm({ ...form, region_code: (e.target as HTMLInputElement).value })} />
+        <input placeholder="세그먼트 코드 (선택)" value={form.segment_code} onInput={(e) => setForm({ ...form, segment_code: (e.target as HTMLInputElement).value })} />
         <input type="number" step="any" placeholder="민감도" value={form.sensitivity} onInput={(e) => setForm({ ...form, sensitivity: (e.target as HTMLInputElement).value })} required />
         <input type="number" placeholder="지연(월)" value={form.lag_months} onInput={(e) => setForm({ ...form, lag_months: (e.target as HTMLInputElement).value })} required />
         <button type="submit">저장</button>

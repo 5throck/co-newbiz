@@ -68,9 +68,9 @@ export function DataTab() {
         {series === null ? (
           <p>불러오는 중...</p>
         ) : series.length === 0 ? (
-          <p className="empty-state">데이터 없음 — 검색어와 일치하는 시계열이 없습니다.</p>
+          <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 검색어와 일치하는 시계열이 없습니다.</p>
         ) : (
-          <table className="data-table">
+          <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
             <caption className="sr-only">시계열 목록</caption>
             <thead>
               <tr>
@@ -85,7 +85,7 @@ export function DataTab() {
               {series.map((s) => (
                 <tr key={s.series_id} className={selected === s.series_id ? "row-selected" : undefined}>
                   <td>
-                    <button type="button" className="link-button" onClick={() => setSelected(s.series_id)}>
+                    <button type="button" className="border-0 bg-transparent p-0 text-[color:var(--accent)] underline cursor-pointer" onClick={() => setSelected(s.series_id)}>
                       {s.series_id}
                     </button>
                   </td>
@@ -108,9 +108,9 @@ export function DataTab() {
           {observations === null ? (
             <p>불러오는 중...</p>
           ) : observations.length === 0 ? (
-            <p className="empty-state">데이터 없음 — 이 시계열에 관측치가 없습니다.</p>
+            <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 이 시계열에 관측치가 없습니다.</p>
           ) : (
-            <table className="data-table">
+            <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
               <caption className="sr-only">{selected} 관측치</caption>
               <thead>
                 <tr>
@@ -144,7 +144,7 @@ export function DataTab() {
         {changes === null ? (
           <p>불러오는 중...</p>
         ) : changes.length === 0 ? (
-          <p className="empty-state">데이터 없음 — 최근 감지된 데이터 변경이 없습니다.</p>
+          <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 최근 감지된 데이터 변경이 없습니다.</p>
         ) : (
           <ul className="change-log-list">
             {changes.map((row) => {
