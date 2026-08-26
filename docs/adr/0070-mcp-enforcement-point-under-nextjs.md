@@ -1,8 +1,8 @@
 # ADR-0070: MCP enforcement point under Next.js, superseding ADR-0011's implementation
 
-**Status**: Proposed
-**Date**: 2026-08-25
-**Deciders**: security-expert (pending sign-off — required given this ADR's subject), platform-lead (pending sign-off) — not yet Accepted
+**Status**: Accepted — 2026-08-26, retroactively. The *intent* was upheld throughout the migration (no Server Action was written anywhere in `app/web-next`; every one of the 40+ ported endpoints is a Route Handler under `app/api/**`; `mcp/co-newbiz/` continues calling only those Route Handlers, verified via `list_projects` etc. after cutover). **Known gap, accepted with the ADR rather than blocking on it**: the mechanical lint rule this ADR's Decision §2 calls for (rejecting a `"use server"` directive co-located with a Prisma import, and rejecting any Prisma import outside `app/api/**`) was never written — the guarantee currently rests on convention/code-review, exactly the failure mode this ADR's own text warns is insufficient. Tracked as follow-up work, not re-opened as a blocker to Accepted status.
+**Date**: 2026-08-25 (proposed) / 2026-08-26 (accepted)
+**Deciders**: Mark Park (project owner — approved after reviewing the completed, verified migration; accepted the lint-rule gap as tracked follow-up rather than a blocker)
 **Design of record**: `docs/designs/2026-08-25-web-stack-migration-nextjs-prisma_ko.md` §5
 **Supersedes**: ADR-0011 (MCP access is REST-only, never direct DB) — implementation detail only; the *intent* is carried forward unchanged, see Decision
 

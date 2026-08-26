@@ -29,17 +29,21 @@ resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
-const { buildApp } = await import("../../app/server/index.ts");
+// ADR-0069/0070 Phase 6 test port: app/server/index.ts (buildApp/Hono) no
+// longer exists — nextRequest() is the app/web-next equivalent of
+// app.request(path, init), dispatching to the same-shaped Next.js Route
+// Handler instead. Every test below calls req(...) exactly as before; only
+// this setup section changed. See tests/unit/helpers/next-route-dispatch.ts.
+const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { grantProjectMembership, setMnpiFlag } = await import("../../db/lib/access-control.ts");
 const { recordVentureScorecardCycle } = await import("../../db/repositories/venture-scorecard.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 
-const app = buildApp();
 const NOW = new Date().toISOString();
 
 function req(path: string, init?: RequestInit) {
-  return app.request(path, init);
+  return nextRequest(path, init);
 }
 function loginBody(userId: string, password: string) {
   return { method: "POST", body: JSON.stringify({ userId, password }) };
@@ -1085,7 +1089,13 @@ describe("admin console", () => {
 
   test("audit log has no delete route at any privilege level (FR-SEC-07)", async () => {
     const res = await req("/api/admin/audit-log", { method: "DELETE", headers: { cookie: rootCookie } });
-    expect(res.status).toBe(404);
+    // 405, not 404 (ADR-0069/0070 Phase 6 port): Next.js's routing
+    // convention for "this path exists but has no handler for this verb"
+    // is 405 Method Not Allowed, vs. Hono's 404 for the same case. Either
+    // status conveys FR-SEC-07's actual guarantee identically — no DELETE
+    // capability exists on this path — so the assertion follows the new
+    // framework's convention rather than forcing Hono's shape.
+    expect(res.status).toBe(405);
   });
 
   test("data-sources report presence only, never the key value", async () => {
