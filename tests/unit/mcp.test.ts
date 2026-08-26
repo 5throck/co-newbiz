@@ -26,7 +26,11 @@ resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
-const { buildApp } = await import("../../app/server/index.ts");
+// ADR-0069/0070 Phase 6 test port: app/server/index.ts (buildApp/Hono) no
+// longer exists — nextFetch is the Bun.serve-compatible equivalent,
+// dispatching to app/web-next's Route Handlers. See
+// tests/unit/helpers/next-route-dispatch.ts.
+const { nextFetch } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { grantProjectMembership } = await import("../../db/lib/access-control.ts");
 const { issueApiToken } = await import("../../db/lib/api-tokens.ts");
@@ -40,8 +44,7 @@ let readToken: string;
 let writeToken: string;
 
 beforeAll(async () => {
-  const app = buildApp();
-  server = Bun.serve({ port: 0, fetch: app.fetch });
+  server = Bun.serve({ port: 0, fetch: nextFetch });
   process.env.CO_NEWBIZ_API_BASE_URL = `http://localhost:${server.port}`;
 
   await createUser(db, { userId: "alice", role: "analyst", password: "pw-alice-12345", createdBy: "test", now: NOW });

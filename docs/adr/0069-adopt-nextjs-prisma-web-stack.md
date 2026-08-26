@@ -1,8 +1,8 @@
 # ADR-0069: Adopt Next.js + Prisma web stack, superseding ADR-0010
 
-**Status**: Proposed
-**Date**: 2026-08-25
-**Deciders**: platform-lead (pending sign-off), architect (pending sign-off) — not yet Accepted; requires explicit approval given the scale of what it supersedes
+**Status**: Accepted — 2026-08-26, retroactively, after Phases 0-6 were executed and independently verified (schema fix, all 34+ endpoints ported and response-compared against the live Hono API, all pages rendering, cutover complete, old stack removed in PR #142)
+**Date**: 2026-08-25 (proposed) / 2026-08-26 (accepted)
+**Deciders**: Mark Park (project owner — approved after reviewing the completed, verified migration; platform-lead/architect roles are not separately staffed on this project)
 **Design of record**: `docs/designs/2026-08-25-web-stack-migration-nextjs-prisma_ko.md`
 **Supersedes**: ADR-0010 (Web stack: Hono + React/Vite + ECharts)
 
