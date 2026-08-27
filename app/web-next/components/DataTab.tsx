@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, type DataChangeRow, type ObservationRow, type SeriesRow } from "../lib/api.ts";
 import { SourceTooltip } from "./SourceTooltip.tsx";
+import { EChart } from "./EChart.tsx";
 
 // 데이터 (Data) tab — ui-spec §2: series browser (search + selected series'
 // latest-revision observations, unit/source per row) plus the recent
@@ -53,6 +54,28 @@ export function DataTab() {
       .then((res) => setObservations(res.data))
       .catch(() => setObservations([]));
   }, [selected]);
+
+  const sortedObs = observations
+    ? [...observations].sort((a, b) => String(a.period_id).localeCompare(String(b.period_id)))
+    : [];
+
+  const chartOption = sortedObs.length
+    ? {
+        tooltip: { trigger: "axis" as const },
+        grid: { left: 56, right: 24, top: 24, bottom: 32 },
+        xAxis: { type: "category" as const, data: sortedObs.map((o) => o.period_id) },
+        yAxis: { type: "value" as const, name: sortedObs[0]?.unit_id ?? "" },
+        series: [
+          {
+            type: "line" as const,
+            smooth: true,
+            data: sortedObs.map((o) => o.value),
+            itemStyle: { color: "#7c9dff" },
+            areaStyle: { color: "rgba(124,157,255,0.12)" },
+          },
+        ],
+      }
+    : null;
 
   return (
     <div className="data-tab">
@@ -136,6 +159,7 @@ export function DataTab() {
               </tbody>
             </table>
           )}
+          {chartOption && <EChart option={chartOption} height={280} />}
         </section>
       )}
 

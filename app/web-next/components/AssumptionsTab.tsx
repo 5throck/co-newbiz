@@ -36,19 +36,26 @@ export function AssumptionsTab({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   const latestRun = runs && runs.length > 0 ? runs[0] : null;
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!latestRun) {
+    if (runs && runs.length > 0 && !selectedRunId) {
+      setSelectedRunId(runs[0].id);
+    }
+  }, [runs, selectedRunId]);
+
+  useEffect(() => {
+    if (!selectedRunId) {
       setAssumptions(runs === null ? null : []);
       return;
     }
     api
-      .get<AssumptionRow[]>(`/api/assumptions?run_id=${encodeURIComponent(latestRun.id)}`)
+      .get<AssumptionRow[]>(`/api/assumptions?run_id=${encodeURIComponent(selectedRunId)}`)
       .then((res) => setAssumptions(res.data))
       .catch(() => setAssumptions([]));
-    // runs is stable once fetched; latestRun.id is the actual dependency.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [latestRun?.id]);
+  }, [selectedRunId]);
+
+  const selectedRun = runs?.find((r) => r.id === selectedRunId) ?? latestRun;
 
   if (runs === null) {
     return <p>불러오는 중...</p>;
@@ -61,7 +68,23 @@ export function AssumptionsTab({ projectId }: { projectId: string }) {
   return (
     <div className="assumptions-tab">
       <p className="assumptions-run-note">
-        최신 분석 실행: <strong>{latestRun.label}</strong> ({new Date(latestRun.created_at).toLocaleString("ko-KR")})
+        {runs && runs.length > 0 && (
+          <label className="mr-3">
+            실행 선택:{" "}
+            <select
+              value={selectedRunId ?? ""}
+              onChange={(e) => setSelectedRunId(e.target.value)}
+              className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded px-2 py-1 text-sm"
+            >
+              {runs.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        선택된 분석 실행: <strong>{selectedRun?.label}</strong> ({selectedRun ? new Date(selectedRun.created_at).toLocaleString("ko-KR") : "—"})
       </p>
       {assumptions === null ? (
         <p>불러오는 중...</p>
