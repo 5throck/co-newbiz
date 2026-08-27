@@ -57,6 +57,51 @@ export function AssumptionsTab({ projectId }: { projectId: string }) {
 
   const selectedRun = runs?.find((r) => r.id === selectedRunId) ?? latestRun;
 
+  const [form, setForm] = useState({
+    assumption_key: "",
+    kind: "user",
+    value: "",
+    as_of: "",
+    rationale: "",
+    anchor_ref: "",
+    ttl_days: "",
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formBusy, setFormBusy] = useState(false);
+
+  async function submitAssumption(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    if (!selectedRunId) {
+      setFormError("실행(run)을 먼저 선택하세요.");
+      return;
+    }
+    if (!form.assumption_key.trim()) {
+      setFormError("가정 키(assumption_key)는 필수입니다.");
+      return;
+    }
+    setFormBusy(true);
+    try {
+      await api.post<{ id: string }>(`/api/assumptions`, {
+        run_id: selectedRunId,
+        assumption_key: form.assumption_key.trim(),
+        kind: form.kind,
+        value: form.value === "" ? undefined : Number(form.value),
+        as_of: form.as_of || undefined,
+        rationale: form.rationale || undefined,
+        anchor_ref: form.anchor_ref || undefined,
+        ttl_days: form.ttl_days === "" ? undefined : Number(form.ttl_days),
+      });
+      setForm({ assumption_key: "", kind: "user", value: "", as_of: "", rationale: "", anchor_ref: "", ttl_days: "" });
+      const res = await api.get<AssumptionRow[]>(`/api/assumptions?run_id=${encodeURIComponent(selectedRunId)}`);
+      setAssumptions(res.data);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "가정 등록에 실패했습니다.");
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
   if (runs === null) {
     return <p>불러오는 중...</p>;
   }
@@ -139,6 +184,75 @@ export function AssumptionsTab({ projectId }: { projectId: string }) {
           </tbody>
         </table>
       )}
+
+      <form className="assumption-form mt-6" onSubmit={submitAssumption} aria-label="가정 추가">
+        <h3>가정 추가</h3>
+        <div className="form-grid">
+          <label>
+            가정 키 *
+            <input
+              type="text"
+              value={form.assumption_key}
+              onChange={(e) => setForm({ ...form, assumption_key: e.target.value })}
+              required
+            />
+          </label>
+          <label>
+            종류
+            <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
+              <option value="live">실시간</option>
+              <option value="user">사용자 입력</option>
+              <option value="derived">파생값</option>
+              <option value="assumed">가정값</option>
+            </select>
+          </label>
+          <label>
+            값
+            <input
+              type="number"
+              step="any"
+              value={form.value}
+              onChange={(e) => setForm({ ...form, value: e.target.value })}
+            />
+          </label>
+          <label>
+            제공 시점
+            <input
+              type="date"
+              value={form.as_of}
+              onChange={(e) => setForm({ ...form, as_of: e.target.value })}
+            />
+          </label>
+          <label>
+            유효기간(일)
+            <input
+              type="number"
+              value={form.ttl_days}
+              onChange={(e) => setForm({ ...form, ttl_days: e.target.value })}
+            />
+          </label>
+          <label>
+            anchor_ref
+            <input
+              type="text"
+              value={form.anchor_ref}
+              onChange={(e) => setForm({ ...form, anchor_ref: e.target.value })}
+            />
+          </label>
+        </div>
+        <label className="block mt-2">
+          근거 (rationale)
+          <textarea
+            value={form.rationale}
+            onChange={(e) => setForm({ ...form, rationale: e.target.value })}
+            rows={2}
+          />
+        </label>
+        {formError && <p className="form-error mt-2">{formError}</p>}
+        <button type="submit" className="btn-primary mt-2" disabled={formBusy}>
+          {formBusy ? "등록 중..." : "가정 등록"}
+        </button>
+      </form>
     </div>
   );
 }
