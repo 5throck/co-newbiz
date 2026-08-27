@@ -81,6 +81,22 @@ function PermitSection({
   const criticalSet = new Set(criticalPath);
   const layers = computeLayers(rows, edges);
 
+  const NODE_W = 150;
+  const NODE_H = 40;
+  const GRAPH_PAD = 16;
+  const COL_GAP = 48;
+  const ROW_GAP = 16;
+  const positions = new Map<string, { x: number; y: number }>();
+  layers.forEach((layer, i) => {
+    const x = GRAPH_PAD + i * (NODE_W + COL_GAP);
+    layer.forEach((id, j) => {
+      positions.set(id, { x, y: GRAPH_PAD + j * (NODE_H + ROW_GAP) });
+    });
+  });
+  const maxLayerHeight = Math.max(1, ...layers.map((l) => l.length));
+  const graphW = GRAPH_PAD * 2 + Math.max(0, layers.length - 1) * (NODE_W + COL_GAP);
+  const graphH = GRAPH_PAD * 2 + (maxLayerHeight - 1) * (NODE_H + ROW_GAP) + NODE_H;
+
   return (
     <section className="permit-section" aria-label={title}>
       <h2>{title}</h2>
@@ -121,6 +137,7 @@ function PermitSection({
           </table>
 
           {edges.length > 0 && (
+            <>
             <div className="dag-view">
               <h3>선후행 관계 (DAG)</h3>
               <div className="dag-layers">
@@ -153,6 +170,51 @@ function PermitSection({
                 ))}
               </ul>
             </div>
+            <div className="dag-graph-wrap" style={{ overflowX: "auto" }}>
+              <svg width={graphW} height={graphH} role="img" aria-label={`${title} DAG 노드-링크 그래프`}>
+                {edges.map((e, i) => {
+                  const a = positions.get(e.from);
+                  const b = positions.get(e.to);
+                  if (!a || !b) return null;
+                  const critical = criticalSet.has(e.from) && criticalSet.has(e.to);
+                  return (
+                    <line
+                      key={`e-${i}`}
+                      x1={a.x + NODE_W / 2}
+                      y1={a.y + NODE_H / 2}
+                      x2={b.x + NODE_W / 2}
+                      y2={b.y + NODE_H / 2}
+                      stroke={critical ? "#f87171" : "#3a4150"}
+                      strokeWidth={critical ? 2 : 1}
+                    />
+                  );
+                })}
+                {layers.flatMap((layer) => layer).map((id) => {
+                  const p = positions.get(id);
+                  const row = byId.get(id);
+                  if (!p || !row) return null;
+                  const critical = criticalSet.has(id);
+                  return (
+                    <g key={id}>
+                      <rect
+                        x={p.x}
+                        y={p.y}
+                        width={NODE_W}
+                        height={NODE_H}
+                        rx={4}
+                        fill="#1a1f2a"
+                        stroke={critical ? "#f87171" : "#3a4150"}
+                        strokeWidth={critical ? 2 : 1}
+                      />
+                      <text x={p.x + NODE_W / 2} y={p.y + NODE_H / 2 + 4} textAnchor="middle" fontSize={10} fill="#eceef2">
+                        {row.name}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+          </>
           )}
         </>
       )}
