@@ -54,38 +54,44 @@ export default function ReportsPage() {
       ) : (
         <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
           <caption className="sr-only">보고서 문서 목록</caption>
-          <thead>
-            <tr>
-              <th scope="col">문서 ID</th>
-              <th scope="col">프로젝트</th>
-              <th scope="col">실행</th>
-              <th scope="col">버전</th>
-              <th scope="col">상태</th>
-              <th scope="col">생성일</th>
-            </tr>
-          </thead>
-          <tbody>
-            {docs.map((d) => (
-              <tr key={d.id}>
-                <td className="font-mono text-xs">{d.id}</td>
-                <td>{d.project_id}</td>
-                <td>{d.run_label ?? d.run_id}</td>
-                <td>{d.version}</td>
-                <td>
-                  {d.superseded_by === null ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      현재 버전
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-500/10 text-slate-400 border border-slate-500/20">
-                      대체됨 ({d.superseded_by})
-                    </span>
-                  )}
-                </td>
-                <td>{new Date(d.created_at).toLocaleString("ko-KR")}</td>
+            <thead>
+              <tr>
+                <th scope="col">문서 ID</th>
+                <th scope="col">프로젝트</th>
+                <th scope="col">실행</th>
+                <th scope="col">버전</th>
+                <th scope="col">상태</th>
+                <th scope="col">생성일</th>
+                <th scope="col">내보내기</th>
               </tr>
-            ))}
-          </tbody>
+            </thead>
+            <tbody>
+              {docs.map((d) => (
+                <tr key={d.id}>
+                  <td className="font-mono text-xs">{d.id}</td>
+                  <td>{d.project_id}</td>
+                  <td>{d.run_label ?? d.run_id}</td>
+                  <td>{d.version}</td>
+                  <td>
+                    {d.superseded_by === null ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        현재 버전
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                        대체됨 ({d.superseded_by})
+                      </span>
+                    )}
+                  </td>
+                  <td>{new Date(d.created_at).toLocaleString("ko-KR")}</td>
+                  <td className="whitespace-nowrap">
+                    <a className="btn-ghost text-xs mr-1" href={`/api/reports/${d.id}/export?format=docx`}>DOCX</a>
+                    <a className="btn-ghost text-xs mr-1" href={`/api/reports/${d.id}/export?format=hwpx`}>HWPX</a>
+                    <a className="btn-ghost text-xs" href={`/api/reports/${d.id}/export?format=pdf`}>PDF</a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
         </table>
       )}
     </main>
