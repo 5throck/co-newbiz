@@ -91,6 +91,8 @@
 | `/api/reports/:run_id` | POST | Generate deliverable (docx/pdf/hwpx) — staleness gate blocks if inputs exceed `ttl_days` | Membership | forward-design |
 | `/api/glossary` | GET | Glossary term list (collection view) | Public within the workspace | as-built (5.6A) |
 | `/api/glossary/:term` | GET | Glossary lookup (also backs UI tooltip, MCP `lookup_term`) | Public within the workspace | as-built (5.6A) |
+| `/api/reports` | GET | Deliverable document list + superseded chain (joins `document` on `run`) | Authenticated | as-built (2026-08-27 web-implementation-plan) |
+| `/api/reports/:id/export` | GET | Render a document's markdown to `docx`/`hwpx`/`pdf` via `scripts/co-newbiz/report.ts` → `python/report/render_*.py`; `format` query param (`docx`/`hwpx`/`pdf`) | Authenticated | as-built (2026-08-27 web-implementation-plan) |
 
 ### 7.1 PMI and Class-C Evidence Surfaces (as-built — ADR-0063 write paths)
 
@@ -124,6 +126,9 @@ All project-scoped via membership (404-not-403); writes analyst-gated and audit-
 | `/api/admin/schedule-jobs` | GET/PUT | `job_run` history, retry | `admin` role |
 | `/api/admin/audit-log` | GET | Read-only, no delete endpoint exists at any privilege level | `admin` role |
 | `/api/admin/retention` | GET/POST | Retention policy management | `admin` role |
+| `/api/admin/governance` | GET | Governance document registry (`governance_doc`: layer/key/title/version/enforceability/owner/superseded_by) | `admin` role |
+| `/api/admin/master-data` | GET | Master-data unmapped queue (`staging_unmapped`: raw_value/attempted_master_table/first_seen_at) | `admin` role |
+| `/api/admin/adr` | GET | ADR index scanned from `docs/adr/*.md` (id/title/status); excludes README | `admin` role |
 
 ## 9. Response Envelope and Error Contract
 
