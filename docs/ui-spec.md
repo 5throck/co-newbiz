@@ -97,7 +97,7 @@ As-built deltas not in the tree above:
 | 규정·절차 관리 (Governance) | `governance_doc` version list, `project_policy_pin` status, impact-analysis viewer | *As-built (2026-08-27): governance document list built (`GET /api/admin/governance` from `governance_doc`)* |
 | 용어집 관리 (Glossary) | Undefined-term queue from `glossary:lint`, registration workflow | *As-built (2026-08-27): read-only 용어 목록 built (`GET /api/glossary`, admin 용어집 관리 섹션). Undefined-term queue + registration workflow deferred (no write endpoint yet)* |
 | 데이터 소스 관리 (Data Sources) | Presence + last-success timestamp **only** — no key-value field exists in this UI at all, not just hidden | FR-SYS/design §4-9 |
-| 기준정보 관리 (Master Data) | `staging_unmapped` resolution queue | *As-built (2026-08-27): explicit "no API yet" shell — staging_unmapped read endpoint does not exist* |
+| 기준정보 관리 (Master Data) | `staging_unmapped` resolution queue | *As-built (2026-08-27): master-data queue built (`GET /api/admin/master-data` from `staging_unmapped`)* |
 | 거버넌스 (ADR/Stage Gate) | ADR index, stage-gate configuration | *As-built (2026-08-27): ADR index built (`GET /api/admin/adr` scanning `docs/adr/*.md`); Master data built (`GET /api/admin/master-data` from `staging_unmapped`)* |
 | 로그 관리 (Logs) | Audit log viewer, **no delete control rendered anywhere in this screen** | FR-SEC-07 |
 

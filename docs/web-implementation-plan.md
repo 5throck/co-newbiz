@@ -44,11 +44,11 @@ Verified against all 67 `route.ts` files under `app/web-next/app/api/`:
 **Backend gap — requires companion API work in the same phase:**
 - `GET /api/projects` does not return `rag_overall` / gate stage / staleness → Phase 2 adds a summary join (no per-card N+1)
 - Reports page: no route exists (`document` table exists) → Phase 5 develops the route with the page
-- Admin sections 6–10 (Notifications/rag_rule, Governance docs, Glossary queue, Master data, ADR index): no routes → Phase 4 builds each section **with** its route or ships the explicit no-API shell; per-section choice recorded in ui-spec at build time
+- Admin sections 6–10 (Notifications/rag_rule, Governance docs, Glossary queue, Master data, ADR index): **all built with real routes as of 2026-08-27** — `GET /api/notifications`, `GET /api/glossary`, `GET /api/admin/governance`, `GET /api/admin/master-data`, `GET /api/admin/adr`; no-API shells replaced. Per-section status recorded in ui-spec §5.
 
 **Explicitly deferred (insufficient data source):**
-- ROIC driver-tree waterfall (no API; revisit after model engine) — financial tab v1 = time-series + composition charts from `industries/[id]/financials`
-- Pure proxy-chain hop grading view (no API; topology-based chain diagram ships instead)
+- ROIC driver-tree waterfall — **implemented 2026-08-27** (`GET /api/projects/:id/roic-tree` + `RoicTree.tsx` ECharts waterfall; derives ROIC/NOPAT margin from `fact_industry`, honest not-computable state when base metrics absent).
+- Pure proxy-chain hop grading view — **implemented 2026-08-27** (`GET /api/projects/:id/proxy-chain-grade` + `ProxyChainGrade.tsx`: stored-vs-recomputed grade, per-hop R²/CI table, chain diagram + compounded-CI error band).
 
 ## 4. Milestones (order-based, no week estimates — finding 14)
 
@@ -72,12 +72,12 @@ Order: Simulation (histogram/CDF) → Model (waterfall/tornado from run inputs) 
 Each: FR-SYS-05-compliant theming, SourceTooltip provenance preserved, no chart without its API field.
 Verify + sync.
 
-### M4 — Admin Console Completion
-Sections 6–10 per §3's gap rule (route + UI together, or honest no-API shell). Notification-threshold editing keeps the mandatory-ADR-reference hard block (FR-GOV/ui-spec §5). Audit-log screen gains no delete control (FR-SEC-07, unchanged).
+### M4 — Admin Console Completion ✅ (completed 2026-08-27)
+Sections 6–10 per §3's gap rule (route + UI together, or honest no-API shell). **All 10 of 10 sections now built with real read endpoints** (`/api/notifications`, `/api/glossary`, `/api/admin/governance`, `/api/admin/master-data`, `/api/admin/adr`). Notification-threshold editing keeps the mandatory-ADR-reference hard block (FR-GOV/ui-spec §5). Audit-log screen gains no delete control (FR-SEC-07, unchanged).
 Verify + sync.
 
 ### M5 — Reports & Close-out
-1. `GET /api/reports` route (documents list, superseded chain) + `/reports` page + export controls (PDF via browser print first; DOCX/HWPX via existing report renderer where reachable).
+1. `GET /api/reports` route (documents list, superseded chain) + `/reports` page + export controls (PDF via browser print; DOCX/HWPX/PDF via existing report renderer `scripts/co-newbiz/report.ts` → `python/report/render_*.py`) — ✅ completed 2026-08-27.
 2. Accessibility pass: `accessibility-audit` skill against every new screen (WCAG 2.1 AA), keyboard navigation for sidebar, charts, dialogs.
 3. Final verify + sync.
 
