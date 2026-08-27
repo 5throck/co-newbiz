@@ -31,6 +31,35 @@ interface GlossaryTermRow {
   category: string;
 }
 
+interface AdrRow {
+  id: string;
+  title: string;
+  status: string;
+  file: string;
+}
+
+interface MasterDataRow {
+  id: string;
+  raw_value: string;
+  attempted_master_table: string;
+  first_seen_at: string;
+}
+
+interface GovernanceDocRow {
+  id: string;
+  layer: string;
+  key: string;
+  title: string;
+  scope: string;
+  version: string;
+  enforceability: string;
+  owner_agent: string;
+  doc_path: string;
+  effective_from: string;
+  superseded_by: string | null;
+  review_cycle_months: number | null;
+}
+
 // Admin console — ui-spec §5. Sections the backend serves are rendered with
 // real data (users, audit, data-sources, schedule-jobs, retention,
 // notifications, glossary). Sections whose backend endpoints do not yet exist
@@ -48,6 +77,9 @@ export function AdminConsole() {
   const [retention, setRetention] = useState<RetentionPolicyRow[] | null>(null);
   const [notifications, setNotifications] = useState<AdminNotificationRow[] | null>(null);
   const [glossary, setGlossary] = useState<GlossaryTermRow[] | null>(null);
+  const [adrs, setAdrs] = useState<AdrRow[] | null>(null);
+  const [masterData, setMasterData] = useState<MasterDataRow[] | null>(null);
+  const [governance, setGovernance] = useState<GovernanceDocRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retentionFormError, setRetentionFormError] = useState<string | null>(null);
   const [retentionNotice, setRetentionNotice] = useState<string | null>(null);
@@ -100,7 +132,25 @@ export function AdminConsole() {
         .then((res) => setGlossary(res.data))
         .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
     }
-  }, [section, users, auditLog, sources, jobs, retention, notifications, glossary]);
+    if (section === "adr" && adrs === null) {
+      api
+        .get<{ adrs: AdrRow[] }>("/api/admin/adr")
+        .then((res) => setAdrs(res.data.adrs))
+        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+    }
+    if (section === "master-data" && masterData === null) {
+      api
+        .get<MasterDataRow[]>("/api/admin/master-data")
+        .then((res) => setMasterData(res.data))
+        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+    }
+    if (section === "governance" && governance === null) {
+      api
+        .get<GovernanceDocRow[]>("/api/admin/governance")
+        .then((res) => setGovernance(res.data))
+        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+    }
+  }, [section, users, auditLog, sources, jobs, retention, notifications, glossary, adrs, masterData, governance]);
 
   async function approve(userId: string) {
     await api.put(`/api/admin/users/${userId}`, { action: "approve" });
@@ -482,23 +532,100 @@ export function AdminConsole() {
           </table>
         ))}
 
-      {section === "governance" && (
-        <div className="glass p-5 text-sm text-[color:var(--muted-fg)]">
-          거버넌스 문서 레지스트리(read 엔드포인트 미존재) — Policy/Procedure/Guideline/Checklist 인덱스 API가 추가되면 이 섹션에 렌더링됩니다. 현재는 표시할 API가 없습니다.
-        </div>
-      )}
+      {section === "governance" &&
+        (governance === null ? (
+          <p>불러오는 중...</p>
+        ) : governance.length === 0 ? (
+          <p className="text-[color:var(--muted-fg)] italic">등록된 거버넌스 문서가 없습니다.</p>
+        ) : (
+          <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+            <caption className="sr-only">거버넌스 문서 레지스트리</caption>
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">계층</th>
+                <th scope="col">키</th>
+                <th scope="col">제목</th>
+                <th scope="col">버전</th>
+                <th scope="col">강제성</th>
+                <th scope="col">소유자</th>
+                <th scope="col">상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              {governance.map((g) => (
+                <tr key={g.id}>
+                  <td className="font-mono text-xs">{g.id}</td>
+                  <td>{g.layer}</td>
+                  <td className="font-mono text-xs">{g.key}</td>
+                  <td>{g.title}</td>
+                  <td>{g.version}</td>
+                  <td>{g.enforceability}</td>
+                  <td>{g.owner_agent}</td>
+                  <td>{g.superseded_by ? `대체됨 (${g.superseded_by})` : "유효"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ))}
 
-      {section === "master-data" && (
-        <div className="glass p-5 text-sm text-[color:var(--muted-fg)]">
-          마스터 데이터(staging_unmapped 큐 등) read 엔드포인트가 아직 없습니다. 해당 API가 추가되면 이 섹션에 렌더링됩니다.
-        </div>
-      )}
+      {section === "master-data" &&
+        (masterData === null ? (
+          <p>불러오는 중...</p>
+        ) : masterData.length === 0 ? (
+          <p className="text-[color:var(--muted-fg)] italic">미매핑 큐(staging_unmapped)가 비어 있습니다 — 모든 원시값이 정상 매칭되고 있습니다.</p>
+        ) : (
+          <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+            <caption className="sr-only">마스터 데이터 미매핑 큐</caption>
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">원시값</th>
+                <th scope="col">대상 테이블</th>
+                <th scope="col">최초 발견</th>
+              </tr>
+            </thead>
+            <tbody>
+              {masterData.map((m) => (
+                <tr key={m.id}>
+                  <td className="font-mono text-xs">{m.id}</td>
+                  <td>{m.raw_value}</td>
+                  <td className="font-mono text-xs">{m.attempted_master_table}</td>
+                  <td>{new Date(m.first_seen_at).toLocaleString("ko-KR")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ))}
 
-      {section === "adr" && (
-        <div className="glass p-5 text-sm text-[color:var(--muted-fg)]">
-          ADR 인덱스(read 엔드포인트 미존재) — docs/adr/README.md 인덱스를 노출하는 API가 추가되면 이 섹션에 렌더링됩니다. 현재는 표시할 API가 없습니다.
-        </div>
-      )}
+      {section === "adr" &&
+        (adrs === null ? (
+          <p>불러오는 중...</p>
+        ) : adrs.length === 0 ? (
+          <p className="text-[color:var(--muted-fg)] italic">ADR 문서가 없습니다 (docs/adr).</p>
+        ) : (
+          <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+            <caption className="sr-only">ADR 인덱스</caption>
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">제목</th>
+                <th scope="col">상태</th>
+                <th scope="col">파일</th>
+              </tr>
+            </thead>
+            <tbody>
+              {adrs.map((a) => (
+                <tr key={a.id}>
+                  <td className="font-mono text-xs">{a.id}</td>
+                  <td>{a.title}</td>
+                  <td>{a.status}</td>
+                  <td className="font-mono text-xs">{a.file}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ))}
     </main>
   );
 }

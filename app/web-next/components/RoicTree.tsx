@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api.ts";
+import { RoicWaterfallChart } from "./RoicWaterfallChart.tsx";
 
 interface TreeRow {
   level: number;
@@ -58,7 +59,6 @@ export function RoicTree({ projectId }: { projectId: string }) {
 
   const tree = data.tree ?? [];
   const waterfall = data.waterfall ?? [];
-  const maxAbs = Math.max(...waterfall.map((w) => Math.abs(w.value)), 1);
 
   return (
     <section aria-label="ROIC 드라이버 트리" className="mt-6">
@@ -89,27 +89,27 @@ export function RoicTree({ projectId }: { projectId: string }) {
       </ul>
 
       <h4 className="font-semibold mt-4 mb-2">마진 브리지 (Waterfall)</h4>
-      <div className="space-y-2">
-        {waterfall.map((w, i) => {
-          const widthPct = (Math.abs(w.value) / maxAbs) * 100;
-          const color =
-            w.kind === "delta"
-              ? w.value < 0
-                ? "bg-rose-500/30"
-                : "bg-emerald-500/30"
-              : w.kind === "pct"
-                ? "bg-[color:var(--primary)]/40"
-                : "bg-[color:var(--primary)]/20";
-          return (
-            <div key={i} className="flex items-center gap-2 text-sm">
-              <span className="w-32 shrink-0 text-[color:var(--muted-fg)]">{w.step}</span>
-              <div className="flex-1 h-5 bg-[color:var(--border-subtle)] rounded">
-                <div className={`h-5 rounded ${color}`} style={{ width: `${widthPct}%` }} />
-              </div>
-              <span className="w-28 text-right font-mono">{w.kind === "pct" ? `${w.value.toFixed(2)}%` : fmt(w.value)}</span>
-            </div>
-          );
-        })}
+      <RoicWaterfallChart steps={waterfall} />
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">마진 브리지 상세</caption>
+          <thead>
+            <tr className="text-left">
+              <th className="p-2 border-b border-[color:var(--border)]">단계</th>
+              <th className="p-2 border-b border-[color:var(--border)] text-right">값</th>
+            </tr>
+          </thead>
+          <tbody>
+            {waterfall.map((w, i) => (
+              <tr key={i}>
+                <td className="p-2 border-b border-[color:var(--border-subtle)]">{w.step}</td>
+                <td className="p-2 border-b border-[color:var(--border-subtle)] text-right font-mono">
+                  {w.kind === "pct" ? `${w.value.toFixed(2)}%` : fmt(w.value)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );
