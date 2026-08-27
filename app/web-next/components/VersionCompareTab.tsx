@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError, type ProvenanceMeta, type RunDiff, type RunSummary } from "../lib/api.ts";
 import { SourceTooltip } from "./SourceTooltip.tsx";
+import { EnginePendingPanel } from "./EnginePendingPanel.tsx";
 
 // 버전 비교 (Version Comparison) tab — ui-spec §2 batch 3. Variable-level
 // bridge between two runs of one project (GET /api/runs/:id/diff/:otherId):
@@ -226,6 +227,10 @@ export function VersionCompareTab({ projectId }: { projectId: string }) {
           </>
         )}
       </section>
+      <EnginePendingPanel
+        title="브리지 워터폴 (NPV 레벨 분해)"
+        note="버전 비교 브리지 워터폴(NPV 레벨 분해)은 valuation 엔진의 출력이 필요합니다. 엔진이 아직 구현되지 않아 NPV 분해를 표시할 수 없습니다."
+      />
     </div>
   );
 }

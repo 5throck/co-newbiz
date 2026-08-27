@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api.ts";
 import { RoicWaterfallChart } from "./RoicWaterfallChart.tsx";
+import { EnginePendingPanel } from "./EnginePendingPanel.tsx";
 
 interface TreeRow {
   level: number;
@@ -61,7 +62,8 @@ export function RoicTree({ projectId }: { projectId: string }) {
   const waterfall = data.waterfall ?? [];
 
   return (
-    <section aria-label="ROIC 드라이버 트리" className="mt-6">
+    <>
+      <section aria-label="ROIC 드라이버 트리" className="mt-6">
       <h3 className="font-bold text-lg mb-2">ROIC 드라이버 트리</h3>
       <div className="flex gap-6 mb-4 flex-wrap">
         <div className="glass p-4 flex-1 min-w-[160px]">
@@ -112,5 +114,10 @@ export function RoicTree({ projectId }: { projectId: string }) {
         </table>
       </div>
     </section>
+    <EnginePendingPanel
+      title="프로젝션 (anchor markers 포함)"
+      note="프로젝션(성장률 추정 + base-rate anchor 표시)은 growth-projection 엔드포인트가 필요합니다. 해당 엔드포인트는 forward-design(아직 구현되지 않음)이라 현재 표시할 수 없습니다."
+    />
+    </>
   );
 }

@@ -10,6 +10,7 @@ import {
   type SimulationRunResult,
 } from "../lib/api.ts";
 import { SourceTooltip } from "./SourceTooltip.tsx";
+import { SimulationDistChart, type SimMetric } from "./SimulationDistChart.tsx";
 
 // 시뮬레이션 (Simulation) tab — ui-spec §2 batch 3. Seeded Monte Carlo over
 // a run's input snapshot (ADR-0026): POST /api/simulations composes the
@@ -226,6 +227,10 @@ export function SimulationTab({ projectId }: { projectId: string }) {
               </tbody>
             </table>
           )}
+          <SimulationDistChart
+            results={results.results as unknown as SimMetric[]}
+            seed={metaSeed ?? results.simulation.run_id}
+          />
         </section>
       )}
     </div>

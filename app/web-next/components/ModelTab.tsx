@@ -10,6 +10,7 @@ import {
   type RunSummary,
 } from "../lib/api.ts";
 import { SourceTooltip } from "./SourceTooltip.tsx";
+import { EnginePendingPanel } from "./EnginePendingPanel.tsx";
 
 // 모델 (Model) tab — ui-spec §2 batch 3. Runs list + create-run form over
 // the engine-1 versioning surface (ADR-0005): a run records a versioned
@@ -275,6 +276,14 @@ export function ModelTab({ projectId }: { projectId: string }) {
           )}
         </section>
       )}
+      <EnginePendingPanel
+        title="워터폴 차트 (Waterfall)"
+        note="워터폴 차트는 valuation 엔진 출력(매출 → 운영비용 → 세금 → NOPAT → ROIC 브리지)이 생성되어야 표시됩니다. 모델 엔진이 아직 구현되지 않아 표시할 출력이 없습니다."
+      />
+      <EnginePendingPanel
+        title="토네이도 차트 (Tornado)"
+        note="토네이도 차트는 각 입력 가정에 대한 출력 민감도를 요구합니다. 민감도 분석은 모델 엔진의 산출물이라 현재 사용할 수 없습니다."
+      />
     </div>
   );
 }
