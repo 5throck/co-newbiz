@@ -3,7 +3,7 @@
 // was removed in Prisma 7; see the migration note this file's header
 // links to in schema.prisma).
 import { defineConfig } from "prisma/config";
-import { PrismaBetterSQLite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 // Prisma 7's CLI does not auto-load .env for the config file itself (only
 // for migrate/generate steps downstream) — load it explicitly here so
@@ -21,8 +21,5 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
     url: process.env.DATABASE_URL!,
-  },
-  migrate: {
-    adapter: async () => new PrismaBetterSQLite3({ url: process.env.DATABASE_URL! }),
   },
 });

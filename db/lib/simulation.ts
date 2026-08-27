@@ -253,8 +253,6 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
     simulation_id: simulationId,
     run_id: runId,
     project_id: run.project_id,
-    seed,
-    iterations,
     discount_rate: discountRate,
     ...summary,
     contingent_liability_count: liabilities.length,

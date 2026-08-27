@@ -89,7 +89,7 @@ function spawnEngine(scenarioPath: string, timeoutMs: number): Promise<EngineOut
     const timer = setTimeout(() => proc.kill(), timeoutMs);
     void proc.exited.then((code) => {
       clearTimeout(timer);
-      return Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]).then(([stdout, stderr]) => {
+      return Promise.all([new Response(proc.stdout as ReadableStream).text(), new Response(proc.stderr as ReadableStream).text()]).then(([stdout, stderr]) => {
         if (code !== 0 && stdout.trim() === "") {
           reject(new Error(`structure_sim.py exited with code ${code}: ${stderr}`));
           return;

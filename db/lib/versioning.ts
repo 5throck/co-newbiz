@@ -116,7 +116,7 @@ export function createRun(db: Database, opts: CreateRunOptions): CreateRunResult
     // Sorted insertion so the snapshot's physical row order is as
     // reproducible as its hash.
     for (const key of [...inputs.keys()].sort()) {
-      db.run("INSERT INTO run_input (run_id, assumption_key, value) VALUES (?,?,?)", [runId, key, inputs.get(key)]);
+      db.run("INSERT INTO run_input (run_id, assumption_key, value) VALUES (?,?,?)", [runId, key, inputs.get(key)!]);
     }
   })();
 

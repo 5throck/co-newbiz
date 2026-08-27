@@ -16,8 +16,8 @@
   *As-built: built — `GlossaryTerm.tsx` implements the pattern (dashed underline, click/hover popover, keyboard-reachable button, wired to `/api/glossary/:term`), and since PR #65 batch 5 registered terms are auto-detected in body text: `glossary.tsx` provides `GlossaryProvider` (session-once `GET /api/glossary` fetch, authenticated mounts only), `useGlossaryTerms()` (lookup map built from key/en/ko), and the `GlossaryText` renderer (longest-match-first alternation; word-boundary + case-insensitive for Latin forms; exact-string for Korean forms — Hangul has no `\b` in JS regex; per-text segmentation memoized in a bounded module cache + React.memo). Applied to the free-text prose fields rendered today: DD finding descriptions, assumption rationales, contingent-liability descriptions, antitrust remedy details. Alias auto-detection stays gated — `GET /api/glossary` returns no aliases (they exist only on the per-term detail endpoint; no N+1 fetching to work around it). The two hand-placed example terms on 개요 remain as harmless explicit examples.*
 - **3-depth navigation maximum** (design §4-10).
   *As-built: met — the deepest route is `/projects/:id` (depth 2); within-page sections are client-side tab state, not nested routes.*
-- Dark mode supported; layout responsive down to tablet width.
-  *As-built: dark mode met via `prefers-color-scheme` CSS custom properties; tablet responsiveness not verifiable from source — no tablet breakpoints exist, the only fluid layout is the project-card grid, and tables have no narrow-width overflow handling.*
+- Dark mode only (Onyx 2.0 design system, `color-scheme: dark`); layout responsive down to tablet width.
+  *As-built (2026-08-27, M1): dark-only via Onyx 2.0 tokens in `styles.css` — light mode removed, `color-scheme: dark` set on `:root`. Tablet responsiveness: sidebar collapses at ≤880px via AppShell media query; project-card grid uses `auto-fill`.*
 
 ## 2. Information Architecture
 
@@ -34,8 +34,8 @@ As-built markers, verified against `app/web/src/` on 2026-08-21: ✅ built · �
 │   │   · ⚠️ partial: merged view, per-step source badges, and thresholds built (§4); override flag + baseline link and R&BD checklist panel not built
 │   ├── 데이터 (Data) — series browser, staleness indicators
 │   │   · ⚠️ partial (PR #65): `DataTab.tsx` built — series search (`GET /api/series?q=`), selected series' latest-revision observations (`GET /api/series/:id/observations`, unit/source per row, value wrapped in `SourceTooltip`), and the recent data-change log (`GET /api/data-changes`, icon+label+color per change_type, old→new values). Deferred: series charting/graphing (no chart library), an `all_revisions=1` toggle, and per-series staleness badges (no staleness field in the series-catalog payload today)
-│   ├── 재무 분석 (Financial Analysis) — ROIC driver-tree waterfall, peer boxplot, projection with anchor markers · ❌ not built (no chart library in the SPA)
-│   ├── 프록시 체인 (Proxy Chain) — chain diagram, hop-level reliability grade, error-band display · ❌ not built
+│   ├── 재무 분석 (Financial Analysis) — ROIC driver-tree waterfall, peer boxplot, projection with anchor markers · ⚠️ partial (2026-08-27 web-implementation-plan): ROIC driver-tree + margin-bridge waterfall built (`GET /api/projects/:id/roic-tree`, `RoicTree.tsx` on the 모델 tab) — computes ROIC/NOPAT margin from present fact_industry metrics, degrades to an honest "insufficient data" note when base metrics are absent. Deferred: peer boxplot, projection with anchor markers, an ECharts chart (CSS-bar waterfall for now)
+│   ├── 프록시 체인 (Proxy Chain) — chain diagram, hop-level reliability grade, error-band display · ⚠️ partial (2026-08-27 web-implementation-plan): hop-level reliability grade view built (`GET /api/projects/:id/proxy-chain-grade`, `ProxyChainGrade.tsx` on the 시장·체인 tab) — stored vs recomputed grade (db/lib/chain-grading.ts) with per-hop type/R²/CI table and mismatch warning. Deferred: chain diagram (topology-based) and error-band display
 │   ├── 가정 (Assumptions) — assumption registry, kind/rationale/ttl display
 │   │   · ⚠️ partial (PR #65): `AssumptionsTab.tsx` built — read-only registry table for the project's latest run (`GET /api/projects/:id/runs` then `GET /api/assumptions?run_id=`): assumption_key, kind chip, value (source-tooltipped), as_of, ttl_days, and a mandatory-visible rationale column (never hover-only) for `kind='assumed'` rows. Deferred: the write form (`POST /api/assumptions`) and a run picker (always uses the newest run)
 │   ├── 모델 (Model) — waterfall + tornado charts
@@ -56,8 +56,8 @@ As-built markers, verified against `app/web/src/` on 2026-08-21: ✅ built · �
 │   │   · ⚠️ partial (PR #119): `PmiEvidenceTab.tsx` built — 네 증거 테이블의 목록+입력 폼 (핵심인력 명부 `GET/POST /api/projects/:id/pmi/key-talent`, 시너지 인증 `.../pmi/synergy-certifications` — ≥9,000bp·2분기 규칙 힌트 표기, 딜 쉐이프 평가 `.../deal-shape-evaluations` — 8종 enum 셀렉트, 인센티브 마감일 `.../incentive-deadlines` — 최조 마감 선두 정렬) + 판단 변수 어설션 루프 (`GET/POST .../dimension-inputs`, 교차 검토 버튼; 검토 전 행은 "검토 대기" 명시). 금액 필드는 KRW 백만원 단위 라벨링 (ADR-0061)
 │   └── 용어집 (Glossary) — searchable, in-context
 │       · ⚠️ partial: tooltip component built and wired to `/api/glossary/:term`; searchable view built in PR #65 batch 4 as a top-level route (`/glossary`, `Glossary.tsx`) rather than a ProjectDetail tab — the glossary is workspace reference data with no project binding, and ProjectDetail's tab bar already carries 11 project-scoped tabs (route choice recorded here; the IA tree above keeps the node under Project Detail as the design target). Search is client-side over the fields the list payload carries (key/ko/en/category); alias search is not possible — `GET /api/glossary` returns no aliases (backend gap; aliases exist only on the per-term detail endpoint, which the cards' tooltip reuses for definition/why_it_matters). In-context auto-linking built in PR #65 batch 5 (`glossary.tsx`: provider + hook + `GlossaryText` renderer, applied to DD descriptions, assumption rationales, contingent-liability descriptions, antitrust remedy details — see §1's FR-SYS-04 note); alias auto-detection gated on the same list-endpoint gap; two hand-placed example terms remain on 개요
-├── 관리자 콘솔 (Admin Console) — see §5 · ⚠️ partial: 5 of 10 sections built (Users, Logs, Data Sources, Batch/Schedule, Database — the DB row is itself partial: retention-policy table + upsert form built, migration-status/backup-history have no endpoints and render an explicit "no API yet" note)
-└── 보고서 (Reports) — generated deliverable list, export controls · ❌ not built (no route, no nav entry)
+├── 관리자 콘솔 (Admin Console) — see §5 · ⚠️ partial: 7 of 10 sections built (Users, Logs, Data Sources, Batch/Schedule, Database retention, Notifications, Glossary — the last three render explicit "no API yet" notes for their not-yet-built halves; Governance docs, Master data, ADR index render explicit no-API shells, see §5)
+└── 보고서 (Reports) — generated deliverable list, export controls · ⚠️ partial (2026-08-27 web-implementation-plan): document list + superseded chain built (`GET /api/reports`, `/reports` page, nav entry in `AppShell.tsx`); browser-print/PDF export wired, DOCX/HWPX deferred to the existing report renderer
 ```
 
 As-built deltas not in the tree above:
@@ -93,12 +93,12 @@ As-built deltas not in the tree above:
 | 사용자 관리 (User Management) | Approve/suspend, role assignment | Does not grant project visibility (FR-SEC-02) |
 | 데이터베이스 관리 (Database) | Migration status, backup history | Read-heavy, links to `job_run` — *As-built (PR #65 batch 4): partial — the retention-policy half is built (table from `GET /api/admin/retention` + audited upsert form `POST /api/admin/retention`); migration status and backup history have no endpoints and render an explicit "아직 API가 없습니다" note, never placeholders* |
 | 배치·스케줄 관리 (Batch/Schedule) | `job_run` history, retry, `schedule_job` edit | — *As-built (PR #65 batch 4): job registry + last-run status/time + enable/disable toggle (optimistic, revert-on-error) built; `job_run` history beyond the latest run and the retry action are not built* |
-| 알림 관리 (Notifications) | `rag_rule` threshold editing (with mandatory ADR reference before save) | Editing a threshold without a linked ADR ref is a client-side hard block, not just a warning |
-| 규정·절차 관리 (Governance) | `governance_doc` version list, `project_policy_pin` status, impact-analysis viewer | — |
-| 용어집 관리 (Glossary) | Undefined-term queue from `glossary:lint`, registration workflow | — |
+| 알림 관리 (Notifications) | `rag_rule` threshold editing (with mandatory ADR reference before save) | *As-built (2026-08-27): read-only 알림 목록 built (`GET /api/notifications`, admin 알림·RAG 규칙 섹션). Threshold editing + mandatory-ADR-ref hard block deferred (no write endpoint yet)* |
+| 규정·절차 관리 (Governance) | `governance_doc` version list, `project_policy_pin` status, impact-analysis viewer | *As-built (2026-08-27): explicit "no API yet" shell — governance document read endpoint does not exist* |
+| 용어집 관리 (Glossary) | Undefined-term queue from `glossary:lint`, registration workflow | *As-built (2026-08-27): read-only 용어 목록 built (`GET /api/glossary`, admin 용어집 관리 섹션). Undefined-term queue + registration workflow deferred (no write endpoint yet)* |
 | 데이터 소스 관리 (Data Sources) | Presence + last-success timestamp **only** — no key-value field exists in this UI at all, not just hidden | FR-SYS/design §4-9 |
-| 기준정보 관리 (Master Data) | `staging_unmapped` resolution queue | — |
-| 거버넌스 (ADR/Stage Gate) | ADR index, stage-gate configuration | — |
+| 기준정보 관리 (Master Data) | `staging_unmapped` resolution queue | *As-built (2026-08-27): explicit "no API yet" shell — staging_unmapped read endpoint does not exist* |
+| 거버넌스 (ADR/Stage Gate) | ADR index, stage-gate configuration | *As-built (2026-08-27): explicit "no API yet" shell — Governance/Master Data/ADR index read endpoints do not exist* |
 | 로그 관리 (Logs) | Audit log viewer, **no delete control rendered anywhere in this screen** | FR-SEC-07 |
 
 ## 6. Accessibility

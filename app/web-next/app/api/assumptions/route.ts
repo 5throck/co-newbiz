@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       runId: body.run_id.trim(),
       assumptionKey: body.assumption_key.trim(),
       kind: body.kind ?? "",
-      value: body.value,
+      value: body.value ?? 0,
       asOf: body.as_of ?? "",
       rationale: body.rationale,
       anchorRef: body.anchor_ref,

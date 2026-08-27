@@ -285,7 +285,7 @@ export function recordVentureScorecardCycle(input: RecordVentureScorecardInput, 
         r.evidence_ref,
         r.observed_at,
         now,
-      ]);
+      ] as any);
       rowIds.push(id);
     }
     logDataAccess(db, {

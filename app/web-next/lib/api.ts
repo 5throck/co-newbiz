@@ -64,13 +64,10 @@ export interface ProjectSummary {
   id: string;
   project_no: string;
   created_at: string;
-  // Client-gated card enrichment: GET /api/projects returns only
-  // id/project_no/created_at today, so the RAG and staleness badges render
-  // only if a future list payload carries these fields — never a fabricated
-  // default grade on the card.
-  rag_overall?: "green" | "amber" | "red";
-  rag_assessed_at?: string;
-  stale?: boolean;
+  rag_overall?: "green" | "amber" | "red" | null;
+  rag_assessed_at?: string | null;
+  gate_stage?: string | null;
+  is_stale?: boolean;
 }
 
 // FR-SYS-03 provenance — the envelope `meta` fields a source tooltip may

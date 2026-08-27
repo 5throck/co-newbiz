@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 
-export type EnvelopeStatus = 200 | 201 | 400 | 401 | 403 | 404 | 409 | 423 | 500;
+export type EnvelopeStatus = 200 | 201 | 400 | 401 | 403 | 404 | 409 | 423 | 429 | 500;
 
 export interface ErrorBody {
   code: string;
@@ -18,6 +18,7 @@ export function ok<T>(data: T, status: EnvelopeStatus = 200, meta: Record<string
 }
 
 export interface Provenance {
+  [key: string]: string | undefined;
   assumption_key?: string;
   source?: string;
   anchor_ref?: string;

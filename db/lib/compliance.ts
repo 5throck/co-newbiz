@@ -259,7 +259,7 @@ export function recordInterpretation(db: Database, options: RecordInterpretation
     }
     if (target.governance_doc_id !== options.governanceDocId || target.clause_ref !== options.clauseRef) {
       throw new Error(
-        `Supersession refused: interpretation ${options.supersedes} belongs to ${target.governance_doc_id}/${target.clauseRef}, but the new answer targets ${options.governanceDocId}/${options.clauseRef} — a later answer never silently contradicts an earlier one (FR-GOV-12).`,
+        `Supersession refused: interpretation ${options.supersedes} belongs to ${target.governance_doc_id}/${target.clause_ref}, but the new answer targets ${options.governanceDocId}/${options.clauseRef} — a later answer never silently contradicts an earlier one (FR-GOV-12).`,
       );
     }
   }
