@@ -26,6 +26,8 @@ function findGlossaryDir(): string {
   throw new Error(`Could not locate the glossary/ directory from cwd=${process.cwd()} (import.meta.dirname was unavailable).`);
 }
 
+export { findGlossaryDir };
+
 export interface GlossaryTerm {
   key: string;
   ko: string;
@@ -78,4 +80,10 @@ export function findTerm(query: string): GlossaryTerm | null {
     terms.find((t) => t.aliases?.some((a) => a.toLowerCase() === needle)) ??
     null
   );
+}
+
+/** Drop the in-memory cache so the next loadGlossary() re-reads the YAML files
+ * (called after glossary-write.ts registers a new term). */
+export function invalidateGlossaryCache(): void {
+  cache = null;
 }

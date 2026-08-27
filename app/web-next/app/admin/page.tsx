@@ -88,6 +88,93 @@ export function AdminConsole() {
   const [months, setMonths] = useState("");
   const [action, setAction] = useState<"archive" | "delete">("archive");
 
+  // 알림 임계치(감시 규칙) 추가 폼 — 임계치 편집에는 ADR 참조가 필수다
+  // (ui-spec §5: ADR 참조 없는 임계치 편집은 경고가 아니라 클라이언트 차단).
+  const [watchForm, setWatchForm] = useState({ project_id: "", trigger_type: "rag_change", threshold: "", cooldown_hours: "24", channel: "in_app", adr_ref: "" });
+  const [watchFormError, setWatchFormError] = useState<string | null>(null);
+  const [watchFormNotice, setWatchFormNotice] = useState<string | null>(null);
+  const [watchFormBusy, setWatchFormBusy] = useState(false);
+
+  // 용어집 등록 폼 — why_it_matters_ko 필수 (glossary/_schema.yaml).
+  const [termForm, setTermForm] = useState({ key: "", ko: "", en: "", definition_ko: "", why_it_matters_ko: "", category: "business", owner: "glossary-curator", aliases: "" });
+  const [termFormError, setTermFormError] = useState<string | null>(null);
+  const [termFormNotice, setTermFormNotice] = useState<string | null>(null);
+  const [termFormBusy, setTermFormBusy] = useState(false);
+
+  async function submitWatchRule(e: FormEvent) {
+    e.preventDefault();
+    setWatchFormError(null);
+    setWatchFormNotice(null);
+    // 하드 차단: ADR 참조가 비어 있으면 전송 자체를 하지 않는다 (경고 아님).
+    if (!watchForm.adr_ref.trim()) {
+      setWatchFormError("ADR 참조가 필요합니다 — 임계치 규칙은 연결된 ADR 없이는 저장할 수 없습니다.");
+      return;
+    }
+    if (!watchForm.project_id.trim() || !watchForm.trigger_type.trim() || !watchForm.channel.trim()) {
+      setWatchFormError("프로젝트 ID, 트리거 유형, 채널은 필수입니다.");
+      return;
+    }
+    setWatchFormBusy(true);
+    try {
+      await api.post<{ id: string }>("/api/watch", {
+        project_id: watchForm.project_id.trim(),
+        rules: [
+          {
+            trigger_type: watchForm.trigger_type.trim(),
+            threshold: watchForm.threshold === "" ? undefined : Number(watchForm.threshold),
+            cooldown_hours: watchForm.cooldown_hours === "" ? undefined : Number(watchForm.cooldown_hours),
+            channel: watchForm.channel.trim(),
+            adr_ref: watchForm.adr_ref.trim(),
+          },
+        ],
+      });
+      setWatchFormNotice(`감시 규칙이 등록되었습니다 (ADR: ${watchForm.adr_ref.trim()}).`);
+      setWatchForm({ project_id: "", trigger_type: "rag_change", threshold: "", cooldown_hours: "24", channel: "in_app", adr_ref: "" });
+    } catch (err) {
+      setWatchFormError(err instanceof Error ? err.message : "감시 규칙 등록에 실패했습니다.");
+    } finally {
+      setWatchFormBusy(false);
+    }
+  }
+
+  async function submitGlossaryTerm(e: FormEvent) {
+    e.preventDefault();
+    setTermFormError(null);
+    setTermFormNotice(null);
+    if (!termForm.key.trim() || !termForm.ko.trim() || !termForm.en.trim() || !termForm.definition_ko.trim()) {
+      setTermFormError("키, 한글 용어, 영문 용어, 정의는 필수입니다.");
+      return;
+    }
+    if (!termForm.why_it_matters_ko.trim()) {
+      setTermFormError("why_it_matters_ko는 필수입니다 — 정의만으로는 '왜 중요한가'가 전달되지 않습니다 (glossary/_schema.yaml).");
+      return;
+    }
+    setTermFormBusy(true);
+    try {
+      const res = await api.post<{ key: string; file: string }>("/api/glossary", {
+        key: termForm.key.trim(),
+        ko: termForm.ko.trim(),
+        en: termForm.en.trim(),
+        definition_ko: termForm.definition_ko.trim(),
+        why_it_matters_ko: termForm.why_it_matters_ko.trim(),
+        category: termForm.category,
+        owner: termForm.owner.trim() || undefined,
+        aliases: termForm.aliases.trim() ? termForm.aliases.split(",").map((a) => a.trim()).filter(Boolean) : undefined,
+      });
+      setTermFormNotice(`용어가 등록되었습니다: ${res.data.key} (${res.data.file})`);
+      setTermForm({ key: "", ko: "", en: "", definition_ko: "", why_it_matters_ko: "", category: "business", owner: "glossary-curator", aliases: "" });
+      api
+        .get<GlossaryTermRow[]>("/api/glossary")
+        .then((r) => setGlossary(r.data))
+        .catch(() => undefined);
+    } catch (err) {
+      setTermFormError(err instanceof Error ? err.message : "용어 등록에 실패했습니다.");
+    } finally {
+      setTermFormBusy(false);
+    }
+  }
+
+
   useEffect(() => {
     setError(null);
     if (section === "users" && users === null) {
@@ -503,6 +590,55 @@ export function AdminConsole() {
           </table>
         ))}
 
+      {section === "notifications" && (
+        <form className="watch-rule-form mt-6" onSubmit={submitWatchRule} aria-label="감시 규칙 추가">
+          <h3>감시 규칙 추가 (임계치 편집)</h3>
+          <p className="helper-note">
+            임계치 규칙에는 연결된 ADR 참조가 필수입니다 (ui-spec §5) — ADR 참조 없이는 저장이 차단됩니다.
+          </p>
+          <div className="form-grid">
+            <label>
+              프로젝트 ID *
+              <input type="text" value={watchForm.project_id} onChange={(e) => setWatchForm({ ...watchForm, project_id: e.target.value })} required />
+            </label>
+            <label>
+              트리거 유형 *
+              <select value={watchForm.trigger_type} onChange={(e) => setWatchForm({ ...watchForm, trigger_type: e.target.value })}>
+                <option value="rag_change">RAG 등급 변화</option>
+                <option value="data_change">데이터 변경</option>
+                <option value="kill_criteria">Kill Criteria</option>
+              </select>
+            </label>
+            <label>
+              임계치
+              <input type="number" step="any" value={watchForm.threshold} onChange={(e) => setWatchForm({ ...watchForm, threshold: e.target.value })} />
+            </label>
+            <label>
+              쿨다운(시간)
+              <input type="number" value={watchForm.cooldown_hours} onChange={(e) => setWatchForm({ ...watchForm, cooldown_hours: e.target.value })} />
+            </label>
+            <label>
+              채널 *
+              <select value={watchForm.channel} onChange={(e) => setWatchForm({ ...watchForm, channel: e.target.value })}>
+                <option value="in_app">앱 내</option>
+                <option value="email">이메일</option>
+                <option value="webhook">웹훅</option>
+                <option value="all">전체</option>
+              </select>
+            </label>
+            <label>
+              ADR 참조 * (예: ADR-0017)
+              <input type="text" value={watchForm.adr_ref} onChange={(e) => setWatchForm({ ...watchForm, adr_ref: e.target.value })} aria-required="true" />
+            </label>
+          </div>
+          {watchFormError && <p className="form-error mt-2" role="alert">{watchFormError}</p>}
+          {watchFormNotice && <p className="form-success mt-2">{watchFormNotice}</p>}
+          <button type="submit" className="btn-primary mt-2" disabled={watchFormBusy}>
+            {watchFormBusy ? "등록 중..." : "감시 규칙 등록"}
+          </button>
+        </form>
+      )}
+
       {section === "glossary" &&
         (glossary === null ? (
           <p>불러오는 중...</p>
@@ -531,6 +667,61 @@ export function AdminConsole() {
             </tbody>
           </table>
         ))}
+
+      {section === "glossary" && (
+        <form className="glossary-form mt-6" onSubmit={submitGlossaryTerm} aria-label="용어 등록">
+          <h3>용어 등록</h3>
+          <p className="helper-note">
+            why_it_matters_ko는 필수입니다 — 정의만으로는 이 프로젝트에서 &quot;왜 중요한가&quot;가 전달되지 않습니다 (glossary/_schema.yaml).
+          </p>
+          <div className="form-grid">
+            <label>
+              키 *
+              <input type="text" value={termForm.key} onChange={(e) => setTermForm({ ...termForm, key: e.target.value })} required />
+            </label>
+            <label>
+              한글 용어 *
+              <input type="text" value={termForm.ko} onChange={(e) => setTermForm({ ...termForm, ko: e.target.value })} required />
+            </label>
+            <label>
+              영문 용어 *
+              <input type="text" value={termForm.en} onChange={(e) => setTermForm({ ...termForm, en: e.target.value })} required />
+            </label>
+            <label>
+              분류 *
+              <select value={termForm.category} onChange={(e) => setTermForm({ ...termForm, category: e.target.value })}>
+                <option value="business">business</option>
+                <option value="financial">financial</option>
+                <option value="legal">legal</option>
+                <option value="technical">technical</option>
+                <option value="industry">industry</option>
+                <option value="unit">unit</option>
+              </select>
+            </label>
+            <label>
+              소유 에이전트
+              <input type="text" value={termForm.owner} onChange={(e) => setTermForm({ ...termForm, owner: e.target.value })} />
+            </label>
+            <label>
+              별칭 (쉼표 구분)
+              <input type="text" value={termForm.aliases} onChange={(e) => setTermForm({ ...termForm, aliases: e.target.value })} />
+            </label>
+          </div>
+          <label className="block mt-2">
+            정의 (definition_ko) *
+            <textarea value={termForm.definition_ko} onChange={(e) => setTermForm({ ...termForm, definition_ko: e.target.value })} rows={2} required />
+          </label>
+          <label className="block mt-2">
+            왜 중요한가 (why_it_matters_ko) *
+            <textarea value={termForm.why_it_matters_ko} onChange={(e) => setTermForm({ ...termForm, why_it_matters_ko: e.target.value })} rows={2} required />
+          </label>
+          {termFormError && <p className="form-error mt-2" role="alert">{termFormError}</p>}
+          {termFormNotice && <p className="form-success mt-2">{termFormNotice}</p>}
+          <button type="submit" className="btn-primary mt-2" disabled={termFormBusy}>
+            {termFormBusy ? "등록 중..." : "용어 등록"}
+          </button>
+        </form>
+      )}
 
       {section === "governance" &&
         (governance === null ? (

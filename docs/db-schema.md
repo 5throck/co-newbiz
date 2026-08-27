@@ -161,7 +161,7 @@ Scenario inputs ride run-versioning as exact `drv.rate_bp` / `drv.fx_pct` / `drv
 | `analysis_task` | Deliverable-level review gate | `id`, `project_id`, `deliverable_type`, `reviewed_by`, `reviewed_at` |
 | `job_run` | Scheduled batch execution record | `id`, `job_key`, `started_at`, `finished_at`, `status`, `error` |
 | `schedule_job` | OS-scheduler-registered job definition | `id`, `job_key`, `cron_expr`, `enabled` |
-| `watch` / `watch_rule` | User monitoring subscription | `watch.id`, `watch.project_id`, `watch.user_id`; `watch_rule.watch_id`, `watch_rule.trigger_type`, `watch_rule.threshold`, `watch_rule.cooldown_hours` |
+| `watch` / `watch_rule` | User monitoring subscription | `watch.id`, `watch.project_id`, `watch.user_id`; `watch_rule.watch_id`, `watch_rule.trigger_type`, `watch_rule.threshold`, `watch_rule.cooldown_hours`, `watch_rule.adr_ref` (migration 0036 — linked ADR reference; the admin console hard-blocks threshold edits without one, ui-spec §5) |
 | `notification` | Delivered/pending alert | `id`, `user_id`, `project_id`, `trigger_type`, `payload`, `channel`, `sent_at` |
 
 ## 11. Index Rationale
