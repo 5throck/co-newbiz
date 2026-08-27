@@ -1,42 +1,109 @@
 "use client";
 
-// Port of app/web/src/App.tsx's RequireAuth/RequireAdmin/TopNav, adapted
-// from react-router-dom's <Routes>/<Navigate> to Next.js App Router: each
-// page.tsx is now its own route (no central <Routes> tree), so the
-// auth/must-change-password gate that used to wrap each <Route> element
-// individually now lives once, here, wrapping every page via the root
-// layout. Admin-only gating stays per-page (see app/admin/page.tsx) since
-// only one route needs it — a single extra check there is simpler than a
-// second shell layer.
-
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  FolderKanban,
+  LayoutDashboard,
+  BookOpen,
+  Shield,
+  LogOut,
+  Target,
+  FileText,
+} from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
 
-function TopNav() {
+interface NavItem {
+  href: string;
+  label: string;
+  icon: ReactNode;
+  adminOnly?: boolean;
+}
+
+const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
+  {
+    label: "워크스페이스",
+    items: [
+      { href: "/projects", label: "프로젝트", icon: <FolderKanban size={18} /> },
+      {
+        href: "/portfolio-scorecard",
+        label: "스코어카드",
+        icon: <LayoutDashboard size={18} />,
+      },
+      {
+        href: "/reports",
+        label: "보고서",
+        icon: <FileText size={18} />,
+      },
+    ],
+  },
+  {
+    label: "참조",
+    items: [
+      { href: "/glossary", label: "용어집", icon: <BookOpen size={18} /> },
+      { href: "/strategy", label: "R&BD 전략", icon: <Target size={18} /> },
+    ],
+  },
+  {
+    label: "운영",
+    items: [
+      {
+        href: "/admin",
+        label: "관리자",
+        icon: <Shield size={18} />,
+        adminOnly: true,
+      },
+    ],
+  },
+];
+
+function Sidebar() {
   const { me, logout } = useAuth();
+  const pathname = usePathname();
   if (!me) return null;
+
   return (
-    <header className="top-nav">
-      <Link href="/projects" className="brand">
-        co-newbiz
+    <aside className="app-sidebar">
+      <Link href="/projects" className="sidebar-brand">
+        <span className="sidebar-brand-icon">CN</span>
+        <span>co-newbiz</span>
       </Link>
-      <nav aria-label="주 메뉴">
-        <Link href="/projects">프로젝트</Link>
-        <Link href="/portfolio-scorecard">포트폴리오 스코어카드</Link>
-        <Link href="/glossary">용어집</Link>
-        {me.role === "admin" && <Link href="/admin">관리자 콘솔</Link>}
-      </nav>
-      <div className="top-nav-user">
-        <span>
-          {me.userId} ({me.role})
-        </span>
-        <button type="button" onClick={() => logout()}>
-          로그아웃
+      {NAV_SECTIONS.map((section) => {
+        const items = section.items.filter(
+          (item) => !item.adminOnly || me.role === "admin",
+        );
+        if (items.length === 0) return null;
+        return (
+          <div key={section.label}>
+            <div className="sidebar-group-label">{section.label}</div>
+            <nav className="sidebar-nav" aria-label={section.label}>
+              {items.map((item) => {
+                const active =
+                  pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        );
+      })}
+      <div className="sidebar-user">
+        <span className="text-sm text-[color:var(--muted-fg)]">{me.userId}</span>
+        <button type="button" onClick={() => logout()} className="side-nav-link w-full">
+          <LogOut size={18} />
+          <span>로그아웃</span>
         </button>
       </div>
-    </header>
+    </aside>
   );
 }
 
@@ -57,14 +124,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [me, loading, pathname, router]);
 
   if (pathname === "/login") return <>{children}</>;
-  if (loading) return <p className="loading-splash">불러오는 중...</p>;
-  if (!me) return null; // redirect effect above is in flight
+  if (loading)
+    return (
+      <div className="flex items-center justify-center h-screen text-[color:var(--muted-fg)]">
+        불러오는 중...
+      </div>
+    );
+  if (!me) return null;
   if (me.mustChangePassword && pathname !== "/password-change") return null;
 
   return (
-    <>
-      <TopNav />
-      {children}
-    </>
+    <div className="app-shell">
+      <Sidebar />
+      <main className="app-content">{children}</main>
+    </div>
   );
 }

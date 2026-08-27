@@ -12,16 +12,33 @@ import {
 } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 
-type Section = "users" | "audit" | "data-sources" | "schedule" | "database";
+type Section = "users" | "audit" | "data-sources" | "schedule" | "database" | "notifications" | "glossary" | "governance" | "master-data" | "adr";
 
-// Admin console — ui-spec §5. Only the sections the backend actually
-// serves are rendered here: user management, audit log viewer, data-source
-// presence (Wave 5.6A), and — since PR #65 batch 4 — the schedule-job
-// registry and the retention-policy half of 데이터베이스 관리. Migration
-// status / backup history have no endpoints, so that part of the DB row
-// renders an explicit "no API yet" note instead of placeholders. The
-// remaining designed sections (notifications, governance, glossary admin,
-// master data, ADR/stage gate) stay TODO until their read endpoints exist.
+interface AdminNotificationRow {
+  project_id: string;
+  trigger_type: string;
+  severity: string;
+  payload: string;
+  channel: string;
+  bundle: string;
+  sent_at: string;
+}
+
+interface GlossaryTermRow {
+  key: string;
+  ko: string;
+  en: string;
+  category: string;
+}
+
+// Admin console — ui-spec §5. Sections the backend serves are rendered with
+// real data (users, audit, data-sources, schedule-jobs, retention,
+// notifications, glossary). Sections whose backend endpoints do not yet exist
+// render an explicit "no API yet" note instead of placeholders, per the
+// web-implementation-plan §3 gap rule (M4). The deferred-no-API sections are:
+//   - governance (governance document registry — no read endpoint yet)
+//   - master-data (staging_unmapped queue — no read endpoint yet)
+//   - adr (ADR index — no read endpoint yet)
 export function AdminConsole() {
   const [section, setSection] = useState<Section>("users");
   const [users, setUsers] = useState<AdminUser[] | null>(null);
@@ -29,6 +46,8 @@ export function AdminConsole() {
   const [sources, setSources] = useState<DataSourceRow[] | null>(null);
   const [jobs, setJobs] = useState<ScheduleJobRow[] | null>(null);
   const [retention, setRetention] = useState<RetentionPolicyRow[] | null>(null);
+  const [notifications, setNotifications] = useState<AdminNotificationRow[] | null>(null);
+  const [glossary, setGlossary] = useState<GlossaryTermRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retentionFormError, setRetentionFormError] = useState<string | null>(null);
   const [retentionNotice, setRetentionNotice] = useState<string | null>(null);
@@ -69,7 +88,19 @@ export function AdminConsole() {
         .then((res) => setRetention(res.data))
         .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
     }
-  }, [section, users, auditLog, sources, jobs, retention]);
+    if (section === "notifications" && notifications === null) {
+      api
+        .get<AdminNotificationRow[]>("/api/notifications")
+        .then((res) => setNotifications(res.data))
+        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+    }
+    if (section === "glossary" && glossary === null) {
+      api
+        .get<GlossaryTermRow[]>("/api/glossary")
+        .then((res) => setGlossary(res.data))
+        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+    }
+  }, [section, users, auditLog, sources, jobs, retention, notifications, glossary]);
 
   async function approve(userId: string) {
     await api.put(`/api/admin/users/${userId}`, { action: "approve" });
@@ -124,7 +155,7 @@ export function AdminConsole() {
     <main className="admin-console-page">
       <h1>관리자 콘솔</h1>
       <nav
-        className="flex flex-wrap gap-2 border-b border-[color:var(--border)] my-4 [&>button]:border-0 [&>button]:border-b-2 [&>button]:border-b-transparent [&>button]:rounded-none [&>button]:bg-transparent [&>button[aria-current=true]]:border-b-[color:var(--accent)] [&>button[aria-current=true]]:font-bold"
+        className="tab-nav my-4"
         aria-label="관리자 콘솔 섹션"
       >
         <button type="button" aria-current={section === "users"} onClick={() => setSection("users")}>
@@ -141,6 +172,21 @@ export function AdminConsole() {
         </button>
         <button type="button" aria-current={section === "database"} onClick={() => setSection("database")}>
           데이터베이스 관리
+        </button>
+        <button type="button" aria-current={section === "notifications"} onClick={() => setSection("notifications")}>
+          알림·RAG 규칙
+        </button>
+        <button type="button" aria-current={section === "glossary"} onClick={() => setSection("glossary")}>
+          용어집 관리
+        </button>
+        <button type="button" aria-current={section === "governance"} onClick={() => setSection("governance")}>
+          거버넌스 문서
+        </button>
+        <button type="button" aria-current={section === "master-data"} onClick={() => setSection("master-data")}>
+          마스터 데이터
+        </button>
+        <button type="button" aria-current={section === "adr"} onClick={() => setSection("adr")}>
+          ADR 인덱스
         </button>
       </nav>
       {error && (
@@ -173,7 +219,7 @@ export function AdminConsole() {
                   <td>{new Date(u.created_at).toLocaleDateString("ko-KR")}</td>
                   <td>
                     {u.status === "pending" && (
-                      <button type="button" onClick={() => approve(u.user_id)}>
+                      <button type="button" className="btn-premium" onClick={() => approve(u.user_id)}>
                         승인
                       </button>
                     )}
@@ -287,7 +333,7 @@ export function AdminConsole() {
                     )}
                   </td>
                   <td>
-                    <button type="button" onClick={() => toggleJob(j.job_key, j.enabled !== 1)}>
+                    <button type="button" className="btn-ghost" onClick={() => toggleJob(j.job_key, j.enabled !== 1)}>
                       {j.enabled === 1 ? "비활성화" : "활성화"}
                     </button>
                   </td>
@@ -363,7 +409,7 @@ export function AdminConsole() {
                 <option value="delete">삭제 (delete)</option>
               </select>
             </div>
-            <button type="submit">정책 저장</button>
+            <button type="submit" className="btn-premium">정책 저장</button>
           </form>
           {retentionFormError && (
             <p role="alert" className="text-[color:var(--red-fg)]">
@@ -371,6 +417,86 @@ export function AdminConsole() {
             </p>
           )}
           {retentionNotice && <p className="text-[color:var(--green-fg)]">{retentionNotice}</p>}
+        </div>
+      )}
+
+      {section === "notifications" &&
+        (notifications === null ? (
+          <p>불러오는 중...</p>
+        ) : notifications.length === 0 ? (
+          <p className="text-[color:var(--muted-fg)] italic">수신된 알림이 없습니다.</p>
+        ) : (
+          <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+            <caption className="sr-only">알림 목록 (사용자 수신 기준)</caption>
+            <thead>
+              <tr>
+                <th scope="col">프로젝트</th>
+                <th scope="col">트리거</th>
+                <th scope="col">심각도</th>
+                <th scope="col">채널</th>
+                <th scope="col">번들</th>
+                <th scope="col">발송일</th>
+              </tr>
+            </thead>
+            <tbody>
+              {notifications.map((n, i) => (
+                <tr key={i}>
+                  <td>{n.project_id}</td>
+                  <td>{n.trigger_type}</td>
+                  <td>{n.severity}</td>
+                  <td>{n.channel}</td>
+                  <td>{n.bundle}</td>
+                  <td>{new Date(n.sent_at).toLocaleString("ko-KR")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ))}
+
+      {section === "glossary" &&
+        (glossary === null ? (
+          <p>불러오는 중...</p>
+        ) : glossary.length === 0 ? (
+          <p className="text-[color:var(--muted-fg)] italic">등록된 용어가 없습니다.</p>
+        ) : (
+          <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+            <caption className="sr-only">용어집 용어 목록</caption>
+            <thead>
+              <tr>
+                <th scope="col">키</th>
+                <th scope="col">한글</th>
+                <th scope="col">영문</th>
+                <th scope="col">분류</th>
+              </tr>
+            </thead>
+            <tbody>
+              {glossary.map((t) => (
+                <tr key={t.key}>
+                  <td className="font-mono text-xs">{t.key}</td>
+                  <td>{t.ko}</td>
+                  <td>{t.en}</td>
+                  <td>{t.category}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ))}
+
+      {section === "governance" && (
+        <div className="glass p-5 text-sm text-[color:var(--muted-fg)]">
+          거버넌스 문서 레지스트리(read 엔드포인트 미존재) — Policy/Procedure/Guideline/Checklist 인덱스 API가 추가되면 이 섹션에 렌더링됩니다. 현재는 표시할 API가 없습니다.
+        </div>
+      )}
+
+      {section === "master-data" && (
+        <div className="glass p-5 text-sm text-[color:var(--muted-fg)]">
+          마스터 데이터(staging_unmapped 큐 등) read 엔드포인트가 아직 없습니다. 해당 API가 추가되면 이 섹션에 렌더링됩니다.
+        </div>
+      )}
+
+      {section === "adr" && (
+        <div className="glass p-5 text-sm text-[color:var(--muted-fg)]">
+          ADR 인덱스(read 엔드포인트 미존재) — docs/adr/README.md 인덱스를 노출하는 API가 추가되면 이 섹션에 렌더링됩니다. 현재는 표시할 API가 없습니다.
         </div>
       )}
     </main>

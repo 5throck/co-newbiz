@@ -22,7 +22,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       {
         runId: body.run_id,
         projectId: project.id,
-        scenario: scenario as StructureSimSummary["scenario"],
+        scenario: scenario as "downside" | "base" | "upside" | "custom",
         seed: body.seed,
         iterations: body.iterations,
       },

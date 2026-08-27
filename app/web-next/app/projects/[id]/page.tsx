@@ -23,10 +23,13 @@ import { DdTab } from "../../../components/DdTab.tsx";
 import { PermitsTab } from "../../../components/PermitsTab.tsx";
 import { MaReviewTab } from "../../../components/MaReviewTab.tsx";
 import { ModelTab } from "../../../components/ModelTab.tsx";
+import { RoicTree } from "../../../components/RoicTree.tsx";
 import { SimulationTab } from "../../../components/SimulationTab.tsx";
 import { VersionCompareTab } from "../../../components/VersionCompareTab.tsx";
 import { PmiEvidenceTab } from "../../../components/PmiEvidenceTab.tsx";
 import { MarketChainTab, ChainSensitivityEditor } from "../../../components/MarketChainTab.tsx";
+import { ProxyChainGrade } from "../../../components/ProxyChainGrade.tsx";
+import { OverviewTab } from "../../../components/OverviewTab.tsx";
 
 type Tab =
   | "overview"
@@ -125,7 +128,7 @@ export default function ProjectDetailPage() {
         </div>
       )}
       <nav
-        className="flex flex-wrap gap-2 border-b border-[color:var(--border)] my-4 [&>button]:border-0 [&>button]:border-b-2 [&>button]:border-b-transparent [&>button]:rounded-none [&>button]:bg-transparent [&>button[aria-current=true]]:border-b-[color:var(--accent)] [&>button[aria-current=true]]:font-bold"
+        className="tab-nav my-4"
         aria-label="프로젝트 탭"
       >
         <button type="button" aria-current={tab === "overview"} onClick={() => setTab("overview")}>
@@ -167,8 +170,12 @@ export default function ProjectDetailPage() {
 
       {tab === "overview" && (
         <section aria-label="개요">
-          <RagSignalCard dimensions={dimensions} provenance={ragProvenance} />
-          <p className="glossary-hint">
+          <OverviewTab
+            projectId={id}
+            dimensions={dimensions}
+            ragProvenance={ragProvenance}
+          />
+          <p className="glossary-hint mt-4">
             용어 예: <GlossaryTerm term="WACC">WACC</GlossaryTerm>, <GlossaryTerm term="CGT">CGT</GlossaryTerm>
           </p>
         </section>
@@ -205,6 +212,7 @@ export default function ProjectDetailPage() {
       {tab === "model" && id && (
         <section aria-label="모델">
           <ModelTab projectId={id} />
+          <RoicTree projectId={id} />
         </section>
       )}
 
@@ -236,6 +244,7 @@ export default function ProjectDetailPage() {
         <section aria-label="시장·체인">
           <MarketChainTab projectId={id} />
           <ChainSensitivityEditor projectId={id} />
+          <ProxyChainGrade projectId={id} />
         </section>
       )}
 

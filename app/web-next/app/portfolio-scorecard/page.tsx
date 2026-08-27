@@ -244,7 +244,7 @@ function ScorecardBody({ data, meta }: { data: PortfolioScorecard; meta: Portfol
   );
 }
 
-export function PortfolioScorecard() {
+export default function PortfolioScorecard() {
   // "" selects the server's latest cycle; an explicit "YYYY-Qn" re-fetches.
   const [cycle, setCycle] = useState("");
   const [data, setData] = useState<PortfolioScorecard | null>(null);
@@ -322,5 +322,3 @@ export function PortfolioScorecard() {
     </main>
   );
 }
-
-export default PortfolioScorecard;

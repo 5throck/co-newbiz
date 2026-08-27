@@ -33,6 +33,32 @@ function latestOverallGrades(projectIds: string[]): Map<string, { grade: string;
   return byProject;
 }
 
+function latestGateStage(projectIds: string[]): Map<string, string | null> {
+  const byProject = new Map<string, string | null>();
+  if (projectIds.length === 0) return byProject;
+  const rows = getDb()
+    .query(
+      `SELECT id, current_stage_gate FROM md_project WHERE id IN (${projectIds.map(() => "?").join(", ")})`,
+    )
+    .all(...projectIds) as { id: string; current_stage_gate: string | null }[];
+  for (const row of rows) byProject.set(row.id, row.current_stage_gate);
+  return byProject;
+}
+
+function staleProjectIds(projectIds: string[], staleDays = 30): Set<string> {
+  const stale = new Set<string>();
+  if (projectIds.length === 0) return stale;
+  const rows = getDb()
+    .query(
+      `SELECT project_id, MAX(assessed_at) as last_assessed FROM rag_assessment
+       WHERE project_id IN (${projectIds.map(() => "?").join(", ")})
+       GROUP BY project_id HAVING JULIANDAY('now') - JULIANDAY(MAX(assessed_at)) > ?`,
+    )
+    .all(...projectIds, staleDays) as { project_id: string }[];
+  for (const row of rows) stale.add(row.project_id);
+  return stale;
+}
+
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
@@ -40,10 +66,21 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const includeMnpi = ["1", "true"].includes(url.searchParams.get("include_mnpi") ?? "");
   const projects = listVisibleProjects(auth.auth.userId, { excludeMnpi: !includeMnpi });
-  const overall = latestOverallGrades(projects.map((p) => p.id));
+  const projectIds = projects.map((p) => p.id);
+  const overall = latestOverallGrades(projectIds);
+  const gateStages = latestGateStage(projectIds);
+  const staleIds = staleProjectIds(projectIds);
   const rows = projects.map((p) => {
     const grade = overall.get(p.id);
-    return grade ? { ...p, rag_overall: grade.grade, rag_assessed_at: grade.assessed_at } : p;
+    const gateStage = gateStages.get(p.id) ?? null;
+    const isStale = staleIds.has(p.id);
+    return {
+      ...p,
+      rag_overall: grade?.grade ?? null,
+      rag_assessed_at: grade?.assessed_at ?? null,
+      gate_stage: gateStage,
+      is_stale: isStale,
+    };
   });
   return ok(rows, 200, { include_mnpi: includeMnpi, count: rows.length });
 }

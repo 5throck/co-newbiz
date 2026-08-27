@@ -11,17 +11,28 @@
  * or external process is invoked anywhere in this file.
  */
 
-import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 const DEFAULT_DB_PATH = process.env.CO_NEWBIZ_DB_PATH ?? "db/data/co-newbiz.sqlite";
 
-let _db: Database | null = null;
+// Lazy-loaded Database class from bun:sqlite
+let _Database: any = null;
+let _db: any | null = null;
 
-export function getDb(dbPath: string = DEFAULT_DB_PATH): Database {
+function loadBunSqlite(): any {
+  if (!_Database) {
+    // Use require for synchronous loading in Bun runtime
+    // This avoids static analysis by Next.js/Turbopack
+    _Database = require("bun:sqlite").Database;
+  }
+  return _Database;
+}
+
+export function getDb(dbPath: string = DEFAULT_DB_PATH): any {
   if (_db) return _db;
 
+  const Database = loadBunSqlite();
   const dir = dirname(dbPath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
