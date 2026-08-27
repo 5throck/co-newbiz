@@ -76,8 +76,10 @@ export async function GET(request: Request) {
     const isStale = staleIds.has(p.id);
     return {
       ...p,
-      rag_overall: grade?.grade ?? null,
-      rag_assessed_at: grade?.assessed_at ?? null,
+      // Grade fields are included ONLY when an assessment exists — a project
+      // without one carries no badge keys at all (absence is meaningful; a
+      // null rag_overall would read as a fabricated "assessed, unknown" state).
+      ...(grade ? { rag_overall: grade.grade, rag_assessed_at: grade.assessed_at } : {}),
       gate_stage: gateStage,
       is_stale: isStale,
     };

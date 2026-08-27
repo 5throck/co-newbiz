@@ -66,13 +66,14 @@ export interface AddWatchRuleOptions {
   threshold?: number | null;
   cooldownHours?: number;
   channel: Channel;
+  adrRef?: string | null;
 }
 
 export function addWatchRule(db: Database, options: AddWatchRuleOptions): string {
   const id = ulid();
   db.run(
-    "INSERT INTO watch_rule (id, watch_id, trigger_type, threshold, cooldown_hours, channel, enabled) VALUES (?,?,?,?,?,?,1)",
-    [id, options.watchId, options.triggerType, options.threshold ?? null, options.cooldownHours ?? 24, options.channel],
+    "INSERT INTO watch_rule (id, watch_id, trigger_type, threshold, cooldown_hours, channel, adr_ref, enabled) VALUES (?,?,?,?,?,?,?,1)",
+    [id, options.watchId, options.triggerType, options.threshold ?? null, options.cooldownHours ?? 24, options.channel, options.adrRef?.trim() || null],
   );
   return id;
 }

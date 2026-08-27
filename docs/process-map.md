@@ -1,7 +1,7 @@
 # Process Map — co-newbiz New Business Review
 
 **Owner**: process-governance-manager
-**Design of record**: [`docs/designs/2026-08-19-co-newbiz-design_ko.md`](https://github.com/5throck/ai-workspace-standards/blob/main/docs/designs/2026-08-19-co-newbiz-design_ko.md) section 6, refined by [Stage 1 meetings](../memory/meeting-2026-08-20-m1-process-skeleton.md) M1/M2/M6.
+**Design of record**: [`docs/designs/2026-08-19-co-newbiz-design_ko.md`](https://github.com/5throck/ai-workspace-standards/blob/main/docs/designs/2026-08-19-co-newbiz-design_ko.md) section 6, refined by [Stage 1 meetings](../memory/archive/meeting-2026-08-20-m1-process-skeleton.md) M1/M2/M6.
 
 > **Do not confuse this with the product build Phase 0–6** (design section 4/10). This document maps the *business review process* the team's system implements. The product-build phases are how the team builds and ships that system; this map is what the system, once built, actually runs.
 
@@ -68,4 +68,4 @@ The Entity IC and Group IC decision models both carry a fourth state, `withdrawn
 - `docs/stage-gates.md` *(this doc's companion — not yet created — Stage 2.4)*
 - `docs/audits/2026-08-23-readiness-audit.md` — four-axis readiness audit of the procedures described above (verdicts + residual register R1–R10)
 - `docs/pilots/` — four real-case manual pilots that informed the gate procedures above
-- [Meeting M1](../memory/meeting-2026-08-20-m1-process-skeleton.md), [M2](../memory/meeting-2026-08-20-m2-entity-group-boundary.md), [M6](../memory/meeting-2026-08-20-m6-site-selection-criteria.md)
+- [Meeting M1](../memory/archive/meeting-2026-08-20-m1-process-skeleton.md), [M2](../memory/archive/meeting-2026-08-20-m2-entity-group-boundary.md), [M6](../memory/archive/meeting-2026-08-20-m6-site-selection-criteria.md)

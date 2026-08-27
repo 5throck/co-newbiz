@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
   const body = (await request.json().catch(() => null)) as
-    | { project_id?: string; rules?: { trigger_type?: string; threshold?: number; cooldown_hours?: number; channel?: string }[] }
+    | { project_id?: string; rules?: { trigger_type?: string; threshold?: number; cooldown_hours?: number; channel?: string; adr_ref?: string }[] }
     | null;
   if (!body?.project_id) {
     return badRequest("invalid_request", "project_id is required.");
@@ -64,6 +64,7 @@ export async function POST(request: Request) {
         threshold: rule.threshold ?? null,
         cooldownHours: rule.cooldown_hours ?? 24,
         channel: rule.channel as never,
+        adrRef: rule.adr_ref ?? null,
       });
     }
     return ok({ id: watchId, project_id: body.project_id, rules: (body.rules ?? []).length }, 201);

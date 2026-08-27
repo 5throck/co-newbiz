@@ -29,6 +29,7 @@ export function DataTab() {
   const [selected, setSelected] = useState<string | null>(null);
   const [observations, setObservations] = useState<ObservationRow[] | null>(null);
   const [changes, setChanges] = useState<DataChangeRow[] | null>(null);
+  const [allRevisions, setAllRevisions] = useState(false);
 
   useEffect(() => {
     api
@@ -50,26 +51,35 @@ export function DataTab() {
       return;
     }
     api
-      .get<ObservationRow[]>(`/api/series/${encodeURIComponent(selected)}/observations`)
+      .get<ObservationRow[]>(`/api/series/${encodeURIComponent(selected)}/observations${allRevisions ? "?all_revisions=1" : ""}`)
       .then((res) => setObservations(res.data))
       .catch(() => setObservations([]));
-  }, [selected]);
+  }, [selected, allRevisions]);
 
   const sortedObs = observations
-    ? [...observations].sort((a, b) => String(a.period_id).localeCompare(String(b.period_id)))
+    ? [...observations].sort(
+        (a, b) => String(a.period_id).localeCompare(String(b.period_id)) || a.revision_no - b.revision_no,
+      )
     : [];
 
-  const chartOption = sortedObs.length
+  // all_revisions 모드에서는 기간별 최신 수정본만 차트에 반영한다(테이블은 전체 표시).
+  const chartObs = (() => {
+    const latest = new Map<string, ObservationRow>();
+    for (const o of sortedObs) latest.set(o.period_id, o);
+    return [...latest.values()];
+  })();
+
+  const chartOption = chartObs.length
     ? {
         tooltip: { trigger: "axis" as const },
         grid: { left: 56, right: 24, top: 24, bottom: 32 },
-        xAxis: { type: "category" as const, data: sortedObs.map((o) => o.period_id) },
-        yAxis: { type: "value" as const, name: sortedObs[0]?.unit_id ?? "" },
+        xAxis: { type: "category" as const, data: chartObs.map((o) => o.period_id) },
+        yAxis: { type: "value" as const, name: chartObs[0]?.unit_id ?? "" },
         series: [
           {
             type: "line" as const,
             smooth: true,
-            data: sortedObs.map((o) => o.value),
+            data: chartObs.map((o) => o.value),
             itemStyle: { color: "#7c9dff" },
             areaStyle: { color: "rgba(124,157,255,0.12)" },
           },
@@ -127,7 +137,17 @@ export function DataTab() {
 
       {selected && (
         <section aria-label="선택한 시계열 관측치">
-          <h2>{selected} 관측치 (최신 수정본)</h2>
+          <h2>
+            {selected} 관측치{allRevisions ? " (전체 수정본)" : " (최신 수정본)"}
+          </h2>
+          <label className="mb-2 inline-flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={allRevisions}
+              onChange={(e) => setAllRevisions(e.target.checked)}
+            />
+            전체 수정본 표시 (all_revisions=1)
+          </label>
           {observations === null ? (
             <p>불러오는 중...</p>
           ) : observations.length === 0 ? (

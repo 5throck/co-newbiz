@@ -1283,6 +1283,30 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/projects/{id}/proxy-chain-grade:
+    get:
+      operationId: getProxyChainGrade
+      summary: Stored vs recomputed proxy-chain reliability grade (db/lib/chain-grading.ts) with per-hop type/R²/CI rows; mismatch flagged.
+      tags: [Analysis]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/roic-tree:
+    get:
+      operationId: getRoicTree
+      summary: ROIC driver-tree bridge — derives ROIC/NOPAT margin from fact_industry metrics; degrades to an explicit not-computable state when base metrics are absent.
+      tags: [Analysis]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/watch:
     get:
       operationId: listWatches
@@ -1314,6 +1338,9 @@ paths:
                       threshold: { type: number }
                       cooldown_hours: { type: number }
                       channel: { type: string }
+                      adr_ref:
+                        type: string
+                        description: Linked ADR reference — a notification-threshold rule without one is a client-side hard block (ui-spec §5).
       responses:
         "201": { $ref: "#/components/responses/Created" }
         "400": { $ref: "#/components/responses/BadRequest" }
@@ -1341,6 +1368,35 @@ paths:
         "200": { $ref: "#/components/responses/Ok" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /api/reports:
+    get:
+      operationId: listReports
+      summary: Generated report documents with their superseded chain (document table).
+      tags: [Reports]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/reports/{id}/export:
+    get:
+      operationId: exportReport
+      summary: Render a report document to docx/hwpx/pdf via python/report/render_*.py (?format=docx|hwpx|pdf).
+      tags: [Reports]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: format
+          in: query
+          required: true
+          schema: { type: string, enum: [docx, hwpx, pdf] }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/glossary:
     get:
       operationId: listGlossaryKeys
@@ -1349,6 +1405,34 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ok" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: registerGlossaryTerm
+      summary: >-
+        Register a glossary term — admin only. Appends the term to the category
+        YAML file (glossary/*.yaml SSOT); why_it_matters_ko is mandatory
+        (glossary/_schema.yaml), duplicates are rejected in favor of merging.
+      tags: [Glossary]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, ko, en, definition_ko, why_it_matters_ko, category]
+              properties:
+                key: { type: string }
+                ko: { type: string }
+                en: { type: string }
+                definition_ko: { type: string }
+                why_it_matters_ko: { type: string }
+                category: { type: string, enum: [business, financial, legal, technical, industry, unit] }
+                owner: { type: string }
+                aliases: { type: array, items: { type: string } }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /api/glossary/{term}:
     get:
@@ -1418,6 +1502,36 @@ paths:
     get:
       operationId: listScheduleJobs
       summary: Job registry plus latest run per job. Admin role.
+      tags: [Admin]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/admin/governance:
+    get:
+      operationId: listGovernanceDocs
+      summary: Governance document registry read view (from governance_doc). Admin role.
+      tags: [Admin]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/admin/master-data:
+    get:
+      operationId: listMasterDataQueue
+      summary: staging_unmapped queue — raw values that failed master-data matching. Admin role.
+      tags: [Admin]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/admin/adr:
+    get:
+      operationId: listAdrIndex
+      summary: ADR index scanned from docs/adr/*.md (id, title, status). Admin role.
       tags: [Admin]
       responses:
         "200": { $ref: "#/components/responses/Ok" }
