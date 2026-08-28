@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api.ts";
 import { RoicWaterfallChart } from "./RoicWaterfallChart.tsx";
-import { EnginePendingPanel } from "./EnginePendingPanel.tsx";
 
 interface TreeRow {
   level: number;
@@ -19,6 +18,25 @@ interface WaterfallRow {
   kind: "total" | "delta" | "subtotal" | "pct";
 }
 
+interface HistoricalRoicPoint {
+  fiscal_year: number;
+  roic: number;
+}
+
+interface ProjectionYear {
+  fiscal_year: number;
+  projected_roic: number;
+  base_rate_warning: boolean;
+}
+
+interface Projection {
+  computable: boolean;
+  reason?: string;
+  anchor_ref?: string;
+  cagr?: number;
+  years?: ProjectionYear[];
+}
+
 interface RoicResponse {
   computable: boolean;
   reason?: string;
@@ -28,6 +46,8 @@ interface RoicResponse {
   nopat_margin?: number;
   tree?: TreeRow[];
   waterfall?: WaterfallRow[];
+  historical_roic?: HistoricalRoicPoint[];
+  projection?: Projection;
 }
 
 function fmt(v: number, pct?: boolean) {
@@ -114,10 +134,56 @@ export function RoicTree({ projectId }: { projectId: string }) {
         </table>
       </div>
     </section>
-    <EnginePendingPanel
-      title="프로젝션 (anchor markers 포함)"
-      note="프로젝션(성장률 추정 + base-rate anchor 표시)은 growth-projection 엔드포인트가 필요합니다. 해당 엔드포인트는 forward-design(아직 구현되지 않음)이라 현재 표시할 수 없습니다."
-    />
+    <ProjectionSection projection={data.projection} />
     </>
+  );
+}
+
+function ProjectionSection({ projection }: { projection?: Projection }) {
+  return (
+    <section aria-label="ROIC 프로젝션" className="mt-6">
+      <h4 className="font-semibold mb-2">프로젝션 (ADR-0018 anchor)</h4>
+      {!projection || !projection.computable ? (
+        <div className="glass p-4 text-sm text-[color:var(--muted-fg)]">
+          프로젝션을 계산할 수 없습니다{projection?.reason ? `: ${projection.reason}` : ""}.
+        </div>
+      ) : (
+        <>
+          <p className="text-xs text-[color:var(--muted-fg)] mb-2">
+            anchor_ref: <span className="font-mono">{projection.anchor_ref}</span> · CAGR:{" "}
+            <span className="font-mono">{fmt(projection.cagr ?? 0, true)}</span>
+          </p>
+          <table className="w-full border-collapse text-sm">
+            <caption className="sr-only">ROIC 프로젝션 상세</caption>
+            <thead>
+              <tr className="text-left">
+                <th className="p-2 border-b border-[color:var(--border)]">연도</th>
+                <th className="p-2 border-b border-[color:var(--border)] text-right">예상 ROIC</th>
+                <th className="p-2 border-b border-[color:var(--border)]">base-rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(projection.years ?? []).map((y) => (
+                <tr key={y.fiscal_year}>
+                  <td className="p-2 border-b border-[color:var(--border-subtle)]">{y.fiscal_year}</td>
+                  <td className="p-2 border-b border-[color:var(--border-subtle)] text-right font-mono">
+                    {fmt(y.projected_roic, true)}
+                  </td>
+                  <td className="p-2 border-b border-[color:var(--border-subtle)]">
+                    {y.base_rate_warning ? (
+                      <span className="critical-badge">
+                        <span aria-hidden="true">⚠</span> 역사적 분포 상위 10% 초과
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </section>
   );
 }

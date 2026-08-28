@@ -4,6 +4,15 @@
 // computation is honest: it derives what it can from present metrics and sets
 // `computable=false` with reasons when the base metrics (revenue, NOPAT,
 // invested capital) are absent — never fabricating a figure.
+//
+// Projection v1 (ADR-0018 anchoring): a 3-year forward ROIC projection is
+// derived from the historical fact_industry ROIC series via CAGR when at
+// least two historical data points exist — never fabricated from a single
+// point. Every projected value carries `anchor_ref` back to the historical
+// series it was derived from, and a projection landing above the historical
+// max by more than 10% of the historical range trips `base_rate_warning`
+// (ADR-0018's mechanical outlier check; no peer distribution is wired yet,
+// so the check is historical-only for v1).
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
@@ -81,6 +90,61 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const roic = derivedNopat / ic;
   const taxRate = tax !== null && operatingProfit ? tax / operatingProfit : null;
 
+  // Historical ROIC series (one point per fiscal year with computable base
+  // metrics) drives the v1 projection below.
+  const years = [...new Set(rows.map((r) => r.fiscal_year))].sort((a, b) => a - b);
+  const historicalRoic: { fiscal_year: number; roic: number }[] = [];
+  for (const y of years) {
+    const yearRows = rows.filter((r) => r.fiscal_year === y);
+    const yRevenue = pick(yearRows, ["revenue", "sales", "매출"]);
+    const yOperatingProfit = pick(yearRows, ["ebit", "operating_profit", "op_profit", "영업이익"]);
+    const yTax = pick(yearRows, ["tax", "taxes", "법인세"]);
+    const yNopat = pick(yearRows, ["nopat", "net_operating"]) ?? (yOperatingProfit !== null ? yOperatingProfit - (yTax ?? 0) : null);
+    const yIc = pick(yearRows, ["invested_capital", "invested", "투하자본"]) ?? pick(yearRows, ["total_assets", "asset", "자산"]);
+    if (yRevenue !== null && yNopat !== null && yIc !== null && yIc !== 0) {
+      historicalRoic.push({ fiscal_year: y, roic: yNopat / yIc });
+    }
+  }
+
+  const projection: {
+    computable: boolean;
+    reason?: string;
+    anchor_ref?: string;
+    cagr?: number;
+    years?: { fiscal_year: number; projected_roic: number; base_rate_warning: boolean }[];
+  } = { computable: false };
+
+  if (historicalRoic.length < 2) {
+    projection.reason = "역사적 ROIC 데이터 포인트가 2개 미만이라 프로젝션을 산출할 수 없습니다.";
+  } else {
+    const first = historicalRoic[0];
+    const last = historicalRoic[historicalRoic.length - 1];
+    const span = last.fiscal_year - first.fiscal_year;
+    if (span <= 0 || first.roic <= 0 || last.roic <= 0) {
+      projection.reason = "ROIC 값이 음수/0이거나 연도 스팬이 없어 CAGR을 산출할 수 없습니다.";
+    } else {
+      const cagr = Math.pow(last.roic / first.roic, 1 / span) - 1;
+      const roicValues = historicalRoic.map((h) => h.roic);
+      const histMax = Math.max(...roicValues);
+      const histMin = Math.min(...roicValues);
+      const range = histMax - histMin;
+      const warnThreshold = histMax + 0.1 * range;
+      const anchorRef = `fact_industry:${industryId}:roic_historical:${first.fiscal_year}-${last.fiscal_year}`;
+      const projectedYears = [1, 2, 3].map((offset) => {
+        const projectedRoic = last.roic * Math.pow(1 + cagr, offset);
+        return {
+          fiscal_year: last.fiscal_year + offset,
+          projected_roic: projectedRoic,
+          base_rate_warning: projectedRoic > warnThreshold,
+        };
+      });
+      projection.computable = true;
+      projection.anchor_ref = anchorRef;
+      projection.cagr = cagr;
+      projection.years = projectedYears;
+    }
+  }
+
   const tree = [
     { level: 1, label: "Revenue (매출)", value: revenue, parent: null },
     { level: 2, label: "NOPAT (순영업이익)", value: derivedNopat, parent: "Revenue (매출)" },
@@ -111,6 +175,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       nopat_margin: nopatMargin,
       tree,
       waterfall,
+      historical_roic: historicalRoic,
+      projection,
     },
     200,
     { industry_id: industryId, fiscal_year: latestYear },

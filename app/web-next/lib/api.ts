@@ -418,6 +418,23 @@ export interface CompBenchmarkRow {
   annual_cost_delta: number | null;
 }
 
+// contract_coc_clause — the customer-attrition validator's structured record
+// (ma-07/ma-08, ADR-0072): CoC clauses across customer/supplier contracts
+// plus concentration, churn estimate, and competitive-overlap notes.
+export interface ContractCocRow {
+  id: string;
+  counterparty: string;
+  direction: string;
+  coc_clause_present: number;
+  clause_summary: string | null;
+  concentration_pct: number | null;
+  est_churn_pct: number | null;
+  overlap_note: string | null;
+  value_impact: number | null;
+  evidence_ref: string | null;
+  created_at: string;
+}
+
 export interface ValueChainLinkRow {
   id: string;
   direction: "upstream" | "downstream";

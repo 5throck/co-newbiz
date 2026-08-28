@@ -1336,6 +1336,51 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/projects/{id}/contract-coc-clauses:
+    get:
+      operationId: listContractCocClauses
+      summary: >-
+        The customer-attrition validator's structured record (ma-07/ma-08,
+        ADR-0072) — CoC clauses across customer/supplier contracts plus
+        concentration, churn estimate, and competitive-overlap notes.
+        Membership-filtered.
+      tags: [M&A Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: addContractCocClause
+      summary: Record a contract CoC finding (analyst+ only; audited as contract_coc_add).
+      tags: [M&A Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [counterparty, direction, coc_clause_present]
+              properties:
+                counterparty: { type: string }
+                direction: { type: string, enum: [customer, supplier] }
+                coc_clause_present: { type: boolean }
+                clause_summary: { type: string }
+                concentration_pct: { type: number, minimum: 0, maximum: 100 }
+                est_churn_pct: { type: number, minimum: 0, maximum: 100 }
+                overlap_note: { type: string }
+                value_impact: { type: integer }
+                evidence_ref: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/watch:
     get:
       operationId: listWatches

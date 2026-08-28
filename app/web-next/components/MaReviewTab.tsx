@@ -6,6 +6,7 @@ import {
   ApiError,
   type AntitrustRow,
   type CompBenchmarkRow,
+  type ContractCocRow,
   type IncentiveRow,
   type LiabilitiesResponse,
   type ManagementPackageRow,
@@ -835,6 +836,193 @@ function CompBenchmarkSection({ projectId }: { projectId: string }) {
   );
 }
 
+// ── 9. 고객·공급사 CoC 조항 (customer-attrition validator, ma-07/ma-08) ──
+
+function ContractCocSection({ projectId }: { projectId: string }) {
+  const [rows, setRows] = useState<ContractCocRow[] | null>(null);
+  const [asOf, setAsOf] = useState<ProvenanceMeta>({});
+  const [denied, setDenied] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    counterparty: "",
+    direction: "customer",
+    coc_clause_present: true,
+    clause_summary: "",
+    concentration_pct: "",
+    est_churn_pct: "",
+    overlap_note: "",
+    value_impact: "",
+    evidence_ref: "",
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formNotice, setFormNotice] = useState<string | null>(null);
+  const [formBusy, setFormBusy] = useState(false);
+
+  const refresh = () =>
+    api
+      .get<ContractCocRow[]>(`/api/projects/${projectId}/contract-coc-clauses`)
+      .then((res) => {
+        setRows(res.data);
+        setAsOf({ as_of: typeof res.meta.as_of === "string" ? res.meta.as_of : undefined });
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.code === "role_required") setDenied(err.message);
+        setRows([]);
+      });
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  async function submitClause(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    setFormNotice(null);
+    if (!form.counterparty.trim()) {
+      setFormError("계약 상대방(counterparty)은 필수입니다.");
+      return;
+    }
+    setFormBusy(true);
+    try {
+      await api.post<{ id: string }>(`/api/projects/${projectId}/contract-coc-clauses`, {
+        counterparty: form.counterparty.trim(),
+        direction: form.direction,
+        coc_clause_present: form.coc_clause_present,
+        clause_summary: form.clause_summary || undefined,
+        concentration_pct: form.concentration_pct === "" ? undefined : Number(form.concentration_pct),
+        est_churn_pct: form.est_churn_pct === "" ? undefined : Number(form.est_churn_pct),
+        overlap_note: form.overlap_note || undefined,
+        value_impact: form.value_impact === "" ? undefined : Number(form.value_impact),
+        evidence_ref: form.evidence_ref || undefined,
+      });
+      setFormNotice("계약 CoC 조항이 등록되었습니다.");
+      setForm({ counterparty: "", direction: "customer", coc_clause_present: true, clause_summary: "", concentration_pct: "", est_churn_pct: "", overlap_note: "", value_impact: "", evidence_ref: "" });
+      refresh();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "등록에 실패했습니다.");
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
+  return (
+    <section className="ma-section" aria-label="고객·공급사 CoC 조항">
+      <h2>고객·공급사 CoC 조항 및 이탈 리스크 (Customer Attrition)</h2>
+      <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
+        고객·공급사 계약의 지배권변경(CoC) 조항 스캔 결과와 집중도·이탈 추정치입니다 (필수 검증 ma-07/ma-08).
+      </p>
+      {denied && <p className="form-error">{denied}</p>}
+      {rows === null ? (
+        <p>불러오는 중...</p>
+      ) : rows.length === 0 ? (
+        !denied && <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 스캔된 계약 CoC 기록이 없습니다.</p>
+      ) : (
+        <table className="ma-table">
+          <caption className="sr-only">계약 CoC 조항 및 이탈 리스크</caption>
+          <thead>
+            <tr>
+              <th scope="col">상대방</th>
+              <th scope="col">구분</th>
+              <th scope="col">CoC 조항</th>
+              <th scope="col">집중도(%)</th>
+              <th scope="col">이탈 추정(%)</th>
+              <th scope="col">가치 영향</th>
+              <th scope="col">경쟁 중복</th>
+              <th scope="col">조항 요약</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.id}>
+                <td>{c.counterparty}</td>
+                <td>{c.direction === "customer" ? "고객" : "공급사"}</td>
+                <td>
+                  {c.coc_clause_present === 1 ? (
+                    <span className="critical-badge">
+                      <span aria-hidden="true">●</span> 조항 있음
+                    </span>
+                  ) : (
+                    <span>
+                      <span aria-hidden="true">○</span> 없음
+                    </span>
+                  )}
+                </td>
+                <td>
+                  <Figure provenance={asOf} value={c.concentration_pct === null ? "—" : `${c.concentration_pct}%`} />
+                </td>
+                <td>
+                  <Figure provenance={asOf} value={c.est_churn_pct === null ? "—" : `${c.est_churn_pct}%`} />
+                </td>
+                <td>
+                  <Figure provenance={asOf} value={num(c.value_impact)} />
+                </td>
+                <td>{c.overlap_note?.trim() || "—"}</td>
+                <td>{c.clause_summary?.trim() || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <form className="contract-coc-form mt-4" onSubmit={submitClause} aria-label="계약 CoC 조항 등록">
+        <h3>계약 CoC 조항 등록</h3>
+        <div className="form-grid">
+          <label>
+            상대방 *
+            <input type="text" value={form.counterparty} onChange={(e) => setForm({ ...form, counterparty: e.target.value })} required />
+          </label>
+          <label>
+            구분 *
+            <select value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })}>
+              <option value="customer">고객</option>
+              <option value="supplier">공급사</option>
+            </select>
+          </label>
+          <label>
+            CoC 조항 *
+            <select
+              value={form.coc_clause_present ? "1" : "0"}
+              onChange={(e) => setForm({ ...form, coc_clause_present: e.target.value === "1" })}
+            >
+              <option value="1">조항 있음</option>
+              <option value="0">없음</option>
+            </select>
+          </label>
+          <label>
+            집중도(%)
+            <input type="number" step="any" min="0" max="100" value={form.concentration_pct} onChange={(e) => setForm({ ...form, concentration_pct: e.target.value })} />
+          </label>
+          <label>
+            이탈 추정(%)
+            <input type="number" step="any" min="0" max="100" value={form.est_churn_pct} onChange={(e) => setForm({ ...form, est_churn_pct: e.target.value })} />
+          </label>
+          <label>
+            가치 영향
+            <input type="number" step="any" value={form.value_impact} onChange={(e) => setForm({ ...form, value_impact: e.target.value })} />
+          </label>
+          <label>
+            근거 참조
+            <input type="text" value={form.evidence_ref} onChange={(e) => setForm({ ...form, evidence_ref: e.target.value })} />
+          </label>
+        </div>
+        <label className="block mt-2">
+          조항 요약
+          <textarea value={form.clause_summary} onChange={(e) => setForm({ ...form, clause_summary: e.target.value })} rows={2} />
+        </label>
+        <label className="block mt-2">
+          경쟁 중복 관찰
+          <input type="text" value={form.overlap_note} onChange={(e) => setForm({ ...form, overlap_note: e.target.value })} />
+        </label>
+        {formError && <p className="form-error mt-2" role="alert">{formError}</p>}
+        {formNotice && <p className="form-success mt-2">{formNotice}</p>}
+        <button type="submit" className="btn-primary mt-2" disabled={formBusy}>
+          {formBusy ? "등록 중..." : "CoC 기록 등록"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
 export function MaReviewTab({ projectId }: { projectId: string }) {
   return (
     <div className="ma-tab">
@@ -846,6 +1034,7 @@ export function MaReviewTab({ projectId }: { projectId: string }) {
       <ValueChainSection projectId={projectId} />
       <ManagementPackageSection projectId={projectId} />
       <CompBenchmarkSection projectId={projectId} />
+      <ContractCocSection projectId={projectId} />
     </div>
   );
 }

@@ -1752,3 +1752,145 @@ describe("screening longlist + partner DD + chain sensitivities (ADR-0067 round 
     }
   });
 });
+
+describe("contract-coc-clauses (ma-07/ma-08, ADR-0072)", () => {
+  test("viewer read-only can list, analyst can write, audited as contract_coc_add", async () => {
+    const list0 = await req(`/api/projects/${projectId}/contract-coc-clauses`, { headers: { cookie: aliceCookie } });
+    expect(list0.status).toBe(200);
+    expect((await list0.json()).data).toEqual([]);
+
+    const created = await req(`/api/projects/${projectId}/contract-coc-clauses`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({
+        counterparty: "Acme Co",
+        direction: "customer",
+        coc_clause_present: true,
+        concentration_pct: 42,
+        est_churn_pct: 15,
+        value_impact: -500,
+      }),
+    });
+    expect(created.status).toBe(201);
+
+    const list1 = await req(`/api/projects/${projectId}/contract-coc-clauses`, { headers: { cookie: aliceCookie } });
+    const rows = (await list1.json()).data as Array<{ counterparty: string; coc_clause_present: number }>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].counterparty).toBe("Acme Co");
+    expect(rows[0].coc_clause_present).toBe(1);
+
+    const audit = db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'contract_coc_add'").get() as { n: number };
+    expect(audit.n).toBeGreaterThan(0);
+  });
+
+  test("invalid direction is refused", async () => {
+    const bad = await req(`/api/projects/${projectId}/contract-coc-clauses`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ counterparty: "X", direction: "partner", coc_clause_present: true }),
+    });
+    expect(bad.status).toBe(400);
+  });
+});
+
+describe("roic-tree projection v1 (ADR-0018 base-rate anchoring)", () => {
+  test("honest CAGR projection with anchor_ref, and base-rate warning on an outlier trend", async () => {
+    const industry = ulid();
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [industry, "T-ROIC", "t", "t", NOW]);
+    db.run(
+      "INSERT INTO project_industry (id, project_id, industry_id, bound_by, bound_at, rationale) VALUES (?,?,?,?,?,?)",
+      [ulid(), projectId, industry, "alice", NOW, "test binding"],
+    );
+
+    const currentYear = new Date().getUTCFullYear();
+    // ROIC growing steeply: 5% -> 8% -> 13% -> 22% -> 37% across 5 years —
+    // a CAGR of roughly 65%/yr, guaranteed to push the 3yr-out projection
+    // outside the historical range and trip base_rate_warning.
+    const series = [
+      { year: currentYear - 4, nopat: 5, ic: 100 },
+      { year: currentYear - 3, nopat: 8, ic: 100 },
+      { year: currentYear - 2, nopat: 13, ic: 100 },
+      { year: currentYear - 1, nopat: 22, ic: 100 },
+      { year: currentYear, nopat: 37, ic: 100 },
+    ];
+    for (const point of series) {
+      const periodId = ulid();
+      db.run(
+        "INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
+        [periodId, "year", `${point.year}-01-01`, `${point.year}-12-31`, point.year, NOW],
+      );
+      for (const [metric_key, value] of [
+        ["revenue", 1000],
+        ["nopat", point.nopat],
+        ["invested_capital", point.ic],
+      ] as const) {
+        db.run(
+          "INSERT INTO fact_industry (id, industry_id, period_id, metric_key, value, created_at) VALUES (?,?,?,?,?,?)",
+          [ulid(), industry, periodId, metric_key, value, NOW],
+        );
+      }
+    }
+
+    const res = await req(`/api/projects/${projectId}/roic-tree`, { headers: { cookie: aliceCookie } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()).data as {
+      computable: boolean;
+      historical_roic: { fiscal_year: number; roic: number }[];
+      projection: { computable: boolean; anchor_ref?: string; cagr?: number; years?: { fiscal_year: number; base_rate_warning: boolean }[] };
+    };
+    expect(body.computable).toBe(true);
+    expect(body.historical_roic.length).toBe(5);
+    expect(body.projection.computable).toBe(true);
+    expect(body.projection.anchor_ref).toContain(`fact_industry:${industry}:roic_historical`);
+    expect(body.projection.cagr).toBeGreaterThan(0);
+    expect(body.projection.years).toHaveLength(3);
+    // A steep upward trend should trip the base-rate warning by year 3 at the latest.
+    expect(body.projection.years!.some((y) => y.base_rate_warning)).toBe(true);
+  });
+
+  test("projection is not computable with fewer than two historical data points", async () => {
+    const industry = ulid();
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [industry, "T-ROIC2", "t", "t", NOW]);
+    db.run(
+      "INSERT INTO project_industry (id, project_id, industry_id, bound_by, bound_at, rationale) VALUES (?,?,?,?,?,?)",
+      [ulid(), projectId, industry, "alice", NOW, "test binding solo year"],
+    );
+    // Note: this project already has a live-bound industry from the prior
+    // test; project_industry has no ORDER BY guarantee on the read side of
+    // roic-tree (it takes industries[0]), so this test uses its own project.
+    const res2 = await req("/api/projects", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ project_no: "NP-2026-104" }),
+    });
+    const soloProjectId = (await res2.json()).data.id;
+    db.run(
+      "INSERT INTO project_industry (id, project_id, industry_id, bound_by, bound_at, rationale) VALUES (?,?,?,?,?,?)",
+      [ulid(), soloProjectId, industry, "alice", NOW, "test binding solo year"],
+    );
+
+    const currentYear = new Date().getUTCFullYear();
+    const periodId = ulid();
+    db.run(
+      "INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
+      [periodId, "year", `${currentYear}-01-01`, `${currentYear}-12-31`, currentYear, NOW],
+    );
+    for (const [metric_key, value] of [
+      ["revenue", 1000],
+      ["nopat", 100],
+      ["invested_capital", 500],
+    ] as const) {
+      db.run(
+        "INSERT INTO fact_industry (id, industry_id, period_id, metric_key, value, created_at) VALUES (?,?,?,?,?,?)",
+        [ulid(), industry, periodId, metric_key, value, NOW],
+      );
+    }
+
+    const res = await req(`/api/projects/${soloProjectId}/roic-tree`, { headers: { cookie: aliceCookie } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()).data as { computable: boolean; projection: { computable: boolean; reason?: string } };
+    expect(body.computable).toBe(true);
+    expect(body.projection.computable).toBe(false);
+    expect(body.projection.reason).toBeTruthy();
+  });
+});
