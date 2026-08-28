@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 476,
-    "edge_count": 825
+    "node_count": 470,
+    "edge_count": 821
   },
   "nodes": [
     {
@@ -539,12 +539,6 @@
       "id": "agent:security-engineer",
       "type": "agent",
       "label": "security-engineer"
-    },
-    {
-      "id": "agent:security-expert",
-      "type": "agent",
-      "label": "security-expert",
-      "roster": "workspace-root"
     },
     {
       "id": "agent:sre",
@@ -1319,13 +1313,6 @@
       "status": "active"
     },
     {
-      "id": "skill:accessibility-audit",
-      "type": "skill",
-      "label": "accessibility-audit",
-      "version": "1.0.0",
-      "status": "active"
-    },
-    {
       "id": "skill:admin-console-operations",
       "type": "skill",
       "label": "admin-console-operations",
@@ -1700,14 +1687,21 @@
       "id": "skill:k-dart",
       "type": "skill",
       "label": "k-dart",
-      "version": "2.0.2",
+      "version": "2.0.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:k-kosis",
+      "type": "skill",
+      "label": "k-kosis",
+      "version": "1.0.0",
       "status": "active"
     },
     {
       "id": "skill:k-law",
       "type": "skill",
       "label": "k-law",
-      "version": "1.1.1",
+      "version": "1.0.0",
       "status": "active"
     },
     {
@@ -1749,13 +1743,6 @@
       "id": "skill:mcp-server-integration",
       "type": "skill",
       "label": "mcp-server-integration",
-      "version": "1.0.0",
-      "status": "active"
-    },
-    {
-      "id": "skill:mece-logic-auditor",
-      "type": "skill",
-      "label": "mece-logic-auditor",
       "version": "1.0.0",
       "status": "active"
     },
@@ -1848,13 +1835,6 @@
       "type": "skill",
       "label": "portfolio-fit-assessment",
       "version": "1.3.0",
-      "status": "active"
-    },
-    {
-      "id": "skill:presenter-mode",
-      "type": "skill",
-      "label": "presenter-mode",
-      "version": "1.0.1",
       "status": "active"
     },
     {
@@ -1956,13 +1936,6 @@
       "status": "active"
     },
     {
-      "id": "skill:sarif-exporter",
-      "type": "skill",
-      "label": "sarif-exporter",
-      "version": "1.0.0",
-      "status": "active"
-    },
-    {
       "id": "skill:scenario-planning",
       "type": "skill",
       "label": "scenario-planning",
@@ -2037,20 +2010,6 @@
       "type": "skill",
       "label": "strategic-fit-screening",
       "version": "1.1.0",
-      "status": "active"
-    },
-    {
-      "id": "skill:stride-threat-matrix",
-      "type": "skill",
-      "label": "stride-threat-matrix",
-      "version": "1.0.0",
-      "status": "active"
-    },
-    {
-      "id": "skill:swe-solve",
-      "type": "skill",
-      "label": "swe-solve",
-      "version": "1.0.0",
       "status": "active"
     },
     {
@@ -5548,12 +5507,6 @@
     },
     {
       "type": "member_of",
-      "from": "skill:k-law",
-      "to": "proc:entity-establishment-execution",
-      "source_ref": "skills/k-law/SKILL.md"
-    },
-    {
-      "type": "member_of",
       "from": "skill:legal-due-diligence",
       "to": "proc:brownfield-dd",
       "source_ref": "skills/legal-due-diligence/SKILL.md"
@@ -6077,6 +6030,12 @@
     {
       "type": "owns",
       "from": "agent:financial-analyst",
+      "to": "skill:k-kosis",
+      "source_ref": "skills/k-kosis/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:financial-analyst",
       "to": "skill:peer-benchmarking",
       "source_ref": "skills/peer-benchmarking/SKILL.md"
     },
@@ -6269,12 +6228,6 @@
     {
       "type": "owns",
       "from": "agent:pm",
-      "to": "skill:accessibility-audit",
-      "source_ref": "skills/accessibility-audit/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:pm",
       "to": "skill:agent-lifecycle-manager",
       "source_ref": "skills/agent-lifecycle-manager/SKILL.md"
     },
@@ -6325,12 +6278,6 @@
       "from": "agent:pm",
       "to": "skill:standup-synthesizer",
       "source_ref": "skills/standup-synthesizer/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:pm",
-      "to": "skill:swe-solve",
-      "source_ref": "skills/swe-solve/SKILL.md"
     },
     {
       "type": "owns",
@@ -6535,18 +6482,6 @@
       "from": "agent:security-engineer",
       "to": "skill:vulnerability-management",
       "source_ref": "skills/vulnerability-management/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:security-expert",
-      "to": "skill:sarif-exporter",
-      "source_ref": "skills/sarif-exporter/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:security-expert",
-      "to": "skill:stride-threat-matrix",
-      "source_ref": "skills/stride-threat-matrix/SKILL.md"
     },
     {
       "type": "owns",
