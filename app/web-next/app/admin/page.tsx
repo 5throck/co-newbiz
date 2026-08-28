@@ -31,6 +31,20 @@ interface GlossaryTermRow {
   category: string;
 }
 
+// glossary-lint 미정의어 큐 (ADR-0022) — scripts/co-newbiz/glossary-lint.ts의
+// report-only 스캐너 결과. 큐는 큐레이터 심사 대상이지 자동 게이트가 아니다.
+interface GlossaryLintFinding {
+  token: string;
+  file: string;
+  line: number;
+  count: number;
+}
+
+interface GlossaryLintQueue {
+  scanned_files: number;
+  known_count: number;
+  undefined: GlossaryLintFinding[];
+}
 interface AdrRow {
   id: string;
   title: string;
@@ -77,6 +91,7 @@ export function AdminConsole() {
   const [retention, setRetention] = useState<RetentionPolicyRow[] | null>(null);
   const [notifications, setNotifications] = useState<AdminNotificationRow[] | null>(null);
   const [glossary, setGlossary] = useState<GlossaryTermRow[] | null>(null);
+  const [lintQueue, setLintQueue] = useState<GlossaryLintQueue | null>(null);
   const [adrs, setAdrs] = useState<AdrRow[] | null>(null);
   const [masterData, setMasterData] = useState<MasterDataRow[] | null>(null);
   const [governance, setGovernance] = useState<GovernanceDocRow[] | null>(null);
@@ -219,6 +234,12 @@ export function AdminConsole() {
         .then((res) => setGlossary(res.data))
         .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
     }
+    if (section === "glossary" && lintQueue === null) {
+      api
+        .get<GlossaryLintQueue>("/api/admin/glossary-lint")
+        .then((res) => setLintQueue(res.data))
+        .catch(() => setLintQueue({ scanned_files: 0, known_count: 0, undefined: [] }));
+    }
     if (section === "adr" && adrs === null) {
       api
         .get<{ adrs: AdrRow[] }>("/api/admin/adr")
@@ -237,7 +258,7 @@ export function AdminConsole() {
         .then((res) => setGovernance(res.data))
         .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
     }
-  }, [section, users, auditLog, sources, jobs, retention, notifications, glossary, adrs, masterData, governance]);
+  }, [section, users, auditLog, sources, jobs, retention, notifications, glossary, lintQueue, adrs, masterData, governance]);
 
   async function approve(userId: string) {
     await api.put(`/api/admin/users/${userId}`, { action: "approve" });
@@ -667,6 +688,46 @@ export function AdminConsole() {
             </tbody>
           </table>
         ))}
+
+      {section === "glossary" && (
+        <div className="glossary-lint-queue mt-6">
+          <h3>미정의어 큐 (glossary-lint)</h3>
+          {lintQueue === null ? (
+            <p>스캔 중...</p>
+          ) : lintQueue.undefined.length === 0 ? (
+            <p className="text-[color:var(--muted-fg)] italic">
+              미정의 약어 없음 — {lintQueue.scanned_files}개 파일 스캔, 등록 용어 {lintQueue.known_count}개 사용 확인.
+            </p>
+          ) : (
+            <>
+              <p className="helper-note">
+                {lintQueue.scanned_files}개 파일 스캔 · 등록 용어 {lintQueue.known_count}개 사용 · 미정의 후보 {lintQueue.undefined.length}건 — 큐레이터 심사 대상이며 자동 게이트가 아닙니다.
+              </p>
+              <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+                <caption className="sr-only">미정의어 큐</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">토큰</th>
+                    <th scope="col">파일</th>
+                    <th scope="col">줄</th>
+                    <th scope="col">빈도</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lintQueue.undefined.map((u, i) => (
+                    <tr key={`${u.token}-${u.file}-${u.line}-${i}`}>
+                      <td className="font-mono text-xs">{u.token}</td>
+                      <td className="font-mono text-xs">{u.file}</td>
+                      <td>{u.line}</td>
+                      <td>{u.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
+      )}
 
       {section === "glossary" && (
         <form className="glossary-form mt-6" onSubmit={submitGlossaryTerm} aria-label="용어 등록">

@@ -195,6 +195,9 @@ export interface SeriesRow {
   observation_count: number;
   min_period_id: string;
   max_period_id: string;
+  last_fetched_at: string | null;
+  days_since_fetch: number | null;
+  stale: boolean;
 }
 
 export interface ObservationRow {
@@ -385,6 +388,34 @@ export interface PartnerRow {
   contacted_at: string | null;
   nda_signed: number;
   evidence_ref: string | null;
+}
+
+// management_package — role-based executive comp (FR-MA-06/SEC-05: the
+// response carries executive_ref only; the schema has no name field).
+export interface ManagementPackageRow {
+  id: string;
+  executive_ref: string;
+  role: string | null;
+  base_pay: number | null;
+  coc_trigger: string | null;
+  coc_payout_estimate: number | null;
+  accelerated_vesting: string | null;
+  non_compete_months: number | null;
+  non_compete_enforceable: string | null;
+  flight_risk: string | null;
+  value_impact: number | null;
+}
+
+// comp_benchmark — aggregate-only pay-parity rows (never individual rows).
+export interface CompBenchmarkRow {
+  id: string;
+  job_family: string;
+  grade: string | null;
+  headcount: number | null;
+  target_median: number | null;
+  acquirer_median: number | null;
+  gap_pct: number | null;
+  annual_cost_delta: number | null;
 }
 
 export interface ValueChainLinkRow {

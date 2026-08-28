@@ -3,9 +3,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   api,
+  ApiError,
   type AntitrustRow,
+  type CompBenchmarkRow,
   type IncentiveRow,
   type LiabilitiesResponse,
+  type ManagementPackageRow,
   type PartnerRow,
   type ProvenanceMeta,
   type SiteRow,
@@ -684,6 +687,154 @@ function ValueChainSection({ projectId }: { projectId: string }) {
   );
 }
 
+// ── 7. 경영진 보상 (Management package) ─────────────────────────────────
+// FR-MA-06/SEC-05: 역할 기반 식별자만 노출 — 실명 컬럼은 스키마에도 없다.
+
+function ManagementPackageSection({ projectId }: { projectId: string }) {
+  const [rows, setRows] = useState<ManagementPackageRow[] | null>(null);
+  const [asOf, setAsOf] = useState<ProvenanceMeta>({});
+  const [denied, setDenied] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .get<ManagementPackageRow[]>(`/api/projects/${projectId}/management-package`)
+      .then((res) => {
+        setRows(res.data);
+        setAsOf({ as_of: typeof res.meta.as_of === "string" ? res.meta.as_of : undefined });
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.code === "role_required") setDenied(err.message);
+        setRows([]);
+      });
+  }, [projectId]);
+
+  return (
+    <section className="ma-section" aria-label="경영진 보상">
+      <h2>경영진 보상 (Management Package)</h2>
+      {denied && <p className="form-error">{denied}</p>}
+      {rows === null ? (
+        <p>불러오는 중...</p>
+      ) : rows.length === 0 ? (
+        !denied && <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 경영진 보상 패키지가 없습니다.</p>
+      ) : (
+        <table className="ma-table">
+          <caption className="sr-only">경영진 보상 패키지 (역할 기반)</caption>
+          <thead>
+            <tr>
+              <th scope="col">역할 참조</th>
+              <th scope="col">직책</th>
+              <th scope="col">기본 보수</th>
+              <th scope="col">CoC 트리거</th>
+              <th scope="col">CoC 퇴직금 추정</th>
+              <th scope="col">베스팅 가속</th>
+              <th scope="col">경업금지 (개월)</th>
+              <th scope="col">경업금지 유효</th>
+              <th scope="col">이탈 리스크</th>
+              <th scope="col">가치 영향</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((m) => (
+              <tr key={m.id}>
+                <td className="font-mono text-xs">{m.executive_ref}</td>
+                <td>{m.role?.trim() || "—"}</td>
+                <td>
+                  <Figure provenance={asOf} value={num(m.base_pay)} />
+                </td>
+                <td>{m.coc_trigger?.trim() || "—"}</td>
+                <td>
+                  <Figure provenance={asOf} value={num(m.coc_payout_estimate)} />
+                </td>
+                <td>{m.accelerated_vesting?.trim() || "—"}</td>
+                <td>
+                  <Figure provenance={asOf} value={m.non_compete_months ?? "—"} />
+                </td>
+                <td>{m.non_compete_enforceable?.trim() || "—"}</td>
+                <td>{m.flight_risk?.trim() || "—"}</td>
+                <td>
+                  <Figure provenance={asOf} value={num(m.value_impact)} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
+// ── 8. 보수 벤치마크 (Comp benchmark, aggregate-only) ────────────────────
+
+function CompBenchmarkSection({ projectId }: { projectId: string }) {
+  const [rows, setRows] = useState<CompBenchmarkRow[] | null>(null);
+  const [asOf, setAsOf] = useState<ProvenanceMeta>({});
+  const [denied, setDenied] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .get<CompBenchmarkRow[]>(`/api/projects/${projectId}/comp-benchmark`)
+      .then((res) => {
+        setRows(res.data);
+        setAsOf({ as_of: typeof res.meta.as_of === "string" ? res.meta.as_of : undefined });
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.code === "role_required") setDenied(err.message);
+        setRows([]);
+      });
+  }, [projectId]);
+
+  return (
+    <section className="ma-section" aria-label="보수 벤치마크">
+      <h2>보수 벤치마크 (Comp Benchmark)</h2>
+      <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
+        직군·등급 집계(k≥3)만 제공 — 개인 단위 행은 존재하지 않습니다.
+      </p>
+      {denied && <p className="form-error">{denied}</p>}
+      {rows === null ? (
+        <p>불러오는 중...</p>
+      ) : rows.length === 0 ? (
+        !denied && <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 등록된 보수 벤치마크 집계가 없습니다.</p>
+      ) : (
+        <table className="ma-table">
+          <caption className="sr-only">보수 벤치마크 (집계 전용)</caption>
+          <thead>
+            <tr>
+              <th scope="col">직군</th>
+              <th scope="col">등급</th>
+              <th scope="col">인원</th>
+              <th scope="col">대상 중위값</th>
+              <th scope="col">인수사 중위값</th>
+              <th scope="col">격차(%)</th>
+              <th scope="col">연간 비용 증감</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.id}>
+                <td>{c.job_family}</td>
+                <td>{c.grade?.trim() || "—"}</td>
+                <td>{c.headcount ?? "—"}</td>
+                <td>
+                  <Figure provenance={asOf} value={num(c.target_median)} />
+                </td>
+                <td>
+                  <Figure provenance={asOf} value={num(c.acquirer_median)} />
+                </td>
+                <td>
+                  <Figure provenance={asOf} value={c.gap_pct === null ? "—" : `${c.gap_pct}%`} />
+                </td>
+                <td>
+                  <Figure provenance={asOf} value={num(c.annual_cost_delta)} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
 export function MaReviewTab({ projectId }: { projectId: string }) {
   return (
     <div className="ma-tab">
@@ -693,6 +844,8 @@ export function MaReviewTab({ projectId }: { projectId: string }) {
       <SitesSection projectId={projectId} />
       <PartnersSection projectId={projectId} />
       <ValueChainSection projectId={projectId} />
+      <ManagementPackageSection projectId={projectId} />
+      <CompBenchmarkSection projectId={projectId} />
     </div>
   );
 }

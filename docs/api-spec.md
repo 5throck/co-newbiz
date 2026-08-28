@@ -73,8 +73,8 @@
 | `/api/projects/:id/antitrust` | GET | HHI/remedy-type/discharge-status | Membership | as-built (5.7B) |
 | `/api/projects/:id/liabilities` | GET | Combined exposure — `debt_instrument` + `contingent_liability` + the latest simulation's `covenant_test` (money fields **KRW millions** per ADR-0061; covenant thresholds/ratios are ratios) | Membership | as-built (5.7B) |
 | `/api/projects/:id/contingent-liabilities` | POST | Feeds Monte Carlo | Membership | forward-design (read side served by `/liabilities`) |
-| `/api/projects/:id/management-package` | GET | **`executive_ref` only, never a real name** (FR-MA-06/SEC-05) — response schema has no name field to accidentally populate | Membership + elevated role (compensation data) | forward-design |
-| `/api/projects/:id/comp-benchmark` | GET | Aggregate-only rows | Membership + elevated role | forward-design |
+| `/api/projects/:id/management-package` | GET | **`executive_ref` only, never a real name** (FR-MA-06/SEC-05) — response schema has no name field to accidentally populate | Membership + elevated role (compensation data) | as-built (2026-08-28 — viewer rejected, analyst/admin read; M&A 검토 tab section) |
+| `/api/projects/:id/comp-benchmark` | GET | Aggregate-only rows | Membership + elevated role | as-built (2026-08-28 — viewer rejected; M&A 검토 tab section) |
 | `/api/projects/:id/sites` | GET | `site_candidate` comparison table | Membership | as-built (5.7B) |
 | `/api/projects/:id/permits` | GET | Permit DAG with critical path (`?include_dag=1`); certifications returned in parallel, never merged | Membership | as-built (5.7B) |
 | `/api/projects/:id/incentives` | GET/POST | Unified acquisition/clawback record | Membership | GET as-built (5.7B); POST forward-design |
