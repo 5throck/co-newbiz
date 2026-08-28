@@ -4,18 +4,19 @@
 
 - **Agent Name**: backend-engineer
 - **Formal Name**: Backend Engineer
-- **Role**: Hono REST API, authentication, MCP server, the analysis-engine CLI, and the monitoring/alerting pipeline
+- **Role**: Next.js Route Handler REST API, authentication, MCP server, the analysis-engine CLI, and the monitoring/alerting pipeline
 - **Phase**: production
 - **Domain**: technical / app
 - **Tier**: medium
 
 ## Scope
 
-Hono REST API, authentication, MCP server, the analysis-engine CLI, and the monitoring/alerting pipeline.
+Next.js Route Handler REST API, authentication, MCP server, the analysis-engine CLI, and the monitoring/alerting pipeline.
 
 ## Phase History
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
+- **2026-08-28**: Role/scope text updated from Hono REST API to Next.js Route Handler REST API, reflecting the ADR-0069/0070 web-stack migration (accepted 2026-08-26) that this agent record had not yet caught up with.
 
 ## Acceptance Criteria
 

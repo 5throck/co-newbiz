@@ -18,7 +18,7 @@ Wave 5.1 is a hard precondition for 5.2-5.7 (serial); 5.2's four sub-tracks run 
 | 5.3 | RAG engine + approval-chain engine + compliance/waiver/interpretation engine | 5.1, 5.2a | — |
 | 5.4 | Monitoring/auto-reanalysis + OS-level scheduler registration | 5.1, 5.3 | — |
 | 5.5 | Auth/account/session + **information-protection tables (§9 of `docs/db-schema.md`)** | 5.1 | — |
-| 5.6 | Hono API (`docs/api-spec.md`) + React SPA (`docs/ui-spec.md`) + admin console | 5.1-5.5 | — |
+| 5.6 | Hono API (`docs/api-spec.md`) + React SPA (`docs/ui-spec.md`) + admin console — stack later replaced end-to-end by Next.js + Prisma per ADR-0069/0070 (accepted 2026-08-26); this row is a historical record of wave 5.6 as originally executed, not the current stack | 5.1-5.5 | — |
 | 5.7 | OpenAPI + MCP server (`docs/mcp-integration.md`) | 5.6 | — |
 | 5.8 | Skills — reused (16) + new (per design §5) | Any (parallel throughout) | Everything |
 | 5.9 | Deployment pipeline, runbooks, security-baseline execution | 5.1-5.7 | — |

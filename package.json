@@ -44,7 +44,6 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
-    "hono": "^4.13.3",
     "js-yaml": "^5.2.3",
     "zod": "4.4.3"
   },
@@ -52,7 +51,6 @@
     "bun": ">=1.0.0"
   },
   "overrides": {
-    "hono": ">=4.12.25",
     "esbuild": ">=0.28.1"
   },
   "private": true

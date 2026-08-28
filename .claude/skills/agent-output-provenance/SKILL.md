@@ -5,14 +5,19 @@ description: >
   Stamps every agent-produced deliverable with its producing agent, a
   confidence grade, and a human-review record before it counts as complete
   — `docs/process-map.md`'s `analysis_task.reviewed_by` field is the
-  concrete mechanism referenced (a NULL value blocks Entity IC). As of this
-  skill's authoring, the `analysis_task` table itself has not been migrated
-  — this is a real, explicitly flagged gap in the current DB schema.
+  concrete mechanism referenced (a NULL value blocks Entity IC). The
+  `analysis_task` table exists (`db/migrations/0011_dd_finding_and_remaining_tables.sql`)
+  and its `reviewed_by IS NULL` count is already read by the kill-criteria
+  engine (`db/lib/snapshot-filler.ts`), but no code path writes rows into it
+  — the table is permanently empty and the kill-criteria check is
+  vacuously true (zero unreviewed rows because zero rows exist at all,
+  not because review happened). This is the real, explicitly flagged gap:
+  the write/UI path, not the schema.
 
   Use when: "agent output provenance", "confidence grade on a deliverable",
   "reviewed_by tracking", "AI-produced vs human-confirmed distinction".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-08-28
 status: active
 owner: process-governance-manager
 prerequisites:
@@ -28,15 +33,22 @@ metadata:
 
 ## Context
 
-**Adaptation note**: `docs/process-map.md`'s Entity IC gate row names
-`analysis_task.reviewed_by NULL on any required deliverable` as a blocking
-condition — this is the concrete DB mechanism the design intends, but the
-`analysis_task` table has not yet been created in any migration as of this
-skill's authoring. This skill documents the discipline the eventual table
-must implement, following the same "documents before code" principle as
-`market-data-pipeline` and `industry-profile-application`'s own honest gaps
-— it is not a claim that provenance tracking is currently enforced in the
-running system.
+**Adaptation note (updated 2026-08-28, see design doc §20.4)**: `docs/process-map.md`'s
+Entity IC gate row names `analysis_task.reviewed_by NULL on any required
+deliverable` as a blocking condition — this is the concrete DB mechanism the
+design intends, and the `analysis_task` table itself DOES exist
+(`db/migrations/0011_dd_finding_and_remaining_tables.sql`, columns `id,
+project_id, deliverable_type, reviewed_by, reviewed_at`). The kill-criteria
+engine already reads it (`db/lib/snapshot-filler.ts` computes `COUNT(*)
+WHERE project_id=? AND reviewed_by IS NULL`). **What is genuinely missing is
+the write path**: no repository, API route, or UI anywhere inserts a row
+into `analysis_task` or sets `reviewed_by`. The table is permanently empty,
+so the kill-criteria check currently passes vacuously (zero rows match, not
+because deliverables were reviewed) — it is not a claim that provenance
+tracking is currently enforced in the running system. This skill documents
+the discipline the write/UI path must implement, following the same
+"documents before code" principle as `market-data-pipeline` and
+`industry-profile-application`'s own honest gaps.
 
 ## Design Intent (for the eventual implementation)
 
@@ -56,8 +68,11 @@ not check.
 - Today: when reviewing any agent-produced deliverable, apply this
   discipline manually — note the producing agent, note what could and
   could not be verified, and get explicit human confirmation before
-  treating the deliverable as gate-ready
-- Once implemented: automatically, via the `analysis_task` table
+  treating the deliverable as gate-ready. Do not rely on the
+  `analysis_task.reviewed_by IS NULL` kill-criteria check alone — it is
+  vacuously true until the write path exists (see Context above)
+- Once the write/UI path is implemented: automatically, via the
+  `analysis_task` table (schema already in place)
 
 ## Execution Steps
 

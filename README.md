@@ -54,7 +54,7 @@ Your partners consist of specialized agents, each with a distinct role. The **Pr
 | Agent | Role | Tier | Model |
 |-------|------|------|-------|
 | **antitrust-agent** | Antitrust and merger-control review: market definition, HHI calculation, multi-j | high | inherit |
-| **backend-engineer** | Hono REST API, authentication, MCP server, the analysis-engine CLI, and the moni | medium | inherit |
+| **backend-engineer** | Next.js Route Handler REST API, authentication, MCP server, the analysis-engine CLI, and the moni | medium | inherit |
 | **brownfield-agent** | M&A review lead: target screening, deal structuring, and carve-out assessment | high | inherit |
 | **certification-agent** | Certification and regulatory response, kept structurally distinct from permits | high | inherit |
 | **commercial-dd-agent** | Commercial due diligence: customer concentration, pricing power, channel checks, | medium | inherit |
@@ -64,7 +64,7 @@ Your partners consist of specialized agents, each with a distinct role. The **Pr
 | **dba** | Database operations: backup/restore, monthly recovery drills, performance tuning | medium | inherit |
 | **docs-writer** | Document formatting and language-policy enforcement across all four domains | medium | inherit |
 | **financial-analyst** | Historical financial analysis, peer benchmarking, quality-of-earnings, and growt | high | inherit |
-| **frontend-engineer** | React/Vite UI, ECharts visualizations, the RAG dashboard, the admin console, and | medium | inherit |
+| **frontend-engineer** | Next.js (App Router) UI, Recharts visualizations, the RAG dashboard, the admin cons | medium | inherit |
 | **glossary-curator** | Owns the glossary: registration, review, duplicate merging, and the four tooling | medium | inherit |
 | **greenfield-agent** | New-establishment review lead: site selection, infrastructure assessment, talent | high | inherit |
 | **group-review-agent** | Group-level review distinct from entity-level review: portfolio fit, intra-group | high | inherit |
@@ -133,7 +133,7 @@ Our daily operations are driven by slash commands (registered as Skills by Claud
 
 **Type**: web | cli | api | mcp
 
-This variant implements a new-business-review governance team and its supporting system: policy/procedure/checklist authoring and operation, a Hono REST API with SQLite persistence, an MCP server over that API, a Python computational layer, and deal-review workflows for Green Field and Brown Field cases.
+This variant implements a new-business-review governance team and its supporting system: policy/procedure/checklist authoring and operation, a Next.js Route Handler REST API with SQLite persistence, an MCP server over that API, a Python computational layer, and deal-review workflows for Green Field and Brown Field cases. (Originally built on Hono + React/Vite + ECharts per ADR-0010; migrated to Next.js + Prisma + Tailwind + Recharts per ADR-0069/0070, accepted 2026-08-26.)
 
 > ⚠️ Prototype variant — not for production use.
 
@@ -145,4 +145,4 @@ Internal workspace project — not for external distribution. Governed by the sa
 
 ---
 
-*Last Updated: 2026-08-23*
+*Last Updated: 2026-08-28*

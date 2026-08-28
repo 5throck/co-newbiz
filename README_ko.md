@@ -56,7 +56,7 @@ co-newbiz/
 | 에이전트 | 역할 | 티어 | 모델 |
 |---------|------|------|------|
 | **antitrust-agent** | Antitrust 및 기업결합 통제 리뷰: 시장 정의, HHI 계산, 다중 관할 대응 | high | inherit |
-| **backend-engineer** | Hono REST API, 인증, MCP 서버, analysis-engine CLI, 모니터링 | medium | inherit |
+| **backend-engineer** | Next.js Route Handler REST API, 인증, MCP 서버, analysis-engine CLI, 모니터링 | medium | inherit |
 | **brownfield-agent** | M&A 리뷰 리드: 타깃 스크리닝, 딜 구조화, 부문 분리(carve-out) 평가 | high | inherit |
 | **certification-agent** | 인증 및 규제 대응 — 허가(permit)와 구조적으로 분리하여 관리 | high | inherit |
 | **commercial-dd-agent** | 상업적 DD: 고객 집중도, 가격 결정력, 채널 체크 | medium | inherit |
@@ -66,7 +66,7 @@ co-newbiz/
 | **dba** | 데이터베이스 운영: 백업/복원, 월간 복구 훈련, 성능 튜닝 | medium | inherit |
 | **docs-writer** | 4개 도메인 전반의 문서 포맷팅과 언어 정책 집행 | medium | inherit |
 | **financial-analyst** | 과거 재무 분석, 동종 비교 벤치마킹, 실적 품질(QoE) 분석, 성장 전망 | high | inherit |
-| **frontend-engineer** | React/Vite UI, ECharts 시각화, RAG 대시보드, 관리 콘솔 | medium | inherit |
+| **frontend-engineer** | Next.js(App Router) UI, Recharts 시각화, RAG 대시보드, 관리 콘솔 | medium | inherit |
 | **glossary-curator** | 용어집 소유: 등록, 검토, 중복 병합, 4개 도구 연동 | medium | inherit |
 | **greenfield-agent** | 신설 리뷰 리드: 입지 선정, 인프라 평가, 인재 확보 | high | inherit |
 | **group-review-agent** | 개별 법인 리뷰와 구별되는 그룹 레벨 리뷰: 포트폴리오 적합성, 그룹 내 정합성 | high | inherit |
@@ -135,7 +135,7 @@ PM이 **New Business Review Lead**로서 모든 전문가를 직접 디스패치
 
 **유형**: web | cli | api | mcp
 
-이 변형은 신사업 검토 거버넌스 팀과 그 지원 시스템을 구현합니다: 정책·절차·체크리스트 작성 및 운영, SQLite 기반 Hono REST API, 그 위의 MCP 서버, Python 연산 레이어, Green Field 및 Brown Field 딜 리뷰 워크플로.
+이 변형은 신사업 검토 거버넌스 팀과 그 지원 시스템을 구현합니다: 정책·절차·체크리스트 작성 및 운영, SQLite 기반 Next.js Route Handler REST API, 그 위의 MCP 서버, Python 연산 레이어, Green Field 및 Brown Field 딜 리뷰 워크플로. (원래 ADR-0010에 따라 Hono + React/Vite + ECharts로 구축되었으나, ADR-0069/0070(2026-08-26 승인)에 따라 Next.js + Prisma + Tailwind + Recharts로 이관되었습니다.)
 
 > ⚠️ 프로토타입 변형 — 프로덕션 용도가 아닙니다.
 
@@ -148,4 +148,4 @@ PM이 **New Business Review Lead**로서 모든 전문가를 직접 디스패치
 ---
 
 *최근 업데이트: 2026-08-24*
-*Last Updated: 2026-08-23*
+*Last Updated: 2026-08-28*
