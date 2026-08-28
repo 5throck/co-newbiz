@@ -58,6 +58,8 @@ export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const [tab, setTab] = useState<Tab>("overview");
+  // value_impact 딥링크: 실사 탭의 가정 키 클릭 → 가정 탭에서 해당 키 조회.
+  const [assumptionFocus, setAssumptionFocus] = useState<string | null>(null);
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [mnpiBanner, setMnpiBanner] = useState(false);
   const [dimensions, setDimensions] = useState<RagDimension[]>([]);
@@ -205,7 +207,11 @@ export default function ProjectDetailPage() {
 
       {tab === "assumptions" && id && (
         <section aria-label="가정">
-          <AssumptionsTab projectId={id} />
+          <AssumptionsTab
+            projectId={id}
+            focusKey={assumptionFocus}
+            onFocusClear={() => setAssumptionFocus(null)}
+          />
         </section>
       )}
 
@@ -230,7 +236,13 @@ export default function ProjectDetailPage() {
 
       {tab === "dd" && id && (
         <section aria-label="실사">
-          <DdTab projectId={id} />
+          <DdTab
+            projectId={id}
+            onOpenAssumption={(key) => {
+              setAssumptionFocus(key);
+              setTab("assumptions");
+            }}
+          />
         </section>
       )}
 

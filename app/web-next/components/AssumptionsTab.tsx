@@ -24,7 +24,15 @@ function kindMeta(kind: string) {
   return KIND_META[kind] ?? { label: kind, className: "kind-unknown" };
 }
 
-export function AssumptionsTab({ projectId }: { projectId: string }) {
+export function AssumptionsTab({
+  projectId,
+  focusKey,
+  onFocusClear,
+}: {
+  projectId: string;
+  focusKey?: string | null;
+  onFocusClear?: () => void;
+}) {
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [assumptions, setAssumptions] = useState<AssumptionRow[] | null>(null);
 
@@ -45,6 +53,14 @@ export function AssumptionsTab({ projectId }: { projectId: string }) {
   }, [runs, selectedRunId]);
 
   useEffect(() => {
+    // 딥링크 포커스(value_impact → 가정)가 있으면 실행 무관하게 키로 조회한다.
+    if (focusKey?.trim()) {
+      api
+        .get<AssumptionRow[]>(`/api/assumptions?key=${encodeURIComponent(focusKey.trim())}`)
+        .then((res) => setAssumptions(res.data))
+        .catch(() => setAssumptions([]));
+      return;
+    }
     if (!selectedRunId) {
       setAssumptions(runs === null ? null : []);
       return;
@@ -53,7 +69,7 @@ export function AssumptionsTab({ projectId }: { projectId: string }) {
       .get<AssumptionRow[]>(`/api/assumptions?run_id=${encodeURIComponent(selectedRunId)}`)
       .then((res) => setAssumptions(res.data))
       .catch(() => setAssumptions([]));
-  }, [selectedRunId]);
+  }, [selectedRunId, runs, focusKey]);
 
   const selectedRun = runs?.find((r) => r.id === selectedRunId) ?? latestRun;
 
@@ -131,10 +147,26 @@ export function AssumptionsTab({ projectId }: { projectId: string }) {
         )}
         선택된 분석 실행: <strong>{selectedRun?.label}</strong> ({selectedRun ? new Date(selectedRun.created_at).toLocaleString("ko-KR") : "—"})
       </p>
+      {focusKey?.trim() && (
+        <p className="assumption-focus-note">
+          <span aria-hidden="true">◆</span> 실사 항목에서 연결된 가정 키 <strong className="font-mono">{focusKey}</strong> 검색 결과 (전체 실행 대상).{" "}
+          {onFocusClear && (
+            <button
+              type="button"
+              className="border-0 bg-transparent p-0 text-[color:var(--accent)] underline cursor-pointer"
+              onClick={onFocusClear}
+            >
+              실행 보기로 돌아가기
+            </button>
+          )}
+        </p>
+      )}
       {assumptions === null ? (
         <p>불러오는 중...</p>
       ) : assumptions.length === 0 ? (
-        <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 이 실행에 등록된 가정이 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">
+          데이터 없음 — {focusKey?.trim() ? "해당 가정 키와 일치하는 행이 없습니다." : "이 실행에 등록된 가정이 없습니다."}
+        </p>
       ) : (
         <table className="data-table assumptions-table">
           <caption className="sr-only">가정 목록</caption>
