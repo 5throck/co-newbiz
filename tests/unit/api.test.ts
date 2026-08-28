@@ -990,9 +990,75 @@ describe("simulations — Monte Carlo engine over REST (Wave engine-2)", () => {
     expect(body.data.results).toEqual([
       { metric: "npv", p05: fixture.p05, p50: fixture.p50, p95: fixture.p95, mean: fixture.mean, std: fixture.std },
     ]);
-    expect(body.data).not.toHaveProperty("draws"); // retention_policy: simulation_draw is never exposed
+    expect(body.data).not.toHaveProperty("draws"); // retention_policy: raw draw rows are never exposed
     expect(body.meta.seed).toBe(42);
     expect(body.meta.iterations).toBe(5000);
+    // simulation.ts 1.1.0: the engine's per-iteration draws are persisted
+    // (retention-purgeable) and served only as a server-side aggregate.
+    expect(body.meta.draws_stored).toBe(5000);
+  });
+
+  test("GET results carries a real-draw distribution aggregate — histogram counts sum to the draw count", async () => {
+    const res = await req(`/api/simulations/${createdSimId}/results`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    const dist = body.data.distribution;
+    expect(dist).not.toBeNull();
+    expect(dist.metric).toBe("npv");
+    expect(dist.draws).toBe(5000);
+    expect(dist.bins.length).toBe(40);
+    const total = dist.bins.reduce((sum: number, b: { count: number }) => sum + b.count, 0);
+    expect(total).toBe(5000);
+    expect(dist.cdf.length).toBe(100);
+    expect(dist.cdf[dist.cdf.length - 1].p).toBe(1);
+    // The fixture has NO contingent liabilities, so every draw is the same
+    // deterministic base NPV — the honest real distribution is a single
+    // spike: all 5000 draws land in one bin and the CDF is 1 from the start.
+    const filled = dist.bins.filter((b: { count: number }) => b.count > 0);
+    expect(filled.length).toBe(1);
+    expect(filled[0].count).toBe(5000);
+    expect(dist.cdf[0].p).toBe(1);
+  });
+
+  test("distribution aggregate tracks a SPREAD draw set — synthetic draws, no engine spawn", async () => {
+    // The engine fixture is degenerate (no liabilities → zero variance), so
+    // the spread behavior of the histogram/CDF reduction is pinned with a
+    // synthetic simulation: draws 0..99 → 40 bins over [0, 99], CDF 0.01→1.
+    const db = (await import("../../db/client.ts")).getDb();
+    const simId = "01SYNTHETICDRAWS00000000000";
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+      "01SYNTHRUNFORDEMO000000000", projectId, "synthetic-draws", "synth", "alice", NOW,
+    ]);
+    db.run("INSERT INTO simulation (id, run_id, seed, iterations, discount_rate, created_at) VALUES (?,?,?,?,?,?)", [
+      simId, "01SYNTHRUNFORDEMO000000000", 42, 100, 0.08, NOW,
+    ]);
+    db.run("INSERT INTO simulation_result (simulation_id, metric, p05, p50, p95, mean, std) VALUES (?,?,?,?,?,?,?)", [
+      simId, "npv", 4.95, 49.5, 94.05, 49.5, 29.01,
+    ]);
+    const insert = db.query("INSERT INTO simulation_draw (simulation_id, iteration_no, metric, value) VALUES (?,?, 'npv', ?)");
+    for (let i = 0; i < 100; i++) insert.run(simId, i + 1, i);
+
+    const res = await req(`/api/simulations/${simId}/results`, { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    const dist = body.data.distribution;
+    expect(dist.draws).toBe(100);
+    expect(dist.bins.length).toBe(40);
+    expect(dist.bins.reduce((sum: number, b: { count: number }) => sum + b.count, 0)).toBe(100);
+    // range is exactly [0, 99]; first bin [0, 2.475) holds draws 0..2
+    expect(dist.bins[0].start).toBe(0);
+    expect(dist.bins[dist.bins.length - 1].end).toBeCloseTo(99, 9);
+    // 100 draws over 40 bins of width 2.475 → 2 or 3 draws per bin
+    const counts = dist.bins.map((b: { count: number }) => b.count);
+    expect(Math.max(...counts)).toBe(3);
+    expect(Math.min(...counts)).toBe(2);
+    // CDF: nearest point to the median (49.5) has p ≈ 0.5; endpoints exact
+    expect(dist.cdf[0].p).toBeCloseTo(0.01, 9);
+    const medianPoint = dist.cdf.reduce((best: { value: number; p: number }, c: { value: number; p: number }) =>
+      Math.abs(c.value - 49.5) < Math.abs(best.value - 49.5) ? c : best);
+    expect(medianPoint.p).toBeGreaterThan(0.45);
+    expect(medianPoint.p).toBeLessThan(0.55);
+    expect(dist.cdf[dist.cdf.length - 1].p).toBe(1);
   });
 
   test("a run without sim.* inputs is 400 before the engine spawns", async () => {

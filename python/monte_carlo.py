@@ -25,11 +25,15 @@ Input JSON shape:
       "contingent_liabilities": [
         {"probability": 0.3, "amount_low": 10, "amount_expected": 25,
          "amount_high": 60, "timing_year": 2}
-      ]
+      ],
+      "include_draws": false
     }
 
 Output JSON (to stdout):
     {"p05": ..., "p50": ..., "p95": ..., "mean": ..., "seed": 42, "iterations": 10000}
+    plus, when include_draws is true, "draws": [per-iteration NPV, 4dp rounded].
+    Quantiles are computed on the UNROUNDED draws either way, so the pinned
+    seeded-reproduction values (design section 12 item 13) do not move.
 """
 
 import json
@@ -50,6 +54,7 @@ def run_simulation(
     discount_rate: float,
     base_cash_flows: list[float],
     contingent_liabilities: list[dict[str, Any]],
+    include_draws: bool = False,
 ) -> dict[str, Any]:
     rng = np.random.default_rng(seed)  # seeded generator — never np.random's global state
     base_npv = _npv(base_cash_flows, discount_rate)
@@ -66,7 +71,7 @@ def run_simulation(
                 total_liability_pv += pv
         draws[i] = base_npv - total_liability_pv
 
-    return {
+    result: dict[str, Any] = {
         "seed": seed,
         "iterations": iterations,
         "base_npv": round(base_npv, 2),
@@ -76,6 +81,9 @@ def run_simulation(
         "mean": round(float(np.mean(draws)), 2),
         "std": round(float(np.std(draws)), 2),
     }
+    if include_draws:
+        result["draws"] = [round(float(d), 4) for d in draws]
+    return result
 
 
 def main() -> None:
@@ -97,6 +105,7 @@ def main() -> None:
         discount_rate=payload["discount_rate"],
         base_cash_flows=payload["base_cash_flows"],
         contingent_liabilities=payload.get("contingent_liabilities", []),
+        include_draws=bool(payload.get("include_draws", False)),
     )
     print(json.dumps(result, indent=2))
 

@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Simulation orchestrator — the REST-side bridge to python/monte_carlo.py
  * (ADR-0026, design v1.0 §4-6/§4-8, FR-MA-08). The CLI (`newbiz.ts simulate
@@ -29,10 +29,14 @@
  * scenario JSON lives in a throwaway mkdtemp directory, removed whether
  * the engine succeeds or dies. A timeout kills the child.
  *
- * simulation_draw stays empty ON PURPOSE: monte_carlo.py emits a quantile
- * summary only, no per-iteration draws, so there is nothing to archive —
- * retention_policy's contract is "draws may be purged after N months,
- * quantiles in simulation_result never are" (migration 0005 header).
+ * 1.1.0 — per-iteration draws are now REQUESTED (scenario include_draws)
+ * and PERSISTED into simulation_draw (iteration_no 1..N, metric 'npv').
+ * The retention contract is unchanged (migration 0005 header): draws may be
+ * purged after N months via retention_policy; the quantile summary in
+ * simulation_result is never purged. Raw draw ROWS are still never exposed
+ * through the API — GET /api/simulations/:id/results serves a server-side
+ * histogram/CDF aggregate instead (api.test.ts pins the absence of a raw
+ * `draws` property on the response).
  */
 
 import { spawn } from "node:child_process";
@@ -82,6 +86,8 @@ interface EngineOutput {
   p95: number;
   mean: number;
   std: number;
+  /** Present only when the scenario asked include_draws (4dp-rounded, deterministic per seed). */
+  draws?: number[];
 }
 
 const ENGINE_TIMEOUT_MS = 120_000;
@@ -209,6 +215,7 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
       amount_high: cl.amount_high * SCALE,
       timing_year: cl.expected_timing_year,
     })),
+    include_draws: true, // persisted to simulation_draw (retention-purgeable) — see module doc
   };
 
   const tempDir = mkdtempSync(join(tmpdir(), "co-newbiz-sim-"));
@@ -238,6 +245,18 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
 
   const simulationId = ulid();
   const now = opts.now ?? new Date().toISOString();
+  // Draws are validated against the summary BEFORE anything is written: a
+  // truncated or non-finite draw array means the engine run is corrupt and
+  // nothing should persist (the summary alone would silently disagree with
+  // the histogram built from the draws).
+  const draws = output.draws;
+  if (!Array.isArray(draws) || draws.length !== iterations || draws.some((d) => !Number.isFinite(d))) {
+    throw new Error(
+      `Monte Carlo engine returned an invalid draws array (expected ${iterations} finite values, got ${
+        Array.isArray(draws) ? draws.length : String(draws)
+      }).`,
+    );
+  }
   db.transaction(() => {
     db.run(
       "INSERT INTO simulation (id, run_id, seed, iterations, discount_rate, created_at) VALUES (?,?,?,?,?,?)",
@@ -247,6 +266,10 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
       "INSERT INTO simulation_result (simulation_id, metric, p05, p50, p95, mean, std) VALUES (?,?,?,?,?,?,?)",
       [simulationId, "npv", summary.p05, summary.p50, summary.p95, summary.mean, summary.std],
     );
+    const insertDraw = db.query(
+      "INSERT INTO simulation_draw (simulation_id, iteration_no, metric, value) VALUES (?,?, 'npv', ?)",
+    );
+    for (let i = 0; i < draws.length; i++) insertDraw.run(simulationId, i + 1, draws[i]);
   })();
 
   return {

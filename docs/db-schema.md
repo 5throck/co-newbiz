@@ -49,7 +49,7 @@ v_*           → query-optimized views, derived, never a source of truth
 | `run` | Immutable analysis snapshot | `id`, `project_id`, `label`, `input_hash`, `created_by`, `created_at`, `superseded_by` |
 | `run_input` | Frozen input set per run | PK `(run_id, assumption_key)`, `value` |
 | `simulation` | Monte Carlo run | `id`, `run_id`, `seed`, `iterations`, `created_at` |
-| `simulation_draw` | Raw iteration output — **archived after N months (`retention_policy`)** | `simulation_id`, `iteration_no`, `metric`, `value` — **engine-native REAL units** (design §12 seeded-reproduction contract; deliberately NOT unit-scaled, ADR-0061 execution scope correction #2) |
+| `simulation_draw` | Raw iteration output — **archived after N months (`retention_policy`)** | `simulation_id`, `iteration_no`, `metric`, `value` — **engine-native REAL units** (design §12 seeded-reproduction contract; deliberately NOT unit-scaled, ADR-0061 execution scope correction #2). Writer since `db/lib/simulation.ts` 1.1.0: the REST bridge requests the engine's per-iteration draws and persists one `npv` row per iteration in the same transaction as the summary; raw rows are never API-exposed — `GET /api/simulations/:id/results` serves a server-side histogram/CDF aggregate instead |
 | `simulation_result` | Quantile summary — **retained permanently** | `simulation_id`, `metric`, `p05`, `p50`, `p95` — **engine-native REAL units**, same ADR-0061 exclusion as `simulation_draw` |
 | `document` | Rendered deliverable | `id`, `run_id`, `version`, `superseded_by`, `document_section_hash` |
 | `fx_policy` | FX rate-type assignment per item category | `id`, `scope`, `rate_type`, `source_series_id` |
