@@ -43,7 +43,6 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `k-dart` | 2.0.2 | active | strategy-analyst | 2026-08-23 | — | Unified DART OpenAPI skill — disclosure query, financial parsing, line-item extraction (scope: common, l2_propagate) |
 | `k-law` | 1.1.1 | active | strategy-analyst | 2026-08-23 | — | Korean Ministry of Government Legislation (`법제처`) National Law Information Center OpenAPI — statutes, precedents, ordinances (scope: common, l2_propagate) |
 | `mece-logic-auditor` | 1.0.0 | active | strategy-analyst | 2026-08-06 | — | MECE issue tree auditing and strategic reasoning evaluation rules |
-| `sound-synth` | 1.0.0 | active | sound-designer | 2026-08-06 | — | Web Audio API / jsfxr procedural 8-bit retro sound effect generation rules |
 | `standup-synthesizer` | 1.0.0 | active | pm | 2026-08-06 | — | Daily standup digest synthesizer aggregating commits, issues, PRs, and blockers |
 | `swe-solve` | 1.0.0 | active | pm | 2026-08-06 | — | Autonomous 4-stage issue-to-PR resolution pipeline for software engineering tasks |
 | `financial-statement-analysis` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — DART pipeline, retargeted to co-newbiz's own `newbiz.ts fin:*` CLI |
