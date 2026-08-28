@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 477,
+    "node_count": 476,
     "edge_count": 825
   },
   "nodes": [
@@ -2009,13 +2009,6 @@
       "type": "skill",
       "label": "skill-lifecycle-manager",
       "version": "1.2.0",
-      "status": "active"
-    },
-    {
-      "id": "skill:sound-synth",
-      "type": "skill",
-      "label": "sound-synth",
-      "version": "1.0.0",
       "status": "active"
     },
     {
