@@ -1214,7 +1214,7 @@ describe("scorecard routes — unauthenticated + empty-table reads (E.4)", () =>
   });
 });
 
-// E.4 seeding: frank is a member of project A ONLY (until the MNPI test
+// E.4 seeding: grace is a member of project A ONLY (until the MNPI test
 // adds M), so his rollup exercises the membership filter while B's rows
 // exist group-wide. Rows go in through recordVentureScorecardCycle — the
 // reads here see exactly what production writes.
@@ -1239,18 +1239,18 @@ describe("scorecard routes — membership scope, cycles, MNPI (E.4)", () => {
     return runId;
   }
 
-  let frankCookie: string;
+  let graceCookie: string;
   let projectA: string;
   let projectB: string;
 
   beforeAll(async () => {
-    await createUser(db, { userId: "frank", role: "analyst", password: "pw-frank-123456", createdBy: "test", now: NOW });
-    approveUser(db, { userId: "frank", approvedBy: "test", now: NOW });
-    frankCookie = await loginCookie("frank", "pw-frank-123456");
+    await createUser(db, { userId: "grace", role: "analyst", password: "pw-grace-123456", createdBy: "test", now: NOW });
+    approveUser(db, { userId: "grace", approvedBy: "test", now: NOW });
+    graceCookie = await loginCookie("grace", "pw-grace-123456");
 
     const resA = await req("/api/projects", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ project_no: "NP-2026-110" }) });
     projectA = (await resA.json()).data.id;
-    grantProjectMembership(db, { projectId: projectA, userId: "frank", projectRole: "contributor", grantedBy: "alice", needToKnowBasis: "E.4 portfolio scope test", now: NOW });
+    grantProjectMembership(db, { projectId: projectA, userId: "grace", projectRole: "contributor", grantedBy: "alice", needToKnowBasis: "E.4 portfolio scope test", now: NOW });
 
     const resB = await req("/api/projects", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ project_no: "NP-2026-111" }) });
     projectB = (await resB.json()).data.id;
@@ -1278,10 +1278,10 @@ describe("scorecard routes — membership scope, cycles, MNPI (E.4)", () => {
   });
 
   test("the rollup carries only the caller's visible projects — and says it is a subset", async () => {
-    const res = await req("/api/portfolio-scorecard", { headers: { cookie: frankCookie } });
+    const res = await req("/api/portfolio-scorecard", { headers: { cookie: graceCookie } });
     const body = await res.json();
     expect(res.status).toBe(200);
-    expect(body.data.review_cycle).toBe("2026-Q3"); // latest within frank's scope
+    expect(body.data.review_cycle).toBe("2026-Q3"); // latest within grace's scope
     const allRows = [...body.data.financial, ...body.data.strategic];
     expect(allRows.length).toBe(2); // A's Q3 rows only (Q2's row is out of cycle)
     expect(allRows.every((r: { project_id: string }) => r.project_id === projectA)).toBe(true);
@@ -1295,11 +1295,11 @@ describe("scorecard routes — membership scope, cycles, MNPI (E.4)", () => {
       projects_excluded: 1,
       review_cycle: "2026-Q3",
     });
-    expect(body.meta.review_cycles_available).toEqual(["2026-Q2", "2026-Q3"]); // the selector axis, scoped to frank
+    expect(body.meta.review_cycles_available).toEqual(["2026-Q2", "2026-Q3"]); // the selector axis, scoped to grace
   });
 
   test("?review_cycle=2026-Q2 resolves that cycle explicitly", async () => {
-    const res = await req("/api/portfolio-scorecard?review_cycle=2026-Q2", { headers: { cookie: frankCookie } });
+    const res = await req("/api/portfolio-scorecard?review_cycle=2026-Q2", { headers: { cookie: graceCookie } });
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.data.review_cycle).toBe("2026-Q2");
@@ -1309,24 +1309,24 @@ describe("scorecard routes — membership scope, cycles, MNPI (E.4)", () => {
   });
 
   test("a malformed review_cycle is 400, never a silent latest fallback", async () => {
-    const res = await req("/api/portfolio-scorecard?review_cycle=2026-Q9", { headers: { cookie: frankCookie } });
+    const res = await req("/api/portfolio-scorecard?review_cycle=2026-Q9", { headers: { cookie: graceCookie } });
     expect(res.status).toBe(400);
     expect((await res.json()).error.code).toBe("invalid_review_cycle");
   });
 
   test("project scorecard is 404 for a non-member — existence protected", async () => {
-    const res = await req(`/api/projects/${projectB}/scorecard`, { headers: { cookie: frankCookie } });
+    const res = await req(`/api/projects/${projectB}/scorecard`, { headers: { cookie: graceCookie } });
     expect(res.status).toBe(404);
     expect((await res.json()).error.code).toBe("not_found");
   });
 
   test("project scorecard returns a member's rows, explicit cycle and latest fallback alike", async () => {
-    const explicit = await req(`/api/projects/${projectA}/scorecard?review_cycle=2026-Q2`, { headers: { cookie: frankCookie } });
+    const explicit = await req(`/api/projects/${projectA}/scorecard?review_cycle=2026-Q2`, { headers: { cookie: graceCookie } });
     const explicitBody = await explicit.json();
     expect(explicit.status).toBe(200);
     expect(explicitBody.meta).toMatchObject({ project_id: projectA, review_cycle: "2026-Q2", count: 1 });
 
-    const latest = await req(`/api/projects/${projectA}/scorecard`, { headers: { cookie: frankCookie } });
+    const latest = await req(`/api/projects/${projectA}/scorecard`, { headers: { cookie: graceCookie } });
     const latestBody = await latest.json();
     expect(latest.status).toBe(200);
     expect(latestBody.meta).toMatchObject({ project_id: projectA, review_cycle: "2026-Q3", count: 2 });
@@ -1336,18 +1336,18 @@ describe("scorecard routes — membership scope, cycles, MNPI (E.4)", () => {
   test("an MNPI venture's rows stay in a member's rollup and the read is logged (FR-SEC-06)", async () => {
     // Seed the MNPI venture through the sanctioned paths: classification
     // row, setMnpiFlag 0→1 (retroactive insider enrollment for alice),
-    // then frank's grant (insider enrollment at grant time).
+    // then grace's grant (insider enrollment at grant time).
     const resM = await req("/api/projects", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({ project_no: "NP-2026-112" }) });
     const projectM = (await resM.json()).data.id;
     db.run("INSERT INTO project_classification (project_id, sensitivity, mnpi_flag, classified_by, classified_at) VALUES (?,?,?,?,?)", [projectM, "restricted", 0, "test", NOW]);
     setMnpiFlag(db, { projectId: projectM, mnpiFlag: 1, setBy: "alice", reason: "E.4 MNPI portfolio fixture", now: NOW });
-    grantProjectMembership(db, { projectId: projectM, userId: "frank", projectRole: "observer", grantedBy: "alice", needToKnowBasis: "E.4 MNPI inclusion test", now: NOW });
+    grantProjectMembership(db, { projectId: projectM, userId: "grace", projectRole: "observer", grantedBy: "alice", needToKnowBasis: "E.4 MNPI inclusion test", now: NOW });
     recordVentureScorecardCycle(
       { runId: seedRun(projectM, "sc-m-q3"), projectId: projectM, sourceProcedure: "jv-lifecycle-governance", reviewCycle: "2026-Q3", rows: [scoreRow({ venture_class: "jv", section: "strategic", measure_key: "sc.jv.synergy" })], actor: "alice", now: NOW },
       db,
     );
 
-    const rollup = await req("/api/portfolio-scorecard?review_cycle=2026-Q3", { headers: { cookie: frankCookie } });
+    const rollup = await req("/api/portfolio-scorecard?review_cycle=2026-Q3", { headers: { cookie: graceCookie } });
     const body = await rollup.json();
     expect(rollup.status).toBe(200);
     expect([...body.data.financial, ...body.data.strategic].some((r: { project_id: string }) => r.project_id === projectM)).toBe(true);
@@ -1358,11 +1358,11 @@ describe("scorecard routes — membership scope, cycles, MNPI (E.4)", () => {
     // layer's MNPI read of the project itself.
     const routeLog = db
       .query("SELECT COUNT(*) AS n FROM data_access_log WHERE user_id = ? AND table_key = 'venture_scorecard' AND record_ref = ? AND action = 'read'")
-      .get("frank", "portfolio:2026-Q3") as { n: number };
+      .get("grace", "portfolio:2026-Q3") as { n: number };
     expect(routeLog.n).toBeGreaterThan(0);
     const mnpiLog = db
       .query("SELECT COUNT(*) AS n FROM data_access_log WHERE user_id = ? AND table_key = 'project' AND record_ref = ? AND action = 'read'")
-      .get("frank", projectM) as { n: number };
+      .get("grace", projectM) as { n: number };
     expect(mnpiLog.n).toBeGreaterThan(0);
   });
 });
@@ -1892,5 +1892,179 @@ describe("roic-tree projection v1 (ADR-0018 base-rate anchoring)", () => {
     expect(body.computable).toBe(true);
     expect(body.projection.computable).toBe(false);
     expect(body.projection.reason).toBeTruthy();
+  });
+});
+
+describe("analysis-tasks (design boundary #2 — human-final gate approval)", () => {
+  test("lazy-creates required deliverables at entity_ic gate, reviewed_by stays NULL until sign-off, cannot double-sign", async () => {
+    const res1 = await req("/api/projects", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ project_no: "NP-2026-105" }),
+    });
+    const gateProjectId = (await res1.json()).data.id;
+    db.run("UPDATE md_project SET current_stage_gate = 'entity_ic' WHERE id = ?", [gateProjectId]);
+
+    const list0 = await req(`/api/projects/${gateProjectId}/analysis-tasks`, { headers: { cookie: aliceCookie } });
+    expect(list0.status).toBe(200);
+    const tasks0 = (await list0.json()).data as Array<{ id: string; deliverable_type: string; reviewed_by: string | null }>;
+    expect(tasks0.map((t) => t.deliverable_type).sort()).toEqual(["ic_memo", "rag_assessment"]);
+    expect(tasks0.every((t) => t.reviewed_by === null)).toBe(true);
+
+    // Calling GET again must not duplicate the lazily-created rows.
+    const list1 = await req(`/api/projects/${gateProjectId}/analysis-tasks`, { headers: { cookie: aliceCookie } });
+    expect((await list1.json()).data).toHaveLength(2);
+
+    const taskId = tasks0[0].id;
+    const signOff = await req(`/api/projects/${gateProjectId}/analysis-tasks/${taskId}/review`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+    });
+    expect(signOff.status).toBe(200);
+    const signedBody = (await signOff.json()).data as { reviewed_by: string };
+    expect(signedBody.reviewed_by).toBe("alice");
+
+    const doubleSignOff = await req(`/api/projects/${gateProjectId}/analysis-tasks/${taskId}/review`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+    });
+    expect(doubleSignOff.status).toBe(400);
+
+    const audit = db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'analysis_task_review'").get() as { n: number };
+    expect(audit.n).toBeGreaterThan(0);
+  });
+
+  test("viewer cannot sign off", async () => {
+    await createUser(db, { userId: "hank", role: "viewer", password: "pw-hank-1234567", createdBy: "test", now: NOW });
+    approveUser(db, { userId: "hank", approvedBy: "test", now: NOW });
+    const hankCookie = await loginCookie("hank", "pw-hank-1234567");
+
+    const res1 = await req("/api/projects", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ project_no: "NP-2026-106" }),
+    });
+    const gp = (await res1.json()).data.id;
+    db.run("UPDATE md_project SET current_stage_gate = 'entity_ic' WHERE id = ?", [gp]);
+    grantProjectMembership(db, { projectId: gp, userId: "hank", projectRole: "observer", grantedBy: "alice", now: NOW, needToKnowBasis: "test" });
+    const list = await req(`/api/projects/${gp}/analysis-tasks`, { headers: { cookie: hankCookie } });
+    const taskId = ((await list.json()).data as Array<{ id: string }>)[0].id;
+    const res = await req(`/api/projects/${gp}/analysis-tasks/${taskId}/review`, { method: "POST", headers: { cookie: hankCookie } });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("review-stages (design §10.1-2 — 3-stage review, cross-domain enforcement)", () => {
+  let reviewRunId: string;
+  let reviewProjectId: string;
+
+  beforeAll(async () => {
+    const res = await req("/api/projects", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ project_no: "NP-2026-107" }),
+    });
+    reviewProjectId = (await res.json()).data.id;
+    reviewRunId = ulid();
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+      reviewRunId,
+      reviewProjectId,
+      "review-test-run",
+      "x".repeat(64),
+      "alice",
+      NOW,
+    ]);
+  });
+
+  test("unverified_items must be an explicit array — omitting it is refused, not defaulted", async () => {
+    const res = await req(`/api/projects/${reviewProjectId}/review-stages`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ run_id: reviewRunId, stage: "ai_1st", reviewer_agent_or_user: "financial-analyst", reviewer_domain: "functional" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test("ai_1st then same-domain ai_2nd is refused; different-domain ai_2nd and human_final succeed", async () => {
+    const first = await req(`/api/projects/${reviewProjectId}/review-stages`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({
+        run_id: reviewRunId,
+        stage: "ai_1st",
+        reviewer_agent_or_user: "financial-analyst",
+        reviewer_domain: "functional",
+        unverified_items: [],
+      }),
+    });
+    expect(first.status).toBe(201);
+
+    const sameDomain = await req(`/api/projects/${reviewProjectId}/review-stages`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({
+        run_id: reviewRunId,
+        stage: "ai_2nd",
+        reviewer_agent_or_user: "quant-methodologist",
+        reviewer_domain: "functional",
+        unverified_items: [],
+      }),
+    });
+    expect(sameDomain.status).toBe(400);
+    expect((await sameDomain.json()).error.code).toBe("same_domain_review");
+
+    const secondStageRes = await req(`/api/projects/${reviewProjectId}/review-stages`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({
+        run_id: reviewRunId,
+        stage: "ai_2nd",
+        reviewer_agent_or_user: "data-architect",
+        reviewer_domain: "technical",
+        unverified_items: ["peer benchmark not cross-checked"],
+        result: "concur",
+      }),
+    });
+    expect(secondStageRes.status).toBe(201);
+    const secondStageId = (await secondStageRes.json()).data.id as string;
+
+    const humanFinal = await req(`/api/projects/${reviewProjectId}/review-stages`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({
+        run_id: reviewRunId,
+        stage: "human_final",
+        reviewer_agent_or_user: "alice",
+        unverified_items: [],
+        result: "approved",
+      }),
+    });
+    expect(humanFinal.status).toBe(201);
+
+    const list = await req(`/api/projects/${reviewProjectId}/review-stages?run_id=${reviewRunId}`, { headers: { cookie: aliceCookie } });
+    const stages = (await list.json()).data as Array<{ id: string; stage: string; unverified_items_json: string }>;
+    expect(stages.map((s) => s.stage)).toEqual(["ai_1st", "ai_2nd", "human_final"]);
+    expect(JSON.parse(stages[1].unverified_items_json)).toEqual(["peer benchmark not cross-checked"]);
+
+    // review-audit-samples: only ai_2nd stages are valid targets.
+    const badSample = await req(`/api/projects/${reviewProjectId}/review-audit-samples`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ review_stage_id: stages[0].id, agreed: true }),
+    });
+    expect(badSample.status).toBe(400);
+
+    const sample1 = await req(`/api/projects/${reviewProjectId}/review-audit-samples`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({ review_stage_id: secondStageId, agreed: true }),
+    });
+    expect(sample1.status).toBe(201);
+
+    const agg = await req(`/api/projects/${reviewProjectId}/review-audit-samples`, { headers: { cookie: aliceCookie } });
+    const aggBody = await agg.json();
+    expect(aggBody.meta.total).toBe(1);
+    expect(aggBody.meta.agreed).toBe(1);
+    expect(aggBody.meta.agreed_pct).toBe(100);
   });
 });

@@ -1381,6 +1381,153 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/projects/{id}/analysis-tasks:
+    get:
+      operationId: listAnalysisTasks
+      summary: >-
+        The human-final-approval gate mechanism (design boundary #2): one
+        row per required deliverable at Entity IC / Group IC, lazily
+        created the first time the project reaches that gate.
+        reviewed_by stays NULL until a human explicitly signs off.
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createAnalysisTask
+      summary: Explicitly register a required deliverable (analyst+ only).
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deliverable_type]
+              properties:
+                deliverable_type: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/analysis-tasks/{taskId}/review:
+    post:
+      operationId: reviewAnalysisTask
+      summary: >-
+        Human-final sign-off — the only write path for reviewed_by.
+        Refuses a second sign-off on an already-reviewed task.
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/review-stages:
+    get:
+      operationId: listReviewStages
+      summary: >-
+        The 3-stage review pipeline (design §10.1-2): AI 1st -> AI 2nd
+        (different domain) -> human final. Optionally filtered by run_id.
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: run_id
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createReviewStage
+      summary: >-
+        Record one review stage. unverified_items is a required array
+        (possibly empty) — never omitted; the design's no-PASS-stamp rule
+        means a reviewer always explicitly declares what it could not
+        check. An ai_2nd stage sharing its reviewer_domain with the run's
+        ai_1st stage is refused (design §5.7 — same-domain review never
+        counts as a real 2nd stage).
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id, stage, reviewer_agent_or_user, unverified_items]
+              properties:
+                run_id: { type: string }
+                stage: { type: string, enum: [ai_1st, ai_2nd, human_final] }
+                reviewer_agent_or_user: { type: string }
+                reviewer_domain: { type: string }
+                unverified_items:
+                  type: array
+                  items: { type: string }
+                result: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/review-audit-samples:
+    get:
+      operationId: listReviewAuditSamples
+      summary: >-
+        Measures the "AI 검토 신뢰도" governance KPI (design §6.6): sampled
+        ai_2nd conclusions checked against the human_final outcome.
+        Returns raw rows plus an { total, agreed, agreed_pct } aggregate.
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createReviewAuditSample
+      summary: Record a sample (review_stage_id must reference an ai_2nd stage).
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [review_stage_id, agreed]
+              properties:
+                review_stage_id: { type: string }
+                agreed: { type: boolean }
+                note: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/watch:
     get:
       operationId: listWatches

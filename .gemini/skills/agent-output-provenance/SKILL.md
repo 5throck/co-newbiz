@@ -5,18 +5,19 @@ description: >
   Stamps every agent-produced deliverable with its producing agent, a
   confidence grade, and a human-review record before it counts as complete
   — `docs/process-map.md`'s `analysis_task.reviewed_by` field is the
-  concrete mechanism referenced (a NULL value blocks Entity IC). The
-  `analysis_task` table exists (`db/migrations/0011_dd_finding_and_remaining_tables.sql`)
-  and its `reviewed_by IS NULL` count is already read by the kill-criteria
-  engine (`db/lib/snapshot-filler.ts`), but no code path writes rows into it
-  — the table is permanently empty and the kill-criteria check is
-  vacuously true (zero unreviewed rows because zero rows exist at all,
-  not because review happened). This is the real, explicitly flagged gap:
-  the write/UI path, not the schema.
+  concrete mechanism referenced (a NULL value blocks Entity IC). As of
+  2026-08-28 the write/UI path is implemented: `GET/POST
+  /api/projects/:id/analysis-tasks` (lazy-creates the required deliverables
+  at Entity IC/Group IC) and `POST
+  /api/projects/:id/analysis-tasks/:taskId/review` (the only write path
+  for `reviewed_by`, human-final sign-off) plus the "Review Status" tab
+  (`ReviewStatusTab.tsx`). The kill-criteria check
+  (`db/lib/snapshot-filler.ts`) now reflects real review state instead of
+  the previous permanently-empty table.
 
   Use when: "agent output provenance", "confidence grade on a deliverable",
   "reviewed_by tracking", "AI-produced vs human-confirmed distinction".
-version: 1.1.0
+version: 1.2.0
 last_reviewed: 2026-08-28
 status: active
 owner: process-governance-manager
@@ -35,22 +36,19 @@ metadata:
 
 **Adaptation note (updated 2026-08-28, see design doc §20.4)**: `docs/process-map.md`'s
 Entity IC gate row names `analysis_task.reviewed_by NULL on any required
-deliverable` as a blocking condition — this is the concrete DB mechanism the
-design intends, and the `analysis_task` table itself DOES exist
-(`db/migrations/0011_dd_finding_and_remaining_tables.sql`, columns `id,
-project_id, deliverable_type, reviewed_by, reviewed_at`). The kill-criteria
-engine already reads it (`db/lib/snapshot-filler.ts` computes `COUNT(*)
-WHERE project_id=? AND reviewed_by IS NULL`). **What is genuinely missing is
-the write path**: no repository, API route, or UI anywhere inserts a row
-into `analysis_task` or sets `reviewed_by`. The table is permanently empty,
-so the kill-criteria check currently passes vacuously (zero rows match, not
-because deliverables were reviewed) — it is not a claim that provenance
-tracking is currently enforced in the running system. This skill documents
-the discipline the write/UI path must implement, following the same
-"documents before code" principle as `market-data-pipeline` and
-`industry-profile-application`'s own honest gaps.
+deliverable` as a blocking condition. The `analysis_task` table exists
+(`db/migrations/0011_dd_finding_and_remaining_tables.sql`) and the
+kill-criteria engine reads it (`db/lib/snapshot-filler.ts`). **The write
+path is now implemented**: `app/web-next/app/api/projects/[id]/analysis-tasks/route.ts`
+(GET lazy-creates the required deliverable rows — `ic_memo`,
+`rag_assessment` — the first time a project reaches `entity_ic`/`group_ic`)
+and `app/web-next/app/api/projects/[id]/analysis-tasks/[taskId]/review/route.ts`
+(the sole write path for `reviewed_by` — sets it to the calling user,
+refuses a second sign-off). `ReviewStatusTab.tsx` (the "Review Status" tab) renders
+pending vs. reviewed deliverables and lets an analyst+ record sign-off.
+The kill-criteria check now reflects real review state.
 
-## Design Intent (for the eventual implementation)
+## Design Intent
 
 Every agent-produced deliverable carries: which agent produced it, a
 confidence grade the agent itself assigns (reflecting how much of the work
@@ -65,14 +63,17 @@ not check.
 
 ## When to Use
 
-- Today: when reviewing any agent-produced deliverable, apply this
-  discipline manually — note the producing agent, note what could and
-  could not be verified, and get explicit human confirmation before
-  treating the deliverable as gate-ready. Do not rely on the
-  `analysis_task.reviewed_by IS NULL` kill-criteria check alone — it is
-  vacuously true until the write path exists (see Context above)
-- Once the write/UI path is implemented: automatically, via the
-  `analysis_task` table (schema already in place)
+- When a project reaches Entity IC / Group IC: the required deliverables
+  (`ic_memo`, `rag_assessment`) are lazy-created as `analysis_task` rows on
+  the first `GET /api/projects/:id/analysis-tasks` call; a human reviewer
+  signs off each one via the "Review Status" tab (or `POST
+  .../analysis-tasks/:taskId/review` directly) before the gate can pass
+- When recording the 3-stage review (`review_stage`): apply this
+  discipline explicitly at each stage — note the producing agent/domain,
+  the unverified-items list (even if empty, never omitted), and the result
+  — via `POST /api/projects/:id/review-stages`
+- Sampling AI-review reliability for the governance KPI (design §6.6):
+  `POST /api/projects/:id/review-audit-samples` against an `ai_2nd` stage
 
 ## Execution Steps
 

@@ -1350,7 +1350,7 @@
       "id": "skill:agent-output-provenance",
       "type": "skill",
       "label": "agent-output-provenance",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
