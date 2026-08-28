@@ -4,6 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import type { EChartsOption } from "echarts";
 import { ONYX_CHART_DEFAULTS, ONYX_CHART_THEME } from "../lib/echarts-theme.ts";
+import type { SimulationDistribution } from "../lib/api.ts";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -43,11 +44,72 @@ function gauss(rng: () => number): number {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
-// Illustrative reconstruction: raw simulation draws are archived, not stored
-// (simulation_draw is never read — only the quantile summary persists). We
-// fit a normal from the reported mean/std and sample it deterministically so
-// the shape is stable across renders. Clearly labelled illustrative, not data.
-export function SimulationDistChart({ results, seed }: { results: SimMetric[]; seed?: number | string }) {
+// Real-distribution path (simulation.ts 1.1.0): the server reduces the
+// persisted simulation_draw rows to a fixed-bin histogram + CDF and this
+// component renders it verbatim — clearly labelled as actual data. The
+// illustrative quantile-reconstruction below remains ONLY as the fallback
+// for simulations that predate draw persistence (distribution === null).
+export function SimulationDistChart({
+  results,
+  seed,
+  distribution,
+}: {
+  results: SimMetric[];
+  seed?: number | string;
+  distribution?: SimulationDistribution | null;
+}) {
+  if (results.length === 0) return null;
+  return distribution && distribution.bins.length > 0 ? (
+    <RealDistChart distribution={distribution} />
+  ) : (
+    <IllustrativeDistChart results={results} seed={seed} />
+  );
+}
+
+function RealDistChart({ distribution }: { distribution: SimulationDistribution }) {
+  const option: EChartsOption = {
+    ...ONYX_CHART_DEFAULTS,
+    tooltip: { ...ONYX_CHART_DEFAULTS.tooltip, trigger: "axis" },
+    legend: { data: ["빈도(실측)", "CDF(실측)"], textStyle: { color: "#9aa1ad" } },
+    grid: { ...ONYX_CHART_DEFAULTS.grid, left: 48, right: 48 },
+    xAxis: { type: "value", axisLabel: { color: "#9aa1ad", fontSize: 11 } },
+    yAxis: [
+      { type: "value", name: "빈도", axisLabel: { color: "#9aa1ad", fontSize: 11 } },
+      { type: "value", name: "CDF", max: 1, axisLabel: { color: "#9aa1ad", fontSize: 11 } },
+    ],
+    series: [
+      {
+        name: "빈도(실측)",
+        type: "bar",
+        data: distribution.bins.map((b) => [(b.start + b.end) / 2, b.count]),
+        itemStyle: { color: ONYX_CHART_THEME.color[0] },
+        barWidth: "90%",
+      },
+      {
+        name: "CDF(실측)",
+        type: "line",
+        yAxisIndex: 1,
+        data: distribution.cdf.map((c) => [c.value, c.p]),
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { color: ONYX_CHART_THEME.color[1] },
+      },
+    ],
+  };
+
+  return (
+    <div className="mt-6">
+      <h3>NPV 분포 (실측)</h3>
+      <ReactECharts option={option} style={{ height: 300, width: "100%" }} notMerge lazyUpdate />
+      <p className="mt-2 text-[0.8rem] text-[color:var(--muted-fg)]">
+        저장된 원시 드로우 {distribution.draws.toLocaleString("ko-KR")}개를 서버에서 {distribution.bins.length}개 구간으로 집계한 실측
+        히스토그램/CDF입니다. 드로우 행 자체는 API로 노출되지 않으며(보존 정책상 N개월 후 아카이브 대상), 분위수 요약은 영구 보존됩니다.
+      </p>
+    </div>
+  );
+}
+
+function IllustrativeDistChart({ results, seed }: { results: SimMetric[]; seed?: number | string }) {
   if (results.length === 0) return null;
   const [selected, setSelected] = useState(results[0].metric);
   const row = results.find((r) => r.metric === selected) ?? results[0];

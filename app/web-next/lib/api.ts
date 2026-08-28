@@ -521,9 +521,20 @@ export interface SimulationResultRow {
   std: number;
 }
 
+// Server-side aggregate over the persisted simulation_draw rows (simulation.ts
+// 1.1.0). Raw draw rows are never exposed — the API serves this histogram/CDF
+// reduction instead; null for simulations that predate draw persistence.
+export interface SimulationDistribution {
+  metric: string;
+  draws: number;
+  bins: { start: number; end: number; count: number }[];
+  cdf: { value: number; p: number }[];
+}
+
 export interface SimulationResultsResponse {
   simulation: SimulationSummary;
   results: SimulationResultRow[];
+  distribution: SimulationDistribution | null;
 }
 
 // --- PR #65 batch 4: admin schedule/retention sections (the glossary list

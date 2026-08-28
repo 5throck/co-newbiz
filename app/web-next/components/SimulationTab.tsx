@@ -230,6 +230,7 @@ export function SimulationTab({ projectId }: { projectId: string }) {
           <SimulationDistChart
             results={results.results as unknown as SimMetric[]}
             seed={metaSeed ?? results.simulation.run_id}
+            distribution={results.distribution}
           />
         </section>
       )}
