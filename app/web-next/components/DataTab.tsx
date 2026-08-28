@@ -112,6 +112,7 @@ export function DataTab() {
                 <th scope="col">출처</th>
                 <th scope="col">관측치 수</th>
                 <th scope="col">기간</th>
+                <th scope="col">수집 현황</th>
               </tr>
             </thead>
             <tbody>
@@ -127,6 +128,17 @@ export function DataTab() {
                   <td>{s.observation_count}</td>
                   <td>
                     {s.min_period_id} ~ {s.max_period_id}
+                  </td>
+                  <td>
+                    {s.stale ? (
+                      <span className="stale-badge">
+                        <span aria-hidden="true">■</span> 갱신 지연 ({s.days_since_fetch === null ? "수집 이력 없음" : `${s.days_since_fetch}일 경과`})
+                      </span>
+                    ) : (
+                      <span className="fresh-badge">
+                        <span aria-hidden="true">●</span> 수집 {s.days_since_fetch}일 전
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -1307,6 +1307,35 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/projects/{id}/management-package:
+    get:
+      operationId: getManagementPackage
+      summary: >-
+        Role-based executive comp — executive_ref only, never a real name
+        (FR-MA-06/SEC-05; the response selects no name-shaped column).
+        Membership + elevated role (viewer rejected).
+      tags: [M&A Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/projects/{id}/comp-benchmark:
+    get:
+      operationId: getCompBenchmark
+      summary: Aggregate-only pay-parity rows (job family × grade; no individual rows exist). Membership + elevated role (viewer rejected).
+      tags: [M&A Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/watch:
     get:
       operationId: listWatches
@@ -1532,6 +1561,16 @@ paths:
     get:
       operationId: listAdrIndex
       summary: ADR index scanned from docs/adr/*.md (id, title, status). Admin role.
+      tags: [Admin]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/admin/glossary-lint:
+    get:
+      operationId: getGlossaryLintQueue
+      summary: Undefined-term queue from the glossary-lint scanner (ADR-0022) — report-only, the curator triages. Admin role.
       tags: [Admin]
       responses:
         "200": { $ref: "#/components/responses/Ok" }

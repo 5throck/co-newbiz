@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * glossary:lint — undefined-jargon report over the documented target
  * surfaces (ADR-0022 / glossary/_schema.yaml tooling_integrations:
@@ -110,11 +110,27 @@ export function scanLine(
   return { known, undefined: undefinedTokens };
 }
 
-/** Project root = two levels up from scripts/co-newbiz/. */
-const PROJECT_ROOT = resolve(import.meta.dirname, "..", "..");
+/** Project root = two levels up from scripts/co-newbiz/. import.meta.dirname
+ * is unavailable under Turbopack's server bundle (same edge case proc-resolve.ts
+ * fixed for ADR-0071), so fall back to a cwd walk-up keyed on the glossary/ +
+ * scripts/co-newbiz markers. */
+function findProjectRoot(): string {
+  if (import.meta.dirname) return resolve(import.meta.dirname, "..", "..");
+  let dir = process.cwd();
+  for (let i = 0; i < 6; i++) {
+    if (existsSync(join(dir, "glossary")) && existsSync(join(dir, "scripts", "co-newbiz", "glossary-lint.ts"))) {
+      return dir;
+    }
+    const parent = resolve(dir, "..");
+    if (parent === dir) break;
+    dir = parent;
+  }
+  throw new Error(`Could not locate the project root from cwd=${process.cwd()} (import.meta.dirname was unavailable).`);
+}
 
 /** Report paths relative to the project root when inside it (shorter lines), with / separators. */
 function displayPath(file: string): string {
+  const PROJECT_ROOT = findProjectRoot();
   const rel = file.startsWith(PROJECT_ROOT + "\\") || file.startsWith(PROJECT_ROOT + "/")
     ? file.slice(PROJECT_ROOT.length + 1)
     : file;
@@ -122,6 +138,7 @@ function displayPath(file: string): string {
 }
 
 export function lintGlossaryUsage(options: GlossaryLintOptions = {}): GlossaryLintResult {
+  const PROJECT_ROOT = findProjectRoot();
   const registered = loadRegisteredTerms(join(PROJECT_ROOT, "glossary"));
   const roots = options.roots ?? [join(PROJECT_ROOT, "skills"), join(PROJECT_ROOT, "docs")];
   const files = roots.flatMap(markdownFiles);
