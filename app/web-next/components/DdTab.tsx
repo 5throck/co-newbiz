@@ -17,7 +17,13 @@ const RBD_SOURCE_LABELS: Record<string, string> = {
   external_technology_acquisition: "외부 기술 도입",
 };
 
-export function DdTab({ projectId }: { projectId: string }) {
+export function DdTab({
+  projectId,
+  onOpenAssumption,
+}: {
+  projectId: string;
+  onOpenAssumption?: (assumptionKey: string) => void;
+}) {
   const [category, setCategory] = useState<string | null>(null);
   const [findings, setFindings] = useState<DdFindingRow[] | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
@@ -127,6 +133,18 @@ export function DdTab({ projectId }: { projectId: string }) {
                       <SourceTooltip provenance={{ assumption_key: f.assumption_key ?? undefined }}>
                         {f.value_impact}
                       </SourceTooltip>
+                    )}
+                    {f.assumption_key?.trim() && onOpenAssumption && (
+                      <>
+                        {" "}
+                        <button
+                          type="button"
+                          className="border-0 bg-transparent p-0 text-[color:var(--accent)] underline cursor-pointer text-[0.85rem]"
+                          onClick={() => onOpenAssumption(f.assumption_key!.trim())}
+                        >
+                          {f.assumption_key} →
+                        </button>
+                      </>
                     )}
                   </dd>
                 </div>
