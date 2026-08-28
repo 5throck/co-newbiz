@@ -4,7 +4,7 @@
 
 ## 목적
 
-Diagnoses an organization's capacity to absorb and sustain a Brown Field
+Brown Field 통합이나 Green Field 램프업을 조직이 수용하고 지속할 수 있는 역량을 진단합니다. 준비도 점수, 역량 격차 분석, 재무 모델과 compensation-harmonization 분석에 반영되는 통합/변화관리 비용 추정치를 산출합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

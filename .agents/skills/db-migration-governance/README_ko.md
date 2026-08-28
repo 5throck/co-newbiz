@@ -4,7 +4,7 @@
 
 ## 목적
 
-Authors and reviews `db/migrations/*.sql` under ADR-0001/0002's
+ADR-0001/0002 규약에 따라 `db/migrations/*.sql`을 작성하고 검토합니다 — SQLite 엔진, ULID 기본키, ISO-8601 TEXT 날짜, CHECK 제약 열거형, 정수 최소 단위 화폐, AUTOINCREMENT/INSERT OR REPLACE 금지, PRAGMA foreign_keys=ON — 그리고 설계 §7의 ADR 트리거 목록에 해당하는 모든 스키마 변경이 병합 전 ADR을 갖추었는지 확인합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

@@ -4,7 +4,7 @@
 
 ## 목적
 
-Calibrates a statistical proxy-chain hop via OLS regression with a
+리드-래그 탐색을 포함한 OLS 회귀로 통계적 프록시 체인 홉을 보정하며(`python/correlation.py`), 베타, R제곱, 적합도를 최대화하는 랙, 95% 신뢰구간을 보고합니다. 엔지니어링 홉에는 절대 실행하지 않습니다 — 그 분류는 이 스킬의 일부가 아닌 `guidelines/proxy-chain-hop-classification.md`에 따라 보정 이전에 이루어집니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

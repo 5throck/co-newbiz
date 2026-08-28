@@ -4,7 +4,7 @@
 
 ## 목적
 
-Determines which governance layer (Policy/Procedure/Guideline/Checklist/
+제안된 문서가 어느 거버넌스 계층(정책/절차/가이드라인/체크리스트/템플릿)에 속하는지, 그 결과 어떤 강제 규칙이 적용되는지를 결정합니다. 권고사항이 필수 조항 문구로 작성되거나, 하드 요구사항이 누구도 따를 필요 없는 가이드라인에 묻히는 계층 혼동 오류를 방지합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

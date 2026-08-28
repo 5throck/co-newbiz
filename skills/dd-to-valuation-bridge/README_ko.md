@@ -4,7 +4,7 @@
 
 ## 목적
 
-Connects every material DD finding to a concrete `assumption_key` or
+모든 중대한 DD 발견사항을 구체적인 `assumption_key` 또는 `dd_finding.value_impact`에 연결하여 실제로 밸류에이션 모델에 반영되도록 합니다 — 상업, 기술, 법률, M&A 특수 주제 DD 발견사항 전반에 적용되는 `checklists/commercial-dd-checklist.yaml` cdd-06의 '서술식으로만 존재하는 발견사항 금지' 규칙의 집행 지점입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

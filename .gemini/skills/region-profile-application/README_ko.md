@@ -4,7 +4,7 @@
 
 ## 목적
 
-Applies `region-profiles/*.yaml`'s mandatory review axes (merger control,
+`region-profiles/*.yaml`의 필수 검토 축(합병 규제, 외국인 투자 심사, 노무, 세무, 외환/송금, 반부패, 제재 심사, 데이터 이전, 환경 책임 승계, 인센티브)을 프로젝트의 대상 지역에 적용하며, 누락된 섹션을 절대 임의로 채우지 않습니다 — 출처 없거나 빈 축은 그럴듯한 추측으로 채울 자리표시자가 아닌 해소해야 할 리서치 격차입니다(ADR-0023, `_validate.ts`가 출처 없는 섹션을 거부).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

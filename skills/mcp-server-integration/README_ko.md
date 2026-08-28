@@ -4,7 +4,7 @@
 
 ## 목적
 
-Designs and adds MCP tools to `mcp/co-newbiz/` under ADR-0011's
+ADR-0011의 협상 불가 규칙에 따라 `mcp/co-newbiz/`에 MCP 도구를 설계하고 추가합니다: 서버는 오직 REST API만 호출하며 직접 DB 연결은 절대 하지 않습니다 — `bun:test` 파일 스캔(`tests/unit/mcp.test.ts`)으로 강제되며 단순 설계 문서가 아닙니다. 새 도구는 먼저 대응하는 REST 엔드포인트가 필요합니다(`rest-api-design`); 없으면 `docs/mcp-integration.md` §6에 따라 Stage 5 CI 실패입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

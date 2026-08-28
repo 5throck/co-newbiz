@@ -4,7 +4,7 @@
 
 ## 목적
 
-Analyzes a target's historical financial trajectory (multi-year trend,
+대상의 과거 재무 궤적(다년간 추세, 변동성, 경기순환성)을 `growth-projection-modeling`이 기준으로 삼는 base-rate 분포로서 분석합니다 — `financial-statement-analysis`의 단일 기간 KPI/가치동인 트리 파이프라인 산출물과는 구분되며, 이 스킬은 특히 과거 분포의 형태에 관한 것입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

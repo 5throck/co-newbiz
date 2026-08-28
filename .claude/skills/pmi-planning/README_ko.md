@@ -4,7 +4,7 @@
 
 ## 목적
 
-Plans post-merger integration for a Brown Field acquisition, synthesizing
+Brown Field 인수의 인수 후 통합(PMI)을 계획하며, `org-readiness-assessment`의 통합 비용 추정치, `compensation-harmonization-analysis`의 조화 비용, `management-incentive-review`의 핵심 인력 유지 발견사항, `incentive-clawback-assessment`의 구조조정 유발 클로백 노출을 하나의 통합 계획 및 일정으로 종합합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

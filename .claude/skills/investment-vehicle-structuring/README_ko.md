@@ -4,7 +4,7 @@
 
 ## 목적
 
-Reviews the four mandatory investment-vehicle axes (ADR-0045) as part of
+Pre-FS 거래 구조 가설의 일부로 4개 필수 투자 비히클 축(ADR-0045)을 검토합니다: 세무 구조, 부채 격리, 자금조달 레버리지, 엑싯 구조 — 어떤 법인이 실제로 거래를 보유하는지(직접 대차대조표 vs 신설 SPV vs 지주회사 자회사를 통한 라우팅)를 다룹니다. 구조가 결정된 이후의 `investment-feasibility-modeling`의 NPV/IRR 수치와는 구분되며, JV 비히클이 검토 대상 옵션 중 하나인 `jv-structuring`의 파트너십 거버넌스와도 구분됩니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.2.0

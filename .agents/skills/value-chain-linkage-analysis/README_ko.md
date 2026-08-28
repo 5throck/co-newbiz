@@ -4,7 +4,7 @@
 
 ## 목적
 
-Assesses upstream/downstream margin and demand-risk exposure via the
+`value_chain_link` 테이블의 전이율 계수를 통해 상류/하류 마진 및 수요 리스크 노출을 평가합니다 — `proxy_industry_chain`의 수요 추정 베타와는 의도적으로 별도 저장되며 공유 계수 참조가 없습니다. 두 질문에 대한 답이 다르며 공유될 경우 서로를 오염시키기 때문입니다(ADR-0025).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

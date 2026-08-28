@@ -4,7 +4,7 @@
 
 ## 목적
 
-Defines discrete downside/base/upside scenarios (distinct from
+투자 타당성 모델을 위해 이산적인 다운사이드/기본/업사이드 시나리오를 정의합니다(`monte-carlo-simulation`의 연속 확률 분포와 구분됨). 표준 +200bp 금리 충격 약정 테스트와 거래별 구조적 시나리오를 포함합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

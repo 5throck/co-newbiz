@@ -4,7 +4,7 @@
 
 ## 목적
 
-Automates deployment, environment provisioning, and operational
+co-newbiz 스택(Bun/Hono API, SQLite, React SPA, Python 연산 계층)의 배포, 환경 프로비저닝, 운영 스크립팅을 자동화합니다 — `batch-scheduling-operations`와 `deployment-and-release`의 구체적 규율이 속하는 더 넓은 자동화 실행 영역입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

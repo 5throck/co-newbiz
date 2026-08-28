@@ -4,7 +4,7 @@
 
 ## 목적
 
-Benchmarks employee compensation at job-family/grade level (`comp_benchmark`,
+직무군/등급 수준에서 직원 보상을 벤치마킹하고(`comp_benchmark`, k>=3인 집계만 사용 — 개별 행 절대 사용 금지), 양방향 모두에 명시적 상향 편향을 적용하여 통합 후 보상 조화를 모델링합니다(ADR-0027): 두 쪽 중 더 높은 쪽이 해당 직무군/등급의 하한이 됩니다. 한국 노동법이 방향에 관계없이 통합 후 보상 하향을 일반적으로 금지하기 때문입니다. 절대 절감 항목으로 모델링하지 않습니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

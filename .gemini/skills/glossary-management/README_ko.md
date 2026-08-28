@@ -4,7 +4,7 @@
 
 ## 목적
 
-Authors and maintains `glossary/*.yaml` terms and absorbs the lint step
+`glossary/*.yaml` 용어를 작성·유지관리하고 린트 단계를 흡수합니다(설계 §9.2 병합 — 린트는 용어집을 관리하는 수단이지 별개의 산출물이 아닙니다). 모든 용어는 `why_it_matters_ko`(교과서적 정의가 아닌 프로젝트 특화 근거)를 필요로 하며 `glossary/_validate.ts`가 이를 강제합니다. 용어는 4개의 도구 연동(ADR-0022)에 걸쳐 노출됩니다: UI 툴팁, MCP `lookup_term`, 보고서 부록 생성기, 그리고 이 작성 스킬 자체입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

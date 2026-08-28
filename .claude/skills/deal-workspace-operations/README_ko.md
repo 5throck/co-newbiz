@@ -4,7 +4,7 @@
 
 ## 목적
 
-Operates a project's workspace lifecycle: opening (creation + lead
+프로젝트의 워크스페이스 라이프사이클(개설(생성+리드 멤버십), 멤버십 변경, 종료, 아카이빙)을 운영합니다. 개설과 멤버십은 이미 구축된 실제 기능이며(`POST /api/projects`, `project_member`), 종료와 아카이빙은 아직 구현되지 않은 실제 격차로 명시적으로 표시됩니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

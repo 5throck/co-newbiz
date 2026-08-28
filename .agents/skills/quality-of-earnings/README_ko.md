@@ -4,7 +4,7 @@
 
 ## 목적
 
-Adjusts reported earnings for one-time items, related-party transactions,
+일회성 항목, 특수관계인 거래, 회계 정책의 공격성을 반영하여 신고 이익을 조정하고 밸류에이션 모델이 실제로 사용해야 할 정규화된 EBITDA를 산출합니다 — `financial-statement-analysis`의 검증되었지만 조정되지 않은 파이프라인 산출물과는 구분되는 Brown Field DD의 필수 요소입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

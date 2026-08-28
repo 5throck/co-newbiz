@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-08-29](2026-08-29.md) | fix(skills): translate remaining untranslated README_ko purpose sections |
 | [2026-08-28](2026-08-28.md) | feat(web): notifications threshold ADR-gate, glossary registration, all-revisions toggle + latent regression fix |
 | [2026-08-27](2026-08-27.md) | chore: update |
 | [2026-08-26](2026-08-26.md) | feat(web-stack): Next.js/Prisma migration Phase 0-3 - schema fix, REST API port, frontend port |

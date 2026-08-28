@@ -4,7 +4,7 @@
 
 ## 목적
 
-Conducts external expert interviews per `guidelines/expert-interview-conduct.md`:
+`guidelines/expert-interview-conduct.md`에 따라 외부 전문가 인터뷰를 수행합니다: 접촉 전 컴플라이언스 승인, 실제 목표인 삼각검증(중대한 주장에는 선택이 아닌 2~3개의 독립적 출처 필수), 명시적으로 구조화된 반박 질문(단순히 거래 논지를 검증하는 것이 아님), 검토자가 삼각검증 강도를 한눈에 볼 수 있도록 출처 수/독립성 기록.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

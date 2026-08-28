@@ -4,7 +4,7 @@
 
 ## 목적
 
-Comprehensive company and corporate group intelligence gathering and analysis.
+기업 및 기업집단에 대한 종합적인 정보 수집과 분석을 수행합니다. 개요, 재무, 제품/시장, 애널리스트 커버리지, 리더십/거버넌스를 다루는 병렬 리서치 에이전트를 실행한 뒤 구조화된 회사 프로필로 통합합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

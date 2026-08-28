@@ -4,7 +4,7 @@
 
 ## 목적
 
-Documents JV governance (board composition, veto matters), contribution
+텀시트 협상 전에 JV 거버넌스(이사회 구성, 거부권 사항), 출자 평가, 엑싯 조항(put/call, drag/tag), 교착 상태 해결 메커니즘을 문서화하며, 출자 당사자가 제시한 수치를 그대로 받아들이지 않고 기술 출자를 독립적으로 평가합니다. 필수 Partnership DD 검증 항목입니다(`checklists/partnership-checklist.yaml` pt-06; pt-07 권장).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.2.0

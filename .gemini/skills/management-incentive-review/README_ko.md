@@ -4,7 +4,7 @@
 
 ## 목적
 
-Records executive compensation change-of-control triggers, golden-parachute
+임원 보상의 지배권 변경 트리거, 골든 파라슈트 지급 추정치, 가속 베스팅 조건을 `management_package`(역할 기반, 개인 이름 절대 사용 금지 — 설계 §4-9-1(b) PII 규율) 기준으로 기록하고, 핵심 인력 유지를 위해 의존하기 전에 관할권별 경업금지 조항의 집행 가능성을 확인합니다. 필수 Brown Field DD 검증 항목이며(ma-04), 경업금지 확인은 권장(필수 아님, ma-05)입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

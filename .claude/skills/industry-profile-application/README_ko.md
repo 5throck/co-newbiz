@@ -4,7 +4,7 @@
 
 ## 목적
 
-Applies industry-specific profile data (ADR-0024's profile-first
+산업 특화 프로필 데이터(ADR-0024의 프로필 우선 원칙: 단일 `industry-lead` 에이전트, `industry-profiles/*.yaml`로 표현되는 커버리지, 5개 판단 집약적 절차 성숙도 임계값을 넘어야만 전용 에이전트가 정당화됨)를 프로젝트의 대상 산업에 적용합니다. 2026-08-21 기준 `industry-profiles/_schema.yaml`과 `_validate.ts`는 존재하지만(`region-profiles/`의 계약을 그대로 미러링), 실제 프로필 `.yaml` 파일은 아직 하나도 작성되지 않은 실제 격차로 명시적으로 표시됩니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

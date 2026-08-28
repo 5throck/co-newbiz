@@ -4,7 +4,7 @@
 
 ## 목적
 
-Applies the six-dimension RAG grading rule (Financial, Market, Data
+6개 차원 RAG 등급 규칙(재무, 시장, 데이터 신뢰도, 규제/허가, 기술/실행, 리스크)을 적용합니다 — 우선순위 기반이며 가중평균이 절대 아닙니다(ADR-0016, D-M3-3): 어느 한 차원이라도 RED이거나 Kill Criterion이 트리거되면 전체 RED, 6개 모두 GREEN일 때만 전체 GREEN, 그 외는 AMBER입니다. 데이터 신뢰도가 구조적으로 상한을 결정하며, 히스테리시스 규칙이 하루 단위 등급 요동을 방지합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

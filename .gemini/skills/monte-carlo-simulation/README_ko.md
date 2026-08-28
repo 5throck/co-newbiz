@@ -4,7 +4,7 @@
 
 ## 목적
 
-Runs the seeded Monte Carlo NPV simulation (`python/monte_carlo.py`,
+시드 기반 Monte Carlo NPV 시뮬레이션(`python/monte_carlo.py`, ADR-0026)을 실행하며, 매 반복마다 우발부채를 확률/삼각분포 추출값으로 통합합니다(서술식 각주 절대 금지). 동일한 시드와 동일한 입력값은 반드시 동일한 결과를 재현해야 합니다(설계 §12 검증 항목 13); 이 스크립트는 numpy의 시드 기반 Generator만 사용하며 전역 비시드 RNG는 절대 사용하지 않습니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

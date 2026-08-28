@@ -4,7 +4,7 @@
 
 ## 목적
 
-Operates the account lifecycle (pending -> active, lockout, password
+Wave 5.5/5.6A에서 구축된 계정 라이프사이클(대기 -> 활성, 잠금, 비밀번호 재설정)과 API 토큰 발급을 운영합니다 — PBKDF2-HMAC-SHA256 해싱(FR-SEC-09, `scripts/lib/auth.ts`에서 재사용, 절대 재구현하지 않음), 존재 여부가 노출되지 않는 인증 실패, 그리고 충족될 때까지 정확히 3개 경로(me/logout/password-change)만 허용하는 비밀번호 변경 필수 게이트를 다룹니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

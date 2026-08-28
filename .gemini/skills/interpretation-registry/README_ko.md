@@ -4,7 +4,7 @@
 
 ## 목적
 
-Records and looks up governance interpretation Q&A ("does this clause
+거버넌스 해석 Q&A('이 조항이 우리 사례에 적용되는가?')를 기록하고 조회하여 답변이 처음부터 다시 도출되거나 이후 답변에 의해 조용히 모순되지 않도록 합니다. 대체(supersession)는 명시적이고 범위가 한정됩니다: 이후 답변은 동일한 문서+조항 질문에 대한 이전 답변만 대체할 수 있습니다(FR-GOV-12). `db/lib/compliance.ts`와 `GET/POST /api/interpretations`가 이를 뒷받침합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

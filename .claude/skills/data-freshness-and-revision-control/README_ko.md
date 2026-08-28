@@ -4,7 +4,7 @@
 
 ## 목적
 
-Operates ADR-0004's cache-first, revision-preserving fetch policy day to
+ADR-0004의 캐시 우선, 리비전 보존 페치 정책을 일상적으로 운영합니다: 활성 시리즈 전반의 캐시 노후화를 모니터링하고, 실제 리비전 발생 시 `data_change_log` 항목이 기록되는지 확인하며, 어떤 코드 경로도 `revision_no` 행을 덮어쓰지 않고 새로 삽입하는지 감사합니다. `market-data-pipeline`의 구현 레벨 정책에 대응하는 플랫폼 운영 카운터파트입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

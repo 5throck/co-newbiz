@@ -4,7 +4,7 @@
 
 ## 목적
 
-Identifies regional investment-incentive packages (tax abatement, cash
+지역 투자 인센티브 패키지(세금 감면, 현금 보조금, 토지가격 보조)를 식별하고, 인프라 자본지출 및 물류 비용과 동일한 비교 표에서 각각을 NPV로 전환합니다 — 절대 별도 부록이 아닙니다. 부지 비교를 흡수합니다(설계 §9.2 병합 — 인센티브 NPV 전환 자체가 곧 비교이지 별도 단계가 아닙니다).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

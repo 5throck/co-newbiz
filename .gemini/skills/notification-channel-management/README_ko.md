@@ -4,7 +4,7 @@
 
 ## 목적
 
-Manages the `watch_rule`/`notification` channel and bundling
+`watch_rule`/`notification` 채널과 번들링 구성(in_app/email/webhook/all, 즉시/일일 번들)과 각 알림이 갖는 `severity` 분류(opportunity/warning/urgent/info/ops)를 관리합니다 — `continuous-monitoring-and-alerting`의 감지 주기에 대응하는 전달 측 카운터파트입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

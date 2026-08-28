@@ -4,7 +4,7 @@
 
 ## 목적
 
-Runs the Screening-gate regulatory checks: confirms the applicable region
+Screening 게이트 규제 점검을 실행합니다: 관련된 모든 관할권에 대해 해당 지역 프로필이 존재하고 검증되었는지 확인하고, 외국인 투자 심사 트리거를 지역 프로필의 필수 신고 트리거와 대조하며, 주요 대상만이 아닌 모든 거래상대방에 대해 제재/반부패 심사를 실행합니다(`checklists/legal-regulatory-checklist.yaml` lr-03/04/05).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

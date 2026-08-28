@@ -4,7 +4,7 @@
 
 ## 목적
 
-Implements steps 2 and 4 of `group-investment-review`: the portfolio
+`group-investment-review`의 2단계와 4단계를 구현합니다: 다른 그룹사 대비 포트폴리오 중복/자기잠식 발견사항, 그리고 사이클 간 안건 순위 결정 공식(허들 대비 IRR 스프레드 + RAG 등급 + 요청 자본, 사이클 예산으로 정규화, 동점은 리스크 담당자 플래그로 결정 — 회의 M2 D-M2-2).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.3.0

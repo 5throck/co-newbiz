@@ -4,7 +4,7 @@
 
 ## 목적
 
-Runs `docs/security-baseline.md`'s recurring cadence: weekly dependency/
+`docs/security-baseline.md`의 반복 주기를 실행합니다: 주간 의존성/시크릿 스캔, 월간 접근 권한 검토, 분기별 위협 모델 갱신(`docs/security-model.md`의 STRIDE 매트릭스를 마지막 검토 이후 스키마/API 변경에 대해 재점검) 및 DR 훈련, 정보 보호 테이블에 영향을 미치는 모든 스키마 변경에 보안 검토가 선택이 아닌 필수입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0
