@@ -6,7 +6,6 @@
       "name": "co-newbiz",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.0.4",
-        "hono": "^4.13.3",
         "js-yaml": "^5.2.3",
         "zod": "4.4.3",
       },
@@ -18,7 +17,6 @@
   },
   "overrides": {
     "esbuild": ">=0.28.1",
-    "hono": ">=4.12.25",
   },
   "packages": {
     "@hono/node-server": ["@hono/node-server@2.1.1", "", { "peerDependencies": { "hono": "^4" } }, "sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg=="],

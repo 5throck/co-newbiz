@@ -30,6 +30,7 @@ import { PmiEvidenceTab } from "../../../components/PmiEvidenceTab.tsx";
 import { MarketChainTab, ChainSensitivityEditor } from "../../../components/MarketChainTab.tsx";
 import { ProxyChainGrade } from "../../../components/ProxyChainGrade.tsx";
 import { OverviewTab } from "../../../components/OverviewTab.tsx";
+import { ReviewStatusTab } from "../../../components/ReviewStatusTab.tsx";
 
 type Tab =
   | "overview"
@@ -44,6 +45,7 @@ type Tab =
   | "ma"
   | "market"
   | "pmi"
+  | "review"
   | "members";
 
 interface ProjectMember {
@@ -165,6 +167,7 @@ export default function ProjectDetailPage() {
           M&A 검토
         </button>
         <button type="button" aria-current={tab === "pmi"} onClick={() => setTab("pmi")}>PMI·증거</button>
+        <button type="button" aria-current={tab === "review"} onClick={() => setTab("review")}>검토 현황</button>
       <button type="button" aria-current={tab === "members"} onClick={() => setTab("members")}>
           멤버십
         </button>
@@ -269,6 +272,12 @@ export default function ProjectDetailPage() {
       {tab === "pmi" && id && (
         <section aria-label="PMI 및 증거 팩">
           <PmiEvidenceTab projectId={id} />
+        </section>
+      )}
+
+      {tab === "review" && id && (
+        <section aria-label="검토 현황">
+          <ReviewStatusTab projectId={id} />
         </section>
       )}
 

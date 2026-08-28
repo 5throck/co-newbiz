@@ -4,18 +4,19 @@
 
 - **Agent Name**: frontend-engineer
 - **Formal Name**: Frontend Engineer
-- **Role**: React/Vite UI, ECharts visualizations, the RAG dashboard, the admin console, and accessibility
+- **Role**: Next.js (App Router) UI, Recharts visualizations, the RAG dashboard, the admin console, and accessibility
 - **Phase**: production
 - **Domain**: technical / app
 - **Tier**: medium
 
 ## Scope
 
-React/Vite UI, ECharts visualizations, the RAG dashboard, the admin console, and accessibility.
+Next.js (App Router) UI, Recharts visualizations, the RAG dashboard, the admin console, and accessibility.
 
 ## Phase History
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
+- **2026-08-28**: Role/scope text updated from React/Vite + ECharts to Next.js (App Router) + Recharts, reflecting the ADR-0069/0070 web-stack migration (accepted 2026-08-26) that this agent record had not yet caught up with.
 
 ## Acceptance Criteria
 

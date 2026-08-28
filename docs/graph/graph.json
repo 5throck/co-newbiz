@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 476,
+    "node_count": 477,
     "edge_count": 825
   },
   "nodes": [
@@ -361,6 +361,11 @@
       "id": "adr:0071",
       "type": "adr",
       "label": "ADR-0071: Primary-key NOT NULL rebuild (migration 0033)"
+    },
+    {
+      "id": "adr:0072",
+      "type": "adr",
+      "label": "ADR-0072: Contract change-of-control clause table for the customer-attrition validator"
     },
     {
       "id": "agent:antitrust-agent",
@@ -1345,7 +1350,7 @@
       "id": "skill:agent-output-provenance",
       "type": "skill",
       "label": "agent-output-provenance",
-      "version": "1.0.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {

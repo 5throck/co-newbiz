@@ -11,7 +11,7 @@ Two axes are co-equal, per the design's own framing: **(A) governance ownership 
 
 Distinctive to the domain: many target industries have no direct market data, so demand is estimated through a proxy chain across upstream industries (e.g. crankshaft → marine engine → ship, with CGT/BHP/ton unit conversion). Chain reliability caps the confidence of every downstream conclusion — this is the RAG framework's data-confidence cap rule (see `docs/rag-framework.md`).
 
-**Tech stack**: SQLite (`bun:sqlite`, WAL, vendor-neutral schema for eventual Postgres portability) · Hono API + React/Vite + ECharts · Python (python-docx / reportlab / python-hwpx) for document rendering · MCP server over stdio, REST-proxied · TypeScript CLI (`bun scripts/co-newbiz/newbiz.ts`).
+**Tech stack**: SQLite (`bun:sqlite` access layer retained; Prisma + `@prisma/adapter-better-sqlite3` for schema/typegen) · Next.js (App Router, Route Handlers) + Prisma + Tailwind CSS + Recharts — superseded the original Hono + React/Vite + ECharts stack per ADR-0069/0070 (accepted 2026-08-26) · Python (python-docx / reportlab / python-hwpx) for document rendering · MCP server over stdio, REST-proxied · TypeScript CLI (`bun scripts/co-newbiz/newbiz.ts`).
 
 ## Agents
 

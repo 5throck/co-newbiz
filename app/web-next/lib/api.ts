@@ -418,6 +418,58 @@ export interface CompBenchmarkRow {
   annual_cost_delta: number | null;
 }
 
+// contract_coc_clause — the customer-attrition validator's structured record
+// (ma-07/ma-08, ADR-0072): CoC clauses across customer/supplier contracts
+// plus concentration, churn estimate, and competitive-overlap notes.
+export interface ContractCocRow {
+  id: string;
+  counterparty: string;
+  direction: string;
+  coc_clause_present: number;
+  clause_summary: string | null;
+  concentration_pct: number | null;
+  est_churn_pct: number | null;
+  overlap_note: string | null;
+  value_impact: number | null;
+  evidence_ref: string | null;
+  created_at: string;
+}
+
+// analysis_task — the human-final-approval gate mechanism (design boundary
+// #2: gate approval belongs to humans). reviewed_by stays NULL until a
+// human explicitly signs off; no "PASS" happens implicitly.
+export interface AnalysisTaskRow {
+  id: string;
+  project_id: string;
+  deliverable_type: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+}
+
+// review_stage — the 3-stage review pipeline (design §10.1-2): AI 1st ->
+// AI 2nd (different domain than the 1st-stage author) -> human final.
+export interface ReviewStageRow {
+  id: string;
+  run_id: string;
+  stage: "ai_1st" | "ai_2nd" | "human_final";
+  reviewer_agent_or_user: string;
+  reviewer_domain: string | null;
+  unverified_items_json: string;
+  result: string | null;
+  created_at: string;
+}
+
+// review_audit_sample — measures the "AI 검토 신뢰도" governance KPI
+// (design §6.6): sampled ai_2nd conclusions checked against human_final.
+export interface ReviewAuditSampleRow {
+  id: string;
+  review_stage_id: string;
+  sampled_by: string;
+  agreed: number;
+  note: string | null;
+  created_at: string;
+}
+
 export interface ValueChainLinkRow {
   id: string;
   direction: "upstream" | "downstream";
