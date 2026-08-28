@@ -4,7 +4,7 @@
 
 ## 목적
 
-Designs and reviews SPA screens against `docs/ui-spec.md`'s non-
+`docs/ui-spec.md`의 협상 불가 규칙에 따라 SPA 화면을 설계하고 검토합니다: API 엔벨로프의 `meta` 블록에서 가져온 출처 툴팁(절대 수기 입력 금지), RAG 상태의 유일한 구분자로 색상만 사용 절대 금지, 어디에도 'PASS' 스탬프 없음, 등록된 용어에 용어집 툴팁, 최대 3단계 내비게이션, 다크 모드, 태블릿 반응형 레이아웃.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

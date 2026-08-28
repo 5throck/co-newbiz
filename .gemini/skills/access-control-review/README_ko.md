@@ -4,7 +4,7 @@
 
 ## 목적
 
-Runs the monthly access-permission review: every active `project_member`
+월간 접근 권한 검토를 실행합니다: 모든 활성 `project_member` 행을 지속적 필요성 기준으로 교차 검사하고, 만료를 방치하지 않고 오래된 멤버십을 능동적으로 취소하며, `wall_group` 할당의 지속적 관련성을 검토하고, 관리자 역할 보유자 수를 분기별로 검토하여 설계상 최소한으로 유지합니다(`docs/security-baseline.md` §4).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

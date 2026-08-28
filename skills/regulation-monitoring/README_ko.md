@@ -4,7 +4,7 @@
 
 ## 목적
 
-Watches for statute/regulation changes relevant to active and prospective
+활성 및 예정 프로젝트에 관련된 법령/규정 변경(산업별, 지역별)을 감시하고, 감지된 변경이 거버넌스 문서, 허가 경로, 또는 인증 요건에 영향을 미치면 `policy-change-impact-analysis`로 라우팅합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

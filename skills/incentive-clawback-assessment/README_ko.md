@@ -4,7 +4,7 @@
 
 ## 목적
 
-Reviews the incentive inventory (both prospective and already-granted) for
+예정된 이전이나 구조조정에 대한 클로백(clawback) 노출을 인센티브 인벤토리(예정 및 이미 부여된 것 모두)에서 검토합니다 — ADR-0030의 설계는 인수와 클로백을 하나의 레코드에 유지합니다(`direction: prospective|granted`, `obligation_json`, `clawback_rule`). 인센티브 수령이 곧 클로백 리스크가 되는 의무를 발생시키기 때문입니다. 필수 Brown Field DD 검증 항목입니다(ma-09).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

@@ -4,7 +4,7 @@
 
 ## 목적
 
-Defines the relevant market and calculates HHI/HHI-delta for a Brown Field
+Brown Field 대상의 관련 시장을 정의하고 HHI/HHI-delta를 계산합니다. 대상 기업 간 직접 합병뿐 아니라 공동 소유/공동 지배 조합도 포함합니다(파일럿 010 발견사항 F-2). 모든 관할권에 걸친 합병규제 신고 요건과 gun-jumping 금지를 확인합니다. 6개 필수 Brown Field DD 검증 항목(`checklists/ma-special-topics-checklist.yaml` ma-01/ma-02/ma-03) 중 첫 번째이며, 회의 M5의 순서 규칙에 따라 가장 먼저 평가됩니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

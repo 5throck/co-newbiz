@@ -4,7 +4,7 @@
 
 ## 목적
 
-Operates the OS-level scheduler registrations (ADR-0019) driving
+`watch:run` 및 기타 주기적 작업을 구동하는 OS 레벨 스케줄러 등록(ADR-0019)을 운영합니다 — 프로세스 내 타이머는 앱과 함께 종료되므로, 모든 반복 작업은 실행 중인 애플리케이션 내부에서 자체 지속되는 것에 의존하지 말고 OS 레벨에서 등록되어야 합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

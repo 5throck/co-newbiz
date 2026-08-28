@@ -4,7 +4,7 @@
 
 ## 목적
 
-Scans change-of-control clauses across customer AND supplier contracts,
+고객 및 공급업체 계약, 부채 약정, 임원 보상 전반에서 지배권 변경 조항을 스캔하고, 인수 후 이탈 위험을 평가합니다 — 인수 후에도 공급업체로 남는 매각자를 고객 계약과 동일한 위험 범주로 취급합니다(파일럿 002 발견사항 F-2). 필수 Brown Field DD 검증 항목입니다(`checklists/ma-special-topics-checklist.yaml` ma-07/ma-08).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

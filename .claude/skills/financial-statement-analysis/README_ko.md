@@ -4,7 +4,7 @@
 
 ## 목적
 
-Comprehensive Korean financial statement analysis pipeline. Collects DART data,
+종합적인 한국 재무제표 분석 파이프라인입니다. DART 데이터를 수집하고, 회계 정합성을 검증하고, 표준 재무 모델로 정규화하며, KPI(수익성, 성장성, 레버리지, 현금흐름)를 추출하고, 5단계 ROIC 가치동인 트리를 구축하여 구조화된 KPI/가치동인 트리 보고서를 생성합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

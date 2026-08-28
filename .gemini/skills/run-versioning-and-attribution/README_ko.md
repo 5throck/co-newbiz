@@ -4,7 +4,7 @@
 
 ## 목적
 
-Ensures every analysis produces a `run` row with an immutable
+모든 분석이 불변 `run_input` 스냅샷과 `input_hash`를 가진 `run` 행을 생성하도록 보장합니다(모든 시뮬레이션은 추가로 `seed`를 기록). 동일한 시드와 입력값의 재실행은 반드시 동일한 출력을 재현해야 합니다 — 부가 기능이 아닌 검증 게이트입니다(ADR-0005, 설계 §12). 렌더링되는 모든 보고서는 run id / as_of / input_hash / version / policy_version을 자동으로 출력합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

@@ -4,7 +4,7 @@
 
 ## 목적
 
-Implements the shared -> entity/region override model for procedures
+절차에 대한 공유 -> 법인/지역 오버라이드 모델(ADR-0020)을 구현합니다: 법인 또는 지역 절차 파일은 공유 기준선을 참조하며 추가하거나 대체하는 단계만 선언할 뿐 절대 전체를 중복 작성하지 않습니다. 작성 측과 해석 측(`proc:resolve`, 절차 뷰어의 단계별 출처 배지) 모두를 지원합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

@@ -4,7 +4,7 @@
 
 ## 목적
 
-Designs and reviews REST endpoints against `docs/api-spec.md`'s
+`docs/api-spec.md`의 협상 불가 규칙에 따라 REST 엔드포인트를 설계하고 검토합니다: 모든 엔드포인트에서 리포지토리 계층의 멤버십 필터링, 세션 쿠키 + Bearer 토큰 인증, 기본 목록/검색 응답에서 MNPI 제외, 비멤버의 프로젝트 상세는 403이 아닌 404, 쓰기 엔드포인트 감사, 모든 곳에 `{data, meta, error}` 엔벨로프.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

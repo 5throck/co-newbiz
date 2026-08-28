@@ -4,7 +4,7 @@
 
 ## 목적
 
-Designs and builds Entity IC / Group IC decision decks. Uses Pyramid Principle
+Entity IC / Group IC 의사결정 덱을 설계하고 제작합니다. 피라미드 원칙 구조, 'So What' 메시지 추출, 한 페이지 요약 설계를 활용합니다. 비즈니스 케이스 섹션은 재무 및 RAG 분석의 입력을 필요로 합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

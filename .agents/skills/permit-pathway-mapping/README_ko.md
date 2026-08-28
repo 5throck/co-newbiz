@@ -4,7 +4,7 @@
 
 ## 목적
 
-Maps the applicable permit pathway as a DAG with critical-path lead time
+적용 가능한 허가 경로를 임계 경로 소요 기간과 함께 DAG로 매핑합니다 — 허가는 운영을 허용하는 것으로, 판매를 허용하는 인증서와는 구분됩니다(설계의 협상 불가 경계 #5: 발급기관, 절차, 임계 경로가 모두 다르며 절대 혼동하지 않음). 필수 Screening 게이트 검증 항목입니다(`checklists/legal-regulatory-checklist.yaml` lr-01).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

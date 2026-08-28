@@ -4,7 +4,7 @@
 
 ## 목적
 
-Assembles the confirmed WACC/hurdle IRR, normalized EBITDA, growth
+확정된 WACC/허들 IRR, 정규화된 EBITDA, 성장 전망, 부지/인센티브 비용을 프로젝트의 투자 타당성 모델(NPV, IRR, 회수기간)로 통합합니다 — `wacc-input-session`, `quality-of-earnings`, `growth-projection-modeling`, `regional-incentive-sourcing`의 산출물이 합류하는 지점입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

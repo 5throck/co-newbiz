@@ -4,7 +4,7 @@
 
 ## 목적
 
-Runs the system-enforced gate-blocking check (every mandatory deliverable
+시스템이 강제하는 게이트 차단 점검(모든 필수 산출물과 체크리스트 항목이 존재하거나, 활성 예외(waiver)가 격차를 커버하는지)을 실행하고, 개정 우선순위를 결정하는 거버넌스 KPI 세트를 관리합니다. 교육/공지 후속 조치 단계와 KPI 보고를 흡수합니다 — 둘 다 컴플라이언스 점검 결과와 별개의 독립적 산출물이 아니기 때문입니다(`docs/governance-operations.md` §1/§4, 설계 §9.2의 병합 결정).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

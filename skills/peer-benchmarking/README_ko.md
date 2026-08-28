@@ -4,7 +4,7 @@
 
 ## 목적
 
-Builds a comparable-company peer set and benchmarks the target's KPIs
+비교 가능한 기업 피어 세트를 구축하고 대상의 KPI(마진, 성장률, 레버리지, ROIC)를 벤치마킹합니다 — `historical-financial-analysis`의 시계열 base-rate에 대응하는 횡단면 카운터파트입니다. 둘 다 `growth-projection-modeling`의 anchor 점검에 반영됩니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

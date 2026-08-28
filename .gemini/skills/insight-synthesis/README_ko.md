@@ -4,7 +4,7 @@
 
 ## 목적
 
-Integrates outputs from multiple domain analyses (market intelligence, financial
+여러 도메인 분석(시장 인텔리전스, 재무 분석, 법률/규제 검토, M&A 특수 주제 점검)의 산출물을 하나의 통합된 전략적 관점으로 결합하여 단계별 게이트 의사결정에 반영합니다. 도메인 간 긴장이 조용히 평균화되지 않고 기록되도록 하는 필수 교차 도메인 갈등 해결 단계를 포함합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

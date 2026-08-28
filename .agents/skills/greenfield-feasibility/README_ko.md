@@ -4,7 +4,7 @@
 
 ## 목적
 
-Runs the Green Field (new-establishment) Screening through Pre-FS feasibility
+`procedures/_shared/greenfield-screening/schema.yaml`, `greenfield-pre-fs/schema.yaml`, `checklists/greenfield-feasibility-checklist.yaml`에 따라 Green Field(신규 설립) 스크리닝부터 Pre-FS 타당성 검토까지 실행합니다 — 인프라 최소 요건은 단순히 감점되는 것이 아니라 채점 전에 확인됩니다(Kill Criteria 구분).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

@@ -4,7 +4,7 @@
 
 ## 목적
 
-Executes a response plan when a regulation is enacted or amended before
+발효 전에 제정되거나 개정된 규정에 대한 대응 계획을 실행합니다 — 알려진 발효일을 앞둔 선제적 포지셔닝이며, `statute-change-monitoring`의 반응형 프로젝트별 확인 및 `regulation-monitoring`의 감지 기능과는 구분됩니다. '이것이 다가오고 있음을 알고 있는' 경우를 처리합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

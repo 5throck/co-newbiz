@@ -4,7 +4,7 @@
 
 ## 목적
 
-Runs the Screening -> Pre-FS -> FS -> DD -> Entity IC -> Group IC gate
+Screening -> Pre-FS -> FS -> DD -> Entity IC -> Group IC 게이트 순서와 6개 항목의 구속력 있는 Kill Criteria 목록(ADR-0008, `policies/group/neb-policy.md` §4)을 실행합니다 — RAG 등급과는 구분되며 더 엄격합니다. Kill Criteria 위반은 프로젝트를 즉시 중단시키며, Group IC만이 명시적으로 기록된 결정으로만 이를 무효화할 수 있습니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.3.0

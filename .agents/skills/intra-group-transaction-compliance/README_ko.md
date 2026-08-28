@@ -4,7 +4,7 @@
 
 ## 목적
 
-Implements step 3 of `group-investment-review`: the Korean Fair Trade Act
+`group-investment-review`의 3단계를 구현합니다: 계열사 간 거래(동일 기업집단 내 형제 법인 간 거래 — 설계의 '그룹 대 개별법인' 구분)가 관련된 경우에만 실행되는 한국 공정거래법 제47조 특수관계인 거래 심사입니다. `docs/pilots/pilot-003-doosan-bobcat-robotics.md`의 실제 계열사 내 사례로 검증되었습니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

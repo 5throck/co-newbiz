@@ -4,7 +4,7 @@
 
 ## 목적
 
-Executes releases under ADR-0014's discipline: every migration tagged
+ADR-0014의 규율에 따라 릴리스를 실행합니다: 모든 마이그레이션은 작성 시점에 되돌릴 수 있는지 여부를 태그하고, 모든 마이그레이션 직전에 백업하고, 직후에 헬스체크하며, 되돌릴 수 없는 마이그레이션은 release-engineer와 dba의 공동 승인이 필요하고, 릴리스 주기당 최소 1회 되돌릴 수 있는 마이그레이션으로 실제 롤백 리허설을 수행합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

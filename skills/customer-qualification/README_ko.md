@@ -4,7 +4,7 @@
 
 ## 목적
 
-Assesses customer-mandated vendor-registration and production-approval
+고객이 요구하는 벤더 등록 및 생산 승인 요건(예: 제조 공급망의 PPAP/FAI)을 평가합니다 — `certification-roadmap`의 규제/시장진입 인증과는 구분됩니다. 외부 인증 기관이 관여하지 않아도 고객 특화 자격 요건이 존재할 수 있기 때문입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

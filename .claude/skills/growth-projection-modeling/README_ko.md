@@ -4,7 +4,7 @@
 
 ## 목적
 
-Builds a forward growth projection with every derived assumption carrying
+모든 도출된 가정이 출처 데이터(과거 실적 또는 피어 분포)에 대한 `anchor_ref`를 갖는 미래 성장 전망을 구축합니다 — 해당 분포의 상위 10%를 벗어나는 전망은 조용히 통과되지 않고 자동으로 base-rate 경고를 트리거합니다(ADR-0018). 이는 낙관 편향을 정성적 리스크에서 기계적으로 점검 가능한 리스크로 전환하는 메커니즘이며, 승인되지 않은 상위 10분위 초과 전망에 대한 Kill Criterion의 출처입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

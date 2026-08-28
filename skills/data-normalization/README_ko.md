@@ -4,7 +4,7 @@
 
 ## 목적
 
-Normalizes raw ingested data (Korean DART account names, industry codes,
+수집된 원본 데이터(한국 DART 계정명, 산업 코드, 법인 식별자)를 `db/mappings`/`python/mappings` 테이블 기준으로 표준 스키마에 맞게 정규화하며, 매칭되지 않는 값은 버리거나 추측하지 않고 `master-data-governance`의 `staging_unmapped` 큐로 라우팅합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

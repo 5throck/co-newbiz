@@ -4,7 +4,7 @@
 
 ## 목적
 
-Assesses candidate Green Field sites against mandatory infrastructure
+`checklists/site-selection-checklist.yaml`에 따라 후보 Green Field 부지를 필수 인프라 최소 요건(폐수, 전력, 산업용수, 물류 접근성) 기준으로 평가합니다 — 폐수 처리는 전력 가용성과 무관하게 부족 시 확장을 전면 차단하므로 전력보다 먼저 확인합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

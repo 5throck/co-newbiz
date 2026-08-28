@@ -4,7 +4,7 @@
 
 ## 목적
 
-Confirms certification transferability on change of control against the
+지배권 변경 시 인증서 이전 가능성을 실제 인증 기관 자체 규정에 따라 확인합니다 — 추론은 명시적으로 금지됩니다(설계의 협상 불가 규칙, `checklists/brownfield-feasibility-checklist.yaml` bf-03과 `checklists/ma-special-topics-checklist.yaml` ma-12에서 재확인되며, M&A 평가 순서상 이 점검을 마지막에 수행하도록 요구합니다. 이전 불가능한 인증서는 이미 밸류에이션에 반영된 프리미엄을 무효화할 수 있기 때문입니다).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.2.0

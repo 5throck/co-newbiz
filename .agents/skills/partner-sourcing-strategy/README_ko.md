@@ -4,7 +4,7 @@
 
 ## 목적
 
-States the capability gap defining the need for a partner before sourcing
+소싱 시작 전에 파트너 필요성을 정의하는 역량 격차를 명시하고, 비즈니스 모델이 하드 파트너 종속성을 갖는지 판단합니다 — 이 경우 파트너 소싱 실패는 일정 지연이 아닌 Kill Criteria 후보(거래 종료)입니다(ADR-0031). 필수 Partnership DD 검증 항목입니다(`checklists/partnership-checklist.yaml` pt-01/pt-05).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

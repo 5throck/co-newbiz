@@ -4,7 +4,7 @@
 
 ## 목적
 
-Tracks statutes/regulations applicable to a specific active project's
+특정 활성 프로젝트의 대상 산업과 관할권에 적용되는 법령/규정을 추적합니다 — `regulation-monitoring`의 포트폴리오 전체 상시 감시와는 구분되며, 이 스킬은 스크리닝 이후 중대한 변경이 없었는지 확인하는 프로젝트 범위의 DD 점검이며, 감지된 변경을 해당 프로젝트 자체의 게이트 검토로 되돌립니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

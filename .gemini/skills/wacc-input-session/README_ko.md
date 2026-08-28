@@ -4,7 +4,7 @@
 
 ## 목적
 
-Confirms WACC and hurdle IRR as `kind='user'` (explicitly confirmed, not
+모든 FS 게이트가 열리기 전에 WACC와 허들 IRR을 `kind='assumed'`가 아닌 `kind='user'`(명시적으로 확인됨)로 확정합니다 — `checklists/brownfield-feasibility-checklist.yaml` bf-02의 필수 항목입니다. 직접 입력 모드와 CAPM 구성요소 모드(무위험 이자율=실시간, ERP/목표 D/E=사용자 입력, 베타=도출값)를 모두 지원하며, 용어집 항목 자체에 문서화된 관례를 따릅니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

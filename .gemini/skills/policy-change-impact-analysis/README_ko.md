@@ -4,7 +4,7 @@
 
 ## 목적
 
-Runs the mandatory impact-analysis step of the Policy Change -> System
+정책/절차 개정이 반영되기 전에 정책 변경 -> 시스템 반영 파이프라인(`docs/governance-operations.md` §5, ADR-0021)의 필수 영향 분석 단계를 실행합니다: 변경이 영향을 미치는 모든 `procedure`, `rag_rule`, `assumption`, 체크리스트, 용어집 항목 참조를 식별하고, 진행 중인 프로젝트에 대한 소급 적용 여부를 조용히 적용하지 않고 `project_policy_pin`을 통해 결정합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

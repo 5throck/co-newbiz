@@ -4,7 +4,7 @@
 
 ## 목적
 
-Analyzes a deliverable sample (PDF/DOCX/HWPX) to extract its table-of-contents
+산출물 샘플(PDF/DOCX/HWPX)을 분석하여 목차 구조와 각 섹션별 표/차트 필수 여부를 추출한 뒤, 샘플의 정확한 구조와 시각 요소 요건에 맞는 보고서 콘텐츠를 리서치하고 작성합니다. 제공된 샘플이나 정부/기관 템플릿 형식을 따라야 하는 신사업 검토 산출물을 작성할 때 사용합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0

@@ -4,7 +4,7 @@
 
 ## 목적
 
-Runs the Entity IC -> Group IC approval chain: Entity IC approval gates
+Entity IC -> Group IC 승인 체인을 실행합니다: Entity IC 승인이 Group IC 제출 자격을 결정하고(ADR-0028의 직교하는 범위 x 레벨 축), Group IC는 경쟁하는 안건 중에서의 순위 결정이며 단순 예/아니오가 절대 아닙니다(ADR-0029). `db/lib/approval-chain.ts`와 `GET /api/projects/:id/approval-chain`이 뒷받침합니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

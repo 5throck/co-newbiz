@@ -4,7 +4,7 @@
 
 ## 목적
 
-Conducts the technical DD site visit with a pre-visit document request
+사전 방문 문서 요청 목록과 현장 관찰 체크리스트로 기술 DD 현장 방문을 수행하며, 모든 관찰에 대해 증거(사진, 측정, 로그)를 확보합니다 — 확보된 증거가 없는 관찰은 IC 심사를 통과하지 못합니다(`checklists/technical-dd-checklist.yaml` tdd-01/02).
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.1.0

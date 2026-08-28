@@ -4,7 +4,7 @@
 
 ## 목적
 
-Fetches and maintains external statistical series under the cache-first,
+캐시 우선, 리비전 보존 정책(ADR-0004)에 따라 외부 통계 시리즈를 수집·유지합니다: 유효 기간 내에는 캐시를 재사용하고, 그 외에는 조건부 요청을 하며, 실제 변경 시 덮어쓰지 않고 새로운 `revision_no` 행을 삽입합니다 — 모든 리비전은 `data_change_log`에 보존됩니다. 이 스킬 작성 시점 기준 설명하는 CLI 명령(`fetch`, `md:sync`)은 아직 구현되지 않은 명시적 격차입니다.
 
 - **스코프(scope)**: `co-newbiz`
 - **버전**: 1.0.0
