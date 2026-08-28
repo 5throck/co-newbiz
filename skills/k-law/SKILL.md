@@ -6,8 +6,8 @@ description: >
   Information Center Open API (open.law.go.kr) for statutes, precedents,
   administrative rules, municipal ordinances, and legal interpretation cases.
   Requires LAW_API_OC environment variable.
-version: 1.1.1
-last_reviewed: 2026-08-23
+version: 1.0.0
+last_reviewed: 2026-08-09
 status: active
 owner: strategy-analyst
 prerequisites: LAW_API_OC environment variable
@@ -17,14 +17,15 @@ metadata:
   triggers:
     - k-law
     - /k-law
+    - "`법령`"
+    - "`법률`"
+    - "`법령정보`"
+    - "`법령검색`"
+    - "`판례`"
     - law
     - statute
-    - Korean statute lookup
     - legal search
     - Korea law
-
-  procedure_keys:
-    - entity-establishment-execution
 ---
 # Skill: k-law
 
@@ -64,8 +65,7 @@ Use when an engagement requires Korean statutory or regulatory research from the
 
 ## Reference Material
 
-- `references/terms-ko.json`: Korean query-trigger keywords (statute, precedent, and related search phrases) plus service terminology. Non-Markdown reference asset, exempt from the workspace English-only doc policy — `SKILL.md` stays English-only, so Korean trigger phrases live there, not in `metadata.triggers`.
-- If recurring lookups reveal stable target-specific parameter sets not covered below, capture them as `references/target-params-ko.json`.
+- None yet; if recurring lookups reveal stable target-specific parameter sets not covered below, capture them as `references/target-params-ko.json`.
 
 ## Related Skills
 
