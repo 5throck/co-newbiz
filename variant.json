@@ -263,6 +263,28 @@
         ]
       },
       {
+        "name": "k-dart",
+        "used_by_agents": [
+          "financial-analyst",
+          "technical-dd-agent"
+        ],
+        "phases": [
+          4,
+          5
+        ]
+      },
+      {
+        "name": "k-kosis",
+        "used_by_agents": [
+          "financial-analyst",
+          "market-intelligence-agent"
+        ],
+        "phases": [
+          2,
+          4
+        ]
+      },
+      {
         "name": "legal-due-diligence",
         "used_by_agents": [
           "legal-counsel"
