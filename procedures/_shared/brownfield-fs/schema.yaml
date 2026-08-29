@@ -124,6 +124,28 @@ steps:
     description: >
       OLS calibration of a proxy-chain hop with lead-lag search and 95%
       confidence interval (graph-pilot wiring).
+  - id: 7.9
+    gate: FS
+    agent_key: financial-analyst
+    skill_key: value-chain-stage-financials
+    output_type: chain_stage_financial_rollup
+    description: >
+      Per-value-chain-node 5-year KPI rollup (ADR-0066) — revenue growth,
+      margin, and ROIC per chain stage assembled from DART company data
+      into `fact_industry`, with member-company list and aggregation
+      method. The historical baseline the step-7 structure simulation is
+      sanity-checked against.
+  - id: 7.95
+    gate: FS
+    agent_key: quant-methodologist
+    skill_key: value-chain-driver-identification
+    output_type: chain_node_sensitivity_set
+    description: >
+      Per-stage driver sensitivities derived by correlation/lead-lag
+      estimation of each node's financial series against registered driver
+      series, written to `chain_node_sensitivity` with fit quality and
+      confidence grade — replacing unexamined manual entries as the step-7
+      simulation's sensitivity inputs.
   - id: 8
     gate: FS
     agent_key: process-governance-manager

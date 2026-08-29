@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 480,
-    "edge_count": 831
+    "node_count": 492,
+    "edge_count": 864
   },
   "nodes": [
     {
@@ -597,6 +597,16 @@
       "label": "certification_transferability_check"
     },
     {
+      "id": "artifact:chain_node_sensitivity_set",
+      "type": "artifact",
+      "label": "chain_node_sensitivity_set"
+    },
+    {
+      "id": "artifact:chain_stage_financial_rollup",
+      "type": "artifact",
+      "label": "chain_stage_financial_rollup"
+    },
+    {
       "id": "artifact:compensation_harmonization_result",
       "type": "artifact",
       "label": "compensation_harmonization_result"
@@ -660,6 +670,11 @@
       "id": "artifact:formation_readiness_check",
       "type": "artifact",
       "label": "formation_readiness_check"
+    },
+    {
+      "id": "artifact:forward_industry_research",
+      "type": "artifact",
+      "label": "forward_industry_research"
     },
     {
       "id": "artifact:fs_canonical_kpi_baseline",
@@ -1591,6 +1606,13 @@
       "status": "active"
     },
     {
+      "id": "skill:forward-industry-research",
+      "type": "skill",
+      "label": "forward-industry-research",
+      "version": "1.0.0",
+      "status": "active"
+    },
+    {
       "id": "skill:gateguard",
       "type": "skill",
       "label": "gateguard",
@@ -2151,10 +2173,24 @@
       "status": "active"
     },
     {
+      "id": "skill:value-chain-driver-identification",
+      "type": "skill",
+      "label": "value-chain-driver-identification",
+      "version": "1.0.0",
+      "status": "active"
+    },
+    {
       "id": "skill:value-chain-linkage-analysis",
       "type": "skill",
       "label": "value-chain-linkage-analysis",
       "version": "1.1.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:value-chain-stage-financials",
+      "type": "skill",
+      "label": "value-chain-stage-financials",
+      "version": "1.0.0",
       "status": "active"
     },
     {
@@ -2342,6 +2378,18 @@
       "gate": "FS"
     },
     {
+      "id": "proc:brownfield-fs#7.9",
+      "type": "step",
+      "label": "brownfield-fs step 7.9",
+      "gate": "FS"
+    },
+    {
+      "id": "proc:brownfield-fs#7.95",
+      "type": "step",
+      "label": "brownfield-fs step 7.95",
+      "gate": "FS"
+    },
+    {
       "id": "proc:brownfield-fs#8",
       "type": "step",
       "label": "brownfield-fs step 8",
@@ -2393,6 +2441,12 @@
       "id": "proc:brownfield-screening#3",
       "type": "step",
       "label": "brownfield-screening step 3",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:brownfield-screening#3.5",
+      "type": "step",
+      "label": "brownfield-screening step 3.5",
       "gate": "Screening"
     },
     {
@@ -2600,6 +2654,18 @@
       "gate": "FS"
     },
     {
+      "id": "proc:greenfield-fs#6.9",
+      "type": "step",
+      "label": "greenfield-fs step 6.9",
+      "gate": "FS"
+    },
+    {
+      "id": "proc:greenfield-fs#6.95",
+      "type": "step",
+      "label": "greenfield-fs step 6.95",
+      "gate": "FS"
+    },
+    {
       "id": "proc:greenfield-fs#7",
       "type": "step",
       "label": "greenfield-fs step 7",
@@ -2657,6 +2723,12 @@
       "id": "proc:greenfield-screening#2",
       "type": "step",
       "label": "greenfield-screening step 2",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:greenfield-screening#2.5",
+      "type": "step",
+      "label": "greenfield-screening step 2.5",
       "gate": "Screening"
     },
     {
@@ -4225,6 +4297,18 @@
     },
     {
       "type": "executes_agent",
+      "from": "proc:brownfield-fs#7.9",
+      "to": "agent:financial-analyst",
+      "source_ref": "procedures/_shared/brownfield-fs/schema.yaml#steps[7.9]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:brownfield-fs#7.95",
+      "to": "agent:quant-methodologist",
+      "source_ref": "procedures/_shared/brownfield-fs/schema.yaml#steps[7.95]"
+    },
+    {
+      "type": "executes_agent",
       "from": "proc:brownfield-fs#8",
       "to": "agent:process-governance-manager",
       "source_ref": "procedures/_shared/brownfield-fs/schema.yaml#steps[8]"
@@ -4276,6 +4360,12 @@
       "from": "proc:brownfield-screening#3",
       "to": "agent:antitrust-agent",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:brownfield-screening#3.5",
+      "to": "agent:market-intelligence-agent",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3.5]"
     },
     {
       "type": "executes_agent",
@@ -4483,6 +4573,18 @@
     },
     {
       "type": "executes_agent",
+      "from": "proc:greenfield-fs#6.9",
+      "to": "agent:financial-analyst",
+      "source_ref": "procedures/_shared/greenfield-fs/schema.yaml#steps[6.9]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:greenfield-fs#6.95",
+      "to": "agent:quant-methodologist",
+      "source_ref": "procedures/_shared/greenfield-fs/schema.yaml#steps[6.95]"
+    },
+    {
+      "type": "executes_agent",
       "from": "proc:greenfield-fs#7",
       "to": "agent:process-governance-manager",
       "source_ref": "procedures/_shared/greenfield-fs/schema.yaml#steps[7]"
@@ -4540,6 +4642,12 @@
       "from": "proc:greenfield-screening#2",
       "to": "agent:market-intelligence-agent",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[2]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:greenfield-screening#2.5",
+      "to": "agent:market-intelligence-agent",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[2.5]"
     },
     {
       "type": "executes_agent",
@@ -4837,6 +4945,18 @@
     },
     {
       "type": "executes_skill",
+      "from": "proc:brownfield-fs#7.9",
+      "to": "skill:value-chain-stage-financials",
+      "source_ref": "procedures/_shared/brownfield-fs/schema.yaml#steps[7.9]"
+    },
+    {
+      "type": "executes_skill",
+      "from": "proc:brownfield-fs#7.95",
+      "to": "skill:value-chain-driver-identification",
+      "source_ref": "procedures/_shared/brownfield-fs/schema.yaml#steps[7.95]"
+    },
+    {
+      "type": "executes_skill",
       "from": "proc:brownfield-fs#8",
       "to": "skill:stage-gate-governance",
       "source_ref": "procedures/_shared/brownfield-fs/schema.yaml#steps[8]"
@@ -4888,6 +5008,12 @@
       "from": "proc:brownfield-screening#3",
       "to": "skill:antitrust-screening",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3]"
+    },
+    {
+      "type": "executes_skill",
+      "from": "proc:brownfield-screening#3.5",
+      "to": "skill:forward-industry-research",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3.5]"
     },
     {
       "type": "executes_skill",
@@ -5095,6 +5221,18 @@
     },
     {
       "type": "executes_skill",
+      "from": "proc:greenfield-fs#6.9",
+      "to": "skill:value-chain-stage-financials",
+      "source_ref": "procedures/_shared/greenfield-fs/schema.yaml#steps[6.9]"
+    },
+    {
+      "type": "executes_skill",
+      "from": "proc:greenfield-fs#6.95",
+      "to": "skill:value-chain-driver-identification",
+      "source_ref": "procedures/_shared/greenfield-fs/schema.yaml#steps[6.95]"
+    },
+    {
+      "type": "executes_skill",
       "from": "proc:greenfield-fs#7",
       "to": "skill:stage-gate-governance",
       "source_ref": "procedures/_shared/greenfield-fs/schema.yaml#steps[7]"
@@ -5152,6 +5290,12 @@
       "from": "proc:greenfield-screening#2",
       "to": "skill:value-chain-linkage-analysis",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[2]"
+    },
+    {
+      "type": "executes_skill",
+      "from": "proc:greenfield-screening#2.5",
+      "to": "skill:forward-industry-research",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[2.5]"
     },
     {
       "type": "executes_skill",
@@ -5488,6 +5632,18 @@
       "from": "skill:financing-plan-review",
       "to": "proc:entity-ic-review",
       "source_ref": "skills/financing-plan-review/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:forward-industry-research",
+      "to": "proc:brownfield-screening",
+      "source_ref": "skills/forward-industry-research/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:forward-industry-research",
+      "to": "proc:greenfield-screening",
+      "source_ref": "skills/forward-industry-research/SKILL.md"
     },
     {
       "type": "member_of",
@@ -5911,9 +6067,33 @@
     },
     {
       "type": "member_of",
+      "from": "skill:value-chain-driver-identification",
+      "to": "proc:brownfield-fs",
+      "source_ref": "skills/value-chain-driver-identification/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:value-chain-driver-identification",
+      "to": "proc:greenfield-fs",
+      "source_ref": "skills/value-chain-driver-identification/SKILL.md"
+    },
+    {
+      "type": "member_of",
       "from": "skill:value-chain-linkage-analysis",
       "to": "proc:greenfield-screening",
       "source_ref": "skills/value-chain-linkage-analysis/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:value-chain-stage-financials",
+      "to": "proc:brownfield-fs",
+      "source_ref": "skills/value-chain-stage-financials/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:value-chain-stage-financials",
+      "to": "proc:greenfield-fs",
+      "source_ref": "skills/value-chain-stage-financials/SKILL.md"
     },
     {
       "type": "member_of",
@@ -6121,6 +6301,12 @@
     },
     {
       "type": "owns",
+      "from": "agent:financial-analyst",
+      "to": "skill:value-chain-stage-financials",
+      "source_ref": "skills/value-chain-stage-financials/SKILL.md"
+    },
+    {
+      "type": "owns",
       "from": "agent:frontend-engineer",
       "to": "skill:ui-information-architecture",
       "source_ref": "skills/ui-information-architecture/SKILL.md"
@@ -6280,6 +6466,12 @@
       "from": "agent:market-intelligence-agent",
       "to": "skill:competitive-intelligence",
       "source_ref": "skills/competitive-intelligence/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:market-intelligence-agent",
+      "to": "skill:forward-industry-research",
+      "source_ref": "skills/forward-industry-research/SKILL.md"
     },
     {
       "type": "owns",
@@ -6550,6 +6742,12 @@
       "from": "agent:quant-methodologist",
       "to": "skill:unit-conversion-calibration",
       "source_ref": "skills/unit-conversion-calibration/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:quant-methodologist",
+      "to": "skill:value-chain-driver-identification",
+      "source_ref": "skills/value-chain-driver-identification/SKILL.md"
     },
     {
       "type": "owns",
@@ -6829,6 +7027,18 @@
     },
     {
       "type": "produces",
+      "from": "proc:brownfield-fs#7.9",
+      "to": "artifact:chain_stage_financial_rollup",
+      "source_ref": "procedures/_shared/brownfield-fs/schema.yaml#steps[7.9]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:brownfield-fs#7.95",
+      "to": "artifact:chain_node_sensitivity_set",
+      "source_ref": "procedures/_shared/brownfield-fs/schema.yaml#steps[7.95]"
+    },
+    {
+      "type": "produces",
       "from": "proc:brownfield-fs#8",
       "to": "artifact:gate_pass_record",
       "source_ref": "procedures/_shared/brownfield-fs/schema.yaml#steps[8]"
@@ -6880,6 +7090,12 @@
       "from": "proc:brownfield-screening#3",
       "to": "artifact:preliminary_hhi_screen",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:brownfield-screening#3.5",
+      "to": "artifact:forward_industry_research",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3.5]"
     },
     {
       "type": "produces",
@@ -7087,6 +7303,18 @@
     },
     {
       "type": "produces",
+      "from": "proc:greenfield-fs#6.9",
+      "to": "artifact:chain_stage_financial_rollup",
+      "source_ref": "procedures/_shared/greenfield-fs/schema.yaml#steps[6.9]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-fs#6.95",
+      "to": "artifact:chain_node_sensitivity_set",
+      "source_ref": "procedures/_shared/greenfield-fs/schema.yaml#steps[6.95]"
+    },
+    {
+      "type": "produces",
       "from": "proc:greenfield-fs#7",
       "to": "artifact:gate_pass_record",
       "source_ref": "procedures/_shared/greenfield-fs/schema.yaml#steps[7]"
@@ -7144,6 +7372,12 @@
       "from": "proc:greenfield-screening#2",
       "to": "artifact:market_sizing",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[2]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-screening#2.5",
+      "to": "artifact:forward_industry_research",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[2.5]"
     },
     {
       "type": "produces",
@@ -7441,6 +7675,18 @@
     },
     {
       "type": "step_of",
+      "from": "proc:brownfield-fs#7.9",
+      "to": "proc:brownfield-fs",
+      "source_ref": "procedures/_shared/brownfield-fs/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:brownfield-fs#7.95",
+      "to": "proc:brownfield-fs",
+      "source_ref": "procedures/_shared/brownfield-fs/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:brownfield-fs#8",
       "to": "proc:brownfield-fs",
       "source_ref": "procedures/_shared/brownfield-fs/schema.yaml"
@@ -7490,6 +7736,12 @@
     {
       "type": "step_of",
       "from": "proc:brownfield-screening#3",
+      "to": "proc:brownfield-screening",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:brownfield-screening#3.5",
       "to": "proc:brownfield-screening",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml"
     },
@@ -7699,6 +7951,18 @@
     },
     {
       "type": "step_of",
+      "from": "proc:greenfield-fs#6.9",
+      "to": "proc:greenfield-fs",
+      "source_ref": "procedures/_shared/greenfield-fs/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-fs#6.95",
+      "to": "proc:greenfield-fs",
+      "source_ref": "procedures/_shared/greenfield-fs/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:greenfield-fs#7",
       "to": "proc:greenfield-fs",
       "source_ref": "procedures/_shared/greenfield-fs/schema.yaml"
@@ -7754,6 +8018,12 @@
     {
       "type": "step_of",
       "from": "proc:greenfield-screening#2",
+      "to": "proc:greenfield-screening",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-screening#2.5",
       "to": "proc:greenfield-screening",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml"
     },

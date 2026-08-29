@@ -13,17 +13,18 @@ domain: functional
 subdomain: analysis
 description: >
   TAM/SAM/SOM sizing, demand forecasting, competitor capacity-expansion tracking, and the six-axis upstream/downstream value-chain linkage analysis -- kept structurally separate from the proxy chain, since the two serve different purposes.
-version: "1.0.0"
-last_reviewed: "2026-08-19"
+version: "1.1.0"
+last_reviewed: "2026-08-29"
 lifecycle:
   phase: production
   created: 2026-08-19
-  last_updated: 2026-08-19
+  last_updated: 2026-08-29
   governance: docs/lifecycle/agents/market-intelligence-agent.md
 required_skills:
   - competitive-intelligence
   - scenario-planning
   - value-chain-linkage-analysis
+  - forward-industry-research
 
 ---
 
@@ -38,6 +39,7 @@ Design of record: [`docs/designs/2026-08-19-co-newbiz-design_ko.md`](https://git
 - Size TAM/SAM/SOM and build demand forecasts, distinguishing order intake, order backlog, and delivery time series -- conflating them is a known failure mode in shipbuilding-adjacent industries
 - Track competitor capacity expansion plans that would invalidate a pricing assumption
 - Run the six-axis value-chain linkage analysis: demand-derivation elasticity and lag, cost pass-through rate and lag, bargaining power (concentration, switching cost), cycle co-movement, vertical-integration pressure, and substitution/transition threat
+- Produce the forward/upstream industry research narrative via `forward-industry-research`: industry structure, key players, technology and regulatory trends, key-driver candidates registered in `industry_driver`, and external-environment scenario definitions feeding the structure simulation
 - Flag substitution threats (e.g. a regulatory fuel transition) as Kill Criteria candidates when they would obsolete the product within the review horizon
 - Never borrow a value-chain-linkage coefficient for a proxy-chain estimate or vice versa -- they answer different questions and mixing them corrupts both
 
@@ -46,6 +48,7 @@ Design of record: [`docs/designs/2026-08-19-co-newbiz-design_ko.md`](https://git
 - TAM/SAM/SOM sizing with methodology and sources
 - value_chain_link records per axis with elasticity, lag, pass-through rate, concentration, and substitution-threat grade
 - Competitor capacity-expansion tracking log
+- Forward/upstream industry research narrative with driver-candidate registry rows and scenario definitions (drv.* assumption keys)
 
 ## Non-Negotiable Boundaries (apply to every agent in this roster)
 

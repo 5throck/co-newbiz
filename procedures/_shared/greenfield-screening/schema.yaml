@@ -30,6 +30,18 @@ steps:
     skill_key: value-chain-linkage-analysis
     output_type: market_sizing
     description: TAM/SAM/SOM sizing and initial value-chain linkage read for the target industry.
+  - id: 2.5
+    gate: Screening
+    agent_key: market-intelligence-agent
+    skill_key: forward-industry-research
+    output_type: forward_industry_research
+    description: >
+      Forward/upstream industry research narrative (ADR-0066) — which
+      upstream and forward industries materially move the target, their
+      structure, key players, technology/regulatory trends, and the
+      key-driver candidates registered in `industry_driver` with external
+      -environment scenario definitions. Prerequisite for the six-axis
+      coefficient estimation and the FS industry-structure simulation.
   - id: 3
     gate: Screening
     agent_key: greenfield-agent
