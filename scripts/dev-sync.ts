@@ -1,4 +1,8 @@
-// @version 1.5.5
+// @version 1.6.0
+// v1.6.0: feat(skill-graph): add step 4.65 skill graph gate (ADR-0060) — generates and
+//           verifies the skill relationship graph before VERSION_MANIFEST generation
+//           (ported from templates/common dev-sync v1.7.3+; scope loop omitted — no templates/ dir)
+// v1.5.5: (previous)
 // v1.5.4: fix(pr-check): "PR already exists for branch" step now checks PR state —
 //           previously `gh pr view <branch>` matched ANY PR regardless of state, so
 //           reusing a branch name whose earlier PR was already MERGED/CLOSED caused
@@ -296,6 +300,37 @@ const syncSkillsResult = await $`bun scripts/sync-skills.ts`.nothrow();
 if (syncSkillsResult.exitCode !== 0) {
     console.warn(`⚠️  Skill sync had warnings (exit ${syncSkillsResult.exitCode}), continuing...`);
     if (syncSkillsResult.stderr) console.warn(syncSkillsResult.stderr.trim());
+}
+
+// 4.65 Skill Graph Gate — generates and verifies skill relationship graph (ADR-0060
+//     + Amendment 2). Scaffolded projects have no templates/ directory, so the scope
+//     loop skips; the project's own local graph is emitted by the guarded calls below
+//     (run-context auto-detection tags project assets L3). Must run BEFORE
+//     VERSION_MANIFEST generation so graph files are committed.
+if (fs.existsSync('scripts/generate-skill-graph.ts')) {
+    console.log('📋 Step 4.65: Skill relationship graph gate...');
+    const graphGenRes = await $`bun scripts/generate-skill-graph.ts`.nothrow();
+    if (graphGenRes.exitCode !== 0) {
+        console.error(`${RED}❌ Skill graph generation failed.${RESET}`);
+        console.error(`${YELLOW}   Run manually: bun scripts/generate-skill-graph.ts${RESET}`);
+        if (import.meta.main) {
+            process.exit(1);
+        }
+    }
+
+    const graphVerifyRes = await $`bun scripts/verify-skill-graph.ts`.nothrow();
+    if (graphVerifyRes.exitCode !== 0) {
+        console.error(`${RED}❌ Skill graph verification failed.${RESET}`);
+        console.error(`${YELLOW}   The committed skill graph does not match the current workspace state.${RESET}`);
+        console.error(`${YELLOW}   Fix: Review changes to skills/, agents/, or variant.json, then re-run: bun scripts/generate-skill-graph.ts${RESET}`);
+        if (import.meta.main) {
+            process.exit(1);
+        }
+    }
+
+    console.log(`${GREEN}✓ Skill graph verification passed${RESET}`);
+} else {
+    console.log('📋 Step 4.65: skipped — skill graph generator not present in this context');
 }
 
 // 4. Generate VERSION_MANIFEST.md

@@ -1,0 +1,4345 @@
+{
+  "version": 1,
+  "nodes": [
+    {
+      "id": "access-control-review",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "admin-console-operations",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "adr-governance",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0001",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0002",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0003",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0004",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0005",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0006",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0007",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0008",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0009",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0010",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0011",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0012",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0013",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0014",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0015",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0016",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0017",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0018",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0019",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0020",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0021",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0022",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0023",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0024",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0025",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0026",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0027",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0028",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0029",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0030",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0031",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0032",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0033",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0034",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0035",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0036",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0037",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0038",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0039",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0040",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0041",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0042",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0043",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0044",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0045",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0046",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0047",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0048",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0049",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0050",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0051",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0052",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0053",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0054",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0055",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0056",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0057",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0058",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0059",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0060",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0061",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0062",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0063",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0064",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0065",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0066",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0067",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0068",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0069",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0070",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0071",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0072",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "agent-lifecycle-manager",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "agent-output-provenance",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "antitrust-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "antitrust-screening",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "assumption-audit",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "auth-and-account-management",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "backend-engineer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "batch-scheduling-operations",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "brownfield-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "brownfield-feasibility",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "certification-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "certification-roadmap",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "certification-transferability",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "checklist-authoring",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "commercial-dd-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "commercial-due-diligence",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "community-partnership-planning",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "company-intelligence",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "compensation-harmonization-analysis",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "competitive-intelligence",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "compliance-monitoring",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "compliance-officer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "continuous-monitoring-and-alerting",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "customer-attrition-risk",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "customer-qualification",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "customer-retention-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "data-architect",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "data-freshness-and-revision-control",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "data-normalization",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "database-operations",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "db-migration-governance",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "dba",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "dd-to-valuation-bridge",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "deal-execution-playbook",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "deal-workspace-operations",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "debt-and-contingent-liability-simulation",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "deployment-and-release",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "docs-writer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "executive-presentation",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "expert-interview",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "explain-me",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "financial-analyst",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "financial-statement-analysis",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "financing-plan-review",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "frontend-engineer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "gateguard",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "glossary-curator",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "glossary-management",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "governance-document-hierarchy",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "greenfield-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "greenfield-feasibility",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "group-level-review",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "group-review-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "growth-projection-modeling",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "historical-financial-analysis",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "hr-integration-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "hwp-document-processing",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "incentive-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "incentive-clawback-assessment",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "incident-response",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "industry-lead",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "industry-profile-application",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "infra-automation-engineer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "infrastructure-automation",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "insight-synthesis",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "interpretation-registry",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "intra-group-transaction-compliance",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "investment-feasibility-modeling",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "investment-vehicle-structuring",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "jv-structuring",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "k-dart",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "k-kosis",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "k-law",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "legal-counsel",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "legal-due-diligence",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "legal-risk-register",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "management-incentive-review",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "market-data-pipeline",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "market-intelligence-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "master-data-governance",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "mcp-server-integration",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "meeting-facilitation",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "monte-carlo-simulation",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "notification-channel-management",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "observability-and-alerting",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "org-readiness-assessment",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "partner-due-diligence",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "partner-sourcing-strategy",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "partnership-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "peer-benchmarking",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "permit-pathway-mapping",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "platform-lead",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "pm",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "pmi-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "pmi-planning",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "policy-and-procedure-governance",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "policy-change-impact-analysis",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "portfolio-fit-assessment",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "procedure-reference-override",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "process-governance-manager",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "project-review",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "proxy-industry-chain",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "quality-of-earnings",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "quant-methodologist",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "query-performance-tuning",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "rag-scoring-framework",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "README",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "README_ko",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "region-lead",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "region-profile-application",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "regional-incentive-sourcing",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "regulation-monitoring",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "regulatory-change-response",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "regulatory-screening",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "release-engineer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "rest-api-design",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "risk-officer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "run-versioning-and-attribution",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "sample-driven-report-writing",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "scenario-planning",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "script-lifecycle-manager",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "security-baseline-review",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "security-engineer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "security-scan",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "site-infrastructure-assessment",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "site-visit-protocol",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "skill-lifecycle-manager",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "sre",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "stage-gate-governance",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "standup-synthesizer",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "statute-change-monitoring",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "strategic-fit-screening",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "sync",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "talent-pipeline-planning",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "team-builder",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "technical-dd-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "technical-due-diligence",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "translate",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "two-tier-approval-chain",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "ui-information-architecture",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "unit-conversion-calibration",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "update-bun-packages",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "validate-docs-links",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "valuation-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "value-chain-linkage-analysis",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "vulnerability-management",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "wacc-input-session",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "waiver-management",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "zod-contract-gate",
+      "type": "skill",
+      "layer": "L3"
+    }
+  ],
+  "edges": [
+    {
+      "type": "references",
+      "from": "access-control-review",
+      "to": "auth-and-account-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "access-control-review",
+      "to": "security-baseline-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "admin-console-operations",
+      "to": "adr-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "admin-console-operations",
+      "to": "auth-and-account-management",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "admin-console-operations",
+      "to": "auth-and-account-management",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/admin-console-operations/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "admin-console-operations",
+      "to": "glossary-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "admin-console-operations",
+      "to": "master-data-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "admin-console-operations",
+      "to": "notification-channel-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr-governance",
+      "to": "governance-document-hierarchy",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr-governance",
+      "to": "policy-change-impact-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0045",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0045",
+      "to": "investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0045",
+      "to": "investment-vehicle-structuring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0045",
+      "to": "jv-structuring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0051",
+      "to": "checklist-authoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0051",
+      "to": "financing-plan-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0051",
+      "to": "legal-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0051",
+      "to": "strategic-fit-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "expert-interview",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "jv-structuring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "monte-carlo-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "partner-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "partner-sourcing-strategy",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "pmi-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "portfolio-fit-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "project-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "proxy-industry-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "scenario-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0052",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent-output-provenance",
+      "to": "assumption-audit",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent-output-provenance",
+      "to": "deal-execution-playbook",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "agent-output-provenance",
+      "to": "deal-execution-playbook",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/agent-output-provenance/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "antitrust-screening",
+      "to": "antitrust-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "antitrust-screening",
+      "to": "brownfield-feasibility",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "antitrust-screening",
+      "to": "intra-group-transaction-compliance",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "antitrust-screening",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "antitrust-screening",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "antitrust-screening",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "assumption-audit",
+      "to": "expert-interview",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "assumption-audit",
+      "to": "growth-projection-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "assumption-audit",
+      "to": "investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "assumption-audit",
+      "to": "run-versioning-and-attribution",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "assumption-audit",
+      "to": "unit-conversion-calibration",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "assumption-audit",
+      "to": "wacc-input-session",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "auth-and-account-management",
+      "to": "access-control-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "auth-and-account-management",
+      "to": "rest-api-design",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "batch-scheduling-operations",
+      "to": "continuous-monitoring-and-alerting",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "batch-scheduling-operations",
+      "to": "infrastructure-automation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "batch-scheduling-operations",
+      "to": "observability-and-alerting",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "brownfield-feasibility",
+      "to": "antitrust-screening",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "brownfield-feasibility",
+      "to": "brownfield-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "brownfield-feasibility",
+      "to": "certification-transferability",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "brownfield-feasibility",
+      "to": "commercial-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "brownfield-feasibility",
+      "to": "customer-attrition-risk",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "brownfield-feasibility",
+      "to": "incentive-clawback-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "brownfield-feasibility",
+      "to": "org-readiness-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "brownfield-feasibility",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "brownfield-feasibility",
+      "to": "phase2",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "brownfield-feasibility",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "brownfield-feasibility",
+      "to": "technical-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "certification-roadmap",
+      "to": "certification-transferability",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "certification-roadmap",
+      "to": "customer-qualification",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "certification-roadmap",
+      "to": "permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "certification-transferability",
+      "to": "certification-roadmap",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "certification-transferability",
+      "to": "certification-roadmap",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "certification-transferability",
+      "to": "dd-to-valuation-bridge",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "certification-transferability",
+      "to": "legal-counsel",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "certification-transferability",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "certification-transferability",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "certification-transferability",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "checklist-authoring",
+      "to": "compliance-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "checklist-authoring",
+      "to": "governance-document-hierarchy",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "checklist-authoring",
+      "to": "governance-document-hierarchy",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/checklist-authoring/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "checklist-authoring",
+      "to": "policy-change-impact-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "checklist-authoring",
+      "to": "procedure-reference-override",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "checklist-authoring",
+      "to": "waiver-management",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "commercial-due-diligence",
+      "to": "commercial-dd-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "commercial-due-diligence",
+      "to": "customer-attrition-risk",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "commercial-due-diligence",
+      "to": "dd-to-valuation-bridge",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "commercial-due-diligence",
+      "to": "expert-interview",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "commercial-due-diligence",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "community-partnership-planning",
+      "to": "greenfield-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "community-partnership-planning",
+      "to": "greenfield-feasibility",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "community-partnership-planning",
+      "to": "permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "community-partnership-planning",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "community-partnership-planning",
+      "to": "talent-pipeline-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "company-intelligence",
+      "to": "competitive-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "company-intelligence",
+      "to": "financial-statement-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "company-intelligence",
+      "to": "insight-synthesis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "compensation-harmonization-analysis",
+      "to": "management-incentive-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "compensation-harmonization-analysis",
+      "to": "org-readiness-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "competitive-intelligence",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "competitive-intelligence",
+      "to": "insight-synthesis",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "competitive-intelligence",
+      "to": "market-intelligence-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "competitive-intelligence",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "competitive-intelligence",
+      "to": "value-chain-linkage-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "compliance-monitoring",
+      "to": "compliance-officer",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "compliance-monitoring",
+      "to": "interpretation-registry",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "compliance-monitoring",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "compliance-monitoring",
+      "to": "policy-change-impact-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "compliance-monitoring",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "compliance-monitoring",
+      "to": "waiver-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "continuous-monitoring-and-alerting",
+      "to": "batch-scheduling-operations",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "continuous-monitoring-and-alerting",
+      "to": "notification-channel-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "continuous-monitoring-and-alerting",
+      "to": "rag-scoring-framework",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "customer-attrition-risk",
+      "to": "brownfield-feasibility",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "customer-attrition-risk",
+      "to": "customer-retention-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "customer-attrition-risk",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "customer-attrition-risk",
+      "to": "management-incentive-review",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "customer-attrition-risk",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "customer-qualification",
+      "to": "certification-roadmap",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "customer-qualification",
+      "to": "customer-attrition-risk",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "data-freshness-and-revision-control",
+      "to": "db-migration-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "data-freshness-and-revision-control",
+      "to": "market-data-pipeline",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "data-freshness-and-revision-control",
+      "to": "market-data-pipeline",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/data-freshness-and-revision-control/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "data-normalization",
+      "to": "financial-statement-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "data-normalization",
+      "to": "master-data-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "database-operations",
+      "to": "deployment-and-release",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "database-operations",
+      "to": "infrastructure-automation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "db-migration-governance",
+      "to": "adr-governance",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "db-migration-governance",
+      "to": "adr-governance",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/db-migration-governance/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "db-migration-governance",
+      "to": "data-normalization",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "db-migration-governance",
+      "to": "master-data-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "db-migration-governance",
+      "to": "run-versioning-and-attribution",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "dd-to-valuation-bridge",
+      "to": "brownfield-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "dd-to-valuation-bridge",
+      "to": "commercial-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "dd-to-valuation-bridge",
+      "to": "commercial-due-diligence",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "dd-to-valuation-bridge",
+      "to": "compensation-harmonization-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "dd-to-valuation-bridge",
+      "to": "customer-attrition-risk",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "dd-to-valuation-bridge",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "dd-to-valuation-bridge",
+      "to": "incentive-clawback-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "dd-to-valuation-bridge",
+      "to": "investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "dd-to-valuation-bridge",
+      "to": "legal-risk-register",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "dd-to-valuation-bridge",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "dd-to-valuation-bridge",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "dd-to-valuation-bridge",
+      "to": "quality-of-earnings",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "dd-to-valuation-bridge",
+      "to": "risk-officer",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "dd-to-valuation-bridge",
+      "to": "technical-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "dd-to-valuation-bridge",
+      "to": "technical-due-diligence",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "deal-execution-playbook",
+      "to": "agent-output-provenance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "deal-execution-playbook",
+      "to": "group-level-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "deal-execution-playbook",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "deal-execution-playbook",
+      "to": "stage-gate-governance",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/deal-execution-playbook/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "deal-execution-playbook",
+      "to": "two-tier-approval-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "deal-workspace-operations",
+      "to": "access-control-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "deal-workspace-operations",
+      "to": "two-tier-approval-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "customer-attrition-risk",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "monte-carlo-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "valuation-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "deployment-and-release",
+      "to": "database-operations",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "deployment-and-release",
+      "to": "db-migration-governance",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "deployment-and-release",
+      "to": "db-migration-governance",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/deployment-and-release/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "executive-presentation",
+      "to": "financial-statement-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "executive-presentation",
+      "to": "financial-statement-analysis",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/executive-presentation/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "executive-presentation",
+      "to": "insight-synthesis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "executive-presentation",
+      "to": "rag-scoring-framework",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "executive-presentation",
+      "to": "rag-scoring-framework",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/executive-presentation/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "expert-interview",
+      "to": "assumption-audit",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "expert-interview",
+      "to": "commercial-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "expert-interview",
+      "to": "technical-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "financial-statement-analysis",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "financial-statement-analysis",
+      "to": "growth-projection-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "financial-statement-analysis",
+      "to": "historical-financial-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "financial-statement-analysis",
+      "to": "k-dart",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "financial-statement-analysis",
+      "to": "k-dart",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "financial-statement-analysis",
+      "to": "peer-benchmarking",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "financing-plan-review",
+      "to": "dd-to-valuation-bridge",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "financing-plan-review",
+      "to": "deal-execution-playbook",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "financing-plan-review",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "financing-plan-review",
+      "to": "investment-vehicle-structuring",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "financing-plan-review",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "financing-plan-review",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "financing-plan-review",
+      "to": "valuation-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "glossary-management",
+      "to": "insight-synthesis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "glossary-management",
+      "to": "sample-driven-report-writing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "glossary-management",
+      "to": "ui-information-architecture",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "governance-document-hierarchy",
+      "to": "adr-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "governance-document-hierarchy",
+      "to": "checklist-authoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "governance-document-hierarchy",
+      "to": "policy-and-procedure-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "governance-document-hierarchy",
+      "to": "procedure-reference-override",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "greenfield-feasibility",
+      "to": "community-partnership-planning",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "greenfield-feasibility",
+      "to": "greenfield-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "greenfield-feasibility",
+      "to": "phase2",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "greenfield-feasibility",
+      "to": "regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "greenfield-feasibility",
+      "to": "site-infrastructure-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "greenfield-feasibility",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "greenfield-feasibility",
+      "to": "talent-pipeline-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "group-level-review",
+      "to": "intra-group-transaction-compliance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "group-level-review",
+      "to": "portfolio-fit-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "group-level-review",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "group-level-review",
+      "to": "two-tier-approval-chain",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "group-level-review",
+      "to": "two-tier-approval-chain",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/group-level-review/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "growth-projection-modeling",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "growth-projection-modeling",
+      "to": "historical-financial-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "growth-projection-modeling",
+      "to": "historical-financial-analysis",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "growth-projection-modeling",
+      "to": "investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "growth-projection-modeling",
+      "to": "peer-benchmarking",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "growth-projection-modeling",
+      "to": "peer-benchmarking",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "phase",
+      "from": "growth-projection-modeling",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "growth-projection-modeling",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "historical-financial-analysis",
+      "to": "financial-statement-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "historical-financial-analysis",
+      "to": "financial-statement-analysis",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "historical-financial-analysis",
+      "to": "growth-projection-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "historical-financial-analysis",
+      "to": "peer-benchmarking",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "hwp-document-processing",
+      "to": "glossary-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "hwp-document-processing",
+      "to": "sample-driven-report-writing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "incentive-clawback-assessment",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "incentive-clawback-assessment",
+      "to": "incentive-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "incentive-clawback-assessment",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "incentive-clawback-assessment",
+      "to": "pmi-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "incentive-clawback-assessment",
+      "to": "regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "incident-response",
+      "to": "access-control-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "incident-response",
+      "to": "observability-and-alerting",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "incident-response",
+      "to": "security-baseline-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "industry-profile-application",
+      "to": "proxy-industry-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "industry-profile-application",
+      "to": "region-profile-application",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "infrastructure-automation",
+      "to": "batch-scheduling-operations",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "infrastructure-automation",
+      "to": "database-operations",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "infrastructure-automation",
+      "to": "deployment-and-release",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "insight-synthesis",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "insight-synthesis",
+      "to": "competitive-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "insight-synthesis",
+      "to": "historical-financial-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "insight-synthesis",
+      "to": "rag-scoring-framework",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "interpretation-registry",
+      "to": "compliance-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "interpretation-registry",
+      "to": "glossary-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "intra-group-transaction-compliance",
+      "to": "antitrust-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "intra-group-transaction-compliance",
+      "to": "group-level-review",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "intra-group-transaction-compliance",
+      "to": "group-review-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "intra-group-transaction-compliance",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "investment-feasibility-modeling",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "investment-feasibility-modeling",
+      "to": "growth-projection-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "investment-feasibility-modeling",
+      "to": "growth-projection-modeling",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "investment-feasibility-modeling",
+      "to": "monte-carlo-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "investment-feasibility-modeling",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "investment-feasibility-modeling",
+      "to": "pmi-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "investment-feasibility-modeling",
+      "to": "quality-of-earnings",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "investment-feasibility-modeling",
+      "to": "regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "investment-feasibility-modeling",
+      "to": "scenario-planning",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "investment-feasibility-modeling",
+      "to": "valuation-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "investment-feasibility-modeling",
+      "to": "wacc-input-session",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "investment-feasibility-modeling",
+      "to": "wacc-input-session",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "investment-vehicle-structuring",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "investment-vehicle-structuring",
+      "to": "investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "investment-vehicle-structuring",
+      "to": "jv-structuring",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "investment-vehicle-structuring",
+      "to": "legal-counsel",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "investment-vehicle-structuring",
+      "to": "legal-risk-register",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "investment-vehicle-structuring",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "investment-vehicle-structuring",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "jv-structuring",
+      "to": "legal-counsel",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "jv-structuring",
+      "to": "partner-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "jv-structuring",
+      "to": "partner-due-diligence",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/jv-structuring/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "phase",
+      "from": "jv-structuring",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "jv-structuring",
+      "to": "phase6",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "jv-structuring",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "k-kosis",
+      "to": "k-dart",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "k-kosis",
+      "to": "k-law",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "k-law",
+      "to": "legal-counsel",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "k-law",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "legal-due-diligence",
+      "to": "certification-transferability",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "legal-due-diligence",
+      "to": "compliance-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "legal-due-diligence",
+      "to": "dd-to-valuation-bridge",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "legal-due-diligence",
+      "to": "k-law",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "legal-due-diligence",
+      "to": "legal-counsel",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "legal-due-diligence",
+      "to": "legal-risk-register",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "legal-due-diligence",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "legal-due-diligence",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "legal-risk-register",
+      "to": "certification-transferability",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "legal-risk-register",
+      "to": "customer-attrition-risk",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "legal-risk-register",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "legal-risk-register",
+      "to": "regulatory-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "legal-risk-register",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "management-incentive-review",
+      "to": "compensation-harmonization-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "management-incentive-review",
+      "to": "customer-attrition-risk",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "management-incentive-review",
+      "to": "hr-integration-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "management-incentive-review",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "management-incentive-review",
+      "to": "pmi-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "market-data-pipeline",
+      "to": "data-freshness-and-revision-control",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "market-data-pipeline",
+      "to": "proxy-industry-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "master-data-governance",
+      "to": "data-normalization",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "master-data-governance",
+      "to": "db-migration-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "mcp-server-integration",
+      "to": "auth-and-account-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "mcp-server-integration",
+      "to": "rest-api-design",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "mcp-server-integration",
+      "to": "rest-api-design",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/mcp-server-integration/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "meeting-facilitation",
+      "to": "project-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "meeting-facilitation",
+      "to": "team-builder",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "monte-carlo-simulation",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "monte-carlo-simulation",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/monte-carlo-simulation/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "phase",
+      "from": "monte-carlo-simulation",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "monte-carlo-simulation",
+      "to": "quant-methodologist",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "monte-carlo-simulation",
+      "to": "scenario-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "notification-channel-management",
+      "to": "admin-console-operations",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "notification-channel-management",
+      "to": "continuous-monitoring-and-alerting",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "notification-channel-management",
+      "to": "continuous-monitoring-and-alerting",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/notification-channel-management/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "observability-and-alerting",
+      "to": "continuous-monitoring-and-alerting",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "observability-and-alerting",
+      "to": "incident-response",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "observability-and-alerting",
+      "to": "notification-channel-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "observability-and-alerting",
+      "to": "query-performance-tuning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "observability-and-alerting",
+      "to": "security-baseline-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "org-readiness-assessment",
+      "to": "compensation-harmonization-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "org-readiness-assessment",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "org-readiness-assessment",
+      "to": "hr-integration-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "org-readiness-assessment",
+      "to": "management-incentive-review",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "org-readiness-assessment",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "org-readiness-assessment",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "org-readiness-assessment",
+      "to": "pmi-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "org-readiness-assessment",
+      "to": "talent-pipeline-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "partner-due-diligence",
+      "to": "jv-structuring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "partner-due-diligence",
+      "to": "partner-sourcing-strategy",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "partner-due-diligence",
+      "to": "partner-sourcing-strategy",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/partner-due-diligence/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "partner-due-diligence",
+      "to": "partnership-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "partner-due-diligence",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "partner-sourcing-strategy",
+      "to": "partner-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "partner-sourcing-strategy",
+      "to": "partnership-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "partner-sourcing-strategy",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "partner-sourcing-strategy",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "peer-benchmarking",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "peer-benchmarking",
+      "to": "growth-projection-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "peer-benchmarking",
+      "to": "historical-financial-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "peer-benchmarking",
+      "to": "industry-profile-application",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "peer-benchmarking",
+      "to": "k-dart",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "permit-pathway-mapping",
+      "to": "certification-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "permit-pathway-mapping",
+      "to": "certification-roadmap",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "permit-pathway-mapping",
+      "to": "certification-transferability",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "permit-pathway-mapping",
+      "to": "community-partnership-planning",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "permit-pathway-mapping",
+      "to": "phase2",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "permit-pathway-mapping",
+      "to": "regulatory-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "pmi-planning",
+      "to": "compensation-harmonization-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "pmi-planning",
+      "to": "incentive-clawback-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "pmi-planning",
+      "to": "management-incentive-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "pmi-planning",
+      "to": "org-readiness-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "pmi-planning",
+      "to": "org-readiness-assessment",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/pmi-planning/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "phase",
+      "from": "pmi-planning",
+      "to": "phase6",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "pmi-planning",
+      "to": "pmi-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "pmi-planning",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "policy-and-procedure-governance",
+      "to": "adr-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "policy-and-procedure-governance",
+      "to": "governance-document-hierarchy",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "policy-and-procedure-governance",
+      "to": "governance-document-hierarchy",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/policy-and-procedure-governance/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "policy-and-procedure-governance",
+      "to": "policy-change-impact-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "policy-and-procedure-governance",
+      "to": "procedure-reference-override",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "policy-change-impact-analysis",
+      "to": "adr-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "policy-change-impact-analysis",
+      "to": "policy-and-procedure-governance",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "policy-change-impact-analysis",
+      "to": "policy-and-procedure-governance",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/policy-change-impact-analysis/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "policy-change-impact-analysis",
+      "to": "regulation-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "portfolio-fit-assessment",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "portfolio-fit-assessment",
+      "to": "competitive-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "portfolio-fit-assessment",
+      "to": "group-level-review",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "portfolio-fit-assessment",
+      "to": "group-review-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "portfolio-fit-assessment",
+      "to": "intra-group-transaction-compliance",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "portfolio-fit-assessment",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "portfolio-fit-assessment",
+      "to": "phase6",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "portfolio-fit-assessment",
+      "to": "two-tier-approval-chain",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "procedure-reference-override",
+      "to": "policy-and-procedure-governance",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/procedure-reference-override/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "project-review",
+      "to": "partnership-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "project-review",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "project-review",
+      "to": "phase6",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "project-review",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "proxy-industry-chain",
+      "to": "rag-scoring-framework",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "proxy-industry-chain",
+      "to": "unit-conversion-calibration",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "proxy-industry-chain",
+      "to": "unit-conversion-calibration",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/proxy-industry-chain/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "proxy-industry-chain",
+      "to": "value-chain-linkage-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "quality-of-earnings",
+      "to": "commercial-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "quality-of-earnings",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "quality-of-earnings",
+      "to": "financial-statement-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "quality-of-earnings",
+      "to": "financial-statement-analysis",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "quality-of-earnings",
+      "to": "intra-group-transaction-compliance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "quality-of-earnings",
+      "to": "investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "quality-of-earnings",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "query-performance-tuning",
+      "to": "db-migration-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "query-performance-tuning",
+      "to": "observability-and-alerting",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "rag-scoring-framework",
+      "to": "competitive-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "rag-scoring-framework",
+      "to": "customer-attrition-risk",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "rag-scoring-framework",
+      "to": "dd-to-valuation-bridge",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "rag-scoring-framework",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "rag-scoring-framework",
+      "to": "historical-financial-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "rag-scoring-framework",
+      "to": "peer-benchmarking",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "rag-scoring-framework",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "rag-scoring-framework",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "rag-scoring-framework",
+      "to": "proxy-industry-chain",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "rag-scoring-framework",
+      "to": "proxy-industry-chain",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/rag-scoring-framework/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "rag-scoring-framework",
+      "to": "risk-officer",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "rag-scoring-framework",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "rag-scoring-framework",
+      "to": "technical-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "region-profile-application",
+      "to": "industry-profile-application",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "region-profile-application",
+      "to": "investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "region-profile-application",
+      "to": "org-readiness-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "region-profile-application",
+      "to": "partner-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "region-profile-application",
+      "to": "regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "region-profile-application",
+      "to": "regulation-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "region-profile-application",
+      "to": "talent-pipeline-planning",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "regional-incentive-sourcing",
+      "to": "greenfield-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "regional-incentive-sourcing",
+      "to": "greenfield-feasibility",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "regional-incentive-sourcing",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "regional-incentive-sourcing",
+      "to": "phase2",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "regional-incentive-sourcing",
+      "to": "region-profile-application",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "regional-incentive-sourcing",
+      "to": "site-infrastructure-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "regional-incentive-sourcing",
+      "to": "site-infrastructure-assessment",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/regional-incentive-sourcing/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "regulation-monitoring",
+      "to": "certification-roadmap",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "regulation-monitoring",
+      "to": "k-law",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "regulation-monitoring",
+      "to": "k-law",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/regulation-monitoring/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "regulation-monitoring",
+      "to": "permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "regulation-monitoring",
+      "to": "policy-change-impact-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "regulation-monitoring",
+      "to": "statute-change-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "regulatory-change-response",
+      "to": "certification-roadmap",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "regulatory-change-response",
+      "to": "permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "regulatory-change-response",
+      "to": "regulation-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "regulatory-change-response",
+      "to": "regulation-monitoring",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/regulatory-change-response/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "regulatory-change-response",
+      "to": "statute-change-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "regulatory-screening",
+      "to": "legal-risk-register",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "regulatory-screening",
+      "to": "partner-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "regulatory-screening",
+      "to": "region-profile-application",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "regulatory-screening",
+      "to": "region-profile-application",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/regulatory-screening/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "rest-api-design",
+      "to": "auth-and-account-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "rest-api-design",
+      "to": "mcp-server-integration",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "run-versioning-and-attribution",
+      "to": "assumption-audit",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "run-versioning-and-attribution",
+      "to": "interpretation-registry",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "run-versioning-and-attribution",
+      "to": "monte-carlo-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "sample-driven-report-writing",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "sample-driven-report-writing",
+      "to": "competitive-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "sample-driven-report-writing",
+      "to": "financial-statement-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "sample-driven-report-writing",
+      "to": "hwp-document-processing",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "sample-driven-report-writing",
+      "to": "hwp-document-processing",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/sample-driven-report-writing/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "references",
+      "from": "sample-driven-report-writing",
+      "to": "insight-synthesis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "sample-driven-report-writing",
+      "to": "k-dart",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "sample-driven-report-writing",
+      "to": "k-law",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "scenario-planning",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "scenario-planning",
+      "to": "investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "scenario-planning",
+      "to": "investment-feasibility-modeling",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/scenario-planning/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "scenario-planning",
+      "to": "market-intelligence-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "scenario-planning",
+      "to": "monte-carlo-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "scenario-planning",
+      "to": "partner-sourcing-strategy",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "scenario-planning",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "scenario-planning",
+      "to": "quant-methodologist",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "security-baseline-review",
+      "to": "access-control-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "security-baseline-review",
+      "to": "database-operations",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "security-baseline-review",
+      "to": "db-migration-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "security-baseline-review",
+      "to": "incident-response",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "security-baseline-review",
+      "to": "security-scan",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "security-baseline-review",
+      "to": "vulnerability-management",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "site-infrastructure-assessment",
+      "to": "greenfield-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "site-infrastructure-assessment",
+      "to": "greenfield-feasibility",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "site-infrastructure-assessment",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "site-infrastructure-assessment",
+      "to": "phase2",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "site-infrastructure-assessment",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "site-infrastructure-assessment",
+      "to": "regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "site-infrastructure-assessment",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "site-visit-protocol",
+      "to": "expert-interview",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "site-visit-protocol",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "site-visit-protocol",
+      "to": "technical-dd-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "site-visit-protocol",
+      "to": "technical-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "stage-gate-governance",
+      "to": "compliance-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "stage-gate-governance",
+      "to": "deal-execution-playbook",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "stage-gate-governance",
+      "to": "group-level-review",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "stage-gate-governance",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "stage-gate-governance",
+      "to": "phase2",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "stage-gate-governance",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "stage-gate-governance",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "stage-gate-governance",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "stage-gate-governance",
+      "to": "phase6",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "stage-gate-governance",
+      "to": "policy-change-impact-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "stage-gate-governance",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "stage-gate-governance",
+      "to": "two-tier-approval-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "statute-change-monitoring",
+      "to": "certification-roadmap",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "statute-change-monitoring",
+      "to": "k-law",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "statute-change-monitoring",
+      "to": "permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "statute-change-monitoring",
+      "to": "regulation-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "statute-change-monitoring",
+      "to": "regulatory-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "strategic-fit-screening",
+      "to": "checklist-authoring",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "strategic-fit-screening",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "strategic-fit-screening",
+      "to": "portfolio-fit-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "strategic-fit-screening",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "strategic-fit-screening",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "talent-pipeline-planning",
+      "to": "community-partnership-planning",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "talent-pipeline-planning",
+      "to": "greenfield-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "talent-pipeline-planning",
+      "to": "org-readiness-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "talent-pipeline-planning",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "talent-pipeline-planning",
+      "to": "site-infrastructure-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "team-builder",
+      "to": "agent-lifecycle-manager",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "team-builder",
+      "to": "insight-synthesis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "team-builder",
+      "to": "org-readiness-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "team-builder",
+      "to": "skill-lifecycle-manager",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "technical-due-diligence",
+      "to": "dd-to-valuation-bridge",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "technical-due-diligence",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "technical-due-diligence",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "technical-due-diligence",
+      "to": "site-visit-protocol",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "technical-due-diligence",
+      "to": "site-visit-protocol",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/technical-due-diligence/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "technical-due-diligence",
+      "to": "technical-dd-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "two-tier-approval-chain",
+      "to": "deal-execution-playbook",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "two-tier-approval-chain",
+      "to": "group-level-review",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "two-tier-approval-chain",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "two-tier-approval-chain",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "two-tier-approval-chain",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "ui-information-architecture",
+      "to": "agent-output-provenance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "ui-information-architecture",
+      "to": "rest-api-design",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "unit-conversion-calibration",
+      "to": "growth-projection-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "unit-conversion-calibration",
+      "to": "proxy-industry-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "value-chain-linkage-analysis",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "value-chain-linkage-analysis",
+      "to": "market-intelligence-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "value-chain-linkage-analysis",
+      "to": "phase1",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "value-chain-linkage-analysis",
+      "to": "proxy-industry-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "vulnerability-management",
+      "to": "deployment-and-release",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "vulnerability-management",
+      "to": "security-baseline-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "vulnerability-management",
+      "to": "update-bun-packages",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "wacc-input-session",
+      "to": "compliance-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "wacc-input-session",
+      "to": "investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "wacc-input-session",
+      "to": "phase2",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "wacc-input-session",
+      "to": "valuation-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "waiver-management",
+      "to": "checklist-authoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "waiver-management",
+      "to": "compliance-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "waiver-management",
+      "to": "policy-change-impact-analysis",
+      "source": "prose"
+    }
+  ]
+}

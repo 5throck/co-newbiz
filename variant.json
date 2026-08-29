@@ -27,48 +27,76 @@
         "name": "antitrust-screening",
         "used_by_agents": [
           "antitrust-agent"
+        ],
+        "phases": [
+          1,
+          3,
+          4
         ]
       },
       {
         "name": "brownfield-feasibility",
         "used_by_agents": [
           "brownfield-agent"
+        ],
+        "phases": [
+          1,
+          2
         ]
       },
       {
         "name": "certification-transferability",
         "used_by_agents": [
           "legal-counsel"
+        ],
+        "phases": [
+          4,
+          5
         ]
       },
       {
         "name": "commercial-due-diligence",
         "used_by_agents": [
           "commercial-dd-agent"
+        ],
+        "phases": [
+          4
         ]
       },
       {
         "name": "community-partnership-planning",
         "used_by_agents": [
           "greenfield-agent"
+        ],
+        "phases": [
+          4
         ]
       },
       {
         "name": "competitive-intelligence",
         "used_by_agents": [
           "market-intelligence-agent"
+        ],
+        "phases": [
+          4
         ]
       },
       {
         "name": "compliance-monitoring",
         "used_by_agents": [
           "compliance-officer"
+        ],
+        "phases": [
+          4
         ]
       },
       {
         "name": "customer-attrition-risk",
         "used_by_agents": [
           "customer-retention-agent"
+        ],
+        "phases": [
+          4
         ]
       },
       {
@@ -76,120 +104,187 @@
         "used_by_agents": [
           "brownfield-agent",
           "risk-officer"
+        ],
+        "phases": [
+          4,
+          5
         ]
       },
       {
         "name": "debt-and-contingent-liability-simulation",
         "used_by_agents": [
           "valuation-agent"
+        ],
+        "phases": [
+          4
         ]
       },
       {
         "name": "financing-plan-review",
         "used_by_agents": [
           "valuation-agent"
+        ],
+        "phases": [
+          4,
+          5
         ]
       },
       {
         "name": "greenfield-feasibility",
         "used_by_agents": [
           "greenfield-agent"
+        ],
+        "phases": [
+          2
         ]
       },
       {
         "name": "growth-projection-modeling",
         "used_by_agents": [
           "financial-analyst"
+        ],
+        "phases": [
+          3
         ]
       },
       {
         "name": "incentive-clawback-assessment",
         "used_by_agents": [
           "incentive-agent"
+        ],
+        "phases": [
+          4
         ]
       },
       {
         "name": "intra-group-transaction-compliance",
         "used_by_agents": [
           "group-review-agent"
+        ],
+        "phases": [
+          5
         ]
       },
       {
         "name": "investment-feasibility-modeling",
         "used_by_agents": [
           "valuation-agent"
+        ],
+        "phases": [
+          3
         ]
       },
       {
         "name": "investment-vehicle-structuring",
         "used_by_agents": [
           "legal-counsel"
+        ],
+        "phases": [
+          1,
+          3
         ]
       },
       {
         "name": "jv-structuring",
         "used_by_agents": [
           "legal-counsel"
+        ],
+        "phases": [
+          1,
+          6
         ]
       },
       {
         "name": "k-law",
         "used_by_agents": [
           "legal-counsel"
+        ],
+        "phases": [
+          5
         ]
       },
       {
         "name": "legal-due-diligence",
         "used_by_agents": [
           "legal-counsel"
+        ],
+        "phases": [
+          4,
+          5
         ]
       },
       {
         "name": "management-incentive-review",
         "used_by_agents": [
           "hr-integration-agent"
+        ],
+        "phases": [
+          4
         ]
       },
       {
         "name": "monte-carlo-simulation",
         "used_by_agents": [
           "quant-methodologist"
+        ],
+        "phases": [
+          3
         ]
       },
       {
         "name": "org-readiness-assessment",
         "used_by_agents": [
           "hr-integration-agent"
+        ],
+        "phases": [
+          4,
+          5
         ]
       },
       {
         "name": "partner-due-diligence",
         "used_by_agents": [
           "partnership-agent"
+        ],
+        "phases": [
+          1
         ]
       },
       {
         "name": "partner-sourcing-strategy",
         "used_by_agents": [
           "partnership-agent"
+        ],
+        "phases": [
+          1
         ]
       },
       {
         "name": "permit-pathway-mapping",
         "used_by_agents": [
           "certification-agent"
+        ],
+        "phases": [
+          2
         ]
       },
       {
         "name": "pmi-planning",
         "used_by_agents": [
           "pmi-agent"
+        ],
+        "phases": [
+          6
         ]
       },
       {
         "name": "portfolio-fit-assessment",
         "used_by_agents": [
           "group-review-agent"
+        ],
+        "phases": [
+          5,
+          6
         ]
       },
       {
@@ -197,12 +292,19 @@
         "used_by_agents": [
           "partnership-agent",
           "process-governance-manager"
+        ],
+        "phases": [
+          1,
+          6
         ]
       },
       {
         "name": "quality-of-earnings",
         "used_by_agents": [
           "financial-analyst"
+        ],
+        "phases": [
+          3
         ]
       },
       {
@@ -210,12 +312,19 @@
         "used_by_agents": [
           "process-governance-manager",
           "risk-officer"
+        ],
+        "phases": [
+          5
         ]
       },
       {
         "name": "regional-incentive-sourcing",
         "used_by_agents": [
           "greenfield-agent"
+        ],
+        "phases": [
+          1,
+          2
         ]
       },
       {
@@ -223,18 +332,29 @@
         "used_by_agents": [
           "market-intelligence-agent",
           "quant-methodologist"
+        ],
+        "phases": [
+          3
         ]
       },
       {
         "name": "site-infrastructure-assessment",
         "used_by_agents": [
           "greenfield-agent"
+        ],
+        "phases": [
+          1,
+          2,
+          3
         ]
       },
       {
         "name": "site-visit-protocol",
         "used_by_agents": [
           "technical-dd-agent"
+        ],
+        "phases": [
+          4
         ]
       },
       {
@@ -244,42 +364,68 @@
           "entity-ic-reviewer",
           "process-governance-manager",
           "venture-portfolio-ic"
+        ],
+        "phases": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
         ]
       },
       {
         "name": "strategic-fit-screening",
         "used_by_agents": [
           "process-governance-manager"
+        ],
+        "phases": [
+          1
         ]
       },
       {
         "name": "talent-pipeline-planning",
         "used_by_agents": [
           "greenfield-agent"
+        ],
+        "phases": [
+          4
         ]
       },
       {
         "name": "technical-due-diligence",
         "used_by_agents": [
           "technical-dd-agent"
+        ],
+        "phases": [
+          4
         ]
       },
       {
         "name": "two-tier-approval-chain",
         "used_by_agents": [
           "process-governance-manager"
+        ],
+        "phases": [
+          5
         ]
       },
       {
         "name": "value-chain-linkage-analysis",
         "used_by_agents": [
           "market-intelligence-agent"
+        ],
+        "phases": [
+          1
         ]
       },
       {
         "name": "wacc-input-session",
         "used_by_agents": [
           "valuation-agent"
+        ],
+        "phases": [
+          2
         ]
       }
     ]
