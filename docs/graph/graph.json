@@ -4,7 +4,7 @@
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
     "node_count": 480,
-    "edge_count": 830
+    "edge_count": 831
   },
   "nodes": [
     {
@@ -5572,6 +5572,12 @@
       "from": "skill:jv-structuring",
       "to": "proc:jv-lifecycle-governance",
       "source_ref": "skills/jv-structuring/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:k-law",
+      "to": "proc:entity-establishment-execution",
+      "source_ref": "skills/k-law/SKILL.md"
     },
     {
       "type": "member_of",

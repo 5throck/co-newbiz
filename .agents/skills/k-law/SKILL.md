@@ -14,6 +14,8 @@ prerequisites: LAW_API_OC environment variable
 l2_propagate: true
 metadata:
   type: legal-research
+  procedure_keys:
+    - entity-establishment-execution
   triggers:
     - k-law
     - /k-law
