@@ -7,6 +7,9 @@ status: active
 last_reviewed: 2026-08-24
 last_updated: 2026-08-24
 scope: common
+relates_to:
+  - skill: sample-driven-report-writing
+    type: composes_with
 metadata:
   type: process
   triggers:

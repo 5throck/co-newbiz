@@ -29,6 +29,10 @@ metadata:
 relates_to:
   - skill: portfolio-fit-assessment
     type: follows
+  - skill: two-tier-approval-chain
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
 
 ---
 

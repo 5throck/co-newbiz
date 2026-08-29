@@ -33,6 +33,26 @@ metadata:
 relates_to:
   - skill: site-infrastructure-assessment
     type: follows
+  - skill: investment-feasibility-modeling
+    type: composes_with
+  - skill: monte-carlo-simulation
+    type: composes_with
+  - skill: scenario-planning
+    type: composes_with
+  - skill: historical-financial-analysis
+    type: composes_with
+  - skill: peer-benchmarking
+    type: composes_with
+  - skill: proxy-industry-chain
+    type: composes_with
+  - skill: unit-conversion-calibration
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: financial-statement-analysis
+    type: composes_with
+  - skill: quality-of-earnings
+    type: composes_with
 
 ---
 

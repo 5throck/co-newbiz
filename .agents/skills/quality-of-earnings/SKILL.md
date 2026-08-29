@@ -29,6 +29,24 @@ metadata:
 relates_to:
   - skill: investment-feasibility-modeling
     type: follows
+  - skill: scenario-planning
+    type: composes_with
+  - skill: financial-statement-analysis
+    type: composes_with
+  - skill: peer-benchmarking
+    type: composes_with
+  - skill: unit-conversion-calibration
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: financial-statement-analysis
+    type: composes_with
+  - skill: growth-projection-modeling
+    type: composes_with
+  - skill: historical-financial-analysis
+    type: composes_with
+  - skill: peer-benchmarking
+    type: composes_with
 
 ---
 

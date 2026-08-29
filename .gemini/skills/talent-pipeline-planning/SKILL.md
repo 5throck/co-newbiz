@@ -27,6 +27,12 @@ metadata:
 relates_to:
   - skill: community-partnership-planning
     type: follows
+  - skill: greenfield-feasibility
+    type: composes_with
+  - skill: regional-incentive-sourcing
+    type: composes_with
+  - skill: site-infrastructure-assessment
+    type: composes_with
 
 ---
 

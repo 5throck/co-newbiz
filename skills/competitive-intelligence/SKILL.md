@@ -30,6 +30,28 @@ metadata:
 relates_to:
   - skill: legal-due-diligence
     type: follows
+  - skill: technical-due-diligence
+    type: composes_with
+  - skill: management-incentive-review
+    type: composes_with
+  - skill: customer-attrition-risk
+    type: composes_with
+  - skill: incentive-clawback-assessment
+    type: composes_with
+  - skill: debt-and-contingent-liability-simulation
+    type: composes_with
+  - skill: financing-plan-review
+    type: composes_with
+  - skill: org-readiness-assessment
+    type: composes_with
+  - skill: compliance-monitoring
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: scenario-planning
+    type: composes_with
+  - skill: value-chain-linkage-analysis
+    type: composes_with
 
 ---
 

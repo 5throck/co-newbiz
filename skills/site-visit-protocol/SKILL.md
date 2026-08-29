@@ -28,6 +28,10 @@ metadata:
 relates_to:
   - skill: talent-pipeline-planning
     type: follows
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: technical-due-diligence
+    type: composes_with
 
 ---
 

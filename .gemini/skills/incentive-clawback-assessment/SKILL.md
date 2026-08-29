@@ -29,6 +29,16 @@ metadata:
 relates_to:
   - skill: debt-and-contingent-liability-simulation
     type: follows
+  - skill: technical-due-diligence
+    type: composes_with
+  - skill: legal-due-diligence
+    type: composes_with
+  - skill: management-incentive-review
+    type: composes_with
+  - skill: org-readiness-assessment
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
 
 ---
 

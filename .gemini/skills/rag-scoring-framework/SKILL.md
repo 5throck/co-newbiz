@@ -31,6 +31,22 @@ metadata:
 relates_to:
   - skill: dd-to-valuation-bridge
     type: follows
+  - skill: dd-to-valuation-bridge
+    type: composes_with
+  - skill: insight-synthesis
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: insight-synthesis
+    type: composes_with
+  - skill: project-review
+    type: composes_with
+  - skill: strategic-fit-screening
+    type: composes_with
+  - skill: two-tier-approval-chain
+    type: composes_with
+  - skill: dd-to-valuation-bridge
+    type: composes_with
 
 ---
 

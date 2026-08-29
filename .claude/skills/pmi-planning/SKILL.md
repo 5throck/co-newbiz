@@ -29,6 +29,8 @@ metadata:
 relates_to:
   - skill: compensation-harmonization-analysis
     type: follows
+  - skill: stage-gate-governance
+    type: composes_with
 
 ---
 

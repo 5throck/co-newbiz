@@ -29,6 +29,12 @@ metadata:
 relates_to:
   - skill: jv-structuring
     type: follows
+  - skill: partner-sourcing-strategy
+    type: composes_with
+  - skill: project-review
+    type: composes_with
+  - skill: partner-sourcing-strategy
+    type: composes_with
 
 ---
 

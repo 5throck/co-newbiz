@@ -31,6 +31,20 @@ relates_to:
     type: follows
   - skill: historical-financial-analysis
     type: follows
+  - skill: proxy-industry-chain
+    type: composes_with
+  - skill: unit-conversion-calibration
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: site-infrastructure-assessment
+    type: composes_with
+  - skill: competitive-intelligence
+    type: composes_with
+  - skill: value-chain-linkage-analysis
+    type: composes_with
+  - skill: proxy-industry-chain
+    type: composes_with
 
 ---
 

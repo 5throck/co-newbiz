@@ -15,6 +15,15 @@ last_reviewed: 2026-08-20
 status: active
 owner: security-engineer
 prerequisites: none
+relates_to:
+  - skill: ui-information-architecture
+    type: composes_with
+  - skill: security-baseline-review
+    type: composes_with
+  - skill: vulnerability-management
+    type: composes_with
+  - skill: security-scan
+    type: composes_with
 metadata:
   type: process
   triggers:

@@ -15,6 +15,23 @@ last_reviewed: 2026-08-23
 status: active
 owner: process-governance-manager
 prerequisites: none
+relates_to:
+  - skill: technical-due-diligence
+    type: composes_with
+  - skill: wacc-input-session
+    type: composes_with
+  - skill: strategic-fit-screening
+    type: composes_with
+  - skill: talent-pipeline-planning
+    type: composes_with
+  - skill: value-chain-linkage-analysis
+    type: composes_with
+  - skill: two-tier-approval-chain
+    type: composes_with
+  - skill: strategic-fit-screening
+    type: composes_with
+  - skill: two-tier-approval-chain
+    type: composes_with
 metadata:
   type: process
   triggers:

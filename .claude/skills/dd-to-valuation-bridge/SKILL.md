@@ -33,6 +33,22 @@ relates_to:
     type: follows
   - skill: stage-gate-governance
     type: follows
+  - skill: rag-scoring-framework
+    type: composes_with
+  - skill: insight-synthesis
+    type: composes_with
+  - skill: executive-presentation
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: site-visit-protocol
+    type: composes_with
+  - skill: talent-pipeline-planning
+    type: composes_with
+  - skill: brownfield-feasibility
+    type: composes_with
+  - skill: rag-scoring-framework
+    type: composes_with
 
 ---
 

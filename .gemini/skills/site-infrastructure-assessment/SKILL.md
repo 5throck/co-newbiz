@@ -33,6 +33,16 @@ relates_to:
     type: follows
   - skill: regional-incentive-sourcing
     type: follows
+  - skill: unit-conversion-calibration
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: strategic-fit-screening
+    type: composes_with
+  - skill: community-partnership-planning
+    type: composes_with
+  - skill: talent-pipeline-planning
+    type: composes_with
 
 ---
 

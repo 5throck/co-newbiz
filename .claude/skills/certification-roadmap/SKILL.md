@@ -27,6 +27,14 @@ metadata:
 relates_to:
   - skill: stage-gate-governance
     type: follows
+  - skill: wacc-input-session
+    type: composes_with
+  - skill: greenfield-feasibility
+    type: composes_with
+  - skill: site-infrastructure-assessment
+    type: composes_with
+  - skill: regional-incentive-sourcing
+    type: composes_with
 
 ---
 

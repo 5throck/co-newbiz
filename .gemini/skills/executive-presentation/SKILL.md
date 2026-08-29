@@ -30,6 +30,16 @@ metadata:
 relates_to:
   - skill: stage-gate-governance
     type: follows
+  - skill: rag-scoring-framework
+    type: composes_with
+  - skill: financing-plan-review
+    type: composes_with
+  - skill: two-tier-approval-chain
+    type: composes_with
+  - skill: portfolio-fit-assessment
+    type: composes_with
+  - skill: intra-group-transaction-compliance
+    type: composes_with
 
 ---
 

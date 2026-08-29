@@ -27,6 +27,12 @@ metadata:
 relates_to:
   - skill: partner-due-diligence
     type: follows
+  - skill: partner-due-diligence
+    type: composes_with
+  - skill: project-review
+    type: composes_with
+  - skill: partner-due-diligence
+    type: composes_with
 
 ---
 

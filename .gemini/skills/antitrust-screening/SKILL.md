@@ -37,6 +37,44 @@ relates_to:
     type: follows
   - skill: stage-gate-governance
     type: follows
+  - skill: commercial-due-diligence
+    type: composes_with
+  - skill: technical-due-diligence
+    type: composes_with
+  - skill: competitive-intelligence
+    type: composes_with
+  - skill: customer-attrition-risk
+    type: composes_with
+  - skill: incentive-clawback-assessment
+    type: composes_with
+  - skill: debt-and-contingent-liability-simulation
+    type: composes_with
+  - skill: certification-transferability
+    type: composes_with
+  - skill: financing-plan-review
+    type: composes_with
+  - skill: org-readiness-assessment
+    type: composes_with
+  - skill: compliance-monitoring
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: quality-of-earnings
+    type: composes_with
+  - skill: investment-feasibility-modeling
+    type: composes_with
+  - skill: monte-carlo-simulation
+    type: composes_with
+  - skill: financial-statement-analysis
+    type: composes_with
+  - skill: peer-benchmarking
+    type: composes_with
+  - skill: proxy-industry-chain
+    type: composes_with
+  - skill: unit-conversion-calibration
+    type: composes_with
+  - skill: brownfield-feasibility
+    type: composes_with
 
 ---
 
