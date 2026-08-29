@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * verify-scripts.ts — Script Lifecycle Registry Verifier
- * @version 1.4.0
+ * @version 1.4.2
  *
  * Validates that scripts/SCRIPTS.md Registry is in sync with actual script files,
  * enforces deprecation removal dates, and blocks on security advisories.
@@ -33,8 +33,8 @@ const SCRIPTS_MD_FILENAME = "SCRIPTS.md";
 // Resolve workspace root (this script lives in scripts/ or templates/common/scripts/,
 // templates/co-*/scripts/, or a scaffolded Projects/<name>/scripts/ — possibly detached
 // from the workspace entirely once a project has been relocated, e.g. to C:\projects\).
-// context.md marks the true L0 workspace root; variant.json / docs/context.md mark
-// a generated context root (no context.md there by design). If this script is
+// CONSTITUTION.md marks the true L0 workspace root; variant.json / docs/context.md mark
+// a generated context root (no CONSTITUTION.md there by design). If this script is
 // running standalone with none of these markers present, fall back to the directory
 // containing this script's own scripts/ folder.
 function findWorkspaceRoot(startDir: string): string {
@@ -54,7 +54,7 @@ function findWorkspaceRoot(startDir: string): string {
   return dirname(startDir);
 }
 
-// Walk all the way up to the true L0 workspace root (context.md), independent of
+// Walk all the way up to the true L0 workspace root (CONSTITUTION.md), independent of
 // findWorkspaceRoot()'s "nearest marker" stop. Returns null if the workspace root is not
 // reachable (e.g. a project relocated outside the workspace tree) — the drift check below
 // only makes sense relative to the true root, so it must be skipped in that case rather
@@ -81,9 +81,9 @@ const scriptsMdPath = join(scriptsDir, SCRIPTS_MD_FILENAME);
 
 // ── Layer Detection ──────────────────────────────────────────────────────────
 // Determine the current execution context so that checks can be scoped. Layer
-// numbering follows context.md §Terminology Definition (L1=templates/common,
+// numbering follows CONSTITUTION.md §Terminology Definition (L1=templates/common,
 // L2=templates/co-*, L3=Projects/*):
-// L0 = workspace root (context.md), full verification.
+// L0 = workspace root (CONSTITUTION.md), full verification.
 // L1 = templates/common/, L2 = an official variant template (templates/co-*/),
 // L3 = a scaffolded/live project (Projects/*/, or detached elsewhere) — L1/L2/L3
 // all skip L0-only registry entries.
@@ -109,7 +109,7 @@ function detectContextLayer(): ContextLayer {
     return "L3";
   }
 
-  if (existsSync(join(workspaceRoot, "context.md"))) return "L0"; // defensive; unreachable given the branch above
+  if (existsSync(join(workspaceRoot, "CONSTITUTION.md"))) return "L0"; // defensive; unreachable given the branch above
   return "L3";
 }
 
@@ -188,8 +188,12 @@ function parseRegistry(content: string): RegistryEntry[] {
 function walkScripts(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     if (entry.isDirectory()) {
-      // Skip variant subdirectories (co-*) — they have separate sub-registries (scripts/<variant>/SCRIPTS.md)
-      if (entry.name.startsWith("co-")) return [];
+      // A variant directory with its OWN SCRIPTS.md sub-registry governs itself
+      // (the main registry doesn't list its files). Without a sub-registry, the
+      // variant's scripts belong to the main registry via their `co-*/…` relative
+      // paths (existing rows like `co-newbiz/graph.ts`) — recurse so nested
+      // variant-specific structures stay governed instead of escaping the scan.
+      if (entry.name.startsWith("co-") && existsSync(join(dir, entry.name, "SCRIPTS.md"))) return [];
       return walkScripts(join(dir, entry.name));
     }
     return SCRIPT_EXTENSIONS.some((ext) => entry.name.endsWith(ext)) && entry.name !== SCRIPTS_MD_FILENAME
@@ -246,10 +250,11 @@ function detectDrift(registry: RegistryEntry[]): { drifted: DriftResult[]; clean
       continue;
     }
 
-    // context.md references are intentionally scrubbed in L1 (templates/common/).
-    // Normalize both sides before comparison to avoid false drift on governance refs.
+    // CONSTITUTION.md references are intentionally scrubbed in L1 (templates/common/).
+    // Normalize BOTH sides: the L1 scrub may or may not have replaced
+    // CONSTITUTION.md (scrub misses are the L0-leakage audit check's job, not drift's).
     const l0Normalized = l0Content.replace(/CONSTITUTION\.md/g, 'context.md');
-    const l1Normalized = l1Content;
+    const l1Normalized = l1Content.replace(/CONSTITUTION\.md/g, 'context.md');
 
     if (l0Normalized !== l1Normalized) {
       drifted.push({
