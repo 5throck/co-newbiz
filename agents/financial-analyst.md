@@ -13,12 +13,12 @@ domain: functional
 subdomain: analysis
 description: >
   Historical financial analysis, peer benchmarking, quality-of-earnings, and growth-projection methodology, built on the existing DART-to-IFRS-to-KPI-to-ROIC-driver-tree pipeline inherited from co-consult.
-version: "1.0.0"
-last_reviewed: "2026-08-19"
+version: "1.1.0"
+last_reviewed: "2026-08-29"
 lifecycle:
   phase: production
   created: 2026-08-19
-  last_updated: 2026-08-19
+  last_updated: 2026-08-29
   governance: docs/lifecycle/agents/financial-analyst.md
 required_skills:
   - financial-statement-analysis
@@ -26,6 +26,7 @@ required_skills:
   - historical-financial-analysis
   - peer-benchmarking
   - quality-of-earnings
+  - value-chain-stage-financials
 
 ---
 
@@ -42,6 +43,7 @@ Design of record: [`docs/designs/2026-08-19-co-newbiz-design_ko.md`](https://git
 - Select and document peer groups with an explicit selection rationale; an unjustified peer group defeats the whole point of benchmarking
 - Anchor every growth projection to a specific historical or peer data point via anchor_ref, and flag projections outside the top-decile historical/peer range
 - Run quality-of-earnings normalization for brownfield targets: strip one-off items, normalize owner compensation, adjust for accounting-policy differences
+- When dispatched for value-chain analysis, run the financial pipeline per chain node industry and produce per-stage 5-year KPI rollups (revenue growth, margin, ROIC into `fact_industry`) via `value-chain-stage-financials` -- the chain is analyzed stage by stage, not only at the target company
 
 ## Output Format
 
@@ -49,6 +51,7 @@ Design of record: [`docs/designs/2026-08-19-co-newbiz-design_ko.md`](https://git
 - peer_group / peer_member records with documented selection rationale
 - projection records with method and anchor_ref
 - QoE normalization bridge for brownfield targets
+- Per-chain-node 5-year KPI rollups with member-company list and aggregation method (value-chain dispatches)
 
 ## Non-Negotiable Boundaries (apply to every agent in this roster)
 
@@ -77,3 +80,4 @@ You are a specialist agent that may ONLY be dispatched by PM. If a user attempts
 - Do NOT use peak-cycle historical results as a baseline projection input without disclosing the cycle position
 - Do NOT submit a peer group without a documented selection rationale
 - Do NOT submit a growth projection without an anchor_ref pointing to the historical or peer data it is derived from
+- Do NOT submit a per-stage rollup without documenting its member companies and aggregation method

@@ -622,6 +622,11 @@
       "layer": "L3"
     },
     {
+      "id": "forward-industry-research",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "frontend-engineer",
       "type": "agent",
       "layer": "L3"
@@ -1137,7 +1142,17 @@
       "layer": "L3"
     },
     {
+      "id": "value-chain-driver-identification",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "value-chain-linkage-analysis",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "value-chain-stage-financials",
       "type": "skill",
       "layer": "L3"
     },
@@ -3966,6 +3981,12 @@
     },
     {
       "type": "references",
+      "from": "financial-analyst",
+      "to": "value-chain-stage-financials",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "financial-statement-analysis",
       "to": "company-intelligence",
       "source": "prose"
@@ -4340,6 +4361,87 @@
         "field": "relates_to",
         "index": 9
       }
+    },
+    {
+      "type": "composes_with",
+      "from": "forward-industry-research",
+      "to": "company-intelligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/forward-industry-research/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "references",
+      "from": "forward-industry-research",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "forward-industry-research",
+      "to": "market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "forward-industry-research",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/forward-industry-research/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "references",
+      "from": "forward-industry-research",
+      "to": "scenario-planning",
+      "source": "prose"
+    },
+    {
+      "type": "enables",
+      "from": "forward-industry-research",
+      "to": "value-chain-driver-identification",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/forward-industry-research/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "references",
+      "from": "forward-industry-research",
+      "to": "value-chain-driver-identification",
+      "source": "prose"
+    },
+    {
+      "type": "enables",
+      "from": "forward-industry-research",
+      "to": "value-chain-linkage-analysis",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/forward-industry-research/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "references",
+      "from": "forward-industry-research",
+      "to": "value-chain-linkage-analysis",
+      "source": "prose"
     },
     {
       "type": "used_by",
@@ -6451,6 +6553,12 @@
       "type": "references",
       "from": "market-data-pipeline",
       "to": "proxy-industry-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "market-intelligence-agent",
+      "to": "forward-industry-research",
       "source": "prose"
     },
     {
@@ -9936,6 +10044,85 @@
       }
     },
     {
+      "type": "follows",
+      "from": "value-chain-driver-identification",
+      "to": "forward-industry-research",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/value-chain-driver-identification/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "references",
+      "from": "value-chain-driver-identification",
+      "to": "forward-industry-research",
+      "source": "prose"
+    },
+    {
+      "type": "enables",
+      "from": "value-chain-driver-identification",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/value-chain-driver-identification/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "references",
+      "from": "value-chain-driver-identification",
+      "to": "scenario-planning",
+      "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "value-chain-driver-identification",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/value-chain-driver-identification/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "references",
+      "from": "value-chain-driver-identification",
+      "to": "unit-conversion-calibration",
+      "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "value-chain-driver-identification",
+      "to": "value-chain-stage-financials",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/value-chain-driver-identification/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "references",
+      "from": "value-chain-driver-identification",
+      "to": "value-chain-stage-financials",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "value-chain-driver-identification",
+      "to": "value-chain-stage-financials",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/value-chain-driver-identification/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
       "type": "composes_with",
       "from": "value-chain-linkage-analysis",
       "to": "competitive-intelligence",
@@ -10004,6 +10191,121 @@
         "field": "relates_to",
         "index": 0
       }
+    },
+    {
+      "type": "used_by",
+      "from": "value-chain-stage-financials",
+      "to": "financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 5
+      }
+    },
+    {
+      "type": "references",
+      "from": "value-chain-stage-financials",
+      "to": "financial-statement-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "value-chain-stage-financials",
+      "to": "historical-financial-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/value-chain-stage-financials/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "references",
+      "from": "value-chain-stage-financials",
+      "to": "historical-financial-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "value-chain-stage-financials",
+      "to": "historical-financial-analysis",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/value-chain-stage-financials/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "value-chain-stage-financials",
+      "to": "k-dart",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/value-chain-stage-financials/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "references",
+      "from": "value-chain-stage-financials",
+      "to": "k-dart",
+      "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "value-chain-stage-financials",
+      "to": "peer-benchmarking",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/value-chain-stage-financials/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "references",
+      "from": "value-chain-stage-financials",
+      "to": "scenario-planning",
+      "source": "prose"
+    },
+    {
+      "type": "enables",
+      "from": "value-chain-stage-financials",
+      "to": "value-chain-driver-identification",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/value-chain-stage-financials/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "references",
+      "from": "value-chain-stage-financials",
+      "to": "value-chain-driver-identification",
+      "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "value-chain-stage-financials",
+      "to": "value-chain-linkage-analysis",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/value-chain-stage-financials/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "references",
+      "from": "value-chain-stage-financials",
+      "to": "value-chain-linkage-analysis",
+      "source": "prose"
     },
     {
       "type": "composes_with",

@@ -76,6 +76,9 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `industry-profile-application` | 1.0.0 | active | industry-lead | 2026-08-20 | — | Wave 5.8E — ADR-0024 profile-first principle; `industry-profiles/` does not exist yet, gap flagged explicitly |
 | `proxy-industry-chain` | 1.0.0 | active | quant-methodologist | 2026-08-20 | — | Wave 5.8F (design §9.3 market/proxy-chain group) — ADR-0006 statistical-hop-only grading rule |
 | `value-chain-linkage-analysis` | 1.0.0 | 1.1.0 | quant-methodologist | 2026-08-20 | 2026-08-23 | Wave 5.8F — ADR-0025 deliberate separation from proxy-chain betas |
+| `value-chain-stage-financials` | 1.0.0 | active | financial-analyst | 2026-08-29 | — | ADR-0066 gap closure — per-chain-node 5-year KPI rollup pipeline into `fact_industry` |
+| `forward-industry-research` | 1.0.0 | active | market-intelligence-agent | 2026-08-29 | — | ADR-0066 gap closure — forward/upstream industry qualitative research narrative feeding the driver registry |
+| `value-chain-driver-identification` | 1.0.0 | active | quant-methodologist | 2026-08-29 | — | ADR-0066 gap closure — per-stage driver sensitivity derivation via correlation/lead-lag |
 | `unit-conversion-calibration` | 1.0.0 | active | quant-methodologist | 2026-08-20 | — | Wave 5.8F — lead-lag OLS regression, `python/correlation.py` |
 | `market-data-pipeline` | 1.0.0 | active | data-architect | 2026-08-20 | — | Wave 5.8F — ADR-0004 cache-first/revision-preserving policy; `fetch`/`md:sync` CLI not yet implemented, gap flagged explicitly |
 | `historical-financial-analysis` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G (design §9.3 financial/simulation group) — historical distribution feeding the growth-projection anchor |

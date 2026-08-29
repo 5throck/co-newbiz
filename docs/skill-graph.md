@@ -48,6 +48,7 @@
 | `explain-me` | L3 | — | — | — | — | — |
 | `financial-statement-analysis` | L3 | financial-analyst, financial-analyst | phase3 | growth-projection-modeling (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (composes_with), investment-vehicle-structuring (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `financing-plan-review` | L3 | valuation-agent, valuation-agent | phase4, phase5 | incentive-clawback-assessment (composes_with), insight-synthesis (follows), investment-feasibility-modeling (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (follows), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), wacc-input-session (composes_with) | — | — |
+| `forward-industry-research` | L3 | market-intelligence-agent | — | company-intelligence (composes_with), scenario-planning (composes_with), value-chain-driver-identification (enables), value-chain-linkage-analysis (enables) | — | — |
 | `gateguard` | L3 | — | — | — | — | — |
 | `glossary-management` | L3 | glossary-curator | — | — | — | — |
 | `governance-document-hierarchy` | L3 | — | — | — | — | — |
@@ -128,7 +129,9 @@
 | `unit-conversion-calibration` | L3 | quant-methodologist | phase3 | stage-gate-governance (follows) | — | — |
 | `update-bun-packages` | L3 | — | — | — | — | — |
 | `validate-docs-links` | L3 | — | — | — | — | — |
+| `value-chain-driver-identification` | L3 | — | — | forward-industry-research (follows), scenario-planning (enables), unit-conversion-calibration (composes_with), value-chain-stage-financials (follows) | — | — |
 | `value-chain-linkage-analysis` | L3 | market-intelligence-agent, market-intelligence-agent | phase1 | competitive-intelligence (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (follows) | — | — |
+| `value-chain-stage-financials` | L3 | financial-analyst | — | historical-financial-analysis (composes_with), k-dart (composes_with), peer-benchmarking (composes_with), value-chain-driver-identification (enables), value-chain-linkage-analysis (follows) | — | — |
 | `vulnerability-management` | L3 | security-engineer | — | access-control-review (composes_with), security-baseline-review (composes_with), security-scan (composes_with) | — | — |
 | `wacc-input-session` | L3 | valuation-agent, valuation-agent | phase2 | brownfield-feasibility (follows), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), investment-feasibility-modeling (composes_with), site-infrastructure-assessment (follows) | — | — |
 | `waiver-management` | L3 | — | — | — | — | — |
