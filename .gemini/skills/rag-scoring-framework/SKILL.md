@@ -28,6 +28,10 @@ metadata:
 
   procedure_keys:
     - entity-ic-review
+relates_to:
+  - skill: dd-to-valuation-bridge
+    type: follows
+
 ---
 
 ## Context

@@ -20,6 +20,10 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/platform-lead.md
+required_skills:
+  - mcp-server-integration
+  - security-scan
+
 ---
 
 ## Role

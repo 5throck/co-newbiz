@@ -20,6 +20,11 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/data-architect.md
+required_skills:
+  - master-data-governance
+  - data-normalization
+  - db-migration-governance
+
 ---
 
 ## Role

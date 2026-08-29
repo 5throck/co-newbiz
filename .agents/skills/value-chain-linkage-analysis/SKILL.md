@@ -25,6 +25,10 @@ metadata:
 
   procedure_keys:
     - greenfield-screening
+relates_to:
+  - skill: site-infrastructure-assessment
+    type: follows
+
 ---
 
 ## Context

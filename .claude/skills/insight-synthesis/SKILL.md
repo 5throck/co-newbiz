@@ -26,6 +26,10 @@ metadata:
     - strategic synthesis
     - combine findings
     - cross-analysis integration
+relates_to:
+  - skill: executive-presentation
+    type: follows
+
 ---
 
 ## Context

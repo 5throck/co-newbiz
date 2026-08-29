@@ -39,6 +39,12 @@ metadata:
     - org-readiness-assessment
     - stage-gate-governance
     - technical-due-diligence
+relates_to:
+  - skill: permit-pathway-mapping
+    type: follows
+  - skill: strategic-fit-screening
+    type: follows
+
 ---
 
 ## Context

@@ -20,6 +20,11 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/partnership-agent.md
+required_skills:
+  - partner-due-diligence
+  - partner-sourcing-strategy
+  - project-review
+
 ---
 
 ## Role

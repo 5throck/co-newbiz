@@ -24,6 +24,10 @@ metadata:
     - comparable company analysis
     - peer multiple comparison
     - industry benchmark
+relates_to:
+  - skill: proxy-industry-chain
+    type: follows
+
 ---
 
 ## Context

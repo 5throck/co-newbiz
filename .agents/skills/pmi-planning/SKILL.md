@@ -26,6 +26,10 @@ metadata:
     - post-merger integration
     - integration timeline
     - day-one integration plan
+relates_to:
+  - skill: compensation-harmonization-analysis
+    type: follows
+
 ---
 
 ## Context

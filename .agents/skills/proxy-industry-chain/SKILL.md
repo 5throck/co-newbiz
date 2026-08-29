@@ -27,6 +27,10 @@ metadata:
     - no direct market data
     - chain reliability grade
     - demand estimation via proxy industry
+relates_to:
+  - skill: unit-conversion-calibration
+    type: follows
+
 ---
 
 ## Context

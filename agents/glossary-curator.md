@@ -1,6 +1,6 @@
 ---
 name: glossary-curator
-role: Owns the glossary: registration, review, duplicate merging, and the four tooling integrations (UI tooltip, report appendix, glossary-lint, MCP lookup_term) that keep it from rotting
+role: "Owns the glossary: registration, review, duplicate merging, and the four tooling integrations (UI tooltip, report appendix, glossary-lint, MCP lookup_term) that keep it from rotting"
 status: active
 formal_name: Glossary Curator
 tier:
@@ -20,6 +20,9 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/glossary-curator.md
+required_skills:
+  - glossary-management
+
 ---
 
 ## Role

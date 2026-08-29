@@ -20,6 +20,10 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/risk-officer.md
+required_skills:
+  - dd-to-valuation-bridge
+  - rag-scoring-framework
+
 ---
 
 ## Role

@@ -20,6 +20,13 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/greenfield-agent.md
+required_skills:
+  - community-partnership-planning
+  - greenfield-feasibility
+  - regional-incentive-sourcing
+  - site-infrastructure-assessment
+  - talent-pipeline-planning
+
 ---
 
 ## Role

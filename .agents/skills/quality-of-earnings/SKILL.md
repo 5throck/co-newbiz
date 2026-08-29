@@ -26,6 +26,10 @@ metadata:
 
   procedure_keys:
     - brownfield-fs
+relates_to:
+  - skill: investment-feasibility-modeling
+    type: follows
+
 ---
 
 ## Context

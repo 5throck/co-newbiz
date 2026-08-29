@@ -20,6 +20,11 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/hr-integration-agent.md
+required_skills:
+  - compensation-harmonization-analysis
+  - management-incentive-review
+  - org-readiness-assessment
+
 ---
 
 ## Role

@@ -1,6 +1,6 @@
 ---
 name: dba
-role: Database operations: backup/restore, monthly recovery drills, performance tuning, and capacity management
+role: "Database operations: backup/restore, monthly recovery drills, performance tuning, and capacity management"
 status: active
 formal_name: Database Administrator
 tier:
@@ -20,6 +20,11 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/dba.md
+required_skills:
+  - database-operations
+  - query-performance-tuning
+  - db-migration-governance
+
 ---
 
 ## Role

@@ -26,6 +26,12 @@ metadata:
     - upside case
     - rate shock scenario
     - structural scenario planning
+relates_to:
+  - skill: financial-statement-analysis
+    type: follows
+  - skill: historical-financial-analysis
+    type: follows
+
 ---
 
 ## Context

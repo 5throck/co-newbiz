@@ -30,6 +30,12 @@ metadata:
     - drag-along tag-along
     - deadlock resolution
     - technology contribution valuation
+relates_to:
+  - skill: investment-vehicle-structuring
+    type: follows
+  - skill: project-review
+    type: follows
+
 ---
 
 ## Context

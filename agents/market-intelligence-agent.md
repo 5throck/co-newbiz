@@ -20,6 +20,11 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/market-intelligence-agent.md
+required_skills:
+  - competitive-intelligence
+  - scenario-planning
+  - value-chain-linkage-analysis
+
 ---
 
 ## Role

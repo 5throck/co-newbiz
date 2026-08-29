@@ -26,6 +26,10 @@ metadata:
 
   procedure_keys:
     - brownfield-dd
+relates_to:
+  - skill: debt-and-contingent-liability-simulation
+    type: follows
+
 ---
 
 ## Context

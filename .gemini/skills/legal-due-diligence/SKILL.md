@@ -25,6 +25,12 @@ metadata:
   procedure_keys:
     - brownfield-dd
     - entity-establishment-execution
+relates_to:
+  - skill: antitrust-screening
+    type: follows
+  - skill: k-law
+    type: follows
+
 ---
 
 ## Context

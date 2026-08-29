@@ -20,6 +20,10 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/infra-automation-engineer.md
+required_skills:
+  - infrastructure-automation
+  - batch-scheduling-operations
+
 ---
 
 ## Role

@@ -26,6 +26,10 @@ metadata:
     - statute
     - legal search
     - Korea law
+relates_to:
+  - skill: certification-transferability
+    type: follows
+
 ---
 # Skill: k-law
 

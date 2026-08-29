@@ -26,6 +26,10 @@ metadata:
   procedure_keys:
     - brownfield-pre-fs
     - greenfield-pre-fs
+relates_to:
+  - skill: certification-roadmap
+    type: follows
+
 ---
 
 ## Context

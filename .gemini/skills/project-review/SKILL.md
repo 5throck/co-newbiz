@@ -26,6 +26,12 @@ metadata:
     - review project
     - audit project
     - quality review
+relates_to:
+  - skill: portfolio-fit-assessment
+    type: follows
+  - skill: stage-gate-governance
+    type: follows
+
 ---
 
 # project-review

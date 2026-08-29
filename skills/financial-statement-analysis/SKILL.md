@@ -33,6 +33,10 @@ metadata:
     - DART analysis
     - fundamental analysis
     - corporate financial analysis
+relates_to:
+  - skill: peer-benchmarking
+    type: follows
+
 ---
 
 # Financial Statement Analysis Workflow

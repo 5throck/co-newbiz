@@ -105,6 +105,10 @@ variant_overrides:
     often binds before headcount does. Start at 3 concurrent deals and raise only after
     measuring gate cycle time.
     <!-- END VARIANT-SECTION -->
+required_skills:
+  - stage-gate-governance
+  - project-review
+
 ---
 # Project Manager (PM) — New Business Review Lead
 

@@ -26,6 +26,10 @@ metadata:
     - partner compliance screening
     - sanctions screening for a partner
     - post-transfer competitor risk
+relates_to:
+  - skill: jv-structuring
+    type: follows
+
 ---
 
 ## Context

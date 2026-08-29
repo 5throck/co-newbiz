@@ -24,6 +24,10 @@ metadata:
 
   procedure_keys:
     - greenfield-dd
+relates_to:
+  - skill: community-partnership-planning
+    type: follows
+
 ---
 
 ## Context

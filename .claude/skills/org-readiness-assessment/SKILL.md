@@ -26,6 +26,12 @@ metadata:
   procedure_keys:
     - brownfield-dd
     - entity-establishment-execution
+relates_to:
+  - skill: compliance-monitoring
+    type: follows
+  - skill: stage-gate-governance
+    type: follows
+
 ---
 
 ## Context

@@ -20,6 +20,11 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/backend-engineer.md
+required_skills:
+  - rest-api-design
+  - mcp-server-integration
+  - zod-contract-gate
+
 ---
 
 ## Role

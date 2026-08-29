@@ -20,6 +20,10 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/frontend-engineer.md
+required_skills:
+  - ui-information-architecture
+  - access-control-review
+
 ---
 
 ## Role

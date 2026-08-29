@@ -30,6 +30,10 @@ metadata:
 
   procedure_keys:
     - greenfield-fs
+relates_to:
+  - skill: site-infrastructure-assessment
+    type: follows
+
 ---
 
 ## Context

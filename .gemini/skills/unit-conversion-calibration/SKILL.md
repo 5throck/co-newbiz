@@ -25,6 +25,10 @@ metadata:
     - lead-lag regression
     - unit conversion coefficient
     - beta calibration for a proxy chain
+relates_to:
+  - skill: stage-gate-governance
+    type: follows
+
 ---
 
 ## Context

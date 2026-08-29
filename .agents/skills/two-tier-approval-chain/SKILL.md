@@ -27,6 +27,10 @@ metadata:
 
   procedure_keys:
     - group-investment-review
+relates_to:
+  - skill: portfolio-fit-assessment
+    type: follows
+
 ---
 
 ## Context

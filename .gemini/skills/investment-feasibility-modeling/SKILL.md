@@ -27,6 +27,10 @@ metadata:
   procedure_keys:
     - brownfield-fs
     - greenfield-fs
+relates_to:
+  - skill: monte-carlo-simulation
+    type: follows
+
 ---
 
 ## Context
