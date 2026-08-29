@@ -32,7 +32,7 @@ Full roster with per-agent tier and role: `AGENTS.md`. Full definitions: `agents
 
 ## Skills
 
-119 skills under `skills/`, spanning:
+116 skills under `skills/`, spanning:
 
 - **Reused from co-consult / workspace** (financial-statement-analysis, insight-synthesis, competitive-intelligence, company-intelligence, executive-presentation, sample-driven-report-writing, hwp-document-processing, org-readiness-assessment, k-dart, k-law, mece-logic-auditor, security-scan, stride-threat-matrix, sarif-exporter, accessibility-audit, zod-contract-gate) — adapted to co-newbiz's own `newbiz.ts` CLI rather than restated.
 - **Governance authoring & operation** — `governance-document-hierarchy`, `policy-and-procedure-governance`, `procedure-reference-override`, `two-tier-approval-chain`, `policy-change-impact-analysis`, `regulation-monitoring`, `adr-governance`, `compliance-monitoring`, `waiver-management`, `interpretation-registry`, `governance-training-and-notice`, `governance-kpi-reporting`, `checklist-authoring`.
@@ -47,14 +47,16 @@ Full roster with per-agent tier and role: `AGENTS.md`. Full definitions: `agents
 - **Legal & DD** — `regulatory-screening`, `permit-pathway-mapping`, `statute-change-monitoring`, `legal-risk-register`, `commercial-due-diligence`, `technical-due-diligence`, `site-visit-protocol`, `expert-interview`, `dd-to-valuation-bridge`.
 - **Judgment & quality** — `rag-scoring-framework`, `run-versioning-and-attribution`, `assumption-audit`.
 - **Platform** — `master-data-governance`, `data-normalization`, `data-freshness-and-revision-control`, `db-migration-governance`, `query-performance-tuning`, `rest-api-design`, `mcp-server-integration`, `ui-information-architecture`, `auth-and-account-management`, `continuous-monitoring-and-alerting`, `notification-channel-management`.
-- **Operations & security** — `deployment-and-release`, `database-operations`, `backup-and-dr`, `observability-and-alerting`, `incident-response`, `infrastructure-automation`, `batch-scheduling-operations`, `security-baseline-review`, `vulnerability-management`, `access-control-review`, `admin-console-operations`.
+- **Operations & security** — `deployment-and-release`, `database-operations` (absorbed `backup-and-dr`, design §9.2), `observability-and-alerting`, `incident-response`, `infrastructure-automation`, `batch-scheduling-operations`, `security-baseline-review`, `vulnerability-management`, `access-control-review`, `admin-console-operations`.
+
+**Skill relationship graph** (ADR-0073, workspace ADR-0060 machinery): `docs/skill-graph.{json,md}` is a generated projection — re-generated and drift-verified by `/sync` Step 4.65 (`scripts/generate-skill-graph.ts`, project copy 1.8.2 with three recorded local adaptations). Phase edges come from the `phases:` arrays in `variant.json` (derived from procedure `gate:` fields, one-to-one onto `docs/phase-definitions.md`'s 0–7 phases); `used_by` edges from agents' `required_skills:` frontmatter and the manifest; typed `relates_to:` (`follows`) edges from procedure step adjacency. Advisory only — `procedures/*.yaml` remains authoritative for dispatch.
 
 Full registry with per-skill status/owner/version: `skills/SKILLS.md`.
 
 ## Domain Configuration
 
 - **RAG signal system** (`docs/rag-framework.md`): six dimensions (financial, market, data confidence, regulatory/permit, technical/execution, risk) plus overall, rule-based (not weighted-average) — a Kill Criteria trigger or any assessed Red dimension forces overall Red immediately; an incomplete assessment (fewer than six dimensions genuinely assessed, none Red) yields no overall grade rather than defaulting to a color (Wave 5.10 defect fix, see `docs/pilots/pilot-001-system-rerun.md`).
-- **Stage gates**: Screening → Pre-FS → FS → DD → Entity IC → Group IC, with Entity IC approval required before Group-level procedure entry (`approval_chain`, ADR-0028).
+- **Stage gates**: Screening → Pre-FS → FS → DD → Entity IC → Group IC, with Entity IC approval required before Group-level procedure entry (`approval_chain`, ADR-0028). Numbered lifecycle phases (0 intake → 1 Screening → 2 Pre-FS → 3 FS → 4 DD → 5 IC → 6 execution & post-close → 7 finalization/QA) are defined in `docs/phase-definitions.md` and referenced by the skill graph's `phase` edges (ADR-0073).
 - **Governance layers** (`docs/governance-operations.md`): Policy / Procedure / Guideline / Checklist / Template, each with distinct enforceability and revision authority — see the document-layer table in the design.
 - **Procedure inheritance**: `procedures/{_shared,entities/<company>,regions/<ISO2>,group}/<proc>/schema.yaml` — entity/region procedures reference shared procedures via `references:` + `overrides:`, never copy them (ADR-0020); copies are audit-detected and blocked.
 - **Information protection** (`docs/information-protection.md`, `docs/security-model.md`): project-membership access control (deny-by-default), minimal-collection/aggregate-only handling of personal data (executive compensation, comp benchmarks), and MNPI insider-list/access-log handling for listed-company deals — none of this is deferrable to a later phase (ADR-0038/0039/0040).

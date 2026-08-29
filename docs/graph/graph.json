@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 470,
+    "node_count": 471,
     "edge_count": 821
   },
   "nodes": [
@@ -366,6 +366,11 @@
       "id": "adr:0072",
       "type": "adr",
       "label": "ADR-0072: Contract change-of-control clause table for the customer-attrition validator"
+    },
+    {
+      "id": "adr:0073",
+      "type": "adr",
+      "label": "ADR-0073: Adopt the skill relationship graph and the 0–7 lifecycle phase system"
     },
     {
       "id": "agent:antitrust-agent",
