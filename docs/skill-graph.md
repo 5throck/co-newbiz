@@ -62,8 +62,8 @@
 | `investment-feasibility-modeling` | L3 | valuation-agent, valuation-agent | phase3 | monte-carlo-simulation (follows) | — | — |
 | `investment-vehicle-structuring` | L3 | legal-counsel, legal-counsel | phase1, phase3 | antitrust-screening (follows), project-review (follows) | — | — |
 | `jv-structuring` | L3 | legal-counsel, legal-counsel | phase1, phase6 | investment-vehicle-structuring (follows), project-review (follows) | — | — |
-| `k-dart` | L3 | — | — | — | — | — |
-| `k-kosis` | L3 | — | — | — | — | — |
+| `k-dart` | L3 | financial-analyst, technical-dd-agent | phase4, phase5 | — | — | — |
+| `k-kosis` | L3 | financial-analyst, market-intelligence-agent | phase2, phase4 | — | — | — |
 | `k-law` | L3 | legal-counsel, legal-counsel | phase5 | certification-transferability (follows) | — | — |
 | `legal-due-diligence` | L3 | legal-counsel, legal-counsel | phase4, phase5 | antitrust-screening (follows), k-law (follows) | — | — |
 | `legal-risk-register` | L3 | — | — | — | — | — |
@@ -130,10 +130,10 @@
 Skills used in specific lifecycle phases (from `variant.json` `skill_manifest`):
 
 - **phase1**: antitrust-screening, brownfield-feasibility, investment-vehicle-structuring, jv-structuring, partner-due-diligence, partner-sourcing-strategy, project-review, regional-incentive-sourcing, site-infrastructure-assessment, stage-gate-governance, strategic-fit-screening, value-chain-linkage-analysis
-- **phase2**: brownfield-feasibility, certification-roadmap, greenfield-feasibility, permit-pathway-mapping, regional-incentive-sourcing, site-infrastructure-assessment, stage-gate-governance, wacc-input-session
+- **phase2**: brownfield-feasibility, certification-roadmap, greenfield-feasibility, k-kosis, permit-pathway-mapping, regional-incentive-sourcing, site-infrastructure-assessment, stage-gate-governance, wacc-input-session
 - **phase3**: antitrust-screening, financial-statement-analysis, growth-projection-modeling, historical-financial-analysis, investment-feasibility-modeling, investment-vehicle-structuring, monte-carlo-simulation, peer-benchmarking, proxy-industry-chain, quality-of-earnings, scenario-planning, site-infrastructure-assessment, stage-gate-governance, unit-conversion-calibration
-- **phase4**: antitrust-screening, certification-transferability, commercial-due-diligence, community-partnership-planning, competitive-intelligence, compliance-monitoring, customer-attrition-risk, dd-to-valuation-bridge, debt-and-contingent-liability-simulation, financing-plan-review, incentive-clawback-assessment, legal-due-diligence, management-incentive-review, org-readiness-assessment, site-visit-protocol, stage-gate-governance, talent-pipeline-planning, technical-due-diligence
-- **phase5**: certification-transferability, dd-to-valuation-bridge, executive-presentation, financing-plan-review, insight-synthesis, intra-group-transaction-compliance, k-law, legal-due-diligence, org-readiness-assessment, portfolio-fit-assessment, rag-scoring-framework, stage-gate-governance, two-tier-approval-chain
+- **phase4**: antitrust-screening, certification-transferability, commercial-due-diligence, community-partnership-planning, competitive-intelligence, compliance-monitoring, customer-attrition-risk, dd-to-valuation-bridge, debt-and-contingent-liability-simulation, financing-plan-review, incentive-clawback-assessment, k-dart, k-kosis, legal-due-diligence, management-incentive-review, org-readiness-assessment, site-visit-protocol, stage-gate-governance, talent-pipeline-planning, technical-due-diligence
+- **phase5**: certification-transferability, dd-to-valuation-bridge, executive-presentation, financing-plan-review, insight-synthesis, intra-group-transaction-compliance, k-dart, k-law, legal-due-diligence, org-readiness-assessment, portfolio-fit-assessment, rag-scoring-framework, stage-gate-governance, two-tier-approval-chain
 - **phase6**: compensation-harmonization-analysis, jv-structuring, pmi-planning, portfolio-fit-assessment, project-review, stage-gate-governance
 
 ## Edge Types

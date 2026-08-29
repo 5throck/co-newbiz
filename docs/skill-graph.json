@@ -3445,6 +3445,36 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "k-dart",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "k-dart",
+      "to": "phase4",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "k-dart",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "k-dart",
+      "to": "technical-dd-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "k-kosis",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
+    },
+    {
       "type": "references",
       "from": "k-kosis",
       "to": "k-dart",
@@ -3455,6 +3485,24 @@
       "from": "k-kosis",
       "to": "k-law",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "k-kosis",
+      "to": "market-intelligence-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "k-kosis",
+      "to": "phase2",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "k-kosis",
+      "to": "phase4",
+      "source": "skill_manifest"
     },
     {
       "type": "follows",
