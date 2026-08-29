@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Skill Relationship Graph Generator
- * @version 1.7.1
+ * @version 1.8.0
  *
  * Generates a skill relationship graph from multiple sources:
  * - SKILL.md files (prerequisites, relates_to frontmatter fields)
@@ -693,6 +693,43 @@ export function buildGraph(): SkillGraph {
       } catch {
         // Invalid JSON, skip this variant
       }
+    }
+  }
+
+  // Source 3b: project-local variant.json (co-newbiz local adaptation). The loop
+  // above only fires at the workspace root, where templates/co-* directories
+  // live; a scaffolded project ships its own variant.json with the same
+  // skill_manifest shape (used_by_agents, phases), but no templates/co-* copy —
+  // so without this branch its manifest edges never materialize (same shape as
+  // the L0 loop; targets validated against the project's local skill/agent sets).
+  const projectVariantJsonPath = join(ROOT, 'variant.json');
+  if (existsSync(projectVariantJsonPath)) {
+    try {
+      const variantJson = JSON.parse(readFileSync(projectVariantJsonPath, 'utf-8'));
+      const variantSpecific = variantJson?.skill_manifest?.variant_specific;
+
+      if (Array.isArray(variantSpecific)) {
+        for (const entry of variantSpecific) {
+          const manifest = entry as SkillManifestEntry;
+          if (!skillNames.has(manifest.name)) continue;
+
+          if (manifest.used_by_agents && Array.isArray(manifest.used_by_agents)) {
+            for (const agent of manifest.used_by_agents) {
+              if (agentNames.has(agent)) {
+                edges.push({ type: 'used_by', from: manifest.name, to: agent, source: 'skill_manifest' });
+              }
+            }
+          }
+
+          if (manifest.phases && Array.isArray(manifest.phases)) {
+            for (const phase of manifest.phases) {
+              edges.push({ type: 'phase', from: manifest.name, to: `phase${phase}`, source: 'skill_manifest' });
+            }
+          }
+        }
+      }
+    } catch {
+      // Invalid JSON, skip project manifest
     }
   }
 

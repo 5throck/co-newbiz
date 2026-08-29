@@ -13,115 +13,115 @@
 | `adr-governance` | L3 | — | — | — | — | — |
 | `agent-lifecycle-manager` | L3 | — | — | — | — | — |
 | `agent-output-provenance` | L3 | — | — | — | — | — |
-| `antitrust-screening` | L3 | — | — | — | — | — |
+| `antitrust-screening` | L3 | antitrust-agent | phase1, phase3, phase4 | — | — | — |
 | `assumption-audit` | L3 | — | — | — | — | — |
 | `auth-and-account-management` | L3 | — | — | — | — | — |
 | `batch-scheduling-operations` | L3 | — | — | — | — | — |
-| `brownfield-feasibility` | L3 | — | — | — | — | — |
+| `brownfield-feasibility` | L3 | brownfield-agent | phase1, phase2 | — | — | — |
 | `certification-roadmap` | L3 | — | — | — | — | — |
-| `certification-transferability` | L3 | — | — | — | — | — |
+| `certification-transferability` | L3 | legal-counsel | phase4, phase5 | — | — | — |
 | `checklist-authoring` | L3 | — | — | — | — | — |
-| `commercial-due-diligence` | L3 | — | — | — | — | — |
-| `community-partnership-planning` | L3 | — | — | — | — | — |
+| `commercial-due-diligence` | L3 | commercial-dd-agent | phase4 | — | — | — |
+| `community-partnership-planning` | L3 | greenfield-agent | phase4 | — | — | — |
 | `company-intelligence` | L3 | — | — | — | — | — |
 | `compensation-harmonization-analysis` | L3 | — | — | — | — | — |
-| `competitive-intelligence` | L3 | — | — | — | — | — |
-| `compliance-monitoring` | L3 | — | — | — | — | — |
+| `competitive-intelligence` | L3 | market-intelligence-agent | phase4 | — | — | — |
+| `compliance-monitoring` | L3 | compliance-officer | phase4 | — | — | — |
 | `continuous-monitoring-and-alerting` | L3 | — | — | — | — | — |
-| `customer-attrition-risk` | L3 | — | — | — | — | — |
+| `customer-attrition-risk` | L3 | customer-retention-agent | phase4 | — | — | — |
 | `customer-qualification` | L3 | — | — | — | — | — |
 | `data-freshness-and-revision-control` | L3 | — | — | — | — | — |
 | `data-normalization` | L3 | — | — | — | — | — |
 | `database-operations` | L3 | — | — | — | — | — |
 | `db-migration-governance` | L3 | — | — | — | — | — |
-| `dd-to-valuation-bridge` | L3 | — | — | — | — | — |
+| `dd-to-valuation-bridge` | L3 | brownfield-agent, risk-officer | phase4, phase5 | — | — | — |
 | `deal-execution-playbook` | L3 | — | — | — | — | — |
 | `deal-workspace-operations` | L3 | — | — | — | — | — |
-| `debt-and-contingent-liability-simulation` | L3 | — | — | — | — | — |
+| `debt-and-contingent-liability-simulation` | L3 | valuation-agent | phase4 | — | — | — |
 | `deployment-and-release` | L3 | — | — | — | — | — |
 | `executive-presentation` | L3 | — | — | — | — | — |
 | `expert-interview` | L3 | — | — | — | — | — |
 | `explain-me` | L3 | — | — | — | — | — |
 | `financial-statement-analysis` | L3 | — | — | — | — | — |
-| `financing-plan-review` | L3 | — | — | — | — | — |
+| `financing-plan-review` | L3 | valuation-agent | phase4, phase5 | — | — | — |
 | `gateguard` | L3 | — | — | — | — | — |
 | `glossary-management` | L3 | — | — | — | — | — |
 | `governance-document-hierarchy` | L3 | — | — | — | — | — |
-| `greenfield-feasibility` | L3 | — | — | — | — | — |
+| `greenfield-feasibility` | L3 | greenfield-agent | phase2 | — | — | — |
 | `group-level-review` | L3 | — | — | — | — | — |
-| `growth-projection-modeling` | L3 | — | — | — | — | — |
+| `growth-projection-modeling` | L3 | financial-analyst | phase3 | — | — | — |
 | `historical-financial-analysis` | L3 | — | — | — | — | — |
 | `hwp-document-processing` | L3 | — | — | — | — | — |
-| `incentive-clawback-assessment` | L3 | — | — | — | — | — |
+| `incentive-clawback-assessment` | L3 | incentive-agent | phase4 | — | — | — |
 | `incident-response` | L3 | — | — | — | — | — |
 | `industry-profile-application` | L3 | — | — | — | — | — |
 | `infrastructure-automation` | L3 | — | — | — | — | — |
 | `insight-synthesis` | L3 | — | — | — | — | — |
 | `interpretation-registry` | L3 | — | — | — | — | — |
-| `intra-group-transaction-compliance` | L3 | — | — | — | — | — |
-| `investment-feasibility-modeling` | L3 | — | — | — | — | — |
-| `investment-vehicle-structuring` | L3 | — | — | — | — | — |
-| `jv-structuring` | L3 | — | — | — | — | — |
+| `intra-group-transaction-compliance` | L3 | group-review-agent | phase5 | — | — | — |
+| `investment-feasibility-modeling` | L3 | valuation-agent | phase3 | — | — | — |
+| `investment-vehicle-structuring` | L3 | legal-counsel | phase1, phase3 | — | — | — |
+| `jv-structuring` | L3 | legal-counsel | phase1, phase6 | — | — | — |
 | `k-dart` | L3 | — | — | — | — | — |
 | `k-kosis` | L3 | — | — | — | — | — |
-| `k-law` | L3 | — | — | — | — | — |
-| `legal-due-diligence` | L3 | — | — | — | — | — |
+| `k-law` | L3 | legal-counsel | phase5 | — | — | — |
+| `legal-due-diligence` | L3 | legal-counsel | phase4, phase5 | — | — | — |
 | `legal-risk-register` | L3 | — | — | — | — | — |
-| `management-incentive-review` | L3 | — | — | — | — | — |
+| `management-incentive-review` | L3 | hr-integration-agent | phase4 | — | — | — |
 | `market-data-pipeline` | L3 | — | — | — | — | — |
 | `master-data-governance` | L3 | — | — | — | — | — |
 | `mcp-server-integration` | L3 | — | — | — | — | — |
 | `meeting-facilitation` | L3 | — | — | — | — | — |
-| `monte-carlo-simulation` | L3 | — | — | — | — | — |
+| `monte-carlo-simulation` | L3 | quant-methodologist | phase3 | — | — | — |
 | `notification-channel-management` | L3 | — | — | — | — | — |
 | `observability-and-alerting` | L3 | — | — | — | — | — |
-| `org-readiness-assessment` | L3 | — | — | — | — | — |
-| `partner-due-diligence` | L3 | — | — | — | — | — |
-| `partner-sourcing-strategy` | L3 | — | — | — | — | — |
+| `org-readiness-assessment` | L3 | hr-integration-agent | phase4, phase5 | — | — | — |
+| `partner-due-diligence` | L3 | partnership-agent | phase1 | — | — | — |
+| `partner-sourcing-strategy` | L3 | partnership-agent | phase1 | — | — | — |
 | `peer-benchmarking` | L3 | — | — | — | — | — |
-| `permit-pathway-mapping` | L3 | — | — | — | — | — |
-| `pmi-planning` | L3 | — | — | — | — | — |
+| `permit-pathway-mapping` | L3 | certification-agent | phase2 | — | — | — |
+| `pmi-planning` | L3 | pmi-agent | phase6 | — | — | — |
 | `policy-and-procedure-governance` | L3 | — | — | — | — | — |
 | `policy-change-impact-analysis` | L3 | — | — | — | — | — |
-| `portfolio-fit-assessment` | L3 | — | — | — | — | — |
+| `portfolio-fit-assessment` | L3 | group-review-agent | phase5, phase6 | — | — | — |
 | `procedure-reference-override` | L3 | — | — | — | — | — |
-| `project-review` | L3 | — | — | — | — | — |
+| `project-review` | L3 | partnership-agent, process-governance-manager | phase1, phase6 | — | — | — |
 | `proxy-industry-chain` | L3 | — | — | — | — | — |
-| `quality-of-earnings` | L3 | — | — | — | — | — |
+| `quality-of-earnings` | L3 | financial-analyst | phase3 | — | — | — |
 | `query-performance-tuning` | L3 | — | — | — | — | — |
-| `rag-scoring-framework` | L3 | — | — | — | — | — |
+| `rag-scoring-framework` | L3 | process-governance-manager, risk-officer | phase5 | — | — | — |
 | `region-profile-application` | L3 | — | — | — | — | — |
-| `regional-incentive-sourcing` | L3 | — | — | — | — | — |
+| `regional-incentive-sourcing` | L3 | greenfield-agent | phase1, phase2 | — | — | — |
 | `regulation-monitoring` | L3 | — | — | — | — | — |
 | `regulatory-change-response` | L3 | — | — | — | — | — |
 | `regulatory-screening` | L3 | — | — | — | — | — |
 | `rest-api-design` | L3 | — | — | — | — | — |
 | `run-versioning-and-attribution` | L3 | — | — | — | — | — |
 | `sample-driven-report-writing` | L3 | — | — | — | — | — |
-| `scenario-planning` | L3 | — | — | — | — | — |
+| `scenario-planning` | L3 | market-intelligence-agent, quant-methodologist | phase3 | — | — | — |
 | `script-lifecycle-manager` | L3 | — | — | — | — | — |
 | `security-baseline-review` | L3 | — | — | — | — | — |
 | `security-scan` | L3 | — | — | — | — | — |
-| `site-infrastructure-assessment` | L3 | — | — | — | — | — |
-| `site-visit-protocol` | L3 | — | — | — | — | — |
+| `site-infrastructure-assessment` | L3 | greenfield-agent | phase1, phase2, phase3 | — | — | — |
+| `site-visit-protocol` | L3 | technical-dd-agent | phase4 | — | — | — |
 | `skill-lifecycle-manager` | L3 | — | — | — | — | — |
-| `stage-gate-governance` | L3 | — | — | — | — | — |
+| `stage-gate-governance` | L3 | process-governance-manager | phase1, phase2, phase3, phase4, phase5, phase6 | — | — | — |
 | `standup-synthesizer` | L3 | — | — | — | — | — |
 | `statute-change-monitoring` | L3 | — | — | — | — | — |
-| `strategic-fit-screening` | L3 | — | — | — | — | — |
+| `strategic-fit-screening` | L3 | process-governance-manager | phase1 | — | — | — |
 | `sync` | L3 | — | — | — | — | — |
-| `talent-pipeline-planning` | L3 | — | — | — | — | — |
+| `talent-pipeline-planning` | L3 | greenfield-agent | phase4 | — | — | — |
 | `team-builder` | L3 | — | — | — | — | — |
-| `technical-due-diligence` | L3 | — | — | — | — | — |
+| `technical-due-diligence` | L3 | technical-dd-agent | phase4 | — | — | — |
 | `translate` | L3 | — | — | — | — | — |
-| `two-tier-approval-chain` | L3 | — | — | — | — | — |
+| `two-tier-approval-chain` | L3 | process-governance-manager | phase5 | — | — | — |
 | `ui-information-architecture` | L3 | — | — | — | — | — |
 | `unit-conversion-calibration` | L3 | — | — | — | — | — |
 | `update-bun-packages` | L3 | — | — | — | — | — |
 | `validate-docs-links` | L3 | — | — | — | — | — |
-| `value-chain-linkage-analysis` | L3 | — | — | — | — | — |
+| `value-chain-linkage-analysis` | L3 | market-intelligence-agent | phase1 | — | — | — |
 | `vulnerability-management` | L3 | — | — | — | — | — |
-| `wacc-input-session` | L3 | — | — | — | — | — |
+| `wacc-input-session` | L3 | valuation-agent | phase2 | — | — | — |
 | `waiver-management` | L3 | — | — | — | — | — |
 | `zod-contract-gate` | L3 | — | — | — | — | — |
 
@@ -129,6 +129,12 @@
 
 Skills used in specific lifecycle phases (from `variant.json` `skill_manifest`):
 
+- **phase1**: antitrust-screening, brownfield-feasibility, investment-vehicle-structuring, jv-structuring, partner-due-diligence, partner-sourcing-strategy, project-review, regional-incentive-sourcing, site-infrastructure-assessment, stage-gate-governance, strategic-fit-screening, value-chain-linkage-analysis
+- **phase2**: brownfield-feasibility, greenfield-feasibility, permit-pathway-mapping, regional-incentive-sourcing, site-infrastructure-assessment, stage-gate-governance, wacc-input-session
+- **phase3**: antitrust-screening, growth-projection-modeling, investment-feasibility-modeling, investment-vehicle-structuring, monte-carlo-simulation, quality-of-earnings, scenario-planning, site-infrastructure-assessment, stage-gate-governance
+- **phase4**: antitrust-screening, certification-transferability, commercial-due-diligence, community-partnership-planning, competitive-intelligence, compliance-monitoring, customer-attrition-risk, dd-to-valuation-bridge, debt-and-contingent-liability-simulation, financing-plan-review, incentive-clawback-assessment, legal-due-diligence, management-incentive-review, org-readiness-assessment, site-visit-protocol, stage-gate-governance, talent-pipeline-planning, technical-due-diligence
+- **phase5**: certification-transferability, dd-to-valuation-bridge, financing-plan-review, intra-group-transaction-compliance, k-law, legal-due-diligence, org-readiness-assessment, portfolio-fit-assessment, rag-scoring-framework, stage-gate-governance, two-tier-approval-chain
+- **phase6**: jv-structuring, pmi-planning, portfolio-fit-assessment, project-review, stage-gate-governance
 
 ## Edge Types
 
