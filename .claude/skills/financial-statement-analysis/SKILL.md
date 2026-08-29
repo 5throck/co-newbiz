@@ -17,7 +17,6 @@ version: 1.0.0
 last_reviewed: 2026-08-20
 prerequisites:
   - k-dart
-l2_propagate: false
 metadata:
   procedure_keys:
     - brownfield-fs
