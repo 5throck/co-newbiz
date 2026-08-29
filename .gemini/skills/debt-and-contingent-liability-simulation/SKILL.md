@@ -31,6 +31,22 @@ metadata:
 relates_to:
   - skill: certification-transferability
     type: follows
+  - skill: technical-due-diligence
+    type: composes_with
+  - skill: legal-due-diligence
+    type: composes_with
+  - skill: management-incentive-review
+    type: composes_with
+  - skill: financing-plan-review
+    type: composes_with
+  - skill: org-readiness-assessment
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: investment-feasibility-modeling
+    type: composes_with
+  - skill: wacc-input-session
+    type: composes_with
 
 ---
 

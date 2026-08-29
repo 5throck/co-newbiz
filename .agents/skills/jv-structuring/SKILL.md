@@ -35,6 +35,20 @@ relates_to:
     type: follows
   - skill: project-review
     type: follows
+  - skill: partner-sourcing-strategy
+    type: composes_with
+  - skill: project-review
+    type: composes_with
+  - skill: portfolio-fit-assessment
+    type: composes_with
+  - skill: project-review
+    type: composes_with
+  - skill: certification-transferability
+    type: composes_with
+  - skill: k-law
+    type: composes_with
+  - skill: legal-due-diligence
+    type: composes_with
 
 ---
 

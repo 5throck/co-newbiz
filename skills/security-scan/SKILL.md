@@ -7,6 +7,15 @@ status: active
 scope: common
 owner: pm
 prerequisites: gitleaks
+relates_to:
+  - skill: mcp-server-integration
+    type: composes_with
+  - skill: security-baseline-review
+    type: composes_with
+  - skill: vulnerability-management
+    type: composes_with
+  - skill: access-control-review
+    type: composes_with
 metadata:
   type: process
   triggers:

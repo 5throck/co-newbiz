@@ -27,6 +27,18 @@ metadata:
 relates_to:
   - skill: proxy-industry-chain
     type: follows
+  - skill: quality-of-earnings
+    type: composes_with
+  - skill: scenario-planning
+    type: composes_with
+  - skill: unit-conversion-calibration
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: site-infrastructure-assessment
+    type: composes_with
+  - skill: quality-of-earnings
+    type: composes_with
 
 ---
 

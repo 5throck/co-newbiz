@@ -15,6 +15,9 @@ last_reviewed: 2026-08-20
 status: active
 owner: frontend-engineer
 prerequisites: none
+relates_to:
+  - skill: access-control-review
+    type: composes_with
 metadata:
   type: implementation
   triggers:

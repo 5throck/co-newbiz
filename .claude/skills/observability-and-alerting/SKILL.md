@@ -15,6 +15,9 @@ last_reviewed: 2026-08-20
 status: active
 owner: sre
 prerequisites: none
+relates_to:
+  - skill: incident-response
+    type: composes_with
 metadata:
   type: implementation
   triggers:

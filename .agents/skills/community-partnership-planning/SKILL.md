@@ -28,6 +28,16 @@ metadata:
 relates_to:
   - skill: dd-to-valuation-bridge
     type: follows
+  - skill: site-visit-protocol
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: greenfield-feasibility
+    type: composes_with
+  - skill: regional-incentive-sourcing
+    type: composes_with
+  - skill: site-infrastructure-assessment
+    type: composes_with
 
 ---
 

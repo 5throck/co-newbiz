@@ -29,6 +29,8 @@ metadata:
 relates_to:
   - skill: competitive-intelligence
     type: follows
+  - skill: site-visit-protocol
+    type: composes_with
 
 ---
 

@@ -29,6 +29,18 @@ metadata:
 relates_to:
   - skill: incentive-clawback-assessment
     type: follows
+  - skill: technical-due-diligence
+    type: composes_with
+  - skill: legal-due-diligence
+    type: composes_with
+  - skill: debt-and-contingent-liability-simulation
+    type: composes_with
+  - skill: financing-plan-review
+    type: composes_with
+  - skill: org-readiness-assessment
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
 
 ---
 

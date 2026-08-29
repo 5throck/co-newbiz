@@ -31,6 +31,14 @@ relates_to:
     type: follows
   - skill: stage-gate-governance
     type: follows
+  - skill: insight-synthesis
+    type: composes_with
+  - skill: rag-scoring-framework
+    type: composes_with
+  - skill: strategic-fit-screening
+    type: composes_with
+  - skill: two-tier-approval-chain
+    type: composes_with
 
 ---
 

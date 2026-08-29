@@ -29,6 +29,18 @@ relates_to:
     type: follows
   - skill: value-chain-linkage-analysis
     type: follows
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: insight-synthesis
+    type: composes_with
+  - skill: project-review
+    type: composes_with
+  - skill: rag-scoring-framework
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: two-tier-approval-chain
+    type: composes_with
 
 ---
 

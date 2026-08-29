@@ -16,7 +16,15 @@ last_reviewed: 2026-08-20
 status: active
 owner: backend-engineer
 prerequisites:
-  - rest-api-design
+relates_to:
+  - skill: rest-api-design
+    type: composes_with
+  - skill: zod-contract-gate
+    type: composes_with
+  - skill: security-scan
+    type: composes_with
+  - skill: rest-api-design
+    type: relates_to
 metadata:
   type: implementation
   triggers:

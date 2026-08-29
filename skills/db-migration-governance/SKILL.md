@@ -15,7 +15,17 @@ last_reviewed: 2026-08-20
 status: active
 owner: dba
 prerequisites:
-  - adr-governance
+relates_to:
+  - skill: master-data-governance
+    type: composes_with
+  - skill: data-normalization
+    type: composes_with
+  - skill: database-operations
+    type: composes_with
+  - skill: query-performance-tuning
+    type: composes_with
+  - skill: adr-governance
+    type: relates_to
 metadata:
   type: implementation
   triggers:

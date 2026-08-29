@@ -17,6 +17,9 @@ last_reviewed: 2026-08-20
 status: active
 owner: sre
 prerequisites: none
+relates_to:
+  - skill: observability-and-alerting
+    type: composes_with
 metadata:
   type: process
   triggers:

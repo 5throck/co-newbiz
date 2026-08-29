@@ -1181,6 +1181,18 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "access-control-review",
+      "to": "security-baseline-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/access-control-review/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "access-control-review",
       "to": "security-baseline-review",
@@ -1194,6 +1206,42 @@
       "provenance": {
         "file": "agents/security-engineer.md",
         "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "access-control-review",
+      "to": "security-scan",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/access-control-review/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "access-control-review",
+      "to": "ui-information-architecture",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/access-control-review/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "access-control-review",
+      "to": "vulnerability-management",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/access-control-review/SKILL.md",
+        "field": "relates_to",
         "index": 2
       }
     },
@@ -1392,16 +1440,148 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "brownfield-feasibility",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 21
+      }
+    },
+    {
       "type": "references",
       "from": "antitrust-screening",
       "to": "brownfield-feasibility",
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "certification-transferability",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "commercial-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "competitive-intelligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "compliance-monitoring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 12
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "customer-attrition-risk",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "financial-statement-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 17
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 10
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "incentive-clawback-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
       "type": "references",
       "from": "antitrust-screening",
       "to": "intra-group-transaction-compliance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "investment-feasibility-modeling",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 15
+      }
     },
     {
       "type": "follows",
@@ -1412,6 +1592,42 @@
         "file": "skills/antitrust-screening/SKILL.md",
         "field": "relates_to",
         "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "monte-carlo-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 16
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 11
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "peer-benchmarking",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 18
       }
     },
     {
@@ -1433,6 +1649,30 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 19
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "quality-of-earnings",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 14
+      }
+    },
+    {
       "type": "follows",
       "from": "antitrust-screening",
       "to": "scenario-planning",
@@ -1444,6 +1684,18 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 13
+      }
+    },
+    {
       "type": "follows",
       "from": "antitrust-screening",
       "to": "stage-gate-governance",
@@ -1452,6 +1704,30 @@
         "file": "skills/antitrust-screening/SKILL.md",
         "field": "relates_to",
         "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "antitrust-screening",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 20
       }
     },
     {
@@ -1520,6 +1796,18 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "batch-scheduling-operations",
+      "to": "infrastructure-automation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/batch-scheduling-operations/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "batch-scheduling-operations",
       "to": "infrastructure-automation",
@@ -1544,6 +1832,18 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "brownfield-feasibility",
+      "to": "certification-roadmap",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/brownfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "references",
       "from": "brownfield-feasibility",
       "to": "certification-transferability",
@@ -1560,6 +1860,18 @@
       "from": "brownfield-feasibility",
       "to": "customer-attrition-risk",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "brownfield-feasibility",
+      "to": "dd-to-valuation-bridge",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/brownfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
     },
     {
       "type": "references",
@@ -1595,6 +1907,18 @@
       "from": "brownfield-feasibility",
       "to": "phase2",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "brownfield-feasibility",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/brownfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "references",
@@ -1649,6 +1973,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "certification-roadmap",
+      "to": "greenfield-feasibility",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-roadmap/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "references",
       "from": "certification-roadmap",
       "to": "permit-pathway-mapping",
@@ -1661,6 +1997,30 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "certification-roadmap",
+      "to": "regional-incentive-sourcing",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-roadmap/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-roadmap",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-roadmap/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "follows",
       "from": "certification-roadmap",
       "to": "stage-gate-governance",
@@ -1669,6 +2029,18 @@
         "file": "skills/certification-roadmap/SKILL.md",
         "field": "relates_to",
         "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-roadmap",
+      "to": "wacc-input-session",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-roadmap/SKILL.md",
+        "field": "relates_to",
+        "index": 1
       }
     },
     {
@@ -1685,6 +2057,54 @@
       "provenance": {
         "file": "skills/certification-transferability/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "commercial-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "competitive-intelligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "compliance-monitoring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 10
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "customer-attrition-risk",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 7
       }
     },
     {
@@ -1705,6 +2125,42 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "incentive-clawback-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "investment-vehicle-structuring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 12
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "jv-structuring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 13
+      }
+    },
+    {
       "type": "used_by",
       "from": "certification-transferability",
       "to": "legal-counsel",
@@ -1720,6 +2176,54 @@
       "from": "certification-transferability",
       "to": "legal-counsel",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 14
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "management-incentive-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
     },
     {
       "type": "follows",
@@ -1745,10 +2249,34 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 11
+      }
+    },
+    {
       "type": "references",
       "from": "certification-transferability",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "certification-transferability",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "references",
@@ -1797,6 +2325,42 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "commercial-due-diligence",
+      "to": "competitive-intelligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "commercial-due-diligence",
+      "to": "compliance-monitoring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "commercial-due-diligence",
+      "to": "customer-attrition-risk",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "references",
       "from": "commercial-due-diligence",
       "to": "customer-attrition-risk",
@@ -1809,16 +2373,100 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "commercial-due-diligence",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
       "type": "references",
       "from": "commercial-due-diligence",
       "to": "expert-interview",
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "commercial-due-diligence",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "commercial-due-diligence",
+      "to": "incentive-clawback-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "commercial-due-diligence",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "commercial-due-diligence",
+      "to": "management-incentive-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "commercial-due-diligence",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
       "type": "phase",
       "from": "commercial-due-diligence",
       "to": "phase4",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "commercial-due-diligence",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 10
+      }
     },
     {
       "type": "follows",
@@ -1849,6 +2497,18 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "community-partnership-planning",
+      "to": "greenfield-feasibility",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/community-partnership-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "references",
       "from": "community-partnership-planning",
       "to": "greenfield-feasibility",
@@ -1865,6 +2525,54 @@
       "from": "community-partnership-planning",
       "to": "phase4",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "community-partnership-planning",
+      "to": "regional-incentive-sourcing",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/community-partnership-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "community-partnership-planning",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/community-partnership-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "community-partnership-planning",
+      "to": "site-visit-protocol",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/community-partnership-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "community-partnership-planning",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/community-partnership-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "references",
@@ -1908,10 +2616,34 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "compensation-harmonization-analysis",
+      "to": "management-incentive-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/compensation-harmonization-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "references",
       "from": "compensation-harmonization-analysis",
       "to": "management-incentive-review",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "compensation-harmonization-analysis",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/compensation-harmonization-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "references",
@@ -1924,6 +2656,18 @@
       "from": "compensation-harmonization-analysis",
       "to": "phase6",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "compensation-harmonization-analysis",
+      "to": "pmi-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/compensation-harmonization-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "follows",
@@ -1943,6 +2687,66 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "compliance-monitoring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "customer-attrition-risk",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "incentive-clawback-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "references",
       "from": "competitive-intelligence",
       "to": "insight-synthesis",
@@ -1957,6 +2761,18 @@
         "file": "skills/competitive-intelligence/SKILL.md",
         "field": "relates_to",
         "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "management-incentive-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 2
       }
     },
     {
@@ -1977,10 +2793,70 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
       "type": "phase",
       "from": "competitive-intelligence",
       "to": "phase4",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 10
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "competitive-intelligence",
+      "to": "value-chain-linkage-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 11
+      }
     },
     {
       "type": "references",
@@ -1995,10 +2871,82 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "compliance-monitoring",
+      "to": "customer-attrition-risk",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/compliance-monitoring/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "compliance-monitoring",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/compliance-monitoring/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "compliance-monitoring",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/compliance-monitoring/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "compliance-monitoring",
+      "to": "incentive-clawback-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/compliance-monitoring/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
       "type": "references",
       "from": "compliance-monitoring",
       "to": "interpretation-registry",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "compliance-monitoring",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/compliance-monitoring/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "compliance-monitoring",
+      "to": "management-incentive-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/compliance-monitoring/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "phase",
@@ -2028,6 +2976,18 @@
       "from": "compliance-monitoring",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "compliance-monitoring",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/compliance-monitoring/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -2066,10 +3026,34 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "customer-attrition-risk",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/customer-attrition-risk/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "references",
       "from": "customer-attrition-risk",
       "to": "debt-and-contingent-liability-simulation",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "customer-attrition-risk",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/customer-attrition-risk/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
     },
     {
       "type": "follows",
@@ -2083,16 +3067,64 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "customer-attrition-risk",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/customer-attrition-risk/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "references",
       "from": "customer-attrition-risk",
       "to": "management-incentive-review",
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "customer-attrition-risk",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/customer-attrition-risk/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
       "type": "phase",
       "from": "customer-attrition-risk",
       "to": "phase4",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "customer-attrition-risk",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/customer-attrition-risk/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "customer-attrition-risk",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/customer-attrition-risk/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -2140,16 +3172,52 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "data-normalization",
+      "to": "db-migration-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/data-normalization/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "data-normalization",
       "to": "financial-statement-analysis",
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "data-normalization",
+      "to": "master-data-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/data-normalization/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "data-normalization",
       "to": "master-data-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "database-operations",
+      "to": "db-migration-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/database-operations/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "used_by",
@@ -2175,19 +3243,32 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "database-operations",
+      "to": "query-performance-tuning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/database-operations/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "db-migration-governance",
       "to": "adr-governance",
       "source": "prose"
     },
     {
-      "type": "requires",
+      "type": "relates_to",
       "from": "db-migration-governance",
       "to": "adr-governance",
-      "source": "prerequisites",
+      "source": "relates_to",
       "provenance": {
         "file": "skills/db-migration-governance/SKILL.md",
-        "field": "prerequisites"
+        "field": "relates_to",
+        "index": 4
       }
     },
     {
@@ -2202,10 +3283,34 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "db-migration-governance",
+      "to": "data-normalization",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/db-migration-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "db-migration-governance",
       "to": "data-normalization",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "db-migration-governance",
+      "to": "database-operations",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/db-migration-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "used_by",
@@ -2219,10 +3324,34 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "db-migration-governance",
+      "to": "master-data-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/db-migration-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "db-migration-governance",
       "to": "master-data-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "db-migration-governance",
+      "to": "query-performance-tuning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/db-migration-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "references",
@@ -2235,6 +3364,18 @@
       "from": "dd-to-valuation-bridge",
       "to": "brownfield-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "dd-to-valuation-bridge",
+      "to": "brownfield-feasibility",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
     },
     {
       "type": "references",
@@ -2271,6 +3412,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "dd-to-valuation-bridge",
+      "to": "executive-presentation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "follows",
       "from": "dd-to-valuation-bridge",
       "to": "financing-plan-review",
@@ -2286,6 +3439,18 @@
       "from": "dd-to-valuation-bridge",
       "to": "incentive-clawback-assessment",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "dd-to-valuation-bridge",
+      "to": "insight-synthesis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "references",
@@ -2318,6 +3483,30 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "dd-to-valuation-bridge",
+      "to": "rag-scoring-framework",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "dd-to-valuation-bridge",
+      "to": "rag-scoring-framework",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
+    },
+    {
       "type": "used_by",
       "from": "dd-to-valuation-bridge",
       "to": "risk-officer",
@@ -2335,6 +3524,30 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "dd-to-valuation-bridge",
+      "to": "site-visit-protocol",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "dd-to-valuation-bridge",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
       "type": "follows",
       "from": "dd-to-valuation-bridge",
       "to": "stage-gate-governance",
@@ -2343,6 +3556,18 @@
         "file": "skills/dd-to-valuation-bridge/SKILL.md",
         "field": "relates_to",
         "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "dd-to-valuation-bridge",
+      "to": "talent-pipeline-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "relates_to",
+        "index": 7
       }
     },
     {
@@ -2425,10 +3650,70 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/debt-and-contingent-liability-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "investment-feasibility-modeling",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/debt-and-contingent-liability-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/debt-and-contingent-liability-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "management-incentive-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/debt-and-contingent-liability-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "references",
       "from": "debt-and-contingent-liability-simulation",
       "to": "monte-carlo-simulation",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/debt-and-contingent-liability-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
     },
     {
       "type": "phase",
@@ -2437,10 +3722,34 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/debt-and-contingent-liability-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
       "type": "references",
       "from": "debt-and-contingent-liability-simulation",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/debt-and-contingent-liability-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "used_by",
@@ -2458,6 +3767,18 @@
       "from": "debt-and-contingent-liability-simulation",
       "to": "valuation-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "wacc-input-session",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/debt-and-contingent-liability-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
     },
     {
       "type": "references",
@@ -2527,16 +3848,64 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "executive-presentation",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/executive-presentation/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "references",
       "from": "executive-presentation",
       "to": "insight-synthesis",
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "executive-presentation",
+      "to": "intra-group-transaction-compliance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/executive-presentation/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
       "type": "phase",
       "from": "executive-presentation",
       "to": "phase5",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "executive-presentation",
+      "to": "portfolio-fit-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/executive-presentation/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "executive-presentation",
+      "to": "rag-scoring-framework",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/executive-presentation/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -2563,6 +3932,18 @@
         "file": "skills/executive-presentation/SKILL.md",
         "field": "relates_to",
         "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "executive-presentation",
+      "to": "two-tier-approval-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/executive-presentation/SKILL.md",
+        "field": "relates_to",
+        "index": 3
       }
     },
     {
@@ -2607,16 +3988,64 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "growth-projection-modeling",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
+    },
+    {
       "type": "references",
       "from": "financial-statement-analysis",
       "to": "growth-projection-modeling",
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "historical-financial-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 10
+      }
+    },
+    {
       "type": "references",
       "from": "financial-statement-analysis",
       "to": "historical-financial-analysis",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "investment-feasibility-modeling",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "investment-vehicle-structuring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
     },
     {
       "type": "references",
@@ -2632,6 +4061,18 @@
       "provenance": {
         "file": "skills/financial-statement-analysis/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "monte-carlo-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 3
       }
     },
     {
@@ -2658,6 +4099,78 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "quality-of-earnings",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "quality-of-earnings",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 11
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "financial-statement-analysis",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
       "type": "references",
       "from": "financing-plan-review",
       "to": "dd-to-valuation-bridge",
@@ -2676,6 +4189,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "financing-plan-review",
+      "to": "incentive-clawback-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financing-plan-review/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
       "type": "follows",
       "from": "financing-plan-review",
       "to": "insight-synthesis",
@@ -2687,10 +4212,46 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "financing-plan-review",
+      "to": "investment-feasibility-modeling",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financing-plan-review/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
       "type": "references",
       "from": "financing-plan-review",
       "to": "investment-vehicle-structuring",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "financing-plan-review",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financing-plan-review/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "financing-plan-review",
+      "to": "management-incentive-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financing-plan-review/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
     },
     {
       "type": "follows",
@@ -2716,6 +4277,42 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "financing-plan-review",
+      "to": "rag-scoring-framework",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financing-plan-review/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "financing-plan-review",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financing-plan-review/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "financing-plan-review",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financing-plan-review/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "used_by",
       "from": "financing-plan-review",
       "to": "valuation-agent",
@@ -2731,6 +4328,18 @@
       "from": "financing-plan-review",
       "to": "valuation-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "financing-plan-review",
+      "to": "wacc-input-session",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/financing-plan-review/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
     },
     {
       "type": "used_by",
@@ -2786,6 +4395,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "greenfield-feasibility",
+      "to": "community-partnership-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/greenfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
       "type": "references",
       "from": "greenfield-feasibility",
       "to": "community-partnership-planning",
@@ -2798,10 +4419,34 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "greenfield-feasibility",
+      "to": "permit-pathway-mapping",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/greenfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "phase",
       "from": "greenfield-feasibility",
       "to": "phase2",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "greenfield-feasibility",
+      "to": "regional-incentive-sourcing",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/greenfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "references",
@@ -2810,16 +4455,52 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "greenfield-feasibility",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/greenfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "greenfield-feasibility",
       "to": "site-infrastructure-assessment",
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "greenfield-feasibility",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/greenfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "references",
       "from": "greenfield-feasibility",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "greenfield-feasibility",
+      "to": "talent-pipeline-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/greenfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
     },
     {
       "type": "references",
@@ -2890,6 +4571,30 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "growth-projection-modeling",
+      "to": "financial-statement-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "growth-projection-modeling",
+      "to": "historical-financial-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "references",
       "from": "growth-projection-modeling",
       "to": "historical-financial-analysis",
@@ -2906,10 +4611,46 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "growth-projection-modeling",
+      "to": "investment-feasibility-modeling",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "growth-projection-modeling",
       "to": "investment-feasibility-modeling",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "growth-projection-modeling",
+      "to": "monte-carlo-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "growth-projection-modeling",
+      "to": "peer-benchmarking",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
     },
     {
       "type": "references",
@@ -2934,6 +4675,42 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "growth-projection-modeling",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "growth-projection-modeling",
+      "to": "quality-of-earnings",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 10
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "growth-projection-modeling",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "follows",
       "from": "growth-projection-modeling",
       "to": "site-infrastructure-assessment",
@@ -2945,10 +4722,34 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "growth-projection-modeling",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
       "type": "references",
       "from": "growth-projection-modeling",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "growth-projection-modeling",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
     },
     {
       "type": "used_by",
@@ -2966,6 +4767,18 @@
       "from": "historical-financial-analysis",
       "to": "financial-analyst",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "historical-financial-analysis",
+      "to": "financial-statement-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
     },
     {
       "type": "references",
@@ -2990,6 +4803,30 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "historical-financial-analysis",
+      "to": "investment-feasibility-modeling",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "historical-financial-analysis",
+      "to": "monte-carlo-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "follows",
       "from": "historical-financial-analysis",
       "to": "peer-benchmarking",
@@ -3011,6 +4848,78 @@
       "from": "historical-financial-analysis",
       "to": "phase3",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "historical-financial-analysis",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "historical-financial-analysis",
+      "to": "quality-of-earnings",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "historical-financial-analysis",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "historical-financial-analysis",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "historical-financial-analysis",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "historical-financial-analysis",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
     },
     {
       "type": "references",
@@ -3126,6 +5035,42 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "incentive-clawback-assessment",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/incentive-clawback-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "incentive-clawback-assessment",
+      "to": "management-incentive-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/incentive-clawback-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "incentive-clawback-assessment",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/incentive-clawback-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "phase",
       "from": "incentive-clawback-assessment",
       "to": "phase4",
@@ -3144,10 +5089,46 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "incentive-clawback-assessment",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/incentive-clawback-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "incentive-clawback-assessment",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/incentive-clawback-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "incident-response",
       "to": "access-control-review",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "incident-response",
+      "to": "observability-and-alerting",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/incident-response/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -3194,6 +5175,18 @@
       "from": "industry-profile-application",
       "to": "region-profile-application",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "infrastructure-automation",
+      "to": "batch-scheduling-operations",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/infrastructure-automation/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -3277,10 +5270,82 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "insight-synthesis",
+      "to": "project-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/insight-synthesis/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "insight-synthesis",
+      "to": "rag-scoring-framework",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/insight-synthesis/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "insight-synthesis",
+      "to": "rag-scoring-framework",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/insight-synthesis/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "references",
       "from": "insight-synthesis",
       "to": "rag-scoring-framework",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "insight-synthesis",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/insight-synthesis/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "insight-synthesis",
+      "to": "strategic-fit-screening",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/insight-synthesis/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "insight-synthesis",
+      "to": "two-tier-approval-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/insight-synthesis/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
     },
     {
       "type": "references",
@@ -3330,10 +5395,58 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "intra-group-transaction-compliance",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/intra-group-transaction-compliance/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "intra-group-transaction-compliance",
+      "to": "two-tier-approval-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/intra-group-transaction-compliance/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-feasibility-modeling",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
       "type": "references",
       "from": "investment-feasibility-modeling",
       "to": "debt-and-contingent-liability-simulation",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-feasibility-modeling",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
     },
     {
       "type": "references",
@@ -3349,6 +5462,18 @@
       "provenance": {
         "file": "skills/investment-feasibility-modeling/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-feasibility-modeling",
+      "to": "investment-vehicle-structuring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 1
       }
     },
     {
@@ -3369,6 +5494,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "investment-feasibility-modeling",
+      "to": "peer-benchmarking",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "phase",
       "from": "investment-feasibility-modeling",
       "to": "phase3",
@@ -3379,6 +5516,18 @@
       "from": "investment-feasibility-modeling",
       "to": "pmi-planning",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-feasibility-modeling",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
     },
     {
       "type": "references",
@@ -3393,10 +5542,46 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "investment-feasibility-modeling",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "references",
       "from": "investment-feasibility-modeling",
       "to": "scenario-planning",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-feasibility-modeling",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-feasibility-modeling",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
     },
     {
       "type": "used_by",
@@ -3414,6 +5599,18 @@
       "from": "investment-feasibility-modeling",
       "to": "valuation-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-feasibility-modeling",
+      "to": "wacc-input-session",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
     },
     {
       "type": "references",
@@ -3443,6 +5640,18 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "certification-transferability",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 10
+      }
+    },
+    {
       "type": "references",
       "from": "investment-vehicle-structuring",
       "to": "debt-and-contingent-liability-simulation",
@@ -3459,6 +5668,18 @@
       "from": "investment-vehicle-structuring",
       "to": "jv-structuring",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "k-law",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 11
+      }
     },
     {
       "type": "used_by",
@@ -3478,10 +5699,58 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 12
+      }
+    },
+    {
       "type": "references",
       "from": "investment-vehicle-structuring",
       "to": "legal-risk-register",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "partner-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "partner-sourcing-strategy",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "peer-benchmarking",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
     },
     {
       "type": "phase",
@@ -3507,6 +5776,78 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "quality-of-earnings",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "investment-vehicle-structuring",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "jv-structuring",
+      "to": "certification-transferability",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/jv-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
       "type": "follows",
       "from": "jv-structuring",
       "to": "investment-vehicle-structuring",
@@ -3515,6 +5856,18 @@
         "file": "skills/jv-structuring/SKILL.md",
         "field": "relates_to",
         "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "jv-structuring",
+      "to": "k-law",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/jv-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 7
       }
     },
     {
@@ -3535,6 +5888,18 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "jv-structuring",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/jv-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
       "type": "references",
       "from": "jv-structuring",
       "to": "partner-due-diligence",
@@ -3551,6 +5916,18 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "jv-structuring",
+      "to": "partner-sourcing-strategy",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/jv-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "phase",
       "from": "jv-structuring",
       "to": "phase1",
@@ -3561,6 +5938,42 @@
       "from": "jv-structuring",
       "to": "phase6",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "jv-structuring",
+      "to": "portfolio-fit-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/jv-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "jv-structuring",
+      "to": "project-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/jv-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "jv-structuring",
+      "to": "project-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/jv-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
     },
     {
       "type": "follows",
@@ -3651,6 +6064,30 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "k-law",
+      "to": "investment-vehicle-structuring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/k-law/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "k-law",
+      "to": "jv-structuring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/k-law/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "used_by",
       "from": "k-law",
       "to": "legal-counsel",
@@ -3668,10 +6105,34 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "k-law",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/k-law/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "phase",
       "from": "k-law",
       "to": "phase5",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "k-law",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/k-law/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "follows",
@@ -3682,6 +6143,30 @@
         "file": "skills/legal-due-diligence/SKILL.md",
         "field": "relates_to",
         "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "legal-due-diligence",
+      "to": "certification-transferability",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/legal-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "legal-due-diligence",
+      "to": "certification-transferability",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/legal-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 7
       }
     },
     {
@@ -3701,6 +6186,30 @@
       "from": "legal-due-diligence",
       "to": "dd-to-valuation-bridge",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "legal-due-diligence",
+      "to": "investment-vehicle-structuring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/legal-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "legal-due-diligence",
+      "to": "jv-structuring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/legal-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
     },
     {
       "type": "follows",
@@ -3743,6 +6252,30 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "legal-due-diligence",
+      "to": "management-incentive-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/legal-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "legal-due-diligence",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/legal-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
       "type": "phase",
       "from": "legal-due-diligence",
       "to": "phase4",
@@ -3753,6 +6286,30 @@
       "from": "legal-due-diligence",
       "to": "phase5",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "legal-due-diligence",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/legal-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "legal-due-diligence",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/legal-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "references",
@@ -3783,6 +6340,18 @@
       "from": "legal-risk-register",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "management-incentive-review",
+      "to": "compensation-harmonization-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/management-incentive-review/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
     },
     {
       "type": "references",
@@ -3825,6 +6394,18 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "management-incentive-review",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/management-incentive-review/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "phase",
       "from": "management-incentive-review",
       "to": "phase4",
@@ -3835,6 +6416,30 @@
       "from": "management-incentive-review",
       "to": "pmi-planning",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "management-incentive-review",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/management-incentive-review/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "management-incentive-review",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/management-incentive-review/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -3860,10 +6465,34 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "master-data-governance",
+      "to": "data-normalization",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/master-data-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "master-data-governance",
       "to": "data-normalization",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "master-data-governance",
+      "to": "db-migration-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/master-data-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -3900,19 +6529,56 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "mcp-server-integration",
+      "to": "rest-api-design",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/mcp-server-integration/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "mcp-server-integration",
       "to": "rest-api-design",
       "source": "prose"
     },
     {
-      "type": "requires",
+      "type": "relates_to",
       "from": "mcp-server-integration",
       "to": "rest-api-design",
-      "source": "prerequisites",
+      "source": "relates_to",
       "provenance": {
         "file": "skills/mcp-server-integration/SKILL.md",
-        "field": "prerequisites"
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "mcp-server-integration",
+      "to": "security-scan",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/mcp-server-integration/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "mcp-server-integration",
+      "to": "zod-contract-gate",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/mcp-server-integration/SKILL.md",
+        "field": "relates_to",
+        "index": 1
       }
     },
     {
@@ -3955,16 +6621,64 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "monte-carlo-simulation",
+      "to": "peer-benchmarking",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/monte-carlo-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "phase",
       "from": "monte-carlo-simulation",
       "to": "phase3",
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "monte-carlo-simulation",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/monte-carlo-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "monte-carlo-simulation",
+      "to": "quality-of-earnings",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/monte-carlo-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "used_by",
       "from": "monte-carlo-simulation",
       "to": "quant-methodologist",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "monte-carlo-simulation",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/monte-carlo-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "follows",
@@ -3982,6 +6696,42 @@
       "from": "monte-carlo-simulation",
       "to": "scenario-planning",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "monte-carlo-simulation",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/monte-carlo-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "monte-carlo-simulation",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/monte-carlo-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "monte-carlo-simulation",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/monte-carlo-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
     },
     {
       "type": "references",
@@ -4010,6 +6760,18 @@
       "from": "observability-and-alerting",
       "to": "continuous-monitoring-and-alerting",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "observability-and-alerting",
+      "to": "incident-response",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/observability-and-alerting/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -4044,6 +6806,18 @@
         "file": "agents/sre.md",
         "field": "required_skills",
         "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "org-readiness-assessment",
+      "to": "compensation-harmonization-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/org-readiness-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 4
       }
     },
     {
@@ -4111,6 +6885,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "org-readiness-assessment",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/org-readiness-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "follows",
       "from": "org-readiness-assessment",
       "to": "stage-gate-governance",
@@ -4128,6 +6914,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "org-readiness-assessment",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/org-readiness-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "follows",
       "from": "partner-due-diligence",
       "to": "jv-structuring",
@@ -4143,6 +6941,30 @@
       "from": "partner-due-diligence",
       "to": "jv-structuring",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "partner-due-diligence",
+      "to": "partner-sourcing-strategy",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/partner-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "partner-due-diligence",
+      "to": "partner-sourcing-strategy",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/partner-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "references",
@@ -4184,6 +7006,42 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "partner-due-diligence",
+      "to": "project-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/partner-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "partner-sourcing-strategy",
+      "to": "partner-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/partner-sourcing-strategy/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "partner-sourcing-strategy",
+      "to": "partner-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/partner-sourcing-strategy/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "follows",
       "from": "partner-sourcing-strategy",
       "to": "partner-due-diligence",
@@ -4222,6 +7080,18 @@
       "from": "partner-sourcing-strategy",
       "to": "phase1",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "partner-sourcing-strategy",
+      "to": "project-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/partner-sourcing-strategy/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "references",
@@ -4294,6 +7164,78 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "peer-benchmarking",
+      "to": "quality-of-earnings",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/peer-benchmarking/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "peer-benchmarking",
+      "to": "quality-of-earnings",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/peer-benchmarking/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "peer-benchmarking",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/peer-benchmarking/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "peer-benchmarking",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/peer-benchmarking/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "peer-benchmarking",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/peer-benchmarking/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "peer-benchmarking",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/peer-benchmarking/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "used_by",
       "from": "permit-pathway-mapping",
       "to": "certification-agent",
@@ -4350,6 +7292,42 @@
       "from": "permit-pathway-mapping",
       "to": "regulatory-screening",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "permit-pathway-mapping",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/permit-pathway-mapping/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "permit-pathway-mapping",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/permit-pathway-mapping/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "permit-pathway-mapping",
+      "to": "wacc-input-session",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/permit-pathway-mapping/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -4413,6 +7391,18 @@
       "from": "pmi-planning",
       "to": "pmi-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "pmi-planning",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/pmi-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -4569,6 +7559,18 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "portfolio-fit-assessment",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/portfolio-fit-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "references",
       "from": "portfolio-fit-assessment",
       "to": "two-tier-approval-chain",
@@ -4582,6 +7584,18 @@
       "provenance": {
         "file": "skills/procedure-reference-override/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "project-review",
+      "to": "insight-synthesis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/project-review/SKILL.md",
+        "field": "relates_to",
+        "index": 2
       }
     },
     {
@@ -4642,6 +7656,18 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "project-review",
+      "to": "rag-scoring-framework",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/project-review/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "follows",
       "from": "project-review",
       "to": "stage-gate-governance",
@@ -4653,10 +7679,46 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "project-review",
+      "to": "strategic-fit-screening",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/project-review/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "project-review",
+      "to": "two-tier-approval-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/project-review/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
       "type": "phase",
       "from": "proxy-industry-chain",
       "to": "phase3",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "proxy-industry-chain",
+      "to": "quality-of-earnings",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/proxy-industry-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "used_by",
@@ -4669,6 +7731,54 @@
       "from": "proxy-industry-chain",
       "to": "rag-scoring-framework",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "proxy-industry-chain",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/proxy-industry-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "proxy-industry-chain",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/proxy-industry-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "proxy-industry-chain",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/proxy-industry-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "proxy-industry-chain",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/proxy-industry-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "follows",
@@ -4727,6 +7837,30 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "quality-of-earnings",
+      "to": "financial-statement-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "quality-of-earnings",
+      "to": "financial-statement-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
       "type": "references",
       "from": "quality-of-earnings",
       "to": "financial-statement-analysis",
@@ -4740,6 +7874,30 @@
       "provenance": {
         "file": "skills/quality-of-earnings/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "quality-of-earnings",
+      "to": "growth-projection-modeling",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "quality-of-earnings",
+      "to": "historical-financial-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "relates_to",
+        "index": 8
       }
     },
     {
@@ -4766,10 +7924,94 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "quality-of-earnings",
+      "to": "peer-benchmarking",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "quality-of-earnings",
+      "to": "peer-benchmarking",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
+    },
+    {
       "type": "phase",
       "from": "quality-of-earnings",
       "to": "phase3",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "quality-of-earnings",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "quality-of-earnings",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "quality-of-earnings",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "query-performance-tuning",
+      "to": "database-operations",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/query-performance-tuning/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "query-performance-tuning",
+      "to": "db-migration-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/query-performance-tuning/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -4807,6 +8049,30 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "rag-scoring-framework",
+      "to": "dd-to-valuation-bridge",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/rag-scoring-framework/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "rag-scoring-framework",
+      "to": "dd-to-valuation-bridge",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/rag-scoring-framework/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
       "type": "follows",
       "from": "rag-scoring-framework",
       "to": "dd-to-valuation-bridge",
@@ -4836,6 +8102,30 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "rag-scoring-framework",
+      "to": "insight-synthesis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/rag-scoring-framework/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "rag-scoring-framework",
+      "to": "insight-synthesis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/rag-scoring-framework/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
       "type": "references",
       "from": "rag-scoring-framework",
       "to": "peer-benchmarking",
@@ -4863,6 +8153,18 @@
       "from": "rag-scoring-framework",
       "to": "process-governance-manager",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "rag-scoring-framework",
+      "to": "project-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/rag-scoring-framework/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
     },
     {
       "type": "references",
@@ -4898,16 +8200,52 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "rag-scoring-framework",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/rag-scoring-framework/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "references",
       "from": "rag-scoring-framework",
       "to": "stage-gate-governance",
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "rag-scoring-framework",
+      "to": "strategic-fit-screening",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/rag-scoring-framework/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
       "type": "references",
       "from": "rag-scoring-framework",
       "to": "technical-due-diligence",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "rag-scoring-framework",
+      "to": "two-tier-approval-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/rag-scoring-framework/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
     },
     {
       "type": "references",
@@ -4961,6 +8299,18 @@
       "from": "region-profile-application",
       "to": "talent-pipeline-planning",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "regional-incentive-sourcing",
+      "to": "community-partnership-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/regional-incentive-sourcing/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
     },
     {
       "type": "used_by",
@@ -5020,6 +8370,18 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "regional-incentive-sourcing",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/regional-incentive-sourcing/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "follows",
       "from": "regional-incentive-sourcing",
       "to": "stage-gate-governance",
@@ -5028,6 +8390,54 @@
         "file": "skills/regional-incentive-sourcing/SKILL.md",
         "field": "relates_to",
         "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "regional-incentive-sourcing",
+      "to": "strategic-fit-screening",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/regional-incentive-sourcing/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "regional-incentive-sourcing",
+      "to": "talent-pipeline-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/regional-incentive-sourcing/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "regional-incentive-sourcing",
+      "to": "value-chain-linkage-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/regional-incentive-sourcing/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "regional-incentive-sourcing",
+      "to": "wacc-input-session",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/regional-incentive-sourcing/SKILL.md",
+        "field": "relates_to",
+        "index": 2
       }
     },
     {
@@ -5161,10 +8571,34 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "rest-api-design",
+      "to": "mcp-server-integration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/rest-api-design/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "rest-api-design",
       "to": "mcp-server-integration",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "rest-api-design",
+      "to": "zod-contract-gate",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/rest-api-design/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -5248,6 +8682,30 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "sample-driven-report-writing",
+      "to": "translate",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/sample-driven-report-writing/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "scenario-planning",
+      "to": "competitive-intelligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/scenario-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
       "type": "references",
       "from": "scenario-planning",
       "to": "debt-and-contingent-liability-simulation",
@@ -5327,10 +8785,94 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "scenario-planning",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/scenario-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "scenario-planning",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/scenario-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
       "type": "used_by",
       "from": "scenario-planning",
       "to": "quant-methodologist",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "scenario-planning",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/scenario-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "scenario-planning",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/scenario-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "scenario-planning",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/scenario-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "scenario-planning",
+      "to": "value-chain-linkage-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/scenario-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "security-baseline-review",
+      "to": "access-control-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/security-baseline-review/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -5368,16 +8910,64 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "security-baseline-review",
+      "to": "security-scan",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/security-baseline-review/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "references",
       "from": "security-baseline-review",
       "to": "security-scan",
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "security-baseline-review",
+      "to": "vulnerability-management",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/security-baseline-review/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "security-baseline-review",
       "to": "vulnerability-management",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "security-scan",
+      "to": "access-control-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/security-scan/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "security-scan",
+      "to": "mcp-server-integration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/security-scan/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "used_by",
@@ -5391,6 +8981,18 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "security-scan",
+      "to": "security-baseline-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/security-scan/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "used_by",
       "from": "security-scan",
       "to": "security-engineer",
@@ -5399,6 +9001,30 @@
         "file": "agents/security-engineer.md",
         "field": "required_skills",
         "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "security-scan",
+      "to": "vulnerability-management",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/security-scan/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "site-infrastructure-assessment",
+      "to": "community-partnership-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/site-infrastructure-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 5
       }
     },
     {
@@ -5460,10 +9086,58 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "site-infrastructure-assessment",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/site-infrastructure-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "references",
       "from": "site-infrastructure-assessment",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "site-infrastructure-assessment",
+      "to": "strategic-fit-screening",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/site-infrastructure-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "site-infrastructure-assessment",
+      "to": "talent-pipeline-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/site-infrastructure-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "site-infrastructure-assessment",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/site-infrastructure-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "references",
@@ -5476,6 +9150,18 @@
       "from": "site-visit-protocol",
       "to": "phase4",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "site-visit-protocol",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/site-visit-protocol/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "follows",
@@ -5493,6 +9179,18 @@
       "from": "site-visit-protocol",
       "to": "technical-dd-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "site-visit-protocol",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/site-visit-protocol/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "references",
@@ -5590,10 +9288,106 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "stage-gate-governance",
+      "to": "strategic-fit-screening",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/stage-gate-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "stage-gate-governance",
+      "to": "strategic-fit-screening",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/stage-gate-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "stage-gate-governance",
+      "to": "talent-pipeline-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/stage-gate-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "stage-gate-governance",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/stage-gate-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "stage-gate-governance",
+      "to": "two-tier-approval-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/stage-gate-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "stage-gate-governance",
+      "to": "two-tier-approval-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/stage-gate-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
+    },
+    {
       "type": "references",
       "from": "stage-gate-governance",
       "to": "two-tier-approval-chain",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "stage-gate-governance",
+      "to": "value-chain-linkage-analysis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/stage-gate-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "stage-gate-governance",
+      "to": "wacc-input-session",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/stage-gate-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -5643,6 +9437,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "strategic-fit-screening",
+      "to": "insight-synthesis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/strategic-fit-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
       "type": "phase",
       "from": "strategic-fit-screening",
       "to": "phase1",
@@ -5672,10 +9478,70 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "strategic-fit-screening",
+      "to": "project-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/strategic-fit-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "strategic-fit-screening",
+      "to": "rag-scoring-framework",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/strategic-fit-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "strategic-fit-screening",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/strategic-fit-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "strategic-fit-screening",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/strategic-fit-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
       "type": "references",
       "from": "strategic-fit-screening",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "strategic-fit-screening",
+      "to": "two-tier-approval-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/strategic-fit-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 7
+      }
     },
     {
       "type": "follows",
@@ -5712,6 +9578,18 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "talent-pipeline-planning",
+      "to": "greenfield-feasibility",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/talent-pipeline-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "talent-pipeline-planning",
       "to": "org-readiness-assessment",
@@ -5722,6 +9600,30 @@
       "from": "talent-pipeline-planning",
       "to": "phase4",
       "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "talent-pipeline-planning",
+      "to": "regional-incentive-sourcing",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/talent-pipeline-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "talent-pipeline-planning",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/talent-pipeline-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "references",
@@ -5783,6 +9685,18 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "technical-due-diligence",
+      "to": "site-visit-protocol",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/technical-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "technical-due-diligence",
       "to": "site-visit-protocol",
@@ -5816,6 +9730,18 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "translate",
+      "to": "sample-driven-report-writing",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/translate/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "two-tier-approval-chain",
       "to": "deal-execution-playbook",
@@ -5826,6 +9752,18 @@
       "from": "two-tier-approval-chain",
       "to": "group-level-review",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "two-tier-approval-chain",
+      "to": "insight-synthesis",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/two-tier-approval-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "phase",
@@ -5862,10 +9800,82 @@
       "source": "skill_manifest"
     },
     {
+      "type": "composes_with",
+      "from": "two-tier-approval-chain",
+      "to": "project-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/two-tier-approval-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "two-tier-approval-chain",
+      "to": "rag-scoring-framework",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/two-tier-approval-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "two-tier-approval-chain",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/two-tier-approval-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "two-tier-approval-chain",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/two-tier-approval-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 5
+      }
+    },
+    {
       "type": "references",
       "from": "two-tier-approval-chain",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "two-tier-approval-chain",
+      "to": "strategic-fit-screening",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/two-tier-approval-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 6
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "ui-information-architecture",
+      "to": "access-control-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/ui-information-architecture/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -5926,6 +9936,18 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "value-chain-linkage-analysis",
+      "to": "competitive-intelligence",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/value-chain-linkage-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "value-chain-linkage-analysis",
       "to": "debt-and-contingent-liability-simulation",
@@ -5961,6 +9983,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "value-chain-linkage-analysis",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/value-chain-linkage-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
       "type": "follows",
       "from": "value-chain-linkage-analysis",
       "to": "site-infrastructure-assessment",
@@ -5972,10 +10006,34 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "vulnerability-management",
+      "to": "access-control-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/vulnerability-management/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "vulnerability-management",
       "to": "deployment-and-release",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "vulnerability-management",
+      "to": "security-baseline-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/vulnerability-management/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -5992,6 +10050,18 @@
         "file": "agents/security-engineer.md",
         "field": "required_skills",
         "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "vulnerability-management",
+      "to": "security-scan",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/vulnerability-management/SKILL.md",
+        "field": "relates_to",
+        "index": 2
       }
     },
     {
@@ -6016,6 +10086,42 @@
       "from": "wacc-input-session",
       "to": "compliance-monitoring",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "wacc-input-session",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/wacc-input-session/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "wacc-input-session",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/wacc-input-session/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "wacc-input-session",
+      "to": "investment-feasibility-modeling",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/wacc-input-session/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
     },
     {
       "type": "references",
@@ -6084,6 +10190,30 @@
         "file": "agents/backend-engineer.md",
         "field": "required_skills",
         "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "zod-contract-gate",
+      "to": "mcp-server-integration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/zod-contract-gate/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "zod-contract-gate",
+      "to": "rest-api-design",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/zod-contract-gate/SKILL.md",
+        "field": "relates_to",
+        "index": 0
       }
     }
   ]

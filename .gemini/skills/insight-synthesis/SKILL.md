@@ -29,6 +29,18 @@ metadata:
 relates_to:
   - skill: executive-presentation
     type: follows
+  - skill: rag-scoring-framework
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: project-review
+    type: composes_with
+  - skill: rag-scoring-framework
+    type: composes_with
+  - skill: strategic-fit-screening
+    type: composes_with
+  - skill: two-tier-approval-chain
+    type: composes_with
 
 ---
 

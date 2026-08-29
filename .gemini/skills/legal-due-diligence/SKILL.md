@@ -30,6 +30,22 @@ relates_to:
     type: follows
   - skill: k-law
     type: follows
+  - skill: technical-due-diligence
+    type: composes_with
+  - skill: management-incentive-review
+    type: composes_with
+  - skill: certification-transferability
+    type: composes_with
+  - skill: org-readiness-assessment
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: certification-transferability
+    type: composes_with
+  - skill: investment-vehicle-structuring
+    type: composes_with
+  - skill: jv-structuring
+    type: composes_with
 
 ---
 

@@ -31,6 +31,12 @@ relates_to:
     type: follows
   - skill: site-infrastructure-assessment
     type: follows
+  - skill: debt-and-contingent-liability-simulation
+    type: composes_with
+  - skill: financing-plan-review
+    type: composes_with
+  - skill: investment-feasibility-modeling
+    type: composes_with
 
 ---
 

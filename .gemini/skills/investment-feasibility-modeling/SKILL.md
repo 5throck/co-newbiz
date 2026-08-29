@@ -30,6 +30,24 @@ metadata:
 relates_to:
   - skill: monte-carlo-simulation
     type: follows
+  - skill: investment-vehicle-structuring
+    type: composes_with
+  - skill: scenario-planning
+    type: composes_with
+  - skill: peer-benchmarking
+    type: composes_with
+  - skill: proxy-industry-chain
+    type: composes_with
+  - skill: unit-conversion-calibration
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: debt-and-contingent-liability-simulation
+    type: composes_with
+  - skill: financing-plan-review
+    type: composes_with
+  - skill: wacc-input-session
+    type: composes_with
 
 ---
 

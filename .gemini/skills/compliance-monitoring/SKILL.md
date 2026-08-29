@@ -31,6 +31,20 @@ metadata:
 relates_to:
   - skill: stage-gate-governance
     type: follows
+  - skill: technical-due-diligence
+    type: composes_with
+  - skill: legal-due-diligence
+    type: composes_with
+  - skill: management-incentive-review
+    type: composes_with
+  - skill: customer-attrition-risk
+    type: composes_with
+  - skill: incentive-clawback-assessment
+    type: composes_with
+  - skill: debt-and-contingent-liability-simulation
+    type: composes_with
+  - skill: financing-plan-review
+    type: composes_with
 
 ---
 

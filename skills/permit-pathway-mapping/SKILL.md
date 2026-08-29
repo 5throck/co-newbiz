@@ -29,6 +29,12 @@ metadata:
 relates_to:
   - skill: certification-roadmap
     type: follows
+  - skill: wacc-input-session
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: site-infrastructure-assessment
+    type: composes_with
 
 ---
 

@@ -36,6 +36,28 @@ relates_to:
     type: follows
   - skill: project-review
     type: follows
+  - skill: quality-of-earnings
+    type: composes_with
+  - skill: scenario-planning
+    type: composes_with
+  - skill: peer-benchmarking
+    type: composes_with
+  - skill: proxy-industry-chain
+    type: composes_with
+  - skill: unit-conversion-calibration
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: partner-sourcing-strategy
+    type: composes_with
+  - skill: partner-due-diligence
+    type: composes_with
+  - skill: certification-transferability
+    type: composes_with
+  - skill: k-law
+    type: composes_with
+  - skill: legal-due-diligence
+    type: composes_with
 
 ---
 

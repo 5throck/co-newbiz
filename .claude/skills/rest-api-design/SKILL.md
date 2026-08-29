@@ -15,6 +15,11 @@ last_reviewed: 2026-08-20
 status: active
 owner: backend-engineer
 prerequisites: none
+relates_to:
+  - skill: mcp-server-integration
+    type: composes_with
+  - skill: zod-contract-gate
+    type: composes_with
 metadata:
   type: implementation
   triggers:

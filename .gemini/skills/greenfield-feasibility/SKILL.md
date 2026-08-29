@@ -29,6 +29,18 @@ metadata:
 relates_to:
   - skill: wacc-input-session
     type: follows
+  - skill: site-infrastructure-assessment
+    type: composes_with
+  - skill: regional-incentive-sourcing
+    type: composes_with
+  - skill: permit-pathway-mapping
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: community-partnership-planning
+    type: composes_with
+  - skill: talent-pipeline-planning
+    type: composes_with
 
 ---
 

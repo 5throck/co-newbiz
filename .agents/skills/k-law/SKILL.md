@@ -31,6 +31,14 @@ metadata:
 relates_to:
   - skill: certification-transferability
     type: follows
+  - skill: org-readiness-assessment
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: investment-vehicle-structuring
+    type: composes_with
+  - skill: jv-structuring
+    type: composes_with
 
 ---
 # Skill: k-law

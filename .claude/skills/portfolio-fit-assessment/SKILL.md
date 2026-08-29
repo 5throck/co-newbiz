@@ -37,6 +37,8 @@ relates_to:
     type: follows
   - skill: project-review
     type: follows
+  - skill: stage-gate-governance
+    type: composes_with
 
 ---
 

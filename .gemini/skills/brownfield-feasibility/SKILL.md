@@ -44,6 +44,12 @@ relates_to:
     type: follows
   - skill: strategic-fit-screening
     type: follows
+  - skill: certification-roadmap
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: dd-to-valuation-bridge
+    type: composes_with
 
 ---
 

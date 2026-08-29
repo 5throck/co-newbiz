@@ -13,6 +13,9 @@ owner: docs-writer
 version: 1.0.0
 last_reviewed: 2026-08-20
 prerequisites: hwp-document-processing
+relates_to:
+  - skill: translate
+    type: composes_with
 metadata:
   type: domain
   triggers:

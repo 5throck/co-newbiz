@@ -28,6 +28,12 @@ metadata:
 relates_to:
   - skill: stage-gate-governance
     type: follows
+  - skill: pmi-planning
+    type: composes_with
+  - skill: management-incentive-review
+    type: composes_with
+  - skill: org-readiness-assessment
+    type: composes_with
 
 ---
 

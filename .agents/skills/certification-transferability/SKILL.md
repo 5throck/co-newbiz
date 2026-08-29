@@ -32,6 +32,32 @@ relates_to:
     type: follows
   - skill: org-readiness-assessment
     type: follows
+  - skill: commercial-due-diligence
+    type: composes_with
+  - skill: technical-due-diligence
+    type: composes_with
+  - skill: competitive-intelligence
+    type: composes_with
+  - skill: legal-due-diligence
+    type: composes_with
+  - skill: management-incentive-review
+    type: composes_with
+  - skill: customer-attrition-risk
+    type: composes_with
+  - skill: incentive-clawback-assessment
+    type: composes_with
+  - skill: org-readiness-assessment
+    type: composes_with
+  - skill: compliance-monitoring
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: investment-vehicle-structuring
+    type: composes_with
+  - skill: jv-structuring
+    type: composes_with
+  - skill: legal-due-diligence
+    type: composes_with
 
 ---
 

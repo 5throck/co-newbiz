@@ -36,6 +36,28 @@ metadata:
 relates_to:
   - skill: peer-benchmarking
     type: follows
+  - skill: quality-of-earnings
+    type: composes_with
+  - skill: investment-feasibility-modeling
+    type: composes_with
+  - skill: monte-carlo-simulation
+    type: composes_with
+  - skill: investment-vehicle-structuring
+    type: composes_with
+  - skill: scenario-planning
+    type: composes_with
+  - skill: proxy-industry-chain
+    type: composes_with
+  - skill: unit-conversion-calibration
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: growth-projection-modeling
+    type: composes_with
+  - skill: historical-financial-analysis
+    type: composes_with
+  - skill: quality-of-earnings
+    type: composes_with
 
 ---
 

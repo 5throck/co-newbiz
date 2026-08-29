@@ -28,6 +28,10 @@ metadata:
 relates_to:
   - skill: site-infrastructure-assessment
     type: follows
+  - skill: competitive-intelligence
+    type: composes_with
+  - skill: scenario-planning
+    type: composes_with
 
 ---
 

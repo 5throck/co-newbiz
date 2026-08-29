@@ -33,6 +33,18 @@ relates_to:
     type: follows
   - skill: stage-gate-governance
     type: follows
+  - skill: wacc-input-session
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: strategic-fit-screening
+    type: composes_with
+  - skill: value-chain-linkage-analysis
+    type: composes_with
+  - skill: community-partnership-planning
+    type: composes_with
+  - skill: talent-pipeline-planning
+    type: composes_with
 
 ---
 

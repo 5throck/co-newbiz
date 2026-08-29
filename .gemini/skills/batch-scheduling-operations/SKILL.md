@@ -14,6 +14,9 @@ last_reviewed: 2026-08-20
 status: active
 owner: infra-automation-engineer
 prerequisites: none
+relates_to:
+  - skill: infrastructure-automation
+    type: composes_with
 metadata:
   type: implementation
   triggers:

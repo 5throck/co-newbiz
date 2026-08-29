@@ -15,6 +15,11 @@ last_reviewed: 2026-08-20
 status: active
 owner: dba
 prerequisites: none
+relates_to:
+  - skill: master-data-governance
+    type: composes_with
+  - skill: db-migration-governance
+    type: composes_with
 metadata:
   type: implementation
   triggers:

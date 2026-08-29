@@ -31,6 +31,14 @@ metadata:
 relates_to:
   - skill: customer-attrition-risk
     type: follows
+  - skill: technical-due-diligence
+    type: composes_with
+  - skill: org-readiness-assessment
+    type: composes_with
+  - skill: stage-gate-governance
+    type: composes_with
+  - skill: compensation-harmonization-analysis
+    type: composes_with
 
 ---
 
