@@ -20,6 +20,10 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-22
   governance: docs/lifecycle/agents/certification-agent.md
+required_skills:
+  - certification-roadmap
+  - permit-pathway-mapping
+
 ---
 
 ## Role

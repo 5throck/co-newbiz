@@ -28,6 +28,12 @@ metadata:
   procedure_keys:
     - entity-ic-review
     - greenfield-dd
+relates_to:
+  - skill: financing-plan-review
+    type: follows
+  - skill: stage-gate-governance
+    type: follows
+
 ---
 
 ## Context

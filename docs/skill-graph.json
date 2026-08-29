@@ -907,16 +907,6 @@
       "layer": "L3"
     },
     {
-      "id": "README",
-      "type": "agent",
-      "layer": "L3"
-    },
-    {
-      "id": "README_ko",
-      "type": "agent",
-      "layer": "L3"
-    },
-    {
       "id": "region-lead",
       "type": "agent",
       "layer": "L3"
@@ -1130,10 +1120,32 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "access-control-review",
+      "to": "frontend-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/frontend-engineer.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "access-control-review",
       "to": "security-baseline-review",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "access-control-review",
+      "to": "security-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/security-engineer.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "references",
@@ -1342,6 +1354,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "antitrust-screening",
+      "to": "management-incentive-review",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "phase",
       "from": "antitrust-screening",
       "to": "phase1",
@@ -1358,6 +1381,28 @@
       "from": "antitrust-screening",
       "to": "phase4",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "antitrust-screening",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "follows",
+      "from": "antitrust-screening",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/antitrust-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "references",
@@ -1414,6 +1459,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "batch-scheduling-operations",
+      "to": "infra-automation-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/infra-automation-engineer.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "batch-scheduling-operations",
       "to": "infrastructure-automation",
@@ -1468,6 +1524,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "brownfield-feasibility",
+      "to": "permit-pathway-mapping",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/brownfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "phase",
       "from": "brownfield-feasibility",
       "to": "phase1",
@@ -1486,10 +1553,38 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "brownfield-feasibility",
+      "to": "strategic-fit-screening",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/brownfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "brownfield-feasibility",
       "to": "technical-due-diligence",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "certification-roadmap",
+      "to": "certification-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/certification-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "certification-roadmap",
+      "to": "certification-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "references",
@@ -1508,6 +1603,23 @@
       "from": "certification-roadmap",
       "to": "permit-pathway-mapping",
       "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "certification-roadmap",
+      "to": "phase2",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "certification-roadmap",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/certification-roadmap/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -1532,10 +1644,43 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "certification-transferability",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "certification-transferability",
+      "to": "legal-counsel",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/legal-counsel.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "used_by",
       "from": "certification-transferability",
       "to": "legal-counsel",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "certification-transferability",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/certification-transferability/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "phase",
@@ -1626,6 +1771,28 @@
       "source": "skill_manifest"
     },
     {
+      "type": "follows",
+      "from": "commercial-due-diligence",
+      "to": "technical-due-diligence",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/commercial-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "follows",
+      "from": "community-partnership-planning",
+      "to": "dd-to-valuation-bridge",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/community-partnership-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "used_by",
       "from": "community-partnership-planning",
       "to": "greenfield-agent",
@@ -1674,6 +1841,23 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "compensation-harmonization-analysis",
+      "to": "hr-integration-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/hr-integration-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "compensation-harmonization-analysis",
+      "to": "hr-integration-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "references",
       "from": "compensation-harmonization-analysis",
       "to": "management-incentive-review",
@@ -1686,6 +1870,23 @@
       "source": "prose"
     },
     {
+      "type": "phase",
+      "from": "compensation-harmonization-analysis",
+      "to": "phase6",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "compensation-harmonization-analysis",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/compensation-harmonization-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "competitive-intelligence",
       "to": "company-intelligence",
@@ -1696,6 +1897,28 @@
       "from": "competitive-intelligence",
       "to": "insight-synthesis",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "competitive-intelligence",
+      "to": "legal-due-diligence",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/competitive-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "competitive-intelligence",
+      "to": "market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "used_by",
@@ -1738,6 +1961,17 @@
       "from": "compliance-monitoring",
       "to": "policy-change-impact-analysis",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "compliance-monitoring",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/compliance-monitoring/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -1788,6 +2022,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "customer-attrition-risk",
+      "to": "incentive-clawback-assessment",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/customer-attrition-risk/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "customer-attrition-risk",
       "to": "management-incentive-review",
@@ -1834,6 +2079,17 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "data-normalization",
+      "to": "data-architect",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/data-architect.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "data-normalization",
       "to": "financial-statement-analysis",
@@ -1844,6 +2100,17 @@
       "from": "data-normalization",
       "to": "master-data-governance",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "database-operations",
+      "to": "dba",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/dba.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -1874,10 +2141,32 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "db-migration-governance",
+      "to": "data-architect",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/data-architect.md",
+        "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
       "type": "references",
       "from": "db-migration-governance",
       "to": "data-normalization",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "db-migration-governance",
+      "to": "dba",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/dba.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "references",
@@ -1932,6 +2221,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "dd-to-valuation-bridge",
+      "to": "financing-plan-review",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "dd-to-valuation-bridge",
       "to": "incentive-clawback-assessment",
@@ -1971,7 +2271,29 @@
       "type": "used_by",
       "from": "dd-to-valuation-bridge",
       "to": "risk-officer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/risk-officer.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "dd-to-valuation-bridge",
+      "to": "risk-officer",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "dd-to-valuation-bridge",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/dd-to-valuation-bridge/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -2036,6 +2358,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "certification-transferability",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/debt-and-contingent-liability-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "debt-and-contingent-liability-simulation",
       "to": "customer-attrition-risk",
@@ -2058,6 +2391,17 @@
       "from": "debt-and-contingent-liability-simulation",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "valuation-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/valuation-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "used_by",
@@ -2088,6 +2432,23 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "deployment-and-release",
+      "to": "release-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/release-engineer.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "executive-presentation",
+      "to": "docs-writer",
+      "source": "skill_manifest"
+    },
+    {
       "type": "references",
       "from": "executive-presentation",
       "to": "financial-statement-analysis",
@@ -2110,6 +2471,12 @@
       "source": "prose"
     },
     {
+      "type": "phase",
+      "from": "executive-presentation",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
       "type": "references",
       "from": "executive-presentation",
       "to": "rag-scoring-framework",
@@ -2123,6 +2490,17 @@
       "provenance": {
         "file": "skills/executive-presentation/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "follows",
+      "from": "executive-presentation",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/executive-presentation/SKILL.md",
+        "field": "relates_to",
+        "index": 0
       }
     },
     {
@@ -2148,6 +2526,23 @@
       "from": "financial-statement-analysis",
       "to": "company-intelligence",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "financial-statement-analysis",
+      "to": "financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "financial-statement-analysis",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
     },
     {
       "type": "references",
@@ -2178,10 +2573,27 @@
       }
     },
     {
+      "type": "follows",
+      "from": "financial-statement-analysis",
+      "to": "peer-benchmarking",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/financial-statement-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "financial-statement-analysis",
       "to": "peer-benchmarking",
       "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "financial-statement-analysis",
+      "to": "phase3",
+      "source": "skill_manifest"
     },
     {
       "type": "references",
@@ -2202,10 +2614,32 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "financing-plan-review",
+      "to": "insight-synthesis",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/financing-plan-review/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "financing-plan-review",
       "to": "investment-vehicle-structuring",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "financing-plan-review",
+      "to": "org-readiness-assessment",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/financing-plan-review/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "phase",
@@ -2223,7 +2657,29 @@
       "type": "used_by",
       "from": "financing-plan-review",
       "to": "valuation-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/valuation-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "financing-plan-review",
+      "to": "valuation-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "glossary-management",
+      "to": "glossary-curator",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/glossary-curator.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -2310,6 +2766,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "greenfield-feasibility",
+      "to": "wacc-input-session",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/greenfield-feasibility/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "group-level-review",
       "to": "intra-group-transaction-compliance",
@@ -2341,6 +2808,17 @@
       "provenance": {
         "file": "skills/group-level-review/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "growth-projection-modeling",
+      "to": "financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 1
       }
     },
     {
@@ -2394,10 +2872,38 @@
       "source": "skill_manifest"
     },
     {
+      "type": "follows",
+      "from": "growth-projection-modeling",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/growth-projection-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "growth-projection-modeling",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "historical-financial-analysis",
+      "to": "financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "historical-financial-analysis",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
     },
     {
       "type": "references",
@@ -2422,10 +2928,27 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "historical-financial-analysis",
+      "to": "peer-benchmarking",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/historical-financial-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "historical-financial-analysis",
       "to": "peer-benchmarking",
       "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "historical-financial-analysis",
+      "to": "phase3",
+      "source": "skill_manifest"
     },
     {
       "type": "references",
@@ -2438,6 +2961,17 @@
       "from": "hwp-document-processing",
       "to": "sample-driven-report-writing",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "incentive-clawback-assessment",
+      "to": "debt-and-contingent-liability-simulation",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/incentive-clawback-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -2488,6 +3022,28 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "incident-response",
+      "to": "sre",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/sre.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "industry-profile-application",
+      "to": "industry-lead",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/industry-lead.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "industry-profile-application",
       "to": "proxy-industry-chain",
@@ -2518,6 +3074,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "infrastructure-automation",
+      "to": "infra-automation-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/infra-automation-engineer.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "insight-synthesis",
       "to": "company-intelligence",
@@ -2530,10 +3097,44 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "insight-synthesis",
+      "to": "executive-presentation",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/insight-synthesis/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "insight-synthesis",
       "to": "historical-financial-analysis",
       "source": "prose"
+    },
+    {
+      "type": "phase",
+      "from": "insight-synthesis",
+      "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "insight-synthesis",
+      "to": "process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "insight-synthesis",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
     },
     {
       "type": "references",
@@ -2578,6 +3179,17 @@
       "source": "skill_manifest"
     },
     {
+      "type": "follows",
+      "from": "intra-group-transaction-compliance",
+      "to": "portfolio-fit-assessment",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/intra-group-transaction-compliance/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "investment-feasibility-modeling",
       "to": "debt-and-contingent-liability-simulation",
@@ -2597,6 +3209,17 @@
       "provenance": {
         "file": "skills/investment-feasibility-modeling/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "follows",
+      "from": "investment-feasibility-modeling",
+      "to": "monte-carlo-simulation",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/investment-feasibility-modeling/SKILL.md",
+        "field": "relates_to",
+        "index": 0
       }
     },
     {
@@ -2639,6 +3262,17 @@
       "type": "used_by",
       "from": "investment-feasibility-modeling",
       "to": "valuation-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/valuation-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "investment-feasibility-modeling",
+      "to": "valuation-agent",
       "source": "skill_manifest"
     },
     {
@@ -2655,6 +3289,17 @@
       "provenance": {
         "file": "skills/investment-feasibility-modeling/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "follows",
+      "from": "investment-vehicle-structuring",
+      "to": "antitrust-screening",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 0
       }
     },
     {
@@ -2679,6 +3324,17 @@
       "type": "used_by",
       "from": "investment-vehicle-structuring",
       "to": "legal-counsel",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/legal-counsel.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "investment-vehicle-structuring",
+      "to": "legal-counsel",
       "source": "skill_manifest"
     },
     {
@@ -2698,6 +3354,39 @@
       "from": "investment-vehicle-structuring",
       "to": "phase3",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "investment-vehicle-structuring",
+      "to": "project-review",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/investment-vehicle-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "follows",
+      "from": "jv-structuring",
+      "to": "investment-vehicle-structuring",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/jv-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "jv-structuring",
+      "to": "legal-counsel",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/legal-counsel.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "used_by",
@@ -2734,6 +3423,17 @@
       "source": "skill_manifest"
     },
     {
+      "type": "follows",
+      "from": "jv-structuring",
+      "to": "project-review",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/jv-structuring/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "jv-structuring",
       "to": "stage-gate-governance",
@@ -2752,6 +3452,28 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "k-law",
+      "to": "certification-transferability",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/k-law/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "k-law",
+      "to": "legal-counsel",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/legal-counsel.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
       "type": "used_by",
       "from": "k-law",
       "to": "legal-counsel",
@@ -2762,6 +3484,17 @@
       "from": "k-law",
       "to": "phase5",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "legal-due-diligence",
+      "to": "antitrust-screening",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/legal-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -2782,10 +3515,32 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "legal-due-diligence",
+      "to": "k-law",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/legal-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "legal-due-diligence",
       "to": "k-law",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "legal-due-diligence",
+      "to": "legal-counsel",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/legal-counsel.md",
+        "field": "required_skills",
+        "index": 4
+      }
     },
     {
       "type": "used_by",
@@ -2848,10 +3603,32 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "management-incentive-review",
+      "to": "customer-attrition-risk",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/management-incentive-review/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "management-incentive-review",
       "to": "customer-attrition-risk",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "management-incentive-review",
+      "to": "hr-integration-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/hr-integration-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "used_by",
@@ -2884,6 +3661,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "master-data-governance",
+      "to": "data-architect",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/data-architect.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "master-data-governance",
       "to": "data-normalization",
@@ -2900,6 +3688,28 @@
       "from": "mcp-server-integration",
       "to": "auth-and-account-management",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "mcp-server-integration",
+      "to": "backend-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/backend-engineer.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "mcp-server-integration",
+      "to": "platform-lead",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/platform-lead.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -2946,6 +3756,17 @@
       }
     },
     {
+      "type": "follows",
+      "from": "monte-carlo-simulation",
+      "to": "investment-vehicle-structuring",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/monte-carlo-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "phase",
       "from": "monte-carlo-simulation",
       "to": "phase3",
@@ -2956,6 +3777,17 @@
       "from": "monte-carlo-simulation",
       "to": "quant-methodologist",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "monte-carlo-simulation",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/monte-carlo-simulation/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -3016,16 +3848,49 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "observability-and-alerting",
+      "to": "sre",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/sre.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "org-readiness-assessment",
       "to": "compensation-harmonization-analysis",
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "org-readiness-assessment",
+      "to": "compliance-monitoring",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/org-readiness-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "org-readiness-assessment",
       "to": "debt-and-contingent-liability-simulation",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "org-readiness-assessment",
+      "to": "hr-integration-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/hr-integration-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "used_by",
@@ -3058,10 +3923,32 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "org-readiness-assessment",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/org-readiness-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "org-readiness-assessment",
       "to": "talent-pipeline-planning",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "partner-due-diligence",
+      "to": "jv-structuring",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/partner-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -3089,6 +3976,17 @@
       "type": "used_by",
       "from": "partner-due-diligence",
       "to": "partnership-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/partnership-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "partner-due-diligence",
+      "to": "partnership-agent",
       "source": "skill_manifest"
     },
     {
@@ -3098,10 +3996,32 @@
       "source": "skill_manifest"
     },
     {
+      "type": "follows",
+      "from": "partner-sourcing-strategy",
+      "to": "partner-due-diligence",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/partner-sourcing-strategy/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "partner-sourcing-strategy",
       "to": "partner-due-diligence",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "partner-sourcing-strategy",
+      "to": "partnership-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/partnership-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "used_by",
@@ -3128,6 +4048,23 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "peer-benchmarking",
+      "to": "financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "peer-benchmarking",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
+    },
+    {
       "type": "references",
       "from": "peer-benchmarking",
       "to": "growth-projection-modeling",
@@ -3152,10 +4089,49 @@
       "source": "prose"
     },
     {
+      "type": "phase",
+      "from": "peer-benchmarking",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "peer-benchmarking",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/peer-benchmarking/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "permit-pathway-mapping",
+      "to": "certification-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/certification-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
       "type": "used_by",
       "from": "permit-pathway-mapping",
       "to": "certification-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "permit-pathway-mapping",
+      "to": "certification-roadmap",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/permit-pathway-mapping/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -3186,6 +4162,17 @@
       "from": "permit-pathway-mapping",
       "to": "regulatory-screening",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "pmi-planning",
+      "to": "compensation-harmonization-analysis",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/pmi-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -3314,6 +4301,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "portfolio-fit-assessment",
+      "to": "executive-presentation",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/portfolio-fit-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "portfolio-fit-assessment",
       "to": "group-level-review",
@@ -3326,10 +4324,32 @@
       "source": "skill_manifest"
     },
     {
+      "type": "follows",
+      "from": "portfolio-fit-assessment",
+      "to": "intra-group-transaction-compliance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/portfolio-fit-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "portfolio-fit-assessment",
       "to": "intra-group-transaction-compliance",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "portfolio-fit-assessment",
+      "to": "jv-structuring",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/portfolio-fit-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
     },
     {
       "type": "phase",
@@ -3342,6 +4362,17 @@
       "from": "portfolio-fit-assessment",
       "to": "phase6",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "portfolio-fit-assessment",
+      "to": "project-review",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/portfolio-fit-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
     },
     {
       "type": "references",
@@ -3357,6 +4388,17 @@
       "provenance": {
         "file": "skills/procedure-reference-override/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "project-review",
+      "to": "partnership-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/partnership-agent.md",
+        "field": "required_skills",
+        "index": 2
       }
     },
     {
@@ -3380,7 +4422,63 @@
     {
       "type": "used_by",
       "from": "project-review",
+      "to": "pm",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/pm.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "follows",
+      "from": "project-review",
+      "to": "portfolio-fit-assessment",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/project-review/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "project-review",
       "to": "process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "project-review",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "project-review",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/project-review/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "phase",
+      "from": "proxy-industry-chain",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "proxy-industry-chain",
+      "to": "quant-methodologist",
       "source": "skill_manifest"
     },
     {
@@ -3388,6 +4486,17 @@
       "from": "proxy-industry-chain",
       "to": "rag-scoring-framework",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "proxy-industry-chain",
+      "to": "unit-conversion-calibration",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/proxy-industry-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -3421,6 +4530,17 @@
       "type": "used_by",
       "from": "quality-of-earnings",
       "to": "financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 4
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "quality-of-earnings",
+      "to": "financial-analyst",
       "source": "skill_manifest"
     },
     {
@@ -3446,6 +4566,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "quality-of-earnings",
+      "to": "investment-feasibility-modeling",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/quality-of-earnings/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "quality-of-earnings",
       "to": "investment-feasibility-modeling",
@@ -3464,6 +4595,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "query-performance-tuning",
+      "to": "dba",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/dba.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "query-performance-tuning",
       "to": "observability-and-alerting",
@@ -3480,6 +4622,17 @@
       "from": "rag-scoring-framework",
       "to": "customer-attrition-risk",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "rag-scoring-framework",
+      "to": "dd-to-valuation-bridge",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/rag-scoring-framework/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -3515,6 +4668,17 @@
       "type": "used_by",
       "from": "rag-scoring-framework",
       "to": "process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "rag-scoring-framework",
+      "to": "process-governance-manager",
       "source": "skill_manifest"
     },
     {
@@ -3531,6 +4695,17 @@
       "provenance": {
         "file": "skills/rag-scoring-framework/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "rag-scoring-framework",
+      "to": "risk-officer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/risk-officer.md",
+        "field": "required_skills",
+        "index": 1
       }
     },
     {
@@ -3576,6 +4751,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "region-profile-application",
+      "to": "region-lead",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/region-lead.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "region-profile-application",
       "to": "regional-incentive-sourcing",
@@ -3604,6 +4790,17 @@
       "from": "regional-incentive-sourcing",
       "to": "greenfield-feasibility",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "regional-incentive-sourcing",
+      "to": "permit-pathway-mapping",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/regional-incentive-sourcing/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -3637,6 +4834,17 @@
       "provenance": {
         "file": "skills/regional-incentive-sourcing/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "follows",
+      "from": "regional-incentive-sourcing",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/regional-incentive-sourcing/SKILL.md",
+        "field": "relates_to",
+        "index": 1
       }
     },
     {
@@ -3748,6 +4956,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "rest-api-design",
+      "to": "backend-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/backend-engineer.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "rest-api-design",
       "to": "mcp-server-integration",
@@ -3782,6 +5001,17 @@
       "from": "sample-driven-report-writing",
       "to": "competitive-intelligence",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "sample-driven-report-writing",
+      "to": "docs-writer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/docs-writer.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -3830,6 +5060,28 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "scenario-planning",
+      "to": "financial-statement-analysis",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/scenario-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "follows",
+      "from": "scenario-planning",
+      "to": "historical-financial-analysis",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/scenario-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "scenario-planning",
       "to": "investment-feasibility-modeling",
@@ -3843,6 +5095,17 @@
       "provenance": {
         "file": "skills/scenario-planning/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "scenario-planning",
+      "to": "market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 1
       }
     },
     {
@@ -3900,6 +5163,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "security-baseline-review",
+      "to": "security-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/security-engineer.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "security-baseline-review",
       "to": "security-scan",
@@ -3913,6 +5187,28 @@
     },
     {
       "type": "used_by",
+      "from": "security-scan",
+      "to": "platform-lead",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/platform-lead.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "security-scan",
+      "to": "security-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/security-engineer.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
+      "type": "used_by",
       "from": "site-infrastructure-assessment",
       "to": "greenfield-agent",
       "source": "skill_manifest"
@@ -3922,6 +5218,17 @@
       "from": "site-infrastructure-assessment",
       "to": "greenfield-feasibility",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "site-infrastructure-assessment",
+      "to": "investment-feasibility-modeling",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/site-infrastructure-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -3940,6 +5247,17 @@
       "from": "site-infrastructure-assessment",
       "to": "phase3",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "site-infrastructure-assessment",
+      "to": "regional-incentive-sourcing",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/site-infrastructure-assessment/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -3964,6 +5282,17 @@
       "from": "site-visit-protocol",
       "to": "phase4",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "site-visit-protocol",
+      "to": "talent-pipeline-planning",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/site-visit-protocol/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "used_by",
@@ -4032,10 +5361,32 @@
       "source": "skill_manifest"
     },
     {
+      "type": "used_by",
+      "from": "stage-gate-governance",
+      "to": "pm",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/pm.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "stage-gate-governance",
       "to": "policy-change-impact-analysis",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "stage-gate-governance",
+      "to": "process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 3
+      }
     },
     {
       "type": "used_by",
@@ -4080,6 +5431,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "strategic-fit-screening",
+      "to": "antitrust-screening",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/strategic-fit-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "strategic-fit-screening",
       "to": "checklist-authoring",
@@ -4101,6 +5463,17 @@
       "type": "used_by",
       "from": "strategic-fit-screening",
       "to": "process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 4
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "strategic-fit-screening",
+      "to": "process-governance-manager",
       "source": "skill_manifest"
     },
     {
@@ -4108,6 +5481,28 @@
       "from": "strategic-fit-screening",
       "to": "stage-gate-governance",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "strategic-fit-screening",
+      "to": "value-chain-linkage-analysis",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/strategic-fit-screening/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "follows",
+      "from": "talent-pipeline-planning",
+      "to": "community-partnership-planning",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/talent-pipeline-planning/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -4164,6 +5559,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "technical-due-diligence",
+      "to": "competitive-intelligence",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/technical-due-diligence/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "technical-due-diligence",
       "to": "dd-to-valuation-bridge",
@@ -4204,6 +5610,17 @@
       "source": "skill_manifest"
     },
     {
+      "type": "used_by",
+      "from": "translate",
+      "to": "docs-writer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/docs-writer.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "two-tier-approval-chain",
       "to": "deal-execution-playbook",
@@ -4220,6 +5637,28 @@
       "from": "two-tier-approval-chain",
       "to": "phase5",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "two-tier-approval-chain",
+      "to": "portfolio-fit-assessment",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/two-tier-approval-chain/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "two-tier-approval-chain",
+      "to": "process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 5
+      }
     },
     {
       "type": "used_by",
@@ -4240,6 +5679,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "ui-information-architecture",
+      "to": "frontend-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/frontend-engineer.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "ui-information-architecture",
       "to": "rest-api-design",
@@ -4252,16 +5702,50 @@
       "source": "prose"
     },
     {
+      "type": "phase",
+      "from": "unit-conversion-calibration",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
       "type": "references",
       "from": "unit-conversion-calibration",
       "to": "proxy-industry-chain",
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "unit-conversion-calibration",
+      "to": "quant-methodologist",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "unit-conversion-calibration",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/unit-conversion-calibration/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "value-chain-linkage-analysis",
       "to": "debt-and-contingent-liability-simulation",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "value-chain-linkage-analysis",
+      "to": "market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "used_by",
@@ -4282,6 +5766,17 @@
       "source": "prose"
     },
     {
+      "type": "follows",
+      "from": "value-chain-linkage-analysis",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/value-chain-linkage-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "vulnerability-management",
       "to": "deployment-and-release",
@@ -4294,10 +5789,32 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "vulnerability-management",
+      "to": "security-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/security-engineer.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
       "type": "references",
       "from": "vulnerability-management",
       "to": "update-bun-packages",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "wacc-input-session",
+      "to": "brownfield-feasibility",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/wacc-input-session/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
@@ -4316,6 +5833,28 @@
       "from": "wacc-input-session",
       "to": "phase2",
       "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "wacc-input-session",
+      "to": "site-infrastructure-assessment",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/wacc-input-session/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "wacc-input-session",
+      "to": "valuation-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/valuation-agent.md",
+        "field": "required_skills",
+        "index": 3
+      }
     },
     {
       "type": "used_by",
@@ -4340,6 +5879,17 @@
       "from": "waiver-management",
       "to": "policy-change-impact-analysis",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "zod-contract-gate",
+      "to": "backend-engineer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/backend-engineer.md",
+        "field": "required_skills",
+        "index": 2
+      }
     }
   ]
 }

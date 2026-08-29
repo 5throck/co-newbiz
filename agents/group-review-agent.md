@@ -20,6 +20,10 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/group-review-agent.md
+required_skills:
+  - intra-group-transaction-compliance
+  - portfolio-fit-assessment
+
 ---
 
 ## Role

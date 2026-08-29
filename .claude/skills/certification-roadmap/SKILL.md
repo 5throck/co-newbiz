@@ -24,6 +24,10 @@ metadata:
     - certification requirements
     - certification gap analysis
     - certification roadmap
+relates_to:
+  - skill: stage-gate-governance
+    type: follows
+
 ---
 
 ## Context

@@ -27,6 +27,12 @@ metadata:
   procedure_keys:
     - brownfield-dd
     - entity-establishment-execution
+relates_to:
+  - skill: financing-plan-review
+    type: follows
+  - skill: org-readiness-assessment
+    type: follows
+
 ---
 
 ## Context

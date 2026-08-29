@@ -27,6 +27,10 @@ metadata:
 
   procedure_keys:
     - brownfield-dd
+relates_to:
+  - skill: legal-due-diligence
+    type: follows
+
 ---
 
 ## Context

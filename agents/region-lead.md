@@ -20,6 +20,9 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/region-lead.md
+required_skills:
+  - region-profile-application
+
 ---
 
 ## Role

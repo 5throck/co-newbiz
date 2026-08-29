@@ -20,6 +20,10 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/docs-writer.md
+required_skills:
+  - sample-driven-report-writing
+  - translate
+
 ---
 
 ## Role

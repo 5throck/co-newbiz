@@ -20,6 +20,12 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/valuation-agent.md
+required_skills:
+  - debt-and-contingent-liability-simulation
+  - financing-plan-review
+  - investment-feasibility-modeling
+  - wacc-input-session
+
 ---
 
 ## Role

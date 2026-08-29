@@ -28,6 +28,12 @@ metadata:
     - greenfield-fs
     - greenfield-pre-fs
     - greenfield-screening
+relates_to:
+  - skill: investment-feasibility-modeling
+    type: follows
+  - skill: regional-incentive-sourcing
+    type: follows
+
 ---
 
 ## Context

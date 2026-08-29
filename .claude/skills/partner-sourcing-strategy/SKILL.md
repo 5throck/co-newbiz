@@ -24,6 +24,10 @@ metadata:
     - capability gap for a partner
     - hard partner dependency
     - JV partner search
+relates_to:
+  - skill: partner-due-diligence
+    type: follows
+
 ---
 
 ## Context

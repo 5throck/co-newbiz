@@ -45,6 +45,15 @@
         ]
       },
       {
+        "name": "certification-roadmap",
+        "used_by_agents": [
+          "certification-agent"
+        ],
+        "phases": [
+          2
+        ]
+      },
+      {
         "name": "certification-transferability",
         "used_by_agents": [
           "legal-counsel"
@@ -70,6 +79,15 @@
         ],
         "phases": [
           4
+        ]
+      },
+      {
+        "name": "compensation-harmonization-analysis",
+        "used_by_agents": [
+          "hr-integration-agent"
+        ],
+        "phases": [
+          6
         ]
       },
       {
@@ -120,6 +138,24 @@
         ]
       },
       {
+        "name": "executive-presentation",
+        "used_by_agents": [
+          "docs-writer"
+        ],
+        "phases": [
+          5
+        ]
+      },
+      {
+        "name": "financial-statement-analysis",
+        "used_by_agents": [
+          "financial-analyst"
+        ],
+        "phases": [
+          3
+        ]
+      },
+      {
         "name": "financing-plan-review",
         "used_by_agents": [
           "valuation-agent"
@@ -148,12 +184,30 @@
         ]
       },
       {
+        "name": "historical-financial-analysis",
+        "used_by_agents": [
+          "financial-analyst"
+        ],
+        "phases": [
+          3
+        ]
+      },
+      {
         "name": "incentive-clawback-assessment",
         "used_by_agents": [
           "incentive-agent"
         ],
         "phases": [
           4
+        ]
+      },
+      {
+        "name": "insight-synthesis",
+        "used_by_agents": [
+          "process-governance-manager"
+        ],
+        "phases": [
+          5
         ]
       },
       {
@@ -260,6 +314,15 @@
         ]
       },
       {
+        "name": "peer-benchmarking",
+        "used_by_agents": [
+          "financial-analyst"
+        ],
+        "phases": [
+          3
+        ]
+      },
+      {
         "name": "permit-pathway-mapping",
         "used_by_agents": [
           "certification-agent"
@@ -296,6 +359,15 @@
         "phases": [
           1,
           6
+        ]
+      },
+      {
+        "name": "proxy-industry-chain",
+        "used_by_agents": [
+          "quant-methodologist"
+        ],
+        "phases": [
+          3
         ]
       },
       {
@@ -408,6 +480,15 @@
         ],
         "phases": [
           5
+        ]
+      },
+      {
+        "name": "unit-conversion-calibration",
+        "used_by_agents": [
+          "quant-methodologist"
+        ],
+        "phases": [
+          3
         ]
       },
       {

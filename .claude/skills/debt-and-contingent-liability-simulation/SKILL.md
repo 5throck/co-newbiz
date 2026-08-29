@@ -28,6 +28,10 @@ metadata:
 
   procedure_keys:
     - brownfield-dd
+relates_to:
+  - skill: certification-transferability
+    type: follows
+
 ---
 
 ## Context

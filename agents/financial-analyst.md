@@ -20,6 +20,13 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/financial-analyst.md
+required_skills:
+  - financial-statement-analysis
+  - growth-projection-modeling
+  - historical-financial-analysis
+  - peer-benchmarking
+  - quality-of-earnings
+
 ---
 
 ## Role

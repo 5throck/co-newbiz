@@ -28,6 +28,16 @@ metadata:
     - group-investment-review
     - jv-lifecycle-governance
     - portfolio-venture-monitoring
+relates_to:
+  - skill: executive-presentation
+    type: follows
+  - skill: intra-group-transaction-compliance
+    type: follows
+  - skill: jv-structuring
+    type: follows
+  - skill: project-review
+    type: follows
+
 ---
 
 ## Context

@@ -24,6 +24,12 @@ metadata:
   procedure_keys:
     - brownfield-dd
     - entity-ic-review
+relates_to:
+  - skill: insight-synthesis
+    type: follows
+  - skill: org-readiness-assessment
+    type: follows
+
 ---
 
 ## Context

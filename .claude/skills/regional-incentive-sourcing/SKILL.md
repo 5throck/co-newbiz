@@ -28,6 +28,12 @@ metadata:
   procedure_keys:
     - greenfield-pre-fs
     - greenfield-screening
+relates_to:
+  - skill: permit-pathway-mapping
+    type: follows
+  - skill: stage-gate-governance
+    type: follows
+
 ---
 
 ## Context

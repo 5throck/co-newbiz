@@ -24,6 +24,12 @@ metadata:
   procedure_keys:
     - brownfield-screening
     - greenfield-screening
+relates_to:
+  - skill: antitrust-screening
+    type: follows
+  - skill: value-chain-linkage-analysis
+    type: follows
+
 ---
 
 ## Context

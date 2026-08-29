@@ -20,6 +20,12 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/security-engineer.md
+required_skills:
+  - security-baseline-review
+  - vulnerability-management
+  - access-control-review
+  - security-scan
+
 ---
 
 ## Role

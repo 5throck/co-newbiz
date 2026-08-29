@@ -30,6 +30,14 @@ metadata:
     - brownfield-dd
     - brownfield-fs
     - brownfield-screening
+relates_to:
+  - skill: management-incentive-review
+    type: follows
+  - skill: scenario-planning
+    type: follows
+  - skill: stage-gate-governance
+    type: follows
+
 ---
 
 ## Context

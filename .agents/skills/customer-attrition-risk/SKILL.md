@@ -26,6 +26,10 @@ metadata:
 
   procedure_keys:
     - brownfield-dd
+relates_to:
+  - skill: incentive-clawback-assessment
+    type: follows
+
 ---
 
 ## Context

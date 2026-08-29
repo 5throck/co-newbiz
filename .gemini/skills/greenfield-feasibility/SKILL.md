@@ -26,6 +26,10 @@ metadata:
 
   procedure_keys:
     - greenfield-pre-fs
+relates_to:
+  - skill: wacc-input-session
+    type: follows
+
 ---
 
 ## Context

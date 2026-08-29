@@ -20,6 +20,12 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/quant-methodologist.md
+required_skills:
+  - monte-carlo-simulation
+  - proxy-industry-chain
+  - scenario-planning
+  - unit-conversion-calibration
+
 ---
 
 ## Role

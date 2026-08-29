@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Skill Relationship Graph Generator
- * @version 1.8.0
+ * @version 1.8.2
  *
  * Generates a skill relationship graph from multiple sources:
  * - SKILL.md files (prerequisites, relates_to frontmatter fields)
@@ -402,11 +402,14 @@ function discoverNodes(): { skills: Map<string, GraphNode>, agents: Map<string, 
   }
 
   // L0 agents
+  // co-newbiz local adaptation: exclude README/README_ko — agents/ carries folder
+  // READMEs the canonical L0 loop never sees, and they were being counted as
+  // agent nodes.
   const agentsDir = join(ROOT, 'agents');
   if (existsSync(agentsDir)) {
     const entries = readdirSync(agentsDir);
     for (const entry of entries) {
-      if (entry.endsWith('.md') && entry !== 'handoff-spec.md') {
+      if (entry.endsWith('.md') && entry !== 'handoff-spec.md' && !/^README/.test(entry) && !entry.startsWith('_')) {
         const name = entry.replace('.md', '');
         agents.set(name, { id: name, type: 'agent', layer: localLayer });
       }

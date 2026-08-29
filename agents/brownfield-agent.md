@@ -20,6 +20,10 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/brownfield-agent.md
+required_skills:
+  - brownfield-feasibility
+  - dd-to-valuation-bridge
+
 ---
 
 ## Role

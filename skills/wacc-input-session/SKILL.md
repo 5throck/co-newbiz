@@ -26,6 +26,12 @@ metadata:
   procedure_keys:
     - brownfield-pre-fs
     - greenfield-pre-fs
+relates_to:
+  - skill: brownfield-feasibility
+    type: follows
+  - skill: site-infrastructure-assessment
+    type: follows
+
 ---
 
 ## Context

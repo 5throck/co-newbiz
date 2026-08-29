@@ -26,6 +26,10 @@ metadata:
     - historical volatility
     - base rate distribution
     - multi-year trajectory analysis
+relates_to:
+  - skill: peer-benchmarking
+    type: follows
+
 ---
 
 ## Context

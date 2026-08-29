@@ -20,6 +20,13 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/legal-counsel.md
+required_skills:
+  - certification-transferability
+  - investment-vehicle-structuring
+  - jv-structuring
+  - k-law
+  - legal-due-diligence
+
 ---
 
 ## Role

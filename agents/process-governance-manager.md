@@ -20,6 +20,14 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/process-governance-manager.md
+required_skills:
+  - insight-synthesis
+  - project-review
+  - rag-scoring-framework
+  - stage-gate-governance
+  - strategic-fit-screening
+  - two-tier-approval-chain
+
 ---
 
 ## Role

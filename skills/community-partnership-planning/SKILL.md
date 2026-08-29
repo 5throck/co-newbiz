@@ -25,6 +25,10 @@ metadata:
 
   procedure_keys:
     - greenfield-dd
+relates_to:
+  - skill: dd-to-valuation-bridge
+    type: follows
+
 ---
 
 ## Context

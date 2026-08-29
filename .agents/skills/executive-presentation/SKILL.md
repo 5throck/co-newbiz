@@ -27,6 +27,10 @@ metadata:
     - decision deck
     - strategy deck
     - board presentation
+relates_to:
+  - skill: stage-gate-governance
+    type: follows
+
 ---
 
 ## Context

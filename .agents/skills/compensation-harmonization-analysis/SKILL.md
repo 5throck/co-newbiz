@@ -25,6 +25,10 @@ metadata:
     - comp benchmark
     - upward bias
     - post-merger pay equalization
+relates_to:
+  - skill: stage-gate-governance
+    type: follows
+
 ---
 
 ## Context

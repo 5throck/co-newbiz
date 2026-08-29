@@ -27,6 +27,12 @@ metadata:
     - seeded simulation
     - P50 P95 NPV
     - contingent liability integration
+relates_to:
+  - skill: investment-vehicle-structuring
+    type: follows
+  - skill: scenario-planning
+    type: follows
+
 ---
 
 ## Context

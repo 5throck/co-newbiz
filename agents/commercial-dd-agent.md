@@ -20,6 +20,9 @@ lifecycle:
   created: 2026-08-19
   last_updated: 2026-08-19
   governance: docs/lifecycle/agents/commercial-dd-agent.md
+required_skills:
+  - commercial-due-diligence
+
 ---
 
 ## Role

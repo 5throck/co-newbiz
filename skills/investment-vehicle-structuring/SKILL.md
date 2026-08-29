@@ -31,6 +31,12 @@ metadata:
   procedure_keys:
     - brownfield-fs
     - deal-shape-chain
+relates_to:
+  - skill: antitrust-screening
+    type: follows
+  - skill: project-review
+    type: follows
+
 ---
 
 ## Context
