@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Added
+- **[2026-08-29]**: feat(skills): **Skill relationship graph adopted (ADR-0060) — ported from templates/common.** `scripts/generate-skill-graph.ts` (v1.7.0) + `scripts/verify-skill-graph.ts` (v1.5.0) copied from the canonical template layer; generated artifacts `docs/skill-graph.json` (224 nodes / 403 edges), `docs/skill-graph.md`, and the `docs/skill-graph.overrides.json` seed are committed. `scripts/dev-sync.ts` (1.5.5 → 1.6.0) gained the Step 4.65 skill graph gate before VERSION_MANIFEST generation — sync now regenerates and verifies the graph and halts on drift. One local adaptation: run-context detection keys on `templates/common` (not `templates/`) because this project ships in-project content templates under `templates/deliverables/`, which otherwise mis-tagged all nodes L0; with the fix the project tags L3 like every other scaffolded project. `@types/js-yaml` added as a devDependency for the js-yaml frontmatter parser. `bun run agent:verify`, `verify-skills`, and `validate-skills` all pass unchanged.
+
 ### Fixed
 - **[2026-08-28]**: chore(graph): `docs/graph/{graph.json,graph.md}` regenerated — the committed projection had drifted from the skill/agent/procedure SSOTs (discovered while cleaning up stale GitHub branches; the pre-push audit gate on `main` itself was failing this check).
 
