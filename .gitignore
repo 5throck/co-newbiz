@@ -17,7 +17,6 @@ node_modules/
 .next/
 dist/
 build/
-*.tsbuildinfo
 
 # OS artifacts
 .DS_Store
@@ -54,8 +53,6 @@ NUL
 
 # Databases
 *.sqlite
-*.sqlite-wal
-*.sqlite-shm
 *.db
 
 
@@ -74,7 +71,4 @@ memory/archive/
 
 # Ignore test temp directories
 tests/.temp/
-
-# Rendered report outputs (docx/pdf/hwpx — regenerate via `report` command)
-render_out/
 <!-- /WORKSPACE-MANAGED -->

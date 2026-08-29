@@ -1,8 +1,26 @@
-// @version 1.6.0
-// v1.6.0: feat(skill-graph): add step 4.65 skill graph gate (ADR-0060) — generates and
-//           verifies the skill relationship graph before VERSION_MANIFEST generation
-//           (ported from templates/common dev-sync v1.7.3+; scope loop omitted — no templates/ dir)
-// v1.5.5: (previous)
+// @version 1.8.0
+// v1.7.8: feat(skill-graph): step 4.65 scope loop (ADR-0060 Amendment 2) — after the L0
+//           unified graph gate, generate+verify every template scope (templates/common +
+//           templates/co-*) so each variant template ships its own docs/skill-graph.json;
+//           workspace-root-gated on templates/common so scaffolded projects never enter
+//           the loop (their own local graph comes from the existing guarded calls).
+//           Corrected the stale "generator is L0-only" comment.
+// v1.7.7: fix(pipeline): step 3.95 QA pre-check ran bare `bun test` instead of `bun run test`
+//           (the package.json script) — bare `bun test` recursively scans the whole CWD tree,
+//           pulling in every nested Projects/*/ repo's test suite (Playwright visual regression,
+//           MCP integration tests, etc.), turning a non-fatal check into a multi-minute noisy
+//           detour. `bun run test` correctly delegates to the scoped `test-runner.ts integration`.
+// v1.7.6: fix(pipeline): add step 4.62 cascade re-publish — heals template platform skill
+//           copies after sync-skills step 4.6 updates root platform dirs (mirrors 4.5 gating)
+// v1.7.3: feat(pipeline): add step 4.65 skill graph gate (ADR-0060) — generates and
+//           verifies skill relationship graph before VERSION_MANIFEST generation
+// v1.7.2: fix(pipeline): forward --spec-exempt via SYNC_SPEC_EXEMPT env instead of shell
+//           interpolation — the interpolated " --spec-exempt=X" (leading space) reached
+//           audit as a single argv word and defeated its startsWith parse, making the
+//           ADR-0055 escape hatch inert on every /sync run (ported from co-abap 1.7.2)
+// v1.7.1: fix(types): coerce Bun Shell stderr to string before .trim() (2 sites) and
+//           widen the five withRetry isSuccess lambdas to the (result: unknown) contract
+//           — typing-only, no behavior change (ported from co-abap docs/upstream-fix-list.md)
 // v1.5.4: fix(pr-check): "PR already exists for branch" step now checks PR state —
 //           previously `gh pr view <branch>` matched ANY PR regardless of state, so
 //           reusing a branch name whose earlier PR was already MERGED/CLOSED caused
@@ -42,6 +60,7 @@ if (path.resolve(actualCwd) !== expectedRoot) {
 // chain below still applies.
 const rawArgs = process.argv.slice(2);
 let bodyFilePath = '';
+let specExempt = '';
 const msgArgs: string[] = [];
 for (let i = 0; i < rawArgs.length; i++) {
   const arg = rawArgs[i];
@@ -49,6 +68,8 @@ for (let i = 0; i < rawArgs.length; i++) {
     bodyFilePath = rawArgs[++i] ?? '';
   } else if (arg.startsWith('--body-file=')) {
     bodyFilePath = arg.slice('--body-file='.length);
+  } else if (arg.startsWith('--spec-exempt=')) {
+    specExempt = arg.slice('--spec-exempt='.length);
   } else {
     msgArgs.push(arg);
   }
@@ -65,7 +86,7 @@ const msg = (msgArgs.join(' ') || "chore: update")
 // silently swallowed by the PR-creation fallback below). Shared detector also catches
 // Japanese/Chinese, not just Korean — see scripts/lib/language-guard.ts.
 if (hasNonEnglish(msg)) {
-    console.log(`${RED}❌ Commit message / PR title must be written in English (CONSTITUTION.md §3).${RESET}`);
+    console.log(`${RED}❌ Commit message / PR title must be written in English (context.md §3).${RESET}`);
     console.log(`${YELLOW}   Translate the message and re-run: /sync "<english message>"${RESET}`);
     if (import.meta.main) {
       process.exit(1);
@@ -234,12 +255,29 @@ if (fs.existsSync(archiveMemoryTs)) {
     }
 }
 
-// 3.9 Spec registry check (non-blocking — warns if approved specs are stale or code has no spec)
-// Output is intentionally visible (no .quiet()) — Stage 1 of the spec-registry-enforcement
-// rollout; see docs/designs/2026-08-16-spec-registry-enforcement-design.md.
+// 3.9 Spec registry check (BLOCKING since ADR-0055 Stage 2 — the relevance check
+// Fails when a code diff has no spec activity; stale/missing-spec stay WARN).
+// Output is intentionally visible (no .quiet()); same idiom as step 3.97.
 const specRegPath = path.join('docs', 'specs', 'registry.json');
 if (fs.existsSync(specRegPath)) {
-    await $`bun scripts/audit.ts --spec-check --lifecycle-only`.nothrow();
+    // Pass the exemption via SYNC_SPEC_EXEMPT (documented env fallback in audit.ts):
+    // interpolating ` --spec-exempt=X` into the Bun $ shell keeps the leading space in
+    // a single argv word, which defeats audit's startsWith('--spec-exempt=') parse.
+    const specEnv = specExempt ? { SYNC_SPEC_EXEMPT: specExempt } : {};
+    const specRes = await $`bun scripts/audit.ts --spec-check --lifecycle-only`
+        .env({ ...process.env, ...specEnv })
+        .nothrow();
+    if (specRes.exitCode !== 0) {
+        console.error(`${RED}✗ Step 3.9: spec-check FAILED (exit ${specRes.exitCode})${RESET}`);
+        console.error('  The diff touches code (scripts/templates/agents) with no relevant spec activity.');
+        console.error('  Fix: update docs/specs/ (or docs/designs/) alongside the change, or legitimize the');
+        console.error('  sync with --spec-exempt=E1..E5 (AGENTS.md §5.1.1 categories; e.g. --spec-exempt=E3 for a typo hotfix).');
+        if (import.meta.main) process.exit(1);
+    } else {
+        console.log(`${GREEN}✓ Spec registry check passed${RESET}`);
+    }
+} else {
+    console.log('📋 Step 3.9: skipped — no docs/specs/registry.json');
 }
 
 // 3.95 QA Pre-checks (non-fatal — unique checks from qa-gate.ts)
@@ -249,10 +287,18 @@ if (fs.existsSync('package.json')) {
     try {
         const pkg = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
         if (pkg.scripts?.test) {
-            const testResult = await $`bun test`.nothrow();
+            // Bare `bun test` (no path) recursively scans the entire CWD tree for *.test.ts,
+            // which includes every nested Projects/*/ repo (separate git repos scaffolded
+            // from templates/ — see README.md § Repository Structure). That pulled in
+            // unrelated suites (Playwright visual-regression, MCP integration, etc.) from
+            // other projects, making this non-fatal check take many minutes and print noise
+            // irrelevant to this repo. `bun run test` invokes the actual package.json script
+            // (`bun scripts/test-runner.ts integration`), which is already correctly scoped
+            // to this repo's own tests/ directory.
+            const testResult = await $`bun run test`.nothrow();
             if (testResult.exitCode !== 0) {
                 console.warn(`⚠️  Project tests failed (non-blocking, exit ${testResult.exitCode})`);
-                if (testResult.stderr) console.warn(testResult.stderr.trim());
+                if (testResult.stderr) console.warn(String(testResult.stderr).trim());
             }
         }
     } catch { /* ignore parse errors */ }
@@ -262,18 +308,66 @@ if (fs.existsSync('README.md') && !fs.existsSync('README_ko.md')) {
     console.warn('⚠️  README_ko.md missing (non-blocking)');
 }
 
+// 3.96 Skill & decision-chain validators (fail-closed gates, ADR-0055/0061; reledgev
+//      pipeline-coverage review 2026-08-29). Both are L0-scoped — scaffolded projects
+//      skip via existsSync guards. Previously standalone-only (manual invocation),
+//      which let relation/decision drift land unnoticed between syncs.
+if (fs.existsSync('scripts/validate-skills.ts')) {
+    console.log('📋 Step 3.96a: Skill lifecycle & relation validation...');
+    const skillsRes = await $`bun scripts/validate-skills.ts`.nothrow();
+    if (skillsRes.exitCode !== 0) {
+        console.error(`${RED}❌ Step 3.96a: validate-skills.ts FAILED (exit ${skillsRes.exitCode})${RESET}`);
+        console.error(`${YELLOW}   Fix: review relation metadata errors (form homogeneity, type vocabulary, target existence) in skills/ and templates/*/skills/, then re-run /sync.${RESET}`);
+        if (import.meta.main) process.exit(1);
+    } else {
+        console.log(`${GREEN}✓ Skill lifecycle & relation validation passed${RESET}`);
+    }
+}
+if (fs.existsSync('docs/decisions') && fs.existsSync('scripts/validate-decisions.ts')) {
+    console.log('📋 Step 3.96b: Decision record chain validation...');
+    const decRes = await $`bun scripts/validate-decisions.ts`.nothrow();
+    if (decRes.exitCode !== 0) {
+        console.error(`${RED}❌ Step 3.96b: validate-decisions.ts FAILED (exit ${decRes.exitCode})${RESET}`);
+        console.error(`${YELLOW}   Fix: repair DEC frontmatter/chain links (evidence_refs ⊆ ledger, knowledge_refs existence) per ADR-0061, then re-run /sync.${RESET}`);
+        if (import.meta.main) process.exit(1);
+    } else {
+        console.log(`${GREEN}✓ Decision record chain validation passed${RESET}`);
+    }
+}
+
+// 3.97 ADR governance linkage gate (blocking — Stage 2 of ADR-0059).
+//     The validator is L0-only (no docs/adr corpus exists in generated projects),
+//     so this step is guarded by existsSync — scaffolded projects skip it.
+if (fs.existsSync('scripts/verify-adr-governance.ts')) {
+    console.log('📋 Step 3.97: ADR governance linkage check...');
+    const govRes = await $`bun scripts/verify-adr-governance.ts --strict`.nothrow();
+    if (govRes.exitCode !== 0) {
+        console.error(`${RED}❌ ADR governance linkage check failed.${RESET}`);
+        console.error(`${YELLOW}   One or more post-cutoff Accepted ADRs lack governance-doc references, or marker-drift findings exist.${RESET}`);
+        console.error(`${YELLOW}   For linkage: Add ADR-00NN pointers to context.md, docs/constitution/, or docs/governance/ per docs/adr/0059 and re-run /sync.${RESET}`);
+        console.error(`${YELLOW}   For marker-drift: Review the duplicated section, update it if stale, then re-seed with: bun scripts/verify-adr-governance.ts --update-marker-hashes${RESET}`);
+        if (import.meta.main) {
+            process.exit(1);
+        }
+    } else {
+        console.log(`${GREEN}✓ ADR governance linkage check passed${RESET}`);
+    }
+} else {
+    console.log('📋 Step 3.97: skipped — ADR governance validator is L0-only (not present in scaffolded projects)');
+}
+
 // 4.5 L0→L1 publish — must run BEFORE audit gate so that CONSTITUTION scrub
 //     is applied to templates/common/ files before the L0-leakage check.
 const isWorkspaceRoot = fs.existsSync('templates/common') && fs.existsSync('scripts/propagation-map.json');
 // L0 context: context.md exists at workspace root — publish failures are fatal here.
-const isL0Context = fs.existsSync('CONSTITUTION.md');
+const isL0Context = fs.existsSync('context.md');
 if (isWorkspaceRoot) {
     console.log('\n📦 Publishing L0→L1 (scripts, skills, commands)...');
     try {
         const publishRes = await $`bun scripts/propagate-to-templates.ts --apply`.nothrow();
         if (publishRes.exitCode !== 0) {
             if (isL0Context) {
-                console.log(`${RED}❌ L0→L1 publish failed — fatal in L0 context (CONSTITUTION.md present)${RESET}`);
+                console.log(`${RED}❌ L0→L1 publish failed — fatal in L0 context (context.md present)${RESET}`);
                 if (import.meta.main) {
                   process.exit(1);
                 }
@@ -283,12 +377,74 @@ if (isWorkspaceRoot) {
         }
     } catch (e) {
         if (isL0Context) {
-            console.log(`${RED}❌ L0→L1 publish failed — fatal in L0 context (CONSTITUTION.md present)${RESET}`);
+            console.log(`${RED}❌ L0→L1 publish failed — fatal in L0 context (context.md present)${RESET}`);
             if (import.meta.main) {
               process.exit(1);
             }
         } else {
             console.log(`${YELLOW}⚠️  L0→L1 publish failed — continuing sync${RESET}`);
+        }
+    }
+}
+
+// ── Step 4.52: Dependency version sync (root → templates/common) ──
+//     Aligns shared dependency versions from root package.json to
+//     templates/common/package.json and regenerates bun.lock.
+//     Runs after 4.5 (propagate never touches package.json) and before
+//     audit 4.9 so the dependency-mirror audit check passes on the
+//     self-healed state. Files written here are swept into the same
+//     commit by git add -A.
+if (isWorkspaceRoot) {
+    console.log('\n📦 Syncing dependency versions (root → templates/common)...');
+    try {
+        const depSyncRes = await $`bun scripts/sync-template-deps.ts --apply`.nothrow();
+        if (depSyncRes.exitCode !== 0) {
+            console.error(`${RED}❌ Dependency sync failed.${RESET}`);
+            if (depSyncRes.stderr) {
+                console.error(String(depSyncRes.stderr).trim());
+            }
+            if (import.meta.main) {
+                process.exit(1);
+            }
+        } else {
+            console.log(`${GREEN}✓ Dependency sync completed${RESET}`);
+        }
+    } catch (e) {
+        console.error(`${RED}❌ Dependency sync failed: ${e}${RESET}`);
+        if (import.meta.main) {
+            process.exit(1);
+        }
+    }
+}
+
+// ── Step 4.55: COMMON-CONTEXT marker-rewrite drift check (WARN stage, L0-only) ──
+// Per ADR-0062 + the ADR-0055 WARN-first playbook: the pilot propagation domains
+// (constitution-context, variant-context) are checked for zone drift at sync time.
+// Dry-run only — drift is reported as a WARN (non-fatal); the operator runs
+// `bun scripts/propagate-to-templates.ts --marker-rewrite --domain <name> --apply`
+// manually to refresh zones. Promotion to a hard gate waits for pilot soak.
+// Wired 2026-08-25 after the 4-variant pilot held 0 would-overwrite across ~10 PRs
+// (design doc: docs/designs/2026-08-24-marker-propagation-engine-design.md).
+if (isWorkspaceRoot && isL0Context) {
+    console.log('\n🔍 COMMON-CONTEXT marker-rewrite drift check (WARN stage)...');
+    for (const domain of ['constitution-context', 'variant-context']) {
+        try {
+            const res = await $`bun scripts/propagate-to-templates.ts --marker-rewrite --domain ${domain}`.nothrow();
+            const out = res.stdout.toString();
+            const m = out.match(/Would overwrite: (\d+)/);
+            const wouldOverwrite = m ? parseInt(m[1], 10) : null;
+            if (res.exitCode !== 0) {
+                console.log(`${YELLOW}⚠️  marker-rewrite check failed for domain '${domain}' (exit ${res.exitCode}) — investigate manually${RESET}`);
+            } else if (wouldOverwrite === null) {
+                console.log(`${YELLOW}⚠️  marker-rewrite output for domain '${domain}' had no drift counter — investigate manually${RESET}`);
+            } else if (wouldOverwrite > 0) {
+                console.log(`${YELLOW}⚠️  COMMON-CONTEXT drift in domain '${domain}': ${wouldOverwrite} zone(s) would be overwritten${RESET}`);
+                console.log(`${YELLOW}   Refresh manually: bun scripts/propagate-to-templates.ts --marker-rewrite --domain ${domain} --apply${RESET}`);
+            } else {
+                console.log(`${GREEN}✓ COMMON-CONTEXT domain '${domain}' in sync (0 would-overwrite)${RESET}`);
+            }
+        } catch {
+            console.log(`${YELLOW}⚠️  marker-rewrite check could not run for domain '${domain}' — investigate manually${RESET}`);
         }
     }
 }
@@ -299,14 +455,64 @@ console.log('📋 Step 4.6: Syncing skills to platform directories...');
 const syncSkillsResult = await $`bun scripts/sync-skills.ts`.nothrow();
 if (syncSkillsResult.exitCode !== 0) {
     console.warn(`⚠️  Skill sync had warnings (exit ${syncSkillsResult.exitCode}), continuing...`);
-    if (syncSkillsResult.stderr) console.warn(syncSkillsResult.stderr.trim());
+    if (syncSkillsResult.stderr) console.warn(String(syncSkillsResult.stderr).trim());
+}
+
+// 4.62 Cascade re-publish — unconditional second L0→L1 pass after skill sync.
+//     Step 4.5 runs propagate-to-templates.ts --apply BEFORE step 4.6 sync-skills.ts
+//     updates root platform dirs (.claude/.gemini/.agents/skills). This causes a lag:
+//     4.5 compares stale platform copies to templates, then 4.6 updates platforms,
+//     leaving template platform copies stale until the NEXT sync. Fix: re-run
+//     propagate-to-templates.ts --apply unconditionally after 4.6 (new step 4.62).
+//     Transforms are directional and idempotent, so the converged pass copies nothing.
+//     Design doc: docs/designs/2026-08-25-pipeline-cascade-repass-design.md
+if (isWorkspaceRoot) {
+    console.log('📦 Step 4.62: Cascade re-publish (L0→L1 after skill sync)...');
+    try {
+        const repassRes = await $`bun scripts/propagate-to-templates.ts --apply`.nothrow();
+        if (repassRes.exitCode !== 0) {
+            if (isL0Context) {
+                console.log(`${RED}❌ Cascade re-publish failed — fatal in L0 context${RESET}`);
+                if (import.meta.main) {
+                    process.exit(1);
+                }
+            } else {
+                console.log(`${YELLOW}⚠️  Cascade re-publish failed — continuing sync${RESET}`);
+            }
+        } else {
+            const stdout = repassRes.stdout.toString();
+            if (stdout.includes('Nothing to apply')) {
+                console.log(`${GREEN}✓ Step 4.62: template mirrors already converged (nothing to apply)${RESET}`);
+            } else {
+                const match = stdout.match(/Done\. (\d+) file\(s\) copied\./);
+                if (match) {
+                    const n = match[1];
+                    console.log(`${GREEN}✓ Step 4.62: cascade re-publish complete — ${n} file(s) copied${RESET}`);
+                } else {
+                    console.log(`${GREEN}✓ Step 4.62: cascade re-publish complete${RESET}`);
+                }
+            }
+        }
+    } catch (e) {
+        if (isL0Context) {
+            console.log(`${RED}❌ Cascade re-publish failed — fatal in L0 context${RESET}`);
+            if (import.meta.main) {
+                process.exit(1);
+            }
+        } else {
+            console.log(`${YELLOW}⚠️  Cascade re-publish failed — continuing sync${RESET}`);
+        }
+    }
 }
 
 // 4.65 Skill Graph Gate — generates and verifies skill relationship graph (ADR-0060
-//     + Amendment 2). Scaffolded projects have no templates/ directory, so the scope
-//     loop skips; the project's own local graph is emitted by the guarded calls below
-//     (run-context auto-detection tags project assets L3). Must run BEFORE
-//     VERSION_MANIFEST generation so graph files are committed.
+//     + Amendment 2). At the workspace root this covers the L0 unified graph plus a
+//     generate+verify loop over every template scope (templates/common and
+//     templates/co-* ship their own docs/skill-graph.json). Scaffolded projects have
+//     no templates/ directory, so the scope loop skips; the project's own local
+//     graph is emitted by the same guarded calls below (run-context auto-detection
+//     tags project assets L3). Must run BEFORE VERSION_MANIFEST generation so graph
+//     files are committed.
 if (fs.existsSync('scripts/generate-skill-graph.ts')) {
     console.log('📋 Step 4.65: Skill relationship graph gate...');
     const graphGenRes = await $`bun scripts/generate-skill-graph.ts`.nothrow();
@@ -328,12 +534,38 @@ if (fs.existsSync('scripts/generate-skill-graph.ts')) {
         }
     }
 
+    // Template scopes (workspace root only — projects have no templates/ directory).
+    if (fs.existsSync('templates/common')) {
+        const scopes = ['common'];
+        for (const entry of fs.readdirSync('templates', { withFileTypes: true })) {
+            if (entry.isDirectory() && entry.name.startsWith('co-')) scopes.push(entry.name);
+        }
+        for (const scope of scopes) {
+            const scopeGenRes = await $`bun scripts/generate-skill-graph.ts --scope ${scope}`.nothrow();
+            if (scopeGenRes.exitCode !== 0) {
+                console.error(`${RED}❌ Skill graph generation failed for scope: ${scope}.${RESET}`);
+                if (import.meta.main) {
+                    process.exit(1);
+                }
+            }
+            const scopeVerifyRes = await $`bun scripts/verify-skill-graph.ts --scope ${scope}`.nothrow();
+            if (scopeVerifyRes.exitCode !== 0) {
+                console.error(`${RED}❌ Skill graph verification failed for scope: ${scope}.${RESET}`);
+                console.error(`${YELLOW}   Fix: bun scripts/generate-skill-graph.ts --scope ${scope}${RESET}`);
+                if (import.meta.main) {
+                    process.exit(1);
+                }
+            }
+        }
+        console.log(`${GREEN}✓ Skill graph scope artifacts verified (${scopes.length} scopes)${RESET}`);
+    }
+
     console.log(`${GREEN}✓ Skill graph verification passed${RESET}`);
 } else {
     console.log('📋 Step 4.65: skipped — skill graph generator not present in this context');
 }
 
-// 4. Generate VERSION_MANIFEST.md
+// 4.7 Generate VERSION_MANIFEST.md
 const genManifestTs = path.join('scripts', 'generate-version-manifest.ts');
 if (fs.existsSync(genManifestTs)) {
     const genRes = await $`bun ${genManifestTs}`.quiet().nothrow();
@@ -482,7 +714,7 @@ try {
 
 const pushRetry = await withRetry(
     () => $`git push -u origin ${branch}`.nothrow(),
-    { ...DEFAULT_CONFIG, maxRetries: 3, initialDelay: 1000, isSuccess: (r: { exitCode: number }) => r.exitCode === 0 },
+    { ...DEFAULT_CONFIG, maxRetries: 3, initialDelay: 1000, isSuccess: (r: unknown) => typeof r === "object" && r !== null && (r as { exitCode: number }).exitCode === 0 },
     'git push'
 );
 const pushProc = pushRetry.result as { exitCode: number; stderr: { toString(): string } } | undefined;
@@ -561,26 +793,26 @@ if (existingPrUrl) {
     if (bodySourceFile) {
         prCreateRetry = await withRetry(
             () => $`gh pr create --title ${msg} --body-file ${bodySourceFile}`.nothrow(),
-            { ...DEFAULT_CONFIG, maxRetries: 3, initialDelay: 1000, isSuccess: (r: { exitCode: number }) => r.exitCode === 0 },
+            { ...DEFAULT_CONFIG, maxRetries: 3, initialDelay: 1000, isSuccess: (r: unknown) => typeof r === "object" && r !== null && (r as { exitCode: number }).exitCode === 0 },
             'gh pr create'
         );
     } else if (prBody) {
         prCreateRetry = await withRetry(
             () => $`gh pr create --title ${msg} --body ${prBody}`.nothrow(),
-            { ...DEFAULT_CONFIG, maxRetries: 3, initialDelay: 1000, isSuccess: (r: { exitCode: number }) => r.exitCode === 0 },
+            { ...DEFAULT_CONFIG, maxRetries: 3, initialDelay: 1000, isSuccess: (r: unknown) => typeof r === "object" && r !== null && (r as { exitCode: number }).exitCode === 0 },
             'gh pr create'
         );
     } else if (fs.existsSync(path.join('.github', 'pull_request_template.md'))) {
         const prTpl = fs.readFileSync(path.join('.github', 'pull_request_template.md'), 'utf-8');
         prCreateRetry = await withRetry(
             () => $`gh pr create --title ${msg} --body ${prTpl}`.nothrow(),
-            { ...DEFAULT_CONFIG, maxRetries: 3, initialDelay: 1000, isSuccess: (r: { exitCode: number }) => r.exitCode === 0 },
+            { ...DEFAULT_CONFIG, maxRetries: 3, initialDelay: 1000, isSuccess: (r: unknown) => typeof r === "object" && r !== null && (r as { exitCode: number }).exitCode === 0 },
             'gh pr create'
         );
     } else {
         prCreateRetry = await withRetry(
             () => $`gh pr create --fill`.nothrow(),
-            { ...DEFAULT_CONFIG, maxRetries: 3, initialDelay: 1000, isSuccess: (r: { exitCode: number }) => r.exitCode === 0 },
+            { ...DEFAULT_CONFIG, maxRetries: 3, initialDelay: 1000, isSuccess: (r: unknown) => typeof r === "object" && r !== null && (r as { exitCode: number }).exitCode === 0 },
             'gh pr create'
         );
     }

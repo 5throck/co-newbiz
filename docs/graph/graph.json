@@ -1986,7 +1986,7 @@
       "id": "skill:skill-lifecycle-manager",
       "type": "skill",
       "label": "skill-lifecycle-manager",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "status": "active"
     },
     {
@@ -2021,7 +2021,7 @@
       "id": "skill:sync",
       "type": "skill",
       "label": "sync",
-      "version": "1.2.0",
+      "version": "1.2.2",
       "status": "active"
     },
     {
@@ -2049,7 +2049,7 @@
       "id": "skill:translate",
       "type": "skill",
       "label": "translate",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "active"
     },
     {

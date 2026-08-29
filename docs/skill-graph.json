@@ -4425,17 +4425,6 @@
       "source": "skill_manifest"
     },
     {
-      "type": "used_by",
-      "from": "project-review",
-      "to": "pm",
-      "source": "required_skills",
-      "provenance": {
-        "file": "agents/pm.md",
-        "field": "required_skills",
-        "index": 1
-      }
-    },
-    {
       "type": "follows",
       "from": "project-review",
       "to": "portfolio-fit-assessment",
@@ -5312,6 +5301,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "skill-lifecycle-manager",
+      "to": "script-lifecycle-manager",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/skill-lifecycle-manager/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "stage-gate-governance",
       "to": "compliance-monitoring",
@@ -5364,17 +5365,6 @@
       "from": "stage-gate-governance",
       "to": "phase6",
       "source": "skill_manifest"
-    },
-    {
-      "type": "used_by",
-      "from": "stage-gate-governance",
-      "to": "pm",
-      "source": "required_skills",
-      "provenance": {
-        "file": "agents/pm.md",
-        "field": "required_skills",
-        "index": 0
-      }
     },
     {
       "type": "references",

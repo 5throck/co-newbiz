@@ -85,7 +85,7 @@
 | `policy-change-impact-analysis` | L3 | — | — | — | — | — |
 | `portfolio-fit-assessment` | L3 | group-review-agent | phase5, phase6 | executive-presentation (follows), intra-group-transaction-compliance (follows), jv-structuring (follows), project-review (follows) | — | — |
 | `procedure-reference-override` | L3 | — | — | — | — | — |
-| `project-review` | L3 | partnership-agent, partnership-agent, pm, process-governance-manager, process-governance-manager | phase1, phase6 | portfolio-fit-assessment (follows), stage-gate-governance (follows) | — | — |
+| `project-review` | L3 | partnership-agent, partnership-agent, process-governance-manager, process-governance-manager | phase1, phase6 | portfolio-fit-assessment (follows), stage-gate-governance (follows) | — | — |
 | `proxy-industry-chain` | L3 | quant-methodologist | phase3 | unit-conversion-calibration (follows) | — | — |
 | `quality-of-earnings` | L3 | financial-analyst, financial-analyst | phase3 | investment-feasibility-modeling (follows) | — | — |
 | `query-performance-tuning` | L3 | dba | — | — | — | — |
@@ -104,8 +104,8 @@
 | `security-scan` | L3 | platform-lead, security-engineer | — | — | — | — |
 | `site-infrastructure-assessment` | L3 | greenfield-agent | phase1, phase2, phase3 | investment-feasibility-modeling (follows), regional-incentive-sourcing (follows) | — | — |
 | `site-visit-protocol` | L3 | technical-dd-agent | phase4 | talent-pipeline-planning (follows) | — | — |
-| `skill-lifecycle-manager` | L3 | — | — | — | — | — |
-| `stage-gate-governance` | L3 | pm, process-governance-manager, process-governance-manager | phase1, phase2, phase3, phase4, phase5, phase6 | — | — | — |
+| `skill-lifecycle-manager` | L3 | — | — | script-lifecycle-manager (composes_with) | — | — |
+| `stage-gate-governance` | L3 | process-governance-manager, process-governance-manager | phase1, phase2, phase3, phase4, phase5, phase6 | — | — | — |
 | `standup-synthesizer` | L3 | — | — | — | — | — |
 | `statute-change-monitoring` | L3 | — | — | — | — | — |
 | `strategic-fit-screening` | L3 | process-governance-manager, process-governance-manager | phase1 | antitrust-screening (follows), value-chain-linkage-analysis (follows) | — | — |
