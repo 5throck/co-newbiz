@@ -1,6 +1,6 @@
 # ADR-0073: Adopt the skill relationship graph and the 0–7 lifecycle phase system
 
-**Status**: Proposed — implementation landed in the same change (precedent: ADR-0069/0070 landed Proposed, accepted after verification)
+**Status**: Accepted — implementation landed in the same change (precedent: ADR-0069/0070 landed Proposed, accepted after verification). Partly superseded on 2026-08-29: the three generator adaptations in Decision (b) were upstreamed into the canonical L0 generator (workspace ADR-0060 Amendment 7, v1.8.3); this project now tracks the canonical copy — see the reconciliation note at the end of this ADR.
 **Date**: 2026-08-29
 **Deciders**: user (standing directive), process-governance-manager (workstream), docs-writer (phase definitions)
 **Design of record**: `docs/phase-definitions.md` (phase system); workspace ADR-0060 + Amendments 1–3 and `templates/common/scripts/generate-skill-graph.ts` (graph machinery, canonical layer)
@@ -45,3 +45,15 @@ Phase semantics also required a decision: the standard table fixes phases 5–6 
 ## Cross-references
 
 `docs/phase-definitions.md` · `docs/skill-graph.md` · `variant.json` skill_manifest · `procedures/**/schema.yaml` (`gate:` fields — the phase SSOT) · `scripts/generate-skill-graph.ts` (1.8.2) · `scripts/dev-sync.ts` Step 4.65 · workspace ADR-0060 + Amendments 1–3 (`ai_workspace` root) · local ADR-0060 (unrelated, kill-criteria) · ADR-0028 (Entity IC approval chain — the phase-5 human gate)
+
+## Reconciliation note (2026-08-29)
+
+The three generator adaptations in Decision (b) were upstreamed into the
+canonical workspace generator as v1.8.3 (workspace ADR-0060 Amendment 7;
+`ai_workspace` PR #766): `templates/common`-keyed L0/L3 detection, project-local
+`variant.json` Source 3b, and `README*`/`_` exclusion in agent discovery. This
+project's `scripts/generate-skill-graph.ts` was replaced with the L0 copy
+(logic diff 0) and `docs/skill-graph.{json,md}` regenerated and verified
+(223 nodes / 661 edges; manifest edges preserved). The fork-maintenance rule in
+Consequences ("upstream updates must be re-ported, not blind-copied") is retired
+for the generator — it is once again a canonical-layer copy.
