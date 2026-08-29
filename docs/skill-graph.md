@@ -14,6 +14,7 @@
 | `agent-lifecycle-manager` | L3 | — | — | — | — | — |
 | `agent-output-provenance` | L3 | — | — | — | — | — |
 | `antitrust-screening` | L3 | antitrust-agent | phase1, phase3, phase4 | management-incentive-review (follows), scenario-planning (follows), stage-gate-governance (follows) | — | — |
+| `api-documentation` | L3 | — | — | — | — | — |
 | `assumption-audit` | L3 | — | — | — | — | — |
 | `auth-and-account-management` | L3 | — | — | — | — | — |
 | `batch-scheduling-operations` | L3 | infra-automation-engineer | — | — | — | — |
@@ -38,7 +39,10 @@
 | `deal-execution-playbook` | L3 | — | — | — | — | — |
 | `deal-workspace-operations` | L3 | — | — | — | — | — |
 | `debt-and-contingent-liability-simulation` | L3 | valuation-agent, valuation-agent | phase4 | certification-transferability (follows) | — | — |
+| `decision-record` | L3 | — | — | — | — | — |
 | `deployment-and-release` | L3 | release-engineer | — | — | — | — |
+| `documentation-writing` | L3 | — | — | — | — | — |
+| `evidence-ledger` | L3 | — | — | — | — | — |
 | `executive-presentation` | L3 | docs-writer | phase5 | stage-gate-governance (follows) | — | — |
 | `expert-interview` | L3 | — | — | — | — | — |
 | `explain-me` | L3 | — | — | — | — | — |
@@ -52,6 +56,10 @@
 | `growth-projection-modeling` | L3 | financial-analyst, financial-analyst | phase3 | site-infrastructure-assessment (follows) | — | — |
 | `historical-financial-analysis` | L3 | financial-analyst, financial-analyst | phase3 | peer-benchmarking (follows) | — | — |
 | `hwp-document-processing` | L3 | — | — | — | — | — |
+| `i18n-audit` | L3 | — | — | — | — | — |
+| `i18n-formatting` | L3 | — | — | — | — | — |
+| `i18n-layout` | L3 | — | — | — | — | — |
+| `i18n-locale-config` | L3 | — | — | — | — | — |
 | `incentive-clawback-assessment` | L3 | incentive-agent | phase4 | debt-and-contingent-liability-simulation (follows) | — | — |
 | `incident-response` | L3 | sre | — | — | — | — |
 | `industry-profile-application` | L3 | industry-lead | — | — | — | — |
@@ -95,6 +103,7 @@
 | `regulation-monitoring` | L3 | — | — | — | — | — |
 | `regulatory-change-response` | L3 | — | — | — | — | — |
 | `regulatory-screening` | L3 | — | — | — | — | — |
+| `research-analysis` | L3 | — | — | documentation-writing (enables) | — | — |
 | `rest-api-design` | L3 | backend-engineer | — | — | — | — |
 | `run-versioning-and-attribution` | L3 | — | — | — | — | — |
 | `sample-driven-report-writing` | L3 | docs-writer | — | — | — | — |
