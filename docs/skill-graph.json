@@ -402,6 +402,11 @@
       "layer": "L3"
     },
     {
+      "id": "api-documentation",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "assumption-audit",
       "type": "skill",
       "layer": "L3"
@@ -562,6 +567,11 @@
       "layer": "L3"
     },
     {
+      "id": "decision-record",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "deployment-and-release",
       "type": "skill",
       "layer": "L3"
@@ -569,6 +579,16 @@
     {
       "id": "docs-writer",
       "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "documentation-writing",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "evidence-ledger",
+      "type": "skill",
       "layer": "L3"
     },
     {
@@ -663,6 +683,26 @@
     },
     {
       "id": "hwp-document-processing",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "i18n-audit",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "i18n-formatting",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "i18n-layout",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "i18n-locale-config",
       "type": "skill",
       "layer": "L3"
     },
@@ -944,6 +984,11 @@
     {
       "id": "release-engineer",
       "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "research-analysis",
+      "type": "skill",
       "layer": "L3"
     },
     {
@@ -2416,6 +2461,12 @@
     },
     {
       "type": "references",
+      "from": "decision-record",
+      "to": "evidence-ledger",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "deployment-and-release",
       "to": "database-operations",
       "source": "prose"
@@ -2446,6 +2497,12 @@
         "field": "required_skills",
         "index": 0
       }
+    },
+    {
+      "type": "references",
+      "from": "evidence-ledger",
+      "to": "decision-record",
+      "source": "prose"
     },
     {
       "type": "used_by",
@@ -2965,6 +3022,84 @@
       "type": "references",
       "from": "hwp-document-processing",
       "to": "sample-driven-report-writing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-audit",
+      "to": "i18n-formatting",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-audit",
+      "to": "i18n-layout",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-audit",
+      "to": "i18n-locale-config",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-formatting",
+      "to": "i18n-layout",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-formatting",
+      "to": "i18n-locale-config",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-formatting",
+      "to": "translate",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-layout",
+      "to": "hwp-document-processing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-layout",
+      "to": "i18n-formatting",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-layout",
+      "to": "i18n-locale-config",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-layout",
+      "to": "translate",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-locale-config",
+      "to": "i18n-formatting",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-locale-config",
+      "to": "i18n-layout",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-locale-config",
+      "to": "translate",
       "source": "prose"
     },
     {
@@ -4217,6 +4352,12 @@
       "source": "prose"
     },
     {
+      "type": "references",
+      "from": "pm",
+      "to": "decision-record",
+      "source": "prose"
+    },
+    {
       "type": "follows",
       "from": "pmi-planning",
       "to": "compensation-harmonization-analysis",
@@ -4989,6 +5130,17 @@
       "provenance": {
         "file": "skills/regulatory-screening/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "enables",
+      "from": "research-analysis",
+      "to": "documentation-writing",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/research-analysis/SKILL.md",
+        "field": "relates_to",
+        "index": 0
       }
     },
     {

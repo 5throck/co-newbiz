@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 471,
-    "edge_count": 821
+    "node_count": 480,
+    "edge_count": 830
   },
   "nodes": [
     {
@@ -1353,6 +1353,13 @@
       "status": "active"
     },
     {
+      "id": "skill:api-documentation",
+      "type": "skill",
+      "label": "api-documentation",
+      "version": "1.0.0",
+      "status": "active"
+    },
+    {
       "id": "skill:assumption-audit",
       "type": "skill",
       "label": "assumption-audit",
@@ -1521,10 +1528,31 @@
       "status": "active"
     },
     {
+      "id": "skill:decision-record",
+      "type": "skill",
+      "label": "decision-record",
+      "version": "1.1.0",
+      "status": "active"
+    },
+    {
       "id": "skill:deployment-and-release",
       "type": "skill",
       "label": "deployment-and-release",
       "version": "1.0.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:documentation-writing",
+      "type": "skill",
+      "label": "documentation-writing",
+      "version": "1.0.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:evidence-ledger",
+      "type": "skill",
+      "label": "evidence-ledger",
+      "version": "1.1.0",
       "status": "active"
     },
     {
@@ -1615,6 +1643,34 @@
       "id": "skill:hwp-document-processing",
       "type": "skill",
       "label": "hwp-document-processing",
+      "version": "1.0.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:i18n-audit",
+      "type": "skill",
+      "label": "i18n-audit",
+      "version": "1.0.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:i18n-formatting",
+      "type": "skill",
+      "label": "i18n-formatting",
+      "version": "1.0.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:i18n-layout",
+      "type": "skill",
+      "label": "i18n-layout",
+      "version": "1.0.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:i18n-locale-config",
+      "type": "skill",
+      "label": "i18n-locale-config",
       "version": "1.0.0",
       "status": "active"
     },
@@ -1917,6 +1973,13 @@
       "type": "skill",
       "label": "regulatory-screening",
       "version": "1.1.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:research-analysis",
+      "type": "skill",
+      "label": "research-analysis",
+      "version": "1.0.0",
       "status": "active"
     },
     {
@@ -6239,6 +6302,30 @@
     {
       "type": "owns",
       "from": "agent:pm",
+      "to": "skill:api-documentation",
+      "source_ref": "skills/api-documentation/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
+      "to": "skill:decision-record",
+      "source_ref": "skills/decision-record/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
+      "to": "skill:documentation-writing",
+      "source_ref": "skills/documentation-writing/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
+      "to": "skill:evidence-ledger",
+      "source_ref": "skills/evidence-ledger/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
       "to": "skill:explain-me",
       "source_ref": "skills/explain-me/SKILL.md"
     },
@@ -6251,6 +6338,30 @@
     {
       "type": "owns",
       "from": "agent:pm",
+      "to": "skill:i18n-audit",
+      "source_ref": "skills/i18n-audit/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
+      "to": "skill:i18n-formatting",
+      "source_ref": "skills/i18n-formatting/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
+      "to": "skill:i18n-layout",
+      "source_ref": "skills/i18n-layout/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
+      "to": "skill:i18n-locale-config",
+      "source_ref": "skills/i18n-locale-config/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
       "to": "skill:meeting-facilitation",
       "source_ref": "skills/meeting-facilitation/SKILL.md"
     },
@@ -6259,6 +6370,12 @@
       "from": "agent:pm",
       "to": "skill:project-review",
       "source_ref": "skills/project-review/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
+      "to": "skill:research-analysis",
+      "source_ref": "skills/research-analysis/SKILL.md"
     },
     {
       "type": "owns",
