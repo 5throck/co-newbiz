@@ -535,6 +535,17 @@
         "phases": [
           2
         ]
+      },
+      {
+        "name": "systematic-market-sizing",
+        "used_by_agents": [
+          "market-intelligence-agent",
+          "quant-methodologist"
+        ],
+        "phases": [
+          2,
+          3
+        ]
       }
     ]
   },
