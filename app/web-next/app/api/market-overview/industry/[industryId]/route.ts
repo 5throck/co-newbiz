@@ -79,6 +79,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
     source_id: string; revision_no: number; fetched_at: string;
   }>;
 
+  // Assumption-registry rows for the market-sizing report (step 8 of the
+  // systematic-market-sizing procedure): hb.* rows live on the seed run.
+  const sizingRun = db
+    .query("SELECT id FROM run WHERE label = ? ORDER BY created_at DESC LIMIT 1")
+    .get("hydraulic-breaker-matrix-seed") as { id: string } | null;
+  const sizingAssumptions = sizingRun
+    ? db
+        .query(
+          `SELECT assumption_key, kind, value, rationale, anchor_ref, as_of, ttl_days
+           FROM assumption WHERE run_id = ? AND assumption_key LIKE 'hb.%' ORDER BY assumption_key`,
+        )
+        .all(sizingRun.id) as Array<{
+        assumption_key: string; kind: string; value: number; rationale: string | null;
+        anchor_ref: string | null; as_of: string; ttl_days: number | null;
+      }>
+    : [];
+
   return ok(
     {
       industry,
@@ -86,6 +103,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
       regions,
       simulations,
       series,
+      sizing: sizingRun
+        ? {
+            run_id: sizingRun.id,
+            run_label: "hydraulic-breaker-matrix-seed",
+            assumptions: sizingAssumptions,
+          }
+        : null,
     },
     200,
     {

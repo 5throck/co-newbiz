@@ -5,25 +5,36 @@ import Link from "next/link";
 import { api, type ObservationRow } from "../../lib/api.ts";
 import { EChart } from "../../components/EChart.tsx";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
+import {
+  ANCHOR_SOURCES, ANCHOR_TOTAL, AXES, BASELINE_2026, CAGR_BASE, CHAIN_GRADE,
+  CONSISTENCY, CROSS_VALIDATION, GLOBAL_2026, GLOBAL_2030, LIMITATIONS,
+  PROJECTION_2030, REGISTRY, REGIONS, SCENARIO_ROLLUP, SEGMENTS, SIZING_SOURCE_DOC,
+  STEPS, VALIDATION_STATUS_META, band,
+  type SegmentCode,
+} from "../../lib/market-sizing.ts";
 
-// S1 시장분석 (/market) — 산업 리스트(테이블) → 클릭 시 상세 분석 드릴다운.
-// 드라이버 민감도 = 바 차트, 권역별 = 도넛(점유율) + 바(NPV), 시나리오 = 그룹 바 차트.
+// S1 시장분석 (/market) — systematic-market-sizing 스킬의 8단계 절차를 그대로
+// 따르는 분석 리포트. 산업 선택 → 8단계 세로 흐름(각 단계 = 방법론 한 단계 +
+// 이해를 돕는 차트), 우측 래일로 단계 이동.
 
 interface IndustryRow {
   id: string; name_ko: string; name_en: string | null;
-  ksic_code: string | null; naics_code: string | null; driver_count: number;
+  ksic_code: string | null; driver_count: number;
 }
 interface DriverRow { id: string; code: string; label_ko: string; description: string; }
 interface MarketOverview {
   industries: IndustryRow[]; drivers: DriverRow[];
   stats: { value_chain_links: number; proxy_links: number; series_count: number; observation_count: number };
 }
+interface DriverSensitivity { driver_label: string; sensitivity: number; lag_months: number | null; region_code: string | null; segment_code: string | null }
+interface AssumptionRow {
+  assumption_key: string; kind: string; value: number; rationale: string | null;
+  anchor_ref: string | null; as_of: string; ttl_days: number | null;
+}
 interface IndustryDetail {
   industry: { id: string; name_ko: string; name_en: string | null; ksic_code: string | null };
-  driver_sensitivities: Array<{ driver_id: string; driver_label: string; sensitivity: number; lag_months: number | null; region_code: string | null }>;
-  regions: Array<{ region: string; scenario_count: number; avg_p50: number | null }>;
-  simulations: Array<{ scenario: string; region_code: string | null; metric: string; p05: number | null; p50: number | null; p95: number | null }>;
-  series: Array<{ series_id: string; period_id: string; value: number; unit_id: string; source_id: string }>;
+  driver_sensitivities: DriverSensitivity[];
+  sizing: { run_id: string; run_label: string; assumptions: AssumptionRow[] } | null;
 }
 interface SeriesRow {
   series_id: string; unit_id: string; source_id: string; observation_count: number;
@@ -31,12 +42,7 @@ interface SeriesRow {
   days_since_fetch: number | null; stale: boolean;
 }
 
-const REGION_LABELS: Record<string, string> = {
-  china: "중국", apac_ex_china: "아시아(중국 제외)", north_america: "북미",
-  europe: "유럽", mea: "중동·아프리카", korea: "한국",
-};
-
-const DRIVER_ICONS: Record<string, string> = { rate: "📊", fx: "💱", commodity: "🏭", regulation: "📋" };
+const SEGMENT_COLORS = [0, 1, 2];
 
 export function MarketView() {
   const [overview, setOverview] = useState<MarketOverview | null>(null);
@@ -56,327 +62,464 @@ export function MarketView() {
       .catch((e) => setError(e instanceof Error ? e.message : "상세 불러오기 실패"));
   }, []);
 
+  // 이 분석(유압브레이커)의 8단계 리포트는 연구문서와 동결 매트릭스 기반 —
+  // 선택한 산업이 그 분석 대상인지 KSIC 코드로 판별.
+  const hasSizing = detail?.industry.ksic_code === "HYD-BRK";
+
   return (
     <main>
       <h1>시장분석</h1>
-      <p className="mt-[0.15rem] mb-4 text-[color:var(--muted-fg)] text-[0.9rem]">
-        프로세스 스테이지 S1 — 산업을 선택하면 가치사슬·드라이버·권역별 데이터가 차트로 표시됩니다.
+      <p className="mt-[0.15rem] mb-2 text-[color:var(--muted-fg)] text-[0.9rem]">
+        프로세스 스테이지 S1 — <strong>systematic-market-sizing</strong> 스킬의 8단계 절차로 시장을 분석합니다.
+        각 단계는 방법론 한 단계와 그 결과를 보여주는 차트로 구성됩니다.
         기회를 발굴하려면 <Link href="/opportunities" className="text-[color:var(--accent)] underline">기회 발굴(S2)</Link>으로 이어가세요.
       </p>
+
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
-      {/* ── 산업 리스트 (테이블) ── */}
-      <section aria-label="산업 리스트" className="market-section">
-        <h2>🏭 분석 대상 산업</h2>
-        {overview === null ? (
-          <p>불러오는 중...</p>
-        ) : overview.industries.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic">등록된 산업이 없습니다.</p>
-        ) : (
-          <table className="data-table" aria-label="분석 대상 산업">
-            <caption className="sr-only">분석 대상 산업 목록</caption>
-            <thead>
-              <tr>
-                <th scope="col">산업명</th>
-                <th scope="col">KSIC 코드</th>
-                <th scope="col">연결 드라이버</th>
-                <th scope="col">액션</th>
-              </tr>
-            </thead>
-            <tbody>
-              {overview.industries.map((ind) => (
-                <tr key={ind.id} className={selectedIndustry === ind.id ? "row-selected" : undefined}>
-                  <td className="cell-primary font-semibold">{ind.name_ko}</td>
-                  <td><code className="dd-item-id">{ind.ksic_code ?? "—"}</code></td>
-                  <td className="tabular-nums">{ind.driver_count}건</td>
-                  <td>
-                    <button type="button" className="btn-ghost text-[0.78rem]" onClick={() => loadDetail(ind.id)}>
-                      분석 열기
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      {/* ── 산업 선택 (컴팩트 칩 리스트) ── */}
+      <section aria-label="분석 대상 산업 선택" className="market-section">
+        <div className="sizing-industry-row" role="listbox" aria-label="분석 대상 산업">
+          {overview === null ? (
+            <p>불러오는 중...</p>
+          ) : overview.industries.length === 0 ? (
+            <p className="text-[color:var(--muted-fg)] italic">등록된 산업이 없습니다.</p>
+          ) : (
+            overview.industries.map((ind) => (
+              <button
+                key={ind.id}
+                type="button"
+                role="option"
+                aria-selected={selectedIndustry === ind.id}
+                className={`sizing-industry-chip ${selectedIndustry === ind.id ? "sizing-industry-chip-active" : ""}`}
+                onClick={() => loadDetail(ind.id)}
+              >
+                <span className="font-semibold">{ind.name_ko}</span>
+                <span className="sizing-chip-meta">{ind.ksic_code ?? "—"} · 드라이버 {ind.driver_count}건</span>
+              </button>
+            ))
+          )}
+        </div>
       </section>
 
-      {/* ── 산업 상세 (차트 중심) ── */}
       {detail && (
-        <section aria-label="산업 상세 분석" className="market-section">
-          <h2 className="mb-4">
-            📊 {detail.industry.name_ko} 상세 분석
-            {detail.industry.ksic_code && <code className="dd-item-id ml-2">{detail.industry.ksic_code}</code>}
-          </h2>
+        <>
+          {/* ── 단계 래일 (sticky) ── */}
+          {hasSizing && (
+            <nav aria-label="분석 단계" className="sizing-step-rail" >
+              {STEPS.map((s, i) => (
+                <a key={s.id} href={`#${s.id}`} className="sizing-step-link">
+                  <span className="sizing-step-num">{i + 1}</span>
+                  <span>{s.short}</span>
+                </a>
+              ))}
+            </nav>
+          )}
 
-          {/* ── 드라이버 민감도 (바 차트) ── */}
-          <div className="market-sub-section">
-            <h3>1️⃣ 드라이버 민감도 — 주요 드라이버 도출</h3>
-            <p className="mb-2 text-[color:var(--muted-fg)] text-[0.78rem]">
-              전체 드라이버의 민감도를 분석한 후, 민감도 절댓값이 0.3 이상인 드라이버를
-              <strong className="text-[color:var(--primary)]"> 주요 드라이버</strong>로 도출합니다.
+          <div className="sizing-report-header">
+            <h2>
+              📊 {detail.industry.name_ko} 시장 분석 리포트
+              {detail.industry.ksic_code && <code className="dd-item-id ml-2">{detail.industry.ksic_code}</code>}
+            </h2>
+            <p className="text-[color:var(--muted-fg)] text-[0.78rem]">
+              방법론: systematic-market-sizing v1.0 · 소스 문서: <code className="text-[0.72rem]">{SIZING_SOURCE_DOC}</code>
             </p>
-            {detail.driver_sensitivities.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] italic text-[0.8rem]">기록된 드라이버 민감도가 없습니다.</p>
-            ) : (
-              <DriverSensitivityChart sensitivities={detail.driver_sensitivities} />
-            )}
           </div>
 
-          {/* ── 권역별 분석 (도넛 + 바 차트, 좌/우) ── */}
-          <div className="market-sub-section">
-            <h3>2️⃣ 권역별 분석</h3>
-            {detail.regions.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] italic text-[0.8rem]">권역별 데이터가 없습니다. 구조 시뮬레이션을 실행하면 권역별 수요가 기록됩니다.</p>
-            ) : (
-              <div className="chart-pair">
-                <div className="chart-half">
-                  <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">시장점유율 (도넛)</h4>
-                  <RegionalPieChart regions={detail.regions} />
-                </div>
-                <div className="chart-half">
-                  <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">평균 NPV (바)</h4>
-                  <RegionalBarChart regions={detail.regions} />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ── 시나리오 시뮬레이션 결과 (그룹 바 차트 + 표) ── */}
-          {detail.simulations.length > 0 && (
-            <div className="market-sub-section">
-              <h3>3️⃣ 시나리오 시뮬레이션 결과</h3>
-              <div className="chart-pair">
-                <div className="chart-half">
-                  <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역별 시장점유율 추이 (선)</h4>
-                  <ScenarioGroupChart simulations={detail.simulations} metric="share" />
-                </div>
-                <div className="chart-half">
-                  <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역별 NPV 추이 (선)</h4>
-                  <ScenarioGroupChart simulations={detail.simulations} metric="npv" />
-                </div>
-              </div>
-              <SimulationTable simulations={detail.simulations} />
-            </div>
+          {hasSizing ? (
+            <SizingReport detail={detail} />
+          ) : (
+            <section aria-label="분석 대기" className="market-section">
+              <p className="text-[color:var(--muted-fg)] italic">
+                이 산업에는 아직 8단계 정식 분석(sizing 리포트)이 등록되지 않았습니다.
+                systematic-market-sizing 스킬의 절차(앵커 삼각검증 → 권역·세그먼트 배분 → 교차검증 → 레지스트리 등록)를
+                수행하면 이 화면에 리포트가 표시됩니다. 아래는 현재 기록된 드라이버 구조입니다.
+              </p>
+              <StepSensitivityChart stepNumber={1} sensitivities={detail.driver_sensitivities} />
+            </section>
           )}
-
-          {/* ── 시계열 데이터 ── */}
-          {detail.series.length > 0 && (
-            <div className="market-sub-section">
-              <h3>산업 시계열 데이터</h3>
-              <p className="text-[color:var(--muted-fg)] text-[0.78rem]">{detail.series.length}건의 관측치</p>
-            </div>
-          )}
-        </section>
+        </>
       )}
 
-      {/* ── 시장 시계열 (하단, 기존 유지) ── */}
       <TimeSeriesSection />
     </main>
   );
 }
 
-// ── 드라이버 민감도 바 차트 + 주요 드라이버 도출 프로세스 ──
-const KEY_DRIVER_THRESHOLD = 0.3;
+/* ═══════════════ 8단계 리포트 ═══════════════ */
 
-function DriverSensitivityChart({ sensitivities }: { sensitivities: Array<{ driver_label: string; sensitivity: number; region_code: string | null }> }) {
-  // 주요 드라이버 도출 프로세스 표시
-  const aggProcess = new Map<string, number>();
-  for (const ds of sensitivities) {
-    aggProcess.set(ds.driver_label, Math.abs(ds.sensitivity));
-  }
-  const sortedDrivers = [...aggProcess.entries()].sort((a, b) => b[1] - a[1]);
-  const keyCount = sortedDrivers.filter(([, v]) => v >= KEY_DRIVER_THRESHOLD).length;
-  const keyNames = sortedDrivers.filter(([, v]) => v >= KEY_DRIVER_THRESHOLD).map(([k]) => k);
+function StepSection({ n, id, title, children }: { n: number; id: string; title: string; children: React.ReactNode }) {
+  return (
+    <section id={id} aria-label={`단계 ${n}: ${title}`} className="market-section sizing-step">
+      <h3 className="sizing-step-title">
+        <span className="sizing-step-badge">{n}</span> {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function SizingReport({ detail }: { detail: IndustryDetail }) {
+  return (
+    <div className="sizing-report">
+      <StepSection n={1} id="step-1" title="축·프록시 구조 정의">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+          분석 축을 <strong>권역 × 최종수요 세그먼트 × 시나리오</strong> 3축으로 고정하고, 데이터가 실제로
+          분해되는 방식에 맞춰 권역을 묶습니다(예: 중국 별도 분리). 프록시 체인의 통계 hop 수가 체인 등급을
+          결정하고, 그 등급이 모든 후속 결론의 신뢰도 상한이 됩니다.
+        </p>
+        <div className="chart-pair">
+          <div className="chart-half">
+            <table className="data-table" aria-label="분석 축 정의">
+              <caption className="sr-only">분석 축 정의</caption>
+              <thead><tr><th scope="col">축</th><th scope="col">값</th></tr></thead>
+              <tbody>
+                {AXES.map((a) => (
+                  <tr key={a.axis}><td className="font-semibold">{a.axis}</td><td>{a.values}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="chart-half sizing-grade-card">
+            <span className="status-chip status-amber">체인 등급 {CHAIN_GRADE.grade}</span>
+            <p className="mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">{CHAIN_GRADE.note}</p>
+            <p className="mt-1 text-[0.78rem]">통계 hop {CHAIN_GRADE.statisticalHops}개 · 분석 hop은 등급에 불가산</p>
+          </div>
+        </div>
+        <StepSensitivityChart stepNumber={undefined} sensitivities={detail.driver_sensitivities} />
+      </StepSection>
+
+      <StepSection n={2} id="step-2" title="앵커 삼각검증">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+          독립 추정치 2–3개로 기준년 총시장(2026, $B)을 삼각검증하고 이상치를 명시적으로 제외합니다.
+          이후 모든 배분이 이 앵커로 수렴해야 합니다.
+        </p>
+        <AnchorChart />
+        <ul className="sizing-note-list mt-2">
+          {ANCHOR_SOURCES.map((s) => (
+            <li key={s.label} className={s.status === "excluded" ? "text-[color:var(--muted-fg)] line-through" : ""}>
+              <strong>{s.label}</strong> — ${s.estimate.toFixed(2)}B · {s.note}
+            </li>
+          ))}
+        </ul>
+      </StepSection>
+
+      <StepSection n={3} id="step-3" title="권역·세그먼트 배분">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+          권역 가중치는 인접 공시시장 프록시에서, 세그먼트 믹스는 글로벌 교차검증치에 맞춘 보정 배분입니다.
+          판단 조정은 셀별로 출처와 함께 기록됩니다(바텀업 합산이 아님).
+        </p>
+        <div className="chart-pair">
+          <div className="chart-half">
+            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역 가중치 (도넛)</h4>
+            <RegionWeightDonut />
+          </div>
+          <div className="chart-half">
+            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역별 세그먼트 믹스 (100% 적층)</h4>
+            <SegmentMixStack />
+          </div>
+        </div>
+        <RegionTable />
+      </StepSection>
+
+      <StepSection n={4} id="step-4" title="셀별 CAGR·시나리오 밴드">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+          권역×세그먼트 셀마다 개별 CAGR을 부여합니다(글로벌 단일 수준 아님). 시나리오 밴드는 기본값
+          base×0.5 ~ base×1.55이며, <strong>소스 간 불일치가 문서화된 셀만</strong> 넓은 밴드로 대체합니다 —
+          아래 차트에서 북미·광산(2–11%)이 그 사례입니다.
+        </p>
+        <div className="chart-pair">
+          <div className="chart-half">
+            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">기본 시나리오 CAGR (셀별 그룹 바)</h4>
+            <CagrGroupedBar />
+          </div>
+          <div className="chart-half">
+            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">2026 → 2030 전망 (권역 합계)</h4>
+            <ProjectionChart />
+          </div>
+        </div>
+        <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">시나리오 밴드 (비관~낙관, 18개 셀 — 북미·광산 오버라이드 강조)</h4>
+        <ScenarioBandChart />
+        <ScenarioRollupTable />
+      </StepSection>
+
+      <StepSection n={5} id="step-5" title="정합성 체크 (바텀업 vs 탑다운)">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+          매트릭스를 롤업한 암시 글로벌 CAGR을 탑다운 컨센서스와 비교합니다. 허용 오차 내여도 이는
+          <strong> 내부 정합성 확인</strong>일 뿐 — 양쪽 모두 같은 부류의 소스로 소급되므로 독립적 확인으로
+          표현하지 않습니다.
+        </p>
+        <ConsistencyChart />
+        <p className="sizing-note-list mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">{CONSISTENCY.tolerance}</p>
+      </StepSection>
+
+      <StepSection n={6} id="step-6" title="1차 소스 교차검증">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+          카테고리 내 상장사의 연차보고서·중간보고서 원문으로 매트릭스의 각 주장을 검증합니다.
+          구조적으로 검증 불가능한 항목은 <strong>검증 불가</strong>로 명시합니다(탐색 실패가 아닌 공시 구조의 한계).
+        </p>
+        <table className="data-table" aria-label="1차 소스 교차검증 결과">
+          <caption className="sr-only">1차 소스 교차검증 결과</caption>
+          <thead>
+            <tr><th scope="col" className="w-[34%]">매트릭스 주장</th><th scope="col">판정</th><th scope="col">1차 소스 근거 (Epiroc FY2025)</th></tr>
+          </thead>
+          <tbody>
+            {CROSS_VALIDATION.map((v) => {
+              const meta = VALIDATION_STATUS_META[v.status];
+              return (
+                <tr key={v.claim}>
+                  <td className="font-semibold">{v.claim}</td>
+                  <td><span className={`status-chip ${meta.chip}`}>{meta.label}</span></td>
+                  <td className="text-[0.78rem]">{v.evidence}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </StepSection>
+
+      <StepSection n={7} id="step-7" title="한계 레지스터">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+          판단적 보정·소스 불일치·외삽 불가 신호를 번호 붙여 고정합니다. 소비자는 이 목록 없이 매트릭스를
+          인용할 수 없습니다.
+        </p>
+        <ol className="sizing-limitations">
+          {LIMITATIONS.map((l, i) => <li key={i}>{l}</li>)}
+        </ol>
+      </StepSection>
+
+      <StepSection n={8} id="step-8" title="레지스트리 등록">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+          동결된 매트릭스는 assumption 레지스트리에 조합당 1 row(kind='assumed', rationale + anchor_ref + TTL)로
+          등록됩니다. 레지스트리는 append-only — 수정은 새 row로 기록됩니다. 아래는 실제 등록 상태(라이브 조회)입니다.
+        </p>
+        <RegistryStatus sizing={detail.sizing} />
+      </StepSection>
+    </div>
+  );
+}
+
+/* ── 단계별 차트 ── */
+
+function StepSensitivityChart({ stepNumber, sensitivities }: { stepNumber: number | undefined; sensitivities: DriverSensitivity[] }) {
   const ct = useChartTheme();
-  // Deduplicate by driver_label, aggregate sensitivity
-  const agg = new Map<string, { total: number; count: number; regions: string[] }>();
+  const agg = new Map<string, number>();
   for (const ds of sensitivities) {
-    if (!agg.has(ds.driver_label)) agg.set(ds.driver_label, { total: 0, count: 0, regions: [] });
-    const entry = agg.get(ds.driver_label)!;
-    entry.total += Math.abs(ds.sensitivity);
-    entry.count++;
-    if (ds.region_code) entry.regions.push(ds.region_code);
+    if (!agg.has(ds.driver_label)) agg.set(ds.driver_label, 0);
+    agg.set(ds.driver_label, Math.max(agg.get(ds.driver_label)!, Math.abs(ds.sensitivity)));
   }
   const labels = [...agg.keys()];
-  const values = labels.map((l) => {
-    const e = agg.get(l)!;
-    return Math.round((e.total / e.count) * 100) / 100;
-  });
-
+  const values = labels.map((l) => Math.round((agg.get(l) ?? 0) * 100) / 100);
+  if (labels.length === 0) return <p className="text-[color:var(--muted-fg)] italic text-[0.8rem]">기록된 드라이버 민감도가 없습니다.</p>;
   const option = {
     grid: { left: 140, right: 40, top: 16, bottom: 32 },
     xAxis: { type: "value" as const, axisLabel: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
     yAxis: { type: "category" as const, data: labels, axisLabel: { color: ct.muted, width: 120, overflow: "truncate" as const } },
-    series: [{
-      type: "bar" as const, data: values,
-      itemStyle: { color: ct.color[0], borderRadius: [0, 4, 4, 0] },
-      barMaxWidth: 24,
-    }],
-    tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
-  };
-
-  return (
-    <div>
-      {/* 주요 드라이버 도출 프로세스 */}
-      <div className="driver-derivation">
-        <div className="driver-derivation-step">
-          <span className="status-chip status-in-progress">Step 1</span>
-          <span>전체 드라이버 {sortedDrivers.length}개 분석</span>
-        </div>
-        <span className="driver-arrow">→</span>
-        <div className="driver-derivation-step">
-          <span className="status-chip status-amber">Step 2</span>
-          <span>민감도 절댓값 ≥ {KEY_DRIVER_THRESHOLD} 필터링</span>
-        </div>
-        <span className="driver-arrow">→</span>
-        <div className="driver-derivation-step">
-          <span className="status-chip status-green">주요 드라이버 {keyCount}개</span>
-          <span>{keyNames.join(", ") || "없음"}</span>
-        </div>
-      </div>
-      <EChart option={option} height={Math.max(160, labels.length * 40 + 48)} />
-    </div>
-  );
-}
-
-// ── 권역별 도넛 차트 (시장점유율) ──
-function RegionalPieChart({ regions }: { regions: Array<{ region: string; avg_p50: number | null }> }) {
-  const ct = useChartTheme();
-  const valid = regions.filter((r) => r.avg_p50 !== null && r.avg_p50 > 0);
-  if (valid.length === 0) return null;
-  const total = valid.reduce((a, r) => a + (r.avg_p50 ?? 0), 0);
-  const option: Record<string, unknown> = {
-    tooltip: { trigger: "item", formatter: (p: { name?: string; value?: number; percent?: number }) => `${p.name}: ${p.value?.toLocaleString()} KRM (${p.percent}%)` },
-    legend: { bottom: 0, textStyle: { color: ct.muted } },
-    series: [{
-      type: "pie" as const,
-      radius: ["40%", "70%"],
-      label: { color: ct.muted, formatter: "{b}\n{d}%" },
-      data: valid.map((r) => ({ name: REGION_LABELS[r.region] ?? r.region, value: r.avg_p50 })),
-    }],
-  };
-  return (
-    <div>
-      <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역별 시장점유율 (NPV P50 기준)</h4>
-      <EChart option={option as never} height={280} />
-    </div>
-  );
-}
-
-// ── 권역별 바 차트 (평균 NPV) ──
-function RegionalBarChart({ regions }: { regions: Array<{ region: string; avg_p50: number | null }> }) {
-  const ct = useChartTheme();
-  const labels = regions.map((r) => REGION_LABELS[r.region] ?? r.region);
-  const values = regions.map((r) => r.avg_p50 ?? 0);
-  const option = {
-    grid: { left: 80, right: 24, top: 16, bottom: 32 },
-    xAxis: { type: "value" as const, axisLabel: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
-    yAxis: { type: "category" as const, data: labels, axisLabel: { color: ct.muted } },
-    series: [{
-      type: "bar" as const, data: values,
-      itemStyle: { color: ct.color[1], borderRadius: [0, 4, 4, 0] },
-      barMaxWidth: 28,
-    }],
+    series: [{ type: "bar" as const, data: values, itemStyle: { color: ct.color[0], borderRadius: [0, 4, 4, 0] }, barMaxWidth: 22 }],
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
   return (
     <div className="mt-4">
-      <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역별 평균 NPV (KRM)</h4>
-      <EChart option={option} height={Math.max(160, regions.length * 44 + 48)} />
+      {stepNumber !== undefined && <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">주요 드라이버 민감도 (민감도 절댓값 ≥ 0.3 → 주요 드라이버)</h4>}
+      <EChart option={option} height={Math.max(140, labels.length * 40 + 48)} />
     </div>
   );
 }
 
-// ── 시나리오별 권역 데이터 선 그래프 (점유율 or NPV) ──
-function ScenarioGroupChart({ simulations, metric }: {
-  simulations: Array<{ scenario: string; region_code: string | null; p05: number | null; p50: number | null; p95: number | null }>;
-  metric: "share" | "npv";
-}) {
+function AnchorChart() {
   const ct = useChartTheme();
-  // Group by scenario → region → aggregate P50
-  const byScenario = new Map<string, Map<string, number[]>>();
-  for (const s of simulations) {
-    const region = s.region_code ?? "기타";
-    if (!byScenario.has(s.scenario)) byScenario.set(s.scenario, new Map());
-    const byRegion = byScenario.get(s.scenario)!;
-    if (!byRegion.has(region)) byRegion.set(region, []);
-    if (s.p50 !== null) byRegion.get(region)!.push(s.p50);
-  }
-
-  const regionNames = [...new Set(simulations.map((s) => s.region_code).filter(Boolean))] as string[];
-  const scenarioNames = [...byScenario.keys()];
-
-  const seriesData = regionNames.map((region) => {
-    const data = scenarioNames.map((sc) => {
-      const regionData = byScenario.get(sc)?.get(region);
-      if (!regionData || regionData.length === 0) return null;
-      const avgP50 = regionData.reduce((a, b) => a + b, 0) / regionData.length;
-      if (metric === "share") {
-        const total = scenarioNames.reduce((sum, sc2) => {
-          const rd = byScenario.get(sc2)?.get(region);
-          return sum + (rd ? rd.reduce((a, b) => a + b, 0) / rd.length : 0);
-        }, 0);
-        return total > 0 ? Math.round((avgP50 / total) * 1000) / 10 : null;
-      }
-      return Math.round(avgP50 * 10) / 10;
-    });
-    return {
-      name: REGION_LABELS[region] ?? region,
-      type: "line" as const,
-      data,
-      smooth: true,
-      symbol: "circle" as const,
-      symbolSize: 6,
-    };
-  });
-
-  const yAxisName = metric === "share" ? "점유율 (%)" : "NPV (KRM)";
-
   const option = {
-    grid: { left: 56, right: 20, top: 36, bottom: 32 },
-    legend: { top: 0, textStyle: { color: ct.muted, fontSize: 10 } },
-    xAxis: { type: "category" as const, data: scenarioNames, axisLabel: { color: ct.muted, fontSize: 10 } },
+    grid: { left: 170, right: 60, top: 16, bottom: 32 },
+    xAxis: { type: "value" as const, name: "$B", nameTextStyle: { color: ct.muted }, axisLabel: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
     yAxis: {
-      type: "value" as const, name: yAxisName, nameTextStyle: { color: ct.muted, fontSize: 10 },
-      axisLabel: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } },
+      type: "category" as const,
+      data: ANCHOR_SOURCES.map((s) => s.label),
+      axisLabel: { color: ct.muted, width: 150, overflow: "truncate" as const },
     },
-    series: seriesData,
-    tooltip: { trigger: "axis" as const },
+    series: [
+      {
+        type: "bar" as const,
+        data: ANCHOR_SOURCES.map((s) => ({
+          value: s.estimate,
+          itemStyle: { color: s.status === "excluded" ? ct.muted : ct.color[0], opacity: s.status === "excluded" ? 0.4 : 1, borderRadius: [0, 4, 4, 0] },
+        })),
+        barMaxWidth: 24,
+        markLine: {
+          symbol: "none",
+          data: [{ xAxis: ANCHOR_TOTAL, label: { formatter: `앵커 $${ANCHOR_TOTAL.toFixed(2)}B`, color: ct.muted }, lineStyle: { color: ct.color[3], type: "dashed" as const, width: 2 } }],
+        },
+      },
+    ],
+    tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-
-  const title = metric === "share" ? "권역별 시장점유율 추이 (선)" : "권역별 NPV 추이 (선)";
-
-  return (
-    <div>
-      <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">{title}</h4>
-      <EChart option={option} height={260} />
-    </div>
-  );
+  return <EChart option={option} height={170} />;
 }
 
-// ── 시뮬레이션 상세 테이블 ──
-function SimulationTable({ simulations }: { simulations: Array<{ scenario: string; region_code: string | null; metric: string; p05: number | null; p50: number | null; p95: number | null }> }) {
+function RegionWeightDonut() {
+  const ct = useChartTheme();
+  const option: Record<string, unknown> = {
+    tooltip: { trigger: "item", formatter: (p: { name?: string; percent?: number }) => `${p.name}: ${p.percent}%` },
+    legend: { bottom: 0, textStyle: { color: ct.muted, fontSize: 10 } },
+    series: [{
+      type: "pie" as const,
+      radius: ["42%", "70%"],
+      center: ["50%", "44%"],
+      label: { color: ct.muted, formatter: "{d}%", fontSize: 10 },
+      data: REGIONS.map((r, i) => ({ name: r.label, value: r.weight, itemStyle: { color: ct.color[i % ct.color.length] } })),
+    }],
+  };
+  return <EChart option={option as never} height={280} />;
+}
+
+function SegmentMixStack() {
+  const ct = useChartTheme();
+  const option = {
+    grid: { left: 110, right: 24, top: 30, bottom: 32 },
+    legend: { top: 0, textStyle: { color: ct.muted, fontSize: 10 } },
+    xAxis: { type: "value" as const, max: 100, axisLabel: { formatter: "{value}%", color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
+    yAxis: { type: "category" as const, data: [...REGIONS].reverse().map((r) => r.label), axisLabel: { color: ct.muted, fontSize: 10 } },
+    series: SEGMENTS.map((seg, i) => ({
+      name: seg.label,
+      type: "bar" as const,
+      stack: "mix",
+      data: [...REGIONS].reverse().map((r) => r.mix[seg.code]),
+      itemStyle: { color: ct.color[SEGMENT_COLORS[i]] },
+      barMaxWidth: 22,
+    })),
+    tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const }, valueFormatter: (v: unknown) => `${Number(v)}%` },
+  };
+  return <EChart option={option} height={280} />;
+}
+
+function RegionTable() {
+  const regionTotal = (code: string) => {
+    const m = BASELINE_2026[code];
+    return m.construction + m.mining + m.other;
+  };
   return (
-    <table className="data-table mt-4" aria-label="시나리오 시뮬레이션 상세">
-      <caption className="sr-only">시나리오별 시뮬레이션 상세</caption>
+    <table className="data-table mt-3" aria-label="권역×세그먼트 배분표">
+      <caption className="sr-only">권역×세그먼트 배분 및 2026 기준선</caption>
       <thead>
         <tr>
-          <th scope="col">시나리오</th>
-          <th scope="col">권역</th>
-          <th scope="col">P05</th>
-          <th scope="col">P50</th>
-          <th scope="col">P95</th>
+          <th scope="col">권역</th><th scope="col">가중치</th><th scope="col">건설</th><th scope="col">광산</th><th scope="col">기타</th><th scope="col">2026 ($B)</th><th scope="col">주요 조정</th>
         </tr>
       </thead>
       <tbody>
-        {simulations.map((sim, i) => (
-          <tr key={i}>
-            <td>{sim.scenario}</td>
-            <td>{sim.region_code ? (REGION_LABELS[sim.region_code] ?? sim.region_code) : "—"}</td>
-            <td className="tabular-nums">{sim.p05 !== null ? sim.p05.toLocaleString("ko-KR") : "—"}</td>
-            <td className="tabular-nums">{sim.p50 !== null ? sim.p50.toLocaleString("ko-KR") : "—"}</td>
-            <td className="tabular-nums">{sim.p95 !== null ? sim.p95.toLocaleString("ko-KR") : "—"}</td>
+        {REGIONS.map((r) => (
+          <tr key={r.code}>
+            <td className="font-semibold">{r.label}</td>
+            <td className="tabular-nums">{r.weight}%</td>
+            <td className="tabular-nums">{r.mix.construction}%</td>
+            <td className="tabular-nums">{r.mix.mining}%</td>
+            <td className="tabular-nums">{r.mix.other}%</td>
+            <td className="tabular-nums">{regionTotal(r.code).toFixed(3)}</td>
+            <td className="text-[0.75rem] text-[color:var(--muted-fg)]">{r.adjustment}</td>
+          </tr>
+        ))}
+        <tr className="row-selected">
+          <td className="font-semibold">글로벌</td>
+          <td className="tabular-nums">100%</td>
+          <td className="tabular-nums">{Math.round((GLOBAL_2026.construction / GLOBAL_2026.total) * 1000) / 10}%</td>
+          <td className="tabular-nums">{Math.round((GLOBAL_2026.mining / GLOBAL_2026.total) * 1000) / 10}%</td>
+          <td className="tabular-nums">{Math.round((GLOBAL_2026.other / GLOBAL_2026.total) * 1000) / 10}%</td>
+          <td className="tabular-nums font-semibold">{GLOBAL_2026.total.toFixed(2)} (앵커 ${GLOBAL_2026.anchor.toFixed(2)})</td>
+          <td />
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+function CagrGroupedBar() {
+  const ct = useChartTheme();
+  const option = {
+    grid: { left: 110, right: 24, top: 30, bottom: 32 },
+    legend: { top: 0, textStyle: { color: ct.muted, fontSize: 10 } },
+    xAxis: { type: "value" as const, axisLabel: { formatter: (v: number) => `${(v * 100).toFixed(0)}%`, color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
+    yAxis: { type: "category" as const, data: [...REGIONS].reverse().map((r) => r.label), axisLabel: { color: ct.muted, fontSize: 10 } },
+    series: SEGMENTS.map((seg, i) => ({
+      name: seg.label,
+      type: "bar" as const,
+      data: [...REGIONS].reverse().map((r) => CAGR_BASE[r.code][seg.code]),
+      itemStyle: { color: ct.color[SEGMENT_COLORS[i]], borderRadius: [0, 3, 3, 0] },
+      barMaxWidth: 12,
+    })),
+    tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const }, valueFormatter: (v: unknown) => `${(Number(v) * 100).toFixed(1)}%` },
+  };
+  return <EChart option={option} height={280} />;
+}
+
+function ProjectionChart() {
+  const ct = useChartTheme();
+  const totals2026 = REGIONS.map((r) => {
+    const m = BASELINE_2026[r.code];
+    return Math.round((m.construction + m.mining + m.other) * 1000) / 1000;
+  });
+  const totals2030 = REGIONS.map((r) => {
+    const m = PROJECTION_2030[r.code];
+    return Math.round((m.construction + m.mining + m.other) * 1000) / 1000;
+  });
+  const option = {
+    grid: { left: 110, right: 24, top: 30, bottom: 32 },
+    legend: { top: 0, textStyle: { color: ct.muted, fontSize: 10 } },
+    xAxis: { type: "value" as const, name: "$B", nameTextStyle: { color: ct.muted }, axisLabel: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
+    yAxis: { type: "category" as const, data: [...REGIONS].reverse().map((r) => r.label), axisLabel: { color: ct.muted, fontSize: 10 } },
+    series: [
+      { name: "2026", type: "bar" as const, data: [...totals2026].reverse(), itemStyle: { color: ct.color[0], opacity: 0.55, borderRadius: [0, 3, 3, 0] }, barMaxWidth: 12 },
+      { name: "2030 (기본)", type: "bar" as const, data: [...totals2030].reverse(), itemStyle: { color: ct.color[3], borderRadius: [0, 3, 3, 0] }, barMaxWidth: 12 },
+    ],
+    tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
+  };
+  return <EChart option={option} height={280} />;
+}
+
+function ScenarioBandChart() {
+  const ct = useChartTheme();
+  const rows = REGIONS.flatMap((r) => SEGMENTS.map((seg) => {
+    const b = band(r.code, seg.code);
+    const isOverride = r.code === "north_america" && seg.code === "mining";
+    return { label: `${r.label} · ${seg.label}`, down: b.down, up: b.up, isOverride };
+  }));
+  // 투명 base(비관) + 가시 width(낙관−비관) 스택으로 레인지 바 구성
+  const option = {
+    grid: { left: 150, right: 60, top: 16, bottom: 32 },
+    xAxis: { type: "value" as const, axisLabel: { formatter: (v: number) => `${(v * 100).toFixed(0)}%`, color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
+    yAxis: { type: "category" as const, data: rows.map((r) => r.label), axisLabel: { color: ct.muted, fontSize: 9.5 } },
+    series: [
+      { type: "bar" as const, stack: "band", data: rows.map((r) => r.down), itemStyle: { color: "transparent" }, barMaxWidth: 12, silent: true, tooltip: { show: false } },
+      {
+        type: "bar" as const,
+        stack: "band",
+        data: rows.map((r) => ({
+          value: Math.round((r.up - r.down) * 10000) / 10000,
+          itemStyle: { color: r.isOverride ? ct.color[3] : ct.color[1], opacity: r.isOverride ? 1 : 0.65, borderRadius: 3 },
+        })),
+        barMaxWidth: 12,
+        tooltip: { show: true },
+      },
+    ],
+    tooltip: {
+      trigger: "item" as const,
+      formatter: (p: unknown) => {
+        const r = rows[(p as { dataIndex: number }).dataIndex];
+        return `${r.label}<br/>비관 ${(r.down * 100).toFixed(1)}% ~ 낙관 ${(r.up * 100).toFixed(1)}%${r.isOverride ? "<br/><strong>문서화된 소스 불일치 → 넓은 밴드</strong>" : ""}`;
+      },
+    },
+  };
+  return <EChart option={option} height={Math.max(280, rows.length * 17 + 48)} />;
+}
+
+function ScenarioRollupTable() {
+  return (
+    <table className="data-table mt-3" aria-label="글로벌 시나리오 롤업">
+      <caption className="sr-only">글로벌 시나리오 롤업</caption>
+      <thead><tr><th scope="col">시나리오</th><th scope="col">글로벌 CAGR (2026–2030)</th><th scope="col">2030 총시장</th></tr></thead>
+      <tbody>
+        {SCENARIO_ROLLUP.map((s) => (
+          <tr key={s.scenario}>
+            <td className="font-semibold">{s.scenario}</td>
+            <td className="tabular-nums">~{s.cagr}%</td>
+            <td className="tabular-nums">${s.total2030.toFixed(2)}B</td>
           </tr>
         ))}
       </tbody>
@@ -384,7 +527,93 @@ function SimulationTable({ simulations }: { simulations: Array<{ scenario: strin
   );
 }
 
-// ── 시계열 섹션 (하단, 기존 로직 유지) ──
+function ConsistencyChart() {
+  const ct = useChartTheme();
+  const option = {
+    grid: { left: 130, right: 60, top: 16, bottom: 32 },
+    xAxis: { type: "value" as const, min: 0, max: 8, axisLabel: { formatter: "{value}%", color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
+    yAxis: { type: "category" as const, data: ["매트릭스 롤업 (바텀업)", "컨센서스 (탑다운)"], axisLabel: { color: ct.muted, fontSize: 10 } },
+    series: [{
+      type: "bar" as const,
+      data: [
+        { value: CONSISTENCY.bottomUpCagr, itemStyle: { color: ct.color[0], borderRadius: [0, 4, 4, 0] } },
+        { value: CONSISTENCY.topDownCagr, itemStyle: { color: ct.color[2], opacity: 0.6, borderRadius: [0, 4, 4, 0] } },
+      ],
+      barMaxWidth: 26,
+      label: { show: true, position: "right" as const, formatter: "{c}%", color: ct.muted, fontSize: 11 },
+    }],
+    tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
+  };
+  return <EChart option={option} height={140} />;
+}
+
+function RegistryStatus({ sizing }: { sizing: IndustryDetail["sizing"] }) {
+  const counts = useMemo(() => {
+    const byPrefix: { baseline_2026: number; cagr: number } = { baseline_2026: 0, cagr: 0 };
+    let assumed = 0;
+    for (const a of sizing?.assumptions ?? []) {
+      if (a.kind === "assumed") assumed++;
+      if (a.assumption_key.includes(".baseline_2026.")) byPrefix.baseline_2026++;
+      else if (a.assumption_key.includes(".cagr.")) byPrefix.cagr++;
+    }
+    return { ...byPrefix, assumed, total: sizing?.assumptions.length ?? 0 };
+  }, [sizing]);
+
+  if (!sizing) {
+    return (
+      <p className="text-[color:var(--muted-fg)] italic text-[0.8rem]">
+        레지스트리에 이 분석의 등록 row가 없습니다. 등록은 {REGISTRY.referenceImplementation} 경로로 수행됩니다.
+      </p>
+    );
+  }
+  const ok = counts.baseline_2026 === REGISTRY.expectedRows.baseline && counts.cagr === REGISTRY.expectedRows.cagr;
+  return (
+    <div>
+      <div className="driver-derivation mb-3">
+        <div className="driver-derivation-step">
+          <span className={`status-chip ${ok ? "status-green" : "status-amber"}`}>{ok ? "등록 완료" : "불일치"}</span>
+          <span>run <code className="text-[0.72rem]">{sizing.run_label}</code></span>
+        </div>
+        <span className="driver-arrow">→</span>
+        <div className="driver-derivation-step">
+          <span className="status-chip status-in-progress">baseline {counts.baseline_2026}/{REGISTRY.expectedRows.baseline}</span>
+          <span>2026 기준선 ($B)</span>
+        </div>
+        <span className="driver-arrow">→</span>
+        <div className="driver-derivation-step">
+          <span className="status-chip status-in-progress">cagr {counts.cagr}/{REGISTRY.expectedRows.cagr}</span>
+          <span>비관/기본/낙관 밴드</span>
+        </div>
+      </div>
+      <p className="text-[0.78rem] text-[color:var(--muted-fg)]">
+        총 {counts.total} row · 전부 kind='assumed' (rationale + anchor_ref 필수, FR-DATA-07) · TTL {REGISTRY.ttlDays}일 ·
+        append-only (수정 = 새 row)
+      </p>
+      <details className="mt-2">
+        <summary className="text-[0.8rem] cursor-pointer text-[color:var(--accent)]">등록 row 전체 보기 ({counts.total}개)</summary>
+        <table className="data-table mt-2" aria-label="레지스트리 등록 row">
+          <caption className="sr-only">레지스트리 등록 row 목록</caption>
+          <thead>
+            <tr><th scope="col">assumption_key</th><th scope="col">kind</th><th scope="col">value</th><th scope="col">anchor_ref</th><th scope="col">TTL</th></tr>
+          </thead>
+          <tbody>
+            {sizing.assumptions.map((a) => (
+              <tr key={a.assumption_key}>
+                <td><code className="text-[0.72rem]">{a.assumption_key}</code></td>
+                <td><span className="status-chip status-in-progress">{a.kind}</span></td>
+                <td className="tabular-nums">{a.value}</td>
+                <td className="text-[0.72rem]">{a.anchor_ref ?? "—"}</td>
+                <td className="tabular-nums">{a.ttl_days ?? "—"}d</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+    </div>
+  );
+}
+
+/* ── 시장 시계열 (부록 데이터 탐색) ── */
 function TimeSeriesSection() {
   const [series, setSeries] = useState<SeriesRow[] | null>(null);
   const [query, setQuery] = useState("");
@@ -419,8 +648,8 @@ function TimeSeriesSection() {
   }, [observations, ct]);
 
   return (
-    <section aria-label="시장 시계열" className="market-section">
-      <h2>📈 시장 시계열</h2>
+    <section aria-label="시장 시계열 (부록)" className="market-section">
+      <h2>📈 부록 — 시장 시계열 데이터</h2>
       <input type="search" aria-label="시계열 검색" placeholder="시계열 ID 검색" value={query} onChange={(e) => setQuery(e.target.value)} className="mb-3" />
       {series === null ? (
         <p>불러오는 중...</p>
