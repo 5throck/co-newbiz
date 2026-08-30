@@ -48,6 +48,36 @@ def _npv(cash_flows: list[float], discount_rate: float) -> float:
     return sum(cf / ((1 + discount_rate) ** (t + 1)) for t, cf in enumerate(cash_flows))
 
 
+def _irr(cash_flows: list[float]) -> float | None:
+    """Deterministic IRR of the base cash flows via bisection on [-0.99, 10]."""
+    def npv_at(rate: float) -> float:
+        return _npv(cash_flows, rate)
+    lo, hi = -0.99, 10.0
+    f_lo, f_hi = npv_at(lo), npv_at(hi)
+    if f_lo * f_hi > 0:
+        return None
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        f_mid = npv_at(mid)
+        if abs(f_mid) < 1e-9:
+            return mid
+        if f_lo * f_mid < 0:
+            hi = mid
+        else:
+            lo, f_lo = mid, f_mid
+    return (lo + hi) / 2
+
+
+def _payback_year(cash_flows: list[float]) -> int | None:
+    """First year (1-based) where cumulative undiscounted cash flow >= 0."""
+    cum = 0.0
+    for i, cf in enumerate(cash_flows, start=1):
+        cum += cf
+        if cum >= 0:
+            return i
+    return None
+
+
 def run_simulation(
     seed: int,
     iterations: int,
@@ -80,6 +110,8 @@ def run_simulation(
         "p95": round(float(np.percentile(draws, 95)), 2),
         "mean": round(float(np.mean(draws)), 2),
         "std": round(float(np.std(draws)), 2),
+        "irr": (lambda v: round(v, 6) if v is not None else None)(_irr(base_cash_flows)),
+        "payback_year": _payback_year(base_cash_flows),
     }
     if include_draws:
         result["draws"] = [round(float(d), 4) for d in draws]

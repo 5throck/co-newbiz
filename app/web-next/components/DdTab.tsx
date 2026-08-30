@@ -90,6 +90,18 @@ export function DdTab({
       .catch(() => setFindings([]));
   }, [projectId, category]);
 
+
+  async function deleteFinding(id: string) {
+    if (!window.confirm("이 조사내역을 삭제할까요? (감사로그에 기록됩니다)")) return;
+    try {
+      await api.delete(`/api/projects/${projectId}/dd-findings/${encodeURIComponent(id)}`);
+      const res = await api.get<DdFindingRow[]>(`/api/projects/${projectId}/dd-findings${category ? `?category=${encodeURIComponent(category)}` : ""}`);
+      setFindings(res.data);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "삭제 실패");
+    }
+  }
+
   return (
     <div className="dd-tab">
       <div className="filter-chips" role="group" aria-label="카테고리 필터">
@@ -119,6 +131,15 @@ export function DdTab({
               <div className="dd-finding-head">
                 <span className="dd-category-badge">{f.category}</span>
                 <span className="dd-finding-date">{new Date(f.created_at).toLocaleDateString("ko-KR")}</span>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => {
+                    if (window.confirm("이 조사내역을 삭제할까요? (감사로그에 기록됩니다)")) deleteFinding(f.id);
+                  }}
+                >
+                  삭제
+                </button>
               </div>
               <p className="dd-finding-desc">
                 <GlossaryText text={f.description} />

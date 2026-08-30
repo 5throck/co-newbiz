@@ -73,8 +73,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     .query("SELECT value FROM simulation_draw WHERE simulation_id = ? AND metric = 'npv' ORDER BY iteration_no")
     .all(simulationId) as { value: number }[];
   const distribution = drawRows.length > 0 ? buildDistribution("npv", drawRows.map((d) => d.value)) : null;
+  // A2 input snapshot — what this simulation actually consumed.
+  const inputs = getDb()
+    .query("SELECT assumption_key, value FROM run_input WHERE run_id = ? AND assumption_key LIKE 'sim.%' ORDER BY assumption_key")
+    .all(simulation.run_id) as Array<{ assumption_key: string; value: number }>;
+  const liabilities = getDb()
+    .query("SELECT COUNT(*) AS c FROM contingent_liability WHERE project_id = ?")
+    .get(simulation.project_id) as { c: number };
   const { project_id: _projectId, ...row } = simulation;
-  return ok({ simulation: row, results, distribution }, 200, {
+  return ok({ simulation: row, results, distribution, inputs, contingent_liability_count: liabilities.c }, 200, {
     seed: simulation.seed,
     iterations: simulation.iterations,
     draws_stored: drawRows.length,

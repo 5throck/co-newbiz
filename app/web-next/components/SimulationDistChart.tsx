@@ -3,7 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import type { EChartsOption } from "echarts";
-import { ONYX_CHART_DEFAULTS, ONYX_CHART_THEME } from "../lib/echarts-theme.ts";
+import { useChartTheme } from "../lib/echarts-theme.ts";
 import type { SimulationDistribution } from "../lib/api.ts";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
@@ -67,22 +67,23 @@ export function SimulationDistChart({
 }
 
 function RealDistChart({ distribution }: { distribution: SimulationDistribution }) {
+  const ct = useChartTheme();
   const option: EChartsOption = {
-    ...ONYX_CHART_DEFAULTS,
-    tooltip: { ...ONYX_CHART_DEFAULTS.tooltip, trigger: "axis" },
-    legend: { data: ["빈도(실측)", "CDF(실측)"], textStyle: { color: "#9aa1ad" } },
-    grid: { ...ONYX_CHART_DEFAULTS.grid, left: 48, right: 48 },
-    xAxis: { type: "value", axisLabel: { color: "#9aa1ad", fontSize: 11 } },
+    ...ct.defaults,
+    tooltip: { ...ct.defaults.tooltip, trigger: "axis" },
+    legend: { data: ["빈도(실측)", "CDF(실측)"], textStyle: { color: ct.muted } },
+    grid: { ...ct.defaults.grid, left: 48, right: 48 },
+    xAxis: { type: "value", axisLabel: { color: ct.muted, fontSize: 11 } },
     yAxis: [
-      { type: "value", name: "빈도", axisLabel: { color: "#9aa1ad", fontSize: 11 } },
-      { type: "value", name: "CDF", max: 1, axisLabel: { color: "#9aa1ad", fontSize: 11 } },
+      { type: "value", name: "빈도", axisLabel: { color: ct.muted, fontSize: 11 } },
+      { type: "value", name: "CDF", max: 1, axisLabel: { color: ct.muted, fontSize: 11 } },
     ],
     series: [
       {
         name: "빈도(실측)",
         type: "bar",
         data: distribution.bins.map((b) => [(b.start + b.end) / 2, b.count]),
-        itemStyle: { color: ONYX_CHART_THEME.color[0] },
+        itemStyle: { color: ct.color[0] },
         barWidth: "90%",
       },
       {
@@ -92,7 +93,7 @@ function RealDistChart({ distribution }: { distribution: SimulationDistribution 
         data: distribution.cdf.map((c) => [c.value, c.p]),
         smooth: true,
         showSymbol: false,
-        lineStyle: { color: ONYX_CHART_THEME.color[1] },
+        lineStyle: { color: ct.color[1] },
       },
     ],
   };
@@ -110,6 +111,7 @@ function RealDistChart({ distribution }: { distribution: SimulationDistribution 
 }
 
 function IllustrativeDistChart({ results, seed }: { results: SimMetric[]; seed?: number | string }) {
+  const ct = useChartTheme();
   if (results.length === 0) return null;
   const [selected, setSelected] = useState(results[0].metric);
   const row = results.find((r) => r.metric === selected) ?? results[0];
@@ -133,21 +135,21 @@ function IllustrativeDistChart({ results, seed }: { results: SimMetric[]; seed?:
   const cdf = centers.map((c) => sorted.filter((s) => s <= c).length / N);
 
   const option: EChartsOption = {
-    ...ONYX_CHART_DEFAULTS,
-    tooltip: { ...ONYX_CHART_DEFAULTS.tooltip, trigger: "axis" },
-    legend: { data: ["빈도(illustrative)", "CDF(illustrative)"], textStyle: { color: "#9aa1ad" } },
-    grid: { ...ONYX_CHART_DEFAULTS.grid, left: 48, right: 48 },
-    xAxis: { type: "value", axisLabel: { color: "#9aa1ad", fontSize: 11 } },
+    ...ct.defaults,
+    tooltip: { ...ct.defaults.tooltip, trigger: "axis" },
+    legend: { data: ["빈도(illustrative)", "CDF(illustrative)"], textStyle: { color: ct.muted } },
+    grid: { ...ct.defaults.grid, left: 48, right: 48 },
+    xAxis: { type: "value", axisLabel: { color: ct.muted, fontSize: 11 } },
     yAxis: [
-      { type: "value", name: "빈도", axisLabel: { color: "#9aa1ad", fontSize: 11 } },
-      { type: "value", name: "CDF", max: 1, axisLabel: { color: "#9aa1ad", fontSize: 11 } },
+      { type: "value", name: "빈도", axisLabel: { color: ct.muted, fontSize: 11 } },
+      { type: "value", name: "CDF", max: 1, axisLabel: { color: ct.muted, fontSize: 11 } },
     ],
     series: [
       {
         name: "빈도(illustrative)",
         type: "bar",
         data: centers.map((c, i) => [c, hist[i]]),
-        itemStyle: { color: ONYX_CHART_THEME.color[0] },
+        itemStyle: { color: ct.color[0] },
         barWidth: "90%",
       },
       {
@@ -157,7 +159,7 @@ function IllustrativeDistChart({ results, seed }: { results: SimMetric[]; seed?:
         data: centers.map((c, i) => [c, cdf[i]]),
         smooth: true,
         showSymbol: false,
-        lineStyle: { color: ONYX_CHART_THEME.color[1] },
+        lineStyle: { color: ct.color[1] },
       },
     ],
   };

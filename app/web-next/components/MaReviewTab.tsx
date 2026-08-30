@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { EntityCrudPanel } from "./EntityCrudPanel.tsx";
 import {
   api,
   ApiError,
@@ -114,6 +115,19 @@ function AntitrustSection({ projectId }: { projectId: string }) {
   return (
     <section className="ma-section" aria-label="독과점">
       <h2>독과점 (Antitrust)</h2>
+      <EntityCrudPanel
+        projectId={projectId}
+        endpoint={`/api/projects/${projectId}/antitrust`}
+        idKey="id"
+        title="antitrust"
+        rowLabel="독과점"
+        columns={[
+          { key: "market_definition", label: "시장 정의", required: true },
+          { key: "hhi_before", label: "HHI 이전", type: "number" },
+          { key: "hhi_after", label: "HHI 이후", type: "number" },
+          { key: "remedy_type", label: "구제 유형" }
+        ]}
+      />
       {rows === null ? (
         <p>불러오는 중...</p>
       ) : rows.length === 0 ? (
@@ -260,6 +274,19 @@ function IncentivesSection({ projectId }: { projectId: string }) {
   return (
     <section className="ma-section" aria-label="인센티브">
       <h2>인센티브 (Incentives)</h2>
+      <EntityCrudPanel
+        projectId={projectId}
+        endpoint={`/api/projects/${projectId}/incentives`}
+        idKey="id"
+        title="incentives"
+        rowLabel="인센티브"
+        columns={[
+          { key: "direction", label: "방향", required: true },
+          { key: "type", label: "유형", required: true },
+          { key: "grantor", label: "부여 기관" },
+          { key: "amount", label: "금액", type: "number" }
+        ]}
+      />
       {rows === null ? (
         <p>불러오는 중...</p>
       ) : rows.length === 0 ? (
@@ -451,6 +478,19 @@ function SitesSection({ projectId }: { projectId: string }) {
   return (
     <section className="ma-section" aria-label="부지 비교">
       <h2>부지 비교 (Sites)</h2>
+      <EntityCrudPanel
+        projectId={projectId}
+        endpoint={`/api/projects/${projectId}/sites`}
+        idKey="id"
+        title="sites"
+        rowLabel="부지"
+        columns={[
+          { key: "name", label: "부지명", required: true },
+          { key: "region_code", label: "지역" },
+          { key: "infra_score", label: "인프라 점수", type: "number" },
+          { key: "infra_capex", label: "인프라 CAPEX", type: "number" }
+        ]}
+      />
       {rows === null ? (
         <p>불러오는 중...</p>
       ) : rows.length === 0 ? (
@@ -529,6 +569,19 @@ function PartnersSection({ projectId }: { projectId: string }) {
   return (
     <section className="ma-section" aria-label="파트너">
       <h2>파트너 (Partners)</h2>
+      <EntityCrudPanel
+        projectId={projectId}
+        endpoint={`/api/projects/${projectId}/partners`}
+        idKey="id"
+        title="partners"
+        rowLabel="파트너"
+        columns={[
+          { key: "name", label: "파트너명", required: true },
+          { key: "partner_type", label: "유형", required: true },
+          { key: "region_code", label: "지역" },
+          { key: "capability_score", label: "역량", type: "number" }
+        ]}
+      />
       {rows === null ? (
         <p>불러오는 중...</p>
       ) : rows.length === 0 ? (

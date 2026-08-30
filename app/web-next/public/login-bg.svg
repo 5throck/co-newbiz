@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1530"/>
+      <stop offset="0.55" stop-color="#10254d"/>
+      <stop offset="1" stop-color="#1b3a6b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.72" cy="0.28" r="0.5">
+      <stop offset="0" stop-color="#7c9dff" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#7c9dff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1b3a"/>
+      <stop offset="1" stop-color="#070d1c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+  <rect width="1920" height="1080" fill="url(#glow)"/>
+  <!-- distant value-chain skyline: linked nodes rising left to right -->
+  <g stroke="#3d66f5" stroke-opacity="0.5" stroke-width="2" fill="none">
+    <path d="M 120 780 L 420 700 L 720 720 L 1020 560 L 1320 590 L 1620 400 L 1830 430"/>
+  </g>
+  <g fill="#7c9dff">
+    <circle cx="120" cy="780" r="7" fill-opacity="0.9"/>
+    <circle cx="420" cy="700" r="9" fill-opacity="0.8"/>
+    <circle cx="720" cy="720" r="7" fill-opacity="0.7"/>
+    <circle cx="1020" cy="560" r="11" fill-opacity="0.9"/>
+    <circle cx="1320" cy="590" r="8" fill-opacity="0.75"/>
+    <circle cx="1620" cy="400" r="12" fill-opacity="0.95"/>
+    <circle cx="1830" cy="430" r="7" fill-opacity="0.7"/>
+  </g>
+  <!-- port cranes silhouette -->
+  <g fill="#060a16" fill-opacity="0.85">
+    <rect x="0" y="880" width="1920" height="200"/>
+    <rect x="240" y="700" width="14" height="190"/>
+    <path d="M 240 700 L 400 660 L 400 690 L 254 726 Z"/>
+    <rect x="1500" y="660" width="14" height="230"/>
+    <path d="M 1500 660 L 1680 615 L 1680 650 L 1514 690 Z"/>
+    <rect x="820" y="730" width="12" height="160"/>
+    <path d="M 820 730 L 960 695 L 960 720 L 832 752 Z"/>
+  </g>
+  <rect y="900" width="1920" height="180" fill="url(#sea)"/>
+  <!-- grid dots -->
+  <g fill="#ffffff" fill-opacity="0.05">
+    <circle cx="60" cy="120" r="2"/><circle cx="180" cy="220" r="2"/><circle cx="320" cy="90" r="2"/>
+    <circle cx="520" cy="180" r="2"/><circle cx="700" cy="120" r="2"/><circle cx="940" cy="220" r="2"/>
+    <circle cx="1180" cy="90" r="2"/><circle cx="1420" cy="180" r="2"/><circle cx="1660" cy="120" r="2"/>
+    <circle cx="1860" cy="220" r="2"/>
+  </g>
+</svg>

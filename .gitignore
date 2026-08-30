@@ -72,3 +72,5 @@ memory/archive/
 # Ignore test temp directories
 tests/.temp/
 <!-- /WORKSPACE-MANAGED -->
+*.sqlite-shm
+*.sqlite-wal

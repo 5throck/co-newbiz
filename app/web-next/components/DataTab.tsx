@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, type DataChangeRow, type ObservationRow, type SeriesRow } from "../lib/api.ts";
 import { SourceTooltip } from "./SourceTooltip.tsx";
+import { useChartTheme } from "../lib/echarts-theme.ts";
 import { EChart } from "./EChart.tsx";
 
 // 데이터 (Data) tab — ui-spec §2: series browser (search + selected series'
@@ -24,6 +25,7 @@ function changeMeta(changeType: string) {
 }
 
 export function DataTab() {
+  const ct = useChartTheme();
   const [query, setQuery] = useState("");
   const [series, setSeries] = useState<SeriesRow[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -31,11 +33,15 @@ export function DataTab() {
   const [changes, setChanges] = useState<DataChangeRow[] | null>(null);
   const [allRevisions, setAllRevisions] = useState(false);
 
+  // Debounced search — every keystroke previously hit /api/series directly.
   useEffect(() => {
-    api
-      .get<SeriesRow[]>(`/api/series?q=${encodeURIComponent(query)}`)
-      .then((res) => setSeries(res.data))
-      .catch(() => setSeries([]));
+    const t = setTimeout(() => {
+      api
+        .get<SeriesRow[]>(`/api/series?q=${encodeURIComponent(query)}`)
+        .then((res) => setSeries(res.data))
+        .catch(() => setSeries([]));
+    }, 250);
+    return () => clearTimeout(t);
   }, [query]);
 
   useEffect(() => {
@@ -80,8 +86,8 @@ export function DataTab() {
             type: "line" as const,
             smooth: true,
             data: chartObs.map((o) => o.value),
-            itemStyle: { color: "#7c9dff" },
-            areaStyle: { color: "rgba(124,157,255,0.12)" },
+            itemStyle: { color: ct.color[0] },
+            areaStyle: { color: ct.color[0], opacity: 0.12 },
           },
         ],
       }

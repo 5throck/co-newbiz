@@ -8,9 +8,18 @@ import "./styles.css";
 // (AuthProvider > GlossaryProvider > routed content). react-router-dom's
 // <BrowserRouter> has no Next.js equivalent needed — the App Router itself
 // is the router.
+
+// Pre-paint theme restore: light is the default; a stored dark preference is
+// applied before first paint to avoid a flash. Keep in sync with
+// components/ThemeToggle.tsx ("cn-theme" localStorage key).
+const THEME_INIT = `(function(){try{var t=localStorage.getItem("cn-theme");if(t==="dark"||t==="light"){document.documentElement.dataset.theme=t;}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
       <body>
         <AuthProvider>
           <GlossaryProvider>
