@@ -11,6 +11,7 @@ import {
   type ScheduleJobRow,
 } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
+import { MasterDataSection } from "../../components/admin/MasterDataSection.tsx";
 
 type Section = "users" | "audit" | "data-sources" | "schedule" | "database" | "notifications" | "glossary" | "governance" | "master-data" | "adr";
 
@@ -52,12 +53,6 @@ interface AdrRow {
   file: string;
 }
 
-interface MasterDataRow {
-  id: string;
-  raw_value: string;
-  attempted_master_table: string;
-  first_seen_at: string;
-}
 
 interface GovernanceDocRow {
   id: string;
@@ -74,17 +69,16 @@ interface GovernanceDocRow {
   review_cycle_months: number | null;
 }
 
-// Admin console — ui-spec §5. Sections the backend serves are rendered with
-// real data (users, audit, data-sources, schedule-jobs, retention,
-// notifications, glossary). Sections whose backend endpoints do not yet exist
-// render an explicit "no API yet" note instead of placeholders, per the
-// web-implementation-plan §3 gap rule (M4). The deferred-no-API sections are:
-//   - governance (governance document registry — no read endpoint yet)
-//   - master-data (staging_unmapped queue — no read endpoint yet)
-//   - adr (ADR index — no read endpoint yet)
+// Admin console — ui-spec §5. All ten sections are served by backend
+// endpoints and render real data; master-data is managed by the dedicated
+// MasterDataSection component (code tables + staging queue resolution).
 export function AdminConsole() {
   const [section, setSection] = useState<Section>("users");
   const [users, setUsers] = useState<AdminUser[] | null>(null);
+  const [newUserId, setNewUserId] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"analyst" | "viewer" | "admin">("analyst");
+  const [notice, setNotice] = useState<string | null>(null);
+  const [noticePinned, setNoticePinned] = useState(false);
   const [auditLog, setAuditLog] = useState<AuditLogRow[] | null>(null);
   const [sources, setSources] = useState<DataSourceRow[] | null>(null);
   const [jobs, setJobs] = useState<ScheduleJobRow[] | null>(null);
@@ -93,7 +87,6 @@ export function AdminConsole() {
   const [glossary, setGlossary] = useState<GlossaryTermRow[] | null>(null);
   const [lintQueue, setLintQueue] = useState<GlossaryLintQueue | null>(null);
   const [adrs, setAdrs] = useState<AdrRow[] | null>(null);
-  const [masterData, setMasterData] = useState<MasterDataRow[] | null>(null);
   const [governance, setGovernance] = useState<GovernanceDocRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retentionFormError, setRetentionFormError] = useState<string | null>(null);
@@ -246,23 +239,53 @@ export function AdminConsole() {
         .then((res) => setAdrs(res.data.adrs))
         .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
     }
-    if (section === "master-data" && masterData === null) {
-      api
-        .get<MasterDataRow[]>("/api/admin/master-data")
-        .then((res) => setMasterData(res.data))
-        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
-    }
     if (section === "governance" && governance === null) {
       api
         .get<GovernanceDocRow[]>("/api/admin/governance")
         .then((res) => setGovernance(res.data))
         .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
     }
-  }, [section, users, auditLog, sources, jobs, retention, notifications, glossary, lintQueue, adrs, masterData, governance]);
+  }, [section, users, auditLog, sources, jobs, retention, notifications, glossary, lintQueue, adrs, governance]);
 
   async function approve(userId: string) {
     await api.put(`/api/admin/users/${userId}`, { action: "approve" });
     setUsers(null);
+  }
+
+  async function createUserAccount(e: FormEvent) {
+    e.preventDefault();
+    setNotice(null);
+    try {
+      const res = await api.post<{ user_id: string; initial_password: string }>("/api/admin/users", {
+        user_id: newUserId,
+        display_name: newUserId,
+        role: newUserRole,
+      });
+      setNoticePinned(true);
+      setNotice(`사용자 ${res.data.user_id} 생성 — 임시 비밀번호: ${res.data.initial_password} (한 번만 표시됩니다)`);
+      setNewUserId("");
+      setUsers(null);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "생성 실패");
+    }
+  }
+
+  async function userAction(userId: string, action: "delete" | "reset_password") {
+    setNotice(null);
+    try {
+      if (action === "delete") {
+        if (!window.confirm(`${userId} 계정을 삭제할까요? 세션·토큰도 함께 삭제되며 감사 로그에 기록됩니다.`)) return;
+        await api.put(`/api/admin/users/${userId}`, { action: "delete" });
+        setNotice(`${userId} 삭제됨`);
+      } else {
+        const res = await api.put<{ temporary_password: string }>(`/api/admin/users/${userId}`, { action: "reset_password" });
+        setNoticePinned(true);
+        setNotice(`${userId} 비밀번호 초기화 — 임시 비밀번호: ${res.data.temporary_password} (한 번만 표시됩니다)`);
+      }
+      setUsers(null);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "작업 실패");
+    }
   }
 
   // Optimistic enable/disable: flip locally, revert to the pre-toggle
@@ -353,6 +376,36 @@ export function AdminConsole() {
         </p>
       )}
 
+      {section === "users" && (
+        <div>
+          {notice && noticePinned && (
+            <p role="status" className="mb-2 p-2 border border-[color:var(--green-border)] bg-[color:var(--green-bg)] rounded-lg text-[color:var(--green-fg)]">
+              {notice}
+              <button type="button" className="btn-ghost ml-2" onClick={() => { setNoticePinned(false); setNotice(null); }}>
+                확인
+              </button>
+            </p>
+          )}
+          <form onSubmit={createUserAccount} aria-label="사용자 생성" className="mb-4 flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              aria-label="새 사용자 아이디"
+              placeholder="user@example.com"
+              value={newUserId}
+              onChange={(e) => setNewUserId(e.target.value)}
+              required
+            />
+            <select aria-label="역할" value={newUserRole} onChange={(e) => setNewUserRole(e.target.value as "analyst" | "viewer" | "admin")}>
+              <option value="analyst">analyst</option>
+              <option value="viewer">viewer</option>
+              <option value="admin">admin</option>
+            </select>
+            <button type="submit" className="btn-premium">
+              사용자 생성
+            </button>
+          </form>
+        </div>
+      )}
       {section === "users" &&
         (users === null ? (
           <p>불러오는 중...</p>
@@ -375,12 +428,20 @@ export function AdminConsole() {
                   <td>{u.role}</td>
                   <td>{u.status}</td>
                   <td>{new Date(u.created_at).toLocaleDateString("ko-KR")}</td>
-                  <td>
+                  <td className="flex flex-wrap gap-1">
                     {u.status === "pending" && (
                       <button type="button" className="btn-premium" onClick={() => approve(u.user_id)}>
                         승인
                       </button>
                     )}
+                    {u.status !== "pending" && (
+                      <button type="button" className="btn-ghost" onClick={() => userAction(u.user_id, "reset_password")}>
+                        비밀번호 초기화
+                      </button>
+                    )}
+                    <button type="button" className="btn-ghost" onClick={() => userAction(u.user_id, "delete")}>
+                      삭제
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -821,34 +882,7 @@ export function AdminConsole() {
           </table>
         ))}
 
-      {section === "master-data" &&
-        (masterData === null ? (
-          <p>불러오는 중...</p>
-        ) : masterData.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic">미매핑 큐(staging_unmapped)가 비어 있습니다 — 모든 원시값이 정상 매칭되고 있습니다.</p>
-        ) : (
-          <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
-            <caption className="sr-only">마스터 데이터 미매핑 큐</caption>
-            <thead>
-              <tr>
-                <th scope="col">ID</th>
-                <th scope="col">원시값</th>
-                <th scope="col">대상 테이블</th>
-                <th scope="col">최초 발견</th>
-              </tr>
-            </thead>
-            <tbody>
-              {masterData.map((m) => (
-                <tr key={m.id}>
-                  <td className="font-mono text-xs">{m.id}</td>
-                  <td>{m.raw_value}</td>
-                  <td className="font-mono text-xs">{m.attempted_master_table}</td>
-                  <td>{new Date(m.first_seen_at).toLocaleString("ko-KR")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ))}
+      {section === "master-data" && <MasterDataSection />}
 
       {section === "adr" &&
         (adrs === null ? (

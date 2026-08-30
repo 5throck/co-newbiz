@@ -41,6 +41,7 @@
 | `debt-and-contingent-liability-simulation` | L3 | valuation-agent, valuation-agent | phase4 | certification-transferability (follows), financing-plan-review (composes_with), investment-feasibility-modeling (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), wacc-input-session (composes_with) | — | — |
 | `decision-record` | L3 | — | — | — | — | — |
 | `deployment-and-release` | L3 | release-engineer | — | — | — | — |
+| `design-lint` | L3 | design-system-agent | — | — | — | — |
 | `documentation-writing` | L3 | — | — | — | — | — |
 | `evidence-ledger` | L3 | — | — | — | — | — |
 | `executive-presentation` | L3 | docs-writer | phase5 | financing-plan-review (composes_with), intra-group-transaction-compliance (composes_with), portfolio-fit-assessment (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (follows), two-tier-approval-chain (composes_with) | — | — |
@@ -250,3 +251,4 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0071` | adr | — | — | — |
 | `adr:0072` | adr | — | — | — |
 | `adr:0073` | adr | — | — | — |
+| `adr:0074` | adr | — | — | — |

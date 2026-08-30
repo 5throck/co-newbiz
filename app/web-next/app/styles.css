@@ -1,38 +1,105 @@
 @import "tailwindcss";
 
-/* Onyx 2.0 Design System — dark-only (co-price design system v5.0 adapted).
-   All existing custom-property names preserved as complete color values
-   for backward compatibility with the 21 ported component files. */
+/* Onyx 3.0 Design System — light-default with dark toggle (evolution of
+   Onyx 2.0). All custom-property names preserved for backward compatibility
+   with the ported component files. Default theme is light (modern SaaS
+   baseline); `data-theme="dark"` on <html> restores the Onyx dark palette.
+   The theme is set pre-paint by an inline script in app/layout.tsx. */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
   /* ── HSL token system (enables dynamic opacity) ── */
   --primary-h: 217;
   --primary-s: 91%;
-  --primary-l: 60%;
+  --primary-l: 45%;
   --success-h: 160;
   --success-s: 84%;
-  --success-l: 39%;
-  --warning-h: 45;
-  --warning-s: 93%;
-  --warning-l: 47%;
+  --success-l: 30%;
+  --warning-h: 35;
+  --warning-s: 90%;
+  --warning-l: 38%;
   --danger-h: 0;
-  --danger-s: 93%;
-  --danger-l: 71%;
+  --danger-s: 72%;
+  --danger-l: 45%;
 
   --primary: hsl(var(--primary-h), var(--primary-s), var(--primary-l));
-  --primary-dim: hsl(var(--primary-h), var(--primary-s), 45%);
+  --primary-dim: hsl(var(--primary-h), var(--primary-s), 35%);
   --primary-bg: hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.10);
   --primary-border: hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.25);
   --success: hsl(var(--success-h), var(--success-s), var(--success-l));
   --success-bg: hsla(var(--success-h), var(--success-s), var(--success-l), 0.10);
   --warning: hsl(var(--warning-h), var(--warning-s), var(--warning-l));
-  --warning-bg: hsla(var(--warning-h), var(--warning-s), var(--warning-l), 0.10);
+  --warning-bg: hsla(var(--warning-h), var(--warning-s), var(--warning-l), 0.12);
   --danger: hsl(var(--danger-h), var(--danger-s), var(--danger-l));
   --danger-bg: hsla(var(--danger-h), var(--danger-s), var(--danger-l), 0.10);
 
-  /* ── Base surfaces (3-level elevation) ── */
+  /* ── Base surfaces (3-level elevation) — light ── */
+  --bg: #f6f7f9;
+  --fg: #171a21;
+  --surface: #ffffff;
+  --surface-2: #f1f3f6;
+  --surface-elevated: #ffffff;
+  --muted-bg: #f1f3f6;
+  --muted-fg: #5d6572;
+  --border: rgba(16, 22, 34, 0.10);
+  --border-subtle: rgba(16, 22, 34, 0.06);
+  --border-bright: rgba(16, 22, 34, 0.16);
+  --accent: #3d66f5;
+  --primary-rgb: 61, 102, 245;
+
+  /* theme-scoped interaction tokens (no hardcoded whites/blacks below) */
+  --input-bg: rgba(16, 22, 34, 0.03);
+  --hover-bg: rgba(16, 22, 34, 0.05);
+  --sidebar-bg: rgba(16, 22, 34, 0.02);
+  --placeholder-fg: rgba(23, 26, 33, 0.35);
+  --scrollbar-thumb: rgba(16, 22, 34, 0.18);
+  --scrollbar-thumb-hover: rgba(16, 22, 34, 0.30);
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-inset: rgba(255, 255, 255, 0.6);
+
+  /* ── RAG grade colors (light-tuned) ── */
+  --green-bg: hsla(152, 63%, 36%, 0.10);
+  --green-fg: #0c7a4b;
+  --green-border: hsla(152, 63%, 36%, 0.28);
+  --amber-bg: hsla(35, 90%, 45%, 0.12);
+  --amber-fg: #935c06;
+  --amber-border: hsla(35, 90%, 45%, 0.30);
+  --red-bg: hsla(0, 72%, 46%, 0.09);
+  --red-fg: #b32318;
+  --red-border: hsla(0, 72%, 46%, 0.26);
+
+  /* ── 6-step radius scale ── */
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows (light) ── */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
+  --shadow-lg: 0 8px 24px rgba(16, 24, 40, 0.10);
+  --shadow-xl: 0 40px 80px -20px rgba(16, 24, 40, 0.18);
+  --shadow-glow: 0 0 30px hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.12);
+
+  /* ── Typography ── */
+  --font-sans: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Density scaling ── */
+  --content-max: 1440px;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --primary-l: 60%;
+  --primary-dim: hsl(var(--primary-h), var(--primary-s), 45%);
+
   --bg: #0a0c10;
   --fg: #eceef2;
   --surface: #12151b;
@@ -46,7 +113,15 @@
   --accent: #7c9dff;
   --primary-rgb: 124, 157, 255;
 
-  /* ── RAG grade colors ── */
+  --input-bg: rgba(255, 255, 255, 0.03);
+  --hover-bg: rgba(255, 255, 255, 0.04);
+  --sidebar-bg: rgba(255, 255, 255, 0.02);
+  --placeholder-fg: rgba(255, 255, 255, 0.25);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.10);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.20);
+  --glass-bg: rgba(20, 20, 22, 0.7);
+  --glass-inset: rgba(255, 255, 255, 0.04);
+
   --green-bg: hsla(152, 63%, 46%, 0.12);
   --green-fg: #7fe0a0;
   --green-border: hsla(152, 63%, 46%, 0.25);
@@ -57,29 +132,11 @@
   --red-fg: #ff9d97;
   --red-border: hsla(0, 93%, 71%, 0.25);
 
-  /* ── 6-step radius scale ── */
-  --radius: 0.75rem;
-  --radius-sm: 0.5rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
-  --radius-3xl: 1.5rem;
-  --radius-full: 9999px;
-
-  /* ── Shadows ── */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 40px 80px -20px rgba(0, 0, 0, 0.7);
   --shadow-glow: 0 0 30px hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.15);
-
-  /* ── Typography ── */
-  --font-sans: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
-
-  /* ── Density scaling ── */
-  --content-max: 1440px;
 }
 
 @media (min-width: 1920px) {
@@ -105,9 +162,12 @@
   }
 
   main {
-    max-width: var(--content-max);
-    margin: 0 auto;
-    padding: 1.5rem 2rem;
+    /* Fill the content pane — the earlier centered max-width variant
+       double-applied with .app-content and squeezed everything into a
+       narrow centered column. */
+    max-width: none;
+    margin: 0;
+    padding: 1.5rem 2.5rem;
   }
 
   a, button {
@@ -129,7 +189,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     padding: 0.75rem 1rem;
-    background: hsla(0, 0%, 100%, 0.03);
+    background: var(--input-bg);
     color: var(--fg);
     transition: all 0.3s var(--ease-spring);
   }
@@ -143,7 +203,7 @@
   }
 
   input::placeholder {
-    color: rgba(255, 255, 255, 0.2);
+    color: var(--placeholder-fg);
     font-size: 0.8rem;
     letter-spacing: 0.05em;
   }
@@ -157,11 +217,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--scrollbar-thumb);
     border-radius: 10px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--scrollbar-thumb-hover);
   }
 
   /* Animations */
@@ -1228,12 +1288,12 @@
 
   /* ── Onyx 2.0 component classes ── */
   .glass {
-    background: rgba(20, 20, 22, 0.7);
+    background: var(--glass-bg);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--border);
     border-radius: var(--radius-2xl);
-    box-shadow: 0 25px 50px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    box-shadow: var(--shadow-lg), inset 0 1px 0 var(--glass-inset);
   }
   .glass-accent {
     background: linear-gradient(135deg, hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.12), hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.04));
@@ -1291,7 +1351,7 @@
     transform: none;
   }
   .btn-ghost {
-    background: hsla(0, 0%, 100%, 0.04);
+    background: var(--hover-bg);
     border: 1px solid var(--border);
     color: var(--fg);
     border-radius: var(--radius-xl);
@@ -1344,7 +1404,7 @@
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    background: hsla(0, 0%, 100%, 0.02);
+    background: var(--sidebar-bg);
     backdrop-filter: blur(20px);
     border-right: 1px solid var(--border-subtle);
     padding: 1.5rem 0;
@@ -1403,7 +1463,7 @@
     text-align: left;
   }
   .side-nav-link:hover {
-    background: hsla(0, 0%, 100%, 0.04);
+    background: var(--hover-bg);
     color: var(--fg);
   }
   .side-nav-link svg {
@@ -1449,8 +1509,7 @@
   .app-content {
     flex: 1;
     min-width: 0;
-    padding: 2rem 2.5rem;
-    max-width: 1440px;
+    max-width: none;
   }
   /* --- Gate Progress Bar --- */
   .gate-progress {
@@ -1619,3 +1678,728 @@
     }
   }
 }
+
+/* ── Governance Library (/library) ───────────────────────────────────────
+   Reference view for the axis-A documents (gate checklists, operating
+   manuals, policies). Master-detail layout reusing the Onyx surfaces. */
+.library-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.library-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--muted-fg);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.2s var(--ease-spring, ease), border-color 0.2s ease, background 0.2s ease;
+}
+.library-tab:hover {
+  color: var(--fg);
+  border-color: color-mix(in oklab, var(--primary) 40%, var(--border));
+}
+.library-tab-active {
+  color: var(--fg);
+  background: color-mix(in oklab, var(--primary) 14%, var(--surface));
+  border-color: var(--primary);
+}
+.library-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--primary) 18%, transparent);
+  color: var(--fg);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.library-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+.library-list-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.library-doc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+.library-doc-item {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s var(--ease-spring, ease);
+}
+.library-doc-item:hover {
+  border-color: color-mix(in oklab, var(--primary) 40%, var(--border));
+  transform: translateY(-1px);
+}
+.library-doc-item-active {
+  border-color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 10%, var(--surface));
+}
+.library-doc-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.library-doc-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  color: var(--muted-fg);
+  font-size: 0.78rem;
+}
+.library-doc-lang {
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+}
+.library-content-pane {
+  min-width: 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+.library-content-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-bottom: 0.9rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.library-content-title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.library-doc-path {
+  color: var(--muted-fg);
+  font-size: 0.78rem;
+}
+.library-code {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2, var(--surface));
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.library-doc-body {
+  max-width: 78ch;
+}
+.library-doc-body h2 {
+  margin: 1.4rem 0 0.5rem;
+  font-size: 1.05rem;
+}
+.library-doc-body h3 {
+  margin: 1.1rem 0 0.4rem;
+  font-size: 0.95rem;
+  color: var(--fg);
+}
+.library-doc-body p {
+  margin: 0.45rem 0;
+  line-height: 1.65;
+  color: color-mix(in oklab, var(--fg) 88%, var(--muted-fg));
+}
+.library-doc-body ul {
+  margin: 0.45rem 0;
+  padding-left: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.library-doc-body li {
+  line-height: 1.6;
+  color: color-mix(in oklab, var(--fg) 88%, var(--muted-fg));
+}
+@media (max-width: 880px) {
+  .library-layout {
+    grid-template-columns: 1fr;
+  }
+  .library-doc-list {
+    max-height: 40vh;
+  }
+}
+.library-blockquote {
+  border-left: 3px solid color-mix(in oklab, var(--primary) 55%, var(--border));
+  padding-left: 0.75rem;
+  color: var(--muted-fg);
+}
+
+/* ── DD Workspace (checklist-driven DD) ── */
+.dd-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  margin-bottom: 1rem;
+}
+.dd-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.dd-progress-badges {
+  display: inline-flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.dd-progress-bar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--muted-bg);
+  overflow: hidden;
+}
+.dd-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  transition: width 0.4s var(--ease-spring);
+}
+.dd-progress-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--warning);
+}
+.dd-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.dd-checklist-item {
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color 0.2s ease;
+}
+.dd-checklist-item-dirty {
+  border-color: var(--primary);
+}
+.dd-checklist-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.dd-item-id {
+  font-size: 0.75rem;
+  color: var(--muted-fg);
+}
+.dd-item-meta {
+  font-size: 0.75rem;
+  color: var(--muted-fg);
+}
+.dd-item-text {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.dd-item-form {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.dd-item-form select,
+.dd-item-form input {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+}
+.dd-item-form input[type="text"] {
+  min-width: 11rem;
+  flex: 1;
+  max-width: 18rem;
+}
+
+/* generic status-chip tone modifiers (used by DD workspace, profitability) */
+.status-green { background: var(--green-bg); color: var(--green-fg); }
+.status-amber { background: var(--amber-bg); color: var(--amber-fg); }
+.status-red { background: var(--red-bg); color: var(--red-fg); }
+
+/* ── Activity timeline & snapshots ── */
+.activity-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+.snapshot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.snapshot-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.snapshot-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex: 1;
+}
+.snapshot-view {
+  margin-top: 0.75rem;
+}
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.activity-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.45rem 0.2rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.activity-ts {
+  min-width: 7.5rem;
+}
+.activity-label {
+  flex: 1;
+  font-size: 0.88rem;
+}
+
+/* ── Benchmark case library ── */
+.benchmark-filters {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.benchmark-filters input[type="search"] {
+  flex: 1;
+  min-width: 14rem;
+  max-width: 24rem;
+}
+.benchmark-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 0.9rem;
+}
+.benchmark-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  transition: border-color 0.2s ease, transform 0.2s var(--ease-spring);
+}
+.benchmark-card:hover {
+  border-color: color-mix(in oklab, var(--primary) 40%, var(--border));
+  transform: translateY(-2px);
+}
+.benchmark-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.benchmark-summary {
+  margin: 0.15rem 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.benchmark-metrics {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid color-mix(in oklab, var(--primary) 55%, var(--border));
+  background: var(--muted-bg);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+
+/* .data-table restoration — the 2026-08-26 utility conversion missed the
+   components that still reference the class (AssumptionsTab, MaReviewTab,
+   portfolio-scorecard); restoring it as a component class so every table
+   gets the same treatment without touching each call site. */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0 1.5rem;
+}
+.data-table th {
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem;
+  text-align: left;
+}
+.data-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+/* ── Opportunity funnel board ── */
+.opportunity-create { margin-bottom: 1.25rem; }
+.opportunity-create summary { display: inline-flex; cursor: pointer; list-style: none; }
+.opportunity-form { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; align-items: center; }
+.opportunity-form input { min-width: 10rem; }
+.funnel-board { display: grid; grid-template-columns: repeat(4, minmax(230px, 1fr)); gap: 0.9rem; align-items: start; }
+.funnel-column-title { font-size: 0.95rem; margin: 0 0 0.6rem; display: flex; align-items: center; gap: 0.4rem; }
+.funnel-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.3rem; height: 1.3rem; padding: 0 0.3rem; border-radius: var(--radius-full); background: color-mix(in oklab, var(--primary) 16%, transparent); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+.funnel-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.funnel-card { padding: 0.75rem 0.9rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; gap: 0.3rem; }
+.funnel-card-name { font-size: 0.88rem; line-height: 1.35; }
+.funnel-card-meta { margin: 0; font-size: 0.75rem; color: var(--muted-fg); }
+.funnel-card-scores { margin: 0; font-size: 0.78rem; font-weight: 600; }
+.funnel-card-rationale { margin: 0.1rem 0 0; font-size: 0.78rem; color: var(--muted-fg); line-height: 1.5; }
+.funnel-card-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.3rem; align-items: center; }
+.funnel-empty { color: var(--muted-fg); font-size: 0.8rem; text-align: center; padding: 0.6rem 0; border: 1px dashed var(--border); border-radius: var(--radius-lg); }
+@media (max-width: 1100px) { .funnel-board { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .funnel-board { grid-template-columns: 1fr; } }
+
+/* ── Process workflow view (S1–S7) ── */
+.stage-stepper { list-style: none; display: flex; gap: 0.4rem; margin: 0 0 0.9rem; padding: 0; flex-wrap: wrap; }
+.stage-step { display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-full); background: var(--surface); font-size: 0.8rem; }
+.stage-step-complete { border-color: var(--green-border); background: var(--green-bg); color: var(--green-fg); }
+.stage-step-current { border-color: var(--primary); background: var(--primary-bg); color: var(--fg); font-weight: 700; }
+.stage-step-locked { color: var(--muted-fg); opacity: 0.7; }
+.stage-step-terminated { border-color: var(--red-border); background: var(--red-bg); color: var(--red-fg); }
+.stage-step-id { font-weight: 800; font-variant-numeric: tabular-nums; }
+.stage-step-mark { font-weight: 800; }
+.gate-status-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.workflow-blockers { margin: 0 0 0.9rem; padding: 0.6rem 0.9rem; border-left: 3px solid var(--warning); background: var(--warning-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; list-style: none; font-size: 0.85rem; }
+.workflow-card { padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); margin-bottom: 0.9rem; }
+.workflow-card h3 { margin: 0 0 0.6rem; font-size: 0.95rem; }
+.route-form { display: flex; flex-direction: column; gap: 0.6rem; }
+.route-form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; color: var(--muted-fg); }
+.route-form textarea { min-height: 3.5rem; }
+.route-form select, .route-form input, .route-form textarea { max-width: 34rem; }
+.workflow-artifacts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; }
+.bc-model-row { margin-bottom: 0.6rem; }
+.bc-model-row select { min-width: 18rem; }
+.bc-line-row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.bc-line-row input, .bc-line-row select { padding: 0.4rem 0.6rem; font-size: 0.82rem; min-width: 7rem; }
+
+/* ── S1 market view ── */
+.market-layout { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 1.25rem; align-items: start; }
+.market-list-pane { display: flex; flex-direction: column; gap: 0.5rem; }
+.market-series-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; max-height: 65vh; overflow-y: auto; }
+.market-chart-pane { min-width: 0; padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); }
+@media (max-width: 880px) { .market-layout { grid-template-columns: 1fr; } }
+
+/* ── Login rich layout (background image + assist links) ── */
+.login-page-rich {
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 3rem;
+  padding: 0 2rem;
+  background:
+    linear-gradient(to bottom, color-mix(in oklab, var(--bg) 55%, transparent), var(--bg) 92%),
+    url("/login-bg.svg") center / cover no-repeat;
+}
+.login-hero {
+  align-self: center;
+  max-width: 34rem;
+  color: #fff;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
+}
+.login-hero-title {
+  font-size: 2.1rem;
+  font-weight: 800;
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.02em;
+}
+.login-hero-sub {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  opacity: 0.88;
+  margin: 0;
+}
+.login-panel {
+  align-self: center;
+  width: min(24rem, 100%);
+  padding: 2rem 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(12px);
+}
+.login-panel h1 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+}
+.login-panel form {
+  display: flex;
+  flex-direction: column;
+}
+.login-panel label {
+  font-size: 0.82rem;
+  color: var(--muted-fg);
+  margin: 0.5rem 0 0.25rem;
+}
+.login-assist {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.login-link {
+  color: var(--accent);
+  text-decoration: underline;
+  font-size: 0.85rem;
+}
+.login-hint {
+  margin: 0;
+  color: var(--muted-fg);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+@media (max-width: 880px) {
+  .login-hero {
+    display: none;
+  }
+}
+
+/* ── Topbar (right-aligned actions) ── */
+.app-main-col { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+}
+.topbar-crumbs { font-size: 0.85rem; font-weight: 600; color: var(--muted-fg); }
+.topbar-actions { display: flex; align-items: center; gap: 0.75rem; }
+.topbar-user { font-size: 0.8rem; color: var(--muted-fg); max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-logout {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.35rem 0.7rem; border: 1px solid var(--border); border-radius: var(--radius-full);
+  background: var(--surface); color: var(--fg); font-size: 0.8rem; cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+.topbar-logout:hover { border-color: var(--danger); color: var(--danger); }
+.theme-toggle-compact {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem; border-radius: var(--radius-full);
+  border: 1px solid var(--border); background: var(--surface); color: var(--fg);
+  cursor: pointer; transition: border-color 0.2s ease;
+}
+.theme-toggle-compact:hover { border-color: var(--primary); }
+
+/* ── Process progress header (S1–S7 signal lights) ── */
+.process-header {
+  position: sticky;
+  top: 2.7rem;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.7rem 1rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+}
+.process-lights {
+  list-style: none;
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.process-light {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  background: var(--muted-bg);
+}
+.pl-icon { font-weight: 900; font-size: 0.95rem; }
+.pl-body { display: flex; flex-direction: column; line-height: 1.15; }
+.pl-id { font-weight: 700; }
+.pl-status { font-size: 0.68rem; color: var(--muted-fg); }
+.pl-complete { border-color: var(--green-border); background: var(--green-bg); color: var(--green-fg); }
+.pl-complete .pl-status { color: var(--green-fg); }
+.pl-current { border-color: var(--primary); background: var(--primary-bg); color: var(--fg); box-shadow: 0 0 0 1px var(--primary-border); }
+.pl-terminated { border-color: var(--red-border); background: var(--red-bg); color: var(--red-fg); }
+.process-header-meta {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.process-hold-note {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--warning);
+  background: var(--warning-bg);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.82rem;
+}
+
+/* ── Deal-card stage lights ── */
+.stage-lights { list-style: none; display: flex; gap: 0.35rem; flex-wrap: wrap; margin: 0.35rem 0 0.2rem; padding: 0; }
+.stage-light {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.15rem 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-full);
+  font-size: 0.7rem; background: var(--muted-bg); color: var(--muted-fg);
+}
+.sl-complete { border-color: var(--green-border); background: var(--green-bg); color: var(--green-fg); }
+.sl-current { border-color: var(--primary); background: var(--primary-bg); color: var(--fg); font-weight: 700; }
+
+/* ── Benchmark detail modal ── */
+.benchmark-card-open {
+  display: flex; flex-direction: column; gap: 0.3rem; width: 100%;
+  text-align: left; background: transparent; border: none; padding: 0;
+  color: inherit; cursor: pointer; font: inherit;
+}
+.benchmark-more { margin-top: 0.4rem; font-size: 0.75rem; color: var(--accent); }
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem;
+}
+.modal-panel {
+  width: min(46rem, 100%);
+  max-height: 82vh;
+  overflow-y: auto;
+  padding: 1.5rem 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-xl);
+}
+.modal-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 0.5rem;
+}
+.modal-head h2 { margin: 0; font-size: 1.1rem; }
+
+/* ── Glossary split + detail panel ── */
+.glossary-split { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(280px, 380px); gap: 1.25rem; align-items: start; }
+.glossary-card-open { display: flex; flex-direction: column; gap: 0.25rem; width: 100%; text-align: left; background: transparent; border: none; padding: 0; color: inherit; cursor: pointer; font: inherit; }
+.glossary-card-open:hover .glossary-card-head strong { color: var(--accent); }
+.glossary-card-active { border-color: var(--primary) !important; }
+.glossary-preview { margin: 0.25rem 0 0; font-size: 0.78rem; color: var(--muted-fg); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.glossary-detail {
+  position: sticky; top: 5.2rem;
+  padding: 1.1rem 1.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  max-height: 75vh; overflow-y: auto;
+}
+.glossary-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.glossary-detail-head h2 { margin: 0; font-size: 1.05rem; }
+.glossary-detail-en { color: var(--muted-fg); font-size: 0.82rem; margin: 0.2rem 0 0.8rem; }
+.glossary-detail section { margin-top: 0.8rem; }
+.glossary-detail h3 { margin: 0 0 0.25rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-fg); }
+.glossary-detail p { margin: 0; font-size: 0.85rem; line-height: 1.65; }
+.glossary-related { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.glossary-usedin { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.78rem; }
+@media (max-width: 1000px) { .glossary-split { grid-template-columns: 1fr; } .glossary-detail { position: static; } }
+
+/* ── Process stage card hub ── */
+.process-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.9rem; }
+.process-card {
+  display: flex; flex-direction: column; gap: 0.35rem;
+  padding: 1rem 1.15rem; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface); color: var(--fg); text-decoration: none;
+  transition: border-color 0.2s ease, transform 0.2s var(--ease-spring);
+}
+.process-card:hover { border-color: color-mix(in oklab, var(--primary) 45%, var(--border)); transform: translateY(-2px); }
+.process-card strong { font-size: 0.92rem; }
+.process-card p { margin: 0; font-size: 0.8rem; color: var(--muted-fg); line-height: 1.55; }
+.process-deal-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.process-deal-row {
+  display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap;
+  padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);
+}
+.process-deal-no { font-weight: 700; color: var(--fg); text-decoration: none; min-width: 8rem; }
+.process-deal-no:hover { color: var(--accent); }

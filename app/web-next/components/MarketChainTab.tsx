@@ -181,9 +181,9 @@ export function MarketChainTab({ projectId }: { projectId: string }) {
               })();
             }}
           >
-            <input type="number" placeholder="연도" value={importForm.fiscal_year} onInput={(e) => setImportForm({ ...importForm, fiscal_year: (e.target as HTMLInputElement).value })} required />
-            <input placeholder="지표 키 (revenue)" value={importForm.metric_key} onInput={(e) => setImportForm({ ...importForm, metric_key: (e.target as HTMLInputElement).value })} required />
-            <input type="number" step="any" placeholder="값" value={importForm.value} onInput={(e) => setImportForm({ ...importForm, value: (e.target as HTMLInputElement).value })} required />
+            <input type="number" placeholder="연도" value={importForm.fiscal_year} onChange={(e) => setImportForm({ ...importForm, fiscal_year: (e.target as HTMLInputElement).value })} required />
+            <input placeholder="지표 키 (revenue)" value={importForm.metric_key} onChange={(e) => setImportForm({ ...importForm, metric_key: (e.target as HTMLInputElement).value })} required />
+            <input type="number" step="any" placeholder="값" value={importForm.value} onChange={(e) => setImportForm({ ...importForm, value: (e.target as HTMLInputElement).value })} required />
             <button type="submit">값 추가 (폴백 임포트)</button>
           </form>
         </>
@@ -213,7 +213,7 @@ export function MarketChainTab({ projectId }: { projectId: string }) {
           })();
         }}
       >
-        <select value={simRunId} onInput={(e) => setSimRunId((e.target as HTMLSelectElement).value)} required>
+        <select value={simRunId} onChange={(e) => setSimRunId((e.target as HTMLSelectElement).value)} required>
           <option value="">런 선택</option>
           {runs.map((r) => (
             <option key={r.id} value={r.id}>
@@ -221,7 +221,7 @@ export function MarketChainTab({ projectId }: { projectId: string }) {
             </option>
           ))}
         </select>
-        <select value={scenario} onInput={(e) => setScenario((e.target as HTMLSelectElement).value as typeof scenario)}>
+        <select value={scenario} onChange={(e) => setScenario((e.target as HTMLSelectElement).value as typeof scenario)}>
           <option value="downside">다운사이드</option>
           <option value="base">베이스</option>
           <option value="upside">업사이드</option>
@@ -431,14 +431,14 @@ export function ChainSensitivityEditor({ projectId }: { projectId: string }) {
           } catch (err) { setError(errText(err)); }
         }}
       >
-        <input placeholder="industry_id" value={form.industry_id} onInput={(e) => setForm({ ...form, industry_id: (e.target as HTMLInputElement).value })} required />
-        <select value={form.driver_code} onInput={(e) => setForm({ ...form, driver_code: (e.target as HTMLSelectElement).value })}>
+        <input placeholder="industry_id" value={form.industry_id} onChange={(e) => setForm({ ...form, industry_id: (e.target as HTMLInputElement).value })} required />
+        <select value={form.driver_code} onChange={(e) => setForm({ ...form, driver_code: (e.target as HTMLSelectElement).value })}>
           <option value="rate">금리</option><option value="fx">환율</option><option value="commodity">원자재</option><option value="regulation">규제</option>
         </select>
-        <input placeholder="지역 코드 (선택)" value={form.region_code} onInput={(e) => setForm({ ...form, region_code: (e.target as HTMLInputElement).value })} />
-        <input placeholder="세그먼트 코드 (선택)" value={form.segment_code} onInput={(e) => setForm({ ...form, segment_code: (e.target as HTMLInputElement).value })} />
-        <input type="number" step="any" placeholder="민감도" value={form.sensitivity} onInput={(e) => setForm({ ...form, sensitivity: (e.target as HTMLInputElement).value })} required />
-        <input type="number" placeholder="지연(월)" value={form.lag_months} onInput={(e) => setForm({ ...form, lag_months: (e.target as HTMLInputElement).value })} required />
+        <input placeholder="지역 코드 (선택)" value={form.region_code} onChange={(e) => setForm({ ...form, region_code: (e.target as HTMLInputElement).value })} />
+        <input placeholder="세그먼트 코드 (선택)" value={form.segment_code} onChange={(e) => setForm({ ...form, segment_code: (e.target as HTMLInputElement).value })} />
+        <input type="number" step="any" placeholder="민감도" value={form.sensitivity} onChange={(e) => setForm({ ...form, sensitivity: (e.target as HTMLInputElement).value })} required />
+        <input type="number" placeholder="지연(월)" value={form.lag_months} onChange={(e) => setForm({ ...form, lag_months: (e.target as HTMLInputElement).value })} required />
         <button type="submit">저장</button>
       </form>
     </section>

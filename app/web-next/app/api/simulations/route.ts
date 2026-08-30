@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const body = (await request.json().catch(() => null)) as { run_id?: string; seed?: number; iterations?: number } | null;
+  const body = (await request.json().catch(() => null)) as { run_id?: string; seed?: number; iterations?: number; discount_rate_override?: number } | null;
   if (!body?.run_id?.trim()) {
     return badRequest("invalid_request", "run_id is required.");
   }
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return forbidden("role_required", "Simulation runs require the analyst role.");
   }
   try {
-    const result = await runSimulationForRun(getDb(), { runId, seed: body.seed, iterations: body.iterations });
+    const result = await runSimulationForRun(getDb(), { runId, seed: body.seed, iterations: body.iterations, discountRateOverride: typeof body.discount_rate_override === 'number' ? body.discount_rate_override : undefined });
     appendAudit(getDb(), { actor: ctx.userId, action: "simulation_run", target: `${run.project_id}:${result.simulation_id}`, now: new Date().toISOString() });
     return ok(result, 201);
   } catch (err) {

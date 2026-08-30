@@ -93,7 +93,7 @@ function AnalysisTasksSection({ projectId }: { projectId: string }) {
                 <td><DeliverableTypeLabel type={t.deliverable_type} /></td>
                 <td>
                   {t.reviewed_by ? (
-                    <span className="critical-badge" style={{ background: "var(--green-bg, #e6f4ea)", color: "var(--green-fg, #1a7f37)" }}>
+                    <span className="critical-badge" style={{ background: "var(--green-bg)", color: "var(--green-fg)" }}>
                       <span aria-hidden="true">●</span> 검토 완료
                     </span>
                   ) : (

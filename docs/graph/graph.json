@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 492,
-    "edge_count": 864
+    "node_count": 495,
+    "edge_count": 865
   },
   "nodes": [
     {
@@ -373,6 +373,11 @@
       "label": "ADR-0073: Adopt the skill relationship graph and the 0–7 lifecycle phase system"
     },
     {
+      "id": "adr:0074",
+      "type": "adr",
+      "label": "ADR-0074: Process Meta Model Platform — declarative flow spec, agentic runtime, multi-channel interfaces"
+    },
+    {
       "id": "agent:antitrust-agent",
       "type": "agent",
       "label": "antitrust-agent"
@@ -428,6 +433,11 @@
       "id": "agent:dba",
       "type": "agent",
       "label": "dba"
+    },
+    {
+      "id": "agent:design-system-agent",
+      "type": "agent",
+      "label": "design-system-agent"
     },
     {
       "id": "agent:docs-writer",
@@ -1553,6 +1563,13 @@
       "id": "skill:deployment-and-release",
       "type": "skill",
       "label": "deployment-and-release",
+      "version": "1.0.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:design-lint",
+      "type": "skill",
+      "label": "design-lint",
       "version": "1.0.0",
       "status": "active"
     },
@@ -6244,6 +6261,12 @@
       "from": "agent:dba",
       "to": "skill:query-performance-tuning",
       "source_ref": "skills/query-performance-tuning/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:design-system-agent",
+      "to": "skill:design-lint",
+      "source_ref": "skills/design-lint/SKILL.md"
     },
     {
       "type": "owns",

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { api } from "../lib/api.ts";
+import { useChartTheme } from "../lib/echarts-theme.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { GradeBadge } from "../components/RagCard.tsx";
 
@@ -29,6 +30,7 @@ const GATE_LABELS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
+  const ct = useChartTheme();
   const { me } = useAuth();
   const [projects, setProjects] = useState<DashboardProject[]>([]);
 
@@ -54,21 +56,21 @@ export default function DashboardPage() {
     xAxis: {
       type: "category" as const,
       data: stageCounts.map((s) => s.label),
-      axisLabel: { color: "#9aa1ad", fontSize: 11 },
-      axisLine: { lineStyle: { color: "#2b303b" } },
+      axisLabel: { color: ct.muted, fontSize: 11 },
+      axisLine: { lineStyle: { color: ct.axis } },
     },
     yAxis: {
       type: "value" as const,
       minInterval: 1,
-      axisLabel: { color: "#9aa1ad" },
-      splitLine: { lineStyle: { color: "#2b303b" } },
+      axisLabel: { color: ct.muted },
+      splitLine: { lineStyle: { color: ct.split } },
     },
     series: [
       {
         type: "bar" as const,
         data: stageCounts.map((s) => s.count),
         itemStyle: {
-          color: "#7c9dff",
+          color: ct.color[0],
           borderRadius: [4, 4, 0, 0],
         },
         barMaxWidth: 40,
@@ -81,7 +83,7 @@ export default function DashboardPage() {
     tooltip: { trigger: "item" as const },
     legend: {
       bottom: 0,
-      textStyle: { color: "#9aa1ad", fontSize: 12 },
+      textStyle: { color: ct.muted, fontSize: 12 },
     },
     series: [
       {
@@ -91,10 +93,10 @@ export default function DashboardPage() {
         avoidLabelOverlap: false,
         label: { show: false },
         data: [
-          { value: ragCounts.green, name: "\u25cf Green", itemStyle: { color: "#7fe0a0" } },
-          { value: ragCounts.amber, name: "\u25b2 Amber", itemStyle: { color: "#ffcf7a" } },
-          { value: ragCounts.red, name: "\u25a0 Red", itemStyle: { color: "#ff9d97" } },
-          { value: ragCounts.unassessed, name: "\u25cb Unassessed", itemStyle: { color: "#3a4150" } },
+          { value: ragCounts.green, name: "\u25cf Green", itemStyle: { color: ct.color[1] } },
+          { value: ragCounts.amber, name: "\u25b2 Amber", itemStyle: { color: ct.color[2] } },
+          { value: ragCounts.red, name: "\u25a0 Red", itemStyle: { color: ct.color[3] } },
+          { value: ragCounts.unassessed, name: "\u25cb Unassessed", itemStyle: { color: ct.axis } },
         ],
       },
     ],

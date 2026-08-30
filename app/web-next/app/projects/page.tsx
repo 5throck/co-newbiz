@@ -6,6 +6,7 @@ import { api, type ProjectSummary } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { GradeBadge } from "../../components/RagCard.tsx";
 import { GateProgress } from "../../components/GateProgress.tsx";
+import { StageLights } from "../../components/StageLights.tsx";
 import { NotificationBell } from "../../components/NotificationBell.tsx";
 
 type FilterType = "all" | "gf" | "bf";
@@ -143,6 +144,9 @@ export default function ProjectListPage() {
                 )}
               </div>
               <GateProgress currentStage={p.gate_stage} />
+              {p.stage_summary && (
+                <StageLights stages={p.stage_summary.stages} routeDecided={p.stage_summary.routeDecided} />
+              )}
               <span className="project-created">
                 {new Date(p.created_at).toLocaleDateString("ko-KR")}
               </span>

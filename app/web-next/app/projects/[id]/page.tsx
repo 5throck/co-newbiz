@@ -4,7 +4,7 @@
 // next/navigation's useParams (same hook name, same shape for a client
 // component). Tabs remain client-side state (design's 3-depth nav max).
 import { useEffect, useState, type FormEvent } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   api,
   ApiError,
@@ -19,7 +19,10 @@ import { ProcedureViewer } from "../../../components/ProcedureViewer.tsx";
 import { GlossaryTerm } from "../../../components/GlossaryTerm.tsx";
 import { DataTab } from "../../../components/DataTab.tsx";
 import { AssumptionsTab } from "../../../components/AssumptionsTab.tsx";
-import { DdTab } from "../../../components/DdTab.tsx";
+import { DdWorkspaceTab } from "../../../components/DdWorkspaceTab.tsx";
+import { ActivityTab } from "../../../components/ActivityTab.tsx";
+import { WorkflowTab } from "../../../components/WorkflowTab.tsx";
+import { ProcessHeader } from "../../../components/ProcessHeader.tsx";
 import { PermitsTab } from "../../../components/PermitsTab.tsx";
 import { MaReviewTab } from "../../../components/MaReviewTab.tsx";
 import { ModelTab } from "../../../components/ModelTab.tsx";
@@ -34,6 +37,7 @@ import { ReviewStatusTab } from "../../../components/ReviewStatusTab.tsx";
 
 type Tab =
   | "overview"
+  | "workflow"
   | "procedure"
   | "data"
   | "assumptions"
@@ -46,6 +50,7 @@ type Tab =
   | "market"
   | "pmi"
   | "review"
+  | "activity"
   | "members";
 
 interface ProjectMember {
@@ -58,8 +63,18 @@ interface ProjectMember {
 
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const id = params.id;
-  const [tab, setTab] = useState<Tab>("overview");
+  const tabParam = searchParams.get("tab") as Tab | null;
+  const validTabs: Tab[] = ["workflow", "overview", "procedure", "market", "data", "assumptions", "model", "simulation", "compare", "dd", "permits", "ma", "pmi", "review", "activity", "members"];
+  const initialTab: Tab = tabParam && validTabs.includes(tabParam) ? tabParam : "workflow";
+  const [tab, setTabState] = useState<Tab>(initialTab);
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", t);
+    window.history.replaceState(null, "", url.toString());
+  };
   // value_impact 딥링크: 실사 탭의 가정 키 클릭 → 가정 탭에서 해당 키 조회.
   const [assumptionFocus, setAssumptionFocus] = useState<string | null>(null);
   const [project, setProject] = useState<ProjectSummary | null>(null);
@@ -131,10 +146,14 @@ export default function ProjectDetailPage() {
           ⚠ 본 프로젝트는 미공개중요정보(MNPI)로 분류되어 있습니다. 모든 열람은 감사 로그에 기록됩니다.
         </div>
       )}
+      {id && <ProcessHeader projectId={id} />}
       <nav
         className="tab-nav my-4"
         aria-label="프로젝트 탭"
       >
+        <button type="button" aria-current={tab === "workflow"} onClick={() => setTab("workflow")}>
+          워크플로우
+        </button>
         <button type="button" aria-current={tab === "overview"} onClick={() => setTab("overview")}>
           개요
         </button>
@@ -168,10 +187,17 @@ export default function ProjectDetailPage() {
         </button>
         <button type="button" aria-current={tab === "pmi"} onClick={() => setTab("pmi")}>PMI·증거</button>
         <button type="button" aria-current={tab === "review"} onClick={() => setTab("review")}>검토 현황</button>
+        <button type="button" aria-current={tab === "activity"} onClick={() => setTab("activity")}>활동·보고서</button>
       <button type="button" aria-current={tab === "members"} onClick={() => setTab("members")}>
           멤버십
         </button>
       </nav>
+
+      {tab === "workflow" && id && (
+        <section aria-label="워크플로우">
+          <WorkflowTab projectId={id} />
+        </section>
+      )}
 
       {tab === "overview" && (
         <section aria-label="개요">
@@ -239,7 +265,7 @@ export default function ProjectDetailPage() {
 
       {tab === "dd" && id && (
         <section aria-label="실사">
-          <DdTab
+          <DdWorkspaceTab
             projectId={id}
             onOpenAssumption={(key) => {
               setAssumptionFocus(key);
@@ -278,6 +304,12 @@ export default function ProjectDetailPage() {
       {tab === "review" && id && (
         <section aria-label="검토 현황">
           <ReviewStatusTab projectId={id} />
+        </section>
+      )}
+
+      {tab === "activity" && id && (
+        <section aria-label="활동 및 보고서">
+          <ActivityTab projectId={id} />
         </section>
       )}
 

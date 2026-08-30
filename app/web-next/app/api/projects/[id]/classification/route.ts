@@ -30,7 +30,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return forbidden("admin_required", "Classification is set by an administrator who is a project member.");
   }
   const { id } = await params;
-  const project = visibleProject(ctx, id);
+  const project = visibleProject(ctx, id, { allowAdmin: true });
   if (!project) return notFound();
   const body = (await request.json().catch(() => null)) as
     | { sensitivity?: string; mnpi_flag?: number | boolean; wall_group?: string | null }

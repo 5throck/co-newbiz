@@ -137,16 +137,16 @@ export function PmiEvidenceTab({ projectId }: { projectId: string }) {
           });
         }}
       >
-        <input placeholder="역할 코드 (C-EO-001)" value={talentForm.role_ref} onInput={(e) => setTalentForm({ ...talentForm, role_ref: (e.target as HTMLInputElement).value })} required />
-        <select value={talentForm.status} onInput={(e) => setTalentForm({ ...talentForm, status: (e.target as HTMLSelectElement).value as KeyTalentRow["status"] })}>
+        <input placeholder="역할 코드 (C-EO-001)" value={talentForm.role_ref} onChange={(e) => setTalentForm({ ...talentForm, role_ref: (e.target as HTMLInputElement).value })} required />
+        <select value={talentForm.status} onChange={(e) => setTalentForm({ ...talentForm, status: (e.target as HTMLSelectElement).value as KeyTalentRow["status"] })}>
           {Object.entries(KEY_TALENT_STATUS_KO).map(([v, label]) => (
             <option key={v} value={v}>
               {label}
             </option>
           ))}
         </select>
-        <input type="date" value={talentForm.locked_at.slice(0, 10)} onInput={(e) => setTalentForm({ ...talentForm, locked_at: (e.target as HTMLInputElement).value })} required />
-        {talentForm.status !== "active" && <input type="date" value={talentForm.exit_date} onInput={(e) => setTalentForm({ ...talentForm, exit_date: (e.target as HTMLInputElement).value })} />}
+        <input type="date" value={talentForm.locked_at.slice(0, 10)} onChange={(e) => setTalentForm({ ...talentForm, locked_at: (e.target as HTMLInputElement).value })} required />
+        {talentForm.status !== "active" && <input type="date" value={talentForm.exit_date} onChange={(e) => setTalentForm({ ...talentForm, exit_date: (e.target as HTMLInputElement).value })} />}
         <button type="submit">명부 추가</button>
       </form>
 
@@ -192,11 +192,11 @@ export function PmiEvidenceTab({ projectId }: { projectId: string }) {
           });
         }}
       >
-        <input type="number" min={0} max={10000} placeholder="달성률 bp (9000=90%)" value={certForm.run_rate_bp} onInput={(e) => setCertForm({ ...certForm, run_rate_bp: (e.target as HTMLInputElement).value })} required />
-        <input type="number" min={1} placeholder="유지 분기" value={certForm.sustained_quarters} onInput={(e) => setCertForm({ ...certForm, sustained_quarters: (e.target as HTMLInputElement).value })} required />
-        <input placeholder="인증자 (C-CFO-001)" value={certForm.certified_by} onInput={(e) => setCertForm({ ...certForm, certified_by: (e.target as HTMLInputElement).value })} required />
-        <input type="date" placeholder="베이스라인 잠금일" value={certForm.baseline_locked_at} onInput={(e) => setCertForm({ ...certForm, baseline_locked_at: (e.target as HTMLInputElement).value })} required />
-        <input type="date" placeholder="서명일" value={certForm.signed_at} onInput={(e) => setCertForm({ ...certForm, signed_at: (e.target as HTMLInputElement).value })} required />
+        <input type="number" min={0} max={10000} placeholder="달성률 bp (9000=90%)" value={certForm.run_rate_bp} onChange={(e) => setCertForm({ ...certForm, run_rate_bp: (e.target as HTMLInputElement).value })} required />
+        <input type="number" min={1} placeholder="유지 분기" value={certForm.sustained_quarters} onChange={(e) => setCertForm({ ...certForm, sustained_quarters: (e.target as HTMLInputElement).value })} required />
+        <input placeholder="인증자 (C-CFO-001)" value={certForm.certified_by} onChange={(e) => setCertForm({ ...certForm, certified_by: (e.target as HTMLInputElement).value })} required />
+        <input type="date" placeholder="베이스라인 잠금일" value={certForm.baseline_locked_at} onChange={(e) => setCertForm({ ...certForm, baseline_locked_at: (e.target as HTMLInputElement).value })} required />
+        <input type="date" placeholder="서명일" value={certForm.signed_at} onChange={(e) => setCertForm({ ...certForm, signed_at: (e.target as HTMLInputElement).value })} required />
         <button type="submit">인증 기록</button>
       </form>
 
@@ -234,19 +234,19 @@ export function PmiEvidenceTab({ projectId }: { projectId: string }) {
           });
         }}
       >
-        <select value={shapeForm.shape} onInput={(e) => setShapeForm({ ...shapeForm, shape: (e.target as HTMLSelectElement).value })}>
+        <select value={shapeForm.shape} onChange={(e) => setShapeForm({ ...shapeForm, shape: (e.target as HTMLSelectElement).value })}>
           {Object.entries(SHAPE_KO).map(([v, label]) => (
             <option key={v} value={v}>
               {label}
             </option>
           ))}
         </select>
-        <select value={shapeForm.intent} onInput={(e) => setShapeForm({ ...shapeForm, intent: (e.target as HTMLSelectElement).value as "integration" | "capability_access" })}>
+        <select value={shapeForm.intent} onChange={(e) => setShapeForm({ ...shapeForm, intent: (e.target as HTMLSelectElement).value as "integration" | "capability_access" })}>
           <option value="integration">통합 의도</option>
           <option value="capability_access">역량 접근 의도</option>
         </select>
         <label>
-          <input type="checkbox" checked={shapeForm.viable} onInput={(e) => setShapeForm({ ...shapeForm, viable: (e.target as HTMLInputElement).checked })} /> 생존
+          <input type="checkbox" checked={shapeForm.viable} onChange={(e) => setShapeForm({ ...shapeForm, viable: (e.target as HTMLInputElement).checked })} /> 생존
         </label>
         <button type="submit">평가 기록</button>
       </form>
@@ -284,9 +284,9 @@ export function PmiEvidenceTab({ projectId }: { projectId: string }) {
           });
         }}
       >
-        <input placeholder="인센티브 식별자" value={deadlineForm.incentive_ref} onInput={(e) => setDeadlineForm({ ...deadlineForm, incentive_ref: (e.target as HTMLInputElement).value })} required />
-        <input type="datetime-local" value={deadlineForm.deadline} onInput={(e) => setDeadlineForm({ ...deadlineForm, deadline: (e.target as HTMLInputElement).value })} required />
-        <input placeholder="출처 (선택)" value={deadlineForm.source} onInput={(e) => setDeadlineForm({ ...deadlineForm, source: (e.target as HTMLInputElement).value })} />
+        <input placeholder="인센티브 식별자" value={deadlineForm.incentive_ref} onChange={(e) => setDeadlineForm({ ...deadlineForm, incentive_ref: (e.target as HTMLInputElement).value })} required />
+        <input type="datetime-local" value={deadlineForm.deadline} onChange={(e) => setDeadlineForm({ ...deadlineForm, deadline: (e.target as HTMLInputElement).value })} required />
+        <input placeholder="출처 (선택)" value={deadlineForm.source} onChange={(e) => setDeadlineForm({ ...deadlineForm, source: (e.target as HTMLInputElement).value })} />
         <button type="submit">마감 기록</button>
       </form>
 
@@ -347,23 +347,23 @@ export function PmiEvidenceTab({ projectId }: { projectId: string }) {
           });
         }}
       >
-        <input placeholder="run_id" value={assertForm.run_id} onInput={(e) => setAssertForm({ ...assertForm, run_id: (e.target as HTMLInputElement).value })} required />
-        <input placeholder="var_key (예: legal.ip_assignment_chain_complete)" value={assertForm.var_key} onInput={(e) => setAssertForm({ ...assertForm, var_key: (e.target as HTMLInputElement).value })} required />
-        <select value={assertForm.kind} onInput={(e) => setAssertForm({ ...assertForm, kind: (e.target as HTMLSelectElement).value })}>
+        <input placeholder="run_id" value={assertForm.run_id} onChange={(e) => setAssertForm({ ...assertForm, run_id: (e.target as HTMLInputElement).value })} required />
+        <input placeholder="var_key (예: legal.ip_assignment_chain_complete)" value={assertForm.var_key} onChange={(e) => setAssertForm({ ...assertForm, var_key: (e.target as HTMLInputElement).value })} required />
+        <select value={assertForm.kind} onChange={(e) => setAssertForm({ ...assertForm, kind: (e.target as HTMLSelectElement).value })}>
           <option value="text">텍스트</option>
           <option value="num">숫자</option>
           <option value="bool">참/거짓</option>
         </select>
         {assertForm.kind === "bool" ? (
-          <select value={assertForm.value} onInput={(e) => setAssertForm({ ...assertForm, value: (e.target as HTMLSelectElement).value })}>
+          <select value={assertForm.value} onChange={(e) => setAssertForm({ ...assertForm, value: (e.target as HTMLSelectElement).value })}>
             <option value="true">참</option>
             <option value="false">거짓</option>
           </select>
         ) : (
-          <input placeholder="값" value={assertForm.value} onInput={(e) => setAssertForm({ ...assertForm, value: (e.target as HTMLInputElement).value })} required />
+          <input placeholder="값" value={assertForm.value} onChange={(e) => setAssertForm({ ...assertForm, value: (e.target as HTMLInputElement).value })} required />
         )}
-        <input placeholder="근거 참조 (doc:/src:/https:)" value={assertForm.evidence_ref} onInput={(e) => setAssertForm({ ...assertForm, evidence_ref: (e.target as HTMLInputElement).value })} required />
-        <input placeholder="근거 설명" value={assertForm.rationale} onInput={(e) => setAssertForm({ ...assertForm, rationale: (e.target as HTMLInputElement).value })} required />
+        <input placeholder="근거 참조 (doc:/src:/https:)" value={assertForm.evidence_ref} onChange={(e) => setAssertForm({ ...assertForm, evidence_ref: (e.target as HTMLInputElement).value })} required />
+        <input placeholder="근거 설명" value={assertForm.rationale} onChange={(e) => setAssertForm({ ...assertForm, rationale: (e.target as HTMLInputElement).value })} required />
         <button type="submit">어설션 제출</button>
       </form>
     </section>

@@ -71,11 +71,13 @@ function PermitSection({
   rows,
   edges,
   criticalPath,
+  onDelete,
 }: {
   title: string;
   rows: PermitRow[];
   edges: { from: string; to: string }[];
   criticalPath: string[];
+  onDelete?: (rowId: string) => void;
 }) {
   const byId = new Map(rows.map((r) => [r.id, r]));
   const criticalSet = new Set(criticalPath);
@@ -113,6 +115,7 @@ function PermitSection({
                 <th scope="col">법정 처리일</th>
                 <th scope="col">상태</th>
                 <th scope="col">임계 경로</th>
+                {onDelete && <th scope="col">삭제</th>}
               </tr>
             </thead>
             <tbody>
@@ -130,6 +133,13 @@ function PermitSection({
                       </span>
                     </td>
                     <td>{critical && <span className="critical-badge">임계 경로</span>}</td>
+                    {onDelete && (
+                      <td>
+                        <button type="button" className="btn-ghost" onClick={() => onDelete(r.id)}>
+                          삭제
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -184,7 +194,7 @@ function PermitSection({
                       y1={a.y + NODE_H / 2}
                       x2={b.x + NODE_W / 2}
                       y2={b.y + NODE_H / 2}
-                      stroke={critical ? "#f87171" : "#3a4150"}
+                      stroke={critical ? "var(--danger)" : "var(--border-bright)"}
                       strokeWidth={critical ? 2 : 1}
                     />
                   );
@@ -202,11 +212,11 @@ function PermitSection({
                         width={NODE_W}
                         height={NODE_H}
                         rx={4}
-                        fill="#1a1f2a"
-                        stroke={critical ? "#f87171" : "#3a4150"}
+                        fill="var(--surface-elevated)"
+                        stroke={critical ? "var(--danger)" : "var(--border-bright)"}
                         strokeWidth={critical ? 2 : 1}
                       />
-                      <text x={p.x + NODE_W / 2} y={p.y + NODE_H / 2 + 4} textAnchor="middle" fontSize={10} fill="#eceef2">
+                      <text x={p.x + NODE_W / 2} y={p.y + NODE_H / 2 + 4} textAnchor="middle" fontSize={10} fill="var(--fg)">
                         {row.name}
                       </text>
                     </g>
@@ -224,13 +234,51 @@ function PermitSection({
 
 export function PermitsTab({ projectId }: { projectId: string }) {
   const [data, setData] = useState<PermitsResponse | null>(null);
+  // CRUD (C-feat): 인허가 등록/삭제. 등록 폼 + 행 삭제(확인 대화상자·감사로그).
+  const [form, setForm] = useState({ name: "", agency: "", statutory_days: "" });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
+  const reload = () => {
     api
       .get<PermitsResponse>(`/api/projects/${projectId}/permits?include_dag=1`)
       .then((res) => setData(res.data))
       .catch(() => setData({ permits: [], certifications: [] }));
+  };
+
+  useEffect(() => {
+    reload();
   }, [projectId]);
+
+  async function addPermit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setFormError(null);
+    try {
+      await api.post(`/api/projects/${projectId}/permits`, {
+        name: form.name,
+        agency: form.agency || undefined,
+        statutory_days: form.statutory_days ? Number(form.statutory_days) : undefined,
+        status: "not_started",
+      });
+      setForm({ name: "", agency: "", statutory_days: "" });
+      reload();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "등록 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deletePermit(rowId: string) {
+    if (!window.confirm("이 인허가 항목을 삭제할까요? (감사로그에 기록됩니다)")) return;
+    try {
+      await api.delete(`/api/projects/${projectId}/permits?row_id=${rowId}`);
+      reload();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "삭제 실패");
+    }
+  }
 
   if (data === null) {
     return <p>불러오는 중...</p>;
@@ -238,11 +286,28 @@ export function PermitsTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="permits-tab">
+      <details className="opportunity-create">
+        <summary className="btn-ghost">+ 인허가 등록</summary>
+        <form onSubmit={addPermit} aria-label="인허가 등록" className="opportunity-form">
+          <input type="text" aria-label="인허가명" placeholder="인허가명" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <input type="text" aria-label="기관" placeholder="기관" value={form.agency} onChange={(e) => setForm({ ...form, agency: e.target.value })} />
+          <input type="number" aria-label="법정 처리기간(일)" placeholder="법정기간(일)" value={form.statutory_days} onChange={(e) => setForm({ ...form, statutory_days: e.target.value })} />
+          <button type="submit" className="btn-premium" disabled={busy}>
+            등록
+          </button>
+        </form>
+        {formError && (
+          <p role="alert" className="text-[color:var(--red-fg)]">
+            {formError}
+          </p>
+        )}
+      </details>
       <PermitSection
         title="인허가 (Permits)"
         rows={data.permits}
         edges={data.dag?.permit_edges ?? []}
         criticalPath={data.dag?.permit_critical_path ?? []}
+        onDelete={(rowId) => deletePermit(rowId)}
       />
       <PermitSection
         title="인증 (Certifications)"

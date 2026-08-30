@@ -126,6 +126,20 @@ export function AssumptionsTab({
     return <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 이 프로젝트에 생성된 분석 실행(run)이 없습니다.</p>;
   }
 
+
+  async function deleteAssumption(id: string) {
+    if (!window.confirm("이 가정을 삭제할까요? (감사로그에 기록됩니다)")) return;
+    try {
+      await api.delete(`/api/assumptions/${encodeURIComponent(id)}`);
+      const res = await api.get<AssumptionRow[]>(
+        `/api/assumptions?run_id=${encodeURIComponent(selectedRunId ?? "")}`,
+      );
+      setAssumptions(res.data);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "삭제 실패");
+    }
+  }
+
   return (
     <div className="assumptions-tab">
       <p className="assumptions-run-note">
@@ -195,6 +209,11 @@ export function AssumptionsTab({
                   </td>
                   <td>{new Date(a.as_of).toLocaleDateString("ko-KR")}</td>
                   <td>{a.ttl_days ?? "—"}</td>
+                  <td>
+                    <button type="button" className="btn-ghost" onClick={() => deleteAssumption(a.id)}>
+                      삭제
+                    </button>
+                  </td>
                   <td>
                     {a.kind === "assumed" ? (
                       a.rationale?.trim() ? (

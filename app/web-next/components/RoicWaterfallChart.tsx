@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { EChartsOption } from "echarts";
-import { ONYX_CHART_DEFAULTS, ONYX_CHART_THEME } from "../lib/echarts-theme.ts";
+import { useChartTheme } from "../lib/echarts-theme.ts";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -16,11 +16,12 @@ interface WfStep {
 // The pct step (ROIC%) is excluded from the bar chart because it lives on a
 // different scale; it is already surfaced as a KPI above the chart.
 export function RoicWaterfallChart({ steps }: { steps: WfStep[] }) {
+  const ct = useChartTheme();
   const bars = steps.filter((s) => s.kind !== "pct");
   const base: number[] = [];
   const vals: number[] = [];
   const colors: string[] = [];
-  const palette = ONYX_CHART_THEME.color;
+  const palette = ct.color;
   let running = 0;
   for (const s of bars) {
     if (s.kind === "total" || s.kind === "subtotal") {
@@ -38,9 +39,9 @@ export function RoicWaterfallChart({ steps }: { steps: WfStep[] }) {
   }
 
   const option: EChartsOption = {
-    ...ONYX_CHART_DEFAULTS,
+    ...ct.defaults,
     tooltip: {
-      ...ONYX_CHART_DEFAULTS.tooltip,
+      ...ct.defaults.tooltip,
       trigger: "axis",
       axisPointer: { type: "shadow" },
       formatter: (params: unknown) => {
@@ -50,15 +51,15 @@ export function RoicWaterfallChart({ steps }: { steps: WfStep[] }) {
         return `${p.name}<br/>${display}`;
       },
     },
-    grid: { ...ONYX_CHART_DEFAULTS.grid, left: 56 },
+    grid: { ...ct.defaults.grid, left: 56 },
     xAxis: {
       type: "category",
       data: bars.map((b) => b.step),
-      axisLabel: { color: "#9aa1ad", fontSize: 11 },
+      axisLabel: { color: ct.muted, fontSize: 11 },
     },
     yAxis: {
       type: "value",
-      axisLabel: { color: "#9aa1ad", fontSize: 11 },
+      axisLabel: { color: ct.muted, fontSize: 11 },
     },
     series: [
       {

@@ -1,7 +1,10 @@
 "use client";
 
 // Port of app/web/src/pages/Login.tsx — useNavigate -> useRouter().push.
+// S1~S7 프로세스 플랫폼의 진입 화면: 배경 이미지(가치사슬/항만 모티프)와
+// 계정 신청 안내 링크를 제공한다. 계정 신청은 /register → 관리자 승인.
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth, describeAuthError } from "../../lib/auth-client.tsx";
 
@@ -28,22 +31,34 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="login-page">
-      <form onSubmit={onSubmit} className="login-form" aria-labelledby="login-heading">
-        <h1 id="login-heading">co-newbiz 로그인</h1>
-        <label htmlFor="userId">아이디</label>
-        <input id="userId" name="userId" autoComplete="username" value={userId} onChange={(e) => setUserId(e.target.value)} required />
-        <label htmlFor="password">비밀번호</label>
-        <input id="password" name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        {error && (
-          <p role="alert" className="text-[color:var(--red-fg)]">
-            {error}
-          </p>
-        )}
-        <button type="submit" disabled={busy}>
-          {busy ? "로그인 중..." : "로그인"}
-        </button>
-      </form>
+    <main className="login-page login-page-rich">
+      <div className="login-hero" aria-hidden="true">
+        <p className="login-hero-title">신규사업 검토 AI 플랫폼</p>
+        <p className="login-hero-sub">시장분석 → 기회발굴 → 시너지 → 트랙결정 → 사업성·밸류에이션 → 실사 → 투자심사</p>
+      </div>
+      <div className="login-panel">
+        <form onSubmit={onSubmit} className="login-form" aria-labelledby="login-heading">
+          <h1 id="login-heading">co-newbiz 로그인</h1>
+          <label htmlFor="userId">아이디</label>
+          <input id="userId" name="userId" autoComplete="username" value={userId} onChange={(e) => setUserId(e.target.value)} required />
+          <label htmlFor="password">비밀번호</label>
+          <input id="password" name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          {error && (
+            <p role="alert" className="text-[color:var(--red-fg)]">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={busy}>
+            {busy ? "로그인 중..." : "로그인"}
+          </button>
+        </form>
+        <div className="login-assist">
+          <Link href="/register" className="login-link">
+            계정이 없으신가요? 계정 신청 →
+          </Link>
+          <p className="login-hint">계정 신청 후 관리자 승인이 완료되면 로그인할 수 있습니다.</p>
+        </div>
+      </div>
     </main>
   );
 }

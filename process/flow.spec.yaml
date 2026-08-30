@@ -1,0 +1,290 @@
+# Process Flow Specification — SSOT (v1.0.0, ADR-0074)
+#
+# This file is the single source of truth for the deal process:
+#   - docs/process-flow.md is GENERATED from this file (scripts/co-newbiz/generate-process-flow.ts)
+#   - the web UI (sidebar stage groups, stepper, stage cards, artifact checklists)
+#     and the agent orchestrator render/execute from this spec at runtime
+#   - tests/unit/process-flow.test.ts enforces schema + reference integrity
+#
+# Invariants (ADR-0074):
+#   Stage ≠ Gate · Opportunity ≠ Project · Artifact ≠ Decision · Agent does not
+#   own the Process · Definition/Execution are separated (process_run.spec_version)
+#
+# stateTransitions: onComplete → next stage id (or "terminal"); onHold stays on
+# the same stage pending artifact supplementation; onKill ends the process.
+
+meta:
+  id: co-newbiz-main-flow
+  name: 신규사업 검토 메인 플로우
+  version: "1.0.0"
+  entity_lifecycles:
+    opportunity: [S1, S2, S3, S4]
+    project: [S5, S6, S7]
+
+gates:
+  - id: screening
+    name: Screening
+    decisionCriteria:
+      - 시장 매력도가 수용 기준 이상이다
+      - 전략적 적합성 knock-out 항목을 모두 통과했다
+      - 시너지 점수가 합의 기준을 충족한다
+    killCriteria:
+      - 시장이 구조적으로 매력이 없다(축소+상품화)
+      - 데이터 신뢰도가 판단 불가 수준이다
+      - 전략적 적합성 knock-out 실패
+    fundingDecision: Screening 통과 시 Pre-FS 예산 트랜치 개시
+  - id: pre_fs
+    name: Pre-FS
+    decisionCriteria:
+      - 트랙(그린필드/브라운필드) 결정 근거가 기록되었다
+      - 사업성 분석 입력이 존재한다
+    killCriteria:
+      - 진출방식이 결정되지 않았다
+    fundingDecision: FS 본격 검토 자원 배정
+  - id: fs
+    name: FS
+    decisionCriteria:
+      - 정량화된 Business Case(NPV/IRR/BEP 또는 밸류에이션 범위)가 존재한다
+    killCriteria:
+      - 기준 수익률 미달이 기본 시나리오에서 확인된다
+    fundingDecision: DD 착시 자원 배정
+  - id: dd
+    name: DD
+    decisionCriteria:
+      - 필수 체크리스트 항목이 모두 충족/해당없음/예외 처리되었다
+      - 미해소 필수 미충족이 0건이다
+    killCriteria:
+      - waiver 불가능한 필수 항목 미충족 지속
+    fundingDecision: IC 패키지 작성 자원 배정
+  - id: entity_ic
+    name: Entity IC
+    decisionCriteria:
+      - IC 패키지가 완비되었다
+      - 사람 최종 승인 필수 산출물의 reviewed_by가 기록되었다
+    killCriteria:
+      - 필수 산출물 미승인
+    fundingDecision: Entity 차원 투자 권고
+  - id: group_ic
+    name: Group IC
+    decisionCriteria:
+      - Entity IC 승인이 선행되었다
+      - 그룹 관점 포트폴리오 적합성이 검토되었다
+    killCriteria:
+      - 그룹 수준 반려
+    fundingDecision: 최종 투자 집행
+
+stages:
+  - id: S1
+    name: 시장분석
+    objective: 어디에 기회가 있는가? — 시장 규모·성장·경쟁구조와 가치사슬을 파악한다
+    inputs:
+      - 외부 시장 데이터 (fact_market_observation)
+      - 산업 드라이버 레지스트리
+    outputs:
+      - 시장 규모·성장 추정
+      - 가치사슬 구조
+    entryCriteria: []
+    activities:
+      - id: market-research
+        agent: market-intelligence-agent
+        skills: [market-data-pipeline, proxy-industry-chain]
+        procedure: [greenfield-screening, brownfield-screening]
+      - id: competitive-intelligence
+        agent: market-intelligence-agent
+        skills: [competitive-intelligence]
+        procedure: [greenfield-screening, brownfield-screening]
+      - id: value-chain-analysis
+        agent: industry-lead
+        skills: [value-chain-linkage-analysis, value-chain-stage-financials]
+        procedure: [greenfield-screening, brownfield-screening]
+    requiredArtifacts:
+      - 시장 규모·성장 추정
+      - 가치사슬 구조
+    completionCriteria:
+      - 최소 1개의 정량화된 수요 추정(직접 또는 프록시 체인)이 존재한다
+      - 데이터 신뢰도 등급이 기록되었다
+    applicableTracks: [greenfield, brownfield]
+    stateTransitions: { onComplete: S2, onHold: S1, onKill: terminal }
+    gates: [screening]
+
+  - id: S2
+    name: 기회 발굴
+    objective: 무엇을 할 것인가? — 가치사슬상 사업 기회를 등록·평가한다
+    inputs:
+      - 가치사슬 구조
+    outputs:
+      - 기회 레지스트리(매력도 포함)
+    entryCriteria:
+      - S1 산출물 존재
+    activities:
+      - id: opportunity-discovery
+        agent: market-intelligence-agent
+        skills: [insight-synthesis]
+        procedure: [greenfield-screening, brownfield-screening]
+      - id: business-model-sketch
+        agent: greenfield-agent
+        skills: [scenario-planning]
+        procedure: [greenfield-screening, brownfield-screening]
+    requiredArtifacts:
+      - 기회 등록(가치사슬 노드·매력도)
+    completionCriteria:
+      - 최소 1개 기회가 selected 상태이다
+    applicableTracks: [greenfield, brownfield]
+    stateTransitions: { onComplete: S3, onHold: S2, onKill: terminal }
+    gates: [screening]
+
+  - id: S3
+    name: 시너지·전략적 적합성
+    objective: 우리가 해야 하는가? — 자사 역량과의 시너지를 평가한다
+    inputs:
+      - 선별 기회
+      - 자사 역량·포트폴리오 정보
+    outputs:
+      - 시너지 점수
+      - 전략적 적합성 평가
+    entryCriteria:
+      - S2 완료 (selected 기회 존재)
+    activities:
+      - id: strategic-fit-screening
+        agent: process-governance-manager
+        skills: [strategic-fit-screening, portfolio-fit-assessment]
+        procedure: [greenfield-screening, brownfield-screening]
+      - id: synergy-analysis
+        agent: risk-officer
+        skills: [assumption-audit]
+        procedure: [greenfield-screening, brownfield-screening]
+    requiredArtifacts:
+      - 시너지 평가
+      - 전략적 적합성 판단
+    completionCriteria:
+      - 기회에 synergy_score와 근거가 기록되었다
+      - 적합성 판단(Go/Hold/Kill 권고)이 존재한다
+    applicableTracks: [greenfield, brownfield]
+    stateTransitions: { onComplete: S4, onHold: S3, onKill: terminal }
+    gates: [screening]
+
+  - id: S4
+    name: 진출방식 결정
+    objective: 어떻게 들어갈 것인가? — Greenfield(자체) vs Brownfield(M&A), R&BD vs 사내벤처를 결정한다
+    inputs:
+      - 시너지·적합성 평가
+    outputs:
+      - 라우트 결정 기록
+    entryCriteria:
+      - S3 완료
+    activities:
+      - id: route-strategy
+        agent: pm
+        skills: [deal-execution-playbook, jv-structuring, partner-sourcing-strategy]
+        procedure: [greenfield-pre-fs, brownfield-pre-fs, deal-shape-chain]
+      - id: deal-shape-evaluation
+        agent: brownfield-agent
+        skills: [deal-execution-playbook]
+        procedure: [greenfield-pre-fs, brownfield-pre-fs, deal-shape-chain]
+    requiredArtifacts:
+      - 트랙 결정(GF/BF)·근거
+      - 검토한 대안
+    completionCriteria:
+      - route_decision 레코드가 존재한다 (track 필수, greenfield는 sub_track)
+    applicableTracks: [greenfield, brownfield]
+    stateTransitions: { onComplete: S5, onHold: S4, onKill: terminal }
+    gates: [screening, pre_fs]
+
+  - id: S5
+    name: 사업성 분석
+    objective: 돈이 되는가? — Greenfield는 비용·수익 모델, M&A는 밸류에이션이 주체다
+    inputs:
+      - 트랙 결정
+      - Business Case 라인 (greenfield)
+      - 타깃 재무 정보 (brownfield)
+    outputs:
+      - Business Case / 밸류에이션
+      - 시뮬레이션 NPV 분포
+    entryCriteria:
+      - S4 완료
+    activities:
+      - id: business-case-modeling
+        agent: financial-analyst
+        skills: [growth-projection-modeling, investment-feasibility-modeling]
+        procedure: [greenfield-fs, brownfield-fs]
+      - id: valuation
+        agent: valuation-agent
+        skills: [dd-to-valuation-bridge, monte-carlo-simulation]
+        procedure: [greenfield-fs, brownfield-fs]
+      - id: quant-methods
+        agent: quant-methodologist
+        skills: [wacc-input-session, monte-carlo-simulation]
+        procedure: [greenfield-fs, brownfield-fs]
+    requiredArtifacts:
+      - Business Case(비용·수익 라인 또는 밸류에이션)
+      - 시뮬레이션 NPV 분위수
+    completionCriteria:
+      - 민감도가 포함된 정량 사롢가 존재한다 (시뮬레이션 또는 밸류에이션 범위)
+    applicableTracks: [greenfield, brownfield]
+    stateTransitions: { onComplete: S6, onHold: S5, onKill: terminal }
+    gates: [pre_fs, fs]
+
+  - id: S6
+    name: 실사·검증
+    objective: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다
+    inputs:
+      - 게이트 체크리스트 (commercial/technical/legal)
+      - 조사 근거
+    outputs:
+      - DD 체크리스트 판정
+      - 조사내역(dd_finding)
+    entryCriteria:
+      - S5 완료
+    activities:
+      - id: commercial-dd
+        agent: commercial-dd-agent
+        skills: [commercial-due-diligence]
+        procedure: [greenfield-dd, brownfield-dd]
+      - id: technical-dd
+        agent: technical-dd-agent
+        skills: [technical-due-diligence, site-infrastructure-assessment]
+        procedure: [greenfield-dd, brownfield-dd]
+      - id: legal-dd
+        agent: legal-counsel
+        skills: [legal-due-diligence, regulatory-screening]
+        procedure: [greenfield-dd, brownfield-dd]
+    requiredArtifacts:
+      - DD 체크리스트 판정(필수 항목 해소)
+    completionCriteria:
+      - 적용 체크리스트의 모든 항목이 판정되고 필수 미충족이 0건이다
+    applicableTracks: [greenfield, brownfield]
+    stateTransitions: { onComplete: S7, onHold: S6, onKill: terminal }
+    gates: [dd]
+
+  - id: S7
+    name: 투자심사·실행
+    objective: 투자할 것인가? — IC 패키지로 Entity/Group IC 심사를 받는다
+    inputs:
+      - IC 패키지(사업계획·DD·RAG·검토)
+      - 사람 최종 승인 산출물
+    outputs:
+      - IC 결정
+      - 실행 진입(PMI / 벤처 모니터링 / R&BD 실행)
+    entryCriteria:
+      - S6 완료
+    activities:
+      - id: ic-preparation
+        agent: pm
+        skills: [executive-presentation, sample-driven-report-writing]
+        procedure: [entity-ic-review, group-investment-review]
+      - id: risk-review
+        agent: risk-officer
+        skills: [legal-risk-register]
+        procedure: [entity-ic-review, group-investment-review]
+      - id: group-review
+        agent: group-review-agent
+        skills: [group-level-review]
+        procedure: [entity-ic-review, group-investment-review]
+    requiredArtifacts:
+      - IC 패키지
+      - 사람 최종 승인(reviewer 기록)
+    completionCriteria:
+      - Entity IC와 Group IC 승인이 모두 기록되었다
+    applicableTracks: [greenfield, brownfield]
+    stateTransitions: { onComplete: terminal, onHold: S7, onKill: terminal }
+    gates: [entity_ic, group_ic]

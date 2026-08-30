@@ -19,7 +19,7 @@
 |---|---|---|
 | `_core` | 1 | `pm` |
 | functional | 21 | `process-governance-manager` |
-| technical | 9 | `platform-lead` |
+| technical | 10 | `platform-lead` |
 | industry | 1 | `industry-lead` |
 | region | 1 | `region-lead` |
 | `_shared` | 1 | — |
@@ -63,7 +63,8 @@
 | Agent | File | Tier | Subdomain | Role |
 |---|---|---|---|---|
 | **platform-lead** | [`agents/platform-lead.md`](agents/platform-lead.md) | High | _lead | Domain lead for technical |
-| data-architect | [`agents/data-architect.md`](agents/data-architect.md) | High | data | ERD, master data governance, normalization, indexing, migration, and portability |
+
+| **design-system-agent** | [`agents/design-system-agent.md`](agents/design-system-agent.md) | Medium | design | Onyx 3.0 design system governance — token, component, and accessibility consistency enforcement (design-lint) || data-architect | [`agents/data-architect.md`](agents/data-architect.md) | High | data | ERD, master data governance, normalization, indexing, migration, and portability |
 | dba | [`agents/dba.md`](agents/dba.md) | Medium | data | Database operations: backup/restore, monthly recovery drills, performance tuning, and capacity management |
 | backend-engineer | [`agents/backend-engineer.md`](agents/backend-engineer.md) | Medium | app | Hono REST API, authentication, MCP server, the analysis-engine CLI, and the monitoring/alerting pipeline |
 | frontend-engineer | [`agents/frontend-engineer.md`](agents/frontend-engineer.md) | Medium | app | React/Vite UI, ECharts visualizations, the RAG dashboard, the admin console, and accessibility |

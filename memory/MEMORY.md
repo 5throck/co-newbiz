@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-08-30](2026-08-30.md) | chore: update |
 | [2026-08-29](2026-08-29.md) | --spec-exempt=E2 chore(deps): update in-range packages and sync bun.lock |
 | [2026-08-29](2026-08-29.md) | fix(skills): translate remaining untranslated README_ko purpose sections |
 | [2026-08-28](2026-08-28.md) | feat(web): notifications threshold ADR-gate, glossary registration, all-revisions toggle + latent regression fix |

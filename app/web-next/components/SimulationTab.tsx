@@ -36,6 +36,9 @@ export function SimulationTab({ projectId }: { projectId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [results, setResults] = useState<SimulationResultsResponse | null>(null);
+  // A3 시나리오 비교 — 보수/기본/낙관 3회 실행 결과(할인율 ±2%p)
+  const [scenarios, setScenarios] = useState<Array<{ label: string; rate: number; p05: number; p50: number; p95: number; distribution: SimulationResultsResponse["distribution"] }> | null>(null);
+  const [scenarioBusy, setScenarioBusy] = useState(false);
   const [meta, setMeta] = useState<ProvenanceMeta>({});
   // Seed/iterations shown in the results header come from the envelope meta
   // (the endpoint's documented contract), not from re-deriving them.
@@ -227,6 +230,91 @@ export function SimulationTab({ projectId }: { projectId: string }) {
               </tbody>
             </table>
           )}
+          <section aria-label="입력 스냅샷" className="sim-snapshot">
+            <h3>입력 스냅샷</h3>
+            <p className="text-[0.8rem] text-[color:var(--muted-fg)]">
+              할인율 {num(results.simulation.discount_rate)} · 우발채무 {results.contingent_liability_count ?? 0}건 반영
+              {results.inputs?.length ? ` · 현금흐름 ${results.inputs.filter((i) => i.assumption_key.startsWith("sim.cf")).length}개년` : ""}
+            </p>
+            {(results.simulation as unknown as { irr?: number; payback_year?: number }).irr !== undefined && (
+              <p className="text-[0.82rem]">
+                IRR {((results.simulation as unknown as { irr: number }).irr * 100).toFixed(1)}% · 페이백{" "}
+                {(results.simulation as unknown as { payback_year?: number }).payback_year ?? "—"}년차
+              </p>
+            )}
+          </section>
+          <section aria-label="시나리오 비교" className="scenario-section">
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={scenarioBusy}
+              onClick={async () => {
+                setScenarioBusy(true);
+                try {
+                  const runId = results.simulation.run_id;
+                  const seed = results.simulation.seed;
+                  const defs: Array<{ label: string; override: number }> = [
+                    { label: "보수 (+2%p)", override: results.simulation.discount_rate + 0.02 },
+                    { label: "기본", override: results.simulation.discount_rate },
+                    { label: "낙관 (−2%p)", override: Math.max(results.simulation.discount_rate - 0.02, 0.001) },
+                  ];
+                  const out = [];
+                  for (const d of defs) {
+                    const post = await api.post<{ simulation_id: string }>("/api/simulations", {
+                      run_id: runId,
+                      seed,
+                      iterations: results.simulation.iterations,
+                      discount_rate_override: d.override,
+                    });
+                    const res = await api.get<SimulationResultsResponse>(
+                      `/api/simulations/${encodeURIComponent(post.data.simulation_id)}/results`,
+                    );
+                    const npv = res.data.results.find((r) => r.metric === "npv");
+                    out.push({
+                      label: d.label,
+                      rate: d.override,
+                      p05: npv?.p05 ?? 0,
+                      p50: npv?.p50 ?? 0,
+                      p95: npv?.p95 ?? 0,
+                      distribution: res.data.distribution,
+                    });
+                  }
+                  setScenarios(out);
+                } catch (err) {
+                  setFormError(err instanceof Error ? err.message : "시나리오 비교 실패");
+                } finally {
+                  setScenarioBusy(false);
+                }
+              }}
+            >
+              {scenarioBusy ? "비교 실행 중..." : "시나리오 비교 실행 (보수/기본/낙관)"}
+            </button>
+            {scenarios && (
+              <table className="data-table" aria-label="시나리오 비교">
+                <caption className="sr-only">시나리오별 NPV 비교</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">시나리오</th>
+                    <th scope="col">할인율</th>
+                    <th scope="col">NPV P05</th>
+                    <th scope="col">NPV 중앙</th>
+                    <th scope="col">NPV P95</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scenarios.map((sc) => (
+                    <tr key={sc.label}>
+                      <td>{sc.label}</td>
+                      <td className="tabular-nums">{(sc.rate * 100).toFixed(1)}%</td>
+                      <td className="tabular-nums">{num(sc.p05)}</td>
+                      <td className="tabular-nums">{num(sc.p50)}</td>
+                      <td className="tabular-nums">{num(sc.p95)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
           <SimulationDistChart
             results={results.results as unknown as SimMetric[]}
             seed={metaSeed ?? results.simulation.run_id}

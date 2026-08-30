@@ -68,6 +68,11 @@ export interface ProjectSummary {
   rag_assessed_at?: string | null;
   gate_stage?: string | null;
   is_stale?: boolean;
+  stage_summary?: {
+    track: "greenfield" | "brownfield" | null;
+    routeDecided: boolean;
+    stages: Array<{ id: string; status: "complete" | "current" | "locked" }>;
+  };
 }
 
 // FR-SYS-03 provenance — the envelope `meta` fields a source tooltip may
@@ -550,6 +555,8 @@ export interface SimulationRunResult {
   mean: number;
   std: number;
   contingent_liability_count: number;
+  irr?: number;
+  payback_year?: number;
 }
 
 // GET /api/simulations/:id/results — quantile summary ONLY; raw draws are
@@ -587,6 +594,9 @@ export interface SimulationResultsResponse {
   simulation: SimulationSummary;
   results: SimulationResultRow[];
   distribution: SimulationDistribution | null;
+  /** A2 input snapshot — the run's sim.* inputs consumed by this simulation. */
+  inputs?: Array<{ assumption_key: string; value: number }>;
+  contingent_liability_count?: number;
 }
 
 // --- PR #65 batch 4: admin schedule/retention sections (the glossary list

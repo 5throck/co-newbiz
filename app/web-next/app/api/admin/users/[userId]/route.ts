@@ -1,6 +1,6 @@
 // Port of app/server/admin.ts PUT /api/admin/users/:userId
 import { getDb } from "../../../../../../../db/client.ts";
-import { approveUser } from "../../../../../../../db/lib/accounts.ts";
+import { approveUser, resetPassword } from "../../../../../../../db/lib/accounts.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireAdmin } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
@@ -14,7 +14,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
   if (adminCheck) return adminCheck;
   const ctx = auth.auth;
   const { userId } = await params;
-  const body = (await request.json().catch(() => null)) as { action?: string; role?: string } | null;
+  const body = (await request.json().catch(() => null)) as { action?: string; role?: string; temporary_password?: string } | null;
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -56,5 +56,31 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
     return ok({ ok: true, status: "active" });
   }
 
-  return badRequest("invalid_request", "action must be approve|set_role|disable|enable.");
+  if (body?.action === "reset_password") {
+    // Admin-initiated reset: temporary password, forces the change flow,
+    // revokes sessions (accounts.resetPassword). The temp password is shown
+    // once in this response — never stored in plaintext or audit.
+    const tempPassword = body.temporary_password && body.temporary_password.length >= 8 ? body.temporary_password : `tmp-${Math.random().toString(36).slice(2, 10)}!A`;
+    try {
+      await resetPassword(db, { userId, tempPassword, resetBy: ctx.userId, now });
+    } catch (err) {
+      return badRequest("reset_failed", err instanceof Error ? err.message : "Reset failed.");
+    }
+    return ok({ ok: true, temporary_password: tempPassword, must_change_password: true });
+  }
+
+  if (body?.action === "delete") {
+    if (userId === ctx.userId) {
+      return badRequest("self_delete_blocked", "An admin cannot delete their own account.");
+    }
+    const res = db.run("DELETE FROM app_user WHERE user_id = ?", [userId]);
+    if (res.changes === 0) return notFound();
+    // Sessions/api_tokens orphan-join app_user; drop them so no dangling rows remain.
+    db.run("DELETE FROM session WHERE user_id = ?", [userId]);
+    db.run("DELETE FROM api_token WHERE user_id = ?", [userId]);
+    appendAudit(db, { actor: ctx.userId, action: "account_delete", target: userId, now });
+    return ok({ ok: true, deleted: userId });
+  }
+
+  return badRequest("invalid_request", "action must be approve|set_role|disable|enable|reset_password|delete.");
 }

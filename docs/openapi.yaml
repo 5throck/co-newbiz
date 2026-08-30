@@ -12,13 +12,8 @@ info:
   title: co-newbiz REST API
   version: 1.4.0
   description: >-
-    REST surface of co-newbiz (Stage 5 Waves 5.6-5.7 + engine-1 run
-    versioning + engine-2 simulations). Every response uses the standard
-    envelope {data, meta, error} (api-spec.md §9). Project-scoped reads
-    return 404 — identical to "does not exist" — for projects the caller
-    cannot see (FR-SEC-01): membership is resolved first, so project
-    existence itself is never an oracle. Write endpoints are audit-logged
-    (FR-SEC-07).
+    REST surface of co-newbiz (Stage 5 Waves 5.6-5.7 + engine-1 run versioning + engine-2 simulations). Every response uses the standard envelope {data, meta, error} (api-spec.md §9). Project-scoped reads return 404 — identical to "does not
+    exist" — for projects the caller cannot see (FR-SEC-01): membership is resolved first, so project existence itself is never an oracle. Write endpoints are audit-logged (FR-SEC-07).
 servers:
   - url: http://localhost:8787
     description: Default bind (app/server/index.ts; CO_NEWBIZ_PORT overrides)
@@ -45,23 +40,23 @@ tags:
     description: Term lookup backing the UI tooltip and MCP lookup_term (api-spec.md §7).
   - name: Admin
     description: Admin console — never MCP-exposed (api-spec.md §8). Admin role required; project data stays off these routes.
-
 paths:
   /api/health:
     get:
       operationId: health
       summary: Liveness probe (no auth).
-      tags: [Health]
+      tags:
+        - Health
       security: []
       responses:
-        "200":
-          $ref: "#/components/responses/Ok"
-
+        '200':
+          $ref: '#/components/responses/Ok'
   /api/auth/register:
     post:
       operationId: register
       summary: Self-signup — always role=viewer, status=pending (no auth).
-      tags: [Auth]
+      tags:
+        - Auth
       security: []
       requestBody:
         required: true
@@ -69,20 +64,27 @@ paths:
           application/json:
             schema:
               type: object
-              required: [userId, password]
+              required:
+                - userId
+                - password
               properties:
-                userId: { type: string }
-                password: { type: string }
-                displayName: { type: string }
+                userId:
+                  type: string
+                password:
+                  type: string
+                displayName:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
   /api/auth/login:
     post:
       operationId: login
       summary: Credential login — issues the session cookie.
-      tags: [Auth]
+      tags:
+        - Auth
       security: []
       requestBody:
         required: true
@@ -90,994 +92,1488 @@ paths:
           application/json:
             schema:
               type: object
-              required: [userId, password]
+              required:
+                - userId
+                - password
               properties:
-                userId: { type: string }
-                password: { type: string }
+                userId:
+                  type: string
+                password:
+                  type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "423": { $ref: "#/components/responses/Locked" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '423':
+          $ref: '#/components/responses/Locked'
   /api/auth/me:
     get:
       operationId: me
       summary: Current identity — also the must-change-password gate's status probe.
-      tags: [Auth]
+      tags:
+        - Auth
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/auth/logout:
     post:
       operationId: logout
       summary: Revoke exactly the current session or token.
-      tags: [Auth]
+      tags:
+        - Auth
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/auth/password-change:
     post:
       operationId: changePassword
       summary: Change password — history reuse refused; all other sessions revoked.
-      tags: [Auth]
+      tags:
+        - Auth
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [currentPassword, newPassword]
+              required:
+                - currentPassword
+                - newPassword
               properties:
-                currentPassword: { type: string }
-                newPassword: { type: string }
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/auth/password-reset:
     post:
       operationId: resetPassword
       summary: Admin-initiated reset — forces must_change_password.
-      tags: [Auth]
+      tags:
+        - Auth
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [userId, tempPassword]
+              required:
+                - userId
+                - tempPassword
               properties:
-                userId: { type: string }
-                tempPassword: { type: string }
+                userId:
+                  type: string
+                tempPassword:
+                  type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/tokens:
     post:
       operationId: issueToken
       summary: Issue a Bearer API token — plaintext returned exactly once.
-      tags: [Tokens]
+      tags:
+        - Tokens
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [label]
+              required:
+                - label
               properties:
-                label: { type: string }
+                label:
+                  type: string
                 scopes:
                   type: array
-                  items: { type: string, enum: [read, write] }
+                  items:
+                    type: string
+                    enum:
+                      - read
+                      - write
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     get:
       operationId: listTokens
       summary: List the caller's tokens — identity columns only, hash never leaves the engine.
-      tags: [Tokens]
+      tags:
+        - Tokens
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/tokens/{id}:
     delete:
       operationId: revokeToken
       summary: Revoke a token — owner-scoped (someone else's id is indistinguishable from nonexistent).
-      tags: [Tokens]
+      tags:
+        - Tokens
       parameters:
-        - $ref: "#/components/parameters/TokenId"
+        - $ref: '#/components/parameters/TokenId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects:
     get:
       operationId: listProjects
       summary: Membership-filtered project list; MNPI excluded by default (include_mnpi=1 opts in).
-      tags: [Projects]
+      tags:
+        - Projects
       parameters:
         - name: include_mnpi
           in: query
-          schema: { type: string, enum: ["1", "true"] }
+          schema:
+            type: string
+            enum:
+              - '1'
+              - 'true'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       operationId: createProject
       summary: Create a project — analyst+ role; creator becomes lead automatically.
-      tags: [Projects]
+      tags:
+        - Projects
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [project_no]
+              required:
+                - project_no
               properties:
-                project_no: { type: string }
+                project_no:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/projects/{id}:
     get:
       operationId: getProject
       summary: Project detail — 404 (never 403) for a non-member; MNPI banner flag in meta.
-      tags: [Projects]
+      tags:
+        - Projects
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/members:
     get:
       operationId: listMembers
       summary: Active members of a visible project.
-      tags: [Projects]
+      tags:
+        - Projects
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: grantMembership
       summary: Grant membership — project lead only; need-to-know basis mandatory (engine-enforced).
-      tags: [Projects]
+      tags:
+        - Projects
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [userId, project_role]
+              required:
+                - userId
+                - project_role
               properties:
-                userId: { type: string }
-                project_role: { type: string, enum: [lead, contributor, reviewer, observer] }
-                need_to_know_basis: { type: string }
+                userId:
+                  type: string
+                project_role:
+                  type: string
+                  enum:
+                    - lead
+                    - contributor
+                    - reviewer
+                    - observer
+                need_to_know_basis:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: revokeMember
+      summary: Revoke a member's membership (?user_id=). Lead only; audited.
+      tags:
+        - Projects
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      operationId: changeMemberRole
+      summary: Change a member's project role. Lead only; audited.
+      tags:
+        - Projects
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/projects/{id}/members/{userId}:
     delete:
       operationId: revokeMembership
       summary: Revoke membership — project lead only.
-      tags: [Projects]
+      tags:
+        - Projects
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
-        - $ref: "#/components/parameters/MemberUserId"
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/MemberUserId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/classification:
     get:
       operationId: getClassification
       summary: Sensitivity / mnpi_flag / wall_group for a visible project.
-      tags: [Projects]
+      tags:
+        - Projects
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       operationId: setClassification
       summary: Set classification — admin AND project member (account model has no counsel role; see projects.ts module doc).
-      tags: [Projects]
+      tags:
+        - Projects
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [sensitivity]
+              required:
+                - sensitivity
               properties:
-                sensitivity: { type: string, enum: [public, internal, confidential, restricted] }
-                mnpi_flag: { type: [boolean, integer] }
-                wall_group: { type: [string, "null"] }
+                sensitivity:
+                  type: string
+                  enum:
+                    - public
+                    - internal
+                    - confidential
+                    - restricted
+                mnpi_flag:
+                  type:
+                    - boolean
+                    - integer
+                wall_group:
+                  type:
+                    - string
+                    - 'null'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/rag:
     get:
       operationId: getRag
       summary: Latest RAG assessment per dimension — rationale always included (no color-only signal).
-      tags: [Governance]
+      tags:
+        - Governance
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/rag/history:
     get:
       operationId: getRagHistory
       summary: RAG grade transitions, newest first.
-      tags: [Governance]
+      tags:
+        - Governance
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/approval-chain:
     get:
       operationId: getApprovalChain
       summary: Entity/Group IC gates in order, with blocked_reason when applicable.
-      tags: [Governance]
+      tags:
+        - Governance
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/compliance-checks:
     get:
       operationId: getComplianceChecks
       summary: Gate-blocking compliance check status.
-      tags: [Governance]
+      tags:
+        - Governance
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/waivers:
     get:
       operationId: listWaivers
       summary: Active and expired waivers for a visible project.
-      tags: [Governance]
+      tags:
+        - Governance
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: fileWaiver
       summary: File a waiver request — project lead; expires_at mandatory (indefinite waivers refused, ADR-0036); approve=true also needs admin.
-      tags: [Governance]
+      tags:
+        - Governance
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [governance_doc_id, clause_ref, reason, approver_role, expires_at]
+              required:
+                - governance_doc_id
+                - clause_ref
+                - reason
+                - approver_role
+                - expires_at
               properties:
-                governance_doc_id: { type: string }
-                clause_ref: { type: string }
-                reason: { type: string }
-                approver_role: { type: string }
-                expires_at: { type: string }
-                approve: { type: boolean }
+                governance_doc_id:
+                  type: string
+                clause_ref:
+                  type: string
+                reason:
+                  type: string
+                approver_role:
+                  type: string
+                expires_at:
+                  type: string
+                approve:
+                  type: boolean
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/pmi/key-talent:
     get:
       operationId: listKeyTalent
       summary: Close-locked key-talent roster (feeds the 90d attrition tripwire).
-      tags: [PMI]
+      tags:
+        - PMI
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: addKeyTalent
       summary: Add a roster row — analyst+; role_ref is a role key, never a person's name (ADR-0039); audited.
-      tags: [PMI]
+      tags:
+        - PMI
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [role_ref, locked_at]
+              required:
+                - role_ref
+                - locked_at
               properties:
-                role_ref: { type: string, description: "Role key like C-EO-001" }
-                status: { type: string, enum: [active, departed_regretted, departed_planned] }
-                exit_date: { type: [string, "null"] }
-                locked_at: { type: string }
+                role_ref:
+                  type: string
+                  description: Role key like C-EO-001
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - departed_regretted
+                    - departed_planned
+                exit_date:
+                  type:
+                    - string
+                    - 'null'
+                locked_at:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/pmi/synergy-certifications:
     get:
       operationId: listSynergyCertifications
       summary: Finance synergy run-rate certifications (the BAU-exit completeness fact).
-      tags: [PMI]
+      tags:
+        - PMI
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: addSynergyCertification
       summary: Record a certification row — analyst+; certified means >=9000 bp AND >=2 quarters; audited.
-      tags: [PMI]
+      tags:
+        - PMI
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [run_rate_bp, sustained_quarters, certified_by, baseline_locked_at, signed_at]
+              required:
+                - run_rate_bp
+                - sustained_quarters
+                - certified_by
+                - baseline_locked_at
+                - signed_at
               properties:
-                run_rate_bp: { type: integer, minimum: 0, maximum: 10000, description: "Basis points of committed cost-synergy run-rate achieved (9000 = 90%)" }
-                sustained_quarters: { type: integer, minimum: 1 }
-                certified_by: { type: string }
-                baseline_locked_at: { type: string }
-                signed_at: { type: string }
+                run_rate_bp:
+                  type: integer
+                  minimum: 0
+                  maximum: 10000
+                  description: Basis points of committed cost-synergy run-rate achieved (9000 = 90%)
+                sustained_quarters:
+                  type: integer
+                  minimum: 1
+                certified_by:
+                  type: string
+                baseline_locked_at:
+                  type: string
+                signed_at:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/deal-shape-evaluations:
     get:
       operationId: listDealShapeEvaluations
       summary: P3 deal-shape candidate evaluations (feeds the zero-viable recycle criterion).
-      tags: [DealShape]
+      tags:
+        - DealShape
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: addDealShapeEvaluation
       summary: Record one candidate shape's two-stage verdict — analyst+; audited.
-      tags: [DealShape]
+      tags:
+        - DealShape
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [shape, intent, viable]
+              required:
+                - shape
+                - intent
+                - viable
               properties:
-                shape: { type: string, enum: [full_acquisition, majority_stake, spv, holdco_route, joint_venture, minority_stake, license_in, co_development] }
-                intent: { type: string, enum: [integration, capability_access] }
-                viable: { type: boolean }
-                evaluated_at: { type: string }
+                shape:
+                  type: string
+                  enum:
+                    - full_acquisition
+                    - majority_stake
+                    - spv
+                    - holdco_route
+                    - joint_venture
+                    - minority_stake
+                    - license_in
+                    - co_development
+                intent:
+                  type: string
+                  enum:
+                    - integration
+                    - capability_access
+                viable:
+                  type: boolean
+                evaluated_at:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/incentive-deadlines:
     get:
       operationId: listIncentiveDeadlines
       summary: Recorded incentive-package deadlines (earliest binds; feeds the permit-path tripwire).
-      tags: [GreenField]
+      tags:
+        - GreenField
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: addIncentiveDeadline
       summary: Record an incentive deadline — analyst+; audited.
-      tags: [GreenField]
+      tags:
+        - GreenField
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [incentive_ref, deadline]
+              required:
+                - incentive_ref
+                - deadline
               properties:
-                incentive_ref: { type: string }
-                deadline: { type: string, format: date-time }
-                source: { type: string }
+                incentive_ref:
+                  type: string
+                deadline:
+                  type: string
+                  format: date-time
+                source:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/dimension-inputs:
     get:
       operationId: listDimensionInputs
       summary: Live judged-variable assertions (?var_key= narrows) — meta.count / meta.reviewed.
-      tags: [Evidence]
+      tags:
+        - Evidence
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
         - name: var_key
           in: query
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: assertDimensionInput
       summary: Assert a judged fact — analyst+; lands UNREVIEWED by design (a cross-domain review is a separate act); audited.
-      tags: [Evidence]
+      tags:
+        - Evidence
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [run_id, var_key, value, evidence_ref, rationale]
+              required:
+                - run_id
+                - var_key
+                - value
+                - evidence_ref
+                - rationale
               properties:
-                run_id: { type: string }
-                var_key: { type: string }
+                run_id:
+                  type: string
+                var_key:
+                  type: string
                 value:
                   type: object
-                  required: [kind, value]
+                  required:
+                    - kind
+                    - value
                   properties:
-                    kind: { type: string, enum: [num, text, bool] }
+                    kind:
+                      type: string
+                      enum:
+                        - num
+                        - text
+                        - bool
                     value: {}
-                evidence_ref: { type: string, description: "Citation vocabulary required on requires_evidence_ref vars" }
-                rationale: { type: string }
-                observed_at: { type: string }
+                evidence_ref:
+                  type: string
+                  description: Citation vocabulary required on requires_evidence_ref vars
+                rationale:
+                  type: string
+                observed_at:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/dimension-inputs/{rowId}/review:
     post:
       operationId: reviewDimensionInput
       summary: Cross-domain second review — reviewer must differ from the asserter; reviewed assertions are what snapshots read; audited.
-      tags: [Evidence]
+      tags:
+        - Evidence
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
         - name: rowId
           in: path
           required: true
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/value-chain/topology:
     get:
       operationId: getChainTopology
       summary: Layered value-chain graph (upstream→end-market) resolved from value_chain_link; cycle → 400.
-      tags: [Market]
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/industries/{industryId}/financials:
     get:
       operationId: getStageFinancials
       summary: Per-year metric aggregates for one chain node (fact_industry), default last 5 years (?years=1..10).
-      tags: [Market]
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
         - name: industryId
           in: path
           required: true
-          schema: { type: string }
+          schema:
+            type: string
         - name: years
           in: query
-          schema: { type: integer, minimum: 1, maximum: 10 }
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/financial-imports:
     post:
       operationId: importChainFinancials
       summary: User-provided fallback ingestion for chain-node financials (when DART collection is unavailable) — analyst+; audited; rows append with revision_no=1.
-      tags: [Market]
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [industry_id, rows]
+              required:
+                - industry_id
+                - rows
               properties:
-                industry_id: { type: string }
-                source: { type: string, description: "md_source code — created on first use" }
+                industry_id:
+                  type: string
+                source:
+                  type: string
+                  description: md_source code — created on first use
                 rows:
                   type: array
                   items:
                     type: object
-                    required: [fiscal_year, metric_key, value]
+                    required:
+                      - fiscal_year
+                      - metric_key
+                      - value
                     properties:
-                      fiscal_year: { type: integer }
-                      metric_key: { type: string }
-                      value: { type: number }
+                      fiscal_year:
+                        type: integer
+                      metric_key:
+                        type: string
+                      value:
+                        type: number
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/structure-simulations:
     post:
       operationId: runStructureSimulation
-      summary: "ADR-0066 Phase C — compose the structure scenario from the run's drv.* assumptions + chain_node_sensitivity + value_chain_link, spawn python/structure_sim.py (seeded MC), persist quantile rows for assessed nodes. Analyst+, audited; engine failures 500."
-      tags: [Market]
+      summary: >-
+        ADR-0066 Phase C — compose the structure scenario from the run's drv.* assumptions + chain_node_sensitivity + value_chain_link, spawn python/structure_sim.py (seeded MC), persist quantile rows for assessed nodes. Analyst+, audited;
+        engine failures 500.
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [run_id]
+              required:
+                - run_id
               properties:
-                run_id: { type: string }
-                seed: { type: integer }
-                iterations: { type: integer, minimum: 100 }
-                scenario: { type: string, enum: [downside, base, upside, custom] }
+                run_id:
+                  type: string
+                seed:
+                  type: integer
+                iterations:
+                  type: integer
+                  minimum: 100
+                scenario:
+                  type: string
+                  enum:
+                    - downside
+                    - base
+                    - upside
+                    - custom
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "500": { description: Engine failure envelope }
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          description: Engine failure envelope
     get:
       operationId: listStructureSimulationResults
       summary: Persisted quantile rows (?run_id= narrows; newest first, capped 200).
-      tags: [Market]
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
         - name: run_id
           in: query
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/screening-longlist:
     get:
       operationId: listScreeningLonglist
-      summary: Screening candidate register with knock-out verdicts (feeds the #12 halt).
-      tags: [Market]
+      summary: Screening candidate register with knock-out verdicts (feeds the
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: addScreeningLonglistEntry
       summary: Register a candidate with its knock-out verdict — analyst+; audited.
-      tags: [Market]
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [candidate_name, knock_out_passed]
+              required:
+                - candidate_name
+                - knock_out_passed
               properties:
-                candidate_name: { type: string }
-                knock_out_passed: { type: boolean }
-                notes: { type: string }
+                candidate_name:
+                  type: string
+                knock_out_passed:
+                  type: boolean
+                notes:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/partner-dd-findings:
     get:
       operationId: listPartnerDDFindings
       summary: Partner DD findings with workstream and severity (#15/#16 tripwire inputs).
-      tags: [Market]
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: addPartnerDDFinding
       summary: Record a partner DD finding — analyst+; audited; severity drives kill-criteria tripwires.
-      tags: [Market]
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [partner_id, workstream, severity, description]
+              required:
+                - partner_id
+                - workstream
+                - severity
+                - description
               properties:
-                partner_id: { type: string }
-                workstream: { type: string, enum: [financial_distress, ip_chain, general] }
-                severity: { type: string, enum: [red, amber, green] }
-                description: { type: string }
+                partner_id:
+                  type: string
+                workstream:
+                  type: string
+                  enum:
+                    - financial_distress
+                    - ip_chain
+                    - general
+                severity:
+                  type: string
+                  enum:
+                    - red
+                    - amber
+                    - green
+                description:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/chain-sensitivities:
     get:
       operationId: listChainSensitivities
       summary: Driver sensitivities per chain node (?industry_id narrows) — feeds the structure-simulation engine.
-      tags: [Market]
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
         - name: industry_id
           in: query
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: upsertChainSensitivity
       summary: Upsert a driver sensitivity for one node — analyst+; UNIQUE(project,industry,driver) makes this a natural upsert; audited.
-      tags: [Market]
+      tags:
+        - Market
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [industry_id, driver_code, sensitivity]
+              required:
+                - industry_id
+                - driver_code
+                - sensitivity
               properties:
-                industry_id: { type: string }
-                driver_code: { type: string, enum: [rate, fx, commodity, regulation] }
-                sensitivity: { type: number }
-                lag_months: { type: integer, minimum: 0 }
+                industry_id:
+                  type: string
+                driver_code:
+                  type: string
+                  enum:
+                    - rate
+                    - fx
+                    - commodity
+                    - regulation
+                sensitivity:
+                  type: number
+                lag_months:
+                  type: integer
+                  minimum: 0
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/interpretations:
     get:
       operationId: searchInterpretations
       summary: Interpretation registry search (workspace-wide, not project-scoped).
-      tags: [Governance]
+      tags:
+        - Governance
       parameters:
         - name: doc
           in: query
-          schema: { type: string }
+          schema:
+            type: string
         - name: clause
           in: query
-          schema: { type: string }
+          schema:
+            type: string
         - name: q
           in: query
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       operationId: recordInterpretation
       summary: Record a Q&A pair — admin only; supersession guard rejects contradictions (409).
-      tags: [Governance]
+      tags:
+        - Governance
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [governance_doc_id, clause_ref, question, answer]
+              required:
+                - governance_doc_id
+                - clause_ref
+                - question
+                - answer
               properties:
-                governance_doc_id: { type: string }
-                clause_ref: { type: string }
-                question: { type: string }
-                answer: { type: string }
-                supersedes: { type: string }
-                published: { type: boolean }
+                governance_doc_id:
+                  type: string
+                clause_ref:
+                  type: string
+                question:
+                  type: string
+                answer:
+                  type: string
+                supersedes:
+                  type: string
+                published:
+                  type: boolean
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/procedures/resolve:
     get:
       operationId: resolveProcedure
       summary: Merged shared/region/entity procedure with per-step source badges (proc:resolve equivalent).
-      tags: [Governance]
+      tags:
+        - Governance
       parameters:
         - name: procedure
           in: query
           required: true
-          schema: { type: string }
+          schema:
+            type: string
         - name: entity
           in: query
-          schema: { type: string }
+          schema:
+            type: string
         - name: region
           in: query
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/series:
     get:
       operationId: listSeries
       summary: Distinct series catalog from fact_market_observation — unit, source, observation count, period coverage.
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
         - name: q
           in: query
-          schema: { type: string }
+          schema:
+            type: string
           description: Substring filter on series_id.
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/series/{id}/observations:
     get:
       operationId: getObservations
       summary: Observations for one series — latest revision per period by default (FR-DATA-05 revision-preserving reads).
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
-        - $ref: "#/components/parameters/SeriesId"
+        - $ref: '#/components/parameters/SeriesId'
         - name: all_revisions
           in: query
-          schema: { type: string, enum: ["1", "true"] }
+          schema:
+            type: string
+            enum:
+              - '1'
+              - 'true'
           description: Return every revision row, not just the latest per period.
         - name: period_id
           in: query
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/data-changes:
     get:
       operationId: listDataChanges
       summary: data_change_log scan — new/revised/deleted detections, newest first.
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
         - name: series_id
           in: query
-          schema: { type: string }
+          schema:
+            type: string
         - name: limit
           in: query
-          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/projects/{id}/runs:
     get:
       operationId: listRuns
       summary: Run list for a visible project, newest first, with each run's input-snapshot size.
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: createRun
       summary: Create a versioned input snapshot — NOT a valuation result; the model engine does not exist yet. Analyst+; audited.
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [label]
+              required:
+                - label
               properties:
-                label: { type: string }
+                label:
+                  type: string
                 from_run_id:
                   type: string
                   description: Source run whose inputs are copied; defaults to the project's latest run. Must belong to the same project (400 otherwise).
                 set:
                   type: object
                   description: Overrides applied on top of the copied snapshot (assumption_key -> finite number).
-                  additionalProperties: { type: number }
+                  additionalProperties:
+                    type: number
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/runs/{id}:
     get:
       operationId: getRun
       summary: Run row plus its immutable run_input snapshot and input_hash (ADR-0005 run-based versioning).
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
-        - $ref: "#/components/parameters/RunId"
+        - $ref: '#/components/parameters/RunId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/runs/{id}/diff/{otherId}:
     get:
       operationId: diffRuns
       summary: Variable-level bridge between two runs of one project — changed/added/removed per assumption_key plus both input hashes. NPV-level decomposition deferred until the valuation engine exists.
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
-        - $ref: "#/components/parameters/RunId"
-        - $ref: "#/components/parameters/OtherRunId"
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/OtherRunId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/assumptions:
     get:
       operationId: getAssumptions
       summary: Assumption registry read — ?run_id= gates on the run's project visibility (404 for a non-member).
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
         - name: run_id
           in: query
-          schema: { type: string }
+          schema:
+            type: string
         - name: key
           in: query
-          schema: { type: string }
+          schema:
+            type: string
           description: assumption_key filter.
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: setAssumption
       summary: Write an assumption — analyst+; kind='assumed' requires non-empty rationale (FR-DATA-07, app code AND DB CHECK).
-      tags: [Analysis]
+      tags:
+        - Analysis
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [run_id, assumption_key, kind, value, as_of]
+              required:
+                - run_id
+                - assumption_key
+                - kind
+                - value
+                - as_of
               properties:
-                run_id: { type: string }
-                assumption_key: { type: string }
-                kind: { type: string, enum: [live, user, derived, assumed] }
-                value: { type: number }
-                as_of: { type: string, description: ISO-8601 date. }
-                rationale: { type: string }
-                anchor_ref: { type: string }
-                ttl_days: { type: integer }
+                run_id:
+                  type: string
+                assumption_key:
+                  type: string
+                kind:
+                  type: string
+                  enum:
+                    - live
+                    - user
+                    - derived
+                    - assumed
+                value:
+                  type: number
+                as_of:
+                  type: string
+                  description: ISO-8601 date.
+                rationale:
+                  type: string
+                anchor_ref:
+                  type: string
+                ttl_days:
+                  type: integer
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/simulations:
     post:
       operationId: createSimulation
       summary: >-
-        Run the seeded Monte Carlo engine over a run's inputs — the scenario
-        is composed from the run's sim.* keys plus the project's contingent
-        liabilities; python/monte_carlo.py is spawned args-array-only (never
-        shell) and the quantile summary is persisted. Analyst+; audited.
-      tags: [Analysis]
+        Run the seeded Monte Carlo engine over a run's inputs — the scenario is composed from the run's sim.* keys plus the project's contingent liabilities; python/monte_carlo.py is spawned args-array-only (never shell) and the quantile
+        summary is persisted. Analyst+; audited.
+      tags:
+        - Analysis
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [run_id]
+              required:
+                - run_id
               properties:
                 run_id:
                   type: string
@@ -1094,745 +1590,2306 @@ paths:
                   default: 10000
                   description: The engine's own default when omitted.
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "500":
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
           description: Engine failure (spawn error, timeout kill, or unparseable output) — error.code simulation_failed.
-
   /api/simulations/{id}/results:
     get:
       operationId: getSimulationResults
       summary: Quantile summary from simulation_result ONLY — raw draws are never exposed here (retention_policy archives simulation_draw; the permanent record is the summary). meta carries seed + iterations.
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
-        - $ref: "#/components/parameters/SimulationId"
+        - $ref: '#/components/parameters/SimulationId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/portfolio-scorecard:
     get:
       operationId: getPortfolioScorecard
-      summary: Membership-filtered portfolio rollup over venture_scorecard for one review cycle (ADR-0059 E.4) — ?review_cycle=YYYY-Qn or the latest within the caller's visible scope. meta.scope="membership-filtered" with scope_incomplete/projects_excluded discloses when the rollup is a subset of the cycle; MNPI ventures are included for members.
-      tags: [Monitoring]
+      summary: >-
+        Membership-filtered portfolio rollup over venture_scorecard for one review cycle (ADR-0059 E.4) — ?review_cycle=YYYY-Qn or the latest within the caller's visible scope. meta.scope="membership-filtered" with
+        scope_incomplete/projects_excluded discloses when the rollup is a subset of the cycle; MNPI ventures are included for members.
+      tags:
+        - Monitoring
       parameters:
         - name: review_cycle
           in: query
           required: false
-          schema: { type: string, pattern: '^\d{4}-Q[1-4]$' }
+          schema:
+            type: string
+            pattern: ^\d{4}-Q[1-4]$
           description: Explicit review cycle; absent/blank resolves the latest in scope. Malformed values are 400 (invalid_review_cycle).
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/projects/{id}/scorecard:
     get:
       operationId: getProjectScorecard
       summary: One project's scorecard rows for ?review_cycle= or the project's latest cycle (migration 0024) — member + MNPI-guarded; 404 for a non-member (FR-SEC-01).
-      tags: [Monitoring]
+      tags:
+        - Monitoring
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
         - name: review_cycle
           in: query
           required: false
-          schema: { type: string, pattern: '^\d{4}-Q[1-4]$' }
+          schema:
+            type: string
+            pattern: ^\d{4}-Q[1-4]$
           description: Explicit review cycle; absent/blank resolves the project's latest. Malformed values are 400 (invalid_review_cycle).
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/dd-findings:
     get:
       operationId: listDdFindings
       summary: DD findings for a visible project, optional ?category= filter (e.g. rbd), newest first.
-      tags: [Deal Review]
+      tags:
+        - Deal Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
         - name: category
           in: query
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: addDdFinding
       summary: Record a DD finding — analyst+; category='rbd' requires rbd_source (app code AND DB CHECK).
-      tags: [Deal Review]
+      tags:
+        - Deal Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [category, description]
+              required:
+                - category
+                - description
               properties:
-                category: { type: string }
-                description: { type: string }
-                value_impact: { type: number }
-                assumption_key: { type: string }
-                evidence_ref: { type: string }
-                trl_grade: { type: string }
-                ip_ownership_status: { type: string }
-                commercialization_path: { type: string }
-                parent_relationship_json: { type: string }
+                category:
+                  type: string
+                description:
+                  type: string
+                value_impact:
+                  type: number
+                assumption_key:
+                  type: string
+                evidence_ref:
+                  type: string
+                trl_grade:
+                  type: string
+                ip_ownership_status:
+                  type: string
+                commercialization_path:
+                  type: string
+                parent_relationship_json:
+                  type: string
                 rbd_source:
-                  type: [string, "null"]
-                  enum: [internal_only, accelerator_partnered, external_technology_acquisition, null]
+                  type:
+                    - string
+                    - 'null'
+                  enum:
+                    - internal_only
+                    - accelerator_partnered
+                    - external_technology_acquisition
+                    - null
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/antitrust:
     get:
       operationId: getAntitrust
       summary: Antitrust findings — market definition, HHI before/after, remedy type, discharge status.
-      tags: [Deal Review]
+      tags:
+        - Deal Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteAntitrustFinding
+      summary: Delete an antitrust finding (?row_id=). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createAntitrustFinding
+      summary: Record an antitrust finding. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      operationId: updateAntitrustFinding
+      summary: Update an antitrust finding. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/projects/{id}/incentives:
     get:
       operationId: getIncentives
       summary: Incentive records, both directions — meta carries per-direction counts.
-      tags: [Deal Review]
+      tags:
+        - Deal Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteIncentive
+      summary: Delete an incentive (?row_id=). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createIncentive
+      summary: Record an incentive (direction prospective|granted). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      operationId: updateIncentive
+      summary: Update an incentive. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/projects/{id}/liabilities:
     get:
       operationId: getLiabilities
       summary: Combined exposure — debt instruments, contingent liabilities, and the latest simulation's covenant tests.
-      tags: [Deal Review]
+      tags:
+        - Deal Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteContingentLiability
+      summary: Delete a contingent liability (?liability_id=). Analyst+; audited.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createContingentLiability
+      summary: Record a contingent liability (triangular distribution; drawn into simulations). Analyst+; audited.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/projects/{id}/sites:
     get:
       operationId: listSites
       summary: Site-candidate comparison — ranked order first, unranked candidates last.
-      tags: [Deal Review]
+      tags:
+        - Deal Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteSiteCandidate
+      summary: Delete a site candidate (?row_id=). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createSiteCandidate
+      summary: Record a site candidate. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      operationId: updateSiteCandidate
+      summary: Update a site candidate. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/projects/{id}/partners:
     get:
       operationId: listPartners
       summary: Partner-candidate screening rows.
-      tags: [Deal Review]
+      tags:
+        - Deal Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deletePartnerCandidate
+      summary: Delete a partner candidate (?row_id=). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createPartnerCandidate
+      summary: Record a partner candidate. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      operationId: updatePartnerCandidate
+      summary: Update a partner candidate. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/projects/{id}/permits:
     get:
       operationId: getPermits
       summary: Flat permit and certification lists (parallel fields, never merged); ?include_dag=1 adds each kind's edges and statutory-days critical path.
-      tags: [Deal Review]
+      tags:
+        - Deal Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
         - name: include_dag
           in: query
-          schema: { type: string, enum: ["1", "true"] }
+          schema:
+            type: string
+            enum:
+              - '1'
+              - 'true'
           description: Adds dag.permit_edges / dag.permit_critical_path / dag.certification_edges / dag.certification_critical_path.
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deletePermit
+      summary: Delete a permit (?row_id=). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createPermit
+      summary: Record a permit. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      operationId: updatePermit
+      summary: Update a permit. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/projects/{id}/value-chain-links:
     get:
       operationId: getValueChainLinks
       summary: Value-chain linkage rows with md_industry names on both ends (separate table from proxy chains — ADR-0025).
-      tags: [Deal Review]
+      tags:
+        - Deal Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/proxy-chain-grade:
     get:
       operationId: getProxyChainGrade
       summary: Stored vs recomputed proxy-chain reliability grade (db/lib/chain-grading.ts) with per-hop type/R²/CI rows; mismatch flagged.
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/roic-tree:
     get:
       operationId: getRoicTree
       summary: ROIC driver-tree bridge — derives ROIC/NOPAT margin from fact_industry metrics; degrades to an explicit not-computable state when base metrics are absent.
-      tags: [Analysis]
+      tags:
+        - Analysis
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/management-package:
     get:
       operationId: getManagementPackage
-      summary: >-
-        Role-based executive comp — executive_ref only, never a real name
-        (FR-MA-06/SEC-05; the response selects no name-shaped column).
-        Membership + elevated role (viewer rejected).
-      tags: [M&A Review]
+      summary: Role-based executive comp — executive_ref only, never a real name (FR-MA-06/SEC-05; the response selects no name-shaped column). Membership + elevated role (viewer rejected).
+      tags:
+        - M&A Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/comp-benchmark:
     get:
       operationId: getCompBenchmark
       summary: Aggregate-only pay-parity rows (job family × grade; no individual rows exist). Membership + elevated role (viewer rejected).
-      tags: [M&A Review]
+      tags:
+        - M&A Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/contract-coc-clauses:
     get:
       operationId: listContractCocClauses
-      summary: >-
-        The customer-attrition validator's structured record (ma-07/ma-08,
-        ADR-0072) — CoC clauses across customer/supplier contracts plus
-        concentration, churn estimate, and competitive-overlap notes.
-        Membership-filtered.
-      tags: [M&A Review]
+      summary: The customer-attrition validator's structured record (ma-07/ma-08, ADR-0072) — CoC clauses across customer/supplier contracts plus concentration, churn estimate, and competitive-overlap notes. Membership-filtered.
+      tags:
+        - M&A Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: addContractCocClause
       summary: Record a contract CoC finding (analyst+ only; audited as contract_coc_add).
-      tags: [M&A Review]
+      tags:
+        - M&A Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [counterparty, direction, coc_clause_present]
+              required:
+                - counterparty
+                - direction
+                - coc_clause_present
               properties:
-                counterparty: { type: string }
-                direction: { type: string, enum: [customer, supplier] }
-                coc_clause_present: { type: boolean }
-                clause_summary: { type: string }
-                concentration_pct: { type: number, minimum: 0, maximum: 100 }
-                est_churn_pct: { type: number, minimum: 0, maximum: 100 }
-                overlap_note: { type: string }
-                value_impact: { type: integer }
-                evidence_ref: { type: string }
+                counterparty:
+                  type: string
+                direction:
+                  type: string
+                  enum:
+                    - customer
+                    - supplier
+                coc_clause_present:
+                  type: boolean
+                clause_summary:
+                  type: string
+                concentration_pct:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                est_churn_pct:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                overlap_note:
+                  type: string
+                value_impact:
+                  type: integer
+                evidence_ref:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/analysis-tasks:
     get:
       operationId: listAnalysisTasks
       summary: >-
-        The human-final-approval gate mechanism (design boundary #2): one
-        row per required deliverable at Entity IC / Group IC, lazily
-        created the first time the project reaches that gate.
-        reviewed_by stays NULL until a human explicitly signs off.
-      tags: [Review]
+        The human-final-approval gate mechanism (design boundary #2): one row per required deliverable at Entity IC / Group IC, lazily created the first time the project reaches that gate. reviewed_by stays NULL until a human explicitly
+        signs off.
+      tags:
+        - Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: createAnalysisTask
       summary: Explicitly register a required deliverable (analyst+ only).
-      tags: [Review]
+      tags:
+        - Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [deliverable_type]
+              required:
+                - deliverable_type
               properties:
-                deliverable_type: { type: string }
+                deliverable_type:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/analysis-tasks/{taskId}/review:
     post:
       operationId: reviewAnalysisTask
-      summary: >-
-        Human-final sign-off — the only write path for reviewed_by.
-        Refuses a second sign-off on an already-reviewed task.
-      tags: [Review]
+      summary: Human-final sign-off — the only write path for reviewed_by. Refuses a second sign-off on an already-reviewed task.
+      tags:
+        - Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
         - name: taskId
           in: path
           required: true
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/review-stages:
     get:
       operationId: listReviewStages
-      summary: >-
-        The 3-stage review pipeline (design §10.1-2): AI 1st -> AI 2nd
-        (different domain) -> human final. Optionally filtered by run_id.
-      tags: [Review]
+      summary: 'The 3-stage review pipeline (design §10.1-2): AI 1st -> AI 2nd (different domain) -> human final. Optionally filtered by run_id.'
+      tags:
+        - Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
         - name: run_id
           in: query
           required: false
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: createReviewStage
       summary: >-
-        Record one review stage. unverified_items is a required array
-        (possibly empty) — never omitted; the design's no-PASS-stamp rule
-        means a reviewer always explicitly declares what it could not
-        check. An ai_2nd stage sharing its reviewer_domain with the run's
-        ai_1st stage is refused (design §5.7 — same-domain review never
-        counts as a real 2nd stage).
-      tags: [Review]
+        Record one review stage. unverified_items is a required array (possibly empty) — never omitted; the design's no-PASS-stamp rule means a reviewer always explicitly declares what it could not check. An ai_2nd stage sharing its
+        reviewer_domain with the run's ai_1st stage is refused (design §5.7 — same-domain review never counts as a real 2nd stage).
+      tags:
+        - Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [run_id, stage, reviewer_agent_or_user, unverified_items]
+              required:
+                - run_id
+                - stage
+                - reviewer_agent_or_user
+                - unverified_items
               properties:
-                run_id: { type: string }
-                stage: { type: string, enum: [ai_1st, ai_2nd, human_final] }
-                reviewer_agent_or_user: { type: string }
-                reviewer_domain: { type: string }
+                run_id:
+                  type: string
+                stage:
+                  type: string
+                  enum:
+                    - ai_1st
+                    - ai_2nd
+                    - human_final
+                reviewer_agent_or_user:
+                  type: string
+                reviewer_domain:
+                  type: string
                 unverified_items:
                   type: array
-                  items: { type: string }
-                result: { type: string }
+                  items:
+                    type: string
+                result:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/review-audit-samples:
     get:
       operationId: listReviewAuditSamples
-      summary: >-
-        Measures the "AI 검토 신뢰도" governance KPI (design §6.6): sampled
-        ai_2nd conclusions checked against the human_final outcome.
-        Returns raw rows plus an { total, agreed, agreed_pct } aggregate.
-      tags: [Review]
+      summary: 'Measures the "AI 검토 신뢰도" governance KPI (design §6.6): sampled ai_2nd conclusions checked against the human_final outcome. Returns raw rows plus an { total, agreed, agreed_pct } aggregate.'
+      tags:
+        - Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: createReviewAuditSample
       summary: Record a sample (review_stage_id must reference an ai_2nd stage).
-      tags: [Review]
+      tags:
+        - Review
       parameters:
-        - $ref: "#/components/parameters/ProjectId"
+        - $ref: '#/components/parameters/ProjectId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [review_stage_id, agreed]
+              required:
+                - review_stage_id
+                - agreed
               properties:
-                review_stage_id: { type: string }
-                agreed: { type: boolean }
-                note: { type: string }
+                review_stage_id:
+                  type: string
+                agreed:
+                  type: boolean
+                note:
+                  type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/watch:
     get:
       operationId: listWatches
       summary: The caller's watches with rules, newest first.
-      tags: [Monitoring]
+      tags:
+        - Monitoring
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       operationId: createWatch
       summary: Create a watch — project must be visible (404 otherwise; a watch is never an existence oracle).
-      tags: [Monitoring]
+      tags:
+        - Monitoring
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [project_id]
+              required:
+                - project_id
               properties:
-                project_id: { type: string }
+                project_id:
+                  type: string
                 rules:
                   type: array
                   items:
                     type: object
-                    required: [trigger_type, channel]
+                    required:
+                      - trigger_type
+                      - channel
                     properties:
-                      trigger_type: { type: string }
-                      threshold: { type: number }
-                      cooldown_hours: { type: number }
-                      channel: { type: string }
+                      trigger_type:
+                        type: string
+                      threshold:
+                        type: number
+                      cooldown_hours:
+                        type: number
+                      channel:
+                        type: string
                       adr_ref:
                         type: string
                         description: Linked ADR reference — a notification-threshold rule without one is a client-side hard block (ui-spec §5).
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/watch/{id}:
     delete:
       operationId: deleteWatch
       summary: Delete one of the caller's own watches (rules first — no schema cascade).
-      tags: [Monitoring]
+      tags:
+        - Monitoring
       parameters:
-        - $ref: "#/components/parameters/WatchId"
+        - $ref: '#/components/parameters/WatchId'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/notifications:
     get:
       operationId: listNotifications
       summary: The caller's notifications, newest first (limit 200).
-      tags: [Monitoring]
+      tags:
+        - Monitoring
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/reports:
     get:
       operationId: listReports
       summary: Generated report documents with their superseded chain (document table).
-      tags: [Reports]
+      tags:
+        - Reports
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/reports/{id}/export:
     get:
       operationId: exportReport
       summary: Render a report document to docx/hwpx/pdf via python/report/render_*.py (?format=docx|hwpx|pdf).
-      tags: [Reports]
+      tags:
+        - Reports
       parameters:
         - name: id
           in: path
           required: true
-          schema: { type: string }
+          schema:
+            type: string
         - name: format
           in: query
           required: true
-          schema: { type: string, enum: [docx, hwpx, pdf] }
+          schema:
+            type: string
+            enum:
+              - docx
+              - hwpx
+              - pdf
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/glossary:
     get:
       operationId: listGlossaryKeys
       summary: All glossary keys (for the UI's term-highlight pass).
-      tags: [Glossary]
+      tags:
+        - Glossary
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       operationId: registerGlossaryTerm
-      summary: >-
-        Register a glossary term — admin only. Appends the term to the category
-        YAML file (glossary/*.yaml SSOT); why_it_matters_ko is mandatory
-        (glossary/_schema.yaml), duplicates are rejected in favor of merging.
-      tags: [Glossary]
+      summary: Register a glossary term — admin only. Appends the term to the category YAML file (glossary/*.yaml SSOT); why_it_matters_ko is mandatory (glossary/_schema.yaml), duplicates are rejected in favor of merging.
+      tags:
+        - Glossary
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [key, ko, en, definition_ko, why_it_matters_ko, category]
+              required:
+                - key
+                - ko
+                - en
+                - definition_ko
+                - why_it_matters_ko
+                - category
               properties:
-                key: { type: string }
-                ko: { type: string }
-                en: { type: string }
-                definition_ko: { type: string }
-                why_it_matters_ko: { type: string }
-                category: { type: string, enum: [business, financial, legal, technical, industry, unit] }
-                owner: { type: string }
-                aliases: { type: array, items: { type: string } }
+                key:
+                  type: string
+                ko:
+                  type: string
+                en:
+                  type: string
+                definition_ko:
+                  type: string
+                why_it_matters_ko:
+                  type: string
+                category:
+                  type: string
+                  enum:
+                    - business
+                    - financial
+                    - legal
+                    - technical
+                    - industry
+                    - unit
+                owner:
+                  type: string
+                aliases:
+                  type: array
+                  items:
+                    type: string
       responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/glossary/{term}:
     get:
       operationId: lookupTerm
       summary: Term lookup by key / ko / en / alias — backs the UI tooltip and MCP lookup_term.
-      tags: [Glossary]
+      tags:
+        - Glossary
       parameters:
-        - $ref: "#/components/parameters/GlossaryTerm"
+        - $ref: '#/components/parameters/GlossaryTerm'
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/users:
     get:
       operationId: listUsers
       summary: User list — identity columns only, no hash material. Admin role.
-      tags: [Admin]
+      tags:
+        - Admin
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createAdminUser
+      summary: Create an active user account (initial password returned once). Admin role; audited.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/users/{userId}:
     put:
       operationId: manageUser
-      summary: Approve / set_role / disable / enable an account. Admin role; audited.
-      tags: [Admin]
+      summary: Approve / set_role / disable / enable / reset_password / delete an account. Admin role; audited.
+      tags:
+        - Admin
       parameters:
-        - $ref: "#/components/parameters/MemberUserId"
+        - $ref: '#/components/parameters/MemberUserId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [action]
+              required:
+                - action
               properties:
-                action: { type: string, enum: [approve, set_role, disable, enable] }
-                role: { type: string, enum: [admin, analyst, viewer] }
+                action:
+                  type: string
+                  enum:
+                    - approve
+                    - set_role
+                    - disable
+                    - enable
+                role:
+                  type: string
+                  enum:
+                    - admin
+                    - analyst
+                    - viewer
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/audit-log:
     get:
       operationId: getAuditLog
       summary: Append-only audit viewer — no DELETE route exists at any privilege level (FR-SEC-07). Admin role.
-      tags: [Admin]
+      tags:
+        - Admin
       parameters:
         - name: limit
           in: query
-          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
         - name: before
           in: query
-          schema: { type: string }
+          schema:
+            type: string
           description: created_at cursor for descending pagination.
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/schedule-jobs:
     get:
       operationId: listScheduleJobs
       summary: Job registry plus latest run per job. Admin role.
-      tags: [Admin]
+      tags:
+        - Admin
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/governance:
     get:
       operationId: listGovernanceDocs
       summary: Governance document registry read view (from governance_doc). Admin role.
-      tags: [Admin]
+      tags:
+        - Admin
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/master-data:
     get:
-      operationId: listMasterDataQueue
-      summary: staging_unmapped queue — raw values that failed master-data matching. Admin role.
-      tags: [Admin]
+      operationId: listMasterData
+      summary: Without ?table= lists the manageable md_* code tables; with ?table= lists its codes (allow-listed tables/columns only). Admin role.
+      tags:
+        - Admin
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: addMasterDataCode
+      summary: Add a master-data code row (table/id/fields; allow-listed). Admin role; audited.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      operationId: updateMasterDataCode
+      summary: Update a master-data code row (table/id/fields; allow-listed). Admin role; audited.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/adr:
     get:
       operationId: listAdrIndex
       summary: ADR index scanned from docs/adr/*.md (id, title, status). Admin role.
-      tags: [Admin]
+      tags:
+        - Admin
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/profitability:
+    get:
+      operationId: getPortfolioProfitability
+      summary: Portfolio profitability rollup — per visible project, the latest persisted simulation's NPV quantile summary plus overall RAG.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/benchmarks:
+    get:
+      operationId: listBenchmarkCases
+      summary: External benchmarking case library (q / deal_type / industry / region / deal_year filters). Any authenticated role.
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/admin/benchmarks:
+    post:
+      operationId: createBenchmarkCase
+      summary: Add a benchmark case. Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      operationId: updateBenchmarkCase
+      summary: Update a benchmark case. Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      operationId: deleteBenchmarkCase
+      summary: Delete a benchmark case (?id=). Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/projects/{id}/profitability:
+    get:
+      operationId: getProjectProfitability
+      summary: Per-project simulation-based NPV history (actor, run label, iterations per simulation).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/dd-workspace/{kind}:
+    get:
+      operationId: getDdWorkspace
+      summary: Checklist-driven DD workspace — gate-checklist items (commercial|technical|legal) merged with this project's per-item assessment states plus progress rollups.
+      tags:
+        - DealReview
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - commercial
+              - technical
+              - legal
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: assessDdChecklistItem
+      summary: Record one checklist item assessment (pass|fail|na|waived + note/evidence; waived requires a project waiver_id). Analyst+; audited.
+      tags:
+        - DealReview
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - commercial
+              - technical
+              - legal
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/projects/{id}/activity:
+    get:
+      operationId: getProjectActivity
+      summary: Reverse-chronological activity timeline — runs, simulations, DD assessments, DD findings, RAG assessments, review stages, report snapshots.
+      tags:
+        - DealReview
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/snapshots:
+    get:
+      operationId: listReportSnapshots
+      summary: Report snapshot list for the project.
+      tags:
+        - Reports
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createReportSnapshot
+      summary: Assemble the current analysis state (runs, simulations, RAG, DD progress, reviews) into an immutable markdown snapshot. Analyst+; audited.
+      tags:
+        - Reports
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/projects/{id}/snapshots/{snapId}:
+    get:
+      operationId: getReportSnapshot
+      summary: Single report snapshot's markdown content.
+      tags:
+        - Reports
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: snapId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/master-data/staging:
+    get:
+      operationId: listStagingUnmapped
+      summary: staging_unmapped queue (read).
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: resolveStagingUnmapped
+      summary: Resolve a staging row (action=map after adding the code, or reject). Admin role; audited.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/opportunities:
+    get:
+      operationId: listOpportunities
+      summary: Opportunity funnel registry (status / project_id filters). Any authenticated role.
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createOpportunity
+      summary: Register an opportunity (S2). Analyst+; audited.
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/opportunities/{id}:
+    get:
+      operationId: getOpportunity
+      summary: Single opportunity.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: updateOpportunity
+      summary: Update an opportunity (status transition, scoring, rationale). Analyst+; audited.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/opportunities/{id}/promote:
+    post:
+      operationId: promoteOpportunity
+      summary: Promote a selected opportunity to a project/deal (creates project + lead membership, links opportunity). Analyst+; audited.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/route-decision:
+    get:
+      operationId: listOpportunityRouteDecisions
+      summary: Route decisions of the opportunity (S4).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createOpportunityRouteDecision
+      summary: Record a route decision on the opportunity path (project_id stays NULL until promote). Analyst+; audited.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/opportunities/{id}/process:
+    get:
+      operationId: getOpportunityProcess
+      summary: Derived process state (S1-S4) of the opportunity - evaluateProcess, never persisted.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/route-decision:
+    get:
+      operationId: listProjectRouteDecisions
+      summary: Route decisions linked to the project.
+      tags:
+        - Projects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectRouteDecision
+      summary: Record a route decision for an existing deal (opportunity_id required; classification axes written). Analyst+; audited.
+      tags:
+        - Projects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/projects/{id}/process:
+    get:
+      operationId: getProjectProcess
+      summary: Derived process state (S5-S7) of the deal - evaluateProcess, never persisted.
+      tags:
+        - Projects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/gate-decisions:
+    get:
+      operationId: listGateDecisions
+      summary: Gate decision records (GO/HOLD/KILL) of the project.
+      tags:
+        - Governance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createGateDecision
+      summary: Record a gate decision - HOLD requires missing_artifacts list. Analyst+; audited.
+      tags:
+        - Governance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/projects/{id}/business-case:
+    get:
+      operationId: listBusinessCaseModels
+      summary: Business-case models of the project (greenfield_cost implemented; valuation etc. reserved).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createBusinessCaseModel
+      summary: Create a business-case model. Analyst+; audited.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      operationId: deleteBusinessCaseModel
+      summary: Delete a business-case model and its lines (?model_id=). Analyst+; audited.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/business-case/{modelId}:
+    get:
+      operationId: getBusinessCaseModel
+      summary: Model lines + derived year-by-year projection (revenue minus labor/opex/capex, cumulative cash flow, BEP year).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: addBusinessCaseLine
+      summary: Add a line (labor/opex/capex/revenue). Analyst+; audited.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      operationId: deleteBusinessCaseLine
+      summary: Delete a line (?line_id=). Analyst+; audited.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  delete /api/projects/{id}/antitrust:
+    DELETE:
+      operationId: deleteAntitrustFinding
+      summary: Delete an antitrust finding (?row_id=). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  delete /api/projects/{id}/incentives:
+    DELETE:
+      operationId: deleteIncentive
+      summary: Delete an incentive (?row_id=). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  delete /api/projects/{id}/members:
+    DELETE:
+      operationId: revokeMember
+      summary: Revoke a member's membership (?user_id=). Lead only; audited.
+      tags:
+        - Projects
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  delete /api/projects/{id}/permits:
+    DELETE:
+      operationId: deletePermit
+      summary: Delete a permit (?row_id=). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  get /api/projects/{id}/checklists/{checklistId}:
+    GET:
+      operationId: getChecklistProgress
+      summary: Merge gate-checklist item definitions with this project's recorded states plus progress rollups (any checklist).
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  post /api/projects/{id}/business-case/{modelId}/simulate:
+    POST:
+      operationId: simulateBusinessCase
+      summary: Create a run from the Business Case lines (sim.cf1..N + discount rate) and run the Monte Carlo immediately. Analyst+; audited.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  post /api/projects/{id}/incentives:
+    POST:
+      operationId: createIncentive
+      summary: Record an incentive (direction prospective|granted). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  post /api/projects/{id}/partners:
+    POST:
+      operationId: createPartnerCandidate
+      summary: Record a partner candidate. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  post /api/projects/{id}/sites:
+    POST:
+      operationId: createSiteCandidate
+      summary: Record a site candidate. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  put /api/projects/{id}/antitrust:
+    PUT:
+      operationId: updateAntitrustFinding
+      summary: Update an antitrust finding. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  put /api/projects/{id}/incentives:
+    PUT:
+      operationId: updateIncentive
+      summary: Update an incentive. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  put /api/projects/{id}/partners:
+    PUT:
+      operationId: updatePartnerCandidate
+      summary: Update a partner candidate. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  put /api/projects/{id}/sites:
+    PUT:
+      operationId: updateSiteCandidate
+      summary: Update a site candidate. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/library/{docId}:
+    get:
+      operationId: getLibraryDoc
+      summary: Single library document's summary plus raw text content (id from GET /api/library; ids are chk-*/man-*/pol-*, never raw paths).
+      tags:
+        - Reference
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/glossary-lint:
     get:
       operationId: getGlossaryLintQueue
       summary: Undefined-term queue from the glossary-lint scanner (ADR-0022) — report-only, the curator triages. Admin role.
-      tags: [Admin]
+      tags:
+        - Admin
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/schedule-jobs/{jobKey}:
     put:
       operationId: toggleScheduleJob
       summary: Enable/disable toggle for one job. Admin role; audited.
-      tags: [Admin]
+      tags:
+        - Admin
       parameters:
-        - $ref: "#/components/parameters/JobKey"
+        - $ref: '#/components/parameters/JobKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [enabled]
+              required:
+                - enabled
               properties:
-                enabled: { type: boolean }
+                enabled:
+                  type: boolean
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/data-sources:
     get:
       operationId: listDataSources
       summary: Source registry plus API-key PRESENCE only — the value never crosses this boundary. Admin role.
-      tags: [Admin]
+      tags:
+        - Admin
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/retention:
     get:
       operationId: listRetentionPolicies
       summary: The archival policy table. Admin role.
-      tags: [Admin]
+      tags:
+        - Admin
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       operationId: upsertRetentionPolicy
       summary: Upsert one policy row. Admin role; audited.
-      tags: [Admin]
+      tags:
+        - Admin
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [table_key, basis, retention_months, action]
+              required:
+                - table_key
+                - basis
+                - retention_months
+                - action
               properties:
-                table_key: { type: string }
-                basis: { type: string }
-                retention_months: { type: integer, minimum: 0 }
-                action: { type: string, enum: [archive, delete] }
+                table_key:
+                  type: string
+                basis:
+                  type: string
+                retention_months:
+                  type: integer
+                  minimum: 0
+                action:
+                  type: string
+                  enum:
+                    - archive
+                    - delete
       responses:
-        "201": { $ref: "#/components/responses/Created" }
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/assumptions/{assumptionId}:
+    put:
+      operationId: updateAssumption
+      summary: Update an assumption (partial; value/rationale/anchor/ttl). Analyst+; audited.
+      tags:
+        - Assumptions
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteAssumption
+      summary: Hard-delete an assumption. Analyst+; audited.
+      tags:
+        - Assumptions
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+
+  /api/projects/{id}/agent-run:
+    get:
+      operationId: listAgentRuns
+      summary: "Agent stage execution runs of the project (status, source, actor)."
+      tags: [Governance]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: runStageAgents
+      summary: "Execute a process stage through its mapped agents (positions, stage conclusion, gate evaluation). Analyst+; audited."
+      tags: [Governance]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+
+  /api/projects/{id}/ai-draft:
+    post:
+      operationId: createAiDraft
+      summary: "Generate an AI rationale draft (checklist item / gate decision / evidence summary) from persisted deal data. source: llm or synthesis. Analyst+."
+      tags: [Analysis]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/library:
+    get:
+      operationId: listLibraryDocuments
+      summary: 'Governance library index: gate checklists, operating manuals, policies (read-only).'
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+  /api/projects/{id}/business-case/{modelId}/simulate:
+    post:
+      operationId: simulateBusinessCase
+      summary: Create a run from the Business Case lines (sim.cf1..N + discount rate) and run the Monte Carlo immediately. Analyst+; audited.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/checklists/{checklistId}:
+    get:
+      operationId: getChecklistProgress
+      summary: Gate-checklist items merged with this project's recorded states plus progress rollups.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: assessChecklistItem
+      summary: Record a checklist item assessment (pass/fail/na/waived + evidence). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/dd-findings/{findingId}:
+    put:
+      operationId: updateDdFinding
+      summary: Update a DD finding (description/value impact/evidence). Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteDdFinding
+      summary: Delete a DD finding. Analyst+; audited.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   securitySchemes:
     sessionCookie:
@@ -1849,125 +3906,150 @@ components:
       name: id
       in: path
       required: true
-      schema: { type: string }
+      schema:
+        type: string
       description: Project id. A non-member gets 404 — identical to nonexistent (FR-SEC-01).
     SeriesId:
       name: id
       in: path
       required: true
-      schema: { type: string }
+      schema:
+        type: string
       description: Series id (fact_market_observation.series_id).
     RunId:
       name: id
       in: path
       required: true
-      schema: { type: string }
+      schema:
+        type: string
       description: Run id. A run in a project the caller cannot see returns 404 (FR-SEC-01).
     OtherRunId:
       name: otherId
       in: path
       required: true
-      schema: { type: string }
+      schema:
+        type: string
       description: Comparison run id — must belong to the same project as the base run (400 otherwise).
     SimulationId:
       name: id
       in: path
       required: true
-      schema: { type: string }
+      schema:
+        type: string
       description: Simulation id. Membership resolves simulation -> run -> project; a non-member gets 404 (FR-SEC-01).
     TokenId:
       name: id
       in: path
       required: true
-      schema: { type: string }
+      schema:
+        type: string
       description: API token id (owner-scoped).
     WatchId:
       name: id
       in: path
       required: true
-      schema: { type: string }
+      schema:
+        type: string
       description: Watch id (caller's own).
     MemberUserId:
       name: userId
       in: path
       required: true
-      schema: { type: string }
+      schema:
+        type: string
       description: User id.
     GlossaryTerm:
       name: term
       in: path
       required: true
-      schema: { type: string }
+      schema:
+        type: string
       description: Term key, Korean term, English name, or alias.
     JobKey:
       name: jobKey
       in: path
       required: true
-      schema: { type: string }
+      schema:
+        type: string
       description: Scheduled job key.
   responses:
     Ok:
       description: Success — standard envelope; data shape is per-endpoint.
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/Envelope" }
+          schema:
+            $ref: '#/components/schemas/Envelope'
     Created:
       description: Created — standard envelope.
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/Envelope" }
+          schema:
+            $ref: '#/components/schemas/Envelope'
     BadRequest:
       description: Validation failure — envelope error.code names the rule that refused it.
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/Envelope" }
+          schema:
+            $ref: '#/components/schemas/Envelope'
     Unauthorized:
       description: Missing or invalid session cookie / Bearer token.
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/Envelope" }
+          schema:
+            $ref: '#/components/schemas/Envelope'
     Forbidden:
       description: Authenticated but not permitted — role, token scope, CSRF origin, or the must-change-password gate.
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/Envelope" }
+          schema:
+            $ref: '#/components/schemas/Envelope'
     NotFound:
-      description: >-
-        The 404 contract — returned both for missing resources AND for
-        projects the caller cannot see (FR-SEC-01: existence itself is
-        protected; project reads never return 403).
+      description: 'The 404 contract — returned both for missing resources AND for projects the caller cannot see (FR-SEC-01: existence itself is protected; project reads never return 403).'
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/Envelope" }
+          schema:
+            $ref: '#/components/schemas/Envelope'
     Conflict:
       description: Supersession/conflict rejection.
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/Envelope" }
+          schema:
+            $ref: '#/components/schemas/Envelope'
     Locked:
       description: Account locked (423) — retry after locked_until.
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/Envelope" }
+          schema:
+            $ref: '#/components/schemas/Envelope'
   schemas:
     Envelope:
       type: object
       description: Every response, success and error alike (api-spec.md §9).
-      required: [data, meta, error]
+      required:
+        - data
+        - meta
+        - error
       properties:
         data: {}
         meta:
           type: object
-          required: [as_of]
+          required:
+            - as_of
           properties:
-            as_of: { type: string, format: date-time }
+            as_of:
+              type: string
+              format: date-time
         error:
           oneOf:
-            - type: "null"
-            - $ref: "#/components/schemas/ErrorBody"
+            - type: 'null'
+            - $ref: '#/components/schemas/ErrorBody'
     ErrorBody:
       type: object
-      required: [code, message]
+      required:
+        - code
+        - message
       properties:
-        code: { type: string }
-        message: { type: string }
+        code:
+          type: string
+        message:
+          type: string

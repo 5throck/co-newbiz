@@ -59,6 +59,10 @@ export interface RunSimulationOptions {
   now?: string;
   /** Engine kill deadline, default 120s — a wedged run must not hang the caller. */
   timeoutMs?: number;
+  /** Scenario comparison (A3): override the run's sim.discount_rate without
+   * touching the stored run inputs. The override is used for THIS simulation
+   * only and is recorded via the simulation row's discount_rate column. */
+  discountRateOverride?: number;
 }
 
 export interface SimulationRunResult {
@@ -75,6 +79,10 @@ export interface SimulationRunResult {
   mean: number;
   std: number;
   contingent_liability_count: number;
+  /** A5: deterministic IRR of the base cash flows (undefined in legacy outputs). */
+  irr?: number;
+  /** A5: first year cumulative undiscounted cash flow >= 0 (undefined in legacy outputs). */
+  payback_year?: number;
 }
 
 interface EngineOutput {
@@ -86,6 +94,10 @@ interface EngineOutput {
   p95: number;
   mean: number;
   std: number;
+  /** A5: deterministic IRR of the base cash flows (absent in legacy outputs). */
+  irr?: number;
+  /** A5: first year cumulative undiscounted cash flow >= 0 (absent in legacy outputs). */
+  payback_year?: number;
   /** Present only when the scenario asked include_draws (4dp-rounded, deterministic per seed). */
   draws?: number[];
 }
@@ -168,7 +180,7 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
     .all(runId) as { assumption_key: string; value: number }[]) {
     inputs.set(row.assumption_key, row.value);
   }
-  const discountRate = inputs.get("sim.discount_rate");
+  const discountRate = opts.discountRateOverride ?? inputs.get("sim.discount_rate");
   if (discountRate === undefined || !Number.isFinite(discountRate) || discountRate <= -1) {
     throw new SimulationInputError(
       "run_input key 'sim.discount_rate' is required (a finite rate > -1) before a simulation can run.",
@@ -241,6 +253,12 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
     p95: requireFinite(output, "p95"),
     mean: requireFinite(output, "mean"),
     std: requireFinite(output, "std"),
+    // A5 extension: deterministic IRR/payback of the base cash flows. Optional
+    // — older engine outputs (and pinned fixtures) without them stay valid.
+    irr: typeof output.irr === "number" && Number.isFinite(output.irr) ? output.irr : undefined,
+    payback_year: typeof output.payback_year === "number" && Number.isInteger(output.payback_year)
+      ? output.payback_year
+      : undefined,
   };
 
   const simulationId = ulid();

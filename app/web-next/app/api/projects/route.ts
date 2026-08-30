@@ -12,9 +12,24 @@
 
 import { getDb } from "../../../../../db/client.ts";
 import { createProject, listVisibleProjects } from "../../../../../db/repositories/project.repository.ts";
+import { evaluateProjectStageSummary } from "../../../lib/process-flow.ts";
 import { appendAudit, grantProjectMembership } from "../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../lib/auth.ts";
 import { badRequest, forbidden, ok } from "../../../lib/envelope.ts";
+
+// Compact per-deal stage summary for list cards (S5–S7 + route state).
+// Derived, never stored — same evaluator the workflow view uses.
+function stageSummary(projectId: string): {
+  track: "greenfield" | "brownfield" | null;
+  routeDecided: boolean;
+  stages: Array<{ id: string; status: "complete" | "current" | "blocked" | "locked" }>;
+} {
+  try {
+    return evaluateProjectStageSummary(projectId);
+  } catch {
+    return { track: null, routeDecided: false, stages: [] };
+  }
+}
 
 function latestOverallGrades(projectIds: string[]): Map<string, { grade: string; assessed_at: string }> {
   const byProject = new Map<string, { grade: string; assessed_at: string }>();
@@ -65,7 +80,8 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const includeMnpi = ["1", "true"].includes(url.searchParams.get("include_mnpi") ?? "");
-  const projects = listVisibleProjects(auth.auth.userId, { excludeMnpi: !includeMnpi });
+  // Admin deal-block: admins see no deals at all.
+  const projects = auth.auth.role === "admin" ? [] : listVisibleProjects(auth.auth.userId, { excludeMnpi: !includeMnpi });
   const projectIds = projects.map((p) => p.id);
   const overall = latestOverallGrades(projectIds);
   const gateStages = latestGateStage(projectIds);
@@ -82,6 +98,7 @@ export async function GET(request: Request) {
       ...(grade ? { rag_overall: grade.grade, rag_assessed_at: grade.assessed_at } : {}),
       gate_stage: gateStage,
       is_stale: isStale,
+      stage_summary: stageSummary(p.id),
     };
   });
   return ok(rows, 200, { include_mnpi: includeMnpi, count: rows.length });

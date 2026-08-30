@@ -2,8 +2,10 @@
 // criticalPath() ported verbatim (Kahn's algorithm + one relaxation pass) —
 // see the Hono original for the full algorithm-choice explanation.
 import { getDb } from "../../../../../../../db/client.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
-import { notFound, ok } from "../../../../../lib/envelope.ts";
+import { authenticate } from "../../../../../lib/auth.ts"
+import { handleCreate, handleUpdate, handleDelete } from "../../../../../lib/crud-handlers.ts";
+import type { EntitySpec } from "../../../../../lib/entity-crud.ts";
+import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
 function criticalPath(
@@ -99,3 +101,50 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
   return ok(data, 200, { permit_count: permits.length, certification_count: certifications.length });
 }
+
+const SPEC: EntitySpec = {
+  table: "permit",
+  columns: [
+    { name: "name", type: "text", required: true },
+    { name: "agency", type: "text" },
+    { name: "statutory_days", type: "int" },
+    { name: "status", type: "text" },
+    ],
+};
+
+
+// CRUD (C-feat): create/update/delete via the allow-listed entity helper.
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  const { id } = await params;
+  const project = visibleProject(auth.auth, id);
+  if (!project) return notFound();
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body) return badRequest("invalid_request", "body required.");
+  return handleCreate({ ctx: auth.auth, project, spec: SPEC, body });
+}
+
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  const { id } = await params;
+  const project = visibleProject(auth.auth, id);
+  if (!project) return notFound();
+  const body = (await request.json().catch(() => null)) as (Record<string, unknown> & { id?: string }) | null;
+  if (!body?.id) return badRequest("invalid_request", "id (row) is required.");
+  return handleUpdate({ ctx: auth.auth, project, spec: SPEC, rowId: String(body.id), body });
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  const { id } = await params;
+  const project = visibleProject(auth.auth, id);
+  if (!project) return notFound();
+  const url = new URL(request.url);
+  const rowId = url.searchParams.get("row_id");
+  if (!rowId) return badRequest("invalid_request", "row_id query param is required.");
+  return handleDelete({ ctx: auth.auth, project, spec: SPEC, rowId, body: {} });
+}
+
