@@ -8,7 +8,7 @@ import { useChartTheme } from "../../lib/echarts-theme.ts";
 import {
   ANCHOR_SOURCES, ANCHOR_TOTAL, AXES, BASELINE_2026, CAGR_BASE, CHAIN_GRADE,
   CONSISTENCY, CROSS_VALIDATION, GLOBAL_2026, GLOBAL_2030, LIMITATIONS,
-  PROJECTION_2030, REGISTRY, REGIONS, SCENARIO_ROLLUP, SEGMENTS, SIZING_SOURCE_DOC,
+  PROJECTION_2030, REGISTRY, REGIONS, SEGMENTS, SIZING_SOURCE_DOC,
   STEPS, VALIDATION_STATUS_META, band,
   type SegmentCode,
 } from "../../lib/market-sizing.ts";
@@ -240,7 +240,21 @@ function SizingReport({ detail }: { detail: IndustryDetail }) {
         </div>
         <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">시나리오 밴드 (비관~낙관, 18개 셀 — 북미·광산 오버라이드 강조)</h4>
         <ScenarioBandChart />
-        <ScenarioRollupTable />
+        <div className="chart-pair">
+          <div className="chart-half">
+            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">시나리오별 2030 전망 — 권역별 CAGR 적용 (그룹 바)</h4>
+            <RegionScenarioChart />
+          </div>
+          <div className="chart-half">
+            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">시나리오별 2030 전망 (권역 테이블, $B)</h4>
+            <RegionScenarioTable />
+          </div>
+        </div>
+        <p className="sizing-note-list mt-2 text-[0.75rem] text-[color:var(--muted-fg)]">
+          시나리오는 글로벌 단일 CAGR이 아니라 각 권역×세그먼트 셀의 비관/기본/낙관 CAGR(4년 복리)을 그대로 적용해
+          계산합니다 — 권역별 성격(예: 광산 집중 권역의 비관 하락, 유럽 기타의 규제 상승)이 시나리오 결과에 그대로 반영됩니다.
+          글로벌 롤업은 각 시나리오의 권역 합계입니다.
+        </p>
       </StepSection>
 
       <StepSection n={5} id="step-5" title="정합성 체크 (바텀업 vs 탑다운)">
@@ -509,19 +523,66 @@ function ScenarioBandChart() {
   return <EChart option={option} height={Math.max(280, rows.length * 17 + 48)} />;
 }
 
-function ScenarioRollupTable() {
+// 시나리오 적용: 글로벌 단일 CAGR이 아니라 각 권역×세그먼트 셀의
+// 비관/기본/낙관 CAGR을 4년(2026→2030) 복리로 적용한 권역별 전망.
+function regionScenario2030(code: string, scenario: "down" | "base" | "up"): number {
+  return SEGMENTS.reduce((sum, seg) => {
+    const cagr = band(code, seg.code)[scenario];
+    return sum + BASELINE_2026[code][seg.code] * Math.pow(1 + cagr, 4);
+  }, 0);
+}
+
+const SCENARIOS_META = [
+  { key: "down" as const, label: "비관" },
+  { key: "base" as const, label: "기본" },
+  { key: "up" as const, label: "낙관" },
+];
+
+function RegionScenarioChart() {
+  const ct = useChartTheme();
+  const option = {
+    grid: { left: 110, right: 40, top: 30, bottom: 32 },
+    legend: { top: 0, textStyle: { color: ct.muted, fontSize: 10 } },
+    xAxis: { type: "value" as const, axisLabel: { formatter: (v: unknown) => `$${Number(v)}`, color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
+    yAxis: { type: "category" as const, data: [...REGIONS].reverse().map((r) => r.label), axisLabel: { color: ct.muted, fontSize: 10 } },
+    series: SCENARIOS_META.map((s) => ({
+      name: s.label,
+      type: "bar" as const,
+      data: [...REGIONS].reverse().map((r) => Math.round(regionScenario2030(r.code, s.key) * 1000) / 1000),
+      itemStyle: {
+        color: s.key === "base" ? ct.color[0] : s.key === "up" ? ct.color[3] : ct.color[1],
+        opacity: s.key === "base" ? 1 : 0.6,
+        borderRadius: [0, 3, 3, 0],
+      },
+      barMaxWidth: 12,
+    })),
+    tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
+  };
+  return <EChart option={option} height={280} />;
+}
+
+function RegionScenarioTable() {
+  const r3 = (v: number) => Math.round(v * 1000) / 1000;
+  const globals = SCENARIOS_META.map((s) => REGIONS.reduce((a, r) => a + regionScenario2030(r.code, s.key), 0));
   return (
-    <table className="data-table mt-3" aria-label="글로벌 시나리오 롤업">
-      <caption className="sr-only">글로벌 시나리오 롤업</caption>
-      <thead><tr><th scope="col">시나리오</th><th scope="col">글로벌 CAGR (2026–2030)</th><th scope="col">2030 총시장</th></tr></thead>
+    <table className="data-table" aria-label="시나리오별 권역 2030 전망">
+      <caption className="sr-only">시나리오별 권역 2030 전망</caption>
+      <thead><tr><th scope="col">권역</th><th scope="col">비관</th><th scope="col">기본</th><th scope="col">낙관</th></tr></thead>
       <tbody>
-        {SCENARIO_ROLLUP.map((s) => (
-          <tr key={s.scenario}>
-            <td className="font-semibold">{s.scenario}</td>
-            <td className="tabular-nums">~{s.cagr}%</td>
-            <td className="tabular-nums">${s.total2030.toFixed(2)}B</td>
+        {REGIONS.map((r) => (
+          <tr key={r.code}>
+            <td className="font-semibold">{r.label}</td>
+            {SCENARIOS_META.map((s) => (
+              <td key={s.key} className="tabular-nums">{r3(regionScenario2030(r.code, s.key)).toFixed(3)}</td>
+            ))}
           </tr>
         ))}
+        <tr className="row-selected">
+          <td className="font-semibold">글로벌</td>
+          {globals.map((g, i) => (
+            <td key={i} className="tabular-nums font-semibold">{r3(g).toFixed(2)}</td>
+          ))}
+        </tr>
       </tbody>
     </table>
   );
