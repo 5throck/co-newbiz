@@ -2256,10 +2256,10 @@
 }
 .topbar-logout:hover { border-color: var(--danger); color: var(--danger); }
 .theme-toggle-compact {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 2rem; height: 2rem; border-radius: var(--radius-full);
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  height: 2rem; padding: 0 0.7rem; border-radius: var(--radius-full);
   border: 1px solid var(--border); background: var(--surface); color: var(--fg);
-  cursor: pointer; transition: border-color 0.2s ease;
+  font-size: 0.75rem; cursor: pointer; transition: border-color 0.2s ease;
 }
 .theme-toggle-compact:hover { border-color: var(--primary); }
 
@@ -2635,3 +2635,7 @@
   font-size: 0.82rem;
   display: grid; gap: 0.35rem;
 }
+.sizing-step-deep { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.sizing-step-badge-deep { background: color-mix(in srgb, var(--accent) 75%, var(--fg)); }
+
+.sizing-verdict-cell { white-space: nowrap; min-width: 6.5rem; }

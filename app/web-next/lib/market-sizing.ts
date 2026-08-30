@@ -144,11 +144,11 @@ export const REGISTRY = {
 
 export const STEPS = [
   { id: "step-1", title: "축·프록시 구조 정의", short: "축 정의" },
-  { id: "step-2", title: "앵커 삼각검증", short: "앵커" },
+  { id: "step-2", title: "기준 시장규모 산정 (다중 소스 교차)", short: "기준 규모" },
   { id: "step-3", title: "권역·세그먼트 배분", short: "배분" },
   { id: "step-4", title: "셀별 CAGR·시나리오 밴드", short: "CAGR·밴드" },
-  { id: "step-5", title: "정합성 체크 (바텀업 vs 탑다운)", short: "정합성" },
-  { id: "step-6", title: "1차 소스 교차검증", short: "교차검증" },
-  { id: "step-7", title: "한계 레지스터", short: "한계" },
-  { id: "step-8", title: "레지스트리 등록", short: "등록" },
+  { id: "step-5", title: "성장률 정합성 확인 (바텀업 vs 탑다운)", short: "정합성" },
+  { id: "step-6", title: "기업 공시 교차검증", short: "공시 검증" },
+  { id: "step-7", title: "분석 한계 목록", short: "한계" },
+  { id: "step-8", title: "가정 레지스트리 등록", short: "등록" },
 ];

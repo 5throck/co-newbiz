@@ -36,8 +36,8 @@ export function ThemeToggle({ compact = false }: { compact?: boolean } = {}) {
       aria-pressed={theme === "dark"}
     >
       {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-      {!compact && <span>{theme === "dark" ? "라이트 모드" : "다크 모드"}</span>}
-      {compact && <span className="sr-only">{theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}</span>}
+      <span>{theme === "dark" ? "라이트 모드" : "다크 모드"}</span>
+      {compact && <span className="sr-only">전환</span>}
     </button>
   );
 }

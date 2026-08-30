@@ -189,7 +189,7 @@ function SizingReport({ detail }: { detail: IndustryDetail }) {
         <StepSensitivityChart stepNumber={undefined} sensitivities={detail.driver_sensitivities} />
       </StepSection>
 
-      <StepSection n={2} id="step-2" title="앵커 삼각검증">
+      <StepSection n={2} id="step-2" title="기준 시장규모 산정 (다중 소스 교차)">
         <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
           독립 추정치 2–3개로 기준년 총시장(2026, $B)을 삼각검증하고 이상치를 명시적으로 제외합니다.
           이후 모든 배분이 이 앵커로 수렴해야 합니다.
@@ -257,7 +257,30 @@ function SizingReport({ detail }: { detail: IndustryDetail }) {
         </p>
       </StepSection>
 
-      <StepSection n={5} id="step-5" title="정합성 체크 (바텀업 vs 탑다운)">
+      {/* 4단계와 5단계 사이의 심화 영역 — 방법론 8단계 번호는 유지 */}
+      <section id="yearly-share" aria-label="연도별 시장점유율 추이" className="market-section sizing-step sizing-step-deep">
+        <h3 className="sizing-step-title">
+          <span className="sizing-step-badge sizing-step-badge-deep">4-A</span> 연도별 시장점유율 추이 (2026 → 2030, 기본 시나리오)
+        </h3>
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+          각 권역×세그먼트 셀의 기본 CAGR을 연도별로 복리 적용해 권역별 시장 규모와 점유율이
+          어떻게 이동하는지 연 단위로 추적합니다. 4단계의 연간 성장률(원인)과 5단계의 정합성 체크(검증) 사이에서
+          시장 구조의 시간에 따른 변화(결과)를 보여주는 별도 영역입니다.
+        </p>
+        <div className="chart-pair">
+          <div className="chart-half">
+            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역별 점유율 추이 (적층 영역, %)</h4>
+            <YearlyShareAreaChart />
+          </div>
+          <div className="chart-half">
+            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역별 시장 규모 추이 (적층 바, $B)</h4>
+            <YearlySizeStackedBar />
+          </div>
+        </div>
+        <YearlyShareTable />
+      </section>
+
+      <StepSection n={5} id="step-5" title="성장률 정합성 확인 (바텀업 vs 탑다운)">
         <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
           매트릭스를 롤업한 암시 글로벌 CAGR을 탑다운 컨센서스와 비교합니다. 허용 오차 내여도 이는
           <strong> 내부 정합성 확인</strong>일 뿐 — 양쪽 모두 같은 부류의 소스로 소급되므로 독립적 확인으로
@@ -267,7 +290,7 @@ function SizingReport({ detail }: { detail: IndustryDetail }) {
         <p className="sizing-note-list mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">{CONSISTENCY.tolerance}</p>
       </StepSection>
 
-      <StepSection n={6} id="step-6" title="1차 소스 교차검증">
+      <StepSection n={6} id="step-6" title="기업 공시 교차검증">
         <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
           카테고리 내 상장사의 연차보고서·중간보고서 원문으로 매트릭스의 각 주장을 검증합니다.
           구조적으로 검증 불가능한 항목은 <strong>검증 불가</strong>로 명시합니다(탐색 실패가 아닌 공시 구조의 한계).
@@ -283,7 +306,7 @@ function SizingReport({ detail }: { detail: IndustryDetail }) {
               return (
                 <tr key={v.claim}>
                   <td className="font-semibold">{v.claim}</td>
-                  <td><span className={`status-chip ${meta.chip}`}>{meta.label}</span></td>
+                  <td className="sizing-verdict-cell"><span className={`status-chip ${meta.chip}`}>{meta.label}</span></td>
                   <td className="text-[0.78rem]">{v.evidence}</td>
                 </tr>
               );
@@ -292,7 +315,7 @@ function SizingReport({ detail }: { detail: IndustryDetail }) {
         </table>
       </StepSection>
 
-      <StepSection n={7} id="step-7" title="한계 레지스터">
+      <StepSection n={7} id="step-7" title="분석 한계 목록">
         <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
           판단적 보정·소스 불일치·외삽 불가 신호를 번호 붙여 고정합니다. 소비자는 이 목록 없이 매트릭스를
           인용할 수 없습니다.
@@ -302,7 +325,7 @@ function SizingReport({ detail }: { detail: IndustryDetail }) {
         </ol>
       </StepSection>
 
-      <StepSection n={8} id="step-8" title="레지스트리 등록">
+      <StepSection n={8} id="step-8" title="가정 레지스트리 등록">
         <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
           동결된 매트릭스는 assumption 레지스트리에 조합당 1 row(kind='assumed', rationale + anchor_ref + TTL)로
           등록됩니다. 레지스트리는 append-only — 수정은 새 row로 기록됩니다. 아래는 실제 등록 상태(라이브 조회)입니다.
@@ -582,6 +605,101 @@ function RegionScenarioTable() {
           {globals.map((g, i) => (
             <td key={i} className="tabular-nums font-semibold">{r3(g).toFixed(2)}</td>
           ))}
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/* ── 4-A 연도별 시장점유율 (기본 시나리오, 셀 CAGR 연간 복리) ── */
+const YEARS = [2026, 2027, 2028, 2029, 2030];
+
+function regionTotalInYear(code: string, yearIndex: number, scenario: "down" | "base" | "up" = "base"): number {
+  return SEGMENTS.reduce((sum, seg) => {
+    const cagr = band(code, seg.code)[scenario];
+    return sum + BASELINE_2026[code][seg.code] * Math.pow(1 + cagr, yearIndex);
+  }, 0);
+}
+
+function yearlyShareMatrix(): { years: number[]; shares: Record<string, number[]>; totals: number[] } {
+  const shares: Record<string, number[]> = {};
+  const totals = YEARS.map(() => 0);
+  for (const r of REGIONS) {
+    shares[r.code] = YEARS.map((_, y) => regionTotalInYear(r.code, y));
+    totals.forEach((_, y) => { totals[y] += shares[r.code][y]; });
+  }
+  for (const r of REGIONS) {
+    shares[r.code] = shares[r.code].map((v, y) => Math.round((v / totals[y]) * 1000) / 10);
+  }
+  return { years: YEARS, shares, totals: totals.map((t) => Math.round(t * 100) / 100) };
+}
+
+function YearlyShareAreaChart() {
+  const ct = useChartTheme();
+  const { shares } = yearlyShareMatrix();
+  const option = {
+    grid: { left: 48, right: 24, top: 30, bottom: 32 },
+    legend: { top: 0, textStyle: { color: ct.muted, fontSize: 10 } },
+    xAxis: { type: "category" as const, data: YEARS.map(String), boundaryGap: false, axisLabel: { color: ct.muted } },
+    yAxis: { type: "value" as const, max: 100, axisLabel: { formatter: "{value}%", color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
+    series: REGIONS.map((r, i) => ({
+      name: r.label,
+      type: "line" as const,
+      stack: "share",
+      data: shares[r.code],
+      areaStyle: { opacity: 0.75 },
+      lineStyle: { width: 1 },
+      itemStyle: { color: ct.color[i % ct.color.length] },
+      symbol: "none" as const,
+    })),
+    tooltip: { trigger: "axis" as const, valueFormatter: (v: unknown) => `${Number(v)}%` },
+  };
+  return <EChart option={option} height={300} />;
+}
+
+function YearlySizeStackedBar() {
+  const ct = useChartTheme();
+  const option = {
+    grid: { left: 48, right: 24, top: 30, bottom: 32 },
+    legend: { top: 0, textStyle: { color: ct.muted, fontSize: 10 } },
+    xAxis: { type: "category" as const, data: YEARS.map(String), axisLabel: { color: ct.muted } },
+    yAxis: { type: "value" as const, name: "$B", nameTextStyle: { color: ct.muted }, axisLabel: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
+    series: REGIONS.map((r, i) => ({
+      name: r.label,
+      type: "bar" as const,
+      stack: "size",
+      data: YEARS.map((_, y) => Math.round(regionTotalInYear(r.code, y) * 100) / 100),
+      itemStyle: { color: ct.color[i % ct.color.length] },
+      barMaxWidth: 42,
+    })),
+    tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
+  };
+  return <EChart option={option} height={300} />;
+}
+
+function YearlyShareTable() {
+  const { years, shares, totals } = yearlyShareMatrix();
+  return (
+    <table className="data-table mt-3" aria-label="연도별 권역 점유율">
+      <caption className="sr-only">연도별 권역 점유율 및 글로벌 총시장</caption>
+      <thead>
+        <tr>
+          <th scope="col">권역</th>
+          {years.map((y) => <th key={y} scope="col">{y} 점유율</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {REGIONS.map((r) => (
+          <tr key={r.code}>
+            <td className="font-semibold">{r.label}</td>
+            {years.map((_, y) => (
+              <td key={y} className="tabular-nums">{shares[r.code][y].toFixed(1)}%</td>
+            ))}
+          </tr>
+        ))}
+        <tr className="row-selected">
+          <td className="font-semibold">글로벌 총시장 ($B)</td>
+          {totals.map((t, y) => <td key={y} className="tabular-nums font-semibold">{t.toFixed(2)}</td>)}
         </tr>
       </tbody>
     </table>

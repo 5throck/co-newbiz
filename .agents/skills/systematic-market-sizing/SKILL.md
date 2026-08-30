@@ -13,7 +13,7 @@ description: >
   Use when: "market sizing", "TAM/SAM/SOM", "market matrix", "region×segment
   demand estimate", "market cross-validation against filings", "scenario
   bands for market size".
-version: 1.0.0
+version: 1.1.0
 last_reviewed: 2026-08-31
 status: active
 owner: market-intelligence-agent
@@ -84,6 +84,21 @@ cells have **documented disagreement between source classes** — those get an
 explicit wider override band, and the disagreement is the first item to
 resolve if better data arrives.
 
+Scenarios are applied REGION-RESOLVED, never as a single global CAGR: each
+region's down/base/up 2030 projection compounds its own cell CAGRs (4-year
+compound from the baseline), and the global roll-up per scenario is the sum
+of those regional projections. A global-rate shortcut would erase the
+regional character the matrix exists to capture.
+
+### Step 4-A — Track year-by-year market share (separate report section)
+Between growth rates (step 4) and verification (step 5), present the market
+structure's evolution OVER TIME as its own report section: compound each
+cell's base CAGR year by year and show region shares and sizes for every
+year of the horizon (stacked area of shares, stacked bars of sizes, and a
+per-year share table with the global total row). This makes structural
+shifts (which region gains / loses share, and when) visible instead of
+collapsing the horizon to a single end-year delta.
+
 ### Step 5 — Run the bottom-up vs top-down consistency check
 Roll the matrix up to an implied global CAGR and compare against the top-down
 consensus rate. Within tolerance → it is an **internal consistency check
@@ -132,12 +147,40 @@ A sizing is complete when ALL of the following exist:
 2. A registration script (or direct `recordAssumption` calls) that lands the
    matrix rows in the assumption registry, committed alongside the doc.
 3. A CHANGELOG entry recording the sizing and its registration.
+4. A /market report page section set covering all steps — including the
+   region-resolved scenario projections (step 4) and the year-by-year
+   market-share section (step 4-A) — with a live step-8 registry status view.
+
+## Terminology (use these labels consistently)
+
+This skill file is English-only per the workspace language policy; the
+approved Korean UI labels for each step live in the `STEPS` constant of
+`app/web-next/lib/market-sizing.ts` — that constant is the single source of
+truth for step labels in UI and Korean deliverables. When writing or
+referring to steps, use the concepts below (not the deprecated jargon):
+
+| Step | Concept | Deprecated jargon (do not use) |
+|---|---|---|
+| 1 | Axis and proxy-structure definition | — |
+| 2 | Baseline market sizing via multi-source cross-estimation | "anchor triangulation" |
+| 3 | Region and segment allocation | — |
+| 4 | Per-cell CAGRs and scenario bands | — |
+| 4-A | Year-by-year market-share trend | — |
+| 5 | Growth-rate consistency check (bottom-up vs top-down) | bare "consistency check" |
+| 6 | Cross-validation against company filings | "first-party source cross-validation" |
+| 7 | Known-limitations list | "limitations register" |
+| 8 | Assumption-registry registration | bare "registry registration" |
 
 ## Anti-patterns (refuse these)
 
 - A single-source total presented as the market size.
 - Region×segment tables presented as bottom-up sums when they are calibrated
   allocations.
+- Scenarios applied as one global CAGR instead of region-resolved cell CAGRs
+  (step 4) — this erases the regional differentiation the matrix exists to
+  capture.
+- Collapsing the projection horizon to a single end-year delta with no
+  year-by-year share view (step 4-A).
 - Cross-validation against vendor reports described as independent
   confirmation.
 - A finished matrix left unregistered because "no project run exists yet" —
