@@ -22,7 +22,6 @@ import { AssumptionsTab } from "../../../components/AssumptionsTab.tsx";
 import { DdWorkspaceTab } from "../../../components/DdWorkspaceTab.tsx";
 import { ActivityTab } from "../../../components/ActivityTab.tsx";
 import { WorkflowTab } from "../../../components/WorkflowTab.tsx";
-import { ProcessHeader } from "../../../components/ProcessHeader.tsx";
 import { PermitsTab } from "../../../components/PermitsTab.tsx";
 import { MaReviewTab } from "../../../components/MaReviewTab.tsx";
 import { ModelTab } from "../../../components/ModelTab.tsx";
@@ -140,58 +139,35 @@ export default function ProjectDetailPage() {
 
   return (
     <main className="project-detail-page">
-      <h1>{project?.project_no ?? "..."}</h1>
+      <div className="deal-header">
+        <h1 className="mb-0">{project?.project_no ?? "..."}</h1>
+        <select
+          aria-label="화면 전환"
+          value={tab}
+          onChange={(e) => setTab(e.target.value as Tab)}
+          className="deal-view-select"
+        >
+          <option value="workflow">워크플로우</option>
+          <option value="overview">개요</option>
+          <option value="market">시장·체인</option>
+          <option value="data">데이터</option>
+          <option value="assumptions">가정</option>
+          <option value="model">모델</option>
+          <option value="simulation">시뮬레이션</option>
+          <option value="dd">실사</option>
+          <option value="permits">법령·인허가</option>
+          <option value="ma">M&A 검토</option>
+          <option value="pmi">PMI·증거</option>
+          <option value="review">검토 현황</option>
+          <option value="activity">활동·보고서</option>
+          <option value="members">멤버십</option>
+        </select>
+      </div>
       {mnpiBanner && (
         <div role="alert" className="mnpi-banner">
           ⚠ 본 프로젝트는 미공개중요정보(MNPI)로 분류되어 있습니다. 모든 열람은 감사 로그에 기록됩니다.
         </div>
       )}
-      {id && <ProcessHeader projectId={id} />}
-      <nav
-        className="tab-nav my-4"
-        aria-label="프로젝트 탭"
-      >
-        <button type="button" aria-current={tab === "workflow"} onClick={() => setTab("workflow")}>
-          워크플로우
-        </button>
-        <button type="button" aria-current={tab === "overview"} onClick={() => setTab("overview")}>
-          개요
-        </button>
-        <button type="button" aria-current={tab === "procedure"} onClick={() => setTab("procedure")}>
-          절차 뷰어
-        </button>
-        <button type="button" aria-current={tab === "market"} onClick={() => setTab("market")}>시장·체인</button>
-      <button type="button" aria-current={tab === "data"} onClick={() => setTab("data")}>
-          데이터
-        </button>
-        <button type="button" aria-current={tab === "assumptions"} onClick={() => setTab("assumptions")}>
-          가정
-        </button>
-        <button type="button" aria-current={tab === "model"} onClick={() => setTab("model")}>
-          모델
-        </button>
-        <button type="button" aria-current={tab === "simulation"} onClick={() => setTab("simulation")}>
-          시뮬레이션
-        </button>
-        <button type="button" aria-current={tab === "compare"} onClick={() => setTab("compare")}>
-          버전 비교
-        </button>
-        <button type="button" aria-current={tab === "dd"} onClick={() => setTab("dd")}>
-          실사
-        </button>
-        <button type="button" aria-current={tab === "permits"} onClick={() => setTab("permits")}>
-          법령·인허가
-        </button>
-        <button type="button" aria-current={tab === "ma"} onClick={() => setTab("ma")}>
-          M&A 검토
-        </button>
-        <button type="button" aria-current={tab === "pmi"} onClick={() => setTab("pmi")}>PMI·증거</button>
-        <button type="button" aria-current={tab === "review"} onClick={() => setTab("review")}>검토 현황</button>
-        <button type="button" aria-current={tab === "activity"} onClick={() => setTab("activity")}>활동·보고서</button>
-      <button type="button" aria-current={tab === "members"} onClick={() => setTab("members")}>
-          멤버십
-        </button>
-      </nav>
 
       {tab === "workflow" && id && (
         <section aria-label="워크플로우">

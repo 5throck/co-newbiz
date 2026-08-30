@@ -118,7 +118,12 @@ export async function POST(request: Request) {
   }
   const db = getDb();
   const now = new Date().toISOString();
-  const project = createProject(body.project_no.trim());
+  let project;
+  try {
+    project = createProject(body.project_no.trim());
+  } catch {
+    return badRequest("duplicate_project_no", `프로젝트 번호 '${body.project_no.trim()}'은(는) 이미 존재합니다.`);
+  }
   grantProjectMembership(db, {
     projectId: project.id,
     userId: ctx.userId,

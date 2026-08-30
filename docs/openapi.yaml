@@ -306,6 +306,15 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProject
+      summary: "Hard delete a deal and its child records. Analyst+; audited."
+      tags: [Projects]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /api/projects/{id}/members:
     get:
       operationId: listMembers
@@ -3811,6 +3820,15 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/market-overview:
+    get:
+      operationId: getMarketOverview
+      summary: S1 market analysis overview — industries, industry drivers, value chain link counts, proxy link counts, and market observation series counts. Workspace-level (no project_id). Any authenticated role.
+      tags: [Analysis]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /api/library:
     get:

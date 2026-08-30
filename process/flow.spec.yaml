@@ -288,3 +288,28 @@ stages:
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: terminal, onHold: S7, onKill: terminal }
     gates: [entity_ic, group_ic]
+
+  - id: S8
+    name: 사후 관리
+    objective: 투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다
+    inputs:
+      - IC 승인 결정
+      - 실행 계획
+    outputs:
+      - 포트폴리오 스코어카드
+      - 사업 성과 리포트
+    entryCriteria:
+      - S7 완료 (IC 승인)
+    activities:
+      - id: portfolio-monitoring
+        agent: group-review-agent
+        skills: [portfolio-fit-assessment]
+        procedure: [portfolio-venture-monitoring]
+    requiredArtifacts:
+      - 벤처 스코어카드
+    completionCriteria:
+      - 분기별 스코어카드 갱신
+    applicableTracks: [greenfield, brownfield]
+    stateTransitions: { onComplete: terminal, onHold: S8, onKill: terminal }
+    gates: []
+

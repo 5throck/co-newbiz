@@ -91,6 +91,7 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 - S5 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`
 - S6 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`
 - S7 투자심사·실행: `pm`, `risk-officer`, `group-review-agent`
+- S8 사후 관리: `group-review-agent`
 
 스킬·프로시저 대응은 각 스테이지의 Activities 표를, 전체 매핑 근거는 ADR-0074를 참고한다.
 
@@ -373,3 +374,25 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 - 그룹 수준 반려
 
 **자원 결정**: 최종 투자 집행
+
+## S8 — 사후 관리
+
+**목표**: 투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다
+
+**입력**
+- IC 승인 결정
+- 실행 계획
+
+**Activities**
+- portfolio-monitoring · agent: `group-review-agent` · skills: `portfolio-fit-assessment` · procedure: `portfolio-venture-monitoring`
+
+**필수 산출물**
+- 벤처 스코어카드
+
+**완료 기준**
+- 분기별 스코어카드 갱신
+
+**적용 트랙**: greenfield, brownfield
+
+### 게이트
+

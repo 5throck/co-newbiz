@@ -140,7 +140,7 @@ export function OpportunitiesView() {
       {rows === null ? (
         <p>불러오는 중...</p>
       ) : (
-        <div className="funnel-board" role="list" aria-label="기회 퍼널">
+        <div className="funnel-board" role="list" aria-label="기회 발굴">
           {COLUMNS.map(({ status, label }) => {
             const col = rows.filter((r) => r.status === status);
             return (

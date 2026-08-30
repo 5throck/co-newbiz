@@ -368,13 +368,17 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
       ? (STAGES.find((s) => s.sequence === (STAGES.find((s) => s.id === currentStage)?.sequence ?? 0) + 1)?.id ?? null)
       : null;
 
+  // Deduplicate blockers — the same blocker (e.g. S4 route undecided) can be
+  // pushed by multiple stage evaluations; show it once.
+  const uniqueBlockers = [...new Set(blockers)];
+
   return {
     entity,
     currentStage,
     completedStages,
     blockedStages,
     nextStage,
-    blockers,
+    blockers: uniqueBlockers,
     requiredArtifacts,
     gateStatus,
     track,

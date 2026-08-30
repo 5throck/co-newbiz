@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
+import { useSearchParams } from "next/navigation";
 import { BusinessCasePanel } from "./BusinessCasePanel.tsx";
 
 // 워크플로우 탭 — 프로세스 스테이지 S1~S7의 단계 안내 뷰 (docs/process-flow.md).
@@ -47,6 +48,25 @@ const STAGE_LABELS: Record<string, string> = {
   S7: "투자심사·실행",
 };
 
+const AGENT_LABELS: Record<string, string> = {
+  "market-intelligence-agent": "시장 인텔리전스",
+  "industry-lead": "산업 리드",
+  "region-lead": "지역 리드",
+  "greenfield-agent": "그린필드 에이전트",
+  "brownfield-agent": "브라운필드 에이전트",
+  "financial-analyst": "재무 애널리스트",
+  "valuation-agent": "밸류에이션",
+  "quant-methodologist": "정량 방법론",
+  "commercial-dd-agent": "Commercial DD",
+  "technical-dd-agent": "Technical DD",
+  "legal-counsel": "법률 자문",
+  "pm": "PM",
+  "process-governance-manager": "프로세스 거버넌스",
+  "risk-officer": "리스크",
+  "group-review-agent": "그룹 리뷰",
+  "partnership-agent": "파트너십",
+};
+
 const GATE_LABELS: Record<string, string> = {
   screening: "Screening",
   pre_fs: "Pre-FS",
@@ -55,6 +75,14 @@ const GATE_LABELS: Record<string, string> = {
   entity_ic: "Entity IC",
   group_ic: "Group IC",
 };
+
+function stripMd(text: string): string {
+  return text
+    .replace(/^#+\s*/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/`([^`]+)`/g, "$1");
+}
 
 export function WorkflowTab({ projectId }: { projectId: string }) {
   const [projectEval, setProjectEval] = useState<ProcessEvaluation | null>(null);
@@ -66,6 +94,8 @@ export function WorkflowTab({ projectId }: { projectId: string }) {
   const [routeForm, setRouteForm] = useState({ track: "greenfield", sub_track: "intra_venture", rationale: "", alternatives_considered: "", opportunity_id: "" });
   // gate decision form
   const [gateForm, setGateForm] = useState({ gate: "screening", decision: "go", rationale: "", missing: "" });
+  const searchParams = useSearchParams();
+  const urlStage = searchParams.get("stage");
   const [agentBusy, setAgentBusy] = useState(false);
   const [agentLog, setAgentLog] = useState<string | null>(null);
 
@@ -155,11 +185,6 @@ ${res.data.conclusion_md}`);
   return (
     <div>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
-      {projectEval.terminated && (
-        <p role="alert" className="mnpi-banner">
-          ⚠ 이 프로세스는 게이트 KILL 판정으로 종결되었습니다.
-        </p>
-      )}
 
       {/* Stepper */}
       <ol className="stage-stepper" aria-label="프로세스 스테이지">
@@ -173,29 +198,10 @@ ${res.data.conclusion_md}`);
           </li>
         ))}
       </ol>
-      <p className="mb-3 text-[color:var(--muted-fg)] text-[0.82rem]">
-        현재 스테이지: <strong>{projectEval.currentStage ?? "—"}</strong>
-        {track && <> · 트랙: <strong>{track === "greenfield" ? "그린필드(자체)" : "브라운필드(M&A)"}</strong>{projectEval.subTrack ? ` (${projectEval.subTrack === "existing_business_rbd" ? "R&BD" : "사내벤처"})` : ""}</>}
-        {" · "}스테이지는 저장되지 않고 산출물·게이트 상태에서 계산됩니다.
-      </p>
 
       {/* Gate status */}
-      <div className="gate-status-row" aria-label="게이트 상태">
-        {Object.entries(projectEval.gateStatus).map(([gate, verdict]) => (
-          <span key={gate} className={`status-chip ${verdict === "go" ? "status-green" : verdict === "hold" ? "status-amber" : verdict === "kill" ? "status-red" : "status-not-started"}`}>
-            {GATE_LABELS[gate] ?? gate}: {verdict.toUpperCase()}
-          </span>
-        ))}
-      </div>
 
       {/* Blockers */}
-      {projectEval.blockers.length > 0 && (
-        <ul className="workflow-blockers">
-          {projectEval.blockers.map((b, i) => (
-            <li key={i}>⚠ {b}</li>
-          ))}
-        </ul>
-      )}
 
       {/* 에이전트 스테이지 실행 (Agentic-first) */}
       <section className="workflow-card" aria-label="에이전트 실행">

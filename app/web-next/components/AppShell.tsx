@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   FolderKanban,
+  LineChart,
+  Gauge,
   LayoutDashboard,
   BookOpen,
   Shield,
@@ -15,11 +17,11 @@ import {
   TrendingUp,
   Landmark,
   Lightbulb,
-  LineChart,
-  ShieldCheck,
 } from "lucide-react";
+import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
+import { WorkflowSidebar } from "./WorkflowSidebar.tsx";
 
 interface NavItem {
   href: string;
@@ -28,57 +30,33 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
-// 좌측 패널 — 프로세스 스테이지(S1~S7) 흐름 순으로 구성하며 각 항목은 해당
-// 스테이지를 실행하는 화면에 연결된다(docs/process-flow.md §3). S4·S6는
-// 개별 딜 컨텍스트(워크플로우 탭 기본)에서 수행되므로 딜 목록으로 진입한다.
+// 좌측 패널 — 플랫 전역 내비. 딜 진행 흐름(S1~S7)은 개별 딜 상세의
+// 워크플로우 내비에서 관리되며, 이 패널은 도구·참조·운영 바로가기를 제공한다.
 const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
-    label: "S1 시장분석",
-    items: [{ href: "/process/S1", label: "시장 데이터·체인", icon: <LineChart size={18} /> }],
-  },
-  {
-    label: "S2 기회발굴",
-    items: [{ href: "/process/S2", label: "기회 퍼널", icon: <Lightbulb size={18} /> }],
-  },
-  {
-    label: "S3 시너지·적합성",
-    items: [{ href: "/process/S3", label: "적합성 평가", icon: <Target size={18} /> }],
-  },
-  {
-    label: "S4 진출방식 결정",
-    items: [{ href: "/process/S4", label: "딜 워크플로우", icon: <FolderKanban size={18} /> }],
-  },
-  {
-    label: "S5 사업성 분석",
-    items: [{ href: "/process/S5", label: "수익성 분석", icon: <TrendingUp size={18} /> }],
-  },
-  {
-    label: "S6 실사·검증",
-    items: [{ href: "/process/S6", label: "딜 실사 (C/T/L)", icon: <ShieldCheck size={18} /> }],
-  },
-  {
-    label: "S7 투자심사·실행",
-    items: [{ href: "/process/S7", label: "IC 패키지·보고서", icon: <FileText size={18} /> }],
-  },
-  {
-    label: "관리·참조",
+    label: "딜",
     items: [
-      { href: "/portfolio-scorecard", label: "스코어카드", icon: <LayoutDashboard size={18} /> },
+      { href: "/", label: "대시보드", icon: <LayoutDashboard size={18} /> },
+      { href: "/market", label: "시장분석", icon: <LineChart size={18} /> },
+      { href: "/opportunities", label: "기회 발굴", icon: <Lightbulb size={18} /> },
+      { href: "/projects", label: "딜 목록", icon: <FolderKanban size={18} /> },
+    ],
+  },
+  {
+    label: "분석·참조",
+    items: [
+      { href: "/profitability", label: "수익성 분석", icon: <TrendingUp size={18} /> },
+      { href: "/portfolio-scorecard", label: "스코어카드", icon: <Gauge size={18} /> },
       { href: "/benchmarks", label: "벤치마킹 사례", icon: <Landmark size={18} /> },
-      { href: "/glossary", label: "용어집", icon: <BookOpen size={18} /> },
       { href: "/library", label: "규정·체크리스트", icon: <LibraryBig size={18} /> },
+      { href: "/glossary", label: "용어집", icon: <BookOpen size={18} /> },
       { href: "/strategy", label: "R&BD 전략", icon: <Target size={18} /> },
     ],
   },
   {
     label: "운영",
     items: [
-      {
-        href: "/admin",
-        label: "관리자",
-        icon: <Shield size={18} />,
-        adminOnly: true,
-      },
+      { href: "/admin", label: "관리자", icon: <Shield size={18} />, adminOnly: true },
     ],
   },
 ];
@@ -180,13 +158,44 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!me) return null;
   if (me.mustChangePassword && pathname !== "/password-change") return null;
 
+  // 딜 상세 경로(/projects/:id) 진입 시 좌측 패널이 워크플로우 내비로 전환됨
+  const dealMatch = pathname.match(/^\/projects\/([^/]+)/);
+  const isDealDetail = !!dealMatch && pathname !== "/projects";
+
   return (
     <div className="app-shell">
-      <Sidebar />
+      {isDealDetail && dealMatch ? (
+        <DealWorkflowSidebar projectId={dealMatch[1]} />
+      ) : (
+        <Sidebar />
+      )}
       <div className="app-main-col">
         <Topbar pathname={pathname} />
         <div className="app-content">{children}</div>
       </div>
     </div>
   );
+}
+
+function DealWorkflowSidebar({ projectId }: { projectId: string }) {
+  const [projectNo, setProjectNo] = useState("...");
+  const router = useRouter();
+  const searchParams = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : "",
+  );
+  const activeStage = searchParams.get("stage") ?? "";
+  const handleStageSelect = (stage: string) => {
+    // 스테이지 클릭 시 현재 경로를 유지하면서 stage 파라미터만 업데이트
+    const url = new URL(window.location.href);
+    url.searchParams.set("stage", stage);
+    window.history.replaceState(null, "", url.toString());
+    // React에 URL 변경을 알리기 위해 커스텀 이벤트 발생
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+  useEffect(() => {
+    api.get<{ project_no: string }>(`/api/projects/${projectId}`)
+      .then((r) => setProjectNo(r.data?.project_no ?? "..."))
+      .catch(() => setProjectNo("..."));
+  }, [projectId]);
+  return <WorkflowSidebar projectId={projectId} projectNo={projectNo} activeStage={activeStage} onStageSelect={handleStageSelect} />;
 }
