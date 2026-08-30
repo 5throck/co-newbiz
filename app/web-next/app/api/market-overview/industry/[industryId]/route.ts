@@ -110,6 +110,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
             assumptions: sizingAssumptions,
           }
         : null,
+      versions: db
+        .query(
+          `SELECT v.version_no, v.changelog, v.created_by, v.created_at
+           FROM market_sizing_version v
+           JOIN market_sizing_analysis a ON a.id = v.analysis_id
+           WHERE a.industry_id = ? ORDER BY v.version_no DESC`,
+        )
+        .all(industryId) as Array<{ version_no: number; changelog: string | null; created_by: string; created_at: string }>,
     },
     200,
     {

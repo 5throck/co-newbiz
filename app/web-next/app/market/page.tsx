@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { api, type ObservationRow } from "../../lib/api.ts";
+import { api } from "../../lib/api.ts";
 import { EChart } from "../../components/EChart.tsx";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
 import {
@@ -17,9 +17,13 @@ import {
 // 따르는 분석 리포트. 산업 선택 → 8단계 세로 흐름(각 단계 = 방법론 한 단계 +
 // 이해를 돕는 차트), 우측 래일로 단계 이동.
 
+interface AnalysisInfo {
+  id: string; status: "in_progress" | "completed"; current_step: number; latest_version: number | null;
+  created_at: string; completed_at: string | null;
+}
 interface IndustryRow {
   id: string; name_ko: string; name_en: string | null;
-  ksic_code: string | null; driver_count: number;
+  ksic_code: string | null; driver_count: number; analysis: AnalysisInfo | null;
 }
 interface DriverRow { id: string; code: string; label_ko: string; description: string; }
 interface MarketOverview {
@@ -31,28 +35,55 @@ interface AssumptionRow {
   assumption_key: string; kind: string; value: number; rationale: string | null;
   anchor_ref: string | null; as_of: string; ttl_days: number | null;
 }
+interface VersionInfo { version_no: number; changelog: string | null; created_by: string; created_at: string }
 interface IndustryDetail {
   industry: { id: string; name_ko: string; name_en: string | null; ksic_code: string | null };
   driver_sensitivities: DriverSensitivity[];
   sizing: { run_id: string; run_label: string; assumptions: AssumptionRow[] } | null;
+  versions: VersionInfo[];
 }
-interface SeriesRow {
-  series_id: string; unit_id: string; source_id: string; observation_count: number;
-  min_period_id: string; max_period_id: string; last_fetched_at: string | null;
-  days_since_fetch: number | null; stale: boolean;
+interface PipelineStepPayload {
+  step: number; title: string; summary: string; source: string;
+  data: Record<string, unknown>; pendingInputs: string[];
+}
+interface AnalysisDetail {
+  id: string; status: "in_progress" | "completed"; current_step: number; name_ko: string;
+  versions: Array<{ version_no: number; payload: { steps?: PipelineStepPayload[] } | null; changelog: string | null; created_by: string; created_at: string }>;
 }
 
 const SEGMENT_COLORS = [0, 1, 2];
+
+interface LlmStatus { configured: boolean; provider: string | null; model: string | null }
 
 export function MarketView() {
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [detail, setDetail] = useState<IndustryDetail | null>(null);
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newCode, setNewCode] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [llmStatus, setLlmStatus] = useState<LlmStatus | null>(null);
+
+  const refreshOverview = useCallback(() => {
+    return api.get<MarketOverview>("/api/market-overview")
+      .then((r) => { setOverview(r.data); setError(null); })
+      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+  }, []);
 
   useEffect(() => {
-    api.get<MarketOverview>("/api/market-overview").then((r) => setOverview(r.data)).catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
-  }, []);
+    void refreshOverview();
+    api.get<LlmStatus>("/api/llm-status").then((r) => setLlmStatus(r.data)).catch(() => setLlmStatus({ configured: false, provider: null, model: null }));
+  }, [refreshOverview]);
+
+  // 분석 중인 산업이 있으면 3초 간격으로 상태 폴링 → 완료 시 목록이 자동 갱신
+  const hasInProgress = overview?.industries.some((i) => i.analysis?.status === "in_progress") ?? false;
+  useEffect(() => {
+    if (!hasInProgress) return;
+    const t = setInterval(() => { void refreshOverview(); }, 3000);
+    return () => clearInterval(t);
+  }, [hasInProgress, refreshOverview]);
 
   const loadDetail = useCallback((industryId: string) => {
     setSelectedIndustry(industryId);
@@ -62,87 +93,252 @@ export function MarketView() {
       .catch((e) => setError(e instanceof Error ? e.message : "상세 불러오기 실패"));
   }, []);
 
-  // 이 분석(유압브레이커)의 8단계 리포트는 연구문서와 동결 매트릭스 기반 —
-  // 선택한 산업이 그 분석 대상인지 KSIC 코드로 판별.
-  const hasSizing = detail?.industry.ksic_code === "HYD-BRK";
+  async function createAnalysis(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newName.trim() || creating) return;
+    setCreating(true);
+    try {
+      await api.post("/api/market-overview/analyses", { name_ko: newName.trim(), ksic_code: newCode.trim() || undefined });
+      setNewName(""); setNewCode(""); setShowNewForm(false);
+      await refreshOverview();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "분석 생성 실패");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  const backToList = useCallback(() => { setSelectedIndustry(null); setDetail(null); void refreshOverview(); }, [refreshOverview]);
+
+  if (detail && selectedIndustry) {
+    const row = overview?.industries.find((i) => i.id === selectedIndustry);
+    const analysisId = row?.analysis?.id ?? null;
+    const analysisDate = row?.analysis ? (row.analysis.completed_at ?? row.analysis.created_at).slice(0, 10) : null;
+    return (
+      <main>
+        <h1>시장분석</h1>
+        <button type="button" className="btn-ghost mb-3 text-[0.8rem]" onClick={backToList}>← 산업 목록으로</button>
+        <MarketReport detail={detail} analysisId={analysisId} analysisDate={analysisDate} />
+      </main>
+    );
+  }
 
   return (
     <main>
       <h1>시장분석</h1>
       <p className="mt-[0.15rem] mb-2 text-[color:var(--muted-fg)] text-[0.9rem]">
-        프로세스 스테이지 S1 — <strong>systematic-market-sizing</strong> 스킬의 8단계 절차로 시장을 분석합니다.
-        각 단계는 방법론 한 단계와 그 결과를 보여주는 차트로 구성됩니다.
-        기회를 발굴하려면 <Link href="/opportunities" className="text-[color:var(--accent)] underline">기회 발굴(S2)</Link>으로 이어가세요.
+        프로세스 스테이지 S1 — 산업을 선택하면 <strong>systematic-market-sizing</strong> 8단계 절차로 분석된
+        리포트가 차트로 표시됩니다. 기회를 발굴하려면 <Link href="/opportunities" className="text-[color:var(--accent)] underline">기회 발굴(S2)</Link>으로 이어가세요.
       </p>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
-      {/* ── 산업 선택 (컴팩트 칩 리스트) ── */}
-      <section aria-label="분석 대상 산업 선택" className="market-section">
-        <div className="sizing-industry-row" role="listbox" aria-label="분석 대상 산업">
-          {overview === null ? (
-            <p>불러오는 중...</p>
-          ) : overview.industries.length === 0 ? (
-            <p className="text-[color:var(--muted-fg)] italic">등록된 산업이 없습니다.</p>
-          ) : (
-            overview.industries.map((ind) => (
-              <button
-                key={ind.id}
-                type="button"
-                role="option"
-                aria-selected={selectedIndustry === ind.id}
-                className={`sizing-industry-chip ${selectedIndustry === ind.id ? "sizing-industry-chip-active" : ""}`}
-                onClick={() => loadDetail(ind.id)}
-              >
-                <span className="font-semibold">{ind.name_ko}</span>
-                <span className="sizing-chip-meta">{ind.ksic_code ?? "—"} · 드라이버 {ind.driver_count}건</span>
-              </button>
-            ))
-          )}
+      {/* ── 분석 대상 산업 (테이블) ── */}
+      <section aria-label="분석 대상 산업" className="market-section">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="!mb-0">🏭 분석 대상 산업</h2>
+          <button type="button" className="btn-ghost text-[0.8rem]" onClick={() => setShowNewForm((v) => !v)} aria-expanded={showNewForm}>
+            {showNewForm ? "취소" : "＋ 신규 산업 분석"}
+          </button>
         </div>
-      </section>
 
-      {detail && (
-        <>
-          {/* ── 단계 래일 (sticky) ── */}
-          {hasSizing && (
-            <nav aria-label="분석 단계" className="sizing-step-rail" >
-              {STEPS.map((s, i) => (
-                <a key={s.id} href={`#${s.id}`} className="sizing-step-link">
-                  <span className="sizing-step-num">{i + 1}</span>
-                  <span>{s.short}</span>
-                </a>
-              ))}
-            </nav>
-          )}
-
-          <div className="sizing-report-header">
-            <h2>
-              📊 {detail.industry.name_ko} 시장 분석 리포트
-              {detail.industry.ksic_code && <code className="dd-item-id ml-2">{detail.industry.ksic_code}</code>}
-            </h2>
-            <p className="text-[color:var(--muted-fg)] text-[0.78rem]">
-              방법론: systematic-market-sizing v1.0 · 소스 문서: <code className="text-[0.72rem]">{SIZING_SOURCE_DOC}</code>
+        {showNewForm && (
+          <form onSubmit={createAnalysis} aria-label="신규 산업 분석 생성" className="sizing-new-form mb-3">
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-[0.78rem]">
+                <span className="block mb-1">산업명 *</span>
+                <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="예: 산업용 로봇" required className="sizing-new-input" />
+              </label>
+              <label className="text-[0.78rem]">
+                <span className="block mb-1">KSIC 코드 (선택)</span>
+                <input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="예: 28121" className="sizing-new-input sizing-new-input-sm" />
+              </label>
+              <button type="submit" className="btn-ghost text-[0.8rem]" disabled={creating || !newName.trim()}>
+                {creating ? "생성 중..." : "분석 시작"}
+              </button>
+            </div>
+            <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+              systematic-market-sizing 8단계 파이프라인이 순서대로 실행되며, 완료 전까지는 목록에 "분석 중"으로 표시됩니다.
+              {llmStatus && (llmStatus.configured
+                ? <> LLM 요약 사용: <strong>{llmStatus.provider} / {llmStatus.model}</strong></>
+                : <> LLM 미구성(CO_NEWBIZ_LLM_* 환경변수) — <strong>결정론 합성</strong>으로 분석됩니다.</>)}
             </p>
-          </div>
+          </form>
+        )}
 
-          {hasSizing ? (
-            <SizingReport detail={detail} />
-          ) : (
-            <section aria-label="분석 대기" className="market-section">
-              <p className="text-[color:var(--muted-fg)] italic">
-                이 산업에는 아직 8단계 정식 분석(sizing 리포트)이 등록되지 않았습니다.
-                systematic-market-sizing 스킬의 절차(앵커 삼각검증 → 권역·세그먼트 배분 → 교차검증 → 레지스트리 등록)를
-                수행하면 이 화면에 리포트가 표시됩니다. 아래는 현재 기록된 드라이버 구조입니다.
-              </p>
-              <StepSensitivityChart stepNumber={1} sensitivities={detail.driver_sensitivities} />
-            </section>
-          )}
-        </>
-      )}
-
-      <TimeSeriesSection />
+        {overview === null ? (
+          <p>불러오는 중...</p>
+        ) : overview.industries.length === 0 ? (
+          <p className="text-[color:var(--muted-fg)] italic">등록된 산업이 없습니다. "신규 산업 분석"으로 시작하세요.</p>
+        ) : (
+          <table className="data-table" aria-label="분석 대상 산업 목록">
+            <caption className="sr-only">분석 대상 산업 목록</caption>
+            <thead>
+              <tr>
+                <th scope="col">산업명</th>
+                <th scope="col">KSIC 코드</th>
+                <th scope="col">연결 드라이버</th>
+                <th scope="col">분석 상태</th>
+                <th scope="col">분석일</th>
+                <th scope="col">액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overview.industries.map((ind) => {
+                const a = ind.analysis;
+                const inProgress = a?.status === "in_progress";
+                return (
+                  <tr key={ind.id} className={selectedIndustry === ind.id ? "row-selected" : undefined}>
+                    <td className="cell-primary font-semibold">{ind.name_ko}</td>
+                    <td><code className="dd-item-id">{ind.ksic_code ?? "—"}</code></td>
+                    <td className="tabular-nums">{ind.driver_count}건</td>
+                    <td>
+                      {inProgress ? (
+                        <span className="status-chip status-amber">분석 중 ({a?.current_step ?? 0}/8단계)</span>
+                      ) : a?.status === "completed" ? (
+                        <span className="status-chip status-green">분석 완료 (v{a.latest_version ?? 1})</span>
+                      ) : (
+                        <span className="status-chip status-not-started">분석 대기</span>
+                      )}
+                    </td>
+                    <td>
+                      {a ? (
+                        <span className="tabular-nums">{(a.completed_at ?? a.created_at).slice(0, 10)}</span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-ghost text-[0.78rem]"
+                        disabled={inProgress}
+                        onClick={() => loadDetail(ind.id)}
+                      >
+                        {inProgress ? "분석 중" : "분석 열기"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+        {hasInProgress && (
+          <p className="mt-2 mb-0 text-[0.75rem] text-[color:var(--muted-fg)]" role="status">
+            분석이 진행 중입니다 — 완료되면 목록이 자동으로 갱신됩니다.
+          </p>
+        )}
+      </section>
     </main>
+  );
+}
+
+/* ── 산업 리포트 진입점: 동결 리포트(HYD-BRK) 또는 파이프라인 리포트 ── */
+
+function MarketReport({ detail, analysisId, analysisDate }: { detail: IndustryDetail; analysisId: string | null; analysisDate: string | null }) {
+  const isFrozen = detail.industry.ksic_code === "HYD-BRK";
+  const hasSizing = isFrozen;
+  return (
+    <>
+      <div className="sizing-report-header">
+        <h2>
+          📊 {detail.industry.name_ko} 시장 분석 리포트
+          {detail.industry.ksic_code && <code className="dd-item-id ml-2">{detail.industry.ksic_code}</code>}
+        </h2>
+        <p className="text-[color:var(--muted-fg)] text-[0.78rem]">
+          방법론: systematic-market-sizing v1.1 · {isFrozen ? <>소스 문서: <code className="text-[0.72rem]">{SIZING_SOURCE_DOC}</code></> : "8단계 파이프라인 산출"}
+          {analysisDate && <> · 분석일: <strong>{analysisDate}</strong></>}
+        </p>
+      </div>
+      <VersionBar versions={detail.versions} />
+      {hasSizing ? (
+        <SizingReport detail={detail} />
+      ) : (
+        <PipelineReport detail={detail} analysisId={analysisId} />
+      )}
+    </>
+  );
+}
+
+/* ── 버전 관리 바 ── */
+function VersionBar({ versions }: { versions: VersionInfo[] }) {
+  if (!versions || versions.length === 0) return null;
+  return (
+    <details className="market-section sizing-version-bar">
+      <summary className="cursor-pointer text-[0.82rem]">
+        🕘 버전 이력 ({versions.length}개 버전) — 최신 v{versions[0].version_no}
+      </summary>
+      <table className="data-table mt-2" aria-label="분석 버전 이력">
+        <caption className="sr-only">분석 버전 이력</caption>
+        <thead>
+          <tr><th scope="col">버전</th><th scope="col">변경 내용</th><th scope="col">작성</th><th scope="col">일시</th></tr>
+        </thead>
+        <tbody>
+          {versions.map((v) => (
+            <tr key={v.version_no}>
+              <td className="font-semibold tabular-nums">v{v.version_no}</td>
+              <td className="text-[0.78rem]">{v.changelog ?? "—"}</td>
+              <td className="text-[0.75rem]">{v.created_by}</td>
+              <td className="text-[0.75rem] tabular-nums">{v.created_at.slice(0, 10)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  );
+}
+
+/* ── 파이프라인 산출 리포트 (신규 생성 분석) ── */
+function PipelineReport({ detail, analysisId }: { detail: IndustryDetail; analysisId: string | null }) {
+  const [analysis, setAnalysis] = useState<AnalysisDetail | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!analysisId) return;
+    api.get<AnalysisDetail>(`/api/market-overview/analyses/${encodeURIComponent(analysisId)}`)
+      .then((r) => setAnalysis(r.data))
+      .catch((e) => setError(e instanceof Error ? e.message : "분석 결과 불러오기 실패"));
+  }, [analysisId]);
+
+  if (!analysisId) {
+    return (
+      <section aria-label="분석 없음" className="market-section sizing-step">
+        <p className="text-[color:var(--muted-fg)] italic">
+          이 산업의 정식 분석 기록이 없습니다. 목록에서 "신규 산업 분석"으로 8단계 파이프라인을 실행하세요.
+        </p>
+        <StepSensitivityChart stepNumber={1} sensitivities={detail.driver_sensitivities} />
+      </section>
+    );
+  }
+
+  const latest = analysis?.versions[0];
+  const steps = latest?.payload?.steps ?? null;
+
+  return (
+    <section aria-label="파이프라인 분석 리포트" className="market-section">
+      {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      {steps ? (
+        steps.map((s) => (
+          <div key={s.step} className="market-section sizing-step">
+            <h3 className="sizing-step-title">
+              <span className="sizing-step-badge">{s.step}</span> {s.title}
+              <span className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"} ml-2`}>
+                {s.source === "llm" ? "LLM 요약" : "결정론 요약"}
+              </span>
+            </h3>
+            <p className="text-[0.82rem]">{s.summary}</p>
+            {s.pendingInputs.length > 0 && (
+              <ul className="sizing-note-list text-[0.75rem] text-[color:var(--muted-fg)]">
+                {s.pendingInputs.map((p, i) => <li key={i}>수동 확정 필요: {p}</li>)}
+              </ul>
+            )}
+          </div>
+        ))
+      ) : (
+        <p>분석 결과를 불러오는 중...</p>
+      )}
+    </section>
   );
 }
 
@@ -789,88 +985,6 @@ function RegistryStatus({ sizing }: { sizing: IndustryDetail["sizing"] }) {
         </table>
       </details>
     </div>
-  );
-}
-
-/* ── 시장 시계열 (부록 데이터 탐색) ── */
-function TimeSeriesSection() {
-  const [series, setSeries] = useState<SeriesRow[] | null>(null);
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string | null>(null);
-  const [observations, setObservations] = useState<ObservationRow[] | null>(null);
-  const ct = useChartTheme();
-
-  useEffect(() => {
-    const qs = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
-    api.get<SeriesRow[]>(`/api/series${qs}`).then((r) => setSeries(r.data)).catch(() => setSeries([]));
-  }, [query]);
-
-  useEffect(() => {
-    if (!selected) { setObservations(null); return; }
-    api.get<ObservationRow[]>(`/api/series/${encodeURIComponent(selected)}/observations`)
-      .then((r) => setObservations(r.data))
-      .catch(() => setObservations([]));
-  }, [selected]);
-
-  const chartOption = useMemo(() => {
-    if (!observations || observations.length === 0) return null;
-    const sorted = [...observations].sort((a, b) => a.period_id.localeCompare(b.period_id));
-    return {
-      grid: { left: 56, right: 24, top: 24, bottom: 32 },
-      xAxis: { type: "category" as const, data: sorted.map((o) => o.period_id), axisLabel: { color: ct.muted } },
-      yAxis: { type: "value" as const, axisLabel: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
-      series: [{
-        type: "line" as const, smooth: true, data: sorted.map((o) => o.value),
-        itemStyle: { color: ct.color[0] }, areaStyle: { color: ct.color[0], opacity: 0.12 },
-      }],
-    };
-  }, [observations, ct]);
-
-  return (
-    <section aria-label="시장 시계열 (부록)" className="market-section">
-      <h2>📈 부록 — 시장 시계열 데이터</h2>
-      <input type="search" aria-label="시계열 검색" placeholder="시계열 ID 검색" value={query} onChange={(e) => setQuery(e.target.value)} className="mb-3" />
-      {series === null ? (
-        <p>불러오는 중...</p>
-      ) : series.length === 0 ? (
-        <p className="text-[color:var(--muted-fg)] italic">등록된 시장 시계열이 없습니다.</p>
-      ) : (
-        <div className="market-layout">
-          <div className="market-list-pane">
-            <p className="mb-1 text-[color:var(--muted-fg)] text-[0.8rem]">총 {series.length}개 시계열</p>
-            <ul className="market-series-list">
-              {series.map((s) => (
-                <li key={s.series_id}>
-                  <button type="button" className={`library-doc-item ${selected === s.series_id ? "library-doc-item-active" : ""}`} onClick={() => setSelected(s.series_id)}>
-                    <span className="library-doc-title">{s.series_id}</span>
-                    <span className="library-doc-meta">
-                      <span>{s.observation_count} 관측</span>
-                      <span>{s.min_period_id}~{s.max_period_id}</span>
-                      <span className="library-doc-lang">{s.unit_id}</span>
-                      {s.stale && <span className="status-chip status-amber">stale</span>}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="market-chart-pane">
-            {!selected ? (
-              <p className="text-[color:var(--muted-fg)] italic">왼쪽에서 시계열을 선택하면 추이가 표시됩니다.</p>
-            ) : observations === null ? (
-              <p>불러오는 중...</p>
-            ) : observations.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] italic">관측치가 없습니다.</p>
-            ) : (
-              <>
-                <h3 className="text-[1rem] mb-2">{selected}</h3>
-                {chartOption && <EChart option={chartOption} height={320} />}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </section>
   );
 }
 
