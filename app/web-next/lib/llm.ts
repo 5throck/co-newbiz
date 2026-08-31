@@ -42,14 +42,15 @@ interface ProviderConfig {
 }
 
 // The Next.js server runs with cwd app/web-next, so Next only auto-loads
-// .env files from there — but operators configure CO_NEWBIZ_LLM_* in the
-// repo-root .env. Walk up from this module and import any LLM keys that are
-// not already in the environment (never overriding explicitly-set values).
+// .env files from there — but operators configure CO_NEWBIZ_LLM_*, DART_API_KEY,
+// TAVILY_API_KEY etc. in the repo-root .env. Walk up from cwd and import
+// pipeline keys that are not already in the environment (never overriding
+// explicitly-set values).
+const PIPELINE_ENV_KEYS = /^(CO_NEWBIZ_LLM_[A-Z_]+|DART_API_KEY|TAVILY_API_KEY)$/;
 let rootEnvLoaded = false;
-function loadRootEnvLlmKeys(): void {
+export function loadRootEnvPipelineKeys(): void {
   if (rootEnvLoaded) return;
   rootEnvLoaded = true;
-  if (process.env.CO_NEWBIZ_LLM_PROVIDER) return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
     const { existsSync, readFileSync } = require("node:fs") as typeof import("node:fs");
@@ -62,10 +63,12 @@ function loadRootEnvLlmKeys(): void {
       const envPath = join(dir, ".env");
       if (existsSync(envPath)) {
         for (const line of readFileSync(envPath, "utf-8").split(/\r?\n/)) {
-          const m = line.match(/^(CO_NEWBIZ_LLM_[A-Z_]+)=(.*)$/);
-          if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].trim();
+          const m = line.match(/^([A-Z_]+)=(.*)$/);
+          if (m && PIPELINE_ENV_KEYS.test(m[1]) && process.env[m[1]] === undefined) {
+            process.env[m[1]] = m[2].trim();
+          }
         }
-        if (process.env.CO_NEWBIZ_LLM_PROVIDER) return;
+        if (process.env.CO_NEWBIZ_LLM_PROVIDER && process.env.DART_API_KEY && process.env.TAVILY_API_KEY) return;
       }
       const parent = dirname(dir);
       if (parent === dir) return;
@@ -77,7 +80,7 @@ function loadRootEnvLlmKeys(): void {
 }
 
 export function getProviderConfig(): ProviderConfig | null {
-  loadRootEnvLlmKeys();
+  loadRootEnvPipelineKeys();
   const provider = process.env.CO_NEWBIZ_LLM_PROVIDER?.trim();
   if (!provider || provider === "none") return null;
   const cfg: ProviderConfig = {
@@ -136,6 +139,9 @@ function buildRequest(cfg: ProviderConfig, messages: LlmMessage[], opts: { tempe
     const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
     return {
       model: cfg.model,
+      // Reasoning models (GLM) otherwise spend the token budget on thinking
+      // blocks before emitting any text — disable when the provider accepts it.
+      thinking: { type: "disabled" },
       max_tokens: maxTokens,
       temperature,
       system: system || undefined,

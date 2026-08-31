@@ -17,6 +17,7 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { completeOrFallback } from "./llm.ts";
+import { researchSources } from "./web-research.ts";
 import { SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
 
 export const PIPELINE_STEPS = [
@@ -309,10 +310,21 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const s6 = await summarize(industry, 6, "기업 공시 교차검증", `검증 후보 ${crossValidation.length}개 도출 — 전부 실제 공시 대조 전 상태.`);
   stepSummaries.push({ step: 6, ...s6, pendingInputs: ["각 주장을 실제 연차·중간보고서 원문으로 대조"] });
 
-  // ── Step 6-B: 정성 분석 — 기회 요인 / 위험 요인 (S2 기회발굴 연동) ──
+  // ── Step 6-B: 정성 분석 — 글로벌 기관·증권사·통계 리서치 기반 기회/위험 요인 ──
+  // 웹 리서치(TAVILY)로 산업 보고서·증권사 리포트·통계·기사를 입수해 출처와
+  // 함께 요인을 도출한다. 리서치 미구성 시 LLM 지식만 사용하고 출처 미확보로
+  // 표기한다.
+  const research = await researchSources([
+    `${industry} 시장 전망 기회 요인 산업 보고서`,
+    `${industry} market outlook growth drivers report`,
+    `${industry} 산업 통계 수출입 통계`,
+  ]);
+  const researchContext = research.length
+    ? research.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet}`).join("\n\n")
+    : "(웹 리서치 미구성 — LLM 지식 기반)";
   const qualJson = await askJson(
     industry,
-    `이 시장의 정성 분석을 수행하세요. JSON: {"opportunityFactors":["기회 요인", ...],"riskFactors":["위험 요인", ...]}. 각 3~5개, 한 문장씩. 기회는 수요 촉발·규제·기술 전환·시장 공백, 위험은 공급 제약·대체재·가격 변동성·지정학·경기 민감도 관점에서.`,
+    `아래 리서치 발췌를 근거로 이 시장의 정성 분석을 수행하세요. JSON: {"opportunityFactors":["기회 요인", ...],"riskFactors":["위험 요인", ...]}. 각 3~5개 한 문장씩, 발췌에 근거가 있으면 그 출처 번호([n])를 문장 끝에 붙이세요.\n\n리서치 발췌:\n${researchContext}`,
   );
   const listOf = (v: unknown, fallback: string[]): string[] => {
     const arr = Array.isArray(v) ? v : [];
@@ -322,6 +334,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const qualitative: SizingMatrix["qualitative"] = {
     opportunityFactors: listOf(qualJson?.opportunityFactors, ["시장 성장 기반 기회 요인 — 정성 분석 보완 필요"]),
     riskFactors: listOf(qualJson?.riskFactors, ["정성 위험 분석 보완 필요"]),
+    sources: research.map((s) => ({ title: s.title, url: s.url, snippet: s.snippet.slice(0, 200) })),
   };
 
   // ── Step 7: limitations ──

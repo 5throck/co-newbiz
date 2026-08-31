@@ -112,18 +112,31 @@ export async function POST(request: Request) {
   if (ctx.role === "viewer") {
     return forbidden("role_required", "Project creation requires the analyst role.");
   }
-  const body = (await request.json().catch(() => null)) as { project_no?: string } | null;
+  const body = (await request.json().catch(() => null)) as { project_no?: string; company_name?: string } | null;
   if (!body?.project_no?.trim()) {
     return badRequest("invalid_request", "project_no is required.");
   }
+  // 프로젝트 등록 시 대상 회사 필수 — S4~S7 진행 대상을 명확히 한다.
+  const companyName = body.company_name?.trim();
+  if (!companyName) {
+    return badRequest("company_required", "company_name is required — a project must name its target company.");
+  }
   const db = getDb();
   const now = new Date().toISOString();
+  let company = db.query("SELECT id FROM md_company WHERE name_ko = ?").get(companyName) as { id: string } | null;
+  if (!company) {
+    const { ulid } = await import("../../../../../db/lib/ulid.ts");
+    const companyId = ulid();
+    db.run("INSERT INTO md_company (id, name_ko, created_at) VALUES (?,?,?)", [companyId, companyName, now]);
+    company = { id: companyId };
+  }
   let project;
   try {
     project = createProject(body.project_no.trim());
   } catch {
     return badRequest("duplicate_project_no", `프로젝트 번호 '${body.project_no.trim()}'은(는) 이미 존재합니다.`);
   }
+  db.run("UPDATE md_project SET company_id = ? WHERE id = ?", [company.id, project.id]);
   grantProjectMembership(db, {
     projectId: project.id,
     userId: ctx.userId,

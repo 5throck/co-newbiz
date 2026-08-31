@@ -50,6 +50,8 @@ export interface QualitativeFactors {
   opportunityFactors: string[];
   /** 정성 분석 — 위험 요인 (공급 제약, 대체재, 가격 변동성, 지정학 등) */
   riskFactors: string[];
+  /** 입수 출처 (글로벌 기관·증권사·통계·뉴스) — 출처 명기 필수 */
+  sources?: Array<{ title: string; url: string; snippet?: string }>;
 }
 
 /**
@@ -216,6 +218,7 @@ export const HYD_BRK_MATRIX: SizingMatrix = {
       "장비 제조사 자체 어태치먼트 사업 확대(수직계열화) — 독립 부품 수요 잠식",
       "중고 브레이커 유통 확대 — 신규 판매 대체",
     ],
+    sources: [{ title: "Epiroc Annual and Sustainability Report 2025", url: "https://www.epirocgroup.com/", snippet: "1차 공시 — 광산 강세/인프라 약세 확인" }],
   },
   consistency: {
     bottomUpCagr: 5.7,

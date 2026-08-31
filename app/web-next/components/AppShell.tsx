@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Landmark,
   Lightbulb,
+  Handshake,
 } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
@@ -39,6 +40,7 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
       { href: "/", label: "대시보드", icon: <LayoutDashboard size={18} /> },
       { href: "/market", label: "시장분석", icon: <LineChart size={18} /> },
       { href: "/opportunities", label: "기회 발굴", icon: <Lightbulb size={18} /> },
+      { href: "/synergy", label: "시너지 정합성", icon: <Handshake size={18} /> },
       { href: "/projects", label: "딜 목록", icon: <FolderKanban size={18} /> },
     ],
   },

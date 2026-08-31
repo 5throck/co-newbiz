@@ -15,6 +15,7 @@ export default function ProjectListPage() {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newProjectNo, setNewProjectNo] = useState("");
+  const [newProjectCompany, setNewProjectCompany] = useState("");
   const [ragFilter, setRagFilter] = useState<RagFilter>("all");
   const [page, setPage] = useState(1);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export default function ProjectListPage() {
     e.preventDefault();
     setError(null);
     try {
-      const res = await api.post<{ id: string }>("/api/projects", { project_no: newProjectNo });
+      const res = await api.post<{ id: string }>("/api/projects", { project_no: newProjectNo, company_name: newProjectCompany });
       setNewProjectNo("");
       const created = await api.get<ProjectSummary[]>(`/api/projects`);
       setProjects(created.data);
@@ -111,6 +112,12 @@ export default function ProjectListPage() {
             value={newProjectNo}
             onChange={(e) => setNewProjectNo(e.target.value)}
             placeholder="NP-2026-001"
+          />
+          <input
+            aria-label="대상 회사명"
+            value={newProjectCompany}
+            onChange={(e) => setNewProjectCompany(e.target.value)}
+            placeholder="대상 회사명 (필수)"
           />
           <button type="submit" className="btn-premium">생성</button>
         </form>

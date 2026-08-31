@@ -68,6 +68,7 @@ export function OpportunitiesView() {
   const [form, setForm] = useState({ name: "", market_scope: "", value_chain_node: "", market_size_krw_m: "", growth_rate: "", attractiveness_score: "" });
   const [promoteFor, setPromoteFor] = useState<string | null>(null);
   const [projectNo, setProjectNo] = useState("");
+  const [promoteCompany, setPromoteCompany] = useState("");
 
   const load = useCallback(() => {
     const qs = statusFilter ? `?status=${statusFilter}` : "";
@@ -125,7 +126,7 @@ export function OpportunitiesView() {
   async function promote(id: string) {
     setError(null);
     try {
-      const res = await api.post<{ project_id: string }>(`/api/opportunities/${id}/promote`, { project_no: projectNo });
+      const res = await api.post<{ project_id: string }>(`/api/opportunities/${id}/promote`, { project_no: projectNo, company_name: promoteCompany });
       setPromoteFor(null);
       setProjectNo("");
       load();
@@ -282,6 +283,7 @@ export function OpportunitiesView() {
                           promoteFor === o.id ? (
                             <span className="flex gap-1">
                               <input type="text" aria-label="새 딜 번호" placeholder="딜 번호 (예: P-2026-001)" value={projectNo} onChange={(e) => setProjectNo(e.target.value)} />
+                              <input type="text" aria-label="대상 회사명" placeholder="대상 회사명 (필수)" value={promoteCompany} onChange={(e) => setPromoteCompany(e.target.value)} />
                               <button type="button" className="btn-premium" onClick={() => promote(o.id)}>
                                 승격
                               </button>

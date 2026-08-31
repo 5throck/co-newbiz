@@ -589,6 +589,19 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
             </ul>
           </div>
         </div>
+        {matrix.qualitative.sources && matrix.qualitative.sources.length > 0 && (
+          <details className="mt-3">
+            <summary className="cursor-pointer text-[0.8rem] text-[color:var(--accent)]">📚 입수 출처 ({matrix.qualitative.sources.length}건 — 출처 명기 필수)</summary>
+            <ul className="sizing-note-list mt-2">
+              {matrix.qualitative.sources.map((s, i) => (
+                <li key={i}>
+                  <a href={s.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{s.title}</a>
+                  {s.snippet && <span className="text-[color:var(--muted-fg)]"> — {s.snippet}</span>}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </section>
 
       <StepSection n={6} id="step-6" title="기업 공시 교차검증">
