@@ -34,6 +34,8 @@ export async function GET(request: Request) {
         sourceLabel: string; targetYear: number; marketSize: number;
         ourMarketSize?: number; gapPct?: number; gapAnalysis?: string; newDrivers?: string[];
       };
+      qualitative?: { opportunityFactors?: string[]; riskFactors?: string[] };
+      chainDirection?: { position?: string; note?: string; relatedIndustries?: Array<{ relation?: string; name?: string; note?: string }> };
     };
     let matrix: MatrixShape | null = null;
     try {
@@ -64,6 +66,9 @@ export async function GET(request: Request) {
             new_drivers: ef.newDrivers ?? [],
           }
         : null,
+      opportunity_factors: matrix?.qualitative?.opportunityFactors ?? [],
+      risk_factors: matrix?.qualitative?.riskFactors ?? [],
+      chain_direction: matrix?.chainDirection ?? null,
     };
   });
 

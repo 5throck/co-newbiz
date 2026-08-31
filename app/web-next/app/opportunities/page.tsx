@@ -51,6 +51,9 @@ interface SizingInsight {
     gap_analysis: string | null;
     new_drivers: string[];
   } | null;
+  opportunity_factors: string[];
+  risk_factors: string[];
+  chain_direction: { position?: string; note?: string; relatedIndustries?: Array<{ relation?: string; name?: string; note?: string }> } | null;
 }
 
 export function OpportunitiesView() {
@@ -59,6 +62,7 @@ export function OpportunitiesView() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [insights, setInsights] = useState<SizingInsight[] | null>(null);
+  const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
   // S3 진입(사이드바 "적합성 평가") 지원 — ?status=assessed로 열린다.
   const [statusFilter, setStatusFilter] = useState<OpportunityRow["status"] | "">("");
   const [form, setForm] = useState({ name: "", market_scope: "", value_chain_node: "", market_size_krw_m: "", growth_rate: "", attractiveness_score: "" });
@@ -137,7 +141,7 @@ export function OpportunitiesView() {
       <h1>기회 발굴</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
         시장분석(S1) 결과에서 가치사슬상 사업 기회를 발굴·평가하고, 선별된 기회를 딜로 승격합니다
-        (프로세스 스테이지 S2 — docs/process-flow.md).
+        (프로세스 스테이지 S2 — docs/process-flow.md). 분석된 산업을 선택하면 그 시장의 인사이트가 열립니다.
       </p>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
@@ -145,68 +149,77 @@ export function OpportunitiesView() {
         </p>
       )}
 
-      {/* ── S1 시장분석 인사이트: 성장률 + 외부 전망 대비 격차(드라이버 요인) ── */}
+      {/* ── 분석된 산업 리스트 (시장분석과 동일한 select-then-insight 흐름) ── */}
       {insights !== null && insights.length > 0 && (
-        <section aria-label="시장분석 인사이트" className="market-section sizing-step mb-4">
-          <h2 className="text-[0.92rem] mb-1">🔬 시장분석 인사이트 (S1 → S2)</h2>
-          <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
-            완료된 산업 분석의 성장률과, 외부 미래 전망이 우리 CAGR 외삽과 갈릴 때 그 격차를 만드는
-            요인(신규·강화 드라이버)입니다. 기회의 성장률·매력도 평가 시 입력으로 사용하세요.
-          </p>
-          <table className="data-table sizing-insight-table" aria-label="시장분석 인사이트">
-            <caption className="sr-only">시장분석 인사이트</caption>
-            <thead>
-              <tr>
-                <th scope="col">산업</th>
-                <th scope="col">우리 CAGR (바텀업)</th>
-                <th scope="col">외부 전망 대비 격차</th>
-                <th scope="col">신규·강화 드라이버 / 격차 요인</th>
-              </tr>
-            </thead>
-            <tbody>
-              {insights.map((s) => (
-                <tr key={s.analysis_id}>
-                  <td className="font-semibold">
-                    {s.industry_name}
-                    <br />
-                    <Link href="/market" className="text-[0.72rem] text-[color:var(--accent)] underline">리포트 열기</Link>
-                  </td>
-                  <td className="tabular-nums">{s.bottom_up_cagr_pct !== null ? `${s.bottom_up_cagr_pct}%` : "—"}</td>
-                  <td className="tabular-nums">
-                    {s.external_forecast?.gap_pct != null ? (
-                      <>
-                        {s.external_forecast.gap_pct > 0 ? "+" : ""}{s.external_forecast.gap_pct}%
-                        <br />
-                        <span className="text-[0.7rem] text-[color:var(--muted-fg)]">
-                          vs {s.external_forecast.source_label} ({s.external_forecast.target_year})
-                        </span>
-                      </>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="text-[0.78rem]">
-                    {s.external_forecast ? (
-                      <>
-                        {s.external_forecast.new_drivers.length > 0 && (
-                          <span className="mr-1">
-                            {s.external_forecast.new_drivers.map((d) => (
-                              <span key={d} className="status-chip status-in-progress mr-1">{d}</span>
-                            ))}
-                          </span>
-                        )}
-                        {s.external_forecast.gap_analysis}
-                      </>
-                    ) : (
-                      <span className="text-[color:var(--muted-fg)]">외부 전망 미입수 — CAGR 외삽 기준</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <section aria-label="분석된 산업" className="market-section">
+          <h2 className="text-[0.92rem] mb-2">🔬 분석된 산업 — 선택하면 시장 인사이트가 열립니다</h2>
+          <div className="flex flex-wrap gap-2">
+            {insights.map((s) => (
+              <button
+                key={s.analysis_id}
+                type="button"
+                aria-pressed={selectedIndustry === s.industry_name}
+                className={`sizing-industry-chip ${selectedIndustry === s.industry_name ? "sizing-industry-chip-active" : ""}`}
+                onClick={() => setSelectedIndustry(selectedIndustry === s.industry_name ? null : s.industry_name)}
+              >
+                <span className="font-semibold">{s.industry_name}</span>
+                <span className="sizing-chip-meta">
+                  CAGR {s.bottom_up_cagr_pct !== null ? `${s.bottom_up_cagr_pct}%` : "—"}
+                  {s.external_forecast?.gap_pct != null ? ` · 격차 ${s.external_forecast.gap_pct > 0 ? "+" : ""}${s.external_forecast.gap_pct}%` : ""}
+                </span>
+              </button>
+            ))}
+          </div>
         </section>
       )}
+
+      {/* ── 선택된 산업의 시장 인사이트 (정량 + 정성) ── */}
+      {insights !== null && selectedIndustry && (() => {
+        const sel = insights.find((s) => s.industry_name === selectedIndustry);
+        if (!sel) return null;
+        return (
+          <section aria-label="선택 산업 시장 인사이트" className="market-section sizing-step sizing-step-deep">
+            <h2 className="text-[0.95rem] mb-1">📊 {sel.industry_name} 시장 인사이트</h2>
+            <p className="mb-3 text-[0.75rem] text-[color:var(--muted-fg)]">
+              정량 지표(성장률·외부 전망 대비 격차)와 정성 분석(기회·위험 요인)을 함께 제공합니다 —
+              기회 등록 시 성장률·매력도 평가의 근거로 사용하세요.
+            </p>
+            <div className="chart-pair">
+              <div className="chart-half sizing-grade-card">
+                <h4 className="text-[0.85rem] mb-2">📈 정량 인사이트</h4>
+                <ul className="sizing-note-list">
+                  <li>바텀업 CAGR: <strong>{sel.bottom_up_cagr_pct !== null ? `${sel.bottom_up_cagr_pct}%` : "—"}</strong></li>
+                  {sel.external_forecast ? (
+                    <>
+                      <li>외부 전망: ${sel.external_forecast.external_size_b.toFixed(2)}B @ {sel.external_forecast.target_year} ({sel.external_forecast.source_label})</li>
+                      <li>격차: <strong>{sel.external_forecast.gap_pct !== null ? `${sel.external_forecast.gap_pct > 0 ? "+" : ""}${sel.external_forecast.gap_pct}%` : "—"}</strong> (우리 추정 ${sel.external_forecast.our_size_b?.toFixed(2) ?? "—"}B)</li>
+                    </>
+                  ) : (
+                    <li className="text-[color:var(--muted-fg)]">외부 전망 미입수 — CAGR 외삽 기준</li>
+                  )}
+                </ul>
+                {sel.external_forecast?.gap_analysis && (
+                  <p className="mt-2 mb-0 text-[0.78rem] whitespace-pre-line">{sel.external_forecast.gap_analysis}</p>
+                )}
+              </div>
+              <div className="chart-half">
+                <div className="sizing-grade-card mb-3">
+                  <h4 className="text-[0.85rem] mb-2">✅ 기회 요인</h4>
+                  <ul className="sizing-note-list">
+                    {(sel.opportunity_factors.length ? sel.opportunity_factors : ["분석 보완 필요"]).map((f, i) => <li key={i}>{f}</li>)}
+                  </ul>
+                </div>
+                <div className="sizing-grade-card">
+                  <h4 className="text-[0.85rem] mb-2">⚠️ 위험 요인</h4>
+                  <ul className="sizing-note-list">
+                    {(sel.risk_factors.length ? sel.risk_factors : ["분석 보완 필요"]).map((f, i) => <li key={i}>{f}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       <details className="opportunity-create">
         <summary className="btn-ghost">+ 기회 등록</summary>

@@ -33,6 +33,45 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
     lag_months: number | null; region_code: string | null; segment_code: string | null; evidence_ref: string | null;
   }>;
 
+  // 신규 산업(딜 미연계)은 chain_node_sensitivity rows가 없다 — 완료된 분석의
+  // 매트릭스에서 지역×세그먼트 수요 민감도를 파생해 같은 화면을 제공한다.
+  // (민감도 = 셀 CAGR × 10, 시드 스크립트와 동일한 placeholder 척도)
+  if (driverSensitivities.length === 0) {
+    const latest = db
+      .query(
+        `SELECT v.payload FROM market_sizing_version v
+         JOIN market_sizing_analysis a ON a.id = v.analysis_id
+         WHERE a.industry_id = ? AND a.status = 'completed'
+         ORDER BY v.version_no DESC LIMIT 1`,
+      )
+      .get(industryId) as { payload: string } | null;
+    if (latest) {
+      try {
+        const matrix = (JSON.parse(latest.payload) as { matrix?: { regions?: Array<{ code: string; label: string }>; cagrBase?: Record<string, Record<string, number>> } }).matrix;
+        const REGION_LABELS: Record<string, string> = {
+          china: "중국", apac_ex_china: "아시아(중국 제외)", north_america: "북미",
+          europe: "유럽", mea: "중동·아프리카", latam_row: "중남미/기타",
+        };
+        const SEG_LABELS: Record<string, string> = { construction: "건설", mining: "광산", other: "기타" };
+        for (const region of matrix?.regions ?? []) {
+          for (const [seg, cagr] of Object.entries(matrix?.cagrBase?.[region.code] ?? {})) {
+            driverSensitivities.push({
+              driver_id: `derived-${region.code}-${seg}`,
+              driver_label: `수요 규모 (${REGION_LABELS[region.code] ?? region.code} · ${SEG_LABELS[seg] ?? seg})`,
+              sensitivity: Math.round((cagr ?? 0) * 10 * 100) / 100,
+              lag_months: 0,
+              region_code: region.code,
+              segment_code: seg,
+              evidence_ref: "market-sizing-pipeline — 셀 CAGR 기반 파생 민감도",
+            });
+          }
+        }
+      } catch {
+        // payload 파싱 실패 시 빈 배열 유지
+      }
+    }
+  }
+
   // Structure simulation results (regional demand scenarios)
   const simulations = db
     .query(

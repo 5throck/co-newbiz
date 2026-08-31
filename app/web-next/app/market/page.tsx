@@ -49,6 +49,11 @@ interface LlmStatus { configured: boolean; provider: string | null; model: strin
 
 const SEGMENT_COLORS = [0, 1, 2];
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
+const POSITION_LABELS: Record<string, string> = {
+  upstream: "상류(원자재·부품)",
+  midstream: "중류(조립·가공)",
+  downstream: "하류(완제품·수요처)",
+};
 
 export function MarketView() {
   const [overview, setOverview] = useState<MarketOverview | null>(null);
@@ -372,17 +377,17 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
 }) {
   return (
     <div className="sizing-report">
-      <StepSection n={1} id="step-1" title="축·프록시 구조 정의">
+      <StepSection n={1} id="step-1" title="시장 구조 정의 (분석 축·산업 사슬 방향)">
         <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
-          분석 축을 <strong>권역 × 최종수요 세그먼트 × 시나리오</strong> 3축으로 고정하고, 데이터가 실제로
-          분해되는 방식에 맞춰 권역을 묶습니다(예: 중국 별도 분리). 프록시 체인의 통계 hop 수가 체인 등급을
-          결정하고, 그 등급이 모든 후속 결론의 신뢰도 상한이 됩니다.
+          시장을 <strong>권역 × 최종수요 세그먼트 × 시나리오</strong> 3축으로 나누고, 산업이 가치사슬에서
+          어디에 위치하는지(상류·중류·하류)에 따라 분석 방향을 정합니다 — 하류 산업은 전방/전전방(수요처)을,
+          상류 산업은 후방/후후방(공급처)을 분석해야 수요·공급 구조가 온전히 파악됩니다.
         </p>
         <div className="chart-pair">
           <div className="chart-half">
-            <table className="data-table" aria-label="분석 축 정의">
+            <table className="data-table sizing-axes-table" aria-label="분석 축 정의">
               <caption className="sr-only">분석 축 정의</caption>
-              <thead><tr><th scope="col">축</th><th scope="col">값</th></tr></thead>
+              <thead><tr><th scope="col">구분</th><th scope="col">값</th></tr></thead>
               <tbody>
                 <tr><td className="font-semibold">권역 (Region)</td><td>{matrix.regions.map((r) => r.label).join(" / ")} ({matrix.regions.length}개)</td></tr>
                 <tr><td className="font-semibold">최종수요 세그먼트</td><td>건설 / 광산 / 기타·철거·리노베이션 (3개)</td></tr>
@@ -396,6 +401,25 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
             <p className="mt-1 text-[0.78rem]">통계 hop {matrix.chainGrade.statisticalHops}개 · 분석 hop은 등급에 불가산</p>
           </div>
         </div>
+        <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">
+          산업 사슬 방향 — 위치: {POSITION_LABELS[matrix.chainDirection.position] ?? matrix.chainDirection.position}
+        </h4>
+        <table className="data-table" aria-label="산업 사슬 방향 분석">
+          <caption className="sr-only">산업 사슬 방향 분석</caption>
+          <thead>
+            <tr><th scope="col" className="w-[8rem]">방향</th><th scope="col">인접 산업</th><th scope="col">분석 포인트</th></tr>
+          </thead>
+          <tbody>
+            {matrix.chainDirection.relatedIndustries.map((r, i) => (
+              <tr key={i}>
+                <td className="font-semibold">{r.relation}</td>
+                <td>{r.name}</td>
+                <td className="text-[0.75rem] text-[color:var(--muted-fg)]">{r.note ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="sizing-note-list mt-2 text-[0.75rem] text-[color:var(--muted-fg)]">{matrix.chainDirection.note}</p>
         <StepSensitivityChart sensitivities={detail.driver_sensitivities} />
       </StepSection>
 
@@ -540,6 +564,32 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
           </p>
         )}
       </StepSection>
+
+      {/* 5-A: 정성 분석 — 기회/위험 요인 (방법론 번호 유지, 별도 영역) */}
+      <section aria-label="정성 분석 — 기회·위험 요인" className="market-section sizing-step sizing-step-deep">
+        <h3 className="sizing-step-title">
+          <span className="sizing-step-badge sizing-step-badge-deep">5-A</span> 정성 분석 — 기회 요인과 위험 요인
+        </h3>
+        <p className="mb-3 text-[color:var(--muted-fg)] text-[0.8rem]">
+          정량 매트릭스만으로는 시장의 질적 방향이 보이지 않습니다. 수요 촉발·규제·기술 전환 등
+          <strong> 기회 요인</strong>과 공급 제약·대체재·지정학 등 <strong>위험 요인</strong>을 함께 다룹니다 —
+          기회 발굴(S2)의 매력도·위험 평가 입력으로 직결됩니다.
+        </p>
+        <div className="chart-pair">
+          <div className="chart-half sizing-grade-card">
+            <h4 className="text-[0.85rem] mb-2">✅ 기회 요인</h4>
+            <ul className="sizing-note-list">
+              {matrix.qualitative.opportunityFactors.map((f, i) => <li key={i}>{f}</li>)}
+            </ul>
+          </div>
+          <div className="chart-half sizing-grade-card">
+            <h4 className="text-[0.85rem] mb-2">⚠️ 위험 요인</h4>
+            <ul className="sizing-note-list">
+              {matrix.qualitative.riskFactors.map((f, i) => <li key={i}>{f}</li>)}
+            </ul>
+          </div>
+        </div>
+      </section>
 
       <StepSection n={6} id="step-6" title="기업 공시 교차검증">
         <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">

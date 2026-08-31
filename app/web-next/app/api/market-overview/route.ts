@@ -47,11 +47,18 @@ export async function GET(request: Request) {
 
   return ok(
     {
-      industries: industries.map((i) => ({
-        ...i,
-        driver_count: sensitivities.find((s) => s.industry_id === i.id)?.driver_count ?? 0,
-        analysis: analyses.find((a) => a.industry_id === i.id) ?? null,
-      })),
+      industries: industries.map((i) => {
+        const analysis = analyses.find((a) => a.industry_id === i.id) ?? null;
+        const chainCount = sensitivities.find((s) => s.industry_id === i.id)?.driver_count ?? 0;
+        // 딜 미연계 신규 산업은 chain rows 대신 분석 매트릭스의 지역×세그먼트
+        // 파생 민감도 노드(6×3=18)를 연결 드라이버로 계산한다.
+        const derivedCount = analysis?.status === "completed" ? 18 : 0;
+        return {
+          ...i,
+          driver_count: Math.max(chainCount, derivedCount),
+          analysis,
+        };
+      }),
       drivers,
       stats: {
         value_chain_links: valueChainCount.c,

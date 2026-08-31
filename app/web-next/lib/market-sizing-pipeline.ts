@@ -106,9 +106,30 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const advance = (step: number) => db.run("UPDATE market_sizing_analysis SET current_step = ? WHERE id = ?", [step, analysis.id]);
   const stepSummaries: StepSummary[] = [];
 
-  // ── Step 1: axes + proxy structure ──
+  // ── Step 1: 시장 구조 정의 (분석 축 + 산업 사슬 방향) ──
   advance(1);
-  const s1 = await summarize(industry, 1, "축·프록시 구조 정의", "권역 6개 × 세그먼트 3개 × 시나리오 3개 축으로 고정. 주요 드라이버와 프록시 체인 관점 기술.");
+  // 산업의 가치사슬 위치에 따라 분석 방향이 갈린다: downstream 산업은
+  // 전방/전전방(수요처)을, upstream 산업은 후방/후후방(공급처)을 분석한다.
+  const dirJson = await askJson(
+    industry,
+    `이 산업이 가치사슬에서 어디에 위치하는지와 인접 산업을 분석하세요. JSON: {"position":"upstream|midstream|downstream","note":"위치 판단 근거 한두 문장","relatedIndustries":[{"relation":"전방|전전방|후방|후후방","name":"산업명","note":"분석 포인트"}]}. position이 downstream/midstream이면 relation은 전방/전전방(수요처) 중심으로, upstream이면 후방/후후방(공급처) 중심으로 3~5개.`,
+  );
+  const chainDirection: SizingMatrix["chainDirection"] = {
+    position: (["upstream", "midstream", "downstream"].includes(str(dirJson?.position)) ? str(dirJson?.position) : "midstream") as "upstream" | "midstream" | "downstream",
+    note: str(dirJson?.note, "가치사슬 위치 미확정 — 분석가 확정 필요"),
+    relatedIndustries: (Array.isArray(dirJson?.relatedIndustries) ? dirJson!.relatedIndustries : []).slice(0, 6).map((r) => ({
+      relation: str(r.relation, "전방"),
+      name: str(r.name, "—"),
+      note: str(r.note) || undefined,
+    })),
+  };
+  const POSITION_LABEL: Record<string, string> = { upstream: "상류(원자재·부품)", midstream: "중류(조립·가공)", downstream: "하류(완제품·수요처)" };
+  const s1 = await summarize(
+    industry,
+    1,
+    "시장 구조 정의",
+    `가치사슬 위치는 ${POSITION_LABEL[chainDirection.position]} — ${chainDirection.position === "upstream" ? "후방/후후방(공급처)" : "전방/전전방(수요처)"} 산업을 분석 대상으로 삼습니다. 인접 산업 ${chainDirection.relatedIndustries.length}개 식별.`,
+  );
   stepSummaries.push({ step: 1, ...s1, pendingInputs: ["프록시 체인의 통계 hop 수 확정 (체인 등급 산정)"] });
 
   // ── Step 2: anchor triangulation (LLM proposes source estimates) ──
@@ -288,6 +309,21 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const s6 = await summarize(industry, 6, "기업 공시 교차검증", `검증 후보 ${crossValidation.length}개 도출 — 전부 실제 공시 대조 전 상태.`);
   stepSummaries.push({ step: 6, ...s6, pendingInputs: ["각 주장을 실제 연차·중간보고서 원문으로 대조"] });
 
+  // ── Step 6-B: 정성 분석 — 기회 요인 / 위험 요인 (S2 기회발굴 연동) ──
+  const qualJson = await askJson(
+    industry,
+    `이 시장의 정성 분석을 수행하세요. JSON: {"opportunityFactors":["기회 요인", ...],"riskFactors":["위험 요인", ...]}. 각 3~5개, 한 문장씩. 기회는 수요 촉발·규제·기술 전환·시장 공백, 위험은 공급 제약·대체재·가격 변동성·지정학·경기 민감도 관점에서.`,
+  );
+  const listOf = (v: unknown, fallback: string[]): string[] => {
+    const arr = Array.isArray(v) ? v : [];
+    const items = arr.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, 5);
+    return items.length ? items : fallback;
+  };
+  const qualitative: SizingMatrix["qualitative"] = {
+    opportunityFactors: listOf(qualJson?.opportunityFactors, ["시장 성장 기반 기회 요인 — 정성 분석 보완 필요"]),
+    riskFactors: listOf(qualJson?.riskFactors, ["정성 위험 분석 보완 필요"]),
+  };
+
   // ── Step 7: limitations ──
   advance(7);
   const limJson = await askJson(
@@ -327,6 +363,8 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       statisticalHops: 0,
       note: "LLM 추정 매트릭스 — 통계 hop 미확정으로 잠정 C. 분석가가 프록시 체인을 확정하면 재평가합니다.",
     },
+    chainDirection,
+    qualitative,
     consistency: {
       bottomUpCagr: Math.round(bottomUpCagr * 1000) / 10,
       topDownCagr: 0,

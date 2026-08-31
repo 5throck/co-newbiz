@@ -34,6 +34,25 @@ export interface CrossValidationClaim {
 export interface ChainGrade { grade: string; statisticalHops: number; note: string }
 
 /**
+ * 산업 사슬 방향 분석 — 산업이 가치사슬에서 어디에 위치하는지에 따라 분석
+ * 방향이 갈린다. Downstream(완제품·수요처 쪽) 산업은 전방/전전방(수요처의
+ * 수요처)을, Upstream(원자재·부품 쪽) 산업은 후방/후후방(공급처의 공급처)을
+ * 분석해야 수요·공급 구조가 온전히 파악된다.
+ */
+export interface ChainDirection {
+  position: "upstream" | "midstream" | "downstream";
+  note: string;
+  /** 분석 대상 인접 산업 (relation은 산업 위치에 따라 전방계 또는 후방계) */
+  relatedIndustries: Array<{ relation: string; name: string; note?: string }>;
+}
+export interface QualitativeFactors {
+  /** 정성 분석 — 기회 요인 (수요 촉발, 규제, 기술 전환 등) */
+  opportunityFactors: string[];
+  /** 정성 분석 — 위험 요인 (공급 제약, 대체재, 가격 변동성, 지정학 등) */
+  riskFactors: string[];
+}
+
+/**
  * 외부 미래 전망 대비 격차 분석 (step 5-B). 과거 데이터 기반 CAGR 외삽과
  * 입수된 외부 미래 추정치가 갈리는 경우, 어떤 요인(신규·강화 드라이버)이
  * 그 격차를 만드는지 기록한다. 외부 전망이 없으면 undefined — 기존 CAGR
@@ -64,6 +83,8 @@ export interface SizingMatrix {
   /** Documented wider-band overrides, key = "region|segment" (down/up CAGR fractions). */
   bandOverrides?: Record<string, { down: number; up: number; reason?: string }>;
   chainGrade: ChainGrade;
+  chainDirection: ChainDirection;
+  qualitative: QualitativeFactors;
   consistency: { bottomUpCagr: number; topDownCagr: number; tolerance: string };
   externalForecast?: ExternalForecastGap;
   crossValidation: CrossValidationClaim[];
@@ -174,6 +195,27 @@ export const HYD_BRK_MATRIX: SizingMatrix = {
     grade: "B",
     statisticalHops: 3,
     note: "프록시 체인 통계 hop 3개 — 스킬(proxy-industry-chain) 규정상 상한 B. 이 매트릭스의 어떤 결론도 Green 확신도로 표현될 수 없음.",
+  },
+  chainDirection: {
+    position: "midstream",
+    note: "유압브레이커는 건설·광산 장비의 어태치먼트(중류) — 수요 구조가 지배적이므로 전방(장비 제조·보유)과 전전방(인프라·광산 개발 수요)을 분석한다.",
+    relatedIndustries: [
+      { relation: "전방", name: "건설·광산 장비 제조 (Epiroc, Sandvik, HD Hyundai 등)", note: "어태치먼트 수요의 직접 수요처" },
+      { relation: "전방", name: "장비 임대·렌탈업", note: "기계장착형 수요의 실질 보유 주체" },
+      { relation: "전전방", name: "인프라 건설·광산 개발", note: "최종 수요 발생지 — 구리·금 광산 캐펙스가 핵심 드라이버" },
+    ],
+  },
+  qualitative: {
+    opportunityFactors: [
+      "광산 캐펙스 회복(구리·금) — 기계장착형 브레이커 수요 직결",
+      "EU Stage V 등 배출 규제 — 구형 장비 교체 수요 촉발",
+      "장비 임대 시장 성장 — 중고 시장 보유효율 개선에 따른 신규 수요",
+    ],
+    riskFactors: [
+      "중국 인프라 경기 둔화 — 물량 최대 권역의 수요 급변 위험",
+      "장비 제조사 자체 어태치먼트 사업 확대(수직계열화) — 독립 부품 수요 잠식",
+      "중고 브레이커 유통 확대 — 신규 판매 대체",
+    ],
   },
   consistency: {
     bottomUpCagr: 5.7,

@@ -13,7 +13,7 @@ description: >
   Use when: "market sizing", "TAM/SAM/SOM", "market matrix", "region×segment
   demand estimate", "market cross-validation against filings", "scenario
   bands for market size".
-version: 1.2.0
+version: 1.3.0
 last_reviewed: 2026-08-31
 status: active
 owner: market-intelligence-agent
@@ -61,6 +61,20 @@ separated from APAC when China dominates unit volume). Identify the proxy
 chain (per `proxy-industry-chain`) and note which hops are statistical vs
 analytical — the statistical-hop count caps the chain grade (A/B/C) and that
 grade caps every downstream conclusion.
+
+**Chain-direction rule**: determine WHERE the industry sits in the value
+chain — that decides which adjacent industries to analyze.
+- Downstream / end-product industries analyze FORWARD industries (the
+  direct customers and the customers' customers) to understand demand
+  structure.
+- Upstream (raw-material / components) industries analyze BACKWARD
+  industries (the direct suppliers and the suppliers' suppliers) to
+  understand supply and cost structure.
+  Korean relation labels (jeonbang/jeonjeonbang vs hubang/huhubang) live in
+  the matrix data and the glossary — not in this English file.
+Record the position (upstream/midstream/downstream) and 3–5 adjacent
+industries with relation labels; the qualitative opportunity/risk factors
+must stay consistent with that direction.
 
 ### Step 2 — Anchor the total with triangulation, not a single source
 Collect at least 2–3 independent vendor/analyst estimates of the baseline-year

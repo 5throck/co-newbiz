@@ -2645,3 +2645,6 @@
 .sizing-insight-table td:nth-child(2),
 .sizing-insight-table td:nth-child(3) { white-space: nowrap; min-width: 8rem; }
 .sizing-insight-table td:last-child { width: 55%; }
+.sizing-axes-table td:first-child { white-space: nowrap; min-width: 11rem; }
+.sizing-actions-cell { white-space: nowrap; }
+.sizing-rerun-btn { margin-left: 0.4rem; color: var(--amber-fg); }
