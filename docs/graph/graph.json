@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 495,
-    "edge_count": 865
+    "node_count": 496,
+    "edge_count": 868
   },
   "nodes": [
     {
@@ -2124,6 +2124,13 @@
       "type": "skill",
       "label": "sync",
       "version": "1.2.2",
+      "status": "active"
+    },
+    {
+      "id": "skill:systematic-market-sizing",
+      "type": "skill",
+      "label": "systematic-market-sizing",
+      "version": "1.2.0",
       "status": "active"
     },
     {
@@ -6054,6 +6061,18 @@
     },
     {
       "type": "member_of",
+      "from": "skill:systematic-market-sizing",
+      "to": "proc:brownfield-fs",
+      "source_ref": "skills/systematic-market-sizing/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:systematic-market-sizing",
+      "to": "proc:greenfield-fs",
+      "source_ref": "skills/systematic-market-sizing/SKILL.md"
+    },
+    {
+      "type": "member_of",
       "from": "skill:talent-pipeline-planning",
       "to": "proc:greenfield-dd",
       "source_ref": "skills/talent-pipeline-planning/SKILL.md"
@@ -6495,6 +6514,12 @@
       "from": "agent:market-intelligence-agent",
       "to": "skill:forward-industry-research",
       "source_ref": "skills/forward-industry-research/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:market-intelligence-agent",
+      "to": "skill:systematic-market-sizing",
+      "source_ref": "skills/systematic-market-sizing/SKILL.md"
     },
     {
       "type": "owns",

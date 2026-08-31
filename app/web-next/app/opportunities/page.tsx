@@ -35,11 +35,30 @@ const COLUMNS: Array<{ status: OpportunityRow["status"]; label: string }> = [
 
 const nf = new Intl.NumberFormat("ko-KR");
 
+// S1 시장분석에서 넘어온 인사이트 — 성장률과 외부 전망 대비 격차(신규
+// 드라이버 포함)를 기회 평가의 입력으로 제공한다(market-sizing 5-B).
+interface SizingInsight {
+  analysis_id: string;
+  industry_name: string;
+  completed_at: string | null;
+  bottom_up_cagr_pct: number | null;
+  external_forecast: {
+    source_label: string;
+    target_year: number;
+    external_size_b: number;
+    our_size_b: number | null;
+    gap_pct: number | null;
+    gap_analysis: string | null;
+    new_drivers: string[];
+  } | null;
+}
+
 export function OpportunitiesView() {
   const router = useRouter();
   const [rows, setRows] = useState<OpportunityRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [insights, setInsights] = useState<SizingInsight[] | null>(null);
   // S3 진입(사이드바 "적합성 평가") 지원 — ?status=assessed로 열린다.
   const [statusFilter, setStatusFilter] = useState<OpportunityRow["status"] | "">("");
   const [form, setForm] = useState({ name: "", market_scope: "", value_chain_node: "", market_size_krw_m: "", growth_rate: "", attractiveness_score: "" });
@@ -59,6 +78,10 @@ export function OpportunitiesView() {
   }, []);
 
   useEffect(load, [load]);
+
+  useEffect(() => {
+    api.get<{ insights: SizingInsight[] }>("/api/market-overview/insights").then((r) => setInsights(r.data.insights)).catch(() => setInsights([]));
+  }, []);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -120,6 +143,69 @@ export function OpportunitiesView() {
         <p role="alert" className="text-[color:var(--red-fg)]">
           {error}
         </p>
+      )}
+
+      {/* ── S1 시장분석 인사이트: 성장률 + 외부 전망 대비 격차(드라이버 요인) ── */}
+      {insights !== null && insights.length > 0 && (
+        <section aria-label="시장분석 인사이트" className="market-section sizing-step mb-4">
+          <h2 className="text-[0.92rem] mb-1">🔬 시장분석 인사이트 (S1 → S2)</h2>
+          <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
+            완료된 산업 분석의 성장률과, 외부 미래 전망이 우리 CAGR 외삽과 갈릴 때 그 격차를 만드는
+            요인(신규·강화 드라이버)입니다. 기회의 성장률·매력도 평가 시 입력으로 사용하세요.
+          </p>
+          <table className="data-table sizing-insight-table" aria-label="시장분석 인사이트">
+            <caption className="sr-only">시장분석 인사이트</caption>
+            <thead>
+              <tr>
+                <th scope="col">산업</th>
+                <th scope="col">우리 CAGR (바텀업)</th>
+                <th scope="col">외부 전망 대비 격차</th>
+                <th scope="col">신규·강화 드라이버 / 격차 요인</th>
+              </tr>
+            </thead>
+            <tbody>
+              {insights.map((s) => (
+                <tr key={s.analysis_id}>
+                  <td className="font-semibold">
+                    {s.industry_name}
+                    <br />
+                    <Link href="/market" className="text-[0.72rem] text-[color:var(--accent)] underline">리포트 열기</Link>
+                  </td>
+                  <td className="tabular-nums">{s.bottom_up_cagr_pct !== null ? `${s.bottom_up_cagr_pct}%` : "—"}</td>
+                  <td className="tabular-nums">
+                    {s.external_forecast?.gap_pct != null ? (
+                      <>
+                        {s.external_forecast.gap_pct > 0 ? "+" : ""}{s.external_forecast.gap_pct}%
+                        <br />
+                        <span className="text-[0.7rem] text-[color:var(--muted-fg)]">
+                          vs {s.external_forecast.source_label} ({s.external_forecast.target_year})
+                        </span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="text-[0.78rem]">
+                    {s.external_forecast ? (
+                      <>
+                        {s.external_forecast.new_drivers.length > 0 && (
+                          <span className="mr-1">
+                            {s.external_forecast.new_drivers.map((d) => (
+                              <span key={d} className="status-chip status-in-progress mr-1">{d}</span>
+                            ))}
+                          </span>
+                        )}
+                        {s.external_forecast.gap_analysis}
+                      </>
+                    ) : (
+                      <span className="text-[color:var(--muted-fg)]">외부 전망 미입수 — CAGR 외삽 기준</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       )}
 
       <details className="opportunity-create">

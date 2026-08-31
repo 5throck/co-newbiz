@@ -13,7 +13,7 @@ description: >
   Use when: "market sizing", "TAM/SAM/SOM", "market matrix", "region×segment
   demand estimate", "market cross-validation against filings", "scenario
   bands for market size".
-version: 1.1.0
+version: 1.2.0
 last_reviewed: 2026-08-31
 status: active
 owner: market-intelligence-agent
@@ -105,6 +105,30 @@ consensus rate. Within tolerance → it is an **internal consistency check
 only**; both sides ultimately trace to the same class of vendor reports, so
 it must NOT be described as independent confirmation. Outside tolerance →
 stop and reconcile the allocation before proceeding.
+
+### Step 5-B — External forecast gap analysis (when a future estimate exists)
+Our projections are CAGR extrapolations of historical drivers. When a PUBLIC
+future estimate for the industry can be obtained (vendor forecast for a
+target year), compare it against our extrapolation for the same year:
+record the external source, target-year size, and implied CAGR; compute our
+size and the gap %. If the two diverge, the historical drivers alone do not
+explain the future — analyze WHICH factors close the gap (new or
+strengthened drivers: demand triggers, regulation, technology shifts,
+substitutes) and record them as `newDrivers` alongside the gap analysis.
+If no external forecast is obtainable, keep the CAGR extrapolation as-is —
+never invent one. The gap analysis feeds S2 (opportunity discovery) as market insight:
+opportunity growth-rate and attractiveness scoring should use the
+gap-aware driver view, not the naive extrapolation.
+
+### Re-analysis and versioning
+An analysis is a versioned artifact, never a one-shot. Re-run the pipeline
+(a new append-only version) when: the previous run FAILED mid-pipeline, the
+analysis date goes stale (default guidance: >90 days), or a better source
+arrives. Every re-run lands `version N+1` with a changelog line; prior
+versions are preserved so decisions can cite the exact version they relied
+on. Freezing + registry registration (step 8) applies to the version an
+analyst has confirmed — unconfirmed pipeline output stays flagged as
+`llm-estimate` and must not be cited as verified.
 
 ### Step 6 — Cross-validate against first-party company sources
 Go to the actual annual reports / interim reports / filings of listed players

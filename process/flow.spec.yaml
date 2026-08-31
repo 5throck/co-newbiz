@@ -81,13 +81,14 @@ stages:
       - 외부 시장 데이터 (fact_market_observation)
       - 산업 드라이버 레지스트리
     outputs:
-      - 시장 규모·성장 추정
+      - 시장 규모·성장 추정 (systematic-market-sizing 매트릭스 — 버전 관리)
+      - 외부 미래 전망 대비 격차 분석 (입수 시 — 신규·강화 드라이버 요인 포함, S2 인사이트로 연동)
       - 가치사슬 구조
     entryCriteria: []
     activities:
       - id: market-research
         agent: market-intelligence-agent
-        skills: [market-data-pipeline, proxy-industry-chain]
+        skills: [market-data-pipeline, proxy-industry-chain, systematic-market-sizing]
         procedure: [greenfield-screening, brownfield-screening]
       - id: competitive-intelligence
         agent: market-intelligence-agent

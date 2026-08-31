@@ -2639,3 +2639,9 @@
 .sizing-step-badge-deep { background: color-mix(in srgb, var(--accent) 75%, var(--fg)); }
 
 .sizing-verdict-cell { white-space: nowrap; min-width: 6.5rem; }
+
+.sizing-insight-table td { vertical-align: top; }
+.sizing-insight-table td:first-child { white-space: nowrap; min-width: 7rem; }
+.sizing-insight-table td:nth-child(2),
+.sizing-insight-table td:nth-child(3) { white-space: nowrap; min-width: 8rem; }
+.sizing-insight-table td:last-child { width: 55%; }

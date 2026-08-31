@@ -106,7 +106,7 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 - 산업 드라이버 레지스트리
 
 **Activities**
-- market-research · agent: `market-intelligence-agent` · skills: `market-data-pipeline`, `proxy-industry-chain` · procedure: `greenfield-screening`, `brownfield-screening`
+- market-research · agent: `market-intelligence-agent` · skills: `market-data-pipeline`, `proxy-industry-chain`, `systematic-market-sizing` · procedure: `greenfield-screening`, `brownfield-screening`
 - competitive-intelligence · agent: `market-intelligence-agent` · skills: `competitive-intelligence` · procedure: `greenfield-screening`, `brownfield-screening`
 - value-chain-analysis · agent: `industry-lead` · skills: `value-chain-linkage-analysis`, `value-chain-stage-financials` · procedure: `greenfield-screening`, `brownfield-screening`
 
