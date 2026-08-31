@@ -2648,3 +2648,5 @@
 .sizing-axes-table td:first-child { white-space: nowrap; min-width: 11rem; }
 .sizing-actions-cell { white-space: nowrap; }
 .sizing-rerun-btn { margin-left: 0.4rem; color: var(--amber-fg); }
+.wf-longlist { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.5rem 0.6rem; margin-bottom: 0.5rem; border: 1px dashed var(--border); border-radius: var(--radius-md); }
+.wf-longlist-note { font-size: 0.68rem; color: var(--muted-fg); }

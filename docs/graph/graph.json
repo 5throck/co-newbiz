@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 496,
+    "node_count": 497,
     "edge_count": 868
   },
   "nodes": [
@@ -376,6 +376,11 @@
       "id": "adr:0074",
       "type": "adr",
       "label": "ADR-0074: Process Meta Model Platform — declarative flow spec, agentic runtime, multi-channel interfaces"
+    },
+    {
+      "id": "adr:0075",
+      "type": "adr",
+      "label": "ADR-0075: Pipeline execution environment discipline — per-shell secret loading, CRLF normalization, and evidence-based failure verification"
     },
     {
       "id": "agent:antitrust-agent",

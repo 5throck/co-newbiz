@@ -110,6 +110,7 @@
 | ADR-0066 | Value-chain driver/scenario schema + structure-simulation plane (Phase B) | Accepted (2026-08-24) | [0066-value-chain-driver-scenario-schema.md](0066-value-chain-driver-scenario-schema.md) |
 | ADR-0067 | Kill-criteria extension round 4 — screening longlist + partner DD finding surfaces; #12/#15/#16 armed; baseline 18→21 | Accepted (2026-08-25) | [0067-kill-criteria-extension-round-4.md](0067-kill-criteria-extension-round-4.md) |
 | ADR-0068 | Kill-criteria extension round 5 — site infrastructure + analysis_task review plane; #20/#23/#26 armed; baseline 21→24 | Accepted (2026-08-25) | [0068-kill-criteria-extension-round-5.md](0068-kill-criteria-extension-round-5.md) |
+| ADR-0075 | Pipeline execution environment discipline — per-shell secret loading, CRLF normalization, evidence-based failure verification | Accepted (2026-08-31) | [0075-pipeline-execution-environment-discipline.md](0075-pipeline-execution-environment-discipline.md) |
 
 > Index generated from `docs/adr/*.md` front matter on 2026-08-24. Long
 > statuses are abbreviated here; the ADR file is authoritative.

@@ -387,6 +387,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0075",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent-lifecycle-manager",
       "type": "skill",
       "layer": "L3"
@@ -1444,6 +1449,24 @@
       "type": "references",
       "from": "adr:0052",
       "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0075",
+      "to": "k-dart",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0075",
+      "to": "k-kosis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0075",
+      "to": "k-law",
       "source": "prose"
     },
     {

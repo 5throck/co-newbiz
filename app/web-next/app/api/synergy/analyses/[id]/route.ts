@@ -13,12 +13,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const analysis = db
     .query(
       `SELECT sa.id, sa.status, sa.current_step, sa.created_by, sa.created_at, sa.completed_at,
-              c.id AS company_id, c.name_ko AS company_name, c.dart_corp_code
-       FROM synergy_analysis sa JOIN md_company c ON c.id = sa.company_id
+              c.id AS company_id, c.name_ko AS company_name, c.dart_corp_code,
+              ac.name_ko AS acquirer_name
+       FROM synergy_analysis sa
+       JOIN md_company c ON c.id = sa.company_id
+       LEFT JOIN md_company ac ON ac.id = sa.acquirer_company_id
        WHERE sa.id = ?`,
     )
     .get(id) as
-    | { id: string; status: string; current_step: number; created_by: string; created_at: string; completed_at: string | null; company_id: string; company_name: string; dart_corp_code: string | null }
+    | { id: string; status: string; current_step: number; created_by: string; created_at: string; completed_at: string | null; company_id: string; company_name: string; dart_corp_code: string | null; acquirer_name: string | null }
     | null;
   if (!analysis) return notFound();
 

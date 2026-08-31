@@ -11,7 +11,7 @@ export interface RouteDecisionInput {
   opportunityId: string;
   projectId: string | null;
   track: "greenfield" | "brownfield";
-  subTrack?: "existing_business_rbd" | "intra_venture" | null;
+  subTrack?: "existing_business_rbd" | "intra_venture" | "m_and_a" | "jv" | "strategic_investment" | "minority_investment" | "partnership" | "rbd" | "corporate_venture" | null;
   rationale: string;
   alternativesConsidered?: string | null;
   decisionFactors?: Record<string, unknown> | null;

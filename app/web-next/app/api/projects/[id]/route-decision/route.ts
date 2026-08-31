@@ -7,7 +7,11 @@ import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { listRouteDecisions, recordRouteDecision } from "../../../../../lib/route-decision.ts";
 
 const TRACKS = new Set(["greenfield", "brownfield"]);
-const SUB_TRACKS = new Set(["existing_business_rbd", "intra_venture"]);
+const GREENFIELD_SUB_TRACKS = new Set(["existing_business_rbd", "intra_venture"]);
+// Brownfield ≠ M&A — M&A는 Brownfield의 여러 Route 중 하나다.
+const BROWNFIELD_ROUTES = new Set([
+  "m_and_a", "jv", "strategic_investment", "minority_investment", "partnership", "rbd", "corporate_venture",
+]);
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -33,11 +37,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!body?.opportunity_id?.trim() || !body?.track || !TRACKS.has(body.track) || !body?.rationale?.trim()) {
     return badRequest("invalid_request", "opportunity_id, track (greenfield|brownfield) and rationale are required.");
   }
-  if (body.sub_track && !SUB_TRACKS.has(body.sub_track)) {
-    return badRequest("invalid_request", "sub_track must be existing_business_rbd | intra_venture (greenfield only).");
-  }
-  if (body.sub_track && body.track !== "greenfield") {
-    return badRequest("invalid_request", "sub_track applies only to the greenfield track.");
+  if (body.sub_track) {
+    const allowed = body.track === "greenfield" ? GREENFIELD_SUB_TRACKS : BROWNFIELD_ROUTES;
+    if (!allowed.has(body.sub_track)) {
+      return badRequest(
+        "invalid_request",
+        body.track === "greenfield"
+          ? "greenfield sub_track must be existing_business_rbd | intra_venture."
+          : "brownfield route must be m_and_a | jv | strategic_investment | minority_investment | partnership | rbd | corporate_venture.",
+      );
+    }
   }
   const db = getDb();
   const opp = db

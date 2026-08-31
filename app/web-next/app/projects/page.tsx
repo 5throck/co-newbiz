@@ -64,7 +64,7 @@ export default function ProjectListPage() {
   }
 
   async function handleDelete(id: string, no: string) {
-    if (!window.confirm(`${no} 딜을 삭제할까요? 감사로그에 기록됩니다.`)) return;
+    if (!window.confirm(`${no} 프로젝트를 삭제할까요? 감사로그에 기록됩니다.`)) return;
     setError(null);
     try {
       await api.delete(`/api/projects/${id}`);
@@ -75,7 +75,7 @@ export default function ProjectListPage() {
   }
 
   async function handleArchive(id: string, no: string) {
-    if (!window.confirm(`${no} 딜을 보관할까요? 보관된 딜은 목록에서 숨겨집니다.`)) return;
+    if (!window.confirm(`${no} 프로젝트를 보관할까요? 보관된 프로젝트는 목록에서 숨겨집니다.`)) return;
     setError(null);
     try {
       await api.put(`/api/projects/${id}`, { archived: true });
@@ -99,14 +99,14 @@ export default function ProjectListPage() {
 
   return (
     <main>
-      <h1>딜 목록</h1>
+      <h1>프로젝트 목록</h1>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>
       )}
 
       {me?.role !== "viewer" && (
         <form onSubmit={onCreate} className="new-project-form glass">
-          <label htmlFor="project_no">신규 딜</label>
+          <label htmlFor="project_no">신규 프로젝트</label>
           <input
             id="project_no"
             value={newProjectNo}
@@ -127,11 +127,11 @@ export default function ProjectListPage() {
       {projects === null ? (
         <p>불러오는 중...</p>
       ) : filteredProjects.length === 0 ? (
-        <p>표시할 딜이 없습니다.</p>
+        <p>표시할 프로젝트가 없습니다.</p>
       ) : (
         <>
-          <table className="data-table" aria-label="딜 목록">
-            <caption className="sr-only">딜 목록 및 진척 현황</caption>
+          <table className="data-table" aria-label="프로젝트 목록">
+            <caption className="sr-only">프로젝트 목록 및 진척 현황</caption>
             <thead>
               <tr>
                 <th scope="col">프로젝트</th>

@@ -25,6 +25,7 @@ export interface SynergySourceRef { title: string; url: string; snippet?: string
 
 export interface SynergyPayload {
   company: { name: string; dartCorpCode: string | null };
+  acquirer: string | null;
   dartFinancials: {
     available: boolean;
     year?: string;
@@ -78,13 +79,16 @@ async function askJson(system: string, user: string, maxTokens = 2500): Promise<
 export async function runSynergyPipeline(db: Database, analysisId: string): Promise<void> {
   const row = db
     .query(
-      `SELECT sa.id, sa.company_id, c.name_ko, c.dart_corp_code
-       FROM synergy_analysis sa JOIN md_company c ON c.id = sa.company_id
+      `SELECT sa.id, sa.company_id, c.name_ko, c.dart_corp_code, ac.name_ko AS acquirer_name
+       FROM synergy_analysis sa
+       JOIN md_company c ON c.id = sa.company_id
+       LEFT JOIN md_company ac ON ac.id = sa.acquirer_company_id
        WHERE sa.id = ?`,
     )
-    .get(analysisId) as { id: string; company_id: string; name_ko: string; dart_corp_code: string | null } | null;
+    .get(analysisId) as { id: string; company_id: string; name_ko: string; dart_corp_code: string | null; acquirer_name: string | null } | null;
   if (!row) throw new Error(`synergy analysis ${analysisId} not found`);
-  const company = row.name_ko;
+  const company = row.name_ko; // M&A 대상 기업
+  const acquirer = row.acquirer_name ?? null; // 인수 주체
   const now = () => new Date().toISOString();
   const advance = (step: number) => db.run("UPDATE synergy_analysis SET current_step = ? WHERE id = ?", [step, analysisId]);
   const stepSummaries: SynergyStepSummary[] = [];
@@ -179,7 +183,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     .join("\n") || "(완료된 시장분석 없음)";
   const synJson = await askJson(
     "You are a corporate development analyst. Reply with ONE JSON object only.",
-    `대상 회사: ${company}\n재무/사업 평가: ${businessAssessment}\n강점: ${financialStrengths.join(" / ")}\n\nS1·S2 완료 시장 분석(Long List):\n${marketsContext}\n\nJSON: {"synergyAreas":[{"area":"시너지 영역명","synergyType":"매출 시너지|원가 절감|기술·역량|유통·채널 등","rationale":"회사 역량과 시장 기회의 연결 근거 2~3문장","opportunity":"구체 기회","risk":"리스크","sources":["관련 출처 번호/명"]}]} — 3~6개 영역. Long List를 Short List로 좁히는 관점에서 회사 강/약점과 시장 격차·드라이버를 연결하세요.`,
+    `역할 구분 — 인수 주체: ${acquirer ?? "미지정"}, M&A 대상 기업: ${company}\n대상 기업 재무/사업 평가: ${businessAssessment}\n대상 기업 강점: ${financialStrengths.join(" / ")}\n\nS1·S2 완료 시장 분석(Long List):\n${marketsContext}\n\nJSON: {"synergyAreas":[{"area":"시너지 영역명","synergyType":"매출 시너지|원가 절감|기술·역량|유통·채널 등","rationale":"대상 기업의 역량·자산이 인수 주체와 연결되어 시너지가 나는 근거 2~3문장","opportunity":"구체 기회","risk":"리스크","sources":["관련 출처 번호/명"]}]} — 3~6개 영역. 인수 주체의 역량과 대상 기업 강점, 시장 격차·드라이버를 연결해 Long List를 Short List로 좁히세요.`,
     3000,
   );
   const synergyAreas = (Array.isArray(synJson?.synergyAreas) ? synJson!.synergyAreas : []).slice(0, 6).map((a) => ({
@@ -211,6 +215,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   // ── Persist ──
   const payload: SynergyPayload = {
     company: { name: company, dartCorpCode: corpCode },
+    acquirer: acquirer,
     dartFinancials: {
       available: dart.found,
       year: dart.year,

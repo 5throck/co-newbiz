@@ -110,6 +110,30 @@ export function OpportunitiesView() {
     }
   }
 
+  // 분석된 산업에서 기회 등록 — 선택한 산업이 시장 범위로 자동 연결된다.
+  const [oppForm, setOppForm] = useState({ name: "", growth_rate: "", attractiveness_score: "" });
+  async function createForIndustry(e: React.FormEvent) {
+    e.preventDefault();
+    const sel = insights?.find((s) => s.industry_name === selectedIndustry);
+    if (!sel || !oppForm.name.trim() || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post("/api/opportunities", {
+        name: oppForm.name.trim(),
+        market_scope: sel.industry_name,
+        growth_rate: sel.bottom_up_cagr_pct ?? undefined,
+        attractiveness_score: oppForm.attractiveness_score ? Number(oppForm.attractiveness_score) : undefined,
+      });
+      setOppForm({ name: "", growth_rate: "", attractiveness_score: "" });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "등록 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function setStatus(id: string, status: OpportunityRow["status"], synergy?: number) {
     setError(null);
     try {
@@ -141,7 +165,7 @@ export function OpportunitiesView() {
     <main>
       <h1>기회 발굴</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        시장분석(S1) 결과에서 가치사슬상 사업 기회를 발굴·평가하고, 선별된 기회를 딜로 승격합니다
+        시장분석(S1) 결과에서 가치사슬상 사업 기회를 발굴·평가하고, 선별된 기회를 프로젝트로 승격합니다
         (프로세스 스테이지 S2 — docs/process-flow.md). 분석된 산업을 선택하면 그 시장의 인사이트가 열립니다.
       </p>
       {error && (
@@ -218,24 +242,42 @@ export function OpportunitiesView() {
                 </div>
               </div>
             </div>
+
+            {/* 이 시장에서 발굴한 기회 등록 — 산업이 시장 범위로 자동 연결 */}
+            <form onSubmit={createForIndustry} aria-label="이 시장의 기회 등록" className="sizing-new-form mt-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="text-[0.78rem]">
+                  <span className="block mb-1">기회명 *</span>
+                  <input
+                    value={oppForm.name}
+                    onChange={(e) => setOppForm({ ...oppForm, name: e.target.value })}
+                    placeholder={`${sel.industry_name} 관련 기회`}
+                    required
+                    className="sizing-new-input"
+                  />
+                </label>
+                <label className="text-[0.78rem]">
+                  <span className="block mb-1">매력도 (선택, 0-100)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={oppForm.attractiveness_score}
+                    onChange={(e) => setOppForm({ ...oppForm, attractiveness_score: e.target.value })}
+                    className="sizing-new-input sizing-new-input-sm"
+                  />
+                </label>
+                <button type="submit" className="btn-ghost text-[0.8rem]" disabled={busy || !oppForm.name.trim()}>
+                  이 시장에 기회 등록
+                </button>
+              </div>
+              <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+                시장 범위는 <strong>{sel.industry_name}</strong>으로 자동 연결되고, 성장률은 분석 CAGR({sel.bottom_up_cagr_pct ?? "—"}%)이 기본 적용됩니다.
+              </p>
+            </form>
           </section>
         );
       })()}
-
-      <details className="opportunity-create">
-        <summary className="btn-ghost">+ 기회 등록</summary>
-        <form onSubmit={create} aria-label="기회 등록" className="opportunity-form">
-          <input type="text" aria-label="기회명" placeholder="기회명 (예: 조선용 고향압 프레스 부품)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          <input type="text" aria-label="시장 범위" placeholder="시장 범위" value={form.market_scope} onChange={(e) => setForm({ ...form, market_scope: e.target.value })} />
-          <input type="text" aria-label="가치사슬 노드" placeholder="가치사슬 노드" value={form.value_chain_node} onChange={(e) => setForm({ ...form, value_chain_node: e.target.value })} />
-          <input type="number" aria-label="시장 규모 (KRM)" placeholder="시장규모 KRM" value={form.market_size_krw_m} onChange={(e) => setForm({ ...form, market_size_krw_m: e.target.value })} />
-          <input type="number" step="0.1" aria-label="성장률 (%)" placeholder="성장률 %" value={form.growth_rate} onChange={(e) => setForm({ ...form, growth_rate: e.target.value })} />
-          <input type="number" min={0} max={100} aria-label="매력도 (0-100)" placeholder="매력도 0-100" value={form.attractiveness_score} onChange={(e) => setForm({ ...form, attractiveness_score: e.target.value })} />
-          <button type="submit" className="btn-premium" disabled={busy}>
-            등록
-          </button>
-        </form>
-      </details>
 
       {rows === null ? (
         <p>불러오는 중...</p>
@@ -263,6 +305,9 @@ export function OpportunitiesView() {
                         매력도 {o.attractiveness_score ?? "—"} · 시너지 {o.synergy_score ?? "—"}
                       </p>
                       {o.rationale && <p className="funnel-card-rationale">{o.rationale}</p>}
+                      {status === "selected" && !o.project_id && (
+                        <p className="funnel-card-meta text-[color:var(--muted-fg)]">프로젝트 미연결 — 승격 시 프로젝트 번호·대상 회사가 연결됩니다.</p>
+                      )}
                       <div className="funnel-card-actions">
                         {status === "identified" && (
                           <button type="button" className="btn-ghost" onClick={() => setStatus(o.id, "assessed")}>
@@ -282,7 +327,7 @@ export function OpportunitiesView() {
                         {status === "selected" && !o.project_id && (
                           promoteFor === o.id ? (
                             <span className="flex gap-1">
-                              <input type="text" aria-label="새 딜 번호" placeholder="딜 번호 (예: P-2026-001)" value={projectNo} onChange={(e) => setProjectNo(e.target.value)} />
+                              <input type="text" aria-label="새 프로젝트 번호" placeholder="프로젝트 번호 (예: P-2026-001)" value={projectNo} onChange={(e) => setProjectNo(e.target.value)} />
                               <input type="text" aria-label="대상 회사명" placeholder="대상 회사명 (필수)" value={promoteCompany} onChange={(e) => setPromoteCompany(e.target.value)} />
                               <button type="button" className="btn-premium" onClick={() => promote(o.id)}>
                                 승격
@@ -290,13 +335,13 @@ export function OpportunitiesView() {
                             </span>
                           ) : (
                             <button type="button" className="btn-premium" onClick={() => { setPromoteFor(o.id); setProjectNo(""); }}>
-                              딜로 승격
+                              프로젝트로 승격
                             </button>
                           )
                         )}
                         {o.project_id && (
                           <Link href={`/projects/${o.project_id}`} className="text-[color:var(--accent)] underline text-[0.8rem]">
-                            딜 열기 →
+                            프로젝트 열기 →
                           </Link>
                         )}
                       </div>

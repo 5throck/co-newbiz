@@ -103,3 +103,25 @@ terms:
     related: [Group IC]
     used_in: [portfolio-fit-assessment]
     owner: group-review-agent
+
+  Project:
+    ko: 프로젝트
+    en: Project (Deal)
+    definition_ko: 선별된 기회가 S4~S7(진출방식 결정→사업성 분석→실사·검증→투자심사·실행)을 통과하는 실행 단위. 반드시 대상 회사(md_company)와 연결된다.
+    why_it_matters_ko: 예전에 '딜'과 '프로젝트'가 혼용되었으나 이제 UI·문서 전체에서 '프로젝트'로 통일한다. '딜'은 동의어(별칭)로만 남기고, 프로젝트 번호(project_no)가 승격 시점에 연결된다.
+    category: business
+    aliases: [딜, Deal]
+    related: [Opportunity]
+    used_in: [stage-gate-governance, deal-execution-playbook, project-review]
+    owner: process-governance-manager
+
+  Opportunity:
+    ko: 기회
+    en: Opportunity
+    definition_ko: 시장분석(S1)과 시너지 정합성(S3)의 Long List에서 발굴되어 발굴→평가→선별 퍼널을 통과한 사업 아이디어. 선별되면 프로젝트로 승격된다.
+    why_it_matters_ko: 기회는 프로젝트가 아니다(불변식 #2) — 승격 전까지 project_id는 NULL이며, 선별 단계에서는 프로젝트 번호가 없다(승격 시 연결).
+    category: business
+    aliases: [사업 기회]
+    related: [Project]
+    used_in: [strategic-fit-screening]
+    owner: market-intelligence-agent

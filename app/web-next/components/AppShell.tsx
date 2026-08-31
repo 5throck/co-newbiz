@@ -31,17 +31,17 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
-// 좌측 패널 — 플랫 전역 내비. 딜 진행 흐름(S1~S7)은 개별 딜 상세의
+// 좌측 패널 — 플랫 전역 내비. 프로젝트 진행 흐름(S4~S7)은 개별 프로젝트 상세의
 // 워크플로우 내비에서 관리되며, 이 패널은 도구·참조·운영 바로가기를 제공한다.
 const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
-    label: "딜",
+    label: "프로젝트",
     items: [
       { href: "/", label: "대시보드", icon: <LayoutDashboard size={18} /> },
       { href: "/market", label: "시장분석", icon: <LineChart size={18} /> },
       { href: "/opportunities", label: "기회 발굴", icon: <Lightbulb size={18} /> },
       { href: "/synergy", label: "시너지 정합성", icon: <Handshake size={18} /> },
-      { href: "/projects", label: "딜 목록", icon: <FolderKanban size={18} /> },
+      { href: "/projects", label: "프로젝트 목록", icon: <FolderKanban size={18} /> },
     ],
   },
   {

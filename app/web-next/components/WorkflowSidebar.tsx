@@ -22,9 +22,6 @@ export interface WfStageEval {
 }
 
 export const WF_STAGES = [
-  { id: "S1", label: "시장분석" },
-  { id: "S2", label: "기회발굴" },
-  { id: "S3", label: "시너지·적합성" },
   { id: "S4", label: "진출방식 결정" },
   { id: "S5", label: "사업성 분석" },
   { id: "S6", label: "실사·검증" },
@@ -61,6 +58,12 @@ export function WorkflowSidebar({
       {eval_?.terminated && (
         <p className="wf-terminated" role="alert">✕ 프로세스 종결 (KILL)</p>
       )}
+
+      {/* S1~S3(Long List)는 시장분석·기회발굴·시너지 페이지에서 완료 — 딜은 S4~S7 */}
+      <div className="wf-longlist" title="S1 시장분석 · S2 기회발굴 · S3 시너지 정합성 완료 (Long List)">
+        <span className="status-chip status-green">S1~S3 완료</span>
+        <span className="wf-longlist-note">Long List 확정</span>
+      </div>
 
       <ol className="wf-stepper" aria-label="프로세스 스테이지">
         {WF_STAGES.map((s) => {
