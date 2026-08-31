@@ -13,7 +13,7 @@ description: >
   Use when: "market sizing", "TAM/SAM/SOM", "market matrix", "region×segment
   demand estimate", "market cross-validation against filings", "scenario
   bands for market size".
-version: 1.3.0
+version: 1.4.0
 last_reviewed: 2026-08-31
 status: active
 owner: market-intelligence-agent
@@ -224,3 +224,31 @@ referring to steps, use the concepts below (not the deprecated jargon):
 - A finished matrix left unregistered because "no project run exists yet" —
   write the registration script anyway (Step 8), so registration is one
   command once the run appears.
+
+## Route branches after this skill (meta-model v2)
+
+This skill produces the market insight that feeds S2 opportunities. What
+happens AFTER an opportunity is selected depends on the ROUTE DECISION —
+and the two branches are structurally different:
+
+- **Brownfield ≠ M&A.** Brownfield means ANY entry that leverages existing
+  companies/assets: M&A, JV, strategic investment, minority investment,
+  partnership, R&BD combination, corporate venture. M&A is one route among
+  seven. The promote/project flow must ask which Brownfield route is intended.
+- **Brownfield core object = the Target Company.** After route decision:
+  Target Universe → Target Company Long List → screening (strategic fit,
+  capability fit, financial, ownership/availability, regulatory) → Target
+  Company Short List → DD → Deal/Investment → Project. The Long List →
+  Short List narrowing is an independent, repeatable process stage (not a
+  loose artifact): candidate universe defined, minimum coverage, attributes
+  populated, sources attached; screening evidence, ranking, and exclusion
+  reasons recorded. In the product this is the S5 Target Screening panel
+  (project_company rows: candidate → target) and /synergy (S3).
+- **Greenfield has no Target Company object.** Its questions are "can we
+  enter this opportunity with our own capabilities?" and "what must we
+  build?": Internal Capability Assessment → Capability Gap → Build / Partner
+  / Hire / Invest → Entry Strategy → Business Case → Project. Its S6 gate is
+  feasibility/capability-gap verification, NOT due diligence. CDD/TDD must
+  never appear before the Brownfield Short List.
+- **Project is the shared execution unit** of both branches; only the path
+  from Route Decision to Project differs.

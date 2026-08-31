@@ -69,6 +69,8 @@ export function OpportunitiesView() {
   const [promoteFor, setPromoteFor] = useState<string | null>(null);
   const [projectNo, setProjectNo] = useState("");
   const [promoteCompany, setPromoteCompany] = useState("");
+  const [promoteTrack, setPromoteTrack] = useState<"brownfield" | "greenfield">("brownfield");
+  const [promoteCandidates, setPromoteCandidates] = useState("");
 
   const load = useCallback(() => {
     const qs = statusFilter ? `?status=${statusFilter}` : "";
@@ -150,7 +152,12 @@ export function OpportunitiesView() {
   async function promote(id: string) {
     setError(null);
     try {
-      const res = await api.post<{ project_id: string }>(`/api/opportunities/${id}/promote`, { project_no: projectNo, company_name: promoteCompany });
+      const res = await api.post<{ project_id: string }>(`/api/opportunities/${id}/promote`, {
+        project_no: projectNo,
+        track: promoteTrack,
+        company_name: promoteTrack === "brownfield" ? promoteCompany || undefined : undefined,
+        target_candidates: promoteTrack === "brownfield" ? promoteCandidates.split(/[\n,]/).map((x) => x.trim()).filter(Boolean) : undefined,
+      });
       setPromoteFor(null);
       setProjectNo("");
       load();
@@ -326,15 +333,28 @@ export function OpportunitiesView() {
                         )}
                         {status === "selected" && !o.project_id && (
                           promoteFor === o.id ? (
-                            <span className="flex gap-1">
-                              <input type="text" aria-label="새 프로젝트 번호" placeholder="프로젝트 번호 (예: P-2026-001)" value={projectNo} onChange={(e) => setProjectNo(e.target.value)} />
-                              <input type="text" aria-label="대상 회사명" placeholder="대상 회사명 (필수)" value={promoteCompany} onChange={(e) => setPromoteCompany(e.target.value)} />
+                            <span className="flex flex-col gap-1 items-stretch">
+                              <div className="flex gap-1">
+                                <input type="text" aria-label="새 프로젝트 번호" placeholder="프로젝트 번호 (예: P-2026-001)" value={projectNo} onChange={(e) => setProjectNo(e.target.value)} />
+                                <select aria-label="진출방식 트랙" value={promoteTrack} onChange={(e) => setPromoteTrack(e.target.value as "brownfield" | "greenfield")}>
+                                  <option value="brownfield">Brownfield</option>
+                                  <option value="greenfield">Greenfield</option>
+                                </select>
+                              </div>
+                              {promoteTrack === "brownfield" ? (
+                                <>
+                                  <textarea aria-label="대상 기업 후보 (Long List)" placeholder={'대상 기업 후보 (줄바꿈 구분) — 예: 레인보우로보틱스'} value={promoteCandidates} onChange={(e) => setPromoteCandidates(e.target.value)} rows={3} />
+                                  <input type="text" aria-label="주 대상 기업 (선택)" placeholder="주 대상 기업 (선택 — 이후 S5에서 선별 가능)" value={promoteCompany} onChange={(e) => setPromoteCompany(e.target.value)} />
+                                </>
+                              ) : (
+                                <p className="funnel-card-meta">Greenfield — 대상 기업 없이 자체 역량으로 진출합니다 (역량 평가는 S5에서).</p>
+                              )}
                               <button type="button" className="btn-premium" onClick={() => promote(o.id)}>
                                 승격
                               </button>
                             </span>
                           ) : (
-                            <button type="button" className="btn-premium" onClick={() => { setPromoteFor(o.id); setProjectNo(""); }}>
+                            <button type="button" className="btn-premium" onClick={() => { setPromoteFor(o.id); setProjectNo(""); setPromoteCompany(""); setPromoteCandidates(""); }}>
                               프로젝트로 승격
                             </button>
                           )

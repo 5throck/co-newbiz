@@ -88,7 +88,7 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 - S2 기회 발굴: `market-intelligence-agent`, `greenfield-agent`
 - S3 시너지·전략적 적합성: `process-governance-manager`, `risk-officer`
 - S4 진출방식 결정: `pm`, `brownfield-agent`
-- S5 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`
+- S5 사업성 분석 · 대상 선별: `financial-analyst`, `valuation-agent`, `quant-methodologist`
 - S6 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`
 - S7 투자심사·실행: `pm`, `risk-officer`, `group-review-agent`
 - S8 사후 관리: `group-review-agent`
@@ -208,7 +208,7 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 
 ## S4 — 진출방식 결정
 
-**목표**: 어떻게 들어갈 것인가? — Greenfield(자체) vs Brownfield(M&A), R&BD vs 사내벤처를 결정한다
+**목표**: 어떻게 들어갈 것인가? — Greenfield(자체 역량 진출) vs Brownfield(기존 기업·자산 결합)를 결정한다. Brownfield ≠ M&A — M&A·JV·전략적 투자·소수점 지분·파트너십·R&BD·사내벤처(CVC) 중 Route를 고른다
 
 **입력**
 - 시너지·적합성 평가
@@ -219,10 +219,11 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 
 **필수 산출물**
 - 트랙 결정(GF/BF)·근거
+- Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)
 - 검토한 대안
 
 **완료 기준**
-- route_decision 레코드가 존재한다 (track 필수, greenfield는 sub_track)
+- route_decision 레코드가 존재한다 (track 필수, greenfield는 sub_track, brownfield는 Route 유형)
 
 **적용 트랙**: greenfield, brownfield
 
@@ -252,14 +253,15 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 
 **자원 결정**: FS 본격 검토 자원 배정
 
-## S5 — 사업성 분석
+## S5 — 사업성 분석 · 대상 선별
 
-**목표**: 돈이 되는가? — Greenfield는 비용·수익 모델, M&A는 밸류에이션이 주체다
+**목표**: 돈이 되는가? — Greenfield는 역량 평가·Business Case, Brownfield는 대상 기업 Target Universe → Long List → 스크리닝 → Short List 선별이 주체다
 
 **입력**
 - 트랙 결정
 - Business Case 라인 (greenfield)
 - 타깃 재무 정보 (brownfield)
+- 대상 기업 후보 목록 (brownfield — 승격 시 Long List 등록)
 
 **Activities**
 - business-case-modeling · agent: `financial-analyst` · skills: `growth-projection-modeling`, `investment-feasibility-modeling` · procedure: `greenfield-fs`, `brownfield-fs`
