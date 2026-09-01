@@ -22,7 +22,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await login(userId, password);
-      router.push("/projects");
+      router.push("/");
     } catch (err) {
       setError(describeAuthError(err));
     } finally {

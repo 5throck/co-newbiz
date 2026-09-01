@@ -269,7 +269,7 @@ export function MarketView() {
       <h1>시장분석</h1>
       <p className="mt-[0.15rem] mb-2 text-[color:var(--muted-fg)] text-[0.9rem]">
         프로세스 스테이지 S1 — 산업을 선택하면 <strong>systematic-market-sizing</strong> 8단계 절차로 분석된
-        리포트가 차트로 표시됩니다. 기회를 발굴하려면 <Link href="/opportunities" className="text-[color:var(--accent)] underline">기회 발굴(S2)</Link>으로 이어가세요.
+        리포트가 차트로 표시됩니다.
       </p>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
