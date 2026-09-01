@@ -30,6 +30,7 @@ metadata:
     - brownfield-dd
     - brownfield-fs
     - brownfield-screening
+    - brownfield-target-screening
 relates_to:
   - skill: management-incentive-review
     type: follows

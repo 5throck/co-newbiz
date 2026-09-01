@@ -1,0 +1,86 @@
+schema_version: "1.0"
+procedure_id: shared-brownfield-target-screening
+title: "Brown Field Target Screening (Long List → Short List)"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: Target Screening
+
+# Post-route-decision stage (flow.spec v2.0.0 S7 대상 스크리닝, brownfield only).
+# Narrows the S6 Target Company Long List to a Short List via knock-out screens
+# (strategic fit, capability fit, financial, geographic, ownership/availability,
+# regulatory) plus ranked scoring — desk research only. Detailed assessment
+# (CDD/TDD/valuation) starts ONLY after the Short List is confirmed at the
+# target_screening gate; no commissioned DD work before that gate.
+
+steps:
+  - id: 1
+    gate: Target Screening
+    agent_key: brownfield-agent
+    skill_key: strategic-fit-screening
+    output_type: target_screening_result
+    description: >
+      Run the knock-out screens per candidate against
+      `checklists/target-screening-checklist.yaml` (chk-target-screening,
+      ADR-0081): t-01 ownership/availability, t-02 regulatory (incl.
+      concentration pre-screen), t-03 geographic fit, t-04 structural market
+      contraction+commoditization, t-05 capability relevance vs the S1/S3
+      required-capability list. Every knock-out failure is recorded with a
+      written exclusion reason (Exclusion Reasons); the rated scorecard
+      (t-06..t-09) feeds the Target Ranking. Desk research only — no
+      commissioned analysis before the target_screening gate.
+  - id: 2
+    gate: Target Screening
+    agent_key: antitrust-agent
+    skill_key: antitrust-screening
+    output_type: target_regulatory_screen
+    applies_when: { op: "in", var: "target.has_external_market_presence", values: [true] }
+    description: >
+      Per-candidate concentration/regulatory pre-screen for candidates with
+      external market presence — early filter only; the full six-way
+      cross-check runs at DD. Reuses the fact-gated rule of
+      shared-brownfield-screening step 3 (fail-closed on unassessed facts).
+  - id: 3
+    gate: Target Screening
+    agent_key: brownfield-agent
+    skill_key: peer-benchmarking
+    output_type: target_ranking
+    description: >
+      Rank the surviving candidates on the rated scorecard (strategic value,
+      capability complementarity, financial attractiveness, integration/
+      partnership complexity) calibrated against peer benchmarks. Produce the
+      Target Ranking/Score with per-criterion evidence and propose the Short
+      List cut — the cut line itself is confirmed at the target_screening gate.
+  - id: 4
+    gate: Target Screening
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: >
+      Confirm the Target Screening gate deliverables — Short List exists,
+      every Long List candidate has a ranking or exclusion reason, and all
+      Short List candidates passed the knock-out screens — then open S8
+      (사업성 분석) for the Short List targets.
+
+completion_criteria:
+  - Short List exists and every Short List candidate passed the knock-out screens
+  - Every Long List candidate carries a ranking score or a written exclusion reason
+  - Screening evidence is recorded per candidate
+
+kill_criteria:
+  - condition: no_candidate_passes_knock_out
+    action: halt
+  - condition: shortlist_quality_below_threshold
+    action: back_to_target_identification
+
+legal_basis:
+  - "flow.spec.yaml v2.0.0 S7 (대상 스크리닝) and target_screening gate decision criteria"
+  - "checklists/target-screening-checklist.yaml (chk-target-screening — ADR-0081)"
+  - "checklists/strategic-fit-screening-checklist.yaml (chk-strategic-fit, rated-scorecard convention)"
+  - "shared-brownfield-screening step 3 (fact-gated HHI pre-screen rule reused in step 2)"
+
+owner_agent: brownfield-agent
+last_reviewed: "2026-08-31"

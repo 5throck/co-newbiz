@@ -54,6 +54,11 @@ import { runStructureSimulation, getStructureSimulationResults } from "./tools/s
 import { listDimensionInputs, assertDimensionInput, reviewDimensionInput, type DimensionInputAssertInput } from "./tools/pmi.ts";
 import { listScreeningLonglist, addScreeningLonglistEntry, listPartnerDDFindings, addPartnerDDFinding, listChainSensitivities, upsertChainSensitivity } from "./tools/market.ts";
 import {
+  listOpportunities, createOpportunity, updateOpportunity, promoteOpportunity,
+  getProcessEvaluation, runStageAgents, listGateDecisions, recordGateDecision,
+  createRouteDecision, listBusinessCaseModels,
+} from "./tools/process.ts";
+import {
   compareRuns,
   getAssumptions,
   getObservations,
@@ -377,6 +382,14 @@ export const TOOLS: ToolDefinition[] = [
   { name: "add_partner_dd_finding✱", description: "Record a partner DD finding — analyst+; audited; severity drives kill-criteria tripwires.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, partner_id: { type: "string" }, workstream: { type: "string", enum: ["financial_distress", "ip_chain", "general"] }, severity: { type: "string", enum: ["red", "amber", "green"] }, description: { type: "string" } }, required: ["projectId", "partner_id", "workstream", "severity", "description"] } },
   { name: "list_chain_sensitivities", description: "Driver sensitivities per chain node (?industry_id narrows) — feeds the structure-simulation engine.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, industry_id: { type: "string" } }, required: ["projectId"] } },
   { name: "upsert_chain_sensitivity✱", description: "Upsert a driver sensitivity for one node — analyst+; UNIQUE triple makes this a natural upsert.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, industry_id: { type: "string" }, driver_code: { type: "string", enum: ["rate", "fx", "commodity", "regulation"] }, sensitivity: { type: "number" }, lag_months: { type: "integer" } }, required: ["projectId", "industry_id", "driver_code", "sensitivity"] } },
+  { name: "list_opportunities", description: "Opportunity funnel registry (S2) — status/project_id filters.", inputSchema: { type: "object", properties: { status: { type: "string", enum: ["identified", "assessed", "selected", "dropped"] }, project_id: { type: "string" } } } },
+  { name: "create_opportunity✱", description: "Register an opportunity (S2) — analyst+; audited.", inputSchema: { type: "object", properties: { name: { type: "string" }, market_scope: { type: "string" }, value_chain_node: { type: "string" }, market_size_krw_m: { type: "number" }, growth_rate: { type: "number" }, attractiveness_score: { type: "integer" }, synergy_score: { type: "integer" }, rationale: { type: "string" } }, required: ["name"] } },
+  { name: "promote_opportunity✱", description: "Promote a selected opportunity to a project/deal. Analyst+; audited.", inputSchema: { type: "object", properties: { id: { type: "string" }, project_no: { type: "string" } }, required: ["id", "project_no"] } },
+  { name: "get_process_evaluation", description: "Derived process state (S1-S7) — currentStage, completedStages, gateStatus, requiredArtifacts. Never persisted.", inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] } },
+  { name: "run_stage_agents✱", description: "Execute a process stage through its mapped agents — positions, stage conclusion, gate evaluation. Analyst+; audited.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, stage: { type: "string", enum: ["S1","S2","S3","S4","S5","S6","S7"] } }, required: ["projectId", "stage"] } },
+  { name: "get_gate_decisions", description: "Gate decision records (GO/HOLD/KILL) for a project.", inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] } },
+  { name: "record_gate_decision✱", description: "Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, gate: { type: "string", enum: ["screening","pre_fs","fs","dd","entity_ic","group_ic"] }, decision: { type: "string", enum: ["go","hold","kill"] }, rationale: { type: "string" }, missing_artifacts: { type: "array", items: { type: "string" } } }, required: ["projectId", "gate", "decision", "rationale"] } },
+  { name: "create_route_decision✱", description: "Record a route decision (S4) — greenfield/brownfield + sub_track + rationale. Analyst+; audited.", inputSchema: { type: "object", properties: { projectId: { type: "string" }, opportunity_id: { type: "string" }, track: { type: "string", enum: ["greenfield","brownfield"] }, sub_track: { type: "string", enum: ["existing_business_rbd","intra_venture"] }, rationale: { type: "string" } }, required: ["projectId", "track", "rationale"] } },
 ];
 
 export function buildServer(): Server {
@@ -626,6 +639,50 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
     case "get_value_chain_linkage":
       requireString(args, "projectId");
       return getValueChainLinkage(args.projectId as string);
+    case "list_opportunities":
+      return listOpportunities(args.status as string | undefined);
+    case "create_opportunity✱": {
+      requireString(args, "name");
+      return createOpportunity(args as unknown as Parameters<typeof createOpportunity>[0]);
+    }
+    case "promote_opportunity✱": {
+      requireString(args, "id");
+      requireString(args, "project_no");
+      return promoteOpportunity(args.id as string, { project_no: args.project_no as string });
+    }
+    case "get_process_evaluation":
+      requireString(args, "projectId");
+      return getProcessEvaluation(args.projectId as string);
+    case "run_stage_agents✱": {
+      requireString(args, "projectId");
+      requireString(args, "stage");
+      return runStageAgents(args.projectId as string, args.stage as string);
+    }
+    case "get_gate_decisions":
+      requireString(args, "projectId");
+      return listGateDecisions(args.projectId as string);
+    case "record_gate_decision✱": {
+      requireString(args, "projectId");
+      requireString(args, "gate");
+      requireString(args, "decision");
+      requireString(args, "rationale");
+      return recordGateDecision(args.projectId as string, {
+        gate: args.gate as string, decision: args.decision as string,
+        rationale: args.rationale as string,
+        missing_artifacts: args.missing_artifacts as string[] | undefined,
+      });
+    }
+    case "create_route_decision✱": {
+      requireString(args, "projectId");
+      requireString(args, "track");
+      requireString(args, "rationale");
+      return createRouteDecision(args.projectId as string, {
+        opportunity_id: args.opportunity_id as string | undefined,
+        track: args.track as string, sub_track: args.sub_track as string | undefined,
+        rationale: args.rationale as string,
+        alternatives_considered: args.alternatives_considered as string | undefined,
+      });
+    }
     default:
       throw new MCPValidationError(`Unknown tool: ${name}`);
   }

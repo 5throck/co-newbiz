@@ -5,57 +5,47 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { api } from "../lib/api.ts";
 import { useChartTheme } from "../lib/echarts-theme.ts";
-import { useAuth } from "../lib/auth-client.tsx";
-import { GradeBadge } from "../components/RagCard.tsx";
 
 const EChartsCore = dynamic(() => import("echarts-for-react"), { ssr: false });
 
-interface DashboardProject {
+// 대시보드 — S1~S3(기회 발굴) 현황. 트랙 결정 이후(딜/프로젝트) 흐름은
+// flow.spec v2.0.0 재설계에 따라 재구축 예정이다.
+interface DashboardOpportunity {
   id: string;
-  project_no: string;
+  name: string;
+  status: "identified" | "assessed" | "selected" | "dropped";
+  attractiveness_score: number | null;
+  synergy_score: number | null;
   created_at: string;
-  rag_overall: string | null;
-  gate_stage: string | null;
-  is_stale: boolean;
 }
 
-const GATE_STAGES = ["screening", "pre_fs", "fs", "dd", "entity_ic", "group_ic"];
-const GATE_LABELS: Record<string, string> = {
-  screening: "Screening",
-  pre_fs: "Pre-FS",
-  fs: "FS",
-  dd: "DD",
-  entity_ic: "Entity IC",
-  group_ic: "Group IC",
+const STATUS_LABELS: Record<DashboardOpportunity["status"], string> = {
+  identified: "발굴",
+  assessed: "평가",
+  selected: "선별",
+  dropped: "제외",
 };
 
 export default function DashboardPage() {
   const ct = useChartTheme();
-  const { me } = useAuth();
-  const [projects, setProjects] = useState<DashboardProject[]>([]);
+  const [opps, setOpps] = useState<DashboardOpportunity[]>([]);
 
   useEffect(() => {
-    api.get<DashboardProject[]>("/api/projects").then((res) => setProjects(res.data)).catch(() => {});
+    api.get<DashboardOpportunity[]>("/api/opportunities").then((res) => setOpps(res.data)).catch(() => {});
   }, []);
 
-  const stageCounts = GATE_STAGES.map((stage) => ({
-    stage,
-    label: GATE_LABELS[stage],
-    count: projects.filter((p) => p.gate_stage === stage).length,
+  const statusOrder: DashboardOpportunity["status"][] = ["identified", "assessed", "selected", "dropped"];
+  const statusCounts = statusOrder.map((status) => ({
+    status,
+    label: STATUS_LABELS[status],
+    count: opps.filter((o) => o.status === status).length,
   }));
 
-  const ragCounts = {
-    green: projects.filter((p) => p.rag_overall === "green").length,
-    amber: projects.filter((p) => p.rag_overall === "amber").length,
-    red: projects.filter((p) => p.rag_overall === "red").length,
-    unassessed: projects.filter((p) => !p.rag_overall).length,
-  };
-
-  const gateChartOption = {
+  const funnelChartOption = {
     tooltip: { trigger: "axis" as const },
     xAxis: {
       type: "category" as const,
-      data: stageCounts.map((s) => s.label),
+      data: statusCounts.map((s) => s.label),
       axisLabel: { color: ct.muted, fontSize: 11 },
       axisLine: { lineStyle: { color: ct.axis } },
     },
@@ -68,7 +58,7 @@ export default function DashboardPage() {
     series: [
       {
         type: "bar" as const,
-        data: stageCounts.map((s) => s.count),
+        data: statusCounts.map((s) => s.count),
         itemStyle: {
           color: ct.color[0],
           borderRadius: [4, 4, 0, 0],
@@ -79,28 +69,11 @@ export default function DashboardPage() {
     grid: { left: 40, right: 20, top: 20, bottom: 40 },
   };
 
-  const ragPieOption = {
-    tooltip: { trigger: "item" as const },
-    legend: {
-      bottom: 0,
-      textStyle: { color: ct.muted, fontSize: 12 },
-    },
-    series: [
-      {
-        type: "pie" as const,
-        radius: ["40%", "70%"],
-        center: ["50%", "45%"],
-        avoidLabelOverlap: false,
-        label: { show: false },
-        data: [
-          { value: ragCounts.green, name: "\u25cf Green", itemStyle: { color: ct.color[1] } },
-          { value: ragCounts.amber, name: "\u25b2 Amber", itemStyle: { color: ct.color[2] } },
-          { value: ragCounts.red, name: "\u25a0 Red", itemStyle: { color: ct.color[3] } },
-          { value: ragCounts.unassessed, name: "\u25cb Unassessed", itemStyle: { color: ct.axis } },
-        ],
-      },
-    ],
-  };
+  const scored = opps.filter((o) => o.attractiveness_score !== null || o.synergy_score !== null);
+  const avgAttractiveness =
+    scored.length > 0
+      ? Math.round(scored.reduce((acc, o) => acc + (o.attractiveness_score ?? 0), 0) / scored.length)
+      : null;
 
   return (
     <main className="dashboard-page">
@@ -109,56 +82,49 @@ export default function DashboardPage() {
       {/* KPI Cards */}
       <div className="summary-cards">
         <div className="summary-card glass">
-          <span className="summary-value mono-num">{projects.length}</span>
-          <span className="text-label">전체 프로젝트</span>
+          <span className="summary-value mono-num">{opps.length}</span>
+          <span className="text-label">전체 기회</span>
+        </div>
+        <div className="summary-card glass">
+          <span className="summary-value mono-num">{opps.filter((o) => o.status === "selected").length}</span>
+          <span className="text-label">선별된 기회</span>
+        </div>
+        <div className="summary-card glass">
+          <span className="summary-value mono-num">{opps.filter((o) => o.status === "assessed").length}</span>
+          <span className="text-label">평가 중</span>
         </div>
         <div className="summary-card glass" style={{ borderColor: "var(--green-border)" }}>
-          <span className="summary-value mono-num" style={{ color: "var(--green-fg)" }}>{ragCounts.green}</span>
-          <span className="text-label">Green</span>
-        </div>
-        <div className="summary-card glass" style={{ borderColor: "var(--amber-border)" }}>
-          <span className="summary-value mono-num" style={{ color: "var(--amber-fg)" }}>{ragCounts.amber}</span>
-          <span className="text-label">Amber</span>
-        </div>
-        <div className="summary-card glass" style={{ borderColor: "var(--red-border)" }}>
-          <span className="summary-value mono-num" style={{ color: "var(--red-fg)" }}>{ragCounts.red}</span>
-          <span className="text-label">Red</span>
+          <span className="summary-value mono-num" style={{ color: "var(--green-fg)" }}>{avgAttractiveness ?? "—"}</span>
+          <span className="text-label">평균 매력도</span>
         </div>
       </div>
 
       {/* Charts Row */}
       <div className="charts-row">
         <section className="chart-card glass">
-          <h3 className="text-label mb-2">게이트별 프로젝트 분포</h3>
-          <EChartsCore option={gateChartOption} style={{ height: 280 }} />
-        </section>
-        <section className="chart-card glass">
-          <h3 className="text-label mb-2">RAG 등급 분포</h3>
-          <EChartsCore option={ragPieOption} style={{ height: 280 }} />
+          <h3 className="text-label mb-2">기회 퍼널 분포</h3>
+          <EChartsCore option={funnelChartOption} style={{ height: 280 }} />
         </section>
       </div>
 
-      {/* Recent Projects */}
+      {/* Recent Opportunities */}
       <section className="glass p-4 mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-label">최근 프로젝트</h3>
-          <Link href="/projects" className="text-sm text-[color:var(--primary)] hover:underline">전체 보기</Link>
+          <h3 className="text-label">최근 등록 기회</h3>
+          <Link href="/opportunities" className="text-sm text-[color:var(--primary)] hover:underline">전체 보기</Link>
         </div>
-        {projects.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)]">프로젝트가 없습니다.</p>
+        {opps.length === 0 ? (
+          <p className="text-[color:var(--muted-fg)]">등록된 기회가 없습니다.</p>
         ) : (
           <ul className="space-y-2">
-            {projects.slice(0, 5).map((p) => (
-              <li key={p.id}>
-                <Link href={`/projects/${p.id}`} className="flex items-center gap-3 p-2 rounded hover:bg-[rgba(255,255,255,0.04)] transition-colors">
-                  <span className="font-semibold">{p.project_no}</span>
-                  {p.rag_overall && <GradeBadge grade={p.rag_overall} />}
-                  {p.is_stale && (
-                    <span className="grade-badge grade-amber">
-                      <span aria-hidden="true">&#x25b2;</span> 갱신 필요
-                    </span>
-                  )}
-                  <span className="ml-auto text-sm text-[color:var(--muted-fg)]">{p.gate_stage ? GATE_LABELS[p.gate_stage] ?? p.gate_stage : "미정"}</span>
+            {opps.slice(0, 5).map((o) => (
+              <li key={o.id}>
+                <Link href="/opportunities" className="flex items-center gap-3 p-2 rounded hover:bg-[rgba(255,255,255,0.04)] transition-colors">
+                  <span className="font-semibold">{o.name}</span>
+                  <span className="text-sm text-[color:var(--muted-fg)]">{STATUS_LABELS[o.status]}</span>
+                  <span className="ml-auto text-sm text-[color:var(--muted-fg)] tabular-nums">
+                    매력도 {o.attractiveness_score ?? "—"} · 시너지 {o.synergy_score ?? "—"}
+                  </span>
                 </Link>
               </li>
             ))}

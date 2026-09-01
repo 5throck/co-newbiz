@@ -20,6 +20,7 @@ metadata:
   procedure_keys:
     - greenfield-fs
     - brownfield-fs
+    - greenfield-capability-assessment
   triggers:
     - scenario analysis
     - downside case

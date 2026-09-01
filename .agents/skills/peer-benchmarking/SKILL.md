@@ -18,6 +18,7 @@ metadata:
   procedure_keys:
     - greenfield-fs
     - brownfield-fs
+    - brownfield-target-screening
   type: domain
   triggers:
     - peer benchmarking

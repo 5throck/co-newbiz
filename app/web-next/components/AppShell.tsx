@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useEffect, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  FolderKanban,
+  ChevronLeft,
+  GitBranch,
+  Sprout,
+  LineChart,
   LayoutDashboard,
   BookOpen,
   Shield,
@@ -12,11 +15,9 @@ import {
   Target,
   FileText,
   LibraryBig,
-  TrendingUp,
   Landmark,
   Lightbulb,
-  LineChart,
-  ShieldCheck,
+  Handshake,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
@@ -28,74 +29,71 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
-// 좌측 패널 — 프로세스 스테이지(S1~S7) 흐름 순으로 구성하며 각 항목은 해당
-// 스테이지를 실행하는 화면에 연결된다(docs/process-flow.md §3). S4·S6는
-// 개별 딜 컨텍스트(워크플로우 탭 기본)에서 수행되므로 딜 목록으로 진입한다.
+// 좌측 패널 — 플랫 전역 내비. 트랙 결정 이후 흐름(S4~)은 flow.spec v2.0.0
+// 재설계에 따라 재구축 예정이며, 이 패널은 탐색·참조·운영 바로가기를 제공한다.
 const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
-    label: "S1 시장분석",
-    items: [{ href: "/process/S1", label: "시장 데이터·체인", icon: <LineChart size={18} /> }],
-  },
-  {
-    label: "S2 기회발굴",
-    items: [{ href: "/process/S2", label: "기회 퍼널", icon: <Lightbulb size={18} /> }],
-  },
-  {
-    label: "S3 시너지·적합성",
-    items: [{ href: "/process/S3", label: "적합성 평가", icon: <Target size={18} /> }],
-  },
-  {
-    label: "S4 진출방식 결정",
-    items: [{ href: "/process/S4", label: "딜 워크플로우", icon: <FolderKanban size={18} /> }],
-  },
-  {
-    label: "S5 사업성 분석",
-    items: [{ href: "/process/S5", label: "수익성 분석", icon: <TrendingUp size={18} /> }],
-  },
-  {
-    label: "S6 실사·검증",
-    items: [{ href: "/process/S6", label: "딜 실사 (C/T/L)", icon: <ShieldCheck size={18} /> }],
-  },
-  {
-    label: "S7 투자심사·실행",
-    items: [{ href: "/process/S7", label: "IC 패키지·보고서", icon: <FileText size={18} /> }],
-  },
-  {
-    label: "관리·참조",
+    label: "탐색",
     items: [
-      { href: "/portfolio-scorecard", label: "스코어카드", icon: <LayoutDashboard size={18} /> },
+      { href: "/", label: "대시보드", icon: <LayoutDashboard size={18} /> },
+      { href: "/market", label: "시장분석", icon: <LineChart size={18} /> },
+      { href: "/opportunities", label: "기회 발굴", icon: <Lightbulb size={18} /> },
+      { href: "/our-company", label: "그룹/계열사 분석", icon: <Landmark size={18} /> },
+      { href: "/synergy", label: "시너지 정합성", icon: <Handshake size={18} /> },
+      { href: "/route-decision", label: "진출방식 결정", icon: <GitBranch size={18} /> },
+      { href: "/brownfield", label: "대상 후보 발굴", icon: <Target size={18} /> },
+      { href: "/greenfield", label: "역량 평가·진출전략", icon: <Sprout size={18} /> },
+    ],
+  },
+  {
+    label: "분석·참조",
+    items: [
       { href: "/benchmarks", label: "벤치마킹 사례", icon: <Landmark size={18} /> },
-      { href: "/glossary", label: "용어집", icon: <BookOpen size={18} /> },
       { href: "/library", label: "규정·체크리스트", icon: <LibraryBig size={18} /> },
+      { href: "/glossary", label: "용어집", icon: <BookOpen size={18} /> },
       { href: "/strategy", label: "R&BD 전략", icon: <Target size={18} /> },
     ],
   },
   {
     label: "운영",
     items: [
-      {
-        href: "/admin",
-        label: "관리자",
-        icon: <Shield size={18} />,
-        adminOnly: true,
-      },
+      { href: "/admin", label: "관리자", icon: <Shield size={18} />, adminOnly: true },
     ],
   },
 ];
 
-// 우측 상단 바 — 테마 전환·로그아웃·사용자 표시를 좌측 패널이 아닌 화면
-// 우측 상단에 모은다.
+// 우측 상단 바 — 맨 왼쪽에 상세 화면용 뒤로 가기, 오른쪽에 테마 전환·로그아웃·
+// 사용자 표시. 위치 표시는 페이지 제목(h1)과 중복되지 않도록 목록 페이지에서는
+// 숨기고, 하위 상세 경로에서만 뒤로 가기 필로 제공한다.
 function Topbar({ pathname }: { pathname: string }) {
   const { me, logout } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   if (!me) return null;
-  const label =
-    NAV_SECTIONS.flatMap((sec) => sec.items).find((i) => pathname === i.href || pathname.startsWith(i.href + "/"))?.label ??
-    (pathname === "/" ? "홈" : (pathname.split("/")[1] ?? ""));
+  const item = NAV_SECTIONS.flatMap((sec) => sec.items).find(
+    (i) => pathname === i.href || pathname.startsWith(i.href + "/"),
+  );
+  const isNested =
+    (!!item && pathname !== item.href && pathname.length > item.href.length) ||
+    // 목록의 상세 표현(?industry=·?company= 등) — 필터 파라미터(status 등)는 제외
+    (pathname === "/market" && !!searchParams.get("industry")) ||
+    (pathname === "/synergy" && !!searchParams.get("company")) ||
+    (pathname === "/route-decision" && !!searchParams.get("opportunity")) ||
+    (pathname === "/brownfield" && !!searchParams.get("opportunity")) ||
+    (pathname === "/greenfield" && !!searchParams.get("opportunity"));
   return (
     <header className="topbar">
-      <span className="topbar-crumbs" aria-label="현재 위치">
-        {label}
-      </span>
+      {isNested && item && (
+        <button
+          type="button"
+          className="back-link"
+          onClick={() => router.push(item.href)}
+          aria-label={`${item.label} 목록으로 돌아가기`}
+        >
+          <ChevronLeft size={14} />
+          {item.label}
+        </button>
+      )}
       <div className="topbar-actions">
         <ThemeToggle compact />
         <span className="topbar-user">{me.userId}</span>
@@ -115,12 +113,12 @@ function Sidebar() {
 
   return (
     <aside className="app-sidebar">
-      <Link href="/projects" className="sidebar-brand">
+      <Link href="/" className="sidebar-brand">
         <span className="sidebar-brand-icon">CN</span>
         <span>co-newbiz</span>
       </Link>
       {NAV_SECTIONS.map((section) => {
-        // 관리자 역할 분리: S1~S7 딜 프로세스 그룹은 관리자에게 숨긴다 —
+        // 관리자 역할 분리: 딜 프로세스 그룹은 관리자에게 숨긴다 —
         // 관리자는 운영 콘솔(사용자·마스터데이터·시스템)만 사용한다.
         if (me.role === "admin" && section.label.startsWith("S")) return null;
         const items = section.items.filter(
@@ -184,7 +182,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <Sidebar />
       <div className="app-main-col">
-        <Topbar pathname={pathname} />
+        <Suspense fallback={null}>
+          <Topbar pathname={pathname} />
+        </Suspense>
         <div className="app-content">{children}</div>
       </div>
     </div>

@@ -1,0 +1,80 @@
+#!/usr/bin/env bun
+// @version 1.0.0
+/**
+ * env-check.ts — ADR-0075 pre-flight gate for pipeline API stages.
+ *
+ * The 2026-08-31 S1–S7 pipeline run misdiagnosed "API key missing" when the
+ * real causes were (a) each tool shell starting with an empty environment and
+ * (b) CRLF line endings in .env corrupting every sourced value with a trailing
+ * \r. This script makes both failure modes checkable before any stage runs:
+ *
+ *   bun scripts/co-newbiz/env-check.ts           # verify keys + CRLF state
+ *   bun scripts/co-newbiz/env-check.ts --exports # print CRLF-safe export lines
+ *
+ * Values are never printed in check mode. The --exports output is meant for
+ * shells without process substitution:
+ *   eval "$(bun scripts/co-newbiz/env-check.ts --exports)"
+ */
+
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { die } from "../lib/error-handling.ts";
+
+const REQUIRED_KEYS = [
+  "DART_API_KEY",
+  "LAW_API_OC",
+  "KOSIS_API_KEY",
+  "CO_NEWBIZ_API_TOKEN",
+] as const;
+
+const repoRoot = join(import.meta.dir, "..", "..");
+const envPath = join(repoRoot, ".env");
+
+const exportsMode = process.argv.includes("--exports");
+
+if (!existsSync(envPath)) {
+  die(`.env not found at ${envPath}. Create it with the required keys: ${REQUIRED_KEYS.join(", ")}`);
+}
+
+const raw = readFileSync(envPath, "utf8");
+const hasCRLF = raw.includes("\r");
+const parsed = new Map<string, string>();
+for (const line of raw.split(/\r?\n/)) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+  const eq = trimmed.indexOf("=");
+  parsed.set(trimmed.slice(0, eq).trim(), trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, ""));
+}
+
+if (exportsMode) {
+  const lines: string[] = [];
+  for (const key of REQUIRED_KEYS) {
+    const value = parsed.get(key);
+    if (value === undefined) die(`Cannot emit exports: required key ${key} is missing from .env`);
+    // Single-quoted, with existing single quotes escaped; \r already stripped by parsing.
+    lines.push(`export ${key}='${value.replaceAll("'", `'\\''`)}'`);
+  }
+  console.log(lines.join("\n"));
+  process.exit(0);
+}
+
+const problems: string[] = [];
+const missing = REQUIRED_KEYS.filter((k) => !parsed.has(k) || parsed.get(k) === "");
+if (missing.length > 0) {
+  problems.push(`missing or empty keys: ${missing.join(", ")}`);
+}
+if (hasCRLF) {
+  // Not fatal by itself — the canonical preamble strips \r at load time — but
+  // any workflow that sourced .env directly is already contaminated.
+  problems.push(
+    ".env uses CRLF line endings; sourcing it directly corrupts every value with a trailing \\r. Load via: set -a; source <(tr -d '\\r' < .env); set +a"
+  );
+}
+
+if (problems.length > 0) {
+  console.error("env-check: FAILED");
+  for (const p of problems) console.error(`  - ${p}`);
+  process.exit(1);
+}
+
+console.log(`env-check: OK — ${REQUIRED_KEYS.length}/${REQUIRED_KEYS.length} required keys present${hasCRLF ? " (CRLF detected; use the tr -d '\\r' load preamble)" : ""}`);

@@ -18,6 +18,7 @@ prerequisites: none
 metadata:
   procedure_keys:
     - brownfield-dd
+    - brownfield-target-identification
   source: workspace
   type: research
   triggers:

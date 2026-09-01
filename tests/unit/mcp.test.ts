@@ -101,7 +101,7 @@ describe("ADR-0011 — no direct DB access from the MCP server (FR-SYS-01)", () 
 describe("tool catalog", () => {
   test("every registered tool has a name and an object input schema", async () => {
     const { TOOLS } = await import("../../mcp/co-newbiz/index.ts");
-    expect(TOOLS.length).toBe(48); // 29 (through engine-2) + 8 Class C evidence surfaces + 6 ADR-0067 market surfaces
+    expect(TOOLS.length).toBe(56); // 48 (previous) + 8 process tools (ADR-0074: opportunities, process evaluation, gate decisions, route decisions)
     for (const tool of TOOLS) {
       expect(tool.name.length).toBeGreaterThan(0);
       expect(tool.inputSchema.type).toBe("object");

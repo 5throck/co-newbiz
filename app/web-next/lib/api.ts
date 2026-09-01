@@ -27,6 +27,8 @@ function readCookie(name: string): string | null {
 
 async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>> {
   const headers: Record<string, string> = { "Content-Type": "application/json", ...(init?.headers as Record<string, string>) };
+  // multipart 업로드는 브라우저가 boundary를 설정해야 하므로 Content-Type을 제거한다.
+  if (init?.body instanceof FormData) delete headers["Content-Type"];
   const method = init?.method ?? "GET";
   if (method !== "GET" && method !== "HEAD") {
     // Double-submit CSRF: echo the readable csrf cookie in a custom header.
@@ -49,7 +51,9 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
+  delete: <T>(path: string, body?: unknown) => request<T>(path, { method: "DELETE", body: body ? JSON.stringify(body) : undefined }),
+  upload: <T>(path: string, form: FormData) => request<T>(path, { method: "POST", body: form }),
 };
 
 export interface Me {

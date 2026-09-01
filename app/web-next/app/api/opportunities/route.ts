@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const rows = getDb()
     .query(
       `SELECT id, project_id, name, market_scope, value_chain_node, market_size_krw_m,
-              growth_rate, attractiveness_score, synergy_score, status, rationale,
+              growth_rate, attractiveness_score, synergy_score, synergy_rationale, fit_verdict, fit_rationale, status, rationale,
               decided_by, decided_at, created_by, created_at
        FROM opportunity
        WHERE (? IS NULL OR status = ?)
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
   const status = body.status ?? (body.synergy_score !== undefined ? "assessed" : "identified");
   db.run(
     `INSERT INTO opportunity (id, project_id, name, market_scope, value_chain_node, market_size_krw_m,
-                              growth_rate, attractiveness_score, synergy_score, status, rationale,
+                              growth_rate, attractiveness_score, synergy_score, synergy_rationale, fit_verdict, fit_rationale, status, rationale,
                               created_by, created_at)
      VALUES (?,NULL,?,?,?,?,?,?,?,?,?,?,?)`,
     [id, body.name.trim(), body.market_scope?.trim() ?? null, body.value_chain_node?.trim() ?? null,

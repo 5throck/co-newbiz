@@ -41,7 +41,46 @@ interface ProviderConfig {
   model?: string;
 }
 
+// The Next.js server runs with cwd app/web-next, so Next only auto-loads
+// .env files from there — but operators configure CO_NEWBIZ_LLM_*, DART_API_KEY,
+// TAVILY_API_KEY etc. in the repo-root .env. Walk up from cwd and import
+// pipeline keys that are not already in the environment (never overriding
+// explicitly-set values).
+const PIPELINE_ENV_KEYS = /^(CO_NEWBIZ_LLM_[A-Z_]+|DART_API_KEY|TAVILY_API_KEY)$/;
+let rootEnvLoaded = false;
+export function loadRootEnvPipelineKeys(): void {
+  if (rootEnvLoaded) return;
+  rootEnvLoaded = true;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
+    const { existsSync, readFileSync } = require("node:fs") as typeof import("node:fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
+    const { dirname, join } = require("node:path") as typeof import("node:path");
+    // cwd is the anchor (next start runs from app/web-next); import.meta.dir
+    // is unreliable inside the bundled server chunks.
+    let dir = process.cwd();
+    for (let i = 0; i < 5; i++) {
+      const envPath = join(dir, ".env");
+      if (existsSync(envPath)) {
+        for (const line of readFileSync(envPath, "utf-8").split(/\r?\n/)) {
+          const m = line.match(/^([A-Z_]+)=(.*)$/);
+          if (m && PIPELINE_ENV_KEYS.test(m[1]) && process.env[m[1]] === undefined) {
+            process.env[m[1]] = m[2].trim();
+          }
+        }
+        if (process.env.CO_NEWBIZ_LLM_PROVIDER && process.env.DART_API_KEY && process.env.TAVILY_API_KEY) return;
+      }
+      const parent = dirname(dir);
+      if (parent === dir) return;
+      dir = parent;
+    }
+  } catch {
+    // env discovery is best-effort — the deterministic fallback still works
+  }
+}
+
 export function getProviderConfig(): ProviderConfig | null {
+  loadRootEnvPipelineKeys();
   const provider = process.env.CO_NEWBIZ_LLM_PROVIDER?.trim();
   if (!provider || provider === "none") return null;
   const cfg: ProviderConfig = {
@@ -65,11 +104,14 @@ export async function complete(
 ): Promise<string> {
   const cfg = getProviderConfig();
   if (!cfg) throw new Error("LLM provider is not configured.");
-  const body = buildRequest(cfg, messages, opts);
   const url = resolveUrl(cfg);
   let lastError: unknown = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
+      // Reasoning models can spend the whole token budget on thinking and
+      // return an empty text part — retry once with a 4× token budget.
+      const attemptOpts = attempt === 0 ? opts : { ...opts, maxTokens: (opts.maxTokens ?? 1500) * 4 };
+      const body = buildRequest(cfg, messages, attemptOpts);
       const res = await fetch(url, {
         method: "POST",
         headers: buildHeaders(cfg),
@@ -78,7 +120,9 @@ export async function complete(
       });
       if (!res.ok) throw new Error(`LLM HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const json = (await res.json()) as Record<string, unknown>;
-      return extractText(cfg.provider, json);
+      const text = extractText(cfg.provider, json);
+      if (!text.trim()) throw new Error("LLM returned an empty response (reasoning tokens may have exhausted max_tokens).");
+      return text;
     } catch (err) {
       lastError = err;
       if (attempt === 0) continue;
@@ -95,6 +139,9 @@ function buildRequest(cfg: ProviderConfig, messages: LlmMessage[], opts: { tempe
     const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
     return {
       model: cfg.model,
+      // Reasoning models (GLM) otherwise spend the token budget on thinking
+      // blocks before emitting any text — disable when the provider accepts it.
+      thinking: { type: "disabled" },
       max_tokens: maxTokens,
       temperature,
       system: system || undefined,
@@ -122,7 +169,13 @@ function buildHeaders(cfg: ProviderConfig): Record<string, string> {
 }
 
 function resolveUrl(cfg: ProviderConfig): string {
-  if (cfg.provider === "anthropic") return cfg.baseUrl ?? "https://api.anthropic.com/v1/messages";
+  if (cfg.provider === "anthropic") {
+    const base = cfg.baseUrl?.replace(/\/$/, "");
+    if (!base) return "https://api.anthropic.com/v1/messages";
+    // Operators give the bare Anthropic-compatible base (e.g. a proxy root);
+    // the messages path still has to be appended.
+    return base.endsWith("/messages") ? base : `${base}/v1/messages`;
+  }
   if (cfg.provider === "gemini")
     return `${cfg.baseUrl ?? "https://generativelanguage.googleapis.com/v1beta"}/models/${cfg.model}:generateContent?key=${cfg.apiKey}`;
   return `${cfg.baseUrl ?? "https://api.openai.com/v1"}/chat/completions`;

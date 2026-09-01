@@ -1,0 +1,62 @@
+schema_version: "1.0"
+procedure_id: shared-brownfield-target-identification
+title: "Brown Field Target Identification (Universe → Long List)"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: Pre-FS
+
+# Post-route-decision stage (flow.spec v2.0.0 S6 대상 후보 발굴, brownfield only).
+# Distinct from shared-brownfield-screening step 1: that Screening-gate step
+# produces an early deal-thesis longlist BEFORE the route is chosen; this
+# procedure runs AFTER track = brownfield is fixed and defines the full
+# candidate universe with explicit selection criteria and coverage, then
+# registers the Target Company Long List that S7 (target_screening gate)
+# narrows to a Short List.
+
+steps:
+  - id: 1
+    gate: Pre-FS
+    agent_key: brownfield-agent
+    skill_key: brownfield-feasibility
+    output_type: target_universe_definition
+    description: >
+      Define the Target Universe — the population of existing companies/assets
+      that could serve the Opportunity under the selected Brownfield route
+      (M&A/JV/strategic investment/minority/partnership/R&BD/CVC). Record the
+      selection criteria (industry segment, value-chain node, geography, size
+      band, route-specific constraints) and the minimum coverage the longlist
+      must achieve before screening may start.
+  - id: 2
+    gate: Pre-FS
+    agent_key: market-intelligence-agent
+    skill_key: company-intelligence
+    output_type: target_longlist
+    description: >
+      Populate the Target Company Long List from the defined universe — one
+      record per candidate with the required attributes (identity, segment,
+      value-chain position, ownership, scale, route-relevant capabilities) and
+      source/evidence links per candidate. Coverage is checked against the
+      universe definition of step 1; candidates without required attributes or
+      sources do not count toward coverage.
+
+completion_criteria:
+  - Universe definition with explicit selection criteria is recorded
+  - Long List meets the minimum coverage defined in the universe definition
+  - Every Long List candidate carries required attributes and sources
+
+kill_criteria:
+  - condition: universe_cannot_be_defined
+    action: back_to_route_decision
+  - condition: minimum_coverage_not_achievable
+    action: hold_pending_market_research
+
+legal_basis:
+  - "flow.spec.yaml v2.0.0 S6 (대상 후보 발굴) — Brownfield Long List is a distinct process stage, not a screening byproduct"
+  - "Design v1.0 §6.3 (procedure/skill authority split)"
+
+owner_agent: brownfield-agent
+last_reviewed: "2026-08-31"

@@ -387,6 +387,41 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0075",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0076",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0077",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0078",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0079",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0080",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0081",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent-lifecycle-manager",
       "type": "skill",
       "layer": "L3"
@@ -1102,6 +1137,11 @@
       "layer": "L3"
     },
     {
+      "id": "systematic-market-sizing",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "talent-pipeline-planning",
       "type": "skill",
       "layer": "L3"
@@ -1439,6 +1479,24 @@
       "type": "references",
       "from": "adr:0052",
       "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0075",
+      "to": "k-dart",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0075",
+      "to": "k-kosis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0075",
+      "to": "k-law",
       "source": "prose"
     },
     {
@@ -9686,6 +9744,101 @@
         "file": "skills/strategic-fit-screening/SKILL.md",
         "field": "relates_to",
         "index": 1
+      }
+    },
+    {
+      "type": "enables",
+      "from": "systematic-market-sizing",
+      "to": "assumption-audit",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/systematic-market-sizing/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "enables",
+      "from": "systematic-market-sizing",
+      "to": "evidence-ledger",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/systematic-market-sizing/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "systematic-market-sizing",
+      "to": "market-intelligence-agent",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "systematic-market-sizing",
+      "to": "phase2",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "phase",
+      "from": "systematic-market-sizing",
+      "to": "phase3",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "follows",
+      "from": "systematic-market-sizing",
+      "to": "proxy-industry-chain",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/systematic-market-sizing/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "references",
+      "from": "systematic-market-sizing",
+      "to": "proxy-industry-chain",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "systematic-market-sizing",
+      "to": "proxy-industry-chain",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/systematic-market-sizing/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "systematic-market-sizing",
+      "to": "quant-methodologist",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "composes_with",
+      "from": "systematic-market-sizing",
+      "to": "scenario-planning",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/systematic-market-sizing/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "requires",
+      "from": "systematic-market-sizing",
+      "to": "scenario-planning",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/systematic-market-sizing/SKILL.md",
+        "field": "prerequisites"
       }
     },
     {

@@ -76,7 +76,7 @@ function stageSection(s: Stage): string {
     ].join("\n");
   });
   return [
-    `## ${s.id} — ${s.name}`,
+    `## ${s.id} — ${s.name}${trackTag(s)}`,
     "",
     `**목표**: ${s.objective}`,
     "",
@@ -101,10 +101,17 @@ function stageSection(s: Stage): string {
   ].join("\n");
 }
 
+function trackTag(s: Stage): string {
+  if (s.applicableTracks.length === 1) {
+    return s.applicableTracks[0] === "greenfield" ? " (greenfield 전용)" : " (brownfield 전용)";
+  }
+  return "";
+}
+
 function generate(spec: FlowSpec): string {
   const parts: string[] = [HEADER];
   parts.push("## 프로세스 흐름 요약\n");
-  parts.push("S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방식 결정 → S5 사업성 분석 → S6 실사·검증 → S7 투자심사·실행\n");
+  parts.push(spec.stages.map((s) => `${s.id} ${s.name}${trackTag(s)}`).join(" → ") + "\n");
   parts.push("엔티티 라이프사이클:");
   for (const [entity, stages] of Object.entries(spec.meta.entity_lifecycles)) {
     parts.push(`- ${entity}: ${stages.join(" → ")}`);

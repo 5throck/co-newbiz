@@ -55,6 +55,7 @@ metadata:
     - group-investment-review
     - pmi-integration-execution
     - portfolio-venture-monitoring
+    - brownfield-target-screening
 ---
 
 ## Context

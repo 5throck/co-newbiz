@@ -113,3 +113,89 @@ terms:
     related: [KSIC, Peer Group]
     used_in: [master-data-governance]
     owner: data-architect
+
+  MktSizingBaseline:
+    ko: 기준 시장규모 산정
+    en: Baseline Market Sizing (Multi-source Cross-estimation)
+    definition_ko: 독립 추정치 2~3개를 모아 기준연도 총시장 규모를 합의치로 삼고, 이상치는 명시적으로 제외하는 절차. systematic-market-sizing 2단계.
+    why_it_matters_ko: 이후 모든 권역·세그먼트 배분이 이 기준값으로 수렴하므로, 단일 소스 인용이나 이상치 혼입은 매트릭스 전체를 왜곡한다.
+    category: industry
+    aliases: [앵커 삼각검증, anchor triangulation, 기준규모 앵커링]
+    related: [MktSizingAllocation, MktSizingConsistency]
+    used_in: [systematic-market-sizing]
+    owner: market-intelligence-agent
+
+  MktSizingAllocation:
+    ko: 권역·세그먼트 배분
+    en: Region and Segment Allocation
+    definition_ko: 기준 시장규모를 권역 가중치와 세그먼트 믹스로 나누어 권역×세그먼트 셀을 만드는 절차. 믹스는 바텀업 합산이 아니라 글로벌 교차검증치에 맞춘 보정 배분이다.
+    why_it_matters_ko: 보정 배분을 소스 기반 데이터처럼 표기하면 근거 등급을 속이는 것이 되므로, 셀별 판단 조정을 반드시 출처와 함께 기록해야 한다.
+    category: industry
+    related: [MktSizingBaseline, MktSizingCellCagr]
+    used_in: [systematic-market-sizing]
+    owner: market-intelligence-agent
+
+  MktSizingCellCagr:
+    ko: 셀별 CAGR·시나리오 밴드
+    en: Per-cell CAGRs and Scenario Bands
+    definition_ko: 권역×세그먼트 셀마다 개별 CAGR을 부여하고, 비관/기본/낙관 밴드(base×0.5~base×1.55, 소스 불일치 셀은 문서화된 wider override)를 붙이는 절차. 시나리오 적용은 글로벌 단일 CAGR이 아니라 각 권역의 자체 셀 CAGR 복리로 계산한다.
+    why_it_matters_ko: 글로벌 단일 CAGR로 시나리오를 돌리면 광산 집중 권역과 규제 성장 권역의 차이가 지워져, 매트릭스가 존재하는 이유 자체가 사라진다.
+    category: industry
+    aliases: [scenario bands]
+    related: [MktSizingAllocation, MktSizingYearlyShare, MktSizingConsistency]
+    used_in: [systematic-market-sizing]
+    owner: quant-methodologist
+
+  MktSizingYearlyShare:
+    ko: 연도별 시장점유율 추이
+    en: Year-by-year Market-share Trend
+    definition_ko: 각 셀의 기본 CAGR을 연도별로 복리 적용해 권역별 규모와 점유율의 연간 이동을 보여주는 심화 영역(4-A). 성장률(4단계)과 검증(5단계) 사이의 시장 구조 변화를 추적한다.
+    why_it_matters_ko: 최종연도 증감만 보면 어느 권역이 언제 점유율을 바꾸는지 놓친다. 진입 시점 판단(S2 이후)의 핵심 입력이다.
+    category: industry
+    related: [MktSizingCellCagr]
+    used_in: [systematic-market-sizing]
+    owner: market-intelligence-agent
+
+  MktSizingConsistency:
+    ko: 성장률 정합성 확인
+    en: Growth-rate Consistency Check (Bottom-up vs Top-down)
+    definition_ko: 매트릭스 롤업의 암시 글로벌 CAGR을 탑다운 컨센서스와 비교하는 내부 정합성 확인. 양쪽 모두 같은 부류의 소스로 소급되므로 독립적 확인이 아니다.
+    why_it_matters_ko: 이 확인을 독립적 검증처럼 표현하면 근거가 이중으로 세는 착시가 생긴다. 허용 오차 밖이면 배분을 재검토해야 한다.
+    category: industry
+    aliases: [정합성 체크, consistency check]
+    related: [MktSizingCellCagr, MktSizingFilingValidation]
+    used_in: [systematic-market-sizing]
+    owner: quant-methodologist
+
+  MktSizingFilingValidation:
+    ko: 기업 공시 교차검증
+    en: Cross-validation Against Company Filings
+    definition_ko: 카테고리 내 상장사의 연차·중간보고서 원문으로 매트릭스 주장을 검증하고, 구조적으로 검증 불가능한 항목(상위 보고 단위에 묻힌 카테고리 매출 등)은 검증 불가로 명시하는 절차.
+    why_it_matters_ko: 검증 불가가 '탐색 실패'인지 '공시 구조의 한계'인지 구분해야 유료 소스 투자 판단이 가능하고, 과대 확신을 막을 수 있다.
+    category: industry
+    aliases: [1차 소스 교차검증, first-party source cross-validation]
+    related: [MktSizingConsistency, MktSizingLimitations]
+    used_in: [systematic-market-sizing, company-intelligence]
+    owner: market-intelligence-agent
+
+  MktSizingLimitations:
+    ko: 분석 한계 목록
+    en: Known-limitations List
+    definition_ko: 판단적 보정, 소스 간 불일치, 외삽 불가 신호를 번호 붙여 고정하고 체인 등급 상한을 재확인하는 목록. 이 목록 없이는 매트릭스를 인용할 수 없다.
+    why_it_matters_ko: 한계를 숫자로 고정해야 다음 사이클에서 무엇을 먼저 해소할지 우선순위가 정해지고, 소비자의 과대 신뢰를 차단한다.
+    category: industry
+    aliases: [한계 레지스터, limitations register]
+    related: [MktSizingFilingValidation, MktSizingRegistry]
+    used_in: [systematic-market-sizing]
+    owner: market-intelligence-agent
+
+  MktSizingRegistry:
+    ko: 가정 레지스트리 등록
+    en: Assumption-registry Registration
+    definition_ko: 동결된 매트릭스를 assumption 레지스트리에 조합당 1 row(kind='assumed', rationale + anchor_ref + TTL)로 기록하는 최종 절차. 레지스트리는 append-only다.
+    why_it_matters_ko: 등록되지 않은 시장 분석은 게이트 심사에서 근거로 인정되지 않는다. recordAssumption 경로를 써야 rationale 필수 규칙(FR-DATA-07)이 강제된다.
+    category: industry
+    aliases: [레지스트리 등록, registry registration]
+    related: [MktSizingLimitations]
+    used_in: [systematic-market-sizing, evidence-ledger]
+    owner: market-intelligence-agent
