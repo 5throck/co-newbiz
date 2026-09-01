@@ -176,6 +176,9 @@ stages:
       - 기회에 synergy_score와 근거가 기록되었다
       - 적합성 판단(Go/Hold/Kill 권고)이 존재한다
       - 최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)
+      # 게이트 권고 조합 로직(fit=Go & synergy≥60→Go, fit=Kill or synergy<40→Kill, 그 외→Hold)은
+      # 시너지 점수가 40 미만이면 사람의 Hold 판정보다 우선해 Kill을 권고할 수 있다 —
+      # 이 경우 권고 근거를 기록하고 사람이 최종 판단한다 (경계 #2: 자동 판정 아님)
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S4, onHold: S3, onKill: terminal }
     gates: [screening]
@@ -198,12 +201,18 @@ stages:
         agent: brownfield-agent
         skills: [deal-execution-playbook]
         procedure: [greenfield-pre-fs, brownfield-pre-fs, deal-shape-chain]
+      # 채점 프레임워크: Stage 1 의도 분기(통합 vs 역량접근) → Stage 2 5criteria×20%
+      # 가중채점(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도) +
+      # 사전배제(통제필요도=高 AND 파트너 지식=암묵적 → 라이선스/공동개발 배제) —
+      # docs/decisions/2026-08-24-class-c-decisions.md (d), ADR-0052
     requiredArtifacts:
       - 트랙 결정(GF/BF)·근거
       - Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)
+      - 5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)
       - 검토한 대안
     completionCriteria:
       - route_decision 레코드가 존재한다 (track 필수, greenfield는 sub_track, brownfield는 Route 유형)
+      - Brownfield인 경우 5criteria 채점 결과와 사전배제 점검이 기록되었다
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S5, onHold: S4, onKill: terminal }
     gates: [screening, pre_fs]
@@ -234,10 +243,6 @@ stages:
         agent: financial-analyst
         skills: [investment-feasibility-modeling]
         procedure: [greenfield-capability-assessment]
-      - id: business-case-lines
-        agent: financial-analyst
-        skills: [investment-feasibility-modeling]
-        procedure: [greenfield-fs]
     requiredArtifacts:
       - 역량 격차 평가
       - 진출전략(Build/Partner/Hire/Invest 결정·근거)
@@ -388,12 +393,14 @@ stages:
 
   - id: S10
     name: 투자심사·실행
-    objective: 투자할 것인가? — IC 패키지로 Entity/Group IC 심사를 받는다
+    objective: "투자할 것인가? — 투자 구조(Deal/Investment Structure: 비히클·자금 조달·지급 구조)를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다"
     inputs:
       - IC 패키지(사업계획·DD·RAG·검토)
+      - 투자 구조안(비히클·자금 조달·지급 구조 — brownfield: investment-vehicle-structuring, financing-plan-review)
       - 사람 최종 승인 산출물
     outputs:
       - IC 결정
+      - 투자 구조 확정(비히클·자금 조달 mix·지급 일정)
       - 실행 진입(PMI / 벤처 모니터링 / R&BD 실행)
     entryCriteria:
       - S9 완료
@@ -402,6 +409,10 @@ stages:
         agent: pm
         skills: [executive-presentation, sample-driven-report-writing]
         procedure: [entity-ic-review, group-investment-review]
+      - id: investment-structuring
+        agent: brownfield-agent
+        skills: [investment-vehicle-structuring, financing-plan-review]
+        procedure: [entity-ic-review]
       - id: risk-review
         agent: risk-officer
         skills: [legal-risk-register]
@@ -428,6 +439,7 @@ stages:
     outputs:
       - 포트폴리오 스코어카드
       - 사업 성과 리포트
+      - 포트폴리오 전환 결정(어휘 5종: next_tranche_released / held_evidence_incomplete / graduate_to_core / reduce_or_divest / kill_with_learning_captured)
     entryCriteria:
       - S10 완료 (IC 승인)
     activities:
@@ -439,6 +451,8 @@ stages:
       - 벤처 스코어카드
     completionCriteria:
       - 분기별 스코어카드 갱신
+      # 이 단계의 kill/graduate는 S1~S10의 Kill Criteria와 범주가 다른 포트폴리오 거버넌스 결정이다
+      # (procedures/_shared/portfolio-venture-monitoring — venture-portfolio-ic 결정 어휘 5종)
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: terminal, onHold: S11, onKill: terminal }
     gates: []
