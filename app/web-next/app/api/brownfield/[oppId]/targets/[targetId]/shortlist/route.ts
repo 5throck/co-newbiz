@@ -1,4 +1,5 @@
 // S7 — Short List 승격 (knock-out 통과 + 필수 항목 판정 완료가 조건).
+import { ulid } from "../../../../../../../../../db/lib/ulid.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
@@ -23,5 +24,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const row = db.query("SELECT COALESCE(MAX(rank),0) m FROM brownfield_target WHERE opportunity_id = ? AND status='shortlisted'").get(oppId) as { m: number };
   const rank = body?.rank ?? row.m + 1;
   db.run("UPDATE brownfield_target SET status = 'shortlisted', rank = ?, exclusion_reason = NULL, updated_at = ? WHERE id = ?", [rank, now(), targetId]);
-  return ok(db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId), 200);
+
+  // S7 → 시너지 정합성 자동 연결 — 대상 회사를 md_company에 등록/재사용하고
+  // synergy_analysis를 in_progress로 준비해 시너지 정합성 화면에서 바로 심층 분석이 가능하게 한다.
+  let company_id: string | null = null;
+  const mc = db.query("SELECT id FROM md_company WHERE name_ko = ?").get(target.company_name) as { id: string } | undefined;
+  if (mc) {
+    company_id = mc.id;
+    if (target.dart_corp_code) db.run("UPDATE md_company SET dart_corp_code = ? WHERE id = ?", [target.dart_corp_code, mc.id]);
+  } else {
+    company_id = ulid();
+    db.run("INSERT INTO md_company (id, dart_corp_code, name_ko, created_at) VALUES (?,?,?,?)", [company_id, target.dart_corp_code, target.company_name, now()]);
+  }
+  let synergyLinked = false;
+  const syn = db
+    .query("SELECT id FROM synergy_analysis WHERE company_id = ? ORDER BY created_at DESC LIMIT 1")
+    .get(company_id) as { id: string } | undefined;
+  if (syn) {
+    db.run("UPDATE synergy_analysis SET status = 'in_progress', current_step = 0, completed_at = NULL WHERE id = ?", [syn.id]);
+    synergyLinked = true;
+  }
+
+  return ok({ ...db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId), company_id, synergy_linked: synergyLinked }, 200);
 }
