@@ -104,7 +104,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - S7 대상 스크리닝: `brownfield-agent`, `antitrust-agent`
 - S8 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`
 - S9 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`
-- S10 투자심사·실행: `pm`, `risk-officer`, `group-review-agent`
+- S10 투자심사·실행: `pm`, `brownfield-agent`, `risk-officer`, `group-review-agent`
 - S11 사후 관리: `group-review-agent`
 
 스킬·프로시저 대응은 각 스테이지의 Activities 표를, 전체 매핑 근거는 ADR-0074를 참고한다.
@@ -236,10 +236,12 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **필수 산출물**
 - 트랙 결정(GF/BF)·근거
 - Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)
+- 5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)
 - 검토한 대안
 
 **완료 기준**
 - route_decision 레코드가 존재한다 (track 필수, greenfield는 sub_track, brownfield는 Route 유형)
+- Brownfield인 경우 5criteria 채점 결과와 사전배제 점검이 기록되었다
 
 **적용 트랙**: greenfield, brownfield
 
@@ -282,7 +284,6 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - capability-assessment · agent: `greenfield-agent` · skills: `greenfield-feasibility`, `org-readiness-assessment` · procedure: `greenfield-capability-assessment`
 - entry-strategy · agent: `greenfield-agent` · skills: `scenario-planning`, `talent-pipeline-planning` · procedure: `greenfield-capability-assessment`
 - business-case-lines · agent: `financial-analyst` · skills: `investment-feasibility-modeling` · procedure: `greenfield-capability-assessment`
-- business-case-lines · agent: `financial-analyst` · skills: `investment-feasibility-modeling` · procedure: `greenfield-fs`
 
 **필수 산출물**
 - 역량 격차 평가
@@ -449,14 +450,16 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 ## S10 — 투자심사·실행
 
-**목표**: 투자할 것인가? — IC 패키지로 Entity/Group IC 심사를 받는다
+**목표**: 투자할 것인가? — 투자 구조(Deal/Investment Structure: 비히클·자금 조달·지급 구조)를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다
 
 **입력**
 - IC 패키지(사업계획·DD·RAG·검토)
+- [object Object]
 - 사람 최종 승인 산출물
 
 **Activities**
 - ic-preparation · agent: `pm` · skills: `executive-presentation`, `sample-driven-report-writing` · procedure: `entity-ic-review`, `group-investment-review`
+- investment-structuring · agent: `brownfield-agent` · skills: `investment-vehicle-structuring`, `financing-plan-review` · procedure: `entity-ic-review`
 - risk-review · agent: `risk-officer` · skills: `legal-risk-register` · procedure: `entity-ic-review`, `group-investment-review`
 - group-review · agent: `group-review-agent` · skills: `group-level-review` · procedure: `entity-ic-review`, `group-investment-review`
 

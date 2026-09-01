@@ -405,265 +405,6 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /api/runs/{id}:
-    get:
-      operationId: getRun
-      summary: Run row plus its immutable run_input snapshot and input_hash (ADR-0005 run-based versioning).
-      tags:
-        - Analysis
-      parameters:
-        - $ref: '#/components/parameters/RunId'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /api/runs/{id}/diff/{otherId}:
-    get:
-      operationId: diffRuns
-      summary: Variable-level bridge between two runs of one project — changed/added/removed per assumption_key plus both input hashes. NPV-level decomposition deferred until the valuation engine exists.
-      tags:
-        - Analysis
-      parameters:
-        - $ref: '#/components/parameters/RunId'
-        - $ref: '#/components/parameters/OtherRunId'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /api/assumptions:
-    get:
-      operationId: getAssumptions
-      summary: Assumption registry read — ?run_id= gates on the run's project visibility (404 for a non-member).
-      tags:
-        - Analysis
-      parameters:
-        - name: run_id
-          in: query
-          schema:
-            type: string
-        - name: key
-          in: query
-          schema:
-            type: string
-          description: assumption_key filter.
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    post:
-      operationId: setAssumption
-      summary: Write an assumption — analyst+; kind='assumed' requires non-empty rationale (FR-DATA-07, app code AND DB CHECK).
-      tags:
-        - Analysis
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - run_id
-                - assumption_key
-                - kind
-                - value
-                - as_of
-              properties:
-                run_id:
-                  type: string
-                assumption_key:
-                  type: string
-                kind:
-                  type: string
-                  enum:
-                    - live
-                    - user
-                    - derived
-                    - assumed
-                value:
-                  type: number
-                as_of:
-                  type: string
-                  description: ISO-8601 date.
-                rationale:
-                  type: string
-                anchor_ref:
-                  type: string
-                ttl_days:
-                  type: integer
-      responses:
-        '201':
-          $ref: '#/components/responses/Created'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /api/simulations:
-    post:
-      operationId: createSimulation
-      summary: >-
-        Run the seeded Monte Carlo engine over a run's inputs — the scenario is composed from the run's sim.* keys plus the project's contingent liabilities; python/monte_carlo.py is spawned args-array-only (never shell) and the quantile
-        summary is persisted. Analyst+; audited.
-      tags:
-        - Analysis
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - run_id
-              properties:
-                run_id:
-                  type: string
-                  description: Run whose inputs feed the engine; its project gates visibility (404 for a non-member).
-                seed:
-                  type: integer
-                  minimum: 0
-                  maximum: 2147483647
-                  description: Omitted = deterministic default derived from the run's input_hash, so identical inputs stay reproducible either way.
-                iterations:
-                  type: integer
-                  minimum: 1
-                  maximum: 100000
-                  default: 10000
-                  description: The engine's own default when omitted.
-      responses:
-        '201':
-          $ref: '#/components/responses/Created'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          description: Engine failure (spawn error, timeout kill, or unparseable output) — error.code simulation_failed.
-  /api/simulations/{id}/results:
-    get:
-      operationId: getSimulationResults
-      summary: Quantile summary from simulation_result ONLY — raw draws are never exposed here (retention_policy archives simulation_draw; the permanent record is the summary). meta carries seed + iterations.
-      tags:
-        - Analysis
-      parameters:
-        - $ref: '#/components/parameters/SimulationId'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /api/portfolio-scorecard:
-    get:
-      operationId: getPortfolioScorecard
-      summary: >-
-        Membership-filtered portfolio rollup over venture_scorecard for one review cycle (ADR-0059 E.4) — ?review_cycle=YYYY-Qn or the latest within the caller's visible scope. meta.scope="membership-filtered" with
-        scope_incomplete/projects_excluded discloses when the rollup is a subset of the cycle; MNPI ventures are included for members.
-      tags:
-        - Monitoring
-      parameters:
-        - name: review_cycle
-          in: query
-          required: false
-          schema:
-            type: string
-            pattern: ^\d{4}-Q[1-4]$
-          description: Explicit review cycle; absent/blank resolves the latest in scope. Malformed values are 400 (invalid_review_cycle).
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /api/watch:
-    get:
-      operationId: listWatches
-      summary: The caller's watches with rules, newest first.
-      tags:
-        - Monitoring
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-    post:
-      operationId: createWatch
-      summary: Create a watch — project must be visible (404 otherwise; a watch is never an existence oracle).
-      tags:
-        - Monitoring
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - project_id
-              properties:
-                project_id:
-                  type: string
-                rules:
-                  type: array
-                  items:
-                    type: object
-                    required:
-                      - trigger_type
-                      - channel
-                    properties:
-                      trigger_type:
-                        type: string
-                      threshold:
-                        type: number
-                      cooldown_hours:
-                        type: number
-                      channel:
-                        type: string
-                      adr_ref:
-                        type: string
-                        description: Linked ADR reference — a notification-threshold rule without one is a client-side hard block (ui-spec §5).
-      responses:
-        '201':
-          $ref: '#/components/responses/Created'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /api/watch/{id}:
-    delete:
-      operationId: deleteWatch
-      summary: Delete one of the caller's own watches (rules first — no schema cascade).
-      tags:
-        - Monitoring
-      parameters:
-        - $ref: '#/components/parameters/WatchId'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
   /api/notifications:
     get:
       operationId: listNotifications
@@ -675,47 +416,6 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /api/reports:
-    get:
-      operationId: listReports
-      summary: Generated report documents with their superseded chain (document table).
-      tags:
-        - Reports
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /api/reports/{id}/export:
-    get:
-      operationId: exportReport
-      summary: Render a report document to docx/hwpx/pdf via python/report/render_*.py (?format=docx|hwpx|pdf).
-      tags:
-        - Reports
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: format
-          in: query
-          required: true
-          schema:
-            type: string
-            enum:
-              - docx
-              - hwpx
-              - pdf
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
   /api/glossary:
     get:
       operationId: listGlossaryKeys
@@ -1470,35 +1170,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/assumptions/{assumptionId}:
-    put:
-      operationId: updateAssumption
-      summary: Update an assumption (partial; value/rationale/anchor/ttl). Analyst+; audited.
-      tags:
-        - Assumptions
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    delete:
-      operationId: deleteAssumption
-      summary: Hard-delete an assumption. Analyst+; audited.
-      tags:
-        - Assumptions
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
 
 
 
@@ -1520,6 +1191,492 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok'
+  /api/llm-status:
+    get:
+      operationId: getLlmStatus
+      summary: LLM provider configuration status (configured/provider/model — never the key). Any authenticated role.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/analyses:
+    post:
+      operationId: createMarketAnalysis
+      summary: Create a new industry market-sizing analysis (analyst+).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      operationId: listMarketAnalyses
+      summary: List market-sizing analyses.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/analyses/{id}:
+    get:
+      operationId: getMarketAnalysis
+      summary: Market-sizing analysis detail with version history.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/analyses/{id}/rerun:
+    post:
+      operationId: rerunMarketAnalysis
+      summary: Re-run an analysis (append-only version N+1).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/industry/{industryId}:
+    get:
+      operationId: getMarketIndustry
+      summary: Industry detail — chain links, driver sensitivities, simulations, versions.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      operationId: updateMarketIndustry
+      summary: Update industry name/KSIC (analyst+).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: deleteMarketIndustry
+      summary: Delete industry + its market-sizing analyses (analyst+; 409 when referenced).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/insights:
+    get:
+      operationId: getMarketInsights
+      summary: Completed-analysis insights for the S2 bridge.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/synergy/analyses:
+    post:
+      operationId: createSynergyAnalysis
+      summary: Create a synergy analysis for a target company (analyst+).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      operationId: listSynergyAnalyses
+      summary: List synergy analyses.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/synergy/analyses/{id}:
+    get:
+      operationId: getSynergyAnalysis
+      summary: Synergy analysis detail with version history.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/synergy/dart-search:
+    get:
+      operationId: searchDartCompanies
+      summary: DART company search (corp code auto-fill).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/synergy/upload:
+    post:
+      operationId: uploadEvidenceFile
+      summary: Upload credit-report/evidence file; extracts text (PDF/txt).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/synergy/web-search:
+    get:
+      operationId: webSearchCompany
+      summary: External web research for a company (TAVILY).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/discover:
+    post:
+      operationId: discoverOpportunities
+      summary: Derive opportunity candidates from a completed market analysis (analyst+).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}/route-decision:
+    get:
+      operationId: getRouteDecision
+      summary: Route decisions for an opportunity.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createRouteDecision
+      summary: Record track (GF/BF) + Brownfield route decision (S4, selected opportunity only).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}/factors:
+    get:
+      operationId: getOpportunityFactors
+      summary: Opportunity/risk factors for an opportunity.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: deriveOpportunityFactors
+      summary: Auto-derive opportunity/risk factors (analyst+).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: addOpportunityFactor
+      summary: Add a manual opportunity/risk factor.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: deleteOpportunityFactor
+      summary: Remove a factor by type+index.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}/sketch:
+    post:
+      operationId: createBusinessModelSketch
+      summary: Generate/persist a business-model sketch (analyst+).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}/screening:
+    get:
+      operationId: getOpportunityScreening
+      summary: S3 screening state (synergy, fit, gate recommendation).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: runOpportunityScreening
+      summary: Run synergy analysis or strategic-fit verdict (S3).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/groups:
+    get:
+      operationId: listCompanyGroups
+      summary: List groups (affiliate counts).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createCompanyGroup
+      summary: Create a group (analyst+).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/groups/{id}:
+    get:
+      operationId: getCompanyGroup
+      summary: Group detail with members and latest profiles.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/groups/{id}/members:
+    post:
+      operationId: addGroupMember
+      summary: Add an affiliate/HQ to a group.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: removeGroupMember
+      summary: Remove an affiliate + its profiles.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      operationId: updateGroupMember
+      summary: Update member DART code/role.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/analyze:
+    post:
+      operationId: analyzeMember
+      summary: Run the company-profile pipeline (versioned).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/profile:
+    get:
+      operationId: getMemberProfile
+      summary: Member profile + version history.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield:
+    get:
+      operationId: listBrownfieldOpportunities
+      summary: Opportunities with a Brownfield route decision.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/targets:
+    get:
+      operationId: listBrownfieldTargets
+      summary: Long List + checklist definition + screening summaries.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: addBrownfieldTarget
+      summary: Add a Long List target candidate.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/targets/{targetId}:
+    patch:
+      operationId: updateBrownfieldTarget
+      summary: Update target company/DART/universe note.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: saveTargetScreening
+      summary: Save chk-target-screening verdicts.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/targets/{targetId}/shortlist:
+    post:
+      operationId: shortlistTarget
+      summary: Promote to Short List (knock-out + mandatory pass required).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/targets/{targetId}/exclude:
+    post:
+      operationId: excludeTarget
+      summary: Exclude with exclusion reason.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/greenfield:
+    get:
+      operationId: listGreenfieldOpportunities
+      summary: Opportunities with a Greenfield route decision.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/greenfield/{oppId}:
+    get:
+      operationId: getGreenfieldAssessment
+      summary: Greenfield capability assessment state.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: saveGreenfieldAssessment
+      summary: Save capability gaps / entry strategy / business-case lines.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
 components:
   securitySchemes:
     sessionCookie:

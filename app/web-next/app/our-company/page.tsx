@@ -48,6 +48,8 @@ export function OurCompanyView() {
   // 계열사 등록 — DART 자동 검색 (시너지 정합성의 dart-search API 재사용)
   const [dartSearching, setDartSearching] = useState(false);
   const [dartResults, setDartResults] = useState<Array<{ corp_code: string; corp_name: string }>>([]);
+  const [uploadingMember, setUploadingMember] = useState<string | null>(null);
+  const [uploadedNames, setUploadedNames] = useState<Record<string, string>>({});
   const [openMember, setOpenMember] = useState<string | null>(null);
   const [editDart, setEditDart] = useState<Record<string, string>>({});
   const [savingDart, setSavingDart] = useState<string | null>(null);
@@ -164,6 +166,21 @@ export function OurCompanyView() {
       setError(err instanceof Error ? err.message : "DART 코드 저장 실패");
     } finally {
       setSavingDart(null);
+    }
+  }
+
+  async function uploadMemberFile(memberId: string, file: File) {
+    setUploadingMember(memberId);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await api.upload<{ original_name: string }>(`/api/our-company/members/${memberId}/upload`, form);
+      setUploadedNames((prev) => ({ ...prev, [memberId]: res.data.original_name }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "업로드 실패");
+    } finally {
+      setUploadingMember(null);
     }
   }
 
@@ -388,6 +405,16 @@ export function OurCompanyView() {
                             {isOpen ? "닫기" : "리포트"}
                           </button>
                         )}
+                        <label className="btn-ghost text-[0.75rem] cursor-pointer" title="신용평가자료 등 근거 파일 업로드">
+                          {uploadingMember === m.id ? "업로드 중..." : "근거파일"}
+                          <input
+                            type="file"
+                            aria-label={`${m.company_name} 근거 파일 업로드`}
+                            className="hidden"
+                            disabled={uploadingMember === m.id}
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadMemberFile(m.id, f); }}
+                          />
+                        </label>
                         <button type="button" className="btn-ghost text-[0.75rem]" title="그룹에서 이 계열사를 제거합니다" onClick={() => removeMember(m.id)}>
                           제거
                         </button>
