@@ -151,16 +151,61 @@ export async function findCorpCode(companyName: string): Promise<string | null> 
   return rows.find((r) => r.corp_name === q)?.corp_code ?? rows.find((r) => r.corp_name.includes(q))?.corp_code ?? null;
 }
 
-export async function searchCorpCodesWithMeta(query: string, limit = 8): Promise<CorpRowsResult> {
-  const { rows, stale, error } = await loadCorpRows();
+export async function searchCorpCodesWithMeta(query: string, limit = 8): Promise<CorpRowsResult & { results: CorpRow[] }> {
+  const key = apiKey();
+  if (!key) return { rows: [], stale: false, error: "DART_API_KEY 미구성", results: [] };
   const q = query.trim();
+  if (!q) return { rows: [], stale: false, error: null, results: [] };
+
+  // OpenDART corpCode.xml.zip이 IP 차단되는 경우가 잦아, JSON 목록 API(list.json)로
+  // 상장(Y)·외감(K/E) 전체를 페이지 순회하며 이름 포함 매칭한다.
+  const results: CorpRow[] = [];
+  const seen = new Set<string>();
   const exact: CorpRow[] = [];
-  const contains: CorpRow[] = [];
-  for (const r of rows) {
-    if (r.corp_name === q) exact.push(r);
-    else if (r.corp_name.includes(q)) contains.push(r);
+  let lastStatus = "";
+
+  for (const corpCls of ["Y", "K", "E"]) {
+    let pageNo = 1;
+    const maxPage = 30;
+    while (pageNo <= maxPage) {
+      try {
+        const res = await fetch(
+          `${BASE}/list.json?crtfc_key=${encodeURIComponent(key)}&corp_cls=${corpCls}&page_no=${pageNo}&page_count=100`,
+          { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }, signal: AbortSignal.timeout(30_000) },
+        );
+        const json = (await res.json()) as {
+          status?: string; message?: string; total_page?: number;
+          list?: Array<{ corp_code?: string; corp_name?: string }>;
+        };
+        lastStatus = json.status ?? "";
+        if (json.status !== "000" || !Array.isArray(json.list)) break;
+        for (const r of json.list) {
+          const name = (r.corp_name ?? "").trim();
+          const code = (r.corp_code ?? "").trim();
+          if (!name || !code || seen.has(code)) continue;
+          seen.add(code);
+          if (name === q) exact.push({ corp_code: code, corp_name: name });
+          else if (name.includes(q)) results.push({ corp_code: code, corp_name: name });
+        }
+        const tp = typeof json.total_page === "number" ? json.total_page : 1;
+        if (pageNo >= tp) break;
+        pageNo++;
+      } catch (err) {
+        lastError(lastStatus, err);
+        break;
+      }
+    }
   }
-  return { rows, stale, error: rows.length === 0 ? error : null, results: [...exact, ...contains].slice(0, limit) };
+
+  function lastError(_s: string, _e: unknown) {
+    lastStatus = "ERR";
+  }
+
+  const finalResults = [...exact, ...results].slice(0, limit);
+  if (finalResults.length === 0 && exact === null) {
+    return { rows: [], stale: false, error: `DART 검색 결과가 없습니다 (status ${lastStatus})`, results: [] };
+  }
+  return { rows: [], stale: false, error: null, results: finalResults.slice(0, limit) };
 }
 
 export async function searchCorpCodes(query: string, limit = 8): Promise<CorpRow[]> {
