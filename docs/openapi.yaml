@@ -1562,6 +1562,17 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/our-company/members/{memberId}/upload:
+    post:
+      operationId: uploadMemberEvidenceFile
+      summary: Upload credit-report/evidence file for an affiliate; extracts text (PDF/txt). Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /api/brownfield:
     get:
