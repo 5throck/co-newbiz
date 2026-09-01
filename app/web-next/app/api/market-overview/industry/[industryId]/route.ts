@@ -3,7 +3,7 @@
 // structure_simulation_result, and md_industry.
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
-import { notFound, ok } from "../../../../../lib/envelope.ts";
+import { fail, forbidden, notFound, ok, badRequest } from "../../../../../lib/envelope.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
@@ -47,24 +47,38 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
       .get(industryId) as { payload: string } | null;
     if (latest) {
       try {
-        const matrix = (JSON.parse(latest.payload) as { matrix?: { regions?: Array<{ code: string; label: string }>; cagrBase?: Record<string, Record<string, number>> } }).matrix;
-        const REGION_LABELS: Record<string, string> = {
-          china: "중국", apac_ex_china: "아시아(중국 제외)", north_america: "북미",
-          europe: "유럽", mea: "중동·아프리카", latam_row: "중남미/기타",
-        };
-        const SEG_LABELS: Record<string, string> = { construction: "건설", mining: "광산", other: "기타" };
-        for (const region of matrix?.regions ?? []) {
-          for (const [seg, cagr] of Object.entries(matrix?.cagrBase?.[region.code] ?? {})) {
-            driverSensitivities.push({
-              driver_id: `derived-${region.code}-${seg}`,
-              driver_label: `수요 규모 (${REGION_LABELS[region.code] ?? region.code} · ${SEG_LABELS[seg] ?? seg})`,
-              sensitivity: Math.round((cagr ?? 0) * 10 * 100) / 100,
-              lag_months: 0,
-              region_code: region.code,
-              segment_code: seg,
-              evidence_ref: "market-sizing-pipeline — 셀 CAGR 기반 파생 민감도",
-            });
+        const matrix = (JSON.parse(latest.payload) as {
+          matrix?: {
+            segments?: Array<{ code: string; label: string }>;
+            regions?: Array<{ code: string; label: string }>;
+            baseline2026?: Record<string, Record<string, number>>;
+            cagrBase?: Record<string, Record<string, number>>;
+          };
+        }).matrix;
+        // 세그먼트 단위로 집계해 표시한다 — 권역별 조합은 3단계(권역·세그먼트 배분)의 역할이고,
+        // 1단계 축 정의에서는 산업의 세그먼트 구조만 보면 충분하다.
+        const segs = matrix?.segments
+          ?? [{ code: "construction", label: "건설" }, { code: "mining", label: "광산" }, { code: "other", label: "기타" }];
+        const regions = matrix?.regions ?? [];
+        for (const seg of segs) {
+          let wSum = 0;
+          let cagrSum = 0;
+          for (const r of regions) {
+            const base = matrix?.cagrBase?.[r.code]?.[seg.code] ?? 0;
+            const w = matrix?.baseline2026?.[r.code]?.[seg.code] ?? 0;
+            cagrSum += base * w;
+            wSum += w;
           }
+          const wCagr = wSum > 0 ? cagrSum / wSum : 0;
+          driverSensitivities.push({
+            driver_id: `derived-${seg.code}`,
+            driver_label: `수요 규모 (${seg.label})`,
+            sensitivity: Math.round(wCagr * 10 * 100) / 100,
+            lag_months: 0,
+            region_code: null,
+            segment_code: seg.code,
+            evidence_ref: "market-sizing-pipeline — 세그먼트 통합 CAGR 기반 파생 민감도 (권역 가중 평균)",
+          });
         }
       } catch {
         // payload 파싱 실패 시 빈 배열 유지
@@ -135,9 +149,35 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
       }>
     : [];
 
+  // 가치사슬 구조 — 프록시 체인 링크(후방=공급처, 전방=수요처)와 체인 등급.
+  // S1 "가치사슬 구조" 산출물의 산업 단위 조회 surface가 된다.
+  const chainLinks = db
+    .query(
+      `SELECT pl.hop_type, pl.coefficient, pl.beta, pl.r2, pl.lag_months, pl.evidence_ref,
+              i.id AS industry_id, i.name_ko,
+              CASE WHEN pl.to_industry_id = ? THEN 'upstream' ELSE 'downstream' END AS direction
+       FROM proxy_link pl
+       JOIN md_industry i ON i.id = CASE WHEN pl.to_industry_id = ? THEN pl.from_industry_id ELSE pl.to_industry_id END
+       WHERE pl.from_industry_id = ? OR pl.to_industry_id = ?
+       ORDER BY direction, i.name_ko`,
+    )
+    .all(industryId, industryId, industryId, industryId) as Array<{
+    hop_type: "engineering" | "statistical"; coefficient: number | null; beta: number | null; r2: number | null;
+    lag_months: number | null; evidence_ref: string; industry_id: string; name_ko: string; direction: "upstream" | "downstream";
+  }>;
+  const chainGradeRow = db
+    .query(
+      "SELECT reliability_grade, grade_rationale FROM proxy_chain WHERE target_industry_id = ? LIMIT 1",
+    )
+    .get(industryId) as { reliability_grade: string; grade_rationale: string } | null;
+
   return ok(
     {
       industry,
+      chain: {
+        links: chainLinks,
+        grade: chainGradeRow,
+      },
       driver_sensitivities: driverSensitivities,
       regions,
       simulations,
@@ -166,4 +206,78 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
       series: series.length,
     },
   );
+}
+
+// 산업 정보 수정 — 산업명·KSIC 코드 변경 (analyst+).
+export async function PATCH(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Industry update requires the analyst role.");
+  const { industryId } = await params;
+  const body = (await request.json().catch(() => null)) as { name_ko?: string; ksic_code?: string | null } | null;
+  const name = body?.name_ko?.trim();
+  const code = body?.ksic_code?.trim();
+  if (!name) return badRequest("invalid_request", "산업명은 필수입니다.");
+
+  const db = getDb();
+  const industry = db
+    .query("SELECT id FROM md_industry WHERE id = ?")
+    .get(industryId) as { id: string } | null;
+  if (!industry) return notFound();
+
+  try {
+    db.query("UPDATE md_industry SET name_ko = ?, ksic_code = ? WHERE id = ?").run(name, code || null, industryId);
+  } catch (err) {
+    return fail(500, "update_failed", `산업 정보 수정 중 오류가 발생했습니다: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  const updated = db
+    .query("SELECT id, name_ko, name_en, ksic_code, naics_code FROM md_industry WHERE id = ?")
+    .get(industryId);
+  return ok(updated, 200);
+}
+
+// 산업 삭제 — market-sizing 분석 레지스트리와 함께 제거한다. 가치사슬·딜 등
+// 다른 도메인이 이 산업을 참조하면 FK 제약으로 삭제가 차단된다(409).
+export async function DELETE(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Industry deletion requires the analyst role.");
+  const { industryId } = await params;
+  const db = getDb();
+
+  const industry = db
+    .query("SELECT id, name_ko FROM md_industry WHERE id = ?")
+    .get(industryId) as { id: string; name_ko: string } | null;
+  if (!industry) return notFound();
+
+  try {
+    db.query("BEGIN").run();
+    // 시장분석 버전·분석 레지스트리부터 정리한다 (append-only 버전 행 포함).
+    db.query(
+      `DELETE FROM market_sizing_version WHERE analysis_id IN (SELECT id FROM market_sizing_analysis WHERE industry_id = ?)`,
+    ).run(industryId);
+    db.query("DELETE FROM market_sizing_analysis WHERE industry_id = ?").run(industryId);
+    // S2 연동 정리 — 이 산업에서 발굴되어 아직 딜로 승격되지 않은 기회는 함께 삭제한다
+    // (S1 삭제가 S2 파생 데이터를 남기지 않도록). 승격된 기회(project_id 있음)는
+    // 이력 보호를 위해 유지하고 market_scope만 해제한다.
+    db.run(
+      "DELETE FROM opportunity WHERE market_scope = ? AND project_id IS NULL",
+      [industry.name_ko],
+    );
+    db.run(
+      "UPDATE opportunity SET market_scope = NULL WHERE market_scope = ? AND project_id IS NOT NULL",
+      [industry.name_ko],
+    );
+    db.query("DELETE FROM md_industry WHERE id = ?").run(industryId);
+    db.query("COMMIT").run();
+  } catch (err) {
+    try { db.query("ROLLBACK").run(); } catch { /* no open transaction */ }
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/FOREIGN KEY|constraint/i.test(msg)) {
+      return fail(409, "industry_in_use", "이 산업은 가치사슬·딜 등 다른 데이터에서 참조 중이어서 삭제할 수 없습니다.");
+    }
+    return fail(500, "delete_failed", `산업 삭제 중 오류가 발생했습니다: ${msg}`);
+  }
+
+  return ok({ deleted: industry.id, name_ko: industry.name_ko }, 200);
 }

@@ -26,6 +26,7 @@ metadata:
 
   procedure_keys:
     - greenfield-pre-fs
+    - greenfield-capability-assessment
 relates_to:
   - skill: wacc-input-session
     type: follows

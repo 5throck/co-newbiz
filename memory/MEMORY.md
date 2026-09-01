@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-01](2026-09-01.md) | chore: update |
 | [2026-08-31](2026-08-31.md) | chore: update |
 | [2026-08-30](2026-08-30.md) | chore: update |
 | [2026-08-29](2026-08-29.md) | --spec-exempt=E2 chore(deps): update in-range packages and sync bun.lock |

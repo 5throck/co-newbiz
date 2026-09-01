@@ -8,11 +8,11 @@
 
 ## 프로세스 흐름 요약
 
-S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방식 결정 → S5 사업성 분석 → S6 실사·검증 → S7 투자심사·실행
+S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S4 진출방식 결정 → S5 역량 평가·진출전략 (greenfield 전용) → S6 대상 후보 발굴 (brownfield 전용) → S7 대상 스크리닝 (brownfield 전용) → S8 사업성 분석 → S9 실사·검증 → S10 투자심사·실행 → S11 사후 관리
 
 엔티티 라이프사이클:
 - opportunity: S1 → S2 → S3 → S4
-- project: S5 → S6 → S7
+- project: S5 → S6 → S7 → S8 → S9 → S10 → S11
 
 ## 게이트 정의
 
@@ -32,12 +32,23 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 ### Pre-FS (pre_fs)
 **판정 기준**
 - 트랙(그린필드/브라운필드) 결정 근거가 기록되었다
-- 사업성 분석 입력이 존재한다
+- 트랙별 후속 검토 입력이 존재한다 (greenfield: 역량 평가, brownfield: Target Universe 정의)
 
 **Kill 기준**
 - 진출방식이 결정되지 않았다
 
 **자원 결정**: FS 본격 검토 자원 배정
+
+### Target Screening (target_screening)
+**판정 기준**
+- Target Company Short List가 존재한다
+- 모든 Long List 후보에 랭킹 또는 제외 사유가 기록되었다
+- Short List 후보가 knock-out 스크리닝을 통과했다
+
+**Kill 기준**
+- knock-out 통과 후보가 0건이다 (스크리닝 결과 진입 가능한 대상 없음)
+
+**자원 결정**: Short List 대상 사업성 분석 자원 배정
 
 ### FS (fs)
 **판정 기준**
@@ -88,10 +99,13 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 - S2 기회 발굴: `market-intelligence-agent`, `greenfield-agent`
 - S3 시너지·전략적 적합성: `process-governance-manager`, `risk-officer`
 - S4 진출방식 결정: `pm`, `brownfield-agent`
-- S5 사업성 분석 · 대상 선별: `financial-analyst`, `valuation-agent`, `quant-methodologist`
-- S6 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`
-- S7 투자심사·실행: `pm`, `risk-officer`, `group-review-agent`
-- S8 사후 관리: `group-review-agent`
+- S5 역량 평가·진출전략: `greenfield-agent`, `financial-analyst`
+- S6 대상 후보 발굴: `brownfield-agent`, `market-intelligence-agent`
+- S7 대상 스크리닝: `brownfield-agent`, `antitrust-agent`
+- S8 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`
+- S9 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`
+- S10 투자심사·실행: `pm`, `risk-officer`, `group-review-agent`
+- S11 사후 관리: `group-review-agent`
 
 스킬·프로시저 대응은 각 스테이지의 Activities 표를, 전체 매핑 근거는 ADR-0074를 참고한다.
 
@@ -140,7 +154,8 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 **목표**: 무엇을 할 것인가? — 가치사슬상 사업 기회를 등록·평가한다
 
 **입력**
-- 가치사슬 구조
+- 시장 규모·성장 추정 (S1)
+- 가치사슬 구조 (S1)
 
 **Activities**
 - opportunity-discovery · agent: `market-intelligence-agent` · skills: `insight-synthesis` · procedure: `greenfield-screening`, `brownfield-screening`
@@ -150,7 +165,7 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 - 기회 등록(가치사슬 노드·매력도)
 
 **완료 기준**
-- 최소 1개 기회가 selected 상태이다
+- 최소 1개 기회가 등록되고 매력도가 평가되었다
 
 **적용 트랙**: greenfield, brownfield
 
@@ -174,8 +189,8 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 **목표**: 우리가 해야 하는가? — 자사 역량과의 시너지를 평가한다
 
 **입력**
-- 선별 기회
-- 자사 역량·포트폴리오 정보
+- 후보 기회 (S2 기회 퍼널)
+- 자사 역량·포트폴리오 정보 (그룹/계열사 분석 산출 — 그룹/계열사 프로파일)
 
 **Activities**
 - strategic-fit-screening · agent: `process-governance-manager` · skills: `strategic-fit-screening`, `portfolio-fit-assessment` · procedure: `greenfield-screening`, `brownfield-screening`
@@ -188,6 +203,7 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 **완료 기준**
 - 기회에 synergy_score와 근거가 기록되었다
 - 적합성 판단(Go/Hold/Kill 권고)이 존재한다
+- 최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)
 
 **적용 트랙**: greenfield, brownfield
 
@@ -246,22 +262,132 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 
 **판정 기준**
 - 트랙(그린필드/브라운필드) 결정 근거가 기록되었다
-- 사업성 분석 입력이 존재한다
+- 트랙별 후속 검토 입력이 존재한다 (greenfield: 역량 평가, brownfield: Target Universe 정의)
 
 **Kill 기준**
 - 진출방식이 결정되지 않았다
 
 **자원 결정**: FS 본격 검토 자원 배정
 
-## S5 — 사업성 분석 · 대상 선별
+## S5 — 역량 평가·진출전략 (greenfield 전용)
 
-**목표**: 돈이 되는가? — Greenfield는 역량 평가·Business Case, Brownfield는 대상 기업 Target Universe → Long List → 스크리닝 → Short List 선별이 주체다
+**목표**: 스스로 진입할 수 있는가? — 자체 역량을 평가하고 격차를 구축 방안(Build/Partner/Hire/Invest)으로 해소해 진출전략을 세운다 (Greenfield 전용 — Target Company 객체가 존재하지 않는다)
+
+**입력**
+- 트랙 결정 (greenfield)
+- 자사 역량·조직·인프라 정보
+- 필요 역량 목록 (S3 적합성 평가에서 도출)
+
+**Activities**
+- capability-assessment · agent: `greenfield-agent` · skills: `greenfield-feasibility`, `org-readiness-assessment` · procedure: `greenfield-capability-assessment`
+- entry-strategy · agent: `greenfield-agent` · skills: `scenario-planning`, `talent-pipeline-planning` · procedure: `greenfield-capability-assessment`
+- business-case-lines · agent: `financial-analyst` · skills: `investment-feasibility-modeling` · procedure: `greenfield-capability-assessment`
+- business-case-lines · agent: `financial-analyst` · skills: `investment-feasibility-modeling` · procedure: `greenfield-fs`
+
+**필수 산출물**
+- 역량 격차 평가
+- 진출전략(Build/Partner/Hire/Invest 결정·근거)
+
+**완료 기준**
+- 필요 역량 대비 보유 역량 격차와 해소 방안이 기록되었다
+- 진출전략이 결정되고 검토한 대안이 기록되었다
+
+**적용 트랙**: greenfield
+
+### 게이트
+### Gate: Pre-FS (pre_fs)
+
+**판정 기준**
+- 트랙(그린필드/브라운필드) 결정 근거가 기록되었다
+- 트랙별 후속 검토 입력이 존재한다 (greenfield: 역량 평가, brownfield: Target Universe 정의)
+
+**Kill 기준**
+- 진출방식이 결정되지 않았다
+
+**자원 결정**: FS 본격 검토 자원 배정
+
+## S6 — 대상 후보 발굴 (brownfield 전용)
+
+**목표**: 누구와 결합할 것인가? — Opportunity에 진입 가능한 기존 기업·자산의 Target Universe를 정의하고 Target Company Long List를 작성한다 (Brownfield 전용)
+
+**입력**
+- 트랙 결정·Route 유형 (brownfield)
+- 시장 정의·가치사슬 구조 (S1)
+- 필요 역량·진입 조건 (S3)
+
+**Activities**
+- target-universe-definition · agent: `brownfield-agent` · skills: `brownfield-feasibility`, `competitive-intelligence` · procedure: `brownfield-target-identification`
+- target-longlist · agent: `market-intelligence-agent` · skills: `company-intelligence`, `brownfield-feasibility` · procedure: `brownfield-target-identification`
+
+**필수 산출물**
+- Target Universe 정의
+- Target Company Long List
+
+**완료 기준**
+- 후보 Universe의 정의·선정 기준이 기록되었다
+- 최소 커버리지 기준을 충족하는 Long List가 존재한다
+- Long List 후보에 필수 속성과 출처/근거가 기록되었다
+
+**적용 트랙**: brownfield
+
+### 게이트
+### Gate: Pre-FS (pre_fs)
+
+**판정 기준**
+- 트랙(그린필드/브라운필드) 결정 근거가 기록되었다
+- 트랙별 후속 검토 입력이 존재한다 (greenfield: 역량 평가, brownfield: Target Universe 정의)
+
+**Kill 기준**
+- 진출방식이 결정되지 않았다
+
+**자원 결정**: FS 본격 검토 자원 배정
+
+## S7 — 대상 스크리닝 (brownfield 전용)
+
+**목표**: 어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)
+
+**입력**
+- Target Company Long List (S6)
+- 스크리닝 기준(전략적 적합성·역량 적합성·재무·지역·소유권/가용성·규제 제약)
+
+**Activities**
+- target-screening · agent: `brownfield-agent` · skills: `brownfield-feasibility`, `strategic-fit-screening`, `peer-benchmarking` · procedure: `brownfield-target-screening`
+- ownership-regulatory-screening · agent: `antitrust-agent` · skills: `antitrust-screening`, `regulatory-screening` · procedure: `brownfield-target-screening`
+- target-ranking · agent: `brownfield-agent` · skills: `strategic-fit-screening`, `brownfield-feasibility` · procedure: `brownfield-target-screening`
+
+**필수 산출물**
+- Target Company Short List
+- Target Ranking/Score
+- Exclusion Reasons
+
+**완료 기준**
+- 모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다
+- Short List 후보가 knock-out 스크리닝을 통과했다
+- 스크리닝 근거(evidence)가 후보별로 기록되었다
+
+**적용 트랙**: brownfield
+
+### 게이트
+### Gate: Target Screening (target_screening)
+
+**판정 기준**
+- Target Company Short List가 존재한다
+- 모든 Long List 후보에 랭킹 또는 제외 사유가 기록되었다
+- Short List 후보가 knock-out 스크리닝을 통과했다
+
+**Kill 기준**
+- knock-out 통과 후보가 0건이다 (스크리닝 결과 진입 가능한 대상 없음)
+
+**자원 결정**: Short List 대상 사업성 분석 자원 배정
+
+## S8 — 사업성 분석
+
+**목표**: 돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다
 
 **입력**
 - 트랙 결정
-- Business Case 라인 (greenfield)
-- 타깃 재무 정보 (brownfield)
-- 대상 기업 후보 목록 (brownfield — 승격 시 Long List 등록)
+- 진출전략·Business Case 라인 (greenfield — S5)
+- Short List 대상 재무 정보 (brownfield — S7)
 
 **Activities**
 - business-case-modeling · agent: `financial-analyst` · skills: `growth-projection-modeling`, `investment-feasibility-modeling` · procedure: `greenfield-fs`, `brownfield-fs`
@@ -273,22 +399,11 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 - 시뮬레이션 NPV 분위수
 
 **완료 기준**
-- 민감도가 포함된 정량 사롢가 존재한다 (시뮬레이션 또는 밸류에이션 범위)
+- 민감도가 포함된 정량 평가가 존재한다 (시뮬레이션 또는 밸류에이션 범위)
 
 **적용 트랙**: greenfield, brownfield
 
 ### 게이트
-### Gate: Pre-FS (pre_fs)
-
-**판정 기준**
-- 트랙(그린필드/브라운필드) 결정 근거가 기록되었다
-- 사업성 분석 입력이 존재한다
-
-**Kill 기준**
-- 진출방식이 결정되지 않았다
-
-**자원 결정**: FS 본격 검토 자원 배정
-
 ### Gate: FS (fs)
 
 **판정 기준**
@@ -299,9 +414,9 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 
 **자원 결정**: DD 착시 자원 배정
 
-## S6 — 실사·검증
+## S9 — 실사·검증
 
-**목표**: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다
+**목표**: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 Short List 대상 DD, greenfield는 실현가능성 검증)
 
 **입력**
 - 게이트 체크리스트 (commercial/technical/legal)
@@ -332,7 +447,7 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 
 **자원 결정**: IC 패키지 작성 자원 배정
 
-## S7 — 투자심사·실행
+## S10 — 투자심사·실행
 
 **목표**: 투자할 것인가? — IC 패키지로 Entity/Group IC 심사를 받는다
 
@@ -377,7 +492,7 @@ S1 시장분석 → S2 기회발굴 → S3 시너지·적합성 → S4 진출방
 
 **자원 결정**: 최종 투자 집행
 
-## S8 — 사후 관리
+## S11 — 사후 관리
 
 **목표**: 투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다
 

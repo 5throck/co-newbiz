@@ -113,7 +113,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   // 전방/전전방(수요처)을, upstream 산업은 후방/후후방(공급처)을 분석한다.
   const dirJson = await askJson(
     industry,
-    `이 산업이 가치사슬에서 어디에 위치하는지와 인접 산업을 분석하세요. JSON: {"position":"upstream|midstream|downstream","note":"위치 판단 근거 한두 문장","relatedIndustries":[{"relation":"전방|전전방|후방|후후방","name":"산업명","note":"분석 포인트"}]}. position이 downstream/midstream이면 relation은 전방/전전방(수요처) 중심으로, upstream이면 후방/후후방(공급처) 중심으로 3~5개.`,
+    `이 산업이 가치사슬에서 어디에 위치하는지와 인접 산업을 분석하세요. JSON: {"position":"upstream|midstream|downstream","note":"위치 판단 근거 한두 문장","relatedIndustries":[{"relation":"전방|전전방|후방|후후방","name":"산업명","note":"분석 포인트"}]}. position이 downstream/midstream이면 relation은 전방/전전방(수요처) 중심으로, upstream이면 후방/후후방(공급처) 중심으로 3~5개. segments는 이 산업의 최종수요처를 2~4개 나눈 것으로, 산업 특성에 맞게 직접 정의하세요(예: 산업용 로봇이면 제조/물류·창고/분류, 휴머노이드 로봇이면 제조 조립/물류·창고/서비스 등). 무작정 건설·광산·기타를 재사용하지 말 것. code는 short_english_snake, label은 한글.`,
   );
   const chainDirection: SizingMatrix["chainDirection"] = {
     position: (["upstream", "midstream", "downstream"].includes(str(dirJson?.position)) ? str(dirJson?.position) : "midstream") as "upstream" | "midstream" | "downstream",
@@ -124,12 +124,37 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       note: str(r.note) || undefined,
     })),
   };
+  // 산업 축에 맞는 최종수요 세그먼트 (LLM 제안 — 검증 전). 2개 미만이면 기본값 사용.
+  const rawSegs = Array.isArray(dirJson?.segments) ? (dirJson!.segments as Array<Record<string, unknown>>) : [];
+  const segDefs = rawSegs
+    .map((x) => ({ code: str(x.code).toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 24), label: str(x.label) }))
+    .filter((x) => x.code.length > 0 && x.label.length > 0)
+    .slice(0, 4);
+  const segs = segDefs.length >= 2 ? segDefs : [...SEGMENTS];
   const POSITION_LABEL: Record<string, string> = { upstream: "상류(원자재·부품)", midstream: "중류(조립·가공)", downstream: "하류(완제품·수요처)" };
+  // 경쟁 구조 (S1 competitive-intelligence) — LLM 추정, 공시 대조 전
+  const compJson = await askJson(
+    industry,
+    `이 시장의 경쟁 구조를 분석하세요. JSON: {"structure":"시장 구조 요약(독점/과점/독과점/경쟁 정도와 집중도 정성 코멘트) 한두 문장","players":[{"name":"기업명","tier":"leader|challenger|niche","note":"포지션·점유율 추정 한 문장"}]}. players는 글로벌 주요 기업 3~6개, 점유율은 알려진 범위의 정성 추정으로.`,
+  );
+  const competitive: SizingMatrix["competitive"] | undefined = compJson
+    ? {
+        structure: str(compJson.structure, "경쟁 구조 요약 미생성 — 수동 작성 필요"),
+        players: (Array.isArray(compJson.players) ? compJson.players as Array<Record<string, unknown>> : [])
+          .slice(0, 6)
+          .map((x) => ({
+            name: str(x.name, "—"),
+            tier: (["leader", "challenger", "niche"].includes(str(x.tier)) ? str(x.tier) : "challenger") as "leader" | "challenger" | "niche",
+            note: `${str(x.note, "")} — LLM 추정, 공시 대조 전`,
+          })),
+      }
+    : undefined;
+
   const s1 = await summarize(
     industry,
     1,
     "시장 구조 정의",
-    `가치사슬 위치는 ${POSITION_LABEL[chainDirection.position]} — ${chainDirection.position === "upstream" ? "후방/후후방(공급처)" : "전방/전전방(수요처)"} 산업을 분석 대상으로 삼습니다. 인접 산업 ${chainDirection.relatedIndustries.length}개 식별.`,
+    `가치사슬 위치는 ${POSITION_LABEL[chainDirection.position]} — ${chainDirection.position === "upstream" ? "후방/후후방(공급처)" : "전방/전전방(수요처)"} 산업을 분석 대상으로 삼습니다. 인접 산업 ${chainDirection.relatedIndustries.length}개 식별${competitive ? `, 경쟁 구조 요약·주요 기업 ${competitive.players.length}개 도출` : ""}.`,
   );
   stepSummaries.push({ step: 1, ...s1, pendingInputs: ["프록시 체인의 통계 hop 수 확정 (체인 등급 산정)"] });
 
@@ -156,31 +181,31 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   advance(3);
   const allocJson = await askJson(
     industry,
-    `권역별 가중치와 세그먼트 믹스를 추정하세요. JSON: {"regions":[{"code":"china|apac_ex_china|north_america|europe|mea|latam_row","weight":26,"construction":46,"mining":36,"other":18,"adjustment":"조정 근거 한 문장"}]}. 6개 권역 모두 포함, weight 합계 100, 각 권역의 construction+mining+other=100.`,
+    `권역별 가중치와 세그먼트 믹스를 추정하세요. JSON: {"regions":[{"code":"china|apac_ex_china|north_america|europe|mea|latam_row","weight":26,"mix":{"${segs[0].code}":40,"${segs[1].code}":35${segs[2] ? `,"${segs[2].code}":25` : ""},"adjustment":"조정 근거 한 문장"}]}. 6개 권역 모두 포함, weight 합계 100, 각 권역의 mix 키는 ${segs.map((x) => x.code).join("|")} 전체이고 합계 100.`,
   );
   const rawRegions = Array.isArray(allocJson?.regions) ? (allocJson!.regions as Array<Record<string, unknown>>) : [];
   const regions = REGIONS.map((r) => {
     const found = rawRegions.find((x) => str(x.code) === r.code);
     const weight = num(found?.weight, Math.round(100 / REGIONS.length));
-    const construction = num(found?.construction, 34);
-    const mining = num(found?.mining, 33);
-    const other = num(found?.other, 100 - construction - mining);
+    const rawMix = (found?.mix && typeof found.mix === "object" ? found.mix : {}) as Record<string, unknown>;
+    const mix: Record<string, number> = {};
+    for (const seg of segs) mix[seg.code] = num(rawMix[seg.code], Math.round(100 / segs.length));
     return {
       code: r.code,
       label: r.label,
       weight,
-      mix: { construction, mining, other },
+      mix,
       adjustment: `${str(found?.adjustment, "LLM 추정 배분")} — 검증 전`,
     };
   });
-  const s3 = await summarize(industry, 3, "권역·세그먼트 배분", `6개 권역 × 3개 세그먼트 셀 배분 완료. LLM 추정 — 검증 전.`);
+  const s3 = await summarize(industry, 3, "권역·세그먼트 배분", `6개 권역 × ${segs.length}개 세그먼트(${segs.map((x) => x.label).join("/")}) 셀 배분 완료. LLM 추정 — 검증 전.`);
   stepSummaries.push({ step: 3, ...s3, pendingInputs: ["인접 공시시장 프록시로 가중치 검증", "세그먼트 믹스 보정 근거 기록"] });
 
   // ── Step 4: per-cell baselines + CAGRs + band overrides ──
   advance(4);
   const cagrJson = await askJson(
     industry,
-    `권역×세그먼트별 2026 기준 시장규모(십억 달러, 합계≈${anchorTotal.toFixed(2)})와 2026→2030 CAGR(소수)을 추정하세요. JSON: {"baseline":{"china":{"construction":0.2,"mining":0.1,"other":0.05}, ...}, "cagr":{"china":{"construction":0.06, ...}}, "overrides":[{"region":"north_america","segment":"mining","down":0.02,"up":0.11,"reason":"..."}]}. 6개 권역 × construction/mining/other. baseline 합계는 앵커 ${anchorTotal.toFixed(2)}와 ±15% 이내로.`,
+    `권역×세그먼트별 2026 기준 시장규모(십억 달러, 합계≈${anchorTotal.toFixed(2)})와 2026→2030 CAGR(소수)을 추정하세요. JSON: {"baseline":{"china":{"${segs[0].code}":0.2,"${segs[1].code}":0.1${segs[2] ? `,"${segs[2].code}":0.05` : ""}, ...}, ...}, "cagr":{"china":{"${segs[0].code}":0.06, ...}}, "overrides":[{"region":"north_america","segment":"${segs[1].code}","down":0.02,"up":0.11,"reason":"..."}]}. 6개 권역 × ${segs.map((x) => x.code).join("|")}. baseline 합계는 앵커 ${anchorTotal.toFixed(2)}와 ±15% 이내로.`,
   );
   const readMatrix = (obj: unknown): Record<string, Record<string, number>> => {
     const out: Record<string, Record<string, number>> = {};
@@ -197,26 +222,26 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const llmBaseline = readMatrix(cagrJson?.baseline);
   const llmCagr = readMatrix(cagrJson?.cagr);
   // Scale LLM baselines so the global total reconciles to the anchor.
-  const rawTotal = REGIONS.reduce((a, r) => a + SEGMENTS.reduce((b, seg) => b + (llmBaseline[r.code]?.[seg.code] ?? 0), 0), 0);
+  const rawTotal = REGIONS.reduce((a, r) => a + segs.reduce((b, seg) => b + (llmBaseline[r.code]?.[seg.code] ?? 0), 0), 0);
   const scale = rawTotal > 0 ? anchorTotal / rawTotal : 0;
   const baseline2026: SizingMatrix["baseline2026"] = {};
   const cagrBase: SizingMatrix["cagrBase"] = {};
   for (const r of REGIONS) {
     baseline2026[r.code] = {} as SizingMatrix["baseline2026"][string];
     cagrBase[r.code] = {} as SizingMatrix["cagrBase"][string];
-    for (const seg of ["construction", "mining", "other"] as const) {
-      const v = (llmBaseline[r.code]?.[seg] ?? anchorTotal / 18) * scale;
-      baseline2026[r.code][seg] = Math.round(v * 1000) / 1000;
-      cagrBase[r.code][seg] = Math.min(0.25, Math.max(0, llmCagr[r.code]?.[seg] ?? 0.05));
+    for (const seg of segs) {
+      const v = (llmBaseline[r.code]?.[seg.code] ?? anchorTotal / (REGIONS.length * segs.length)) * scale;
+      baseline2026[r.code][seg.code] = Math.round(v * 1000) / 1000;
+      cagrBase[r.code][seg.code] = Math.min(0.25, Math.max(0, llmCagr[r.code]?.[seg.code] ?? 0.05));
     }
   }
   // 최종 앵커 정합: 라운딩·결측 보간으로 어긋난 합계를 앵커에 정확히 스케일한다.
-  const totalNow = REGIONS.reduce((a, r) => a + SEGMENTS.reduce((b, seg) => b + baseline2026[r.code][seg.code], 0), 0);
+  const totalNow = REGIONS.reduce((a, r) => a + segs.reduce((b, seg) => b + baseline2026[r.code][seg.code], 0), 0);
   if (totalNow > 0) {
     const k = anchorTotal / totalNow;
     for (const r of REGIONS) {
-      for (const seg of ["construction", "mining", "other"] as const) {
-        baseline2026[r.code][seg] = Math.round(baseline2026[r.code][seg] * k * 1000) / 1000;
+      for (const seg of segs) {
+        baseline2026[r.code][seg.code] = Math.round(baseline2026[r.code][seg.code] * k * 1000) / 1000;
       }
     }
   }
@@ -229,13 +254,13 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       }
     }
   }
-  const s4 = await summarize(industry, 4, "셀별 CAGR·시나리오 밴드", `18개 셀 CAGR·기준선 확정(앵커 ${anchorTotal.toFixed(2)}B 스케일 보정). 밴드 오버라이드 ${Object.keys(bandOverrides).length}개.`);
+  const s4 = await summarize(industry, 4, "셀별 CAGR·시나리오 밴드", `${REGIONS.length * segs.length}개 셀 CAGR·기준선 확정(앵커 ${anchorTotal.toFixed(2)}B 스케일 보정). 밴드 오버라이드 ${Object.keys(bandOverrides).length}개.`);
   stepSummaries.push({ step: 4, ...s4, pendingInputs: ["셀별 CAGR 근거(소스) 입력", " wider band 오버라이드 근거 문서화"] });
 
   // ── Step 5: consistency check (computed, not asked) ──
   advance(5);
   const bottomUpCagr = Math.pow(
-    REGIONS.reduce((a, r) => a + SEGMENTS.reduce((b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], 4), 0), 0) / anchorTotal,
+    REGIONS.reduce((a, r) => a + segs.reduce((b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], 4), 0), 0) / anchorTotal,
     1 / 4,
   ) - 1;
   const s5 = await summarize(
@@ -247,7 +272,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   stepSummaries.push({ step: 5, ...s5, pendingInputs: ["탑다운 컨센서스 CAGR 입력"] });
 
   // ── Step 5-B: external future forecast vs our CAGR extrapolation ──
-  // 외부 전망이 입수되면 우리 외삽과의 격차와 그 요인(신규·강화 드라이버)을
+  // 외부 전망이 입수되면 우리 추정(과거 성장률 연장)과의 격차와 그 요인(신규·강화 드라이버)을
   // 분석한다. 입수되지 않으면 externalForecast 없이 기존 방식(CAGR 외삽)을
   // 그대로 사용한다.
   let externalForecast: SizingMatrix["externalForecast"] | undefined;
@@ -260,11 +285,11 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     const externalSize = num(efJson.marketSize, 0);
     if (externalSize > 0) {
       const yearIndex = Math.max(1, targetYear - 2026);
-      const ourSize = REGIONS.reduce((a, r) => a + SEGMENTS.reduce((b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], yearIndex), 0), 0);
+      const ourSize = REGIONS.reduce((a, r) => a + segs.reduce((b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], yearIndex), 0), 0);
       const gapPct = Math.round((externalSize / ourSize - 1) * 1000) / 10;
       const gapJson = await askJson(
         industry,
-        `우리 CAGR 외삽 추정(${ourSize.toFixed(2)}B @${targetYear}, CAGR ${(bottomUpCagr * 100).toFixed(1)}%)과 외부 전망(${externalSize.toFixed(2)}B @${targetYear}, 출처: ${str(efJson.sourceLabel, "외부")})이 ${gapPct >= 0 ? "+" : ""}${gapPct}% 차이가 난다. JSON: {"gapAnalysis":"과거 드라이버 외에 어떤 요인이 이 격차를 만드는지 3~5문장","newDrivers":["신규/강화 드라이버", "..."]}. 격차 방향(외부가 높음/낮음)을 명시하고, 수요 촉발 요인·규제·기술 전환·대체재 관점에서 설명하세요.`,
+        `우리 추정(과거 성장률 연장)(${ourSize.toFixed(2)}B @${targetYear}, CAGR ${(bottomUpCagr * 100).toFixed(1)}%)과 외부 전망(${externalSize.toFixed(2)}B @${targetYear}, 출처: ${str(efJson.sourceLabel, "외부")})이 ${gapPct >= 0 ? "+" : ""}${gapPct}% 차이가 난다. JSON: {"gapAnalysis":"과거 드라이버 외에 어떤 요인이 이 격차를 만드는지 3~5문장","newDrivers":["신규/강화 드라이버", "..."]}. 격차 방향(외부가 높음/낮음)을 명시하고, 수요 촉발 요인·규제·기술 전환·대체재 관점에서 설명하세요.`,
       );
       const newDrivers = (Array.isArray(gapJson?.newDrivers) ? gapJson!.newDrivers : [])
         .filter((d): d is string => typeof d === "string" && d.trim().length > 0)
@@ -367,6 +392,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     industryLabel: industry,
     provenance: "llm-estimate",
     anchor: { sources: anchorSources, total: anchorTotal },
+    segments: segs,
     regions,
     baseline2026,
     cagrBase,
@@ -377,6 +403,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       note: "LLM 추정 매트릭스 — 통계 hop 미확정으로 잠정 C. 분석가가 프록시 체인을 확정하면 재평가합니다.",
     },
     chainDirection,
+    competitive,
     qualitative,
     consistency: {
       bottomUpCagr: Math.round(bottomUpCagr * 1000) / 10,

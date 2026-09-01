@@ -30,6 +30,8 @@ metadata:
   procedure_keys:
     - brownfield-pre-fs
     - brownfield-screening
+    - brownfield-target-identification
+    - brownfield-target-screening
   related_skills:
     - antitrust-screening
     - certification-transferability

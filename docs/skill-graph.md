@@ -254,3 +254,9 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0073` | adr | — | — | — |
 | `adr:0074` | adr | — | — | — |
 | `adr:0075` | adr | — | k-dart, k-kosis, k-law | — |
+| `adr:0076` | adr | — | — | — |
+| `adr:0077` | adr | — | — | — |
+| `adr:0078` | adr | — | — | — |
+| `adr:0079` | adr | — | — | — |
+| `adr:0080` | adr | — | — | — |
+| `adr:0081` | adr | — | — | — |

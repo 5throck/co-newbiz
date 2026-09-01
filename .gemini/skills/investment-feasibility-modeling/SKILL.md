@@ -27,6 +27,7 @@ metadata:
   procedure_keys:
     - brownfield-fs
     - greenfield-fs
+    - greenfield-capability-assessment
 relates_to:
   - skill: monte-carlo-simulation
     type: follows

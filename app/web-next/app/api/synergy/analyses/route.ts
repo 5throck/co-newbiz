@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   const ctx = auth.auth;
   if (ctx.role === "viewer") return forbidden("role_required", "시너지 분석 생성은 analyst 역할 이상이어야 합니다.");
 
-  let body: { company_name?: string; acquirer_name?: string; dart_corp_code?: string };
+  let body: { company_name?: string; acquirer_name?: string; dart_corp_code?: string; source_ref?: string };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -62,16 +62,31 @@ export async function POST(request: Request) {
   const company = findOrCreate(companyName, dartCode); // M&A 대상 기업
   const acquirer = acquirerName ? findOrCreate(acquirerName, null) : null;
 
+  // 회사당 분석 행은 하나 — 재분석 시 같은 행을 재사용하고 파이프라인이
+  // 새 버전(append-only)을 쌓는다. 회사별 목록 중복을 방지한다.
   const existing = db
-    .query("SELECT id FROM synergy_analysis WHERE company_id = ? AND status = 'in_progress'")
-    .get(company.id) as { id: string } | null;
-  if (existing) return ok({ analysis_id: existing.id, reused: true }, 200, { status: "in_progress" });
+    .query("SELECT id, status FROM synergy_analysis WHERE company_id = ? ORDER BY created_at DESC LIMIT 1")
+    .get(company.id) as { id: string; status: string } | null;
+  if (existing) {
+    if (existing.status === "in_progress") {
+      return ok({ analysis_id: existing.id, reused: true }, 200, { status: "in_progress" });
+    }
+    db.run(
+      "UPDATE synergy_analysis SET status = 'in_progress', current_step = 0, completed_at = NULL, acquirer_company_id = COALESCE(?, acquirer_company_id) WHERE id = ?",
+      [acquirer?.id ?? null, existing.id],
+    );
+    appendAudit(db, { actor: ctx.userId, action: "synergy_analysis.rerun", target: existing.id, now });
+    void runSynergyPipeline(db, existing.id).catch((err) => {
+      console.error("synergy pipeline rerun failed:", err);
+    });
+    return ok({ analysis_id: existing.id, reused: true }, 200, { rerun: true });
+  }
 
   const analysisId = ulid();
   db.run(
-    `INSERT INTO synergy_analysis (id, company_id, acquirer_company_id, status, current_step, created_by, created_at)
-     VALUES (?,?,?,?,?,?,?)`,
-    [analysisId, company.id, acquirer?.id ?? null, "in_progress", 0, ctx.userId, now],
+    `INSERT INTO synergy_analysis (id, company_id, acquirer_company_id, status, current_step, source_ref, created_by, created_at)
+     VALUES (?,?,?,?,?,?,?,?)`,
+    [analysisId, company.id, acquirer?.id ?? null, "in_progress", 0, body.source_ref?.trim() || null, ctx.userId, now],
   );
   appendAudit(db, { actor: ctx.userId, action: "synergy_analysis.create", target: analysisId, now });
 

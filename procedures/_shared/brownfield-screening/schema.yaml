@@ -22,6 +22,10 @@ steps:
     # recorded with the rendered predicate reason, never silent — for internal origin
     # the skip record carries the Decision 7 needs-judgement note ("not yet judged",
     # not "not applicable") until PR-9 lands the internal-pathway content.
+    # NOTE (flow.spec v2.0.0): this Screening-gate longlist is an EARLY deal-thesis
+    # candidate scan made BEFORE the route is chosen. The post-route-decision,
+    # full Target Universe → Long List stage is S6 via
+    # shared-brownfield-target-identification; do not conflate the two.
     applies_when: { op: "in", var: "project.origin", values: ["external", "hybrid", "joint"] }
     description: >
       Identify and longlist acquisition targets against the deal thesis.

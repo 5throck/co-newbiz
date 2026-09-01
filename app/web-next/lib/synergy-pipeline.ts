@@ -34,6 +34,13 @@ export interface SynergyPayload {
     error?: string;
   };
   researchSources: SynergySourceRef[];
+  /** 재무 데이터 출처 추적 — DART / 신용평가자료 / 외부 검색 */
+  dataSources?: {
+    dart: boolean;
+    dartYear: string | null;
+    creditReport: string | null;
+    webResearchCount: number;
+  };
   financialStrengths: string[];
   financialWeaknesses: string[];
   businessAssessment: string;
@@ -79,15 +86,29 @@ async function askJson(system: string, user: string, maxTokens = 2500): Promise<
 export async function runSynergyPipeline(db: Database, analysisId: string): Promise<void> {
   const row = db
     .query(
-      `SELECT sa.id, sa.company_id, c.name_ko, c.dart_corp_code, ac.name_ko AS acquirer_name
+      `SELECT sa.id, sa.company_id, c.name_ko, c.dart_corp_code, sa.source_ref AS source_ref, ac.name_ko AS acquirer_name
        FROM synergy_analysis sa
        JOIN md_company c ON c.id = sa.company_id
        LEFT JOIN md_company ac ON ac.id = sa.acquirer_company_id
        WHERE sa.id = ?`,
     )
-    .get(analysisId) as { id: string; company_id: string; name_ko: string; dart_corp_code: string | null; acquirer_name: string | null } | null;
+    .get(analysisId) as { id: string; company_id: string; name_ko: string; dart_corp_code: string | null; source_ref: string | null; acquirer_name: string | null } | null;
   if (!row) throw new Error(`synergy analysis ${analysisId} not found`);
-  const company = row.name_ko; // M&A 대상 기업
+  const company = row.name_ko;
+  const sourceRef = row.source_ref ?? null; // M&A 대상 기업
+  // 신용평가자료 업로드 파일의 추출 텍스트 — "신용평가자료: {original} ({stored})"에서 stored 파싱
+  let creditText: string | null = null;
+  if (sourceRef) {
+    const m = sourceRef.match(/\(([^\)]+)\)$/);
+    if (m) {
+      try {
+        const { existsSync, readFileSync } = require("node:fs") as typeof import("node:fs");
+        const { join } = require("node:path") as typeof import("node:path");
+        const p2 = join(process.cwd(), "..", "workspace", "uploads", `${m[1]}.txt`);
+        if (existsSync(p2)) creditText = readFileSync(p2, "utf-8").slice(0, 60_000);
+      } catch { /* 추출 텍스트 없음 — 리서치로 대체 */ }
+    }
+  }
   const acquirer = row.acquirer_name ?? null; // 인수 주체
   const now = () => new Date().toISOString();
   const advance = (step: number) => db.run("UPDATE synergy_analysis SET current_step = ? WHERE id = ?", [step, analysisId]);
@@ -97,7 +118,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   advance(1);
   let corpCode = row.dart_corp_code ?? null;
   if (!corpCode && isDartConfigured()) corpCode = await findCorpCode(company);
-  const dart: DartFinancials = corpCode ? await fetchFinancials(corpCode) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
+  const dart: DartFinancials = corpCode ? await fetchFinancials(corpCode, { years: 3 }) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
   if (corpCode && corpCode !== row.dart_corp_code) {
     db.run("UPDATE md_company SET dart_corp_code = ? WHERE id = ?", [corpCode, row.company_id]);
   }
@@ -136,7 +157,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     : "(웹 리서치 없음)";
   const faJson = await askJson(
     "You are an M&A financial analyst. Reply with ONE JSON object only.",
-    `회사: ${company}\nDART 재무: ${dartContext}\n\n외부 리서치 발췌:\n${researchContext}\n\nJSON: {"strengths":["재무·사업 강점", ...],"weaknesses":["재무·사업 약점", ...],"businessAssessment":"종합 평가 3~5문장 — 리서치 발췌와 교차검증하고 상충 시 명시"}. 강점·약점 각 3~5개, 리서치 출처 번호([n])를 문장 끝에 붙이세요.`,
+    `회사: ${company}\nDART 재무: ${dartContext}${creditText ? `\n\n신용평가자료 발췌:\n${creditText.slice(0, 4000)}` : ""}\n\n외부 리서치 발췌:\n${researchContext}\n\nJSON: {"strengths":["재무·사업 강점", ...],"weaknesses":["재무·사업 약점", ...],"businessAssessment":"종합 평가 3~5문장 — 리서치 발췌와 교차검증하고 상충 시 명시"}. 강점·약점 각 3~5개, 리서치 출처 번호([n])를 문장 끝에 붙이세요.`,
   );
   const listOf = (v: unknown, fallback: string[]): string[] => {
     const arr = Array.isArray(v) ? v : [];
@@ -224,6 +245,12 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       error: dart.error,
     },
     researchSources: research.map((s) => ({ title: s.title, url: s.url, snippet: s.snippet.slice(0, 200) })),
+    dataSources: {
+      dart: dart.found,
+      dartYear: dart.found ? dart.year ?? null : null,
+      creditReport: creditText ? `${sourceRef ?? "신용평가자료"} (텍스트 추출됨)` : sourceRef,
+      webResearchCount: research.length,
+    },
     financialStrengths,
     financialWeaknesses,
     businessAssessment,

@@ -105,3 +105,28 @@ The PM role and Phase 0/5/6 structure are identical across all variants. Variant
 | 4 | Confirm delivery targets | Track completion | Delivery confirmation |
 | 5 | Update governance records | Verify lifecycle drift | Drift report or "no drift" confirmation |
 | 6 | Run audit + /sync | Fix issues (max 2 iterations) | Audit pass report + PR link |
+
+---
+
+## Deal Process Stages (S1–S11) — a separate axis
+
+The phases above govern **how agents work on a task** (the workspace task lifecycle). The deal
+review pipeline `flow.spec.yaml` (S1 시장분석 → S11 사후 관리) is a **different axis**: it
+describes **what business-review stage a deal is in**, not which workspace phase the agent work
+belongs to.
+
+**Naming discipline (naming is how we keep the two axes apart):**
+
+| Axis | Canonical term | Examples |
+|---|---|---|
+| Workspace task lifecycle | **워크스페이스 페이즈** (Phase 0–6) | Phase 2 (설계 승인), Phase 3 (실행) |
+| Deal review pipeline | **S-스테이지** (S1–S11) | S4 진출방식 결정, S7 대상 스크리닝 |
+
+- Skill metadata `phases` tags (e.g. `phases: [1, 3]`) refer to the **workspace** axis only —
+  they say which task phases a skill serves, never which deal stage. A skill that serves S4
+  carries the workspace phases its work falls into, not "4".
+- Deal-stage progress is tracked in `process/flow.spec.yaml` (and `docs/process-flow.md`), not
+  in the phase model above.
+- When writing docs or code: deal stages are written as **S-스테이지 (S1–S11)**; workspace
+  phases as **워크스페이스 페이즈 (Phase 0–6)**. Avoid bare "phase"/"단계" when the axis is
+  ambiguous.

@@ -24,6 +24,7 @@ metadata:
   procedure_keys:
     - brownfield-screening
     - greenfield-screening
+    - brownfield-target-screening
 relates_to:
   - skill: antitrust-screening
     type: follows

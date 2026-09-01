@@ -1,7 +1,7 @@
 "use client";
 
 // Port of app/web/src/pages/Login.tsx — useNavigate -> useRouter().push.
-// S1~S7 프로세스 플랫폼의 진입 화면: 배경 이미지(가치사슬/항만 모티프)와
+// 신규사업 검토 프로세스(S1~S3 기회 발굴) 플랫폼의 진입 화면: 배경 이미지(가치사슬/항만 모티프)와
 // 계정 신청 안내 링크를 제공한다. 계정 신청은 /register → 관리자 승인.
 import { useState, type FormEvent } from "react";
 import Link from "next/link";

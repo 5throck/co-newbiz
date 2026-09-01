@@ -1,0 +1,55 @@
+schema_version: "1.0"
+procedure_id: shared-greenfield-capability-assessment
+title: "Green Field Capability Assessment & Entry Strategy"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: Pre-FS
+
+# S5 역량 평가·진출전략 (flow.spec v2.0.0, greenfield 전용) — B-7 전용 절차.
+# greenfield-pre-fs/fs에서 분리: S5의 산출물(역량 격차 → Build/Partner/Hire/Invest
+# 결정 → Business Case 라인)이 1:1로 매핑되는 절차. S4에서 track=greenfield로
+# 결정된 기회에 적용된다. 그린필드는 Target Company 객체가 없음 — "우리 스스로
+# 진입 가능한가, 무엇을 구축해야 하는가"가 핵심 질문.
+
+steps:
+  - id: 1
+    gate: Pre-FS
+    agent_key: greenfield-agent
+    skill_key: greenfield-feasibility
+    output_type: capability_gap_assessment
+    description: >
+      필요 역량(산업 시장분석 S1·적합성 평가 S3에서 도출) 대비 보유 역량의
+      격차를 역량별로 평가한다 — required_level/current_level/gap과 해소
+      방안(Build/Partner/Hire/Invest 후보)을 기록.
+  - id: 2
+    gate: Pre-FS
+    agent_key: greenfield-agent
+    skill_key: scenario-planning
+    output_type: entry_strategy
+    description: >
+      역량 격차 해소 방식을 Build/Partner/Hire/Invest 중 결정하고, 검토한
+      대안과 근거를 기록한다. 진출전략(Build/Partner/Hire/Invest)이 S5 산출물.
+  - id: 3
+    gate: Pre-FS
+    agent_key: financial-analyst
+    skill_key: investment-feasibility-modeling
+    output_type: business_case_lines
+    description: >
+      진출전략을 실행하는 데 필요한 비용·수익 라인(Business Case 라인)을
+      정리한다 — S8 사업성 분석(greenfield-fs)의 입력.
+
+completion_criteria:
+  - 필요 역량 대비 보유 역량 격차와 해소 방안이 기록되었다
+  - 진출전략(Build/Partner/Hire/Invest)이 결정되고 검토한 대안이 기록되었다
+  - Business Case 라인(비용·수익 구조)이 정리되었다
+
+legal_basis:
+  - "flow.spec.yaml v2.0.0 S5 (역량 평가·진출전략, greenfield 전용)"
+  - "ADR-0080 Phase 2 (S5 전용 절차 분리 — B-7)"
+
+owner_agent: greenfield-agent
+last_reviewed: "2026-09-01"

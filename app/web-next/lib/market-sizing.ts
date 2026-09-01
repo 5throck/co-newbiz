@@ -23,7 +23,7 @@ export interface MatrixRegion {
   code: string;
   label: string;
   weight: number; // regional weight, %
-  mix: Record<SegmentCode, number>; // segment mix, %
+  mix: Record<string, number>; // segment mix, % (keyed by matrix segment code)
   adjustment: string;
 }
 export interface CrossValidationClaim {
@@ -45,6 +45,16 @@ export interface ChainDirection {
   /** 분석 대상 인접 산업 (relation은 산업 위치에 따라 전방계 또는 후방계) */
   relatedIndustries: Array<{ relation: string; name: string; note?: string }>;
 }
+/**
+ * 경쟁 구조 (S1 competitive-intelligence activity 산출) — 시장 집중도와
+ * 주요 플레이어. LLM 추정이며 공시 대조 전 상태임을 note에 명시한다.
+ */
+export interface CompetitiveStructure {
+  /** 시장 구조 요약 (독점/과점/독과점/경쟁 정도, 집중도 정성 코멘트) */
+  structure: string;
+  players: Array<{ name: string; tier: "leader" | "challenger" | "niche"; note: string }>;
+}
+
 export interface QualitativeFactors {
   /** 정성 분석 — 기회 요인 (수요 촉발, 규제, 기술 전환 등) */
   opportunityFactors: string[];
@@ -80,8 +90,8 @@ export interface SizingMatrix {
   provenance: "frozen-research" | "llm-estimate";
   anchor: { sources: AnchorSource[]; total: number };
   regions: MatrixRegion[];
-  baseline2026: Record<string, Record<SegmentCode, number>>; // $B
-  cagrBase: Record<string, Record<SegmentCode, number>>; // fraction
+  baseline2026: Record<string, Record<string, number>>; // $B
+  cagrBase: Record<string, Record<string, number>>; // fraction
   /** Documented wider-band overrides, key = "region|segment" (down/up CAGR fractions). */
   bandOverrides?: Record<string, { down: number; up: number; reason?: string }>;
   chainGrade: ChainGrade;
@@ -91,43 +101,53 @@ export interface SizingMatrix {
   externalForecast?: ExternalForecastGap;
   crossValidation: CrossValidationClaim[];
   limitations: string[];
+  /** 경쟁 구조 — 1단계에서 산업별로 도출 (구형 매트릭스에는 없음) */
+  competitive?: CompetitiveStructure;
+  /** 최종수요 세그먼트 정의 — 산업별로 달라질 수 있다. 없으면 기본 SEGMENTS(琦설/광산/기타) 사용. */
+  segments?: Array<{ code: string; label: string }>;
 }
 
 // ── helpers shared by UI + pipeline ──
 
-export function bandFor(m: SizingMatrix, code: string, segment: SegmentCode): { down: number; base: number; up: number } {
+export function bandFor(m: SizingMatrix, code: string, segment: string): { down: number; base: number; up: number } {
   const base = m.cagrBase[code]?.[segment] ?? 0.05;
   const o = m.bandOverrides?.[`${code}|${segment}`];
   if (o) return { down: o.down, base, up: o.up };
   return { down: base * 0.5, base, up: base * 1.55 };
 }
 
+/** 매트릭스의 세그먼트 정의 — 산업 축을 따라 달라질 수 있다. */
+export function segmentsOf(m: Pick<SizingMatrix, "segments">): ReadonlyArray<{ code: string; label: string }> {
+  return m.segments ?? SEGMENTS;
+}
+
 /** Region total in year `yearIndex` (0 = baseline 2026), compounding per-cell CAGRs. */
 export function regionTotal(m: SizingMatrix, code: string, yearIndex: number, scenario: "down" | "base" | "up" = "base"): number {
-  return SEGMENTS.reduce((sum, seg) => {
+  return segmentsOf(m).reduce((sum, seg) => {
     const cagr = bandFor(m, code, seg.code)[scenario];
     return sum + (m.baseline2026[code]?.[seg.code] ?? 0) * Math.pow(1 + cagr, yearIndex);
   }, 0);
 }
 
-export function global2026(m: SizingMatrix): { construction: number; mining: number; other: number; total: number } {
-  const t = { construction: 0, mining: 0, other: 0, total: 0 } as Record<SegmentCode | "total", number>;
+export function global2026(m: SizingMatrix): Record<string, number> {
+  const t: Record<string, number> = { total: 0 };
+  for (const seg of segmentsOf(m)) t[seg.code] = 0;
   for (const r of m.regions) {
-    for (const seg of SEGMENTS) {
+    for (const seg of segmentsOf(m)) {
       const v = m.baseline2026[r.code]?.[seg.code] ?? 0;
       t[seg.code] += v;
       t.total += v;
     }
   }
-  return t as { construction: number; mining: number; other: number; total: number };
+  return t;
 }
 
 /** 2030 base-scenario projection per region (4-year compound). */
-export function projection2030(m: SizingMatrix): Record<string, Record<SegmentCode, number>> {
-  const out: Record<string, Record<SegmentCode, number>> = {};
+export function projection2030(m: SizingMatrix): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {};
   for (const r of m.regions) {
-    out[r.code] = {} as Record<SegmentCode, number>;
-    for (const seg of SEGMENTS) {
+    out[r.code] = {};
+    for (const seg of segmentsOf(m)) {
       out[r.code][seg.code] = (m.baseline2026[r.code]?.[seg.code] ?? 0) * Math.pow(1 + (m.cagrBase[r.code]?.[seg.code] ?? 0), 4);
     }
   }
@@ -205,6 +225,42 @@ export const HYD_BRK_MATRIX: SizingMatrix = {
       { relation: "전방", name: "건설·광산 장비 제조 (Epiroc, Sandvik, HD Hyundai 등)", note: "어태치먼트 수요의 직접 수요처" },
       { relation: "전방", name: "장비 임대·렌탈업", note: "기계장착형 수요의 실질 보유 주체" },
       { relation: "전전방", name: "인프라 건설·광산 개발", note: "최종 수요 발생지 — 구리·금 광산 캐펙스가 핵심 드라이버" },
+    ],
+  },
+  competitive: {
+    structure:
+      "과점형 니치 어태치먼트 시장 — CR4(Epiroc·Sandvik·Caterpillar·Atlas Copco) 합산 점유율 약 15~20% (source #21). 장비 제조사 자사 브랜드 번들과 독립 어태치먼트 브랜드가 공존하며, 광산(대형)은 글로벌 브랜드·건설(중소)은 지역 브랜드로 이원화.",
+    players: [
+      {
+        name: "Epiroc (Stanley·AT)",
+        tier: "leader",
+        note: "어태치먼트 카테고리 리더 — FY2025 매출 SEK 62.0bn, Stanley Infrastructure 인수(2024)로 북미 특수 어태치먼트 확대 (source #22, 1차 공시)",
+      },
+      {
+        name: "Sandvik / Rammer",
+        tier: "leader",
+        note: "광산·채석장 세그먼트 강자 — 파트·서비스 매출 비중이 높은 프리미엄 포지션",
+      },
+      {
+        name: "Caterpillar",
+        tier: "challenger",
+        note: "자사 굴착장비(H 라인) 번들 중심 — CR4 구성원 (source #21)",
+      },
+      {
+        name: "Atlas Copco 계열",
+        tier: "challenger",
+        note: "CR4 구성원 (source #21)",
+      },
+      {
+        name: "Komatsu / Montabert",
+        tier: "challenger",
+        note: "자사 굴착장비 번들 — Montabert 브랜드 (문서 §6 top-10 목록)",
+      },
+      {
+        name: "HD Hyundai / Develon (현대중공업그룹)",
+        tier: "niche",
+        note: "한국·아시아권 자사 장비 번들 중심 (문서 §6 top-10 목록)",
+      },
     ],
   },
   qualitative: {

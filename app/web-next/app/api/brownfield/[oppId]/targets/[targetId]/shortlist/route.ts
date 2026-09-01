@@ -1,0 +1,27 @@
+// S7 — Short List 승격 (knock-out 통과 + 필수 항목 판정 완료가 조건).
+import { getDb } from "../../../../../../../../../db/client.ts";
+import { authenticate } from "../../../../../../../lib/auth.ts";
+import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { screeningSummary, type TargetRow } from "../../../../../../../lib/brownfield-targets.ts";
+
+const now = () => new Date().toISOString();
+
+export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Short List 승격은 analyst 역할 이상이어야 합니다.");
+  const { oppId, targetId } = await params;
+  const body = (await request.json().catch(() => null)) as { rank?: number; universe_note?: string } | null;
+  const db = getDb();
+  const target = db
+    .query("SELECT * FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
+    .get(targetId, oppId) as unknown as TargetRow | undefined;
+  if (!target) return notFound();
+  const summary = screeningSummary(target);
+  if (summary.anyKnockOutFail) return badRequest("knock_out_fail", "knock-out 항목(t-01~t-05) 중 fail이 있습니다 — 제외 사유를 기록하세요.");
+  if (summary.mandatoryOpen.length > 0) return badRequest("mandatory_pending", `필수 항목 미판정: ${summary.mandatoryOpen.join(", ")}`);
+  const row = db.query("SELECT COALESCE(MAX(rank),0) m FROM brownfield_target WHERE opportunity_id = ? AND status='shortlisted'").get(oppId) as { m: number };
+  const rank = body?.rank ?? row.m + 1;
+  db.run("UPDATE brownfield_target SET status = 'shortlisted', rank = ?, exclusion_reason = NULL, updated_at = ? WHERE id = ?", [rank, now(), targetId]);
+  return ok(db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId), 200);
+}

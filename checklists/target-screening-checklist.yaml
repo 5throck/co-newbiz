@@ -1,0 +1,62 @@
+governance_doc_id: chk-target-screening
+layer: checklist
+title: "Target Screening Checklist (Long List → Short List)"
+scope: shared
+enforceability: mixed
+owner_agent: brownfield-agent
+version: "1.0.0"
+effective_from: "2026-08-31"
+gate: Target Screening
+
+# S7 대상 스크리닝 (flow.spec v2.0.0) — Long List를 Short List로 좁히는 스크리닝.
+# 두 부분 구조 (strategic-fit 체크리스트의 Cooper Gate 1 관례를 계승):
+#   Part 1 (t1..t5) = must-meet knock-outs (Pass/Fail — any Fail = 해당 후보 제외,
+#   사유 기록). Part 2 (t6..t9) = should-meet rated criteria (0-10, 가시적 스코어카드).
+# 근거: S6 대상 후보 발굴의 Long List·Universe 정의, S1/S3 필요 역량 목록 —
+# desk research만 허용, commissioned 분석 금지 (Short List 확정 후 DD에서 수행).
+#
+# THRESHOLDS ARE ILLUSTRATIVE: t6..t9 가중치·진입 임계치는 관행 예시이며 활성 정책이
+# 아니다. 임계치 활성화는 문서화된 결정 기록이 선행되어야 한다 (ADR-0051 open (b)와 동일 규율).
+
+items:
+  # Part 1 — must-meet knock-outs (any Fail = 후보 제외, Exclusion Reasons에 기록)
+  - id: t-01
+    text: "Ownership/availability — the stake is plausibly available: a seller/partner exists, the stake is not subject to an undisclosed lock-up or pre-emption right that blocks the route, and an approach channel is identified (recorded per candidate)"
+    mandatory: true
+    waiver_eligible: false   # 가용성은 완결 사실(completeness fact), 판단이 아님
+  - id: t-02
+    text: "Regulatory screen — no known fatal foreign-investment limit, licensing/permitting transfer barrier, or concentration (merger-control pre-screen) that blocks the selected Brownfield route; blocking exposure escalates to the antitrust-agent"
+    mandatory: true
+    waiver_eligible: false
+  - id: t-03
+    text: "Geographic fit — the candidate's operating footprint aligns with the universe definition's geography criteria, or a recorded exception with justification exists"
+    mandatory: true
+    waiver_eligible: true
+  - id: t-04
+    text: "No structural market contraction + commoditization — the candidate's served market is not in terminal decline with price-only competition (the standing kill axis from Screening)"
+    mandatory: true
+    waiver_eligible: true
+  - id: t-05
+    text: "Capability relevance — the candidate materially contributes the required capability list derived in S1/S3 (no capability gap is left unaddressed with no mitigation plan recorded)"
+    mandatory: true
+    waiver_eligible: true
+  # Part 2 — should-meet rated criteria (0-10, weighted; scored and recorded)
+  - id: t-06
+    text: "Strategic value — the candidate's position in the opportunity's value chain and its strategic contribution to the declared intent (core/adjacent/transformational)"
+    mandatory: true
+    waiver_eligible: true
+  - id: t-07
+    text: "Capability complementarity — degree to which the candidate fills the capability gap vs. overlap with existing internal capabilities"
+    mandatory: true
+    waiver_eligible: true
+  - id: t-08
+    text: "Financial attractiveness — revenue/EBITDA scale, growth profile, margin quality, and balance-sheet health vs. the financial criteria in the universe definition (desk research only)"
+    mandatory: true
+    waiver_eligible: true
+  - id: t-09
+    text: "Integration/partnership complexity — estimated complexity of the selected route (M&A integration, JV governance, or partnership operational coupling) and the sponsor's capacity to absorb it"
+    mandatory: true
+    waiver_eligible: true
+
+# 출력: Target Company Short List + Target Ranking/Score + Screening Evidence +
+# Exclusion Reasons (모든 Long List 후보에 랭킹 또는 제외 사유 기록 — target_screening 게이트 판정기준).

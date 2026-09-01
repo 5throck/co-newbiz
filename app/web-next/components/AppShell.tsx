@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useEffect, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  FolderKanban,
+  ChevronLeft,
+  GitBranch,
+  Sprout,
   LineChart,
-  Gauge,
   LayoutDashboard,
   BookOpen,
   Shield,
@@ -14,15 +15,12 @@ import {
   Target,
   FileText,
   LibraryBig,
-  TrendingUp,
   Landmark,
   Lightbulb,
   Handshake,
 } from "lucide-react";
-import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
-import { WorkflowSidebar } from "./WorkflowSidebar.tsx";
 
 interface NavItem {
   href: string;
@@ -31,24 +29,25 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
-// 좌측 패널 — 플랫 전역 내비. 프로젝트 진행 흐름(S4~S7)은 개별 프로젝트 상세의
-// 워크플로우 내비에서 관리되며, 이 패널은 도구·참조·운영 바로가기를 제공한다.
+// 좌측 패널 — 플랫 전역 내비. 트랙 결정 이후 흐름(S4~)은 flow.spec v2.0.0
+// 재설계에 따라 재구축 예정이며, 이 패널은 탐색·참조·운영 바로가기를 제공한다.
 const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
-    label: "프로젝트",
+    label: "탐색",
     items: [
       { href: "/", label: "대시보드", icon: <LayoutDashboard size={18} /> },
       { href: "/market", label: "시장분석", icon: <LineChart size={18} /> },
       { href: "/opportunities", label: "기회 발굴", icon: <Lightbulb size={18} /> },
+      { href: "/our-company", label: "그룹/계열사 분석", icon: <Landmark size={18} /> },
       { href: "/synergy", label: "시너지 정합성", icon: <Handshake size={18} /> },
-      { href: "/projects", label: "프로젝트 목록", icon: <FolderKanban size={18} /> },
+      { href: "/route-decision", label: "진출방식 결정", icon: <GitBranch size={18} /> },
+      { href: "/brownfield", label: "대상 후보 발굴", icon: <Target size={18} /> },
+      { href: "/greenfield", label: "역량 평가·진출전략", icon: <Sprout size={18} /> },
     ],
   },
   {
     label: "분석·참조",
     items: [
-      { href: "/profitability", label: "수익성 분석", icon: <TrendingUp size={18} /> },
-      { href: "/portfolio-scorecard", label: "스코어카드", icon: <Gauge size={18} /> },
       { href: "/benchmarks", label: "벤치마킹 사례", icon: <Landmark size={18} /> },
       { href: "/library", label: "규정·체크리스트", icon: <LibraryBig size={18} /> },
       { href: "/glossary", label: "용어집", icon: <BookOpen size={18} /> },
@@ -63,19 +62,38 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
-// 우측 상단 바 — 테마 전환·로그아웃·사용자 표시를 좌측 패널이 아닌 화면
-// 우측 상단에 모은다.
+// 우측 상단 바 — 맨 왼쪽에 상세 화면용 뒤로 가기, 오른쪽에 테마 전환·로그아웃·
+// 사용자 표시. 위치 표시는 페이지 제목(h1)과 중복되지 않도록 목록 페이지에서는
+// 숨기고, 하위 상세 경로에서만 뒤로 가기 필로 제공한다.
 function Topbar({ pathname }: { pathname: string }) {
   const { me, logout } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   if (!me) return null;
-  const label =
-    NAV_SECTIONS.flatMap((sec) => sec.items).find((i) => pathname === i.href || pathname.startsWith(i.href + "/"))?.label ??
-    (pathname === "/" ? "홈" : (pathname.split("/")[1] ?? ""));
+  const item = NAV_SECTIONS.flatMap((sec) => sec.items).find(
+    (i) => pathname === i.href || pathname.startsWith(i.href + "/"),
+  );
+  const isNested =
+    (!!item && pathname !== item.href && pathname.length > item.href.length) ||
+    // 목록의 상세 표현(?industry=·?company= 등) — 필터 파라미터(status 등)는 제외
+    (pathname === "/market" && !!searchParams.get("industry")) ||
+    (pathname === "/synergy" && !!searchParams.get("company")) ||
+    (pathname === "/route-decision" && !!searchParams.get("opportunity")) ||
+    (pathname === "/brownfield" && !!searchParams.get("opportunity")) ||
+    (pathname === "/greenfield" && !!searchParams.get("opportunity"));
   return (
     <header className="topbar">
-      <span className="topbar-crumbs" aria-label="현재 위치">
-        {label}
-      </span>
+      {isNested && item && (
+        <button
+          type="button"
+          className="back-link"
+          onClick={() => router.push(item.href)}
+          aria-label={`${item.label} 목록으로 돌아가기`}
+        >
+          <ChevronLeft size={14} />
+          {item.label}
+        </button>
+      )}
       <div className="topbar-actions">
         <ThemeToggle compact />
         <span className="topbar-user">{me.userId}</span>
@@ -95,12 +113,12 @@ function Sidebar() {
 
   return (
     <aside className="app-sidebar">
-      <Link href="/projects" className="sidebar-brand">
+      <Link href="/" className="sidebar-brand">
         <span className="sidebar-brand-icon">CN</span>
         <span>co-newbiz</span>
       </Link>
       {NAV_SECTIONS.map((section) => {
-        // 관리자 역할 분리: S1~S7 딜 프로세스 그룹은 관리자에게 숨긴다 —
+        // 관리자 역할 분리: 딜 프로세스 그룹은 관리자에게 숨긴다 —
         // 관리자는 운영 콘솔(사용자·마스터데이터·시스템)만 사용한다.
         if (me.role === "admin" && section.label.startsWith("S")) return null;
         const items = section.items.filter(
@@ -160,44 +178,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!me) return null;
   if (me.mustChangePassword && pathname !== "/password-change") return null;
 
-  // 딜 상세 경로(/projects/:id) 진입 시 좌측 패널이 워크플로우 내비로 전환됨
-  const dealMatch = pathname.match(/^\/projects\/([^/]+)/);
-  const isDealDetail = !!dealMatch && pathname !== "/projects";
-
   return (
     <div className="app-shell">
-      {isDealDetail && dealMatch ? (
-        <DealWorkflowSidebar projectId={dealMatch[1]} />
-      ) : (
-        <Sidebar />
-      )}
+      <Sidebar />
       <div className="app-main-col">
-        <Topbar pathname={pathname} />
+        <Suspense fallback={null}>
+          <Topbar pathname={pathname} />
+        </Suspense>
         <div className="app-content">{children}</div>
       </div>
     </div>
   );
-}
-
-function DealWorkflowSidebar({ projectId }: { projectId: string }) {
-  const [projectNo, setProjectNo] = useState("...");
-  const router = useRouter();
-  const searchParams = new URLSearchParams(
-    typeof window !== "undefined" ? window.location.search : "",
-  );
-  const activeStage = searchParams.get("stage") ?? "";
-  const handleStageSelect = (stage: string) => {
-    // 스테이지 클릭 시 현재 경로를 유지하면서 stage 파라미터만 업데이트
-    const url = new URL(window.location.href);
-    url.searchParams.set("stage", stage);
-    window.history.replaceState(null, "", url.toString());
-    // React에 URL 변경을 알리기 위해 커스텀 이벤트 발생
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  };
-  useEffect(() => {
-    api.get<{ project_no: string }>(`/api/projects/${projectId}`)
-      .then((r) => setProjectNo(r.data?.project_no ?? "..."))
-      .catch(() => setProjectNo("..."));
-  }, [projectId]);
-  return <WorkflowSidebar projectId={projectId} projectNo={projectNo} activeStage={activeStage} onStageSelect={handleStageSelect} />;
 }

@@ -1,4 +1,4 @@
-// Opportunity-side process evaluation (S1–S4 derived state).
+// Opportunity-side process evaluation (S1–S3 derived state).
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";

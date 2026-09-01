@@ -2246,7 +2246,7 @@
   backdrop-filter: blur(12px);
 }
 .topbar-crumbs { font-size: 0.85rem; font-weight: 600; color: var(--muted-fg); }
-.topbar-actions { display: flex; align-items: center; gap: 0.75rem; }
+.topbar-actions { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
 .topbar-user { font-size: 0.8rem; color: var(--muted-fg); max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar-logout {
   display: inline-flex; align-items: center; gap: 0.35rem;
@@ -2513,7 +2513,7 @@
 .pagination-page-active { background: var(--primary-bg); border-color: var(--primary); color: var(--primary); font-weight: 700; }
 
 /* ── Market page sections ── */
-.market-section { margin-bottom: 1.75rem; }
+.market-section { margin-top: 2rem; margin-bottom: 1.75rem; }
 .market-section h2 { font-size: 1rem; margin: 0 0 0.5rem; }
 .market-industry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.6rem; }
 .market-industry-card {
@@ -2647,6 +2647,33 @@
 .sizing-insight-table td:last-child { width: 55%; }
 .sizing-axes-table td:first-child { white-space: nowrap; min-width: 11rem; }
 .sizing-actions-cell { white-space: nowrap; }
+.status-chip { white-space: nowrap; }
+
 .sizing-rerun-btn { margin-left: 0.4rem; color: var(--amber-fg); }
 .wf-longlist { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.5rem 0.6rem; margin-bottom: 0.5rem; border: 1px dashed var(--border); border-radius: var(--radius-md); }
 .wf-longlist-note { font-size: 0.68rem; color: var(--muted-fg); }
+
+/* 페이지 헤더 행 — h1과 보조 액션(뒤로 가기 등)을 한 줄에 배치 */
+.page-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.page-header-row h1 { margin-bottom: 0; }
+
+/* 뒤로 가기 필 — 작은 아이콘 + 라벨, hover 시 accent */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.65rem 0.2rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--muted-fg);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.back-link:hover { color: var(--accent); border-color: var(--accent); }
