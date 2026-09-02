@@ -41,8 +41,8 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
       { href: "/our-company", label: "그룹/계열사 분석", icon: <Landmark size={18} /> },
       { href: "/synergy", label: "시너지 정합성", icon: <Handshake size={18} /> },
       { href: "/route-decision", label: "진출방식 결정", icon: <GitBranch size={18} /> },
-      { href: "/brownfield", label: "대상 후보 발굴", icon: <Target size={18} /> },
       { href: "/greenfield", label: "역량 평가·진출전략", icon: <Sprout size={18} /> },
+      { href: "/brownfield", label: "대상 후보 발굴", icon: <Target size={18} /> },
     ],
   },
   {

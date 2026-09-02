@@ -89,3 +89,10 @@ ADRs 0001-0044 are **Accepted** as of 2026-08-20, ratifying decisions already ma
 | [0079](0079-s2-opportunity-funnel.md) | S2 opportunity funnel — agentic discovery, factor-based evaluation, list registry |
 | [0080](0080-our-company-analysis.md) | Our-company analysis — group/affiliate two-level self-profile feeding S3 |
 | [0081](0081-s7-target-screening-checklist.md) | S7 target-screening checklist (chk-target-screening) — knock-out + rated scorecard for Long List → Short List |
+| [0082](0082-unified-crud-interaction-pattern.md) | Unified CRUD interaction pattern — row-inline edit, ConfirmDialog, 등록/저장/삭제 label standard |
+| [0083](0083-visual-ui-standard-toolbar-button-sizes.md) | Visual UI standard — SectionToolbar structure, two button sizes, delete de-emphasis hierarchy |
+| [0084](0084-s4-structured-route-decision-scoring.md) | S4 structured route-decision scoring — two-stage intent/5criteria scorecard with lexicographic override |
+| [0085](0085-s10-entity-establishment-execution-alignment.md) | S10 entity establishment execution — spec alignment + step/status record layer with kill-criteria semantics |
+| [0086](0086-standard-screen-pattern-adoption.md) | Standard screen pattern adoption — StageFrame/StageRail shell, stage-meta spec-governed, P1–P5 rollout |
+| [0087](0087-design-process-pipeline.md) | Design process pipeline — principles→tokens→style guide→icons→components→patterns→screens; design artifacts mandatory at design phase |
+| [0088](0088-report-data-presentation-standard.md) | Report data-presentation standard — chart+pivot for time series, bullet lists, wide-table scroll handling |

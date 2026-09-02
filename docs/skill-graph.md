@@ -260,3 +260,10 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0079` | adr | — | — | — |
 | `adr:0080` | adr | — | — | — |
 | `adr:0081` | adr | — | — | — |
+| `adr:0082` | adr | — | — | — |
+| `adr:0083` | adr | — | — | — |
+| `adr:0084` | adr | — | — | — |
+| `adr:0085` | adr | — | — | — |
+| `adr:0086` | adr | — | — | — |
+| `adr:0087` | adr | — | — | — |
+| `adr:0088` | adr | — | — | — |

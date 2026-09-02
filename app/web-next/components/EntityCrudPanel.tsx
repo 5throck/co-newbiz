@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
+import { useConfirm } from "./crud.tsx";
 
 // 범용 엔티티 CRUD 패널 — 목록 조회 + 등록 폼 + 행 삭제. columns는 서버
 // allow-list 스펙과 일치해야 한다. 읽기전용이던 섹션(부지·파트너·인센티브·
@@ -30,6 +31,7 @@ export function EntityCrudPanel({
   rowLabel: string;
 }) {
   const [rows, setRows] = useState<Record<string, unknown>[] | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
   const [form, setForm] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -64,20 +66,26 @@ export function EntityCrudPanel({
     }
   }
 
-  async function remove(rowId: string) {
-    if (!window.confirm(`이 ${rowLabel} 항목을 삭제할까요? (감사로그에 기록됩니다)`)) return;
-    setError(null);
-    try {
-      const sep = endpoint.includes("?") ? "&" : "?";
-      await api.delete(`${endpoint}${sep}row_id=${encodeURIComponent(rowId)}`);
-      load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "삭제 실패");
-    }
+  function remove(rowId: string) {
+    confirm(
+      `${rowLabel} 삭제`,
+      async () => {
+        setError(null);
+        try {
+          const sep = endpoint.includes("?") ? "&" : "?";
+          await api.delete(`${endpoint}${sep}row_id=${encodeURIComponent(rowId)}`);
+          load();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "삭제 실패");
+        }
+      },
+      { body: "감사로그에 기록됩니다." },
+    );
   }
 
   return (
     <div className="entity-crud-panel">
+      {confirmDialog}
       <details className="opportunity-create">
         <summary className="btn-ghost">+ {title} 등록</summary>
         <form onSubmit={create} aria-label={`${title} 등록`} className="opportunity-form">

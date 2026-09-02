@@ -104,7 +104,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - S7 대상 스크리닝: `brownfield-agent`, `antitrust-agent`
 - S8 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`
 - S9 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`
-- S10 투자심사·실행: `pm`, `brownfield-agent`, `risk-officer`, `group-review-agent`
+- S10 투자심사·실행: `pm`, `brownfield-agent`, `risk-officer`, `group-review-agent`, `process-governance-manager`
 - S11 사후 관리: `group-review-agent`
 
 스킬·프로시저 대응은 각 스테이지의 Activities 표를, 전체 매핑 근거는 ADR-0074를 참고한다.
@@ -462,13 +462,16 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - investment-structuring · agent: `brownfield-agent` · skills: `investment-vehicle-structuring`, `financing-plan-review` · procedure: `entity-ic-review`
 - risk-review · agent: `risk-officer` · skills: `legal-risk-register` · procedure: `entity-ic-review`, `group-investment-review`
 - group-review · agent: `group-review-agent` · skills: `group-level-review` · procedure: `entity-ic-review`, `group-investment-review`
+- entity-establishment-execution · agent: `process-governance-manager` · skills: `legal-due-diligence`, `k-law`, `certification-transferability`, `org-readiness-assessment`, `stage-gate-governance` · procedure: `entity-establishment-execution`
 
 **필수 산출물**
 - IC 패키지
 - 사람 최종 승인(reviewer 기록)
+- 설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})
 
 **완료 기준**
 - Entity IC와 Group IC 승인이 모두 기록되었다
+- origin∈{internal,joint}인 프로젝트는 entity-establishment-execution 5단계 완료 기록이 존재한다
 
 **적용 트랙**: greenfield, brownfield
 

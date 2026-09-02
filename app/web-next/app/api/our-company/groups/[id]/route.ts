@@ -1,7 +1,7 @@
 // 그룹 상세 — 그룹 정보 + 계열사 목록 + 각 계열사의 최신 프로파일 요약.
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
-import { notFound, ok } from "../../../../../lib/envelope.ts";
+import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { loadLatestProfile } from "../../../../../lib/company-profile-pipeline.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -37,4 +37,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }));
 
   return ok({ group, members, profiles }, 200, { member_count: members.length });
+}
+
+/** 그룹명 수정 (analyst+). */
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  if (auth.auth.role === "viewer") return forbidden("role_required", "그룹명 수정은 analyst 역할 이상이어야 합니다.");
+  const { id } = await params;
+  const body = (await request.json().catch(() => null)) as { name?: string } | null;
+  const name = body?.name?.trim();
+  if (!name) return badRequest("invalid_request", "그룹명은 필수입니다.");
+  const db = getDb();
+  if (!db.query("SELECT id FROM company_group WHERE id = ?").get(id)) return notFound();
+  db.run("UPDATE company_group SET name = ? WHERE id = ?", [name, id]);
+  return ok(db.query("SELECT id, name FROM company_group WHERE id = ?").get(id), 200);
 }

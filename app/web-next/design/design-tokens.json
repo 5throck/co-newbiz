@@ -1,0 +1,68 @@
+{
+  "$schema": "https://design-tokens.org/draft-1",
+  "meta": {
+    "name": "co-newbiz web design tokens",
+    "version": "1.0.0",
+    "adr": ["ADR-0087", "ADR-0083"],
+    "note": "디자인 결정의 단일 원본. styles.css의 CSS 변수 체계를 정식화한 것 — 새 토큰은 여기에 먼저 선언한다. 3계층: primitive(절대값) → semantic(의미) → component(컴포넌트)."
+  },
+  "primitive": {
+    "color": {
+      "blue-500": "#4c6ef5",
+      "blue-300": "#7c9dff",
+      "green-600": "#0c7a4b",
+      "green-400": "#7fe0a0",
+      "amber-600": "#935c06",
+      "amber-400": "#ffcf7a",
+      "red-600": "#b32318",
+      "red-400": "#ff9d97",
+      "danger-500": "#e5484d",
+      "gray-950": "#0a0c10",
+      "gray-100": "#eef0f4",
+      "gray-400": "#a5adba"
+    },
+    "space": { "1": "4px", "2": "8px", "3": "12px", "4": "16px", "6": "24px", "8": "32px" },
+    "radius": { "sm": "0.5rem", "md": "0.75rem", "lg": "1rem", "xl": "1.25rem", "2xl": "1.5rem", "full": "9999px" },
+    "font": { "sans": "Pretendard, 'Malgun Gothic', system-ui, sans-serif", "mono": "JetBrains Mono, ui-monospace, monospace" },
+    "iconSize": { "nav": 18, "action": 16 }
+  },
+  "semantic": {
+    "color": {
+      "primary": { "light": "blue-500", "dark": "blue-300" },
+      "accent": { "light": "blue-500", "dark": "blue-300" },
+      "danger": "danger-500",
+      "success-fg": { "light": "green-600", "dark": "green-400" },
+      "warning-fg": { "light": "amber-600", "dark": "amber-400" },
+      "risk-fg": { "light": "red-600", "dark": "red-400" },
+      "bg": { "light": "gray-100@inverse", "dark": "gray-950" },
+      "fg": { "light": "gray-950@inverse", "dark": "gray-100" },
+      "muted-fg": "gray-400",
+      "border": "rgba(alpha-on-surface, 0.07)"
+    },
+    "statusChips": ["success(green)", "warning(amber)", "risk(red)", "neutral(not-started)"],
+    "contrast": "WCAG AA 4.5:1 (본문 텍스트)"
+  },
+  "component": {
+    "button": {
+      "sizes": {
+        "default(toolbar)": { "padding": "0.6rem 1.5rem", "fontSize": "1rem" },
+        "sm(row/inline)": { "padding": "0.3rem 0.75rem", "fontSize": "0.75rem" }
+      },
+      "variants": ["btn-ghost(기본)", "btn-danger(파괴 — 행 내에서는 저채도, 호버 시 강조)"],
+      "note": "이 2-size×2-variant 외 버튼 조합 금지 (ADR-0083)"
+    },
+    "actionCell": { "align": "flex-end", "gap": "0.5rem" },
+    "sectionToolbar": { "structure": "title-group(좌) + filters + actions(우)", "rightInset": "0.5rem" },
+    "createToggle": { "label": "＋ ~ 등록", "cancelInsideForm": true },
+    "delete": { "label": "삭제", "confirm": "ConfirmDialog 필수 (ADR-0082)" },
+    "reportDataPresentation": {
+      "adr": "ADR-0088",
+      "timeSeries": "차트(좌/상) + 피벗 테이블(계정=행, 연도=열 최신순) 병기 — 장기 행 나열 금지",
+      "longTextLists": "문단 뭉치 대신 report-bullet-list(블릿+항목 간격) 사용",
+      "wideTables": "4열 이상·장문 셀 표는 table-scroll 래퍼 + 열 최소폭(col-label/col-type/col-text) 필수",
+      "units": "금액 단위 표기 필수(예: 억원) + 출처 칩/링크 병기",
+      "integrity": "합산 검증 불일치 시 경고 배너 + 신뢰도 하향 표기"
+    }
+  },
+  "iconVocabularyDoc": "docs/designs/DESIGN-CHECKLIST.md"
+}

@@ -3,6 +3,8 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
+import { SectionToolbar } from "../../components/layout.tsx";
+import { StageFrame } from "../../components/StageFrame.tsx";
 
 // S5 역량 평가·진출전략 (/greenfield) — flow.spec v2.0.0 그린필드 경로.
 //   Greenfield는 Target Company가 없음 — "우리 스스로 진입 가능한가, 무엇을
@@ -21,7 +23,7 @@ interface Assessment {
   rationale: string | null; updated_at: string;
   capability_gaps: GapRow[] | null; business_case_lines: BcLine[] | null;
 }
-interface OppDetail { opportunity: { id: string; name: string }; assessment: Assessment | null }
+interface OppDetail { opportunity: { id: string; name: string; assessed_at?: string | null }; assessment: Assessment | null }
 
 const RESOLUTIONS = ["build", "partner", "hire", "invest"] as const;
 
@@ -94,12 +96,11 @@ export function GreenfieldView() {
 
   return (
     <main>
-      <h1>역량 평가·진출전략</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        프로세스 스테이지 <strong>S5 (Greenfield 경로)</strong> — 자체 역량으로 진입할 수 있는지 평가합니다.
+      <StageFrame stageId="S5" track="greenfield">
+        <strong>Greenfield 경로</strong> — 자체 역량으로 진입할 수 있는지 평가합니다.
         필요 역량 대비 보유 역량의 <strong>격차</strong>를 기록하고, 해소 방식을
         <strong> Build / Partner / Hire / Invest</strong> 중 결정한 뒤 진출전략과 Business Case 라인을 정리합니다.
-      </p>
+      </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
@@ -133,7 +134,18 @@ export function GreenfieldView() {
       {/* ── S5 평가 폼 ── */}
       {selected && (
         <section aria-label="역량 평가" className="market-section">
-          <h2 className="text-[0.92rem] mb-2">⚙️ {selected.opportunity.name} — 역량 평가·진출전략</h2>
+          <SectionToolbar
+            title={`${selected.opportunity.name} — 역량 평가·진출전략`}
+            icon="⚙️"
+            summary={
+              <span className="flex items-center gap-1">
+                <span className="status-chip status-not-started" title="P4 실행형: 평가 구성요소 진행 — S10 설립실행과 동일 상태 어휘">
+                  {selected.opportunity.assessed_at ? "done" : "in_progress"} · {[gaps.length > 0, entryStrategy !== "", bcLines.length > 0].filter(Boolean).length}/3 구성요소
+                </span>
+                {selected.opportunity.assessed_at && <span className="status-chip status-green">평가 기록 v1+</span>}
+              </span>
+            }
+          />
           <form onSubmit={save} className="sizing-new-form">
             {/* 1. 역량 격차 */}
             <h3 className="text-[0.85rem] mb-2">1️⃣ 역량 격차 평가 (필요 역량 vs 보유 역량)</h3>
@@ -146,10 +158,10 @@ export function GreenfieldView() {
                 <select aria-label="해소 방식" value={g.resolution} onChange={(e) => setGap(i, { resolution: e.target.value })} className="sizing-new-input sizing-new-input-sm">
                   {RESOLUTIONS.map((r) => <option key={r} value={r}>{r.toUpperCase()}</option>)}
                 </select>
-                <button type="button" className="btn-ghost text-[0.7rem]" onClick={() => setGaps((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setGaps((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>
               </div>
             ))}
-            <button type="button" className="btn-ghost text-[0.75rem] mb-3" onClick={() => setGaps((prev) => [...prev, { capability: "", required_level: "", current_level: "", gap: "", resolution: "build" }])}>＋ 역량 추가</button>
+            <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setGaps((prev) => [...prev, { capability: "", required_level: "", current_level: "", gap: "", resolution: "build" }])}>＋ 역량 추가</button>
 
             {/* 2. 진출전략 */}
             <h3 className="text-[0.85rem] mb-2">2️⃣ 진출전략 (Build / Partner / Hire / Invest 결정)</h3>
@@ -175,14 +187,14 @@ export function GreenfieldView() {
                 </select>
                 <input aria-label="금액(억원)" type="number" placeholder="금액 (억원)" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "7rem" }} />
                 <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "10rem" }} />
-                <button type="button" className="btn-ghost text-[0.7rem]" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>
               </div>
             ))}
-            <button type="button" className="btn-ghost text-[0.75rem] mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", kind: "cost", amount: 0 }])}>＋ 라인 추가</button>
+            <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", kind: "cost", amount: 0 }])}>＋ 라인 추가</button>
 
             <input aria-label="평가 근거" placeholder="평가 근거 (S1 시장분석·S3 적합성 판단 인용, 선택)" value={rationale} onChange={(e) => setRationale(e.target.value)} className="sizing-new-input mb-3" style={{ width: "100%" }} />
 
-            <button type="submit" className="btn-ghost text-[0.85rem]" disabled={busy}>평가 저장</button>
+            <button type="submit" className="btn-ghost" disabled={busy}>평가 저장</button>
           </form>
 
           {/* 저장된 요약 */}

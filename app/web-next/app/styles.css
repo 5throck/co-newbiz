@@ -2582,6 +2582,142 @@
 }
 .sizing-chip-meta { font-size: 0.7rem; color: var(--muted-fg); }
 
+/* ── 통합 CRUD 프리미티브 (ADR-0082) ── */
+
+/* 버튼 크기 변형 — 컨트롤 크기는 이 두 가지뿐이다.
+   기본(btn-ghost/btn-danger) = 툴바용, .btn-sm = 테이블 행·인라인용. */
+.btn-ghost.btn-sm, .btn-danger.btn-sm {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: var(--radius-md);
+}
+/* 행 액션의 삭제는 저채도로 시작해 호버 시 위험을 강조한다 —
+   파괴 액션이 행에서 가장 눈에 띄는 버튼이 되지 않도록 (ADR-0083). */
+.btn-danger.btn-sm {
+  background: transparent;
+  border-color: color-mix(in srgb, #e5484d 30%, transparent);
+  color: color-mix(in srgb, #e5484d 80%, var(--fg));
+}
+.btn-danger.btn-sm:hover {
+  background: color-mix(in srgb, #e5484d 14%, var(--surface));
+  border-color: color-mix(in srgb, #e5484d 60%, transparent);
+  color: #e5484d;
+}
+
+/* 섹션 헤더 표준 (ADR-0083) — 제목 그룹(좌) / 필터 / 우측 액션 단일 구조.
+   페이지는 이 구조 밖에서 헤더를 구성하지 않는다. */
+.section-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.section-toolbar > .section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.section-toolbar > .section-title h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.section-toolbar > .section-meta {
+  font-size: 0.72rem;
+  color: var(--muted-fg);
+}
+.section-toolbar > .toolbar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.section-toolbar > .toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  /* 테이블 행 버튼의 오른 끝(마지막 셀 0.5rem 패딩)과 툴바 버튼의 오른 끝을 맞춘다 */
+  margin-right: 0.5rem;
+}
+
+/* ── P2 Report 데이터 표현 표준 (ADR-0088) ── */
+/* 넓은 표 눌림 방지 래퍼 — 4열 이상·장문 셀 표는 반드시 이 래퍼 안에 둔다. */
+.table-scroll { overflow-x: auto; }
+.report-table { min-width: 48rem; }
+.report-table th, .report-table td { vertical-align: top; }
+.report-table .col-label { min-width: 10rem; }
+.report-table .col-type { min-width: 6rem; }
+.report-table .col-text { min-width: 16rem; }
+.report-table .col-num { text-align: right; white-space: nowrap; }
+/* 장문 나열은 블릿 목록으로 — 문단 뭉치 대신 항목별 불릿+간격 */
+.report-bullet-list {
+  margin: 0.4rem 0;
+  padding-left: 1.2rem;
+  list-style: disc;
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.report-bullet-list li { padding-left: 0.1rem; }
+.report-bullet-list li::marker { color: var(--muted-fg); }
+.report-bullet-card h4 { margin: 0 0 0.5rem; font-size: 0.9rem; font-weight: 600; }
+/* 리포트 차트 카드 — 시계열 데이터는 차트+피벗 테이블 병기 */
+.report-chart-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+/* 행 액션 셀 — td는 table-cell을 유지해야 행 배경·경계가 이어진다.
+   flex(우측 정렬, 8px 간격)는 내부 .actions-row에 적용한다. */
+.sizing-actions-cell { white-space: nowrap; }
+.sizing-actions-cell > .actions-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sizing-new-form {
+  padding: 0.75rem 0.9rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+}
+.sizing-new-input {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 0.82rem;
+  min-width: 8rem;
+}
+.sizing-new-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.sizing-new-input-sm { padding: 0.3rem 0.45rem; font-size: 0.76rem; min-width: 5rem; }
+.btn-danger {
+  background: color-mix(in srgb, #e5484d 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, #e5484d 55%, transparent);
+  color: #e5484d;
+  border-radius: var(--radius-xl);
+  padding: 0.6rem 1.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+}
+.btn-danger:hover {
+  background: color-mix(in srgb, #e5484d 22%, var(--surface));
+}
+.btn-danger:disabled { opacity: 0.45; cursor: not-allowed; }
+.row-edit-cell { display: inline-flex; align-items: center; gap: 0.25rem; }
+
+
 .sizing-step-rail {
   position: sticky; top: 3.2rem; z-index: 5;
   display: flex; flex-wrap: wrap; gap: 0.3rem;

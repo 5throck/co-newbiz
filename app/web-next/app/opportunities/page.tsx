@@ -4,6 +4,9 @@ import { Fragment, Suspense, useCallback, useEffect, useMemo, useState } from "r
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
+import { useConfirm } from "../../components/crud.tsx";
+import { SectionToolbar } from "../../components/layout.tsx";
+import { StageFrame } from "../../components/StageFrame.tsx";
 
 // 기회 발굴 (/opportunities) — S2 기회 퍼널.
 // 레이아웃 원칙: 요약(KPI)이 먼저, 상세는 접힘(details) — 산업·기회가 많아져도
@@ -87,7 +90,7 @@ function nextStepActions(
     return (
       <button
         type="button"
-        className="btn-ghost text-[0.75rem]"
+        className="btn-ghost btn-sm"
         disabled={o.attractiveness_score === null}
         title={o.attractiveness_score === null ? "행을 펼쳐 매력도를 평가하세요" : undefined}
         onClick={() => setStatus(o.id, "assessed")}
@@ -102,9 +105,9 @@ function nextStepActions(
     const hint = !s3Ready ? "행을 펼쳐 시너지 분석·전략적 적합성 평가를 실행하세요 (S3)" : undefined;
     return (
       <>
-        <button type="button" className="btn-ghost text-[0.75rem]" disabled={!s3Ready} title={hint} onClick={() => setStatus(o.id, "selected", o.synergy_score ?? o.attractiveness_score ?? 50)}>선별</button>
-        <button type="button" className="btn-ghost text-[0.75rem]" disabled={!s3Ready} title={hint} onClick={() => setStatus(o.id, "dropped", o.synergy_score ?? o.attractiveness_score ?? 50)}>제외</button>
-        <button type="button" className="btn-ghost text-[0.75rem]" onClick={() => showSketch(o.id)} disabled={sketchOf[o.id] === "loading"}>
+        <button type="button" className="btn-ghost btn-sm" disabled={!s3Ready} title={hint} onClick={() => setStatus(o.id, "selected", o.synergy_score ?? o.attractiveness_score ?? 50)}>선별</button>
+        <button type="button" className="btn-ghost btn-sm" disabled={!s3Ready} title={hint} onClick={() => setStatus(o.id, "dropped", o.synergy_score ?? o.attractiveness_score ?? 50)}>제외</button>
+        <button type="button" className="btn-ghost btn-sm" onClick={() => showSketch(o.id)} disabled={sketchOf[o.id] === "loading"}>
           {sketchOf[o.id] === "loading" ? "..." : "스케치"}
         </button>
       </>
@@ -112,7 +115,7 @@ function nextStepActions(
   }
   if (o.status === "selected") {
     return (
-      <button type="button" className="btn-ghost text-[0.75rem]" onClick={() => showSketch(o.id)} disabled={sketchOf[o.id] === "loading"}>
+      <button type="button" className="btn-ghost btn-sm" onClick={() => showSketch(o.id)} disabled={sketchOf[o.id] === "loading"}>
         {sketchOf[o.id] === "loading" ? "..." : "스케치"}
       </button>
     );
@@ -143,6 +146,8 @@ export function OpportunitiesView() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sortKey, setSortKey] = useState<"attractiveness" | "recent">("attractiveness");
   const [industryFilter, setIndustryFilter] = useState<string | "">("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const { confirm, confirmDialog } = useConfirm();
 
   const load = useCallback(() => {
     const qs = statusFilter ? `?status=${statusFilter}` : "";
@@ -177,6 +182,7 @@ export function OpportunitiesView() {
         attractiveness_score: form.attractiveness_score ? Number(form.attractiveness_score) : undefined,
       });
       setForm({ name: "", market_scope: "", value_chain_node: "", attractiveness_score: "" });
+      setShowCreateForm(false);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "등록 실패");
@@ -255,14 +261,20 @@ export function OpportunitiesView() {
     }
   }
 
-  async function removeFactor(id: string, type: "opportunity" | "risk", index: number) {
-    setError(null);
-    try {
-      const res = await api.delete<{ factors: OppFactors }>(`/api/opportunities/${id}/factors`, { type, index });
-      setFactorsOf((prev) => ({ ...prev, [id]: { factors: res.data.factors, source: prev[id] && prev[id] !== "loading" ? prev[id].source : "manual" } }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "요인 삭제 실패");
-    }
+  function removeFactor(id: string, type: "opportunity" | "risk", index: number, text: string) {
+    confirm(
+      "요인 삭제",
+      async () => {
+        setError(null);
+        try {
+          const res = await api.delete<{ factors: OppFactors }>(`/api/opportunities/${id}/factors`, { type, index });
+          setFactorsOf((prev) => ({ ...prev, [id]: { factors: res.data.factors, source: prev[id] && prev[id] !== "loading" ? prev[id].source : "manual" } }));
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "요인 삭제 실패");
+        }
+      },
+      { body: text.length > 60 ? `${text.slice(0, 60)}…` : text },
+    );
   }
 
   async function fetchFactors(id: string) {
@@ -324,10 +336,10 @@ export function OpportunitiesView() {
 
   return (
     <main>
-      <h1>기회 발굴</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        시장분석(S1) 산출물에서 기회를 발굴하고, 기회·위험 요인을 근거로 매력도를 평가합니다 (프로세스 스테이지 S2).
-      </p>
+      {confirmDialog}
+      <StageFrame stageId="S2">
+        시장분석(S1) 산출물에서 기회를 발굴하고, 기회·위험 요인을 근거로 매력도를 평가합니다.
+      </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
@@ -355,7 +367,7 @@ export function OpportunitiesView() {
 
       {/* ── 분석된 산업 (S1 연동, 접힘) ── */}
       <section aria-label="분석된 산업" className="market-section">
-        <h2 className="text-[0.92rem] mb-2">🔬 분석된 산업 — 선택해 기회 발굴</h2>
+        <div className="section-toolbar"><span className="section-title"><h2>🔬 분석된 산업 — 선택해 기회 발굴</h2></span></div>
         {insights !== null && insights.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {insights.map((s) => (
@@ -391,8 +403,8 @@ export function OpportunitiesView() {
               </span>
               <button
                 type="button"
-                className="btn-ghost text-[0.8rem]"
-                style={{ marginLeft: "auto" }}
+                className="btn-ghost btn-sm"
+                style={{ marginLeft: "auto" }} /* lint-exempt: 폼 내부 헤더(SectionToolbar 외부 컨텍스트) */
                 disabled={discovering !== null}
                 title="시장분석 근거(기회 요인·드라이버·격차 분석)에서 기회 후보를 자동 발굴하고, 기회/위험 요인도 함께 도출합니다"
                 onClick={() => discoverOpportunities(selectedInsight.industry_name)}
@@ -426,50 +438,57 @@ export function OpportunitiesView() {
 
       {/* ── 기회 퍼널 (리스트 + 행 펼침 평가 패널) ── */}
       <section aria-label="기회 퍼널" className="market-section">
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          <h2 className="text-[0.92rem] !mb-0">🗂 기회 퍼널</h2>
-          <span className="text-[0.72rem] text-[color:var(--muted-fg)]">
-            {statusFilter ? `${COLUMNS.find((c) => c.status === statusFilter)?.label ?? statusFilter} 필터 · ` : ""}
-            {sortedRows.length}건
-          </span>
-          <div role="group" aria-label="산업 필터" className="flex flex-wrap gap-1">
-            <button
-              type="button"
-              aria-pressed={industryFilter === ""}
-              className={`status-chip ${industryFilter === "" ? "status-green" : "status-not-started"}`}
-              onClick={() => setIndustryFilter("")}
-            >
-              전체 산업
-            </button>
-            {industries.map((ind) => (
-              <button
-                key={ind}
-                type="button"
-                aria-pressed={industryFilter === ind}
-                className={`status-chip ${industryFilter === ind ? "status-green" : "status-not-started"}`}
-                onClick={() => setIndustryFilter(ind)}
-              >
-                {ind}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1" style={{ marginLeft: "auto" }}>
-            {([
-              ["attractiveness", "매력도순"],
-              ["recent", "최근 등록순"],
-            ] as const).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={sortKey === key}
-                className={`status-chip ${sortKey === key ? "status-green" : "status-not-started"}`}
-                onClick={() => setSortKey(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <SectionToolbar
+          title="기회 퍼널"
+          icon="🗂"
+          count={sortedRows.length}
+          filters={
+            <>
+              <span className="section-meta">
+                {statusFilter ? `${COLUMNS.find((c) => c.status === statusFilter)?.label ?? statusFilter} 필터 · ` : ""}
+              </span>
+              <span role="group" aria-label="산업 필터" className="flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  aria-pressed={industryFilter === ""}
+                  className={`status-chip ${industryFilter === "" ? "status-green" : "status-not-started"}`}
+                  onClick={() => setIndustryFilter("")}
+                >
+                  전체 산업
+                </button>
+                {industries.map((ind) => (
+                  <button
+                    key={ind}
+                    type="button"
+                    aria-pressed={industryFilter === ind}
+                    className={`status-chip ${industryFilter === ind ? "status-green" : "status-not-started"}`}
+                    onClick={() => setIndustryFilter(ind)}
+                  >
+                    {ind}
+                  </button>
+                ))}
+              </span>
+            </>
+          }
+          actions={
+            <span role="group" aria-label="정렬" className="flex gap-1">
+              {([
+                ["attractiveness", "매력도순"],
+                ["recent", "최근 등록순"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={sortKey === key}
+                  className={`status-chip ${sortKey === key ? "status-green" : "status-not-started"}`}
+                  onClick={() => setSortKey(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </span>
+          }
+        />
         {rows === null ? (
           <p>불러오는 중...</p>
         ) : sortedRows.length === 0 ? (
@@ -523,7 +542,7 @@ export function OpportunitiesView() {
                       <td className="tabular-nums">{o.attractiveness_score ?? "—"}</td>
                       <td className="tabular-nums">{o.synergy_score ?? "—"}</td>
                       <td className="tabular-nums">{fs ? `✅${fs.opportunity.length} ⚠️${fs.risk.length}` : "—"}</td>
-                      <td className="sizing-actions-cell">{nextStepActions(o, setStatus, showSketch, sketchOf)}</td>
+                      <td className="sizing-actions-cell"><span className="actions-row">{nextStepActions(o, setStatus, showSketch, sketchOf)}</span></td>
                     </tr>
                     {isOpen && (
                       <tr>
@@ -536,7 +555,7 @@ export function OpportunitiesView() {
                                   {(fs?.opportunity ?? []).map((f, i) => (
                                     <li key={i}>
                                       {f}
-                                      <button type="button" className="btn-ghost text-[0.65rem] ml-1" onClick={() => removeFactor(o.id, "opportunity", i)}>✕</button>
+                                      <button type="button" className="btn-danger btn-sm ml-1" title="이 요인을 삭제합니다" onClick={() => removeFactor(o.id, "opportunity", i, f)}>삭제</button>
                                     </li>
                                   ))}
                                   {(!fs || fs.opportunity.length === 0) && <li className="text-[color:var(--muted-fg)]">자동 도출 또는 수동 등록하세요.</li>}
@@ -548,7 +567,7 @@ export function OpportunitiesView() {
                                   {(fs?.risk ?? []).map((f, i) => (
                                     <li key={i}>
                                       {f}
-                                      <button type="button" className="btn-ghost text-[0.65rem] ml-1" onClick={() => removeFactor(o.id, "risk", i)}>✕</button>
+                                      <button type="button" className="btn-danger btn-sm ml-1" title="이 요인을 삭제합니다" onClick={() => removeFactor(o.id, "risk", i, f)}>삭제</button>
                                     </li>
                                   ))}
                                   {(!fs || fs.risk.length === 0) && <li className="text-[color:var(--muted-fg)]">자동 도출 또는 수동 등록하세요.</li>}
@@ -558,7 +577,7 @@ export function OpportunitiesView() {
                             <div className="flex flex-wrap items-center gap-1 mt-1">
                               <button
                                 type="button"
-                                className="btn-ghost text-[0.72rem]"
+                                className="btn-ghost btn-sm"
                                 disabled={factorState === "loading"}
                                 title="산업 시장분석 근거에서 기회/위험 요인을 자동 도출합니다"
                                 onClick={() => autoDeriveFactors(o.id)}
@@ -573,7 +592,7 @@ export function OpportunitiesView() {
                                 className="sizing-new-input sizing-new-input-sm"
                                 style={{ width: "9rem" }}
                               />
-                              <button type="button" className="btn-ghost text-[0.72rem]" onClick={() => addFactor(o.id, "opportunity")}>추가</button>
+                              <button type="button" className="btn-ghost btn-sm" onClick={() => addFactor(o.id, "opportunity")}>추가</button>
                               <input
                                 aria-label="위험 요인 수동 추가"
                                 placeholder="위험 요인 추가"
@@ -582,7 +601,7 @@ export function OpportunitiesView() {
                                 className="sizing-new-input sizing-new-input-sm"
                                 style={{ width: "9rem" }}
                               />
-                              <button type="button" className="btn-ghost text-[0.72rem]" onClick={() => addFactor(o.id, "risk")}>추가</button>
+                              <button type="button" className="btn-ghost btn-sm" onClick={() => addFactor(o.id, "risk")}>추가</button>
                             </div>
 
                             {o.rationale && <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">{o.rationale}</p>}
@@ -601,7 +620,7 @@ export function OpportunitiesView() {
                                 <div className="flex flex-wrap items-center gap-1 mt-2">
                                   <button
                                     type="button"
-                                    className="btn-ghost text-[0.72rem]"
+                                    className="btn-ghost btn-sm"
                                     disabled={screeningBusy[o.id] !== undefined}
                                     title="자사 역량과의 시너지를 0-100 점과 근거로 산출합니다 (risk-officer)"
                                     onClick={() => runScreening(o.id, "synergy")}
@@ -610,7 +629,7 @@ export function OpportunitiesView() {
                                   </button>
                                   <button
                                     type="button"
-                                    className="btn-ghost text-[0.72rem]"
+                                    className="btn-ghost btn-sm"
                                     disabled={screeningBusy[o.id] !== undefined}
                                     title="전략적 적합성을 Go/Hold/Kill로 권고합니다 (process-governance-manager)"
                                     onClick={() => runScreening(o.id, "fit")}
@@ -648,7 +667,7 @@ export function OpportunitiesView() {
                                   className="sizing-new-input sizing-new-input-sm"
                                   style={{ width: "7.5rem" }}
                                 />
-                                <button type="button" className="btn-ghost text-[0.75rem]" onClick={() => evaluateAttractiveness(o.id)}>
+                                <button type="button" className="btn-ghost btn-sm" onClick={() => evaluateAttractiveness(o.id)}>
                                   매력도 평가
                                 </button>
                                 <span className="text-[0.72rem] text-[color:var(--muted-fg)]">평가 후 다음 단계(평가)로 이동할 수 있습니다.</span>
@@ -691,7 +710,7 @@ export function OpportunitiesView() {
                                 <details className="mt-2 text-[0.75rem]">
                                   <summary className="cursor-pointer text-[color:var(--muted-fg)]">
                                     비즈니스 모델 스케치 ({sk.source === "llm" ? "LLM" : "결정론 합성"})
-                                    <button type="button" className="btn-ghost text-[0.7rem] ml-2" onClick={(e) => { e.preventDefault(); void showSketch(o.id, true); }}>재생성</button>
+                                    <button type="button" className="btn-ghost btn-sm ml-2" onClick={(e) => { e.preventDefault(); void showSketch(o.id, true); }}>재생성</button>
                                   </summary>
                                   <ul className="sizing-note-list mt-1">
                                     <li><strong>고객</strong> — {sk.sketch.customer ?? "—"}</li>
@@ -719,11 +738,19 @@ export function OpportunitiesView() {
       </section>
 
 
-      {/* ── 수동 등록 (접힘) ── */}
+      {/* ── 수동 등록 (표준 토글 인라인 폼 — ADR-0083) ── */}
       <section aria-label="기회 수동 등록" className="market-section">
-        <details>
-          <summary className="cursor-pointer text-[0.92rem] font-semibold">✍️ 기회 직접 등록</summary>
-          <form onSubmit={create} className="sizing-new-form mt-2">
+        <SectionToolbar
+          title="기회 직접 등록"
+          icon="✍️"
+          actions={
+            <button type="button" className="btn-ghost whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
+              ＋ 기회 직접 등록
+            </button>
+          }
+        />
+        {showCreateForm && (
+          <form onSubmit={create} className="sizing-new-form mb-3">
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[0.78rem]">
                 <span className="block mb-1">기회명 *</span>
@@ -741,12 +768,15 @@ export function OpportunitiesView() {
                 <span className="block mb-1">매력도 (0-100)</span>
                 <input type="number" min={0} max={100} value={form.attractiveness_score} onChange={(e) => setForm({ ...form, attractiveness_score: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
               </label>
-              <button type="submit" className="btn-ghost text-[0.8rem]" disabled={busy || !form.name.trim()}>
-                {busy ? "등록 중..." : "기회 등록"}
+              <button type="submit" className="btn-ghost" disabled={busy || !form.name.trim()}>
+                {busy ? "등록 중..." : "등록"}
+              </button>
+              <button type="button" className="btn-ghost" onClick={() => setShowCreateForm(false)}>
+                취소
               </button>
             </div>
           </form>
-        </details>
+        )}
       </section>
     </main>
   );
