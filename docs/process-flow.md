@@ -97,7 +97,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 - S1 시장분석: `market-intelligence-agent`, `industry-lead`
 - S2 기회 발굴: `market-intelligence-agent`, `greenfield-agent`
-- S3 시너지·전략적 적합성: `process-governance-manager`, `risk-officer`
+- S3 시너지·전략적 적합성: `process-governance-manager`, `risk-officer`, `financial-analyst`
 - S4 진출방식 결정: `pm`, `brownfield-agent`
 - S5 역량 평가·진출전략: `greenfield-agent`, `financial-analyst`
 - S6 대상 후보 발굴: `brownfield-agent`, `market-intelligence-agent`
@@ -195,6 +195,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **Activities**
 - strategic-fit-screening · agent: `process-governance-manager` · skills: `strategic-fit-screening`, `portfolio-fit-assessment` · procedure: `greenfield-screening`, `brownfield-screening`
 - synergy-analysis · agent: `risk-officer` · skills: `assumption-audit` · procedure: `greenfield-screening`, `brownfield-screening`
+- our-company-profile · agent: `financial-analyst` · skills: `historical-financial-analysis`, `company-intelligence` · procedure: `company-profile-analysis`
 
 **필수 산출물**
 - 시너지 평가

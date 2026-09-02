@@ -172,22 +172,30 @@ export function parseCorpXml(buf: Buffer): CorpRow[] {
   const { inflateRawSync } = require("node:zlib") as typeof import("node:zlib");
   if (!(buf.length > 4 && buf[0] === 0x50 && buf[1] === 0x4b)) return [];
   let xml = "";
-  for (let i = 0; i < buf.length - 4; i++) {
-    if (buf[i] === 0x50 && buf[i + 1] === 0x4b && buf[i + 2] === 0x03 && buf[i + 3] === 0x04) {
-      const compressionMethod = buf.readUInt16LE(i + 8);
-      const compressedSize = buf.readUInt32LE(i + 18);
-      const uncompressedSize = buf.readUInt32LE(i + 22);
-      const nameLen = buf.readUInt16LE(i + 26);
-      const extraLen = buf.readUInt16LE(i + 28);
-      if (compressedSize === 0 || compressedSize > MAX_ZIP) return [];
-      if (uncompressedSize > 0 && uncompressedSize / compressedSize > MAX_RATIO) return []; // 압축비 이상 = bomb 의심
-      const fileName = buf.subarray(i + 30, i + 30 + nameLen).toString("utf-8");
-      if (fileName.includes("/") || fileName.includes("..")) return []; // slip 방지 — 단일 파일 덤프만 허용
-      const dataStart = i + 30 + nameLen + extraLen;
-      const data = buf.subarray(dataStart, dataStart + compressedSize);
-      xml = compressionMethod === 8 ? inflateRawSync(data, { maxOutputLength: MAX_ZIP }).toString("utf-8") : data.toString("utf-8");
-      break;
+  const sig = (i: number) => buf[i] === 0x50 && buf[i + 1] === 0x4b;
+  for (let i = 0; i < buf.length - 4 && !xml; i++) {
+    if (!(sig(i) && buf[i + 2] === 0x03 && buf[i + 3] === 0x04)) continue;
+    const compressionMethod = buf.readUInt16LE(i + 8);
+    let compressedSize = buf.readUInt32LE(i + 18);
+    const uncompressedSize = buf.readUInt32LE(i + 22);
+    const nameLen = buf.readUInt16LE(i + 26);
+    const extraLen = buf.readUInt16LE(i + 28);
+    const fileName = buf.subarray(i + 30, i + 30 + nameLen).toString("utf-8");
+    if (fileName.includes("/") || fileName.includes("..")) return []; // slip 방지 — 단일 파일 덤프만 허용
+    const dataStart = i + 30 + nameLen + extraLen;
+    if (compressedSize === 0) {
+      // 스트리밍 ZIP(data descriptor) — 로컬 헤더에 크기 미기록. 다음 시그니처까지를 데이터로 간주.
+      let next = -1;
+      for (let j = dataStart; j < buf.length - 4; j++) {
+        if (sig(j) && (buf[j + 2] === 0x03 || buf[j + 2] === 0x01)) { next = j; break; }
+      }
+      if (next === -1) next = buf.length;
+      compressedSize = Math.min(next - dataStart, MAX_ZIP);
     }
+    if (compressedSize <= 0 || compressedSize > MAX_ZIP) return [];
+    if (uncompressedSize > 0 && uncompressedSize / compressedSize > MAX_RATIO) return []; // 압축비 이상 = bomb 의심
+    const data = buf.subarray(dataStart, dataStart + compressedSize);
+    xml = compressionMethod === 8 ? inflateRawSync(data, { maxOutputLength: MAX_ZIP }).toString("utf-8") : data.toString("utf-8");
   }
   const rows: CorpRow[] = [];
   for (const row of xml.split("<list>").slice(1)) {
@@ -199,7 +207,8 @@ export function parseCorpXml(buf: Buffer): CorpRow[] {
   return rows;
 }
 
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+// 고유번호 디렉터리는 변경이 드물다 — 30일 TTL (만료돼도 stale-while-revalidate로 검색 유지)
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 async function loadCorpRows(opts: { forceRefresh?: boolean } = {}): Promise<CorpRowsResult> {
   if (!opts.forceRefresh && corpRowsCache) return { rows: corpRowsCache, stale: false, error: null, results: [] };
@@ -217,7 +226,8 @@ async function loadCorpRows(opts: { forceRefresh?: boolean } = {}): Promise<Corp
   const tmp = mkdtempSync(join(tmpdir(), "dart-"));
   let downloadError = "DART 응답 파싱 실패";
   try {
-    const res = await dartFetch(`${BASE}/corpCode.xml.zip?crtfc_key=${encodeURIComponent(key)}`, { timeoutMs: 60_000, accept: "any" });
+        // 주의 — 엔드포인트는 corpCode.xml(.zip이 아님; .zip은 HTML 차단 페이지 반환).
+    const res = await dartFetch(`${BASE}/corpCode.xml?crtfc_key=${encodeURIComponent(key)}`, { timeoutMs: 60_000, accept: "any" });
     if (!res.ok) {
       downloadError = `DART HTTP ${res.status}`;
     } else {

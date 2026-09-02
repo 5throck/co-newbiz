@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-target-identification",
+  "criterion_id": "universe_cannot_be_defined",
+  "title": "Target Universe cannot be defined — no defensible selection criteria or coverage",
+  "action": "back_to_route_decision",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": "Declared in procedures/_shared/brownfield-target-identification/schema.yaml kill_criteria (S6, ADR-0076 track separation); activation awaits the S6 routing-var round per ADR-0060 §3",
+  "notes": "Declared in YAML, not yet executable — predicate null by design until the universe-selection vars exist (activation convention per ADR-0057). Routing back to S4 reopens the route choice (ADR-0052 §A vocabulary)."
+}

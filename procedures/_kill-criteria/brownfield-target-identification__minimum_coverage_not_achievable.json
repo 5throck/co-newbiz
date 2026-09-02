@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-target-identification",
+  "criterion_id": "minimum_coverage_not_achievable",
+  "title": "Minimum Long List coverage not achievable — funnel cannot meet its declared coverage bar",
+  "action": "hold_pending_market_research",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": "Declared in procedures/_shared/brownfield-target-identification/schema.yaml kill_criteria (S6 completion criterion: minimum-coverage Long List); activation awaits the coverage-var round per ADR-0060 §3",
+  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). Hold keeps the opportunity alive pending fresh market research rather than killing the need."
+}

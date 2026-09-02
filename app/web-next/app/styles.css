@@ -2644,9 +2644,11 @@
 /* ── P2 Report 데이터 표현 표준 (ADR-0088) ── */
 /* 넓은 표 눌림 방지 래퍼 — 4열 이상·장문 셀 표는 반드시 이 래퍼 안에 둔다. */
 .table-scroll { overflow-x: auto; }
+/* 표 셀의 한국어 어간 분리 금지(keep-all) — 긴 영문 토큰은 단어 경계에서만 개행 */
+.data-table th, .data-table td { word-break: keep-all; overflow-wrap: break-word; }
 .report-table { min-width: 48rem; }
 .report-table th, .report-table td { vertical-align: top; }
-.report-table .col-label { min-width: 10rem; }
+.report-table .col-label { min-width: 12rem; }
 .report-table .col-type { min-width: 6rem; }
 .report-table .col-text { min-width: 16rem; }
 .report-table .col-num { text-align: right; white-space: nowrap; }
@@ -2670,6 +2672,11 @@
   padding: 0.75rem;
   margin: 0.75rem 0;
 }
+
+/* 사이드바 하위 메뉴 (시너지 정합성 하위: 그룹/계열사 분석 · 시너지·전략적 적합성) */
+.side-nav-parent { cursor: default; }
+.side-nav-children { display: flex; flex-direction: column; }
+.side-nav-child { padding-left: 2.4rem; font-size: 0.86em; }
 
 /* 행 액션 셀 — td는 table-cell을 유지해야 행 배경·경계가 이어진다.
    flex(우측 정렬, 8px 간격)는 내부 .actions-row에 적용한다. */

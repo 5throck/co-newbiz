@@ -33,6 +33,16 @@ The standard is registered in `design-tokens.json` (reportDataPresentation), the
 checklist (§F 데이터 표현), and the P2 pattern definition — so all current and future
 reports (S1, S8, S9) inherit it, not just the synergy report.
 
+**Addendum (2026-09-02, market 경쟁 구조 regression)**: label/name columns must never rely
+on a narrow fixed width (`w-[7rem]`-style) — company names broke mid-word ("Atlas Copco 계
+열"). Rules added: (a) all `data-table` cells use `word-break: keep-all; overflow-wrap:
+break-word` (Korean syllable and English mid-word breaks are prohibited; long unbreakable
+tokens wrap at word boundaries), (b) `col-label` minimum width raised 10rem → 12rem,
+(c) the three market-report tables (경쟁 구조, 가치사슬 체인 링크, 공시 교차검증) are now
+`table-scroll` + `report-table` wrapped. Fixed widths on label columns are a lint target
+going forward. Chart-theme hooks (useChartTheme) must be called at the component's top
+level — conditional/IIFE hook calls crashed the report on first chart render (fixed).
+
 ## Consequences
 
 - Reports gain trend readability and stop truncating/squeezing; the synergy report is the

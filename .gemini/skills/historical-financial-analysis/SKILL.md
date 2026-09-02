@@ -20,6 +20,7 @@ metadata:
   procedure_keys:
     - greenfield-fs
     - brownfield-fs
+    - company-profile-analysis
   type: domain
   triggers:
     - historical financial trend

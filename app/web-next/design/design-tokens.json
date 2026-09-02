@@ -59,7 +59,8 @@
       "adr": "ADR-0088",
       "timeSeries": "차트(좌/상) + 피벗 테이블(계정=행, 연도=열 최신순) 병기 — 장기 행 나열 금지",
       "longTextLists": "문단 뭉치 대신 report-bullet-list(블릿+항목 간격) 사용",
-      "wideTables": "4열 이상·장문 셀 표는 table-scroll 래퍼 + 열 최소폭(col-label/col-type/col-text) 필수",
+      "wideTables": "4열 이상·장문 셀 표는 table-scroll 래퍼 + 열 최소폭(col-label 12rem/col-type 6rem/col-text 16rem) 필수. 라벨 열에 w-[7rem]류 고정 협폭 금지",
+      "cellBreaking": "모든 data-table 셀 word-break: keep-all + overflow-wrap: break-word (단어 중간 개행 금지)",
       "units": "금액 단위 표기 필수(예: 억원) + 출처 칩/링크 병기",
       "integrity": "합산 검증 불일치 시 경고 배너 + 신뢰도 하향 표기"
     }

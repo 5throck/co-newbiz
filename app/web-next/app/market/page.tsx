@@ -703,7 +703,8 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
             이 산업에 연결된 프록시 체인 링크가 없습니다. 신규 분석 산업은 드라이버 민감도가 구조 증거를 대신합니다.
           </p>
         ) : (
-          <table className="data-table" aria-label="가치사슬 프록시 체인 링크">
+          <div className="table-scroll">
+          <table className="data-table report-table" aria-label="가치사슬 프록시 체인 링크">
             <caption className="sr-only">가치사슬 프록시 체인 링크</caption>
             <thead>
               <tr><th scope="col" className="w-[8rem]">방향</th><th scope="col">산업</th><th scope="col">hop</th><th scope="col">계수/β</th><th scope="col">시차(월)</th><th scope="col">근거</th></tr>
@@ -721,6 +722,7 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
               ))}
             </tbody>
           </table>
+          </div>
         )}
         {detail.chain.grade && (
           <p className="mt-1 text-[0.8rem] text-[color:var(--muted-fg)]">
@@ -745,10 +747,11 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
             <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">경쟁 구조</h4>
             <p className="mb-1 text-[0.85rem]">{matrix.competitive.structure}</p>
             {matrix.competitive.players.length > 0 && (
-              <table className="data-table" aria-label="경쟁 구조 — 주요 기업">
+              <div className="table-scroll">
+              <table className="data-table report-table" aria-label="경쟁 구조 — 주요 기업">
                 <caption className="sr-only">경쟁 구조 주요 기업</caption>
                 <thead>
-                  <tr><th scope="col" className="w-[7rem]">기업</th><th scope="col" className="w-[7rem]">포지션</th><th scope="col">비고</th></tr>
+                  <tr><th scope="col" className="col-label">기업</th><th scope="col" className="col-type">포지션</th><th scope="col" className="col-text">비고</th></tr>
                 </thead>
                 <tbody>
                   {matrix.competitive.players.map((pl) => (
@@ -764,6 +767,7 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </>
         )}
@@ -996,7 +1000,8 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
           카테고리 내 상장사의 연차보고서·중간보고서 원문으로 매트릭스의 각 주장을 검증합니다.
           구조적으로 검증 불가능한 항목은 <strong>검증 불가</strong>로 명시합니다(탐색 실패가 아닌 공시 구조의 한계).
         </p>
-        <table className="data-table" aria-label="기업 공시 교차검증 결과">
+        <div className="table-scroll">
+        <table className="data-table report-table" aria-label="기업 공시 교차검증 결과">
           <caption className="sr-only">기업 공시 교차검증 결과</caption>
           <thead>
             <tr><th scope="col" className="w-[34%]">매트릭스 주장</th><th scope="col">판정</th><th scope="col">1차 소스 근거</th></tr>
@@ -1014,6 +1019,7 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
             })}
           </tbody>
         </table>
+        </div>
       </StepSection>
 
       <StepSection n={7} id="step-7" title="분석 한계 목록">

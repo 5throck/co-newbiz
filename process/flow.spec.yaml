@@ -169,6 +169,13 @@ stages:
         agent: risk-officer
         skills: [assumption-audit]
         procedure: [greenfield-screening, brownfield-screening]
+        # 시너지 정합성 화면 — 대상은 그룹/계열사 레지스트리(계열사 또는 그룹 전체)이며,
+        # S2 기회를 연결해 분석하고 완료 시 opportunity.synergy_score 권고를 기록한다 (ADR-0090).
+      - id: our-company-profile
+        agent: financial-analyst
+        skills: [historical-financial-analysis, company-intelligence]
+        procedure: [company-profile-analysis]
+        # 그룹/계열사 프로파일 — 자사 강점/약점·산업 노출을 버전 누적으로 관리 (S3 입력, ADR-0080·0089).
     requiredArtifacts:
       - 시너지 평가
       - 전략적 적합성 판단

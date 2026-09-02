@@ -1,5 +1,7 @@
-// DART 고유번호(corp_code) 전체 덤프 수동 갱신 CLI — k-dart P1-1 (ADR: k-dart 고도화).
-// corpCode.xml.zip을 강제로 재다운로드해 db/data/dart-corpcode-cache.json을 갱신한다.
+// DART 고유번호(corp_code) 전체 덤프 갱신 CLI — k-dart P1-1 (ADR: k-dart 고도화).
+// corpCode.xml(엔드포인트명 주의 — .zip 아님)을 다운로드해 db/data/dart-corpcode-cache.json을
+// 갱신한다. 주기 동기화: 30일 TTL 만료 시 첫 검색 때 자동 갱신(stale-while-revalidate)되며,
+// 수동 즉시 갱신은 이 스크립트를 cron에 등록 (예: 매주 월 07:00 — `bun app/web-next/scripts/dart-sync-corp-codes.ts`).
 // 차단(HTML 응답) 시 기존 캐시를 보존하고 결과를 보고한다.
 // 실행: bun app/web-next/scripts/dart-sync-corp-codes.ts
 import { Database } from "bun:sqlite";

@@ -57,7 +57,14 @@ export interface SynergyPayload {
   };
   shortList: Array<{ rank: number; area: string; verdict: string; reason: string }>;
   stepSummaries: SynergyStepSummary[];
+  /** ADR-0090 — 분석 대상(그룹/계열사 레지스트리) 및 연결 기회 */
+  target?: { type: "affiliate" | "group"; name: string };
+  opportunity?: { id: string; name: string } | null;
+  /** 기회 연결 시 산출된 시너지 점수 권고값 (사람 확정 전 — 경계 #2) */
+  synergyScore?: number | null;
+  synergyRationale?: string | null;
 }
+
 
 const num = (v: unknown, fallback = 0): number => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" && v.trim() ? v.trim() : fallback);
@@ -86,15 +93,16 @@ async function askJson(system: string, user: string, maxTokens = 2500): Promise<
 export async function runSynergyPipeline(db: Database, analysisId: string): Promise<void> {
   const row = db
     .query(
-      `SELECT sa.id, sa.company_id, c.name_ko, c.dart_corp_code, sa.source_ref AS source_ref, ac.name_ko AS acquirer_name
+      `SELECT sa.id, sa.company_id, sa.target_type, sa.member_id, sa.group_id, sa.opportunity_id,
+              c.name_ko, c.dart_corp_code, sa.source_ref AS source_ref, ac.name_ko AS acquirer_name
        FROM synergy_analysis sa
        JOIN md_company c ON c.id = sa.company_id
        LEFT JOIN md_company ac ON ac.id = sa.acquirer_company_id
        WHERE sa.id = ?`,
     )
-    .get(analysisId) as { id: string; company_id: string; name_ko: string; dart_corp_code: string | null; source_ref: string | null; acquirer_name: string | null } | null;
+    .get(analysisId) as { id: string; company_id: string; target_type: "affiliate" | "group" | null; member_id: string | null; group_id: string | null; opportunity_id: string | null; name_ko: string; dart_corp_code: string | null; source_ref: string | null; acquirer_name: string | null } | null;
   if (!row) throw new Error(`synergy analysis ${analysisId} not found`);
-  const company = row.name_ko;
+  let company = row.name_ko;
   const sourceRef = row.source_ref ?? null; // M&A 대상 기업
   // 신용평가자료 업로드 파일의 추출 텍스트 — "신용평가자료: {original} ({stored})"에서 stored 파싱
   let creditText: string | null = null;
@@ -110,15 +118,82 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     }
   }
   const acquirer = row.acquirer_name ?? null; // 인수 주체
+  // ADR-0090 — target_type 분기 공유 변수 (그룹/계열사 프로파일 재사용 경로)
+  let dart: DartFinancials = { corpCode: "", found: false, items: [], error: "" };
+  let research: WebSource[] = [];
+  let financialStrengths: string[] = [];
+  let financialWeaknesses: string[] = [];
+  let businessAssessment = "";
+  let corpCode: string | null = row.dart_corp_code ?? null;
   const now = () => new Date().toISOString();
   const advance = (step: number) => db.run("UPDATE synergy_analysis SET current_step = ? WHERE id = ?", [step, analysisId]);
   const stepSummaries: SynergyStepSummary[] = [];
 
-  // ── Step 1: DART 재무제표·사업보고서 입수 ──
+  if (row.target_type === "affiliate" || row.target_type === "group") {
+    // ── ADR-0090 신규 경로: 그룹/계열사 프로파일 재사용 (Steps 1~3 대체) ──
+    const { loadLatestProfile } = await import("./company-profile-pipeline.ts");
+    advance(1);
+    if (row.target_type === "affiliate") {
+      const member = db.query("SELECT company_name FROM company_group_member WHERE id = ?").get(row.member_id) as { company_name: string } | undefined;
+      company = member?.company_name ?? row.name_ko;
+      const prof = row.member_id ? loadLatestProfile(db, row.member_id) : null;
+      if (!prof) throw new Error("계열사 프로파일이 없습니다 — 그룹/계열사 분석 화면에서 먼저 분석하세요.");
+      financialStrengths = prof.strengths;
+      financialWeaknesses = prof.weaknesses;
+      businessAssessment = prof.businessAssessment;
+      corpCode = prof.dartCorpCode ?? null;
+      dart = prof.dartFinancials?.available
+        ? { corpCode: corpCode ?? "", found: true, year: prof.dartFinancials.year, items: (prof.dartFinancials.items ?? []).map((i) => ({ name: i.name, value: i.value, unit: "KRW" })), reportUrl: prof.dartFinancials.reportUrl }
+        : { corpCode: corpCode ?? "", found: false, items: [], error: prof.dartFinancials?.error ?? "프로파일에 재무 데이터 없음" };
+    } else {
+      const grp = db.query("SELECT name FROM company_group WHERE id = ?").get(row.group_id) as { name: string } | undefined;
+      company = `그룹 전체 (${grp?.name ?? "그룹"})`;
+      const members = db.query("SELECT id, company_name FROM company_group_member WHERE group_id = ?").all(row.group_id) as Array<{ id: string; company_name: string }>;
+      const strengths = new Set<string>();
+      const exposures = new Set<string>();
+      let best: ReturnType<typeof loadLatestProfile> = null;
+      for (const m of members) {
+        const prof = loadLatestProfile(db, m.id);
+        if (!prof) continue;
+        prof.strengths.forEach((x) => strengths.add(x));
+        (prof.industryExposure ?? []).forEach((x) => exposures.add(x));
+        if (!best || (prof.dartFinancials?.items?.length ?? 0) > (best.dartFinancials?.items?.length ?? 0)) best = prof;
+      }
+      if (!best) throw new Error("그룹 소속 계열사의 프로파일이 없습니다 — 그룹/계열사 분석을 먼저 실행하세요.");
+      financialStrengths = [...strengths].slice(0, 5);
+      financialWeaknesses = best.weaknesses;
+      businessAssessment = `그룹 롤업 — ${members.length}개 계열사 프로파일 통합 (공통 강점 ${strengths.size}건, 산업 노출 ${exposures.size}개). 대표 재무: ${best.companyName}.`;
+      corpCode = best.dartCorpCode ?? null;
+      dart = best.dartFinancials?.available
+        ? { corpCode: corpCode ?? "", found: true, year: best.dartFinancials.year, items: (best.dartFinancials.items ?? []).map((i) => ({ name: i.name, value: i.value, unit: "KRW" })), reportUrl: best.dartFinancials.reportUrl }
+        : { corpCode: corpCode ?? "", found: false, items: [], error: "그룹 대표 재무 없음" };
+    }
+    stepSummaries.push({
+      step: 1,
+      title: "그룹/계열사 프로파일 입수",
+      summary: `${company} — 그룹/계열사 분석의 최신 프로파일 버전을 재사용합니다 (DART ${dart.found ? "포함" : "미포함"}).`,
+      source: "synthesis",
+    });
+    advance(2);
+    stepSummaries.push({
+      step: 2,
+      title: "프로파일 리서치 팩 재사용",
+      summary: "프로파일 분석 시 수집된 리서치 출처는 프로파일 버전에 보존돼 있어 재수집하지 않습니다 (출처·노트 탭 참조).",
+      source: "synthesis",
+    });
+    advance(3);
+    stepSummaries.push({
+      step: 3,
+      title: "강점/약점 확정",
+      summary: `프로파일 기반 — 강점 ${financialStrengths.length}개·약점 ${financialWeaknesses.length}개.`,
+      source: "synthesis",
+    });
+  } else {
+  // ── Step 1: DART 재무제표·사업보고서 입수 (legacy md_company 경로) ──
   advance(1);
-  let corpCode = row.dart_corp_code ?? null;
+  corpCode = row.dart_corp_code ?? null;
   if (!corpCode && isDartConfigured()) corpCode = await findCorpCode(company);
-  const dart: DartFinancials = corpCode ? await fetchFinancials(corpCode, { years: 3 }) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
+  dart = corpCode ? await fetchFinancials(corpCode, { years: 3 }) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
   if (corpCode && corpCode !== row.dart_corp_code) {
     db.run("UPDATE md_company SET dart_corp_code = ? WHERE id = ?", [corpCode, row.company_id]);
   }
@@ -133,7 +208,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
 
   // ── Step 2: 외부 리서치 (글로벌 기관·증권사·뉴스) ──
   advance(2);
-  const research: WebSource[] = isWebResearchConfigured()
+  research = isWebResearchConfigured()
     ? await researchSources([
         `${company} 사업보고서 재무 분석`,
         `${company} 증권사 리포트 전망`,
@@ -164,15 +239,16 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     const items = arr.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, 5);
     return items.length ? items : fallback;
   };
-  const financialStrengths = listOf(faJson?.strengths, ["재무 분석 미생성 — DART/리서치 데이터 확인 후 보완"]);
-  const financialWeaknesses = listOf(faJson?.weaknesses, ["재무 분석 미생성 — 보완 필요"]);
-  const businessAssessment = str(faJson?.businessAssessment, "종합 평가 미생성 — 보완 필요");
+  financialStrengths = listOf(faJson?.strengths, ["재무 분석 미생성 — DART/리서치 데이터 확인 후 보완"]);
+  financialWeaknesses = listOf(faJson?.weaknesses, ["재무 분석 미생성 — 보완 필요"]);
+  businessAssessment = str(faJson?.businessAssessment, "종합 평가 미생성 — 보완 필요");
   const faSummary = await completeOrFallback(
     [{ role: "user", content: `회사 ${company}의 재무·사업 분석을 한국어 2문장으로 요약하세요. 강점 ${financialStrengths.length}개, 약점 ${financialWeaknesses.length}개 도출.` }],
     () => `재무 강점 ${financialStrengths.length}개·약점 ${financialWeaknesses.length}개 도출. ${businessAssessment.slice(0, 120)}`,
     { maxTokens: 300 },
   );
   stepSummaries.push({ step: 3, title: "재무 강/약점 분석", summary: faSummary.text, source: faSummary.source });
+  }
 
   // ── Step 4: S1/S2 연계 — 시너지 영역 도출 ──
   advance(4);
@@ -202,9 +278,19 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   const marketsContext = marketSummaries
     .map((m) => `${m.industry}: CAGR ${m.cagrPct ?? "?"}%${m.gapPct !== null ? `, 외부 전망 대비 격차 ${m.gapPct > 0 ? "+" : ""}${m.gapPct}%` : ""}${m.newDrivers.length ? `, 신규 드라이버: ${m.newDrivers.join("/")}` : ""}`)
     .join("\n") || "(완료된 시장분석 없음)";
+  // ADR-0090 — 연결 기회 컨텍스트
+  type OppRow = { id: string; name: string; market_scope: string | null; rationale: string | null };
+  let oppRow: OppRow | null = null;
+  let oppContext = "";
+  if (row.opportunity_id) {
+    oppRow = db.query("SELECT id, name, market_scope, rationale FROM opportunity WHERE id = ?").get(row.opportunity_id) as OppRow | null;
+    if (oppRow) {
+      oppContext = `\n\n연결 기회 (이 분석은 아래 기회를 위한 시너지 검증입니다):\n- 기회명: ${oppRow.name}\n- 시장 범위: ${oppRow.market_scope ?? "—"}\n- 발굴 근거: ${oppRow.rationale ?? "—"}`;
+    }
+  }
   const synJson = await askJson(
     "You are a corporate development analyst. Reply with ONE JSON object only.",
-    `역할 구분 — 인수 주체: ${acquirer ?? "미지정"}, M&A 대상 기업: ${company}\n대상 기업 재무/사업 평가: ${businessAssessment}\n대상 기업 강점: ${financialStrengths.join(" / ")}\n\nS1·S2 완료 시장 분석(Long List):\n${marketsContext}\n\nJSON: {"synergyAreas":[{"area":"시너지 영역명","synergyType":"매출 시너지|원가 절감|기술·역량|유통·채널 등","rationale":"대상 기업의 역량·자산이 인수 주체와 연결되어 시너지가 나는 근거 2~3문장","opportunity":"구체 기회","risk":"리스크","sources":["관련 출처 번호/명"]}]} — 3~6개 영역. 인수 주체의 역량과 대상 기업 강점, 시장 격차·드라이버를 연결해 Long List를 Short List로 좁히세요.`,
+    `역할 구분 — 인수 주체: ${acquirer ?? (row.target_type ? `자사 (${company})` : "미지정")}, 검증 대상: ${company}\n대상 기업 재무/사업 평가: ${businessAssessment}\n대상 기업 강점: ${financialStrengths.join(" / ")}\n\nS1·S2 완료 시장 분석(Long List):\n${marketsContext}${oppContext}\n\nJSON: {"synergyAreas":[{"area":"시너지 영역명","synergyType":"매출 시너지|원가 절감|기술·역량|유통·채널 등","rationale":"대상 기업의 역량·자산이 인수 주체와 연결되어 시너지가 나는 근거 2~3문장","opportunity":"구체 기회","risk":"리스크","sources":["관련 출처 번호/명"]}]} — 3~6개 영역. 인수 주체의 역량과 대상 기업 강점, 시장 격차·드라이버를 연결해 Long List를 Short List로 좁히세요.`,
     3000,
   );
   const synergyAreas = (Array.isArray(synJson?.synergyAreas) ? synJson!.synergyAreas : []).slice(0, 6).map((a) => ({
@@ -226,7 +312,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   advance(5);
   const slJson = await askJson(
     "You are an IC advisor. Reply with ONE JSON object only.",
-    `시너지 영역 후보: ${JSON.stringify(synergyAreas.map((a, i) => ({ no: i + 1, area: a.area, opportunity: a.opportunity, risk: a.risk })))}\n\nJSON: {"shortList":[{"rank":1,"area":"영역명","verdict":"Short List|보류","reason":"한두 문장"}]} — 전체 순위 매기고 상위 2~3개를 Short List로.`,
+    `시너지 영역 후보: ${JSON.stringify(synergyAreas.map((a, i) => ({ no: i + 1, area: a.area, opportunity: a.opportunity, risk: a.risk })))}${oppRow ? `\n\n연결 기회: ${oppRow.name} (${oppRow.market_scope ?? "—"})` : ""}\n\nJSON: {"shortList":[{"rank":1,"area":"영역명","verdict":"Short List|보류","reason":"한두 문장"}],${oppRow ? '"synergyScore": <0-100 정수>, "synergyRationale": "<점수 근거 2~3문장>"' : '"synergyScore": null, "synergyRationale": null'}} — 전체 순위 매기고 상위 2~3개를 Short List로.${oppRow ? " synergyScore는 연결 기회에 대한 시너지 권고 점수입니다 (사람 확정 전 권고값)." : ""}`,
   );
   const shortList = (Array.isArray(slJson?.shortList) ? slJson!.shortList : synergyAreas.map((a, i) => ({ rank: i + 1, area: a.area, verdict: "보류", reason: "자동 선별 미생성" })))
     .slice(0, 6)
@@ -257,6 +343,10 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     marketLinkage: { marketSummaries, synergyAreas },
     shortList,
     stepSummaries,
+    target: row.target_type ? { type: row.target_type, name: company } : undefined,
+    opportunity: oppRow ? { id: oppRow.id, name: oppRow.name } : null,
+    synergyScore: oppRow ? (typeof (slJson as { synergyScore?: unknown })?.synergyScore === "number" ? (slJson as { synergyScore: number }).synergyScore : null) : null,
+    synergyRationale: oppRow ? ((slJson as { synergyRationale?: unknown })?.synergyRationale != null ? String((slJson as { synergyRationale: unknown }).synergyRationale) : null) : null,
   };
   const nextVersionNo =
     ((db.query("SELECT MAX(version_no) m FROM synergy_version WHERE analysis_id = ?").get(analysisId) as { m: number | null }).m ?? 0) + 1;
@@ -266,6 +356,12 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
        VALUES (?,?,?,?,?,?,?)`,
       [ulid(), analysisId, nextVersionNo, JSON.stringify(payload), `시너지 정합성 분석 v${nextVersionNo} (DART ${dart.found ? "입수" : "미입수"} · 리서치 ${research.length}건 · Short List ${shortList.filter((s) => s.verdict.includes("Short")).length}개)`, "synergy-pipeline", now()],
     );
+    if (oppRow && payload.synergyScore !== null && payload.synergyScore !== undefined) {
+      // 경계 #2 — 사람 확정 전 권고값: opportunity.synergy_score에 권고를 기록하고
+      // 근거(synergy_rationale)를 남긴다. 최종 판단은 사람이 한다.
+      db.run("UPDATE opportunity SET synergy_score = ?, synergy_rationale = ? WHERE id = ?",
+        [Math.max(0, Math.min(100, Math.round(payload.synergyScore))), payload.synergyRationale ?? null, oppRow.id]);
+    }
     db.run(
       "UPDATE synergy_analysis SET status = 'completed', current_step = 5, completed_at = ? WHERE id = ?",
       [now(), analysisId],

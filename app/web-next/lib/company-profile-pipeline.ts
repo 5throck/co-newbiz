@@ -150,7 +150,8 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
   const payload: CompanyProfilePayload = {
     companyName: company,
     dartCorpCode: corpCode ?? member.dart_corp_code,
-    dartFinancials: dart,
+    // available 키 필수 — UI가 이 키로 DART 입수 여부를 판정한다 (synergy-pipeline과 동일 계약)
+    dartFinancials: { ...dart, available: dart.found },
     strengths,
     weaknesses,
     businessAssessment,

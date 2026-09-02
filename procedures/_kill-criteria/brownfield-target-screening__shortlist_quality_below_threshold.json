@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-target-screening",
+  "criterion_id": "shortlist_quality_below_threshold",
+  "title": "Short List quality below threshold — no candidate clears the rated-scorecard bar (t-06..t-09)",
+  "action": "back_to_target_identification",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": "Declared in procedures/_shared/brownfield-target-screening/schema.yaml kill_criteria (S7); thresholds are ILLUSTRATIVE until activated by a dated decision (ADR-0081 convention); activation awaits the scorecard-var round per ADR-0060 §3",
+  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). Routing back to S6 widens the Long List before the screen is re-run."
+}
