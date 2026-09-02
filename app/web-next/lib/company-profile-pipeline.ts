@@ -74,14 +74,23 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
       codeNote = "고유번호 해소 실패 — 비상장(리서치 기반)으로 진행";
     }
   }
-  const dart: DartFinancials = corpCode ? await fetchFinancials(corpCode, { years: 3 }) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? codeNote ?? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
+  const dart: DartFinancials = corpCode ? await fetchFinancials(corpCode, { years: 5 }) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? codeNote ?? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
   // 교차검증 통과 코드만 영속화 — 잘못된 코드가 DB에 남지 않는다.
   if (corpCode && corpCode !== member.dart_corp_code && dart.found) {
     db.run("UPDATE company_group_member SET dart_corp_code = ? WHERE id = ?", [corpCode, member.id]);
   }
+  // 연도 커버리지 — 최신 사업보고서가 어느 해인지/이후 미제출임을 명시한다
+  const yearsFound = [...new Set((dart.items ?? []).map((i) => i.year ?? ""))].filter(Boolean).sort().reverse();
+  const latestBusinessYear = new Date().getFullYear() - 1;
+  let coverageNote = "";
+  if (dart.found && yearsFound.length > 0 && Number(yearsFound[0]) < latestBusinessYear) {
+    coverageNote = ` 참고: ${yearsFound[0]}년 사업보고서가 마지막 제출입니다 — 이후 사업보고서 미제출(013).`;
+  }
   await summarize(1, "DART 재무제표·사업보고서 입수",
     (codeNote ? `${codeNote}. ` : "") +
-    (dart.found ? `${dart.year}년 사업보고서 재무 ${dart.items.length}개 계정 입수.` : `DART 미입수 — ${dart.error ?? "사유 없음"} (웹 리서치로 보강).`));
+    (dart.found
+      ? `사업보고서 재무 입수: ${yearsFound.join(" / ")}년 (${dart.items.length}개 계정).${coverageNote}`
+      : `DART 미입수 — ${dart.error ?? "사유 없음"} (웹 리서치로 보강).`));
 
   // ── Step 2: 외부 리서치 (애널리스트 리포트·산업 동향) ──
   let research: WebSource[] = [];

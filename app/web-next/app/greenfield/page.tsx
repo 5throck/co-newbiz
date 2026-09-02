@@ -106,7 +106,7 @@ export function GreenfieldView() {
 
       {/* ── Greenfield 기회 (칩) ── */}
       <section aria-label="그린필드 기회" className="market-section">
-        <h2 className="text-[0.92rem] mb-2">🌱 Greenfield로 결정된 기회</h2>
+        <div className="section-toolbar"><span className="section-title"><h2>🌱 Greenfield로 결정된 기회</h2></span></div>
         {opps === null ? (
           <p>불러오는 중...</p>
         ) : opps.length === 0 ? (

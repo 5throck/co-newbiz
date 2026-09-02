@@ -119,3 +119,11 @@ As-built deltas not in the tree above:
 - 사이드바 탐색의 시너지 정합성은 하위 메뉴를 갖는다: 그룹/계열사 분석(/our-company) · 시너지·전략적 적합성(/synergy). NavItem.children 지원(AppShell), 자식은 들여쓰기 링크, 부모는 활성 그룹 라벨.
 - 그룹/계열사 분석 화면 제목은 "S3 그룹/계열사 분석"(StageFrame heading override — S3 지원 도구 표기, ADR-0089).
 - 시너지 정합성 신규 분석 폼: 대상(그룹/계열사 레지스트리, 프로파일 게이팅) + 기회 연결(선택) — 별도 회사 등록 없음(ADR-0090).
+
+## As-built 2026-09-03 — 관리자 콘솔 분할 (ADR-0091)
+
+- 역할-화면 분리: admin 계정은 관리 그룹(시스템 대시보드·사용자·토큰·로그·데이터소스·스케줄·데이터베이스·알림·용어집·거버넌스·마스터데이터·ADR)만 사용. 비관리자는 관리자 진입 불가(layout 게이트 + 기존 requireAdmin).
+- 라우트: /admin(시스템 대시보드), /admin/users|audit|data-sources|schedule|database|notifications|glossary|governance|master-data|adr — 섹션 상태는 URL 기반.
+- 시스템 대시보드: 감사 로그 30일 추이(라인), 사용자 역할 분포(도넛), 기오퍼널(바), 스케줄 성공/실패(바) — GET /api/admin/system-stats.
+- CRUD 보강: 사용자 역할 변경·비활성화/활성화 UI, 마스터데이터 DELETE, 발급 토큰/임시 비밀번호 1회 확인 모달.
+- 미구현(명시): 용어집 용어 수정/삭제(YAML 파일 기반 — 쓰기 API 설계 선행), 데이터베이스 백업 이력/마이그레이션 상태 API, 스케줄 수동 트리거, RAG 규칙 편집기.

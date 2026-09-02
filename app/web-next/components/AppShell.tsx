@@ -67,7 +67,6 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: "운영",
     items: [
-      { href: "/admin", label: "관리자", icon: <Shield size={18} />, adminOnly: true },
     ],
   },
 ];
@@ -116,10 +115,55 @@ function Topbar({ pathname }: { pathname: string }) {
   );
 }
 
+// 관리자 전용 내비 — admin 역할은 이 그룹만 사용한다 (ADR-0091: 역할-화면 분리).
+const ADMIN_NAV: NavItem[] = [
+  { href: "/admin", label: "시스템 대시보드", icon: <Shield size={18} /> },
+  { href: "/admin/users", label: "사용자·토큰", icon: <Landmark size={18} /> },
+  { href: "/admin/audit", label: "로그 관리", icon: <LibraryBig size={18} /> },
+  { href: "/admin/data-sources", label: "데이터 소스", icon: <Lightbulb size={18} /> },
+  { href: "/admin/schedule", label: "배치·스케줄", icon: <GitMerge size={18} /> },
+  { href: "/admin/database", label: "데이터베이스", icon: <BookOpen size={18} /> },
+  { href: "/admin/notifications", label: "알림", icon: <Target size={18} /> },
+  { href: "/admin/glossary", label: "용어집 관리", icon: <BookOpen size={18} /> },
+  { href: "/admin/governance", label: "거버넌스 문서", icon: <Landmark size={18} /> },
+  { href: "/admin/master-data", label: "마스터 데이터", icon: <LibraryBig size={18} /> },
+  { href: "/admin/adr", label: "ADR 인덱스", icon: <BookOpen size={18} /> },
+];
+
 function Sidebar() {
   const { me } = useAuth();
   const pathname = usePathname();
   if (!me) return null;
+
+  // ADR-0091 — 역할-화면 분리: admin은 관리 화면만, 비관리자는 비즈니스 화면만 본다.
+  if (me.role === "admin") {
+    return (
+      <aside className="app-sidebar">
+        <Link href="/admin" className="sidebar-brand">
+          <span className="sidebar-brand-icon">CN</span>
+          <span>co-newbiz 관리</span>
+        </Link>
+        <div>
+          <div className="sidebar-group-label">관리</div>
+          <nav className="sidebar-nav" aria-label="관리">
+            {ADMIN_NAV.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="app-sidebar">
@@ -128,9 +172,6 @@ function Sidebar() {
         <span>co-newbiz</span>
       </Link>
       {NAV_SECTIONS.map((section) => {
-        // 관리자 역할 분리: 딜 프로세스 그룹은 관리자에게 숨긴다 —
-        // 관리자는 운영 콘솔(사용자·마스터데이터·시스템)만 사용한다.
-        if (me.role === "admin" && section.label.startsWith("S")) return null;
         const items = section.items.filter(
           (item) => !item.adminOnly || me.role === "admin",
         );

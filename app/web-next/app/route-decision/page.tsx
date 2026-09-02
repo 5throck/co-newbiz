@@ -324,7 +324,8 @@ export function RouteDecisionView() {
           {decisions.length > 0 && (
             <div>
               <SectionToolbar title="결정 이력 (최신순)" count={decisions.length} />
-              <table className="data-table" aria-label="진출방식 결정 이력">
+              <div className="table-scroll">
+<table className="data-table report-table" aria-label="진출방식 결정 이력">
                 <caption className="sr-only">진출방식 결정 이력</caption>
                 <thead>
                   <tr>
@@ -359,6 +360,7 @@ export function RouteDecisionView() {
                   ))}
                 </tbody>
               </table>
+</div>
             </div>
           )}
         </section>

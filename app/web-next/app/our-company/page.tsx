@@ -585,7 +585,7 @@ export function OurCompanyView() {
         pairs.sort((x, y) => y.score - x.score);
         return (
           <section aria-label="계열사 간 시너지" className="market-section">
-            <h2 className="text-[0.92rem] mb-2">🔗 계열사 간 시너지 매트릭스 — 산업 노출 겹침 기준</h2>
+            <div className="section-toolbar"><span className="section-title"><h2>🔗 계열사 간 시너지 매트릭스 — 산업 노출 겹침 기준</h2></span></div>
             <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
               각 계열사 프로파일의 산업 노출(industryExposure)이 겹치는 정도를 시너지 후보 지표로 환산한 정성 매트릭스입니다.
               겹침이 있는 계열사 쌍이 상위 표시됩니다 — 공동 R&BD·제휴·수직 통합 후보 발굴의 입력으로 활용하세요.
@@ -720,13 +720,13 @@ export function OurCompanyView() {
             {profileTab === "strengths" && (
               <div className="text-[0.88rem]">
                 <div className="chart-pair">
-                  <div className="chart-half sizing-grade-card">
-                    <h4 className="text-[0.9rem] mb-2">💪 강점</h4>
-                    <ul className="sizing-note-list">{(profile.strengths ?? []).map((x, i) => <li key={i}>{x}</li>)}</ul>
+                  <div className="chart-half sizing-grade-card report-bullet-card">
+                    <h4>💪 강점</h4>
+                    <ul className="report-bullet-list">{(profile.strengths ?? []).map((x, i) => <li key={i}>{x}</li>)}</ul>
                   </div>
-                  <div className="chart-half sizing-grade-card">
-                    <h4 className="text-[0.9rem] mb-2">🩹 약점</h4>
-                    <ul className="sizing-note-list">{(profile.weaknesses ?? []).map((x, i) => <li key={i}>{x}</li>)}</ul>
+                  <div className="chart-half sizing-grade-card report-bullet-card">
+                    <h4>🩹 약점</h4>
+                    <ul className="report-bullet-list">{(profile.weaknesses ?? []).map((x, i) => <li key={i}>{x}</li>)}</ul>
                   </div>
                 </div>
                 <p className="mt-3 mb-0 text-[0.88rem]"><strong>종합 평가:</strong> {profile.businessAssessment || "—"}</p>

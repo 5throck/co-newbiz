@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useConfirm } from "../crud.tsx";
 import { api } from "../../lib/api.ts";
 
 // 관리자 콘솔 — 마스터데이터 관리 섹션. 코드 테이블(허용목록) 조회·추가와
@@ -30,6 +31,8 @@ const EDITABLE: Record<string, string[]> = {
 };
 
 export function MasterDataSection() {
+
+  const { confirm, confirmDialog } = useConfirm();
   const [tables, setTables] = useState<string[] | null>(null);
   const [table, setTable] = useState<string>("md_industry");
   const [data, setData] = useState<MdTableData | null>(null);
@@ -86,6 +89,8 @@ export function MasterDataSection() {
   const editableCols = (EDITABLE[table] ?? []).filter((c) => c !== "id");
 
   return (
+    <>
+      {confirmDialog}
     <div>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
@@ -135,6 +140,24 @@ export function MasterDataSection() {
                     {row[c] === null || row[c] === undefined ? "—" : String(row[c])}
                   </td>
                 ))}
+                <td>
+                  <button
+                    type="button"
+                    className="btn-danger btn-sm"
+                    title="이 행을 삭제합니다"
+                    onClick={() => confirm(`이 ${table} 행을 삭제할까요?`, async () => {
+                      setError(null);
+                      try {
+                        await api.delete("/api/admin/master-data", { table, id: String(row.id ?? "") });
+                        loadTable();
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "삭제 실패");
+                      }
+                    }, { body: "감사로그에 기록됩니다." })}
+                  >
+                    삭제
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -160,7 +183,7 @@ export function MasterDataSection() {
             onChange={(e) => setNewFields((prev) => ({ ...prev, [c]: e.target.value }))}
           />
         ))}
-        <button type="submit" className="btn-premium">
+        <button type="submit" className="btn-ghost">
           코드 추가
         </button>
       </form>
@@ -189,5 +212,6 @@ export function MasterDataSection() {
         </ul>
       )}
     </div>
+    </>
   );
 }

@@ -73,7 +73,7 @@ export default function RegisterPage() {
                   {error}
                 </p>
               )}
-              <button type="submit" className="btn-premium" disabled={busy}>
+              <button type="submit" className="btn-ghost" disabled={busy}>
                 {busy ? "신청 중..." : "계정 신청"}
               </button>
             </form>

@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 544,
+    "node_count": 545,
     "edge_count": 933
   },
   "nodes": [
@@ -456,6 +456,11 @@
       "id": "adr:0090",
       "type": "adr",
       "label": "ADR-0090: Synergy alignment refactor — targets from the affiliate registry, opportunities wired in"
+    },
+    {
+      "id": "adr:0091",
+      "type": "adr",
+      "label": "ADR-0091: Admin console split — role-separated navigation, per-section routes, system dashboard"
     },
     {
       "id": "agent:antitrust-agent",

@@ -136,3 +136,27 @@ export async function PUT(request: Request) {
   appendAudit(db, { actor: ctx.userId, action: "master_data_update", target: `${table.name}:${body.id}`, now: new Date().toISOString() });
   return ok({ table: table.name, id: body.id.trim() });
 }
+
+// DELETE — 마스터 데이터 행 삭제 (allow-list 테이블 한정, ADR-0091 CRUD 보강).
+// 참조 무결성 위반(FK 제약)은 400으로 안내한다 — 먼저 참조하는 데이터를 정리해야 한다.
+export async function DELETE(request: Request) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  const adminCheck = requireAdmin(auth.auth);
+  if (adminCheck) return adminCheck;
+  const body = (await request.json().catch(() => null)) as {
+    table?: string; id?: string;
+  } | null;
+  const table = tableOf(body?.table);
+  if (!table) return badRequest("invalid_request", `table must be one of ${Object.keys(MASTER_TABLES).join(", ")}.`);
+  if (!body?.id?.trim()) return badRequest("invalid_request", "id is required.");
+  const db = getDb();
+  try {
+    const res = db.run(`DELETE FROM ${table.name} WHERE id = ?`, [body.id.trim()]);
+    if (res.changes === 0) return badRequest("not_found", "No such master-data row.");
+    appendAudit(db, { actor: auth.auth.userId, action: "master_data_delete", target: `${table.name}:${body.id}`, now: new Date().toISOString() });
+    return ok({ table: table.name, id: body.id.trim() });
+  } catch {
+    return badRequest("referenced_row", "다른 데이터가 이 행을 참조하고 있습니다 — 참조를 먼저 정리하세요.");
+  }
+}
