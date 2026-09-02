@@ -147,6 +147,7 @@ export function OpportunitiesView() {
   const [sortKey, setSortKey] = useState<"attractiveness" | "recent">("attractiveness");
   const [industryFilter, setIndustryFilter] = useState<string | "">("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [discoverNotice, setDiscoverNotice] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
 
   const load = useCallback(() => {
@@ -212,7 +213,7 @@ export function OpportunitiesView() {
     try {
       const res = await api.post<{ inserted: Array<{ name: string }>; source: string }>("/api/opportunities/discover", { industry });
       load();
-      window.alert(`기회 ${res.data.inserted.length}건이 발굴되었습니다 (${res.data.source === "llm" ? "LLM" : "결정론 합성"}):\n${res.data.inserted.map((o) => `· ${o.name}`).join("\n")}\n\n기회/위험 요인도 자동 도출되었습니다.`);
+      setDiscoverNotice(`기회 ${res.data.inserted.length}건이 발굴되었습니다 (${res.data.source === "llm" ? "LLM" : "결정론 합성"}${res.data.inserted.length ? `: ${res.data.inserted.map((o) => o.name).join(", ")}` : ""}). 기회/위험 요인도 자동 도출되었습니다.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "기회 발굴 실패");
     } finally {
@@ -364,6 +365,8 @@ export function OpportunitiesView() {
           </button>
         ))}
       </div>
+
+      {discoverNotice && <p role="status" className="text-[color:var(--green-fg)] text-[0.85rem] mb-2">{discoverNotice}</p>}
 
       {/* ── 분석된 산업 (S1 연동, 접힘) ── */}
       <section aria-label="분석된 산업" className="market-section">

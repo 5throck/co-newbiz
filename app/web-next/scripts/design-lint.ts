@@ -50,9 +50,17 @@ for (const file of [...walkTsxs(APP_DIR), ...walkTsxs(COMPONENT_DIR)]) {
     }
     // R5 — window.confirm 금지 (ADR-0082): useConfirm()/ConfirmDialog 사용
     if (/window\.confirm/.test(text)) add(file, line, "R5 confirm", `window.confirm 금지 — useConfirm()/ConfirmDialog 사용 (ADR-0082)`);
-    // R6 — 삭제 라벨 통일 (ADR-0082): 제거/기각 버튼 라벨 금지
+    // R6 — 삭제 라벨 통일 (ADR-0082): 제거/기각 버튼 라벨 금지 (멀티라인 포함)
     const r6 = text.match(/>\s*(?:제거|기각)\s*</);
     if (r6) add(file, line, "R6 delete-label", `삭제 버튼 라벨은 "삭제"로 통일: ${r6[0].trim()}`);
+    // R7 — 단계 화면 h1 직접 사용 (ADR-0086)
+    if (IS_STAGE_PAGE(file) && /<h1>/.test(text)) {
+      add(file, line, "R7 stage-h1", "단계 화면의 <h1>은 StageFrame이 렌더링합니다");
+    }
+    // R8 — 관리 콘솔 폼을 details/summary로 만들지 않기 (ADR-0082)
+    if (/details[\s\S]{0,200}summary[^>]*>\s*\+/.test(text)) {
+      add(file, line, "R8 details-create", "생성 폼은 details 접기 대신 ＝ 등록 토글 + sizing-new-form 사용");
+    }
   });
 }
 

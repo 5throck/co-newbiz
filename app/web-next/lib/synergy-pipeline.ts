@@ -193,7 +193,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   advance(1);
   corpCode = row.dart_corp_code ?? null;
   if (!corpCode && isDartConfigured()) corpCode = await findCorpCode(company);
-  dart = corpCode ? await fetchFinancials(corpCode, { years: 3 }) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
+  dart = corpCode ? await fetchFinancials(corpCode, { years: 5 }) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
   if (corpCode && corpCode !== row.dart_corp_code) {
     db.run("UPDATE md_company SET dart_corp_code = ? WHERE id = ?", [corpCode, row.company_id]);
   }
