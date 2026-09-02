@@ -22,8 +22,8 @@ import {
 // 생성한 매트릭스 — 어느 쪽이든 동일한 차트/테이블로 렌더링된다.
 
 interface AnalysisInfo {
-  id: string; status: "in_progress" | "completed"; current_step: number; latest_version: number | null;
-  created_at: string; completed_at: string | null;
+  id: string; status: "in_progress" | "completed" | "failed"; current_step: number; latest_version: number | null;
+  created_at: string; completed_at: string | null; error_message?: string | null;
 }
 interface IndustryRow {
   id: string; name_ko: string; name_en: string | null;
@@ -85,7 +85,7 @@ export function MarketView() {
   const [creating, setCreating] = useState(false);
   const [llmStatus, setLlmStatus] = useState<LlmStatus | null>(null);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed" | "stale" | "pending">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed" | "stale" | "pending" | "failed">("all");
   const [editing, setEditing] = useState<{ id: string; name: string; code: string } | null>(null);
   const { confirm, confirmDialog } = useConfirm();
   const [savingEdit, setSavingEdit] = useState(false);
@@ -202,12 +202,12 @@ export function MarketView() {
 
   // 목록 파생: 검색 + 상태 필터 + 우선순위 정렬(분석 중 → 업데이트 권장 → 최근 분석 → 대기)
   const buckets = useMemo(() => {
-    const of = (ind: IndustryRow): IndustryRow["analysis"] & { bucket: "in_progress" | "stale" | "completed" | "pending" } | null => {
+    const of = (ind: IndustryRow): IndustryRow["analysis"] & { bucket: "in_progress" | "stale" | "completed" | "pending" | "failed" } | null => {
       const a = ind.analysis;
       if (!a) return null;
       const d = (a.completed_at ?? a.created_at).slice(0, 10);
       const stale = a.status === "completed" && d && (Date.now() - new Date(d).getTime()) / 86400000 > STALE_DAYS;
-      return { ...a, bucket: a.status === "in_progress" ? "in_progress" : stale ? "stale" : "completed" };
+      return { ...a, bucket: a.status === "in_progress" ? "in_progress" : a.status === "failed" ? "failed" : stale ? "stale" : "completed" };
     };
     return { of };
   }, []);
@@ -220,7 +220,7 @@ export function MarketView() {
         const b = buckets.of(ind)?.bucket ?? "pending";
         return b === statusFilter;
       });
-    const rank = { in_progress: 0, stale: 1, completed: 2, pending: 3 } as const;
+    const rank = { failed: 0, in_progress: 1, stale: 2, completed: 3, pending: 4 } as const;
     return [...rows].sort((x, y) => {
       const bx = buckets.of(x)?.bucket ?? "pending";
       const by = buckets.of(y)?.bucket ?? "pending";
@@ -232,7 +232,7 @@ export function MarketView() {
   }, [overview, query, statusFilter, buckets]);
 
   const statusCounts = useMemo(() => {
-    const counts = { all: 0, in_progress: 0, completed: 0, stale: 0, pending: 0 };
+    const counts = { all: 0, in_progress: 0, completed: 0, stale: 0, pending: 0, failed: 0 };
     for (const ind of overview?.industries ?? []) {
       counts.all++;
       counts[buckets.of(ind)?.bucket ?? "pending"]++;
@@ -282,7 +282,7 @@ export function MarketView() {
           summary={
             <span role="group" aria-label="상태 필터" className="flex items-center gap-1">
               {([
-                ["all", "전체"], ["in_progress", "분석 중"], ["completed", "완료"], ["stale", "업데이트 권장"], ["pending", "대기"],
+                ["all", "전체"], ["in_progress", "분석 중"], ["completed", "완료"], ["stale", "업데이트 권장"], ["pending", "대기"], ["failed", "실패"],
               ] as const).map(([key, label]) => (
                 <button
                   key={key}
@@ -400,6 +400,8 @@ export function MarketView() {
                         <span className="status-chip status-amber" title="분석일이 90일을 지났습니다 — 재분석로 최신화하세요.">업데이트 권장 (v{a?.latest_version ?? 1})</span>
                       ) : a?.status === "completed" ? (
                         <span className="status-chip status-green">분석 완료 (v{a.latest_version ?? 1})</span>
+                      ) : a?.status === "failed" ? (
+                        <span className="status-chip status-red" title={a.error_message ?? "파이프라인 실행 중 오류가 발생했습니다."}>분석 실패</span>
                       ) : (
                         <span className="status-chip status-not-started">분석 대기</span>
                       )}
@@ -594,7 +596,7 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
   isFrozen: boolean;
   stepSummaries: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> | null;
 }) {
-  const [tab, setTab] = useState<"overview" | "structure" | "competitive" | "size" | "allocation" | "growth" | "qualitative" | "validate">("overview");
+  const [tab, setTab] = useState<"overview" | "structure" | "competitive" | "size" | "allocation" | "growth" | "pipeline" | "qualitative" | "regulation" | "risk" | "validate">("overview");
   const proj2030Total = matrix.regions.reduce((sum, r) => sum + regionTotal(matrix, r.code, 4), 0);
   const TABS = [
     ["overview", "개요"],
@@ -603,7 +605,10 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
     ["size", "시장 규모"],
     ["allocation", "권역·세그먼트"],
     ["growth", "성장성"],
+    ["pipeline", "수요 파이프라인"],
     ["qualitative", "정성 분석"],
+    ["regulation", "규제 환경"],
+    ["risk", "신뢰도·리스크"],
     ["validate", "검증·한계"],
   ] as const;
   return (
@@ -751,7 +756,7 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
               <table className="data-table report-table" aria-label="경쟁 구조 — 주요 기업">
                 <caption className="sr-only">경쟁 구조 주요 기업</caption>
                 <thead>
-                  <tr><th scope="col" className="col-label">기업</th><th scope="col" className="col-type">포지션</th><th scope="col" className="col-text">비고</th></tr>
+                  <tr><th scope="col" className="col-label">기업</th><th scope="col" className="col-type">포지션</th><th scope="col">기술 유형</th><th scope="col">용량 (MWe)</th><th scope="col">진행 상태</th><th scope="col" className="col-text">비고</th></tr>
                 </thead>
                 <tbody>
                   {matrix.competitive.players.map((pl) => (
@@ -762,6 +767,9 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
                           {pl.tier === "leader" ? "리더" : pl.tier === "challenger" ? "도전자" : "니치"}
                         </span>
                       </td>
+                      <td>{pl.techType ?? "—"}</td>
+                      <td className="tabular-nums">{pl.capacityMWe !== undefined ? pl.capacityMWe.toLocaleString() : "—"}</td>
+                      <td>{pl.projectStatus ? <span className="status-chip status-in-progress">{pl.projectStatus}</span> : "—"}</td>
                       <td className="text-[0.8rem] text-[color:var(--muted-fg)]">{pl.note}</td>
                     </tr>
                   ))}
@@ -992,6 +1000,165 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
         </section>
       )}
 
+      {tab === "pipeline" && (
+        <section aria-label="수요 파이프라인" className="market-section sizing-step sizing-step-deep">
+          <h3 className="sizing-step-title text-[0.95rem]">
+            <span className="sizing-step-badge sizing-step-badge-deep">4-B</span> 수요 파이프라인 — 프로젝트별 신뢰도 티어
+          </h3>
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
+            향후 착공·발주가 예정된 개별 프로젝트를 신뢰도 티어로 구분합니다 — <strong>Tier 1</strong>(실착공·계약 확정)부터
+            <strong> Tier 4</strong>(비구속 MOU·초기 검토)까지. 티어가 낮은(숫자가 큰) 항목일수록 수요 불확실성이 크며,
+            시장 추정의 상방 근거로만 취급해야 합니다.
+          </p>
+          {matrix.demandPipeline && matrix.demandPipeline.length > 0 ? (
+            <div className="table-scroll">
+            <table className="data-table report-table" aria-label="수요 파이프라인 프로젝트">
+              <caption className="sr-only">수요 파이프라인 프로젝트 목록</caption>
+              <thead>
+                <tr><th scope="col" className="w-[6rem]">티어</th><th scope="col">프로젝트</th><th scope="col">상태</th><th scope="col">COD 목표</th><th scope="col">출처</th></tr>
+              </thead>
+              <tbody>
+                {[...matrix.demandPipeline].sort((a, b) => a.tier - b.tier).map((p, i) => (
+                  <tr key={`${p.project}-${i}`} className={p.tier === 1 ? "row-selected" : undefined}>
+                    <td>
+                      <span className={`status-chip ${p.tier === 1 ? "status-green" : p.tier === 2 ? "status-amber" : "status-not-started"}`}>
+                        Tier {p.tier}
+                      </span>
+                    </td>
+                    <td className="font-semibold">{p.project}</td>
+                    <td className="text-[0.8rem]">{p.status}</td>
+                    <td className="tabular-nums">{p.codTarget ?? "—"}</td>
+                    <td className="text-[0.75rem]">
+                      {p.sourceUrl ? <a href={p.sourceUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문</a> : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+          ) : (
+            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+              수요 파이프라인 데이터가 없습니다 — 재분석 또는 시드 등록 시 프로젝트별 근거가 반영됩니다.
+            </p>
+          )}
+        </section>
+      )}
+
+      {tab === "regulation" && (
+        <section aria-label="규제 환경" className="market-section sizing-step sizing-step-deep">
+          <h3 className="sizing-step-title text-[0.95rem]">
+            <span className="sizing-step-badge sizing-step-badge-deep">5-B</span> 규제 환경 비교 — 관할권×항목
+          </h3>
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
+            국가·관할권별 규제·인허가 상태를 비교합니다. <strong>1차 소스 직접 확인</strong> 여부가 표시되며,
+            미확인(간접 추정) 항목은 법률 검토 전 인용할 수 없습니다.
+          </p>
+          {matrix.regulatoryComparison && matrix.regulatoryComparison.length > 0 ? (
+            <div className="table-scroll">
+            <table className="data-table report-table" aria-label="규제 환경 비교">
+              <caption className="sr-only">관할권별 규제 비교</caption>
+              <thead>
+                <tr><th scope="col">관할권</th><th scope="col">항목</th><th scope="col">상태</th><th scope="col">1차 소스 확인</th><th scope="col">출처·시점</th></tr>
+              </thead>
+              <tbody>
+                {matrix.regulatoryComparison.map((r, i) => (
+                  <tr key={`${r.jurisdiction}-${r.item}-${i}`}>
+                    <td className="font-semibold">{r.jurisdiction}</td>
+                    <td>{r.item}</td>
+                    <td className="text-[0.8rem]">{r.status}</td>
+                    <td>
+                      <span className={`status-chip ${r.confirmedDirectly ? "status-green" : "status-not-started"}`}>
+                        {r.confirmedDirectly ? "직접 확인" : "간접·추정"}
+                      </span>
+                    </td>
+                    <td className="text-[0.75rem]">
+                      {r.sourceUrl ? <a href={r.sourceUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문</a> : "—"}
+                      {r.asOf ? ` · ${r.asOf}` : ""}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+          ) : (
+            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+              규제 비교 데이터가 없습니다 — 재분석 또는 시드 등록 시 관할권별 규제 조사가 반영됩니다.
+            </p>
+          )}
+        </section>
+      )}
+
+      {tab === "risk" && (
+        <section aria-label="신뢰도·리스크" className="market-section sizing-step sizing-step-deep">
+          <h3 className="sizing-step-title text-[0.95rem]">
+            <span className="sizing-step-badge sizing-step-badge-deep">7-A</span> 신뢰도·리스크 — RAG 상한 권고·Kill Criteria·검증 원장
+          </h3>
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
+            데이터 신뢰도가 전체 판단 등급을 캡핑합니다(caps the grade). 아래 Kill Criteria 제안과
+            "확인 불가" 선언은 분석가 검토 대상이며, 자동 판정이 아닙니다.
+          </p>
+          {matrix.ragCapRecommendation && (
+            <div className="sizing-grade-card mt-3">
+              <h4 className="text-[0.9rem] mb-2">🚦 RAG 상한 권고</h4>
+              <span className={`status-chip ${matrix.ragCapRecommendation.grade === "green" ? "status-green" : matrix.ragCapRecommendation.grade === "amber" ? "status-amber" : "status-red"}`}>
+                상한 {matrix.ragCapRecommendation.grade.toUpperCase()}
+              </span>
+              <p className="mt-2 mb-0 text-[0.85rem]">{matrix.ragCapRecommendation.rationale}</p>
+            </div>
+          )}
+          {matrix.killCriteriaProposals && matrix.killCriteriaProposals.length > 0 && (
+            <div className="mt-3">
+              <h4 className="text-[0.85rem] text-[color:var(--muted-fg)] mb-2">⚠️ Kill Criteria 제안 ({matrix.killCriteriaProposals.length}건 — 분석가 검토 필요)</h4>
+              <div className="grid gap-2">
+                {matrix.killCriteriaProposals.map((k, i) => (
+                  <div key={i} className="sizing-grade-card">
+                    <div className="flex items-center gap-2">
+                      <span className={`status-chip ${k.severity === "high" ? "status-red" : k.severity === "medium" ? "status-amber" : "status-not-started"}`}>
+                        {k.severity === "high" ? "심각" : k.severity === "medium" ? "보통" : "낮음"}
+                      </span>
+                      <strong className="text-[0.85rem]">{k.name}</strong>
+                    </div>
+                    <p className="mt-1 mb-0 text-[0.8rem]"><strong>기준:</strong> {k.thresholdText}</p>
+                    <p className="mt-1 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">{k.rationale}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {matrix.verificationLedger && matrix.verificationLedger.length > 0 && (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-[0.85rem] text-[color:var(--accent)]">
+                🔍 검증 원장 ({matrix.verificationLedger.length}건 — 확인/확인불가/판단필요)
+              </summary>
+              <table className="data-table mt-2" aria-label="검증 원장">
+                <caption className="sr-only">주장별 검증 상태</caption>
+                <thead>
+                  <tr><th scope="col" className="w-[34%]">주장</th><th scope="col">상태</th><th scope="col">비고</th></tr>
+                </thead>
+                <tbody>
+                  {matrix.verificationLedger.map((v, i) => (
+                    <tr key={i}>
+                      <td className="font-semibold">{v.claim}</td>
+                      <td className="sizing-verdict-cell">
+                        <span className={`status-chip ${v.status === "confirmed" ? "status-green" : v.status === "could_not_verify" ? "status-red" : "status-amber"}`}>
+                          {v.status === "confirmed" ? "확인" : v.status === "could_not_verify" ? "확인 불가" : "판단 필요"}
+                        </span>
+                      </td>
+                      <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{v.note ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          )}
+          {!matrix.ragCapRecommendation && !matrix.killCriteriaProposals && !matrix.verificationLedger && (
+            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+              신뢰도·리스크 데이터가 없습니다 — 재분석 또는 시드 등록 시 반영됩니다.
+            </p>
+          )}
+        </section>
+      )}
+
 
       {tab === "validate" && (
       <>
@@ -1030,6 +1197,30 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
         <ol className="sizing-limitations">
           {matrix.limitations.map((l, i) => <li key={i}>{l}</li>)}
         </ol>
+        {matrix.sectionConfidence && matrix.sectionConfidence.length > 0 && (
+          <>
+            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">섹션별 데이터 신뢰도 등급 (A 확정 ~ D 추정 불가)</h4>
+            <table className="data-table" aria-label="섹션별 신뢰도 등급">
+              <caption className="sr-only">섹션별 데이터 신뢰도 등급</caption>
+              <thead>
+                <tr><th scope="col">섹션</th><th scope="col">등급</th><th scope="col">비고</th></tr>
+              </thead>
+              <tbody>
+                {matrix.sectionConfidence.map((s, i) => (
+                  <tr key={i}>
+                    <td className="font-semibold">{s.section}</td>
+                    <td>
+                      <span className={`status-chip ${s.grade === "A" || s.grade === "B" ? "status-green" : s.grade === "B-" || s.grade === "C" ? "status-amber" : "status-red"}`}>
+                        {s.grade}
+                      </span>
+                    </td>
+                    <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{s.note ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
       </StepSection>
 
       <StepSection n={8} id="step-8" title="가정 레지스트리 등록">

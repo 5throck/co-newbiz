@@ -71,6 +71,7 @@ export function RouteDecisionView() {
   const [saving, setSaving] = useState(false);
 
   const selectedId = searchParams.get("opportunity");
+  const rationaleParam = searchParams.get("rationale");
 
   const loadRows = useCallback(() => {
     api.get<OpportunityRow[]>("/api/opportunities").then((r) => {
@@ -92,6 +93,15 @@ export function RouteDecisionView() {
     setSelected(found);
     if (found) loadDecisions(found.id);
   }, [selectedId, rows, loadDecisions]);
+
+  // S3 Short List handoff — pre-fill the rationale textarea from ?rationale=
+  // once, as an editable starting point (not a locked value). Only applies
+  // when the target opportunity is actually pre-selected.
+  useEffect(() => {
+    if (!selectedId || !rationaleParam) return;
+    setRationale(rationaleParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, rationaleParam]);
 
   const openOpportunity = useCallback((o: OpportunityRow) => {
     window.history.replaceState(null, "", `/route-decision?opportunity=${encodeURIComponent(o.id)}`);
