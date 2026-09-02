@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
+import { useConfirm } from "../../components/crud.tsx";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
 import dynamic from "next/dynamic";
@@ -32,12 +33,25 @@ interface SynergyPayload {
   };
   shortList: Array<{ rank: number; area: string; verdict: string; reason: string }>;
   stepSummaries: SynergyStepSummary[];
+  target?: { type: "affiliate" | "group"; name: string };
+  opportunity?: { id: string; name: string } | null;
+  synergyScore?: number | null;
+  synergyRationale?: string | null;
 }
 interface SynergyAnalysis {
   id: string; status: "in_progress" | "completed"; current_step: number;
   company_name: string; dart_corp_code: string | null; source_ref?: string | null;
   created_at: string; completed_at: string | null; latest_version: number | null;
+  target_type?: "affiliate" | "group" | null;
+  member_name?: string | null; group_name?: string | null;
+  opportunity_id?: string | null; opportunity_name?: string | null;
   versions?: Array<{ version_no: number; payload: SynergyPayload | null; changelog: string | null; created_by: string; created_at: string }>;
+}
+/** 분석 대상 표기 — 신규(레지스트리)는 계열사/그룹명, legacy는 md_company 회사명 */
+function targetLabel(a: Pick<SynergyAnalysis, "target_type" | "member_name" | "group_name" | "company_name">): string {
+  if (a.target_type === "affiliate") return a.member_name ?? a.company_name;
+  if (a.target_type === "group") return a.group_name ?? "그룹 전체";
+  return a.company_name;
 }
 
 const STEP_TITLES = ["DART 재무 입수", "외부 리서치", "재무 강/약점 분석", "S1·S2 연계 시너지", "Short List 정리"];
@@ -61,24 +75,20 @@ export function SynergyView() {
   const [error, setError] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("");
   const [corpCode, setCorpCode] = useState("");
-  const [creating, setCreating] = useState(false);
+  // 새 분석 폼 — 대상(그룹/계열사 레지스트리) + 기회 연결 (ADR-0090)
   const [showNewForm, setShowNewForm] = useState(false);
-  // 신규 회사 모달 — DART 검색 / 비상장(업로드·외부 검색)
-  const [mode, setMode] = useState<"dart" | "manual">("dart");
-  const [query, setQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<Array<{ corp_code: string; corp_name: string; source?: "dart" | "local" | "web"; validated?: boolean | null }>>([]);
-  const [dartConfigured, setDartConfigured] = useState(true);
-  const [uploadedFile, setUploadedFile] = useState<{ stored_as: string; original_name: string } | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [webResults, setWebResults] = useState<Array<{ title: string; url: string; snippet?: string }> | null>(null);
-  const [webSearching, setWebSearching] = useState(false);
-  const [selectedCorp, setSelectedCorp] = useState<{ corp_code: string; corp_name: string } | null>(null);
+  const [targets, setTargets] = useState<Array<{ kind: "affiliate" | "group"; id: string; label: string; groupName: string; hasProfile: boolean }>>([]);
+  const [targetSel, setTargetSel] = useState<{ kind: "affiliate" | "group"; id: string } | null>(null);
+  const [opps, setOpps] = useState<Array<{ id: string; name: string; status: string }>>([]);
+  const [oppSel, setOppSel] = useState("");
+  const [creating, setCreating] = useState(false);
+  const { confirm, confirmDialog } = useConfirm();
   const [tab, setTab] = useState<TabKey>("finance");
 
   const selectedId = searchParams.get("company");
 
   const refresh = useCallback(() => {
+    loadTargets(); // 대상(그룹/계열사 프로파일) 목록 갱신 — ADR-0090
     return api.get<{ analyses: SynergyAnalysis[] }>("/api/synergy/analyses")
       .then((r) => { setAnalyses(r.data.analyses); setError(null); })
       .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
@@ -137,6 +147,65 @@ export function SynergyView() {
     }
   }, []);
 
+  const loadTargets = useCallback(() => {
+    api.get<{ groups: Array<{ id: string; name: string; member_count: number }> }>("/api/our-company/groups")
+      .then(async (gr) => {
+        const out: Array<{ kind: "affiliate" | "group"; id: string; label: string; groupName: string; hasProfile: boolean }> = [];
+        for (const g of gr.data.groups) {
+          const detail = await api.get<{ members: Array<{ id: string; company_name: string; latest_version: number | null }> }>(`/api/our-company/groups/${encodeURIComponent(g.id)}`);
+          out.push({ kind: "group", id: g.id, label: `그룹 전체 (${g.name})`, groupName: g.name, hasProfile: detail.data.members.some((m) => m.latest_version !== null) });
+          for (const m of detail.data.members) {
+            out.push({ kind: "affiliate", id: m.id, label: m.company_name, groupName: g.name, hasProfile: m.latest_version !== null });
+          }
+        }
+        setTargets(out);
+      })
+      .catch(() => setTargets([]));
+    api.get<{ rows: Array<{ id: string; name: string; status: string }> }>("/api/opportunities")
+      .then((r) => setOpps(r.data.rows.map((o) => ({ id: o.id, name: o.name, status: o.status }))))
+      .catch(() => setOpps([]));
+  }, []);
+
+  async function createAnalysis() {
+    if (!targetSel || creating) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const res = await api.post<{ analysis_id: string }>("/api/synergy/analyses", {
+        targetType: targetSel.kind,
+        memberId: targetSel.kind === "affiliate" ? targetSel.id : undefined,
+        groupId: targetSel.kind === "group" ? targetSel.id : undefined,
+        opportunityId: oppSel || undefined,
+      });
+      const list = await api.get<{ analyses: SynergyAnalysis[] }>("/api/synergy/analyses");
+      setAnalyses(list.data.analyses);
+      setShowNewForm(false);
+      const created = list.data.analyses.find((x) => x.id === res.data.analysis_id);
+      if (created) openDetail({ ...created, status: "in_progress" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "분석 시작 실패");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  function removeAnalysis(a: SynergyAnalysis) {
+    confirm(
+      `${a.company_name} 시너지 분석 삭제`,
+      async () => {
+        setError(null);
+        try {
+          await api.delete(`/api/synergy/analyses/${encodeURIComponent(a.id)}`);
+          if (selected?.id === a.id) backToList();
+          refresh();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "시너지 분석 삭제 실패");
+        }
+      },
+      { body: "이 분석과 버전 전체가 삭제됩니다. 회사 마스터(그룹/계열사·프로젝트 연결)는 유지됩니다." },
+    );
+  }
+
   const backToList = useCallback(() => {
     router.replace("/synergy");
     setSelected(null);
@@ -144,93 +213,19 @@ export function SynergyView() {
     void refresh();
   }, [refresh]);
 
-  async function create() {
-    const name = (mode === "dart" ? selectedCorp?.corp_name ?? "" : companyName).trim();
-    if (!name || creating) return;
-    // DART 검증 — DART 검색 모드에서 선택된 회사가 아니면 경고를 띄우고 등록을 중단한다
-    // (상장·외감 회사를 의도한 경우 DART 미등록은 오입력일 가능성이 높다).
-    if (mode === "dart" && !selectedCorp) {
-      setError("DART 검색 결과에서 회사를 선택하세요 — DART에 없는 회사는 '비상장·직접 입력' 모드로 등록할 수 있습니다.");
-      return;
-    }
-    setCreating(true);
-    setError(null);
-    try {
-      const sourceRef = [
-        uploadedFile ? `신용평가자료: ${uploadedFile.original_name} (${uploadedFile.stored_as})` : "",
-        webResults && webResults.length > 0 ? "외부 검색 확인" : "",
-      ].filter(Boolean).join(" · ") || undefined;
-      const res = await api.post<{ analysis_id: string }>("/api/synergy/analyses", {
-        company_name: name,
-        dart_corp_code: mode === "dart" ? selectedCorp?.corp_code || corpCode.trim() || undefined : undefined,
-        source_ref: sourceRef,
-      });
-      setCompanyName(""); setCorpCode(""); setQuery(""); setSearchResults([]); setSelectedCorp(null);
-      setUploadedFile(null); setWebResults(null); setShowNewForm(false);
-      // 최신 목록에서 생성된 분석을 찾아 "분석 중" 상세로 진입한다 (모달 닫힘)
-      const list = await api.get<{ analyses: SynergyAnalysis[] }>("/api/synergy/analyses");
-      setAnalyses(list.data.analyses);
-      const created = list.data.analyses.find((a) => a.id === res.data.analysis_id);
-      if (created) openDetail({ ...created, status: "in_progress" });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "분석 생성 실패");
-    } finally {
-      setCreating(false);
-    }
-  }
 
-  async function searchDart() {
-    if (!query.trim() || searching) return;
-    setSearching(true);
-    setError(null);
-    try {
-      const res = await api.get<{ configured: boolean; results: Array<{ corp_code: string; corp_name: string; source?: "dart" | "local" | "web"; validated?: boolean | null }> }>(`/api/synergy/dart-search?q=${encodeURIComponent(query.trim())}`);
-      setSearchResults(res.data.results);
-      if (!res.data.configured) setError("DART API 키가 구성되지 않았습니다 (CO_NEWBIZ_DART_* 환경변수). 비상장 입력 모드를 사용하세요.");
-      else if (res.data.results.length === 0) setError("검색 결과가 없습니다 — 회사명을 확인하거나 비상장 입력 모드를 사용하세요.");
-      else setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "DART 검색 실패");
-    } finally {
-      setSearching(false);
-    }
-  }
 
-  async function uploadFile(file: File) {
-    setUploading(true);
-    setError(null);
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await api.upload<{ stored_as: string; original_name: string }>("/api/synergy/upload", form);
-      setUploadedFile({ stored_as: res.data.stored_as, original_name: res.data.original_name });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "업로드 실패");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function searchWeb() {
-    const name = (mode === "manual" ? companyName : query).trim();
-    if (!name || webSearching) return;
-    setWebSearching(true);
-    setError(null);
-    try {
-      const res = await api.get<{ configured: boolean; results: Array<{ title: string; url: string; snippet?: string }> }>(`/api/synergy/web-search?q=${encodeURIComponent(name)}`);
-      setWebResults(res.data.results);
-      if (!res.data.configured) setError("외부 검색(TAVILY)이 구성되지 않았습니다.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "외부 검색 실패");
-    } finally {
-      setWebSearching(false);
-    }
-  }
 
   async function rerun(a: SynergyAnalysis) {
     setError(null);
     try {
-      const res = await api.post<{ analysis_id: string }>("/api/synergy/analyses", { company_name: a.company_name, dart_corp_code: a.dart_corp_code ?? undefined });
+      const res = await api.post<{ analysis_id: string }>("/api/synergy/analyses", {
+        targetType: a.target_type ?? undefined,
+        memberId: a.target_type === "affiliate" ? undefined : undefined,
+        groupId: a.target_type === "group" ? undefined : undefined,
+      });
+      // legacy(company_id 기반) 재분석은 별도 경로가 없어 서버가 target_type 오류로 거부할 수 있다 — 안내로 처리
+      void res;
       // 최신 목록에서 해당 분석을 in_progress 상태로 가져와 상세 진입 → 완료 폴링이 자동 활성화된다
       const list = await api.get<{ analyses: SynergyAnalysis[] }>("/api/synergy/analyses");
       setAnalyses(list.data.analyses);
@@ -246,6 +241,7 @@ export function SynergyView() {
     const selectedAnalysis = detail ?? selected;
     return (
       <main>
+        {confirmDialog}
         <SynergyResult
           analysis={selectedAnalysis}
           tab={tab}
@@ -260,19 +256,20 @@ export function SynergyView() {
   // ── 목록 (분석 대상 회사) ──
   return (
     <main>
+      {confirmDialog}
+      
       <StageFrame stageId="S3">
-        <strong>Brownfield 경로 전용 도구</strong> — 특정 대상 회사의 DART 재무·외부 리서치를 입수해
-        S1 시장분석·S2 기회발굴과의 연계 시너지를 검증하고 Short List 영역을 좁힙니다
-        (스펙상 3단계 시너지 평가는 기회 단위로, 기회 레지스트리의 S3 패널에서 수행됩니다).
-        본격 활용은 S6 대상 후보 발굴·S7 대상 스크리닝 단계입니다.
+        <strong>그룹/계열사 × 기회 시너지 검증</strong> — 그룹/계열사 분석에서 만든 자사 프로파일(특정 계열사 또는 그룹 전체)을
+        S1 시장분석·S2 기회발굴 결과와 연결해 시너지 영역을 도출하고 Short List로 좁힙니다.
+        기회를 연결하면 완료 시 해당 기회에 synergy_score 권고가 기록됩니다 (ADR-0090).
       </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
       <section aria-label="분석 대상 회사" className="market-section">
         <SectionToolbar
-          title="분석 대상 회사"
-          icon="🏢"
+          title="시너지 분석 목록"
+          icon="🗂"
           count={analyses?.length ?? 0}
           actions={
             <button
@@ -281,7 +278,7 @@ export function SynergyView() {
               onClick={() => setShowNewForm((v) => !v)}
               aria-expanded={showNewForm}
             >
-              ＋ 회사 등록
+              ＋ 새 분석
             </button>
           }
         />
@@ -313,10 +310,11 @@ export function SynergyView() {
                         title="시너지 정합성 리포트 열기"
                         onClick={() => openDetail(a)}
                       >
-                        {a.company_name}
+                        {targetLabel(a)}
                       </button>
+                      {a.opportunity_name && <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">기회: {a.opportunity_name}</span>}
                     </td>
-                    <td>{a.dart_corp_code ? <code className="dd-item-id">{a.dart_corp_code}</code> : <span className="status-chip status-amber" title="DART 고유번호 미확인 — 재분석 또는 등록 시 입력">고유번호 미확인</span>}</td>
+                    <td>{a.target_type ? <span className="status-chip status-not-started">{a.target_type === "group" ? "그룹" : "계열사"}</span> : <span className="status-chip status-amber" title="기존 별도 등록 분석(legacy)">legacy</span>}</td>
                     <td>
                       {inProgress ? (
                         <span className="status-chip status-amber">분석 중 ({a.current_step}/5단계)</span>
@@ -333,12 +331,16 @@ export function SynergyView() {
                         <button
                           type="button"
                           className="btn-ghost btn-sm"
-                          title="같은 분석 행을 재사용해 새 버전으로 재실행합니다"
+                          disabled={!a.target_type}
+                          title={a.target_type ? "같은 분석 행을 재사용해 새 버전으로 재실행합니다" : "기존 별도 등록(legacy) 분석은 재실행할 수 없습니다 — 레지스트리 대상 새 분석을 생성하세요"}
                           onClick={() => rerun(a)}
                         >
                           재분석
                         </button>
                       )}
+                      <button type="button" className="btn-danger btn-sm" title="이 시너지 분석을 삭제합니다" onClick={() => removeAnalysis(a)}>
+                        삭제
+                      </button>
                     </span></td>
                   </tr>
                 );
@@ -349,129 +351,51 @@ export function SynergyView() {
         {hasInProgress && <p className="mt-2 mb-0 text-[0.75rem] text-[color:var(--muted-fg)]" role="status">분석이 진행 중입니다 — 완료되면 목록이 자동으로 갱신됩니다.</p>}
       </section>
 
-      {/* ── 신규 회사 등록 모달 ── */}
+      {/* ── 새 분석 폼 (대상 = 그룹/계열사 레지스트리 · 기회 연결 — ADR-0090) ── */}
       {showNewForm && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="신규 회사 등록" onClick={(e) => { if (e.target === e.currentTarget) setShowNewForm(false); }}>
-          <div className="modal-panel">
-            <div className="modal-head">
-              <h2>＋ 신규 회사 등록</h2>
-              <button type="button" className="btn-ghost btn-sm" onClick={() => setShowNewForm(false)}>닫기</button>
-            </div>
-            <div className="flex gap-1 mb-3">
-              {([["dart", "DART 검색 (상장·외감)"], ["manual", "비상장·직접 입력"]] as const).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  aria-pressed={mode === key}
-                  className={`status-chip ${mode === key ? "status-green" : "status-not-started"}`}
-                  onClick={() => setMode(key)}
-                >
-                  {label}
-                </button>
+        <div className="sizing-new-form mb-3">
+          <div className="mb-2">
+            <span className="text-label block mb-1">① 분석 대상 — 그룹/계열사 분석에서 프로파일을 만든 대상</span>
+            {targets.length === 0 ? (
+              <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mb-0">그룹/계열사 분석 화면에서 회사를 등록·분석하면 여기에 표시됩니다.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {targets.map((t) => (
+                  <button
+                    key={`${t.kind}-${t.id}`}
+                    type="button"
+                    aria-pressed={targetSel?.kind === t.kind && targetSel?.id === t.id}
+                    disabled={!t.hasProfile}
+                    title={t.hasProfile ? `${t.groupName} 그룹 · 프로파일 있음` : "프로파일이 없는 대상 — 그룹/계열사 분석을 먼저 실행하세요"}
+                    className={`sizing-industry-chip ${targetSel?.kind === t.kind && targetSel?.id === t.id ? "sizing-industry-chip-active" : ""} ${!t.hasProfile ? "opacity-40" : ""}`}
+                    onClick={() => { if (t.hasProfile) setTargetSel({ kind: t.kind, id: t.id }); }}
+                  >
+                    <span className="font-semibold">{t.kind === "group" ? "🏢 전체" : "🏭"} {t.label}</span>
+                    <span className="sizing-chip-meta">{t.hasProfile ? "프로파일 준비됨" : "프로파일 없음"}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="mb-2">
+            <span className="text-label block mb-1">② 연결 기회 (선택) — S2에서 발굴한 기회를 선택하면 완료 시 synergy_score 권고가 기록됩니다</span>
+            <select value={oppSel} onChange={(e) => setOppSel(e.target.value)} className="sizing-new-input" style={{ width: "100%" }}>
+              <option value="">기회 없이 분석 (시장 연계만)</option>
+              {opps.filter((o) => o.status !== "dropped").map((o) => (
+                <option key={o.id} value={o.id}>[{o.status}] {o.name}</option>
               ))}
-            </div>
-
-            {mode === "dart" && (
-              <>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    aria-label="DART 회사명 검색"
-                    placeholder="회사명 입력 후 검색 (예: 삼성전자)"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void searchDart(); } }}
-                    className="sizing-new-input"
-                    style={{ flex: 1 }}
-                  />
-                  <button type="button" className="btn-ghost btn-sm" disabled={searching || !query.trim()} onClick={() => void searchDart()}>
-                    {searching ? "검색 중..." : "검색"}
-                  </button>
-                </div>
-                {searchResults.length > 0 && (
-                  <ul className="sizing-note-list" role="listbox" aria-label="DART 검색 결과">
-                    {searchResults.map((r) => (
-                      <li key={r.corp_code}>
-                        <button
-                          type="button"
-                          aria-pressed={selectedCorp?.corp_code === r.corp_code}
-                          className={`btn-ghost btn-sm w-full text-left ${selectedCorp?.corp_code === r.corp_code ? "font-semibold" : ""}`}
-                          onClick={() => setSelectedCorp(r)}
-                        >
-                          {selectedCorp?.corp_code === r.corp_code ? "✔ " : ""}{r.corp_name} <code className="dd-item-id">{r.corp_code}</code>
-                          {r.source === "web" && (
-                            <span className={`status-chip ml-1 ${r.validated ? "status-green" : "status-amber"}`} title={r.validated ? "DART 기업개황으로 이름 일치 확인" : "웹 검색 폴백 — DART 역조회 실패(다중 소스 일치)"}>
-                              웹 {r.validated ? "✔교차검증" : "미검증"}
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            )}
-
-            {mode === "manual" && (
-              <>
-                <label className="text-[0.78rem] block mb-2">
-                  <span className="block mb-1">회사명 *</span>
-                  <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="비상장·신생 기업명" className="sizing-new-input" style={{ width: "100%" }} />
-                </label>
-                <label className="text-[0.78rem] block mb-2">
-                  <span className="block mb-1">신용평가자료 등 근거 파일 업로드 (선택, 20MB 이하)</span>
-                  <input
-                    type="file"
-                    aria-label="신용평가자료 업로드"
-                    disabled={uploading}
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadFile(f); }}
-                    className="sizing-new-input"
-                    style={{ width: "100%" }}
-                  />
-                </label>
-                {uploadedFile && (
-                  <p className="text-[0.75rem] text-[color:var(--green-fg)]">✔ 업로드 완료: {uploadedFile.original_name}</p>
-                )}
-                <div className="flex items-center gap-2 mb-2">
-                  <button type="button" className="btn-ghost btn-sm" disabled={webSearching || !companyName.trim()} onClick={() => void searchWeb()}>
-                    {webSearching ? "외부 검색 중..." : "🌐 외부 검색으로 회사 확인"}
-                  </button>
-                  <span className="text-[0.72rem] text-[color:var(--muted-fg)]">기관·뉴스 리서치로 존재성·사업 내용을 확인할 수 있습니다.</span>
-                </div>
-                {webResults && (
-                  <ul className="sizing-note-list sizing-grade-card">
-                    {webResults.length === 0 && <li className="text-[color:var(--muted-fg)]">검색 결과가 없습니다.</li>}
-                    {webResults.map((r) => (
-                      <li key={r.url}>
-                        <a href={r.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{r.title}</a>
-                        {r.snippet && <span className="text-[color:var(--muted-fg)]"> — {r.snippet}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            )}
-
-            <div className="flex justify-end mt-3">
-              <button
-                type="button"
-                className="btn-ghost"
-                disabled={creating || (mode === "dart" ? !selectedCorp : !companyName.trim())}
-                title={mode === "dart" && !selectedCorp ? "검색 결과에서 회사를 선택하세요" : undefined}
-                onClick={() => void create()}
-              >
-                {creating ? "분석 시작 중..." : "분석 시작"}
-              </button>
-            </div>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)}>취소</button>
+            <button type="button" className="btn-ghost" disabled={creating || !targetSel} onClick={() => void createAnalysis()}>
+              {creating ? "분석 시작 중..." : "분석 시작"}
+            </button>
           </div>
         </div>
       )}
     </main>
   );
-}
-
-/** 리포트 차트 테마 — EChart 컴포넌트와 동일한 토큰 기반 테마. */
-function useChartThemeSafe() {
-  return useChartTheme();
 }
 
 function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
@@ -484,13 +408,23 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
   const latest = analysis.versions?.[0] ?? null;
   const p = latest?.payload ?? null;
   const inProgress = analysis.status === "in_progress";
+  const ct = useChartTheme(); // 리포트 차트 테마 — 훅은 컴포넌트 최상위에서 1회
   const analysisDate = latest?.created_at?.slice(0, 10) ?? analysis.created_at.slice(0, 10);
   return (
     <section aria-label="시너지 정합성 리포트" className="market-section sizing-step">
       <SectionToolbar
-        title={`${analysis.company_name} 시너지 정합성 분석`}
+        title={`${targetLabel(analysis)} 시너지 정합성 분석`}
         icon="🏢"
-        summary={<span className="section-meta">S3 Long List → Short List · 분석일 {analysisDate} · v{latest?.version_no ?? analysis.latest_version ?? 1}</span>}
+        summary={
+          <span className="flex items-center gap-1">
+            <span className="section-meta">S3 Long List → Short List · 분석일 {analysisDate} · v{latest?.version_no ?? analysis.latest_version ?? 1}</span>
+            {analysis.opportunity_name && <span className="status-chip status-in-progress" title={`연결 기회: ${analysis.opportunity_name}`}>기회: {analysis.opportunity_name}</span>}
+            {(() => {
+              const score = latest?.payload?.synergyScore;
+              return typeof score === "number" ? <span className="status-chip status-green">synergy 권고 {score}</span> : null;
+            })()}
+          </span>
+        }
         actions={
           <button type="button" className="btn-ghost" disabled={inProgress} onClick={onRerun}>
             재분석
@@ -525,7 +459,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
                   const accounts = [...new Set(items.map((i) => i.name))];
                   const byKey = new Map(items.map((i) => [`${i.year}|${i.name}`, i.value]));
                   const fmtEok = (v: number) => (v / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
-                  const ct = useChartThemeSafe();
+                  
                   const chartOption = {
                     tooltip: { trigger: "axis" as const },
                     legend: { top: 0, textStyle: { color: ct.muted, fontSize: 11 } },

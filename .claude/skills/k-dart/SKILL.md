@@ -106,8 +106,8 @@ Structured JSON output for financial metrics:
 
 Most DART API endpoints require `corp_code` (8-digit unique identifier, DART corp code, 8-digit). When the user provides only a company name or stock code (6 digits), resolve it through the **fallback chain** (v2.1.0) — in order:
 
-1. **Bulk list cache** — `db/data/dart-corpcode-cache.json` (24h TTL). Manual refresh: `bun app/web-next/scripts/dart-sync-corp-codes.ts`. The web app resolves names via `resolveCorpCode()` in `lib/dart-client.ts`, which logs the resolution path (bulk/web) as data provenance.
-2. **Bulk download retry (`corpCode.xml`)** — only if the cache is absent/stale. NOTE: the download is frequently IP-blocked (returns an HTML page instead of a ZIP) — treat HTML responses as "blocked" and fall through, never parse them:
+1. **Bulk list cache** — `db/data/dart-corpcode-cache.json` (~118,821 companies; 30-day TTL — the directory changes rarely; expired cache still serves searches via stale-while-revalidate). Manual refresh: `bun app/web-next/scripts/dart-sync-corp-codes.ts`. The web app resolves names via `resolveCorpCode()` in `lib/dart-client.ts`, which logs the resolution path (bulk/web) as data provenance.
+2. **Bulk download retry (`corpCode.xml`)** — only if the cache is absent/stale. ENDPOINT NAME IS EXACT: `/api/corpCode.xml` (it returns a ZIP despite the .xml suffix). Calling `/api/corpCode.xml.zip` returns an HTML block page — never use it. The OpenDART ZIP is STREAMING (local header sizes are 0, data descriptors follow the data): parsers must locate the next PK signature to find the data end. Treat any HTML response as "blocked" and fall through, never parse it. Manual refresh: `bun app/web-next/scripts/dart-sync-corp-codes.ts` (also the periodic-update entry point — 30-day TTL or cron):
 3. **Web fallback** — search the web for the company's DART corp code (corpCode / naviCrpCik URL parameters on dart.fss.or.kr), then **cross-validate** every candidate against `company.json` (company overview API) — record the code only when the corp name matches. Uncorroborated candidates are discarded.
 
 Legacy manual download (works only when not blocked):

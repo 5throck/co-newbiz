@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 529,
-    "edge_count": 914
+    "node_count": 544,
+    "edge_count": 933
   },
   "nodes": [
     {
@@ -448,6 +448,16 @@
       "label": "ADR-0088: Report data-presentation standard — charts, bullets, wide-table handling"
     },
     {
+      "id": "adr:0089",
+      "type": "adr",
+      "label": "ADR-0089: Codify the S3 input-prep activities (company profile + synergy screen) — without stage promotion"
+    },
+    {
+      "id": "adr:0090",
+      "type": "adr",
+      "label": "ADR-0090: Synergy alignment refactor — targets from the affiliate registry, opportunities wired in"
+    },
+    {
       "id": "agent:antitrust-agent",
       "type": "agent",
       "label": "antitrust-agent"
@@ -695,6 +705,26 @@
       "id": "artifact:chain_stage_financial_rollup",
       "type": "artifact",
       "label": "chain_stage_financial_rollup"
+    },
+    {
+      "id": "artifact:company_profile_assessment",
+      "type": "artifact",
+      "label": "company_profile_assessment"
+    },
+    {
+      "id": "artifact:company_profile_financials",
+      "type": "artifact",
+      "label": "company_profile_financials"
+    },
+    {
+      "id": "artifact:company_profile_research_pack",
+      "type": "artifact",
+      "label": "company_profile_research_pack"
+    },
+    {
+      "id": "artifact:company_profile_version",
+      "type": "artifact",
+      "label": "company_profile_version"
     },
     {
       "id": "artifact:compensation_harmonization_result",
@@ -1102,6 +1132,11 @@
       "label": "brownfield-target-screening"
     },
     {
+      "id": "proc:company-profile-analysis",
+      "type": "procedure",
+      "label": "company-profile-analysis"
+    },
+    {
       "id": "proc:deal-shape-chain",
       "type": "procedure",
       "label": "deal-shape-chain"
@@ -1258,6 +1293,42 @@
       "policy_id": "gd-0024-class-c-decisions",
       "premise_locked": true,
       "dormant": false
+    },
+    {
+      "id": "rule:brownfield-target-identification__minimum_coverage_not_achievable",
+      "type": "rule",
+      "label": "Minimum Long List coverage not achievable — funnel cannot meet its declared coverage bar",
+      "action": "hold_pending_market_research",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
+    },
+    {
+      "id": "rule:brownfield-target-identification__universe_cannot_be_defined",
+      "type": "rule",
+      "label": "Target Universe cannot be defined — no defensible selection criteria or coverage",
+      "action": "back_to_route_decision",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
+    },
+    {
+      "id": "rule:brownfield-target-screening__no_candidate_passes_knock_out",
+      "type": "rule",
+      "label": "No Long List candidate passes the chk-target-screening knock-outs (t-01..t-05)",
+      "action": "halt",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
+    },
+    {
+      "id": "rule:brownfield-target-screening__shortlist_quality_below_threshold",
+      "type": "rule",
+      "label": "Short List quality below threshold — no candidate clears the rated-scorecard bar (t-06..t-09)",
+      "action": "back_to_target_identification",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
     },
     {
       "id": "rule:deal-shape-chain__no_viable_deal_shape",
@@ -2634,6 +2705,30 @@
       "type": "step",
       "label": "brownfield-target-screening step 4",
       "gate": "Target Screening"
+    },
+    {
+      "id": "proc:company-profile-analysis#1",
+      "type": "step",
+      "label": "company-profile-analysis step 1",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:company-profile-analysis#2",
+      "type": "step",
+      "label": "company-profile-analysis step 2",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:company-profile-analysis#3",
+      "type": "step",
+      "label": "company-profile-analysis step 3",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:company-profile-analysis#4",
+      "type": "step",
+      "label": "company-profile-analysis step 4",
+      "gate": "Screening"
     },
     {
       "id": "proc:deal-shape-chain#1",
@@ -4609,6 +4704,30 @@
     },
     {
       "type": "executes_agent",
+      "from": "proc:company-profile-analysis#1",
+      "to": "agent:financial-analyst",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[1]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:company-profile-analysis#2",
+      "to": "agent:market-intelligence-agent",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[2]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:company-profile-analysis#3",
+      "to": "agent:financial-analyst",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[3]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:company-profile-analysis#4",
+      "to": "agent:process-governance-manager",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[4]"
+    },
+    {
+      "type": "executes_agent",
       "from": "proc:deal-shape-chain#1",
       "to": "agent:partnership-agent",
       "source_ref": "procedures/_shared/deal-shape-chain/schema.yaml#steps[1]"
@@ -5311,6 +5430,30 @@
     },
     {
       "type": "executes_skill",
+      "from": "proc:company-profile-analysis#1",
+      "to": "skill:historical-financial-analysis",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[1]"
+    },
+    {
+      "type": "executes_skill",
+      "from": "proc:company-profile-analysis#2",
+      "to": "skill:company-intelligence",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[2]"
+    },
+    {
+      "type": "executes_skill",
+      "from": "proc:company-profile-analysis#3",
+      "to": "skill:historical-financial-analysis",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[3]"
+    },
+    {
+      "type": "executes_skill",
+      "from": "proc:company-profile-analysis#4",
+      "to": "skill:stage-gate-governance",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[4]"
+    },
+    {
+      "type": "executes_skill",
       "from": "proc:deal-shape-chain#1",
       "to": "skill:partner-sourcing-strategy",
       "source_ref": "procedures/_shared/deal-shape-chain/schema.yaml#steps[1]"
@@ -5839,6 +5982,12 @@
     },
     {
       "type": "member_of",
+      "from": "skill:company-intelligence",
+      "to": "proc:company-profile-analysis",
+      "source_ref": "skills/company-intelligence/SKILL.md"
+    },
+    {
+      "type": "member_of",
       "from": "skill:compensation-harmonization-analysis",
       "to": "proc:pmi-integration-execution",
       "source_ref": "skills/compensation-harmonization-analysis/SKILL.md"
@@ -6003,6 +6152,12 @@
       "type": "member_of",
       "from": "skill:historical-financial-analysis",
       "to": "proc:brownfield-fs",
+      "source_ref": "skills/historical-financial-analysis/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:historical-financial-analysis",
+      "to": "proc:company-profile-analysis",
       "source_ref": "skills/historical-financial-analysis/SKILL.md"
     },
     {
@@ -6321,6 +6476,12 @@
       "type": "member_of",
       "from": "skill:stage-gate-governance",
       "to": "proc:brownfield-target-screening",
+      "source_ref": "skills/stage-gate-governance/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:stage-gate-governance",
+      "to": "proc:company-profile-analysis",
       "source_ref": "skills/stage-gate-governance/SKILL.md"
     },
     {
@@ -7531,6 +7692,30 @@
     },
     {
       "type": "produces",
+      "from": "proc:company-profile-analysis#1",
+      "to": "artifact:company_profile_financials",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[1]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:company-profile-analysis#2",
+      "to": "artifact:company_profile_research_pack",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[2]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:company-profile-analysis#3",
+      "to": "artifact:company_profile_assessment",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[3]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:company-profile-analysis#4",
+      "to": "artifact:company_profile_version",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[4]"
+    },
+    {
+      "type": "produces",
       "from": "proc:deal-shape-chain#1",
       "to": "artifact:partner_sourcing_funnel",
       "source_ref": "procedures/_shared/deal-shape-chain/schema.yaml#steps[1]"
@@ -8230,6 +8415,30 @@
       "from": "proc:brownfield-target-screening#4",
       "to": "proc:brownfield-target-screening",
       "source_ref": "procedures/_shared/brownfield-target-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:company-profile-analysis#1",
+      "to": "proc:company-profile-analysis",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:company-profile-analysis#2",
+      "to": "proc:company-profile-analysis",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:company-profile-analysis#3",
+      "to": "proc:company-profile-analysis",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:company-profile-analysis#4",
+      "to": "proc:company-profile-analysis",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml"
     },
     {
       "type": "step_of",

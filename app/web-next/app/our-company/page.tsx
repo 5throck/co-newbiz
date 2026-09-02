@@ -1,9 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { useConfirm, RowEdit } from "../../components/crud.tsx";
-import { PageHeader, SectionToolbar } from "../../components/layout.tsx";
+import { StageFrame } from "../../components/StageFrame.tsx";
+import { SectionToolbar } from "../../components/layout.tsx";
+import dynamic from "next/dynamic";
+import { useChartTheme } from "../../lib/echarts-theme.ts";
+
+const EChartsCore = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 // 그룹/계열사 분석 (/our-company) — 그룹/계열사 2단계 자사 프로파일.
 // S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)을 만든다.
@@ -39,7 +45,21 @@ const PROFILE_TABS = [
 
 type ProfileTabKey = (typeof PROFILE_TABS)[number][0];
 
+/** 상세 헤더 요약 칩 — 프로파일 메타 (DART·리서치·폴백 상태). */
+function ProfileChips({ profile }: { profile: Profile | "loading" | undefined }) {
+  if (!profile || profile === "loading") return null;
+  return (
+    <span className="flex items-center gap-1">
+      {profile.dataSources?.dart && <span className="status-chip status-green">DART {profile.dataSources.dartYear ?? ""}</span>}
+      {(profile.dataSources?.webResearchCount ?? 0) > 0 && <span className="status-chip status-in-progress">외부 리서치 {profile.dataSources!.webResearchCount}건</span>}
+      {profile.degraded && <span className="status-chip status-amber" title={profile.degraded}>부분 분석(폴백)</span>}
+    </span>
+  );
+}
+
 export function OurCompanyView() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [groups, setGroups] = useState<GroupRow[] | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<GroupDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +83,29 @@ export function OurCompanyView() {
   const [profileTab, setProfileTab] = useState<ProfileTabKey>("profile");
   const [profiles, setProfiles] = useState<Record<string, Profile | "loading">>({});
   const { confirm, confirmDialog } = useConfirm();
+  const ct = useChartTheme(); // 리포트 차트 테마 — 훅은 최상위에서 1회만 호출
+
+  // 시너지 정합성과 동일한 선택→상세 흐름: ?member=<id> 가 상태의 유일한 원본
+  const openDetail = useCallback((memberId: string) => {
+    router.replace(`/our-company?member=${encodeURIComponent(memberId)}`);
+    setOpenMember(memberId);
+    if (!profiles[memberId] || profiles[memberId] === "loading") void loadProfile(memberId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, loadProfile]);
+
+  const backToList = useCallback(() => {
+    router.replace("/our-company");
+    setOpenMember(null);
+  }, [router]);
+
+  const memberIdParam = searchParams.get("member");
+  useEffect(() => {
+    if (memberIdParam && memberIdParam !== openMember) {
+      setOpenMember(memberIdParam);
+      if (!profiles[memberIdParam] || profiles[memberIdParam] === "loading") void loadProfile(memberIdParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberIdParam]);
 
   const loadGroups = useCallback(() => {
     api.get<{ groups: GroupRow[] }>("/api/our-company/groups").then((r) => setGroups(r.data.groups)).catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
@@ -183,7 +226,7 @@ export function OurCompanyView() {
       async () => {
         try {
           await api.delete(`/api/our-company/groups/${selectedGroup.group.id}/members`, { member_id: memberId });
-          if (openMember === memberId) setOpenMember(null);
+          if (openMember === memberId) backToList();
           loadGroup(selectedGroup.group.id);
         } catch (err) {
           setError(err instanceof Error ? err.message : "계열사 삭제 실패");
@@ -257,13 +300,14 @@ export function OurCompanyView() {
   return (
     <main>
       {confirmDialog}
-      <PageHeader
-        title="그룹/계열사 분석"
-        description={<>그룹과 계열사를 등록해 <strong>자사 강점/약점</strong>을 분석합니다 — 이 프로파일은 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다. 상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.</>}
-      />
+      <StageFrame stageId="S3" heading="S3 그룹/계열사 분석">
+        그룹과 계열사를 등록해 <strong>자사 강점/약점</strong>을 분석합니다 — 이 프로파일은 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다. 상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.
+      </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
+      {!openMember && (
+      <>
       {/* ── 그룹 선택 ── */}
       <section aria-label="그룹" className="market-section">
         <SectionToolbar
@@ -304,7 +348,7 @@ export function OurCompanyView() {
                 type="button"
                 aria-pressed={selectedGroup?.group.id === g.id}
                 className={`sizing-industry-chip ${selectedGroup?.group.id === g.id ? "sizing-industry-chip-active" : ""}`}
-                onClick={() => { setOpenMember(null); loadGroup(g.id); }}
+                onClick={() => { backToList(); loadGroup(g.id); }}
               >
                 <span className="font-semibold">{g.name}</span>
                 <span className="sizing-chip-meta">계열사 {g.member_count}</span>
@@ -436,7 +480,7 @@ export function OurCompanyView() {
                             type="button"
                             className="font-semibold text-left underline-offset-2 hover:underline"
                             title={analyzed ? "프로파일 리포트 열기" : "프로파일 분석 후 열립니다"}
-                            onClick={() => { setOpenMember(isOpen ? null : m.id); if (analyzed) void loadProfile(m.id); }}
+                            onClick={() => { if (isOpen) backToList(); else openDetail(m.id); }}
                           >
                             {m.company_name}
                           </button>
@@ -471,6 +515,19 @@ export function OurCompanyView() {
                       </td>
                       <td className="tabular-nums">{m.analyzed_at ? m.analyzed_at.slice(0, 10) : "—"}</td>
                       <td className="sizing-actions-cell"><span className="actions-row">
+                        {/* 행 액션 표준 순서: 열기 → 재분석 → 수정(저장/취소) → 삭제 */}
+                        {analyzed && (
+                          <button
+                            type="button"
+                            className="btn-ghost btn-sm"
+                            onClick={() => { if (isOpen) backToList(); else openDetail(m.id); }}
+                          >
+                            {isOpen ? "닫기" : "열기"}
+                          </button>
+                        )}
+                        <button type="button" className="btn-ghost btn-sm" disabled={profiles[m.id] === "loading"} onClick={() => analyzeMember(m.id)}>
+                          {profiles[m.id] === "loading" ? "분석 중..." : analyzed ? "재분석" : "분석"}
+                        </button>
                         {isEditing ? (
                           <>
                             <button type="button" className="btn-ghost btn-sm" disabled={savingMember} onClick={() => saveMemberEdit()}>
@@ -481,18 +538,6 @@ export function OurCompanyView() {
                         ) : (
                           <button type="button" className="btn-ghost btn-sm" title="회사명·DART 고유번호 수정" onClick={() => startMemberEdit(m.id, m.company_name, m.dart_corp_code)}>
                             수정
-                          </button>
-                        )}
-                        <button type="button" className="btn-ghost btn-sm" disabled={profiles[m.id] === "loading"} onClick={() => analyzeMember(m.id)}>
-                          {profiles[m.id] === "loading" ? "분석 중..." : analyzed ? "재분석" : "분석"}
-                        </button>
-                        {analyzed && (
-                          <button
-                            type="button"
-                            className="btn-ghost btn-sm"
-                            onClick={() => { setOpenMember(isOpen ? null : m.id); void loadProfile(m.id); }}
-                          >
-                            {isOpen ? "닫기" : "리포트"}
                           </button>
                         )}
                         <label className="btn-ghost btn-sm cursor-pointer" title="신용평가자료 등 근거 파일 업로드">
@@ -571,11 +616,30 @@ export function OurCompanyView() {
         );
       })()}
 
-      {/* ── 계열사 리포트 (펼침) ── */}
-      {openMember && profiles[openMember] && profiles[openMember] !== "loading" && (() => {
+      </>
+      )}
+
+      {/* ── 계열사 리포트 (상세 전용 뷰 — 시너지 정합성과 동일 흐름) ── */}
+      {openMember && (
+        <section aria-label="계열사 프로파일 리포트" className="market-section sizing-step">
+          <SectionToolbar
+            title="계열사 프로파일 분석"
+            icon="🏢"
+            summary={<ProfileChips profile={profiles[openMember]} />}
+            actions={
+              <>
+                <button type="button" className="btn-ghost" disabled={profiles[openMember] === "loading"} onClick={() => analyzeMember(openMember)}>
+                  {profiles[openMember] === "loading" ? "분석 중..." : "재분석"}
+                </button>
+                <button type="button" className="btn-ghost" onClick={backToList}>목록으로</button>
+              </>
+            }
+          />
+          {profiles[openMember] === "loading" && <p className="text-[0.85rem]" role="status">분석 중입니다 — 완료되면 자동으로 표시됩니다.</p>}
+          {profiles[openMember] && profiles[openMember] !== "loading" && (() => {
         const profile = profiles[openMember] as Profile;
         return (
-          <section aria-label="계열사 프로파일 리포트" className="market-section sizing-step">
+          <>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <h2 className="text-[0.95rem] !mb-0">🏢 {profile.companyName} 프로파일</h2>
               {profile.dataSources?.dart && <span className="status-chip status-green">DART {profile.dataSources.dartYear ?? ""}</span>}
@@ -593,17 +657,53 @@ export function OurCompanyView() {
             {profileTab === "profile" && (
               <div className="text-[0.88rem]">
                 <h3 className="sizing-step-title text-[0.95rem]">재무 현황 {profile.dartFinancials?.available ? `(DART ${profile.dartFinancials.year ?? ""}년)` : "(DART 미입수)"}</h3>
-                {profile.dartFinancials?.available && profile.dartFinancials.items ? (
-                  <table className="data-table" aria-label="DART 재무 요약">
-                    <caption className="sr-only">DART 재무 요약</caption>
-                    <thead><tr><th scope="col">계정</th><th scope="col">연도</th><th scope="col">금액 (억원)</th></tr></thead>
-                    <tbody>
-                      {profile.dartFinancials.items.map((i, idx) => (
-                        <tr key={`${i.year ?? ""}-${i.name}-${idx}`}><td className="font-semibold">{i.name}</td><td className="tabular-nums">{i.year ?? "—"}</td><td className="tabular-nums">{(i.value / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 0 })} 억원</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
+                {profile.dartFinancials?.available && profile.dartFinancials.items ? (() => {
+                  const items = profile.dartFinancials.items;
+                  const years = [...new Set(items.map((i) => i.year ?? ""))].filter(Boolean).sort().reverse();
+                  const accounts = [...new Set(items.map((i) => i.name))];
+                  const byKey = new Map(items.map((i) => [`${i.year}|${i.name}`, i.value]));
+                  const fmtEok = (v: number) => (v / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
+                                    const chartOption = {
+                    tooltip: { trigger: "axis" as const },
+                    legend: { top: 0, textStyle: { color: ct.muted, fontSize: 11 } },
+                    grid: { left: 60, right: 16, top: 32, bottom: 28 },
+                    xAxis: { type: "category" as const, data: accounts, axisLabel: { color: ct.muted, fontSize: 11, interval: 0, rotate: accounts.length > 6 ? 20 : 0 } },
+                    yAxis: { type: "value" as const, axisLabel: { color: ct.muted, formatter: (v: number) => `${fmtEok(v)}억` }, splitLine: { lineStyle: { color: ct.split } } },
+                    series: years.map((y, i) => ({
+                      name: y,
+                      type: "bar" as const,
+                      data: accounts.map((a) => byKey.get(`${y}|${a}`) ?? null),
+                      itemStyle: { color: ct.color[i % ct.color.length], borderRadius: [4, 4, 0, 0] },
+                    })),
+                  };
+                  return (
+                    <>
+                      <div className="report-chart-card">
+                        <EChartsCore option={chartOption} style={{ height: 300 }} />
+                        <p className="mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">단위: 억원 · 출처: DART 사업보고서</p>
+                      </div>
+                      <div className="table-scroll">
+                        <table className="data-table report-table" aria-label="DART 재무 요약 (계정 × 연도)">
+                          <caption className="sr-only">DART 재무 요약 (계정 × 연도)</caption>
+                          <thead>
+                            <tr><th scope="col" className="col-label">계정</th>{years.map((y) => <th key={y} scope="col" className="col-num">{y}</th>)}</tr>
+                          </thead>
+                          <tbody>
+                            {accounts.map((a) => (
+                              <tr key={a}>
+                                <td className="font-semibold">{a}</td>
+                                {years.map((y) => {
+                                  const v = byKey.get(`${y}|${a}`);
+                                  return <td key={y} className="tabular-nums">{v !== undefined ? `${fmtEok(v)} 억원` : "—"}</td>;
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  );
+                })() : (
                   <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">{profile.dartFinancials?.error ?? "재무 데이터 없음"}</p>
                 )}
                 <h3 className="sizing-step-title text-[0.95rem] mt-4">산업 노출</h3>
@@ -646,14 +746,20 @@ export function OurCompanyView() {
                 )}
               </div>
             )}
-          </section>
+          </>
         );
       })()}
+        </section>
+      )}
 
     </main>
   );
 }
 
 export default function OurCompanyPage() {
-  return <OurCompanyView />;
+  return (
+    <Suspense fallback={null}>
+      <OurCompanyView />
+    </Suspense>
+  );
 }

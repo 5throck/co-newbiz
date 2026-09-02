@@ -113,3 +113,9 @@ As-built deltas not in the tree above:
 - `docs/api-spec.md` — the API this UI consumes exclusively (no direct DB access from the frontend)
 - `docs/rag-framework.md` — the grading logic §3 renders
 - `docs/mcp-integration.md` — the parallel AI-client surface (not this UI, but the same underlying API)
+
+## As-built 2026-09-02 — 시너지 정합성 하위 메뉴
+
+- 사이드바 탐색의 시너지 정합성은 하위 메뉴를 갖는다: 그룹/계열사 분석(/our-company) · 시너지·전략적 적합성(/synergy). NavItem.children 지원(AppShell), 자식은 들여쓰기 링크, 부모는 활성 그룹 라벨.
+- 그룹/계열사 분석 화면 제목은 "S3 그룹/계열사 분석"(StageFrame heading override — S3 지원 도구 표기, ADR-0089).
+- 시너지 정합성 신규 분석 폼: 대상(그룹/계열사 레지스트리, 프로파일 게이팅) + 기회 연결(선택) — 별도 회사 등록 없음(ADR-0090).

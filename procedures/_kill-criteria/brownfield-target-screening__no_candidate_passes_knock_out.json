@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-target-screening",
+  "criterion_id": "no_candidate_passes_knock_out",
+  "title": "No Long List candidate passes the chk-target-screening knock-outs (t-01..t-05)",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": "Declared in procedures/_shared/brownfield-target-screening/schema.yaml kill_criteria (S7, chk-target-screening ADR-0081); activation awaits the screening-result var round per ADR-0060 §3",
+  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). Halt is the kill-path: when every candidate fails a non-waivable knock-out, the opportunity cannot proceed to Short List."
+}

@@ -10,12 +10,15 @@ import { GATE_LABEL, STAGE_META, type StageMetaId, type TrackId } from "../lib/s
 export function StageFrame({
   stageId,
   track,
+  heading,
   children,
 }: {
   /** 이 화면이 담당하는 단계 — 복합 단계는 배열(S6·S7처럼 한 화면이 두 단계) */
   stageId: StageMetaId | StageMetaId[];
   /** 화면이 고정 트랙에서 동작할 때 지정 — 트랙 미해당 단계를 레일에서 비활성 */
   track?: TrackId;
+  /** 지원 도구 화면용 제목 재정의 (예: S3의 그룹/계열사 프로파일 화면) — 레일·메타는 stageId를 따른다 */
+  heading?: string;
   children?: ReactNode;
 }) {
   const ids = Array.isArray(stageId) ? stageId : [stageId];
@@ -24,7 +27,7 @@ export function StageFrame({
   return (
     <>
       <h1>
-        {stage.id} {ids.length > 1 ? `· ${STAGE_META.find((s) => s.id === ids[1])!.name}` : stage.name}
+        {heading ?? `${stage.id} ${ids.length > 1 ? `· ${STAGE_META.find((s) => s.id === ids[1])!.name}` : stage.name}`}
       </h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">{stage.objective}</p>
       <StageRail current={ids} track={track} />

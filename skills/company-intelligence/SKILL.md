@@ -19,6 +19,7 @@ metadata:
   procedure_keys:
     - brownfield-dd
     - brownfield-target-identification
+    - company-profile-analysis
   source: workspace
   type: research
   triggers:

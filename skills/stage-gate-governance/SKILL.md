@@ -56,6 +56,7 @@ metadata:
     - pmi-integration-execution
     - portfolio-venture-monitoring
     - brownfield-target-screening
+    - company-profile-analysis
 ---
 
 ## Context

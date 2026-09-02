@@ -18,6 +18,7 @@ import {
   Landmark,
   Lightbulb,
   Handshake,
+  GitMerge,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
@@ -27,6 +28,8 @@ interface NavItem {
   label: string;
   icon: ReactNode;
   adminOnly?: boolean;
+  /** 하위 메뉴 — 부모는 링크가 아니라 그룹 라벨로 렌더링된다 */
+  children?: NavItem[];
 }
 
 // 좌측 패널 — 플랫 전역 내비. 트랙 결정 이후 흐름(S4~)은 flow.spec v2.0.0
@@ -38,8 +41,15 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
       { href: "/", label: "대시보드", icon: <LayoutDashboard size={18} /> },
       { href: "/market", label: "시장분석", icon: <LineChart size={18} /> },
       { href: "/opportunities", label: "기회 발굴", icon: <Lightbulb size={18} /> },
-      { href: "/our-company", label: "그룹/계열사 분석", icon: <Landmark size={18} /> },
-      { href: "/synergy", label: "시너지 정합성", icon: <Handshake size={18} /> },
+      {
+        href: "/our-company",
+        label: "시너지 정합성",
+        icon: <Handshake size={18} />,
+        children: [
+          { href: "/our-company", label: "그룹/계열사 분석", icon: <Landmark size={18} /> },
+          { href: "/synergy", label: "시너지·전략적 적합성", icon: <GitMerge size={18} /> },
+        ],
+      },
       { href: "/route-decision", label: "진출방식 결정", icon: <GitBranch size={18} /> },
       { href: "/greenfield", label: "역량 평가·진출전략", icon: <Sprout size={18} /> },
       { href: "/brownfield", label: "대상 후보 발굴", icon: <Target size={18} /> },
@@ -130,6 +140,34 @@ function Sidebar() {
             <div className="sidebar-group-label">{section.label}</div>
             <nav className="sidebar-nav" aria-label={section.label}>
               {items.map((item) => {
+                if (item.children) {
+                  const childActive = item.children.some(
+                    (c) => pathname === c.href || pathname.startsWith(c.href + "/"),
+                  );
+                  return (
+                    <div key={item.href} className="side-nav-submenu">
+                      <div className={`side-nav-link side-nav-parent ${childActive ? "side-nav-link-active" : ""}`}>
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </div>
+                      <div className="side-nav-children">
+                        {item.children.map((c) => {
+                          const active = pathname === c.href || pathname.startsWith(c.href + "/");
+                          return (
+                            <Link
+                              key={c.href}
+                              href={c.href}
+                              className={`side-nav-link side-nav-child ${active ? "side-nav-link-active" : ""}`}
+                            >
+                              {c.icon}
+                              <span>{c.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
                 const active =
                   pathname === item.href || pathname.startsWith(item.href + "/");
                 return (

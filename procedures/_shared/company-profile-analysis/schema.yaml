@@ -1,0 +1,75 @@
+schema_version: "1.0"
+procedure_id: shared-company-profile-analysis
+title: "Company Profile Analysis (그룹/계열사 자사 프로파일)"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: Screening
+
+# S3 input-prep activity (ADR-0089): NOT a stage — a recurring data-preparation
+# procedure whose append-only versions feed S3 (자사 강점/약점), and optionally
+# S5 (필요 역량 대조) and S7 (t-05 역량 관련성). The runtime implementation is
+# `app/web-next/lib/company-profile-pipeline.ts`; the /our-company surface is
+# its operator UI (ADR-0080 — S3 지원 도구로 유지, 스테이지 미승격).
+
+steps:
+  - id: 1
+    gate: Screening
+    agent_key: financial-analyst
+    skill_key: historical-financial-analysis
+    output_type: company_profile_financials
+    description: >
+      DART financial-statement ingest (3 business years, latest complete year
+      first). The corp_code is resolved through the k-dart v2.1.0 fallback
+      chain (24h-TTL bulk cache -> bulk retry -> web fallback with
+      company.json cross-validation) and ONLY a cross-validated code is
+      persisted on the company record — a code that fails name match is
+      discarded and the step proceeds as 비상장 (research-based). Consolidated
+      (CFS) statements with separate (BFS) fallback; account alias
+      normalization applied.
+  - id: 2
+    gate: Screening
+    agent_key: market-intelligence-agent
+    skill_key: company-intelligence
+    output_type: company_profile_research_pack
+    description: >
+      External research pack — analyst reports, industry trends, and business
+      performance excerpts (Tavily web research, up to 12 deduplicated
+      sources). Every excerpt carries title/url/snippet provenance; the pack
+      is the evidence base for the assessment step and is preserved in the
+      profile version regardless of LLM success or failure.
+  - id: 3
+    gate: Screening
+    agent_key: financial-analyst
+    skill_key: historical-financial-analysis
+    output_type: company_profile_assessment
+    description: >
+      LLM strengths/weaknesses/business assessment grounded in the research
+      pack and DART financials, with per-item source citations ([n]). On LLM
+      failure the step stores a DEGRADED result: the failure reason is
+      recorded (degraded flag), the fallback text reflects the actual
+      situation (research count kept — never the misleading "research not
+      configured" phrasing when sources exist), and the UI surfaces a
+      부분 분석(폴백) — 재분석 권장 chip.
+  - id: 4
+    gate: Screening
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: company_profile_version
+    description: >
+      Append-only version accumulation (company_profile_version, ADR-0005
+      run-versioning pattern) — re-analysis lands version N+1; prior versions
+      are preserved so decisions can cite the exact profile version. Includes
+      the synergy matrix derivation across affiliates (industry-exposure
+      overlap) as a read-only by-product of the latest versions.
+
+legal_basis:
+  - "ADR-0080 (그룹/계열사 분석 — S3 지원 도구, 스테이지 미승격)"
+  - "ADR-0089 (S3 input-prep 활동의 스펙 편입)"
+  - "process/flow.spec.yaml S3 inputs — 자사 역량·포트폴리오 정보"
+
+owner_agent: financial-analyst
+last_reviewed: "2026-09-02"
