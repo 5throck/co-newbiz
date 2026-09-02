@@ -4,7 +4,7 @@
 //   3. LLM 강점/약점/사업 평가 (근거 출처 명기, 결정론 폴백)
 //   4. company_profile_version에 버전 누적 (append-only, ADR-0005 패턴)
 import { getDb } from "../../../db/client.ts";
-import { findCorpCode, fetchFinancials, isDartConfigured, type DartFinancials } from "../lib/dart-client.ts";
+import { resolveCorpCode, validateCorpCode, fetchFinancials, isDartConfigured, type DartFinancials } from "../lib/dart-client.ts";
 import { completeOrFallback } from "./llm.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "./web-research.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
@@ -23,6 +23,8 @@ export interface CompanyProfilePayload {
   weaknesses: string[];
   businessAssessment: string;
   industryExposure: string[];
+  /** LLM 평가 실패로 폴백 저장된 경우 사유 — null이면 정상 분석 */
+  degraded?: string | null;
   researchSources: Array<{ title: string; url: string; snippet?: string }>;
   dataSources: {
     dart: boolean;
@@ -53,14 +55,33 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     stepSummaries.push({ step, title, summary, source });
   };
 
-  // ── Step 1: DART 재무 입수 ──
+  // ── Step 1: DART 재무 입수 (corp_code는 교차검증 통과 코드만 사용·저장) ──
   let corpCode = member.dart_corp_code ?? null;
-  if (!corpCode && isDartConfigured()) corpCode = await findCorpCode(company);
-  const dart: DartFinancials = corpCode ? await fetchFinancials(corpCode, { years: 3 }) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
-  if (corpCode && corpCode !== member.dart_corp_code) {
+  let codeNote: string | null = null;
+  if (corpCode) {
+    const v = await validateCorpCode(corpCode, company);
+    if (v.validated === false) {
+      codeNote = `저장된 DART 고유번호 ${corpCode}가 이 회사와 불일치(실제: ${v.corpName ?? "미확인"}) — 폴백 체인으로 재해석합니다.`;
+      corpCode = null;
+    }
+  }
+  if (!corpCode && isDartConfigured()) {
+    const r = await resolveCorpCode(company);
+    if (r.corpCode && r.validated !== false) {
+      corpCode = r.corpCode;
+      codeNote = `고유번호 ${r.corpCode}를 ${r.resolvedVia} 경로로 해소 (교차검증 ${r.validated ? "통과" : "불가"})`;
+    } else {
+      codeNote = "고유번호 해소 실패 — 비상장(리서치 기반)으로 진행";
+    }
+  }
+  const dart: DartFinancials = corpCode ? await fetchFinancials(corpCode, { years: 3 }) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? codeNote ?? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
+  // 교차검증 통과 코드만 영속화 — 잘못된 코드가 DB에 남지 않는다.
+  if (corpCode && corpCode !== member.dart_corp_code && dart.found) {
     db.run("UPDATE company_group_member SET dart_corp_code = ? WHERE id = ?", [corpCode, member.id]);
   }
-  await summarize(1, "DART 재무제표·사업보고서 입수", dart.found ? `${dart.year}년 사업보고서 재무 ${dart.items.length}개 계정 입수.` : `DART 미입수 — ${dart.error ?? "사유 없음"} (웹 리서치로 보강).`);
+  await summarize(1, "DART 재무제표·사업보고서 입수",
+    (codeNote ? `${codeNote}. ` : "") +
+    (dart.found ? `${dart.year}년 사업보고서 재무 ${dart.items.length}개 계정 입수.` : `DART 미입수 — ${dart.error ?? "사유 없음"} (웹 리서치로 보강).`));
 
   // ── Step 2: 외부 리서치 (애널리스트 리포트·산업 동향) ──
   let research: WebSource[] = [];
@@ -100,6 +121,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
   let weaknesses: string[] = [];
   let businessAssessment = "";
   let industryExposure: string[] = [];
+  let degraded: string | null = null; // LLM 평가 실패 사유 — null이면 정상 (ADR 없이 2026-09-02 사용자 지시)
   try {
     const parsed = JSON.parse(qualJson.text.slice(qualJson.text.indexOf("{"), qualJson.text.lastIndexOf("}") + 1)) as Record<string, unknown>;
     const arr = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, 5) : []);
@@ -107,8 +129,22 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     weaknesses = arr(parsed.weaknesses);
     industryExposure = arr(parsed.industryExposure);
     if (typeof parsed.businessAssessment === "string") businessAssessment = parsed.businessAssessment;
-  } catch { /* 폴백 값 유지 */ }
-  await summarize(3, "강점/약점·사업 평가", `강점 ${strengths.length}개·약점 ${weaknesses.length}개 도출 (출처 ${research.length}건 기반).`);
+  } catch (err) {
+    degraded = `LLM 응답 파싱 실패 (${err instanceof Error ? err.message.slice(0, 60) : "알 수 없는 오류"})`;
+  }
+  // 정적 폴백 문구가 저장된 경우 — 실제 상황을 반영해 정직하게 표기
+  if (strengths.length === 1 && strengths[0]?.includes("미구성")) {
+    degraded = research.length > 0
+      ? `LLM 평가 실패 — 리서치 ${research.length}건 수집됐으나 평가 생성 실패 (재분석 권장)`
+      : "LLM 미구성 및 리서치 미구성 — 수동 등록 필요";
+    strengths = [`(평가 실패 — ${research.length}건의 리서치 출처는 '출처·노트' 탭 참조)`];
+    weaknesses = [`(평가 실패 — 재분석을 실행하세요)`];
+    if (!businessAssessment) businessAssessment = "LLM 평가 실패 — 재분석 시 재생성됩니다.";
+  }
+  await summarize(3, "강점/약점·사업 평가",
+    degraded
+      ? `폴백 저장 — ${degraded}`
+      : `강점 ${strengths.length}개·약점 ${weaknesses.length}개 도출 (출처 ${research.length}건 기반).`);
 
   // ── Step 4: 버전 누적 저장 ──
   const payload: CompanyProfilePayload = {
@@ -120,6 +156,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     businessAssessment,
     industryExposure,
     researchSources: research.map((s) => ({ title: s.title, url: s.url, snippet: s.snippet.slice(0, 200) })),
+    degraded,
     dataSources: { dart: dart.found, dartYear: dart.found ? dart.year ?? null : null, webResearchCount: research.length },
     stepSummaries,
   };

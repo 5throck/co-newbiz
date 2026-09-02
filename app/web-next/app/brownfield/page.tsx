@@ -3,6 +3,8 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
+import { SectionToolbar } from "../../components/layout.tsx";
+import { StageFrame } from "../../components/StageFrame.tsx";
 
 // S6~S7 브라운필드 대상 경로 (/brownfield) — flow.spec v2.0.0.
 //   S6 대상 후보 발굴: Target Universe 정의 → Target Company Long List
@@ -138,12 +140,11 @@ export function BrownfieldView() {
 
   return (
     <main>
-      <h1>대상 후보 발굴 · 스크리닝</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        프로세스 스테이지 <strong>S6~S7 (Brownfield 경로)</strong> — 진출방식이 Brownfield로 결정된 기회의
+      <StageFrame stageId={["S6", "S7"]} track="brownfield">
+        <strong>Brownfield 경로</strong> — 진출방식이 Brownfield로 결정된 기회의
         대상 후보를 발굴하고(S6 Long List), <code>chk-target-screening</code> 체크리스트로 스크리닝해
         Short List로 좁힙니다(S7). CDD/TDD는 Short List 확정 후 S9에서 수행합니다.
-      </p>
+      </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
@@ -177,12 +178,15 @@ export function BrownfieldView() {
       {/* ── S6/S7: 후보 등록 + Long List + 스크리닝 ── */}
       {selected && (
         <section aria-label="대상 후보 스크리닝" className="market-section">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <h2 className="text-[0.92rem] !mb-0">🏢 {selected.opportunity.name} — Long List → Short List</h2>
-            <span className="text-[0.72rem] text-[color:var(--muted-fg)]">
-              {selected.targets.filter((t) => t.status === "shortlisted").length} Short List / {selected.targets.length} Long List
-            </span>
-          </div>
+          <SectionToolbar
+            title={`${selected.opportunity.name} — Long List → Short List`}
+            icon="🏢"
+            summary={
+              <span className="section-meta">
+                {selected.targets.filter((t) => t.status === "shortlisted").length} Short List / {selected.targets.length} Long List
+              </span>
+            }
+          />
 
           {/* S6 — 후보 등록 (Target Universe 근거 포함) */}
           <form onSubmit={addTarget} className="sizing-new-form mb-3">
@@ -192,14 +196,14 @@ export function BrownfieldView() {
                 <input value={newTarget.company_name} onChange={(e) => setNewTarget({ ...newTarget, company_name: e.target.value })} placeholder="예: 레인보우로보틱스" required className="sizing-new-input" />
               </label>
               <label className="text-[0.78rem]">
-                <span className="block mb-1">DART corp code (선택)</span>
-                <input value={newTarget.dart_corp_code} onChange={(e) => setNewTarget({ ...newTarget, dart_corp_code: e.target.value })} placeholder="8자리" className="sizing-new-input sizing-new-input-sm" />
+                <span className="block mb-1">DART 고유번호 (선택, 8자리)</span>
+                <input value={newTarget.dart_corp_code} onChange={(e) => setNewTarget({ ...newTarget, dart_corp_code: e.target.value })} placeholder="8자리 고유번호" className="sizing-new-input sizing-new-input-sm" />
               </label>
               <label className="text-[0.78rem]">
                 <span className="block mb-1">Universe 근거 (선택)</span>
                 <input value={newTarget.universe_note} onChange={(e) => setNewTarget({ ...newTarget, universe_note: e.target.value })} placeholder="선정 기준·가치사슬 위치 등" className="sizing-new-input sizing-new-input-sm" />
               </label>
-              <button type="submit" className="btn-ghost text-[0.8rem]" disabled={busy || !newTarget.company_name.trim()}>후보 등록</button>
+              <button type="submit" className="btn-ghost btn-sm" disabled={busy || !newTarget.company_name.trim()}>후보 등록</button>
             </div>
             <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
               S6 대상 후보 발굴 — Target Universe 정의(선정 기준·커버리지)를 기반으로 후보를 등록합니다.
@@ -288,11 +292,11 @@ export function BrownfieldView() {
                                 })}
                               </ul>
                               <div className="flex flex-wrap items-center gap-2 mt-3">
-                                <button type="button" className="btn-ghost text-[0.8rem]" disabled={busy} onClick={() => saveScreening(t.id)}>판정 저장</button>
+                                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => saveScreening(t.id)}>판정 저장</button>
                                 {t.status !== "shortlisted" && (
                                   <button
                                     type="button"
-                                    className="btn-ghost text-[0.8rem]"
+                                    className="btn-ghost btn-sm"
                                     disabled={busy || !sm?.knockOutsPassed}
                                     title={sm && !sm.knockOutsPassed ? "knock-out 통과 + 필수 항목 판정 후 승격 가능합니다" : "Short List 승격"}
                                     onClick={() => shortlist(t.id)}
@@ -310,7 +314,7 @@ export function BrownfieldView() {
                                       className="sizing-new-input sizing-new-input-sm"
                                       style={{ width: "12rem" }}
                                     />
-                                    <button type="button" className="btn-ghost text-[0.8rem]" disabled={busy} onClick={() => exclude(t.id)}>제외</button>
+                                    <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => exclude(t.id)}>제외</button>
                                   </span>
                                 )}
                               </div>

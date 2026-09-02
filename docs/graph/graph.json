@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 522,
+    "node_count": 529,
     "edge_count": 914
   },
   "nodes": [
@@ -411,6 +411,41 @@
       "id": "adr:0081",
       "type": "adr",
       "label": "ADR-0081: S7 target-screening checklist (chk-target-screening)"
+    },
+    {
+      "id": "adr:0082",
+      "type": "adr",
+      "label": "ADR-0082: Unified CRUD interaction pattern for web surfaces"
+    },
+    {
+      "id": "adr:0083",
+      "type": "adr",
+      "label": "ADR-0083: Visual UI standard — toolbar structure, two button sizes, delete hierarchy"
+    },
+    {
+      "id": "adr:0084",
+      "type": "adr",
+      "label": "ADR-0084: S4 structured route-decision scoring (two-stage framework)"
+    },
+    {
+      "id": "adr:0085",
+      "type": "adr",
+      "label": "ADR-0085: S10 entity establishment execution — spec alignment and execution record layer"
+    },
+    {
+      "id": "adr:0086",
+      "type": "adr",
+      "label": "ADR-0086: Adopt the standard screen pattern system (StageFrame/StageRail + P1–P5)"
+    },
+    {
+      "id": "adr:0087",
+      "type": "adr",
+      "label": "ADR-0087: Design process pipeline — tokens-before-screens, design artifacts required at system design phase"
+    },
+    {
+      "id": "adr:0088",
+      "type": "adr",
+      "label": "ADR-0088: Report data-presentation standard — charts, bullets, wide-table handling"
     },
     {
       "id": "agent:antitrust-agent",
@@ -1872,7 +1907,7 @@
       "id": "skill:k-dart",
       "type": "skill",
       "label": "k-dart",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "status": "active"
     },
     {

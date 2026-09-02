@@ -1,10 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { api } from "../../lib/api.ts";
+import { useConfirm } from "../../components/crud.tsx";
+import { SectionToolbar } from "../../components/layout.tsx";
+import { StageFrame } from "../../components/StageFrame.tsx";
 import { EChart } from "../../components/EChart.tsx";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
 import {
@@ -84,6 +87,7 @@ export function MarketView() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed" | "stale" | "pending">("all");
   const [editing, setEditing] = useState<{ id: string; name: string; code: string } | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
   const [savingEdit, setSavingEdit] = useState(false);
 
   const refreshOverview = useCallback(() => {
@@ -158,17 +162,22 @@ export function MarketView() {
     }
   }
 
-  // 산업 삭제 — market-sizing 분석(버전 행 포함)과 함께 제거한다.
-  async function deleteIndustry(ind: IndustryRow) {
-    if (!window.confirm(`산업 "${ind.name_ko}"을(를) 삭제할까요? 이 산업의 시장분석 기록도 함께 삭제되며 되돌릴 수 없습니다.`)) return;
-    setError(null);
-    try {
-      await api.delete(`/api/market-overview/industry/${encodeURIComponent(ind.id)}`);
-      if (selectedIndustry === ind.id) backToList();
-      await refreshOverview();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "산업 삭제 실패");
-    }
+  // 산업 삭제 — market-sizing 분석(버전 행 포함)과 함께 삭제한다.
+  function deleteIndustry(ind: IndustryRow) {
+    confirm(
+      `산업 "${ind.name_ko}" 삭제`,
+      async () => {
+        setError(null);
+        try {
+          await api.delete(`/api/market-overview/industry/${encodeURIComponent(ind.id)}`);
+          if (selectedIndustry === ind.id) backToList();
+          await refreshOverview();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "산업 삭제 실패");
+        }
+      },
+      { body: "이 산업의 시장분석 기록(버전 전체)도 함께 삭제되며 되돌릴 수 없습니다." },
+    );
   }
 
   // 산업 정보 수정(이름·KSIC 코드) — 목록에서 인라인으로 편집한다.
@@ -222,28 +231,6 @@ export function MarketView() {
     });
   }, [overview, query, statusFilter, buckets]);
 
-  // 상태 칵 오른 끝을 마지막 열(열기·삭제 버튼 오른 끝)에 맞춘다.
-  // 테이블 열 배치가 유전이라 실제 렌더된 버튼 위치를 측정해 사용한다.
-  const [chipsInset, setChipsInset] = useState<number>(8);
-  const tableRef = useRef<HTMLTableElement | null>(null);
-  useEffect(() => {
-    const compute = () => {
-      const td = tableRef.current?.querySelector<HTMLTableCellElement>("td.sizing-actions-cell");
-      const btns = td?.querySelectorAll("button");
-      if (!td || !btns || btns.length === 0) return;
-      // 마지막 버튼(삭제)의 오른 끝이 정렬 기준
-      const btnRight = btns[btns.length - 1].getBoundingClientRect().right;
-      const tdRight = td.getBoundingClientRect().right;
-      setChipsInset(Math.max(8, Math.round(tdRight - btnRight)));
-    };
-    compute();
-    const t = window.setTimeout(compute, 50);
-    const ro = new ResizeObserver(compute);
-    if (tableRef.current) ro.observe(tableRef.current);
-    window.addEventListener("resize", compute);
-    return () => { window.clearTimeout(t); ro.disconnect(); window.removeEventListener("resize", compute); };
-  }, [overview, query, statusFilter, editing]);
-
   const statusCounts = useMemo(() => {
     const counts = { all: 0, in_progress: 0, completed: 0, stale: 0, pending: 0 };
     for (const ind of overview?.industries ?? []) {
@@ -266,7 +253,8 @@ export function MarketView() {
 
   return (
     <main>
-      <h1>시장분석</h1>
+      {confirmDialog}
+      <StageFrame stageId="S1" />
       <p className="mt-[0.15rem] mb-2 text-[color:var(--muted-fg)] text-[0.9rem]">
         프로세스 스테이지 S1 — 산업을 선택하면 <strong>systematic-market-sizing</strong> 8단계 절차로 분석된
         리포트가 차트로 표시됩니다.
@@ -276,37 +264,44 @@ export function MarketView() {
 
       {/* ── 분석 대상 산업 (테이블) ── */}
       <section aria-label="분석 대상 산업" className="market-section">
-        {/* 한 줄: 제목 · 검색 · 상태 칵(마지막 버튼 끝 정렬) · 신규 분석 버튼 */}
-        <div className="flex items-center gap-2 mb-2">
-          <h2 className="!mb-0 whitespace-nowrap" style={{ flexShrink: 0 }}>🏭 분석 대상 산업 <span className="text-[0.72rem] font-normal text-[color:var(--muted-fg)]">({statusCounts.all}건)</span></h2>
-          <input
-            type="search"
-            aria-label="산업 검색"
-            placeholder="산업명·코드 검색"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="sizing-new-input sizing-new-input-sm"
-            style={{ width: "12rem", minWidth: "8rem", flexShrink: 1 }}
-          />
-          <button type="button" className="btn-ghost text-[0.8rem] whitespace-nowrap" style={{ flexShrink: 0 }} onClick={() => setShowNewForm((v) => !v)} aria-expanded={showNewForm}>
-            {showNewForm ? "취소" : "＋ 신규 산업 분석"}
-          </button>
-          <div role="group" aria-label="상태 필터" className="flex items-center gap-1" style={{ marginLeft: "auto", marginRight: chipsInset, flexShrink: 0 }}>
-            {([
-              ["all", "전체"], ["in_progress", "분석 중"], ["completed", "완료"], ["stale", "업데이트 권장"], ["pending", "대기"],
-            ] as const).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={statusFilter === key}
-                className={`status-chip ${statusFilter === key ? "status-green" : "status-not-started"}`}
-                onClick={() => setStatusFilter(key)}
-              >
-                {label} {statusCounts[key]}
-              </button>
-            ))}
-          </div>
-        </div>
+        <SectionToolbar
+          title="분석 대상 산업"
+          icon="🏭"
+          count={statusCounts.all}
+          filters={
+            <input
+              type="search"
+              aria-label="산업 검색"
+              placeholder="산업명·코드 검색"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="sizing-new-input sizing-new-input-sm"
+              style={{ width: "12rem", minWidth: "8rem" }}
+            />
+          }
+          summary={
+            <span role="group" aria-label="상태 필터" className="flex items-center gap-1">
+              {([
+                ["all", "전체"], ["in_progress", "분석 중"], ["completed", "완료"], ["stale", "업데이트 권장"], ["pending", "대기"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={statusFilter === key}
+                  className={`status-chip ${statusFilter === key ? "status-green" : "status-not-started"}`}
+                  onClick={() => setStatusFilter(key)}
+                >
+                  {label} {statusCounts[key]}
+                </button>
+              ))}
+            </span>
+          }
+          actions={
+            <button type="button" className="btn-ghost whitespace-nowrap" onClick={() => setShowNewForm((v) => !v)} aria-expanded={showNewForm}>
+              ＋ 신규 산업 분석
+            </button>
+          }
+        />
 
         {showNewForm && (
           <form onSubmit={createAnalysis} aria-label="신규 산업 분석 생성" className="sizing-new-form mb-3">
@@ -319,8 +314,11 @@ export function MarketView() {
                 <span className="block mb-1">KSIC 코드 (선택)</span>
                 <input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="예: 28121" className="sizing-new-input sizing-new-input-sm" />
               </label>
-              <button type="submit" className="btn-ghost text-[0.8rem]" disabled={creating || !newName.trim()}>
+              <button type="submit" className="btn-ghost" disabled={creating || !newName.trim()}>
                 {creating ? "생성 중..." : "분석 시작"}
+              </button>
+              <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)}>
+                취소
               </button>
             </div>
             <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
@@ -339,7 +337,7 @@ export function MarketView() {
         ) : visibleIndustries.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">검색·필터 조건에 맞는 산업이 없습니다.</p>
         ) : (
-          <table ref={tableRef} className="data-table" aria-label="분석 대상 산업 목록">
+          <table className="data-table" aria-label="분석 대상 산업 목록">
             <caption className="sr-only">분석 대상 산업 목록</caption>
             <thead>
               <tr>
@@ -413,13 +411,13 @@ export function MarketView() {
                         "—"
                       )}
                     </td>
-                    <td className="sizing-actions-cell">
+                    <td className="sizing-actions-cell"><span className="actions-row">
                       {isEditing ? (
                         <>
-                          <button type="button" className="btn-ghost text-[0.78rem]" disabled={savingEdit || !editing.name.trim()} onClick={saveEdit}>
+                          <button type="button" className="btn-ghost btn-sm" disabled={savingEdit || !editing.name.trim()} onClick={saveEdit}>
                             {savingEdit ? "저장 중..." : "저장"}
                           </button>
-                          <button type="button" className="btn-ghost text-[0.78rem]" onClick={() => setEditing(null)}>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => setEditing(null)}>
                             취소
                           </button>
                         </>
@@ -427,7 +425,7 @@ export function MarketView() {
                         <>
                           <button
                             type="button"
-                            className="btn-ghost text-[0.78rem]"
+                            className="btn-ghost btn-sm"
                             disabled={inProgress}
                             onClick={() => loadDetail(ind.id)}
                           >
@@ -436,7 +434,7 @@ export function MarketView() {
                           {a && !inProgress && (
                             <button
                               type="button"
-                              className="btn-ghost text-[0.78rem] sizing-rerun-btn"
+                              className="btn-ghost btn-sm sizing-rerun-btn"
                               title={stale ? "분석일이 90일 지났습니다" : "분석 실패 또는 갱신 필요 시 새 버전으로 재실행"}
                               onClick={() => rerunAnalysis(a.id)}
                             >
@@ -446,7 +444,7 @@ export function MarketView() {
                           {!inProgress && (
                             <button
                               type="button"
-                              className="btn-ghost text-[0.78rem]"
+                              className="btn-ghost btn-sm"
                               title="산업명·KSIC 코드 수정"
                               onClick={() => setEditing({ id: ind.id, name: ind.name_ko, code: ind.ksic_code ?? "" })}
                             >
@@ -456,7 +454,7 @@ export function MarketView() {
                           {!inProgress && (
                             <button
                               type="button"
-                              className="btn-ghost text-[0.78rem]"
+                              className="btn-danger btn-sm"
                               title="이 산업과 시장분석 기록을 삭제합니다"
                               onClick={() => deleteIndustry(ind)}
                             >
@@ -465,7 +463,7 @@ export function MarketView() {
                           )}
                         </>
                       )}
-                    </td>
+                    </span></td>
                   </tr>
                 );
               })}

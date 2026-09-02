@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.ts";
+import { useConfirm, RowEdit } from "../../components/crud.tsx";
+import { PageHeader, SectionToolbar } from "../../components/layout.tsx";
 
 // 그룹/계열사 분석 (/our-company) — 그룹/계열사 2단계 자사 프로파일.
 // S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)을 만든다.
@@ -19,6 +21,7 @@ interface Profile {
   weaknesses?: string[];
   businessAssessment?: string;
   industryExposure?: string[];
+  degraded?: string | null;
   researchSources?: Array<{ title: string; url: string; snippet?: string }>;
   dataSources?: { dart: boolean; dartYear: string | null; creditReport: string | null; webResearchCount: number };
 }
@@ -47,14 +50,19 @@ export function OurCompanyView() {
   const [memberForm, setMemberForm] = useState({ company_name: "", dart_corp_code: "", role: "affiliate" as "hq" | "affiliate" });
   // 계열사 등록 — DART 자동 검색 (시너지 정합성의 dart-search API 재사용)
   const [dartSearching, setDartSearching] = useState(false);
-  const [dartResults, setDartResults] = useState<Array<{ corp_code: string; corp_name: string }>>([]);
+  const [dartResults, setDartResults] = useState<Array<{ corp_code: string; corp_name: string; source?: "dart" | "local" | "web"; validated?: boolean | null }>>([]);
+  const [editGroupName, setEditGroupName] = useState(false);
+  const [groupNameDraft, setGroupNameDraft] = useState("");
+  // 행 통합 편집 모드 — 액션 셀의 "수정" 하나로 시작·종료 (ADR-0083: 행 액션은 액션 셀로 모임)
+  const [editMember, setEditMember] = useState<{ id: string; name: string; dart: string } | null>(null);
+  const [savingMember, setSavingMember] = useState(false);
   const [uploadingMember, setUploadingMember] = useState<string | null>(null);
   const [uploadedNames, setUploadedNames] = useState<Record<string, string>>({});
   const [openMember, setOpenMember] = useState<string | null>(null);
-  const [editDart, setEditDart] = useState<Record<string, string>>({});
-  const [savingDart, setSavingDart] = useState<string | null>(null);
+
   const [profileTab, setProfileTab] = useState<ProfileTabKey>("profile");
   const [profiles, setProfiles] = useState<Record<string, Profile | "loading">>({});
+  const { confirm, confirmDialog } = useConfirm();
 
   const loadGroups = useCallback(() => {
     api.get<{ groups: GroupRow[] }>("/api/our-company/groups").then((r) => setGroups(r.data.groups)).catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
@@ -103,10 +111,11 @@ export function OurCompanyView() {
     setDartSearching(true);
     setError(null);
     try {
-      const res = await api.get<{ configured: boolean; results: Array<{ corp_code: string; corp_name: string }> }>(`/api/synergy/dart-search?q=${encodeURIComponent(q)}`);
+      const res = await api.get<{ configured: boolean; results: Array<{ corp_code: string; corp_name: string; source?: "dart" | "local" | "web"; validated?: boolean | null }>; error?: string }>(`/api/synergy/dart-search?q=${encodeURIComponent(q)}`);
       setDartResults(res.data.results);
-      if (!res.data.configured) setError("DART API 키가 구성되지 않았습니다 — corp code 수동 입력으로 진행하세요.");
-      else if (res.data.results.length === 0) setError("DART 검색 결과가 없습니다 — corp code를 수동 입력하거나 비상장으로 등록하세요.");
+      if (!res.data.configured) setError("DART API 키가 구성되지 않았습니다 — DART 고유번호 수동 입력으로 진행하세요.");
+      else if (res.data.error) setError(res.data.error);
+      else if (res.data.results.length === 0) setError("DART 검색 결과가 없습니다 — DART 고유번호를 수동 입력하거나 비상장으로 등록하세요.");
       else setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "DART 검색 실패");
@@ -115,14 +124,40 @@ export function OurCompanyView() {
     }
   }
 
+  async function saveGroupName() {
+    if (!selectedGroup || !groupNameDraft.trim() || busy) return;
+    setBusy(true); setError(null);
+    try {
+      await api.patch(`/api/our-company/groups/${selectedGroup.group.id}`, { name: groupNameDraft.trim() });
+      setEditGroupName(false);
+      loadGroup(selectedGroup.group.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "그룹명 수정 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function addMember(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedGroup || !memberForm.company_name.trim() || busy) return;
-    // DART 미입력 경고 — 상장·외감 계열사는 DART 코드 확인 권장, 비상장은 확인 후 등록
-    if (!memberForm.dart_corp_code.trim() && !window.confirm(
-      `"${memberForm.company_name.trim()}"은(는) DART 코드가 없습니다.\n` +
-      `[🔍 DART 검색]으로 corp code를 찾거나, 비상장이라면 [확인]을 눌러 리서치 기반으로 등록합니다.`,
-    )) return;
+    // DART 미입력 경고 — 상장·외감 계열사는 DART 고유번호 확인 권장, 비상장은 확인 후 등록
+    if (!memberForm.dart_corp_code.trim()) {
+      confirm(
+        `"${memberForm.company_name.trim()}" DART 고유번호 미입력`,
+        () => void doAddMember(),
+        {
+          body: "[🔍 DART 검색]으로 DART 고유번호를 찾거나, 비상장이라면 등록을 눌러 리서치 기반으로 등록합니다.",
+          confirmLabel: "등록",
+        },
+      );
+      return;
+    }
+    void doAddMember();
+  }
+
+  async function doAddMember() {
+    if (!selectedGroup || !memberForm.company_name.trim() || busy) return;
     setBusy(true); setError(null);
     try {
       await api.post(`/api/our-company/groups/${selectedGroup.group.id}/members`, {
@@ -140,32 +175,46 @@ export function OurCompanyView() {
     }
   }
 
-  async function removeMember(memberId: string) {
-    if (!selectedGroup || !window.confirm("이 계열사와 분석 결과를 제거할까요?")) return;
-    try {
-      await api.delete(`/api/our-company/groups/${selectedGroup.group.id}/members`, { member_id: memberId });
-      if (openMember === memberId) setOpenMember(null);
-      loadGroup(selectedGroup.group.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "계열사 제거 실패");
-    }
+  function removeMember(memberId: string) {
+    if (!selectedGroup) return;
+    const m = selectedGroup.members.find((x) => x.id === memberId);
+    confirm(
+      `${m?.company_name ?? "계열사"} 삭제`,
+      async () => {
+        try {
+          await api.delete(`/api/our-company/groups/${selectedGroup.group.id}/members`, { member_id: memberId });
+          if (openMember === memberId) setOpenMember(null);
+          loadGroup(selectedGroup.group.id);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "계열사 삭제 실패");
+        }
+      },
+      { body: "이 계열사와 분석 결과(프로파일 버전 전체)가 함께 삭제됩니다." },
+    );
   }
 
-  async function saveDartCode(memberId: string) {
-    if (!selectedGroup) return;
-    setSavingDart(memberId);
+  function startMemberEdit(memberId: string, name: string, dart: string | null) {
+    setEditMember({ id: memberId, name, dart: dart ?? "" });
+  }
+
+  async function saveMemberEdit() {
+    if (!selectedGroup || !editMember || savingMember) return;
+    const name = editMember.name.trim();
+    if (!name) { setError("회사명은 필수입니다."); return; }
+    setSavingMember(true);
     setError(null);
     try {
       await api.patch(`/api/our-company/groups/${selectedGroup.group.id}/members`, {
-        member_id: memberId,
-        dart_corp_code: editDart[memberId]?.trim() || null,
+        member_id: editMember.id,
+        company_name: name,
+        dart_corp_code: editMember.dart.trim() || null,
       });
-      setEditDart((prev) => { const n = { ...prev }; delete n[memberId]; return n; });
+      setEditMember(null);
       loadGroup(selectedGroup.group.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "DART 코드 저장 실패");
+      setError(err instanceof Error ? err.message : "계열사 정보 저장 실패");
     } finally {
-      setSavingDart(null);
+      setSavingMember(false);
     }
   }
 
@@ -207,29 +256,30 @@ export function OurCompanyView() {
 
   return (
     <main>
-      <h1>그룹/계열사 분석</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        그룹과 계열사를 등록해 <strong>자사 강점/약점</strong>을 분석합니다 — 이 프로파일은
-        S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다.
-        상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.
-      </p>
+      {confirmDialog}
+      <PageHeader
+        title="그룹/계열사 분석"
+        description={<>그룹과 계열사를 등록해 <strong>자사 강점/약점</strong>을 분석합니다 — 이 프로파일은 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다. 상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.</>}
+      />
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
       {/* ── 그룹 선택 ── */}
       <section aria-label="그룹" className="market-section">
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          <h2 className="text-[0.92rem] !mb-0">🏛 분석 대상 그룹</h2>
-          <button
-            type="button"
-            className="btn-ghost text-[0.8rem]"
-            style={{ marginLeft: "auto" }}
-            onClick={() => { setShowGroupForm((v) => !v); setShowMemberForm(false); }}
-            aria-expanded={showGroupForm}
-          >
-            ＋ 그룹 등록
-          </button>
-        </div>
+        <SectionToolbar
+          title="분석 대상 그룹"
+          icon="🏢"
+          actions={
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => { setShowGroupForm((v) => !v); setShowMemberForm(false); }}
+              aria-expanded={showGroupForm}
+            >
+              ＋ 그룹 등록
+            </button>
+          }
+        />
         {showGroupForm && (
           <form onSubmit={createGroup} className="sizing-new-form mb-3">
             <div className="flex flex-wrap items-end gap-2">
@@ -237,8 +287,8 @@ export function OurCompanyView() {
                 <span className="block mb-1">그룹명 *</span>
                 <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="예: 테크크로스 그룹" required className="sizing-new-input" autoFocus />
               </label>
-              <button type="submit" className="btn-ghost text-[0.8rem]" disabled={busy || !groupName.trim()}>그룹 등록</button>
-              <button type="button" className="btn-ghost text-[0.8rem]" onClick={() => setShowGroupForm(false)}>취소</button>
+              <button type="submit" className="btn-ghost btn-sm" disabled={busy || !groupName.trim()}>등록</button>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setShowGroupForm(false)}>취소</button>
             </div>
           </form>
         )}
@@ -267,19 +317,39 @@ export function OurCompanyView() {
       {/* ── 그룹 상세: 계열사 테이블 ── */}
       {selectedGroup && (
         <section aria-label="계열사" className="market-section">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <h2 className="text-[0.92rem] !mb-0">🏢 {selectedGroup.group.name} 계열사</h2>
-            <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{selectedGroup.members.length}건</span>
-            <button
-              type="button"
-              className="btn-ghost text-[0.8rem]"
-              style={{ marginLeft: "auto" }}
-              onClick={() => { setShowMemberForm((v) => !v); setShowGroupForm(false); }}
-              aria-expanded={showMemberForm}
-            >
-              ＋ 계열사 등록
-            </button>
-          </div>
+          <SectionToolbar
+            title={editGroupName ? undefined : `${selectedGroup.group.name} 계열사`}
+            icon={editGroupName ? undefined : "🏭"}
+            count={selectedGroup.members.length}
+            actions={
+              editGroupName ? (
+                <span className="flex items-center gap-1">
+                  <input
+                    aria-label="그룹명 수정"
+                    value={groupNameDraft}
+                    onChange={(e) => setGroupNameDraft(e.target.value)}
+                    className="sizing-new-input sizing-new-input-sm"
+                    autoFocus
+                    onKeyDown={(e) => { if (e.key === "Enter") void saveGroupName(); }}
+                  />
+                  <button type="button" className="btn-ghost btn-sm" disabled={busy || !groupNameDraft.trim()} onClick={() => saveGroupName()}>저장</button>
+                  <button type="button" className="btn-ghost btn-sm" onClick={() => setEditGroupName(false)}>취소</button>
+                </span>
+              ) : (
+                <>
+                  <button type="button" className="btn-ghost btn-sm" title="그룹명 수정" onClick={() => { setGroupNameDraft(selectedGroup.group.name); setEditGroupName(true); }}>수정</button>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => { setShowMemberForm((v) => !v); setShowGroupForm(false); }}
+                    aria-expanded={showMemberForm}
+                  >
+                    ＋ 계열사 등록
+                  </button>
+                </>
+              )
+            }
+          />
           {showMemberForm && (
             <form onSubmit={addMember} aria-label="계열사 등록" className="sizing-new-form mb-3">
               <div className="flex flex-wrap items-end gap-2">
@@ -287,14 +357,14 @@ export function OurCompanyView() {
                   <span className="block mb-1">회사명 *</span>
                   <span className="flex items-center gap-1">
                     <input value={memberForm.company_name} onChange={(e) => { setMemberForm({ ...memberForm, company_name: e.target.value }); setDartResults([]); }} required className="sizing-new-input" autoFocus />
-                    <button type="button" className="btn-ghost text-[0.72rem]" disabled={dartSearching || !memberForm.company_name.trim()} onClick={() => void searchMemberDart()}>
+                    <button type="button" className="btn-ghost btn-sm" disabled={dartSearching || !memberForm.company_name.trim()} onClick={() => void searchMemberDart()}>
                       {dartSearching ? "검색 중..." : "🔍 DART 검색"}
                     </button>
                   </span>
                 </label>
                 <label className="text-[0.78rem]">
-                  <span className="block mb-1">DART corp code</span>
-                  <input value={memberForm.dart_corp_code} onChange={(e) => setMemberForm({ ...memberForm, dart_corp_code: e.target.value })} placeholder="자동 검색 또는 8자리 입력" className="sizing-new-input sizing-new-input-sm" />
+                  <span className="block mb-1">DART 고유번호</span>
+                  <input value={memberForm.dart_corp_code} onChange={(e) => setMemberForm({ ...memberForm, dart_corp_code: e.target.value })} placeholder="자동 검색 또는 8자리 직접 입력" className="sizing-new-input sizing-new-input-sm" />
                 </label>
                 <label className="text-[0.78rem]">
                   <span className="block mb-1">역할</span>
@@ -303,8 +373,8 @@ export function OurCompanyView() {
                     <option value="hq">지주/HQ</option>
                   </select>
                 </label>
-                <button type="submit" className="btn-ghost text-[0.8rem]" disabled={busy || !memberForm.company_name.trim()}>등록</button>
-                <button type="button" className="btn-ghost text-[0.8rem]" onClick={() => setShowMemberForm(false)}>취소</button>
+                <button type="submit" className="btn-ghost btn-sm" disabled={busy || !memberForm.company_name.trim()}>등록</button>
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setShowMemberForm(false)}>취소</button>
               </div>
               {dartResults.length > 0 && (
                 <ul className="sizing-note-list mt-2" role="listbox" aria-label="DART 검색 결과">
@@ -313,17 +383,22 @@ export function OurCompanyView() {
                       <button
                         type="button"
                         aria-pressed={memberForm.dart_corp_code === r.corp_code}
-                        className={`btn-ghost text-[0.78rem] w-full text-left ${memberForm.dart_corp_code === r.corp_code ? "font-semibold" : ""}`}
+                        className={`btn-ghost btn-sm w-full text-left ${memberForm.dart_corp_code === r.corp_code ? "font-semibold" : ""}`}
                         onClick={() => setMemberForm((prev) => ({ ...prev, dart_corp_code: r.corp_code, company_name: r.corp_name }))}
                       >
                         {memberForm.dart_corp_code === r.corp_code ? "✔ " : ""}{r.corp_name} <code className="dd-item-id">{r.corp_code}</code>
+                        {r.source === "web" && (
+                          <span className={`status-chip ml-1 ${r.validated ? "status-green" : "status-amber"}`} title={r.validated ? "DART 기업개황으로 이름 일치 확인" : "웹 검색 폴백 — DART 역조회 실패(다중 소스 일치)"}>
+                            웹 {r.validated ? "✔교차검증" : "미검증"}
+                          </span>
+                        )}
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
               <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
-                DART corp code는 시너지 정합성 화면의 DART 검색으로 확인하거나 비워둘 수 있습니다(비상장 — 리서치 기반 분석).
+                DART 고유번호는 시너지 정합성 화면의 DART 검색으로 확인하거나 비워둘 수 있습니다(비상장 — 리서치 기반 분석).
               </p>
             </form>
           )}
@@ -334,7 +409,7 @@ export function OurCompanyView() {
               <caption className="sr-only">계열사 목록</caption>
               <thead>
                 <tr>
-                  <th scope="col">회사명</th><th scope="col">역할</th><th scope="col">DART 코드</th>
+                  <th scope="col">회사명</th><th scope="col">역할</th><th scope="col">DART 고유번호</th>
                   <th scope="col">분석 상태</th><th scope="col">분석일</th>
                 </tr>
               </thead>
@@ -342,46 +417,49 @@ export function OurCompanyView() {
                 {selectedGroup.members.map((m) => {
                   const analyzed = m.latest_version !== null;
                   const isOpen = openMember === m.id;
+                  const isEditing = editMember?.id === m.id;
                   return (
                     <tr key={m.id} className={isOpen ? "row-selected" : undefined}>
                       <td className="cell-primary">
-                        <button
-                          type="button"
-                          className="font-semibold text-left underline-offset-2 hover:underline"
-                          title={analyzed ? "프로파일 리포트 열기" : "프로파일 분석 후 열립니다"}
-                          onClick={() => { setOpenMember(isOpen ? null : m.id); if (analyzed) void loadProfile(m.id); }}
-                        >
-                          {m.company_name}
-                        </button>
+                        {isEditing ? (
+                          <RowEdit
+                            editing
+                            value={editMember.name}
+                            onChange={(v) => setEditMember((prev) => (prev ? { ...prev, name: v } : prev))}
+                            onSave={() => saveMemberEdit()}
+                            onCancel={() => setEditMember(null)}
+                            saving={savingMember}
+                            ariaLabel={`${m.company_name} 회사명 수정`}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className="font-semibold text-left underline-offset-2 hover:underline"
+                            title={analyzed ? "프로파일 리포트 열기" : "프로파일 분석 후 열립니다"}
+                            onClick={() => { setOpenMember(isOpen ? null : m.id); if (analyzed) void loadProfile(m.id); }}
+                          >
+                            {m.company_name}
+                          </button>
+                        )}
                       </td>
                       <td>{m.role === "hq" ? "지주/HQ" : "계열사"}</td>
                       <td>
-                        {editDart[m.id] !== undefined ? (
-                          <span className="flex items-center gap-1">
-                            <input
-                              aria-label={`${m.company_name} DART 코드 수정`}
-                              value={editDart[m.id]}
-                              onChange={(e) => setEditDart((prev) => ({ ...prev, [m.id]: e.target.value }))}
-                              placeholder="8자리"
-                              className="sizing-new-input sizing-new-input-sm"
-                              style={{ width: "6rem" }}
-                              autoFocus
-                            />
-                            <button type="button" className="btn-ghost text-[0.7rem]" disabled={savingDart === m.id} onClick={() => saveDartCode(m.id)}>
-                              {savingDart === m.id ? "저장 중..." : "저장"}
-                            </button>
-                            <button type="button" className="btn-ghost text-[0.7rem]" onClick={() => setEditDart((prev) => { const n = { ...prev }; delete n[m.id]; return n; })}>취소</button>
-                          </span>
+                        {isEditing ? (
+                          <RowEdit
+                            editing
+                            value={editMember.dart}
+                            onChange={(v) => setEditMember((prev) => (prev ? { ...prev, dart: v } : prev))}
+                            onSave={() => saveMemberEdit()}
+                            onCancel={() => setEditMember(null)}
+                            saving={savingMember}
+                            ariaLabel={`${m.company_name} DART 고유번호 수정`}
+                            width="6rem"
+                            placeholder="8자리 고유번호"
+                          />
                         ) : m.dart_corp_code ? (
-                          <span className="flex items-center gap-1">
-                            <code className="dd-item-id">{m.dart_corp_code}</code>
-                            <button type="button" className="btn-ghost text-[0.65rem]" title="DART 코드 수정" onClick={() => setEditDart((prev) => ({ ...prev, [m.id]: m.dart_corp_code ?? "" }))}>수정</button>
-                          </span>
+                          <code className="dd-item-id">{m.dart_corp_code}</code>
                         ) : (
-                          <span className="flex items-center gap-1">
-                            <span className="status-chip status-amber" title="DART 코드 미확인 — 수정으로 입력하세요">DART 미확인</span>
-                            <button type="button" className="btn-ghost text-[0.65rem]" onClick={() => setEditDart((prev) => ({ ...prev, [m.id]: "" }))}>입력</button>
-                          </span>
+                          <span className="status-chip status-amber" title="DART 고유번호 미확인 — 행 액션의 수정으로 입력하세요">고유번호 미확인</span>
                         )}
                       </td>
                       <td>
@@ -392,20 +470,32 @@ export function OurCompanyView() {
                         )}
                       </td>
                       <td className="tabular-nums">{m.analyzed_at ? m.analyzed_at.slice(0, 10) : "—"}</td>
-                      <td className="sizing-actions-cell">
-                        <button type="button" className="btn-ghost text-[0.75rem]" disabled={profiles[m.id] === "loading"} onClick={() => analyzeMember(m.id)}>
+                      <td className="sizing-actions-cell"><span className="actions-row">
+                        {isEditing ? (
+                          <>
+                            <button type="button" className="btn-ghost btn-sm" disabled={savingMember} onClick={() => saveMemberEdit()}>
+                              {savingMember ? "저장 중..." : "저장"}
+                            </button>
+                            <button type="button" className="btn-ghost btn-sm" onClick={() => setEditMember(null)}>취소</button>
+                          </>
+                        ) : (
+                          <button type="button" className="btn-ghost btn-sm" title="회사명·DART 고유번호 수정" onClick={() => startMemberEdit(m.id, m.company_name, m.dart_corp_code)}>
+                            수정
+                          </button>
+                        )}
+                        <button type="button" className="btn-ghost btn-sm" disabled={profiles[m.id] === "loading"} onClick={() => analyzeMember(m.id)}>
                           {profiles[m.id] === "loading" ? "분석 중..." : analyzed ? "재분석" : "분석"}
                         </button>
                         {analyzed && (
                           <button
                             type="button"
-                            className="btn-ghost text-[0.75rem]"
+                            className="btn-ghost btn-sm"
                             onClick={() => { setOpenMember(isOpen ? null : m.id); void loadProfile(m.id); }}
                           >
                             {isOpen ? "닫기" : "리포트"}
                           </button>
                         )}
-                        <label className="btn-ghost text-[0.75rem] cursor-pointer" title="신용평가자료 등 근거 파일 업로드">
+                        <label className="btn-ghost btn-sm cursor-pointer" title="신용평가자료 등 근거 파일 업로드">
                           {uploadingMember === m.id ? "업로드 중..." : "근거파일"}
                           <input
                             type="file"
@@ -415,10 +505,10 @@ export function OurCompanyView() {
                             onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadMemberFile(m.id, f); }}
                           />
                         </label>
-                        <button type="button" className="btn-ghost text-[0.75rem]" title="그룹에서 이 계열사를 제거합니다" onClick={() => removeMember(m.id)}>
-                          제거
+                        <button type="button" className="btn-danger btn-sm" title="이 계열사를 삭제합니다" onClick={() => removeMember(m.id)}>
+                          삭제
                         </button>
-                      </td>
+                      </span></td>
                     </tr>
                   );
                 })}
@@ -490,6 +580,7 @@ export function OurCompanyView() {
               <h2 className="text-[0.95rem] !mb-0">🏢 {profile.companyName} 프로파일</h2>
               {profile.dataSources?.dart && <span className="status-chip status-green">DART {profile.dataSources.dartYear ?? ""}</span>}
               {(profile.dataSources?.webResearchCount ?? 0) > 0 && <span className="status-chip status-in-progress">외부 리서치 {profile.dataSources!.webResearchCount}건</span>}
+              {profile.degraded && <span className="status-chip status-amber" title={profile.degraded}>부분 분석(폴백) — 재분석 권장</span>}
             </div>
             <div className="library-tabs" role="tablist" aria-label="프로파일 섹션">
               {PROFILE_TABS.map(([key, label]) => (

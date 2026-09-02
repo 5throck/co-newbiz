@@ -401,6 +401,7 @@ stages:
     outputs:
       - IC 결정
       - 투자 구조 확정(비히클·자금 조달 mix·지급 일정)
+      - 설립 완료 법인(신설 법인 — 사내벤처·자회사, origin∈{internal,joint})
       - 실행 진입(PMI / 벤처 모니터링 / R&BD 실행)
     entryCriteria:
       - S9 완료
@@ -421,11 +422,21 @@ stages:
         agent: group-review-agent
         skills: [group-level-review]
         procedure: [entity-ic-review, group-investment-review]
+      - id: entity-establishment-execution
+        agent: process-governance-manager
+        skills: [legal-due-diligence, k-law, certification-transferability, org-readiness-assessment, stage-gate-governance]
+        procedure: [entity-establishment-execution]
+        # origin∈{internal,joint}에서만 적용 (ADR-0047) — 절차 applies_when이 강제한다.
+        # Entity IC 승인 후 실행: 설립준비(관할·주식구조·이사회 결의) → 법인등기·정관·
+        # 사업자등록 → 신설법인 인허가 이전/재발급 분류 → 인력이전(신 근로계약+PIIA) →
+        # 완료확인(IP양도체인·거버넌스 베이스라인, JV는 이사회·데드락 조항 추가검증).
     requiredArtifacts:
       - IC 패키지
       - 사람 최종 승인(reviewer 기록)
+      - 설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})
     completionCriteria:
       - Entity IC와 Group IC 승인이 모두 기록되었다
+      - origin∈{internal,joint}인 프로젝트는 entity-establishment-execution 5단계 완료 기록이 존재한다
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S11, onHold: S10, onKill: terminal }
     gates: [entity_ic, group_ic]
@@ -441,7 +452,7 @@ stages:
       - 사업 성과 리포트
       - 포트폴리오 전환 결정(어휘 5종: next_tranche_released / held_evidence_incomplete / graduate_to_core / reduce_or_divest / kill_with_learning_captured)
     entryCriteria:
-      - S10 완료 (IC 승인)
+      - S10 완료 (IC 승인, internal/joint는 설립 실행 완료 포함)
     activities:
       - id: portfolio-monitoring
         agent: group-review-agent

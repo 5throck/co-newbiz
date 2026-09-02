@@ -3,6 +3,12 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
+import { SectionToolbar } from "../../components/layout.tsx";
+import { StageFrame } from "../../components/StageFrame.tsx";
+import dynamic from "next/dynamic";
+import { useChartTheme } from "../../lib/echarts-theme.ts";
+
+const EChartsCore = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 // S3 시너지 정합성 (/synergy) — Long List(S1 시장분석 + S2 기회발굴)를
 // 회사 단위 Short List로 좁히는 단계. S1 시장분석과 동일 패턴:
@@ -13,7 +19,7 @@ interface SynergyStepSummary { step: number; title: string; summary: string; sou
 interface SynergySourceRef { title: string; url: string; snippet?: string }
 interface SynergyPayload {
   company: { name: string; dartCorpCode: string | null };
-  dartFinancials: { available: boolean; year?: string; items?: Array<{ name: string; value: number; year?: string }>; reportUrl?: string; error?: string };
+  dartFinancials: { available: boolean; year?: string; items?: Array<{ name: string; value: number; year?: string }>; reportUrl?: string; error?: string; fsDivLabel?: string; integrity?: string | null; integrityNotes?: string[] };
   /** 재무 데이터 출처 — DART / 신용평가자료 / 외부 검색 (구형 버전에는 없음) */
   dataSources?: { dart: boolean; dartYear: string | null; creditReport: string | null; webResearchCount: number };
   researchSources: SynergySourceRef[];
@@ -61,7 +67,7 @@ export function SynergyView() {
   const [mode, setMode] = useState<"dart" | "manual">("dart");
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<Array<{ corp_code: string; corp_name: string }>>([]);
+  const [searchResults, setSearchResults] = useState<Array<{ corp_code: string; corp_name: string; source?: "dart" | "local" | "web"; validated?: boolean | null }>>([]);
   const [dartConfigured, setDartConfigured] = useState(true);
   const [uploadedFile, setUploadedFile] = useState<{ stored_as: string; original_name: string } | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -178,7 +184,7 @@ export function SynergyView() {
     setSearching(true);
     setError(null);
     try {
-      const res = await api.get<{ configured: boolean; results: Array<{ corp_code: string; corp_name: string }> }>(`/api/synergy/dart-search?q=${encodeURIComponent(query.trim())}`);
+      const res = await api.get<{ configured: boolean; results: Array<{ corp_code: string; corp_name: string; source?: "dart" | "local" | "web"; validated?: boolean | null }> }>(`/api/synergy/dart-search?q=${encodeURIComponent(query.trim())}`);
       setSearchResults(res.data.results);
       if (!res.data.configured) setError("DART API 키가 구성되지 않았습니다 (CO_NEWBIZ_DART_* 환경변수). 비상장 입력 모드를 사용하세요.");
       else if (res.data.results.length === 0) setError("검색 결과가 없습니다 — 회사명을 확인하거나 비상장 입력 모드를 사용하세요.");
@@ -254,29 +260,31 @@ export function SynergyView() {
   // ── 목록 (분석 대상 회사) ──
   return (
     <main>
-      <h1>시너지 정합성</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
+      <StageFrame stageId="S3">
         <strong>Brownfield 경로 전용 도구</strong> — 특정 대상 회사의 DART 재무·외부 리서치를 입수해
         S1 시장분석·S2 기회발굴과의 연계 시너지를 검증하고 Short List 영역을 좁힙니다
         (스펙상 3단계 시너지 평가는 기회 단위로, 기회 레지스트리의 S3 패널에서 수행됩니다).
         본격 활용은 S6 대상 후보 발굴·S7 대상 스크리닝 단계입니다.
-      </p>
+      </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
       <section aria-label="분석 대상 회사" className="market-section">
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          <h2 className="text-[0.92rem] !mb-0">🏢 분석 대상 회사</h2>
-          <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{analyses?.length ?? 0}건</span>
-          <button
-            type="button"
-            className="btn-ghost text-[0.8rem]"
-            onClick={() => setShowNewForm((v) => !v)}
-            aria-expanded={showNewForm}
-          >
-            {showNewForm ? "취소" : "＋ 회사 등록"}
-          </button>
-        </div>
+        <SectionToolbar
+          title="분석 대상 회사"
+          icon="🏢"
+          count={analyses?.length ?? 0}
+          actions={
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => setShowNewForm((v) => !v)}
+              aria-expanded={showNewForm}
+            >
+              ＋ 회사 등록
+            </button>
+          }
+        />
 
         {analyses === null ? (
           <p>불러오는 중...</p>
@@ -288,7 +296,7 @@ export function SynergyView() {
             <thead>
               <tr>
                 <th scope="col">회사명</th>
-                <th scope="col">DART 코드</th>
+                <th scope="col">DART 고유번호</th>
                 <th scope="col">분석 상태</th>
                 <th scope="col">분석일</th>
               </tr>
@@ -308,7 +316,7 @@ export function SynergyView() {
                         {a.company_name}
                       </button>
                     </td>
-                    <td>{a.dart_corp_code ? <code className="dd-item-id">{a.dart_corp_code}</code> : <span className="status-chip status-amber" title="DART 코드 미확인 — 재분석 또는 등록 시 입력">DART 미확인</span>}</td>
+                    <td>{a.dart_corp_code ? <code className="dd-item-id">{a.dart_corp_code}</code> : <span className="status-chip status-amber" title="DART 고유번호 미확인 — 재분석 또는 등록 시 입력">고유번호 미확인</span>}</td>
                     <td>
                       {inProgress ? (
                         <span className="status-chip status-amber">분석 중 ({a.current_step}/5단계)</span>
@@ -317,21 +325,21 @@ export function SynergyView() {
                       )}
                     </td>
                     <td className="tabular-nums">{(a.completed_at ?? a.created_at).slice(0, 10)}</td>
-                    <td className="sizing-actions-cell">
-                      <button type="button" className="btn-ghost text-[0.78rem]" disabled={inProgress} onClick={() => openDetail(a)}>
+                    <td className="sizing-actions-cell"><span className="actions-row">
+                      <button type="button" className="btn-ghost btn-sm" disabled={inProgress} onClick={() => openDetail(a)}>
                         {inProgress ? "분석 중" : "열기"}
                       </button>
                       {!inProgress && (
                         <button
                           type="button"
-                          className="btn-ghost text-[0.78rem]"
+                          className="btn-ghost btn-sm"
                           title="같은 분석 행을 재사용해 새 버전으로 재실행합니다"
                           onClick={() => rerun(a)}
                         >
                           재분석
                         </button>
                       )}
-                    </td>
+                    </span></td>
                   </tr>
                 );
               })}
@@ -347,7 +355,7 @@ export function SynergyView() {
           <div className="modal-panel">
             <div className="modal-head">
               <h2>＋ 신규 회사 등록</h2>
-              <button type="button" className="btn-ghost text-[0.78rem]" onClick={() => setShowNewForm(false)}>닫기</button>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setShowNewForm(false)}>닫기</button>
             </div>
             <div className="flex gap-1 mb-3">
               {([["dart", "DART 검색 (상장·외감)"], ["manual", "비상장·직접 입력"]] as const).map(([key, label]) => (
@@ -375,7 +383,7 @@ export function SynergyView() {
                     className="sizing-new-input"
                     style={{ flex: 1 }}
                   />
-                  <button type="button" className="btn-ghost text-[0.8rem]" disabled={searching || !query.trim()} onClick={() => void searchDart()}>
+                  <button type="button" className="btn-ghost btn-sm" disabled={searching || !query.trim()} onClick={() => void searchDart()}>
                     {searching ? "검색 중..." : "검색"}
                   </button>
                 </div>
@@ -386,10 +394,15 @@ export function SynergyView() {
                         <button
                           type="button"
                           aria-pressed={selectedCorp?.corp_code === r.corp_code}
-                          className={`btn-ghost text-[0.8rem] w-full text-left ${selectedCorp?.corp_code === r.corp_code ? "font-semibold" : ""}`}
+                          className={`btn-ghost btn-sm w-full text-left ${selectedCorp?.corp_code === r.corp_code ? "font-semibold" : ""}`}
                           onClick={() => setSelectedCorp(r)}
                         >
                           {selectedCorp?.corp_code === r.corp_code ? "✔ " : ""}{r.corp_name} <code className="dd-item-id">{r.corp_code}</code>
+                          {r.source === "web" && (
+                            <span className={`status-chip ml-1 ${r.validated ? "status-green" : "status-amber"}`} title={r.validated ? "DART 기업개황으로 이름 일치 확인" : "웹 검색 폴백 — DART 역조회 실패(다중 소스 일치)"}>
+                              웹 {r.validated ? "✔교차검증" : "미검증"}
+                            </span>
+                          )}
                         </button>
                       </li>
                     ))}
@@ -419,7 +432,7 @@ export function SynergyView() {
                   <p className="text-[0.75rem] text-[color:var(--green-fg)]">✔ 업로드 완료: {uploadedFile.original_name}</p>
                 )}
                 <div className="flex items-center gap-2 mb-2">
-                  <button type="button" className="btn-ghost text-[0.78rem]" disabled={webSearching || !companyName.trim()} onClick={() => void searchWeb()}>
+                  <button type="button" className="btn-ghost btn-sm" disabled={webSearching || !companyName.trim()} onClick={() => void searchWeb()}>
                     {webSearching ? "외부 검색 중..." : "🌐 외부 검색으로 회사 확인"}
                   </button>
                   <span className="text-[0.72rem] text-[color:var(--muted-fg)]">기관·뉴스 리서치로 존재성·사업 내용을 확인할 수 있습니다.</span>
@@ -441,7 +454,7 @@ export function SynergyView() {
             <div className="flex justify-end mt-3">
               <button
                 type="button"
-                className="btn-ghost text-[0.85rem]"
+                className="btn-ghost"
                 disabled={creating || (mode === "dart" ? !selectedCorp : !companyName.trim())}
                 title={mode === "dart" && !selectedCorp ? "검색 결과에서 회사를 선택하세요" : undefined}
                 onClick={() => void create()}
@@ -454,6 +467,11 @@ export function SynergyView() {
       )}
     </main>
   );
+}
+
+/** 리포트 차트 테마 — EChart 컴포넌트와 동일한 토큰 기반 테마. */
+function useChartThemeSafe() {
+  return useChartTheme();
 }
 
 function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
@@ -469,21 +487,16 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
   const analysisDate = latest?.created_at?.slice(0, 10) ?? analysis.created_at.slice(0, 10);
   return (
     <section aria-label="시너지 정합성 리포트" className="market-section sizing-step">
-      <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h2 className="text-[0.95rem] !mb-0">🏢 {analysis.company_name} 시너지 정합성 분석</h2>
-        <span className="text-[0.72rem] text-[color:var(--muted-fg)]">
-          S3 Long List → Short List · 분석일 {analysisDate} · v{latest?.version_no ?? analysis.latest_version ?? 1}
-        </span>
-        <button
-          type="button"
-          className="btn-ghost text-[0.78rem]"
-          style={{ marginLeft: "auto" }}
-          disabled={inProgress}
-          onClick={onRerun}
-        >
-          재분석
-        </button>
-      </div>
+      <SectionToolbar
+        title={`${analysis.company_name} 시너지 정합성 분석`}
+        icon="🏢"
+        summary={<span className="section-meta">S3 Long List → Short List · 분석일 {analysisDate} · v{latest?.version_no ?? analysis.latest_version ?? 1}</span>}
+        actions={
+          <button type="button" className="btn-ghost" disabled={inProgress} onClick={onRerun}>
+            재분석
+          </button>
+        }
+      />
 
       {inProgress && (
         <p className="text-[0.85rem]" role="status">
@@ -506,27 +519,65 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
             <div className="text-[0.88rem]">
               <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">1</span> 재무 현황 (DART {p.dartFinancials.available ? `${p.dartFinancials.year}년 사업보고서` : "미입수"})</h3>
               {p.dartFinancials.available && p.dartFinancials.items ? (
-                <table className="data-table" aria-label="DART 재무 요약">
-                  <caption className="sr-only">DART 재무 요약</caption>
-                  <thead><tr><th scope="col">계정</th><th scope="col">연도</th><th scope="col">금액 (억원)</th><th scope="col" className="w-[5rem]">출처</th></tr></thead>
-                  <tbody>
-                    {p.dartFinancials.items.map((i, idx) => (
-                      <tr key={`${i.year ?? ""}-${i.name}-${idx}`}>
-                        <td className="font-semibold">{i.name}</td>
-                        <td className="tabular-nums">{i.year ?? "—"}</td>
-                        <td className="tabular-nums">{(i.value / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 0 })} 억원</td>
-                        <td><span className="status-chip status-green">DART</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                (() => {
+                  const items = p.dartFinancials.items;
+                  const years = [...new Set(items.map((i) => i.year ?? ""))].filter(Boolean).sort().reverse();
+                  const accounts = [...new Set(items.map((i) => i.name))];
+                  const byKey = new Map(items.map((i) => [`${i.year}|${i.name}`, i.value]));
+                  const fmtEok = (v: number) => (v / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
+                  const ct = useChartThemeSafe();
+                  const chartOption = {
+                    tooltip: { trigger: "axis" as const },
+                    legend: { top: 0, textStyle: { color: ct.muted, fontSize: 11 } },
+                    grid: { left: 60, right: 16, top: 32, bottom: 28 },
+                    xAxis: { type: "category" as const, data: accounts, axisLabel: { color: ct.muted, fontSize: 11, interval: 0, rotate: accounts.length > 6 ? 20 : 0 } },
+                    yAxis: { type: "value" as const, axisLabel: { color: ct.muted, formatter: (v: number) => `${fmtEok(v)}억` }, splitLine: { lineStyle: { color: ct.split } } },
+                    series: years.map((y, i) => ({
+                      name: y,
+                      type: "bar" as const,
+                      data: accounts.map((a) => byKey.get(`${y}|${a}`) ?? null),
+                      itemStyle: { color: ct.color[i % ct.color.length], borderRadius: [4, 4, 0, 0] },
+                    })),
+                  };
+                  return (
+                    <>
+                      {/* 시계열 비교 — 차트 우선 (ADR-0088 데이터 표현 표준) */}
+                      <div className="report-chart-card">
+                        <EChartsCore option={chartOption} style={{ height: 300 }} />
+                        <p className="mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">단위: 억원 · 출처: DART 사업보고서{p.dartFinancials.fsDivLabel ? ` · ${p.dartFinancials.fsDivLabel}` : ""}</p>
+                      </div>
+                      {/* 피벗 테이블 — 계정(행) × 연도(열, 최신순) */}
+                      <div className="table-scroll">
+                        <table className="data-table report-table" aria-label="DART 재무 요약 (계정 × 연도)">
+                          <caption className="sr-only">DART 재무 요약 (계정 × 연도)</caption>
+                          <thead>
+                            <tr><th scope="col" className="col-label">계정</th>{years.map((y) => <th key={y} scope="col" className="col-num">{y}</th>)}</tr>
+                          </thead>
+                          <tbody>
+                            {accounts.map((a) => (
+                              <tr key={a}>
+                                <td className="font-semibold">{a}</td>
+                                {years.map((y) => {
+                                  const v = byKey.get(`${y}|${a}`);
+                                  return <td key={y} className="tabular-nums">{v !== undefined ? `${fmtEok(v)} 억원` : "—"}</td>;
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {p.dartFinancials.integrity === "warning" && (
+                        <p role="alert" className="text-[0.78rem] text-[color:var(--amber-fg)] mt-1">
+                          ⚠ 재무 합산 검증 불일치 — {(p.dartFinancials.integrityNotes ?? []).join(" / ")} (출처 원본 대조 권장)
+                        </p>
+                      )}
+                      <p className="text-[0.72rem] text-[color:var(--muted-fg)]">출처: <span className="status-chip status-green">DART</span> 전자공시 사업보고서{p.dartFinancials.reportUrl ? <> — <a href={p.dartFinancials.reportUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문 보기</a></> : null}</p>
+                    </>
+                  );
+                })()
               ) : (
                 <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">DART 미입수 — {p.dartFinancials.error ?? "사유 없음"} (웹 리서치로 보완)</p>
               )}
-              {p.dartFinancials.reportUrl && (
-                <a href={p.dartFinancials.reportUrl} target="_blank" rel="noreferrer" className="text-[0.8rem] text-[color:var(--accent)] underline">사업보고서 원문 보기 (DART)</a>
-              )}
-
               {/* 재무 데이터 출처 — DART / 신용평가자료 / 외부 검색 */}
               <div className="sizing-grade-card mt-3">
                 <h4 className="text-[0.85rem] mb-2">🔎 재무 데이터 출처</h4>
@@ -542,7 +593,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
                   </li>
                 </ul>
                 <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
-                  재무 수치는 DART 공시 기준(최근 3년 연도별)이며, corp_code를 모르면 "DART 코드 입력" 후 재분석하면 연도별 재무제표를 직접 조회합니다. 비상장 회사는 신용평가자료·외부 리서치로 보강됩니다(출처 명기).
+                  재무 수치는 DART 공시 기준(최근 3년 연도별)이며, DART 고유번호를 모르면 "DART 고유번호 입력" 후 재분석하면 연도별 재무제표를 직접 조회합니다. 비상장 회사는 신용평가자료·외부 리서치로 보강됩니다(출처 명기).
                 </p>
               </div>
             </div>
@@ -552,13 +603,13 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
             <div className="text-[0.88rem]">
               <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">2</span> 재무·사업 강/약점 분석</h3>
               <div className="chart-pair">
-                <div className="chart-half sizing-grade-card">
-                  <h4 className="text-[0.9rem] mb-2">💪 강점</h4>
-                  <ul className="sizing-note-list">{p.financialStrengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                <div className="chart-half sizing-grade-card report-bullet-card">
+                  <h4>💪 강점</h4>
+                  <ul className="report-bullet-list">{p.financialStrengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
                 </div>
-                <div className="chart-half sizing-grade-card">
-                  <h4 className="text-[0.9rem] mb-2">🩹 약점</h4>
-                  <ul className="sizing-note-list">{p.financialWeaknesses.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                <div className="chart-half sizing-grade-card report-bullet-card">
+                  <h4>🩹 약점</h4>
+                  <ul className="report-bullet-list">{p.financialWeaknesses.map((s, i) => <li key={i}>{s}</li>)}</ul>
                 </div>
               </div>
               <p className="mt-3 mb-0 text-[0.88rem]"><strong>종합 평가:</strong> {p.businessAssessment}</p>
@@ -571,7 +622,8 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
               <p className="mb-2 text-[0.8rem] text-[color:var(--muted-fg)]">
                 연계 시장: {p.marketLinkage.marketSummaries.map((m) => `${m.industry} (CAGR ${m.cagrPct ?? "?"}%${m.gapPct !== null ? `, 격차 ${m.gapPct > 0 ? "+" : ""}${m.gapPct}%` : ""})`).join(" · ") || "없음"}
               </p>
-              <table className="data-table" aria-label="시너지 영역">
+              <div className="table-scroll">
+              <table className="data-table report-table" aria-label="시너지 영역">
                 <caption className="sr-only">시너지 영역</caption>
                 <thead>
                   <tr><th scope="col">영역</th><th scope="col">유형</th><th scope="col">근거</th><th scope="col">기회</th><th scope="col">위험</th></tr>
@@ -579,15 +631,16 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
                 <tbody>
                   {p.marketLinkage.synergyAreas.map((a) => (
                     <tr key={a.area}>
-                      <td className="font-semibold">{a.area}</td>
-                      <td className="text-[0.8rem]">{a.synergyType}</td>
-                      <td className="text-[0.85rem]">{a.rationale}{a.sources.length > 0 && <span className="text-[color:var(--muted-fg)]"> (출처: {a.sources.join(", ")})</span>}</td>
-                      <td className="text-[0.85rem]">{a.opportunity}</td>
-                      <td className="text-[0.85rem]">{a.risk}</td>
+                      <td className="font-semibold col-label">{a.area}</td>
+                      <td className="text-[0.8rem] col-type">{a.synergyType}</td>
+                      <td className="text-[0.85rem] col-text">{a.rationale}{a.sources.length > 0 && <span className="text-[color:var(--muted-fg)]"> (출처: {a.sources.join(", ")})</span>}</td>
+                      <td className="text-[0.85rem] col-text">{a.opportunity}</td>
+                      <td className="text-[0.85rem] col-text">{a.risk}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 

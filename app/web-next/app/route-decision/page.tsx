@@ -3,11 +3,15 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
+import { SectionToolbar } from "../../components/layout.tsx";
+import { StageFrame } from "../../components/StageFrame.tsx";
 
 // S4 진출방식 결정 (/route-decision) — selected 기회에 Greenfield/Brownfield 트랙과
 // 라우트 유형을 기록하는 분기점 (flow.spec v2.0.0).
 // Greenfield → S5 역량 평가·진출전략 / Brownfield → S6 대상 후보 발굴 → S7 대상 스크리닝.
-// S1 시장분석 패턴: 기회 목록 → 선택 시 결정 폼 + 결정 이력.
+// 채점: 2단계 프레임워크 (2026-08-24 Class-C 결정 (d) / ADR-0052) —
+// Stage 1 의도 분기(integration | capability_access) → Stage 2 5기준 × 20% × 1–3점,
+// 사전배제(통제 高 + 역량접근 + 라이선스/공동개발 성 라우트 금지), 기본 스테이징 권고.
 
 interface OpportunityRow {
   id: string; name: string; market_scope: string | null; value_chain_node: string | null;
@@ -15,9 +19,12 @@ interface OpportunityRow {
   fit_verdict: "Go" | "Hold" | "Kill" | null;
   status: "identified" | "assessed" | "selected" | "dropped";
 }
+interface ScoreRow { criterion: string; score: number; evidence_note: string }
 interface RouteDecision {
   id: string; track: "greenfield" | "brownfield"; sub_track: string | null;
   rationale: string; alternatives_considered: string | null; decided_by: string; decided_at: string;
+  intent: string | null; override_flagged: number | null; staging_recommended: string | null;
+  total_score: number | null; scores: ScoreRow[];
 }
 
 const GF_SUB: Record<string, string> = {
@@ -33,6 +40,21 @@ const BF_SUB: Record<string, string> = {
   rbd: "R&BD(공동연구)",
   corporate_venture: "사내벤처(CVC)",
 };
+const INTENT_LABEL: Record<string, string> = {
+  integration: "통합 의도 — 대상을 우리 안으로 (M&A 중심)",
+  capability_access: "역량접근 의도 — 대상의 역량을 빌려 쓴다 (JV·소수지분·파트너십 등)",
+};
+// Stage 2 채점 기준 (각 20% × 1–3점)
+const CRITERIA: Array<{ key: string; label: string; hint: string }> = [
+  { key: "control_need", label: "통제 필요도", hint: "1=성과만 공유돼도 충분 ~ 3=운영 통제 없으면 위험" },
+  { key: "capability_criticality", label: "역량 결정성", hint: "1=대체 가능 ~ 3=암묵적 지식·대체 불가" },
+  { key: "market_uncertainty", label: "시장 불확실성", hint: "1=수요 검증됨 ~ 3=수요·규제 불확실" },
+  { key: "integration_capacity", label: "통합 역량", hint: "1=통합 경험·여력 충분 ~ 3=통합 수용력 부족" },
+  { key: "speed_to_capability", label: "역량확보 속도", hint: "1=천천히 구축 가능 ~ 3=즉시 확보 필요" },
+];
+const SCORE_LABEL: Record<number, string> = { 1: "낮음", 2: "중간", 3: "높음" };
+// 사전배제 대상 라우트 — 통제 필요도=高 + 역량접근 의도에서 선택 불가
+const OVERRIDDEN_SUBS = ["partnership", "rbd", "corporate_venture"];
 
 export function RouteDecisionView() {
   const searchParams = useSearchParams();
@@ -41,9 +63,11 @@ export function RouteDecisionView() {
   const [decisions, setDecisions] = useState<RouteDecision[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [track, setTrack] = useState<"greenfield" | "brownfield">("greenfield");
+  const [intent, setIntent] = useState<"" | "integration" | "capability_access">("");
   const [subTrack, setSubTrack] = useState("");
   const [rationale, setRationale] = useState("");
   const [alternatives, setAlternatives] = useState("");
+  const [scores, setScores] = useState<Record<string, { score: number | null; note: string }>>({});
   const [saving, setSaving] = useState(false);
 
   const selectedId = searchParams.get("opportunity");
@@ -75,6 +99,34 @@ export function RouteDecisionView() {
     loadDecisions(o.id);
   }, [loadDecisions]);
 
+  function setScore(key: string, patch: Partial<{ score: number | null; note: string }>) {
+    setScores((prev) => ({ ...prev, [key]: { score: prev[key]?.score ?? null, note: prev[key]?.note ?? "", ...patch } }));
+  }
+
+  const scored = CRITERIA.map((c) => ({ ...c, ...scores[c.key] ?? { score: null, note: "" } }));
+  const allScored = scored.every((s) => s.score !== null && s.note.trim() !== "");
+  const totalScore = allScored ? Math.round(scored.reduce((sum, s) => sum + (s.score ?? 0) * 0.2, 0) * 100) / 100 : null;
+  // 사전배제: 통제 필요도=高 + 역량접근 + 라이선스/공동개발 성 라우트
+  const overrideBlocked =
+    track === "brownfield" && intent === "capability_access" &&
+    scored.find((s) => s.key === "control_need")?.score === 3 &&
+    subTrack !== "" && OVERRIDDEN_SUBS.includes(subTrack);
+  // 기본 스테이징 권고: 시장 불확실성=高 + 통제 필요도=中 이하
+  const stagingHint =
+    track === "brownfield" && allScored &&
+    scored.find((s) => s.key === "market_uncertainty")?.score === 3 &&
+    (scored.find((s) => s.key === "control_need")?.score ?? 3) <= 2;
+  // Brownfield 채점 의무 — 스펙 completionCriteria 강제
+  const scoresRequired = track === "brownfield";
+  const canSubmit =
+    rationale.trim() !== "" &&
+    (track === "greenfield" || (intent !== "" && allScored && !overrideBlocked)) &&
+    (track === "brownfield" ? subTrack !== "" : true);
+
+  function resetForm() {
+    setIntent(""); setSubTrack(""); setRationale(""); setAlternatives(""); setScores({});
+  }
+
   async function saveDecision(e: React.FormEvent) {
     e.preventDefault();
     if (!selected || saving) return;
@@ -85,8 +137,10 @@ export function RouteDecisionView() {
         sub_track: subTrack || undefined,
         rationale,
         alternatives_considered: alternatives || undefined,
+        intent: intent || undefined,
+        scores: scoresRequired ? scored.map((s) => ({ criterion: s.key, score: s.score, evidence_note: s.note })) : undefined,
       });
-      setRationale(""); setAlternatives("");
+      resetForm();
       loadDecisions(selected.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "결정 저장 실패");
@@ -99,18 +153,17 @@ export function RouteDecisionView() {
 
   return (
     <main>
-      <h1>진출방식 결정</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        프로세스 스테이지 S4 — 선별된 기회의 진출방식을 결정하는 <strong>분기점</strong>입니다.
+      <StageFrame stageId="S4">
+        선별된 기회의 진출방식을 결정하는 <strong>분기점</strong>입니다.
         Greenfield(자체 역량 진출)는 S5 역량 평가로, Brownfield(기존 기업·자산 결합)는
         S6 대상 후보 발굴로 진행됩니다. Brownfield ≠ M&A — 라우트 유형을 함께 선택합니다.
-      </p>
+      </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
       {/* ── 선별된 기회 (칩) ── */}
       <section aria-label="선별된 기회" className="market-section">
-        <h2 className="text-[0.92rem] mb-2">🎯 선별된 기회</h2>
+        <SectionToolbar title="선별된 기회" icon="🎯" />
         {rows === null ? (
           <p>불러오는 중...</p>
         ) : rows.length === 0 ? (
@@ -136,12 +189,12 @@ export function RouteDecisionView() {
       {/* ── 결정 폼 + 이력 ── */}
       {selected && (
         <section aria-label="진출방식 결정" className="market-section">
-          <h2 className="text-[0.92rem] mb-2">⚖️ {selected.name} — 진출방식 결정</h2>
+          <SectionToolbar title={`${selected.name} — 진출방식 결정`} icon="⚖️" />
           <form onSubmit={saveDecision} className="sizing-new-form mb-4">
             <div className="flex flex-wrap items-end gap-3 mb-2">
               <label className="text-[0.78rem]">
                 <span className="block mb-1">트랙 *</span>
-                <select value={track} onChange={(e) => { setTrack(e.target.value as "greenfield" | "brownfield"); setSubTrack(""); }} className="sizing-new-input">
+                <select value={track} onChange={(e) => { setTrack(e.target.value as "greenfield" | "brownfield"); setIntent(""); setSubTrack(""); }} className="sizing-new-input">
                   <option value="greenfield">Greenfield — 자체 역량으로 진출</option>
                   <option value="brownfield">Brownfield — 기존 기업·자산과 결합</option>
                 </select>
@@ -151,7 +204,9 @@ export function RouteDecisionView() {
                   <span className="block mb-1">라우트 유형 * (Brownfield)</span>
                   <select value={subTrack} onChange={(e) => setSubTrack(e.target.value)} className="sizing-new-input">
                     <option value="">선택...</option>
-                    {Object.entries(BF_SUB).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    {Object.entries(BF_SUB)
+                      .filter(([k]) => !overrideBlocked || !OVERRIDDEN_SUBS.includes(k))
+                      .map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </label>
               )}
@@ -165,26 +220,117 @@ export function RouteDecisionView() {
                 </label>
               )}
             </div>
+
+            {/* ── Stage 1: 의도 분기 ── */}
+            {track === "brownfield" && (
+              <fieldset className="mb-3">
+                <legend className="text-[0.78rem] font-semibold mb-1">Stage 1 — 의도 분기 * (채점에 앞서 결정)</legend>
+                <div className="flex flex-wrap gap-2">
+                  {(["integration", "capability_access"] as const).map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      aria-pressed={intent === k}
+                      className={`sizing-industry-chip ${intent === k ? "sizing-industry-chip-active" : ""}`}
+                      onClick={() => setIntent(k)}
+                    >
+                      <span className="font-semibold">{INTENT_LABEL[k]}</span>
+                      <span className="sizing-chip-meta">
+                        {k === "integration" ? "라우트: M&A·전략적 투자 중심 — JV·소수지분은 단계적 옵션" : "라우트: JV·소수지분·파트너십 — 통제는 권리 바닥값으로 제한"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
+            {/* ── Stage 2: 5criteria × 20% × 1–3점 ── */}
+            {track === "brownfield" && (
+              <fieldset className="mb-3">
+                <legend className="text-[0.78rem] font-semibold mb-1">
+                  Stage 2 — 5criteria 채점 * (각 20% × 1–3점, 근거 필수)
+                  {totalScore !== null && <span className="ml-2 status-chip status-green">합산 {totalScore} / 3.0</span>}
+                </legend>
+                <table className="data-table" aria-label="5criteria 채점">
+                  <caption className="sr-only">5criteria 채점</caption>
+                  <thead>
+                    <tr><th scope="col">기준</th><th scope="col">점수</th><th scope="col">근거 *</th></tr>
+                  </thead>
+                  <tbody>
+                    {scored.map((c) => (
+                      <tr key={c.key}>
+                        <td className="text-[0.8rem]">
+                          {c.label}
+                          <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">{c.hint}</span>
+                        </td>
+                        <td>
+                          <div role="group" aria-label={`${c.label} 점수`} className="flex gap-1">
+                            {[1, 2, 3].map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                aria-pressed={c.score === v}
+                                className={`status-chip ${c.score === v ? "status-green" : "status-not-started"}`}
+                                onClick={() => setScore(c.key, { score: v })}
+                              >
+                                {v} · {SCORE_LABEL[v]}
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                        <td>
+                          <input
+                            value={c.note}
+                            onChange={(e) => setScore(c.key, { note: e.target.value })}
+                            placeholder="점수의 근거 (S1·S3 산출물 인용)"
+                            aria-label={`${c.label} 근거`}
+                            className="sizing-new-input sizing-new-input-sm"
+                            style={{ width: "100%" }}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {overrideBlocked && (
+                  <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mt-2 mb-0">
+                    사전배제: 통제 필요도=高 + 역량접근 의도에서는 파트너십·R&BD·CVC 라우트를 선택할 수 없습니다 (합산 점수와 무관 — ADR-0052).
+                  </p>
+                )}
+                {stagingHint && (
+                  <p className="text-[0.78rem] text-[color:var(--accent)] mt-2 mb-0">
+                    스테이징 권고: 시장 불확실성이 高이고 통제 필요도가 中 이하 — 소수지분/공동개발 + 사전 협약된 step-up(call option / ROFR / 전환 트리거)을 권고합니다.
+                  </p>
+                )}
+              </fieldset>
+            )}
+
             <label className="text-[0.78rem] block mb-2">
-              <span className="block mb-1">결정 근거 * (S1 시장분석·S3 적합성 판단을 인용)</span>
+              <span className="block mb-1">결정 근거 * (S1 시장분석·S3 적합성 판단을 인용 — 채점을 보완하는 서술)</span>
               <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} rows={3} required className="sizing-new-input" style={{ width: "100%" }} placeholder="예: S3 적합성 평가 Go(시너지 72) — 자사 역량 보유, 시장 성장 지속..." />
             </label>
             <label className="text-[0.78rem] block mb-3">
               <span className="block mb-1">검토한 대안 (선택)</span>
               <textarea value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} className="sizing-new-input" style={{ width: "100%" }} placeholder="고려했지만 선택하지 않은 트랙·라우트와 사유" />
             </label>
-            <button type="submit" className="btn-ghost text-[0.85rem]" disabled={saving || !rationale.trim() || (track === "brownfield" && !subTrack)}>
+            <button type="submit" className="btn-ghost" disabled={saving || !canSubmit}>
               {saving ? "저장 중..." : "결정 저장"}
             </button>
+            {track === "brownfield" && !allScored && (
+              <span className="ml-2 text-[0.72rem] text-[color:var(--muted-fg)]">Brownfield 결정에는 5기준 채점(점수+근거)이 필요합니다.</span>
+            )}
           </form>
 
           {decisions.length > 0 && (
             <div>
-              <h3 className="text-[0.88rem] mb-2">결정 이력 (최신순)</h3>
+              <SectionToolbar title="결정 이력 (최신순)" count={decisions.length} />
               <table className="data-table" aria-label="진출방식 결정 이력">
                 <caption className="sr-only">진출방식 결정 이력</caption>
                 <thead>
-                  <tr><th scope="col">트랙</th><th scope="col">라우트</th><th scope="col">근거</th><th scope="col">대안</th><th scope="col">결정자/일시</th></tr>
+                  <tr>
+                    <th scope="col">트랙</th><th scope="col">라우트</th><th scope="col">의도</th>
+                    <th scope="col">채점</th><th scope="col">근거</th><th scope="col">대안</th><th scope="col">결정자/일시</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {decisions.map((d) => (
@@ -195,6 +341,17 @@ export function RouteDecisionView() {
                         </span>
                       </td>
                       <td className="text-[0.8rem]">{d.sub_track ? (d.track === "brownfield" ? BF_SUB[d.sub_track] ?? d.sub_track : GF_SUB[d.sub_track] ?? d.sub_track) : "—"}</td>
+                      <td className="text-[0.75rem]">{d.intent ? (d.intent === "integration" ? "통합" : "역량접근") : "—"}</td>
+                      <td className="text-[0.75rem]">
+                        {d.total_score !== null ? (
+                          <span title={(d.scores ?? []).map((s) => `${s.criterion}: ${s.score} — ${s.evidence_note}`).join("\n")}>
+                            <strong className="tabular-nums">{d.total_score}</strong>/3.0
+                          </span>
+                        ) : "—"}
+                        {d.staging_recommended && (
+                          <span className="block text-[0.68rem] text-[color:var(--accent)]" title={d.staging_recommended}>step-up 권고</span>
+                        )}
+                      </td>
                       <td className="text-[0.8rem]">{d.rationale}</td>
                       <td className="text-[0.8rem] text-[color:var(--muted-fg)]">{d.alternatives_considered ?? "—"}</td>
                       <td className="text-[0.75rem] tabular-nums">{d.decided_by} · {d.decided_at.slice(0, 10)}</td>

@@ -134,6 +134,26 @@ describe("process flow spec integrity (ADR-0074)", () => {
     }
   });
 
+  test("web stage-meta mirrors the spec stages (ADR-0086 StageFrame data source)", () => {
+    // app/web-next/lib/stage-meta.ts는 flow.spec의 클라이언트 안전 발췌본이다 —
+    // 단계 id·이름·게이트·트랙·전이가 스펙과 일치하는지 강제한다.
+    const metaPath = join(ROOT, "app", "web-next", "lib", "stage-meta.ts");
+    expect(existsSync(metaPath)).toBe(true);
+    const src = readFileSync(metaPath, "utf-8");
+    const specStages = (spec as { stages: Array<Stage> }).stages;
+    expect(specStages.length).toBe(11);
+    for (const st of specStages) {
+      const row = src.match(new RegExp(`id: "${st.id}", sequence: [0-9]+, name: "${st.name}"`));
+      expect(row).not.toBeNull();
+      const block = src.slice(src.indexOf(`id: "${st.id}",`));
+      const end = block.indexOf("},");
+      const body = block.slice(0, end);
+      for (const g of (st.gates ?? []) as string[]) expect(body).toContain(`"${g}"`);
+      const on = st.stateTransitions?.onComplete as string;
+      expect(body).toContain(`onComplete: "${on}"`);
+    }
+  });
+
   test("docs/process-flow.md is the up-to-date regeneration of the spec", () => {
     // Regenerate in-memory using the same generator entry and compare.
     const genPath = join(ROOT, "scripts", "co-newbiz", "generate-process-flow.ts");

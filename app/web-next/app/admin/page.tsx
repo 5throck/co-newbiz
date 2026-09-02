@@ -11,6 +11,7 @@ import {
   type ScheduleJobRow,
 } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
+import { useConfirm } from "../../components/crud.tsx";
 import { MasterDataSection } from "../../components/admin/MasterDataSection.tsx";
 
 type Section = "users" | "audit" | "data-sources" | "schedule" | "database" | "notifications" | "glossary" | "governance" | "master-data" | "adr";
@@ -75,6 +76,7 @@ interface GovernanceDocRow {
 export function AdminConsole() {
   const [section, setSection] = useState<Section>("users");
   const [users, setUsers] = useState<AdminUser[] | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
   const [newUserId, setNewUserId] = useState("");
   const [newUserRole, setNewUserRole] = useState<"analyst" | "viewer" | "admin">("analyst");
   const [notice, setNotice] = useState<string | null>(null);
@@ -227,18 +229,33 @@ export function AdminConsole() {
     }
   }
 
-  async function userAction(userId: string, action: "delete" | "reset_password") {
+  function userAction(userId: string, action: "delete" | "reset_password") {
+    if (action === "delete") {
+      confirm(
+        `${userId} 계정 삭제`,
+        async () => {
+          setNotice(null);
+          try {
+            await api.put(`/api/admin/users/${userId}`, { action: "delete" });
+            setNotice(`${userId} 삭제됨`);
+            setUsers(null);
+          } catch (err) {
+            setNotice(err instanceof Error ? err.message : "작업 실패");
+          }
+        },
+        { body: "세션·토큰도 함께 삭제되며 감사 로그에 기록됩니다." },
+      );
+      return;
+    }
+    void resetPassword(userId);
+  }
+
+  async function resetPassword(userId: string) {
     setNotice(null);
     try {
-      if (action === "delete") {
-        if (!window.confirm(`${userId} 계정을 삭제할까요? 세션·토큰도 함께 삭제되며 감사 로그에 기록됩니다.`)) return;
-        await api.put(`/api/admin/users/${userId}`, { action: "delete" });
-        setNotice(`${userId} 삭제됨`);
-      } else {
-        const res = await api.put<{ temporary_password: string }>(`/api/admin/users/${userId}`, { action: "reset_password" });
-        setNoticePinned(true);
-        setNotice(`${userId} 비밀번호 초기화 — 임시 비밀번호: ${res.data.temporary_password} (한 번만 표시됩니다)`);
-      }
+      const res = await api.put<{ temporary_password: string }>(`/api/admin/users/${userId}`, { action: "reset_password" });
+      setNoticePinned(true);
+      setNotice(`${userId} 비밀번호 초기화 — 임시 비밀번호: ${res.data.temporary_password} (한 번만 표시됩니다)`);
       setUsers(null);
     } catch (err) {
       setNotice(err instanceof Error ? err.message : "작업 실패");
@@ -291,6 +308,7 @@ export function AdminConsole() {
 
   return (
     <main className="admin-console-page">
+      {confirmDialog}
       <h1>관리자 콘솔</h1>
       <nav
         className="tab-nav my-4"

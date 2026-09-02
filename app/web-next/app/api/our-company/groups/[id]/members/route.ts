@@ -41,7 +41,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (auth.auth.role === "viewer") return forbidden("role_required", "계열사 수정은 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as
-    | { member_id?: string; dart_corp_code?: string | null; role?: "hq" | "affiliate" }
+    | { member_id?: string; company_name?: string; dart_corp_code?: string | null; role?: "hq" | "affiliate" }
     | null;
   const memberId = body?.member_id;
   if (!memberId) return badRequest("invalid_request", "member_id는 필수입니다.");
@@ -54,6 +54,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (typeof body?.dart_corp_code === "string") {
     const code = body.dart_corp_code.trim() || null;
     db.run("UPDATE company_group_member SET dart_corp_code = ? WHERE id = ?", [code, memberId]);
+  }
+  if (body?.company_name?.trim()) {
+    db.run("UPDATE company_group_member SET company_name = ? WHERE id = ?", [body.company_name.trim(), memberId]);
   }
   if (body?.role === "hq" || body?.role === "affiliate") {
     db.run("UPDATE company_group_member SET role = ? WHERE id = ?", [body.role, memberId]);
