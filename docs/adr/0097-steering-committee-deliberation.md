@@ -174,3 +174,39 @@ auto-confirms a committee proposal.
   in the same change.
 - **No schema change**: this phase is configuration + code over the 0064–0066
   tables. No new migration; no flow.spec change.
+
+## Amendment (2026-09-04): standing functional-expert seats
+
+A Steering Committee direction added **six standing functional-expert seats** to
+both registered committees (`route-steering-committee`,
+`target-longlist-shortlist-committee`) in `procedures/_committees.yaml`:
+
+| Seat | Member key | Agent file |
+|---|---|---|
+| 자금 조달 (financing structure) | `financing-agent` | new (`agents/financing-agent.md`) |
+| 대관 (site & facility) | `site-facility-agent` | new (`agents/site-facility-agent.md`) |
+| 법률 (legal) | `legal-counsel` | existing |
+| 인사/노무 (HR & labor) | `hr-integration-agent` | existing |
+| IR (investor relations) | `ir-agent` | new (`agents/ir-agent.md`) |
+| 특허 (patent/IP) | `ip-agent` | new (`agents/ip-agent.md`) |
+
+Each committee now registers 12 members: the fixed core 5 of the skeleton
+(domain expert by track, industry, region, quantitative rigor, red team) plus
+these six standing functional seats, plus the chair (who still votes nothing).
+
+- **No veto**: none of the six carries `veto_dissent` — that privilege remains
+  risk-officer's alone, enforced by the validator's existing
+  non-red-team-veto error (ADR-0097 §4 check b).
+- **Deterministic executor**: all six member keys have role-templated position
+  entries in `app/web-next/lib/committee-agents.ts`, so a deterministic
+  deliberation run never falls through to the ad-hoc default template.
+- **Round-1-only choice deferred**: with 12 members, round-based deliberation
+  is heavy, and marking the functional seats as consulted in round 1 only (a
+  per-member `rounds` override) was evaluated. It was **deferred, not
+  implemented**: expressing it cleanly requires changing both the hybrid path
+  in `committee-session.ts` and `runDeliberationRounds` in
+  `agent-orchestrator.ts` (agent_team passes a flat agent list with a single
+  committee-wide `rounds` value). Supporting it in one mode only would give
+  the two modes divergent deliberation semantics. **Follow-up**: implement a
+  per-member `rounds` override across both paths in one change, then set the
+  six functional seats to round-1-only in `_committees.yaml`.

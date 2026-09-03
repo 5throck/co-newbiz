@@ -68,6 +68,45 @@ const ROLE_TEMPLATES: Record<string, RoleTemplate> = {
     recommendation: "go",
     confidence: 65,
   },
+  // Standing functional-expert seats (ADR-0097 Amendment 2026-09-04):
+  // financing / site & facility / legal / HR & labor / IR / patent-IP.
+  // None carries vetoDissent — the red-team privilege stays risk-officer's.
+  "financing-agent": {
+    domain: "기능 전문가 (자금 조달 — financing structure)",
+    stance: "부채/자기자본 구조, 프로젝트 파이낸스, 정부 기금·보조금, 재무 커버넌트 하한(하락 시나리오 기준)을 점검한다.",
+    recommendation: "go",
+    confidence: 68,
+  },
+  "site-facility-agent": {
+    domain: "기능 전문가 (대관 — site & facility)",
+    stance: "입지 선정, 산업단지 지정 적격성, 시설 투자 규모, 임대/신축 선택의 유연성 가치를 점검한다.",
+    recommendation: "go",
+    confidence: 66,
+  },
+  "legal-counsel": {
+    domain: "기능 전문가 (법률 — legal)",
+    stance: "규제·인허가 경로, 계약 구조, 지배구조 변경 시 인증 이전 가능성을 법적 근거 문서 기준으로 점검한다.",
+    recommendation: "go",
+    confidence: 70,
+  },
+  "hr-integration-agent": {
+    domain: "기능 전문가 (인사/노무 — HR & labor)",
+    stance: "경영진 보상 변동 조항, 임금·복리후생 형평, 노동관계 승계와 인력 리스크를 점검한다.",
+    recommendation: "go",
+    confidence: 67,
+  },
+  "ir-agent": {
+    domain: "기능 전문가 (IR — investor relations)",
+    stance: "투자자 커뮤니케이션이 검증된 근거와 일치하는지, 공시 규율과 시장 인식 리스크를 점검한다.",
+    recommendation: "go",
+    confidence: 64,
+  },
+  "ip-agent": {
+    domain: "기능 전문가 (특허 — patent/IP)",
+    stance: "특허 랜드스케이프, FTO( Freedom to Operate ) 검색 범위의 한계, IP 가치 주장과 영업비밀 보호 태세를 점검한다.",
+    recommendation: "go",
+    confidence: 65,
+  },
   "risk-officer": {
     domain: "레드팀 (낙관 편향 감사 — design v1.0 kill-criteria 권한)",
     stance: "낙관 편향·하락 시나리오·킬 기준 충족 여부를 기본값으로 의심한다.",
