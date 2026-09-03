@@ -507,6 +507,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0099",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent-lifecycle-manager",
       "type": "skill",
       "layer": "L3"
@@ -762,6 +767,11 @@
       "layer": "L3"
     },
     {
+      "id": "finishing-a-development-branch",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "forward-industry-research",
       "type": "skill",
       "layer": "L3"
@@ -817,6 +827,16 @@
       "layer": "L3"
     },
     {
+      "id": "handbook",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "handbook-sync-audit",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "historical-financial-analysis",
       "type": "skill",
       "layer": "L3"
@@ -849,6 +869,11 @@
     {
       "id": "i18n-locale-config",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "i18n-specialist",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -942,6 +967,11 @@
       "layer": "L3"
     },
     {
+      "id": "k-opendata",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "legal-counsel",
       "type": "agent",
       "layer": "L3"
@@ -978,6 +1008,11 @@
     },
     {
       "id": "mcp-server-integration",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "meeting",
       "type": "skill",
       "layer": "L3"
     },
@@ -1032,8 +1067,18 @@
       "layer": "L3"
     },
     {
+      "id": "platform-command-lifecycle-manager",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "platform-lead",
       "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "platform-skill-lifecycle-manager",
+      "type": "skill",
       "layer": "L3"
     },
     {
@@ -1208,6 +1253,11 @@
     },
     {
       "id": "skill-lifecycle-manager",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "source-command-commit-push-pr",
       "type": "skill",
       "layer": "L3"
     },
@@ -5049,6 +5099,24 @@
       }
     },
     {
+      "type": "references",
+      "from": "handbook-sync-audit",
+      "to": "handbook",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "handbook-sync-audit",
+      "to": "project-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "handbook-sync-audit",
+      "to": "validate-docs-links",
+      "source": "prose"
+    },
+    {
       "type": "used_by",
       "from": "historical-financial-analysis",
       "to": "financial-analyst",
@@ -5249,6 +5317,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "i18n-audit",
+      "to": "i18n-specialist",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/i18n-specialist.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
       "type": "references",
       "from": "i18n-formatting",
       "to": "i18n-layout",
@@ -5259,6 +5338,17 @@
       "from": "i18n-formatting",
       "to": "i18n-locale-config",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "i18n-formatting",
+      "to": "i18n-specialist",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/i18n-specialist.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -5285,6 +5375,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "i18n-layout",
+      "to": "i18n-specialist",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/i18n-specialist.md",
+        "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
       "type": "references",
       "from": "i18n-layout",
       "to": "translate",
@@ -5303,8 +5404,67 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "i18n-locale-config",
+      "to": "i18n-specialist",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/i18n-specialist.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "i18n-locale-config",
+      "to": "translate",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-specialist",
+      "to": "i18n-audit",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-specialist",
+      "to": "i18n-formatting",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-specialist",
+      "to": "i18n-layout",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-specialist",
+      "to": "i18n-locale-config",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-specialist",
+      "to": "k-dart",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-specialist",
+      "to": "k-kosis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-specialist",
+      "to": "k-law",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "i18n-specialist",
       "to": "translate",
       "source": "prose"
     },
@@ -6432,6 +6592,35 @@
       }
     },
     {
+      "type": "references",
+      "from": "k-opendata",
+      "to": "k-dart",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "k-opendata",
+      "to": "k-kosis",
+      "source": "prose"
+    },
+    {
+      "type": "relates_to",
+      "from": "k-opendata",
+      "to": "k-kosis",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/k-opendata/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "references",
+      "from": "k-opendata",
+      "to": "k-law",
+      "source": "prose"
+    },
+    {
       "type": "follows",
       "from": "legal-due-diligence",
       "to": "antitrust-screening",
@@ -6883,6 +7072,12 @@
         "field": "relates_to",
         "index": 1
       }
+    },
+    {
+      "type": "references",
+      "from": "meeting",
+      "to": "meeting-facilitation",
+      "source": "prose"
     },
     {
       "type": "references",
@@ -9249,30 +9444,6 @@
       "source": "prose"
     },
     {
-      "type": "composes_with",
-      "from": "security-scan",
-      "to": "access-control-review",
-      "source": "relates_to",
-      "symmetric": true,
-      "provenance": {
-        "file": "skills/security-scan/SKILL.md",
-        "field": "relates_to",
-        "index": 3
-      }
-    },
-    {
-      "type": "composes_with",
-      "from": "security-scan",
-      "to": "mcp-server-integration",
-      "source": "relates_to",
-      "symmetric": true,
-      "provenance": {
-        "file": "skills/security-scan/SKILL.md",
-        "field": "relates_to",
-        "index": 0
-      }
-    },
-    {
       "type": "used_by",
       "from": "security-scan",
       "to": "platform-lead",
@@ -9280,18 +9451,6 @@
       "provenance": {
         "file": "agents/platform-lead.md",
         "field": "required_skills",
-        "index": 1
-      }
-    },
-    {
-      "type": "composes_with",
-      "from": "security-scan",
-      "to": "security-baseline-review",
-      "source": "relates_to",
-      "symmetric": true,
-      "provenance": {
-        "file": "skills/security-scan/SKILL.md",
-        "field": "relates_to",
         "index": 1
       }
     },
@@ -9307,16 +9466,10 @@
       }
     },
     {
-      "type": "composes_with",
+      "type": "references",
       "from": "security-scan",
-      "to": "vulnerability-management",
-      "source": "relates_to",
-      "symmetric": true,
-      "provenance": {
-        "file": "skills/security-scan/SKILL.md",
-        "field": "relates_to",
-        "index": 2
-      }
+      "to": "update-bun-packages",
+      "source": "prose"
     },
     {
       "type": "composes_with",

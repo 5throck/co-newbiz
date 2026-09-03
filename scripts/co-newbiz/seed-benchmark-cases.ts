@@ -1,3 +1,4 @@
+// @version 1.0.0
 // Seed idempotent external benchmarking cases (benchmark_case, migration
 // 0041). Public, widely-reported deals only — figures are approximate
 // public-reported values rounded, cited to their source, and meant as

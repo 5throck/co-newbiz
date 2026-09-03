@@ -1,3 +1,4 @@
+// @version 1.0.0
 // design-lint (skills/design-lint) — mechanical enforcement of the Onyx 3.0
 // design guide (docs/design-guide.md). Fails on:
 //   1. hardcoded hex/rgba colors in components/app tsx (outside styles.css)

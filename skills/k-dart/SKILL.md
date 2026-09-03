@@ -10,7 +10,7 @@ description: >
 version: 2.1.0
 last_reviewed: 2026-08-09
 status: active
-owner: strategy-analyst
+owner: market-intelligence-agent
 prerequisites: DART_API_KEY environment variable
 l2_propagate: true
 metadata:

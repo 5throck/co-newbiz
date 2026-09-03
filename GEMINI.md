@@ -170,16 +170,6 @@ lang_reason: legal # legal | source-material | proper-noun
 *(Not available for: context.md, CLAUDE.md, GEMINI.md, AGENTS.md, or any variant context.md)*
 <!-- COMMON-GEMINI:END -->
 
-### 5. Agent Dispatch Rules
-
-**MANDATORY PM GATEWAY**: All specialist agent dispatch MUST go through PM.
-
-For the **4-level enforcement model**, **mandatory criteria**, **execution plan format**, and **phase determination**, see [AGENTS.md §3 and §5](AGENTS.md).
-
-#### Antigravity-Specific Dispatch
-
-Before any multi-agent dispatch (2+ agents), PM **must** output an execution plan table prior to invoking the agent orchestration tool.
-
 <!-- COMMON-GEMINI:START -->
 ## Execution Plan Boilerplate
 
@@ -190,41 +180,14 @@ The execution plan table format, the Design Gate (Row 0) rule, exemption categor
 **Antigravity execution**: Use `invoke_subagent` for specialist dispatch. See §3 (Subagent Instantiation & Async Orchestration) in this file.
 <!-- COMMON-GEMINI:END -->
 
-#### Skill Resolution Priority
+<!-- COMMON-GEMINI:START -->
+### 6. Workspace & Template Boundary Policy
 
-When a user request matches a skill trigger, apply this priority order — **enforced every session, regardless of platform**:
+- **Strict CWD Isolation**: When modifying templates (in `templates/`), you MUST strictly limit your working directory (CWD) to the specific template folder.
+- **No Cross-Modification**: Modifying workspace root files and template files in a single task or session is forbidden. Keep workspace root changes and template changes completely isolated.
 
-| Priority | Source | Location |
-|----------|--------|----------|
-| **1 (highest)** | Local project skills | `skills/<name>/SKILL.md` in the current working directory |
-| **2** | Platform config skills | `.gemini/skills/` in the project root |
-| **3 (lowest)** | Global plugin skills | e.g., `superpowers/brainstorming`, `superpowers/writing-plans` |
-
-**Rule**: If a local skill's `metadata.triggers` matches the user request, use it — do **not** fall through to a global plugin with overlapping intent.
-
-**Canonical conflict — meeting vs. brainstorming**:
-
-| User says | Correct skill | Priority |
-|-----------|--------------|----------|
-| "meeting", "facilitate", "agent discussion" | `skills/meeting-facilitation` | 1 |
-| "brainstorm", "design before coding", "explore options" | `superpowers/brainstorming` | 3 |
-
-When ambiguous, prefer the local skill and confirm intent with the user.
-Explicit invocation: `/meeting "topic" [--agents a,b] [--rounds N] [--dialogue]`
-
-> **Antigravity Command Intercept Rule**: `/meeting` is not a native Antigravity UI slash command. If the user input begins with `/meeting`, you (the Agent) MUST immediately intercept this text pattern and seamlessly execute the `.gemini/commands/meeting.md` process using the provided arguments, exactly as if the user had explicitly requested the skill by name.
-
----
-
-### 6. Project Boundary Policy
-
-- **Strict Scope**: Work only within the current project directory.
-- **No Cross-Project Modification**: Modifying files outside the project root during a session is forbidden.
-
-> For lifecycle management rules, see [docs/context.md — Lifecycle Management](docs/context.md#lifecycle-management).
+> For L1-L2 Fork Model and lifecycle management rules, see [docs/context.md](docs/context.md) and [docs/context.md](docs/context.md).
 <!-- COMMON-GEMINI:END -->
-
----
 
 <!-- COMMON-GEMINI:START -->
 ## Git & PR Additions (Gemini)
@@ -254,6 +217,27 @@ Before editing any file for the **FIRST time in a session**, the agent MUST:
 | Antigravity | ✅ Prompt (manual) | Hooks do not fire — agent self-enforces |
 
 If the hook is not active (Antigravity), agents must still follow the 4-step process before making first edits.
+<!-- COMMON-GEMINI:END -->
+
+<!-- COMMON-GEMINI:START -->
+### Custom Command Error Recovery
+If a custom slash command or background script returns a non-zero exit code:
+* **Don't bypass hooks**: Never attempt to run git commands with `--no-verify` to bypass the hook system unless under explicit, written user instruction.
+* **Code Page / UTF-8 Issues (Windows)**: If broken Korean characters or Unicode errors appear in CLI output, the Windows terminal code page (CP949) is likely the cause. Ensure `$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8;` or `chcp 65001` is prepended to scripts.
+* **Diagnostic Audit**: Immediately read the failure stdout log. Common errors include:
+  * Missing staged `CHANGELOG.md` edits (caught by `pre-commit`). Fix by running `/changelog` and staging the file.
+  * Direct push attempt to `main` (caught by `pre-push`). Fix by executing the `/sync` pipeline script which handles target branch generation and PR staging automatically.
+<!-- COMMON-GEMINI:END -->
+
+<!-- COMMON-GEMINI:START -->
+### Windows Platform Requirement
+
+**Git Bash required on Windows**: This workspace uses Unix-style shell scripts (`.sh`) for `.githooks/` hook files. Windows users must have Git Bash installed and configured as the default shell for git hooks.
+
+- Git Bash ships with [Git for Windows](https://gitforwindows.org/) — install if not present.
+- Verify: `git config core.hooksPath` should point to `.githooks/`
+- All `scripts/` operational scripts are TypeScript (`.ts`) — run via `bun scripts/<name>.ts`. No `.sh/.ps1` counterparts (ADR-0036).
+- If a hook fails on Windows with "command not found", run it via Git Bash: `"C:\Program Files\Git\bin\bash.exe" .githooks/pre-commit`
 <!-- COMMON-GEMINI:END -->
 
 ## Agent Teams vs. Antigravity Agent Manager
