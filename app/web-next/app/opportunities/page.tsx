@@ -584,6 +584,15 @@ export function OpportunitiesView() {
                             S8 사업성 분석
                           </Link>
                         )}
+                        {o.project_id && (
+                          <Link
+                            href={`/projects/${o.project_id}/ic-review`}
+                            className="btn-ghost btn-sm"
+                            title="승격된 프로젝트의 S10 투자심사·실행(IC 패키지·Entity/Group IC·설립 실행) 화면으로 이동"
+                          >
+                            S10 투자심사
+                          </Link>
+                        )}
                       </span></td>
                     </tr>
                     {isOpen && (

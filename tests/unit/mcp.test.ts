@@ -93,10 +93,10 @@ describe("tool catalog", () => {
   test("every registered tool has a name and an object input schema", async () => {
     const { TOOLS } = await import("../../mcp/co-newbiz/index.ts");
     // ADR-0094 surface alignment: the project-keyed tool suites were removed
-    // with their REST routes; the live catalog is 15 tools — the read
+    // with their REST routes; the live catalog is 16 tools — the read
     // lookups + notifications + the opportunity-keyed process suite + the
     // ADR-0097 committee read-only pair.
-    expect(TOOLS.length).toBe(15);
+    expect(TOOLS.length).toBe(16);
     for (const tool of TOOLS) {
       expect(tool.name.length).toBeGreaterThan(0);
       // MCP tool names must be plain identifiers — no decoration characters

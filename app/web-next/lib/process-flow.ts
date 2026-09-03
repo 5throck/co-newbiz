@@ -10,6 +10,7 @@
 import { getDb } from "../../../db/client.ts";
 import { listTargets, screeningSummary } from "./brownfield-targets.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
+import { establishmentProgress } from "./establishment.ts";
 
 export type StageId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11";
 export type GateId = "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
@@ -280,20 +281,13 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
       blockers.push("Group IC 승인 기록이 필요합니다");
       missing.push("Group IC 승인");
     }
-    // 설립 실행 기록은 opportunity 백링크로 조인한다 (0059는 opportunity-keyed,
-    // project_id 백필은 Phase 5 — ADR-0095 Consequences).
+    // 설립 실행 기록은 project_id 키로 직접 조회한다 (0070 백필, ADR-0100 §5);
+    // 백필 이전 행만 source_opportunity_id 백링크로 대체 조회한다.
     if (project.origin === "internal" || project.origin === "joint") {
-      if (!project.source_opportunity_id) {
-        blockers.push("설립 실행 기록을 조회할 opportunity 연결이 없습니다");
-        missing.push("설립 실행 기록");
-      } else {
-        const done = (db
-          .query("SELECT COUNT(*) c FROM entity_establishment_step WHERE opportunity_id = ? AND status = 'done'")
-          .get(project.source_opportunity_id) as { c: number }).c;
-        if (done < 5) {
-          blockers.push(`설립 실행 미완료 (${done}/5단계)`);
-          missing.push("설립 실행 기록(5단계 완료)");
-        }
+      const done = establishmentProgress(project.id).done;
+      if (done < 5) {
+        blockers.push(`설립 실행 미완료 (${done}/5단계)`);
+        missing.push("설립 실행 기록(5단계 완료)");
       }
     }
   } else if (stage.id === "S11") {
