@@ -260,8 +260,14 @@ describe("shape: four new tables + md_project.current_stage_gate", () => {
     expect(tableColumns("compliance_check").map((c) => c.name)).toEqual([...COMPLIANCE_CHECK_COLUMNS]);
   });
 
-  test("md_project gains current_stage_gate as its fourth column (Decision 5c)", () => {
-    expect(tableColumns("md_project").map((c) => c.name)).toEqual(["id", "project_no", "created_at", "current_stage_gate"]);
+  test("md_project keeps current_stage_gate as its fourth column (Decision 5c)", () => {
+    // Migration 0047 later appended company_id (synergy/project-company
+    // binding) and 0033's PK rebuild preserved column order — so the live
+    // shape is 0013's four columns plus that append. The 0013 contract
+    // being pinned here: current_stage_gate lands fourth, in order.
+    expect(tableColumns("md_project").map((c) => c.name)).toEqual([
+      "id", "project_no", "created_at", "current_stage_gate", "company_id",
+    ]);
   });
 
   test("the three new indexes exist, live-row indexes are partial UNIQUE", () => {

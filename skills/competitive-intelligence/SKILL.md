@@ -27,6 +27,7 @@ metadata:
 
   procedure_keys:
     - brownfield-dd
+    - company-profile-analysis
 relates_to:
   - skill: legal-due-diligence
     type: follows

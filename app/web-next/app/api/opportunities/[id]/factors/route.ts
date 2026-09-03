@@ -1,6 +1,7 @@
 // 기회별 평가 요인 — 자동 도출(POST), 수동 추가(PUT), 삭제(DELETE).
 // 요인은 opportunity.factors_json(0051)에 영속되고 매력도 평가의 근거로 쓰인다.
 import { getDb } from "../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { deriveAndSaveFactors, loadOpportunityWithFactors, readFactors, saveFactors } from "../../../../../lib/opportunity-factors.ts";
@@ -25,6 +26,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     | null;
   if (!row) return notFound();
   const { factors, source } = await deriveAndSaveFactors(db, row);
+  appendAudit(db, { actor: auth.auth.userId, action: "opportunity.factors.derive", target: id, now: new Date().toISOString() });
   return ok({ factors, source }, 200);
 }
 
@@ -46,6 +48,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   factors[type] = [...factors[type], text].slice(0, 6);
   const source = row.factors_source ? `${row.factors_source}+manual` : "manual";
   saveFactors(db, id, factors, source);
+  appendAudit(db, { actor: auth.auth.userId, action: "opportunity.factors.update", target: `${id}:add:${type}`, now: new Date().toISOString() });
   return ok({ factors, source }, 200);
 }
 
@@ -66,5 +69,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const factors = readFactors(row);
   factors[type] = factors[type].filter((_x: string, i: number) => i !== index);
   saveFactors(db, id, factors, row.factors_source ?? "manual");
+  appendAudit(db, { actor: auth.auth.userId, action: "opportunity.factors.update", target: `${id}:remove:${type}:${index}`, now: new Date().toISOString() });
   return ok({ factors }, 200);
 }

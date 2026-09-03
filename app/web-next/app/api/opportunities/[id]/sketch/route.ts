@@ -4,6 +4,7 @@
 // (sketch_json/sketch_source/sketch_at, migration 0050) so the funnel card can
 // show it; regenerating overwrites with a new provenance-stamped version.
 import { getDb } from "../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback } from "../../../../../lib/llm.ts";
@@ -105,5 +106,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   db.run("UPDATE opportunity SET sketch_json = ?, sketch_source = ?, sketch_at = ? WHERE id = ?", [
     JSON.stringify(sketch), source, ts, opp.id,
   ]);
+  appendAudit(db, { actor: auth.auth.userId, action: "opportunity.sketch", target: `${opp.id}:${source}`, now: ts });
   return ok({ id: opp.id, sketch, source, created_at: ts, cached: false }, 200);
 }

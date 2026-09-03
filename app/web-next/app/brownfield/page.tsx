@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Fragment, Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
@@ -310,7 +310,7 @@ export function BrownfieldView() {
                   const sm = t.screening_summary;
                   const isOpen = openTarget === t.id;
                   return (
-                    <>
+                    <Fragment key={t.id}>
                       <tr key={t.id} className={isOpen ? "row-selected" : undefined}>
                         <td className="cell-primary">
                           <button
@@ -407,7 +407,7 @@ export function BrownfieldView() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>

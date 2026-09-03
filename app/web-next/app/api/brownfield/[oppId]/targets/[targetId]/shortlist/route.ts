@@ -1,6 +1,7 @@
 // S7 — Short List 승격 (knock-out 통과 + 필수 항목 판정 완료가 조건).
 import { ulid } from "../../../../../../../../../db/lib/ulid.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { screeningSummary, type TargetRow } from "../../../../../../../lib/brownfield-targets.ts";
@@ -44,6 +45,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     db.run("UPDATE synergy_analysis SET status = 'in_progress', current_step = 0, completed_at = NULL WHERE id = ?", [syn.id]);
     synergyLinked = true;
   }
+
+  appendAudit(db, { actor: auth.auth.userId, action: "brownfield_target.shortlist", target: `${oppId}:${targetId}:rank${rank}`, now: new Date().toISOString() });
 
   return ok({ ...db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId), company_id, synergy_linked: synergyLinked }, 200);
 }

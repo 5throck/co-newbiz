@@ -80,6 +80,8 @@ export interface CreateUserOptions {
 /**
  * Create an account in `pending` status. Self-signup and admin creation both
  * land here; nothing authenticates until an admin approves (design 짠4-9).
+ * The initial password is a known/communicated value, so the account is
+ * flagged must_change_password=1 — the first login forces the change flow.
  */
 export async function createUser(db: Database, opts: CreateUserOptions): Promise<void> {
   if (opts.password.length < MIN_PASSWORD_LENGTH) {
@@ -92,8 +94,8 @@ export async function createUser(db: Database, opts: CreateUserOptions): Promise
   const hashed = await hashPassword(opts.password);
   db.run(
     `INSERT INTO app_user (id, user_id, display_name, role, status, password_salt, password_hash,
-                           password_iterations, wall_group, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+                           password_iterations, must_change_password, wall_group, created_at)
+     VALUES (?,?,?,?,?,?,?,?,1,?,?)`,
     [ulid(), opts.userId, opts.displayName ?? null, opts.role, "pending", hashed.salt, hashed.hash, hashed.iterations, opts.wallGroup ?? null, opts.now],
   );
   appendAudit(db, { actor: opts.createdBy, action: "account_create", target: opts.userId, now: opts.now });

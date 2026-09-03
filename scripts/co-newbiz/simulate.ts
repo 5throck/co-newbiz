@@ -24,7 +24,11 @@ function runPythonScript(scriptName: string, args: string[]): Promise<string> {
   return new Promise((resolveFn, reject) => {
     const scriptDir = dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
     const scriptPath = resolve(scriptDir, "..", "..", "python", scriptName);
-    const pythonBin = process.platform === "win32" ? "python" : "python3";
+    const pythonBin = existsSync(resolve(scriptDir, "..", "..", ".venv", "bin", "python3"))
+      ? resolve(scriptDir, "..", "..", ".venv", "bin", "python3")
+      : process.platform === "win32"
+        ? "python"
+        : "python3"; // venv preferred (python/requirements.txt); PEP 668 systems lack deps
     const quotedArgs = args.map(winQuote);
     const proc = spawn(pythonBin, [scriptPath, ...quotedArgs], {
       stdio: ["ignore", "pipe", "pipe"],
