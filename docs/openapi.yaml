@@ -1721,6 +1721,50 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/pipeline/start:
+    post:
+      operationId: startOpportunityPipeline
+      summary: Start the industry x company auto pipeline for the opportunity (ADR-0102). Analyst+; body {industry_id, initiating_company_id}; runs the first advance pass synchronously.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/opportunities/{id}/pipeline/status:
+    get:
+      operationId: getOpportunityPipelineStatus
+      summary: Read-only pipeline run status across the promotion handoff, with a deep link to the pending human action (ADR-0102).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/opportunities/discover:
     post:
       operationId: discoverOpportunities

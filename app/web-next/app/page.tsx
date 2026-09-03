@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { api } from "../lib/api.ts";
 import { useChartTheme } from "../lib/echarts-theme.ts";
+import { PipelineStatus } from "../components/PipelineStatus.tsx";
 
 const EChartsCore = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -122,6 +123,8 @@ export default function DashboardPage() {
                 <Link href="/opportunities" className="flex items-center gap-3 p-2 rounded hover:bg-[rgba(255,255,255,0.04)] transition-colors">
                   <span className="font-semibold">{o.name}</span>
                   <span className="text-sm text-[color:var(--muted-fg)]">{STATUS_LABELS[o.status]}</span>
+                  {/* 자동 파이프라인 상태 배지 (ADR-0102 §4) — 실행 이력이 있을 때만 표시 */}
+                  <PipelineStatus opportunityId={o.id} />
                   <span className="ml-auto text-sm text-[color:var(--muted-fg)] tabular-nums">
                     매력도 {o.attractiveness_score ?? "—"} · 시너지 {o.synergy_score ?? "—"}
                   </span>

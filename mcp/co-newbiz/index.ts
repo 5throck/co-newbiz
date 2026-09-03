@@ -30,6 +30,7 @@ import {
 } from "./tools/governance.ts";
 import { lookupTerm } from "./tools/glossary.ts";
 import { listNotifications } from "./tools/monitoring.ts";
+import { getPipelineStatus } from "./tools/pipeline.ts";
 import {
   getObservations,
   listDataChanges,
@@ -73,6 +74,11 @@ export const TOOLS: ToolDefinition[] = [
     name: "list_notifications",
     description: "The caller's pending and recent notifications.",
     inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "get_pipeline_status",
+    description: "Pipeline status for an opportunity (read-only, ADR-0102) — active run status, current stage, paused reason, and deep link to the pending human action screen.",
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
   },
   {
     name: "search_series",
@@ -194,6 +200,10 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
       return lookupTerm(args.term as string);
     case "list_notifications":
       return listNotifications();
+    case "get_pipeline_status": {
+      requireString(args, "opportunityId");
+      return getPipelineStatus(args.opportunityId as string);
+    }
     case "search_series":
       return searchSeries(args.q as string | undefined);
     case "get_observations":
