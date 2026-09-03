@@ -52,20 +52,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     lines?: LineInput[];
   } | null;
   if (!body?.name?.trim()) return badRequest("invalid_request", "name은 필수입니다.");
+  const name = body.name.trim();
   const kind = body.kind ?? "valuation";
   if (!KINDS.has(kind)) return badRequest("invalid_request", `kind는 ${[...KINDS].join(" | ")} 중 하나입니다.`);
   const db = getDb();
+  const lineError = validateLines(body.lines ?? []);
+  if (lineError) return badRequest("invalid_request", lineError);
   const modelId = ulid();
   const now = new Date().toISOString();
-  db.run(
-    "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
-    [modelId, id, kind, body.name.trim(), body.horizon_years && body.horizon_years > 0 ? Math.floor(body.horizon_years) : 5, ctx.userId, now],
-  );
-  const lineError = insertLines(db, modelId, body.lines ?? [], ctx.userId, now);
-  if (lineError) {
-    db.run("DELETE FROM business_case_model WHERE id = ?", [modelId]);
-    return badRequest("invalid_request", lineError);
-  }
+  // All-or-nothing: model + lines land in ONE transaction (mirror of
+  // reviewDdCustomItem) so a failure leaves no orphan/partial rows.
+  db.transaction(() => {
+    db.run(
+      "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
+      [modelId, id, kind, name, body.horizon_years && body.horizon_years > 0 ? Math.floor(body.horizon_years) : 5, ctx.userId, now],
+    );
+    insertLines(db, modelId, body.lines ?? [], ctx.userId, now);
+  })();
   return ok({ id: modelId }, 201);
 }
 
@@ -97,9 +100,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     db.run("UPDATE business_case_model SET horizon_years = ? WHERE id = ?", [Math.floor(body.horizon_years), body.model_id]);
   }
   if (Array.isArray(body.lines)) {
-    db.run("DELETE FROM business_case_line WHERE model_id = ?", [body.model_id]);
-    const lineError = insertLines(db, body.model_id, body.lines, ctx.userId, now);
+    const lineError = validateLines(body.lines);
     if (lineError) return badRequest("invalid_request", lineError);
+    const modelId = body.model_id;
+    const lines = body.lines;
+    // Full-line replacement is all-or-nothing: delete + reinsert inside ONE
+    // transaction, so a failed insert never leaves the case without lines.
+    db.transaction(() => {
+      db.run("DELETE FROM business_case_line WHERE model_id = ?", [modelId]);
+      insertLines(db, modelId, lines, ctx.userId, now);
+    })();
   }
   return ok({ id: body.model_id }, 200);
 }
@@ -125,8 +135,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   return ok({ id: modelId }, 200);
 }
 
-/** Validate then insert lines. Returns an error message for the 400 envelope, or null on success. */
-function insertLines(db: ReturnType<typeof getDb>, modelId: string, lines: LineInput[], userId: string, now: string): string | null {
+/** Validate every line BEFORE any insert (the transaction must not fail midway). Returns an error message for the 400 envelope, or null. */
+function validateLines(lines: LineInput[]): string | null {
   for (const line of lines) {
     if (!line.category || !CATEGORIES.has(line.category)) {
       return `line category는 ${[...CATEGORIES].join(" | ")} 중 하나입니다.`;
@@ -134,6 +144,13 @@ function insertLines(db: ReturnType<typeof getDb>, modelId: string, lines: LineI
     if (typeof line.annual_amount_krw_m !== "number" || Number.isNaN(line.annual_amount_krw_m)) {
       return "line annual_amount_krw_m은 숫자여야 합니다.";
     }
+  }
+  return null;
+}
+
+/** Insert pre-validated lines. Call inside a transaction. */
+function insertLines(db: ReturnType<typeof getDb>, modelId: string, lines: LineInput[], userId: string, now: string): void {
+  for (const line of lines) {
     db.run(
       `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note, created_by, created_at)
        VALUES (?,?,?,?,?,?,?,?,?,?)`,
@@ -151,5 +168,4 @@ function insertLines(db: ReturnType<typeof getDb>, modelId: string, lines: LineI
       ],
     );
   }
-  return null;
 }

@@ -5,11 +5,16 @@
 // are written progressively by runActivityChain. Analyst+. Tailoring writes
 // PROPOSALS only (status 'proposed', no state rows) — never an approval,
 // never a gate_decision (boundary #2).
+import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { tailorDdChecklist, DD_DOMAINS, type DdDomain } from "../../../../../../lib/dd-checklist-tailor.ts";
+import { tailorDdChecklist, DD_TAILOR_STAGE, DD_DOMAINS, type DdDomain } from "../../../../../../lib/dd-checklist-tailor.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 
+// Idempotency contract: if a non-failed tailoring run for this project's S9
+// stage already exists, the EXISTING run is returned with 200 and
+// alreadyRun: true instead of duplicating proposals. A FAILED run does not
+// block a retry.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
@@ -25,6 +30,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return badRequest("invalid_request", `domains는 ${DD_DOMAINS.join(" | ")} 중 선택입니다.`);
     }
     domains = [...new Set(body.domains)] as DdDomain[];
+  }
+
+  const existing = getDb()
+    .query(
+      `SELECT id FROM process_run
+       WHERE entity_type = 'project' AND entity_id = ? AND stage = ? AND status != 'failed'
+       ORDER BY started_at DESC LIMIT 1`,
+    )
+    .get(id, DD_TAILOR_STAGE) as { id: string } | undefined;
+  if (existing) {
+    return ok({ runId: existing.id, alreadyRun: true, domains }, 200);
   }
 
   try {

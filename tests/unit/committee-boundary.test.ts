@@ -175,13 +175,33 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     expect(confirmingRowCounts(oppId)).toEqual({ gate: 0, route: 0, target: 0 });
 
     // Human speaks (round 1) — advance then completes the rounds and
-    // synthesizes a PROPOSAL, still without confirming anything.
+    // synthesizes a PROPOSAL, still without confirming anything. No `seat`
+    // claim: a human speaks under their OWN user identity.
     const pos = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
       method: "POST",
       headers: { cookie: rootCookie },
-      body: JSON.stringify({ seat: "industry-lead", positionMd: "산업 관점: 시장성 충분", recommendation: "go", confidence: 70 }),
+      body: JSON.stringify({ positionMd: "인간 위원 관점: 시장성 충분", recommendation: "go", confidence: 70 }),
     });
     expect(pos.status).toBe(201);
+
+    // Same round again → conflict: one position per (round, member).
+    const dup = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
+      method: "POST",
+      headers: { cookie: rootCookie },
+      body: JSON.stringify({ positionMd: "중복 제출 시도", recommendation: "go" }),
+    });
+    expect(dup.status).toBe(409);
+    expect((await dup.json()).error.code).toBe("duplicate_position");
+
+    // Speaking as another member's seat is a forbidden identity claim —
+    // industry-lead is an AGENT seat, never claimable by a human submitter.
+    const impersonation = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
+      method: "POST",
+      headers: { cookie: rootCookie },
+      body: JSON.stringify({ seat: "industry-lead", positionMd: "다른 위원 사칭 시도", recommendation: "go" }),
+    });
+    expect(impersonation.status).toBe(403);
+    expect((await impersonation.json()).error.code).toBe("seat_not_assignable");
 
     let last = "";
     for (let i = 0; i < 3; i++) {
@@ -197,12 +217,41 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
       const hp = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
         method: "POST",
         headers: { cookie: rootCookie },
-        body: JSON.stringify({ seat: "industry-lead", positionMd: `round ${i + 2} human position`, recommendation: "go" }),
+        body: JSON.stringify({ positionMd: `round ${i + 2} human position`, recommendation: "go" }),
       });
       expect(hp.status).toBe(201);
     }
     expect(last).toBe("synthesized");
     expect(confirmingRowCounts(oppId)).toEqual({ gate: 0, route: 0, target: 0 });
+  });
+
+  test("session binding: another opportunity's session is 404 here, not readable or advanceable", async () => {
+    const oppA = await createOpportunity();
+    const oppB = await createOpportunity();
+    const res = await req(`/api/opportunities/${oppA}/committee-sessions`, {
+      method: "POST",
+      headers: { cookie: rootCookie },
+      body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "human_only" }),
+    });
+    expect(res.status).toBe(201);
+    const sessionId = (await res.json()).data.sessionId as string;
+
+    // The session belongs to oppA's process_run — under oppB's path it is
+    // simply not found (existence protection on every session surface).
+    const get = await req(`/api/opportunities/${oppB}/committee-sessions/${sessionId}`, { headers: { cookie: rootCookie } });
+    expect(get.status).toBe(404);
+    const pos = await req(`/api/opportunities/${oppB}/committee-sessions/${sessionId}/positions`, {
+      method: "POST",
+      headers: { cookie: rootCookie },
+      body: JSON.stringify({ positionMd: "교차 기회 입장 시도" }),
+    });
+    expect(pos.status).toBe(404);
+    const adv = await req(`/api/opportunities/${oppB}/committee-sessions/${sessionId}/advance`, {
+      method: "POST",
+      headers: { cookie: rootCookie },
+      body: JSON.stringify({}),
+    });
+    expect(adv.status).toBe(404);
   });
 });
 

@@ -81,8 +81,13 @@ export function listBusinessCases(projectId: string): {
     .query("SELECT id, kind, name, horizon_years, created_by, created_at FROM business_case_model WHERE project_id = ? ORDER BY created_at, id")
     .all(projectId) as Array<{ id: string; kind: string; name: string; horizon_years: number; created_by: string; created_at: string }>;
   const lines = db
-    .query("SELECT id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note FROM business_case_line ORDER BY category, start_year, id")
-    .all() as unknown as Array<LineRow & { model_id: string }>;
+    .query(
+      `SELECT id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note
+       FROM business_case_line
+       WHERE model_id IN (SELECT id FROM business_case_model WHERE project_id = ?)
+       ORDER BY category, start_year, id`,
+    )
+    .all(projectId) as unknown as Array<LineRow & { model_id: string }>;
   const sims = db
     .query("SELECT id, model_id, scenario, percentile, npv_krw_m, irr, note FROM valuation_simulation WHERE project_id = ? ORDER BY scenario, percentile")
     .all(projectId) as unknown as SimulationRow[];

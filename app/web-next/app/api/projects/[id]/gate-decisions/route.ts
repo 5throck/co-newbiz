@@ -68,6 +68,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
     return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
   }
+  // Provenance binding: the cited evaluation's process_run must address THIS
+  // project — another entity's proposal cannot be recorded as this gate's
+  // provenance.
+  if (gateEvaluationId) {
+    const bound = db
+      .query(
+        `SELECT e.id FROM gate_evaluation e JOIN process_run r ON r.id = e.process_run_id
+         WHERE e.id = ? AND r.entity_type = 'project' AND r.entity_id = ?`,
+      )
+      .get(gateEvaluationId, id);
+    if (!bound) {
+      return badRequest("provenance_mismatch", "gate_evaluation_id가 이 프로젝트의 위원회 세션 산출물이 아닙니다.");
+    }
+  }
   const nowTs = new Date().toISOString();
   const gid = ulid();
   db.run(

@@ -99,26 +99,31 @@ export function startPipeline(opts: {
   }
 
   const ids = relatedEntityIds(opts.entityType, opts.entityId);
-  const active = db
-    .query(
-      `SELECT id FROM pipeline_run
-       WHERE status IN ('running','paused_for_human')
-         AND ((entity_type = 'opportunity' AND entity_id IN (?, ?))
-           OR (entity_type = 'project' AND entity_id IN (?, ?)))`,
-    )
-    .get(ids.opportunityId, ids.projectId, ids.opportunityId, ids.projectId) as { id: string } | undefined;
-  if (active) {
-    throw new PipelineError("active_run_exists", `An active pipeline run ('${active.id}') already exists for this entity.`);
-  }
 
-  const id = ulid();
-  const now = nowIso();
-  db.run(
-    `INSERT INTO pipeline_run (id, entity_type, entity_id, industry_id, initiating_company_id, status, current_stage, paused_reason, started_by, started_at, updated_at)
-     VALUES (?,?,?,?,?,'running',NULL,NULL,?,?,?)`,
-    [id, opts.entityType, opts.entityId, opts.industryId, opts.initiatingCompanyId, opts.startedBy, now, now],
-  );
-  return getRun(id);
+  // Race-tolerant exclusivity: the check-and-insert runs in ONE transaction so
+  // two concurrent starts cannot both pass the active-run probe.
+  const inserted = db.transaction(() => {
+    const active = db
+      .query(
+        `SELECT id FROM pipeline_run
+         WHERE status IN ('running','paused_for_human')
+           AND ((entity_type = 'opportunity' AND entity_id IN (?, ?))
+             OR (entity_type = 'project' AND entity_id IN (?, ?)))`,
+      )
+      .get(ids.opportunityId, ids.projectId, ids.opportunityId, ids.projectId) as { id: string } | undefined;
+    if (active) {
+      throw new PipelineError("active_run_exists", `An active pipeline run ('${active.id}') already exists for this entity.`);
+    }
+    const id = ulid();
+    const now = nowIso();
+    db.run(
+      `INSERT INTO pipeline_run (id, entity_type, entity_id, industry_id, initiating_company_id, status, current_stage, paused_reason, started_by, started_at, updated_at)
+       VALUES (?,?,?,?,?,'running',NULL,NULL,?,?,?)`,
+      [id, opts.entityType, opts.entityId, opts.industryId, opts.initiatingCompanyId, opts.startedBy, now, now],
+    );
+    return id;
+  })();
+  return getRun(inserted);
 }
 
 /** The opportunity/project key pair an entity maps to across a promotion. */
@@ -249,13 +254,15 @@ const OPPORTUNITY_RULES: Rule[] = [
       return !already;
     },
     signature: () => "pre_fs",
-    run: async ({ entity, actor }) => {
+    run: async ({ entity, ev, actor }) => {
       await conveneCommitteeSession(
         { entityType: "opportunity", entityId: entity.id },
         {
           committeeKey: "route-steering-committee",
           decisionMode: "agent_team",
           gate: "pre_fs",
+          // Conditional seats (applies_when: track == ...) resolve by track.
+          track: ev.track ?? undefined,
           actor,
           source: "system",
         },
@@ -334,10 +341,14 @@ const PROJECT_RULES: Rule[] = [
     when: ({ entity, ev }) => ev.currentStage === "S9" && ddCompletionSummary(entity.id).pending > 0,
   },
   {
-    // dd gate pending while the checklist is fully resolved.
+    // dd gate pending while the S9 checklist is fully resolved. currentStage is
+    // NOT part of this predicate: evaluateProcess sets currentStage only for
+    // INCOMPLETE stages, so once S9 completes the loop is already looking at
+    // S10 — keying on currentStage would make this rule dead and let the run
+    // skip the dd gate straight to entity_ic.
     key: "gate_decision:dd",
     kind: "human",
-    when: ({ ev }) => ev.currentStage === "S9" && ev.gateStatus.dd !== "go" && ev.completedStages.includes("S9"),
+    when: ({ ev }) => ev.gateStatus.dd !== "go" && ev.completedStages.includes("S9"),
   },
   {
     // S10/S11 are human gates BY DESIGN (ADR-0102 §2): the IC approval is
@@ -388,6 +399,17 @@ export async function advancePipeline(pipelineRunId: string, opts: { actor?: str
   let run = getRun(pipelineRunId);
   if (run.status === "completed" || run.status === "failed" || run.status === "killed") {
     return { run, actions };
+  }
+
+  // Claim the run: a conditional UPDATE flips it to 'running' only if it is
+  // still advanceable. 0 rows updated means another advance is in flight on
+  // this run — no-op instead of interleaving two loops over the same state.
+  const claimed = getDb().run(
+    "UPDATE pipeline_run SET status = 'running', updated_at = ? WHERE id = ? AND status IN ('running','paused_for_human')",
+    [nowIso(), pipelineRunId],
+  );
+  if (claimed.changes === 0) {
+    return { run: getRun(pipelineRunId), actions: [] };
   }
 
   // Ineffective-automation guard state: per ADVANCE CALL, rule key → the

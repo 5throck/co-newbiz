@@ -15,6 +15,13 @@ export async function GET(
   if (!auth.ok) return auth.response;
   const { id, sessionId } = await params;
   if (!getDb().query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
+  // Session binding: the session IS a process_run — it must address THIS path
+  // opportunity, or the transcript is not addressable here (404, existence
+  // protection).
+  const run = getDb().query("SELECT entity_type, entity_id FROM process_run WHERE id = ?").get(sessionId) as
+    | { entity_type: string; entity_id: string }
+    | undefined;
+  if (!run || run.entity_type !== "opportunity" || run.entity_id !== id) return notFound();
   const transcript = getCommitteeSession(sessionId);
   if (!transcript) return notFound();
   return ok(transcript, 200);
