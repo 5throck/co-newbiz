@@ -57,22 +57,23 @@ function industryContext(marketScope: string | null, rationale: string | null): 
 
 export function loadScreeningState(id: string): ScreeningState | null {
   const row = getDb()
-    .query("SELECT synergy_score, synergy_rationale, fit_verdict, fit_rationale FROM opportunity WHERE id = ?")
-    .get(id) as Omit<ScreeningState, "gate"> | undefined;
+    .query("SELECT synergy_score, synergy_rationale, fit_verdict, fit_rationale, attractiveness_score FROM opportunity WHERE id = ?")
+    .get(id) as Omit<ScreeningState, "gate"> & { attractiveness_score: number | null } | undefined;
   if (!row) return null;
   return { ...row, gate: gateRecommendation(row) };
 }
 
 /** screening 게이트 권고 — 스펙 판정기준(매력도·knock-out·시너지)을 조합. */
-function gateRecommendation(row: { synergy_score: number | null; fit_verdict: string | null }): ScreeningState["gate"] {
-  if (row.synergy_score === null || !row.fit_verdict) return null;
+function gateRecommendation(row: { attractiveness_score: number | null; synergy_score: number | null; fit_verdict: string | null }): ScreeningState["gate"] {
+  if (row.synergy_score === null || !row.fit_verdict || row.attractiveness_score === null) return null;
+  const attractiveness = row.attractiveness_score;
   const synergy = row.synergy_score;
-  const recommendation = (row.fit_verdict === "Go" && synergy >= 60) ? "Go"
-    : (row.fit_verdict === "Kill" || synergy < 40) ? "Kill"
+  const recommendation = (row.fit_verdict === "Go" && synergy >= 60 && attractiveness >= 60) ? "Go"
+    : (row.fit_verdict === "Kill" || synergy < 40 || attractiveness < 60) ? "Kill"
     : "Hold";
   return {
     recommendation,
-    rationale: `전략적 적합성 ${row.fit_verdict} + 시너지 ${synergy}점 → screening 게이트 권고 ${recommendation} (합의 기준: 시너지 ≥ 60 Go / < 40 Kill)`,
+    rationale: `시장 매력도 ${attractiveness}점 + 전략적 적합성 ${row.fit_verdict} + 시너지 ${synergy}점 → screening 게이트 권고 ${recommendation} (합의 기준: 매력도 ≥ 60 AND 적합성 Go AND 시너지 ≥ 60 → Go, 그 외 Hold, 매력도 < 60 OR 적합성 Kill OR 시너지 < 40 → Kill)`,
   };
 }
 

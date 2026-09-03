@@ -66,9 +66,10 @@ export async function POST(request: Request) {
     `INSERT INTO opportunity (id, project_id, name, market_scope, value_chain_node, market_size_krw_m,
                               growth_rate, attractiveness_score, synergy_score, synergy_rationale, fit_verdict, fit_rationale, status, rationale,
                               created_by, created_at)
-     VALUES (?,NULL,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, body.name.trim(), body.market_scope?.trim() ?? null, body.value_chain_node?.trim() ?? null,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, null, body.name.trim(), body.market_scope?.trim() ?? null, body.value_chain_node?.trim() ?? null,
       body.market_size_krw_m ?? null, body.growth_rate ?? null, attractiveness, synergy,
+      null, null, null,
       status, body.rationale?.trim() ?? null, ctx.userId, now],
   );
   appendAudit(db, { actor: ctx.userId, action: "opportunity_create", target: `${id}:${body.name.trim()}`, now });

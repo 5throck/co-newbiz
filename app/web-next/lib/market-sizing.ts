@@ -18,7 +18,62 @@ export const SEGMENTS = [
 ] as const;
 export type SegmentCode = (typeof SEGMENTS)[number]["code"];
 
-export interface AnchorSource { label: string; estimate: number; status: "consensus" | "excluded"; note: string }
+export interface AnchorSource {
+  label: string;
+  estimate: number;
+  status: "consensus" | "excluded";
+  note: string;
+  /** 추정 방법론 (선택) — 톱다운/바텀업/프록시 등, 있으면 앵커 신뢰도 판단에 사용 */
+  methodology?: string;
+  /** 소스 원문 URL (선택) */
+  sourceUrl?: string;
+  /** 소스 기준 시점 (선택, ISO 날짜) */
+  asOf?: string;
+}
+
+/** 수요 파이프라인 항목 — 향후 착공/발주가 예정된 개별 프로젝트 (S1 근거 강화용, 선택). */
+export interface DemandPipelineEntry {
+  /** 1(확정) ~ 4(초기 검토) 등 신뢰도 티어 */
+  tier: 1 | 2 | 3 | 4;
+  project: string;
+  status: string;
+  /** 상업운전(가동) 목표 시점 (선택) */
+  codTarget?: string;
+  sourceUrl?: string;
+}
+
+/** 규제 환경 비교 항목 — 국가/관할권별 규제 상태 (선택). */
+export interface RegulatoryComparisonEntry {
+  jurisdiction: string;
+  item: string;
+  status: string;
+  /** 1차 소스로 직접 확인했는지 여부 — false면 추정/간접 확인 */
+  confirmedDirectly: boolean;
+  sourceUrl?: string;
+  asOf?: string;
+}
+
+/** 섹션별 신뢰도 등급 (선택) — 리포트 섹션 단위로 근거 품질을 표기한다. */
+export interface SectionConfidenceEntry {
+  section: string;
+  grade: "A" | "B" | "B-" | "C" | "C-" | "D";
+  note?: string;
+}
+
+/** Kill criteria 제안 — 분석가가 검토할 조기 중단/보류 기준 후보 (선택). */
+export interface KillCriteriaProposal {
+  name: string;
+  thresholdText: string;
+  rationale: string;
+  severity: "low" | "medium" | "high";
+}
+
+/** 검증 원장 항목 — 개별 주장에 대한 확인/미확인/판단필요 상태 (선택). */
+export interface VerificationEntry {
+  claim: string;
+  status: "confirmed" | "could_not_verify" | "needs_judgement";
+  note?: string;
+}
 export interface MatrixRegion {
   code: string;
   label: string;
@@ -52,7 +107,19 @@ export interface ChainDirection {
 export interface CompetitiveStructure {
   /** 시장 구조 요약 (독점/과점/독과점/경쟁 정도, 집중도 정성 코멘트) */
   structure: string;
-  players: Array<{ name: string; tier: "leader" | "challenger" | "niche"; note: string }>;
+  players: Array<{
+    name: string;
+    tier: "leader" | "challenger" | "niche";
+    note: string;
+    /** 기술 유형 (선택, 예: PWR/BWR/SMR 등 산업별 기술 분류) */
+    techType?: string;
+    /** 설비용량 MWe (선택) */
+    capacityMWe?: number;
+    /** 프로젝트/사업 진행 상태 (선택) */
+    projectStatus?: string;
+    /** 근거 참조 (선택) */
+    evidenceRef?: string;
+  }>;
 }
 
 export interface QualitativeFactors {
@@ -105,6 +172,18 @@ export interface SizingMatrix {
   competitive?: CompetitiveStructure;
   /** 최종수요 세그먼트 정의 — 산업별로 달라질 수 있다. 없으면 기본 SEGMENTS(琦설/광산/기타) 사용. */
   segments?: Array<{ code: string; label: string }>;
+  /** 수요 파이프라인 — 향후 예정 프로젝트 목록 (선택, S1 근거 강화용). */
+  demandPipeline?: DemandPipelineEntry[];
+  /** 규제 환경 비교 — 관할권×항목 (선택). */
+  regulatoryComparison?: RegulatoryComparisonEntry[];
+  /** 섹션별 신뢰도 등급 (선택). */
+  sectionConfidence?: SectionConfidenceEntry[];
+  /** Kill criteria 제안 목록 (선택, 분석가 검토용). */
+  killCriteriaProposals?: KillCriteriaProposal[];
+  /** 검증 원장 — 주장별 확인 상태 (선택). */
+  verificationLedger?: VerificationEntry[];
+  /** RAG 상한 권고 (선택) — 데이터 신뢰도가 캡핑하는 등급과 근거. */
+  ragCapRecommendation?: { grade: "green" | "amber" | "red"; rationale: string };
 }
 
 // ── helpers shared by UI + pipeline ──

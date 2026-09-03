@@ -1249,6 +1249,100 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/market-overview/analyses/{id}/seed:
+    post:
+      operationId: seedMarketAnalysis
+      summary: Persist an externally-researched SizingMatrix as a new version, bypassing the LLM pipeline (analyst+).
+      tags:
+        - Analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >-
+                SizingMatrix-shaped payload (see app/web-next/lib/market-sizing.ts). Loosely
+                described here; not every optional field is enumerated.
+              properties:
+                segments:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      label:
+                        type: string
+                anchorSources:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      value:
+                        type: number
+                      methodology:
+                        type: string
+                      sourceUrl:
+                        type: string
+                      asOf:
+                        type: string
+                competitiveStructure:
+                  type: object
+                  properties:
+                    players:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          share:
+                            type: number
+                          techType:
+                            type: string
+                          capacityMWe:
+                            type: number
+                          projectStatus:
+                            type: string
+                          evidenceRef:
+                            type: string
+                demandPipeline:
+                  type: array
+                  items:
+                    type: object
+                    description: Named project/program with demand estimate and confidence tier.
+                regulatoryComparison:
+                  type: array
+                  items:
+                    type: object
+                    description: Per-jurisdiction regulatory posture entry.
+                sectionConfidence:
+                  type: array
+                  items:
+                    type: object
+                    description: Per-report-section confidence grade + rationale.
+                killCriteriaProposals:
+                  type: array
+                  items:
+                    type: object
+                    description: Proposed Kill Criteria entries for registry consideration (proposal only).
+                verificationLedger:
+                  type: array
+                  items:
+                    type: object
+                    description: Explicit could-verify / could-not-verify declaration list.
+                ragCapRecommendation:
+                  type: object
+                  description: Proposed RAG-grade cap driven by the weakest linked evidence.
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '201':
+          description: Version created.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/market-overview/industry/{industryId}:
     get:
       operationId: getMarketIndustry

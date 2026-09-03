@@ -77,6 +77,17 @@ export async function POST(request: Request) {
   // to 'completed' when done, so the UI can poll the "분석 중" state.
   void runSizingPipeline(db, analysisId).catch((err) => {
     console.error("market-sizing pipeline failed:", err);
+    // Defense in depth: the pipeline itself marks the row 'failed' on error,
+    // but if the failure happened before it could write (e.g. DB connection
+    // failure), this catch is the last chance to avoid a stuck 'in_progress' row.
+    try {
+      db.run(
+        "UPDATE market_sizing_analysis SET status = 'failed', error_message = ? WHERE id = ? AND status = 'in_progress'",
+        [(err instanceof Error ? err.message : String(err)).slice(0, 2000), analysisId],
+      );
+    } catch (dbErr) {
+      console.error("market-sizing pipeline: failed to mark analysis failed:", dbErr);
+    }
   });
 
   return ok({ analysis_id: analysisId, reused: false }, 201, { status: "in_progress" });

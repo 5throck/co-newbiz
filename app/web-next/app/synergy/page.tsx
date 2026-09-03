@@ -410,6 +410,28 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
   const inProgress = analysis.status === "in_progress";
   const ct = useChartTheme(); // 리포트 차트 테마 — 훅은 컴포넌트 최상위에서 1회
   const analysisDate = latest?.created_at?.slice(0, 10) ?? analysis.created_at.slice(0, 10);
+  const router = useRouter();
+  const [advancing, setAdvancing] = useState(false);
+  const [advanceError, setAdvanceError] = useState<string | null>(null);
+
+  // S3 Short List -> S4 route-decision handoff: mark the linked opportunity
+  // "selected" and hand the synergy rationale to /route-decision as a
+  // pre-fill starting point (editable, not locked).
+  const opportunityId = p?.opportunity?.id ?? analysis.opportunity_id ?? null;
+  const advanceToRouteDecision = useCallback(async () => {
+    if (!opportunityId || advancing) return;
+    setAdvancing(true);
+    setAdvanceError(null);
+    try {
+      await api.put(`/api/opportunities/${encodeURIComponent(opportunityId)}`, { status: "selected" });
+      const rationale = p?.synergyRationale ?? "";
+      router.push(`/route-decision?opportunity=${encodeURIComponent(opportunityId)}&rationale=${encodeURIComponent(rationale)}`);
+    } catch (err) {
+      setAdvanceError(err instanceof Error ? err.message : "S4 진행 실패");
+    } finally {
+      setAdvancing(false);
+    }
+  }, [opportunityId, advancing, p?.synergyRationale, router]);
   return (
     <section aria-label="시너지 정합성 리포트" className="market-section sizing-step">
       <SectionToolbar
@@ -595,9 +617,21 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
                   ))}
                 </tbody>
               </table>
-              <p className="mt-2 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">
-                Short List 확정 이후 흐름(트랙 결정·대상 스크리닝)은 flow.spec v2.0.0 재설계에 따라 재구축 예정입니다.
-              </p>
+              {/* Short List -> S4 route-decision handoff (opportunity.status -> selected,
+                  rationale carried over as an editable starting point). */}
+              {opportunityId ? (
+                <div className="flex items-center gap-2 mt-2">
+                  <button type="button" className="btn-ghost" disabled={advancing} onClick={() => void advanceToRouteDecision()}>
+                    {advancing ? "S4로 진행 중..." : "S4로 진행"}
+                  </button>
+                  <span className="text-[0.78rem] text-[color:var(--muted-fg)]">연결 기회를 &quot;selected&quot;로 표시하고 트랙 결정(/route-decision)으로 이동합니다.</span>
+                </div>
+              ) : (
+                <p className="mt-2 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">
+                  S4로 진행하려면 이 분석에 연결된 기회(S2)가 필요합니다 — 새 분석 시 "연결 기회"를 선택하세요.
+                </p>
+              )}
+              {advanceError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mt-1">{advanceError}</p>}
             </div>
           )}
 

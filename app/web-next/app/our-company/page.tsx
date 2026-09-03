@@ -455,6 +455,7 @@ export function OurCompanyView() {
                 <tr>
                   <th scope="col">회사명</th><th scope="col">역할</th><th scope="col">DART 고유번호</th>
                   <th scope="col">분석 상태</th><th scope="col">분석일</th>
+                  <th scope="col"><span className="sr-only">관리</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -701,6 +702,7 @@ export function OurCompanyView() {
                           </tbody>
                         </table>
                       </div>
+                      <p className="text-[0.72rem] text-[color:var(--muted-fg)]">출처: <span className="status-chip status-green">DART</span> 전자공시 사업보고서{profile.dartFinancials?.reportUrl ? <> — <a href={profile.dartFinancials.reportUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문 보기</a></> : null}</p>
                     </>
                   );
                 })() : (

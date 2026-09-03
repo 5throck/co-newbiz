@@ -92,7 +92,7 @@ const num = (v: unknown, fallback: number): number => (typeof v === "number" && 
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" && v.trim() ? v.trim() : fallback);
 
 export async function runSizingPipeline(db: Database, analysisId: string): Promise<void> {
-  const analysis = db
+  const row = db
     .query(
       `SELECT a.id, a.industry_id, i.name_ko, i.ksic_code
        FROM market_sizing_analysis a JOIN md_industry i ON i.id = a.industry_id
@@ -101,11 +101,25 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     .get(analysisId) as
     | { id: string; industry_id: string; name_ko: string; ksic_code: string | null }
     | null;
-  if (!analysis) throw new Error(`analysis ${analysisId} not found`);
+  if (!row) throw new Error(`analysis ${analysisId} not found`);
+  const analysis = row; // non-null alias — narrowing does not reach the nested step functions
   const industry = analysis.name_ko;
   const now = () => new Date().toISOString();
   const advance = (step: number) => db.run("UPDATE market_sizing_analysis SET current_step = ? WHERE id = ?", [step, analysis.id]);
   const stepSummaries: StepSummary[] = [];
+
+  try {
+    await runSteps();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    db.run(
+      "UPDATE market_sizing_analysis SET status = 'failed', error_message = ? WHERE id = ?",
+      [message.slice(0, 2000), analysis.id],
+    );
+    throw err;
+  }
+
+  async function runSteps(): Promise<void> {
 
   // ── Step 1: 시장 구조 정의 (분석 축 + 산업 사슬 방향) ──
   advance(1);
@@ -433,6 +447,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       [now(), analysis.id],
     );
   })();
+  }
 }
 
 function r2(v: number): number {
