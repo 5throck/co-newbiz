@@ -1,15 +1,16 @@
 // Process engine — docs/process-flow.md. Computes the derived process state
-// for an Opportunity (S1→S7) from persisted artifacts and gate decisions.
-// current_stage is NEVER stored: UI and (future) agent orchestrators both call
-// evaluateProcess().
+// for an Opportunity (S1→S7) or a promoted Project (S8→S11, ADR-0095) from
+// persisted artifacts and gate decisions. current_stage is NEVER stored: UI and
+// (future) agent orchestrators both call evaluateProcess().
 //
-// Opportunity는 S1~S7 라이프사이클 캐리어다 (ADR-0094) — spec의 project 엔티티는
-// S8+ 승격 시점에 도입하며, S5~S7 화면·API는 모두 opportunityId 기준으로 동작한다.
-// 비적용 단계(brownfield의 S5, greenfield의 S6/S7)는 'skipped'로 표시된다.
+// Opportunity는 S1~S7 라이프사이클 캐리어다 (ADR-0094) — 승격(promotion,
+// ADR-0095) 이후 project가 S8~S11 캐리어가 되며, S5~S7 화면·API는 모두
+// opportunityId 기준으로 동작한다. 비적용 단계(brownfield의 S5, greenfield의
+// S6/S7)는 'skipped'로 표시된다.
 import { getDb } from "../../../db/client.ts";
 import { listTargets, screeningSummary } from "./brownfield-targets.ts";
 
-export type StageId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7";
+export type StageId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11";
 export type GateId = "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
 export type GateVerdict = "pending" | "go" | "hold" | "kill";
 
@@ -31,7 +32,21 @@ export const STAGES: StageDefinition[] = [
   { id: "S5", name: "역량 평가·진출전략", sequence: 5, objective: "스스로 진입할 수 있는가?", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차·해소 방식", "진출전략", "검토한 대안"] },
   { id: "S6", name: "대상 후보 발굴", sequence: 6, objective: "누구와 결합할 것인가?", applicableTracks: ["brownfield"], gateIds: ["pre_fs"], requiredArtifacts: ["Target Universe 정의", "Long List 최소 커버리지"] },
   { id: "S7", name: "대상 스크리닝", sequence: 7, objective: "어떤 대상이 유망한가?", applicableTracks: ["brownfield"], gateIds: ["target_screening"], requiredArtifacts: ["후보별 스크리닝 근거", "Short List 또는 제외 사유"] },
+  // S8~S11 (flow.spec v2.0.0, ADR-0074/0095) — project 엔티티 단계.
+  { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다", applicableTracks: ["greenfield", "brownfield"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션)", "시뮬레이션 NPV 분위수"] },
+  { id: "S9", name: "실사·검증", sequence: 9, objective: "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 Short List 대상 DD, greenfield는 실현가능성 검증)", applicableTracks: ["greenfield", "brownfield"], gateIds: ["dd"], requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"] },
+  { id: "S10", name: "투자심사·실행", sequence: 10, objective: "투자할 것인가? — 투자 구조(Deal/Investment Structure: 비히클·자금 조달·지급 구조)를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다", applicableTracks: ["greenfield", "brownfield"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["IC 패키지", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"] },
+  { id: "S11", name: "사후 관리", sequence: 11, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["greenfield", "brownfield"], gateIds: [], requiredArtifacts: ["벤처 스코어카드"] },
 ];
+
+/** S11 포트폴리오 전환 결정 어휘 5종 (flow.spec S11, portfolio-venture-monitoring). */
+export const PORTFOLIO_TRANSITIONS = [
+  "next_tranche_released",
+  "held_evidence_incomplete",
+  "graduate_to_core",
+  "reduce_or_divest",
+  "kill_with_learning_captured",
+] as const;
 
 export type ProcessEntity =
   | { type: "opportunity"; id: string }
@@ -195,6 +210,96 @@ function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): 
   return { complete, blockers, missing };
 }
 
+interface ProjectRowLite {
+  id: string;
+  project_no: string;
+  origin: string | null;
+  track: "greenfield" | "brownfield" | null;
+  source_opportunity_id: string | null;
+}
+
+/**
+ * Project stage completion (S8–S11). Each check is deliberately a SIMPLE
+ * existing-schema probe — Phase 3 (FS), Phase 4 (DD), Phase 5 (IC/설립) and
+ * Phase 6 (포트폴리오) refine each one against their own richer artifacts;
+ * this skeleton (ADR-0095) only pins the type and the spec port. Marked
+ * REFINEMENT points below.
+ */
+function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, gateStatus: Partial<Record<GateId, GateVerdict>>): { complete: boolean; blockers: string[]; missing: string[] } {
+  const blockers: string[] = [];
+  const missing: string[] = [];
+  const db = getDb();
+  if (stage.id === "S8") {
+    // REFINEMENT (Phase 3): 민감도(NPV 분위수·시뮬레이션)까지 검사하도록 강화.
+    const model = db
+      .query("SELECT id, kind FROM business_case_model WHERE project_id = ? ORDER BY created_at DESC LIMIT 1")
+      .get(project.id) as { id: string; kind: string } | undefined;
+    if (!model) {
+      blockers.push("Business Case / 밸류에이션 모델이 필요합니다");
+      missing.push("Business Case(비용·수익 라인 또는 밸류에이션)");
+    } else {
+      const lines = (db.query("SELECT COUNT(*) c FROM business_case_line WHERE model_id = ?").get(model.id) as { c: number }).c;
+      // 밸류에이션 모델은 라인 없이 정량 평가로 성립할 수 있다 (brownfield).
+      if (lines === 0 && model.kind !== "valuation") {
+        blockers.push("정량 평가(비용·수익 라인)가 필요합니다");
+        missing.push("시뮬레이션 NPV 분위수");
+      }
+    }
+  } else if (stage.id === "S9") {
+    // REFINEMENT (Phase 4): 적용 체크리스트 범위·필수 미충족 0건 검사로 강화.
+    const state = db
+      .query(
+        `SELECT COUNT(*) AS total,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending
+         FROM project_checklist_item_state WHERE project_id = ?`,
+      )
+      .get(project.id) as { total: number; pending: number | null };
+    if (state.total === 0) {
+      blockers.push("DD 체크리스트 판정이 필요합니다");
+      missing.push("DD 체크리스트 판정(필수 항목 해소)");
+    } else if ((state.pending ?? 0) > 0) {
+      blockers.push(`판정 대기 체크리스트 항목 ${state.pending}건이 있습니다`);
+      missing.push("DD 체크리스트 판정(필수 항목 해소)");
+    }
+  } else if (stage.id === "S10") {
+    // IC 승인은 게이트 기록으로만 판단한다 (사람 최종 승인, ADR-0053).
+    if (gateStatus.entity_ic !== "go") {
+      blockers.push("Entity IC 승인 기록이 필요합니다");
+      missing.push("Entity IC 승인");
+    }
+    if (gateStatus.group_ic !== "go") {
+      blockers.push("Group IC 승인 기록이 필요합니다");
+      missing.push("Group IC 승인");
+    }
+    // 설립 실행 기록은 opportunity 백링크로 조인한다 (0059는 opportunity-keyed,
+    // project_id 백필은 Phase 5 — ADR-0095 Consequences).
+    if (project.origin === "internal" || project.origin === "joint") {
+      if (!project.source_opportunity_id) {
+        blockers.push("설립 실행 기록을 조회할 opportunity 연결이 없습니다");
+        missing.push("설립 실행 기록");
+      } else {
+        const done = (db
+          .query("SELECT COUNT(*) c FROM entity_establishment_step WHERE opportunity_id = ? AND status = 'done'")
+          .get(project.source_opportunity_id) as { c: number }).c;
+        if (done < 5) {
+          blockers.push(`설립 실행 미완료 (${done}/5단계)`);
+          missing.push("설립 실행 기록(5단계 완료)");
+        }
+      }
+    }
+  } else if (stage.id === "S11") {
+    // REFINEMENT (Phase 6): 분기 최신성(현재 분기 vs 최신 review_cycle) 검사로 강화.
+    const cards = (db
+      .query("SELECT COUNT(*) c FROM venture_scorecard WHERE project_id = ?")
+      .get(project.id) as { c: number }).c;
+    if (cards === 0) {
+      blockers.push("벤처 스코어카드가 필요합니다");
+      missing.push("벤처 스코어카드");
+    }
+  }
+  return { complete: missing.length === 0, blockers, missing };
+}
+
 interface OpportunityRow {
   id: string;
   name: string;
@@ -226,8 +331,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     const opp = db
       .query("SELECT * FROM opportunity WHERE id = ?")
       .get(entity.id) as OpportunityRow | undefined;
-    if (!opp) throw new Error(`opportunity ${entity.id} not found`);
-    const gates = latestGateDecisions("opportunity", entity.id);
+    if (!opp) throw new Error(`opportunity ${entity.id} not found`);    const gates = latestGateDecisions("opportunity", entity.id);
     gateStatus = Object.fromEntries([...gates.entries()].map(([g, v]) => [g, v.decision]));
     terminated = [...gates.values()].some((g) => g.decision === "kill");
     const screening = gates.get("screening");
@@ -278,6 +382,79 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
       if (screening.decision === "hold") {
         blockers.push(`Screening 게이트 HOLD — 보완 필요: ${(screening.missing ?? []).join(", ") || "근거 확인"}`);
         requiredArtifacts = screening.missing ?? requiredArtifacts;
+      }
+    }
+  }
+
+  else if (entity.type === "project") {
+    // S8~S11 캐리어 (ADR-0095). S1~S7은 opportunity 캐리어에서 완료된 선행
+    // 단계다 — 승격 전제조건(promoteOpportunity)이 트랙별 선행 산출(S5 또는 S7
+    // Short List)을 이미 검증했으므로 프로젝트 평가에서는 모두 complete로 표시한다.
+    const project = db
+      .query("SELECT id, project_no, origin, track, source_opportunity_id FROM md_project WHERE id = ?")
+      .get(entity.id) as ProjectRowLite | undefined;
+    if (!project) throw new Error(`project ${entity.id} not found`);
+    const gates = latestGateDecisions("project", entity.id);
+    gateStatus = Object.fromEntries([...gates.entries()].map(([g, v]) => [g, v.decision]));
+    terminated = [...gates.values()].some((g) => g.decision === "kill");
+    track = project.track;
+    subTrack = project.source_opportunity_id
+      ? (latestRouteDecision(project.source_opportunity_id)?.sub_track ?? null)
+      : null;
+
+    let priorComplete = true;
+    for (const stage of STAGES) {
+      if (terminated) {
+        stages.push({ ...stage, status: "terminated" });
+        continue;
+      }
+      if (track !== null && !stage.applicableTracks.includes("all") && !stage.applicableTracks.includes(track)) {
+        stages.push({ ...stage, status: "skipped" });
+        continue;
+      }
+      // 선행 opportunity 캐리어 단계(S1~S7): 승격된 프로젝트에서는 완료로 단정한다.
+      if (stage.sequence <= 7) {
+        if (!priorComplete) {
+          blockedStages.push(stage.id);
+          stages.push({ ...stage, status: "locked" });
+          continue;
+        }
+        completedStages.push(stage.id);
+        stages.push({ ...stage, status: "complete" });
+        continue;
+      }
+      if (!priorComplete) {
+        blockedStages.push(stage.id);
+        stages.push({ ...stage, status: "locked" });
+        continue;
+      }
+      const res = evaluateProjectStage(stage, project, gateStatus);
+      if (res.complete) {
+        completedStages.push(stage.id);
+        stages.push({ ...stage, status: "complete" });
+      } else {
+        priorComplete = false;
+        if (currentStage === null) {
+          currentStage = stage.id;
+          requiredArtifacts = res.missing;
+          blockers = res.blockers;
+          stages.push({ ...stage, status: "current" });
+        } else {
+          blockedStages.push(stage.id);
+          stages.push({ ...stage, status: "locked" });
+        }
+      }
+    }
+    // HOLD 게이트는 재평가를 막을 뿐 작업 자체를 막지 않는다 — current 단계의
+    // 게이트에 HOLD 기록이 있으면 블로커로 노출한다 (기회 평가와 동일 규칙).
+    if (!terminated && currentStage !== null) {
+      const current = STAGES.find((s) => s.id === currentStage);
+      for (const g of current?.gateIds ?? []) {
+        const verdict = gates.get(g);
+        if (verdict?.decision === "hold") {
+          blockers.push(`${g} 게이트 HOLD — 보완 필요: ${(verdict.missing ?? []).join(", ") || "근거 확인"}`);
+          requiredArtifacts = verdict.missing ?? requiredArtifacts;
+        }
       }
     }
   }

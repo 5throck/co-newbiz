@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 552,
+    "node_count": 553,
     "edge_count": 942
   },
   "nodes": [
@@ -476,6 +476,11 @@
       "id": "adr:0094",
       "type": "adr",
       "label": "ADR-0094: S4 re-review, S5–S7 stage completion, opportunity-keyed gates, and S3 role separation"
+    },
+    {
+      "id": "adr:0095",
+      "type": "adr",
+      "label": "ADR-0095: Project promotion foundation — opportunity→project transition carrier for S8–S11"
     },
     {
       "id": "agent:antitrust-agent",
