@@ -52,7 +52,7 @@ export interface ProcessEvaluation {
   stages: Array<StageDefinition & { status: "complete" | "current" | "blocked" | "locked" | "skipped" | "terminated" }>;
 }
 
-function latestGateDecisions(entityType: "opportunity" | "project", entityId: string): Map<GateId, { decision: GateVerdict; missing: string[] | null; rationale: string }> {
+export function latestGateDecisions(entityType: "opportunity" | "project", entityId: string): Map<GateId, { decision: GateVerdict; missing: string[] | null; rationale: string }> {
   const rows = getDb()
     .query(
       `SELECT gate, decision, missing_artifacts_json, rationale FROM (
@@ -63,6 +63,14 @@ function latestGateDecisions(entityType: "opportunity" | "project", entityId: st
     )
     .all(entityType, entityId) as Array<{ gate: GateId; decision: GateVerdict; missing_artifacts_json: string | null; rationale: string }>;
   return new Map(rows.map((r) => [r.gate, { decision: r.decision, missing: r.missing_artifacts_json ? JSON.parse(r.missing_artifacts_json) : null, rationale: r.rationale }]));
+}
+// Latest gate_decision per gate is shared by the process engine and the
+// gate-decisions API so the tie-breaking rule cannot drift between surfaces.
+
+export function latestRouteDecision(opportunityId: string): { id: string; track: "greenfield" | "brownfield"; sub_track: string | null } | undefined {
+  return getDb()
+    .query("SELECT id, track, sub_track FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
+    .get(opportunityId) as { id: string; track: "greenfield" | "brownfield"; sub_track: string | null } | undefined;
 }
 
 // ── Opportunity stage completion (S1–S3) ─────────────────────────────────
@@ -110,13 +118,20 @@ function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): 
   } else if (stage.id === "S3") {
     if (opp.synergy_score === null) { blockers.push("시너지 평가가 필요합니다"); missing.push("시너지 평가"); }
     if (!opp.rationale) { blockers.push("전략적 적합성 판단 근거가 필요합니다"); missing.push("전략적 적합성 판단"); }
-    complete = blockers.length === 0;
+    // flow.spec S3 completionCriteria: 최소 1개 기회가 selected. 이 기회 자체가
+    // 진출 검토 대상으로 선택되지 않았으면 S4로 진행할 수 없다.
+    if (opp.status === "dropped") {
+      blockers.push("제외(dropped)된 기회입니다 — S4 진행 대상이 아닙니다");
+      missing.push("기회 선택(selected)");
+    } else if (opp.status !== "selected") {
+      blockers.push("기회 선택(selected)이 필요합니다 — 시너지·적합성 평가 후 진출 대상으로 선택");
+      missing.push("기회 선택(selected)");
+    }
+    complete = missing.length === 0;
   } else if (stage.id === "S4") {
     // flow.spec S4 completionCriteria: route_decision 존재(트랙 필수).
     // brownfield는 sub_track(7 라우트 중 1)과 5-criteria 채점까지 요구한다.
-    const decision = getDb()
-      .query("SELECT id, track, sub_track FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
-      .get(opp.id) as { id: string; track: string; sub_track: string | null } | undefined;
+    const decision = latestRouteDecision(opp.id);
     if (!decision) {
       blockers.push("진출방식 결정(route_decision)이 필요합니다");
       missing.push("route_decision(트랙)");
@@ -218,9 +233,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     const screening = gates.get("screening");
 
     // 트랙은 S4 route_decision에서 도출한다 (S4 이전에는 unknown → S5~S7 locked).
-    const routeDecision = db
-      .query("SELECT track, sub_track FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
-      .get(entity.id) as { track: "greenfield" | "brownfield"; sub_track: string | null } | undefined;
+    const routeDecision = latestRouteDecision(entity.id);
     track = routeDecision?.track ?? null;
     subTrack = routeDecision?.sub_track ?? null;
 
@@ -269,9 +282,12 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     }
   }
 
+  // 다음 단계는 currentStage 바로 다음이 아니라, 트랙 비적용(skipped) 단계를
+  // 건너뛴 첫 실제 단계다 (brownfield S4 → nextStage S6, S5는 skip).
+  const currentSequence = currentStage ? STAGES.find((s) => s.id === currentStage)?.sequence ?? 0 : 0;
   const nextStage =
     currentStage && !terminated
-      ? (STAGES.find((s) => s.sequence === (STAGES.find((s) => s.id === currentStage)?.sequence ?? 0) + 1)?.id ?? null)
+      ? (stages.find((s) => s.sequence > currentSequence && s.status !== "skipped")?.id ?? null)
       : null;
 
   // Deduplicate blockers — the same blocker can be pushed by multiple stage

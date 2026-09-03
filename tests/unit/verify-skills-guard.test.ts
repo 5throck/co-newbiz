@@ -18,19 +18,22 @@ import { join } from "node:path";
 
 const SOURCE = readFileSync(join(import.meta.dirname, "../../scripts/verify-skills.ts"), "utf-8");
 
-test("generateSkillsIndex is OPT-IN — the only call site sits directly inside the --write-index guard", () => {
+test("generateSkillsIndex is gated — the only call site sits inside the isLegacyIndex guard", () => {
   // exactly two occurrences: the function definition + one guarded call site.
   // A re-added unconditional call anywhere else breaks this count.
   const occurrences = SOURCE.match(/generateSkillsIndex\(/g) ?? [];
   expect(occurrences.length).toBe(2);
-  expect(SOURCE).toMatch(
-    /if \(process\.argv\.includes\("--write-index"\)\) \{\s*await generateSkillsIndex\(checks\);/
-  );
+  expect(SOURCE).toMatch(/if \(isLegacyIndex\) \{\s*await generateSkillsIndex\(checks\);/);
 });
 
-test("the default (no-flag) run warns instead of writing — hand-maintained notice in the else branch", () => {
-  expect(SOURCE).toMatch(/else \{\s*console\.warn\(/);
-  expect(SOURCE).toContain("hand-maintained; generation is opt-in via --write-index");
+test("the gate keys off the SKILLS.md header — the hand-maintained lifecycle registry is never regenerated", () => {
+  // isLegacyIndex must be derived from the file's own header: only the
+  // legacy "# Skills Index" stub (or a missing file) may be rewritten;
+  // the hand-maintained "# SKILLS.md — Skill Lifecycle Registry" SSOT
+  // short-circuits the writer entirely.
+  expect(SOURCE).toMatch(/const isLegacyIndex =/);
+  expect(SOURCE).toMatch(/startsWith\("# Skills Index"\)/);
+  expect(SOURCE).toContain("hand-maintained SSOT registry");
 });
 
 test("the index write lives only inside generateSkillsIndex — exactly one Bun.write in the module", () => {

@@ -1,5 +1,6 @@
 // S5 역량 평가·진출전략 — 기회별 평가 상태 조회/저장.
 import { getDb } from "../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../lib/envelope.ts";
@@ -76,5 +77,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       ],
     );
   }
+  appendAudit(db, { actor: ctx.userId, action: "greenfield_assessment.save", target: `${oppId}:${existing ? "update" : "create"}`, now: ts });
   return ok({ id, updated_at: ts }, 200);
 }

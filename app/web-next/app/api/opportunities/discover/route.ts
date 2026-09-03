@@ -6,6 +6,7 @@
 // them from the recorded factors when no LLM is configured. Candidates are
 // inserted as `identified` — attractiveness evaluation happens in the funnel.
 import { getDb } from "../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../lib/llm.ts";
@@ -165,6 +166,12 @@ export async function POST(request: Request) {
     }
   }
   const inserted = insertedRows.map(({ id, o }) => ({ id, name: o.name, value_chain_node: o.value_chain_node, attractiveness_score: o.attractiveness_score, source: o.source }));
+  appendAudit(db, {
+    actor: auth.auth.userId,
+    action: "opportunity.discover",
+    target: `${industry}:${insertedRows.map((r) => r.id).join(",")}`,
+    now: ts,
+  });
 
   return ok({ industry, inserted, duplicates_skipped: duplicatesSkipped, source: llmRes.source }, 201, { count: inserted.length });
 }

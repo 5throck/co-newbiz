@@ -22,11 +22,21 @@ function winQuote(path: string): string {
   return process.platform === "win32" ? `"${path.replace(/"/g, '\\"')}"` : path;
 }
 
+// Prefer the project venv (python/requirements.txt) when present — PEP 668
+// system pythons often lack pandas/docx and refuse global pip installs.
+function resolvePythonBin(scriptDir: string): string {
+  if (process.platform !== "win32") {
+    const venvBin = resolve(scriptDir, "..", "..", ".venv", "bin", "python3");
+    if (existsSync(venvBin)) return venvBin;
+  }
+  return process.platform === "win32" ? "python" : "python3";
+}
+
 function runPythonScript(scriptName: string, args: string[]): Promise<string> {
   return new Promise((resolveFn, reject) => {
     const scriptDir = dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
     const scriptPath = resolve(scriptDir, "..", "..", "python", scriptName);
-    const pythonBin = process.platform === "win32" ? "python" : "python3";
+    const pythonBin = resolvePythonBin(scriptDir);
     const quotedArgs = args.map(winQuote);
     const proc = spawn(pythonBin, [scriptPath, ...quotedArgs], {
       stdio: ["ignore", "pipe", "pipe"],

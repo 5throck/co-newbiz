@@ -1,9 +1,15 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
- * Process tools — ADR-0074 Process Meta Model Platform.
- * All thin REST wrappers (ADR-0011). Exposes S1–S7 stage evaluation,
- * agent stage execution, gate decisions, opportunity funnel, and
- * business case to MCP clients (Claude Desktop).
+ * Process tools — ADR-0074 Process Meta Model Platform, ADR-0094
+ * opportunity-keyed addressing. All thin REST wrappers (ADR-0011) over
+ * /api/opportunities/**. Exposes the S2 opportunity funnel, S1-S7 stage
+ * evaluation, gate decisions, and the S4 route decision to MCP clients
+ * (Claude Desktop).
+ *
+ * promote_opportunity removed — its /api/opportunities/:id/promote route
+ * does not exist (promotion now happens through the opportunity lifecycle
+ * routes); run_stage_agents likewise stays unregistered until its REST
+ * route is built (ADR-0094 deferral). Do not advertise dead endpoints.
  */
 
 import { rest } from "../shared/rest-client.ts";
@@ -22,14 +28,6 @@ export async function createOpportunity(body: {
   status?: string; rationale?: string;
 }) {
   return rest.post("/api/opportunities", body);
-}
-
-export async function updateOpportunity(id: string, body: Record<string, unknown>) {
-  return rest.put(`/api/opportunities/${encodeURIComponent(id)}`, body);
-}
-
-export async function promoteOpportunity(id: string, body: { project_no: string }) {
-  return rest.post(`/api/opportunities/${encodeURIComponent(id)}/promote`, body);
 }
 
 // ── Process evaluation (opportunity = S1~S7 lifecycle carrier, ADR-0094) ──

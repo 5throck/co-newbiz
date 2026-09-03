@@ -1,14 +1,12 @@
-// @version 1.2.0
+// @version 1.3.0
 /**
- * Market/assumption tools — mcp-integration.md §3. Thin REST wrappers over
- * app/server/analysis.ts (Wave 5.7B + engine-1/2): the membership gate, the
- * FR-DATA-07 rationale rule, and the audit log all live in the REST layer —
- * this file only relays, per ADR-0011. set_assumption and run_simulation
- * (✱ write) follow the manage_watch pattern: required fields are checked
- * here so a malformed call fails before any REST round-trip, scope
- * enforcement stays REST-side. compare_runs (engine-1) relays the
- * variable-level diff bridge — the REST layer refuses cross-project pairs,
- * so this tool never needs to.
+ * Market data read tools — mcp-integration.md §3. Thin REST wrappers over
+ * /api/series and /api/data-changes: the membership gate and the audit log
+ * all live in the REST layer — this file only relays, per ADR-0011.
+ *
+ * ADR-0094: get_assumptions / set_assumption / compare_runs / run_simulation
+ * were removed — their backing surfaces (/api/assumptions, /api/runs,
+ * /api/simulations) were deleted with the project-keyed REST tree.
  */
 
 import { rest } from "../shared/rest-client.ts";
@@ -34,70 +32,4 @@ export async function listDataChanges(opts: { series_id?: string; limit?: number
   if (typeof opts.limit === "number") params.set("limit", String(opts.limit));
   const qs = params.toString();
   return rest.get(`/api/data-changes${qs ? `?${qs}` : ""}`);
-}
-
-export async function getAssumptions(opts: { run_id?: string; key?: string } = {}) {
-  const params = new URLSearchParams();
-  if (opts.run_id) params.set("run_id", opts.run_id);
-  if (opts.key) params.set("key", opts.key);
-  const qs = params.toString();
-  return rest.get(`/api/assumptions${qs ? `?${qs}` : ""}`);
-}
-
-export interface SetAssumptionInput {
-  run_id: string;
-  assumption_key: string;
-  kind: "live" | "user" | "derived" | "assumed";
-  value: number;
-  as_of: string;
-  rationale?: string;
-  anchor_ref?: string;
-  ttl_days?: number;
-}
-
-/**
- * ✱ write — needs the token's write scope. kind='assumed' without a
- * non-empty rationale is rejected by the REST layer (FR-DATA-07), and the
- * DB CHECK behind it — this tool never relaxes either.
- */
-export async function setAssumption(input: SetAssumptionInput) {
-  if (!input.run_id?.trim()) throw new Error("run_id is required.");
-  if (!input.assumption_key?.trim()) throw new Error("assumption_key is required.");
-  return rest.post("/api/assumptions", input);
-}
-
-/**
- * Variable-level bridge between two runs of one project (engine-1):
- * changed/added/removed per assumption_key plus both input hashes. The
- * REST layer enforces same-project visibility (404 for a non-member, 400
- * for a cross-project pair) — this relay only checks its own arguments.
- */
-export async function compareRuns(runA: string, runB: string) {
-  if (!runA?.trim()) throw new Error("runA is required.");
-  if (!runB?.trim()) throw new Error("runB is required.");
-  return rest.get(`/api/runs/${encodeURIComponent(runA)}/diff/${encodeURIComponent(runB)}`);
-}
-
-export interface RunSimulationInput {
-  run_id: string;
-  seed?: number;
-  iterations?: number;
-}
-
-/**
- * ✱ write — needs the token's write scope. The REST layer composes the
- * scenario (sim.* run inputs + the project's contingent liabilities),
- * spawns the seeded Monte Carlo engine, and returns the persisted quantile
- * summary; an omitted seed defaults to one derived from the run's
- * input_hash, so identical inputs stay reproducible either way.
- */
-export async function runSimulation(input: RunSimulationInput) {
-  if (!input.run_id?.trim()) throw new Error("run_id is required.");
-  if (input.seed !== undefined && (!Number.isInteger(input.seed) || input.seed < 0)) {
-    throw new Error("seed must be a non-negative integer.");
-  }
-  if (input.iterations !== undefined && (!Number.isInteger(input.iterations) || input.iterations < 1)) {
-    throw new Error("iterations must be a positive integer.");
-  }
-  return rest.post("/api/simulations", input);
 }

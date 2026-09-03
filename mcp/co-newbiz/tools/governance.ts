@@ -1,28 +1,14 @@
 // @version 1.0.0
 /**
- * Governance read tools — mcp-integration.md §3. Every project-scoped call
- * relays the REST layer's own membership gate: a non-member project id
- * returns the REST 404 envelope unchanged (existence stays protected, same
- * as the web app — FR-SEC-01), never rewritten into an MCP-specific error.
+ * Governance read tools — mcp-integration.md §3.
+ *
+ * ADR-0094: the project-scoped governance reads (rag / approval-chain /
+ * compliance-checks / waivers) were removed — their backing
+ * /api/projects/** routes were deleted. The live lookups remain:
+ * /api/interpretations and /api/procedures/resolve.
  */
 
 import { rest } from "../shared/rest-client.ts";
-
-export async function getRagAssessment(projectId: string) {
-  return rest.get(`/api/projects/${encodeURIComponent(projectId)}/rag`);
-}
-
-export async function getApprovalChain(projectId: string) {
-  return rest.get(`/api/projects/${encodeURIComponent(projectId)}/approval-chain`);
-}
-
-export async function getComplianceStatus(projectId: string) {
-  return rest.get(`/api/projects/${encodeURIComponent(projectId)}/compliance-checks`);
-}
-
-export async function listWaivers(projectId: string) {
-  return rest.get(`/api/projects/${encodeURIComponent(projectId)}/waivers`);
-}
 
 export async function searchInterpretations(query: { doc?: string; clause?: string; q?: string }) {
   const params = new URLSearchParams();

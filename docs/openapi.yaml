@@ -563,6 +563,57 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/admin/users/{userId}/tokens:
+    get:
+      operationId: listUserTokens
+      summary: Token inventory for one account — metadata only, never token material. Admin role.
+      tags:
+        - Tokens
+      parameters:
+        - $ref: '#/components/parameters/MemberUserId'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: adminIssueUserToken
+      summary: Issue an API token on a user's behalf (label + scopes). Admin role; audited; token value returned once.
+      tags:
+        - Tokens
+      parameters:
+        - $ref: '#/components/parameters/MemberUserId'
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: adminRevokeUserToken
+      summary: Revoke one of a user's API tokens. Admin role; audited.
+      tags:
+        - Tokens
+      parameters:
+        - $ref: '#/components/parameters/MemberUserId'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/audit-log:
     get:
       operationId: getAuditLog
@@ -582,6 +633,64 @@ paths:
           schema:
             type: string
           description: created_at cursor for descending pagination.
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/audit-log/stats:
+    get:
+      operationId: getAuditLogStats
+      summary: Audit-log aggregate counts (action/actor rollups). Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/notifications:
+    get:
+      operationId: adminListNotifications
+      summary: All users' notification rows for the admin console. Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/system-stats:
+    get:
+      operationId: getSystemStats
+      summary: System-level counters (tables, jobs, data freshness) for the admin console. Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/schedule-jobs/{jobKey}/runs:
+    get:
+      operationId: listScheduleJobRuns
+      summary: Run history for one scheduled job. Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: jobKey
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           $ref: '#/components/responses/Ok'
@@ -647,6 +756,20 @@ paths:
     put:
       operationId: updateMasterDataCode
       summary: Update a master-data code row (table/id/fields; allow-listed). Admin role; audited.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      operationId: deleteMasterDataCode
+      summary: Delete (deactivate) a master-data code row (table/id; allow-listed). Admin role; audited.
       tags:
         - Admin
       responses:
@@ -808,6 +931,26 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+    delete:
+      operationId: deleteOpportunity
+      summary: Drop an opportunity from the funnel (S2). Analyst+; audited.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/opportunities/{id}/process:
     get:
       operationId: getOpportunityProcess
@@ -1420,6 +1563,28 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: deleteSynergyAnalysis
+      summary: Delete a synergy analysis and its versions.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/synergy/analyses/{id}/rerun:
+    post:
+      operationId: rerunSynergyAnalysis
+      summary: Re-run a synergy analysis, appending a new version.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /api/synergy/dart-search:
     get:
@@ -1457,6 +1622,82 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/opportunities/{id}/establishment:
+    get:
+      operationId: getOpportunityEstablishment
+      summary: Entity-establishment review state for the opportunity (S6).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: putOpportunityEstablishment
+      summary: Save the entity-establishment review payload (S6). Analyst+; audited.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/opportunities/{id}/gate-decisions:
+    get:
+      operationId: listOpportunityGateDecisions
+      summary: Gate decision records (GO/HOLD/KILL) for the opportunity (S1-S7 lifecycle).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: recordOpportunityGateDecision
+      summary: Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/opportunities/discover:
     post:
       operationId: discoverOpportunities
@@ -1600,6 +1841,16 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+    patch:
+      operationId: updateCompanyGroup
+      summary: Rename / edit a company group.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /api/our-company/groups/{id}/members:
     post:
@@ -1684,6 +1935,16 @@ paths:
     get:
       operationId: listBrownfieldTargets
       summary: Long List + checklist definition + screening summaries.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: putBrownfieldTargets
+      summary: Bulk-replace the Long List target set.
       tags:
         - Analysis
       responses:

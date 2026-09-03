@@ -9,6 +9,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
+import { latestGateDecisions } from "../../../../../lib/process-flow.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
 const GATES = new Set(["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"]);
@@ -27,24 +28,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
        ORDER BY decided_at DESC`,
     )
     .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; decided_by: string; decided_at: string }>;
-  // Latest decision per gate (same ROW_NUMBER shape as lib/process-flow.ts).
-  const latest = db
-    .query(
-      `SELECT gate, decision, missing_artifacts_json, rationale FROM (
-         SELECT gate, decision, missing_artifacts_json, rationale,
-                ROW_NUMBER() OVER (PARTITION BY gate ORDER BY decided_at DESC, id DESC) AS rn
-         FROM gate_decision WHERE entity_type = 'opportunity' AND entity_id = ?
-       ) WHERE rn = 1`,
-    )
-    .all(id) as Array<{ gate: string; decision: string; missing_artifacts_json: string | null; rationale: string }>;
-  return ok({
-    latest: latest.map((g) => ({
-      gate: g.gate,
-      decision: g.decision,
-      rationale: g.rationale,
-      missing_artifacts: g.missing_artifacts_json ? (JSON.parse(g.missing_artifacts_json) as string[]) : null,
-    })),
-    history,
+  // Latest decision per gate — same helper as the process engine (ADR-0094),
+  // so the tie-breaking rule cannot drift between surfaces.
+  const latestMap = latestGateDecisions("opportunity", id);
+  const latest = [...latestMap.entries()].map(([gate, v]) => ({
+    gate,
+    decision: v.decision,
+    rationale: v.rationale,
+    missing_artifacts: v.missing,
+  }));
+  return ok({ latest, history,
   }, 200, { count: history.length });
 }
 

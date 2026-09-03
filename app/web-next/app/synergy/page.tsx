@@ -6,6 +6,7 @@ import { api } from "../../lib/api.ts";
 import { useConfirm } from "../../components/crud.tsx";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
+import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
 import dynamic from "next/dynamic";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
 
@@ -559,6 +560,14 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
                 <p className="mt-2 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">
                   S4로 진행하려면 이 분석에 연결된 기회(S2)가 필요합니다 — 새 분석 시 "연결 기회"를 선택하세요.
                 </p>
+              )}
+              {/* Screening gate — flow.spec S1~S3 gates: [screening]. S3 산출물이
+                  모이는 이 화면에서 GO/HOLD/KILL을 기록한다 (ADR-0094 경계 #2:
+                  기록 버튼은 사람의 몫). */}
+              {opportunityId && (
+                <div className="mt-4">
+                  <GateDecisionPanel opportunityId={opportunityId} gates={["screening"]} />
+                </div>
               )}
               {advanceError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mt-1">{advanceError}</p>}
             </div>
