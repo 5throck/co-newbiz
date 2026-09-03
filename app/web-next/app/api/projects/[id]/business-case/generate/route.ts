@@ -1,0 +1,30 @@
+// POST /api/projects/[id]/business-case/generate — trigger the automatic
+// 3-case generation (ADR-0098 §3). Async-STYLE contract ({ runId }), but
+// bun's SQLite layer is synchronous, so generation completes within the
+// request; the process_run/activity_run/agent_run rows are written
+// progressively by runActivityChain, so the GET status route always shows
+// real per-activity state. Analyst+. Generation writes PROPOSALS only —
+// never an adoption marker, never a gate_decision (boundary #2).
+import { authenticate } from "../../../../../../lib/auth.ts";
+import { visibleProject } from "../../../../../../lib/project-visibility.ts";
+import { generateBusinessCases } from "../../../../../../lib/business-case-generator.ts";
+import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  const ctx = auth.auth;
+  if (ctx.role === "viewer") return forbidden("role_required", "사업성 분석 자동 생성은 analyst 역할 이상이어야 합니다.");
+  const { id } = await params;
+  if (!visibleProject(ctx, id)) return notFound();
+
+  try {
+    const result = await generateBusinessCases(id, { actor: ctx.userId, source: "web" });
+    if (result.status === "failed") {
+      return badRequest("generation_failed", `일부 활동이 실패했습니다 — run ${result.processRunId} 상태를 확인하세요.`);
+    }
+    return ok({ runId: result.processRunId, recommendedScenario: result.recommendedScenario }, 201);
+  } catch (err) {
+    return badRequest("generation_failed", err instanceof Error ? err.message : String(err));
+  }
+}

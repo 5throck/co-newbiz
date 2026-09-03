@@ -575,6 +575,15 @@ export function OpportunitiesView() {
                             삭제
                           </button>
                         )}
+                        {o.project_id && (
+                          <Link
+                            href={`/projects/${o.project_id}/business-case`}
+                            className="btn-ghost btn-sm"
+                            title="승격된 프로젝트의 S8 사업성 분석(Business Case) 화면으로 이동"
+                          >
+                            S8 사업성 분석
+                          </Link>
+                        )}
                       </span></td>
                     </tr>
                     {isOpen && (

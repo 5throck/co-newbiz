@@ -17,7 +17,7 @@ interface GateLatest {
 }
 interface GateHistoryRow extends GateLatest { id: string; decided_by: string; decided_at: string }
 
-export function GateDecisionPanel({ opportunityId, gates, killHint }: { opportunityId: string; gates: GateMetaId[]; killHint?: string | null }) {
+export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity" }: { opportunityId: string; gates: GateMetaId[]; killHint?: string | null; entityType?: "opportunity" | "project" }) {
   const { me } = useAuth();
   const canRecord = me?.role === "admin" || me?.role === "analyst";
   const [latest, setLatest] = useState<GateLatest[] | null>(null);
@@ -31,11 +31,15 @@ export function GateDecisionPanel({ opportunityId, gates, killHint }: { opportun
     missing: "",
   });
 
+  // Project-entity carrier (S8+, ADR-0095/0098) records through the project
+  // route; the default stays the S1~S7 opportunity route.
+  const basePath = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(opportunityId)}/gate-decisions`;
+
   const load = useCallback(() => {
-    api.get<{ latest: GateLatest[]; history: GateHistoryRow[] }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/gate-decisions`)
+    api.get<{ latest: GateLatest[]; history: GateHistoryRow[] }>(basePath)
       .then((r) => { setLatest(r.data.latest); setHistory(r.data.history); })
       .catch((e) => setError(e instanceof Error ? e.message : "게이트 상태 불러오기 실패"));
-  }, [opportunityId]);
+  }, [basePath]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -45,7 +49,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint }: { opportun
     if (saving) return;
     setSaving(true); setError(null);
     try {
-      await api.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/gate-decisions`, {
+      await api.post(basePath, {
         gate: form.gate,
         decision: form.decision,
         rationale: form.rationale.trim(),
