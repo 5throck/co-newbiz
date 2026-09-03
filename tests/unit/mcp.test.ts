@@ -96,7 +96,7 @@ describe("tool catalog", () => {
     // with their REST routes; the live catalog is 16 tools — the read
     // lookups + notifications + the opportunity-keyed process suite + the
     // ADR-0097 committee read-only pair.
-    expect(TOOLS.length).toBe(16);
+    expect(TOOLS.length).toBe(17);
     for (const tool of TOOLS) {
       expect(tool.name.length).toBeGreaterThan(0);
       // MCP tool names must be plain identifiers — no decoration characters

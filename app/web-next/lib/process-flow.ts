@@ -11,6 +11,7 @@ import { getDb } from "../../../db/client.ts";
 import { listTargets, screeningSummary } from "./brownfield-targets.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { establishmentProgress } from "./establishment.ts";
+import { isFreshReviewCycle } from "./portfolio.ts";
 
 export type StageId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11";
 export type GateId = "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
@@ -224,8 +225,9 @@ interface ProjectRowLite {
  * Project stage completion (S8–S11). Each check is deliberately a SIMPLE
  * existing-schema probe — Phase 3 (FS), Phase 4 (DD), Phase 5 (IC/설립) and
  * Phase 6 (포트폴리오) refine each one against their own richer artifacts;
- * this skeleton (ADR-0095) only pins the type and the spec port. S8's check
- * is the ADR-0098 real predicate; S9–S11 remain marked REFINEMENT points.
+ * this skeleton (ADR-0095) only pins the type and the spec port. Every check
+ * is now a real predicate: S8 = ADR-0098, S9 = ADR-0099, S10 = ADR-0100,
+ * S11 = ADR-0101 (latest-cycle freshness) — no REFINEMENT markers remain.
  */
 function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, gateStatus: Partial<Record<GateId, GateVerdict>>): { complete: boolean; blockers: string[]; missing: string[] } {
   const blockers: string[] = [];
@@ -291,13 +293,21 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
       }
     }
   } else if (stage.id === "S11") {
-    // REFINEMENT (Phase 6): 분기 최신성(현재 분기 vs 최신 review_cycle) 검사로 강화.
-    const cards = (db
-      .query("SELECT COUNT(*) c FROM venture_scorecard WHERE project_id = ?")
-      .get(project.id) as { c: number }).c;
-    if (cards === 0) {
+    // ADR-0101 §4 (Phase 6): "분기별 스코어카드가 갱신되었다"를 기계적으로
+    // 검사한다 — 프로젝트의 MAX(review_cycle)가 존재하고 그 주기가 신선해야
+    // 한다 (현재 분기 또는 직전 분기; lib/portfolio.ts의 isFreshReviewCycle
+    // 참고 — 분기 단위 cadence라 직전 분기 스코어카드도 현 분기 IC 심의의
+    // 정당한 근거다). 어긋나면 낡은 주기를 이름으로 지적한다. 이로써 S8~S11
+    // 프로젝트 브랜치의 모든 완료기준이 실재 술어가 된다 (REFINEMENT 잔여 0).
+    const latest = db
+      .query("SELECT MAX(review_cycle) AS c FROM venture_scorecard WHERE project_id = ?")
+      .get(project.id) as { c: string | null };
+    if (!latest.c) {
       blockers.push("벤처 스코어카드가 필요합니다");
       missing.push("벤처 스코어카드");
+    } else if (!isFreshReviewCycle(latest.c)) {
+      blockers.push(`스코어카드 주기가 낡았습니다 (최신 ${latest.c} — 현재 분기 기준 갱신 필요)`);
+      missing.push("분기별 스코어카드 갱신");
     }
   }
   return { complete: missing.length === 0, blockers, missing };

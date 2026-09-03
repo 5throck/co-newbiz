@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 570,
+    "node_count": 571,
     "edge_count": 952
   },
   "nodes": [
@@ -506,6 +506,11 @@
       "id": "adr:0100",
       "type": "adr",
       "label": "ADR-0100: S10 investment screening & execution — IC package surface, project-keyed establishment steps, and 0057 deprecation"
+    },
+    {
+      "id": "adr:0101",
+      "type": "adr",
+      "label": "ADR-0101: S11 post-management — portfolio scorecard view, human transition-decision ledger, and completion of the S8–S11 chain"
     },
     {
       "id": "agent:antitrust-agent",

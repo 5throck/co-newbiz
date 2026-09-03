@@ -593,6 +593,15 @@ export function OpportunitiesView() {
                             S10 투자심사
                           </Link>
                         )}
+                        {o.project_id && (
+                          <Link
+                            href={`/projects/${o.project_id}/portfolio`}
+                            className="btn-ghost btn-sm"
+                            title="승격된 프로젝트의 S11 사후 관리(포트폴리오 스코어카드·전환 결정) 화면으로 이동"
+                          >
+                            S11 사후 관리
+                          </Link>
+                        )}
                       </span></td>
                     </tr>
                     {isOpen && (

@@ -2352,6 +2352,58 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/scorecard:
+    get:
+      operationId: getProjectScorecard
+      summary: S11 portfolio scorecard view (read-only) — latest-cycle rollup via getPortfolioRollup, per-cycle trend, and venture_transition_decision history (ADR-0101).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: review_cycle
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: '^[0-9]{4}-Q[1-4]$'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/transition-decision:
+    post:
+      operationId: postProjectTransitionDecision
+      summary: Record the venture-portfolio-IC's S11 transition decision (recorder pattern; analyst+; 5-vocabulary; kill requires learning_capture; append-only) — ADR-0101.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/projects/{id}/establishment:
     get:
       operationId: getProjectEstablishment
