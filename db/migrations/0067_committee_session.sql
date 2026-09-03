@@ -1,0 +1,28 @@
+-- 0067_committee_session.sql
+-- @reversible: true (purely additive — one nullable column on process_run;
+-- no rows touched, no table rebuild. Manual rollback: drop the column via a
+-- table rebuild, or restore from a pre-migration backup —
+-- scripts/co-newbiz/restore.ts.)
+--
+-- Steering-committee deliberation (ADR-0097 §5): a committee session IS a
+-- process_run row (ADR-0096 generalized addressing) — no new table. The
+-- session needs a marker for which committee convened it, in which decision
+-- mode, and (optionally) which target it deliberates. ADR-0097 deliberately
+-- ships no dedicated columns for these, so they ride a single generic
+-- metadata column:
+--
+--   process_run.meta_json TEXT (nullable)
+--
+-- Stored shape (written by app/web-next/lib/committee-session.ts):
+--   { "committee_key": "...", "decision_mode": "human_only|agent_team|hybrid",
+--     "gate": "...", "target_ref": "..." }
+--
+-- Deliberate choice (documented per the ADR-0097 task brief): committee_key
+-- could have overloaded the existing `stage` column (runDeliberationRounds
+-- already defaults stage to the committee key), but decision_mode and
+-- target_ref have no natural home, and splitting them across stage + a
+-- second invented column would still require a migration. One additive
+-- nullable JSON column keeps 0064–0066 tables untouched and is the minimal
+-- additive surface.
+
+ALTER TABLE process_run ADD COLUMN meta_json TEXT;

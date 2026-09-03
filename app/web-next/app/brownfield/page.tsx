@@ -6,6 +6,7 @@ import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
 import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
+import { CommitteePanel } from "../../components/CommitteePanel.tsx";
 
 // S6~S7 브라운필드 대상 경로 (/brownfield) — flow.spec v2.0.0.
 //   S6 대상 후보 발굴: Target Universe 정의 → Target Company Long List
@@ -416,15 +417,26 @@ export function BrownfieldView() {
         </section>
       )}
       {selected && (
-        <GateDecisionPanel
-          opportunityId={selected.opportunity.id}
-          gates={["target_screening"]}
-          killHint={
-            selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded" && (t.screening_summary?.knockOutsPassed ?? false))
-              ? "knock-out 통과 후보 0건 — Target Screening 게이트 KILL 기준 검토가 필요합니다 (flow.spec S7 kill criteria)."
-              : null
-          }
-        />
+        <>
+          <GateDecisionPanel
+            opportunityId={selected.opportunity.id}
+            gates={["target_screening"]}
+            killHint={
+              selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded" && (t.screening_summary?.knockOutsPassed ?? false))
+                ? "knock-out 통과 후보 0건 — Target Screening 게이트 KILL 기준 검토가 필요합니다 (flow.spec S7 kill criteria)."
+                : null
+            }
+          />
+          {/* ADR-0097: target-longlist-shortlist-committee 심의 — 에이전트는 제안, 확정은 인간 */}
+          {selected.targets.length > 0 && (
+            <CommitteePanel
+              opportunityId={selected.opportunity.id}
+              committeeKey="target-longlist-shortlist-committee"
+              committeeLabel="S6/S7 대상 롱리스트→숏리스트 위원회"
+              gates={["screening"]}
+            />
+          )}
+        </>
       )}
     </main>
   );

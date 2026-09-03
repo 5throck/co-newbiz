@@ -444,6 +444,8 @@ describe("migrations 0064–0066 round trip", () => {
     expect(pr.map((c) => c.name)).toEqual([
       "id", "entity_type", "entity_id", "project_id", "spec_version", "stage",
       "status", "source", "started_by", "started_at", "finished_at",
+      // 0067 (ADR-0097): additive nullable committee-session metadata column.
+      "meta_json",
     ]);
     expect(prByName.get("entity_type")).toMatchObject({ notnull: 1 });
     expect(prByName.get("entity_id")).toMatchObject({ notnull: 1 });
