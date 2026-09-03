@@ -1698,6 +1698,29 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/opportunities/{id}/promote:
+    post:
+      operationId: promoteOpportunityToProject
+      summary: Promote the opportunity to a project (S8+ carrier). Analyst+; preconditions per ADR-0095 (greenfield S5 / brownfield S7 Short List).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/opportunities/discover:
     post:
       operationId: discoverOpportunities

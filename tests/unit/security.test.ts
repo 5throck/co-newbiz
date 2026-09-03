@@ -122,8 +122,18 @@ describe("security-model §7 item 2 — admin is not deal-data visibility", () =
 });
 
 describe("security-model §7 item 3 — single enforcement point, no bypass path", () => {
-  test("the repository exports exactly the three gated functions — no unfiltered read variant exists", () => {
-    expect(Object.keys(projectRepo).sort()).toEqual(["createProject", "getProjectIfVisible", "listVisibleProjects"]);
+  test("the repository exports exactly the gated functions — no unfiltered read variant exists", () => {
+    // ADR-0095 adds promoteOpportunity (the one write path into md_project that
+    // grants the promoter lead membership in the same transaction) and its
+    // typed PromotionError. The deny-by-default READ surface is unchanged:
+    // still only getProjectIfVisible / listVisibleProjects.
+    expect(Object.keys(projectRepo).sort()).toEqual([
+      "PromotionError",
+      "createProject",
+      "getProjectIfVisible",
+      "listVisibleProjects",
+      "promoteOpportunity",
+    ]);
   });
 
   test("every read function requires a callerId as its first parameter", () => {
