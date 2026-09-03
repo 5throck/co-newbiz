@@ -4,7 +4,10 @@ import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { getChecklistItems } from "./library.ts";
 
-export const SCREENING_CHECKLIST_ID = "chk-target-screening";
+// Library registry id for the S7 screening checklist (checklists/target-screening-checklist.yaml).
+// NOTE: the registry id is "chk-target-screening-checklist" — a previous
+// "chk-target-screening" lookup here silently returned no checklist items.
+export const SCREENING_CHECKLIST_ID = "chk-target-screening-checklist";
 
 export interface TargetRow {
   id: string;

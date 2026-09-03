@@ -183,7 +183,11 @@ function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): 
       return { complete, blockers, missing };
     }
     const minLongList = typeof universe.min_long_list === "number" && universe.min_long_list > 0 ? universe.min_long_list : 3;
-    const longList = (getDb().query("SELECT COUNT(*) c FROM brownfield_target WHERE opportunity_id = ? AND status != 'excluded'").get(opp.id) as { c: number }).c;
+    // Coverage measures how many candidates the Long List DISCOVERED — all
+    // registered rows regardless of status. Exclusions are the legitimate
+    // OUTCOME of S7 screening; counting only non-excluded made every
+    // post-screening exclusion retroactively regress S6 and re-lock S7+.
+    const longList = (getDb().query("SELECT COUNT(*) c FROM brownfield_target WHERE opportunity_id = ?").get(opp.id) as { c: number }).c;
     if (longList < minLongList) {
       blockers.push(`Long List 커버리지 부족 (${longList}/${minLongList})`);
       missing.push("Long List 최소 커버리지");
