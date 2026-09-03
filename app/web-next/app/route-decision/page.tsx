@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
+import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
 
 // S4 진출방식 결정 (/route-decision) — selected 기회에 Greenfield/Brownfield 트랙과
 // 라우트 유형을 기록하는 분기점 (flow.spec v2.0.0).
@@ -375,6 +376,7 @@ export function RouteDecisionView() {
           )}
         </section>
       )}
+      {selected && <GateDecisionPanel opportunityId={selected.id} gates={["screening", "pre_fs"]} />}
     </main>
   );
 }

@@ -84,3 +84,38 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   });
   return ok({ id, status: body.status ?? existing.status });
 }
+
+// Delete an opportunity — analyst+ only. Intended for cleaning up test/erroneous
+// registrations; blocked when the opportunity has progressed into downstream
+// stages (a linked project, route decision, target list, feasibility assessment,
+// or synergy analysis references it) so S4+ history is never orphaned.
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  const ctx = auth.auth;
+  if (ctx.role === "viewer") return forbidden("role_required", "Opportunity deletion requires the analyst role.");
+  const { id } = await params;
+  const db = getDb();
+  const existing = db
+    .query("SELECT id, name, project_id FROM opportunity WHERE id = ?")
+    .get(id) as { id: string; name: string; project_id: string | null } | null;
+  if (!existing) return notFound();
+  if (existing.project_id) {
+    return badRequest("opportunity_promoted", "This opportunity is already promoted to a project and cannot be deleted.");
+  }
+  const blockingTables: Array<[string, string]> = [
+    ["route_decision", "진출방식 결정"],
+    ["brownfield_target", "타겟 리스트"],
+    ["greenfield_assessment", "사업성 평가"],
+    ["synergy_analysis", "시너지 분석"],
+  ];
+  for (const [table, label] of blockingTables) {
+    const ref = db.query(`SELECT COUNT(*) c FROM ${table} WHERE opportunity_id = ?`).get(id) as { c: number };
+    if (ref.c > 0) {
+      return badRequest("opportunity_in_use", `연계된 ${label}(${ref.c}건)이 있어 삭제할 수 없습니다.`);
+    }
+  }
+  db.run("DELETE FROM opportunity WHERE id = ?", [id]);
+  appendAudit(db, { actor: ctx.userId, action: "opportunity_delete", target: `${id}:${existing.name}`, now: new Date().toISOString() });
+  return ok({ id, deleted: true });
+}

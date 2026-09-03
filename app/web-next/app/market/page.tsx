@@ -746,20 +746,44 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
           <h3 className="sizing-step-title text-[0.95rem]">
             <span className="sizing-step-badge">2-A</span> 경쟁 구조 — 시장 집중도와 주요 기업
           </h3>
-        {/* S1 competitive-intelligence 산출 — S1 competitive-intelligence 산출 (구형 매트릭스에는 없음) */}
+        {/* S1 competitive-intelligence 산출 — 산업 적응형 컬럼: (1) 레거시/시드 매트릭스의
+            techType·용량·진행상태는 데이터가 있을 때만, (2) 파이프라인 신규 산출은
+            산업별 attributes(라벨 자유)를 동적 컬럼으로 렌더링한다 (ADR-0092 optional). */}
         {matrix.competitive && (
           <>
             <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">경쟁 구조</h4>
             <p className="mb-1 text-[0.85rem]">{matrix.competitive.structure}</p>
-            {matrix.competitive.players.length > 0 && (
+            {matrix.competitive.players.length > 0 && (() => {
+              const players = matrix.competitive.players;
+              const hasTechType = players.some((pl) => pl.techType);
+              const hasCapacity = players.some((pl) => pl.capacityMWe !== undefined);
+              const hasProjectStatus = players.some((pl) => pl.projectStatus);
+              // 동적 속성 컬럼 — player들이 공유하는 라벨의 합집합(최대 4개)
+              const attrLabels: string[] = [];
+              for (const pl of players) {
+                for (const a of pl.attributes ?? []) {
+                  if (!attrLabels.includes(a.label)) attrLabels.push(a.label);
+                }
+              }
+              const attrOf = (pl: (typeof players)[number], label: string) =>
+                pl.attributes?.find((a) => a.label === label)?.value ?? "—";
+              return (
               <div className="table-scroll">
               <table className="data-table report-table" aria-label="경쟁 구조 — 주요 기업">
                 <caption className="sr-only">경쟁 구조 주요 기업</caption>
                 <thead>
-                  <tr><th scope="col" className="col-label">기업</th><th scope="col" className="col-type">포지션</th><th scope="col">기술 유형</th><th scope="col">용량 (MWe)</th><th scope="col">진행 상태</th><th scope="col" className="col-text">비고</th></tr>
+                  <tr>
+                    <th scope="col" className="col-label">기업</th>
+                    <th scope="col" className="col-type">포지션</th>
+                    {hasTechType && <th scope="col" className="col-type">기술 유형</th>}
+                    {hasCapacity && <th scope="col" className="col-type">용량 (MWe)</th>}
+                    {hasProjectStatus && <th scope="col" className="col-type">진행 상태</th>}
+                    {attrLabels.slice(0, 4).map((label) => <th key={label} scope="col" className="col-type">{label}</th>)}
+                    <th scope="col" className="col-text">비고</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {matrix.competitive.players.map((pl) => (
+                  {players.map((pl) => (
                     <tr key={pl.name}>
                       <td className="font-semibold">{pl.name}</td>
                       <td>
@@ -767,16 +791,18 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
                           {pl.tier === "leader" ? "리더" : pl.tier === "challenger" ? "도전자" : "니치"}
                         </span>
                       </td>
-                      <td>{pl.techType ?? "—"}</td>
-                      <td className="tabular-nums">{pl.capacityMWe !== undefined ? pl.capacityMWe.toLocaleString() : "—"}</td>
-                      <td>{pl.projectStatus ? <span className="status-chip status-in-progress">{pl.projectStatus}</span> : "—"}</td>
+                      {hasTechType && <td>{pl.techType ?? "—"}</td>}
+                      {hasCapacity && <td className="tabular-nums">{pl.capacityMWe !== undefined ? pl.capacityMWe.toLocaleString() : "—"}</td>}
+                      {hasProjectStatus && <td>{pl.projectStatus ? <span className="status-chip status-in-progress">{pl.projectStatus}</span> : "—"}</td>}
+                      {attrLabels.slice(0, 4).map((label) => <td key={label}>{attrOf(pl, label)}</td>)}
                       <td className="text-[0.8rem] text-[color:var(--muted-fg)]">{pl.note}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               </div>
-            )}
+              );
+            })()}
           </>
         )}
           {!matrix.competitive && (
@@ -803,7 +829,11 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
         <ul className="sizing-note-list mt-2">
           {matrix.anchor.sources.map((s) => (
             <li key={s.label} className={s.status === "excluded" ? "text-[color:var(--muted-fg)] line-through" : ""}>
-              <strong>{s.label}</strong> — ${s.estimate.toFixed(2)}B · {s.note}
+              <strong>{s.label}</strong> — ${s.estimate.toFixed(2)}B
+              {s.sourceUrl && <> · <a href={s.sourceUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">출처</a></>}
+              {s.asOf && <> <span className="text-[0.75rem] text-[color:var(--muted-fg)]">({s.asOf})</span></>}
+              {s.methodology && <span className="block pl-4 text-[0.75rem] text-[color:var(--muted-fg)]">측정 방법론: {s.methodology}</span>}
+              <span className="block pl-4 text-[0.78rem]">{s.note}</span>
             </li>
           ))}
         </ul>
@@ -1055,23 +1085,29 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
           </p>
           {matrix.regulatoryComparison && matrix.regulatoryComparison.length > 0 ? (
             <div className="table-scroll">
-            <table className="data-table report-table" aria-label="규제 환경 비교">
+            <table className="data-table report-table min-w-[52rem]" aria-label="규제 환경 비교">
               <caption className="sr-only">관할권별 규제 비교</caption>
               <thead>
-                <tr><th scope="col">관할권</th><th scope="col">항목</th><th scope="col">상태</th><th scope="col">1차 소스 확인</th><th scope="col">출처·시점</th></tr>
+                <tr>
+                  <th scope="col" className="col-label">관할권</th>
+                  <th scope="col" className="col-type">항목</th>
+                  <th scope="col">상태</th>
+                  <th scope="col" className="col-type">1차 소스 확인</th>
+                  <th scope="col" className="col-text">출처·시점</th>
+                </tr>
               </thead>
               <tbody>
                 {matrix.regulatoryComparison.map((r, i) => (
                   <tr key={`${r.jurisdiction}-${r.item}-${i}`}>
                     <td className="font-semibold">{r.jurisdiction}</td>
-                    <td>{r.item}</td>
-                    <td className="text-[0.8rem]">{r.status}</td>
+                    <td className="whitespace-normal">{r.item}</td>
+                    <td className="whitespace-normal text-[0.8rem]">{r.status}</td>
                     <td>
                       <span className={`status-chip ${r.confirmedDirectly ? "status-green" : "status-not-started"}`}>
                         {r.confirmedDirectly ? "직접 확인" : "간접·추정"}
                       </span>
                     </td>
-                    <td className="text-[0.75rem]">
+                    <td className="whitespace-normal text-[0.75rem]">
                       {r.sourceUrl ? <a href={r.sourceUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문</a> : "—"}
                       {r.asOf ? ` · ${r.asOf}` : ""}
                     </td>
@@ -1620,7 +1656,7 @@ function ConsistencyChart({ matrix }: { matrix: SizingMatrix }) {
   const option = {
     grid: { left: 130, right: 60, top: 16, bottom: 32 },
     xAxis: { type: "value" as const, min: 0, max: 8, axisLabel: { formatter: "{value}%", color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
-    yAxis: { type: "category" as const, data: ["매트릭스 롤업 (바텀업)", "컨센서스 (탑다운)"], axisLabel: { color: ct.muted, fontSize: 10 } },
+    yAxis: { type: "category" as const, data: ["매트릭스 롤업 (바텀업)", matrix.consistency.topDownCagr > 0 ? "컨센서스 (탑다운)" : "컨센서스 (미입력)"], axisLabel: { color: ct.muted, fontSize: 10 } },
     series: [{
       type: "bar" as const,
       data: [

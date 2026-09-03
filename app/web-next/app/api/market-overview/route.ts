@@ -15,6 +15,29 @@ export async function GET(request: Request) {
     .query("SELECT id, name_ko, name_en, ksic_code, naics_code FROM md_industry ORDER BY name_ko")
     .all() as Array<{ id: string; name_ko: string; name_en: string | null; ksic_code: string | null; naics_code: string | null }>;
 
+  // 완료된 분석의 최신 매트릭스 셀 수(권역 × 세그먼트) — 연결 드라이버 파생 카운트용.
+  // 세그먼트는 ADR-0077 이후 산업별 동적 개수이므로 상수가 아니라 payload에서 센다.
+  const latestPayloads = db
+    .query(
+      `SELECT a.industry_id, v.payload
+       FROM market_sizing_analysis a
+       JOIN market_sizing_version v ON v.analysis_id = a.id
+       WHERE a.status = 'completed'
+         AND v.version_no = (SELECT MAX(version_no) FROM market_sizing_version WHERE analysis_id = a.id)`,
+    )
+    .all() as Array<{ industry_id: string; payload: string }>;
+  const cellCount = new Map<string, number>();
+  for (const p of latestPayloads) {
+    try {
+      const matrix = (JSON.parse(p.payload) as { matrix?: { baseline2026?: Record<string, Record<string, number>> } }).matrix;
+      const first = matrix?.baseline2026 ? Object.values(matrix.baseline2026)[0] : undefined;
+      const regions = matrix?.baseline2026 ? Object.keys(matrix.baseline2026).length : 0;
+      if (regions > 0 && first) cellCount.set(p.industry_id, regions * Object.keys(first).length);
+    } catch {
+      // unparseable payload — leave unset, falls back to 0
+    }
+  }
+
   const drivers = db
     .query("SELECT id, code, label_ko, description FROM industry_driver ORDER BY created_at")
     .all() as Array<{ id: string; code: string; label_ko: string; description: string }>;
@@ -50,9 +73,9 @@ export async function GET(request: Request) {
       industries: industries.map((i) => {
         const analysis = analyses.find((a) => a.industry_id === i.id) ?? null;
         const chainCount = sensitivities.find((s) => s.industry_id === i.id)?.driver_count ?? 0;
-        // 딜 미연계 신규 산업은 chain rows 대신 분석 매트릭스의 지역×세그먼트
-        // 파생 민감도 노드(6×3=18)를 연결 드라이버로 계산한다.
-        const derivedCount = analysis?.status === "completed" ? 18 : 0;
+        // 딜 미연계 신규 산업은 chain rows 대신 분석 매트릭스의 권역×세그먼트
+        // 셀 수(최신 버전 payload에서 실측)를 연결 드라이버로 계산한다.
+        const derivedCount = analysis?.status === "completed" ? (cellCount.get(i.id) ?? 0) : 0;
         return {
           ...i,
           driver_count: Math.max(chainCount, derivedCount),

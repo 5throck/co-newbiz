@@ -1,0 +1,108 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e27] [cursor=pointer]:
+    - generic [ref=e30]:
+      - text: Compiling
+      - generic [ref=e31]:
+        - generic [ref=e32]: .
+        - generic [ref=e33]: .
+        - generic [ref=e34]: .
+  - alert [ref=e26]: 대시보드
+  - generic [ref=e35]:
+    - complementary [ref=e36]:
+      - link "CN co-newbiz" [ref=e37] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e38]: CN
+        - generic [ref=e39]: co-newbiz
+      - generic [ref=e40]:
+        - generic [ref=e41]: 탐색
+        - navigation "탐색" [ref=e42]:
+          - link "대시보드" [ref=e43] [cursor=pointer]:
+            - /url: /
+          - link "시장분석" [ref=e50] [cursor=pointer]:
+            - /url: /market
+          - link "기회 발굴" [ref=e55] [cursor=pointer]:
+            - /url: /opportunities
+          - generic [ref=e59]:
+            - generic [ref=e60]: 시너지 정합성
+            - generic [ref=e67]:
+              - link "그룹/계열사 분석" [ref=e68] [cursor=pointer]:
+                - /url: /our-company
+              - link "시너지·전략적 적합성" [ref=e72] [cursor=pointer]:
+                - /url: /synergy
+          - link "진출방식 결정" [ref=e78] [cursor=pointer]:
+            - /url: /route-decision
+          - link "역량 평가·진출전략" [ref=e84] [cursor=pointer]:
+            - /url: /greenfield
+          - link "대상 후보 발굴" [ref=e89] [cursor=pointer]:
+            - /url: /brownfield
+      - generic [ref=e95]:
+        - generic [ref=e96]: 분석·참조
+        - navigation "분석·참조" [ref=e97]:
+          - link "벤치마킹 사례" [ref=e98] [cursor=pointer]:
+            - /url: /benchmarks
+          - link "규정·체크리스트" [ref=e102] [cursor=pointer]:
+            - /url: /library
+          - link "용어집" [ref=e107] [cursor=pointer]:
+            - /url: /glossary
+          - link "R&BD 전략" [ref=e111] [cursor=pointer]:
+            - /url: /strategy
+    - generic [ref=e117]:
+      - banner [ref=e118]:
+        - generic [ref=e119]:
+          - button "다크 모드로 전환" [ref=e120] [cursor=pointer]:
+            - generic [ref=e123]: 다크 모드
+            - generic [ref=e124]: 전환
+          - generic [ref=e125]: ui-probe2
+          - button "로그아웃" [ref=e126] [cursor=pointer]
+      - main [ref=e132]:
+        - heading "대시보드" [level=1] [ref=e133]
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - generic [ref=e136]: "8"
+            - generic [ref=e137]: 전체 기회
+          - generic [ref=e138]:
+            - generic [ref=e139]: "1"
+            - generic [ref=e140]: 선별된 기회
+          - generic [ref=e141]:
+            - generic [ref=e142]: "3"
+            - generic [ref=e143]: 평가 중
+          - generic [ref=e144]:
+            - generic [ref=e145]: "80"
+            - generic [ref=e146]: 평균 매력도
+        - heading "기회 퍼널 분포" [level=3] [ref=e149]
+        - generic [ref=e153]:
+          - generic [ref=e154]:
+            - heading "최근 등록 기회" [level=3] [ref=e155]
+            - link "전체 보기" [ref=e156] [cursor=pointer]:
+              - /url: /opportunities
+          - list [ref=e157]:
+            - listitem [ref=e158]:
+              - link "SMR(소형모듈원자로) 신사업 기회 발굴 매력도 70 · 시너지 —" [ref=e159] [cursor=pointer]:
+                - /url: /opportunities
+                - generic [ref=e160]: SMR(소형모듈원자로) 신사업 기회
+                - generic [ref=e161]: 발굴
+                - generic [ref=e162]: 매력도 70 · 시너지 —
+            - listitem [ref=e163]:
+              - link "로봇용 정밀감속기·액추에이터 부품 공급 평가 매력도 85 · 시너지 —" [ref=e164] [cursor=pointer]:
+                - /url: /opportunities
+                - generic [ref=e165]: 로봇용 정밀감속기·액추에이터 부품 공급
+                - generic [ref=e166]: 평가
+                - generic [ref=e167]: 매력도 85 · 시너지 —
+            - listitem [ref=e168]:
+              - link "제조·물류·창고용 휴머노이드 로봇 통합 배치 서비스 발굴 매력도 80 · 시너지 —" [ref=e169] [cursor=pointer]:
+                - /url: /opportunities
+                - generic [ref=e170]: 제조·물류·창고용 휴머노이드 로봇 통합 배치 서비스
+                - generic [ref=e171]: 발굴
+                - generic [ref=e172]: 매력도 80 · 시너지 —
+            - listitem [ref=e173]:
+              - link "LLM 기반 범용 로봇 AI 파운데이션 모델·솔루션 발굴 매력도 78 · 시너지 —" [ref=e174] [cursor=pointer]:
+                - /url: /opportunities
+                - generic [ref=e175]: LLM 기반 범용 로봇 AI 파운데이션 모델·솔루션
+                - generic [ref=e176]: 발굴
+                - generic [ref=e177]: 매력도 78 · 시너지 —
+            - listitem [ref=e178]:
+              - link "전기·배터리 굴착기 호환 저소음 스마트 브레이커 평가 매력도 82 · 시너지 —" [ref=e179] [cursor=pointer]:
+                - /url: /opportunities
+                - generic [ref=e180]: 전기·배터리 굴착기 호환 저소음 스마트 브레이커
+                - generic [ref=e181]: 평가
+                - generic [ref=e182]: 매력도 82 · 시너지 —

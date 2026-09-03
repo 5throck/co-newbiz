@@ -43,6 +43,12 @@ tokens wrap at word boundaries), (b) `col-label` minimum width raised 10rem → 
 going forward. Chart-theme hooks (useChartTheme) must be called at the component's top
 level — conditional/IIFE hook calls crashed the report on first chart render (fixed).
 
+Addendum (2026-09-03): table HEADER cells are centered by default
+(`.data-table th { text-align: center }`) — body cells stay left-aligned and numeric
+columns stay right-aligned (`.col-num`, header included). Per-column overrides are the
+only sanctioned exception; re-lefting the default in a new table is a review finding.
+Recorded in `docs/design-guide.md` §6.
+
 ## Consequences
 
 - Reports gain trend readability and stop truncating/squeezing; the synergy report is the

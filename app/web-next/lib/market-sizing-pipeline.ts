@@ -149,7 +149,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   // 경쟁 구조 (S1 competitive-intelligence) — LLM 추정, 공시 대조 전
   const compJson = await askJson(
     industry,
-    `이 시장의 경쟁 구조를 분석하세요. JSON: {"structure":"시장 구조 요약(독점/과점/독과점/경쟁 정도와 집중도 정성 코멘트) 한두 문장","players":[{"name":"기업명","tier":"leader|challenger|niche","note":"포지션·점유율 추정 한 문장"}]}. players는 글로벌 주요 기업 3~6개, 점유율은 알려진 범위의 정성 추정으로.`,
+    `이 시장의 경쟁 구조를 분석하세요. JSON: {"structure":"시장 구조 요약(독점/과점/독과점/경쟁 정도와 집중도 정성 코멘트) 한두 문장","players":[{"name":"기업명","tier":"leader|challenger|niche","note":"포지션·점유율 추정 한 문장","attributes":[{"label":"속성명","value":"값"}]}]}. players는 글로벌 주요 기업 3~6개. attributes는 이 산업의 특성을 가장 잘 보여주는 비교 속성 1~3개로, 라벨을 산업에 맞게 직접 정의하세요(예: 원자로는 "기술 유형"/"용량(MWe)"/"인허가 상태", 로봇은 "상용화 단계"/"주력 형태", 소재는 "제품 등급"/"공정"). 모든 player가 같은 라벨 집합을 공유하도록 하고, 값은 짧게.`,
   );
   const competitive: SizingMatrix["competitive"] | undefined = compJson
     ? {
@@ -160,6 +160,10 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
             name: str(x.name, "—"),
             tier: (["leader", "challenger", "niche"].includes(str(x.tier)) ? str(x.tier) : "challenger") as "leader" | "challenger" | "niche",
             note: `${str(x.note, "")} — LLM 추정, 공시 대조 전`,
+            attributes: (Array.isArray(x.attributes) ? x.attributes as Array<Record<string, unknown>> : [])
+              .map((a) => ({ label: str(a.label), value: str(a.value) }))
+              .filter((a) => a.label && a.value)
+              .slice(0, 4),
           })),
       }
     : undefined;
@@ -176,18 +180,38 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   advance(2);
   const anchorJson = await askJson(
     industry,
-    `2026년 글로벌 시장 규모(단위: 십억 달러) 추정치를 3개 소스 관점에서 제시하세요. JSON: {"sources":[{"label":"소스 관점 설명","estimate":2.0,"status":"consensus|excluded","note":"비고"}],"total":2.0}. total은 excluded를 제외한 합의 앵커. status는 뚜렷이 튀는 추정치 하나만 excluded로.`,
+    `2026년 글로벌 시장 규모(단위: 십억 달러) 추정치를 3개 소스 관점에서 제시하세요. JSON: {"sources":[{"label":"소스 관점 설명(기관·리포트명)","estimate":2.0,"status":"consensus|excluded","methodology":"그 소스가 시장을 어떻게 정의·측정했는지 한 문장","sourceUrl":"알려진 출처 URL(없으면 생략)","note":"비고"}]}. status는 뚜렷이 튀는 추정치 하나만 excluded로. LLM이 제시하는 total은 사용하지 않으므로 포함하지 말 것.`,
   );
   const rawSources = Array.isArray(anchorJson?.sources) ? (anchorJson!.sources as Array<Record<string, unknown>>) : [];
   const anchorSources = rawSources.slice(0, 4).map((s, i) => ({
     label: str(s.label, `소스 관점 #${i + 1} (추정, 검증 전)`),
     estimate: num(s.estimate, 1.0),
     status: (s.status === "excluded" ? "excluded" : "consensus") as "consensus" | "excluded",
+    methodology: str(s.methodology) || undefined,
+    sourceUrl: str(s.sourceUrl) || undefined,
+    asOf: new Date().toISOString().slice(0, 10),
     note: `${str(s.note, "")} — LLM 추정, 검증 전`,
   }));
-  const anchorTotal =
-    num(anchorJson?.total, 0) ||
-    r2(anchorSources.filter((s) => s.status === "consensus").reduce((a, s) => a + s.estimate, 0) / Math.max(1, anchorSources.filter((s) => s.status === "consensus").length));
+  // 결정론적 이상치 제외 — LLM 판단과 무관하게 소스 추정치의 중앙값 대비 3배 이상
+  // 벗어나면 기계적으로 excluded 처리한다(교차 산정의 이상치 제외 규칙 하한).
+  // 방법론상 다중 소스 규모가 수십 배 발산할 수 있으므로(예: 시장 정의 범위 차이)
+  // 이 규칙은 앵커 산입에서 튀는 소스를 강제로 걸러내는 역할만 한다.
+  const estimates = anchorSources.map((s) => s.estimate).sort((a, b) => a - b);
+  const median = estimates.length ? estimates[Math.floor(estimates.length / 2)] : 0;
+  if (median > 0) {
+    for (const s of anchorSources) {
+      if (s.status === "consensus" && (s.estimate >= median * 3 || s.estimate <= median / 3)) {
+        s.status = "excluded";
+        s.note += ` — 중앙값($${median.toFixed(2)}B) 대비 3배 초과 편차로 자동 제외`;
+      }
+    }
+  }
+  // 앵커는 제외 소스를 뺀 합의(consensus) 소스들의 평균으로 재계산한다 —
+  // LLM이 제출한 total은 excluded 반영 여부를 보장할 수 없으므로 신뢰하지 않는다.
+  const consensusSources = anchorSources.filter((s) => s.status === "consensus");
+  const anchorTotal = consensusSources.length
+    ? r2(consensusSources.reduce((a, s) => a + s.estimate, 0) / consensusSources.length)
+    : r2(median || 1.0);
   const s2 = await summarize(industry, 2, "기준 시장규모 산정", `앵커 $${anchorTotal.toFixed(2)}B, 소스 ${anchorSources.length}개(제외 ${anchorSources.filter((s) => s.status === "excluded").length}개). LLM 추정 — 검증 전.`);
   stepSummaries.push({ step: 2, ...s2, pendingInputs: ["실제 밴더 리포트 수치로 교차 확인", "이상치 제외 판단 검토"] });
 
@@ -277,13 +301,23 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     REGIONS.reduce((a, r) => a + segs.reduce((b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], 4), 0), 0) / anchorTotal,
     1 / 4,
   ) - 1;
+  // 탑다운 컨센서스 CAGR — LLM 지식의 공개 컨센서스(벤더 리포트 평균 관점)를 입수해
+  // 정합성 비교가 실제 두 값 사이의 비교가 되도록 한다. 입수 실패 시 0 유지(UI에
+  // '미입력'으로 표시됨)하며 절대 날조하지 않는다.
+  const tdJson = await askJson(
+    industry,
+    `이 산업의 공개된 시장 성장률 컨센서스(주요 시장조사기관 전망의 대표값, 연평균, 소수)를 제시하세요. JSON: {"cagr":0.08,"sourceLabel":"출처 관점(예: 글로벌 리서치 기관 전망 평균)","note":"전제 한 문장"}. 신뢰할 공개 컨센서스를 모르면 {"cagr":null}.`,
+  );
+  const topDownCagr = typeof tdJson?.cagr === "number" && tdJson.cagr > 0 && tdJson.cagr < 1
+    ? Math.round(tdJson.cagr * 1000) / 10
+    : 0;
   const s5 = await summarize(
     industry,
     5,
     "성장률 정합성 확인",
-    `바텀업 롤업 CAGR ${(bottomUpCagr * 100).toFixed(1)}%. 탑다운 컨센서스 입력 전 — 내부 정합성 확인으로만 사용.`,
+    `바텀업 롤업 CAGR ${(bottomUpCagr * 100).toFixed(1)}% vs 탑다운 컨센서스 ${topDownCagr > 0 ? `${topDownCagr.toFixed(1)}%` : "미입수"} — 내부 정합성 확인으로만 사용.`,
   );
-  stepSummaries.push({ step: 5, ...s5, pendingInputs: ["탑다운 컨센서스 CAGR 입력"] });
+  stepSummaries.push({ step: 5, ...s5, pendingInputs: topDownCagr > 0 ? ["컨센서스 CAGR의 원문 출처 확인"] : ["탑다운 컨센서스 CAGR 수동 입력"] });
 
   // ── Step 5-B: external future forecast vs our CAGR extrapolation ──
   // 외부 전망이 입수되면 우리 추정(과거 성장률 연장)과의 격차와 그 요인(신규·강화 드라이버)을
@@ -376,6 +410,55 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     sources: research.map((s) => ({ title: s.title, url: s.url, snippet: s.snippet.slice(0, 200) })),
   };
 
+  // ── Step 6-C: 수요 파이프라인 — 프로젝트별 신뢰도 티어 ──
+  // 향후 착공·발주가 예정된 개별 프로젝트를 웹 리서치로 입수해 Tier 1(실착공·계약)~
+  // Tier 4(비구속 MOU·초기 검토)로 구분한다. 리서치가 막혀도 LLM 지식으로
+  // 최소한의 파이프라인을 제안하되 전부 '검증 전'으로 표기한다.
+  const pipelineResearch = await researchSources([
+    `${industry} 주요 프로젝트 수주 착공 계약 2026`,
+    `${industry} project pipeline orders backlog announced`,
+  ]);
+  const pipelineContext = pipelineResearch.length
+    ? pipelineResearch.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet}`).join("\n\n")
+    : "(웹 리서치 미구성 — LLM 지식 기반)";
+  const dpJson = await askJson(
+    industry,
+    `아래 리서치 발췌를 근거로 이 산업의 수요 파이프라인(향후 착공·발주·도입이 예정된 개별 프로젝트/수주)을 조사하세요. JSON: {"projects":[{"project":"프로젝트명(발주처 포함)","tier":1,"status":"현재 상태 한 문장","codTarget":"완료/도입 목표 연도(있으면)","sourceUrl":"발췌의 URL"}]}. tier는 신뢰도: 1=실착공·계약 확정, 2=최종 승인·선계약, 3=입찰·제안 단계, 4=비구속 MOU·초기 검토. 4~10개, tier 내림차순(확실한 것부터). 리서치 발췌에 없는 프로젝트는 LLM 지식으로 넣되 sourceUrl은 생략.\n\n리서치 발췌:\n${pipelineContext}`,
+  );
+  const demandPipeline: SizingMatrix["demandPipeline"] | undefined = dpJson?.projects && Array.isArray(dpJson.projects) && dpJson.projects.length
+    ? (dpJson.projects as Array<Record<string, unknown>>).slice(0, 12).map((p) => ({
+        tier: ([1, 2, 3, 4].includes(Number(p.tier)) ? Number(p.tier) : 4) as 1 | 2 | 3 | 4,
+        project: str(p.project, "—"),
+        status: str(p.status, "상태 미확인 — 검증 전"),
+        codTarget: str(p.codTarget) || undefined,
+        sourceUrl: str(p.sourceUrl) || undefined,
+      }))
+    : undefined;
+
+  // ── Step 6-D: 규제 환경 비교 — 관할권×항목 ──
+  const regResearch = await researchSources([
+    `${industry} 규제 인허가 국가별 비교`,
+    `${industry} regulation approval licensing comparison US EU`,
+  ]);
+  const regContext = regResearch.length
+    ? regResearch.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet}`).join("\n\n")
+    : "(웹 리서치 미구성 — LLM 지식 기반)";
+  const regJson = await askJson(
+    industry,
+    `아래 리서치 발췌를 근거로 이 산업의 주요 관할권별(예: 한국/미국/EU/일본/중국 중 해당하는 곳) 규제·인허가 상태를 비교하세요. JSON: {"items":[{"jurisdiction":"국가/권역","item":"규제·인허가 항목","status":"현황 한 문장","confirmedDirectly":false,"sourceUrl":"리서치 발췌의 URL(있으면)"}]}. 4~8개. confirmedDirectly는 법령·공식 문서 원문을 직접 확인한 경우에만 true(리서치 발췌 기반이면 대부분 false로 두고, 법령 문서 URL이면 true).\n\n리서치 발췌:\n${regContext}`,
+  );
+  const regulatoryComparison: SizingMatrix["regulatoryComparison"] | undefined =
+    regJson?.items && Array.isArray(regJson.items) && regJson.items.length
+      ? (regJson.items as Array<Record<string, unknown>>).slice(0, 10).map((r) => ({
+          jurisdiction: str(r.jurisdiction, "—"),
+          item: str(r.item, "—"),
+          status: str(r.status, "현황 미확인 — 검증 전"),
+          confirmedDirectly: r.confirmedDirectly === true,
+          sourceUrl: str(r.sourceUrl) || undefined,
+          asOf: new Date().toISOString().slice(0, 10),
+        }))
+      : undefined;
+
   // ── Step 7: limitations ──
   advance(7);
   const limJson = await askJson(
@@ -390,6 +473,51 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     : ["기준 시장규모 미확정(2단계 수동 입력 대기)", "배분과 CAGR은 LLM 추정 — 소스 대조 전"];
   const s7 = await summarize(industry, 7, "분석 한계 목록", `${finalLimitations.length}개 한계 등록.`);
   stepSummaries.push({ step: 7, ...s7, pendingInputs: [] });
+
+  // ── Step 7-A: 신뢰도·리스크 — 검증 원장·Kill Criteria·섹션 등급·RAG 상한 ──
+  // 검증 원장은 6단계 교차검증 결과를 그대로 3단 상태(확인/판단필요/확인불가)로
+  // 사상한 것 — 별도 LLM 호출 없이 결정론적으로 도출한다.
+  const VERDICT_MAP: Record<string, "confirmed" | "could_not_verify" | "needs_judgement"> = {
+    confirmed: "confirmed",
+    directional: "needs_judgement",
+    impossible: "could_not_verify",
+  };
+  const verificationLedger: SizingMatrix["verificationLedger"] = crossValidation.map((c) => ({
+    claim: c.claim,
+    status: VERDICT_MAP[c.status] ?? "needs_judgement",
+    note: c.evidence,
+  }));
+  const kcJson = await askJson(
+    industry,
+    `이 매트릭스의 주장이 무너지면 전체 분석이 무효가 되는 Kill Criteria(치명적 가정)를 제시하세요. JSON: {"criteria":[{"name":"기준명","thresholdText":"무효 판정 임계(수치로)","rationale":"왜 치명적인가","severity":"high|medium|low"}]}. 3~5개. 예: 핵심 수요 드라이버의 성장 전환, 규제 지연, 앵커 소스 간 발산 임계 등.`,
+  );
+  const killCriteriaProposals: SizingMatrix["killCriteriaProposals"] | undefined =
+    kcJson?.criteria && Array.isArray(kcJson.criteria) && kcJson.criteria.length
+      ? (kcJson.criteria as Array<Record<string, unknown>>).slice(0, 6).map((k) => ({
+          name: str(k.name, "—"),
+          thresholdText: str(k.thresholdText, "—"),
+          rationale: str(k.rationale, "—"),
+          severity: (["high", "medium", "low"].includes(str(k.severity)) ? str(k.severity) : "medium") as "high" | "medium" | "low",
+        }))
+      : undefined;
+  // 섹션별 등급은 산출 특성에서 결정론적으로 부여한다: LLM 추정 파이프라인의
+  // 정량 섹션은 검증 전이므로 C 상·하한, 웹 리서치 기반 정성 섹션은 B-.
+  const sectionConfidence: SizingMatrix["sectionConfidence"] = [
+    { section: "기준 시장규모 (앵커)", grade: "C", note: "LLM 추정 다중 소스 — 벤더 리포트 원문 대조 전" },
+    { section: "권역·세그먼트 배분", grade: "C-", note: "LLM 추정 배분 — 공시 프록시 검증 전" },
+    { section: "셀별 CAGR", grade: "C-", note: "LLM 추정 — 소스 근거 입력 전" },
+    { section: "경쟁 구조", grade: "C", note: "LLM 추정 — 공시 대조 전" },
+    { section: "정성 분석", grade: research.length ? "B-" : "D", note: research.length ? `웹 리서치 ${research.length}건 기반 — 원문 확인 전` : "리서치 미구성 — LLM 지식만 사용" },
+    { section: "수요 파이프라인", grade: pipelineResearch.length ? "B-" : "D", note: pipelineResearch.length ? `웹 리서치 ${pipelineResearch.length}건 기반 — 프로젝트 공시 확인 전` : "리서치 미구성 — LLM 지식만 사용" },
+    { section: "규제 환경", grade: regResearch.length ? "B-" : "D", note: regResearch.length ? "간접 소스 기반 — 법령 원문 직접 확인 전" : "리서치 미구성 — LLM 지식만 사용" },
+  ];
+  // RAG 상한 권고: provenance가 llm-estimate인 매트릭스는 신뢰도 등급이 전체를
+  // 캡핑한다는 원칙(디자인 경계 4번)에 따라 amber를 넘지 못한다.
+  const ragCapRecommendation: SizingMatrix["ragCapRecommendation"] = {
+    grade: "amber",
+    rationale:
+      "LLM 추정 파이프라인 산출 — 앵커 삼각검증(2단계)과 공시 교차검증(6단계)을 거쳐 동결하기 전까지 상한 Amber. 데이터 신뢰도가 전체 등급을 캡핑합니다.",
+  };
 
   // ── Step 8: registry (status only — registration happens after freezing) ──
   advance(8);
@@ -419,13 +547,21 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     chainDirection,
     competitive,
     qualitative,
+    demandPipeline,
+    regulatoryComparison,
     consistency: {
       bottomUpCagr: Math.round(bottomUpCagr * 1000) / 10,
-      topDownCagr: 0,
-      tolerance: "탑다운 컨센서스 미입력 — 입력 후 재확인 필요. 내부 정합성 확인으로만 사용(독립 검증 아님).",
+      topDownCagr,
+      tolerance: topDownCagr > 0
+        ? "탑다운 컨센서스는 LLM 지식 기반 추정 — 원문 출처 확인 전. 내부 정합성 확인으로만 사용(독립 검증 아님)."
+        : "탑다운 컨센서스 미입력 — 입력 후 재확인 필요. 내부 정합성 확인으로만 사용(독립 검증 아님).",
     },
     externalForecast,
     crossValidation,
+    verificationLedger,
+    killCriteriaProposals,
+    sectionConfidence,
+    ragCapRecommendation,
     limitations: finalLimitations,
   };
 
