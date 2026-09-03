@@ -49,6 +49,7 @@
 | `explain-me` | L3 | — | — | — | — | — |
 | `financial-statement-analysis` | L3 | financial-analyst, financial-analyst | phase3 | growth-projection-modeling (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (composes_with), investment-vehicle-structuring (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `financing-plan-review` | L3 | valuation-agent, valuation-agent | phase4, phase5 | incentive-clawback-assessment (composes_with), insight-synthesis (follows), investment-feasibility-modeling (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (follows), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), wacc-input-session (composes_with) | — | — |
+| `finishing-a-development-branch` | L3 | — | — | — | — | — |
 | `forward-industry-research` | L3 | market-intelligence-agent | — | company-intelligence (composes_with), scenario-planning (composes_with), value-chain-driver-identification (enables), value-chain-linkage-analysis (enables) | — | — |
 | `gateguard` | L3 | — | — | — | — | — |
 | `glossary-management` | L3 | glossary-curator | — | — | — | — |
@@ -56,12 +57,14 @@
 | `greenfield-feasibility` | L3 | greenfield-agent | phase2 | community-partnership-planning (composes_with), permit-pathway-mapping (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), talent-pipeline-planning (composes_with), wacc-input-session (follows) | — | — |
 | `group-level-review` | L3 | — | — | — | — | — |
 | `growth-projection-modeling` | L3 | financial-analyst, financial-analyst | phase3 | financial-statement-analysis (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (follows), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
+| `handbook` | L3 | — | — | — | — | — |
+| `handbook-sync-audit` | L3 | — | — | — | — | — |
 | `historical-financial-analysis` | L3 | financial-analyst, financial-analyst | phase3 | financial-statement-analysis (composes_with), investment-feasibility-modeling (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `hwp-document-processing` | L3 | — | — | — | — | — |
-| `i18n-audit` | L3 | — | — | — | — | — |
-| `i18n-formatting` | L3 | — | — | — | — | — |
-| `i18n-layout` | L3 | — | — | — | — | — |
-| `i18n-locale-config` | L3 | — | — | — | — | — |
+| `i18n-audit` | L3 | i18n-specialist | — | — | — | — |
+| `i18n-formatting` | L3 | i18n-specialist | — | — | — | — |
+| `i18n-layout` | L3 | i18n-specialist | — | — | — | — |
+| `i18n-locale-config` | L3 | i18n-specialist | — | — | — | — |
 | `incentive-clawback-assessment` | L3 | incentive-agent | phase4 | debt-and-contingent-liability-simulation (follows), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
 | `incident-response` | L3 | sre | — | observability-and-alerting (composes_with) | — | — |
 | `industry-profile-application` | L3 | industry-lead | — | — | — | — |
@@ -75,12 +78,14 @@
 | `k-dart` | L3 | financial-analyst, technical-dd-agent | phase4, phase5 | — | — | — |
 | `k-kosis` | L3 | financial-analyst, market-intelligence-agent | phase2, phase4 | — | — | — |
 | `k-law` | L3 | legal-counsel, legal-counsel | phase5 | certification-transferability (follows), investment-vehicle-structuring (composes_with), jv-structuring (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with) | — | — |
+| `k-opendata` | L3 | — | — | k-kosis | — | — |
 | `legal-due-diligence` | L3 | legal-counsel, legal-counsel | phase4, phase5 | antitrust-screening (follows), certification-transferability (composes_with), certification-transferability (composes_with), investment-vehicle-structuring (composes_with), jv-structuring (composes_with), k-law (follows), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
 | `legal-risk-register` | L3 | — | — | — | — | — |
 | `management-incentive-review` | L3 | hr-integration-agent, hr-integration-agent | phase4 | compensation-harmonization-analysis (composes_with), customer-attrition-risk (follows), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
 | `market-data-pipeline` | L3 | — | — | — | — | — |
 | `master-data-governance` | L3 | data-architect | — | data-normalization (composes_with), db-migration-governance (composes_with) | — | — |
 | `mcp-server-integration` | L3 | backend-engineer, platform-lead | — | rest-api-design, rest-api-design (composes_with), security-scan (composes_with), zod-contract-gate (composes_with) | — | — |
+| `meeting` | L3 | — | — | — | — | — |
 | `meeting-facilitation` | L3 | — | — | — | — | — |
 | `monte-carlo-simulation` | L3 | quant-methodologist | phase3 | investment-vehicle-structuring (follows), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), scenario-planning (follows), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `notification-channel-management` | L3 | — | — | — | — | — |
@@ -90,6 +95,8 @@
 | `partner-sourcing-strategy` | L3 | partnership-agent, partnership-agent | phase1 | partner-due-diligence (composes_with), partner-due-diligence (composes_with), partner-due-diligence (follows), project-review (composes_with) | — | — |
 | `peer-benchmarking` | L3 | financial-analyst, financial-analyst | phase3 | proxy-industry-chain (follows), quality-of-earnings (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `permit-pathway-mapping` | L3 | certification-agent, certification-agent | phase2 | certification-roadmap (follows), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), wacc-input-session (composes_with) | — | — |
+| `platform-command-lifecycle-manager` | L3 | — | — | — | — | — |
+| `platform-skill-lifecycle-manager` | L3 | — | — | — | — | — |
 | `pmi-planning` | L3 | pmi-agent | phase6 | compensation-harmonization-analysis (follows), stage-gate-governance (composes_with) | — | — |
 | `policy-and-procedure-governance` | L3 | — | — | — | — | — |
 | `policy-change-impact-analysis` | L3 | — | — | — | — | — |
@@ -112,10 +119,11 @@
 | `scenario-planning` | L3 | market-intelligence-agent, market-intelligence-agent, quant-methodologist | phase3 | competitive-intelligence (composes_with), financial-statement-analysis (follows), historical-financial-analysis (follows), proxy-industry-chain (composes_with), proxy-industry-chain (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with), value-chain-linkage-analysis (composes_with) | — | — |
 | `script-lifecycle-manager` | L3 | — | — | — | — | — |
 | `security-baseline-review` | L3 | security-engineer | — | access-control-review (composes_with), security-scan (composes_with), vulnerability-management (composes_with) | — | — |
-| `security-scan` | L3 | platform-lead, security-engineer | — | access-control-review (composes_with), mcp-server-integration (composes_with), security-baseline-review (composes_with), vulnerability-management (composes_with) | — | — |
+| `security-scan` | L3 | platform-lead, security-engineer | — | — | — | — |
 | `site-infrastructure-assessment` | L3 | greenfield-agent | phase1, phase2, phase3 | community-partnership-planning (composes_with), investment-feasibility-modeling (follows), regional-incentive-sourcing (follows), stage-gate-governance (composes_with), strategic-fit-screening (composes_with), talent-pipeline-planning (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `site-visit-protocol` | L3 | technical-dd-agent | phase4 | stage-gate-governance (composes_with), talent-pipeline-planning (follows), technical-due-diligence (composes_with) | — | — |
 | `skill-lifecycle-manager` | L3 | — | — | script-lifecycle-manager (composes_with) | — | — |
+| `source-command-commit-push-pr` | L3 | — | — | — | — | — |
 | `stage-gate-governance` | L3 | process-governance-manager, process-governance-manager | phase1, phase2, phase3, phase4, phase5, phase6 | strategic-fit-screening (composes_with), strategic-fit-screening (composes_with), talent-pipeline-planning (composes_with), technical-due-diligence (composes_with), two-tier-approval-chain (composes_with), two-tier-approval-chain (composes_with), value-chain-linkage-analysis (composes_with), wacc-input-session (composes_with) | — | — |
 | `standup-synthesizer` | L3 | — | — | — | — | — |
 | `statute-change-monitoring` | L3 | — | — | — | — | — |
@@ -277,3 +285,4 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0096` | adr | — | — | — |
 | `adr:0097` | adr | — | — | — |
 | `adr:0098` | adr | — | — | — |
+| `adr:0099` | adr | — | — | — |

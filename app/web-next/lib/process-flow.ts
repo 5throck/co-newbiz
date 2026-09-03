@@ -9,6 +9,7 @@
 // S6/S7)는 'skipped'로 표시된다.
 import { getDb } from "../../../db/client.ts";
 import { listTargets, screeningSummary } from "./brownfield-targets.ts";
+import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 
 export type StageId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11";
 export type GateId = "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
@@ -253,20 +254,21 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
       }
     }
   } else if (stage.id === "S9") {
-    // REFINEMENT (Phase 4): 적용 체크리스트 범위·필수 미충족 0건 검사로 강화.
-    const state = db
-      .query(
-        `SELECT COUNT(*) AS total,
-                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending
-         FROM project_checklist_item_state WHERE project_id = ?`,
-      )
-      .get(project.id) as { total: number; pending: number | null };
+    // REFINEMENT (Phase 4): 적용 체크리스트 범위·필수 미충족 0건 검사로 강화
+    // (ADR-0099 §5 — completion summary is the single source of the counts).
+    const state = ddCompletionSummary(project.id);
     if (state.total === 0) {
       blockers.push("DD 체크리스트 판정이 필요합니다");
       missing.push("DD 체크리스트 판정(필수 항목 해소)");
-    } else if ((state.pending ?? 0) > 0) {
-      blockers.push(`판정 대기 체크리스트 항목 ${state.pending}건이 있습니다`);
-      missing.push("DD 체크리스트 판정(필수 항목 해소)");
+    } else {
+      if (state.pending > 0) {
+        blockers.push(`판정 대기 체크리스트 항목 ${state.pending}건이 있습니다`);
+        missing.push("DD 체크리스트 판정(필수 항목 해소)");
+      }
+      if (state.mandatoryUnmet > 0) {
+        blockers.push(`필수 항목 미충족 ${state.mandatoryUnmet}건이 있습니다 (필수 미충족 0건 필요)`);
+        missing.push("필수 항목 해소");
+      }
     }
   } else if (stage.id === "S10") {
     // IC 승인은 게이트 기록으로만 판단한다 (사람 최종 승인, ADR-0053).

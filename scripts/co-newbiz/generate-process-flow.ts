@@ -1,3 +1,4 @@
+// @version 1.1.0
 // Process Flow Spec → docs/process-flow.md generator (ADR-0074).
 // process/flow.spec.yaml is the SSOT; this script regenerates the markdown
 // reference. The drift test (tests/unit/process-flow.test.ts) validates the

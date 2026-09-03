@@ -9,7 +9,7 @@ description: >
 version: 1.0.0
 last_reviewed: 2026-08-09
 status: active
-owner: strategy-analyst
+owner: market-intelligence-agent
 prerequisites: LAW_API_OC environment variable
 l2_propagate: true
 metadata:

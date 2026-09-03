@@ -2330,6 +2330,105 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/dd:
+    get:
+      operationId: getProjectDdWorkspace
+      summary: S9 DD workspace aggregate — standard items with live state, custom items with provenance, findings, and completion (ADR-0099).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/dd-checklist/state:
+    put:
+      operationId: putProjectDdChecklistState
+      summary: Upsert a judgment (pass/fail/pending/waived) on an applied checklist item; proposed-only items are 404 (analyst+).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/dd-checklist/tailor:
+    post:
+      operationId: tailorProjectDdChecklist
+      summary: Run the deterministic S9 DD checklist tailoring chain — proposes 5-10 industry-tailored items per domain, PROPOSED-only (ADR-0099 §2/§6).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/dd-checklist/tailor/{itemId}/review:
+    put:
+      operationId: reviewProjectDdChecklistTailorItem
+      summary: Human approve/reject decision on a proposed custom item; approval inserts the state row in the same transaction (ADR-0099 §4).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     sessionCookie:

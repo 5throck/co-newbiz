@@ -9,7 +9,7 @@ last_reviewed: 2026-08-06
 status: active
 scope: common
 l2_propagate: true
-owner: architect
+owner: backend-engineer
 prerequisites: Bun runtime, Zod library (^3.25 || ^4.0)
 relates_to:
   - skill: rest-api-design

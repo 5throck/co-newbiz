@@ -99,15 +99,15 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `dev-sync.ts` | L0 | 1.8.0 | active | —| —| L0+L1 | —|
-| `dispatch-parallel.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
-| `dispatch-serial.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
-| `dispatch.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
+| `dispatch-parallel.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `dispatch-serial.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `dispatch.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `gen-pr-body.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `generate-ide-rules.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `generate-skill-graph.ts` | L0 | 1.8.3 | active | —| —| L0+L1 | —|
 | `helpers/extends-validator.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `helpers/merge-frontmatter.ts` | L0 | 1.8.6 | active | —| —| L0+L1 | —|
-| `helpers/security-validator.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `helpers/security-validator.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `helpers/pm-md-parser.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/template-utils.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `hooks/gateguard-fact-force.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
@@ -115,7 +115,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `hooks/pre-commit.ts` | L0 | 1.5.10 | active | —| —| L0+L1 | —|
 | `hooks/pre-push.ts` | L0 | 1.2.9 | active | —| —| L0+L1 | —|
 | `lib/auth.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `lib/encoding-utils.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `lib/encoding-utils.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `lib/error-handling.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `lib/language-guard.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/pipeline-state.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
@@ -126,7 +126,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `qa-gate.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `readme-lifecycle-audit.ts` | L0 | 1.0.4 | active | —| —| L0+L1 | —|
 | `render-pdf-deck.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `retry-handler.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
+| `retry-handler.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `setup-github-branch-protection.ts` | L0 | 1.0.1 | active | `--repo`, `--branch`, `--check` (repeatable), `--dry-run` | —| L0+L1 | —|
 | `skill-lifecycle-audit.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `sync-agent-status.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
@@ -155,6 +155,32 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `validate-procedures.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/context-sections.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/context-md-schema.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
+| `handbook/apply-handbook-theme.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — applies the shared CSS theme to every HTML page under a handbook's docs/ directory) | —|
+| `handbook/build-search-index.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — reads docs/search-manifest.json and generates docs/assets/search-data.js for client-side search) | —|
+| `handbook/check-a11y.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — accessibility checks for handbook HTML: alt text, heading hierarchy, empty links, lang attributes) | —|
+| `handbook/check-authoring.ts` | co-newbiz | 1.2.0 | active | —| —| L3-only (project-local handbook toolkit — AUTHORING_GUIDELINES compliance checker for handbook sources) | —|
+| `handbook/check-external-links.ts` | co-newbiz | 1.2.0 | active | —| —| L3-only (project-local handbook toolkit — external link validation for handbook HTML files) | —|
+| `handbook/check-i18n-parity.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — cross-language content parity check for localized handbook pages) | —|
+| `handbook/check-labels.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — chapter-nav link labels must match the target file's title or h1) | —|
+| `handbook/check-links.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — verifies all internal a href targets resolve to existing files) | —|
+| `handbook/check-lint.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — basic HTML lint for handbook files without stylelint/eslint) | —|
+| `handbook/check-search.ts` | co-newbiz | 2.0.0 | active | —| —| L3-only (project-local handbook toolkit — search-manifest.json must contain all primary HTML files in docs/) | —|
+| `handbook/check-spell.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — basic spell checker for English handbook HTML files) | —|
+| `handbook/check-structure.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — HTML structure validator: tag nesting, pre/copy-btn, nested code-block, stray characters) | —|
+| `handbook/check-symmetry.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — chapter-nav prev/next symmetry check between handbook pages) | —|
+| `handbook/check-tables.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — enforces the table column-sizing policy for handbook HTML) | —|
+| `handbook/deploy-handbook.ts` | co-newbiz | 1.1.0 | active | —| —| L3-only (project-local handbook toolkit — deploys a handbook to GitHub Pages: repo creation, visibility, README patching) | —|
+| `handbook/extract-copycode.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — extracts code blocks from handbook HTML into standalone files) | —|
+| `handbook/handbook-doctor.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — enhanced static analyzer for handbook HTML files) | —|
+| `handbook/handbook-sync-audit.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — three audit modes for co-deck generated handbooks) | —|
+| `handbook/nav-utils.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — HTML parsing helpers for handbook validation, zero external deps; imported by the check scripts, also runnable standalone) | —|
+| `handbook/scaffold-handbook.ts` | co-newbiz | 1.2.0 | active | —| —| L3-only (project-local handbook toolkit — generates handbook project scaffold from skill templates + assets) | —|
+| `handbook/update-footers.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — syncs the localized site footer into every HTML page under docs/) | —|
+| `handbook/validate-handbook.ts` | co-newbiz | 1.1.0 | active | —| —| L3-only (project-local handbook toolkit — unified validator and single entry point: aggregates all read-only checks) | —|
+| `handbook/validate-nav.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — navigation integrity validator: runs all 4 nav checks, exit 1 on failure) | —|
+| `tests/apply-handbook-theme.test.ts` | co-newbiz | 1.0.1 | active | —| —| L3-only (project-local bun:test unit tests for handbook/apply-handbook-theme.ts) | —|
+| `tests/check-structure.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test regression tests for handbook/check-structure.ts, fixtures mirror real production bugs) | —|
+| `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
 
 ---
 
