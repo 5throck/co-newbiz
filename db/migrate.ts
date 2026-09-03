@@ -22,11 +22,17 @@
  * Usage: bun db/migrate.ts [--db-path <path>]
  */
 
-import { getDb } from "./client.ts";
+import { getDb, DB_DIR } from "./client.ts";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, basename } from "node:path";
 
-const MIGRATIONS_DIR = join(import.meta.dirname, "migrations");
+// Prefer this file's own directory (exact under the plain Bun runtime);
+// fall back to DB_DIR (see db/client.ts) when bundled by Next/Turbopack,
+// where import.meta.dirname may not survive.
+const MIGRATIONS_DIR =
+  typeof import.meta.dirname === "string"
+    ? join(import.meta.dirname, "migrations")
+    : join(DB_DIR, "migrations");
 
 function ensureMigrationsTable(db: ReturnType<typeof getDb>): void {
   db.run(`

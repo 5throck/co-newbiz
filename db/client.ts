@@ -12,9 +12,41 @@
  */
 
 import { existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const DEFAULT_DB_PATH = process.env.CO_NEWBIZ_DB_PATH ?? "db/data/co-newbiz.sqlite";
+// Anchored to THIS file's directory (<repo>/db), NOT the process working
+// directory — previously the default was cwd-relative, so running the web
+// server from app/web-next silently created a second, divergent database at
+// app/web-next/db/data/. CO_NEWBIZ_DB_PATH still overrides (tests rely on it).
+function resolveDefaultDbPath(): string {
+  if (process.env.CO_NEWBIZ_DB_PATH) return process.env.CO_NEWBIZ_DB_PATH;
+  // import.meta.dir/dirname are Bun-native; under Next's bundler only
+  // import.meta.url may survive, and even that can be a non-file scheme.
+  const meta = import.meta as { dir?: string; dirname?: string; url?: string };
+  const url = meta.url;
+  const here = meta.dirname ?? meta.dir ?? (() => {
+    try {
+      return typeof url === "string" && url.startsWith("file:") ? dirname(fileURLToPath(url)) : undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+  if (here) return join(here, "data", "co-newbiz.sqlite");
+  // Last resort (bundled with no file identity): walk up from the cwd until
+  // we find the repo layout marker db/migrations.
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, "db", "migrations"))) return join(dir, "db", "data", "co-newbiz.sqlite");
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return join(process.cwd(), "db", "data", "co-newbiz.sqlite");
+}
+const DEFAULT_DB_PATH = resolveDefaultDbPath();
+/** <repo>/db — siblings: data/ (databases), migrations/ (SQL). */
+export const DB_DIR = dirname(dirname(DEFAULT_DB_PATH));
 
 // Lazy-loaded Database class from bun:sqlite
 let _Database: any = null;

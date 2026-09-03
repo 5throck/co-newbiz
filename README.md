@@ -35,6 +35,31 @@ co-newbiz/
 
 This is a beta variant of the workspace template. It inherits from `templates/common` and includes variant-specific customizations.
 
+### Running the web app (fresh clone)
+
+The SQLite database is gitignored — it does not exist in a fresh clone. On the
+first server start, Next.js instrumentation (`app/web-next/instrumentation.ts`)
+automatically applies all migrations and bootstraps an initial admin account
+(random password, printed once to the server console; the first login forces a
+password change):
+
+```bash
+cd app/web-next
+bun install
+bun run dev          # first boot prints the initial admin credentials
+# open http://localhost:8787
+```
+
+Manual DB/account management (optional):
+
+```bash
+bun scripts/co-newbiz/newbiz.ts db:migrate
+echo 's3cret-password' | bun scripts/co-newbiz/newbiz.ts user:create alice --role analyst
+bun scripts/co-newbiz/newbiz.ts user:approve alice
+```
+
+Note: the database path is anchored to the repository (`<repo>/db/data/co-newbiz.sqlite`), so the server, CLI scripts, and tests all share one database regardless of the working directory. Set `CO_NEWBIZ_DB_PATH` to override (tests do).
+
 ### For Claude Code users:
 
 See `CLAUDE.md` for detailed instructions.
