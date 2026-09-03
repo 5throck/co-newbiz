@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 553,
+    "node_count": 554,
     "edge_count": 942
   },
   "nodes": [
@@ -481,6 +481,11 @@
       "id": "adr:0095",
       "type": "adr",
       "label": "ADR-0095: Project promotion foundation — opportunity→project transition carrier for S8–S11"
+    },
+    {
+      "id": "adr:0096",
+      "type": "adr",
+      "label": "ADR-0096: Orchestration engine generalization — entity-agnostic execution and the deliberation/activity split"
     },
     {
       "id": "agent:antitrust-agent",
