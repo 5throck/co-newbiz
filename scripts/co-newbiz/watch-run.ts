@@ -46,6 +46,7 @@ import { getDb } from "../../db/client.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { assessScenario, type RagScenario, type RagCliResult } from "./rag.ts";
 import { evaluateTransitionNotifications, evaluateKillCriteriaNotifications } from "../../db/lib/watch-engine.ts";
+import { resumePausedPipelines, type PipelineResumeOutcome } from "../../app/web-next/lib/pipeline.ts";
 import type { RagGrade } from "../../db/lib/rag-engine.ts";
 
 const JOB_KEY = "watch:run";
@@ -199,6 +200,31 @@ export function loadRescenariosDir(dir: string): Record<string, RagScenario> {
   return out;
 }
 
+// ── Pipeline resume pass (ADR-0102 §7) ─────────────────────────────────────
+// The same watch:run invocation, the same job_run bookkeeping (ADR-0019 — no
+// new scheduler, no in-process timer): selects pipeline_run rows paused for a
+// human, auto-resumes the ones whose blocker cleared, leaves the rest paused
+// ("no change = no action", the watch cycle's own rule).
+
+export interface PipelineResumePassResult {
+  jobRunId: string;
+  outcomes: PipelineResumeOutcome[];
+}
+
+export async function runPipelineResumePass(db: Database, options: { now: string }): Promise<PipelineResumePassResult> {
+  const jobRunId = jobRunStart(db, options.now);
+  try {
+    // advancePipeline/resumePausedPipelines write through the db/client
+    // singleton; the CLI binds it to this cycle's --db-path before calling.
+    const outcomes = await resumePausedPipelines({});
+    jobRunFinish(db, jobRunId, options.now, "success");
+    return { jobRunId, outcomes };
+  } catch (err) {
+    jobRunFinish(db, jobRunId, options.now, "failed", (err as Error).message);
+    throw err;
+  }
+}
+
 if (import.meta.main) {
   const argv = process.argv.slice(2);
   const dirIdx = argv.indexOf("--rescenarios-dir");
@@ -207,8 +233,10 @@ if (import.meta.main) {
   const db = getDb(dbPath);
   const rescenarios = dirIdx >= 0 ? loadRescenariosDir(argv[dirIdx + 1]) : undefined;
   try {
-    const result = runWatchCycle(db, { now: new Date().toISOString(), rescenarios });
-    console.log(JSON.stringify(result, null, 2));
+    const now = new Date().toISOString();
+    const result = runWatchCycle(db, { now, rescenarios });
+    const pipelinePass = await runPipelineResumePass(db, { now });
+    console.log(JSON.stringify({ ...result, pipelineResume: pipelinePass.outcomes }, null, 2));
   } catch (err) {
     console.error(`watch:run failed: ${(err as Error).message}`);
     process.exit(1);

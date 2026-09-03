@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 571,
+    "node_count": 572,
     "edge_count": 952
   },
   "nodes": [
@@ -511,6 +511,11 @@
       "id": "adr:0101",
       "type": "adr",
       "label": "ADR-0101: S11 post-management — portfolio scorecard view, human transition-decision ledger, and completion of the S8–S11 chain"
+    },
+    {
+      "id": "adr:0102",
+      "type": "adr",
+      "label": "ADR-0102: Industry × company end-to-end auto pipeline — the state machine that drives S1–S11 and stops only at human gates"
     },
     {
       "id": "agent:antitrust-agent",
