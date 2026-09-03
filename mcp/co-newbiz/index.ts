@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.4.0
+// @version 1.5.0
 /**
  * co-newbiz MCP server — docs/mcp-integration.md.
  *
@@ -41,6 +41,7 @@ import {
   createRouteDecision,
 } from "./tools/process.ts";
 import { listCommitteeSessions, getCommitteeSession } from "./tools/committee.ts";
+import { getProjectIcPackage } from "./tools/ic-package.ts";
 
 const log = createLogger("co-newbiz-mcp");
 
@@ -144,10 +145,15 @@ export const TOOLS: ToolDefinition[] = [
     description: "Full committee-session transcript — per-round positions, chair PROPOSAL, verbatim dissent. Read-only.",
     inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, sessionId: { type: "string" } }, required: ["opportunityId", "sessionId"] },
   },
+  {
+    name: "get_project_ic_package",
+    description: "S10 IC package (read-only) — adopted business case + simulations, DD completion, AI-proposed RAG grade (labeled a proposal), entity_ic/group_ic gate history, establishment progress.",
+    inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] },
+  },
 ];
 
 export function buildServer(): Server {
-  const server = new Server({ name: "co-newbiz-mcp", version: "1.7.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "co-newbiz-mcp", version: "1.8.0" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
@@ -236,6 +242,10 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
       requireString(args, "opportunityId");
       requireString(args, "sessionId");
       return getCommitteeSession(args.opportunityId as string, args.sessionId as string);
+    }
+    case "get_project_ic_package": {
+      requireString(args, "projectId");
+      return getProjectIcPackage(args.projectId as string);
     }
     default:
       throw new MCPValidationError(`Unknown tool: ${name}`);

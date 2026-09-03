@@ -2330,6 +2330,72 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/ic-package:
+    get:
+      operationId: getProjectIcPackage
+      summary: S10 IC package aggregate (read-only) — adopted business case + simulations, DD completion, AI-proposed RAG grade (labeled a proposal), entity_ic/group_ic gate history, establishment progress (ADR-0100).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/establishment:
+    get:
+      operationId: getProjectEstablishment
+      summary: S10 establishment steps (project-keyed projection of the opportunity ledger, 0070) — steps, 5-step progress (ADR-0100).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: putProjectEstablishmentStep
+      summary: Upsert one establishment step (analyst+, human owner; step 5 sequence-enforced; origin internal|joint) — ADR-0085/0100.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/projects/{id}/dd:
     get:
       operationId: getProjectDdWorkspace
