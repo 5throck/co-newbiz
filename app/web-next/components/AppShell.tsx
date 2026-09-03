@@ -12,6 +12,7 @@ import {
   BookOpen,
   Shield,
   LogOut,
+  KeyRound,
   Target,
   FileText,
   LibraryBig,
@@ -106,6 +107,11 @@ function Topbar({ pathname }: { pathname: string }) {
       <div className="topbar-actions">
         <ThemeToggle compact />
         <span className="topbar-user">{me.userId}</span>
+        {/* 임의 비밀번호 변경 — must_change_password 플로우와 같은 화면을 재사용한다. */}
+        <button type="button" onClick={() => router.push("/password-change")} className="topbar-logout" aria-label="비밀번호 변경">
+          <KeyRound size={16} />
+          <span>비밀번호 변경</span>
+        </button>
         <button type="button" onClick={() => logout()} className="topbar-logout" aria-label="로그아웃">
           <LogOut size={16} />
           <span>로그아웃</span>

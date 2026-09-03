@@ -50,6 +50,9 @@ beforeAll(async () => {
   approveUser(db, { userId: "alice", approvedBy: "test", now: NOW });
   await createUser(db, { userId: "bob", role: "viewer", password: "pw-bob-123456", createdBy: "test", now: NOW });
   approveUser(db, { userId: "bob", approvedBy: "test", now: NOW });
+  // createUser flags must_change_password=1; clear it so the seeded API
+  // tokens exercise the relay paths, not the change-password gate.
+  db.run("UPDATE app_user SET must_change_password = 0");
 
   readToken = issueApiToken(db, { userId: "bob", label: "mcp-read", scopes: ["read"], now: NOW }).token;
   writeToken = issueApiToken(db, { userId: "alice", label: "mcp-write", scopes: ["read", "write"], now: NOW }).token;

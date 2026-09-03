@@ -73,11 +73,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
     if (userId === ctx.userId) {
       return badRequest("self_delete_blocked", "An admin cannot delete their own account.");
     }
-    const res = db.run("DELETE FROM app_user WHERE user_id = ?", [userId]);
-    if (res.changes === 0) return notFound();
-    // Sessions/api_tokens orphan-join app_user; drop them so no dangling rows remain.
+    // Drop dependent rows BEFORE the user row — the FK constraints are
+    // enforced, so deleting app_user first 500s on any account that has
+    // ever logged in, changed, or reset a password.
+    db.run("DELETE FROM password_history WHERE user_id = ?", [userId]);
     db.run("DELETE FROM session WHERE user_id = ?", [userId]);
     db.run("DELETE FROM api_token WHERE user_id = ?", [userId]);
+    const res = db.run("DELETE FROM app_user WHERE user_id = ?", [userId]);
+    if (res.changes === 0) return notFound();
     appendAudit(db, { actor: ctx.userId, action: "account_delete", target: userId, now });
     return ok({ ok: true, deleted: userId });
   }

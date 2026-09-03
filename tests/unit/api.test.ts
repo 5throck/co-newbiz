@@ -62,6 +62,11 @@ beforeAll(async () => {
   approveUser(db, { userId: "alice", approvedBy: "test", now: NOW });
   await createUser(db, { userId: "bob", role: "analyst", password: "pw-bob-123456", createdBy: "test", now: NOW });
   approveUser(db, { userId: "bob", approvedBy: "test", now: NOW });
+  // createUser flags must_change_password=1 (the initial password is a
+  // known value). These seeds use fixed credentials and the flag itself is
+  // exercised separately in the must-change-password describe below —
+  // clear it so the seeded sessions start unrestricted.
+  db.run("UPDATE app_user SET must_change_password = 0");
 
   rootCookie = await loginCookie("root", "pw-root-12345");
   aliceCookie = await loginCookie("alice", "pw-alice-12345");
@@ -283,6 +288,9 @@ describe("opportunities — role-gated writes over an open read surface (ADR-009
   beforeAll(async () => {
     await createUser(db, { userId: "dave", role: "viewer", password: "pw-dave-123456", createdBy: "test", now: NOW });
     approveUser(db, { userId: "dave", approvedBy: "test", now: NOW });
+    // createUser flags must_change_password=1; clear it so the viewer session
+    // exercises the role gates, not the change-password gate.
+    db.run("UPDATE app_user SET must_change_password = 0 WHERE user_id = 'dave'");
     viewerCookie = await loginCookie("dave", "pw-dave-123456");
   });
 
