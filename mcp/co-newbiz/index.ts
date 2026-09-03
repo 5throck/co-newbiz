@@ -42,6 +42,7 @@ import {
 } from "./tools/process.ts";
 import { listCommitteeSessions, getCommitteeSession } from "./tools/committee.ts";
 import { getProjectIcPackage } from "./tools/ic-package.ts";
+import { getPortfolioScorecard } from "./tools/portfolio-scorecard.ts";
 
 const log = createLogger("co-newbiz-mcp");
 
@@ -150,6 +151,11 @@ export const TOOLS: ToolDefinition[] = [
     description: "S10 IC package (read-only) — adopted business case + simulations, DD completion, AI-proposed RAG grade (labeled a proposal), entity_ic/group_ic gate history, establishment progress.",
     inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] },
   },
+  {
+    name: "get_portfolio_scorecard",
+    description: "S11 portfolio scorecard (read-only) — quarterly rollup (financial/strategic sections, class rollup, insufficient_evidence), per-cycle trend, and venture-portfolio-IC transition-decision history. The transition-decision POST is deliberately not MCP-exposed (ADR-0101 §5).",
+    inputSchema: { type: "object", properties: { projectId: { type: "string" }, reviewCycle: { type: "string", description: "YYYY-Qn — optional explicit review cycle; defaults to the latest" } }, required: ["projectId"] },
+  },
 ];
 
 export function buildServer(): Server {
@@ -246,6 +252,10 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
     case "get_project_ic_package": {
       requireString(args, "projectId");
       return getProjectIcPackage(args.projectId as string);
+    }
+    case "get_portfolio_scorecard": {
+      requireString(args, "projectId");
+      return getPortfolioScorecard(args.projectId as string, args.reviewCycle as string | undefined);
     }
     default:
       throw new MCPValidationError(`Unknown tool: ${name}`);
