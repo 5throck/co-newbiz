@@ -63,6 +63,10 @@ export interface SynergyPayload {
   /** 기회 연결 시 산출된 시너지 점수 권고값 (사람 확정 전 — 경계 #2) */
   synergyScore?: number | null;
   synergyRationale?: string | null;
+  /** ADR-0102 — 점수 산출 방식과 팩터 분해 (규칙 앵커 + LLM ±10p 보정) */
+  scoringMethod?: "hybrid" | "rule-based" | "unavailable";
+  synergyScoreFactors?: unknown;
+  synergyScoreLimitations?: string[];
   /** ADR-0094 — 재사용된 프로파일의 딥링크 (상세 재무·SWOT는 /our-company가 담당) */
   profileRef?: { kind: "affiliate" | "group"; id: string; label: string; profileVersion: number | null };
 }
@@ -132,6 +136,9 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   const stepSummaries: SynergyStepSummary[] = [];
   // ADR-0094 — 재사용된 프로파일의 딥링크 (affiliate/group 경로에서 채워짐)
   let profileRef: SynergyPayload["profileRef"];
+  // ADR-0102 — 재사용 경로에서도 스코어링 입력(산업노출·재무비율)을 쓰기 위해 보관
+  type ReusedProfile = Awaited<ReturnType<typeof import("./company-profile-pipeline.ts")["loadLatestProfile"]>>;
+  let reusedProfile: ReusedProfile = null;
 
   if (row.target_type === "affiliate" || row.target_type === "group") {
     // ── ADR-0090 신규 경로: 그룹/계열사 프로파일 재사용 (Steps 1~3 대체) ──
@@ -151,6 +158,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       financialStrengths = prof.strengths;
       financialWeaknesses = prof.weaknesses;
       businessAssessment = prof.businessAssessment;
+      reusedProfile = prof;
       corpCode = prof.dartCorpCode ?? null;
       dart = prof.dartFinancials?.available
         ? { corpCode: corpCode ?? "", found: true, year: prof.dartFinancials.year, items: (prof.dartFinancials.items ?? []).map((i) => ({ name: i.name, value: i.value, unit: "KRW" })), reportUrl: prof.dartFinancials.reportUrl }
@@ -261,6 +269,20 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   stepSummaries.push({ step: 3, title: "재무 강/약점 분석", summary: faSummary.text, source: faSummary.source });
   }
 
+  // 리서치 보강 — 프로파일 재사용 경로(ADR-0090)는 Tavily 리서치를 실행하지
+  // 않아 webResearchCount가 0이었다. 리서치는 LLM과 무관한 입수 단계이므로
+  // 근거 확보를 위해 여기서 독립 실행한다 (ADR-0102 — 리서치/평가 분리).
+  if (!research.length && isWebResearchConfigured()) {
+    research = await researchSources([
+      `${company} 사업보고서 재무 분석`,
+      `${company} 증권사 리포트 전망`,
+      `${company} 뉴스 시너지 M&A`,
+    ], 12);
+    if (research.length) {
+      stepSummaries.push({ step: 3, title: "외부 리서치 보강 (재사용 경로)", summary: `프로파일 재사용 경로에 외부 출처 ${research.length}건 추가 입수 — 출처·노트 탭 참조.`, source: "synthesis" });
+    }
+  }
+
   // ── Step 4: S1/S2 연계 — 시너지 영역 도출 ──
   advance(4);
   const completedMarkets = db
@@ -278,13 +300,22 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     let cagrPct: number | null = null;
     let ef: EfShape = null;
     let newDrivers: string[] = [];
+    let relatedIndustries: string[] = [];
     try {
-      const matrix = (JSON.parse(m.payload) as { matrix?: { consistency?: { bottomUpCagr?: number }; externalForecast?: EfShape } }).matrix;
+      const matrix = (JSON.parse(m.payload) as {
+        matrix?: {
+          consistency?: { bottomUpCagr?: number };
+          externalForecast?: EfShape;
+          chainDirection?: { relatedIndustries?: Array<{ name?: string }> };
+        };
+      }).matrix;
       cagrPct = matrix?.consistency?.bottomUpCagr ?? null;
       ef = matrix?.externalForecast ?? null;
       newDrivers = ef?.newDrivers ?? [];
+      relatedIndustries = (matrix?.chainDirection?.relatedIndustries ?? [])
+        .map((r) => String(r?.name ?? "")).filter(Boolean);
     } catch { /* skip malformed */ }
-    return { industry: m.name_ko, cagrPct, gapPct: ef?.gapPct ?? null, newDrivers };
+    return { industry: m.name_ko, cagrPct, gapPct: ef?.gapPct ?? null, newDrivers, relatedIndustries };
   });
   const marketsContext = marketSummaries
     .map((m) => `${m.industry}: CAGR ${m.cagrPct ?? "?"}%${m.gapPct !== null ? `, 외부 전망 대비 격차 ${m.gapPct > 0 ? "+" : ""}${m.gapPct}%` : ""}${m.newDrivers.length ? `, 신규 드라이버: ${m.newDrivers.join("/")}` : ""}`)
@@ -319,16 +350,52 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     source: synJson ? "llm" : "synthesis",
   });
 
-  // ── Step 5: Short List 정리 ──
+  // ── Step 5: Short List 정리 + 시너지 점수 (하이브리드 — ADR-0102) ──
   advance(5);
   const slJson = await askJson(
     "You are an IC advisor. Reply with ONE JSON object only.",
-    `시너지 영역 후보: ${JSON.stringify(synergyAreas.map((a, i) => ({ no: i + 1, area: a.area, opportunity: a.opportunity, risk: a.risk })))}${oppRow ? `\n\n연결 기회: ${oppRow.name} (${oppRow.market_scope ?? "—"})` : ""}\n\nJSON: {"shortList":[{"rank":1,"area":"영역명","verdict":"Short List|보류","reason":"한두 문장"}],${oppRow ? '"synergyScore": <0-100 정수>, "synergyRationale": "<점수 근거 2~3문장>"' : '"synergyScore": null, "synergyRationale": null'}} — 전체 순위 매기고 상위 2~3개를 Short List로.${oppRow ? " synergyScore는 연결 기회에 대한 시너지 권고 점수입니다 (사람 확정 전 권고값)." : ""}`,
+    `시너지 영역 후보: ${JSON.stringify(synergyAreas.map((a, i) => ({ no: i + 1, area: a.area, opportunity: a.opportunity, risk: a.risk })))}${oppRow ? `\n\n연결 기회: ${oppRow.name} (${oppRow.market_scope ?? "—"})` : ""}\n\nJSON: {"shortList":[{"rank":1,"area":"영역명","verdict":"Short List|보류","reason":"한두 문장"}]} — 전체 순위 매기고 상위 2~3개를 Short List로.`,
   );
   const shortList = (Array.isArray(slJson?.shortList) ? slJson!.shortList : synergyAreas.map((a, i) => ({ rank: i + 1, area: a.area, verdict: "보류", reason: "자동 선별 미생성" })))
     .slice(0, 6)
     .map((s, i) => ({ rank: num(s.rank, i + 1), area: str(s.area, "—"), verdict: str(s.verdict, "보류"), reason: str(s.reason, "—") }));
-  stepSummaries.push({ step: 5, title: "Short List 정리", summary: `Short List ${shortList.filter((s) => s.verdict.includes("Short")).length}개 선별 (전체 ${shortList.length}영역 평가).`, source: slJson ? "llm" : "synthesis" });
+
+  // 시너지 점수 — 규칙 기반 팩터 엔진이 앵커를 계산하고(결정론·인자 분해),
+  // LLM이 가용하면 서사 근거와 ±10p 이내 보정만 추가한다. LLM 불가 시에도
+  // 규칙 점수 + 템플릿 근거로 저하 동작한다 (fail-degraded, 점수 소실 없음).
+  const { computeSynergyScore } = await import("./synergy-score.ts");
+  const rule = computeSynergyScore({
+    opportunity: oppRow ? { market_scope: oppRow.market_scope, value_chain_node: null, name: oppRow.name } : null,
+    profile: reusedProfile ? { industryExposure: reusedProfile.industryExposure ?? [], strengths: financialStrengths, ratios: reusedProfile.financialAnalysis?.ratios ?? [] } : null,
+    markets: marketSummaries.map((m) => ({ industry: m.industry, cagr: m.cagrPct === null ? null : m.cagrPct > 1 ? m.cagrPct / 100 : m.cagrPct, relatedIndustries: m.relatedIndustries })),
+  });
+  let synergyScore: number | null = rule.score;
+  let synergyRationale: string | null = rule.score !== null
+    ? `규칙 기반 산출(${rule.factors.filter((f) => f.value !== null).map((f) => `${f.label} ${(f.value as number).toFixed(0)}×${f.weight.toFixed(2)}`).join(" + ")}). ${rule.missing.length ? `미반영: ${rule.missing.join("; ")}` : "전 팩터 반영"}`
+    : null;
+  let scoringMethod: "hybrid" | "rule-based" | "unavailable" = rule.score !== null ? "rule-based" : "unavailable";
+  if (oppRow) {
+    const adj = await askJson(
+      "You are an IC advisor. Reply with ONE JSON object only.",
+      `규칙 기반 시너지 점수: ${rule.score ?? "산출 불가"} (인자: ${JSON.stringify(rule.factors)})\n대상: ${company}, 연결 기회: ${oppRow.name}\n강점: ${financialStrengths.join(" / ")}\n시너지 영역: ${synergyAreas.map((a) => a.area).join(", ") || "없도"}\n\nJSON: {"adjustment": <-10..10 정수>, "reason": "<보정 사유 1~2문장, 정성 근거 명시>"} — 데이터가 부족하면 adjustment 0.`,
+    );
+    if (adj && rule.score !== null) {
+      const delta = typeof adj.adjustment === "number" ? Math.max(-10, Math.min(10, Math.round(adj.adjustment))) : 0;
+      if (delta !== 0) {
+        synergyScore = Math.max(0, Math.min(100, rule.score + delta));
+        scoringMethod = "hybrid";
+        synergyRationale = `${synergyRationale} LLM 보정 ${delta > 0 ? "+" : ""}${delta}p: ${String(adj.reason ?? "")}`;
+      } else if (adj.reason) {
+        synergyRationale = `${synergyRationale} LLM 보정 없음: ${String(adj.reason)}`;
+      }
+    }
+  }
+  stepSummaries.push({
+    step: 5,
+    title: "Short List 정리 + 시너지 점수",
+    summary: `Short List ${shortList.filter((s) => s.verdict.includes("Short")).length}개 선별 (전체 ${shortList.length}영역 평가). 시너지 점수: ${synergyScore ?? "산출 불가"} (${scoringMethod}).`,
+    source: slJson || scoringMethod === "hybrid" ? "llm" : "synthesis",
+  });
 
   // ── Persist ──
   const payload: SynergyPayload = {
@@ -357,8 +424,11 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     target: row.target_type ? { type: row.target_type, name: company } : undefined,
     opportunity: oppRow ? { id: oppRow.id, name: oppRow.name } : null,
     profileRef,
-    synergyScore: oppRow ? (typeof (slJson as { synergyScore?: unknown })?.synergyScore === "number" ? (slJson as { synergyScore: number }).synergyScore : null) : null,
-    synergyRationale: oppRow ? ((slJson as { synergyRationale?: unknown })?.synergyRationale != null ? String((slJson as { synergyRationale: unknown }).synergyRationale) : null) : null,
+    synergyScore: oppRow ? synergyScore : null,
+    synergyRationale: oppRow ? synergyRationale : null,
+    scoringMethod: oppRow ? scoringMethod : undefined,
+    synergyScoreFactors: oppRow ? rule.factors : undefined,
+    synergyScoreLimitations: oppRow ? rule.missing : undefined,
   };
   const nextVersionNo =
     ((db.query("SELECT MAX(version_no) m FROM synergy_version WHERE analysis_id = ?").get(analysisId) as { m: number | null }).m ?? 0) + 1;

@@ -77,4 +77,48 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
+// ── Live validity probes (--probe, or default when stdout is a TTY run) ──
+// Key PRESENCE was never the whole story: the 2026-09-03 run had all keys
+// present yet the LLM key returned HTTP 401, and every LLM pipeline step
+// silently degraded to synthesis. A cheap 1-request probe per service turns
+// that into explicit evidence (ADR-0075: never conclude without one).
+if (process.argv.includes("--probe")) {
+  const probe = async (label: string, url: string, init: RequestInit): Promise<void> => {
+    try {
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(20_000) });
+      const verdict = res.ok ? "valid" : `INVALID (HTTP ${res.status})`;
+      console.log(`  ${label}: ${verdict}`);
+      if (!res.ok) problems.push(`${label} credential rejected — ${verdict}`);
+    } catch (err) {
+      console.log(`  ${label}: UNREACHABLE (${err instanceof Error ? err.message : err})`);
+      problems.push(`${label} probe failed (network)`);
+    }
+  };
+  console.log("probing live credentials:");
+  const llmKey = parsed.get("CO_NEWBIZ_LLM_API_KEY");
+  if (llmKey) {
+    await probe("LLM", `${(parsed.get("CO_NEWBIZ_LLM_BASE_URL") ?? "").replace(/\/$/, "")}/v1/messages`, {
+      method: "POST",
+      headers: { "x-api-key": llmKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: parsed.get("CO_NEWBIZ_LLM_MODEL") ?? "", max_tokens: 8, messages: [{ role: "user", content: "ping" }] }),
+    });
+  } else problems.push("CO_NEWBIZ_LLM_API_KEY missing — LLM pipeline stages will degrade");
+  const dartKey = parsed.get("DART_API_KEY");
+  if (dartKey) await probe("DART", `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${dartKey}`, {});
+  const tavilyKey = parsed.get("TAVILY_API_KEY");
+  if (tavilyKey) {
+    await probe("TAVILY", "https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ api_key: tavilyKey, query: "probe", max_results: 1 }),
+    });
+  } else problems.push("TAVILY_API_KEY missing — web research stages will degrade");
+}
+
+if (problems.length > 0) {
+  console.error("env-check: FAILED");
+  for (const p of problems) console.error(`  - ${p}`);
+  process.exit(1);
+}
+
 console.log(`env-check: OK — ${REQUIRED_KEYS.length}/${REQUIRED_KEYS.length} required keys present${hasCRLF ? " (CRLF detected; use the tr -d '\\r' load preamble)" : ""}`);
