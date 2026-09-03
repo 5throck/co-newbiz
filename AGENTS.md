@@ -13,12 +13,12 @@
 
 ## Roster Overview
 
-**34 agents** across four domains, coordinated by PM as New Business Review Lead. Domain leads are design and review owners, not dispatchers — the workspace flat PM Gateway is preserved in full; see `agents/pm.md` for the coordination loop.
+**38 agents** across four domains, coordinated by PM as New Business Review Lead. Domain leads are design and review owners, not dispatchers — the workspace flat PM Gateway is preserved in full; see `agents/pm.md` for the coordination loop.
 
 | Domain | Count | Lead |
 |---|---|---|
 | `_core` | 1 | `pm` |
-| functional | 21 | `process-governance-manager` |
+| functional | 25 | `process-governance-manager` |
 | technical | 10 | `platform-lead` |
 | industry | 1 | `industry-lead` |
 | region | 1 | `region-lead` |
@@ -32,7 +32,7 @@
 |---|---|---|---|
 | **pm** | [`agents/pm.md`](agents/pm.md) | High | New Business Review Lead — coordinates four domain leads, enforces stage gates, approves ADRs |
 
-## Functional Domain — Regulations, Procedures, Operation, Deal Review (21)
+## Functional Domain — Regulations, Procedures, Operation, Deal Review (25)
 
 | Agent | File | Tier | Subdomain | Role |
 |---|---|---|---|---|
@@ -57,6 +57,10 @@
 | certification-agent | [`agents/certification-agent.md`](agents/certification-agent.md) | High | certification | Certification and regulatory response, kept structurally distinct from permits |
 | partnership-agent | [`agents/partnership-agent.md`](agents/partnership-agent.md) | Medium | partnership | Partner sourcing strategy, partner due diligence including compliance screening, and JV structuring, distinct from community-partnership-planning (which covers local-community relations) |
 | group-review-agent | [`agents/group-review-agent.md`](agents/group-review-agent.md) | High | group | Group-level review distinct from entity-level review: portfolio fit, intra-group transaction compliance, and capital allocation prioritization across concurrent proposals |
+| financing-agent | [`agents/financing-agent.md`](agents/financing-agent.md) | Medium | analysis | Financing structure advisory: debt/equity mix, project finance, government funds and subsidies, and financial covenant structuring |
+| site-facility-agent | [`agents/site-facility-agent.md`](agents/site-facility-agent.md) | Medium | greenfield | Site and facility advisory: site selection, industrial complex eligibility, facility investment, and leasing-versus-build decisions |
+| ir-agent | [`agents/ir-agent.md`](agents/ir-agent.md) | Medium | governance | Investor relations advisory: equity story, disclosure discipline, investor communications, and market perception risk |
+| ip-agent | [`agents/ip-agent.md`](agents/ip-agent.md) | Medium | governance | Patent and IP advisory: patent landscape, freedom-to-operate, IP valuation, trade secrets, and technology licensing |
 
 ## Technical Domain — System Build & Run (9)
 
@@ -95,7 +99,7 @@
 
 ## Governance
 
-- **PM Gateway**: PM is the only agent users may directly invoke. All 33 specialist agents require PM dispatch.
+- **PM Gateway**: PM is the only agent users may directly invoke. All 37 specialist agents require PM dispatch.
 - **Three-stage review**: every deliverable passes AI 1st (formal) -> AI 2nd (cross-domain, different domain than the author) -> human final (judgement and approval). See `agents/pm.md` Dispatch Protocol.
 - **Non-negotiable boundaries**: agents inherit caller permissions and hold no accounts of their own; gate approval and investment decisions belong to humans; `procedures/*.yaml` is authoritative over `skills/*.md`; data confidence caps the RAG grade; permits and certifications are tracked separately.
 - Run `bun run agent:verify` after any change to this roster.

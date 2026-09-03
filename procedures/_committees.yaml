@@ -25,6 +25,26 @@
 # |   → chair: process-governance-manager (synthesis ONLY — never a voting     |
 # |      seat)                                                                 |
 #
+# Amendment (2026-09-04, ADR-0097): six STANDING functional-expert seats were
+# added to both committees — financing-agent (financing structure),
+# site-facility-agent (site & facility), legal-counsel (legal),
+# hr-integration-agent (HR & labor), ir-agent (investor relations),
+# ip-agent (patent/IP). Two map to existing agents; four are new agent files.
+# They carry NO veto_dissent — the red-team privilege stays risk-officer's.
+# The committee skeleton is therefore the fixed core 5 (domain expert,
+# industry, region, quantitative rigor, red team) plus these six standing
+# functional seats.
+#
+# Known follow-up: with 12 members, round-based deliberation is heavy. A
+# per-member `rounds: 1` override (functional seats consulted in round 1
+# only) was considered and deferred — expressing it cleanly requires touching
+# both the hybrid path in app/web-next/lib/committee-session.ts AND
+# runDeliberationRounds in agent-orchestrator.ts (agent_team passes a flat
+# agent list with a single committee-wide rounds value). Doing it in one
+# mode only would give the two modes divergent deliberation semantics, so
+# the committees keep rounds: 2 for every member until the engine supports
+# per-member rounds.
+#
 # The skeleton is RECOMMENDED for future committees (S3 screening, S8
 # case-adoption, S9 checklist-approval); the validator's hard rule is only
 # the mandatory risk-officer seat (ADR-0097 §4).
@@ -73,6 +93,24 @@ committees:
         key: market-intelligence-agent
         seat: quantitative_rigor
       - type: agent
+        key: financing-agent
+        seat: functional_financing
+      - type: agent
+        key: site-facility-agent
+        seat: functional_site_facility
+      - type: agent
+        key: legal-counsel
+        seat: functional_legal
+      - type: agent
+        key: hr-integration-agent
+        seat: functional_hr_labor
+      - type: agent
+        key: ir-agent
+        seat: functional_ir
+      - type: agent
+        key: ip-agent
+        seat: functional_ip
+      - type: agent
         key: risk-officer
         seat: red_team
         veto_dissent: true
@@ -98,6 +136,24 @@ committees:
       - type: agent
         key: valuation-agent
         seat: quantitative_rigor
+      - type: agent
+        key: financing-agent
+        seat: functional_financing
+      - type: agent
+        key: site-facility-agent
+        seat: functional_site_facility
+      - type: agent
+        key: legal-counsel
+        seat: functional_legal
+      - type: agent
+        key: hr-integration-agent
+        seat: functional_hr_labor
+      - type: agent
+        key: ir-agent
+        seat: functional_ir
+      - type: agent
+        key: ip-agent
+        seat: functional_ip
       - type: agent
         key: risk-officer
         seat: red_team

@@ -752,6 +752,11 @@
       "layer": "L3"
     },
     {
+      "id": "financing-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "financing-plan-review",
       "type": "skill",
       "layer": "L3"
@@ -904,6 +909,16 @@
     {
       "id": "investment-vehicle-structuring",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "ip-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "ir-agent",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -1174,6 +1189,11 @@
     {
       "id": "security-scan",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "site-facility-agent",
+      "type": "agent",
       "layer": "L3"
     },
     {

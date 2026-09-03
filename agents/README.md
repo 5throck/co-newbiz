@@ -14,14 +14,14 @@ Every agent file follows the 3-Section structure:
 
 Register every agent in `AGENTS.md` and verify with `bun run agent:verify`.
 
-## Agent classes (readiness audit 2026-08-23)
+## Agent classes (readiness audit 2026-08-23; expanded 2026-09-04)
 
-34 agents in four classes — the classes, not the individual names, are the stable contract:
+38 agents in four classes — the classes, not the individual names, are the stable contract:
 
 | Class | Count | Dispatch behavior |
 |---|---|---|
 | Domain leads | 4 | Design/review owners under the New Business Review Lead (functional `process-governance-manager`, technical `platform-lead`, industry `industry-lead`, region `region-lead`). Leads other than PGM are **not dispatched as procedure steps by design** — industry/region input enters via `industry-profiles/` / `region-profiles/` and lead consultation. (`process-governance-manager` IS dispatched — ×16 steps; `region-lead` ×1 via the EU override) |
-| Deal-review specialists | ~21 | Dispatched via `agent_key` in procedure steps (85 AI steps across 15 shared procedures + override layers). This is the class the readiness audit found **complete** — no deal-review agent is undispatched |
+| Deal-review specialists | ~25 | Dispatched via `agent_key` in procedure steps (85 AI steps across 15 shared procedures + override layers). Includes the six standing functional-expert seats of the ADR-0097 committees added 2026-09-04 (`financing-agent`, `site-facility-agent`, `legal-counsel`, `hr-integration-agent`, `ir-agent`, `ip-agent`). This is the class the readiness audit found **complete** — no deal-review agent is undispatched |
 | Build/run | 8 | `data-architect`, `dba`, `backend-engineer`, `frontend-engineer`, `release-engineer`, `sre`, `infra-automation-engineer`, `security-engineer`. Dormant until a runtime-hardening round activates `app/server` / `app/web` work |
 | Non-deal support | 2 | `glossary-curator`, `docs-writer` — governance/documentation, outside deal review |
 
