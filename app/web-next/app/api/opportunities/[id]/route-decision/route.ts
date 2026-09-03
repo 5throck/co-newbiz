@@ -79,6 +79,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const body = (await request.json().catch(() => null)) as {
     track?: string; sub_track?: string; rationale?: string; alternatives_considered?: string;
     intent?: string; scores?: unknown;
+    // ADR-0097 back-compat: optional provenance link to the committee
+    // deliberation that proposed this decision (0066 nullable column).
+    gate_evaluation_id?: string;
   } | null;
   const track = body?.track;
   const rationale = body?.rationale?.trim();
@@ -137,12 +140,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const decisionId = ulid();
   const now = new Date().toISOString();
+  // ADR-0097 back-compat: gate_evaluation_id is optional provenance — when
+  // present it must reference an existing gate_evaluation (badRequest, not a
+  // bare FK error, so the caller sees the real problem).
+  const gateEvaluationId = body?.gate_evaluation_id?.trim() || null;
+  if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
+    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+  }
   db.run(
     `INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, alternatives_considered, decided_by, decided_at,
-                                 intent, override_flagged, staging_recommended, total_score)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+                                 intent, override_flagged, staging_recommended, total_score, gate_evaluation_id)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [decisionId, id, track, subTrack, rationale, body?.alternatives_considered?.trim() || null, ctx.userId, now,
-     intentValue, 0, stagingRecommended, total],
+     intentValue, 0, stagingRecommended, total, gateEvaluationId],
   );
   for (const s of scoreRows) {
     db.run(

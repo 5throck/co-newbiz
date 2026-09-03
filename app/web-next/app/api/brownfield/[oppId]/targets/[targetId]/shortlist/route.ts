@@ -13,8 +13,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "Short List 승격은 analyst 역할 이상이어야 합니다.");
   const { oppId, targetId } = await params;
-  const body = (await request.json().catch(() => null)) as { rank?: number; universe_note?: string } | null;
+  const body = (await request.json().catch(() => null)) as { rank?: number; universe_note?: string; gate_evaluation_id?: string } | null;
   const db = getDb();
+  // ADR-0097 back-compat: optional provenance link to the S6/S7 committee
+  // deliberation that proposed this promotion (0066 nullable column).
+  const gateEvaluationId = body?.gate_evaluation_id?.trim() || null;
+  if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
+    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+  }
   const target = db
     .query("SELECT * FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
     .get(targetId, oppId) as unknown as TargetRow | undefined;
@@ -24,7 +30,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   if (summary.mandatoryOpen.length > 0) return badRequest("mandatory_pending", `필수 항목 미판정: ${summary.mandatoryOpen.join(", ")}`);
   const row = db.query("SELECT COALESCE(MAX(rank),0) m FROM brownfield_target WHERE opportunity_id = ? AND status='shortlisted'").get(oppId) as { m: number };
   const rank = body?.rank ?? row.m + 1;
-  db.run("UPDATE brownfield_target SET status = 'shortlisted', rank = ?, exclusion_reason = NULL, updated_at = ? WHERE id = ?", [rank, now(), targetId]);
+  db.run("UPDATE brownfield_target SET status = 'shortlisted', rank = ?, exclusion_reason = NULL, gate_evaluation_id = COALESCE(?, gate_evaluation_id), updated_at = ? WHERE id = ?", [rank, gateEvaluationId, now(), targetId]);
 
   // S7 → 시너지 정합성 자동 연결 — 대상 회사를 md_company에 등록/재사용하고
   // synergy_analysis를 in_progress로 준비해 시너지 정합성 화면에서 바로 심층 분석이 가능하게 한다.

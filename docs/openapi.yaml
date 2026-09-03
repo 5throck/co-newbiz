@@ -1755,6 +1755,64 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/opportunities/{id}/committee-sessions:
+    get:
+      operationId: listCommitteeSessions
+      summary: Steering-committee deliberation sessions for an opportunity (ADR-0097).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: conveneCommitteeSession
+      summary: Convene a committee session (analyst+). agent_team runs the full deliberation and lands a gate_evaluation PROPOSAL — never a decision.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}/committee-sessions/{sessionId}:
+    get:
+      operationId: getCommitteeSessionTranscript
+      summary: Full committee-session transcript — per-round positions, chair PROPOSAL, verbatim dissent.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}/committee-sessions/{sessionId}/positions:
+    post:
+      operationId: submitCommitteeHumanPosition
+      summary: Submit a human member's position in human_only/hybrid modes (human_user_id comes from the session, never the body).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}/committee-sessions/{sessionId}/advance:
+    post:
+      operationId: advanceCommitteeSession
+      summary: Advance to the next round or run the chair synthesis (gate_evaluation PROPOSAL only — confirming records stay human-only).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/opportunities/{id}/factors:
     get:
       operationId: getOpportunityFactors

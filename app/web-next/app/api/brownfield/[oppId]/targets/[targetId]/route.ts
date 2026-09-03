@@ -37,7 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "스크리닝 판정은 analyst 역할 이상이어야 합니다.");
   const { oppId, targetId } = await params;
-  const body = (await request.json().catch(() => null)) as { states?: Record<string, string> } | null;
+  const body = (await request.json().catch(() => null)) as { states?: Record<string, string>; gate_evaluation_id?: string } | null;
   const states = body?.states;
   if (!states || typeof states !== "object") return badRequest("invalid_request", "states(체크리스트 판정)는 필수입니다.");
   const valid = new Set(["pass", "fail", "na", "waived", "pending"]);
@@ -50,7 +50,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     .get(targetId, oppId) as { screening_json: string | null } | undefined;
   if (!existing) return notFound();
   const merged = { ...(existing.screening_json ? JSON.parse(existing.screening_json) : {}), ...states };
-  db.run("UPDATE brownfield_target SET screening_json = ?, updated_at = ? WHERE id = ?", [JSON.stringify(merged), now(), targetId]);
+  // ADR-0097 back-compat: optional provenance link to the S6/S7 committee
+  // deliberation behind this screening judgment (0066 nullable column).
+  const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
+  if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
+    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+  }
+  db.run("UPDATE brownfield_target SET screening_json = ?, gate_evaluation_id = COALESCE(?, gate_evaluation_id), updated_at = ? WHERE id = ?", [JSON.stringify(merged), gateEvaluationId, now(), targetId]);
   appendAudit(db, { actor: auth.auth.userId, action: "brownfield_target.screening", target: `${oppId}:${targetId}`, now: new Date().toISOString() });
   const updated = db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId) as unknown as TargetRow;
   return ok({ target: updated, screening_summary: screeningSummary(updated) }, 200);

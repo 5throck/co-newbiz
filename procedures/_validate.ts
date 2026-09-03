@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.5.0
+// @version 1.6.0
 /**
  * Procedure Schema Validator — co-newbiz
  *
@@ -60,6 +60,20 @@
  *   bun procedures/_validate.ts
  *   bun procedures/_validate.ts --strict    (also gate the executable-ratio baseline)
  *   bun procedures/_validate.ts --verbose   (no-op; warnings always print)
+ *
+ * Since 1.6.0 (ADR-0097 §4) it also runs a committee-registry pass against
+ * procedures/_committees.yaml — the steering-committee registry as
+ * governance data:
+ *   (a) members[].key existence: `agent` keys must resolve to
+ *       agents/<key>.md; `human_role` keys must be listed in
+ *       procedures/_human-roles.yaml (the same two registries every other
+ *       pass already consults);
+ *   (b) a committee WITHOUT a risk-officer membership is an ERROR — the
+ *       mandatory red-team seat is a committee contract term (ADR-0097 §2),
+ *       not a configuration choice; removing it requires a new ADR;
+ *   (c) decision_modes_allowed values must stay within the closed enum
+ *       human_only | agent_team | hybrid;
+ *   (d) rounds >= 1 (integer); chair must resolve like a member key.
  */
 
 import * as yaml from "js-yaml";
@@ -76,6 +90,7 @@ const SKILLS_DIR = join(PROJECT_ROOT, "skills");
 const ROUTING_VARS_MIGRATION = join(PROJECT_ROOT, "db", "migrations", "0014_routing_vars.sql");
 const HUMAN_ROLES_FILE = join(ROOT, "_human-roles.yaml");
 const OUTPUT_TYPES_FILE = join(ROOT, "_output-types.yaml");
+const COMMITTEES_FILE = join(ROOT, "_committees.yaml");
 
 interface Issue {
   file: string;
@@ -539,6 +554,147 @@ async function loadOutputTypes(): Promise<{ types: Set<string>; error: Issue | n
   }
 }
 
+// ── Committee registry pass (ADR-0097 §2/§4) ────────────────────────────────
+
+const DECISION_MODES = new Set(["human_only", "agent_team", "hybrid"]);
+/** The red-team seat every committee must carry (ADR-0097 §2). */
+const MANDATORY_RED_TEAM_KEY = "risk-officer";
+
+export interface CommitteeMemberDef {
+  type: unknown;
+  key: unknown;
+  applies_when?: unknown;
+  veto_dissent?: unknown;
+}
+export interface CommitteeDef {
+  applies_to: unknown;
+  description?: unknown;
+  chair: unknown;
+  rounds: unknown;
+  decision_modes_allowed: unknown;
+  members: unknown;
+}
+
+/**
+ * Resolve one member/chair key against the two registries: an `agent` key
+ * must name agents/<key>.md; a `human_role` key must be listed in
+ * _human-roles.yaml. Exported for tests/unit/committee-boundary.test.ts.
+ */
+export function checkCommitteeKey(file: string, where: string, type: unknown, key: unknown, humanRoles: Set<string>): Issue | null {
+  if (typeof key !== "string" || key.trim() === "") {
+    return { file, message: `${where}: member key is missing or empty`, severity: "error" };
+  }
+  if (type === "agent") {
+    if (!existsSync(join(PROJECT_ROOT, "agents", `${key}.md`))) {
+      return { file, message: `${where}: agent key '${key}' has no agents/${key}.md`, severity: "error" };
+    }
+    return null;
+  }
+  if (type === "human_role") {
+    if (!humanRoles.has(key)) {
+      return { file, message: `${where}: human_role key '${key}' is not listed in procedures/_human-roles.yaml — add the registry entry in the same change`, severity: "error" };
+    }
+    return null;
+  }
+  return { file, message: `${where}: member type must be 'agent' or 'human_role' (got ${JSON.stringify(type)})`, severity: "error" };
+}
+
+/**
+ * Validate the whole _committees.yaml document. Static — mirrors the
+ * kill-criteria pass in shape (load once, loud, error-vs-warn discipline).
+ * Exported for tests/unit/committee-boundary.test.ts.
+ */
+export function validateCommitteeRegistry(doc: unknown, humanRoles: Set<string>): { issues: Issue[]; committeeCount: number } {
+  const issues: Issue[] = [];
+  const file = COMMITTEES_FILE;
+  if (typeof doc !== "object" || doc === null) {
+    return { issues: [{ file, message: "Document is not a YAML mapping", severity: "error" }], committeeCount: 0 };
+  }
+  const committees = (doc as { committees?: unknown }).committees;
+  if (typeof committees !== "object" || committees === null || Object.keys(committees as object).length === 0) {
+    return { issues: [{ file, message: "'committees' mapping is missing or empty — the registry is the single inventory", severity: "error" }], committeeCount: 0 };
+  }
+
+  for (const [key, raw] of Object.entries(committees as Record<string, unknown>)) {
+    if (typeof raw !== "object" || raw === null) {
+      issues.push({ file, message: `committee '${key}' is not a YAML mapping`, severity: "error" });
+      continue;
+    }
+    const c = raw as CommitteeDef;
+    const where = `committee '${key}'`;
+    if (typeof c.applies_to !== "string" || c.applies_to.trim() === "") {
+      issues.push({ file, message: `${where}: missing required field 'applies_to' (stage/gate scope)`, severity: "error" });
+    }
+
+    // (d) rounds >= 1.
+    if (typeof c.rounds !== "number" || !Number.isInteger(c.rounds) || c.rounds < 1) {
+      issues.push({ file, message: `${where}: 'rounds' must be an integer >= 1 (got ${JSON.stringify(c.rounds)})`, severity: "error" });
+    }
+
+    // (c) decision_modes_allowed closed enum.
+    if (!Array.isArray(c.decision_modes_allowed) || (c.decision_modes_allowed as unknown[]).length === 0) {
+      issues.push({ file, message: `${where}: 'decision_modes_allowed' must be a non-empty list`, severity: "error" });
+    } else {
+      for (const mode of c.decision_modes_allowed as unknown[]) {
+        if (typeof mode !== "string" || !DECISION_MODES.has(mode)) {
+          issues.push({ file, message: `${where}: decision mode ${JSON.stringify(mode)} is outside the closed enum human_only | agent_team | hybrid`, severity: "error" });
+        }
+      }
+    }
+
+    // Chair — recorder-pattern synthesizer (ADR-0053); resolves like a member key.
+    const chairIssue = checkCommitteeKey(file, `${where} chair`, "agent", c.chair, humanRoles);
+    if (chairIssue) issues.push(chairIssue);
+
+    // (a) member key existence + (b) mandatory red-team seat.
+    if (!Array.isArray(c.members) || (c.members as unknown[]).length === 0) {
+      issues.push({ file, message: `${where}: 'members' must be a non-empty list`, severity: "error" });
+      continue;
+    }
+    let hasRedTeam = false;
+    for (const [i, rawMember] of (c.members as unknown[]).entries()) {
+      if (typeof rawMember !== "object" || rawMember === null) {
+        issues.push({ file, message: `${where}: members[${i}] is not a mapping`, severity: "error" });
+        continue;
+      }
+      const m = rawMember as CommitteeMemberDef;
+      const issue = checkCommitteeKey(file, `${where} members[${i}]`, m.type, m.key, humanRoles);
+      if (issue) {
+        issues.push(issue);
+        continue;
+      }
+      if (m.key === MANDATORY_RED_TEAM_KEY) {
+        hasRedTeam = true;
+        if (m.veto_dissent !== true) {
+          // The verbatim-dissent contract rides on this flag (ADR-0097 §2);
+          // a red-team seat without it is a silent downgrade.
+          issues.push({ file, message: `${where}: the risk-officer (red team) seat must set veto_dissent: true — the verbatim-dissent contract depends on it`, severity: "error" });
+        }
+      } else if (m.veto_dissent === true) {
+        issues.push({ file, message: `${where}: members[${i}] ('${String(m.key)}') carries veto_dissent but is not the red-team seat — veto_dissent belongs to risk-officer only`, severity: "error" });
+      }
+    }
+    if (!hasRedTeam) {
+      issues.push({
+        file,
+        message: `${where}: no risk-officer membership — the red-team seat is MANDATORY on every committee (ADR-0097 §2); removing it requires a new ADR, not a config edit`,
+        severity: "error",
+      });
+    }
+  }
+
+  return { issues, committeeCount: Object.keys(committees as object).length };
+}
+
+/** Load the committee registry once per run. Unreadable ⇒ error + 0 committees. */
+async function loadCommittees(): Promise<{ doc: unknown; error: Issue | null }> {
+  try {
+    return { doc: yaml.load(await readFile(COMMITTEES_FILE, "utf-8"), { schema: yaml.JSON_SCHEMA }), error: null };
+  } catch (e) {
+    return { doc: null, error: { file: COMMITTEES_FILE, message: `cannot read the committee registry: ${(e as Error).message}`, severity: "error" } };
+  }
+}
+
 // ── Kill-criteria registry pass (design of record 2026-08-22, Decision 8) ──
 
 const KILL_CRITERIA_DIR = join(ROOT, "_kill-criteria");
@@ -801,6 +957,13 @@ async function main() {
 
   allIssues.push(...(await lintSkillsForGateSteps()));
 
+  // ADR-0097 §4: committee registry pass — every pass above shares the
+  // human-role set, so it is loaded before this point.
+  const { doc: committeesDoc, error: committeesError } = await loadCommittees();
+  if (committeesError) allIssues.push(committeesError);
+  const committeePass = validateCommitteeRegistry(committeesDoc, humanRoles);
+  allIssues.push(...committeePass.issues);
+
   const { issues: killCriteriaIssues, stats: killCriteriaStats } = await validateKillCriteria(
     declaredKillCriteria,
     process.argv.includes("--strict")
@@ -821,6 +984,7 @@ async function main() {
     `kill-criteria: ${killCriteriaStats.declaredCount} declared / ${killCriteriaStats.executable} executable (registry)`
   );
   console.log(`output_types: ${usedOutputTypes.size} used / ${outputTypes.size} registered (vocabulary)`);
+  console.log(`committees: ${committeePass.committeeCount} registered (ADR-0097)`);
   if (errors.length > 0) {
     console.error("❌ Procedure validation failed.");
     process.exit(1);

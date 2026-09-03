@@ -40,6 +40,7 @@ import {
   getProcessEvaluation, listGateDecisions, recordGateDecision,
   createRouteDecision,
 } from "./tools/process.ts";
+import { listCommitteeSessions, getCommitteeSession } from "./tools/committee.ts";
 
 const log = createLogger("co-newbiz-mcp");
 
@@ -133,6 +134,16 @@ export const TOOLS: ToolDefinition[] = [
     description: "Record a route decision (S4) — greenfield/brownfield + sub_track + rationale. Analyst+; audited.",
     inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, track: { type: "string", enum: ["greenfield","brownfield"] }, sub_track: { type: "string", enum: ["existing_business_rbd","intra_venture"] }, rationale: { type: "string" } }, required: ["opportunityId", "track", "rationale"] },
   },
+  {
+    name: "list_committee_sessions",
+    description: "List steering-committee deliberation sessions for an opportunity (ADR-0097).",
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
+  },
+  {
+    name: "get_committee_session",
+    description: "Full committee-session transcript — per-round positions, chair PROPOSAL, verbatim dissent. Read-only.",
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, sessionId: { type: "string" } }, required: ["opportunityId", "sessionId"] },
+  },
 ];
 
 export function buildServer(): Server {
@@ -216,6 +227,15 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
         rationale: args.rationale as string,
         alternatives_considered: args.alternatives_considered as string | undefined,
       });
+    }
+    case "list_committee_sessions": {
+      requireString(args, "opportunityId");
+      return listCommitteeSessions(args.opportunityId as string);
+    }
+    case "get_committee_session": {
+      requireString(args, "opportunityId");
+      requireString(args, "sessionId");
+      return getCommitteeSession(args.opportunityId as string, args.sessionId as string);
     }
     default:
       throw new MCPValidationError(`Unknown tool: ${name}`);

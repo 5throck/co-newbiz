@@ -1,0 +1,104 @@
+# procedures/_committees.yaml — the steering-committee registry (ADR-0097 §3).
+# Sibling of _human-roles.yaml: read statically by procedures/_validate.ts —
+# no database dependency. A committee registered here is governance data, not
+# a prompt: composition, chair, rounds, and the allowed decision modes are
+# validated on every run.
+#
+# ── The 5-role skeleton (ADR-0097 §1) — derived from repo principles ──────
+# Every seat is derived from an existing structural rule, not hand-picked:
+#
+# | Principle (source)                          | Derived seat                     |
+# |---------------------------------------------|----------------------------------|
+# | Four domain leads (project CLAUDE.md); 2nd-stage review must come from a   |
+# | DIFFERENT domain than the author (design v1.0 cross-validation matrix)     |
+# |   → domain expert: the track agent (brownfield-agent | greenfield-agent —  |
+# |      the only seat that swaps by track) + industry-lead + region-lead      |
+# | S4 / S6-S7 conclusions ride on proxy-chain market estimates and valuation  |
+# |   → quantitative rigor: market-intelligence-agent (S4) | valuation-agent   |
+# |      (S6/S7)                                                               |
+# | Design v1.0 grants risk-officer kill-criteria authority across all gates   |
+# |   → red team: risk-officer — FIXED on every committee and MANDATORY        |
+# |      (veto_dissent: true); optimism-bias auditing is the role, not an      |
+# |      option. Removing this seat requires a new ADR, never a config edit.   |
+# | ADR-0053 recorder pattern — a synthesizer that votes nothing, decides      |
+# | nothing                                                                    |
+# |   → chair: process-governance-manager (synthesis ONLY — never a voting     |
+# |      seat)                                                                 |
+#
+# The skeleton is RECOMMENDED for future committees (S3 screening, S8
+# case-adoption, S9 checklist-approval); the validator's hard rule is only
+# the mandatory risk-officer seat (ADR-0097 §4).
+#
+# Schema (ADR-0097 §3):
+#   committees.<key>.applies_to        — stage/gate scope
+#   members[]                          — type: agent | human_role;
+#                                        key: agents/<key>.md name or
+#                                        _human-roles.yaml registry key;
+#                                        optional applies_when (seat
+#                                        conditional); veto_dissent: true on
+#                                        the red-team seat
+#   chair                              — the recorder-pattern synthesizer
+#   rounds                             — minimum 1
+#   decision_modes_allowed             — closed enum:
+#                                        human_only | agent_team | hybrid
+#
+# Decision modes never change WHO CONFIRMS (design boundary #2): agents
+# propose, humans always confirm gate records (ADR-0053, ADR-0094).
+
+committees:
+  route-steering-committee:
+    applies_to: route_decision
+    description: >-
+      S4 steering committee (route decision). Deliberates the greenfield /
+      brownfield track and route type before the human records the decision.
+    chair: process-governance-manager
+    rounds: 2
+    decision_modes_allowed: [human_only, agent_team, hybrid]
+    members:
+      - type: agent
+        key: brownfield-agent
+        seat: domain_expert
+        applies_when: track == brownfield
+      - type: agent
+        key: greenfield-agent
+        seat: domain_expert
+        applies_when: track == greenfield
+      - type: agent
+        key: industry-lead
+        seat: industry_expert
+      - type: agent
+        key: region-lead
+        seat: region_expert
+      - type: agent
+        key: market-intelligence-agent
+        seat: quantitative_rigor
+      - type: agent
+        key: risk-officer
+        seat: red_team
+        veto_dissent: true
+
+  target-longlist-shortlist-committee:
+    applies_to: brownfield_target
+    description: >-
+      S6/S7 committee (Long List -> Short List). Deliberates target screening
+      and shortlist promotion before the human records the outcome.
+    chair: process-governance-manager
+    rounds: 2
+    decision_modes_allowed: [human_only, agent_team, hybrid]
+    members:
+      - type: agent
+        key: brownfield-agent
+        seat: domain_expert
+      - type: agent
+        key: industry-lead
+        seat: industry_expert
+      - type: agent
+        key: region-lead
+        seat: region_expert
+      - type: agent
+        key: valuation-agent
+        seat: quantitative_rigor
+      - type: agent
+        key: risk-officer
+        seat: red_team
+        veto_dissent: true

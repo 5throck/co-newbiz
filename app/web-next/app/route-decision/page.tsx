@@ -6,6 +6,7 @@ import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
 import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
+import { CommitteePanel } from "../../components/CommitteePanel.tsx";
 
 // S4 진출방식 결정 (/route-decision) — selected 기회에 Greenfield/Brownfield 트랙과
 // 라우트 유형을 기록하는 분기점 (flow.spec v2.0.0).
@@ -376,7 +377,18 @@ export function RouteDecisionView() {
           )}
         </section>
       )}
-      {selected && <GateDecisionPanel opportunityId={selected.id} gates={["screening", "pre_fs"]} />}
+      {selected && (
+        <>
+          <GateDecisionPanel opportunityId={selected.id} gates={["screening", "pre_fs"]} />
+          {/* ADR-0097: route-steering-committee 심의 — 에이전트는 제안, 확정은 인간 */}
+          <CommitteePanel
+            opportunityId={selected.id}
+            committeeKey="route-steering-committee"
+            committeeLabel="S4 진출방식 스티어링 위원회"
+            gates={["pre_fs"]}
+          />
+        </>
+      )}
     </main>
   );
 }

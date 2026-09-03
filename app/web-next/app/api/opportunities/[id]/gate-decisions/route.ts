@@ -49,6 +49,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     gate?: string; decision?: string; rationale?: string; missing_artifacts?: string[];
+    // ADR-0097 back-compat: optional provenance link to the committee
+    // deliberation that proposed this decision (0066 nullable column).
+    gate_evaluation_id?: string;
   } | null;
   if (!body?.gate || !GATES.has(body.gate)) {
     return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")}.`);
@@ -69,11 +72,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const nowTs = new Date().toISOString();
   const gid = ulid();
+  // ADR-0097 back-compat: gate_evaluation_id is optional provenance — when
+  // present it must reference an existing gate_evaluation. The confirming
+  // record itself is still written by THIS human action, never by the
+  // committee session.
+  const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
+  if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
+    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+  }
   db.run(
-    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at)
-     VALUES (?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`,
     [gid, "opportunity", id, body.gate, body.decision, rationale,
-      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs],
+      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId],
   );
   appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
   return ok({ id: gid, gate: body.gate, decision: body.decision }, 201);
