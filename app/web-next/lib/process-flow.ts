@@ -222,15 +222,21 @@ interface ProjectRowLite {
  * Project stage completion (S8–S11). Each check is deliberately a SIMPLE
  * existing-schema probe — Phase 3 (FS), Phase 4 (DD), Phase 5 (IC/설립) and
  * Phase 6 (포트폴리오) refine each one against their own richer artifacts;
- * this skeleton (ADR-0095) only pins the type and the spec port. Marked
- * REFINEMENT points below.
+ * this skeleton (ADR-0095) only pins the type and the spec port. S8's check
+ * is the ADR-0098 real predicate; S9–S11 remain marked REFINEMENT points.
  */
 function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, gateStatus: Partial<Record<GateId, GateVerdict>>): { complete: boolean; blockers: string[]; missing: string[] } {
   const blockers: string[] = [];
   const missing: string[] = [];
   const db = getDb();
   if (stage.id === "S8") {
-    // REFINEMENT (Phase 3): 민감도(NPV 분위수·시뮬레이션)까지 검사하도록 강화.
+    // ADR-0098 (Phase 3): "민감도가 포함된 정량 평가가 존재한다 (시뮬레이션
+    // 또는 밸류에이션 범위)" — mechanically checkable: ≥1 business_case_model
+    // for the project AND ≥1 valuation_simulation row (the persisted NPV
+    // percentiles). Both write paths (automatic generation and manual CRUD)
+    // land in the same tables, so this check is write-path-agnostic. The
+    // ADR-0095 placeholder ("REFINEMENT (Phase 3)" latest-model probe) is
+    // paid off here; S9~S11 keep theirs.
     const model = db
       .query("SELECT id, kind FROM business_case_model WHERE project_id = ? ORDER BY created_at DESC LIMIT 1")
       .get(project.id) as { id: string; kind: string } | undefined;
@@ -238,10 +244,11 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
       blockers.push("Business Case / 밸류에이션 모델이 필요합니다");
       missing.push("Business Case(비용·수익 라인 또는 밸류에이션)");
     } else {
-      const lines = (db.query("SELECT COUNT(*) c FROM business_case_line WHERE model_id = ?").get(model.id) as { c: number }).c;
-      // 밸류에이션 모델은 라인 없이 정량 평가로 성립할 수 있다 (brownfield).
-      if (lines === 0 && model.kind !== "valuation") {
-        blockers.push("정량 평가(비용·수익 라인)가 필요합니다");
+      const sims = (db
+        .query("SELECT COUNT(*) c FROM valuation_simulation WHERE project_id = ? AND model_id = ?")
+        .get(project.id, model.id) as { c: number }).c;
+      if (sims === 0) {
+        blockers.push("민감도가 포함된 정량 평가(시뮬레이션 NPV 분위수)가 필요합니다");
         missing.push("시뮬레이션 NPV 분위수");
       }
     }

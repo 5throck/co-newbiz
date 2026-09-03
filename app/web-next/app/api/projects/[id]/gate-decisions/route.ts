@@ -1,0 +1,81 @@
+// Gate decisions for one project — S8~S11 gates (ADR-0094/0095/0098).
+// Same contract as the opportunity route: gates are HUMAN outputs (boundary
+// #2); this route records the decision a reviewer made, it does not compute
+// one. HOLD requires an explicit missing-artifacts list. The v1
+// /api/projects/:id/gate-decisions tree was removed with the project
+// workflow (ADR-0074); this is the S8+ project-entity carrier's surface.
+import { getDb } from "../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
+import { ulid } from "../../../../../../../db/lib/ulid.ts";
+import { authenticate } from "../../../../../lib/auth.ts";
+import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { latestGateDecisions } from "../../../../../lib/process-flow.ts";
+import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+
+const GATES = new Set(["fs", "dd", "entity_ic", "group_ic"]);
+const DECISIONS = new Set(["go", "hold", "kill"]);
+
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  const { id } = await params;
+  if (!visibleProject(auth.auth, id)) return notFound();
+  const db = getDb();
+  const history = db
+    .query(
+      `SELECT id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at
+       FROM gate_decision WHERE entity_type = 'project' AND entity_id = ?
+       ORDER BY decided_at DESC`,
+    )
+    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; decided_by: string; decided_at: string }>;
+  // Latest decision per gate — same helper as the process engine, so the
+  // tie-breaking rule cannot drift between surfaces.
+  const latestMap = latestGateDecisions("project", id);
+  const latest = [...latestMap.entries()].map(([gate, v]) => ({
+    gate,
+    decision: v.decision,
+    rationale: v.rationale,
+    missing_artifacts: v.missing,
+  }));
+  return ok({ latest, history }, 200, { count: history.length });
+}
+
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  const ctx = auth.auth;
+  if (ctx.role === "viewer") return forbidden("role_required", "게이트 결정 기록은 analyst 역할 이상이어야 합니다.");
+  const { id } = await params;
+  if (!visibleProject(ctx, id)) return notFound();
+  const body = (await request.json().catch(() => null)) as {
+    gate?: string; decision?: string; rationale?: string; missing_artifacts?: string[];
+    gate_evaluation_id?: string;
+  } | null;
+  if (!body?.gate || !GATES.has(body.gate)) {
+    return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")}.`);
+  }
+  if (!body.decision || !DECISIONS.has(body.decision)) {
+    return badRequest("invalid_request", `decision must be one of ${[...DECISIONS].join("|")}.`);
+  }
+  const rationale = body.rationale?.trim();
+  if (!rationale) return badRequest("invalid_request", "rationale is required — a gate decision without its reasoning is not recordable.");
+  const missing = (body.missing_artifacts ?? []).map((m) => m.trim()).filter(Boolean);
+  if (body.decision === "hold" && missing.length === 0) {
+    return badRequest("hold_requires_artifacts", "HOLD 결정에는 missing_artifacts(미완료 산출물 목록)가 필요합니다.");
+  }
+  const db = getDb();
+  const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
+  if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
+    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+  }
+  const nowTs = new Date().toISOString();
+  const gid = ulid();
+  db.run(
+    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    [gid, "project", id, body.gate, body.decision, rationale,
+      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId],
+  );
+  appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
+  return ok({ id: gid, gate: body.gate, decision: body.decision }, 201);
+}
