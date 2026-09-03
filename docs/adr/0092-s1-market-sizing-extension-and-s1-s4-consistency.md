@@ -134,6 +134,37 @@ surfaces existed independently. Per boundary #2 (gate approval and the investmen
 belong to humans), this action records a proposed selection and pre-fills S4's input — it does
 not itself constitute a gate decision; the human still completes the S4 scorecard.
 
+### 6. Pipeline adoption of the extension fields (skill v1.5.0 alignment)
+
+Decisions 1's extension fields existed only as an ingestion schema — the 8-step LLM pipeline
+never generated them, so every pipeline-run analysis (vs. seeded ones like SMR) rendered the
+new tabs empty no matter how many times it was re-run. This ADR records that the pipeline
+itself now produces them, and `systematic-market-sizing` v1.5.0 standardizes the same
+discipline as the S1 method (steps 2-A/2-B/7-A):
+
+- **Deterministic outlier rule (step 2)** — outlier exclusion no longer rests on the LLM's
+  own marking: sources deviating beyond 3× / below ⅓ of the median estimate are mechanically
+  excluded, and the anchor total is recomputed as the mean of the remaining consensus
+  sources. A total quoted by the estimating party is never trusted.
+- **Demand pipeline, regulatory comparison (steps 2-A/2-B)** — generated from web research
+  plus LLM extraction, with source URLs; `confirmedDirectly` stays false unless a primary
+  legal source is behind the item.
+- **Top-down consensus retrieval (step 5)** — the consistency check now retrieves a public
+  consensus CAGR instead of hard-coding `topDownCagr` to 0; when none is obtainable the
+  comparison is recorded as unavailable rather than zero-filled.
+- **Verification ledger, kill-criteria proposals, per-section confidence, RAG cap
+  (step 7-A)** — the ledger is derived deterministically from step 6's cross-validation
+  verdicts; section grades are assigned from the section's evidence class (LLM estimate /
+  web research / primary source); the RAG cap is Amber for any `llm-estimate` matrix,
+  enforcing boundary 4 (data confidence caps the grade) mechanically.
+- **Per-industry driver counts** — the overview's "connected drivers" figure is read from
+  each industry's latest matrix cell count (regions × segments) instead of a hardcoded 18,
+  which predated dynamic segments (ADR-0077).
+
+Consequence: pipeline-generated and seeded matrices now have parity of shape — a re-run
+fills every tab the seed path fills — while provenance stays honest (all generated values
+remain `llm-estimate`/web-research sourced, flagged for analyst confirmation before freeze).
+
 ## Consequences
 
 - **Positive**: deep, externally-researched market analyses (SMR and future exercises of the

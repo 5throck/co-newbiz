@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
+import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
 
 // S6~S7 브라운필드 대상 경로 (/brownfield) — flow.spec v2.0.0.
 //   S6 대상 후보 발굴: Target Universe 정의 → Target Company Long List
@@ -24,6 +25,7 @@ interface TargetRow {
 }
 interface OppDetail {
   opportunity: { id: string; name: string };
+  universe?: { definition: string; criteria?: string[]; scope?: string | null; min_long_list?: number } | null;
   checklist: ChecklistItem[];
   targets: TargetRow[];
 }
@@ -40,6 +42,9 @@ export function BrownfieldView() {
   const [screeningDraft, setScreeningDraft] = useState<Record<string, string>>({});
   const [excludeReason, setExcludeReason] = useState<Record<string, string>>({});
   const [newTarget, setNewTarget] = useState({ company_name: "", dart_corp_code: "", universe_note: "" });
+  // S6 Target Universe 정의 — 완료기준(definition + 최소 Long List 커버리지)
+  const [universeDraft, setUniverseDraft] = useState({ definition: "", criteria: "", min_long_list: "3" });
+  const [savingUniverse, setSavingUniverse] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const selectedId = searchParams.get("opportunity");
@@ -55,6 +60,52 @@ export function BrownfieldView() {
   }, []);
 
   useEffect(() => { loadOpps(); }, [loadOpps]);
+
+  async function saveUniverse() {
+    if (!selected || savingUniverse || !universeDraft.definition.trim()) return;
+    setSavingUniverse(true); setError(null);
+    try {
+      await api.put(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets`, {
+        definition: universeDraft.definition.trim(),
+        criteria: universeDraft.criteria.split(/[,·\n]/).map((s) => s.trim()).filter(Boolean),
+        min_long_list: Number(universeDraft.min_long_list) || 3,
+      });
+      loadDetail(selected.opportunity.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Universe 정의 저장 실패");
+    } finally {
+      setSavingUniverse(false);
+    }
+  }
+
+  // Universe 정의 폼 — 상세 카드 안에서 정의/수정 양쪽으로 쓰인다.
+  function UniverseForm() {
+    return (
+      <form
+        className="sizing-new-form mb-0"
+        onSubmit={(e) => { e.preventDefault(); void saveUniverse(); }}
+        aria-label="Target Universe 정의"
+      >
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-[0.78rem] flex-1 min-w-[16rem]">
+            <span className="block mb-1">유니버스 정의 * (후보 풀의 범위)</span>
+            <input value={universeDraft.definition} onChange={(e) => setUniverseDraft({ ...universeDraft, definition: e.target.value })} placeholder="예: 국내 상장 로봇 부품·시스템 업체 전체" required className="sizing-new-input w-full" />
+          </label>
+          <label className="text-[0.78rem] flex-1 min-w-[12rem]">
+            <span className="block mb-1">선정 기준 (쉼표 구분)</span>
+            <input value={universeDraft.criteria} onChange={(e) => setUniverseDraft({ ...universeDraft, criteria: e.target.value })} placeholder="매출 규모, 기술 보유, 참여 의지" className="sizing-new-input w-full" />
+          </label>
+          <label className="text-[0.78rem] w-[7rem]">
+            <span className="block mb-1">최소 후보 수</span>
+            <input type="number" min={1} value={universeDraft.min_long_list} onChange={(e) => setUniverseDraft({ ...universeDraft, min_long_list: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
+          </label>
+          <button type="submit" className="btn-ghost btn-sm" disabled={savingUniverse || !universeDraft.definition.trim()}>
+            {savingUniverse ? "저장 중..." : "Universe 저장"}
+          </button>
+        </div>
+      </form>
+    );
+  }
 
   useEffect(() => {
     if (!selectedId) { setSelected(null); return; }
@@ -187,6 +238,37 @@ export function BrownfieldView() {
               </span>
             }
           />
+
+          {/* S6 — Target Universe 정의 (완료기준: 정의 + 최소 Long List 커버리지, ADR-0094) */}
+          <div className="sizing-grade-card mb-3">
+            <h4 className="text-[0.85rem] mb-2">🎯 Target Universe 정의</h4>
+            {selected.universe ? (
+              <>
+                <p className="mb-1 text-[0.85rem]">{selected.universe.definition}</p>
+                {(selected.universe.criteria?.length ?? 0) > 0 && (
+                  <p className="mb-1 text-[0.78rem] text-[color:var(--muted-fg)]">선정 기준: {selected.universe.criteria!.join(" · ")}</p>
+                )}
+                {selected.universe.scope && <p className="mb-1 text-[0.78rem] text-[color:var(--muted-fg)]">커버리지 범위: {selected.universe.scope}</p>}
+                <p className="mb-0 text-[0.78rem]">
+                  커버리지:{" "}
+                  <span className={`status-chip ${selected.targets.filter((t) => t.status !== "excluded").length >= (selected.universe.min_long_list ?? 3) ? "status-green" : "status-amber"}`}>
+                    Long List {selected.targets.filter((t) => t.status !== "excluded").length} / 최소 {selected.universe.min_long_list ?? 3}
+                  </span>
+                </p>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[0.78rem] text-[color:var(--accent)]">정의 수정</summary>
+                  <UniverseForm />
+                </details>
+              </>
+            ) : (
+              <>
+                <p className="mb-2 text-[0.8rem] text-[color:var(--muted-fg)]">
+                  아직 정의되지 않았습니다 — S6 완료기준입니다. 후보 등록 전에 선정 기준과 최소 커버리지를 확정하세요.
+                </p>
+                <UniverseForm />
+              </>
+            )}
+          </div>
 
           {/* S6 — 후보 등록 (Target Universe 근거 포함) */}
           <form onSubmit={addTarget} className="sizing-new-form mb-3">
@@ -332,6 +414,17 @@ export function BrownfieldView() {
             </table>
           )}
         </section>
+      )}
+      {selected && (
+        <GateDecisionPanel
+          opportunityId={selected.opportunity.id}
+          gates={["target_screening"]}
+          killHint={
+            selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded" && (t.screening_summary?.knockOutsPassed ?? false))
+              ? "knock-out 통과 후보 0건 — Target Screening 게이트 KILL 기준 검토가 필요합니다 (flow.spec S7 kill criteria)."
+              : null
+          }
+        />
       )}
     </main>
   );

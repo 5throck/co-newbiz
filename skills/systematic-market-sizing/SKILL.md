@@ -13,8 +13,8 @@ description: >
   Use when: "market sizing", "TAM/SAM/SOM", "market matrix", "region×segment
   demand estimate", "market cross-validation against filings", "scenario
   bands for market size".
-version: 1.4.0
-last_reviewed: 2026-08-31
+version: 1.5.0
+last_reviewed: 2026-09-03
 status: active
 owner: market-intelligence-agent
 prerequisites:
@@ -82,6 +82,31 @@ total. Pick a rounded consensus anchor; **explicitly exclude outliers** and
 record the exclusion. The anchor total is the one number all later
 allocations must reconcile to.
 
+**Deterministic outlier rule**: outlier exclusion MUST NOT rest on analyst or
+LLM judgement alone. Compute the median of the source estimates; any source
+deviating beyond 3× (or below ⅓ of) the median is mechanically excluded, with
+the reason recorded on the source entry. The anchor total is then recomputed
+as the mean of the REMAINING consensus sources — a total quoted by the
+estimating party is never trusted, because it cannot be guaranteed to exclude
+the outlier. Each source entry carries its methodology, source URL (when
+known), and as-of date so a reviewer can re-check the exclusion decision.
+
+### Step 2-A — Demand pipeline tiering (when project-level demand is visible)
+Where discrete future orders/projects can be identified (plant construction,
+fleet procurement, licensing rounds), list them as a DEMAND PIPELINE with a
+per-project confidence tier: Tier 1 = contracted/under construction, Tier 2 =
+final approval/early contracting, Tier 3 = bidding/proposal, Tier 4 =
+non-binding MOU/early review. Each entry names its source (URL); tier-N
+(N>1) demand may only be treated as UPSIDE evidence, never folded into the
+baseline anchor.
+
+### Step 2-B — Regulatory environment comparison (when regulation gates demand)
+Compare permitting/certification status across the jurisdictions that gate
+demand (e.g. KR/US/EU/JP/CN). Mark each item `confirmedDirectly` ONLY when a
+primary legal source was read; unconfirmed items are labelled indirect and
+cannot be cited as legal conclusions (boundary: inference is disallowed for
+regulatory conclusions — confirm against source texts).
+
 ### Step 3 — Allocate region weights and segment mix
 Regional weights come from the nearest adjacent market with real disclosure
 (e.g. construction-equipment regional splits for an attachments category).
@@ -115,8 +140,10 @@ collapsing the horizon to a single end-year delta.
 
 ### Step 5 — Run the bottom-up vs top-down consistency check
 Roll the matrix up to an implied global CAGR and compare against the top-down
-consensus rate. Within tolerance → it is an **internal consistency check
-only**; both sides ultimately trace to the same class of vendor reports, so
+consensus rate. Retrieve the consensus rate from public market-research
+outlook; if none is obtainable, record the comparison as NOT AVAILABLE rather
+than defaulting to zero. Within tolerance → it is an **internal consistency
+check only**; both sides ultimately trace to the same class of vendor reports, so
 it must NOT be described as independent confirmation. Outside tolerance →
 stop and reconcile the allocation before proceeding.
 
@@ -162,6 +189,24 @@ judgmental calibration, source disagreement, and non-extrapolatable signal
 (e.g. a low-base rebound) gets its own numbered entry. Re-state the chain
 grade cap so no consumer of the matrix presents it above its confidence.
 
+### Step 7-A — Confidence and risk attachments (always)
+Every sizing carries four structured attachments so consumers can see how much
+of the matrix is verified:
+- **Verification ledger** — each matrix claim mapped to confirmed /
+  needs-judgement / could-NOT-verify. Silence is never read as approval:
+  unverified claims stay explicitly labelled, and the "could not verify"
+  entries must be declared, not dropped.
+- **Kill criteria proposals** — the assumptions whose collapse invalidates
+  the analysis (with numeric thresholds and severity). These are PROPOSALS
+  for analyst review, not automatic verdicts.
+- **Per-section confidence grades** (A/B/B-/C/C-/D) — one grade per section,
+  not one for the whole matrix; the grade basis (LLM estimate vs web-research
+  vs primary source) is stated in the note.
+- **RAG cap recommendation** — data confidence caps the overall grade
+  (boundary 4): an `llm-estimate` matrix is capped at Amber until the anchor
+  triangulation (step 2) and filing cross-validation (step 6) are done and
+  the matrix is frozen.
+
 ### Step 8 — Formally register into the assumption registry
 Per the registry-backed evidence plane (`docs/evidence/README.md`) and the
 research doc's "Next Steps for Formal Registration" section, once a project
@@ -201,17 +246,23 @@ referring to steps, use the concepts below (not the deprecated jargon):
 |---|---|---|
 | 1 | Axis and proxy-structure definition | — |
 | 2 | Baseline market sizing via multi-source cross-estimation | "anchor triangulation" |
+| 2-A | Demand-pipeline confidence tiering | — |
+| 2-B | Regulatory environment comparison | — |
 | 3 | Region and segment allocation | — |
 | 4 | Per-cell CAGRs and scenario bands | — |
 | 4-A | Year-by-year market-share trend | — |
 | 5 | Growth-rate consistency check (bottom-up vs top-down) | bare "consistency check" |
 | 6 | Cross-validation against company filings | "first-party source cross-validation" |
 | 7 | Known-limitations list | "limitations register" |
+| 7-A | Confidence and risk attachments (verification ledger, kill criteria, section grades, RAG cap) | — |
 | 8 | Assumption-registry registration | bare "registry registration" |
 
 ## Anti-patterns (refuse these)
 
 - A single-source total presented as the market size.
+- An anchor total quoted by the estimating party trusted as-is, or outlier
+  exclusion left to judgement alone without the deterministic median rule
+  (step 2).
 - Region×segment tables presented as bottom-up sums when they are calibrated
   allocations.
 - Scenarios applied as one global CAGR instead of region-resolved cell CAGRs

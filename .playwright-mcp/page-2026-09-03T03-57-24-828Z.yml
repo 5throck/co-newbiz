@@ -1,0 +1,20 @@
+- generic [active] [ref=f4e1]:
+  - main [ref=f4e2]:
+    - generic [aria-hidden] [ref=f4e3]:
+      - paragraph [ref=f4e4]: 신규사업 검토 AI 플랫폼
+      - paragraph [ref=f4e5]: 시장분석 → 기회발굴 → 시너지 → 트랙결정 → 사업성·밸류에이션 → 실사 → 투자심사
+    - generic [ref=f4e6]:
+      - form [ref=f4e7]:
+        - heading "co-newbiz 로그인" [level=1] [ref=f4e8]
+        - generic [ref=f4e9]: 아이디
+        - textbox "아이디" [ref=f4e10]
+        - generic [ref=f4e11]: 비밀번호
+        - textbox "비밀번호" [ref=f4e12]
+        - alert [ref=f4e17]: userId and password are required.
+        - button "로그인" [ref=f4e13] [cursor=pointer]
+      - generic [ref=f4e14]:
+        - link "계정이 없으신가요? 계정 신청 →" [ref=f4e15] [cursor=pointer]:
+          - /url: /register
+        - paragraph [ref=f4e16]: 계정 신청 후 관리자 승인이 완료되면 로그인할 수 있습니다.
+  - button "Open Next.js Dev Tools" [ref=f4e23] [cursor=pointer]
+  - alert [ref=f4e27]

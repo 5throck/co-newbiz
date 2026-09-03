@@ -278,6 +278,24 @@ export function OpportunitiesView() {
     );
   }
 
+  // 기회 삭제 — 테스트·오등록 정리용. 딜로 승격된 기회(project_id 연계)는
+  // 서버에서도 차단되며, S4+ 단계 연계가 있으면 삭제가 거부된다.
+  function deleteOpportunity(o: OpportunityRow) {
+    confirm(
+      `기회 "${o.name}" 삭제`,
+      async () => {
+        setError(null);
+        try {
+          await api.delete(`/api/opportunities/${o.id}`);
+          setRows((prev) => (prev ? prev.filter((r) => r.id !== o.id) : prev));
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "기회 삭제 실패");
+        }
+      },
+      { body: "이 기회와 평가 요인이 함께 삭제되며 되돌릴 수 없습니다." },
+    );
+  }
+
   async function fetchFactors(id: string) {
     try {
       const res = await api.get<{ factors: OppFactors; source: string | null }>(`/api/opportunities/${id}/factors`);
@@ -545,7 +563,19 @@ export function OpportunitiesView() {
                       <td className="tabular-nums">{o.attractiveness_score ?? "—"}</td>
                       <td className="tabular-nums">{o.synergy_score ?? "—"}</td>
                       <td className="tabular-nums">{fs ? `✅${fs.opportunity.length} ⚠️${fs.risk.length}` : "—"}</td>
-                      <td className="sizing-actions-cell"><span className="actions-row">{nextStepActions(o, setStatus, showSketch, sketchOf)}</span></td>
+                      <td className="sizing-actions-cell"><span className="actions-row">
+                        {nextStepActions(o, setStatus, showSketch, sketchOf)}
+                        {!o.project_id && (
+                          <button
+                            type="button"
+                            className="btn-danger btn-sm"
+                            title="이 기회를 삭제합니다 (딜로 승격된 기회는 삭제할 수 없습니다)"
+                            onClick={() => deleteOpportunity(o)}
+                          >
+                            삭제
+                          </button>
+                        )}
+                      </span></td>
                     </tr>
                     {isOpen && (
                       <tr>

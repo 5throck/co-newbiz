@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
+import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
 
 // S5 역량 평가·진출전략 (/greenfield) — flow.spec v2.0.0 그린필드 경로.
 //   Greenfield는 Target Company가 없음 — "우리 스스로 진입 가능한가, 무엇을
@@ -221,6 +222,7 @@ export function GreenfieldView() {
           ) : null}
         </section>
       )}
+      {selected && <GateDecisionPanel opportunityId={selected.opportunity.id} gates={["pre_fs"]} />}
     </main>
   );
 }

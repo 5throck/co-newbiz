@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 546,
-    "edge_count": 933
+    "node_count": 552,
+    "edge_count": 941
   },
   "nodes": [
     {
@@ -468,6 +468,16 @@
       "label": "ADR-0092: S1 market-sizing schema extension, `failed` status, seed route, screening-gate fix, and S3→S4 handoff"
     },
     {
+      "id": "adr:0093",
+      "type": "adr",
+      "label": "ADR-0093: Company-profile expansion to S1-level comprehensiveness"
+    },
+    {
+      "id": "adr:0094",
+      "type": "adr",
+      "label": "ADR-0094: S4 re-review, S5–S7 stage completion, opportunity-keyed gates, and S3 role separation"
+    },
+    {
       "id": "agent:antitrust-agent",
       "type": "agent",
       "label": "antitrust-agent"
@@ -722,6 +732,11 @@
       "label": "company_profile_assessment"
     },
     {
+      "id": "artifact:company_profile_competitive",
+      "type": "artifact",
+      "label": "company_profile_competitive"
+    },
+    {
       "id": "artifact:company_profile_financials",
       "type": "artifact",
       "label": "company_profile_financials"
@@ -730,6 +745,11 @@
       "id": "artifact:company_profile_research_pack",
       "type": "artifact",
       "label": "company_profile_research_pack"
+    },
+    {
+      "id": "artifact:company_profile_synthesis",
+      "type": "artifact",
+      "label": "company_profile_synthesis"
     },
     {
       "id": "artifact:company_profile_version",
@@ -2331,7 +2351,7 @@
       "id": "skill:systematic-market-sizing",
       "type": "skill",
       "label": "systematic-market-sizing",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "status": "active"
     },
     {
@@ -2738,6 +2758,18 @@
       "id": "proc:company-profile-analysis#4",
       "type": "step",
       "label": "company-profile-analysis step 4",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:company-profile-analysis#5",
+      "type": "step",
+      "label": "company-profile-analysis step 5",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:company-profile-analysis#6",
+      "type": "step",
+      "label": "company-profile-analysis step 6",
       "gate": "Screening"
     },
     {
@@ -4733,8 +4765,20 @@
     {
       "type": "executes_agent",
       "from": "proc:company-profile-analysis#4",
-      "to": "agent:process-governance-manager",
+      "to": "agent:financial-analyst",
       "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[4]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:company-profile-analysis#5",
+      "to": "agent:financial-analyst",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[5]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:company-profile-analysis#6",
+      "to": "agent:process-governance-manager",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[6]"
     },
     {
       "type": "executes_agent",
@@ -5459,8 +5503,20 @@
     {
       "type": "executes_skill",
       "from": "proc:company-profile-analysis#4",
-      "to": "skill:stage-gate-governance",
+      "to": "skill:competitive-intelligence",
       "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[4]"
+    },
+    {
+      "type": "executes_skill",
+      "from": "proc:company-profile-analysis#5",
+      "to": "skill:historical-financial-analysis",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[5]"
+    },
+    {
+      "type": "executes_skill",
+      "from": "proc:company-profile-analysis#6",
+      "to": "skill:stage-gate-governance",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[6]"
     },
     {
       "type": "executes_skill",
@@ -7721,8 +7777,20 @@
     {
       "type": "produces",
       "from": "proc:company-profile-analysis#4",
-      "to": "artifact:company_profile_version",
+      "to": "artifact:company_profile_competitive",
       "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[4]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:company-profile-analysis#5",
+      "to": "artifact:company_profile_synthesis",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[5]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:company-profile-analysis#6",
+      "to": "artifact:company_profile_version",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml#steps[6]"
     },
     {
       "type": "produces",
@@ -8447,6 +8515,18 @@
     {
       "type": "step_of",
       "from": "proc:company-profile-analysis#4",
+      "to": "proc:company-profile-analysis",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:company-profile-analysis#5",
+      "to": "proc:company-profile-analysis",
+      "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:company-profile-analysis#6",
       "to": "proc:company-profile-analysis",
       "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml"
     },

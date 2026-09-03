@@ -63,6 +63,8 @@ export interface SynergyPayload {
   /** 기회 연결 시 산출된 시너지 점수 권고값 (사람 확정 전 — 경계 #2) */
   synergyScore?: number | null;
   synergyRationale?: string | null;
+  /** ADR-0094 — 재사용된 프로파일의 딥링크 (상세 재무·SWOT는 /our-company가 담당) */
+  profileRef?: { kind: "affiliate" | "group"; id: string; label: string; profileVersion: number | null };
 }
 
 
@@ -128,6 +130,8 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   const now = () => new Date().toISOString();
   const advance = (step: number) => db.run("UPDATE synergy_analysis SET current_step = ? WHERE id = ?", [step, analysisId]);
   const stepSummaries: SynergyStepSummary[] = [];
+  // ADR-0094 — 재사용된 프로파일의 딥링크 (affiliate/group 경로에서 채워짐)
+  let profileRef: SynergyPayload["profileRef"];
 
   if (row.target_type === "affiliate" || row.target_type === "group") {
     // ── ADR-0090 신규 경로: 그룹/계열사 프로파일 재사용 (Steps 1~3 대체) ──
@@ -138,6 +142,12 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       company = member?.company_name ?? row.name_ko;
       const prof = row.member_id ? loadLatestProfile(db, row.member_id) : null;
       if (!prof) throw new Error("계열사 프로파일이 없습니다 — 그룹/계열사 분석 화면에서 먼저 분석하세요.");
+      profileRef = {
+        kind: "affiliate",
+        id: row.member_id!,
+        label: company,
+        profileVersion: (db.query("SELECT MAX(version_no) m FROM company_profile_version WHERE member_id = ?").get(row.member_id!) as { m: number | null }).m,
+      };
       financialStrengths = prof.strengths;
       financialWeaknesses = prof.weaknesses;
       businessAssessment = prof.businessAssessment;
@@ -160,6 +170,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
         if (!best || (prof.dartFinancials?.items?.length ?? 0) > (best.dartFinancials?.items?.length ?? 0)) best = prof;
       }
       if (!best) throw new Error("그룹 소속 계열사의 프로파일이 없습니다 — 그룹/계열사 분석을 먼저 실행하세요.");
+      profileRef = { kind: "group", id: row.group_id!, label: grp?.name ?? "그룹", profileVersion: null };
       financialStrengths = [...strengths].slice(0, 5);
       financialWeaknesses = best.weaknesses;
       businessAssessment = `그룹 롤업 — ${members.length}개 계열사 프로파일 통합 (공통 강점 ${strengths.size}건, 산업 노출 ${exposures.size}개). 대표 재무: ${best.companyName}.`;
@@ -185,7 +196,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     stepSummaries.push({
       step: 3,
       title: "강점/약점 확정",
-      summary: `프로파일 기반 — 강점 ${financialStrengths.length}개·약점 ${financialWeaknesses.length}개.`,
+      summary: `프로파일 기반 — 강점 ${financialStrengths.length}개·약점 ${financialWeaknesses.length}개. 상세 재무·SWOT·신뢰도는 그룹/계열사 분석 리포트를 참조하세요.`,
       source: "synthesis",
     });
   } else {
@@ -345,6 +356,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     stepSummaries,
     target: row.target_type ? { type: row.target_type, name: company } : undefined,
     opportunity: oppRow ? { id: oppRow.id, name: oppRow.name } : null,
+    profileRef,
     synergyScore: oppRow ? (typeof (slJson as { synergyScore?: unknown })?.synergyScore === "number" ? (slJson as { synergyScore: number }).synergyScore : null) : null,
     synergyRationale: oppRow ? ((slJson as { synergyRationale?: unknown })?.synergyRationale != null ? String((slJson as { synergyRationale: unknown }).synergyRationale) : null) : null,
   };

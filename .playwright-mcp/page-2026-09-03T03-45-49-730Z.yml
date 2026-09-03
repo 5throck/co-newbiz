@@ -1,0 +1,78 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - complementary [ref=f1e17]:
+      - link "CN co-newbiz" [ref=f1e18] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f1e19]: CN
+        - generic [ref=f1e20]: co-newbiz
+      - generic [ref=f1e21]:
+        - generic [ref=f1e22]: 탐색
+        - navigation "탐색" [ref=f1e23]:
+          - link "대시보드" [ref=f1e24] [cursor=pointer]:
+            - /url: /
+          - link "시장분석" [ref=f1e31] [cursor=pointer]:
+            - /url: /market
+          - link "기회 발굴" [ref=f1e36] [cursor=pointer]:
+            - /url: /opportunities
+          - generic [ref=f1e40]:
+            - generic [ref=f1e41]: 시너지 정합성
+            - generic [ref=f1e48]:
+              - link "그룹/계열사 분석" [ref=f1e49] [cursor=pointer]:
+                - /url: /our-company
+              - link "시너지·전략적 적합성" [ref=f1e53] [cursor=pointer]:
+                - /url: /synergy
+          - link "진출방식 결정" [ref=f1e59] [cursor=pointer]:
+            - /url: /route-decision
+          - link "역량 평가·진출전략" [ref=f1e65] [cursor=pointer]:
+            - /url: /greenfield
+          - link "대상 후보 발굴" [ref=f1e70] [cursor=pointer]:
+            - /url: /brownfield
+      - generic [ref=f1e76]:
+        - generic [ref=f1e77]: 분석·참조
+        - navigation "분석·참조" [ref=f1e78]:
+          - link "벤치마킹 사례" [ref=f1e79] [cursor=pointer]:
+            - /url: /benchmarks
+          - link "규정·체크리스트" [ref=f1e83] [cursor=pointer]:
+            - /url: /library
+          - link "용어집" [ref=f1e88] [cursor=pointer]:
+            - /url: /glossary
+          - link "R&BD 전략" [ref=f1e92] [cursor=pointer]:
+            - /url: /strategy
+    - generic [ref=f1e98]:
+      - banner [ref=f1e99]:
+        - generic [ref=f1e100]:
+          - button "다크 모드로 전환" [ref=f1e101] [cursor=pointer]:
+            - generic [ref=f1e104]: 다크 모드
+            - generic [ref=f1e105]: 전환
+          - generic [ref=f1e106]: ui-probe2
+          - button "로그아웃" [ref=f1e107] [cursor=pointer]
+      - main [ref=f1e113]:
+        - region "시너지 정합성 리포트" [ref=f1e171]:
+          - generic [ref=f1e172]:
+            - heading "🏢 수산인더스트리 시너지 정합성 분석" [level=2] [ref=f1e174]
+            - generic [ref=f1e175]: S3 Long List → Short List · 분석일 2026-09-02 · v1
+            - button "재분석" [ref=f1e179] [cursor=pointer]
+          - tablist "리포트 섹션" [ref=f1e180]:
+            - tab "개요" [selected] [ref=f1e181] [cursor=pointer]
+            - tab "연계 시너지" [ref=f1e182] [cursor=pointer]
+            - tab "Short List" [ref=f1e183] [cursor=pointer]
+            - tab "출처·노트" [ref=f1e184] [cursor=pointer]
+          - generic [ref=f1e185]:
+            - heading "◎ 프로파일 요약 — 상세는 그룹/계열사 분석 담당" [level=3] [ref=f1e186]:
+              - generic [ref=f1e187]: ◎
+              - text: 프로파일 요약 — 상세는 그룹/계열사 분석 담당
+            - generic [ref=f1e188]:
+              - generic [ref=f1e189]:
+                - strong [ref=f1e190]: 🏢 수산인더스트리
+                - generic [ref=f1e191]: DART 2025
+                - generic [ref=f1e192]: 강점 4건
+                - generic [ref=f1e193]: 약점 4건
+              - paragraph [ref=f1e194]: 수산인더스트리는 원자력(매출 비중 43.4%)과 화력(37.0%) 발전소 계획예방정비를 축으로 하는 종합정비 솔루션 기업으로, 바라카 원전 단독 수주 등 기술 경쟁력을 인정받고 있다[6][11]. 다만 O/H 주기 특성상 분기 실적 변동성이 크다는 점이 약점이며, 국내외 원전 확산 및 필리핀 화력 인수 등으로 성장 모멘텀이 형성되어 있다[1][4]. 탄탄한 재무구조(자본비중 81.29%)와 배당수익률 4.21%는 하방 방어력을 제공한다[2][6].
+  - button "Open Next.js Dev Tools" [ref=f1e195] [cursor=pointer]:
+    - generic [ref=f1e198]:
+      - text: Compiling
+      - generic [ref=f1e199]:
+        - generic [ref=f1e200]: .
+        - generic [ref=f1e201]: .
+        - generic [ref=f1e202]: .
+  - alert [ref=f1e16]

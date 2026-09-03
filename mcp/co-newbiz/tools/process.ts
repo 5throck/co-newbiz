@@ -32,45 +32,33 @@ export async function promoteOpportunity(id: string, body: { project_no: string 
   return rest.post(`/api/opportunities/${encodeURIComponent(id)}/promote`, body);
 }
 
-// ── Process evaluation ──────────────────────────────────────────────────
+// ── Process evaluation (opportunity = S1~S7 lifecycle carrier, ADR-0094) ──
 
-export async function getProcessEvaluation(projectId: string) {
-  return rest.get(`/api/projects/${encodeURIComponent(projectId)}/process`);
+export async function getProcessEvaluation(opportunityId: string) {
+  return rest.get(`/api/opportunities/${encodeURIComponent(opportunityId)}/process`);
 }
 
-export async function runStageAgents(projectId: string, stage: string) {
-  return rest.post(`/api/projects/${encodeURIComponent(projectId)}/agent-run`, { stage });
-}
+// run_stage_agents: DEFERRED — the agent-orchestrator REST route
+// (/api/opportunities/:id/agent-run) does not exist yet; the MCP tool is not
+// registered until it does. Do not advertise a dead endpoint.
 
 // ── Gate decisions ──────────────────────────────────────────────────────
 
-export async function listGateDecisions(projectId: string) {
-  return rest.get(`/api/projects/${encodeURIComponent(projectId)}/gate-decisions`);
+export async function listGateDecisions(opportunityId: string) {
+  return rest.get(`/api/opportunities/${encodeURIComponent(opportunityId)}/gate-decisions`);
 }
 
-export async function recordGateDecision(projectId: string, body: {
+export async function recordGateDecision(opportunityId: string, body: {
   gate: string; decision: string; rationale: string; missing_artifacts?: string[];
 }) {
-  return rest.post(`/api/projects/${encodeURIComponent(projectId)}/gate-decisions`, body);
+  return rest.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/gate-decisions`, body);
 }
 
 // ── Route decision (S4) ─────────────────────────────────────────────────
 
-export async function createRouteDecision(projectId: string, body: {
-  opportunity_id?: string; track: string; sub_track?: string;
+export async function createRouteDecision(opportunityId: string, body: {
+  track: string; sub_track?: string;
   rationale: string; alternatives_considered?: string;
 }) {
-  return rest.post(`/api/projects/${encodeURIComponent(projectId)}/route-decision`, body);
-}
-
-// ── Business Case (S5) ──────────────────────────────────────────────────
-
-export async function listBusinessCaseModels(projectId: string) {
-  return rest.get(`/api/projects/${encodeURIComponent(projectId)}/business-case`);
-}
-
-export async function simulateBusinessCase(projectId: string, body: {
-  model_id?: string; iterations?: number; discount_rate?: number;
-}) {
-  return rest.post(`/api/projects/${projectId}/business-case/simulate`, body);
+  return rest.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/route-decision`, body);
 }

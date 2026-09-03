@@ -119,6 +119,8 @@ export interface CompetitiveStructure {
     projectStatus?: string;
     /** 근거 참조 (선택) */
     evidenceRef?: string;
+    /** 산업별 특성 속성 (동적 컬럼 — 예: 공정 노드, 상용화 단계, 주력 시장. ADR-0092 확장) */
+    attributes?: Array<{ label: string; value: string }>;
   }>;
 }
 

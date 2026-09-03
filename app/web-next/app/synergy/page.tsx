@@ -37,6 +37,8 @@ interface SynergyPayload {
   opportunity?: { id: string; name: string } | null;
   synergyScore?: number | null;
   synergyRationale?: string | null;
+  /** ADR-0094 — 재사용된 프로파일 딥링크 (상세 재무·SWOT는 /our-company 담당) */
+  profileRef?: { kind: "affiliate" | "group"; id: string; label: string; profileVersion: number | null };
 }
 interface SynergyAnalysis {
   id: string; status: "in_progress" | "completed"; current_step: number;
@@ -56,9 +58,10 @@ function targetLabel(a: Pick<SynergyAnalysis, "target_type" | "member_name" | "g
 
 const STEP_TITLES = ["DART 재무 입수", "외부 리서치", "재무 강/약점 분석", "S1·S2 연계 시너지", "Short List 정리"];
 
+// ADR-0094 역할 분리 — 재무 현황·강/약점 상세는 /our-company(그룹/계열사 분석)가
+// 담당하고, /synergy는 시너지 고유 내용(연계 시너지·Short List)만 다룬다.
 const TABS = [
-  ["finance", "재무 현황"],
-  ["swot", "강/약점"],
+  ["overview", "개요"],
   ["linkage", "연계 시너지"],
   ["shortlist", "Short List"],
   ["refs", "출처·노트"],
@@ -83,7 +86,7 @@ export function SynergyView() {
   const [oppSel, setOppSel] = useState("");
   const [creating, setCreating] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
-  const [tab, setTab] = useState<TabKey>("finance");
+  const [tab, setTab] = useState<TabKey>("overview");
 
   const selectedId = searchParams.get("company");
 
@@ -219,18 +222,10 @@ export function SynergyView() {
   async function rerun(a: SynergyAnalysis) {
     setError(null);
     try {
-      const res = await api.post<{ analysis_id: string }>("/api/synergy/analyses", {
-        targetType: a.target_type ?? undefined,
-        memberId: a.target_type === "affiliate" ? undefined : undefined,
-        groupId: a.target_type === "group" ? undefined : undefined,
-      });
-      // legacy(company_id 기반) 재분석은 별도 경로가 없어 서버가 target_type 오류로 거부할 수 있다 — 안내로 처리
-      void res;
-      // 최신 목록에서 해당 분석을 in_progress 상태로 가져와 상세 진입 → 완료 폴링이 자동 활성화된다
-      const list = await api.get<{ analyses: SynergyAnalysis[] }>("/api/synergy/analyses");
-      setAnalyses(list.data.analyses);
-      const updated = list.data.analyses.find((x) => x.id === res.data.analysis_id);
-      if (updated) openDetail({ ...updated, status: "in_progress" });
+      // ADR-0094 — 동일 분석 행을 재실행하고 파이프라인이 새 버전을 append한다.
+      await api.post<{ analysis_id: string; reused: boolean }>(`/api/synergy/analyses/${encodeURIComponent(a.id)}/rerun`, {});
+      openDetail({ ...a, status: "in_progress", latest_version: a.latest_version });
+      void refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "재분석 시작 실패");
     }
@@ -471,104 +466,38 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
             ))}
           </div>
 
-          {tab === "finance" && (
+          {tab === "overview" && (
             <div className="text-[0.88rem]">
-              <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">1</span> 재무 현황 (DART {p.dartFinancials.available ? `${p.dartFinancials.year}년 사업보고서` : "미입수"})</h3>
-              {p.dartFinancials.available && p.dartFinancials.items ? (
-                (() => {
-                  const items = p.dartFinancials.items;
-                  const years = [...new Set(items.map((i) => i.year ?? ""))].filter(Boolean).sort().reverse();
-                  const accounts = [...new Set(items.map((i) => i.name))];
-                  const byKey = new Map(items.map((i) => [`${i.year}|${i.name}`, i.value]));
-                  const fmtEok = (v: number) => (v / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
-                  
-                  const chartOption = {
-                    tooltip: { trigger: "axis" as const },
-                    legend: { top: 0, textStyle: { color: ct.muted, fontSize: 11 } },
-                    grid: { left: 60, right: 16, top: 32, bottom: 28 },
-                    xAxis: { type: "category" as const, data: accounts, axisLabel: { color: ct.muted, fontSize: 11, interval: 0, rotate: accounts.length > 6 ? 20 : 0 } },
-                    yAxis: { type: "value" as const, axisLabel: { color: ct.muted, formatter: (v: number) => `${fmtEok(v)}억` }, splitLine: { lineStyle: { color: ct.split } } },
-                    series: years.map((y, i) => ({
-                      name: y,
-                      type: "bar" as const,
-                      data: accounts.map((a) => byKey.get(`${y}|${a}`) ?? null),
-                      itemStyle: { color: ct.color[i % ct.color.length], borderRadius: [4, 4, 0, 0] },
-                    })),
-                  };
-                  return (
-                    <>
-                      {/* 시계열 비교 — 차트 우선 (ADR-0088 데이터 표현 표준) */}
-                      <div className="report-chart-card">
-                        <EChartsCore option={chartOption} style={{ height: 300 }} />
-                        <p className="mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">단위: 억원 · 출처: DART 사업보고서{p.dartFinancials.fsDivLabel ? ` · ${p.dartFinancials.fsDivLabel}` : ""}</p>
-                      </div>
-                      {/* 피벗 테이블 — 계정(행) × 연도(열, 최신순) */}
-                      <div className="table-scroll">
-                        <table className="data-table report-table" aria-label="DART 재무 요약 (계정 × 연도)">
-                          <caption className="sr-only">DART 재무 요약 (계정 × 연도)</caption>
-                          <thead>
-                            <tr><th scope="col" className="col-label">계정</th>{years.map((y) => <th key={y} scope="col" className="col-num">{y}</th>)}</tr>
-                          </thead>
-                          <tbody>
-                            {accounts.map((a) => (
-                              <tr key={a}>
-                                <td className="font-semibold">{a}</td>
-                                {years.map((y) => {
-                                  const v = byKey.get(`${y}|${a}`);
-                                  return <td key={y} className="tabular-nums">{v !== undefined ? `${fmtEok(v)} 억원` : "—"}</td>;
-                                })}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      {p.dartFinancials.integrity === "warning" && (
-                        <p role="alert" className="text-[0.78rem] text-[color:var(--amber-fg)] mt-1">
-                          ⚠ 재무 합산 검증 불일치 — {(p.dartFinancials.integrityNotes ?? []).join(" / ")} (출처 원본 대조 권장)
-                        </p>
-                      )}
-                      <p className="text-[0.72rem] text-[color:var(--muted-fg)]">출처: <span className="status-chip status-green">DART</span> 전자공시 사업보고서{p.dartFinancials.reportUrl ? <> — <a href={p.dartFinancials.reportUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문 보기</a></> : null}</p>
-                    </>
-                  );
-                })()
-              ) : (
-                <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">DART 미입수 — {p.dartFinancials.error ?? "사유 없음"} (웹 리서치로 보완)</p>
+              <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">◎</span> 프로파일 요약 — 상세는 그룹/계열사 분석 담당</h3>
+              <div className="sizing-grade-card mb-3">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <strong className="text-[0.9rem]">🏢 {p.target?.name ?? p.company.name}</strong>
+                  {p.dataSources?.dart && <span className="status-chip status-green">DART {p.dataSources.dartYear ?? ""}</span>}
+                  {(p.financialStrengths?.length ?? 0) > 0 && <span className="status-chip status-in-progress">강점 {p.financialStrengths.length}건</span>}
+                  {(p.financialWeaknesses?.length ?? 0) > 0 && <span className="status-chip status-not-started">약점 {p.financialWeaknesses.length}건</span>}
+                  {p.profileRef && (
+                    <a
+                      href={p.profileRef.kind === "affiliate" ? `/our-company?member=${encodeURIComponent(p.profileRef.id)}` : "/our-company"}
+                      className="text-[color:var(--accent)] underline text-[0.8rem]"
+                    >
+                      상세 프로파일 보기 →
+                    </a>
+                  )}
+                </div>
+                <p className="mb-0 text-[0.85rem]" style={{ whiteSpace: "pre-line" }}>{p.businessAssessment}</p>
+              </div>
+              {p.opportunity && (
+                <div className="sizing-grade-card mb-3">
+                  <h4 className="text-[0.85rem] mb-2">🔗 연결 기회 — S2 기회발굴</h4>
+                  <p className="mb-1 text-[0.85rem]"><strong>{p.opportunity.name}</strong></p>
+                  {p.synergyScore != null && (
+                    <p className="mb-0 text-[0.82rem]">
+                      시너지 점수 권고: <span className="status-chip status-amber">{p.synergyScore}점 (사람 확정 전 권고값)</span>
+                      {p.synergyRationale && <span className="block mt-1 text-[color:var(--muted-fg)]">{p.synergyRationale}</span>}
+                    </p>
+                  )}
+                </div>
               )}
-              {/* 재무 데이터 출처 — DART / 신용평가자료 / 외부 검색 */}
-              <div className="sizing-grade-card mt-3">
-                <h4 className="text-[0.85rem] mb-2">🔎 재무 데이터 출처</h4>
-                <ul className="sizing-note-list">
-                  <li>
-                    {p.dataSources?.dart ? "✅" : "⚠️"} DART 전자공시 — {p.dataSources?.dart ? `${p.dataSources.dartYear ?? ""} 사업보고서 재무제표` : "미입수 (비상장 또는 미구성)"}
-                  </li>
-                  <li>
-                    {p.dataSources?.creditReport ? "✅" : "⚪"} 신용평가자료 — {p.dataSources?.creditReport ?? "미첨부 (비상장 회사 등록 시 업로드 가능)"}
-                  </li>
-                  <li>
-                    {(p.dataSources?.webResearchCount ?? 0) > 0 ? "✅" : "⚪"} 외부 검색·리서치 — {(p.dataSources?.webResearchCount ?? 0)}건 (기관·증권사·뉴스, 출처는 "출처·노트" 탭)
-                  </li>
-                </ul>
-                <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
-                  재무 수치는 DART 공시 기준(최근 3년 연도별)이며, DART 고유번호를 모르면 "DART 고유번호 입력" 후 재분석하면 연도별 재무제표를 직접 조회합니다. 비상장 회사는 신용평가자료·외부 리서치로 보강됩니다(출처 명기).
-                </p>
-              </div>
-            </div>
-          )}
-
-          {tab === "swot" && (
-            <div className="text-[0.88rem]">
-              <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">2</span> 재무·사업 강/약점 분석</h3>
-              <div className="chart-pair">
-                <div className="chart-half sizing-grade-card report-bullet-card">
-                  <h4>💪 강점</h4>
-                  <ul className="report-bullet-list">{p.financialStrengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
-                </div>
-                <div className="chart-half sizing-grade-card report-bullet-card">
-                  <h4>🩹 약점</h4>
-                  <ul className="report-bullet-list">{p.financialWeaknesses.map((s, i) => <li key={i}>{s}</li>)}</ul>
-                </div>
-              </div>
-              <p className="mt-3 mb-0 text-[0.88rem]"><strong>종합 평가:</strong> {p.businessAssessment}</p>
             </div>
           )}
 

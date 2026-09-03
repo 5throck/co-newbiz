@@ -100,3 +100,5 @@ ADRs 0001-0044 are **Accepted** as of 2026-08-20, ratifying decisions already ma
 | [0090](0090-synergy-alignment-refactor.md) | Synergy alignment refactor — affiliate-registry targets, opportunity linkage, profile reuse |
 | [0091](0091-admin-console-split.md) | Admin console split — role-separated navigation, per-section routes, system dashboard |
 | [0092](0092-s1-market-sizing-extension-and-s1-s4-consistency.md) | S1 market-sizing schema extension, `failed` status, seed route, screening-gate fix, and S3→S4 handoff — additive to ADR-0046, not a supersession |
+| [0093](0093-company-profile-s1-level-expansion.md) | Company-profile expansion to S1 level — payload v2 (no migration), 6-step pipeline, S1 confidence standard, 7-tab report, seed route deferred |
+| [0094](0094-s4-s7-stage-completion-and-gates.md) | S4 re-review + S5–S7 completion — opportunity-keyed gate recording, stage-completion derivation, target-universe artifact, S3 synergy/profile role separation |

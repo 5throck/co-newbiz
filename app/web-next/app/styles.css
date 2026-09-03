@@ -2095,7 +2095,9 @@
 .data-table th {
   border-bottom: 1px solid var(--border);
   padding: 0.5rem;
-  text-align: left;
+  /* 헤더 중앙 정렬이 디폴트 — 본문 셀(td)은 좌측, 수치 열(.col-num)은 우측 유지.
+     예외 정렬이 필요한 열만 개별 클래스/유틸리티로 덮어쓴다. */
+  text-align: center;
 }
 .data-table td {
   border-bottom: 1px solid var(--border);

@@ -3,7 +3,7 @@ procedure_id: shared-company-profile-analysis
 title: "Company Profile Analysis (그룹/계열사 자사 프로파일)"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -47,14 +47,38 @@ steps:
     skill_key: historical-financial-analysis
     output_type: company_profile_assessment
     description: >
-      LLM strengths/weaknesses/business assessment grounded in the research
-      pack and DART financials, with per-item source citations ([n]). On LLM
-      failure the step stores a DEGRADED result: the failure reason is
-      recorded (degraded flag), the fallback text reflects the actual
-      situation (research count kept — never the misleading "research not
-      configured" phrasing when sources exist), and the UI surfaces a
-      부분 분석(폴백) — 재분석 권장 chip.
+      LLM strengths/weaknesses/opportunities/threats (SWOT)/business assessment
+      grounded in the research pack and DART financials, with per-item source
+      citations ([n]). On LLM failure the step stores a DEGRADED result: the
+      failure reason is recorded (degraded flag), the fallback text reflects
+      the actual situation (research count kept — never the misleading
+      "research not configured" phrasing when sources exist), and the UI
+      surfaces a 부분 분석(폴백) — 재분석 권장 chip.
   - id: 4
+    gate: Screening
+    agent_key: financial-analyst
+    skill_key: competitive-intelligence
+    output_type: company_profile_competitive
+    description: >
+      LLM competitive positioning — main competitors with one-sentence sourced
+      notes and a positioning assessment. Failure records a degraded note and
+      NEVER blocks the version save (ADR-0093).
+  - id: 5
+    gate: Screening
+    agent_key: financial-analyst
+    skill_key: historical-financial-analysis
+    output_type: company_profile_synthesis
+    description: >
+      Deterministic synthesis (no LLM): financial ratios and YoY trends derived
+      from the DART accounts; industry linkage matching each industryExposure
+      entry to md_industry and its latest completed S1 market matrix (anchor
+      total, bottom-up CAGR, external-forecast gap, qualitative factors);
+      per-section confidence grades assigned from each section's evidence
+      class; a verification ledger (confirmed / could_not_verify /
+      needs_judgement — silence is never read as approval); and the RAG cap
+      recommendation (analyst-confirmed state required before green — ADR-0093
+      adopting the ADR-0092 decision-6 S1 standard).
+  - id: 6
     gate: Screening
     agent_key: process-governance-manager
     skill_key: stage-gate-governance
@@ -69,7 +93,8 @@ steps:
 legal_basis:
   - "ADR-0080 (그룹/계열사 분석 — S3 지원 도구, 스테이지 미승격)"
   - "ADR-0089 (S3 input-prep 활동의 스펙 편입)"
+  - "ADR-0093 (company-profile S1 수준 확장 — SWOT·경쟁·결정론 합성·신뢰도 표준)"
   - "process/flow.spec.yaml S3 inputs — 자사 역량·포트폴리오 정보"
 
 owner_agent: financial-analyst
-last_reviewed: "2026-09-02"
+last_reviewed: "2026-09-03"
