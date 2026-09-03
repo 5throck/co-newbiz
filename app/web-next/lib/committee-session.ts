@@ -63,6 +63,8 @@ export interface SessionMeta {
   decision_mode: DecisionMode;
   gate: string;
   target_ref?: string;
+  /** Track the session was convened under — resolves conditional seats (8). */
+  track?: string;
   synthesized?: boolean;
   evaluation_id?: string;
 }
@@ -301,6 +303,7 @@ export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOp
     decision_mode: opts.decisionMode,
     gate,
     ...(opts.targetRef ? { target_ref: opts.targetRef } : {}),
+    ...(opts.track ? { track: opts.track } : {}),
   };
 
   // agent_team: agents propose through the full engine — one call, all
@@ -389,11 +392,29 @@ export function submitHumanPosition(opts: HumanPositionOpts): { positionId: stri
     throw new CommitteeError("session_closed", "this session is already synthesized");
   }
   const committee = getCommittee(session.meta.committee_key)!;
-  if (opts.seat && !committee.members.some((m) => m.key === opts.seat)) {
-    throw new CommitteeError("unknown_seat", `'${opts.seat}' is not a member of committee '${session.meta.committee_key}'`);
+  if (opts.seat) {
+    const seat = committee.members.find((m) => m.key === opts.seat);
+    if (!seat) {
+      throw new CommitteeError("unknown_seat", `'${opts.seat}' is not a member of committee '${session.meta.committee_key}'`);
+    }
+    // Seat binding (integrity): a human speaks under their OWN app_user
+    // identity (human_user_id, set from the authenticated session — never the
+    // body). Claiming an AGENT seat would put a human voice under an agent's
+    // name in the transcript, so only human_role seats are claimable.
+    if (seat.type !== "human_role") {
+      throw new CommitteeError("seat_not_assignable", `'${opts.seat}' is an agent seat — human positions are recorded under the submitter's own user identity, never under another member's seat`);
+    }
   }
   const positions = loadPositions(opts.sessionId);
   const round = positions.length === 0 ? 1 : Math.max(...positions.map((p) => p.round));
+  // One position per (round, human member): a repeat submission in the same
+  // round would double-count that member's voice at synthesis.
+  const alreadyThisRound = positions.some(
+    (p) => p.round === round && p.memberType === "human" && (p.humanUserId ?? "") === opts.humanUserId,
+  );
+  if (alreadyThisRound) {
+    throw new CommitteeError("duplicate_position", `user '${opts.humanUserId}' already submitted a position for round ${round} of this session`);
+  }
   const marker = `<!--position-meta:${JSON.stringify({
     recommendation: opts.recommendation,
     veto_dissent: opts.vetoDissent === true,
@@ -457,7 +478,7 @@ export async function advanceCommitteeSession(
       // of all OTHER members, verbatim — the engine's core requirement
       // (ADR-0096 §4), replayed from the recorded agent_position rows.
       const priorRounds: DeliberationPosition[][] = groupByRound(positions.slice(0, positions.findIndex((p) => p.round === nextRound) === -1 ? positions.length : positions.findIndex((p) => p.round === nextRound)));
-      for (const seat of seatsForSession(committee).filter((m) => m.type === "agent")) {
+      for (const seat of seatsForSession(committee, meta.track).filter((m) => m.type === "agent")) {
         const member = { agentKey: seat.key };
         const out = await callAgent(seat.key, deliberationPrompt(member, topic, priorRounds, nextRound));
         writeAgentPosition(sessionId, {

@@ -3,7 +3,7 @@
 // members deliberate alongside (or instead of) agents. The submitter's
 // app_user id is taken from the authenticated session — never from the body.
 import { authenticate } from "../../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { CommitteeError, submitHumanPosition } from "../../../../../../../lib/committee-session.ts";
 
@@ -20,6 +20,12 @@ export async function POST(
   const { id, sessionId } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
+  // Session binding: the session's process_run must address THIS path
+  // opportunity — positions cannot be filed against another entity's session.
+  const run = db.query("SELECT entity_type, entity_id FROM process_run WHERE id = ?").get(sessionId) as
+    | { entity_type: string; entity_id: string }
+    | undefined;
+  if (!run || run.entity_type !== "opportunity" || run.entity_id !== id) return notFound();
   const body = (await request.json().catch(() => null)) as {
     seat?: string; positionMd?: string; confidence?: number; recommendation?: string; vetoDissent?: boolean;
   } | null;
@@ -46,6 +52,10 @@ export async function POST(
   } catch (err) {
     if (err instanceof CommitteeError) {
       if (err.code === "not_found") return notFound();
+      // Speaking as another member's seat is a forbidden identity claim; a
+      // repeat position in the same round is a conflict, not a bad request.
+      if (err.code === "seat_not_assignable") return forbidden(err.code, err.message);
+      if (err.code === "duplicate_position") return fail(409, err.code, err.message);
       return badRequest(err.code, err.message);
     }
     return badRequest("submit_failed", err instanceof Error ? err.message : String(err));

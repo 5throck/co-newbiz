@@ -172,15 +172,15 @@ export default function IcReviewPage() {
               <table className="data-table" aria-label="밸류에이션 시뮬레이션">
                 <caption className="sr-only">채택 케이스의 시뮬레이션 NPV 분위수</caption>
                 <thead>
-                  <tr><th scope="col">시나리오</th><th scope="col">분위수</th><th scope="col">NPV (억원 환산 전 KRW m)</th><th scope="col">IRR</th></tr>
+                  <tr><th scope="col">시나리오</th><th scope="col">분위수</th><th scope="col">NPV (백만 KRW)</th><th scope="col">IRR</th></tr>
                 </thead>
                 <tbody>
                   {pkg.business_case.adopted.simulations.map((s, i) => (
                     <tr key={`${s.scenario}-${s.percentile}-${i}`}>
                       <td>{s.scenario}</td>
                       <td className="tabular-nums">{s.percentile}</td>
-                      <td className="tabular-nums">{s.npv_krw_m}</td>
-                      <td className="tabular-nums">{s.irr != null ? (s.irr * 100).toFixed(1) + "%" : "—"}</td>
+                      <td className="mono-num">{s.npv_krw_m}</td>
+                      <td className="mono-num">{s.irr != null ? (s.irr * 100).toFixed(1) + "%" : "—"}</td>
                     </tr>
                   ))}
                 </tbody>

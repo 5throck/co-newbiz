@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { GateDecisionPanel } from "../../../../components/GateDecisionPanel.tsx";
+import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 
 // S8 사업성 분석 — 프로젝트 Business Case 비교·채택 화면 (ADR-0098 §4).
@@ -57,7 +58,9 @@ interface ActivityRow {
 }
 
 const SCEN_LABEL: Record<string, string> = { base: "기본(Base)", upside: "상승(Upside)", downside: "하락(Downside)" };
-const SCEN_CLASS: Record<string, string> = { base: "status-amber", upside: "status-green", downside: "status-red" };
+// Scenario chips are status, NOT verdicts: upside/downside are neutral
+// (status-not-started) — a downside case is not a failure.
+const SCEN_CLASS: Record<string, string> = { base: "status-amber", upside: "status-not-started", downside: "status-not-started" };
 
 function fmt(n: number): string {
   return n.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
@@ -165,7 +168,7 @@ export default function BusinessCasePage() {
 
   return (
     <main className="market-page">
-      <h2 className="market-title">S8 사업성 분석 — Business Case 비교</h2>
+      <StageFrame stageId="S8" heading="S8 사업성 분석 — Business Case 비교">
       <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">
         시나리오(base/upside/downside)별 정량 평가입니다. 민감도(NPV 분위수)가 포함된 케이스가 S8 완료 요건입니다.
         <span className="ml-2 status-chip status-not-started">엔진 권고 ≠ 채택 — 채택은 사람의 행위입니다</span>
@@ -187,7 +190,8 @@ export default function BusinessCasePage() {
           <ul className="sizing-note-list mt-1">
             {run.activities.map((a) => (
               <li key={a.activityId}>
-                <span className={`status-chip ${a.status === "done" ? "status-green" : "status-red"}`}>{a.status}</span>{" "}
+                {/* Status, not verdict: a still-running activity is neutral, not a failure. */}
+                <span className={`status-chip ${a.status === "done" ? "status-green" : a.status === "failed" ? "status-red" : "status-not-started"}`}>{a.status}</span>{" "}
                 <strong>{a.activityId}</strong> <span className="text-[color:var(--muted-fg)]">({a.agentKey})</span>
                 {a.outputMd && <pre className="text-[0.7rem] whitespace-pre-wrap mt-1">{a.outputMd}</pre>}
               </li>
@@ -211,14 +215,14 @@ export default function BusinessCasePage() {
               <table className="data-table" aria-label={`${c.name} 정량 평가`}>
                 <caption className="sr-only">NPV/IRR 요약</caption>
                 <thead>
-                  <tr><th scope="col">구분</th><th scope="col">NPV (억원)</th><th scope="col">IRR</th></tr>
+                  <tr><th scope="col">구분</th><th scope="col">NPV (백만 KRW)</th><th scope="col">IRR</th></tr>
                 </thead>
                 <tbody>
                   {(["p05", "p50", "p95"] as const).map((p) => (
                     <tr key={p}>
                       <td>{p === "p05" ? "하위 5% (p05)" : p === "p50" ? "중위 (p50)" : "상위 5% (p95)"}</td>
-                      <td className="tabular-nums">{sims[p] ? fmt(sims[p].npv_krw_m) : "—"}</td>
-                      <td className="tabular-nums">{sims[p]?.irr != null ? `${(sims[p].irr! * 100).toFixed(1)}%` : "—"}</td>
+                      <td className="mono-num">{sims[p] ? fmt(sims[p].npv_krw_m) : "—"}</td>
+                      <td className="mono-num">{sims[p]?.irr != null ? `${(sims[p].irr! * 100).toFixed(1)}%` : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -231,7 +235,7 @@ export default function BusinessCasePage() {
                   <summary className="cursor-pointer text-[0.78rem] text-[color:var(--accent)]">라인 상세 ({c.lines.length}건)</summary>
                   <ul className="sizing-note-list">
                     {c.lines.map((l) => (
-                      <li key={l.id}>{l.category} · {l.name}: {fmt(l.annual_amount_krw_m)} 억원 (y{l.start_year}, 성장 {(l.growth_rate * 100).toFixed(1)}%)</li>
+                      <li key={l.id}>{l.category} · {l.name}: <span className="mono-num">{fmt(l.annual_amount_krw_m)}</span> 백만 KRW (y{l.start_year}, 성장 {(l.growth_rate * 100).toFixed(1)}%)</li>
                     ))}
                   </ul>
                 </details>
@@ -275,6 +279,7 @@ export default function BusinessCasePage() {
       <div className="mt-4">
         <GateDecisionPanel opportunityId={projectId} gates={["fs"]} entityType="project" />
       </div>
+      </StageFrame>
       {confirmDialog}
     </main>
   );

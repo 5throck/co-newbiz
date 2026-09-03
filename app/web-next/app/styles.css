@@ -2708,12 +2708,16 @@
 .sizing-new-input:focus {
   outline: none;
   border-color: var(--primary);
+  /* Same 3px focus ring as the global input rule — keyboard focus must stay
+     visible on the sizing inputs (WCAG 2.4.7). */
+  box-shadow: 0 0 0 3px hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.15),
+              0 0 20px hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.1);
 }
 .sizing-new-input-sm { padding: 0.3rem 0.45rem; font-size: 0.76rem; min-width: 5rem; }
 .btn-danger {
-  background: color-mix(in srgb, #e5484d 12%, var(--surface));
-  border: 1px solid color-mix(in srgb, #e5484d 55%, transparent);
-  color: #e5484d;
+  background: color-mix(in srgb, var(--red-fg) 12%, var(--surface));
+  border: 1px solid var(--red-border);
+  color: var(--red-fg);
   border-radius: var(--radius-xl);
   padding: 0.6rem 1.5rem;
   font-weight: 500;
@@ -2721,7 +2725,7 @@
   transition: all 0.2s var(--ease-spring);
 }
 .btn-danger:hover {
-  background: color-mix(in srgb, #e5484d 22%, var(--surface));
+  background: color-mix(in srgb, var(--red-fg) 22%, var(--surface));
 }
 .btn-danger:disabled { opacity: 0.45; cursor: not-allowed; }
 .row-edit-cell { display: inline-flex; align-items: center; gap: 0.25rem; }

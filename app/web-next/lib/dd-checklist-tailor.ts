@@ -310,7 +310,7 @@ export function upsertChecklistState(
     .get(projectId, checklistId, itemId) as { id: string } | undefined;
   if (existing) {
     db.run(
-      "UPDATE project_checklist_item_state SET status = ?, note = COALESCE(?, note), evidence_ref = COALESCE(?, evidence_ref), waiver_id = ?, assessed_by = ?, assessed_at = ? WHERE id = ?",
+      "UPDATE project_checklist_item_state SET status = ?, note = COALESCE(?, note), evidence_ref = COALESCE(?, evidence_ref), waiver_id = COALESCE(?, waiver_id), assessed_by = ?, assessed_at = ? WHERE id = ?",
       [status, opts.note ?? null, opts.evidenceRef ?? null, opts.waiverId ?? null, userId, now, existing.id],
     );
     return existing;

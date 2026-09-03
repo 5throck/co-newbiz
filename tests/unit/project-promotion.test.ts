@@ -198,3 +198,35 @@ describe("promoteOpportunity (ADR-0095)", () => {
     expect((db.query("SELECT project_id FROM opportunity WHERE id = ?").get(oppId) as { project_id: string | null }).project_id).toBeNull();
   });
 });
+
+// ── Route surface: the role boundary (Phase 0 coverage gap) ─────────────────
+// The repository layer has no role concept — the 403 lives on the promote
+// route. Driven through the real route handlers (nextRequest harness).
+
+const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+const { createUser: createAccount, approveUser: approveAccount } = await import("../../db/lib/accounts.ts");
+
+describe("POST /api/opportunities/[id]/promote — role boundary", () => {
+  test("viewer calling promote → 403, no project created", async () => {
+    await createAccount(db, { userId: "viewer-promoter", role: "viewer", password: "pw-viewer-12345", createdBy: "test", now: NOW });
+    approveAccount(db, { userId: "viewer-promoter", approvedBy: "test", now: NOW });
+    db.run("UPDATE app_user SET must_change_password = 0");
+    const login = await nextRequest("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ userId: "viewer-promoter", password: "pw-viewer-12345" }),
+    });
+    expect(login.status).toBe(200);
+    const cookie = (login.headers.getSetCookie()[0] ?? "").split(";")[0];
+
+    const oppId = insertOpportunity();
+    const res = await nextRequest(`/api/opportunities/${oppId}/promote`, {
+      method: "POST",
+      headers: { cookie },
+      body: JSON.stringify({ needToKnowBasis: "viewer must not promote" }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe("role_required");
+    // No side effect: the opportunity stays unpromoted.
+    expect((db.query("SELECT project_id FROM opportunity WHERE id = ?").get(oppId) as { project_id: string | null }).project_id).toBeNull();
+  });
+});

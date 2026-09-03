@@ -255,6 +255,64 @@ describe("(a) full run — boundary #2 is test-enforced", () => {
   });
 });
 
+describe("(f) dd gate — the dead-rule regression", () => {
+  test("fs go + S9 fully resolved → the pipeline pauses at gate_decision:dd (NOT entity_ic)", async () => {
+    // The (a) run is paused at case_adoption:S8 on the project segment.
+    const projectRow = db.query("SELECT project_id FROM opportunity WHERE id = ?").get(oppId) as { project_id: string };
+    const pid = projectRow.project_id;
+
+    // The HUMAN fs decision through the project gate route clears case_adoption.
+    const fs = await req(`/api/projects/${pid}/gate-decisions`, {
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
+      body: JSON.stringify({ gate: "fs", decision: "go", rationale: "사람 FS 결정 (테스트)" }),
+    });
+    expect(fs.status).toBe(201);
+
+    // Next human blocker: the proposed checklist items await approval (the
+    // proposal-shaped S9 work has no automation).
+    await resumePausedPipelines({});
+    const run1 = db.query("SELECT * FROM pipeline_run WHERE entity_type = 'project' AND entity_id = ?").get(pid) as { paused_reason: string };
+    expect(run1.paused_reason).toBe("no_automation:S9");
+
+    // The human approves every proposed tailored item (S9 work) via the
+    // EXISTING review route — approval moves the item INTO the gate-relevant
+    // set as a PENDING judgment (ADR-0099 §5), so the human must then judge
+    // it through the state route. Both steps are ordinary S9 human work.
+    const items = db
+      .query("SELECT id, domain FROM project_checklist_item_custom WHERE project_id = ? AND status = 'proposed'")
+      .all(pid) as Array<{ id: string; domain: string }>;
+    expect(items.length).toBeGreaterThanOrEqual(1);
+    for (const item of items) {
+      const res = await req(`/api/projects/${pid}/dd-checklist/tailor/${item.id}/review`, {
+        method: "PUT",
+        headers: { cookie: analystCookie, "content-type": "application/json" },
+        body: JSON.stringify({ decision: "approved" }),
+      });
+      expect(res.status).toBe(200);
+
+      const judged = await req(`/api/projects/${pid}/dd-checklist/state`, {
+        method: "PUT",
+        headers: { cookie: analystCookie, "content-type": "application/json" },
+        body: JSON.stringify({ checklist_id: `custom:${item.domain}`, item_id: item.id, status: "pass" }),
+      });
+      expect(judged.status).toBe(200);
+    }
+
+    // S9 is now COMPLETE (completedStages includes S9, currentStage has moved
+    // past it) and the dd gate is still pending — the pipeline must pause for
+    // the dd gate decision, not skip ahead to entity_ic.
+    const resumed2 = await resumePausedPipelines({});
+    expect(resumed2.some((o) => o.pipelineRunId && o.action === "resumed")).toBe(true);
+    const run2 = db.query("SELECT * FROM pipeline_run WHERE entity_type = 'project' AND entity_id = ?").get(pid) as {
+      status: string;
+      paused_reason: string;
+    };
+    expect(run2.status).toBe("paused_for_human");
+    expect(run2.paused_reason).toBe("gate_decision:dd");
+  });
+});
+
 describe("(c) blocked automation pauses, never fails", () => {
   test("an opportunity with no automatable stage work pauses with a machine reason", async () => {
     freshOppId = seedOpportunity("자동화 없는 단계 기회", false);

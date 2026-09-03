@@ -178,11 +178,13 @@ export function caseInputsForProject(projectId: string): CaseInputs {
     )
     .get(projectId) as { market_size_krw_m: number | null; growth_rate: number | null } | undefined;
   // Deterministic fallbacks when the promoting opportunity carries no market
-  // facts (brownfield promotion path): documented, never random.
+  // facts (brownfield promotion path): documented, never random. growth_rate
+  // is stored as a RATIO (evidence_var unit 'ratio', migration 0017; seeds
+  // store 0.06) and is used as-is — no percent conversion.
   return {
     projectId,
     marketSizeKrwM: row?.market_size_krw_m ?? 50000,
-    anchorGrowth: (row?.growth_rate ?? 0.05) / 100,
+    anchorGrowth: row?.growth_rate ?? 0.05,
   };
 }
 

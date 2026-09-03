@@ -53,6 +53,9 @@ export function CommitteePanel({
   const [gate, setGate] = useState(gates[0]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  // The inline human-position form — an explicit form, never a prompt dialog.
+  const [position, setPosition] = useState<{ text: string; recommendation: "go" | "hold" | "kill" }>({ text: "", recommendation: "go" });
   // The embedded confirm form — same shape as GateDecisionPanel's.
   const [form, setForm] = useState<{ decision: "go" | "hold" | "kill"; rationale: string; missing: string }>({ decision: "go", rationale: "", missing: "" });
 
@@ -72,7 +75,7 @@ export function CommitteePanel({
 
   async function convene() {
     if (busy) return;
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setNotice(null);
     try {
       const r = await api.post<{ sessionId: string }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`, {
         committeeKey,
@@ -80,6 +83,7 @@ export function CommitteePanel({
         gate,
         ...(targetRef ? { targetRef } : {}),
       });
+      setNotice(`위원회 세션이 소집되었습니다 (${r.data.sessionId.slice(-6)}).`);
       loadSessions();
       loadTranscript(r.data.sessionId);
     } catch (err) {
@@ -91,9 +95,10 @@ export function CommitteePanel({
 
   async function advance() {
     if (!transcript || busy) return;
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setNotice(null);
     try {
-      await api.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(transcript.sessionId)}/advance`, {});
+      const r = await api.post<{ status: string; round?: number }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(transcript.sessionId)}/advance`, {});
+      setNotice(r.data.status === "synthesized" ? "의장 종합이 완료되었습니다 — PROPOSAL을 확인하세요." : `라운드 ${r.data.round ?? ""}가 시작되었습니다.`);
       loadTranscript(transcript.sessionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "세션 진행 실패");
@@ -102,14 +107,16 @@ export function CommitteePanel({
     }
   }
 
-  async function submitPosition(text: string) {
-    if (!transcript || busy || !text.trim()) return;
-    setBusy(true); setError(null);
+  async function submitPosition() {
+    if (!transcript || busy || !position.text.trim()) return;
+    setBusy(true); setError(null); setNotice(null);
     try {
       await api.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(transcript.sessionId)}/positions`, {
-        positionMd: text,
-        recommendation: form.decision,
+        positionMd: position.text,
+        recommendation: position.recommendation,
       });
+      setPosition({ text: "", recommendation: "go" });
+      setNotice("입장이 기록되었습니다.");
       loadTranscript(transcript.sessionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "입장 제출 실패");
@@ -122,7 +129,7 @@ export function CommitteePanel({
   // with the committee PROPOSAL pre-filled (override stays free).
   async function confirm() {
     if (!transcript?.evaluation || busy) return;
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setNotice(null);
     try {
       await api.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/gate-decisions`, {
         gate: transcript.evaluation.gate,
@@ -132,6 +139,7 @@ export function CommitteePanel({
         ...(form.decision === "hold" ? { missing_artifacts: form.missing.split(/[\n,]/).map((s) => s.trim()).filter(Boolean) } : {}),
       });
       setForm({ decision: "go", rationale: "", missing: "" });
+      setNotice(`결정이 기록되었습니다 (${transcript.evaluation.gate} · ${form.decision.toUpperCase()}).`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "결정 기록 실패");
     } finally {
@@ -269,12 +277,39 @@ export function CommitteePanel({
                   </p>
                 )}
                 {humanText && (
-                  <button type="button" className="btn-ghost btn-sm" disabled={busy}
-                    onClick={() => void submitPosition(window.prompt("입장 내용") ?? "")}>
-                    인간 입장 제출
-                  </button>
+                  <form
+                    className="sizing-new-form mb-2"
+                    aria-label="인간 위원 입장 제출"
+                    onSubmit={(e) => { e.preventDefault(); void submitPosition(); }}
+                  >
+                    <label className="block text-[0.78rem]">
+                      <span className="block mb-1">입장 내용</span>
+                      <textarea
+                        value={position.text}
+                        onChange={(e) => setPosition({ ...position, text: e.target.value })}
+                        className="sizing-new-input w-full"
+                        rows={3}
+                        required
+                      />
+                    </label>
+                    <div className="flex flex-wrap items-end gap-2 mt-2">
+                      <label className="text-[0.78rem]">
+                        <span className="block mb-1">권고</span>
+                        <select
+                          value={position.recommendation}
+                          onChange={(e) => setPosition({ ...position, recommendation: e.target.value as typeof position.recommendation })}
+                          className="sizing-new-input sizing-new-input-sm"
+                        >
+                          <option value="go">GO</option>
+                          <option value="hold">HOLD</option>
+                          <option value="kill">KILL</option>
+                        </select>
+                      </label>
+                      <button type="submit" className="btn-ghost btn-sm" disabled={busy || !position.text.trim()}>입장 제출</button>
+                    </div>
+                  </form>
                 )}
-                <button type="button" className="btn-ghost btn-sm ml-2" disabled={busy} onClick={() => void advance()}>
+                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void advance()}>
                   {transcript.rounds.length === 0 ? "라운드 시작" : "다음 라운드 / 의장 종합"}
                 </button>
               </div>
@@ -283,6 +318,7 @@ export function CommitteePanel({
         </div>
       )}
 
+      {notice && <p role="status" className="text-[color:var(--green-fg)] text-[0.8rem]">{notice}</p>}
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.8rem]">{error}</p>}
     </section>
   );

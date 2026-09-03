@@ -20,6 +20,12 @@ export async function POST(
   const { id, sessionId } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
+  // Session binding: the session's process_run must address THIS path
+  // opportunity — a session of another entity is 404 here, never advanceable.
+  const run = db.query("SELECT entity_type, entity_id FROM process_run WHERE id = ?").get(sessionId) as
+    | { entity_type: string; entity_id: string }
+    | undefined;
+  if (!run || run.entity_type !== "opportunity" || run.entity_id !== id) return notFound();
   try {
     const result = await advanceCommitteeSession(sessionId, { actor: ctx.userId });
     appendAudit(db, {
