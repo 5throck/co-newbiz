@@ -2332,6 +2332,25 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/process:
+    get:
+      operationId: getProjectProcess
+      summary: Full S1-S11 process evaluation for the project (project branch + source-opportunity backlink); member-visible only.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/gate-decisions:
     get:
       operationId: listProjectGateDecisions
