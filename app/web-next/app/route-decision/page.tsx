@@ -18,8 +18,13 @@ import { CommitteePanel } from "../../components/CommitteePanel.tsx";
 interface OpportunityRow {
   id: string; name: string; market_scope: string | null; value_chain_node: string | null;
   attractiveness_score: number | null; synergy_score: number | null;
-  fit_verdict: "Go" | "Hold" | "Kill" | null;
+  fit_verdict: "Go" | "Hold" | "Kill" | null; fit_rationale: string | null;
+  rationale: string | null; synergy_rationale: string | null;
+  market_size_krw_m: number | null; growth_rate: number | null;
   status: "identified" | "assessed" | "selected" | "dropped";
+}
+interface CommitteeSessionRow {
+  sessionId: string; status: string; decisionMode: string | null; createdAt: string;
 }
 interface ScoreRow { criterion: string; score: number; evidence_note: string }
 // 트랙 권고 어드바이저 (ADR-0104) — 결정론적 산출물. 권고는 참고일 뿐이며
@@ -82,6 +87,7 @@ export function RouteDecisionView() {
   const [alternatives, setAlternatives] = useState("");
   const [scores, setScores] = useState<Record<string, { score: number | null; note: string }>>({});
   const [advisory, setAdvisory] = useState<TrackAdvisory | null>(null);
+  const [sessions, setSessions] = useState<Array<{ sessionId: string; status: string; decisionMode: string | null; createdAt: string }>>([]);
   const [saving, setSaving] = useState(false);
 
   const selectedId = searchParams.get("opportunity");
@@ -100,6 +106,10 @@ export function RouteDecisionView() {
   }, []);
 
   // 트랙 권고 어드바이저 — 읽기 전용 참고 자료. 실패해도 결정 폼은 막지 않는다.
+  const loadSessions = useCallback((id: string) => {
+    api.get<Array<{ sessionId: string; status: string; decisionMode: string | null; createdAt: string }>>(`/api/opportunities/${encodeURIComponent(id)}/committee-sessions`)
+      .then((r) => setSessions(r.data)).catch(() => setSessions([]));
+  }, []);
   const loadAdvisory = useCallback((id: string) => {
     api.get<TrackAdvisory>(`/api/opportunities/${encodeURIComponent(id)}/route-advisory`)
       .then((r) => setAdvisory(r.data))
@@ -176,6 +186,7 @@ export function RouteDecisionView() {
       });
       resetForm();
       loadDecisions(selected.id);
+    loadSessions(selected.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "결정 저장 실패");
     } finally {
@@ -220,9 +231,30 @@ export function RouteDecisionView() {
         )}
       </section>
 
+      {/* ── 결정 플로우 가이드 (ADR-0104) ── */}
+      <ol aria-label="결정 플로우" className="market-section text-[0.85rem] space-y-1" style={{ paddingLeft: "1.2rem", listStyle: "decimal" }}>
+        <li><a href="#evidence" className="text-[color:var(--accent)] underline">기회·근거 확인</a> — 발굴 근거·적합성 판정·시너지 권고를 검토합니다.</li>
+        <li><a href="#advisory" className="text-[color:var(--accent)] underline">트랙 권고 검토</a> — 결정론적 어드바이저의 신호를 참고합니다.</li>
+        <li><a href="#committee" className="text-[color:var(--accent)] underline">위원회 심의 (선택)</a> — 스티어링 위원회 의견이 필요하면 소집합니다.</li>
+        <li><a href="#decision" className="text-[color:var(--accent)] underline">결정 기록</a> — 트랙·라우트·근거를 기록합니다 (사람 결정).</li>
+      </ol>
+
+      {/* ── 결정 근거 (선택된 기회의 S1~S3 산출물 요약) ── */}
+      {selected && (
+        <section id="evidence" aria-label="결정 근거" className="market-section">
+          <SectionToolbar title={`${selected.name} — 결정 근거`} icon="📋" />
+          <dl className="text-[0.85rem] space-y-1">
+            <div><dt className="inline font-semibold mr-1">시장:</dt><dd className="inline">{selected.market_scope ?? "—"}{selected.market_size_krw_m ? ` (규모 ${selected.market_size_krw_m.toLocaleString()} 백만원)` : ""}{selected.growth_rate !== null ? ` · CAGR ${(selected.growth_rate * 100).toFixed(1)}%` : ""}</dd></div>
+            <div><dt className="inline font-semibold mr-1">발굴 근거:</dt><dd className="inline">{selected.rationale ?? "—"}</dd></div>
+            <div><dt className="inline font-semibold mr-1">적합성 판정:</dt><dd className="inline">{selected.fit_verdict ?? "—"}{selected.fit_rationale ? ` — ${selected.fit_rationale}` : ""}</dd></div>
+            <div><dt className="inline font-semibold mr-1">시너지 권고:</dt><dd className="inline">{selected.synergy_score ?? "—"}점{selected.synergy_rationale ? ` — ${selected.synergy_rationale}` : ""}</dd></div>
+          </dl>
+        </section>
+      )}
+
       {/* ── 트랙 권고 어드바이저 (ADR-0104) — 읽기 전용 참고 자료 ── */}
       {selected && advisory && (
-        <section aria-label="트랙 권고 어드바이저" className="market-section">
+        <section id="advisory" aria-label="트랙 권고 어드바이저" className="market-section">
           <SectionToolbar title={`${selected.name} — 트랙 권고 어드바이저`} icon="🧭" />
           <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
             S1~S3 산출물에서 계산한 결정론적 권고입니다 — 참고 자료일 뿐이며, 결정은 아래 폼에서 사람이 기록합니다 (경계 #2).
@@ -467,18 +499,34 @@ export function RouteDecisionView() {
           )}
         </section>
       )}
-      {selected && (
-        <>
-          <GateDecisionPanel opportunityId={selected.id} gates={["screening", "pre_fs"]} />
-          {/* ADR-0097: route-steering-committee 심의 — 에이전트는 제안, 확정은 인간 */}
-          <CommitteePanel
-            opportunityId={selected.id}
-            committeeKey="route-steering-committee"
-            committeeLabel="S4 진출방식 스티어링 위원회"
-            gates={["pre_fs"]}
-          />
-        </>
+      {selected && sessions.length > 0 && (
+        <section id="committee" aria-label="위원회 심의 이력" className="market-section">
+          <SectionToolbar title="위원회 심의 이력" icon="🏛" />
+          <ul className="text-[0.85rem] space-y-1">
+            {sessions.map((s2) => (
+              <li key={s2.sessionId}>
+                <span className={`status-chip ${s2.status === "done" ? "status-green" : "status-in-progress"}`}>{s2.status}</span>{" "}
+                {s2.decisionMode ?? "—"} · {s2.createdAt.slice(0, 10)} ·{" "}
+                <a className="text-[color:var(--accent)] underline" href={`/api/opportunities/${encodeURIComponent(selected.id)}/committee-sessions/${s2.sessionId}/minutes`} target="_blank" rel="noreferrer">회의록</a>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
+      <section id="decision" aria-label="결정 기록">
+        {selected && (
+        <GateDecisionPanel opportunityId={selected.id} gates={["screening", "pre_fs"]} />
+        )}
+        {/* ADR-0097: route-steering-committee 심의 — 에이전트는 제안, 확정은 인간 */}
+        {selected && (
+        <CommitteePanel
+          opportunityId={selected.id}
+          committeeKey="route-steering-committee"
+          committeeLabel="S4 진출방식 스티어링 위원회"
+          gates={["pre_fs"]}
+        />
+        )}
+      </section>
     </main>
   );
 }

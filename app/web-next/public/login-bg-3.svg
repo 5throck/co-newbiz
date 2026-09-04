@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="ind" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1424"/>
+      <stop offset="0.55" stop-color="#152138"/>
+      <stop offset="1" stop-color="#20345a"/>
+    </linearGradient>
+    <linearGradient id="arm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9db9e6"/>
+      <stop offset="1" stop-color="#5b7fb8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#ind)"/>
+  <g stroke="#3d5480" stroke-width="1" opacity="0.35">
+    <path d="M0 200 H1920 M0 400 H1920 M0 600 H1920 M0 800 H1920"/>
+    <path d="M200 0 V1080 M480 0 V1080 M760 0 V1080 M1040 0 V1080 M1320 0 V1080 M1600 0 V1080"/>
+  </g>
+  <circle cx="1420" cy="330" r="170" fill="#4b6aa5" opacity="0.35"/>
+  <circle cx="1420" cy="330" r="110" fill="#6389c9" opacity="0.4"/>
+  <!-- 로봇 암: 베이스 → 상완 → 전완 → 그리퍼 -->
+  <rect x="380" y="760" width="260" height="40" rx="8" fill="url(#arm)"/>
+  <rect x="470" y="700" width="46" height="70" rx="8" fill="#7d9ccb"/>
+  <g transform="rotate(-38 493 700)">
+    <rect x="471" y="480" width="44" height="230" rx="14" fill="url(#arm)"/>
+  </g>
+  <g transform="rotate(24 493 470)">
+    <rect x="471" y="300" width="40" height="190" rx="12" fill="#87a4d4"/>
+  </g>
+  <circle cx="493" cy="700" r="26" fill="#a8c0e8"/>
+  <circle cx="493" cy="470" r="20" fill="#a8c0e8"/>
+  <g stroke="#a8c0e8" stroke-width="10" stroke-linecap="round">
+    <path d="M493 300 L560 240"/>
+    <path d="M493 300 L420 235"/>
+  </g>
+  <circle cx="560" cy="240" r="12" fill="#cddcf6"/>
+  <circle cx="420" cy="235" r="12" fill="#cddcf6"/>
+  <!-- 데이터 그리드 카드 -->
+  <g fill="#0e1a30" stroke="#37517e">
+    <rect x="1180" y="220" width="360" height="70" rx="8"/>
+    <rect x="1180" y="320" width="360" height="70" rx="8"/>
+    <rect x="1180" y="420" width="360" height="70" rx="8"/>
+  </g>
+  <g fill="#8fb4e8">
+    <rect x="1205" y="242" width="180" height="10" rx="4" opacity="0.8"/>
+    <rect x="1205" y="342" width="140" height="10" rx="4" opacity="0.7"/>
+    <rect x="1205" y="442" width="210" height="10" rx="4" opacity="0.75"/>
+  </g>
+  <g fill="#9fb9e4" opacity="0.9">
+    <rect x="120" y="640" width="240" height="8" rx="4"/>
+    <rect x="120" y="668" width="180" height="8" rx="4"/>
+    <rect x="120" y="696" width="210" height="8" rx="4"/>
+  </g>
+</svg>

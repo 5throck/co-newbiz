@@ -22,8 +22,8 @@
 // The chair synthesis always goes through buildSynthesis() (ADR-0096 §6):
 // veto-dissent positions are copied VERBATIM into gate_evaluation.dissent_json.
 import * as yaml from "js-yaml";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import {
@@ -74,12 +74,25 @@ interface RawCommitteeDoc {
 }
 
 // Same Turbopack caveat as agent-orchestrator.ts: import.meta.dirname may
-// not survive bundling, so fall back to a cwd-relative resolution.
-const LIB_DIR =
-  typeof import.meta.dirname === "string"
-    ? import.meta.dirname
-    : join(process.cwd(), "app", "web-next", "lib");
-const PROJECT_ROOT = join(LIB_DIR, "..", "..", "..");
+// not survive bundling. Resolution order: (1) import.meta.dirname, (2) walk
+// up from cwd until a directory that actually contains the governance file —
+// a bare cwd-relative guess once resolved to app/web-next/procedures (ENOENT)
+// when the server ran from app/web-next.
+function resolveProjectRoot(): string {
+  // lib → web-next → app → repo root: three levels up from this file.
+  if (typeof import.meta.dirname === "string") {
+    return join(import.meta.dirname, "..", "..", "..");
+  }
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, "procedures", "_committees.yaml"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd();
+}
+const PROJECT_ROOT = resolveProjectRoot();
 const COMMITTEES_FILE = join(PROJECT_ROOT, "procedures", "_committees.yaml");
 
 let cachedRegistry: Record<string, CommitteeDef> | null = null;

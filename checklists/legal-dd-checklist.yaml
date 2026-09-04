@@ -16,91 +16,91 @@ gate: DD
 
 items:
   - id: ldd-01
-    text: "Good standing of the target and every subsidiary confirmed — certificates of incorporation, bylaws, and board minutes for the last 3 years obtained and reviewed"
+    text: "법인 적격성 확인 (Good Standing) — 대상 및 모든 자회사의 정관·이사회 의사록 3개년 검토"
     mandatory: true
     waiver_eligible: true
   - id: ldd-02
-    text: "Capitalization table reconstructed — authorized vs. outstanding by class; all options, warrants, convertibles listed with vesting/expiry"
+    text: "자본구조 재구성 (Cap Table) — 주식종류별 승인/발행 주수, 옵션·워런트·전환사채의 귀속·만기 목록"
     mandatory: true
     waiver_eligible: true
   - id: ldd-03
-    text: "Equity-holder votes/consents required to approve the deal identified, with transfer restrictions, preemptive rights, and ROFR/tag-along/drag-along mapped"
+    text: "주주 의결권·동의 요건 식별 — 양도제한·우선매수권·ROFR/태그얼롱/드래그얼롱 매핑"
     mandatory: true
     waiver_eligible: true
   - id: ldd-04
-    text: "Signing authority verified — who can bind the target and each subsidiary, stated explicitly"
+    text: "계약 체결 권한 검증 (Signing Authority) — 대상·자회사를 구속할 수 있는 자를 명시"
     mandatory: true
     waiver_eligible: true
   - id: ldd-05
-    text: "Restrictions on borrowing, refinancing, and guarantees mapped; anti-takeover defenses (staggered board, poison pill) identified where present"
+    text: "차입·리파이낸싱·보증 제한 매핑 — 기업방어책(이사회 분산 등) 존재 시 식별"
     mandatory: true
     waiver_eligible: true
   - id: ldd-06
-    text: "Change-of-control / anti-assignment clause scan completed across the top-20 customer and supplier contracts by revenue/cost — for each, counterparty notice period, consent requirement, and termination/payment consequences recorded; exclusivity, MFN, and minimum-volume commitments captured"
+    text: "상위 20개 고객·공급 계약의 지배권 변경(CoC)·양도금지 조항 스캔 — 통지기간·동의요건·해지 결과 기록, 독점·MFN·최소물량 커밋 캡처"
     mandatory: true
     waiver_eligible: true
   - id: ldd-07
-    text: "Asset-deal vs. share-deal assignment split determined — which contracts require consent to assign in an asset deal vs. pass automatically in a share deal"
+    text: "자산거래 vs 주식거래 양도 구분 — 동의가 필요한 계약과 자동 승계 계약 구분"
     mandatory: true
     waiver_eligible: true
   - id: ldd-08
-    text: "Loan and security documents needing consent or refinancing at close flagged"
+    text: "Close 시 동의·재융자가 필요한 대출·담보 문서 플래그"
     mandatory: true
     waiver_eligible: true
   - id: ldd-09
-    text: "Pending/threatened litigation, arbitration, and regulatory investigations listed with exposure estimate and provision adequacy; judgment-lien, enforcement, and bankruptcy searches run against the target and key subsidiaries"
+    text: "계속·예고 소송·중재·규제조사 목록화 — 노출 추정액·충당금 적정성, 판결·집행·파산 검색 포함"
     mandatory: true
     waiver_eligible: true
   - id: ldd-10
-    text: "IP inventory complete (patents, trademarks, copyrights, domains, trade secrets) with the inventor-to-company assignment chain verified for title gaps"
+    text: "IP 인벤토리 완료 (특허·상표·저작권·도메인·영업비밀) + 발명자-회사 귀속 연계 검증"
     mandatory: true
     waiver_eligible: true
   - id: ldd-11
-    text: "Inbound and outbound licenses reviewed for exclusivity, sublicensing, assignability, and CoC triggers"
+    text: "In/Out 라이선스 검토 — 독점성·서브라이선스·양도 가능성·CoC 트리거"
     mandatory: true
     waiver_eligible: true
   - id: ldd-12
-    text: "IP security interests/encumbrances searched; maintenance/renewal fee compliance confirmed; ongoing or threatened IP disputes listed"
+    text: "IP 담보권·부담 검색, 유지·갱신료 납부 확인, 진행·예고 IP 분쟁 목록화"
     mandatory: true
     waiver_eligible: true
   - id: ldd-13
-    text: "Employee and contractor PIIA coverage confirmed — every employee and contractor has executed IP assignment + confidentiality agreements"
+    text: "임직원·컨트랙터 PIIA(발명 양도+비밀유지계약) 서명 확인 — 전원 이행 여부"
     mandatory: true
     waiver_eligible: true
   - id: ldd-14
-    text: "Where a unionized workforce or pension plan exists: CBA successorship clauses, grievance backlog, and CBA expiry vs. deal timeline checked; pension/benefits exposure quantified (mark not-applicable with rationale where none exists)"
+    text: "노조·퇴직연금 (해당 시) — CBA 승계조항·분쟁 잔여·만기 vs 딜 일정 확인, 노출 정량화 (없으면 not-applicable + 사유)"
     mandatory: true
     waiver_eligible: true
   - id: ldd-15
-    text: "Permit/licence transfer classification stated for every business licence — transfers automatically / requires consent / must be re-issued (legal basis for the certification-transferability determination at brownfield-dd step 11; does not restate that step)"
+    text: "사업 인허가별 이전 분류 명시 — 자동 승계 / 동의 필요 / 재발급 (certification-transferability 판단의 법적 근거)"
     mandatory: true
     waiver_eligible: true
   - id: ldd-16
-    text: "Environmental notices, prior site assessments, and contamination history obtained"
+    text: "환경 통지·사전 토지조사·오염 이력 확보"
     mandatory: true
     waiver_eligible: true
   - id: ldd-17
-    text: "Real-estate title/leasehold verified for owned and leased sites; CoC clauses in leases checked"
+    text: "부동산 소유권·임차권 검증 (보유·임차 지분) — 임대차 CoC 조항 확인"
     mandatory: true
     waiver_eligible: true
   - id: ldd-18
-    text: "Data-protection review — privacy notices, breach/incident records, lawful basis for cross-border data transfers"
+    text: "개인정보 보호 검토 — 처리방침·침해 기록·국외 이전 적법 근거"
     mandatory: true
     waiver_eligible: true
   - id: ldd-19
-    text: "Anti-bribery controls tested and sanctions screening run on counterparties AND beneficial owners"
+    text: "부정방지(anti-bribery) 통제 테스트 + 상대방·실소유자(UBO) 제재 스크리닝"
     mandatory: true
     waiver_eligible: true
   - id: ldd-20
-    text: "Tax filings confirmed current; open audits and assessments identified"
+    text: "세무 신고 현재성 확인 — 진행 중 세무조사·과세 예고 식별"
     mandatory: true
     waiver_eligible: true
   - id: ldd-21
-    text: "Findings register produced with RAG severity — red = deal-structural/remediation required, amber = warranty/indemnity protection, green = acceptable — feeding SPA protections (specific indemnities, escrow sizing, conditions precedent) and valuation adjustments via dd-to-valuation-bridge"
+    text: "발견사항 대장(RAG 등급) 작성 — red=구조적/시정 필요, amber=보증·면책, green=수용 → SPA 보호·밸류에이션 조정(dd-to-valuation-bridge) 투입"
     mandatory: true
     waiver_eligible: true
   - id: ldd-22
-    text: "Korea note (where the target has Korean employees and an asset/business-transfer route is contemplated): employment succession on business transfer is judicial doctrine (영업양도, Supreme Court decision 2000다8448 line) — the individual-consent path is the safe practice. Verify against current statute and with Korean counsel before enforcement use."
+    text: "한국 유의사항 (한국 근로자 + 영업양도 경로 검토 시) — 영업양도 근로자 승계는 판례 확립(대법원 2000다8448 계열), 개별 동의가 안전 관행. 현행 법령·한국 변호사 확인 필요 — 선택"
     mandatory: false
     waiver_eligible: true
 

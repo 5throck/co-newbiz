@@ -97,7 +97,6 @@ function CharterViewInner() {
   return (
     <main>
       <ProjectSubNav projectId={projectId} />
-      <p className="text-[0.8rem] mb-2"><a className="text-[color:var(--accent)] underline" href={`/projects/${projectId}/process`}>프로세스 현황 →</a></p>
       <StageFrame stageId="S8" heading="프로젝트 차터 — 목적·범위·KPI 사전 확정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
           차터는 프로젝트의 목적·시장 범위·밸류체인 노드·진입 범위·KPI를 게이트 심의 전에

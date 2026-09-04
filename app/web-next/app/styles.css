@@ -2095,9 +2095,10 @@
 .data-table th {
   border-bottom: 1px solid var(--border);
   padding: 0.5rem;
-  /* 헤더 중앙 정렬이 디폴트 — 본문 셀(td)은 좌측, 수치 열(.col-num)은 우측 유지.
-     예외 정렬이 필요한 열만 개별 클래스/유틸리티로 덮어쓴다. */
-  text-align: center;
+  /* ADR-0088 개정(2026-09-05): 헤더 정렬은 셀(td) 정렬과 일치한다 —
+     목록형 테이블은 좌측이 원칙이고, 중앙정렬은 코드·짧은 열에서 개별 클래스로
+     적용한다. 중앙 헤더 + 좌측 셀의 불일치가 목록 전체에서 반복되던 문제 수정. */
+  text-align: left;
 }
 .data-table td {
   border-bottom: 1px solid var(--border);
@@ -2157,14 +2158,56 @@
 /* ── Login rich layout (background image + assist links) ── */
 .login-page-rich {
   min-height: 100vh;
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: stretch;
   justify-content: center;
   gap: 3rem;
   padding: 0 2rem;
+  background: var(--bg);
+}
+
+/* ADR-0106 — 로그인 배경 롤링: 신규사업 모티프 3장을 크로스페이드한다.
+ * 크기 규칙: background-size: cover로 텍스트 길이·로그인 패널 높이와 무관하게
+ * 영역을 채우되, hero 텍스트 블록(max-width 34rem)과 패널이 위 레이어(z-index 2)에
+ * 있어 배경이 콘텐츠를 가리지 않는다. prefers-reduced-motion 사용자는 정적 배경. */
+.login-hero-stack {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.login-hero-bg {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+.login-hero-bg.is-active {
+  opacity: 1;
+  animation: login-hero-pan 20s ease-in-out infinite alternate;
+}
+.login-hero-veil {
+  position: absolute;
+  inset: 0;
   background:
-    linear-gradient(to bottom, color-mix(in oklab, var(--bg) 55%, transparent), var(--bg) 92%),
-    url("/login-bg.svg") center / cover no-repeat;
+    linear-gradient(to bottom, color-mix(in oklab, var(--bg) 52%, transparent), color-mix(in oklab, var(--bg) 78%, transparent) 78%, var(--bg) 96%);
+}
+@keyframes login-hero-pan {
+  from { transform: scale(1); }
+  to { transform: scale(1.07); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-hero-bg.is-active { animation: none; }
+  .login-hero-bg { transition: none; }
+}
+.login-page-rich > .login-hero,
+.login-page-rich > .login-panel {
+  position: relative;
+  z-index: 2;
 }
 .login-hero {
   align-self: center;

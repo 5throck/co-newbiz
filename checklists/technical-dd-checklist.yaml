@@ -10,35 +10,35 @@ gate: DD
 
 items:
   - id: tdd-01
-    text: "Site visit conducted with pre-visit document request list and on-site observation checklist"
+    text: "현장 실사 실시 (Site Visit — 사전 자료요청 목록·현장 점검표 포함)"
     mandatory: true
     waiver_eligible: true
   - id: tdd-02
-    text: "Evidence captured during site visit (photo, measurement, log) — observations without captured evidence do not survive IC scrutiny"
+    text: "실사 증적 확보 (사진·계측·로그 — 증적 없는 관찰은 IC 심의에서 효력 없음)"
     mandatory: true
     waiver_eligible: true
   - id: tdd-03
-    text: "Technology readiness level (TRL) assessed for core production processes"
+    text: "핵심 생산 공정의 기술 성숙도 평가 (TRL, Technology Readiness Level)"
     mandatory: true
     waiver_eligible: true
   - id: tdd-04
-    text: "Bottleneck processes identified"
+    text: "병목 공정 식별 (Bottleneck Process)"
     mandatory: true
     waiver_eligible: true
   - id: tdd-05
-    text: "Remaining useful life of key equipment assessed"
+    text: "주요 설비의 잔존 수명 평가 (Remaining Useful Life)"
     mandatory: true
     waiver_eligible: true
   - id: tdd-06
-    text: "EHS liability exposure assessed"
+    text: "환경·안전(EHS) 부채 노출 평가"
     mandatory: true
     waiver_eligible: true
   - id: tdd-07
-    text: "Capex plan independently verified against physical/technical findings, not accepted from management as-is"
+    text: "CAPEX 계획의 독립 검증 (경영진 제시치를 그대로 수용하지 않고 물적·기술적 근거로 검증)"
     mandatory: true
     waiver_eligible: true
   - id: tdd-08
-    text: "Certification status of key production lines confirmed (feeds certification-agent, not duplicated here)"
+    text: "주요 생산 라인 인증 현황 확인 (Certification, certification-agent 연계)"
     mandatory: false
     waiver_eligible: true
 

@@ -133,7 +133,6 @@ export default function IcReviewPage() {
   return (
     <main>
       <ProjectSubNav projectId={projectId} />
-      <p className="text-[0.8rem] mb-2"><a className="text-[color:var(--accent)] underline" href={`/projects/${params.id}/process`}>프로세스 현황 →</a></p>
       <StageFrame stageId="S10" heading="S10 투자심사·실행 — IC 패키지 · Entity/Group IC · 설립 실행">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
           Entity IC와 Group IC 승인이 모두 기록되고, origin∈{"{internal,joint}"} 프로젝트는 설립 5단계 완료 기록이

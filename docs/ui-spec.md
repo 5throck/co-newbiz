@@ -114,6 +114,33 @@ As-built deltas not in the tree above:
 - `docs/rag-framework.md` — the grading logic §3 renders
 - `docs/mcp-integration.md` — the parallel AI-client surface (not this UI, but the same underlying API)
 
+## As-built 2026-09-05 — 추진 전략 하위 메뉴 + 위원회 레지스트리 경로 수정
+
+- 탐색 섹션의 S4~S7 구간을 "추진 전략" 하위 메뉴로 재편: 진출방식 결정(/route-decision) ·
+  그린필드 — 자체 신설 진출(/greenfield) · 브라운필드 — 결합·투자(/brownfield).
+  부모 href는 첫 자식과 동일한 /our-company 패턴.
+- 위원회 레지스트리(procedures/_committees.yaml) 로딩 경로를 상위 탐색(walk-up)으로
+  수정 — 서버가 app/web-next에서 구동될 때 import.meta.dirname 소실 시
+  app/web-next/procedures를 참조하던 ENOENT 해소.
+- 용어 규약: "Long List/Short List"는 브라운필드 S6/S7의 대상 후보 회사 목록에만
+  사용한다. S3 시너지 화면의 동일 개념은 "시너지 영역 후보/우선 시너지 영역"으로
+  표기한다(용어 충돌 제거).
+
+## As-built 2026-09-05 — 로그인 배경 롤링 (ADR-0106)
+
+/login 히어로 영역이 신규사업 모티프 배경 3장(항만·가치사슬 / 도시·인프라 / 스마트
+제조·로봇)을 7초 간격 크로스페이드한다. 에셋은 저장소 내 자체 SVG(public/login-bg*.svg),
+텍스트 가독성은 베일 그라디언트, 모션은 prefers-reduced-motion 존중. 사이즈는
+cover + hero max-width 34rem 제한으로 텍스트 길이·패널 높이와 무관하게 안정.
+
+## As-built 2026-09-05 — S4 결정 근거 패널 + 결정 플로우 가이드
+
+/route-decision에 선택된 기회의 결정 근거 패널과 결정 플로우 가이드를 추가한다.
+- 결정 근거 패널(#evidence): 시장(scope·규모·CAGR), 발굴 근거(S2 rationale),
+  적합성 판정(fit_verdict/fit_rationale), 시너지 권고(synergy_score + 근거).
+- 위원회 심의 이력(#committee): 세션 상태·모드·생성일 + 회의록(markdown) 링크.
+- 결정 플로우 가이드(ol): 근거 확인 → 트랙 권고 검토 → 위원회 심의(선택) → 결정 기록.
+
 ## As-built 2026-09-05 — 테이블 정렬 정합 + 목록 복귀 단일 패턴
 
 - 목록 테이블: th·td 정렬 일치(텍스트 좌측), 식별 컬럼 첫 열 배치(프로젝트 목록에
