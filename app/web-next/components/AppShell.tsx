@@ -13,6 +13,7 @@ import {
   Shield,
   LogOut,
   KeyRound,
+  ListChecks,
   Target,
   FileText,
   LibraryBig,
@@ -23,54 +24,37 @@ import {
   FolderKanban,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
+import { ADMIN_NAV, NAV_SECTIONS, type NavItem } from "../lib/navigation.ts";
 import { ThemeToggle } from "./ThemeToggle.tsx";
 
-interface NavItem {
+interface AdminNavItem {
   href: string;
   label: string;
   icon: ReactNode;
   adminOnly?: boolean;
-  /** 하위 메뉴 — 부모는 링크가 아니라 그룹 라벨로 렌더링된다 */
-  children?: NavItem[];
 }
 
-// 좌측 패널 — 플랫 전역 내비. 트랙 결정 이후 흐름(S4~S7)은 flow.spec v2.0.0
-// 재설계에 따라 opportunities 화면에 흡수되었고, 대상 후보 발굴(S7) 다음
-// 프로젝트 승격 이후(S8~S11)는 같은 탐색 흐름의 연장으로 /projects 목록에서
-// 사업성 분석·실사·투심·포트폴리오 화면으로 진입한다.
-// 이 패널은 탐색·참조 바로가기를 제공한다.
-const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
-  {
-    label: "탐색",
-    items: [
-      { href: "/", label: "대시보드", icon: <LayoutDashboard size={18} /> },
-      { href: "/market", label: "시장분석", icon: <LineChart size={18} /> },
-      { href: "/opportunities", label: "기회 발굴", icon: <Lightbulb size={18} /> },
-      {
-        href: "/our-company",
-        label: "시너지 정합성",
-        icon: <Handshake size={18} />,
-        children: [
-          { href: "/our-company", label: "그룹/계열사 분석", icon: <Landmark size={18} /> },
-          { href: "/synergy", label: "시너지·전략적 적합성", icon: <GitMerge size={18} /> },
-        ],
-      },
-      { href: "/route-decision", label: "진출방식 결정", icon: <GitBranch size={18} /> },
-      { href: "/greenfield", label: "역량 평가·진출전략", icon: <Sprout size={18} /> },
-      { href: "/brownfield", label: "대상 후보 발굴", icon: <Target size={18} /> },
-      { href: "/projects", label: "프로젝트", icon: <FolderKanban size={18} /> },
-    ],
-  },
-  {
-    label: "분석·참조",
-    items: [
-      { href: "/benchmarks", label: "벤치마킹 사례", icon: <Landmark size={18} /> },
-      { href: "/library", label: "규정·체크리스트", icon: <LibraryBig size={18} /> },
-      { href: "/glossary", label: "용어집", icon: <BookOpen size={18} /> },
-      { href: "/strategy", label: "R&BD 전략", icon: <Target size={18} /> },
-    ],
-  },
-];
+// 좌측 패널 — 플랫 전역 내비. 메뉴 구성·순서의 SSOT는 lib/navigation.ts
+// (ADR-0105)다: 새 표준 화면은 반드시 이 레지스트리에 등록하고, 등록 누락·
+// 순서 드리프트는 tests/unit/navigation.test.ts가 잡는다. 이 파일은 아이콘만
+// 입힌다.
+const ICON_BY_HREF: Record<string, ReactNode> = {
+  "/": <LayoutDashboard size={18} />,
+  "/market": <LineChart size={18} />,
+  "/opportunities": <Lightbulb size={18} />,
+  "/our-company": <Handshake size={18} />,
+  "/synergy": <GitMerge size={18} />,
+  "/route-decision": <GitBranch size={18} />,
+  "/greenfield": <Sprout size={18} />,
+  "/brownfield": <Target size={18} />,
+  "/projects": <FolderKanban size={18} />,
+  "/pipeline": <ListChecks size={18} />,
+  "/benchmarks": <Landmark size={18} />,
+  "/library": <LibraryBig size={18} />,
+  "/glossary": <BookOpen size={18} />,
+  "/strategy": <Target size={18} />,
+};
+const CHILD_ICON: ReactNode = <Landmark size={14} />;
 
 // 우측 상단 바 — 맨 왼쪽에 상세 화면용 뒤로 가기, 오른쪽에 테마 전환·로그아웃·
 // 사용자 표시. 위치 표시는 페이지 제목(h1)과 중복되지 않도록 목록 페이지에서는
@@ -122,20 +106,6 @@ function Topbar({ pathname }: { pathname: string }) {
 }
 
 // 관리자 전용 내비 — admin 역할은 이 그룹만 사용한다 (ADR-0091: 역할-화면 분리).
-const ADMIN_NAV: NavItem[] = [
-  { href: "/admin", label: "시스템 대시보드", icon: <Shield size={18} /> },
-  { href: "/admin/users", label: "사용자·토큰", icon: <Landmark size={18} /> },
-  { href: "/admin/audit", label: "로그 관리", icon: <LibraryBig size={18} /> },
-  { href: "/admin/data-sources", label: "데이터 소스", icon: <Lightbulb size={18} /> },
-  { href: "/admin/schedule", label: "배치·스케줄", icon: <GitMerge size={18} /> },
-  { href: "/admin/database", label: "데이터베이스", icon: <BookOpen size={18} /> },
-  { href: "/admin/notifications", label: "알림", icon: <Target size={18} /> },
-  { href: "/admin/glossary", label: "용어집 관리", icon: <BookOpen size={18} /> },
-  { href: "/admin/governance", label: "거버넌스 문서", icon: <Landmark size={18} /> },
-  { href: "/admin/master-data", label: "마스터 데이터", icon: <LibraryBig size={18} /> },
-  { href: "/admin/adr", label: "ADR 인덱스", icon: <BookOpen size={18} /> },
-];
-
 function Sidebar() {
   const { me } = useAuth();
   const pathname = usePathname();
@@ -160,7 +130,7 @@ function Sidebar() {
                   href={item.href}
                   className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
                 >
-                  {item.icon}
+                  {ICON_BY_HREF[item.href] ?? CHILD_ICON}
                   <span>{item.label}</span>
                 </Link>
               );
@@ -178,9 +148,7 @@ function Sidebar() {
         <span>co-newbiz</span>
       </Link>
       {NAV_SECTIONS.map((section) => {
-        const items = section.items.filter(
-          (item) => !item.adminOnly || me.role === "admin",
-        );
+        const items = section.items;
         if (items.length === 0) return null;
         return (
           <div key={section.label}>
@@ -194,7 +162,7 @@ function Sidebar() {
                   return (
                     <div key={item.href} className="side-nav-submenu">
                       <div className={`side-nav-link side-nav-parent ${childActive ? "side-nav-link-active" : ""}`}>
-                        {item.icon}
+                        {ICON_BY_HREF[item.href] ?? CHILD_ICON}
                         <span>{item.label}</span>
                       </div>
                       <div className="side-nav-children">
@@ -206,7 +174,7 @@ function Sidebar() {
                               href={c.href}
                               className={`side-nav-link side-nav-child ${active ? "side-nav-link-active" : ""}`}
                             >
-                              {c.icon}
+                              <span className="side-nav-child-dot" aria-hidden />
                               <span>{c.label}</span>
                             </Link>
                           );
@@ -223,7 +191,7 @@ function Sidebar() {
                     href={item.href}
                     className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
                   >
-                    {item.icon}
+                    {ICON_BY_HREF[item.href] ?? CHILD_ICON}
                     <span>{item.label}</span>
                   </Link>
                 );

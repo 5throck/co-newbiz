@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-05](2026-09-05.md) | chore: update |
 | [2026-09-04](2026-09-04.md) | chore: update |
 | 2026-09-04 | feat: standing functional-expert committee seats (ADR-0097 amendment) - financing, site-facility, IR, IP agents |
 | 2026-09-03 | chore: update |

@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 574,
+    "node_count": 575,
     "edge_count": 952
   },
   "nodes": [
@@ -526,6 +526,11 @@
       "id": "adr:0104",
       "type": "adr",
       "label": "ADR-0104: Committee minutes & scorecard, project charter, and track advisory"
+    },
+    {
+      "id": "adr:0105",
+      "type": "adr",
+      "label": "ADR-0105: Navigation SSOT — menu registration and order as an enforced contract"
     },
     {
       "id": "agent:antitrust-agent",

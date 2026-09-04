@@ -114,6 +114,13 @@ As-built deltas not in the tree above:
 - `docs/rag-framework.md` — the grading logic §3 renders
 - `docs/mcp-integration.md` — the parallel AI-client surface (not this UI, but the same underlying API)
 
+## As-built 2026-09-04 — 내비게이션 SSOT + 프로젝트 하위 화면 등록 (ADR-0105)
+
+- 사이드바 메뉴의 SSOT는 `app/web-next/lib/navigation.ts`다(NAV_SECTIONS/ADMIN_NAV/NON_MENU_ROUTES/menuHrefs). AppShell은 이 파일만 렌더링하며 아이콘 매핑(ICON_BY_HREF)만 로컬로 보유한다. 새 표준 화면은 반드시 여기에 등록한다 — 누락·순서 드리프트는 `tests/unit/navigation.test.ts`(페이지↔메뉴 패리티, 탐색 섹션 순서, 중복 href, AppShell SSOT 사용)가 잡는다.
+- 프로젝트 하위 화면(/projects/[id]/business-case·dd·ic-review·portfolio·process·charter)은 전역 메뉴 대신 `ProjectSubNav` 상호 링크로 연동된다(상세 화면은 /projects 목록에서 진입).
+- 전역 파이프라인 대시보드는 `/pipeline`(모든 프로젝트의 S8~S11 단계·게이트 스냅샷 + HOLD 에이징).
+- 탐색 섹션 순서는 flow.spec 단계 순서를 따른다: 대시보드 → 시장분석(S1) → 기회 발굴(S2) → 시너지 정합성(S3) → 진출방식 결정(S4) → 역량 평가·진출전략(S5, greenfield) → 대상 후보 발굴(S6~S7, brownfield) → 프로젝트(S8~S11) → 프로젝트 파이프라인.
+
 ## As-built 2026-09-02 — 시너지 정합성 하위 메뉴
 
 - 사이드바 탐색의 시너지 정합성은 하위 메뉴를 갖는다: 그룹/계열사 분석(/our-company) · 시너지·전략적 적합성(/synergy). NavItem.children 지원(AppShell), 자식은 들여쓰기 링크, 부모는 활성 그룹 라벨.
