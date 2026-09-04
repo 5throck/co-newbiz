@@ -20,6 +20,7 @@ import {
   Lightbulb,
   Handshake,
   GitMerge,
+  FolderKanban,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
@@ -33,8 +34,10 @@ interface NavItem {
   children?: NavItem[];
 }
 
-// 좌측 패널 — 플랫 전역 내비. 트랙 결정 이후 흐름(S4~)은 flow.spec v2.0.0
-// 재설계에 따라 재구축 예정이며, 이 패널은 탐색·참조·운영 바로가기를 제공한다.
+// 좌측 패널 — 플랫 전역 내비. 트랙 결정 이후 흐름(S4~S7)은 flow.spec v2.0.0
+// 재설계에 따라 opportunities 화면에 흡수되었고, 프로젝트 승격 이후(S8~S11)는
+// /projects 목록에서 사업성 분석·실사·투심·포트폴리오 화면으로 진입한다.
+// 이 패널은 탐색·참조·운영 바로가기를 제공한다.
 const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: "탐색",
@@ -68,6 +71,7 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: "운영",
     items: [
+      { href: "/projects", label: "프로젝트", icon: <FolderKanban size={18} /> },
     ],
   },
 ];
