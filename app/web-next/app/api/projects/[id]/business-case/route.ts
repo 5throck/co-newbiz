@@ -7,6 +7,7 @@
 // non-members get 404 (existence itself is protected, FR-SEC-01); admins are
 // excluded by role separation. Writes are analyst+.
 import { getDb } from "../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
@@ -132,6 +133,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   db.run("DELETE FROM valuation_simulation WHERE model_id = ?", [modelId]);
   db.run("DELETE FROM business_case_line WHERE model_id = ?", [modelId]);
   db.run("DELETE FROM business_case_model WHERE id = ?", [modelId]);
+  appendAudit(db, { actor: auth.auth.userId, action: "business_case.delete", target: `${id}:${modelId}`, now: new Date().toISOString() });
   return ok({ id: modelId }, 200);
 }
 

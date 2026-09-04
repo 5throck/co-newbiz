@@ -2,7 +2,7 @@
 /**
  * Process tools — ADR-0074 Process Meta Model Platform, ADR-0094
  * opportunity-keyed addressing. All thin REST wrappers (ADR-0011) over
- * /api/opportunities/**. Exposes the S2 opportunity funnel, S1-S7 stage
+ * /api/opportunities/**. Exposes the S2 opportunity funnel, S1-S11 stage
  * evaluation, gate decisions, and the S4 route decision to MCP clients
  * (Claude Desktop).
  *
@@ -30,7 +30,7 @@ export async function createOpportunity(body: {
   return rest.post("/api/opportunities", body);
 }
 
-// ── Process evaluation (opportunity = S1~S7 lifecycle carrier, ADR-0094) ──
+// ── Process evaluation (opportunity = S1~S7 carrier; projects carry S8~S11, ADR-0094) ──
 
 export async function getProcessEvaluation(opportunityId: string) {
   return rest.get(`/api/opportunities/${encodeURIComponent(opportunityId)}/process`);

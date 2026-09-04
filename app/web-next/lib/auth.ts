@@ -132,12 +132,16 @@ export function authenticate(request: Request): AuthResult {
         return { ok: false, response: forbidden("csrf_rejected", "Cross-origin request rejected.") };
       }
     }
+    // Double-submit requires BOTH halves. Skipping the check when the CSRF
+    // cookie is absent let cookie-authenticated mutations through without any
+    // token (SameSite=lax was the only backstop) — now rejected.
     const cookieToken = readCookie(request, CSRF_COOKIE);
-    if (cookieToken) {
-      const headerToken = request.headers.get("x-csrf-token");
-      if (!headerToken || headerToken !== cookieToken) {
-        return { ok: false, response: forbidden("csrf_token_mismatch", "CSRF token mismatch — refresh and retry.") };
-      }
+    if (!cookieToken) {
+      return { ok: false, response: forbidden("csrf_missing", "CSRF cookie missing — reload the page and retry.") };
+    }
+    const headerToken = request.headers.get("x-csrf-token");
+    if (!headerToken || headerToken !== cookieToken) {
+      return { ok: false, response: forbidden("csrf_token_mismatch", "CSRF token mismatch — refresh and retry.") };
     }
   }
 

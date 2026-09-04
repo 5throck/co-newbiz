@@ -114,6 +114,7 @@ export default function PortfolioPage() {
 
   return (
     <main>
+      <p className="text-[0.8rem] mb-2"><a className="text-[color:var(--accent)] underline" href={`/projects/${params.id}/process`}>프로세스 현황 →</a></p>
       <StageFrame stageId="S11" heading="S11 사후 관리 — 포트폴리오 스코어카드 · 전환 결정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
           분기별 스코어카드가 갱신되어야 S11 완료 기준이 충족됩니다 (최신 분기 또는 직전 분기 — ADR-0101 §4).

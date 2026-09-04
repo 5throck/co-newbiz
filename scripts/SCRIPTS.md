@@ -58,7 +58,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 |--------|--------|---------|--------|--------------|-------------------|-------|------|
 | `agent-create.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `co-newbiz/newbiz.ts` | co-newbiz | 1.13.0 | active | —| —| L3-only (project-local analysis-engine CLI, design v1.0 §4-8, not part of L0/L1/L2 lineage; v1.13.0 adds the `db:export` case delegating to db-export.ts) | —|
-| `co-newbiz/env-check.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, ADR-0075 pre-flight gate for pipeline API stages — verifies `.env` has the four required keys (DART_API_KEY, LAW_API_OC, KOSIS_API_KEY, CO_NEWBIZ_API_TOKEN; names only, values never printed), reports CRLF contamination with the canonical `tr -d '\r'` load preamble, `--exports` emits CRLF-stripped shell-safe export lines for `eval`-based loading in shells without process substitution) | —|
+| `co-newbiz/env-check.ts` | co-newbiz | 1.1.0 | active | —| —| L3-only (project-local, ADR-0075 pre-flight gate for pipeline API stages — verifies `.env` has the four required keys (DART_API_KEY, LAW_API_OC, KOSIS_API_KEY, CO_NEWBIZ_API_TOKEN; names only, values never printed), reports CRLF contamination with the canonical `tr -d '\r'` load preamble, `--exports` emits CRLF-stripped shell-safe export lines for `eval`-based loading in shells without process substitution; --probe` live-validates LLM/DART/Tavily credentials with 1-request HTTP probes (flags rejected keys with status evidence) | —|
 | `tmp-gen-analyses.ts` | L0 | 0.1.0 | experimental | —| —| L0-only (one-off scratch seeder from the 2026-08-31 session — creates the Humanoid Robot industry row and in-progress market-sizing/synergy analyses directly via bun:sqlite, then runs the S1 sizing and S3 synergy pipelines; superseded by the web pipelines, kept only to reproduce that session's seed state) | —|
 | `co-newbiz/db-export.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `db:export --dialect postgres` — ADR-0002's portability verification mechanism: schema+data dump with INTEGER→BIGINT/REAL→DOUBLE PRECISION type mapping, GLOB-CHECK warnings surfaced, internal tables skipped, FK-order-safe data section) | —|
 | `co-newbiz/dart-collect.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, DART OpenAPI collector for chain-node financials — ADR-0066 Phase A: fnlttSinglAcntAll per year → fact_industry revenue/operating_income/net_income; requires DART_API_KEY, financial-imports REST fallback documented on failure) | —|
@@ -98,7 +98,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `dev-sync.ts` | L0 | 1.8.0 | active | —| —| L0+L1 | —|
+| `dev-sync.ts` | L0 | 1.9.0 | active | —| —| L0+L1 | —|
 | `dispatch-parallel.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `dispatch-serial.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `dispatch.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|

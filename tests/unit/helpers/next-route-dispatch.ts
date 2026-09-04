@@ -102,8 +102,31 @@ export async function nextRequest(path: string, init?: RequestInit): Promise<Res
   if (!handler) {
     return new Response(JSON.stringify({ data: null, meta: {}, error: { code: "method_not_allowed", message: `${method} not supported on ${url.pathname}` } }), { status: 405 });
   }
-  const request = new Request(url, init);
+  const request = buildRequestWithCsrf(url, init, method);
   return handler(request, { params: Promise.resolve(match.params) });
+}
+
+/**
+ * Cookie-authenticated mutations now require the CSRF double-submit
+ * (csrf_missing/csrf_token_mismatch, ADR-0103 hardening). A real browser
+ * client always sends both halves, so the helper mirrors that: when the init
+ * carries a session cookie and no explicit CSRF header, synthesize a matching
+ * csrf cookie + header pair. Tests that exercise CSRF failure explicitly set
+ * their own headers and are left untouched.
+ */
+function buildRequestWithCsrf(url: URL, init: RequestInit | undefined, method: string): Request {
+  const headers = new Headers(init?.headers);
+  const isMutation = method !== "GET" && method !== "HEAD";
+  const cookie = headers.get("cookie") ?? "";
+  const hasSession = cookie.includes("co_newbiz_session=");
+  if (isMutation && hasSession && !headers.has("x-csrf-token")) {
+    const match = cookie.match(/co_newbiz_csrf=([^;]+)/);
+    const token = match?.[1] ?? "test-csrf-token";
+    const newCookie = match ? cookie : `${cookie ? cookie + "; " : ""}co_newbiz_csrf=${token}`;
+    headers.set("cookie", newCookie);
+    headers.set("x-csrf-token", token);
+  }
+  return new Request(url, { ...init, headers });
 }
 
 /**

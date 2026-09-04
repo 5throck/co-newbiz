@@ -15,7 +15,7 @@
  * run_stage_agents deferral note in tools/process.ts. The surviving catalog
  * is the live surface: analysis reads (/api/series, /api/data-changes),
  * glossary/procedure/interpretation lookups, notifications, and the
- * opportunity-keyed S1-S7 process tools (/api/opportunities/**).
+ * opportunity-keyed process tools (full S1-S11 chain) (/api/opportunities/**).
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -44,6 +44,7 @@ import {
 import { listCommitteeSessions, getCommitteeSession } from "./tools/committee.ts";
 import { getProjectIcPackage } from "./tools/ic-package.ts";
 import { getPortfolioScorecard } from "./tools/portfolio-scorecard.ts";
+import { getProjectDdWorkspace } from "./tools/dd-checklist.ts";
 
 const log = createLogger("co-newbiz-mcp");
 
@@ -124,7 +125,7 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     name: "get_process_evaluation",
-    description: "Derived process state (S1-S7) — currentStage, completedStages, gateStatus, requiredArtifacts. Never persisted.",
+    description: "Derived process state (S1-S11) — currentStage, completedStages, gateStatus, requiredArtifacts. Never persisted.",
     inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
   },
   {
@@ -161,6 +162,17 @@ export const TOOLS: ToolDefinition[] = [
     name: "get_portfolio_scorecard",
     description: "S11 portfolio scorecard (read-only) — quarterly rollup (financial/strategic sections, class rollup, insufficient_evidence), per-cycle trend, and venture-portfolio-IC transition-decision history. The transition-decision POST is deliberately not MCP-exposed (ADR-0101 §5).",
     inputSchema: { type: "object", properties: { projectId: { type: "string" }, reviewCycle: { type: "string", description: "YYYY-Qn — optional explicit review cycle; defaults to the latest" } }, required: ["projectId"] },
+  },
+  {
+    name: "get_project_dd_workspace",
+    description: "S9 tailored DD workspace (S1-S11 chain) — standard checklist items with live judgment state, custom items with provenance, findings, and the completion summary. Read-only; tailoring and proposal review are web-first human decisions.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string", description: "Project ULID (promoted at S8)." },
+      },
+      required: ["projectId"],
+    },
   },
 ];
 
@@ -223,6 +235,9 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
       requireString(args, "name");
       return createOpportunity(args as unknown as Parameters<typeof createOpportunity>[0]);
     }
+    case "get_project_dd_workspace":
+      requireString(args, "projectId");
+      return getProjectDdWorkspace(args.projectId as string);
     case "get_process_evaluation":
       requireString(args, "opportunityId");
       return getProcessEvaluation(args.opportunityId as string);

@@ -165,6 +165,12 @@ function buildHeaders(cfg: ProviderConfig): Record<string, string> {
       "anthropic-version": "2023-06-01",
     };
   }
+  if (cfg.provider === "gemini") {
+    return {
+      "content-type": "application/json",
+      "x-goog-api-key": cfg.apiKey ?? "",
+    };
+  }
   return { "content-type": "application/json", authorization: `Bearer ${cfg.apiKey ?? ""}` };
 }
 
@@ -177,7 +183,9 @@ function resolveUrl(cfg: ProviderConfig): string {
     return base.endsWith("/messages") ? base : `${base}/v1/messages`;
   }
   if (cfg.provider === "gemini")
-    return `${cfg.baseUrl ?? "https://generativelanguage.googleapis.com/v1beta"}/models/${cfg.model}:generateContent?key=${cfg.apiKey}`;
+    // Key travels in the x-goog-api-key HEADER (see buildHeaders), never the
+    // URL — query-string keys leak into proxy/access logs.
+    return `${cfg.baseUrl ?? "https://generativelanguage.googleapis.com/v1beta"}/models/${cfg.model}:generateContent`;
   return `${cfg.baseUrl ?? "https://api.openai.com/v1"}/chat/completions`;
 }
 

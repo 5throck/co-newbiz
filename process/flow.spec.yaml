@@ -22,9 +22,12 @@ meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
   version: "2.0.0"
+  # ADR-0094/0095: opportunity is the S1-S7 lifecycle carrier (promoted to a
+  # project at S8); the original v2 split (opp S1-S4 / project S5-S11) was
+  # superseded when project promotion was deferred to S8+.
   entity_lifecycles:
-    opportunity: [S1, S2, S3, S4]
-    project: [S5, S6, S7, S8, S9, S10, S11]
+    opportunity: [S1, S2, S3, S4, S5, S6, S7]
+    project: [S8, S9, S10, S11]
 
 gates:
   - id: screening

@@ -261,7 +261,7 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
       }
     }
   } else if (stage.id === "S9") {
-    // REFINEMENT (Phase 4): 적용 체크리스트 범위·필수 미충족 0건 검사로 강화
+    // 적용 체크리스트 범위·필수 미충족 0건 검사
     // (ADR-0099 §5 — completion summary is the single source of the counts).
     const state = ddCompletionSummary(project.id);
     if (state.total === 0) {
@@ -351,7 +351,6 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     if (!opp) throw new Error(`opportunity ${entity.id} not found`);    const gates = latestGateDecisions("opportunity", entity.id);
     gateStatus = Object.fromEntries([...gates.entries()].map(([g, v]) => [g, v.decision]));
     terminated = [...gates.values()].some((g) => g.decision === "kill");
-    const screening = gates.get("screening");
 
     // 트랙은 S4 route_decision에서 도출한다 (S4 이전에는 unknown → S5~S7 locked).
     const routeDecision = latestRouteDecision(entity.id);
@@ -394,11 +393,17 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
         }
       }
     }
-    // Screening gate decision applies after S3 artifacts exist.
-    if (screening && !terminated) {
-      if (screening.decision === "hold") {
-        blockers.push(`Screening 게이트 HOLD — 보완 필요: ${(screening.missing ?? []).join(", ") || "근거 확인"}`);
-        requiredArtifacts = screening.missing ?? requiredArtifacts;
+    // HOLD 게이트는 재평가를 막을 뿐 작업 자체를 막지 않는다 — current 단계의
+    // 모든 게이트(flow.spec S4는 screening+pre_fs 둘 다 보유)에 대해 HOLD 기록이
+    // 있으면 블로커로 노출한다. S4에서 pre_fs HOLD가 조용히 무시되던 결함 수정.
+    if (!terminated && currentStage !== null) {
+      const current = STAGES.find((s) => s.id === currentStage);
+      for (const g of current?.gateIds ?? []) {
+        const verdict = gates.get(g);
+        if (verdict?.decision === "hold") {
+          blockers.push(`${g} 게이트 HOLD — 보완 필요: ${(verdict.missing ?? []).join(", ") || "근거 확인"}`);
+          requiredArtifacts = verdict.missing ?? requiredArtifacts;
+        }
       }
     }
   }

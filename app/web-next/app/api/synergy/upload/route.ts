@@ -56,6 +56,10 @@ export async function POST(request: Request) {
 
 /** 업로드된 파일의 추출 텍스트 — 파이프라인이 근거 컨텍스트로 사용한다. */
 export function readExtractedText(storedAs: string): string | null {
+  // Path-traversal guard: stored names are flat "<ulid>-<file>" basenames
+  // produced by this route. Any separator or parent-segment would escape
+  // UPLOAD_DIR, so refuse before joining.
+  if (!storedAs || /[/\\]|\.\./.test(storedAs)) return null;
   try {
     const p = join(UPLOAD_DIR, `${storedAs}.txt`);
     return existsSync(p) ? readFileSync(p, "utf-8").slice(0, 60_000) : null;
