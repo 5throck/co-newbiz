@@ -2168,6 +2168,20 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/projects:
+    get:
+      operationId: listProjects
+      summary: Deny-by-default project list for the /projects nav entry point into S8-S11 project screens.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /api/projects/{id}/business-case:
     get:
       operationId: listProjectBusinessCases

@@ -20,6 +20,7 @@ import {
   Lightbulb,
   Handshake,
   GitMerge,
+  FolderKanban,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
@@ -33,8 +34,11 @@ interface NavItem {
   children?: NavItem[];
 }
 
-// 좌측 패널 — 플랫 전역 내비. 트랙 결정 이후 흐름(S4~)은 flow.spec v2.0.0
-// 재설계에 따라 재구축 예정이며, 이 패널은 탐색·참조·운영 바로가기를 제공한다.
+// 좌측 패널 — 플랫 전역 내비. 트랙 결정 이후 흐름(S4~S7)은 flow.spec v2.0.0
+// 재설계에 따라 opportunities 화면에 흡수되었고, 대상 후보 발굴(S7) 다음
+// 프로젝트 승격 이후(S8~S11)는 같은 탐색 흐름의 연장으로 /projects 목록에서
+// 사업성 분석·실사·투심·포트폴리오 화면으로 진입한다.
+// 이 패널은 탐색·참조 바로가기를 제공한다.
 const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: "탐색",
@@ -54,6 +58,7 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
       { href: "/route-decision", label: "진출방식 결정", icon: <GitBranch size={18} /> },
       { href: "/greenfield", label: "역량 평가·진출전략", icon: <Sprout size={18} /> },
       { href: "/brownfield", label: "대상 후보 발굴", icon: <Target size={18} /> },
+      { href: "/projects", label: "프로젝트", icon: <FolderKanban size={18} /> },
     ],
   },
   {
@@ -63,11 +68,6 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
       { href: "/library", label: "규정·체크리스트", icon: <LibraryBig size={18} /> },
       { href: "/glossary", label: "용어집", icon: <BookOpen size={18} /> },
       { href: "/strategy", label: "R&BD 전략", icon: <Target size={18} /> },
-    ],
-  },
-  {
-    label: "운영",
-    items: [
     ],
   },
 ];
