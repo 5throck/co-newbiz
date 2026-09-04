@@ -12,6 +12,7 @@ import { api } from "../../lib/api.ts";
 interface ProjectRow {
   id: string;
   project_no: string;
+  project_name?: string | null;
   created_at: string;
   origin?: string | null;
   track?: "greenfield" | "brownfield" | null;
@@ -56,17 +57,19 @@ export function ProjectsView() {
             <caption className="sr-only">프로젝트 목록</caption>
             <thead>
               <tr>
-                <th>프로젝트 번호</th>
-                <th>트랙</th>
-                <th>원본 기회</th>
-                <th>생성일</th>
-                <th>바로가기</th>
+                <th className="text-left">프로젝트 번호</th>
+                <th className="text-left">프로젝트명</th>
+                <th className="text-left">트랙</th>
+                <th className="text-left">원본 기회</th>
+                <th className="text-left">생성일</th>
+                <th className="text-left">바로가기</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.project_no}</td>
+                  <td className="font-semibold">{p.project_no}</td>
+                  <td>{p.project_name ?? "—"}</td>
                   <td>
                     {p.track ? (
                       <span className={`status-chip ${p.track === "greenfield" ? "status-green" : "status-amber"}`}>

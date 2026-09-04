@@ -64,25 +64,36 @@ function Topbar({ pathname }: { pathname: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   if (!me) return null;
-  const item = NAV_SECTIONS.flatMap((sec) => sec.items).find(
-    (i) => pathname === i.href || pathname.startsWith(i.href + "/"),
+  // 활성 내비 항목 해석 — 최상위뿐 아니라 서브메뉴 자식(/synergy 등)도 찾는다.
+  // 자식이 활성이면 parent를 함께 기록해 목록(부모/자식 href)로 돌아갈 수 있게 한다.
+  const flat: Array<{ item: NavItem; parent?: NavItem }> = NAV_SECTIONS.flatMap((sec) =>
+    sec.items.flatMap((i) => [
+      { item: i, parent: undefined as NavItem | undefined },
+      ...(i.children ?? []).map((c) => ({ item: { ...c }, parent: i })),
+    ]),
   );
-  const isNested =
-    (!!item && pathname !== item.href && pathname.length > item.href.length) ||
-    // 목록의 상세 표현(?industry=·?company= 등) — 필터 파라미터(status 등)는 제외
+  const found = flat.find((e) => pathname === e.item.href || pathname.startsWith(e.item.href + "/"));
+  const item = found?.item;
+  const listHref = found?.parent?.href ?? item?.href;
+  // 상세 표현 판정 — 조회 파라미터 기반 상세(company·opportunity·industry)와
+  // 경로 기반 상세(하위 경로)를 모두 커버한다. 버튼은 topbar 좌측(top)에 위치한다.
+  const hasDetailParam =
     (pathname === "/market" && !!searchParams.get("industry")) ||
     (pathname === "/synergy" && !!searchParams.get("company")) ||
     (pathname === "/route-decision" && !!searchParams.get("opportunity")) ||
     (pathname === "/brownfield" && !!searchParams.get("opportunity")) ||
     (pathname === "/greenfield" && !!searchParams.get("opportunity"));
+  const isNested = (!!item && (pathname !== item.href || hasDetailParam)) || hasDetailParam;
+  const backHref = found?.parent ? found.item.href : item?.href ?? "/";
+  const backLabel = found?.parent ? found.parent.label : item?.label ?? "목록";
   return (
     <header className="topbar">
       {isNested && item && (
         <button
           type="button"
           className="back-link"
-          onClick={() => router.push(item.href)}
-          aria-label={`${item.label} 목록으로 돌아가기`}
+          onClick={() => router.push(backHref)}
+          aria-label={`${backLabel} 목록으로 돌아가기`}
         >
           <ChevronLeft size={14} />
           {item.label}

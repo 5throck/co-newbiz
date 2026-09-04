@@ -114,6 +114,19 @@ As-built deltas not in the tree above:
 - `docs/rag-framework.md` — the grading logic §3 renders
 - `docs/mcp-integration.md` — the parallel AI-client surface (not this UI, but the same underlying API)
 
+## As-built 2026-09-05 — 테이블 정렬 정합 + 목록 복귀 단일 패턴
+
+- 목록 테이블: th·td 정렬 일치(텍스트 좌측), 식별 컬럼 첫 열 배치(프로젝트 목록에
+  프로젝트명 컬럼 추가 — 0074 charter backfill 데이터 연동).
+- 목록 복귀: components/ListBackButton.tsx 단일 컴포넌트(시너지 상세·그룹/계열사
+  상세 적용), URL 기반 상세는 Topbar back-link. 화면별 자체 구현 금지.
+
+## As-built 2026-09-04 — StageFrame 단계 설명 문구 표준화
+
+단계 화면 설명 문구는 StageFrame children으로만 전달한다(프레임 밖 `<p>` 분리 금지).
+프레임이 0.9rem·muted-fg·leading-relaxed·mb-4로 서식을 표준화하고, 문장은 "~합니다."
+종결 1~3문장, 절차·ADR 참조는 문미 괄호로 통일한다(S1/S2/S3/S4/S5/S6·S7 화면 일괄 정정).
+
 ## As-built 2026-09-04 — 내비게이션 SSOT + 프로젝트 하위 화면 등록 (ADR-0105)
 
 - 사이드바 메뉴의 SSOT는 `app/web-next/lib/navigation.ts`다(NAV_SECTIONS/ADMIN_NAV/NON_MENU_ROUTES/menuHrefs). AppShell은 이 파일만 렌더링하며 아이콘 매핑(ICON_BY_HREF)만 로컬로 보유한다. 새 표준 화면은 반드시 여기에 등록한다 — 누락·순서 드리프트는 `tests/unit/navigation.test.ts`(페이지↔메뉴 패리티, 탐색 섹션 순서, 중복 href, AppShell SSOT 사용)가 잡는다.

@@ -98,9 +98,9 @@ export function GreenfieldView() {
   return (
     <main>
       <StageFrame stageId="S5" track="greenfield">
-        <strong>Greenfield 경로</strong> — 자체 역량으로 진입할 수 있는지 평가합니다.
-        필요 역량 대비 보유 역량의 <strong>격차</strong>를 기록하고, 해소 방식을
-        <strong> Build / Partner / Hire / Invest</strong> 중 결정한 뒤 진출전략과 Business Case 라인을 정리합니다.
+        Greenfield 경로 — 자체 역량으로 진입할 수 있는지 평가합니다.
+        필요 역량 대비 보유 역량의 격차를 기록하고, 해소 방식을
+         Build / Partner / Hire / Invest 중 결정한 뒤 진출전략과 Business Case 라인을 정리합니다.
       </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
