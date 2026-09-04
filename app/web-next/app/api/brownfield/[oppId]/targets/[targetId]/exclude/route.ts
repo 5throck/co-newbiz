@@ -1,5 +1,6 @@
 // S7 — 제외 (Exclusion Reasons 기록).
 import { getDb } from "../../../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 
@@ -25,5 +26,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     .get(targetId, oppId) as { id: string } | undefined;
   if (!existing) return notFound();
   db.run("UPDATE brownfield_target SET status = 'excluded', exclusion_reason = ?, rank = NULL, gate_evaluation_id = COALESCE(?, gate_evaluation_id), updated_at = ? WHERE id = ?", [reason, gateEvaluationId, now(), targetId]);
+  appendAudit(db, { actor: auth.auth.userId, action: "brownfield_target.exclude", target: `${oppId}:${targetId}`, now: now() });
   return ok(db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId), 200);
 }

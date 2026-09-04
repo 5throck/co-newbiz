@@ -5,6 +5,7 @@
 import { authenticate } from "../../../../../../../lib/auth.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
 import { CommitteeError, submitHumanPosition } from "../../../../../../../lib/committee-session.ts";
 
 const RECOMMENDATIONS = new Set(["go", "hold", "kill"]);
@@ -48,6 +49,7 @@ export async function POST(
       recommendation: body?.recommendation as "go" | "hold" | "kill" | undefined,
       vetoDissent: body?.vetoDissent === true,
     });
+    appendAudit(db, { actor: ctx.userId, action: "committee_position.submit", target: `${sessionId}:${result.positionId}`, now: new Date().toISOString() });
     return ok(result, 201);
   } catch (err) {
     if (err instanceof CommitteeError) {

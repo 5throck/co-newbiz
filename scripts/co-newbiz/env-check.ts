@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * env-check.ts — ADR-0075 pre-flight gate for pipeline API stages.
  *

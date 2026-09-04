@@ -1,4 +1,4 @@
-// @version 1.8.0
+// @version 1.9.0
 // v1.7.8: feat(skill-graph): step 4.65 scope loop (ADR-0060 Amendment 2) — after the L0
 //           unified graph gate, generate+verify every template scope (templates/common +
 //           templates/co-*) so each variant template ships its own docs/skill-graph.json;
@@ -140,48 +140,6 @@ let separator = "";
 const memoryFile = path.join('memory', `${date}.md`);
 if (fs.existsSync(memoryFile)) { separator = "\n---\n\n"; }
 
-// Idempotency check: skip append if a Session Summary with the same
-// commit message already exists for today (prevents duplicates when
-// /sync is re-run on the same day).
-let alreadyLogged = false;
-if (fs.existsSync(memoryFile)) {
-    const existing = fs.readFileSync(memoryFile, 'utf-8');
-    // Match a Session Summary header followed by the same message
-    const duplicatePattern = new RegExp(
-        `^## Session Summary\\s*\\n${msg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
-        'm'
-    );
-    alreadyLogged = duplicatePattern.test(existing);
-}
-
-if (alreadyLogged) {
-    console.log(`${YELLOW}⚙ Session summary already logged for today — skipping append (idempotent).${RESET}`);
-} else {
-    const template = `${separator}## Session Summary
-${msg}
-
-## Changes
-${fileLines}
-
-## Decisions
-- None
-
-## Open Issues
-- None
-`;
-
-    fs.appendFileSync(memoryFile, template, 'utf8');
-}
-
-// 2. Update MEMORY.md index
-try {
-    await $`bun run scripts/sync-md.ts ${date} "${msg}"`;
-} catch (e) {
-    console.log(`${RED}❌ sync-md.ts failed: ${e}${RESET}`);
-    if (import.meta.main) {
-      process.exit(1);
-    }
-}
 
 // 2.5 Generate scripts/README.md
 const genReadmeTs = path.join('scripts', 'generate-scripts-readme.ts');
@@ -579,6 +537,52 @@ if (fs.existsSync(genManifestTs)) {
     console.log(`${GREEN}✓ VERSION_MANIFEST.md generated${RESET}`);
 }
 
+async function logSessionMemory() {
+// Idempotency check: skip append if a Session Summary with the same
+// commit message already exists for today (prevents duplicates when
+// /sync is re-run on the same day).
+let alreadyLogged = false;
+if (fs.existsSync(memoryFile)) {
+    const existing = fs.readFileSync(memoryFile, 'utf-8');
+    // Match a Session Summary header followed by the same message
+    const duplicatePattern = new RegExp(
+        `^## Session Summary\\s*\\n${msg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+        'm'
+    );
+    alreadyLogged = duplicatePattern.test(existing);
+}
+
+if (alreadyLogged) {
+    console.log(`${YELLOW}⚙ Session summary already logged for today — skipping append (idempotent).${RESET}`);
+} else {
+    const template = `${separator}## Session Summary
+${msg}
+
+## Changes
+${fileLines}
+
+## Decisions
+- None
+
+## Open Issues
+- None
+`;
+
+    fs.appendFileSync(memoryFile, template, 'utf8');
+}
+
+// 2. Update MEMORY.md index
+try {
+    await $`bun run scripts/sync-md.ts ${date} "${msg}"`;
+} catch (e) {
+    console.log(`${RED}❌ sync-md.ts failed: ${e}${RESET}`);
+    if (import.meta.main) {
+      process.exit(1);
+    }
+}
+}
+
+
 // 4.9 Audit gate — call audit.ts directly (platform-independent, no shell intermediary)
 //     Runs AFTER publish + skill sync so templates/common/ is up-to-date with scrub.
 const auditRes = await $`bun scripts/audit.ts`.nothrow();
@@ -588,6 +592,9 @@ if (auditRes.exitCode !== 0) {
       process.exit(1);
     }
 }
+// Session memory is written only AFTER the audit gate passes — a blocked
+// sync must not leave a session log for a commit that never happened.
+await logSessionMemory();
 
 // 5. Branch -> commit -> push -> PR
 let currentBranch = "";

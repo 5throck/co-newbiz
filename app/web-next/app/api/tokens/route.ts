@@ -2,7 +2,7 @@
 import { getDb } from "../../../../../db/client.ts";
 import { issueApiToken, listApiTokens } from "../../../../../db/lib/api-tokens.ts";
 import { authenticate } from "../../../lib/auth.ts";
-import { badRequest, ok } from "../../../lib/envelope.ts";
+import { badRequest, forbidden, ok } from "../../../lib/envelope.ts";
 
 export async function POST(request: Request) {
   const auth = authenticate(request);
@@ -11,11 +11,17 @@ export async function POST(request: Request) {
   if (!body?.label?.trim()) {
     return badRequest("invalid_request", "label is required.");
   }
+  const scopes = body.scopes && body.scopes.length > 0 ? body.scopes : ["read"];
+  // Viewer-role accounts are read-only everywhere else (per-route role gates);
+  // issuing them a write-scoped bearer token would bypass those gates.
+  if (scopes.includes("write") && auth.auth.role === "viewer") {
+    return forbidden("role_required", "viewer 계정은 write 스코프 토큰을 발급할 수 없습니다.");
+  }
   try {
     const issued = issueApiToken(getDb(), {
       userId: auth.auth.userId,
       label: body.label.trim(),
-      scopes: body.scopes && body.scopes.length > 0 ? body.scopes : ["read"],
+      scopes,
       now: new Date().toISOString(),
     });
     return ok({ token: issued.token, id: issued.id, label: body.label.trim() }, 201, { note: "Store this token now — it is never shown again." });

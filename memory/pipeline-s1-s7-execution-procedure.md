@@ -1,8 +1,11 @@
 # Pipeline S1–S7 Execution Procedure (Project Memory)
 
-> Standing procedure for executing the full S1–S7 pipeline (S1 market → S2 opportunity →
-> S3 synergy/fit → S4 route decision → S5 feasibility → S6 DD → S7 IC) against a case
-> project. First distilled from the `samsung-robotics-rainbow` process-check run
+> Renumbered 2026-09-04 to flow.spec v2.0.0 (was v1 S1-S7 numbering)
+>
+> Standing procedure for executing the pipeline (S1 market → S2 opportunity →
+> S3 synergy/fit → S4 route decision → S8 business case → S9 DD → S10 IC) against a case
+> project. In flow.spec v2.0.0, S6/S7 are the brownfield target longlist/screening stages.
+> First distilled from the `samsung-robotics-rainbow` process-check run
 > (2026-08-31); see `deliverables/samsung-robotics-rainbow/governance/00-governance-summary.md`.
 > Update this file whenever a run uncovers a new environment or execution lesson.
 
@@ -14,9 +17,9 @@
 | S2 opportunity | opportunity registry, business-model sketch | Screening | AI formal review |
 | S3 synergy/fit | strategic-fit checklist result, synergy analysis | Screening | AI formal review (threshold: ADR-0051 open question (b) — unresolved) |
 | S4 route | route decision (`track` recorded) | Pre-FS entry | PM records; `decided_by` must name the human approver |
-| S5 feasibility | DCF/comparables/Monte Carlo, WACC assembly | FS | WACC/hurdle must reach `kind='user'` before gate exit |
-| S6 DD | checklist judgments (commercial/technical/legal/regulatory/special topics) | DD | fail-closed: unresolved mandatory items ⇒ Fail |
-| S7 IC | IC package, risk register, kill-criteria evaluation | Entity IC → Group IC | human `reviewed_by`; never fabricate approval |
+| S8 business case (was v1 S5 feasibility) | DCF/comparables/Monte Carlo, WACC assembly | FS | WACC/hurdle must reach `kind='user'` before gate exit |
+| S9 DD (was v1 S6) | checklist judgments (commercial/technical/legal/regulatory/special topics) | DD | fail-closed: unresolved mandatory items ⇒ Fail |
+| S10 IC (was v1 S7) | IC package, risk register, kill-criteria evaluation | Entity IC → Group IC | human `reviewed_by`; never fabricate approval |
 
 Non-negotiables during any run: no PASS stamps without evidence; silence is not
 approval; missing data access is recorded as a limitation, never silently skipped.
@@ -25,13 +28,13 @@ approval; missing data access is recorded as a limitation, never silently skippe
 
 - Shared procedure schemas: `procedures/_shared/<procedure>/schema.yaml`
   (known gap: no shared YAML for S2 opportunity discovery — see governance summary §2.2).
-- Checklists: `checklists/*.yaml` (strategic-fit for S3; the five DD checklists for S6).
-- Kill criteria: `procedures/_kill-criteria/*.json` evaluated at S6/S7 with `evidence_ref` citations.
+- Checklists: `checklists/*.yaml` (strategic-fit for S3; the five DD checklists for S9).
+- Kill criteria: `procedures/_kill-criteria/*.json` evaluated at S9/S10 with `evidence_ref` citations.
 
 ## 3. Skills used per stage
 
-- `k-kosis` (S1 statistics), `k-dart` (S1/S5/S6 filings and peer financials),
-  `k-law` (S6 statute text). All three follow fail-closed: if a lookup fails,
+- `k-kosis` (S1 statistics), `k-dart` (S1/S8/S9 filings and peer financials),
+  `k-law` (S9 statute text). All three follow fail-closed: if a lookup fails,
   record the limitation explicitly and triangulate — never fill with assumption.
 - Data confidence caps the RAG grade (ADR-0016/0049).
 

@@ -168,6 +168,7 @@ export default function BusinessCasePage() {
 
   return (
     <main className="market-page">
+      <p className="text-[0.8rem] mb-2"><a className="text-[color:var(--accent)] underline" href={`/projects/${params.id}/process`}>프로세스 현황 →</a></p>
       <StageFrame stageId="S8" heading="S8 사업성 분석 — Business Case 비교">
       <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">
         시나리오(base/upside/downside)별 정량 평가입니다. 민감도(NPV 분위수)가 포함된 케이스가 S8 완료 요건입니다.

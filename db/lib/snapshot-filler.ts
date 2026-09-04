@@ -892,17 +892,19 @@ function fillClassificationPresenceVar(db: Database, projectId: string): Snapsho
 // ---------------------------------------------------------------------------
 
 /**
- * #12: viable candidates on the Screening longlist. No longlist rows = not
- * yet screened = missing; rows present but zero passing knock-outs IS the
+ * #12: viable candidates on the Screening shortlist. Sourced from
+ * brownfield_target (the S7 shortlist is the live successor of the retired
+ * screening_longlist table, migration 0073). No candidates = not yet
+ * screened = missing; candidates present but zero knock-out passes IS the
  * determinate finding.
  */
 function fillViableTargetsVar(db: Database, projectId: string): SnapshotWrite {
   const row = missing("screening.viable_targets");
-  const total = (db.query("SELECT COUNT(*) AS n FROM screening_longlist WHERE project_id = ?").get(projectId) as unknown as { n: number }).n;
+  const total = (db.query("SELECT COUNT(*) AS n FROM brownfield_target WHERE opportunity_id = (SELECT source_opportunity_id FROM md_project WHERE id = ?)").get(projectId) as unknown as { n: number }).n;
   if (total === 0) return row;
-  row.value_num = (db.query("SELECT COUNT(*) AS n FROM screening_longlist WHERE project_id = ? AND knock_out_passed = 1").get(projectId) as unknown as { n: number }).n;
-  row.evidence_ref = "screening_longlist";
-  const latest = db.query("SELECT MAX(created_at) AS at FROM screening_longlist WHERE project_id = ?").get(projectId) as unknown as { at: string | null };
+  row.value_num = (db.query("SELECT COUNT(*) AS n FROM brownfield_target WHERE opportunity_id = (SELECT source_opportunity_id FROM md_project WHERE id = ?) AND status = 'shortlisted'").get(projectId) as unknown as { n: number }).n;
+  row.evidence_ref = "brownfield_target";
+  const latest = db.query("SELECT MAX(updated_at) AS at FROM brownfield_target WHERE opportunity_id = (SELECT source_opportunity_id FROM md_project WHERE id = ?)").get(projectId) as unknown as { at: string | null };
   row.observed_at = latest.at;
   row.status = "present";
   return row;

@@ -4,6 +4,7 @@
 // 채점 프레임워크: 2026-08-24 Class-C 결정 (d) / ADR-0052 — Stage 1 의도 분기
 // (integration | capability_access) → Stage 2 5기준 × 20% × 1–3점 + 사전배제.
 import { getDb } from "../../../../../../../db/client.ts";
+import { listRouteDecisionsWithScores } from "../../../../../../../db/repositories/route-decision.repository.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
@@ -49,24 +50,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     | { id: string; name: string; status: string }
     | null;
   if (!opp) return notFound();
-  const decisions = db
-    .query(
-      `SELECT id, track, sub_track, rationale, alternatives_considered, decided_by, decided_at,
-              intent, override_flagged, staging_recommended, total_score
-       FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC`,
-    )
-    .all(id) as Array<Record<string, unknown> & { id: string }>;
-  const scores = db
-    .query(
-      `SELECT s.decision_id, s.intent, s.criterion, s.score, s.evidence_note
-       FROM route_decision_score s
-       JOIN route_decision d ON d.id = s.decision_id
-       WHERE d.opportunity_id = ? ORDER BY s.created_at`,
-    )
-    .all(id) as Array<Record<string, unknown>>;
-  for (const d of decisions) {
-    d.scores = scores.filter((s) => s.decision_id === d.id).map(({ decision_id: _drop, ...rest }) => rest);
-  }
+  const decisions = listRouteDecisionsWithScores(id);
   return ok({ opportunity: opp, decisions }, 200, { count: decisions.length });
 }
 

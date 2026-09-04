@@ -11,8 +11,8 @@
 S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S4 진출방식 결정 → S5 역량 평가·진출전략 (greenfield 전용) → S6 대상 후보 발굴 (brownfield 전용) → S7 대상 스크리닝 (brownfield 전용) → S8 사업성 분석 → S9 실사·검증 → S10 투자심사·실행 → S11 사후 관리
 
 엔티티 라이프사이클:
-- opportunity: S1 → S2 → S3 → S4
-- project: S5 → S6 → S7 → S8 → S9 → S10 → S11
+- opportunity: S1 → S2 → S3 → S4 → S5 → S6 → S7
+- project: S8 → S9 → S10 → S11
 
 ## 게이트 정의
 
