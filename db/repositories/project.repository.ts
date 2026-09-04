@@ -40,6 +40,10 @@ export interface ProjectRow {
   track?: "greenfield" | "brownfield" | null;
   /** The opportunity this project was promoted from (null for pre-promotion projects). */
   source_opportunity_id?: string | null;
+  /** ADR-0104 — charter: display name + structured sections + KPI pre-commit (built at promotion, amendable). */
+  project_name?: string | null;
+  charter_json?: string | null;
+  charter_confirmed_at?: string | null;
 }
 
 /**
@@ -167,7 +171,14 @@ function assertPromotionPreconditions(db: ReturnType<typeof getDb>, opp: Promoti
  */
 export function promoteOpportunity(
   opportunityId: string,
-  opts: { promotedBy: string; needToKnowBasis: string; origin?: "internal" | "external" | "hybrid" | "joint" },
+  opts: {
+    promotedBy: string;
+    needToKnowBasis: string;
+    origin?: "internal" | "external" | "hybrid" | "joint";
+    /** ADR-0104 charter — display name + structured charter JSON built by lib/project-charter.ts. */
+    projectName?: string;
+    charterJson?: string;
+  },
 ): PromotedProject {
   if (!opts.needToKnowBasis?.trim()) {
     throw new PromotionError("precondition_failed", "needToKnowBasis is mandatory — the promoter's membership grant needs a recorded basis (FR-SEC-01).");
@@ -200,12 +211,29 @@ export function promoteOpportunity(
       origin: opts.origin ?? null,
       track,
       source_opportunity_id: opportunityId,
+      project_name: opts.projectName ?? null,
+      charter_json: opts.charterJson ?? null,
     };
     db.run(
-      `INSERT INTO md_project (id, project_no, created_at, origin, source_opportunity_id, track)
-       VALUES (?,?,?,?,?,?)`,
-      [row.id, row.project_no, row.created_at, row.origin, row.source_opportunity_id, row.track],
+      `INSERT INTO md_project (id, project_no, created_at, origin, source_opportunity_id, track, project_name, charter_json)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [row.id, row.project_no, row.created_at, row.origin, row.source_opportunity_id, row.track, row.project_name, row.charter_json],
     );
+
+    // Brownfield: link the top shortlisted target's md_company so project→company
+    // joins work without the legacy backlink (ADR-0104 §company-linkage).
+    if (track === "brownfield") {
+      const top = db
+        .query(
+          `SELECT company_name FROM brownfield_target
+           WHERE opportunity_id = ? AND status = 'shortlisted' ORDER BY rank LIMIT 1`,
+        )
+        .get(opportunityId) as { company_name: string } | undefined;
+      if (top) {
+        const mc = db.query("SELECT id FROM md_company WHERE name_ko = ?").get(top.company_name) as { id: string } | undefined;
+        if (mc) db.run("UPDATE md_project SET company_id = ? WHERE id = ?", [mc.id, id]);
+      }
+    }
 
     db.run("UPDATE opportunity SET project_id = ?, promoted_at = ? WHERE id = ?", [row.id, now, opportunityId]);
 

@@ -196,6 +196,21 @@ export function recordVentureScorecardCycle(input: RecordVentureScorecardInput, 
     );
   }
 
+  // C2 (ADR-0104) — charter KPI pre-commits become default targets: a row
+  // whose measure_key matches a charter KPI key and carries no target inherits
+  // the charter's target text, so "승격 때 약속한 것" is the S11 yardstick.
+  let charterKpis: Array<{ key: string; label?: string; target: string }> = [];
+  try {
+    const charterRow = db.query("SELECT charter_json FROM md_project WHERE id = ?").get(input.projectId) as
+      | { charter_json: string | null }
+      | undefined;
+    if (charterRow?.charter_json) {
+      const parsed = JSON.parse(charterRow.charter_json) as { versions?: Array<{ kpis?: Array<{ key: string; label?: string; target: string }> }> };
+      const versions = parsed.versions ?? [];
+      charterKpis = versions[versions.length - 1]?.kpis ?? [];
+    }
+  } catch { /* malformed charter — no default targets */ }
+
   requireActiveMember(db, input.projectId, input.actor);
   requireInsiderIfMnpi(db, input.projectId, input.actor);
 
@@ -237,6 +252,11 @@ export function recordVentureScorecardCycle(input: RecordVentureScorecardInput, 
     }
     if (!(r.measure_key ?? "").trim()) {
       throw new Error(`venture_scorecard_rejected: ${at} measure_key is mandatory — a row without its measure identity cannot be rolled up or trended.`);
+    }
+    // C2 (ADR-0104) — charter KPI pre-commit fills a missing target.
+    if (!rowHasTarget(r)) {
+      const kpi = charterKpis.find((k) => k.key === r.measure_key);
+      if (kpi && kpi.target.trim()) r.target_value = kpi.target;
     }
     if (!rowHasTarget(r) && r.status !== "insufficient_evidence") {
       throw new Error(

@@ -32,6 +32,34 @@ interface DissentEntry { member_key: string; position_md: string }
 
 const REC_LABEL: Record<string, string> = { go: "GO", hold: "HOLD", kill: "KILL" };
 
+// position-meta marker — the verbatim footnote appended to every position
+// (agent and human alike). Parsed here for the per-seat scorecard table
+// (ADR-0104): recommendation / veto / confidence / 5-criteria scores.
+const POSITION_META_RE = /<!--position-meta:(\{[\s\S]*?\})-->/;
+interface PositionMeta {
+  recommendation?: string;
+  veto_dissent?: boolean;
+  confidence?: number;
+  seat?: string;
+  criteria_scores?: Record<string, number>;
+}
+function parsePositionMeta(positionMd: string): PositionMeta {
+  const m = positionMd.match(POSITION_META_RE);
+  if (!m) return {};
+  try {
+    return JSON.parse(m[1]) as PositionMeta;
+  } catch {
+    return {};
+  }
+}
+const CRITERIA_COLS: Array<{ key: string; label: string }> = [
+  { key: "control_need", label: "통제 필요도" },
+  { key: "capability_criticality", label: "역량 결정성" },
+  { key: "market_uncertainty", label: "시장 불확실성" },
+  { key: "integration_capacity", label: "통합 역량" },
+  { key: "speed_to_capability", label: "역량확보 속도" },
+];
+
 export function CommitteePanel({
   opportunityId,
   committeeKey,
@@ -147,6 +175,25 @@ export function CommitteePanel({
     }
   }
 
+  // 회의록 확정 — analyst+ 인간 행위. 세션 목록이 확정 상태를 노출하지 않는
+  // 경우가 있어 항상 허용하고, 이미 확정된 경우 서버 409 메시지를 그대로
+  // 표면화한다 (정직성 제약 — 성공을 가장하지 않는다).
+  const [minutesConfirmed, setMinutesConfirmed] = useState(false);
+
+  async function confirmMinutes() {
+    if (!transcript || busy) return;
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      await api.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(transcript.sessionId)}/minutes`, { confirm: true });
+      setMinutesConfirmed(true);
+      setNotice("회의록이 확정되었습니다.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "회의록 확정 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const dissents: DissentEntry[] = transcript?.evaluation?.dissentJson
     ? (JSON.parse(transcript.evaluation.dissentJson) as DissentEntry[])
     : [];
@@ -219,6 +266,78 @@ export function CommitteePanel({
               ))}
             </div>
           ))}
+
+          {/* 좌석별 스코어카드 — position-meta 마커에서 파싱 (ADR-0104).
+              5기준 점수가 없는 입장은 "—"로 표시된다 — 없는 데이터를
+              있는 것처럼 보이지 않는다. */}
+          {transcript.rounds.some((r) => r.positions.length > 0) && (
+            <section className="mt-3 mb-3" aria-label="좌석별 스코어카드">
+              <p className="text-[0.85rem] font-semibold mb-1">좌석별 스코어카드 (5기준 × 1–3점, position-meta 파싱)</p>
+              <div className="table-scroll">
+                <table className="data-table" aria-label="좌석별 스코어카드">
+                  <caption className="sr-only">좌석별 스코어카드</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">좌석</th>
+                      <th scope="col">유형</th>
+                      <th scope="col">권고</th>
+                      <th scope="col">confidence</th>
+                      <th scope="col">veto</th>
+                      {CRITERIA_COLS.map((c) => <th scope="col" key={c.key}>{c.label}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transcript.rounds.flatMap((r) => r.positions).map((p) => {
+                      const meta = parsePositionMeta(p.positionMd);
+                      const rec = meta.recommendation ?? "";
+                      return (
+                        <tr key={p.positionId}>
+                          <td className="text-[0.75rem]">{meta.seat ?? (p.memberType === "human" ? (p.humanUserId ?? "—") : (p.agentKey ?? "—"))}</td>
+                          <td>
+                            <span className={`status-chip ${p.memberType === "human" ? "status-green" : "status-not-started"}`}>
+                              {p.memberType}
+                            </span>
+                          </td>
+                          <td>
+                            {rec ? (
+                              <span className={`status-chip ${rec === "go" ? "status-green" : rec === "hold" ? "status-amber" : "status-red"}`}>
+                                {REC_LABEL[rec] ?? rec}
+                              </span>
+                            ) : "—"}
+                          </td>
+                          <td className="tabular-nums text-[0.75rem]">{meta.confidence ?? p.confidence ?? "—"}</td>
+                          <td>{meta.veto_dissent ? <span className="status-chip status-red">veto</span> : "—"}</td>
+                          {CRITERIA_COLS.map((c) => (
+                            <td key={c.key} className="tabular-nums text-[0.78rem]">{meta.criteria_scores?.[c.key] ?? "—"}</td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* 회의록 — 열람(text/markdown, 새 탭) + 확정(analyst+ 인간 행위) */}
+          <section className="mt-2 mb-3" aria-label="회의록">
+            <p className="text-[0.85rem] font-semibold mb-1">회의록</p>
+            <span className="actions-row">
+              <a
+                className="btn-ghost btn-sm"
+                href={`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(transcript.sessionId)}/minutes`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                회의록 보기
+              </a>
+              {canAct && (
+                <button type="button" className="btn-ghost btn-sm" disabled={busy || minutesConfirmed} onClick={() => void confirmMinutes()}>
+                  {minutesConfirmed ? "✓ 확정됨" : "회의록 확정"}
+                </button>
+              )}
+            </span>
+          </section>
 
           {transcript.evaluation ? (
             <div className="mt-3 mb-2">

@@ -223,6 +223,7 @@ stages:
     completionCriteria:
       - route_decision 레코드가 존재한다 (track 필수, greenfield는 sub_track, brownfield는 Route 유형)
       - Brownfield인 경우 5criteria 채점 결과와 사전배제 점검이 기록되었다
+      - Greenfield인 경우에도 5criteria 채점 결과를 기록한다 (ADR-0104 — 트랙 간 비교 가능성)
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S5, onHold: S4, onKill: terminal }
     gates: [screening, pre_fs]

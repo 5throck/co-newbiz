@@ -26,6 +26,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const body = (await request.json().catch(() => null)) as {
     needToKnowBasis?: string;
     origin?: string;
+    /** ADR-0104 — override the auto-built charter name (charter is auto-built from S1~S7 artifacts). */
+    project_name?: string;
   } | null;
   const basis = body?.needToKnowBasis?.trim();
   if (!basis) return badRequest("invalid_request", "needToKnowBasis는 필수입니다 — 승격자의 멤버십 근거가 기록되지 않으면 승격할 수 없습니다.");
@@ -38,11 +40,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const opp = db.query("SELECT id FROM opportunity WHERE id = ?").get(id) as { id: string } | undefined;
   if (!opp) return notFound();
 
+  // ADR-0104 — build the charter from the S1~S7 artifacts before promoting.
+  const { buildProjectCharter } = await import("../../../../../lib/project-charter.ts");
+  const dbCharter = getDb();
+  const route = dbCharter
+    .query("SELECT track FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
+    .get(id) as { track: "greenfield" | "brownfield" } | undefined;
+  const built = buildProjectCharter(db, {
+    opportunityId: id,
+    track: route?.track ?? null,
+    builtBy: ctx.userId,
+    now: new Date().toISOString(),
+  });
+  const charterJson = JSON.stringify({ versions: [{ ...built.charter, purpose: built.charter.purpose }] });
+  const projectName = body?.project_name?.trim() || built.name;
+
   try {
     const result = promoteOpportunity(id, {
       promotedBy: ctx.userId,
       needToKnowBasis: basis,
       origin: origin as "internal" | "external" | "hybrid" | "joint" | undefined,
+      projectName,
+      charterJson,
     });
     return ok(
       {

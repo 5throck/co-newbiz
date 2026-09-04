@@ -269,6 +269,8 @@ describe("shape: four new tables + md_project.current_stage_gate", () => {
     expect(tableColumns("md_project").map((c) => c.name)).toEqual([
       "id", "project_no", "created_at", "current_stage_gate", "company_id",
       "origin", "source_opportunity_id", "track",
+      // 0074 (ADR-0104): charter columns appended.
+      "project_name", "charter_json", "charter_confirmed_at",
     ]);
   });
 
