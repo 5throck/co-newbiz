@@ -6,6 +6,7 @@ import { api } from "../../lib/api.ts";
 import Link from "next/link";
 import { useConfirm, RowEdit } from "../../components/crud.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
+import { ListBackButton } from "../../components/ListBackButton.tsx";
 import { SectionToolbar } from "../../components/layout.tsx";
 import dynamic from "next/dynamic";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
@@ -357,7 +358,7 @@ export function OurCompanyView() {
     <main>
       {confirmDialog}
       <StageFrame stageId="S3" heading="S3 그룹/계열사 분석">
-        그룹과 계열사를 등록해 <strong>자사 강점/약점</strong>을 분석합니다 — 이 프로파일은 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다. 상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.
+        그룹과 계열사를 등록해 자사 강점/약점을 분석합니다. 이 프로파일은 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다. 상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.
       </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
@@ -697,7 +698,7 @@ export function OurCompanyView() {
                 <button type="button" className="btn-ghost" disabled={profiles[openMember] === "loading"} onClick={() => analyzeMember(openMember)}>
                   {profiles[openMember] === "loading" ? "분석 중..." : "재분석"}
                 </button>
-                <button type="button" className="btn-ghost" onClick={backToList}>목록으로</button>
+                <ListBackButton onClick={backToList} />
               </>
             }
           />

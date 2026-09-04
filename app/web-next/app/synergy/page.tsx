@@ -7,6 +7,7 @@ import { useConfirm } from "../../components/crud.tsx";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
 import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
+import { ListBackButton } from "../../components/ListBackButton.tsx";
 import dynamic from "next/dynamic";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
 
@@ -255,9 +256,9 @@ export function SynergyView() {
       {confirmDialog}
       
       <StageFrame stageId="S3">
-        <strong>그룹/계열사 × 기회 시너지 검증</strong> — 그룹/계열사 분석에서 만든 자사 프로파일(특정 계열사 또는 그룹 전체)을
-        S1 시장분석·S2 기회발굴 결과와 연결해 시너지 영역을 도출하고 Short List로 좁힙니다.
-        기회를 연결하면 완료 시 해당 기회에 synergy_score 권고가 기록됩니다 (ADR-0090).
+        그룹/계열사 분석에서 만든 자사 프로파일(특정 계열사 또는 그룹 전체)을 S1 시장분석·S2 기회발굴
+        결과와 연결해 시너지 영역을 도출하고 Short List로 좁힙니다. 기회를 연결하면 완료 시 해당 기회에
+        synergy_score 권고가 기록됩니다 (ADR-0090).
       </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
@@ -444,9 +445,12 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
           </span>
         }
         actions={
-          <button type="button" className="btn-ghost" disabled={inProgress} onClick={onRerun}>
-            재분석
-          </button>
+          <>
+            <ListBackButton onClick={onBack} />
+            <button type="button" className="btn-ghost" disabled={inProgress} onClick={onRerun}>
+              재분석
+            </button>
+          </>
         }
       />
 

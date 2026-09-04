@@ -188,7 +188,7 @@ export function RouteDecisionView() {
   return (
     <main>
       <StageFrame stageId="S4">
-        선별된 기회의 진출방식을 결정하는 <strong>분기점</strong>입니다.
+        선별된 기회의 진출방식을 결정하는 분기점입니다.
         Greenfield(자체 역량 진출)는 S5 역량 평가로, Brownfield(기존 기업·자산 결합)는
         S6 대상 후보 발굴로 진행됩니다. Brownfield ≠ M&A — 라우트 유형을 함께 선택합니다.
       </StageFrame>

@@ -31,7 +31,13 @@ export function StageFrame({
       </h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">{stage.objective}</p>
       <StageRail current={ids} track={track} />
-      {children}
+      {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,
+          하단 간격 mb-4). 페이지별 클래스·<strong> 강조 금지(설계서 개정 2026-09-04). */}
+      {children && (
+        <div className="mb-4 text-[0.9rem] text-[color:var(--muted-fg)] leading-relaxed">
+          {children}
+        </div>
+      )}
     </>
   );
 }

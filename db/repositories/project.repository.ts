@@ -313,7 +313,7 @@ export function listVisibleProjects(callerId: string, opts: VisibilityOptions = 
   const db = getDb();
   const rows = db
     .query(
-      `SELECT p.id, p.project_no, p.created_at, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
+      `SELECT p.id, p.project_no, p.project_name, p.created_at, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
        FROM md_project p
        JOIN project_member m ON m.project_id = p.id
        LEFT JOIN project_classification c ON c.project_id = p.id

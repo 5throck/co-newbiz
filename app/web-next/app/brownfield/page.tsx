@@ -193,7 +193,7 @@ export function BrownfieldView() {
   return (
     <main>
       <StageFrame stageId={["S6", "S7"]} track="brownfield">
-        <strong>Brownfield 경로</strong> — 진출방식이 Brownfield로 결정된 기회의
+        Brownfield 경로 — 진출방식이 Brownfield로 결정된 기회의
         대상 후보를 발굴하고(S6 Long List), <code>chk-target-screening</code> 체크리스트로 스크리닝해
         Short List로 좁힙니다(S7). CDD/TDD는 Short List 확정 후 S9에서 수행합니다.
       </StageFrame>

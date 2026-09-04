@@ -254,11 +254,9 @@ export function MarketView() {
   return (
     <main>
       {confirmDialog}
-      <StageFrame stageId="S1" />
-      <p className="mt-[0.15rem] mb-2 text-[color:var(--muted-fg)] text-[0.9rem]">
-        프로세스 스테이지 S1 — 산업을 선택하면 <strong>systematic-market-sizing</strong> 8단계 절차로 분석된
-        리포트가 차트로 표시됩니다.
-      </p>
+      <StageFrame stageId="S1">
+        산업을 선택하면 systematic-market-sizing 8단계 절차로 분석된 리포트가 차트로 표시됩니다 (ADR-0075).
+      </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
