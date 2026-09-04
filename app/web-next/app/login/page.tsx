@@ -3,10 +3,16 @@
 // Port of app/web/src/pages/Login.tsx — useNavigate -> useRouter().push.
 // 신규사업 검토 프로세스(S1~S3 기회 발굴) 플랫폼의 진입 화면: 배경 이미지(가치사슬/항만 모티프)와
 // 계정 신청 안내 링크를 제공한다. 계정 신청은 /register → 관리자 승인.
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth, describeAuthError } from "../../lib/auth-client.tsx";
+
+const LOGIN_BACKGROUNDS = [
+  { src: "/login-bg.svg", label: "항만·가치사슬" },
+  { src: "/login-bg-2.svg", label: "도시·인프라" },
+  { src: "/login-bg-3.svg", label: "스마트 제조·로봇" },
+] as const;
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -15,6 +21,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // 배경 롤링 (ADR-0105 보완) — 신규사업 모티프 3장을 7초 간격 크로스페이드.
+  // prefers-reduced-motion 사용자에게는 정적 첫 장면만 유지한다.
+  const [bgIndex, setBgIndex] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = setInterval(() => setBgIndex((i) => (i + 1) % LOGIN_BACKGROUNDS.length), 7000);
+    return () => clearInterval(timer);
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -32,6 +47,12 @@ export default function LoginPage() {
 
   return (
     <main className="login-page login-page-rich">
+      <div className="login-hero-stack" aria-hidden="true">
+        {LOGIN_BACKGROUNDS.map((bg, i) => (
+          <div key={bg.src} className={`login-hero-bg ${i === bgIndex ? "is-active" : ""}`} style={{ backgroundImage: `url("${bg.src}")` }} />
+        ))}
+        <div className="login-hero-veil" />
+      </div>
       <div className="login-hero" aria-hidden="true">
         <p className="login-hero-title">신규사업 검토 AI 플랫폼</p>
         <p className="login-hero-sub">시장분석 → 기회발굴 → 시너지 → 트랙결정 → 사업성·밸류에이션 → 실사 → 투자심사</p>

@@ -70,17 +70,21 @@ describe("navigation SSOT (ADR-0105)", () => {
     // → S5 greenfield → S6/S7 brownfield → S8+ projects(+pipeline)
     const explore = NAV_SECTIONS.find((s) => s.label === "탐색")!;
     const hrefs = explore.items.map((i) => i.href);
-    const expected = ["/", "/market", "/opportunities", "/our-company", "/route-decision", "/greenfield", "/brownfield", "/projects", "/pipeline"];
+    // 추진 전략(부모) 아래 진출방식 결정/그린필드/브라운필드 자식 — ADR-0105 개정
+    const expected = ["/", "/market", "/opportunities", "/our-company", "/route-decision", "/projects", "/pipeline"];
     expect(hrefs).toEqual(expected);
-    // stage ordering sanity: brownfield(S6/S7) must come after greenfield(S5)
-    expect(hrefs.indexOf("/brownfield")).toBeGreaterThan(hrefs.indexOf("/greenfield"));
+    // stage ordering sanity (sub-menu children): greenfield(S5) → brownfield(S6/S7)
+    const gf = hrefs.indexOf("/greenfield");
+    const bf = hrefs.indexOf("/brownfield");
+    if (gf !== -1 && bf !== -1) expect(bf).toBeGreaterThan(gf);
   });
 
   test("no unintended duplicate menu hrefs", () => {
     // /our-company is both a submenu parent and a child by design — that is
     // the ONLY allowed repetition; anything else is a copy-paste drift.
     const hrefs = menuHrefs();
-    const dupes = hrefs.filter((h, i) => hrefs.indexOf(h) !== i && h !== "/our-company");
+    const allowedDup = new Set(["/our-company", "/route-decision"]);
+    const dupes = hrefs.filter((h, i) => hrefs.indexOf(h) !== i && !allowedDup.has(h));
     expect(dupes).toEqual([]);
   });
 

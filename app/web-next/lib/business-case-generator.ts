@@ -47,6 +47,9 @@ const CAPTURE_RATE = 0.005;
 /** Cost structure: variable opex ratio and year-1 capex as a share of year-1 revenue. */
 const OPEX_RATIO = 0.6;
 const CAPEX_RATIO = 0.1;
+/** ADR-0106 — year-0 초기투자(시설·설립 셋업)를 year-1 매출 대비 비율로 모델링.
+ *  초기투자가 없으면 모든 플로우가 양수라 IRR이 정의되지 않는다(null/0%). */
+const INITIAL_INVESTMENT_RATIO = 0.5;
 /** Scenario deltas — upside/downside are base ±20% on growth AND dispersion (ADR-0098). */
 const SCENARIO_DELTA: Record<Scenario, { growth: number; disp: number }> = {
   base: { growth: 1.0, disp: 1.0 },
@@ -102,6 +105,7 @@ export interface SimulationResult {
 
 /** IRR of a cashflow vector by bisection on NPV(rate); null when no sign change. */
 export function irr(cashflows: number[]): number | null {
+  // flows[0]은 year-0(현재 시점) — 미할인, 이후 연도만 할인한다.
   const npv = (rate: number) => cashflows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + rate, i), 0);
   let lo = -0.9;
   let hi = 10;
@@ -140,16 +144,16 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario): Sim
   const year1Revenue = inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth;
 
   const npvs: number[] = [];
-  const capex = year1Revenue * CAPEX_RATIO;
+  const initialInvestment = year1Revenue * INITIAL_INVESTMENT_RATIO;
   for (let it = 0; it < MC_ITERATIONS; it++) {
     let revenue = year1Revenue;
-    let npv = 0;
+    let npv = -initialInvestment; // year-0 설립 투자
     for (let year = 1; year <= HORIZON_YEARS; year++) {
       if (year > 1) {
         const [z1] = normalPair(rng);
         revenue *= 1 + anchorGrowth + disp * z1;
       }
-      const fcf = revenue * (1 - OPEX_RATIO) - (year === 1 ? capex : 0);
+      const fcf = revenue * (1 - OPEX_RATIO) - revenue * CAPEX_RATIO;
       npv += fcf / Math.pow(1 + WACC, year);
     }
     npvs.push(npv);
@@ -191,11 +195,11 @@ export function caseInputsForProject(projectId: string): CaseInputs {
 function deterministicCashflows(inputs: CaseInputs, scenario: Scenario): number[] {
   const delta = SCENARIO_DELTA[scenario];
   let revenue = inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth;
-  const capex = revenue * CAPEX_RATIO;
-  const flows: number[] = [];
+  const initialInvestment = revenue * INITIAL_INVESTMENT_RATIO;
+  const flows: number[] = [-initialInvestment]; // year-0 설립 투자
   for (let year = 1; year <= HORIZON_YEARS; year++) {
     if (year > 1) revenue *= 1 + inputs.anchorGrowth * delta.growth;
-    flows.push(revenue * (1 - OPEX_RATIO) - (year === 1 ? capex : 0));
+    flows.push(revenue * (1 - OPEX_RATIO) - revenue * CAPEX_RATIO);
   }
   return flows;
 }
@@ -250,7 +254,7 @@ function defaultExecutor(): BusinessCaseStepExecutor {
     if (step === "valuation_model") {
       const modelId = ulid();
       const flows = deterministicCashflows(ctx.inputs, ctx.scenario);
-      const npv = flows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + WACC, i + 1), 0);
+      const npv = flows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + WACC, i), 0); // flows[0]=year-0
       db.run(
         `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)`,
         [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${ctx.scenario}`, HORIZON_YEARS, "business-case-generator", nowIso()],

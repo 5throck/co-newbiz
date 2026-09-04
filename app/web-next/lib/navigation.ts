@@ -37,9 +37,18 @@ export const NAV_SECTIONS: NavSection[] = [
           { href: "/synergy", label: "시너지·전략적 적합성" },
         ],
       },
-      { href: "/route-decision", label: "진출방식 결정" },
-      { href: "/greenfield", label: "역량 평가·진출전략" },
-      { href: "/brownfield", label: "대상 후보 발굴" },
+      {
+        // 추진 전략 — S4 라우트 결정으로 그린필드/브라운필드가 갈리는 구간
+        // (S4 → S5 그린필드 / S6·S7 브라운필드). 부모 href는 첫 자식과 동일한
+        // /our-company 패턴을 따른다.
+        href: "/route-decision",
+        label: "추진 전략",
+        children: [
+          { href: "/route-decision", label: "진출방식 결정" },
+          { href: "/greenfield", label: "그린필드 — 자체 신설 진출" },
+          { href: "/brownfield", label: "브라운필드 — 결합·투자" },
+        ],
+      },
       { href: "/projects", label: "프로젝트" },
       { href: "/pipeline", label: "프로젝트 파이프라인" },
     ],

@@ -176,7 +176,6 @@ export default function DdPage() {
   return (
     <main>
       <ProjectSubNav projectId={projectId} />
-      <p className="text-[0.8rem] mb-2"><a className="text-[color:var(--accent)] underline" href={`/projects/${params.id}/process`}>프로세스 현황 →</a></p>
       <StageFrame stageId="S9" heading="S9 실사·검증 — DD 체크리스트 판정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
           적용 체크리스트의 모든 항목이 판정되고 필수 미충족이 0건이어야 S9이 완료됩니다 (flow.spec v2.0.0).
@@ -223,6 +222,7 @@ export default function DdPage() {
               ))}
             </div>
 
+            <div className="table-scroll">
             <table className="data-table" aria-label={`${domain.title} 체크리스트`}>
               <caption className="sr-only">{domain.title} 체크리스트 판정</caption>
               <thead>
@@ -286,6 +286,7 @@ export default function DdPage() {
                 })}
               </tbody>
             </table>
+            </div>
 
             <section className="market-section sizing-step mt-3" aria-label="산업 맞춤 제안">
               <h3 className="sizing-step-title text-[0.9rem]">산업 맞춤 제안 (proposed)</h3>

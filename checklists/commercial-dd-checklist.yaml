@@ -10,31 +10,31 @@ gate: DD
 
 items:
   - id: cdd-01
-    text: "Customer concentration analyzed (top-N revenue share)"
+    text: "고객 집중도 분석 (상위 N개 고객 매출 비중, Customer Concentration)"
     mandatory: true
     waiver_eligible: true
   - id: cdd-02
-    text: "Customer churn history reviewed"
+    text: "고객 이탈 이력 검토 (Customer Churn)"
     mandatory: true
     waiver_eligible: true
   - id: cdd-03
-    text: "Pricing power assessed (ability to pass through cost increases)"
+    text: "가격 전가 능력 평가 (Pricing Power, 원가 상승분 전가 여부)"
     mandatory: true
     waiver_eligible: true
   - id: cdd-04
-    text: "Win/loss analysis conducted against named competitors"
+    text: "주요 경쟁사 대상 수주·상실 분석 (Win/Loss Analysis)"
     mandatory: false
     waiver_eligible: true
   - id: cdd-05
-    text: "Channel checks completed with distributors/resellers where applicable"
+    text: "유통·리셀러 채널 점검 (Channel Check, 해당 시)"
     mandatory: false
     waiver_eligible: true
   - id: cdd-06
-    text: "Every material finding tied to an assumption_key or dd_finding.value_impact — no finding left as narrative-only"
+    text: "모든 중대 발견사항을 가정 키(assumption_key) 또는 DD 발견 값(value_impact)에 연결 — 서술-only 금지"
     mandatory: true
     waiver_eligible: true
   - id: cdd-07
-    text: "Expert interviews follow the triangulation guideline (2-3 independent sources per material claim)"
+    text: "전문가 인터뷰 삼각검증 준수 (주요 주장당 독립 출처 2~3개, Triangulation)"
     mandatory: true
     waiver_eligible: true
 
