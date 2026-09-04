@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { GateDecisionPanel } from "../../../../components/GateDecisionPanel.tsx";
@@ -168,6 +169,7 @@ export default function BusinessCasePage() {
 
   return (
     <main className="market-page">
+      <ProjectSubNav projectId={projectId} />
       <p className="text-[0.8rem] mb-2"><a className="text-[color:var(--accent)] underline" href={`/projects/${params.id}/process`}>프로세스 현황 →</a></p>
       <StageFrame stageId="S8" heading="S8 사업성 분석 — Business Case 비교">
       <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">

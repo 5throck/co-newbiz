@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
@@ -95,6 +96,7 @@ function CharterViewInner() {
 
   return (
     <main>
+      <ProjectSubNav projectId={projectId} />
       <p className="text-[0.8rem] mb-2"><a className="text-[color:var(--accent)] underline" href={`/projects/${projectId}/process`}>프로세스 현황 →</a></p>
       <StageFrame stageId="S8" heading="프로젝트 차터 — 목적·범위·KPI 사전 확정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">

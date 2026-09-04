@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # Design: 표준 화면 패턴 체계 (Standard Screen Patterns) — 2026-09-01
 
 **Status**: Proposed (구현 착수 전 설계 확정 대기)
@@ -184,3 +189,18 @@ SectionToolbar로 구분한다.
   문서화만으로 가능하다 — 변경 비용의 비대칭이 확장성의 핵심이다.
 - 사용자 경험 회귀 테스트: 패턴 골격이 flow.spec과 일치하는지 검사하는 unit test를
   process-flow 테스트에 추가한다(단계 id ↔ 라우트 매핑, 게이트 칩 표시).
+
+
+## 개정 2026-09-04 — 내비게이션 등록 규칙 (ADR-0105)
+
+표준 화면은 "만드는 것"으로 완료되지 않는다. 모든 신규 화면(page.tsx)은 같은
+PR에서 다음을 만족해야 한다:
+
+1. `app/web-next/lib/navigation.ts`(내비게이션 SSOT)에 등록 — 섹션·순서는
+   flow.spec 단계 순서를 따른다. 상세 화면(프로젝트 하위 등)은 NON_MENU_ROUTES
+   에 명시적으로 기재하고 ProjectSubNav 등 상위 진입점을 제공한다.
+2. `tests/unit/navigation.test.ts` 패리티/순서 검증을 통과한다.
+3. 문서(ui-spec as-built)에 화면을 반영한다.
+
+근거: 메뉴 하드코딩으로 신규 화면이 메뉴에서 누락되고 순서가 드리프트한
+2026-09-04 프로젝트 리뷰finding.

@@ -524,6 +524,17 @@ function insertPauseNotification(run: PipelineRunRow): string {
   const id = ulid();
   const now = nowIso();
   const projectId = run.entity_type === "project" ? run.entity_id : null;
+  // E1 (ADR-0104) — the pause is never a bare flag: attach a Markdown
+  // briefing pack (process snapshot + track advisory + blockers) so the
+  // reviewer can start the committee deliberation immediately.
+  let briefing = "";
+  try {
+    const { buildBriefingPack } = require("./briefing-pack.ts");
+    const entity: ProcessEntity = { type: run.entity_type, id: run.entity_id } as ProcessEntity;
+    briefing = buildBriefingPack(getDb(), entity);
+  } catch (err) {
+    console.error("[pipeline] briefing pack failed:", err instanceof Error ? err.message : err);
+  }
   const payload = JSON.stringify({
     pipeline_run_id: run.id,
     entity_type: run.entity_type,
@@ -531,6 +542,7 @@ function insertPauseNotification(run: PipelineRunRow): string {
     current_stage: run.current_stage,
     paused_reason: run.paused_reason,
     deep_link: pauseLinkFor(run.paused_reason ?? "", run),
+    ...(briefing ? { briefing_markdown: briefing } : {}),
   });
   getDb().run(
     `INSERT INTO notification (id, user_id, project_id, trigger_type, severity, payload, channel, bundle, sent_at)
