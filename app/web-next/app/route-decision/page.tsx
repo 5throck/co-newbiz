@@ -22,6 +22,17 @@ interface OpportunityRow {
   status: "identified" | "assessed" | "selected" | "dropped";
 }
 interface ScoreRow { criterion: string; score: number; evidence_note: string }
+// 트랙 권고 어드바이저 (ADR-0104) — 결정론적 산출물. 권고는 참고일 뿐이며
+// 결정 기록은 아래 폼의 인간 행위다 (경계 #2).
+interface AdvisorySignal { key: string; label: string; leans: "greenfield" | "brownfield" | "neutral"; weight: number; note: string }
+interface TrackAdvisory {
+  recommendedTrack: "greenfield" | "brownfield" | "neutral";
+  greenfieldScore: number;
+  brownfieldScore: number;
+  signals: AdvisorySignal[];
+  baseRates: Array<{ track: string; decisions: number; with_entity_ic_go: number }>;
+  reReviewTriggers: string[];
+}
 interface RouteDecision {
   id: string; track: "greenfield" | "brownfield"; sub_track: string | null;
   rationale: string; alternatives_considered: string | null; decided_by: string; decided_at: string;
@@ -70,6 +81,7 @@ export function RouteDecisionView() {
   const [rationale, setRationale] = useState("");
   const [alternatives, setAlternatives] = useState("");
   const [scores, setScores] = useState<Record<string, { score: number | null; note: string }>>({});
+  const [advisory, setAdvisory] = useState<TrackAdvisory | null>(null);
   const [saving, setSaving] = useState(false);
 
   const selectedId = searchParams.get("opportunity");
@@ -87,14 +99,21 @@ export function RouteDecisionView() {
       .catch((e) => setError(e instanceof Error ? e.message : "결정 이력 불러오기 실패"));
   }, []);
 
+  // 트랙 권고 어드바이저 — 읽기 전용 참고 자료. 실패해도 결정 폼은 막지 않는다.
+  const loadAdvisory = useCallback((id: string) => {
+    api.get<TrackAdvisory>(`/api/opportunities/${encodeURIComponent(id)}/route-advisory`)
+      .then((r) => setAdvisory(r.data))
+      .catch(() => setAdvisory(null));
+  }, []);
+
   useEffect(() => { loadRows(); }, [loadRows]);
 
   useEffect(() => {
     if (!selectedId || rows === null) return;
     const found = rows.find((o) => o.id === selectedId) ?? null;
     setSelected(found);
-    if (found) loadDecisions(found.id);
-  }, [selectedId, rows, loadDecisions]);
+    if (found) { loadDecisions(found.id); loadAdvisory(found.id); }
+  }, [selectedId, rows, loadDecisions, loadAdvisory]);
 
   // S3 Short List handoff — pre-fill the rationale textarea from ?rationale=
   // once, as an editable starting point (not a locked value). Only applies
@@ -109,7 +128,8 @@ export function RouteDecisionView() {
     window.history.replaceState(null, "", `/route-decision?opportunity=${encodeURIComponent(o.id)}`);
     setSelected(o);
     loadDecisions(o.id);
-  }, [loadDecisions]);
+    loadAdvisory(o.id);
+  }, [loadDecisions, loadAdvisory]);
 
   function setScore(key: string, patch: Partial<{ score: number | null; note: string }>) {
     setScores((prev) => ({ ...prev, [key]: { score: prev[key]?.score ?? null, note: prev[key]?.note ?? "", ...patch } }));
@@ -128,7 +148,7 @@ export function RouteDecisionView() {
     track === "brownfield" && allScored &&
     scored.find((s) => s.key === "market_uncertainty")?.score === 3 &&
     (scored.find((s) => s.key === "control_need")?.score ?? 3) <= 2;
-  // Brownfield 채점 의무 — 스펙 completionCriteria 강제
+  // Brownfield 채점 의무 — 스펙 completionCriteria 강제 (Greenfield는 선택).
   const scoresRequired = track === "brownfield";
   const canSubmit =
     rationale.trim() !== "" &&
@@ -150,7 +170,9 @@ export function RouteDecisionView() {
         rationale,
         alternatives_considered: alternatives || undefined,
         intent: intent || undefined,
-        scores: scoresRequired ? scored.map((s) => ({ criterion: s.key, score: s.score, evidence_note: s.note })) : undefined,
+        // 5기준 채점 — Brownfield는 필수(spec completionCriteria), Greenfield는
+        // 완료 시 함께 전송한다 (API는 양 트랙 모두 수용 — ADR-0104).
+        scores: allScored ? scored.map((s) => ({ criterion: s.key, score: s.score, evidence_note: s.note })) : undefined,
       });
       resetForm();
       loadDecisions(selected.id);
@@ -197,6 +219,73 @@ export function RouteDecisionView() {
           </div>
         )}
       </section>
+
+      {/* ── 트랙 권고 어드바이저 (ADR-0104) — 읽기 전용 참고 자료 ── */}
+      {selected && advisory && (
+        <section aria-label="트랙 권고 어드바이저" className="market-section">
+          <SectionToolbar title={`${selected.name} — 트랙 권고 어드바이저`} icon="🧭" />
+          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+            S1~S3 산출물에서 계산한 결정론적 권고입니다 — 참고 자료일 뿐이며, 결정은 아래 폼에서 사람이 기록합니다 (경계 #2).
+          </p>
+          <p className="mb-2">
+            <span className="text-[0.82rem] mr-2">권고 트랙:</span>
+            {advisory.recommendedTrack === "neutral" ? (
+              <span className="status-chip status-not-started">중립 (neutral) — 우세 트랙 없음</span>
+            ) : (
+              <span className={`status-chip ${advisory.recommendedTrack === "brownfield" ? "status-amber" : "status-green"}`}>
+                {advisory.recommendedTrack === "brownfield" ? "Brownfield" : "Greenfield"}
+              </span>
+            )}
+          </p>
+          <div className="mb-3" style={{ maxWidth: "36rem" }} aria-label="트랙 점수 비교">
+            <p className="text-[0.78rem] mb-1">Greenfield <span className="tabular-nums">{advisory.greenfieldScore}</span></p>
+            <div role="img" aria-label={`Greenfield 점수 ${advisory.greenfieldScore}/100`} className="mb-2" style={{ background: "var(--muted-fg)", opacity: 0.2, height: "0.5rem", borderRadius: "0.25rem" }}>
+              <div style={{ width: `${advisory.greenfieldScore}%`, background: "var(--green-fg)", height: "100%", borderRadius: "0.25rem" }} />
+            </div>
+            <p className="text-[0.78rem] mb-1">Brownfield <span className="tabular-nums">{advisory.brownfieldScore}</span></p>
+            <div role="img" aria-label={`Brownfield 점수 ${advisory.brownfieldScore}/100`} style={{ background: "var(--muted-fg)", opacity: 0.2, height: "0.5rem", borderRadius: "0.25rem" }}>
+              <div style={{ width: `${advisory.brownfieldScore}%`, background: "var(--amber-fg, var(--accent))", height: "100%", borderRadius: "0.25rem" }} />
+            </div>
+          </div>
+          <p className="text-[0.82rem] font-semibold mb-1">신호</p>
+          <ul className="sizing-note-list mb-3">
+            {advisory.signals.map((s) => (
+              <li key={s.key}>
+                <strong>{s.label}</strong>
+                <span className={`status-chip ml-1 ${s.leans === "greenfield" ? "status-green" : s.leans === "brownfield" ? "status-amber" : "status-not-started"}`}>
+                  {s.leans === "greenfield" ? "GF 우위" : s.leans === "brownfield" ? "BF 우위" : "중립"}
+                </span>
+                <span className="ml-1 text-[0.72rem] text-[color:var(--muted-fg)]">가중치 {s.weight}</span>
+                <span className="block text-[0.75rem]">{s.note}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[0.82rem] font-semibold mb-1">기저율 (base rates)</p>
+          <table className="data-table mb-3" aria-label="트랙 기저율">
+            <caption className="sr-only">트랙 기저율</caption>
+            <thead>
+              <tr><th scope="col">트랙</th><th scope="col">과거 결정 수</th><th scope="col">Entity IC GO 동반</th></tr>
+            </thead>
+            <tbody>
+              {advisory.baseRates.map((b) => (
+                <tr key={b.track}>
+                  <td className="text-[0.8rem]">{b.track}</td>
+                  <td className="tabular-nums text-[0.8rem]">{b.decisions}</td>
+                  <td className="tabular-nums text-[0.8rem]">{b.with_entity_ic_go}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {advisory.reReviewTriggers.length > 0 && (
+            <div role="alert" className="mb-2">
+              <p className="text-[0.82rem] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">⚠ 재검토 트리거</p>
+              <ul className="sizing-note-list">
+                {advisory.reReviewTriggers.map((t, i) => <li key={i}>{t}</li>)}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── 결정 폼 + 이력 ── */}
       {selected && (
@@ -256,11 +345,12 @@ export function RouteDecisionView() {
               </fieldset>
             )}
 
-            {/* ── Stage 2: 5criteria × 20% × 1–3점 ── */}
-            {track === "brownfield" && (
+            {/* ── Stage 2: 5criteria × 20% × 1–3점 — Brownfield 필수, Greenfield도
+                동일 스코어러로 채점해 전송한다 (API 양 트랙 수용 — ADR-0104) ── */}
+            {(
               <fieldset className="mb-3">
                 <legend className="text-[0.78rem] font-semibold mb-1">
-                  Stage 2 — 5criteria 채점 * (각 20% × 1–3점, 근거 필수)
+                  Stage 2 — 5criteria 채점 {scoresRequired ? "* (각 20% × 1–3점, 근거 필수)" : "(각 20% × 1–3점 — Greenfield는 선택, 입력 시 함께 기록)"}
                   {totalScore !== null && <span className="ml-2 status-chip status-green">합산 {totalScore} / 3.0</span>}
                 </legend>
                 <table className="data-table" aria-label="5criteria 채점">

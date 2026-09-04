@@ -48,6 +48,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { cases, adoption } = listBusinessCases(id);
   const adoptedCase: BusinessCaseView | null = cases.find((c) => c.adopted) ?? null;
 
+  // Committee deliberation refs (ADR-0104) — sessions convened for this
+  // project give the IC the deliberation provenance (minutes are one GET away).
+  const committeeSessions = db
+    .query(
+      `SELECT pr.id AS sessionId, pr.stage, pr.status, pr.started_at,
+              JSON_EXTRACT(pr.meta_json, '$.committee_key') AS committeeKey,
+              JSON_EXTRACT(pr.meta_json, '$.decision_mode') AS decisionMode,
+              JSON_EXTRACT(pr.meta_json, '$.minutes_confirmed_by') AS minutesConfirmedBy
+       FROM process_run pr
+       WHERE pr.entity_type = 'project' AND pr.entity_id = ? AND pr.meta_json LIKE '%"committee_key"%'
+       ORDER BY pr.started_at DESC LIMIT 10`,
+    )
+    .all(id) as Array<Record<string, unknown>>;
+
   // DD summary — completion counts + top findings (IC needs the risk surface,
   // not the full checklist; the S9 workspace route is the full read).
   const completion: DdCompletionSummary = ddCompletionSummary(id);

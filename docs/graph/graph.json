@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 572,
+    "node_count": 574,
     "edge_count": 952
   },
   "nodes": [
@@ -516,6 +516,16 @@
       "id": "adr:0102",
       "type": "adr",
       "label": "ADR-0102: Industry × company end-to-end auto pipeline — the state machine that drives S1–S11 and stops only at human gates"
+    },
+    {
+      "id": "adr:0103",
+      "type": "adr",
+      "label": "ADR-0103: Hybrid synergy scoring — rule-anchored factor engine with bounded LLM narrative"
+    },
+    {
+      "id": "adr:0104",
+      "type": "adr",
+      "label": "ADR-0104: Committee minutes & scorecard, project charter, and track advisory"
     },
     {
       "id": "agent:antitrust-agent",

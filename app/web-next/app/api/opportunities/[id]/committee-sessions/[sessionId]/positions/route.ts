@@ -28,7 +28,7 @@ export async function POST(
     | undefined;
   if (!run || run.entity_type !== "opportunity" || run.entity_id !== id) return notFound();
   const body = (await request.json().catch(() => null)) as {
-    seat?: string; positionMd?: string; confidence?: number; recommendation?: string; vetoDissent?: boolean;
+    seat?: string; positionMd?: string; confidence?: number; recommendation?: string; vetoDissent?: boolean; criteriaScores?: Record<string, number>;
   } | null;
   const positionMd = body?.positionMd?.trim();
   if (!positionMd) return badRequest("invalid_request", "positionMd(입장 내용)는 필수입니다.");
@@ -39,6 +39,22 @@ export async function POST(
   if (confidence !== undefined && (!Number.isFinite(confidence) || confidence < 0 || confidence > 100)) {
     return badRequest("invalid_request", "confidence는 0–100 사이 숫자입니다.");
   }
+  // ADR-0104 quantitative scorecard — optional, but when present all five
+  // criteria must be integers 1-3 (partial scorecards break the aggregate).
+  const CRITERIA = ["control_need", "capability_criticality", "market_uncertainty", "integration_capacity", "speed_to_capability"] as const;
+  let criteriaScores: Record<string, number> | undefined;
+  if (body?.criteriaScores !== undefined) {
+    const raw = body.criteriaScores;
+    if (typeof raw !== "object" || raw === null) return badRequest("invalid_request", "criteriaScores는 5기준 객체입니다.");
+    const missing = CRITERIA.filter((c) => !(c in raw));
+    if (missing.length) return badRequest("invalid_request", `criteriaScores 5기준 전체가 필요합니다 — 누락: ${missing.join(", ")}`);
+    criteriaScores = {};
+    for (const c of CRITERIA) {
+      const v = Number((raw as Record<string, unknown>)[c]);
+      if (!Number.isInteger(v) || v < 1 || v > 3) return badRequest("invalid_request", `${c} 점수는 1–3 사이 정수입니다.`);
+      criteriaScores[c] = v;
+    }
+  }
   try {
     const result = submitHumanPosition({
       sessionId,
@@ -48,6 +64,7 @@ export async function POST(
       confidence,
       recommendation: body?.recommendation as "go" | "hold" | "kill" | undefined,
       vetoDissent: body?.vetoDissent === true,
+      criteriaScores,
     });
     appendAudit(db, { actor: ctx.userId, action: "committee_position.submit", target: `${sessionId}:${result.positionId}`, now: new Date().toISOString() });
     return ok(result, 201);

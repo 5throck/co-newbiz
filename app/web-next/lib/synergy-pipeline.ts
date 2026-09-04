@@ -63,7 +63,7 @@ export interface SynergyPayload {
   /** 기회 연결 시 산출된 시너지 점수 권고값 (사람 확정 전 — 경계 #2) */
   synergyScore?: number | null;
   synergyRationale?: string | null;
-  /** ADR-0102 — 점수 산출 방식과 팩터 분해 (규칙 앵커 + LLM ±10p 보정) */
+  /** ADR-0103 — 점수 산출 방식과 팩터 분해 (규칙 앵커 + LLM ±10p 보정) */
   scoringMethod?: "hybrid" | "rule-based" | "unavailable";
   synergyScoreFactors?: unknown;
   synergyScoreLimitations?: string[];
@@ -182,7 +182,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       financialStrengths = [...strengths].slice(0, 5);
       financialWeaknesses = best.weaknesses;
       businessAssessment = `그룹 롤업 — ${members.length}개 계열사 프로파일 통합 (공통 강점 ${strengths.size}건, 산업 노출 ${exposures.size}개). 대표 재무: ${best.companyName}.`;
-      // ADR-0102 — 그룹 롤업도 스코어링 입력으로 사용(노출 합집합 + 대표 재무 비율)
+      // ADR-0103 — 그룹 롤업도 스코어링 입력으로 사용(노출 합집합 + 대표 재무 비율)
       reusedProfile = {
         ...best,
         industryExposure: [...exposures],
@@ -276,7 +276,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
 
   // 리서치 보강 — 프로파일 재사용 경로(ADR-0090)는 Tavily 리서치를 실행하지
   // 않아 webResearchCount가 0이었다. 리서치는 LLM과 무관한 입수 단계이므로
-  // 근거 확보를 위해 여기서 독립 실행한다 (ADR-0102 — 리서치/평가 분리).
+  // 근거 확보를 위해 여기서 독립 실행한다 (ADR-0103 — 리서치/평가 분리).
   if (!research.length && isWebResearchConfigured()) {
     research = await researchSources([
       `${company} 사업보고서 재무 분석`,

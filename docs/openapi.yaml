@@ -2346,6 +2346,124 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/opportunities/{id}/route-advisory:
+    get:
+      operationId: getRouteAdvisory
+      summary: Deterministic greenfield/brownfield track advisory with per-signal rationale, base rates, and re-review triggers (read-only).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/committee-sessions/{sessionId}/minutes:
+    get:
+      operationId: getCommitteeMinutes
+      summary: Committee meeting minutes as text/markdown (seat scorecard, position record, chair synthesis).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Markdown minutes
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: confirmCommitteeMinutes
+      summary: Chair sign-off on the minutes — append-only, once (analyst+).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BadRequest'
+  /api/projects/{id}/charter:
+    get:
+      operationId: getProjectCharter
+      summary: Project charter with append-only version history (ADR-0104).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: amendProjectCharter
+      summary: Append a charter amendment version (note required, analyst+).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/portfolio/pipeline:
+    get:
+      operationId: getPortfolioPipeline
+      summary: Portfolio S8-S11 pipeline snapshot (per-project stage/gates) plus HOLD/kill gate aging; member-visible projects only.
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/projects/{id}/process:
     get:
       operationId: getProjectProcess

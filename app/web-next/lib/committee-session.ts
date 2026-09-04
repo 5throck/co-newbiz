@@ -171,13 +171,26 @@ function loadPositions(runId: string): SessionRow[] {
  * route; the verbatim position TEXT used in dissent_json includes it as a
  * footnote, never a paraphrase.
  */
-const POSITION_META_RE = /<!--position-meta:(\{[\s\S]*?\})-->/;
+// Non-greedy to the closing comment (not the first `}`) — the marker may
+// contain nested JSON such as criteria_scores (ADR-0104).
+const POSITION_META_RE = /<!--position-meta:([\s\S]*?)-->/;
 
-export function parsePositionMeta(positionMd: string): { recommendation?: Recommendation; veto_dissent?: boolean; confidence?: number } {
+export function parsePositionMeta(positionMd: string): {
+  recommendation?: Recommendation;
+  veto_dissent?: boolean;
+  confidence?: number;
+  /** ADR-0104 quantitative scorecard — 5 criteria, 1-3 each (optional). */
+  criteria_scores?: Record<string, number>;
+} {
   const m = positionMd.match(POSITION_META_RE);
   if (!m) return {};
   try {
-    const parsed = JSON.parse(m[1]) as { recommendation?: Recommendation; veto_dissent?: boolean; confidence?: number };
+    const parsed = JSON.parse(m[1]) as {
+      recommendation?: Recommendation;
+      veto_dissent?: boolean;
+      confidence?: number;
+      criteria_scores?: Record<string, number>;
+    };
     return parsed;
   } catch {
     return {};
@@ -380,6 +393,8 @@ export interface HumanPositionOpts {
   confidence?: number;
   recommendation?: Recommendation;
   vetoDissent?: boolean;
+  /** ADR-0104 quantitative scorecard — 5 criteria, integers 1-3 (optional). */
+  criteriaScores?: Record<string, number>;
 }
 
 export function submitHumanPosition(opts: HumanPositionOpts): { positionId: string; round: number } {
@@ -420,6 +435,7 @@ export function submitHumanPosition(opts: HumanPositionOpts): { positionId: stri
     veto_dissent: opts.vetoDissent === true,
     confidence: opts.confidence,
     seat: opts.seat,
+    ...(opts.criteriaScores ? { criteria_scores: opts.criteriaScores } : {}),
   })}-->`;
   const positionId = ulid();
   const md = [opts.seat ? `[seat: ${opts.seat}] ${opts.positionMd}` : opts.positionMd, marker].join("\n");
