@@ -75,12 +75,14 @@ export function computeSynergyScore(inputs: ScoreInputs): SynergyScoreResult {
   const missing: string[] = [];
   const { market, matched } = pickMarket(inputs);
 
-  // 1) Market attractiveness — linked market's CAGR (10%→0, 45%+→100).
+  // 1) Market attractiveness — linked market's CAGR. Piecewise curve so
+  // mature markets are not flattened to 0: 0%→0, 8%→50, 35%+→100.
   if (market && market.cagr !== null) {
-    const value = clamp(((market.cagr - 0.1) / 0.35) * 100);
+    const c = market.cagr;
+    const value = c <= 0.08 ? clamp((c / 0.08) * 50) : clamp(50 + ((c - 0.08) / 0.27) * 50);
     factors.push({
       key: "market_attractiveness", label: "시장 매력도", baseWeight: 0.35, weight: 0.35, value,
-      note: `${market.industry} 성장률 ${(market.cagr * 100).toFixed(0)}% → 정규화 ${value.toFixed(0)}/100`,
+      note: `${market.industry} 성장률 ${(c * 100).toFixed(1)}% → 정규화 ${value.toFixed(0)}/100`,
     });
   } else {
     missing.push("완료된 S1 시장분석(CAGR) 없음 — 시장 매력도 팩터 미반영");

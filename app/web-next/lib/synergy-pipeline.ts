@@ -182,6 +182,11 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       financialStrengths = [...strengths].slice(0, 5);
       financialWeaknesses = best.weaknesses;
       businessAssessment = `그룹 롤업 — ${members.length}개 계열사 프로파일 통합 (공통 강점 ${strengths.size}건, 산업 노출 ${exposures.size}개). 대표 재무: ${best.companyName}.`;
+      // ADR-0102 — 그룹 롤업도 스코어링 입력으로 사용(노출 합집합 + 대표 재무 비율)
+      reusedProfile = {
+        ...best,
+        industryExposure: [...exposures],
+      };
       corpCode = best.dartCorpCode ?? null;
       dart = best.dartFinancials?.available
         ? { corpCode: corpCode ?? "", found: true, year: best.dartFinancials.year, items: (best.dartFinancials.items ?? []).map((i) => ({ name: i.name, value: i.value, unit: "KRW" })), reportUrl: best.dartFinancials.reportUrl }
