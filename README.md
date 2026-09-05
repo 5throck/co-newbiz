@@ -26,9 +26,17 @@ co-newbiz/
   templates/          deliverable templates (IC memo, etc.)
   glossary/           business/financial/legal/technical/industry term sets
   region-profiles/    per-region regulatory and incentive profiles (Stage 2+)
+  process/            flow.spec.yaml — the process SSOT (12 stages S1~S12, 7 gates, flow.spec v2.2.0)
+  handbook/           Korean platform handbook site (built with the handbook skill; docs/ is the static site)
   docs/               process map, governance operations, manuals, ADRs
   memory/             session logs and meeting transcripts
 ```
+
+The review flow is a 12-stage stage-gate chain (S1 market analysis ... S11
+investment review & execution -> S12 post-management) with a dedicated S10
+deal-structuring stage (investment vehicle incl. SPC, the four mandatory
+axes, financing sources & uses); AI agents propose, humans decide at every
+gate. See `process/flow.spec.yaml` and `docs/process-map.md`.
 
 ## Quick Start
 
@@ -172,4 +180,4 @@ Internal workspace project — not for external distribution. Governed by the sa
 
 ---
 
-*Last Updated: 2026-09-04*
+*Last Updated: 2026-09-05*

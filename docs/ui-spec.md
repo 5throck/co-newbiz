@@ -119,7 +119,7 @@ As-built deltas not in the tree above:
 - 모든 금액 표기는 정수 + 콤마 (소수점 제외) — `fmt()` 헬퍼가
   `Math.round(n).toLocaleString("ko-KR")`을 반환.
 - "프로젝트 차터" → "프로젝트 추진계획"으로 라벨 변경 (사용자 이해도 개선).
-- 사후관리(S11) 진입 조건 확인 완료: entity_ic+group_ic GO 및 설립 5단계 완료 필요.
+- 사후관리(S12) 진입 조건 확인 완료: entity_ic+group_ic GO 및 설립 5단계 완료 필요.
 
 ## As-built 2026-09-05 — 추진 전략 하위 메뉴 + 위원회 레지스트리 경로 수정
 
@@ -165,8 +165,8 @@ cover + hero max-width 34rem 제한으로 텍스트 길이·패널 높이와 무
 
 - 사이드바 메뉴의 SSOT는 `app/web-next/lib/navigation.ts`다(NAV_SECTIONS/ADMIN_NAV/NON_MENU_ROUTES/menuHrefs). AppShell은 이 파일만 렌더링하며 아이콘 매핑(ICON_BY_HREF)만 로컬로 보유한다. 새 표준 화면은 반드시 여기에 등록한다 — 누락·순서 드리프트는 `tests/unit/navigation.test.ts`(페이지↔메뉴 패리티, 탐색 섹션 순서, 중복 href, AppShell SSOT 사용)가 잡는다.
 - 프로젝트 하위 화면(/projects/[id]/business-case·dd·ic-review·portfolio·process·charter)은 전역 메뉴 대신 `ProjectSubNav` 상호 링크로 연동된다(상세 화면은 /projects 목록에서 진입).
-- 전역 파이프라인 대시보드는 `/pipeline`(모든 프로젝트의 S8~S11 단계·게이트 스냅샷 + HOLD 에이징).
-- 탐색 섹션 순서는 flow.spec 단계 순서를 따른다: 대시보드 → 시장분석(S1) → 기회 발굴(S2) → 시너지 정합성(S3) → 진출방식 결정(S4) → 역량 평가·진출전략(S5, greenfield) → 대상 후보 발굴(S6~S7, brownfield) → 프로젝트(S8~S11) → 프로젝트 파이프라인.
+- 전역 파이프라인 대시보드는 `/pipeline`(모든 프로젝트의 S8~S12 단계·게이트 스냅샷 + HOLD 에이징).
+- 탐색 섹션 순서는 flow.spec 단계 순서를 따른다: 대시보드 → 시장분석(S1) → 기회 발굴(S2) → 시너지 정합성(S3) → 진출방식 결정(S4) → 역량 평가·진출전략(S5, greenfield) → 대상 후보 발굴(S6~S7, brownfield) → 프로젝트(S8~S12) → 프로젝트 파이프라인.
 
 ## As-built 2026-09-02 — 시너지 정합성 하위 메뉴
 
@@ -181,3 +181,10 @@ cover + hero max-width 34rem 제한으로 텍스트 길이·패널 높이와 무
 - 시스템 대시보드: 감사 로그 30일 추이(라인), 사용자 역할 분포(도넛), 기오퍼널(바), 스케줄 성공/실패(바) — GET /api/admin/system-stats.
 - CRUD 보강: 사용자 역할 변경·비활성화/활성화 UI, 마스터데이터 DELETE, 발급 토큰/임시 비밀번호 1회 확인 모달.
 - 미구현(명시): 용어집 용어 수정/삭제(YAML 파일 기반 — 쓰기 API 설계 선행), 데이터베이스 백업 이력/마이그레이션 상태 API, 스케줄 수동 트리거, RAG 규칙 편집기.
+
+## 투자구조 설계 (S10, ADR-0106 as-built)
+
+- `/projects/[id]/deal-structure` — ProjectSubNav "투자구조" 탭. StageFrame S10 프레임 안에 두 섹션: (1) 투자구조 가설 카드(비히클 칩: direct/SPC/holdco/내부 스핀오프/JV, 자산·주식·지분·수표 믹스, 4축 노트 표, 근거, 아티팩트 참조 입력 + 4축 검토 완료 버튼), (2) 자금조달 sources & uses 표(조달/사용 합계·차액·균형 배지, 행 추가/삭제).
+- API: `GET/POST /api/projects/{id}/deal-structure` (action: hypothesize | complete_four_axis | add_financing_entry | remove_financing_entry). 4축 완료는 deal_structure_review 아티팩트 참조 필수, 재완료 불가.
+- S10 완료 술어: 최신 가설 4축 완료 AND sources == uses > 0 (최신 가설 미완료 시 재블록).
+- IC 패키지(S11)에 deal_structure 섹션 포함(최신 가설 + 균형 상태).

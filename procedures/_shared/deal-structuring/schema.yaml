@@ -1,0 +1,89 @@
+schema_version: "1.0"
+procedure_id: shared-deal-structuring
+title: "Deal Structuring (S10)"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: unconditional
+workflow_type: core
+gate: "DD"
+# flow.spec v2.2.0 — S10 투자구조 설계 sits between the DD gate (S9) and the
+# IC gates (S11). It is a DESIGN stage, not a review gate: it produces the
+# structure the IC committees later approve, so it carries no gate of its own.
+# The ADR-0045 four mandatory axes (tax structure, liability isolation,
+# financing leverage, exit structure) and the vehicle choice
+# (direct / SPC / holdco / internal-venture spinoff / JV) land in
+# deal_structure_hypothesis (migration 0013) via the governance repository —
+# rationale mandatory, four-axis completion is a separate deliberate act that
+# requires a deal_structure_review artifact reference. The financing plan
+# (sources & uses, migration 0075) must balance (sources == uses > 0) — the
+# S10 completion predicate enforces both mechanically.
+#
+# Pre-FS relationship: brownfield-pre-fs step 2 drafts the EARLY structure
+# hypothesis (deal_structure_hypothesis, PR-5b). This procedure is where that
+# hypothesis is matured post-DD into the reviewable structure: DD findings
+# (dd_finding.value_impact, ADR-0061) feed the liability-isolation and
+# financing-leverage axes; the adopted S8 business case bounds the sources
+# side. A NEWER incomplete hypothesis always supersedes an older completed
+# one (latest-wins) so a stale "complete" flag can never mask a re-opened
+# structure question.
+
+steps:
+  - id: 1
+    gate: "DD"
+    agent_key: brownfield-agent
+    skill_key: investment-vehicle-structuring
+    output_type: deal_structure_review
+    description: >
+      Mature the deal-structure hypothesis: settle the vehicle
+      (direct / SPC / holdco / internal_venture_spinoff / jv), the
+      asset-or-stock form, the stake type, and the primary/secondary
+      instrument mix; record the ADR-0045 four mandatory axis notes —
+      tax structure, liability isolation, financing leverage, exit
+      structure — each grounded in DD findings where they bear
+      (contingent liabilities -> liability isolation; withholding and
+      deal-tax posture -> tax structure; acquisition-finance capacity ->
+      financing leverage; staged exit or trade-sale path -> exit
+      structure). Record the rationale (mandatory) via
+      db/repositories/deal-structure-hypothesis.repository.ts; a structure
+      hypothesis without its rationale is rejected at the write layer.
+  - id: 2
+    gate: "DD"
+    agent_key: brownfield-agent
+    skill_key: investment-vehicle-structuring
+    output_type: four_axis_review_completion
+    description: >
+      Human-reviewer completion of the four-axis review — a deliberate,
+      attributable act (completeFourAxisReview) that REQUIRES a
+      deal_structure_review artifact reference; the completion is refused
+      twice (no artifact ref, or already-completed hypothesis) rather than
+      silently overwritten. The audit_log entry
+      (four_axis_review_completed) is the review's evidence trail.
+  - id: 3
+    gate: "DD"
+    agent_key: valuation-agent
+    skill_key: financing-plan-review
+    output_type: financing_sources_uses_plan
+    description: >
+      Assemble the financing plan (sources & uses, migration 0075) —
+      every funding line (equity commitment, acquisition debt, parent
+      loans, incentive proceeds) on the sources side and every deployment
+      line (purchase price, fees, working-capital injection, reserve)
+      on the uses side, in KRW 백만원 (the ADR-0061 unit convention).
+      Certainty of funds is evidenced, never assumed: commitment papers
+      or internal-funds approvals are referenced in the note column per
+      skills/financing-plan-review. The S10 completion predicate requires
+      sources == uses > 0 — an unbalanced plan blocks stage exit the same
+      way an unproven structure does.
+
+outputs:
+  - deal_structure_review (four-axis complete, artifact-referenced)
+  - financing_sources_uses_plan (balanced)
+
+references:
+  - process/flow.spec.yaml (S10, v2.2.0)
+  - db/repositories/deal-structure-hypothesis.repository.ts
+  - db/repositories/financing-plan.repository.ts
+  - skills/investment-vehicle-structuring/SKILL.md
+  - skills/financing-plan-review/SKILL.md

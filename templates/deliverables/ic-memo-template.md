@@ -5,7 +5,7 @@ title: "Investment Committee Memo Template"
 scope: shared
 enforceability: recommended
 owner_agent: docs-writer
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-08-20"
 ---
 
@@ -46,16 +46,21 @@ If a proxy chain was used: chain, reliability grade, and **what evidence would r
 ## 5. Due Diligence Findings
 Table of `dd_finding` records with `value_impact` and linked `assumption_key`. No narrative-only findings.
 
-## 6. M&A Special Topics (Brown Field only)
+## 6. Deal Structure & Financing (S10 output — ADR-0106)
+Vehicle: [direct / SPC / holdco / internal-venture spinoff / JV] · Form: [asset / stock / mixed] · Stake: [type] · Instrument mix: [primary / secondary / mixed]
+Four-axis review (all four complete, artifact-referenced): tax structure — [note]; liability isolation — [note]; financing leverage — [note]; exit structure — [note]. Artifact ref: [deal_structure_review ref]
+Financing plan (sources & uses): sources [total] = uses [total] KRW millions, balanced [yes]; certainty-of-funds evidence: [commitment papers / internal approvals referenced]
+
+## 7. M&A Special Topics (Brown Field only)
 Antitrust / customer retention / incentive / HR integration / certification transferability / regional labor — status of all six, in the evaluation order fixed by meeting M5 (certification last).
 
-## 7. Kill Criteria Check
+## 8. Kill Criteria Check
 Explicit pass/fail against every Kill Criteria condition applicable to this gate.
 
-## 8. Recommendation
+## 9. Recommendation
 [Human reviewer's recommendation — this section is never auto-generated; §2's RAG grade is *proposed*, this section is where the human confirms or corrects it, with a reason if corrected.]
 
-## 9. Reviewer Sign-off
+## 10. Reviewer Sign-off
 | Stage | Reviewer | Date | Result |
 |---|---|---|---|
 | AI 1st (formal) | [agent_key] | [date] | [verified / could-not-verify list] |

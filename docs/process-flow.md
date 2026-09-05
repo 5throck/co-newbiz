@@ -463,8 +463,8 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - WACC·hurdle 입력값
 
 **Activities**
-- deal-structure-hypothesis · agent: `brownfield-agent` · skills: `investment-vehicle-structuring` · procedure: `brownfield-fs`, `deal-shape-chain`
-- financing-plan · agent: `valuation-agent` · skills: `financing-plan-review` · procedure: `entity-ic-review`
+- deal-structure-hypothesis · agent: `brownfield-agent` · skills: `investment-vehicle-structuring` · procedure: `deal-structuring`, `brownfield-fs`, `deal-shape-chain`
+- financing-plan · agent: `valuation-agent` · skills: `financing-plan-review` · procedure: `deal-structuring`
 
 **필수 산출물**
 - 투자구조 가설(4축 검토 완료)

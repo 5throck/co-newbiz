@@ -29,9 +29,13 @@ co-newbiz/
   templates/         산출물 템플릿(IC 메모 등)
   glossary/          비즈니스/재무/법무/기술/산업 용어 집합
   region-profiles/   지역별 규제·인센티브 프로필 (Stage 2+)
+  process/           flow.spec.yaml — 프로세스 SSOT (12단계 S1~S12, 7개 게이트, v2.2.0)
+  handbook/          한국어 플랫폼 핸드북 사이트 (handbook 스킬로 생성; docs/가 정적 사이트)
   docs/              프로세스 맵, 거버넌스 운영, 매뉴얼, ADR
   memory/            세션 로그와 회의록
 ```
+
+검토 흐름은 12단계 스테이지-게이트 체인입니다(S1 시장분석 ... S11 투자심사·실행 → S12 사후관리). S10 투자구조 설계 단계에서 비히클(SPC 포함)·4대 축 검토·자금조달 sources & uses 균형을 다룹니다. AI 에이전트가 제안하고 모든 게이트 결정은 사람이 내립니다. `process/flow.spec.yaml`과 `docs/process-map.md` 참고.
 
 ## 빠른 시작
 
@@ -148,4 +152,4 @@ PM이 **New Business Review Lead**로서 모든 전문가를 직접 디스패치
 ---
 
 *최근 업데이트: 2026-08-24*
-*Last Updated: 2026-08-28*
+*Last Updated: 2026-09-05*
