@@ -31,6 +31,7 @@ co-newbiz/
   region-profiles/   지역별 규제·인센티브 프로필 (Stage 2+)
   process/           flow.spec.yaml — 프로세스 SSOT (12단계 S1~S12, 7개 게이트, v2.2.0)
   handbook/          한국어 플랫폼 핸드북 사이트 (handbook 스킬로 생성; docs/가 정적 사이트)
+  knowledge-hub/     문서 포털 — 규정·절차·체크리스트·매뉴얼의 버전 고정 스냅샷 (카테고리 중심, 4개 언어 크롬, ADR-0107)
   docs/              프로세스 맵, 거버넌스 운영, 매뉴얼, ADR
   memory/            세션 로그와 회의록
 ```

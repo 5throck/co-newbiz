@@ -547,6 +547,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0107",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent-lifecycle-manager",
       "type": "skill",
       "layer": "L3"
@@ -1698,6 +1703,12 @@
       "type": "references",
       "from": "adr:0092",
       "to": "systematic-market-sizing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0107",
+      "to": "manual-authoring",
       "source": "prose"
     },
     {

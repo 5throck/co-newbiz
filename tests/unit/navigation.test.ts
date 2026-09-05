@@ -54,8 +54,15 @@ describe("navigation SSOT (ADR-0105)", () => {
   });
 
   test("every menu href resolves to a real page", () => {
+    // Static assets served from app/web-next/public (e.g. the knowledge-hub
+    // portal, ADR-0107) are valid menu targets without a page.tsx route.
+    const STATIC_PUBLIC_HREFS = new Set(["/knowledge-hub/"]);
+    for (const href of STATIC_PUBLIC_HREFS) {
+      const asset = join("app/web-next/public", href.replace(/\/$/, ""), "index.html");
+      expect(existsSync(asset)).toBe(true);
+    }
     const pages = new Set(allPageRoutes());
-    const broken = menuHrefs().filter((href) => !pages.has(href));
+    const broken = menuHrefs().filter((href) => !pages.has(href) && !STATIC_PUBLIC_HREFS.has(href));
     expect(broken).toEqual([]);
   });
 

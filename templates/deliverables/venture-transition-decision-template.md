@@ -20,7 +20,7 @@ output_type: venture_transition_decision
   AND the kill/graduate call are taken in one sitting, on the step-2
   evidence pack. A kill is a governed decision with learning capture, not
   a silent starve. This template IS the signature surface — no PASS stamp;
-  the human surface is verified / could not verify / needs judgement.
+  the human surface is verified / could not verify / needs judgment.
 -->
 
 # [Venture Name] — Venture Transition Decision
@@ -52,6 +52,6 @@ output_type: venture_transition_decision
 
 | Member (venture-portfolio-ic) | Surface | Note |
 |---|---|---|
-| [member] | verified / could not verify / needs judgement | [what could not be verified, if anything] |
+| [member] | verified / could not verify / needs judgment | [what could not be verified, if anything] |
 
 Silence is never read as approval; an unverified item is carried into the record explicitly.

@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 583,
+    "node_count": 584,
     "edge_count": 968
   },
   "nodes": [
@@ -536,6 +536,11 @@
       "id": "adr:0106",
       "type": "adr",
       "label": "ADR-0106: Deal structuring as a first-class stage (S10) — investment vehicle, four-axis review, financing plan"
+    },
+    {
+      "id": "adr:0107",
+      "type": "adr",
+      "label": "ADR-0107: Documentation surfaces — knowledge-hub portal, platform handbook, and web library role separation"
     },
     {
       "id": "agent:antitrust-agent",

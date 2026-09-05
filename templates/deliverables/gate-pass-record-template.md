@@ -66,4 +66,4 @@ output_type: gate_pass_record
 | Role | Name/Key | Decision input acknowledged |
 |---|---|---|
 | [Recorder — agent key] | [key] | [scope of what was checked] |
-| [Human authority — registry key, if this gate is human] | [key] | [signature surface: verified / could not verify / needs judgement] |
+| [Human authority — registry key, if this gate is human] | [key] | [signature surface: verified / could not verify / needs judgment] |

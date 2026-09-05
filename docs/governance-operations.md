@@ -52,7 +52,7 @@ When a question arises — "does this clause apply to our case?" — the answer 
 1. Amendment proposed (requires an ADR per the ADR trigger list — see `docs/adr/README.md`).
 2. Impact analysis: identify affected `procedure`, `rag_rule`, `assumption`, checklist, and glossary term references.
 3. Change plan drafted by `process-governance-manager`, approved by PM.
-4. System reflection: procedure schema, `rag_rule`, checklists, glossary updated.
+4. System reflection: procedure schema, `rag_rule`, checklists, glossary updated. Documentation surfaces regenerate in the same change: run `bun run knowledge-hub:build && bun run knowledge-hub:copy` so the knowledge-hub portal snapshot matches the new originals (the portal's source-hash gate, ADR-0107, fails builds against stale originals).
 5. **Retroactivity decision**: in-flight projects stay on their `project_policy_pin` version unless the change is material enough to force an explicit re-evaluation, recorded as a `policy_change` decision — never applied silently.
 6. Notification to affected project owners.
 

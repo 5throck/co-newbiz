@@ -61,4 +61,4 @@ For every `deviation`: [what changed vs. last cycle · trigger implication — d
 | Role | Key | Surface |
 |---|---|---|
 | Recorder — partnership-agent | [key] | [checked scope] |
-| Human reviewer (if designated this cycle) | [registry key] | verified / could not verify / needs judgement |
+| Human reviewer (if designated this cycle) | [registry key] | verified / could not verify / needs judgment |
