@@ -296,12 +296,12 @@ function renderProcedure(doc: DocDef): Rendered {
       <table style="width:100%;border-collapse:collapse;margin:20px 0;">
         <thead>
           <tr style="border-bottom:2px solid var(--border);">
-            <th style="text-align:left;padding:8px;white-space:nowrap;">#</th>
-            <th style="text-align:left;padding:8px;white-space:nowrap;">Gate</th>
-            <th style="text-align:left;padding:8px;white-space:nowrap;">Agent</th>
-            <th style="text-align:left;padding:8px;white-space:nowrap;">Skill</th>
-            <th style="text-align:left;padding:8px;white-space:nowrap;">Output</th>
-            <th style="text-align:left;padding:8px;">Description</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;width:3%;">#</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;width:7%;">Gate</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;width:11%;">Agent</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;width:14%;">Skill</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;width:15%;">Output</th>
+            <th style="text-align:left;padding:8px;width:50%;">Description</th>
           </tr>
         </thead>
         <tbody>${stepRows}
@@ -444,6 +444,8 @@ function renderPage(input: PageInput, generated: Set<string>, lang: Lang): strin
   const A = (p: string): string => input.prefix + variant(p, lang);
   let html = TEMPLATE_HTML;
   html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(input.title)} | co-newbiz ${esc(t("brand", lang))}</title>`);
+  html = html.replace("<!-- HTML_LANG -->", lang === "" ? "ko" : lang);
+  html = html.replace("<!-- HTML_LANG -->", lang === "" ? "ko" : lang);
   html = html.replace(/<!-- ASSETS -->/g, input.prefix + "assets");
   html = html.replace("<!-- BRAND_HREF -->", A("index.html"));
   html = html.replace('class="brand">📚 co-newbiz <!-- BRAND -->', `class="brand">📚 co-newbiz ${esc(t("brand", lang))}`);
