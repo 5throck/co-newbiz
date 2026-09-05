@@ -82,6 +82,14 @@
       transition: border-color .2s;
     }
     .section-glyph { display: block; margin-bottom: 12px; }
+    .toc-box {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg2); padding: 12px 16px; margin: 0 0 20px; font-size: 0.84em;
+    }
+    .toc-box ul { list-style: none; margin: 6px 0 0; padding: 0; }
+    .toc-box li { margin: 2px 0; }
+    .toc-box a { color: var(--text-muted); text-decoration: none; }
+    .toc-box a:hover { color: var(--accent); }
     @media print {
       .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
       .main-content, footer { margin-left: 0; }
@@ -110,25 +118,21 @@
           <ul style="margin:0 0 12px;">
           <li><a href="../index_ja.html">ホーム</a></li>
           </ul>
-          <p class="nav-section">Rules &amp; Procedures</p>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Policies (拡張予定)</span></li></ul>
           <ul style="margin:0 0 12px;">
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Policies (拡張予定)</span></li>
           <li><a href="../procedures/index_ja.html">Procedures</a></li>
           <li style="padding-left:14px;"><a href="../procedures/greenfield-dd_ja.html" class="active" style="font-size:0.85em;">Greenfield DD</a></li>
           <li style="padding-left:14px;"><a href="../procedures/brownfield-dd_ja.html" style="font-size:0.85em;">Brownfield DD</a></li>
           <li style="padding-left:14px;"><a href="../procedures/deal-structuring_ja.html" style="font-size:0.85em;">Deal Structuring</a></li>
           <li style="padding-left:14px;"><a href="../procedures/entity-ic-review_ja.html" style="font-size:0.85em;">Entity IC Review</a></li>
           <li style="padding-left:14px;"><a href="../procedures/jv-lifecycle-governance_ja.html" style="font-size:0.85em;">JV Lifecycle Governance</a></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Checklists (拡張予定)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Due Diligence (拡張予定)</span></li>
           </ul>
-          <p class="nav-section">Reference &amp; Guides</p>
-          <ul style="margin:0 0 12px;">
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Manuals (拡張予定)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Reference (拡張予定)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Templates (拡張予定)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Design (拡張予定)</span></li>
-          </ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Checklists (拡張予定)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Manuals (拡張予定)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Reference (拡張予定)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Templates (拡張予定)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Design (拡張予定)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Due Diligence (拡張予定)</span></li></ul>
     </nav>
   </aside>
 
@@ -140,6 +144,7 @@
       <h1>Greenfield DD</h1>
 <div class="doc-meta-block"><span class="chip">게이트: DD</span><span class="chip">단계: 5</span><span class="chip">버전: 1.0.0</span><span class="chip">원본: procedures/_shared/greenfield-dd/schema.yaml@d9738f65a1e0</span><span class="chip">본문은 원본 언어 유지</span></div>
 <div class="authority-note">このページはリポジトリ原文の<strong>バージョン固定スナップショット</strong>です。矛盾する場合は<strong>リポジトリの原文が優先</strong>されます。本文は原文の言語で維持されます。</div>
+
 
       <p></p>
       <div class="mermaid">flowchart TD

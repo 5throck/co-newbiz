@@ -82,6 +82,14 @@
       transition: border-color .2s;
     }
     .section-glyph { display: block; margin-bottom: 12px; }
+    .toc-box {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg2); padding: 12px 16px; margin: 0 0 20px; font-size: 0.84em;
+    }
+    .toc-box ul { list-style: none; margin: 6px 0 0; padding: 0; }
+    .toc-box li { margin: 2px 0; }
+    .toc-box a { color: var(--text-muted); text-decoration: none; }
+    .toc-box a:hover { color: var(--accent); }
     @media print {
       .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
       .main-content, footer { margin-left: 0; }
@@ -110,25 +118,21 @@
           <ul style="margin:0 0 12px;">
           <li><a href="../index.html">홈</a></li>
           </ul>
-          <p class="nav-section">규정·절차</p>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">규정집 (확장 예정)</span></li></ul>
           <ul style="margin:0 0 12px;">
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">규정집 (확장 예정)</span></li>
           <li><a href="../procedures/index.html">업무절차서</a></li>
           <li style="padding-left:14px;"><a href="../procedures/greenfield-dd.html" style="font-size:0.85em;">그린필드 실사</a></li>
           <li style="padding-left:14px;"><a href="../procedures/brownfield-dd.html" class="active" style="font-size:0.85em;">브라운필드 실사</a></li>
           <li style="padding-left:14px;"><a href="../procedures/deal-structuring.html" style="font-size:0.85em;">투자구조 설계</a></li>
           <li style="padding-left:14px;"><a href="../procedures/entity-ic-review.html" style="font-size:0.85em;">Entity IC 심의</a></li>
           <li style="padding-left:14px;"><a href="../procedures/jv-lifecycle-governance.html" style="font-size:0.85em;">JV 라이프사이클 거버넌스</a></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">체크리스트 (확장 예정)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">DD 실사 (확장 예정)</span></li>
           </ul>
-          <p class="nav-section">참조·가이드</p>
-          <ul style="margin:0 0 12px;">
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">업무 매뉴얼 (확장 예정)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">참고문서 (확장 예정)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">산출물 템플릿 (확장 예정)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">디자인 (확장 예정)</span></li>
-          </ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">체크리스트 (확장 예정)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">업무 매뉴얼 (확장 예정)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">참고문서 (확장 예정)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">산출물 템플릿 (확장 예정)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">디자인 (확장 예정)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">DD 실사 (확장 예정)</span></li></ul>
     </nav>
   </aside>
 
@@ -140,6 +144,7 @@
       <h1>브라운필드 실사</h1>
 <div class="doc-meta-block"><span class="chip">게이트: DD</span><span class="chip">단계: 15</span><span class="chip">버전: 1.6.0</span><span class="chip">원본: procedures/_shared/brownfield-dd/schema.yaml@7240e0a19a29</span><span class="chip">본문은 원본 언어 유지</span></div>
 <div class="authority-note">이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용). 분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱의 문서·규정 화면 또는 저장소 원본을 확인하세요. 본문은 원본 문서의 언어로 유지됩니다.</div>
+
 
       <p></p>
       <div class="mermaid">flowchart TD
