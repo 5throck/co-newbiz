@@ -80,11 +80,13 @@ const t = (key: string, lang: Lang): string =>
 
 // ── 포털 문서 레지스트리 (메뉴 SSOT — 사이드바·카드·배지 전부 여기서 생성) ──
 type DocKind = "procedure" | "checklist" | "md";
-interface DocDef { slug: string; titleKo: string; titleEn: string; source: string; kind: DocKind }
+interface DocDef { slug: string; titleKo: string; titleEn: string; source: string; kind: DocKind; stage?: string }
 interface SectionDef { slug: string; titleKo: string; titleEn: string; blurbKo: string; blurbEn: string; docs: DocDef[] }
 
 const md = (slug: string, titleKo: string, titleEn: string, source: string): DocDef => ({ slug, titleKo, titleEn, source, kind: "md" });
-const proc = (slug: string, titleKo: string, titleEn: string): DocDef => ({ slug, titleKo, titleEn, source: `procedures/_shared/${slug}/schema.yaml`, kind: "procedure" });
+// 절차서 — flow.spec 스테이지 매핑 (S1~S12 전체 커버). 표시·정렬 모두 이 순서를 따른다.
+const proc = (stage: string, slug: string, titleKo: string, titleEn: string): DocDef => ({ stage, slug, titleKo, titleEn, source: `procedures/_shared/${slug}/schema.yaml`, kind: "procedure" as const });
+
 const chk = (n: string, titleKo: string, titleEn: string): DocDef => ({ slug: n, titleKo, titleEn, source: `checklists/${n}-checklist.yaml`, kind: "checklist" });
 
 const SECTIONS: SectionDef[] = [
@@ -99,26 +101,26 @@ const SECTIONS: SectionDef[] = [
   {
     slug: "procedures", titleKo: "업무절차서", titleEn: "Procedures", blurbKo: "스테이지별 공유 절차서입니다. procedures/*.yaml이 권위 원본입니다.", blurbEn: "Stage procedures. procedures/*.yaml is the authoritative source.",
     docs: [
-      proc("greenfield-screening", "그린필드 스크리닝", "Greenfield Screening"),
-      proc("brownfield-screening", "브라운필드 스크리닝", "Brownfield Screening"),
-      proc("greenfield-pre-fs", "그린필드 Pre-FS", "Greenfield Pre-FS"),
-      proc("brownfield-pre-fs", "브라운필드 Pre-FS", "Brownfield Pre-FS"),
-      proc("deal-shape-chain", "딜 셰이프 체인", "Deal Shape Chain"),
-      proc("company-profile-analysis", "기업 프로필 분석", "Company Profile Analysis"),
-      proc("greenfield-capability-assessment", "그린필드 역량 평가", "Greenfield Capability Assessment"),
-      proc("brownfield-target-identification", "브라운필드 대상 후보 발굴", "Brownfield Target Identification"),
-      proc("brownfield-target-screening", "브라운필드 대상 스크리닝", "Brownfield Target Screening"),
-      proc("greenfield-fs", "그린필드 FS", "Greenfield FS"),
-      proc("brownfield-fs", "브라운필드 FS", "Brownfield FS"),
-      proc("greenfield-dd", "그린필드 실사", "Greenfield DD"),
-      proc("brownfield-dd", "브라운필드 실사", "Brownfield DD"),
-      proc("deal-structuring", "투자구조 설계", "Deal Structuring"),
-      proc("entity-ic-review", "Entity IC 심의", "Entity IC Review"),
-      proc("group-investment-review", "그룹 투자 심의", "Group Investment Review"),
-      proc("entity-establishment-execution", "법인 설립 실행", "Entity Establishment Execution"),
-      proc("pmi-integration-execution", "PMI 통합 실행", "PMI Integration Execution"),
-      proc("jv-lifecycle-governance", "JV 라이프사이클 거버넌스", "JV Lifecycle Governance"),
-      proc("portfolio-venture-monitoring", "포트폴리오 벤처 모니터링", "Portfolio Venture Monitoring"),
+      proc("S1~S3", "greenfield-screening", "그린필드 스크리닝", "Greenfield Screening"),
+      proc("S1~S3", "brownfield-screening", "브라운필드 스크리닝", "Brownfield Screening"),
+      proc("S3", "company-profile-analysis", "기업 프로필 분석", "Company Profile Analysis"),
+      proc("S4", "greenfield-pre-fs", "그린필드 Pre-FS", "Greenfield Pre-FS"),
+      proc("S4", "brownfield-pre-fs", "브라운필드 Pre-FS", "Brownfield Pre-FS"),
+      proc("S4", "deal-shape-chain", "딜 셰이프 체인", "Deal Shape Chain"),
+      proc("S5", "greenfield-capability-assessment", "그린필드 역량 평가", "Greenfield Capability Assessment"),
+      proc("S6", "brownfield-target-identification", "브라운필드 대상 후보 발굴", "Brownfield Target Identification"),
+      proc("S7", "brownfield-target-screening", "브라운필드 대상 스크리닝", "Brownfield Target Screening"),
+      proc("S8", "greenfield-fs", "그린필드 FS", "Greenfield FS"),
+      proc("S8", "brownfield-fs", "브라운필드 FS", "Brownfield FS"),
+      proc("S9", "greenfield-dd", "그린필드 실사", "Greenfield DD"),
+      proc("S9", "brownfield-dd", "브라운필드 실사", "Brownfield DD"),
+      proc("S10", "deal-structuring", "투자구조 설계", "Deal Structuring"),
+      proc("S11", "entity-ic-review", "Entity IC 심의", "Entity IC Review"),
+      proc("S11", "group-investment-review", "그룹 투자 심의", "Group Investment Review"),
+      proc("S11", "entity-establishment-execution", "법인 설립 실행", "Entity Establishment Execution"),
+      proc("S11", "jv-lifecycle-governance", "JV 라이프사이클 거버넌스", "JV Lifecycle Governance"),
+      proc("S11", "pmi-integration-execution", "PMI 통합 실행", "PMI Integration Execution"),
+      proc("S12", "portfolio-venture-monitoring", "포트폴리오 벤처 모니터링", "Portfolio Venture Monitoring"),
     ],
   },
   {
@@ -205,11 +207,15 @@ function orderedDocs(sec: SectionDef, lang: Lang): DocDef[] {
   return [...sec.docs].sort((a, b) => key(a).localeCompare(key(b), lang === "" ? "ko" : "en", { sensitivity: "base" }));
 }
 function docLabel(sec: SectionDef, doc: DocDef, lang: Lang): string {
-  // 절차서는 레지스트리 순서 = S-flow 순서(가나다 대신 흐름 유지, 2026-09-05 회의 합의)
-  return lang === "" ? doc.titleKo : doc.titleEn;
+  // 절차서는 레지스트리 순서 = S-flow 순서(가나다 대신 흐름 유지, 2026-09-05 회의 합의).
+  // 커버 스테이지를 라벨 앞에 표기해 S1~S12 어디를 하는 절차인지 즉시 식별한다.
+  const base = lang === "" ? doc.titleKo : doc.titleEn;
+  return doc.stage ? `${doc.stage} ${base}` : base;
 }
 
-// 파일럿 (Phase 0 수렴 게이트): 절차서 5건만. --all 시 전체.
+// 파일럿 (Phase 0 수렴 게이트): 업무절차서는 S1~S12 전체 커버를 위해 전량 생성.
+// 사용자 승인 전 다른 카테고리는 파일럿 범위로 제한된다.
+const PILOT_EXEMPT_SECTIONS = new Set(["procedures"]);
 const PILOT = new Set(["deal-structuring", "brownfield-dd", "entity-ic-review", "greenfield-dd", "jv-lifecycle-governance"]);
 
 // ── 원본 읽기 + 해시 ────────────────────────────────────────────────────────
@@ -497,7 +503,7 @@ interface Target { sec: SectionDef; doc: DocDef }
 const targets: Target[] = [];
 for (const sec of SECTIONS) {
   for (const doc of sec.docs) {
-    if (ALL || PILOT.has(doc.slug)) targets.push({ sec, doc });
+    if (ALL || PILOT_EXEMPT_SECTIONS.has(sec.slug) || PILOT.has(doc.slug)) targets.push({ sec, doc });
   }
 }
 const generated = new Set<string>();

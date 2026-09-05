@@ -1,7 +1,22 @@
 {
+  "procedures/_shared/greenfield-screening/schema.yaml": "550ae14ca76e",
+  "procedures/_shared/brownfield-screening/schema.yaml": "aa1fdfb91e4c",
+  "procedures/_shared/company-profile-analysis/schema.yaml": "a4f3905a2409",
+  "procedures/_shared/greenfield-pre-fs/schema.yaml": "aa5bc819e10d",
+  "procedures/_shared/brownfield-pre-fs/schema.yaml": "bed3e9e25b47",
+  "procedures/_shared/deal-shape-chain/schema.yaml": "dd3e080a5227",
+  "procedures/_shared/greenfield-capability-assessment/schema.yaml": "257516b46f2f",
+  "procedures/_shared/brownfield-target-identification/schema.yaml": "6857c16f9ed3",
+  "procedures/_shared/brownfield-target-screening/schema.yaml": "ce595036a416",
+  "procedures/_shared/greenfield-fs/schema.yaml": "ca590216e351",
+  "procedures/_shared/brownfield-fs/schema.yaml": "0bdcdaa3247a",
   "procedures/_shared/greenfield-dd/schema.yaml": "d9738f65a1e0",
   "procedures/_shared/brownfield-dd/schema.yaml": "7240e0a19a29",
   "procedures/_shared/deal-structuring/schema.yaml": "db47ff9f1f21",
   "procedures/_shared/entity-ic-review/schema.yaml": "f74733c7567d",
-  "procedures/_shared/jv-lifecycle-governance/schema.yaml": "8509ffbe1896"
+  "procedures/_shared/group-investment-review/schema.yaml": "02a837bb2963",
+  "procedures/_shared/entity-establishment-execution/schema.yaml": "340c8eaeb12b",
+  "procedures/_shared/jv-lifecycle-governance/schema.yaml": "8509ffbe1896",
+  "procedures/_shared/pmi-integration-execution/schema.yaml": "015ed0e60796",
+  "procedures/_shared/portfolio-venture-monitoring/schema.yaml": "19351e568c29"
 }
