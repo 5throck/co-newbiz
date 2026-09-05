@@ -130,6 +130,13 @@ const SECTIONS: SectionDef[] = [
   },
 ];
 
+// 내비 그룹 — 웹앱 메뉴(ADR-0105)의 섹션 라벨 패턴을 준용한다:
+// 규정·절차(판정 규칙) / 참조·가이드(수행 참조).
+const NAV_GROUPS: Array<{ label: string; sections: string[] }> = [
+  { label: "규정·절차", sections: ["policies", "procedures", "checklists", "dd"] },
+  { label: "참조·가이드", sections: ["manuals", "reference", "templates", "design"] },
+];
+
 // 파일럿 (Phase 0 수렴 게이트): 절차서 5건만. --all 시 전체.
 const PILOT = new Set(["deal-structuring", "brownfield-dd", "entity-ic-review", "greenfield-dd", "jv-lifecycle-governance"]);
 
@@ -285,20 +292,49 @@ const NAV_ORDER = ["policies", "procedures", "checklists", "manuals", "reference
 
 function sidebarNav(activePath: string | null, generated: Set<string>, prefix: string): string {
   const rel = (p: string): string => prefix + p;
-  const items: string[] = [`<li><a href="${rel("index.html")}"${activePath === null ? ' class="active"' : ""}>홈</a></li>`];
-  for (const sec of SECTIONS) {
-    const docs = sec.docs.filter((d) => generated.has(`${sec.slug}/${d.slug}`));
-    if (docs.length === 0) {
-      items.push(`<li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">${esc(sec.titleKo)} (확장 예정)</span></li>`);
-      continue;
+  const out: string[] = [`<p class="nav-section">포털</p>`, `<ul style="margin:0 0 12px;">`, `<li><a href="${rel("index.html")}"${activePath === null ? ' class="active"' : ""}>홈</a></li>`, `</ul>`];
+  for (const group of NAV_GROUPS) {
+    out.push(`<p class="nav-section">${esc(group.label)}</p>`);
+    out.push(`<ul style="margin:0 0 12px;">`);
+    for (const slug of group.sections) {
+      const sec = SECTIONS.find((x) => x.slug === slug)!;
+      const docs = sec.docs.filter((d) => generated.has(`${sec.slug}/${d.slug}`));
+      if (docs.length === 0) {
+        out.push(`<li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">${esc(sec.titleKo)} (확장 예정)</span></li>`);
+        continue;
+      }
+      out.push(`<li><a href="${rel(`${sec.slug}/index.html`)}"${activePath === `${sec.slug}/index.html` ? ' class="active"' : ""}>${esc(sec.titleKo)}</a></li>`);
+      for (const d of docs) {
+        const active = activePath === `${sec.slug}/${d.slug}.html` ? ' class="active"' : "";
+        out.push(`<li style="padding-left:14px;"><a href="${rel(`${sec.slug}/${d.slug}.html`)}"${active} style="font-size:0.85em;">${esc(d.titleKo || d.slug)}</a></li>`);
+      }
     }
-    items.push(`<li><a href="${rel(`${sec.slug}/index.html`)}"${activePath === `${sec.slug}/index.html` ? ' class="active"' : ""}>${esc(sec.titleKo)}</a></li>`);
-    for (const d of docs) {
-      const active = activePath === `${sec.slug}/${d.slug}.html` ? ' class="active"' : "";
-      items.push(`<li style="padding-left:14px;"><a href="${rel(`${sec.slug}/${d.slug}.html`)}"${active} style="font-size:0.85em;">${esc(d.titleKo || d.slug)}</a></li>`);
-    }
+    out.push(`</ul>`);
   }
-  return items.join("\n          ");
+  return out.join("\n          ");
+}
+
+// 문서 카드용 한 줄 설명 — 원본에서 자동 추출 (수작업 입력 금지)
+function docBlurb(doc: DocDef): string {
+  try {
+    const raw = readSource(doc.source);
+    if (doc.kind === "procedure") {
+      const parsed = yamlLoad(raw) as { description?: string } | null;
+      const d = (parsed?.description ?? "").replace(/\s+/g, " ").trim();
+      return d.length > 120 ? d.slice(0, 117) + "…" : d || "절차서 단계·게이트·산출물 정의";
+    }
+    if (doc.kind === "checklist") {
+      const parsed = yamlLoad(raw) as { items?: unknown[] } | null;
+      const n = parsed?.items?.length ?? 0;
+      return `게이트 판정 체크리스트 — ${n}개 항목 (필수 항목은 waiver 없이 통과 불가)`;
+    }
+    const body = stripFrontmatter(raw);
+    const para = body.split(/\n\s*\n/).map((b) => b.trim()).find((b) => b && !b.startsWith("#") && !b.startsWith("|") && !b.startsWith("-")) ?? "";
+    const plain = para.replace(/[*\`>\[\]]/g, "").replace(/\s+/g, " ").trim();
+    return plain.length > 120 ? plain.slice(0, 117) + "…" : plain || "저장소 원본 문서의 스냅샷";
+  } catch {
+    return "저장소 원본 문서의 스냅샷";
+  }
 }
 
 const FOOTER = '<footer><p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p></footer>';
@@ -425,13 +461,13 @@ for (const { sec, doc } of targets) {
 for (const sec of SECTIONS) {
   const docs = sec.docs.filter((d) => generated.has(`${sec.slug}/${d.slug}`));
   if (docs.length === 0) continue;
-  const list = docs
-    .map((d) => `          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;"><a href="${d.slug}.html">${esc(d.titleKo || d.slug)}</a></td><td style="padding:8px;">${esc(d.source)}</td></tr>`)
+  const cards = docs
+    .map((d) => `        <a class="card" href="${d.slug}.html">\n          <span class="tag tag-ref">${esc(sec.titleKo)}</span>\n          <h2>${esc(d.titleKo || d.slug)}</h2>\n          <p>${esc(docBlurb(d))}</p>\n          <div class="go">문서 열기 →</div>\n        </a>`)
     .join("\n");
   const html = pageHtml(
     sec.titleKo,
     `${sec.slug}/index.html`,
-    `<h1>${esc(sec.titleKo)}</h1>\n      <p>${esc(sec.blurb)}</p>\n      <table style="width:100%;border-collapse:collapse;margin:20px 0;">\n        <thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">문서</th><th style="text-align:left;padding:8px;">원본 경로</th></tr></thead>\n        <tbody>\n${list}\n        </tbody>\n      </table>`,
+    `<h1>${esc(sec.titleKo)}</h1>\n      <p>${esc(sec.blurb)}</p>\n      <div class="grid">\n${cards}\n      </div>`,
     null,
     false,
     generated,
@@ -451,19 +487,21 @@ const sectionCards = SECTIONS.filter((s) => s.docs.some((d) => generated.has(`${
 const home = pageHtml(
   "co-newbiz 문서 허브",
   null,
-  `<h1>co-newbiz 문서 허브</h1>
-      <p>규정집·업무절차서·체크리스트·매뉴얼·참고문서의 <strong>버전 고정 스냅샷</strong> 포털입니다. 모든 페이지는 원본 문서(저장소 YAML/MD)에서 파생되며 <strong>분쟁 시 원본이 우위</strong>입니다. 최신 열람은 웹앱의 문서·규정 화면을 사용하세요.</p>
+  `<p>규정집·업무절차서·체크리스트·매뉴얼·참고문서의 <strong>버전 고정 스냅샷</strong> 포털입니다. 모든 페이지는 원본 문서(저장소 YAML/MD)에서 파생되며 <strong>분쟁 시 원본이 우위</strong>입니다. 최신 열람은 웹앱의 문서·규정 화면을 사용하세요.</p>
       <div class="callout callout--info" style="background:var(--bg-info);border-left:3px solid var(--accent);padding:16px 20px;margin:20px 0;border-radius:4px;">
         <strong>역할 분리 (ADR-0107):</strong> 웹앱 문서·규정 화면 = 운영 중 최신 열람 · 이 포털 = 온보딩·배포용 고정 스냅샷 (각 페이지 푸터의 소스 해시로 원본 대조 가능)
       </div>
-      <h2 id="sections">섹션</h2>
-      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
-        <thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">섹션</th><th style="text-align:left;padding:8px;">설명</th><th style="text-align:left;padding:8px;">문서</th></tr></thead>
-        <tbody>
-${sectionCards}
-        </tbody>
-      </table>
-      ${ALL ? "" : '<p style="font-size:0.85em;color:var(--text-muted);">※ 현재 <strong>파일럿</strong>(절차서 5건)만 생성되어 있습니다 — 승인 후 전체 확장됩니다.</p>'}`,
+      ${SECTIONS.filter((sec) => sec.docs.some((d) => generated.has(`${sec.slug}/${d.slug}`)))
+        .map((sec) => {
+          const docs = sec.docs.filter((d) => generated.has(`${sec.slug}/${d.slug}`));
+          const cards = docs
+            .map((d) => `        <a class="card" href="${sec.slug}/${d.slug}.html">\n          <span class="tag tag-ref">${esc(sec.titleKo)}</span>\n          <h2>${esc(d.titleKo || d.slug)}</h2>\n          <p>${esc(docBlurb(d))}</p>\n          <div class="go">문서 열기 →</div>\n        </a>`)
+            .join("\n");
+          const pending = sec.docs.length - docs.length;
+          return `<p class="section-label">${esc(sec.titleKo)}${ALL || pending === 0 ? "" : ` — 파일럿 ${docs.length}건 / 전체 ${sec.docs.length}건`}</p>\n      <div class="grid">\n${cards}\n      </div>`;
+        })
+        .join("\n      ")}
+      <p style="font-size:0.8em;color:var(--text-dim);margin-top:28px;">기준: flow.spec v2.2.0 · 스냅샷 생성일 ${new Date().toISOString().slice(0, 10)}</p>`,
   null,
   false,
   generated,
