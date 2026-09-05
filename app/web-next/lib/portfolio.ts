@@ -1,5 +1,5 @@
-// S11 post-management helpers (ADR-0101 §4) — the review-cycle freshness
-// vocabulary shared by process-flow's S11 completion predicate and the
+// S12 post-management helpers (ADR-0101 §4) — the review-cycle freshness
+// vocabulary shared by process-flow's S12 completion predicate and the
 // scorecard/transition-decision routes. The 'YYYY-Qn' shape is pinned by the
 // migration-0024 GLOB CHECK, so cycles are lexicographically comparable and
 // ordering arithmetic reduces to string comparison.
@@ -10,7 +10,7 @@
 // immediately previous quarter. Rationale: the review cadence is quarterly
 // (portfolio-venture-monitoring), so a scorecard produced in the prior
 // quarter is still the standing evidence for the current quarter's IC sitting
-// — demanding the literal current quarter would mark S11 blocked for the
+// — demanding the literal current quarter would mark S12 blocked for the
 // first weeks of every quarter. Anything older than one full quarter is
 // stale ("분기별 스코어카드가 갱신되었다" has lapsed) and yields a blocker
 // naming the stale cycle.

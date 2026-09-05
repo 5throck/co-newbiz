@@ -597,18 +597,18 @@ export function OpportunitiesView() {
                           <Link
                             href={`/projects/${o.project_id}/ic-review`}
                             className="btn-ghost btn-sm"
-                            title="승격된 프로젝트의 S10 투자심사·실행(IC 패키지·Entity/Group IC·설립 실행) 화면으로 이동"
+                            title="승격된 프로젝트의 S11 투자심사·실행(IC 패키지·Entity/Group IC·설립 실행) 화면으로 이동"
                           >
-                            S10 투자심사
+                            S11 투자심사
                           </Link>
                         )}
                         {o.project_id && (
                           <Link
                             href={`/projects/${o.project_id}/portfolio`}
                             className="btn-ghost btn-sm"
-                            title="승격된 프로젝트의 S11 사후 관리(포트폴리오 스코어카드·전환 결정) 화면으로 이동"
+                            title="승격된 프로젝트의 S12 사후 관리(포트폴리오 스코어카드·전환 결정) 화면으로 이동"
                           >
-                            S11 사후 관리
+                            S12 사후 관리
                           </Link>
                         )}
                       </span></td>

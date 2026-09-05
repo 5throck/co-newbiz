@@ -198,7 +198,7 @@ export function recordVentureScorecardCycle(input: RecordVentureScorecardInput, 
 
   // C2 (ADR-0104) — charter KPI pre-commits become default targets: a row
   // whose measure_key matches a charter KPI key and carries no target inherits
-  // the charter's target text, so "승격 때 약속한 것" is the S11 yardstick.
+  // the charter's target text, so "승격 때 약속한 것" is the S12 yardstick.
   let charterKpis: Array<{ key: string; label?: string; target: string }> = [];
   try {
     const charterRow = db.query("SELECT charter_json FROM md_project WHERE id = ?").get(input.projectId) as

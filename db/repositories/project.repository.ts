@@ -97,7 +97,7 @@ interface GreenfieldAssessmentCheck {
  *
  * Both tracks additionally require an S4 route_decision to exist, because the
  * project's `track` snapshot is copied from it — promotion without a track
- * would leave S8–S11 surfaces unable to pick their procedure set.
+ * would leave S8–S12 surfaces unable to pick their procedure set.
  */
 function assertPromotionPreconditions(db: ReturnType<typeof getDb>, opp: PromotionSourceRow): void {
   if (!opp.track) {
@@ -140,7 +140,7 @@ function assertPromotionPreconditions(db: ReturnType<typeof getDb>, opp: Promoti
 
 /**
  * Promote an opportunity to a project (ADR-0095) — the single procedure that
- * turns the S1–S7 opportunity carrier into the S8–S11 project carrier.
+ * turns the S1–S7 opportunity carrier into the S8–S12 project carrier.
  *
  * ZERO-MEMBER-INVISIBILITY RATIONALE: under the deny-by-default access model
  * (FR-SEC-01) a project with zero active members is permanently invisible —

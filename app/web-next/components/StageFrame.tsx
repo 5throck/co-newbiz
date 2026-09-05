@@ -1,7 +1,7 @@
 "use client";
 
 // P0 공통 골격 — 표준 화면 패턴 (ADR-0086, docs/designs/2026-09-01-standard-screen-patterns-design_ko.md).
-// 단계 화면의 유일한 외피: 단계 헤더 + S1~S11 진행 레일(StageRail) + 본문 슬롯.
+// 단계 화면의 유일한 외피: 단계 헤더 + S1~S12 진행 레일(StageRail) + 본문 슬롯.
 // 데이터원은 lib/stage-meta.ts (flow.spec 발췌, 정합 테스트로 강제) — 페이지별 하드코딩 금지.
 
 import type { ReactNode } from "react";

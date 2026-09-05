@@ -1,6 +1,6 @@
 "use client";
 
-// Project process view — full S1~S11 chain (opportunity backlink + project
+// Project process view — full S1~S12 chain (opportunity backlink + project
 // branch) from GET /api/projects/[id]/process. One screen answers "지금 어디
 // 스코" for a promoted deal: stage statuses, live blockers, and recorded
 // gate verdicts. Read-only — gate recording stays on the stage pages
@@ -66,8 +66,8 @@ const GATES_BY_STAGE: Record<string, string[]> = {
   S7: ["target_screening"],
   S8: ["fs"],
   S9: ["dd"],
-  S10: ["entity_ic", "group_ic"],
-  S11: [],
+  S11: ["entity_ic", "group_ic"],
+  S12: [],
 };
 
 function StageList({ stages, gateStatus }: { stages: StageView[]; gateStatus: Record<string, string> }) {
@@ -151,7 +151,7 @@ export default function ProjectProcessPage() {
         </section>
       )}
 
-      <section aria-label="프로젝트 단계 (S4~S11)" className="market-section">
+      <section aria-label="프로젝트 단계 (S4~S12)" className="market-section">
         <h2 className="text-[0.92rem] font-semibold">프로젝트 단계</h2>
         <StageList stages={stagesWithGates} gateStatus={data.gateStatus} />
       </section>

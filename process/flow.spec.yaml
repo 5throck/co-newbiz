@@ -21,7 +21,11 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.1.0"
+  version: "2.2.0"
+  # v2.2.0 — new S10 투자구조 설계 (Deal Structuring): the ADR-0045 four-axis
+  #   investment-structure review (tax / liability isolation / financing
+  #   leverage / exit) plus the financing plan (sources & uses) become their own
+  #   stage between S9 실사 and IC 심의; former S10→S11, S11→S12.
   # v2.1.0 — spec-vs-implementation audit bindings: route-advisory (S4),
   # dd-waiver-review (S9), charter-baseline + ic-preparation scorecard/minutes/
   # briefing-pack notes + pmi-kickoff + jv-lifecycle-governance (S10).
@@ -30,7 +34,7 @@ meta:
   # superseded when project promotion was deferred to S8+.
   entity_lifecycles:
     opportunity: [S1, S2, S3, S4, S5, S6, S7]
-    project: [S8, S9, S10, S11]
+    project: [S8, S9, S10, S11, S12]
 
 gates:
   - id: screening
@@ -421,11 +425,48 @@ stages:
     gates: [dd]
 
   - id: S10
+    name: 투자구조 설계
+    objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 비히클(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)"
+    inputs:
+      - S8 채택 Business Case
+      - S9 DD 발견사항(dd_finding value_impact 포함)
+      - WACC·hurdle 입력값
+    outputs:
+      - 투자구조 가설(4축 검토 완료 — deal_structure_review 아티팩트 참조)
+      - 자금조달 계획(sources & uses 균형·자금 확정성 증빙)
+    entryCriteria:
+      - S9 완료
+    activities:
+      - id: deal-structure-hypothesis
+        agent: brownfield-agent
+        skills: [investment-vehicle-structuring]
+        procedure: [brownfield-fs, deal-shape-chain]
+        # 비히클(direct/SPC/holdco/internal_venture_spinoff/jv)·자산/주식·지분·
+        # 수표/instrument 믹스 가설을 세우고 4대 축 노트(절세·책임격리·
+        # 레버리지·엑싯)를 기록한다. 완료 플래그는 근거 아티팩트 참조가
+        # 필수인 별도의 심사 행위다 (deal-structure-hypothesis.repository).
+      - id: financing-plan
+        agent: valuation-agent
+        skills: [financing-plan-review]
+        procedure: [entity-ic-review]
+        # sources & uses를 수집해 균형(조달=사용)을 맞추고, 커버넌트 여력·
+        # 자금 확정성 증빙을 IC 패키지에 첨부 가능한 형태로 남긴다.
+    requiredArtifacts:
+      - 투자구조 가설(4축 검토 완료)
+      - 자금조달 계획(sources & uses 균형)
+    completionCriteria:
+      - 최신 투자구조 가설의 4축 검토(절세 구조·책임 격리·재무 레버리지·엑싯 구조)가 근거 아티팩트 참조와 함께 완료되었다
+      - 자금조달 sources와 uses 합계가 균형을 이루고 0보다 크다
+    applicableTracks: [greenfield, brownfield]
+    stateTransitions: { onComplete: S11, onHold: S10, onKill: terminal }
+    gates: []
+
+  - id: S11
     name: 투자심사·실행
     objective: "투자할 것인가? — 투자 구조(Deal/Investment Structure: 비히클·자금 조달·지급 구조)를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다"
     inputs:
       - IC 패키지(사업계획·DD·RAG·검토)
-      - 투자 구조안(비히클·자금 조달·지급 구조 — brownfield: investment-vehicle-structuring, financing-plan-review)
+      - 투자 구조안(S10 투자구조 설계의 산출물 — 비히클·4축 검토·자금조달 계획)
       - 사람 최종 승인 산출물
     outputs:
       - IC 결정
@@ -490,10 +531,10 @@ stages:
       - 추진계획(차터) 기준선이 확정되고 append-only 변경 이력이 시작되었다
       - origin∈{internal,joint}인 프로젝트는 entity-establishment-execution 5단계 완료 기록이 존재한다
     applicableTracks: [greenfield, brownfield]
-    stateTransitions: { onComplete: S11, onHold: S10, onKill: terminal }
+    stateTransitions: { onComplete: S12, onHold: S11, onKill: terminal }
     gates: [entity_ic, group_ic]
 
-  - id: S11
+  - id: S12
     name: 사후 관리
     objective: 투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다
     inputs:
@@ -504,7 +545,7 @@ stages:
       - 사업 성과 리포트
       - 포트폴리오 전환 결정(어휘 5종: next_tranche_released / held_evidence_incomplete / graduate_to_core / reduce_or_divest / kill_with_learning_captured)
     entryCriteria:
-      - S10 완료 (IC 승인, internal/joint는 설립 실행 완료 포함)
+      - S11 완료 (IC 승인, internal/joint는 설립 실행 완료 포함)
     activities:
       - id: portfolio-monitoring
         agent: group-review-agent
@@ -514,8 +555,8 @@ stages:
       - 벤처 스코어카드
     completionCriteria:
       - 분기별 스코어카드 갱신
-      # 이 단계의 kill/graduate는 S1~S10의 Kill Criteria와 범주가 다른 포트폴리오 거버넌스 결정이다
+      # 이 단계의 kill/graduate는 S1~S11의 Kill Criteria와 범주가 다른 포트폴리오 거버넌스 결정이다
       # (procedures/_shared/portfolio-venture-monitoring — venture-portfolio-ic 결정 어휘 5종)
     applicableTracks: [greenfield, brownfield]
-    stateTransitions: { onComplete: terminal, onHold: S11, onKill: terminal }
+    stateTransitions: { onComplete: terminal, onHold: S12, onKill: terminal }
     gates: []

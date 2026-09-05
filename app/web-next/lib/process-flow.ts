@@ -1,10 +1,10 @@
 // Process engine — docs/process-flow.md. Computes the derived process state
-// for an Opportunity (S1→S7) or a promoted Project (S8→S11, ADR-0095) from
+// for an Opportunity (S1→S7) or a promoted Project (S8→S12, ADR-0095) from
 // persisted artifacts and gate decisions. current_stage is NEVER stored: UI and
 // (future) agent orchestrators both call evaluateProcess().
 //
 // Opportunity는 S1~S7 라이프사이클 캐리어다 (ADR-0094) — 승격(promotion,
-// ADR-0095) 이후 project가 S8~S11 캐리어가 되며, S5~S7 화면·API는 모두
+// ADR-0095) 이후 project가 S8~S12 캐리어가 되며, S5~S7 화면·API는 모두
 // opportunityId 기준으로 동작한다. 비적용 단계(brownfield의 S5, greenfield의
 // S6/S7)는 'skipped'로 표시된다.
 import { getDb } from "../../../db/client.ts";
@@ -13,7 +13,7 @@ import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { establishmentProgress } from "./establishment.ts";
 import { isFreshReviewCycle } from "./portfolio.ts";
 
-export type StageId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11";
+export type StageId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11" | "S12";
 export type GateId = "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
 export type GateVerdict = "pending" | "go" | "hold" | "kill";
 
@@ -35,14 +35,15 @@ export const STAGES: StageDefinition[] = [
   { id: "S5", name: "역량 평가·진출전략", sequence: 5, objective: "스스로 진입할 수 있는가?", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차·해소 방식", "진출전략", "검토한 대안"] },
   { id: "S6", name: "대상 후보 발굴", sequence: 6, objective: "누구와 결합할 것인가?", applicableTracks: ["brownfield"], gateIds: ["pre_fs"], requiredArtifacts: ["Target Universe 정의", "Long List 최소 커버리지"] },
   { id: "S7", name: "대상 스크리닝", sequence: 7, objective: "어떤 대상이 유망한가?", applicableTracks: ["brownfield"], gateIds: ["target_screening"], requiredArtifacts: ["후보별 스크리닝 근거", "Short List 또는 제외 사유"] },
-  // S8~S11 (flow.spec v2.0.0, ADR-0074/0095) — project 엔티티 단계.
+  // S8~S12 (flow.spec v2.2.0, ADR-0074/0095) — project 엔티티 단계.
   { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다", applicableTracks: ["greenfield", "brownfield"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션)", "시뮬레이션 NPV 분위수"] },
   { id: "S9", name: "실사·검증", sequence: 9, objective: "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 Short List 대상 DD, greenfield는 실현가능성 검증)", applicableTracks: ["greenfield", "brownfield"], gateIds: ["dd"], requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"] },
-  { id: "S10", name: "투자심사·실행", sequence: 10, objective: "투자할 것인가? — 투자 구조(Deal/Investment Structure: 비히클·자금 조달·지급 구조)를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다", applicableTracks: ["greenfield", "brownfield"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["IC 패키지", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"] },
-  { id: "S11", name: "사후 관리", sequence: 11, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["greenfield", "brownfield"], gateIds: [], requiredArtifacts: ["벤처 스코어카드"] },
+  { id: "S10", name: "투자구조 설계", sequence: 10, objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 비히클(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)", applicableTracks: ["greenfield", "brownfield"], gateIds: [], requiredArtifacts: ["투자구조 가설(4축 검토 완료)", "자금조달 계획(sources & uses 균형)"] },
+  { id: "S11", name: "투자심사·실행", sequence: 11, objective: "투자할 것인가? — S10 투자구조 설계의 산출물을 IC 패키지에 포함해 Entity/Group IC 심의를 받고, 승인되면 실행한다", applicableTracks: ["greenfield", "brownfield"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["IC 패키지", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"] },
+  { id: "S12", name: "사후 관리", sequence: 12, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["greenfield", "brownfield"], gateIds: [], requiredArtifacts: ["벤처 스코어카드"] },
 ];
 
-/** S11 포트폴리오 전환 결정 어휘 5종 (flow.spec S11, portfolio-venture-monitoring). */
+/** S12 포트폴리오 전환 결정 어휘 5종 (flow.spec S12, portfolio-venture-monitoring). */
 export const PORTFOLIO_TRANSITIONS = [
   "next_tranche_released",
   "held_evidence_incomplete",
@@ -226,12 +227,12 @@ interface ProjectRowLite {
 }
 
 /**
- * Project stage completion (S8–S11). Each check is deliberately a SIMPLE
+ * Project stage completion (S8–S12). Each check is deliberately a SIMPLE
  * existing-schema probe — Phase 3 (FS), Phase 4 (DD), Phase 5 (IC/설립) and
  * Phase 6 (포트폴리오) refine each one against their own richer artifacts;
  * this skeleton (ADR-0095) only pins the type and the spec port. Every check
- * is now a real predicate: S8 = ADR-0098, S9 = ADR-0099, S10 = ADR-0100,
- * S11 = ADR-0101 (latest-cycle freshness) — no REFINEMENT markers remain.
+ * is now a real predicate: S8 = ADR-0098, S9 = ADR-0099, S11 = ADR-0100,
+ * S12 = ADR-0101 (latest-cycle freshness) — no REFINEMENT markers remain.
  */
 function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, gateStatus: Partial<Record<GateId, GateVerdict>>): { complete: boolean; blockers: string[]; missing: string[] } {
   const blockers: string[] = [];
@@ -244,7 +245,7 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
     // percentiles). Both write paths (automatic generation and manual CRUD)
     // land in the same tables, so this check is write-path-agnostic. The
     // ADR-0095 placeholder ("REFINEMENT (Phase 3)" latest-model probe) is
-    // paid off here; S9~S11 keep theirs.
+    // paid off here; S9~S12 keep theirs.
     const model = db
       .query("SELECT id, kind FROM business_case_model WHERE project_id = ? ORDER BY created_at DESC LIMIT 1")
       .get(project.id) as { id: string; kind: string } | undefined;
@@ -278,6 +279,35 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
       }
     }
   } else if (stage.id === "S10") {
+    // 투자구조 설계 (flow.spec v2.2.0): 4축 검토 완료 + sources & uses 균형.
+    const latest = db
+      .query(
+        `SELECT id, four_axis_review_completed FROM deal_structure_hypothesis
+         WHERE project_id = ? ORDER BY hypothesized_at DESC, id DESC LIMIT 1`,
+      )
+      .get(project.id) as { id: string; four_axis_review_completed: number } | undefined;
+    if (!latest) {
+      blockers.push("투자구조 가설이 필요합니다");
+      missing.push("투자구조 가설(4축 검토 완료)");
+    } else if (latest.four_axis_review_completed !== 1) {
+      blockers.push("최신 투자구조 가설의 4축 검토(절세·책임격리·레버리지·엑싯)가 완료되지 않았습니다");
+      missing.push("투자구조 가설(4축 검토 완료)");
+    }
+    const fin = db
+      .query(
+        `SELECT
+           COALESCE(SUM(CASE WHEN kind = 'source' THEN amount_krw_m END), 0) AS sources,
+           COALESCE(SUM(CASE WHEN kind = 'use' THEN amount_krw_m END), 0) AS uses
+         FROM financing_sources_uses WHERE project_id = ?`,
+      )
+      .get(project.id) as { sources: number; uses: number };
+    if (fin.sources <= 0 || fin.uses <= 0 || Math.abs(fin.sources - fin.uses) > 0.001) {
+      blockers.push(
+        `자금조달 sources & uses 균형이 필요합니다 (조달 ${fin.sources} / 사용 ${fin.uses} 백만 KRW)`,
+      );
+      missing.push("자금조달 계획(sources & uses 균형)");
+    }
+  } else if (stage.id === "S11") {
     // IC 승인은 게이트 기록으로만 판단한다 (사람 최종 승인, ADR-0053).
     if (gateStatus.entity_ic !== "go") {
       blockers.push("Entity IC 승인 기록이 필요합니다");
@@ -296,12 +326,12 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
         missing.push("설립 실행 기록(5단계 완료)");
       }
     }
-  } else if (stage.id === "S11") {
+  } else if (stage.id === "S12") {
     // ADR-0101 §4 (Phase 6): "분기별 스코어카드가 갱신되었다"를 기계적으로
     // 검사한다 — 프로젝트의 MAX(review_cycle)가 존재하고 그 주기가 신선해야
     // 한다 (현재 분기 또는 직전 분기; lib/portfolio.ts의 isFreshReviewCycle
     // 참고 — 분기 단위 cadence라 직전 분기 스코어카드도 현 분기 IC 심의의
-    // 정당한 근거다). 어긋나면 낡은 주기를 이름으로 지적한다. 이로써 S8~S11
+    // 정당한 근거다). 어긋나면 낡은 주기를 이름으로 지적한다. 이로써 S8~S12
     // 프로젝트 브랜치의 모든 완료기준이 실재 술어가 된다 (REFINEMENT 잔여 0).
     const latest = db
       .query("SELECT MAX(review_cycle) AS c FROM venture_scorecard WHERE project_id = ?")
@@ -409,7 +439,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
   }
 
   else if (entity.type === "project") {
-    // S8~S11 캐리어 (ADR-0095). S1~S7은 opportunity 캐리어에서 완료된 선행
+    // S8~S12 캐리어 (ADR-0095). S1~S7은 opportunity 캐리어에서 완료된 선행
     // 단계다 — 승격 전제조건(promoteOpportunity)이 트랙별 선행 산출(S5 또는 S7
     // Short List)을 이미 검증했으므로 프로젝트 평가에서는 모두 complete로 표시한다.
     const project = db

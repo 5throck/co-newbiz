@@ -1,4 +1,4 @@
-// GET/PUT /api/projects/[id]/establishment — S10 설립 실행 5단계, project-keyed
+// GET/PUT /api/projects/[id]/establishment — S11 설립 실행 5단계, project-keyed
 // projection (ADR-0100 §2). Mirrors the opportunity establishment route's
 // semantics (role checks, sequence enforcement, audit) but resolves rows
 // through project_id (0070), falling back to the source_opportunity_id

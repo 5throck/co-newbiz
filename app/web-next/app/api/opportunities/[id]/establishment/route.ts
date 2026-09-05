@@ -1,6 +1,6 @@
-// S10 설립 실행 기록 (entity-establishment-execution 절차, ADR-0085).
+// S11 설립 실행 기록 (entity-establishment-execution 절차, ADR-0085).
 // origin∈{internal,joint} 프로젝트의 설립 5단계 상태·증적을 기록한다 —
-// flow.spec S10 completionCriteria("origin∈{internal,joint}인 프로젝트는
+// flow.spec S11 completionCriteria("origin∈{internal,joint}인 프로젝트는
 // entity-establishment-execution 5단계 완료 기록이 존재한다")의 데이터 근거.
 // 상태는 절차 kill criteria 액션과 1:1 (halted / escalated 포함).
 import { getDb } from "../../../../../../../db/client.ts";

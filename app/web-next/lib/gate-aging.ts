@@ -62,7 +62,7 @@ export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}):
   return out.sort((a, b) => b.ageDays - a.ageDays);
 }
 
-/** D1 — S8~S11 funnel: per-project current stage + gate snapshot. */
+/** D1 — S8~S12 funnel: per-project current stage + gate snapshot. */
 export interface PipelineProject {
   projectId: string;
   projectNo: string;

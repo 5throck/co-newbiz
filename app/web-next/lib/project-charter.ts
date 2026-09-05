@@ -3,7 +3,7 @@
 // is answered on the project row itself, not re-derived from the opportunity.
 // Track-specific sections: greenfield = market-entry plan (capability /
 // channel / milestones), brownfield = investment case (target / stake /
-// staged commitment). KPIs declared here are the pre-commit the S11 venture
+// staged commitment). KPIs declared here are the pre-commit the S12 venture
 // scorecard evaluates against (C2).
 import type { Database } from "bun:sqlite";
 
@@ -97,7 +97,7 @@ export function buildProjectCharter(
   return { name, charter };
 }
 
-/** S11 bridge (C2) — charter KPI pre-commits, newest charter wins. */
+/** S12 bridge (C2) — charter KPI pre-commits, newest charter wins. */
 export function getCharterKpis(db: Database, projectId: string): CharterKpi[] {
   const row = db.query("SELECT charter_json FROM md_project WHERE id = ?").get(projectId) as
     | { charter_json: string | null }

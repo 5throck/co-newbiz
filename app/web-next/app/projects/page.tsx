@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
 
-// 프로젝트 (/projects) — S8~S11(사업성 분석·DD·투심·포트폴리오)로 이어지는
+// 프로젝트 (/projects) — S8~S12(사업성 분석·DD·투심·포트폴리오)로 이어지는
 // 프로젝트 키 화면군의 진입점. 승격된 프로젝트는 이전까지 /opportunities의
 // 딥링크로만 도달할 수 있었고 좌측 내비에 목록 화면이 없었다 — 이 페이지가
 // 그 빈틈을 채운다. 목록 화면 관례를 따라(library/glossary) 단일 단계가
@@ -40,7 +40,7 @@ export function ProjectsView() {
     <main>
       <h1>프로젝트</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        승격된 프로젝트의 사업성 분석(S8)·실사(S9)·투심(S10)·포트폴리오(S11) 화면으로 이동합니다.
+        승격된 프로젝트의 사업성 분석(S8)·실사(S9)·투심(S11)·포트폴리오(S12) 화면으로 이동합니다.
       </p>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
@@ -96,10 +96,10 @@ export function ProjectsView() {
                         실사(S9)
                       </Link>
                       <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/ic-review`}>
-                        투심(S10)
+                        투심(S11)
                       </Link>
                       <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/portfolio`}>
-                        포트폴리오(S11)
+                        포트폴리오(S12)
                       </Link>
                     </div>
                   </td>

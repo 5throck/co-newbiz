@@ -1,4 +1,4 @@
-// Gate decisions for one project — S8~S11 gates (ADR-0094/0095/0098).
+// Gate decisions for one project — S8~S12 gates (ADR-0094/0095/0098).
 // Same contract as the opportunity route: gates are HUMAN outputs (boundary
 // #2); this route records the decision a reviewer made, it does not compute
 // one. HOLD requires an explicit missing-artifacts list. The v1

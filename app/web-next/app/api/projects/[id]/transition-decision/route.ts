@@ -1,4 +1,4 @@
-// POST /api/projects/[id]/transition-decision — the S11 human-only recorder
+// POST /api/projects/[id]/transition-decision — the S12 human-only recorder
 // surface (ADR-0101 §2, ADR-0053 recorder pattern). The venture-portfolio-IC
 // makes the transition decision in the IC sitting; the session user (the
 // procedure's recorder, operated per the ADR-0100 pattern) RECORDS it here —
@@ -48,7 +48,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // 5-vocabulary — the TypeScript mirror of the 0071 CHECK.
   const decision = body?.decision;
   if (!decision || !PORTFOLIO_TRANSITIONS.includes(decision as (typeof PORTFOLIO_TRANSITIONS)[number])) {
-    return badRequest("invalid_request", `decision는 ${PORTFOLIO_TRANSITIONS.join(" | ")} 중 하나입니다 (S11 어휘 5종, flow.spec v2.0.0).`);
+    return badRequest("invalid_request", `decision는 ${PORTFOLIO_TRANSITIONS.join(" | ")} 중 하나입니다 (S12 어휘 5종, flow.spec v2.0.0).`);
   }
   // A kill is a governed decision, not a silent starve — rationale AND, for
   // kills, the learning capture are both mandatory.

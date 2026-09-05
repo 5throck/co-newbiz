@@ -2,7 +2,7 @@
 // returns only projects with an active project_member row for the caller,
 // no admin bypass (admins run the system, not deal content — role
 // separation, see lib/project-visibility.ts header). Backs the /projects
-// nav entry point added for the S8-S11 project-keyed screens (business-case,
+// nav entry point added for the S8-S12 project-keyed screens (business-case,
 // dd, ic-review, portfolio) which previously had no list-level entry point.
 import { authenticate } from "../../../lib/auth.ts";
 import { isAdminDealBlocked } from "../../../lib/project-visibility.ts";
