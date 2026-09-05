@@ -1027,6 +1027,11 @@
       "layer": "L3"
     },
     {
+      "id": "manual-authoring",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "market-data-pipeline",
       "type": "skill",
       "layer": "L3"
@@ -6961,6 +6966,98 @@
         "field": "relates_to",
         "index": 1
       }
+    },
+    {
+      "type": "composes_with",
+      "from": "manual-authoring",
+      "to": "checklist-authoring",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/manual-authoring/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "references",
+      "from": "manual-authoring",
+      "to": "checklist-authoring",
+      "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "manual-authoring",
+      "to": "documentation-writing",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/manual-authoring/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
+    },
+    {
+      "type": "follows",
+      "from": "manual-authoring",
+      "to": "governance-document-hierarchy",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/manual-authoring/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "references",
+      "from": "manual-authoring",
+      "to": "governance-document-hierarchy",
+      "source": "prose"
+    },
+    {
+      "type": "requires",
+      "from": "manual-authoring",
+      "to": "governance-document-hierarchy",
+      "source": "prerequisites",
+      "provenance": {
+        "file": "skills/manual-authoring/SKILL.md",
+        "field": "prerequisites"
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "manual-authoring",
+      "to": "handbook",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/manual-authoring/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "references",
+      "from": "manual-authoring",
+      "to": "handbook",
+      "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "manual-authoring",
+      "to": "handbook-sync-audit",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/manual-authoring/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "references",
+      "from": "manual-authoring",
+      "to": "handbook-sync-audit",
+      "source": "prose"
     },
     {
       "type": "references",
