@@ -1,57 +1,37 @@
 ---
 governance_doc_id: gov-des-05
 layer: docs-content
-title: "접근성·유니버설 디자인"
+title: "Accessibility · Universal Design"
 scope: co-newbiz
 owner_agent: design-system-agent
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: design-accessibility_ko.md
 ---
-# 화면은 누구나 문제없이 쓸 수 있어야 한다
+# Screens must work for everyone, without exception
 
-접근성(유니버설 디자인, UD)이란 "장애가 있거나 특정 기기·환경에서 작업하는 사람도 다른 사람과
-동등하게 화면을 사용할 수 있게 만드는 것"을 뜻합니다. 마우스를 쓸 수 없는 사람, 색을 구분하기
-어려운 사람, 화면 낭독기를 쓰는 사람, 움직이는 화면에 어지러움을 느끼는 사람 모두를 배제하지
-않도록 설계 단계에서부터 챙기는 항목입니다. co-newbiz에서는 이것이 "여유 있으면 나중에 고려할
-사항"이 아니라, 어떤 화면이든 배포 전에 반드시 지켜야 하는 **출하 조건**입니다. 아래 여섯 가지는
-2026-09-05 접근성 감사에서 확정된 규칙입니다.
+Accessibility (universal design, UD) means "making it so that even people with disabilities, or people working on particular devices or in particular environments, can use the screen on equal terms with everyone else." People who cannot use a mouse, people who have trouble distinguishing colors, people who use screen readers, and people who feel dizzy from moving visuals must all be included — this is something to take care of from the design stage onward, so that no one is excluded. At co-newbiz, this is not "something to consider later if there is spare time" but a **shipping condition** that every screen must satisfy before deployment. The six rules below were confirmed at the 2026-09-05 accessibility audit.
 
-1. **키보드만으로도 모든 걸 할 수 있어야 한다** — 마우스 없이 키보드(Tab, 화살표, Enter 등)만
-   써도 화면의 모든 버튼과 메뉴에 접근할 수 있어야 합니다. 지금 어떤 요소에 커서(포커스)가
-   가 있는지 항상 눈에 보이는 테두리로 표시합니다.
-2. **표는 구조가 읽혀야 한다** — 시각 장애인이 쓰는 화면 낭독기는 표를 눈이 아니라 소리로
-   전달합니다. 표에 제목을 붙이고 각 헤더가 어떤 셀들과 연결되는지 명시적으로 표시해서,
-   낭독기로 들었을 때도 "이 숫자가 어떤 행·열의 값인지" 알 수 있게 합니다. 또한 헤더와 셀의
-   정렬은 같은 열끼리 항상 일치시켜, 시각적으로도 표가 흐트러져 보이지 않게 합니다.
-3. **색으로만 상태를 구분하지 않는다** — "빨간색이면 실패, 초록색이면 성공"처럼 색에만
-   의존하면 색맹인 사용자는 구분할 수 없습니다. 그래서 상태를 나타내는 배지에는 항상 색과
-   함께 "성공" "실패" 같은 텍스트 라벨을 병기합니다.
-4. **과도한 움직임을 요구하지 않는다** — 화면이 계속 움직이거나 자동으로 슬라이드가 넘어가면
-   일부 사용자는 어지러움이나 불편을 느낄 수 있습니다. 사용자가 시스템 설정에서 "동작 줄이기"를
-   켜둔 경우, 예를 들어 로그인 화면의 움직이는 배경 이미지를 정지된 화면으로 대체하는 식으로
-   존중합니다.
-5. **아이콘만 있는 버튼에는 이름을 붙인다** — 글자 없이 아이콘 하나만 있는 버튼(예: 휴지통
-   모양)은 화면 낭독기 사용자에게는 그냥 "버튼"으로만 들립니다. 그래서 이런 버튼에는 "삭제"처럼
-   숨겨진 이름표(aria-label)를 반드시 붙여, 무엇을 하는 버튼인지 알 수 있게 합니다.
-6. **글자와 배경의 명암 대비를 충분히 확보한다** — 본문 텍스트는 배경과 최소 4.5:1 이상의
-   명암 대비를 유지해야 합니다. 저시력 사용자나 밝은 곳에서 화면을 보는 사용자도 글자를 읽을 수
-   있어야 하며, 이는 밝은 테마와 어두운 테마 양쪽 모두에서 확인합니다.
+1. **Everything must be operable with the keyboard alone** — without a mouse, every button and menu on the screen must be reachable using only the keyboard (Tab, arrow keys, Enter, etc.). There is always a clearly visible outline showing which element currently has focus.
+2. **Tables must have their structure read out** — screen readers used by visually impaired users convey tables through sound, not sight. Tables get a caption and each header is explicitly associated with the cells it covers, so that when heard through a screen reader it is clear "which row and column this number belongs to." In addition, header and cell alignment must always match within each column, so the table also looks visually tidy.
+3. **Status must never be conveyed by color alone** — if status depends only on color ("red = failure, green = success"), color-blind users cannot tell them apart. That is why status badges always pair the color with a text label such as "Success" or "Fail".
+4. **Do not demand excessive motion** — screens that constantly move or auto-advance slides can cause dizziness or discomfort for some users. When a user has enabled "reduce motion" in their system settings, we respect it — for example, by replacing an animated background image on the login screen with a static one.
+5. **Icon-only buttons must have names** — a button with only an icon and no text (e.g., a trash-can shape) sounds like just "button" to a screen reader user. So such buttons must always carry a hidden name (aria-label) such as "Delete", making it clear what the button does.
+6. **Ensure sufficient contrast between text and background** — body text must maintain a contrast ratio of at least 4.5:1 against the background. Users with low vision, or users viewing the screen in bright light, must be able to read the text; this is verified in both the light theme and the dark theme.
 
-## 🌐 외부 참고 — 업계 디자인 시스템·접근성 표준
+## 🌐 External Reference — Industry design system and accessibility standards
 
-- 색상값 자체가 아니라 **용도를 나타내는 이름**으로 토큰을 만드는 것이 표준입니다(예:
-  `color-text-primary`) — Material Design 3, https://m3.material.io/foundations/design-tokens
-  (접근일 2026-09-05)
-- 명암 대비는 디자인 문서에 적힌 숫자만으로는 보장되지 않으며, 실제 화면에서 색 조합이 그대로
-  구현됐는지 런타임으로 검증해야 한다는 지적이 있습니다 —
+- The standard is to name tokens by **what they are used for**, not by the color value itself (e.g., `color-text-primary`) — Material Design 3, https://m3.material.io/foundations/design-tokens (accessed 2026-09-05)
+- Contrast ratios cannot be guaranteed by the numbers written in a design document alone; there are arguments that they must be verified at runtime, in the actual screen, that the color combination is implemented as specified —
   https://medium.com/@SaraTariqMustafa/design-tokens-dont-fix-accessibility-they-can-hide-it-dc07534864e6
-  (접근일 2026-09-05)
-- 국제 웹 접근성 표준(WCAG 2.1)의 명암 대비 기준: 일반 텍스트 4.5:1, 큰 텍스트 3:1 —
-  https://www.w3.org/TR/WCAG21/ (접근일 2026-09-05)
+  (accessed 2026-09-05)
+- Contrast requirements of the international web accessibility standard (WCAG 2.1): 4.5:1 for normal text, 3:1 for large text —
+  https://www.w3.org/TR/WCAG21/ (accessed 2026-09-05)
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| 1~5항 | 2026-09-05 UD 감사 정비(PR #219 계열), ui-spec as-built |
-| 대비 기준 | W3C WCAG 2.1 (위 외부 참고) |
+| Items 1–5 | 2026-09-05 UD audit remediation (PR #219 series), ui-spec as-built |
+| Contrast requirements | W3C WCAG 2.1 (external reference above) |

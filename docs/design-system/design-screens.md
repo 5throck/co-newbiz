@@ -1,49 +1,37 @@
 ---
 governance_doc_id: gov-des-04
 layer: docs-content
-title: "표준 화면 패턴 P0~P5"
+title: "Standard Screen Patterns P0–P5"
 scope: co-newbiz
 owner_agent: design-system-agent
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: design-screens_ko.md
 ---
-# 12단계 화면을 처음부터 새로 디자인하지 않는 이유
+# Why the 12 stage screens are never designed from scratch
 
-신규사업 검토 과정은 S1부터 S12까지 12단계가 있고, 각 단계마다 화면이 필요합니다. 그런데
-이 12개 화면을 매번 처음부터 새로 디자인하면 일관성이 없어지고 만드는 시간도 오래 걸립니다.
-자세히 들여다보면 이 12단계의 화면들은 실제로 하는 일의 성격에 따라 5가지 유형으로 겹치는
-것을 알 수 있습니다(근거: 2026-09-01 표준화면패턴 설계문서 §3). 그래서 새 화면을 만들 때는
-이 5가지 유형 중 어디에 해당하는지부터 판단하고, 거기 맞는 패턴을 재사용합니다.
+The new business review process has 12 stages, S1 through S12, and each stage needs its own screens. If these 12 screens were designed from scratch every time, consistency would suffer and building them would take a long time. Looked at closely, the screens of these 12 stages actually fall into 5 types according to the nature of what they do (basis: 2026-09-01 standard screen patterns design doc §3). So when building a new screen, the first step is to determine which of these 5 types it belongs to, and then reuse the matching pattern.
 
-| 패턴 | 무슨 화면인가 | 어떤 단계에서 쓰이는가 |
+| Pattern | What kind of screen | Which stages use it |
 |---|---|---|
-| **P0 Shell**(공통 골격) | 모든 화면에 공통으로 들어가는 뼈대 — 상단 헤더, 좌측 메뉴, 진행 단계 표시줄 | 전체 화면 공통 |
-| **P1 Registry**(목록·등록) | 여러 항목을 쭉 나열하고 고르는 화면 | S6 후보 롱리스트, S7 숏리스트 |
-| **P2 Report**(리포트 열람) | 분석 결과를 읽기만 하는 화면 | S1 시장분석, S9 실사 리포트 |
-| **P3 Decision**(판정·채점) | 사람이 직접 승인·거절 등을 결정하는 화면 | S3/S4/S7 판정, S10 투자구조, S11 투자심의 |
-| **P4 Execution**(실행·체크리스트) | 할 일 목록을 하나씩 처리해가는 화면 | S5, S9 체크리스트, S11 설립 실행, S8 파이프라인 |
-| **P5 Monitoring**(모니터링) | 진행 상황을 실시간으로 지켜보는 대시보드 | S12, 파이프라인 현황판 |
+| **P0 Shell** (common skeleton) | The skeleton shared by every screen — top header, left menu, stage progress bar | Common to all screens |
+| **P1 Registry** (list · registration) | Screens that list many items and let you pick among them | S6 candidate long list, S7 short list |
+| **P2 Report** (report reading) | Screens for reading analysis results only | S1 market analysis, S9 due diligence report |
+| **P3 Decision** (decision · scoring) | Screens where a human directly decides to approve or reject, etc. | S3/S4/S7 decisions, S10 investment structure, S11 investment review |
+| **P4 Execution** (execution · checklist) | Screens for working through a to-do list item by item | S5, S9 checklist, S11 incorporation execution, S8 pipeline |
+| **P5 Monitoring** (monitoring) | Dashboards for watching progress in real time | S12, pipeline status board |
 
-두 가지 추가 규칙이 있습니다. 한 단계가 여러 패턴을 동시에 필요로 하면 위에서 아래 순서로
-배치하고, 패턴이 바뀌는 경계는 소제목 형태의 구분선(SectionToolbar)으로 표시합니다. 또한
-앞 단계가 끝나지 않았는데 다음 단계를 "완료"로 표시할 수는 없습니다 — 이는 화면의 표시 방식이
-아니라 시스템 자체가 지키는 규칙과 동일하게 화면에도 그대로 반영됩니다.
+Two additional rules apply. When a single stage needs multiple patterns at once, they are laid out top to bottom in that order, and each boundary where the pattern changes is marked with a subheading-style divider (SectionToolbar). Also, a later stage can never be marked "complete" while an earlier stage is not finished — just as the system itself enforces this rule, it is reflected as-is on the screen; it is not merely a display convention.
 
-## 🌐 외부 참고 — 업계는 업무용 화면을 어떻게 분류하는가
+## 🌐 External Reference — How does the industry classify business screens?
 
-업계에서도 대시보드를 세 가지로 분류합니다 — **operational**(실시간으로 일상 업무를
-추적하는 화면), **analytical**(과거 데이터를 탐색해 추세를 찾는 화면), **strategic**(경영진을
-위한 고수준 요약 화면). 그리고 화면 설계는 "이 화면에서 사용자가 어떤 결정을 내려야 하는가"에서
-출발해야 하며, 한 화면에는 하나의 명확한 결론만 담아야 한다는 것이 공통된 권고입니다. co-newbiz의
-P1~P5 분류는 이 3분류에 목록형·리포트형 화면을 더해 5개로 세분화한 것에 해당하며, P5는
-operational 대시보드에, P2는 analytical 리포트에 가장 가깝습니다. 관리자용 도구 화면의 표준
-레이아웃(좌측 고정 메뉴 + 상단바)도 co-newbiz의 P0 공통 골격과 구조가 일치합니다. 출처·상세는
-[docs/research/dashboard-screen-patterns.md] 문서 참조 (조사일 2026-09-05).
+The industry also classifies dashboards into three kinds — **operational** (screens tracking day-to-day work in real time), **analytical** (screens for exploring past data to find trends), and **strategic** (high-level summary screens for executives). And the common advice is that screen design should start from "what decision must the user make on this screen," and that a single screen should carry only one clear conclusion. co-newbiz's P1–P5 classification corresponds to subdividing those three categories into five by adding list-type and report-type screens; P5 is closest to an operational dashboard and P2 to an analytical report. The standard layout for admin tool screens (fixed left menu + top bar) also matches the structure of co-newbiz's P0 common skeleton. For sources and details, see [docs/research/dashboard-screen-patterns.md] (surveyed 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| 패턴 정의 | docs/designs/2026-09-01-standard-screen-patterns-design_ko.md §3~5 |
-| S10 추가 | flow.spec v2.2.0, ADR-0106 |
-| 화면 패턴 분류 관행 | docs/research/dashboard-screen-patterns.md |
+| Pattern definitions | docs/designs/2026-09-01-standard-screen-patterns-design_ko.md §3–5 |
+| S10 addition | flow.spec v2.2.0, ADR-0106 |
+| Screen pattern classification practice | docs/research/dashboard-screen-patterns.md |

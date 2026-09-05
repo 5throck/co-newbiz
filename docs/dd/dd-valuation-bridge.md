@@ -1,54 +1,38 @@
 ---
 governance_doc_id: gov-dd-06
 layer: docs-content
-title: "DD→밸류에이션 브릿지"
+title: "DD→Valuation Bridge"
 scope: co-newbiz
 owner_agent: valuation-agent
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: dd-valuation-bridge_ko.md
 ---
-# 실사 결과가 실제 투자 결정에 어떻게 반영되는가
+# How due diligence results feed into the actual investment decision
+> **Language**: **English** · [한국어](dd-valuation-bridge_ko.md)
 
-아무리 꼼꼼하게 실사를 진행해도, 그 결과가 실제 투자 조건에 반영되지 않으면 실사는 서류함에
-쌓이는 보고서에 불과합니다. 이 문서는 [DD 발견사항 기록 규칙]에 따라 정식
-기록된 발견사항이, 최종적으로 투자심의위원회(IC)의 승인 여부에까지 어떻게 이어지는지를
-설명합니다.
+No matter how rigorously due diligence is conducted, if its results are not reflected in the actual investment terms, DD is just another report shelved in a drawer. This document explains how findings formally recorded under [the DD findings recording rules] ultimately flow through to the Investment Committee's (IC) approval decision.
 
-## 발견에서 투자 판단까지, 세 단계
+## From finding to investment judgment, in three steps
 
-1. **금액으로 환산된 발견사항**(`dd_finding.value_impact`, KRW 백만원 단위)이 각 발견의
-   정량적 영향을 나타냅니다. 예를 들어 "핵심 고객 이탈 리스크로 연간 매출 30억원 감소 가능"처럼,
-   앞선 문서에서 설명한 원칙에 따라 숫자로 표현됩니다.
-2. 이 금액은 앞서(S8 단계에서) 만들어둔 사업 계획의 세 가지 시나리오 — **하방(비관적)**,
-   **base(기본)**, **상방(낙관적)** — 에 반영되어, 실사 전에는 몰랐던 리스크·기회를 계획에
-   녹여냅니다.
-3. 이렇게 조정된 결과가 투자심의위원회에 올라가는 최종 패키지의 재무 요약과, 이 투자안이
-   전반적으로 얼마나 신뢰할 만한지를 나타내는 **RAG 등급**(적신호·주의·안전 신호등 방식의 평가)
-   산출로 이어집니다.
+1. **Findings converted into amounts** (`dd_finding.value_impact`, in KRW millions) express the quantitative impact of each finding. For example, "core customer churn risk could reduce annual revenue by KRW 3 billion" — expressed as a number, per the principles described in the earlier document.
+2. These amounts are reflected into the three scenarios of the business plan built earlier (at Stage S8) — **downside (pessimistic)**, **base**, and **upside (optimistic)** — folding risks and opportunities unknown before due diligence into the plan.
+3. The adjusted results flow into the financial summary of the final package submitted to the Investment Committee, and into an overall **RAG grade** (a traffic-light style rating: red / amber / green) expressing how reliable the investment proposal is overall.
 
-## 지켜야 할 두 가지 규칙
+## Two rules that must be upheld
 
-- **금액이 없으면 올라가지 않는다** — 어떤 발견사항이든 투자심의위원회 패키지에 반영되려면
-  value_impact(금액)가 있거나, 없다면 "왜 금액으로 환산할 수 없는지" 명확한 사유가 있어야
-  합니다. "발견은 했는데 숫자는 없다"는 상태로는 최종 판단에 반영될 수 없습니다.
-- **정보의 신뢰도가 등급의 한계를 정한다** — 아무리 재무 수치가 좋아 보여도, 그 근거가 되는
-  정보의 신뢰도(data confidence)가 낮으면 전체 RAG 등급은 그 수준 이상으로 올라갈 수 없습니다.
-  즉 "숫자는 좋은데 출처가 부실하다"는 상황에서, 숫자만 보고 낙관적으로 판단하지 못하도록 막는
-  안전장치입니다.
+- **No amount, no entry** — for any finding to be reflected in the IC package, it must carry a value_impact (amount), or, if it does not, a clear stated reason for why it cannot be converted into money. A finding left as "discovered but unquantified" cannot be reflected in the final judgment.
+- **Information confidence caps the grade** — no matter how good the financial figures look, if the confidence of the underlying information (data confidence) is low, the overall RAG grade cannot rise above that level. This is a safeguard against judging optimistically on the numbers alone when "the numbers are good but the sources are weak."
 
-## 🌐 외부 참고 — 업계에서도 발견사항이 이런 식으로 가격에 반영되는가
+## 🌐 External Reference — Does the industry reflect findings into price this way too
 
-네, 이 구조는 업계 M&A 관행과 원리가 같습니다. 업계에서는 실사를 통해 정상화한 이익(Quality of
-Earnings)에 배수를 곱해 최종 가격을 계산하며, 부채성 항목은 그 배수 계산과 별개로 가격에서 직접
-차감됩니다. 또한 매도자와 매수자가 각자 독립적으로 정상화 이익을 계산해서 서로의 결과가 10~15%
-이내로 수렴하는지 확인하는 것이 2026년 기준의 표준 관행입니다 — 두 계산이 크게 어긋나면 그
-차이 자체가 협상의 쟁점이 됩니다. 출처·상세는 [docs/research/dd-findings-quantification.md] 문서
-참조 (조사일 2026-09-05).
+Yes, this structure shares its principles with industry M&A practice. The industry computes the final price by applying a multiple to earnings normalized through due diligence (Quality of Earnings), while debt-like items are deducted directly from the price, separately from that multiple calculation. Also standard practice as of 2026: the seller and buyer each independently compute normalized earnings and check whether their results converge within 10–15% — when the two computations diverge materially, the difference itself becomes a negotiation issue. See the [docs/research/dd-findings-quantification.md] document for sources and details (research date 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| 브릿지 절차 | skills/dd-to-valuation-bridge, ADR-0098 |
-| 상한 제한 | docs/governance/rag-framework.md, ic-package 라우트 주석 |
-| QoE 브릿지 관행 | docs/research/dd-findings-quantification.md |
+| Bridge procedure | skills/dd-to-valuation-bridge, ADR-0098 |
+| Grade capping | docs/governance/rag-framework.md, ic-package route comments |
+| QoE bridge practice | docs/research/dd-findings-quantification.md |

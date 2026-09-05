@@ -1,46 +1,32 @@
 ---
 governance_doc_id: gov-dd-07
 layer: docs-content
-title: "DD 운영 모범 사례"
+title: "DD Operating Best Practices"
 scope: co-newbiz
 owner_agent: process-governance-manager
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: dd-best-practices_ko.md
 ---
-# 실사를 실제로 진행할 때 지켜야 할 다섯 가지 습관
+# Five habits to keep when actually conducting due diligence
+> **Language**: **English** · [한국어](dd-best-practices_ko.md)
 
-[DD 개요]에서 실사의 목적과 절차를 설명했다면, 이 문서는 "그래서 실무에서 어떻게
-움직여야 하는가"를 다룹니다. 아래 다섯 가지는 co-newbiz의 내부 규칙과 M&A 업계의 일반적인 모범
-관행을 결합한 것입니다.
+Where [the DD overview] explained the purpose and procedure of due diligence, this document covers "so how should we actually operate in practice." The following five habits combine co-newbiz's internal rules with general M&A industry best practices.
 
-1. **한 사람 말만 믿지 않는다(삼각검증)** — 중요한 주장일수록 서로 무관한 출처 2~3곳에서
-   같은 이야기가 나오는지 확인합니다. 예를 들어 "이 회사 매출이 꾸준히 성장하고 있다"는 주장을
-   경영진 발표 자료 한 장만 보고 받아들이지 않고, 실제 세금계산서·주요 고객 인터뷰·업계 통계로
-   교차 확인하는 식입니다. (체크리스트 cdd-07 항목과 같은 원칙)
-2. **전문가에게 물어볼 때는 순서가 있다(전문가 인터뷰)** — 처음에는 시장 전반의 흐름처럼 넓은
-   질문으로 시작해서, 점점 구체적인 재무·운영 세부사항으로 좁혀갑니다. 이때 두 가지를 반드시
-   지켜야 합니다. 첫째, 인터뷰 대상이 갖고 있을 수 있는 미공개 중요 정보(MNPI)를 캐묻는
-   질문이 되지 않도록 컴플라이언스를 확인합니다. 둘째, "그럼 성장하고 있다는 거죠?"처럼 답을
-   유도하는 질문이나, 먼저 들은 의견에 이후 판단이 끌려가는 현상(앵커링)을 피해야 합니다.
-3. **말보다 증거를 남긴다** — 통화나 메일로 전달받은 내용보다 문서로 남는 증적을 우선합니다.
-   증적 없이 "누가 그렇게 말했다"에만 의존한 발견사항은 신뢰도 등급을 자동으로 **C등급**으로
-   낮춰 기록합니다 — 신뢰할 수 없는 정보라는 사실 자체를 숨기지 않기 위함입니다.
-4. **문제를 발견하면 미루지 않는다(조기 에스컬레이션)** — 필수 항목에서 리스크 징후가 보이면,
-   실사가 다 끝날 때까지 기다리지 않고 그 즉시 예외처리(waiver) 또는 중단(kill) 검토에 들어갑니다.
-   자세한 판단 기준은 [waiver·kill criteria] 문서를 참고하세요.
-5. **성급하게 확정하지 않는다** — 모든 판정은 "아직 모름(미정)" 상태에서 시작하며, 조사가 실제로
-   끝나기 전까지는 추측만으로 통과·실패를 확정하지 않습니다.
+1. **Trust no single voice (triangulation)** — the more important a claim, the more you confirm that the same story emerges from 2–3 independent sources. For example, do not accept the claim "this company's revenue has grown steadily" on the strength of a single management presentation; cross-check it against actual tax invoices, interviews with major customers, and industry statistics. (The same principle as checklist item cdd-07.)
+2. **There is an order to asking experts (expert interviews)** — start with broad questions about overall market dynamics and progressively narrow toward specific financial and operational details. Two things must be observed here. First, verify compliance so that no question probes for material non-public information (MNPI) the interviewee might hold. Second, avoid leading questions that elicit a desired answer ("so you are growing, right?") and anchoring — the phenomenon where judgments made after hearing an opinion get dragged toward the first view heard.
+3. **Leave evidence, not words** — prefer documentary evidence over what was conveyed in calls or emails. A finding relying solely on "someone said so" without corroboration is automatically recorded at a lowered confidence grade of **C** — the point is not to hide the fact that the information is unreliable.
+4. **Do not defer problems once found (early escalation)** — as soon as signs of risk appear on a mandatory item, begin reviewing waiver or kill immediately rather than waiting for due diligence to finish. For detailed decision criteria, see the [waiver & kill criteria] document.
+5. **Do not finalize prematurely** — every determination starts in the "not yet known (undetermined)" state, and pass/fail is never finalized by guesswork before the investigation has actually concluded.
 
-## 🌐 외부 참고 — 전문가 인터뷰는 업계에서 어떻게 하는가
+## 🌐 External Reference — How does the industry conduct expert interviews
 
-사모펀드(PE) 업계의 표준 관행도 위 2번 원칙과 거의 동일합니다 — 넓은 시장 트렌드 질문에서
-시작해 재무·운영 세부로 좁혀가고, 전문가 네트워크를 이용할 때는 미공개 정보(MNPI) 컴플라이언스를
-반드시 확인하며, 여러 전문가에게 같은 질문을 던져 교차검증하고 질문 순서로 인한 편향(앵커링)을
-경계합니다. 출처·상세는 [docs/research/expert-interview-practice.md] 문서 참조 (조사일 2026-09-05).
+Standard practice in the private equity (PE) industry is nearly identical to principle 2 above — start with broad market-trend questions and narrow toward financial and operational detail, verify MNPI compliance when using expert networks, ask the same question of multiple experts to cross-validate, and guard against ordering-induced bias (anchoring). See the [docs/research/expert-interview-practice.md] document for sources and details (research date 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| 1, 5 | checklist cdd-07, dd-tailor 신뢰도 규칙 |
+| 1, 5 | checklist cdd-07, dd-tailor confidence rules |
 | 2 | guide-expert-interview + docs/research/expert-interview-practice.md |

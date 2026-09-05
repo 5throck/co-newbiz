@@ -1,3 +1,7 @@
+---
+lang: en
+---
+
 # Research Report: Best Practice for the Readiness-Audit Gap Areas
 
 > **Provenance:** researched by the PM (inline, 2026-08-23), as input to [`docs/audits/2026-08-23-readiness-audit.md`](../audits/2026-08-23-readiness-audit.md) and the gap-remediation design. Method: direct WebFetch (channel verified working this session). The Z.ai search backend (built-in WebSearch + web-reader MCP) returned quota-exhausted for every query (resets 2026-09-01) — same condition under which `rbd-research2` produced `rbd-partnership-best-practice.md` via WebFetch. Successful fetches this session (7): GAO-20-48G product page, Wikipedia (reference class forecasting, expert elicitation, corporate venture capital, balanced scorecard), OMG DMN, stage-gate.com landing. Failed fetches, recorded honestly: iso.org 403, bcg.com 403, gao.gov full PDF > 10 MB limit, stage-gate.com sub-path 404. Claims below are marked with their fetched source; widely-documented practice not traceable to a fetched URL is marked `[practice]`. Consultancy/ISO primary pages should be re-fetched after 2026-09-01 as a supplement — no decision in the remediation design waits on them.

@@ -4,6 +4,8 @@ translated_from_hash: PLACEHOLDER
 lang: ko
 lang_reason: source-material
 ---
+counterpart: operations-manual.md
+---
 
 # 운영 매뉴얼 — 시스템 운영자
 

@@ -6,59 +6,40 @@ scope: co-newbiz
 owner_agent: compliance-officer
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: dd-waiver-kill_ko.md
 ---
-# 예외를 인정할 때와, 아예 멈춰야 할 때
+# When exceptions are allowed, and when to stop entirely
+> **Language**: **English** · [한국어](dd-waiver-kill_ko.md)
 
-실사([DD 개요])를 진행하다 보면 필수 항목을 완벽히 통과하지 못하는 경우가
-생깁니다. 이때 두 가지 갈림길이 있습니다 — 사정을 감안해 예외로 넘어가거나(waiver), 아니면
-이 딜 자체를 멈추는 것(kill criteria)입니다. 이 문서는 그 갈림길에서 어떤 기준으로 판단하는지
-설명합니다.
+While carrying out due diligence (see [the DD overview]), there will be cases where a mandatory item cannot be fully passed. At that point there are two forks — granting an exception in light of the circumstances (waiver), or halting the deal itself (kill criteria). This document explains the criteria used to decide at that fork.
 
-## waiver — 예외를 인정하되, 아무렇게나 인정하지 않는다
+## waiver — exceptions are allowed, but never granted casually
 
-체크리스트에서 "필수(mandatory)"로 표시된 항목을 충족하지 못했다면, 원칙적으로 다음 단계로
-넘어갈 수 없습니다. 다만 상황에 따라 정식으로 승인된 예외(waiver)가 있으면 통과할 수 있습니다.
-이때 지켜야 할 규칙이 있습니다.
+If a checklist item marked "mandatory" is not satisfied, in principle you cannot move to the next stage. However, depending on the situation, you may pass if there is a formally approved exception (waiver). Rules apply here:
 
-- waiver를 승인할 때는 **사유, 승인자, 만료일**을 반드시 함께 기록해야 합니다. "이번 한 번만
-  봐준다"는 식으로 구두로 넘어가는 것은 허용되지 않습니다.
-- 애초에 "waiver 불가능"으로 지정된 필수 항목은 예외가 없습니다 — 이런 항목을 충족하지
-  못했다면 그것은 waiver의 대상이 아니라 곧바로 **KILL**(중단)을 의미합니다.
-- 반면 "권장(mandatory가 아닌)" 항목이 빠졌을 때는 정식 waiver 절차 없이, 그냥 이유를
-  설명하는 진술 정도로 충분합니다. 권장 항목까지 waiver 승인 절차를 거치게 하면 정작 중요한
-  필수 항목의 waiver 심사가 형식적으로 흘러갈 위험이 있기 때문입니다.
+- When approving a waiver, the **reason, approver, and expiry date** must be recorded together. A verbal "we'll let it slide just this once" is not permitted.
+- Mandatory items designated "waiver-ineligible" from the start have no exceptions — failing such an item is not a candidate for waiver but means an immediate **KILL** (stop).
+- Conversely, when a "recommended" (non-mandatory) item is missing, no formal waiver procedure is needed; a statement explaining the reason suffices. The reason: routing recommended items through waiver approval as well risks diluting the review of waivers on genuinely important mandatory items into a formality.
 
-## kill criteria — 이 조건에 걸리면 딜을 멈춘다
+## kill criteria — if any of these conditions hit, the deal stops
 
-다음과 같은 상황에서는 프로젝트를 그대로 정지시킵니다. 이는 "웬만하면 다시 검토해보자"는
-권고사항이 아니라, 구속력 있는 규칙입니다.
+In the following situations the project is halted outright. These are not advisory "let's take another look if we can" suggestions but binding rules:
 
-- 신뢰도가 낮은 대체 정보(proxy)로만 확인했는데, 그 등급이 B 이하인 상태로 더 상위 단계로
-  넘어가려 하는 경우
-- waiver가 아예 불가능한 필수 실사 항목을 충족하지 못한 경우
-- 애초에 사전에 걸러내기로 정한 배제 규칙(4단계에서 정한 규칙)에 걸리는 대안만 남은 경우
+- The item was verified only with low-confidence substitute information (a proxy), at grade B or below, and the process is attempting to move to a higher stage in that state
+- A mandatory due diligence item for which waiver is entirely impossible was not satisfied
+- Only alternatives remain that fall under the pre-defined exclusion rules (the rules set at Stage 4)
 
-이 kill criteria 중 하나라도 해당하면 어떤 담당자나 검토자도 혼자서 예외를 인정할 수 없습니다.
-반드시 그룹 투자심의위원회(Group IC)의 명시적인 결정이 있어야만 예외를 논의할 수 있습니다 —
-한 사람의 판단으로 중단 기준을 무마시킬 수 없도록 설계된 안전장치입니다.
+If any one of these kill criteria applies, no officer or reviewer may grant an exception alone. Only an explicit decision by the Group Investment Committee (Group IC) can open the door to discussing an exception — this is a safeguard designed so that a single person's judgment cannot soften the stop criteria.
 
-## 🌐 외부 참고 — 업계에서는 언제 딜을 멈추는가
+## 🌐 External Reference — When does the industry stop a deal
 
-업계 M&A에서 딜을 실제로 깨는 기준도 co-newbiz와 비슷한 두 축으로 요약됩니다 — 문제의
-**중대성**과, 그 문제를 **금액으로 정확히 얼마인지 계산할 수 있는지** 여부입니다. 리스크의
-범위를 명확히 알 수 있고 가격조정·손해배상 약정·에스크로(보관금) 등으로 계약상 처리가
-가능하다면 협상으로 풀어가지만, 규모조차 가늠할 수 없는 "블랙박스" 리스크라면 철회하는 것이
-합리적이라는 것이 공통된 결론입니다. 한편 대출 약정(covenant) 위반에 대한 예외(waiver) 실무를
-보면, 예외는 반드시 "이번 위반 한 건에만 한정된다"는 것을 문서로 명확히 남겨야 합니다 — 그렇지
-않으면 반복적인 눈감아주기가 "사실상 상시로 봐주기로 했다"는 암묵적 합의로 해석될 위험이
-있습니다. co-newbiz가 waiver마다 만료일을 반드시 기록하도록 강제하는 것은 바로 이 실패
-사례를 구조적으로 막기 위함입니다. 출처·상세는 [docs/research/dd-dealbreaker-criteria.md] 문서
-참조 (조사일 2026-09-05).
+In industry M&A, the criteria that actually break deals also reduce to two axes similar to co-newbiz's — the **materiality** of the problem, and whether the problem **can be precisely quantified in money terms**. The common conclusion: if the scope of a risk is clear and it can be handled contractually through price adjustments, indemnity clauses, or escrow, it is negotiated through; but an unquantifiable "black box" risk whose very scale cannot be gauged is rationally walked away from. Meanwhile, waiver practice around loan covenant breaches shows that a waiver must be clearly documented as "limited to this single breach" — otherwise repeated forbearance risks being interpreted as an implicit agreement of "effectively ongoing forbearance." co-newbiz forces an expiry date on every waiver precisely to structurally prevent this failure pattern. See the [docs/research/dd-dealbreaker-criteria.md] document for sources and details (research date 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| waiver 규칙 | business-manual §체크리스트, skills/waiver-management |
-| kill criteria 6항목 | policies/group/neb-policy §4, ADR-0008 |
-| 딜브레이커·waiver 관행 | docs/research/dd-dealbreaker-criteria.md |
+| Waiver rules | business-manual §checklist, skills/waiver-management |
+| Six kill criteria | policies/group/neb-policy §4, ADR-0008 |
+| Dealbreaker and waiver practice | docs/research/dd-dealbreaker-criteria.md |

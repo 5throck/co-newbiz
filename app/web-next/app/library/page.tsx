@@ -48,7 +48,7 @@ function MarkdownView({ text }: { text: string }) {
   return <div className="library-doc-body" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-function DocViewer({ docs }: { docs: DocSummary[] }) {
+function DocViewer({ docs, allDocs }: { docs: DocSummary[]; allDocs: DocSummary[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DocContent | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +64,15 @@ function DocViewer({ docs }: { docs: DocSummary[] }) {
       .then((r) => setDetail(r.data))
       .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
   }, [selectedId]);
+
+  // 페어 문서 전환 — frontmatter의 `counterpart:` 파일을 같은 카테고리 목록에서 찾는다.
+  const counterpartDoc = useMemo(() => {
+    if (!detail) return null;
+    const m = detail.content.match(/^counterpart:\s*(\S+)\s*$/m);
+    if (!m) return null;
+    const targetFile = detail.file.replace(/[^/]+$/, m[1]);
+    return allDocs.find((d) => d.file === targetFile) ?? null;
+  }, [detail, allDocs]);
 
   return (
     <div className="library-layout">
@@ -98,6 +107,15 @@ function DocViewer({ docs }: { docs: DocSummary[] }) {
           <>
             <div className="library-content-head">
               <h2 className="library-content-title">{detail.title}</h2>
+              {counterpartDoc && (
+                <button
+                  type="button"
+                  className="library-tab"
+                  onClick={() => setSelectedId(counterpartDoc.id)}
+                >
+                  {counterpartDoc.lang === "ko" ? "한국어로 보기" : "Read in English"}
+                </button>
+              )}
               <code className="library-doc-path">{detail.file}</code>
             </div>
             <MarkdownView text={detail.content} />
@@ -120,11 +138,20 @@ const CATEGORY_TABS: Array<{ category: Category; label: string }> = [
   { category: "dd", label: "DD 실사" },
 ];
 
+// 언어 필터 — 기본값은 한국어(ADR-0108 문서 언어 규약: 본문 원본은 한국어 우선).
+type LangFilter = "ko" | "en" | "all";
+const LANG_FILTERS: Array<{ value: LangFilter; label: string }> = [
+  { value: "ko", label: "한국어" },
+  { value: "en", label: "English" },
+  { value: "all", label: "전체" },
+];
+
 // ── 페이지 ─────────────────────────────────────────────────────────────────
 export function LibraryView() {
   const [docs, setDocs] = useState<DocSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [docCategory, setDocCategory] = useState<Category>("policy");
+  const [langFilter, setLangFilter] = useState<LangFilter>("ko");
 
   useEffect(() => {
     api
@@ -133,7 +160,13 @@ export function LibraryView() {
       .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
   }, []);
 
-  const docList = useMemo(() => (docs ?? []).filter((d): d is DocSummary => d.category === docCategory), [docs, docCategory]);
+  const docList = useMemo(
+    () =>
+      (docs ?? []).filter(
+        (d): d is DocSummary => d.category === docCategory && (langFilter === "all" || d.lang === langFilter),
+      ),
+    [docs, docCategory, langFilter],
+  );
 
   return (
     <main>
@@ -151,6 +184,20 @@ export function LibraryView() {
         <p>불러오는 중...</p>
       ) : (
         <>
+          <div className="library-tabs" role="tablist" aria-label="문서 언어">
+            {LANG_FILTERS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={langFilter === value}
+                className={`library-tab ${langFilter === value ? "library-tab-active" : ""}`}
+                onClick={() => setLangFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="library-tabs" role="tablist" aria-label="문서 종류">
             {CATEGORY_TABS.map(({ category, label }) => (
               <button
@@ -165,7 +212,7 @@ export function LibraryView() {
               </button>
             ))}
           </div>
-          <DocViewer docs={docList} />
+          <DocViewer docs={docList} allDocs={docs} />
         </>
       )}
     </main>

@@ -1,93 +1,67 @@
 ---
 governance_doc_id: gov-dd-01
 layer: docs-content
-title: "DD 개요·프로세스"
+title: "DD Overview & Process"
 scope: co-newbiz
 owner_agent: process-governance-manager
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: dd-overview_ko.md
 ---
-# DD(실사)란 무엇이고, 이 회사는 왜 하는가
+# What is DD (Due Diligence), and why does this company do it
+> **Language**: **English** · [한국어](dd-overview_ko.md)
 
-**실사**(Due Diligence, 이하 DD)란 어떤 회사를 인수하거나 새로운 사업을 시작하기 전에,
-"우리가 알고 있는 정보가 사실인지, 그리고 어떤 위험이 숨어 있는지"를 꼼꼼히 확인하는 검증
-단계입니다. 집을 사기 전에 등기부등본을 떼어보고, 누수는 없는지 살펴보고, 주변 시세를
-알아보는 것과 같은 원리입니다 — 다만 대상이 집이 아니라 회사 전체이기 때문에, 재무·법률·기술·
-시장·조직 등 여러 각도에서 동시에 들여다봐야 합니다.
+**Due diligence** (DD) is a verification step performed before acquiring a company or starting a new business, in which you carefully confirm "whether the information we have is actually true, and what risks may be hidden." It follows the same logic as checking the property registry, looking for leaks, and researching local market prices before buying a house — except the subject is not a house but an entire company, so you have to examine it simultaneously from multiple angles: financial, legal, technical, market, and organizational.
 
-co-newbiz의 신규사업 검토 절차에서 DD는 12단계(S1~S12) 중 아홉 번째 단계인 **S9**에
-해당합니다. 이 단계는 두 가지 상황에서 성격이 조금 다르게 적용됩니다.
+In co-newbiz's new business review process, DD corresponds to **S9**, the ninth of the twelve stages (S1–S12). This stage is applied somewhat differently in two situations:
 
-- **Brownfield(브라운필드)** — 이미 존재하는 회사를 인수하거나 지분투자하는 경우입니다. 이때
-  DD는 "이 회사가 우리에게 보여준 자료가 실제와 일치하는가"를 확인하는, 말 그대로 대상 기업에
-  대한 실사입니다.
-- **Greenfield(그린필드)** — 기존 회사를 사는 것이 아니라, 우리가 직접 새 사업을 신설해
-  진출하는 경우입니다. 검증할 대상 기업이 없으므로, 대신 우리 자신이 세운 진출 전략과 비용
-  구조(앞선 S5~S8 단계에서 만든 계획)가 현실적으로 실현 가능한지를 검증합니다.
+- **Brownfield** — the case of acquiring or making an equity investment in an already existing company. Here, DD is due diligence on the target company in the literal sense: verifying "whether the materials this company has shown us match reality."
+- **Greenfield** — the case of not buying an existing company but entering a new business by building it ourselves. Since there is no target company to verify, we instead validate whether our own entry strategy and cost structure (the plans built in the earlier S5–S8 stages) are realistically feasible.
 
-## 전체 흐름 속에서 DD의 위치
+## Where DD sits in the overall flow
 
-DD는 혼자 존재하는 단계가 아니라 앞뒤 단계와 이어진 사슬의 한 고리입니다.
+DD is not a standalone stage but one link in a chain connected to the stages before and after it.
 
-**S8 사업성 분석**(이 사업이 돈이 되는가에 대한 1차 계산) → **S9 DD**(그 계산의 전제가 사실인지
-검증) → **S10 투자구조 설계**(어떤 방식·회사 구조로 투자할지 결정) → **S11 투자심의위원회(IC)
-심의**(최종 승인 여부 결정)
+**S8 business viability analysis** (the first-pass calculation of whether this business makes money) → **S9 DD** (verifying whether the assumptions behind that calculation are true) → **S10 investment structure design** (deciding how and through what company structure to invest) → **S11 Investment Committee (IC) review** (final approval decision)
 
-즉 DD는 "숫자로 만든 계획"과 "실제로 승인 가능한 투자안" 사이를 잇는 다리 역할을 합니다. DD에서
-나온 발견사항이 부실하면, 그 뒤에 아무리 정교한 투자구조를 설계해도 잘못된 전제 위에 지은 집이
-됩니다.
+In other words, DD serves as the bridge between "a plan made of numbers" and "an investment proposal that can actually be approved." If the findings that come out of DD are weak, no matter how sophisticated the investment structure designed afterwards, it will be a house built on wrong premises.
 
-## 7개 조사 영역(도메인)
+## The 7 investigation areas (domains)
 
-DD는 한 사람이 모든 걸 들여다보는 것이 아니라, 전문 영역별로 나눠서 진행합니다. co-newbiz는
-다음 7개 영역을 표준으로 둡니다 — 각 영역이 실제로 무엇을 확인하는지는 [도메인별 실사
-가이드]에서 더 자세히 다룹니다.
+DD is not done by one person looking at everything; it is divided by area of expertise. co-newbiz uses the following 7 areas as its standard — what each area actually checks is covered in more detail in [the domain-specific DD guide].
 
-| 영역 | 쉽게 말하면 |
+| Area | In plain terms |
 |---|---|
-| commercial(상업) | 이 사업이 팔릴 시장이 진짜 있는가 |
-| technical(기술) | 쓰겠다는 기술·설비가 실제로 작동하고 오래 가는가 |
-| legal(법무) | 소유권이 깨끗하고 소송·규제 문제가 없는가 |
-| financial(재무) | 장부에 적힌 숫자를 믿을 수 있는가 |
-| hr(인사·조직) | 핵심 인력이 남을지, 처우에 숨은 부담은 없는지 |
-| market(시장) | 애초의 시장 판단이 여전히 맞는지 재확인 |
-| financing(자금조달) | 실제로 돈을 마련할 수 있는 구조인지 |
+| commercial | Is there really a market in which this business can be sold |
+| technical | Do the technology and equipment we plan to use actually work and last |
+| legal | Is ownership clean, with no litigation or regulatory issues |
+| financial | Can the numbers in the books be trusted |
+| hr | Will key people stay, and are there hidden burdens in their compensation |
+| market | Re-confirming whether the original market judgment still holds |
+| financing | Is the structure actually capable of raising the required money |
 
-각 영역마다 확인해야 할 세부 항목 목록(체크리스트)이 미리 정해져 있고, 그중 "필수(mandatory)"로
-표시된 항목은 원칙적으로 통과해야 다음 단계로 넘어갈 수 있습니다. 예외적으로 통과시키려면
-정식으로 승인된 예외처리(waiver)가 있어야 하며, 이에 대해서는 [waiver·kill
-criteria] 문서에서 다룹니다.
+For each area there is a predefined list of detailed items to check (a checklist), and in principle you cannot move to the next stage unless the items marked "mandatory" pass. To pass them exceptionally, a formally approved waiver is required, which is covered in the [waiver & kill criteria] document.
 
-## 진행 규칙 — 왜 "미정"에서 시작하는가
+## Operating rules — why we start from "undetermined"
 
-이 단계의 조사 결과는 처음부터 통과/실패로 정해 두지 않습니다. 모든 체크리스트 항목은 **"아직
-확인되지 않음(미정)"** 상태로 시작해서, 실제 조사가 끝난 뒤에야 통과(pass) 또는 실패(fail)로
-확정됩니다. 이는 "일단 통과로 적어두고 나중에 문제가 생기면 고친다"는 식의 사후 정정을 원천
-차단하기 위한 설계입니다.
+The investigation results of this stage are not fixed as pass/fail from the outset. Every checklist item starts in the **"not yet verified (undetermined)"** state and is only finalized as pass or fail after the actual investigation is complete. This design exists to block out post-hoc corrections of the "write it down as passed for now and fix it later if a problem appears" variety.
 
-DD가 완료됐다고 인정받으려면 두 가지 조건을 모두 만족해야 합니다.
+To be recognized as complete, DD must satisfy both of the following conditions:
 
-1. 적용된 체크리스트의 모든 항목이 (미정이 아니라) 확정 판정을 받았을 것
-2. 그중 필수 항목 미충족이 하나도 없을 것(예외 승인된 waiver는 별도)
+1. Every item on the applicable checklist has received a definitive determination (not undetermined)
+2. No unmet mandatory item remains (waivers formally approved as exceptions are separate)
 
-그리고 조사 과정에서 발견한 문제나 리스크는 "회의록에 적어뒀다"로 끝나지 않고, 반드시
-`dd_finding`이라는 정식 기록으로 남겨야 합니다 — 이 기록 규칙은 [DD 발견사항 기록
-규칙] 문서에서 다룹니다.
+And any problem or risk discovered during the investigation does not end with "it was noted in the meeting minutes" — it must be formally recorded as a `dd_finding`; this recording rule is covered in the [DD findings recording rules] document.
 
-## 🌐 외부 참고 — M&A 실사는 업계에서 어떻게 진행되는가
+## 🌐 External Reference — How M&A due diligence is conducted in the industry
 
-일반적인 인수합병(M&A) 실사는 ①제한된 정보로 딜의 가치를 1차 판단하는 예비 검토
-→ ②본계약 의향서(LOI) 체결 후 전체 자료를 열람하는 confirmatory(본) 실사(가장 방대하고 중요한
-단계) → ③발견사항을 가격·계약 조건에 반영하는 협상 → ④종결 직전 최종 확인 → ⑤종결(closing)의
-5~6단계로 진행되는 것이 표준입니다. co-newbiz의 Brownfield 트랙은 이 confirmatory 실사 단계에
-대응하고, Greenfield 트랙(외부 대상 기업이 없는 자체 신설)은 이 표준 프로세스와 정확히 일치하지
-않습니다 — 남의 회사를 검증하는 것이 아니라 우리 자신의 가정을 검증한다는 점이 핵심적인 차이입니다.
-출처·상세는 [docs/research/dd-process-phases.md] 문서 참조 (조사일 2026-09-05).
+A typical merger and acquisition (M&A) due diligence process proceeds in 5–6 standard stages: ① preliminary review that makes a first-pass judgment of the deal's value with limited information → ② confirmatory (main) due diligence in which the full data room is reviewed after signing a letter of intent (LOI) (the most extensive and critical stage) → ③ negotiation reflecting the findings into price and contract terms → ④ final confirmation just before closing → ⑤ closing. co-newbiz's Brownfield track corresponds to this confirmatory due diligence stage, while the Greenfield track (self-founded entry with no external target company) does not map exactly onto this standard process — the key difference is that instead of verifying someone else's company, we verify our own assumptions. See the [docs/research/dd-process-phases.md] document for sources and details (research date 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| 7도메인·완료 술어 | ADR-0099, process-flow.ts S9 분기 |
-| 필수·waiver 규칙 | docs/manuals/business-manual §2, checklists front matter |
-| 트랙별 단계 비교 | docs/research/dd-process-phases.md |
+| 7 domains, completion predicate | ADR-0099, process-flow.ts S9 branch |
+| Mandatory and waiver rules | docs/manuals/business-manual §2, checklists front matter |
+| Track-level stage comparison | docs/research/dd-process-phases.md |

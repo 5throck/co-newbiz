@@ -1,23 +1,30 @@
-# 리서치 노트 — 상업 실사(CDD) 표준 워크스트림
+---
+lang: en
+counterpart: dd-commercial-workstreams_ko.md
+---
 
-> 🌐 외부 참고 자료. 본 포털의 규정·절차 원본 우위 원칙은 유지되며, 이 문서는 업계 표준 관행 비교용입니다.
-> 조사일: 2026-09-05
+# Research Note — Standard Commercial Due Diligence (CDD) Workstreams
 
-## 표준 워크스트림 (다수 소스 공통)
+> 🌐 External reference material. This portal retains its original-first principle for regulations and procedures; this document is for comparing industry standard practices.
+> Researched: 2026-09-05
 
-1. **시장 인텔리전스** — TAM/SAM/SOM 사이징, 성장률, 세그멘테이션, 도입률 추세
-2. **경쟁 인텔리전스** — 점유율, 포지셔닝, 진입장벽(moat), 가격결정력
-3. **고객 인텔리전스** — 고객 집중도 리스크, 이탈률, NPS/만족도, 매출 품질·지속성
-4. **성장 평가** — 경영진 계획의 검증, 상방 기회 사이징, 레드플래그 도출
-5. **종합·권고** — 증거 삼각검증 후 투자 논지 검증
+## Standard Workstreams (common across multiple sources)
 
-## co-newbiz 매핑
+1. **Market intelligence** — TAM/SAM/SOM sizing, growth rates, segmentation, adoption-rate trends
+2. **Competitive intelligence** — market share, positioning, barriers to entry (moat), pricing power
+3. **Customer intelligence** — customer concentration risk, churn rate, NPS/satisfaction, revenue
+   quality and durability
+4. **Growth assessment** — validating management plans, sizing upside opportunities, surfacing red flags
+5. **Synthesis and recommendation** — verifying the investment thesis after triangulating evidence
 
-- 1→ S1 시장분석(TAM/SAM/SOM, rag-framework), 2~3→ S9 상업 실사 체크리스트(cdd-01~07), 4→ S8 사업성 분석 시나리오, 5→ S11 IC 패키지
+## co-newbiz mapping
 
-## 출처
+- 1 → S1 market analysis (TAM/SAM/SOM, rag-framework), 2–3 → S9 commercial DD checklist (cdd-01~07),
+  4 → S8 business viability analysis scenarios, 5 → S11 IC package
 
-- Martec Group, "The Five Pillars of Commercial Due Diligence" — https://martecgroup.com/whats-in-traditional-commercial-due-diligence-the-five-pillars/ (접근일 2026-09-05)
-- PE Primer, "More Than You Wanted to Know About Commercial Due Diligence" — https://pe-primer.com/more-than-you-wanted-to-know-about-commercial-due-diligence/ (접근일 2026-09-05)
-- BluWave, "Commercial Due Diligence" — https://bluwave.net/solutions/transactions-and-due-diligence/commercial-due-diligence/ (접근일 2026-09-05)
-- Ellty, "Commercial Due Diligence: Full Process Guide" — https://www.ellty.com/blog/commercial-due-diligence (접근일 2026-09-05)
+## Sources
+
+- Martec Group, "The Five Pillars of Commercial Due Diligence" — https://martecgroup.com/whats-in-traditional-commercial-due-diligence-the-five-pillars/ (accessed 2026-09-05)
+- PE Primer, "More Than You Wanted to Know About Commercial Due Diligence" — https://pe-primer.com/more-than-you-wanted-to-know-about-commercial-due-diligence/ (accessed 2026-09-05)
+- BluWave, "Commercial Due Diligence" — https://bluwave.net/solutions/transactions-and-due-diligence/commercial-due-diligence/ (accessed 2026-09-05)
+- Ellty, "Commercial Due Diligence: Full Process Guide" — https://www.ellty.com/blog/commercial-due-diligence (accessed 2026-09-05)

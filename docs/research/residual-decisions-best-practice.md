@@ -1,3 +1,7 @@
+---
+lang: en
+---
+
 # Research Report: Best Practice for the Residual Decisions Pack
 
 > **Provenance:** researched 2026-08-24 by four research agents (R1 — JV governance/scorecard; R2 — TRL/MRL gating; R3 — M&A synergy/PMI; R4 — deal shape, calibration corpus, antitrust), as **non-binding decision support** for [`docs/decisions/2026-08-24-residual-decisions-pack.md`](../decisions/2026-08-24-residual-decisions-pack.md). Method: the built-in WebSearch channel was unavailable (Z.ai quota exhausted — HTTP 429, resets 2026-09-01 08:56) and its fallback text is unsourced model knowledge, **excluded from evidence** throughout; the working channels were direct WebFetch of canonical URLs and Brave search HTML (R4). Evidence tiers are marked inline: `[live]` = page fetched this session; `[snippet]` = search-result fragment of a paywalled or blocked page (title/abstract only); `[model-knowledge]` = not live-verified, flagged wherever used. Fetch failures are consolidated in §7. All "research-suggested defaults" below are decision support only: gate approval and investment decisions belong to humans (boundary #2), and nothing here becomes enforcement-active without the user's decision and the reflection PR passing the anti-tamper gate.

@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: business-manual_ko.md
+---
+
 # Business Manual — Analysts & Committee Reviewers
 
 > **Language**: **English** · [한국어](business-manual_ko.md)

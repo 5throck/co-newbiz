@@ -1,46 +1,38 @@
 ---
 governance_doc_id: gov-dd-02
 layer: docs-content
-title: "도메인별 실사 가이드"
+title: "Domain-Specific DD Guide"
 scope: co-newbiz
 owner_agent: commercial-dd-agent
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: dd-domain-guides_ko.md
 ---
-# 실사는 왜 7개 영역으로 나뉘어 있는가
+# Why due diligence is split into 7 areas
+> **Language**: **English** · [한국어](dd-domain-guides_ko.md)
 
-실사([DD 개요] 참고)를 한 사람이 혼자 진행하면 반드시 사각지대가 생깁니다. 재무를
-잘 아는 사람이 계약서의 법적 함정을 놓치고, 기술을 잘 아는 사람이 회계상의 이상 징후를 알아채지
-못하는 식입니다. 그래서 co-newbiz는 실사를 7개의 전문 영역(도메인)으로 나눠 각각 별도의
-체크리스트로 진행합니다. 각 체크리스트 항목의 정확한 문구는 저장소의 YAML 원본 파일이 최종
-기준이며, 아래 표는 "이 영역이 왜 존재하고 무엇을 지키려는가"를 이해하기 위한 설명입니다.
+If due diligence (see [the DD overview]) is carried out by a single person, blind spots are inevitable. Someone strong in finance may miss the legal traps in a contract; someone strong in technology may fail to notice accounting irregularities. That is why co-newbiz divides due diligence into 7 specialist areas (domains), each run as a separate checklist. The exact wording of each checklist item is governed by the YAML source files in the repository; the table below is an explanation to help you understand "why each area exists and what it is trying to protect."
 
-| 영역 | 목적 | 무엇을 확인하는가 |
+| Area | Purpose | What is checked |
 |---|---|---|
-| **commercial**(상업) | 시장·고객·경쟁 검증 | 매출이 소수 고객에게 몰려 있지 않은지(고객 집중도), 가격을 마음대로 올릴 수 있을 만큼 경쟁우위가 있는지, 지금의 성장세가 일시적 유행이 아니라 지속 가능한지 |
-| **technical**(기술) | 기술·설비 검증 | 핵심 기술이 실험 단계인지 실제 상용화 단계인지, 설비의 남은 수명은 얼마나 되는지, 환경·보건·안전(EHS) 규정을 어기고 있지 않은지 |
-| **legal**(법무) | 법무·규제 검증 | 팔겠다는 자산·지분의 소유권이 실제로 깨끗한지, 걸려 있는 규제 심사는 없는지, 진행 중이거나 예견되는 소송은 없는지 |
-| **financial**(재무) | 재무 품질 검증 | 장부상 이익이 실제 현금창출력을 반영하는지(수익의 질), 운전자본이 갑자기 말라붙을 위험은 없는지, 부채 상환 일정과 세무 리스크는 어떤지 |
-| **hr**(인사·조직) | 인사·조직 검증 | 핵심 경영진에게 과도한 보상·특혜 계약이 걸려 있지 않은지, 인수 후 처우 조건이 형평에 맞는지, 노무 리스크(미지급 임금, 노사 분쟁 등)는 없는지 |
-| **market**(시장) | 시장 재확인 | 애초 사업성 분석 때 세운 수요 예측이 지금도 유효한지, 대체재나 새 경쟁자가 그 사이 등장하지 않았는지 |
-| **financing**(자금조달) | 자금 확정성 검증 | 실제로 필요한 돈을 조달할 수 있는 구조인지, 대출을 받는다면 약정 조건을 지킬 여력이 있는지 |
+| **commercial** | Market, customer, and competitive validation | Whether revenue is concentrated in a small number of customers (customer concentration), whether competitive advantage is strong enough to raise prices at will, and whether the current growth momentum is sustainable rather than a passing trend |
+| **technical** | Technology and equipment validation | Whether the core technology is still at the experimental stage or genuinely commercialized, how much remaining useful life the equipment has, and whether environmental, health, and safety (EHS) regulations are being violated |
+| **legal** | Legal and regulatory validation | Whether ownership of the assets or equity to be sold is actually clean, whether any regulatory reviews are pending, and whether there are ongoing or foreseeable lawsuits |
+| **financial** | Financial quality validation | Whether book profits reflect actual cash generation (quality of earnings), whether there is a risk of working capital suddenly drying up, and what the debt repayment schedule and tax risks look like |
+| **hr** | People and organization validation | Whether key executives are locked into excessive compensation or special-benefit contracts, whether post-acquisition employment terms are equitable, and whether labor risks exist (unpaid wages, labor disputes, etc.) |
+| **market** | Market re-validation | Whether the demand projections made in the original viability analysis are still valid today, and whether substitutes or new competitors have emerged in the meantime |
+| **financing** | Funding certainty validation | Whether the structure can actually raise the required money, and — if borrowing — whether there is headroom to comply with the loan covenants |
 
-이 7개 영역은 서로 독립적이지 않습니다. 예를 들어 상업 실사에서 발견한 "고객 이탈 위험"은
-재무 실사의 "매출 예측"과 직결되고, 인사 실사에서 발견한 "핵심 인력 이탈 위험"은 기술 실사의
-"기술 승계 가능성"과 맞물립니다. 그래서 실사 결과는 항목별로 따로따로 끝나지 않고, 최종적으로
-[DD→밸류에이션 브릿지]를 통해 하나의 투자 판단으로 종합됩니다.
+These 7 areas are not independent of one another. For example, a "customer churn risk" found in commercial due diligence ties directly into the "revenue projection" in financial due diligence, and a "key-person departure risk" found in HR due diligence interacts with "technology succession feasibility" in technical due diligence. That is why due diligence results do not end as isolated per-item conclusions; they are ultimately consolidated into a single investment judgment through the [DD→valuation bridge].
 
-## 🌐 외부 참고 — 업계는 상업 실사를 어떻게 나누는가
+## 🌐 External Reference — How the industry divides commercial due diligence
 
-업계 표준에서도 상업 실사는 시장 인텔리전스·경쟁 인텔리전스·고객 인텔리전스·성장 평가의 네 축으로
-구성되는 것이 일반적이며(Martec Group의 "5 Pillars", PE Primer 등), 그중 고객 집중도·고객
-이탈률·매출의 지속가능성이 가장 공통적으로 확인되는 항목으로 꼽힙니다. co-newbiz의 commercial
-영역 확인점(고객 집중도·가격결정력·성장 지속성)은 이 업계 표준 축과 대부분 일치합니다. 자세한
-출처는 [docs/research/dd-commercial-workstreams.md] 문서를 참조 (조사일 2026-09-05).
+Industry standards likewise typically structure commercial due diligence around four pillars — market intelligence, competitive intelligence, customer intelligence, and growth assessment (e.g., the Martec Group's "5 Pillars", PE Primer) — and customer concentration, customer churn rate, and revenue sustainability are cited as the most commonly examined items. co-newbiz's commercial area checkpoints (customer concentration, pricing power, growth sustainability) align with most of these industry-standard pillars. See the [docs/research/dd-commercial-workstreams.md] document for detailed sources (research date 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| 도메인 체계 | checklists/*.yaml, ADR-0099 |
-| 업계 워크스트림 | docs/research/dd-commercial-workstreams.md |
+| Domain system | checklists/*.yaml, ADR-0099 |
+| Industry workstreams | docs/research/dd-commercial-workstreams.md |

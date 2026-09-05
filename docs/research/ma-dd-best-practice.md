@@ -1,3 +1,7 @@
+---
+lang: en
+---
+
 > Provenance: researched by the ma-research agent, 2026-08-22 (18 web searches + 6 primary-source fetches; 62 sources). Committed copy of .git/research/ma-dd-best-practice.md for ADR-0051 citation; the untracked original is the working input.
 
 # M&A Due Diligence Best-Practice Research Report (2026-08)

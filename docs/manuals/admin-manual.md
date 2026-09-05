@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: admin-manual_ko.md
+---
+
 # Admin Manual — System Administrators
 
 > **Language**: **English** · [한국어](admin-manual_ko.md)

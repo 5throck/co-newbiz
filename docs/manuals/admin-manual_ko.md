@@ -4,6 +4,8 @@ translated_from_hash: PLACEHOLDER
 lang: ko
 lang_reason: source-material
 ---
+counterpart: admin-manual.md
+---
 
 # 관리자 매뉴얼 — 시스템 관리자
 

@@ -1,55 +1,41 @@
 ---
 governance_doc_id: gov-des-03
 layer: docs-content
-title: "주요 컴포넌트 카탈로그"
+title: "Key Component Catalog"
 scope: co-newbiz
 owner_agent: frontend-engineer
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: design-components_ko.md
 ---
-# 화면마다 반복되는 부품들을 어떻게 재사용하는가
+# How recurring screen pieces get reused
 
-레고 블록처럼, 화면을 이루는 조각들을 한 번 잘 만들어두면 여러 화면에서 그대로 가져다 쓸 수
-있습니다. 이런 재사용 가능한 화면 조각을 **컴포넌트**라고 부릅니다. 매번 새로 만드는 대신
-이미 검증된 컴포넌트를 조합하면, 화면마다 디자인이 미묘하게 달라지는 문제를 막을 수 있고
-개발 속도도 빨라집니다. 실제 구현 코드는 `app/web-next/components/`에 있으며, 아래는 co-newbiz
-화면에서 반복적으로 쓰이는 대표 컴포넌트입니다.
+Like LEGO blocks, once the pieces that make up a screen are built well, they can be taken and used as-is across many screens. Such reusable screen pieces are called **components**. Instead of building things from scratch every time, combining already-proven components prevents designs from drifting subtly from screen to screen and speeds up development. The actual implementation code lives in `app/web-next/components/`, and the following are the representative components used repeatedly across co-newbiz screens.
 
-| 컴포넌트 | 무슨 역할을 하는가 | 어디서 쓰이는가 |
+| Component | What it does | Where it is used |
 |---|---|---|
-| StageFrame | 각 단계 화면의 뼈대(제목·설명·본문이 들어갈 자리) | S1~S12 모든 단계 화면 |
-| ProjectSubNav | 한 프로젝트 안에서 개요·사업성·실사·투자구조·투자심의 등 하위 화면을 넘나드는 탭 | 프로젝트 상세 화면 전체 |
-| GateDecisionPanel | "승인/보류/중단"을 선택하고 그 사유·결정자를 기록하는 카드 | 사람의 승인이 필요한 모든 화면 |
-| CommitteePanel | 위원회 참석자 좌석 배치, 점수표, 회의록을 보여주는 패널 | S4·S11 위원회 심의 화면 |
-| ListBackButton | 목록 화면으로 되돌아가는 버튼(모든 화면에서 똑같이 동작) | 목록에서 상세로 들어간 화면 |
-| data-table + .table-scroll | 목록·요약 데이터를 보여주는 표(화면 폭보다 넓으면 가로로 스크롤) | 전체 화면 |
+| StageFrame | The skeleton of each stage screen (the slots for title, description, and body) | All stage screens S1–S12 |
+| ProjectSubNav | Tabs for moving between sub-screens within a project — Overview, Feasibility, Due Diligence, Investment Structure, Investment Review, etc. | Throughout the project detail screen |
+| GateDecisionPanel | The card for selecting "Approve / Hold / Stop" and recording the reason and decision maker | Every screen requiring human approval |
+| CommitteePanel | Panel showing committee member seating, score sheets, and meeting minutes | S4 and S11 committee review screens |
+| ListBackButton | Button for returning to the list screen (behaves identically on every screen) | Any screen entered from a list into a detail view |
+| data-table + .table-scroll | Table for showing list and summary data (scrolls horizontally when wider than the screen) | All screens |
 
-## 화면을 만들 때 지켜야 할 규칙
+## Rules to follow when building screens
 
-- 새로운 상세 화면을 만들 때는 반드시 ProjectSubNav를 포함해야 합니다. 이 탭 없이 만들어진
-  화면은 다른 하위 화면들과 단절된 "고아 화면"이 되어, 사용자가 거기서 다른 메뉴로 돌아가는
-  법을 찾지 못하게 됩니다.
-- 표의 헤더와 실제 데이터 셀은 같은 열끼리 정렬 방식(왼쪽/가운데/오른쪽 맞춤)을 반드시
-  일치시킵니다. 헤더는 가운데 정렬인데 셀은 왼쪽 정렬이면 표가 시각적으로 어긋나 보입니다.
-- 이 문서 자체를 포함한 모든 참조 문서는 `/library` 화면(목록+상세 2단 뷰)에서 열람하며,
-  별도의 챕터 분할이나 페이지 이동 버튼 없이 문서 하나가 그대로 한 화면에 표시됩니다.
+- Every new detail screen must include ProjectSubNav. A screen built without these tabs becomes an "orphan screen" cut off from the other sub-screens, leaving users with no way to get back to other menus from there.
+- Table headers and their data cells must use the same alignment (left/center/right) within each column. If the header is centered while the cells are left-aligned, the table looks visually misaligned.
+- All reference documents, including this one, are read on the `/library` screen (a list + detail two-pane view), where each document is rendered in full on one screen without separate chapter splitting or page-navigation buttons.
 
-## 🌐 외부 참고 — 컴포넌트 목록은 업계에서 어떻게 관리되는가
+## 🌐 External Reference — How component catalogs are managed in the industry
 
-전통적으로는 컴포넌트를 "원자(atom) → 분자(molecule) → 유기체(organism)"처럼 화학 용어로
-분류하는 Atomic Design 방식이 널리 쓰였습니다. 다만 2026년 기준 업계 흐름은 이런 추상적인
-분류 이름보다, 컴포넌트의 이름 자체가 "무엇을 하고 어디에 쓰이는지"를 바로 알려주는 의미
-기반 네이밍으로 옮겨가고 있습니다. co-newbiz의 컴포넌트 이름(StageFrame, GateDecisionPanel
-등)은 이미 이런 의미 기반 네이밍을 따르고 있어 이 흐름에 부합합니다. 업계는 또한 "화면의 모든
-요소가 어떤 표준 컴포넌트에 속하는지 추적할 수 있어야 한다"는 점을 컴포넌트 카탈로그의 핵심
-체크 항목으로 꼽는데, "새 상세 화면은 ProjectSubNav를 반드시 포함해야 한다"는 co-newbiz의
-규칙이 바로 이 원칙의 구체적인 적용 사례입니다. 출처·상세는
-[docs/research/component-catalog-naming.md] 문서 참조 (조사일 2026-09-05).
+Traditionally, Atomic Design — classifying components with chemistry terms like "atom → molecule → organism" — was widely used. As of 2026, however, the industry trend is moving away from such abstract category names toward meaning-based naming, where the component's name itself immediately tells you what it does and where it is used. co-newbiz's component names (StageFrame, GateDecisionPanel, etc.) already follow this meaning-based naming and are in line with the trend. The industry also treats "you must be able to trace every element on a screen back to a standard component" as a core checklist item for a component catalog, and co-newbiz's rule that "new detail screens must include ProjectSubNav" is a concrete application of exactly that principle. For sources and details, see [docs/research/component-catalog-naming.md] (surveyed 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| 컴포넌트 목록 | docs/architecture/ui-spec.md as-built, docs/designs/2026-09-01 표준화면패턴 |
-| 목록 복귀 단일 패턴 | PR #219 디자인 정비(ListBackButton 통합) |
-| 카탈로그 네이밍 관행 | docs/research/component-catalog-naming.md |
+| Component list | docs/architecture/ui-spec.md as-built, docs/designs/2026-09-01 standard screen patterns |
+| Single list-return pattern | PR #219 design cleanup (ListBackButton consolidation) |
+| Catalog naming practice | docs/research/component-catalog-naming.md |

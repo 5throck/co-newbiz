@@ -4,6 +4,8 @@ translated_from_hash: PLACEHOLDER
 lang: ko
 lang_reason: source-material
 ---
+counterpart: business-manual.md
+---
 
 # 비즈니스 매뉴얼 — analyst와 위원회 심사자
 

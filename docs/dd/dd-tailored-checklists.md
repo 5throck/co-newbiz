@@ -1,57 +1,37 @@
 ---
 governance_doc_id: gov-dd-04
 layer: docs-content
-title: "맞춤 체크리스트"
+title: "Tailored Checklists"
 scope: co-newbiz
 owner_agent: commercial-dd-agent
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: dd-tailored-checklists_ko.md
 ---
-# 표준 체크리스트만으로 충분하지 않을 때
+# When the standard checklist alone is not enough
+> **Language**: **English** · [한국어](dd-tailored-checklists_ko.md)
 
-[도메인별 실사 가이드]에서 소개한 7개 영역의 표준 체크리스트는 어떤
-업종에나 공통으로 적용할 수 있는 필수 확인 항목들입니다. 하지만 예를 들어 반도체 공장을 인수할
-때와 배달 플랫폼 스타트업에 투자할 때는 확인해야 할 리스크가 전혀 다릅니다 — 반도체라면
-화학물질 취급 관련 배상 책임이, 플랫폼이라면 배달원의 근로자성 인정 리스크가 표준 체크리스트에는
-없는 중요한 확인 항목이 됩니다. co-newbiz는 이런 업종·기업 고유의 리스크를 놓치지 않기 위해,
-표준 체크리스트에 산업별 **맞춤 항목**을 추가로 제안하는 절차를 두고 있습니다(설계 근거: 내부
-ADR-0099).
+The standard checklists for the 7 areas introduced in [the domain-specific DD guide] are mandatory checks applicable across any industry. But the risks to verify differ entirely between, say, acquiring a semiconductor plant and investing in a delivery-platform startup — for a semiconductor plant, product liability related to handling chemicals becomes a critical check item, and for a platform, the risk of couriers being recognized as employees — items that the standard checklist does not contain. To avoid missing these industry- and company-specific risks, co-newbiz maintains a procedure for proposing industry-specific **tailored items** in addition to the standard checklist (design basis: internal ADR-0099).
 
-여기서 중요한 원칙은 하나입니다 — 표준 항목은 절대 대체되지 않고, 맞춤 항목은 어디까지나
-**추가**된다는 것입니다. 표준 체크리스트가 느슨해서 맞춤 항목으로 갈아치우는 것이 아니라, 표준이
-다루지 못하는 빈틈을 메우는 용도입니다.
+One principle matters here — standard items are never replaced; tailored items are strictly **additions**. This is not about swapping in tailored items because the standard checklist is too loose; it exists to fill gaps the standard cannot cover.
 
-## 어떻게 진행되는가
+## How it works
 
-1. 담당 실행 프로그램이 이 프로젝트의 맥락(어떤 산업인지, 어떤 트랙인지, 앞서 진행한 사업성
-   분석 결과가 무엇인지)을 읽고, 이 딜에 특화된 체크리스트 항목을 5~10개 정도 제안합니다.
-2. 제안된 항목에는 반드시 **출처 신뢰도 등급**이 함께 매겨집니다. 근거 없이 그냥 "이런 게
-   있을 것 같다"고 제안된 항목은 자동으로 가장 낮은 등급인 **C**로 기록됩니다 — 근거의
-   빈약함을 숨기지 않고 드러내려는 설계입니다.
-3. 이렇게 제안된 항목은 사람이 검토해서 승인한 것만 실제 프로젝트의 체크리스트에 합류하고,
-   이후 통과/실패 판정의 대상이 됩니다. 제안됐다고 자동으로 반영되지 않습니다.
+1. The responsible execution program reads this project's context (what industry it is, which track it is on, and what the earlier viability analysis concluded) and proposes roughly 5–10 checklist items specific to this deal.
+2. Each proposed item is always assigned a **source confidence grade**. An item proposed on a bare "this might exist" hunch with no supporting evidence is automatically recorded at the lowest grade, **C** — the design deliberately exposes, rather than hides, thin evidentiary backing.
+3. Proposed items join the project's actual checklist only after human review and approval, and only then become subject to pass/fail determination. Being proposed does not mean being automatically adopted.
 
-이 과정에서 필요하면 인터넷 검색을 이용해 해당 산업의 최근 이슈나 규제 동향을 참고하는 기능도
-켤 수 있습니다(내부 설정 `CO_NEWBIZ_DD_TAILOR_AGENTS`). 다만 이 기능은 "AI가 알아서 다
-찾아준다"는 뜻이 아니라, 그 검색이 놓칠 수 있는 한계까지 검토자에게 투명하게 드러나도록 설계된
-것입니다.
+Where needed, an internet-search capability can be enabled during this process to reference recent industry issues and regulatory trends (internal setting `CO_NEWBIZ_DD_TAILOR_AGENTS`). However, this feature does not mean "the AI finds everything on its own"; it is designed to make the limits of what that search might miss transparently visible to the reviewer.
 
-## 🌐 외부 참고 — 업종별로 체크리스트를 바꾸는 것이 업계 표준인가
+## 🌐 External Reference — Is tailoring checklists by industry an industry standard?
 
-네, 그렇습니다. M&A 실사의 핵심 원칙 자체는 업종을 가리지 않지만, 각 업종은 저마다 고유한
-규제·운영상의 특성·가치평가 리스크를 갖고 있어서, 표준 체크리스트를 그대로 쓰기보다 그 업종의
-현실에 맞게 조정하는 것이 업계의 일반적인 관행입니다. 예를 들어 기술 기업은 지식재산권 소유권과
-데이터 보안·정보보호 인증을, 제조업은 환경 책임과 공급망 리스크를, 헬스케어는 인허가와
-보험수가 체계를 중점적으로 살펴봅니다. 이상적으로는 재무·법무·운영·업종 전문가로 구성된
-다학제 팀이 이 조정을 담당하지만, co-newbiz는 이를 출처 신뢰도 등급(A/B/C) 체계로 보완합니다 —
-전문가 검증을 완전히 대체하지는 못해도, 최소한 근거 없는 제안이 근거 있는 제안처럼 보이지
-않도록 막는 장치입니다. 출처·상세는 [docs/research/dd-checklist-tailoring-practice.md] 문서
-참조 (조사일 2026-09-05).
+Yes, it is. The core principles of M&A due diligence are industry-agnostic, but each industry has its own regulatory, operational, and valuation-risk characteristics, so adapting the standard checklist to the realities of the sector is common industry practice. For example, technology companies are examined with focus on intellectual-property ownership and data security/information-security certifications, manufacturers on environmental liability and supply chain risk, and healthcare on licenses and reimbursement systems. Ideally a multidisciplinary team of financial, legal, operational, and sector specialists handles this adaptation; co-newbiz supplements it with a source confidence grading system (A/B/C) — even if it cannot fully replace expert validation, it at least prevents evidence-free proposals from masquerading as evidence-backed ones. See the [docs/research/dd-checklist-tailoring-practice.md] document for sources and details (research date 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| 파이프라인·신뢰도 등급 | ADR-0099, dd-checklist-tailor.ts |
-| 커스텀 항목 저장 | migration 0069, project_checklist_item_state |
-| 업종별 맞춤화 관행 | docs/research/dd-checklist-tailoring-practice.md |
+| Pipeline and confidence grades | ADR-0099, dd-checklist-tailor.ts |
+| Custom item storage | migration 0069, project_checklist_item_state |
+| Industry tailoring practice | docs/research/dd-checklist-tailoring-practice.md |

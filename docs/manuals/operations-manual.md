@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: operations-manual_ko.md
+---
+
 # Operations Manual — System Operators
 
 > **Language**: **English** · [한국어](operations-manual_ko.md)

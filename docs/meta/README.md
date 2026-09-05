@@ -17,7 +17,7 @@ For project identity and standards start at
 | [`architecture/`](../architecture/) | Engineering contracts — SRS, API spec, OpenAPI, DB schema, UI spec, MCP integration |
 | [`governance/`](../governance/) | Process and governance operations — process map, RACI, RAG framework, ops cadence, traceability |
 | [`security/`](../security/) | Security model, baseline, and policy |
-| [`design/`](../design-system/) | Design guide and the design philosophy/tokens/components/screens/accessibility pages |
+| [`design-system/`](../design-system/) | Design guide and the design philosophy/tokens/components/screens/accessibility pages |
 | [`dd/`](../dd/) | Due-diligence methodology — overview, domain guides, findings rules, waivers, valuation bridge, best practices |
 | [`planning/`](../planning/) | Dev plan, transition plan, web implementation plan, pilot research |
 | [`guidelines/`](../guidelines/) | Recommended-tier practice guides — expert interviews, proxy-chain hop classification |
@@ -51,7 +51,7 @@ For project identity and standards start at
 - **Security** — [`security/security-model.md`](../security/security-model.md),
   [`security/security-baseline.md`](../security/security-baseline.md),
   [`security/security.md`](../security/security.md)
-- **Design** — [`design/design-guide.md`](../design-system/design-guide.md) plus the
+- **Design** — [`design-system/design-guide.md`](../design-system/design-guide.md) plus the
   philosophy/tokens/components/screens/accessibility pages in the same folder
 - **Due diligence** — the seven pages under [`dd/`](../dd/), starting from
   [`dd/dd-overview.md`](../dd/dd-overview.md)

@@ -1,57 +1,33 @@
 ---
 governance_doc_id: gov-des-01
 layer: docs-content
-title: "디자인 철학·원칙"
+title: "Design Philosophy and Principles"
 scope: co-newbiz
 owner_agent: design-system-agent
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: design-philosophy_ko.md
 ---
-# 이 사이트의 화면들은 어떤 기준으로 설계되는가
+# What standards govern the design of this site's screens
 
-co-newbiz 웹사이트는 신규사업 검토의 전체 12단계(S1~S12)를 다루는 하나의 시스템입니다.
-화면이 수십 개에 이르다 보니, 담당자마다 제각각의 방식으로 만들면 사용자는 화면마다 다시
-사용법을 익혀야 합니다. 이를 막기 위해 모든 화면이 공통으로 따르는 다섯 가지 설계 원칙을
-정리했습니다. (근거 문서: `docs/designs/2026-09-01-standard-screen-patterns-design_ko.md`,
-`docs/design-system/design-guide.md`)
+The co-newbiz website is a single system covering all 12 stages (S1–S12) of new business review. With dozens of screens, if each person built them their own way, users would have to relearn how to use every screen. To prevent that, five design principles that every screen follows in common have been defined. (Basis documents: `docs/designs/2026-09-01-standard-screen-patterns-design_ko.md`, `docs/design-system/design-guide.md`)
 
-1. **"진행 중"과 "확정됨"을 헷갈리게 하지 않는다** — 화면에는 두 종류의 표시가 섞여 있습니다.
-   하나는 "지금 어디까지 왔는가"를 나타내는 **상태**(예: 진행중, 대기)이고, 다른 하나는
-   "누가 무엇을 결정했는가"를 나타내는 **판정**(예: 승인, 거절, 필수)입니다. 이 둘을 시각적으로
-   구분해두지 않으면, 사용자가 색깔만 보고 "이미 승인된 것"으로 착각할 수 있습니다.
-2. **AI가 제안한 것과 사람이 결정한 것을 뒤섞지 않는다** — 시스템(AI)이 추천하는 값은 항상
-   "제안"이라는 표시와 함께 보여주고, 실제로 사람이 승인·거절을 누르는 화면 요소(게이트 결정
-   카드)와는 시각적으로 명확히 구분합니다. AI의 추천을 사람이 이미 내린 결정처럼 보이게
-   만들지 않는다는 뜻입니다.
-3. **화면 하나에는 목적 하나만** — 목록 화면은 "고르는" 용도, 상세 화면은 "읽는" 용도, 판정
-   화면은 "결정하는" 용도로 역할을 나눕니다. 한 화면에 여러 목적을 뒤섞으면 사용자가 지금
-   이 화면에서 무엇을 해야 하는지 헷갈리게 됩니다. (자세한 화면 유형 분류는 [표준 화면 패턴
-   P0~P5] 참고)
-4. **색·간격·글자는 미리 정한 토큰만 쓴다** — 화면 코드에 새로운 색상 값을 직접 적어 넣지
-   않고, 미리 정의된 토큰만 사용합니다(자세한 내용은 [디자인 토큰] 참고).
-   이렇게 해야 나중에 전체 화면의 색이나 스타일을 한 번에 바꿀 수 있습니다.
-5. **접근성은 선택이 아니라 기본값이다** — 키보드만으로 조작할 수 있는지, 화면 낭독기를 위한
-   표준 태그가 있는지, 움직임에 민감한 사용자를 위한 설정을 존중하는지는 모든 화면이 배포되기
-   전에 반드시 갖춰야 하는 조건입니다(자세한 내용은 [접근성·유니버설
-   디자인] 참고).
+1. **Never confuse "in progress" with "decided"** — screens mix two kinds of indicators. One is **status**, showing "where things stand right now" (e.g., In Progress, Pending); the other is **decision**, showing "who decided what" (e.g., Approve, Reject, Required). Without a clear visual distinction between the two, users can look at a color and mistakenly think something "has already been approved."
+2. **Never mix what the AI proposed with what a human decided** — values recommended by the system (AI) are always shown with a "proposal" marker, kept visually and clearly separate from the screen elements where a human actually approves or rejects (the gate decision cards). In other words, an AI recommendation must never be made to look like a decision a human already made.
+3. **One screen, one purpose** — list screens are for "picking", detail screens are for "reading", and decision screens are for "deciding." Mixing several purposes on one screen confuses users about what they are supposed to do there. (For the detailed screen-type classification, see [Standard Screen Patterns P0–P5].)
+4. **Colors, spacing, and typography use only pre-defined tokens** — no raw color values are written directly into screen code; only pre-defined tokens are used (see [Design Tokens] for details). This is what makes it possible later to change the color or style of the entire product in one move.
+5. **Accessibility is not optional — it is the default** — keyboard operability, standard tags for screen readers, and respect for motion-sensitivity settings are conditions every screen must satisfy before it can ship (see [Accessibility · Universal Design] for details).
 
-## 🌐 외부 참고 — "AI 제안과 사람 결정의 분리"는 업계에서도 표준인가
+## 🌐 External Reference — Is "separating AI proposals from human decisions" also an industry standard?
 
-네, 이 원칙은 업계에서 흔히 쓰이는 **Human-in-the-Loop(사람이 최종 결정권을 갖는 방식)** 개념과
-정확히 일치합니다 — AI는 판단 재료를 제공하고, 실제 결정은 항상 사람이 내리며, 사람이 승인하기
-전까지는 아무것도 자동으로 실행되지 않습니다. 다만 관련 연구에 따르면, 이런 구조를 만들어
-두는 것만으로 저절로 좋은 결과가 나오지는 않습니다 — 오히려 사람들은 AI 제안의 정확도가 낮을
-때일수록 검토를 소홀히 하는 경향(자동화 과신)을 보이기도 합니다. 그래서 AI 제안과 사람 결정을
-시각적으로 명확히 분리하는 것뿐 아니라, 사소하고 위험이 낮은 항목까지 매번 사람의 승인을
-요구해 검토자를 지치게 만들지 않는 것도 중요합니다 — 검토할 것이 너무 많아지면 사람들은 결국
-제대로 보지 않고 그냥 승인 버튼을 누르게 되기 때문입니다. 출처·상세는
-[docs/research/human-in-the-loop-ui.md] 문서 참조 (조사일 2026-09-05).
+Yes — this principle matches exactly the widely used industry concept of **Human-in-the-Loop** (the human holds final decision authority): the AI supplies material for judgment, the actual decision is always made by a human, and nothing executes automatically before human approval. That said, related research shows that simply having this structure in place does not automatically produce good outcomes — people sometimes actually review less carefully precisely when the AI's accuracy is low (automation complacency / over-reliance). So in addition to separating AI proposals and human decisions visually, it is also important not to fatigue reviewers by demanding human approval for every trivial, low-risk item — when there is too much to review, people eventually stop looking properly and just click Approve. For sources and details, see [docs/research/human-in-the-loop-ui.md] (surveyed 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| 경계 #2 시각 분리 | docs/adr/0106, flow.spec 경계 불변식 |
-| 토큰 우선 | docs/design-system/design-guide.md, 표준화면패턴 설계문서 §2 |
-| 접근성 출하 조건 | ui-spec as-built(UD 감사), manual-authoring 스킬 |
-| HITL 설계 관행 | docs/research/human-in-the-loop-ui.md |
+| Visual separation of boundary #2 | docs/adr/0106, flow.spec boundary invariants |
+| Token-first | docs/design-system/design-guide.md, standard screen patterns design doc §2 |
+| Accessibility shipping condition | ui-spec as-built (UD audit), manual-authoring skill |
+| HITL design practice | docs/research/human-in-the-loop-ui.md |

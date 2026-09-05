@@ -20,7 +20,7 @@ lang_reason: source-material
 | [`architecture/`](../architecture/) | 엔지니어링 계약 — SRS, API 명세, OpenAPI, DB 스키마, UI 명세, MCP 통합 |
 | [`governance/`](../governance/) | 프로세스·거버넌스 운영 — 프로세스 맵, RACI, RAG 프레임워크, 운영 주기, 추적성 매트릭스 |
 | [`security/`](../security/) | 보안 모델, 베이스라인, 정책 |
-| [`design/`](../design-system/) | 디자인 가이드와 철학·토큰·컴포넌트·표준화면·접근성 페이지 |
+| [`design-system/`](../design-system/) | 디자인 가이드와 철학·토큰·컴포넌트·표준화면·접근성 페이지 |
 | [`dd/`](../dd/) | 실사 방법론 — 개요, 도메인 가이드, 발견사항 규칙, waiver, 밸류에이션 브릿지, 모범 사례 |
 | [`planning/`](../planning/) | 개발 계획, 전환 계획, 웹 구현 계획, 파일럿 조사 |
 | [`guidelines/`](../guidelines/) | 권장 등급 실무 가이드 — 전문가 인터뷰, 프록시 체인 홉 분류 |
@@ -54,7 +54,7 @@ lang_reason: source-material
 - **보안** — [`security/security-model.md`](../security/security-model.md),
   [`security/security-baseline.md`](../security/security-baseline.md),
   [`security/security.md`](../security/security.md)
-- **디자인** — [`design/design-guide.md`](../design-system/design-guide.md)와 같은 폴더의
+- **디자인** — [`design-system/design-guide.md`](../design-system/design-guide.md)와 같은 폴더의
   철학·토큰·컴포넌트·표준화면·접근성 페이지
 - **실사** — [`dd/`](../dd/) 아래 7개 문서, 시작은
   [`dd/dd-overview.md`](../dd/dd-overview.md)

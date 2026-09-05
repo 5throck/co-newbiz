@@ -1,72 +1,49 @@
 ---
 governance_doc_id: gov-des-02
 layer: docs-content
-title: "디자인 가이드 — 토큰·타이포·간격"
+title: "Design Guide — Tokens, Typography, Spacing"
 scope: co-newbiz
 owner_agent: design-system-agent
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: design-tokens_ko.md
 ---
-# 화면의 색·글자·간격은 왜 코드에 직접 적지 않는가
+# Why colors, typography, and spacing are never hard-coded in screen code
 
-화면을 만들 때 "이 버튼은 파란색"이라고 코드에 직접 색상 값을 적어 넣으면, 나중에 브랜드 색을
-바꾸거나 어두운 화면(다크모드)을 지원하려 할 때 화면 수백 개를 일일이 찾아 고쳐야 합니다.
-그래서 co-newbiz는 색·간격·글자 크기 같은 값을 **디자인 토큰**이라는 이름표가 붙은 변수로
-미리 정의해두고, 화면 코드는 그 이름표만 참조하게 만듭니다.
+If you write a raw color value into screen code — "this button is blue" — then later, when the brand color changes or dark mode needs to be supported, you have to hunt down and fix hundreds of screens one by one. So co-newbiz pre-defines values such as colors, spacing, and font sizes as labeled variables called **design tokens**, and screen code only ever references those labels.
 
-이 토큰의 유일한 원본은 실제 서비스 화면(`app/web-next`)이 쓰는 `app/styles.css`이고,
-그 설계 의도를 글로 정리한 것이 `docs/design-system/design-guide.md`입니다. 지금 이 문서를 읽고 있는
-`/library` 화면도 앱의 다른 모든 화면과 똑같이 이 `app/styles.css`를 직접 불러 쓰기 때문에
-(ADR-0108 — 별도로 빌드되는 문서 포털이 없어지고 앱 자체가 유일한 렌더링 표면이 됨), 색깔을
-서로 "맞추는" 별도 작업 자체가 필요 없습니다 — 애초에 같은 CSS를 보고 있는 같은 화면입니다.
+The single source of truth for these tokens is `app/styles.css`, used by the actual product screens (`app/web-next`), and `docs/design-system/design-guide.md` is the written record of that design intent. This `/library` screen you are reading now also loads the very same `app/styles.css` directly, exactly like every other app screen (ADR-0108 — the separately built documentation portal is gone and the app itself is the only rendering surface), so there is no separate "color matching" work to do at all — these are the same screens looking at the same CSS in the first place.
 
-## 색 토큰
+## Color tokens
 
-토큰의 이름은 "무슨 색인지"가 아니라 "어디에 쓰이는지"를 나타냅니다. 예를 들어 `--accent`는
-"파란색"이 아니라 "강조가 필요한 곳에 쓰는 색"이라는 뜻입니다 — 나중에 브랜드 색이 바뀌어도
-이름은 그대로 두고 값만 바꾸면 전체 화면에 반영됩니다.
+Token names describe "where the value is used," not "what color it is." For example, `--accent` does not mean "blue"; it means "the color used wherever emphasis is needed" — so even if the brand color changes later, the name stays the same and changing only the value propagates it across all screens.
 
-| 토큰 | 용도 |
+| Token | Purpose |
 |---|---|
-| `--bg`, `--bg2`, `--bg3` | 화면 배경 3단계(기본 배경 / 패널 배경 / 강조 배경) |
-| `--text`, `--text-muted`, `--text-dim` | 본문 글자 / 보조 설명 글자 / 흐리게 표시할 글자 |
-| `--border` | 선을 그을 때만 쓰는 색(경계선 전용) |
-| `--accent` 계열 | 사용자가 상호작용하는 요소의 강조색(링크, 현재 선택된 탭 등) |
-| `--bg-info/note/warn/success/error` | 안내·주의·성공·오류 등 알림 상자의 배경색 |
+| `--bg`, `--bg2`, `--bg3` | Three levels of screen background (base background / panel background / emphasized background) |
+| `--text`, `--text-muted`, `--text-dim` | Body text / secondary explanatory text / dimmed text |
+| `--border` | The color used only for drawing lines (borders only) |
+| `--accent` family | Emphasis color for elements the user interacts with (links, the currently selected tab, etc.) |
+| `--bg-info/note/warn/success/error` | Background colors for notification boxes such as info, caution, success, and error |
 
-화면을 만들 때 색은 반드시 이 토큰으로만 지정하며, 코드에 직접 `#0000FF` 같은 색상 값을 써넣지
-않습니다. 실제 서비스 화면은 `[data-theme="dark"]` 속성으로 밝음/어두움을 전환하고, 이 문서
-포털은 `:root`(기본값) → `prefers-color-scheme`(기기 설정 자동 감지) → `.dark`(사용자가 수동으로
-켠 경우)의 3단계로 전환합니다 — 전환을 트리거하는 방식(스위치)은 두 화면이 서로 다르지만, 전환
-결과로 나오는 색상 값 자체는 동일하게 맞춰져 있습니다.
+When building screens, colors must be specified only through these tokens; raw color values like `#0000FF` are never written into code. The product screens switch light/dark via the `[data-theme="dark"]` attribute, while this documentation portal switches in three steps: `:root` (default) → `prefers-color-scheme` (auto-detected device setting) → `.dark` (manually enabled by the user) — the trigger for switching differs between the two screens, but the resulting color values themselves are kept identical.
 
-## 글자 크기·간격
+## Font sizes and spacing
 
-- 본문 글자는 15px, 줄간격은 1.65배, 보조 설명은 14px, 가장 작은 라벨(마이크로 텍스트)은
-  12px입니다 — 이 크기 차이가 화면에서 "이게 제목인지 본문인지 부가 설명인지"를 구분하는
-  기준이 됩니다.
-- 요소 사이의 간격은 항상 8px의 배수(`--spacing-unit`)로 맞춥니다. 임의의 숫자(예: 13px,
-  17px)를 쓰지 않고 8, 16, 24, 32처럼 일정한 리듬을 유지해, 화면마다 여백이 들쭉날쭉해
-  보이지 않게 합니다.
-- 금액은 소수점 없는 정수 + 백만원 단위로, 천 단위마다 콤마를 찍어 표기합니다(예: 9,000).
-  모든 화면에서 이 표기 방식을 통일합니다.
+- Body text is 15px with 1.65× line height, secondary explanations are 14px, and the smallest labels (micro text) are 12px — these size differences are what let the screen communicate "is this a heading, body text, or a side note?"
+- Spacing between elements always follows multiples of 8px (`--spacing-unit`). Arbitrary numbers (e.g., 13px, 17px) are avoided in favor of a steady rhythm like 8, 16, 24, 32, so margins never look uneven from screen to screen.
+- Amounts are written as integers without decimals, in units of a million KRW, with commas every three digits (e.g., 9,000). This notation is standardized across all screens.
 
-## 🌐 외부 참고 — 디자인 토큰은 업계에서 어떻게 관리되는가
+## 🌐 External Reference — How design tokens are managed in the industry
 
-2026년 기준 업계 표준은 W3C가 정한 공통 포맷(디자인 도구와 코드가 서로 다른 형식으로 토큰을
-내보내던 문제를 해결한 규격)과, **원시값 → 의미명 → 컴포넌트별 값**의 3단계 구조입니다. 예를
-들어 `blue-500`(원시값) → `action-color`(의미명) → `button-bg-primary`(버튼 전용 값)처럼
-계층을 나누면, 값 하나만 바꿔도 그 값을 참조하는 모든 화면에 깔끔하게 전파됩니다. co-newbiz의
-`--bg`/`--text`/`--border`/`--accent` 체계는 이미 "용도 기반 의미명" 계층을 따르고 있어 이
-흐름에 부합합니다. 업계는 또한 토큰 목록을 30~50개 정도로 작게 시작할 것과, 토큰 변경을 공유
-API를 바꾸는 것과 같은 무게로 신중히 다룰 것을 권고합니다. 출처·상세는
-[docs/research/design-token-architecture.md] 문서 참조 (조사일 2026-09-05).
+As of 2026, the industry standard is the W3C-defined common format (the specification that solved the problem of design tools and code exporting tokens in incompatible formats) together with a three-tier structure of **raw value → semantic name → component-specific value**. For example, layering `blue-500` (raw value) → `action-color` (semantic name) → `button-bg-primary` (button-specific value) means changing a single value propagates cleanly to every screen that references it. co-newbiz's `--bg`/`--text`/`--border`/`--accent` system already follows the "purpose-based semantic naming" tier and is in line with this trend. The industry also recommends starting small, with roughly 30–50 tokens, and treating token changes with the same weight as a breaking shared-API change. For sources and details, see [docs/research/design-token-architecture.md] (surveyed 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| 토큰 목록 | app/web-next/app/styles.css, docs/design-system/design-guide.md |
-| 금액 표기 | ADR-0061(dd value_impact 단위), 2026-09-05 디자인 정비 PR #219 |
-| 토큰 아키텍처 관행 | docs/research/design-token-architecture.md |
-| 단일 렌더링 표면(별도 테마 동기화 불필요) | ADR-0108, app/web-next/app/library/page.tsx |
+| Token list | app/web-next/app/styles.css, docs/design-system/design-guide.md |
+| Amount notation | ADR-0061 (dd value_impact units), 2026-09-05 design cleanup PR #219 |
+| Token architecture practice | docs/research/design-token-architecture.md |
+| Single rendering surface (no separate theme sync needed) | ADR-0108, app/web-next/app/library/page.tsx |

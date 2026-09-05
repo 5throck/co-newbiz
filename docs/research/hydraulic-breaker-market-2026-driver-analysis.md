@@ -1,3 +1,7 @@
+---
+lang: en
+---
+
 # Hydraulic Breaker Global Market — Driver Analysis & Regional/Segment Matrix (2026)
 
 > **Status**: Standalone market-intelligence artifact, produced outside any formal project run

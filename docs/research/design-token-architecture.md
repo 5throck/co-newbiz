@@ -1,34 +1,42 @@
-# 리서치 노트 — 디자인 토큰 아키텍처(W3C DTCG) 표준 관행
+---
+lang: en
+counterpart: design-token-architecture_ko.md
+---
 
-> 🌐 외부 참고 자료. 조사일: 2026-09-05. handbook-variables.css 토큰 체계의 업계 표준 비교용.
+# Research Note — Design Token Architecture (W3C DTCG) Standard Practices
 
-## 표준 관행
+> 🌐 External reference material. Researched: 2026-09-05. For comparing the handbook-variables.css token system against industry standards.
 
-1. **W3C DTCG 표준 정식화**: Design Tokens Community Group이 2025-10-28 v2025.10 안정 규격을
-   발표(Adobe·Figma·Google·Microsoft 등 40개 이상 조직 참여) — `$value`/`$type` 공통 스키마,
-   `{color.brand.500}` 형태의 참조가 플랫폼 전반에서 일관되게 해석된다
-2. **3계층 아키텍처가 지배적 권고안**: Primitive(`blue-500`) → Semantic(`action-color`) →
-   Component(`button-bg-primary`) — 계층을 올바르게 나누면 값 하나 변경이 전체 화면에 깨끗하게
-   전파된다. 토큰 혼란의 대부분은 한 계층으로 뭉개서(컴포넌트가 원시 hex를 직접 참조) 생긴다
-3. **범위는 작게 시작**: 색·간격·타이포·radius를 아우르는 30~50개 토큰으로 시작 — 아무도 채택하지
-   않는 400개 토큰 목록은 아무도 쓰지 않는 300개 컴포넌트 라이브러리와 같은 실패 패턴
-4. **단일 진실 원천(SSOT) 원칙**: 토큰마다 원천을 하나로 정하고 나머지는 그로부터 생성 — Figma와
-   코드가 따로 놀면 사실상 두 개의 디자인 시스템을 유지하게 된다
-5. **거버넌스**: 토큰 변경은 공유 API 변경과 동일한 무게로 다뤄야 한다 — `color-primary-500`을
-   blue에서 green으로 바꾸는 PR은 리뷰 없이 병합되어서는 안 된다
+## Standard Practices
 
-## co-newbiz 매핑
+1. **W3C DTCG standard formalized**: the Design Tokens Community Group released the stable v2025.10
+   specification on 2025-10-28 (with participation from 40+ organizations including Adobe, Figma, Google,
+   and Microsoft) — the `$value`/`$type` common schema and references in the `{color.brand.500}` form are
+   interpreted consistently across platforms
+2. **The 3-tier architecture is the dominant recommendation**: Primitive (`blue-500`) → Semantic
+   (`action-color`) → Component (`button-bg-primary`) — when the tiers are divided correctly, changing a
+   single value propagates cleanly across the entire UI. Most token confusion arises from collapsing the
+   tiers into one (components referencing raw hex directly)
+3. **Start with a small scope**: begin with 30–50 tokens covering color, spacing, typography, and radius —
+   a list of 400 tokens nobody adopts is the same failure pattern as a 300-component library nobody uses
+4. **Single source of truth (SSOT) principle**: define one source per token and generate the rest from it —
+   if Figma and code drift apart, you are effectively maintaining two design systems
+5. **Governance**: token changes must be treated with the same weight as shared API changes — a PR that
+   changes `color-primary-500` from blue to green must not be merged without review
 
-- `handbook-variables.css`의 `--bg/--text/--border/--accent` 체계는 이미 **용도 기반 Semantic
-  계층**을 따르고 있음(하드코딩 색상 금지 규칙과 일치) — Primitive 계층(원시 hex)이 별도 파일로
-  분리되어 있는지는 별도 확인 필요.
-- ":root → prefers-color-scheme → .dark" 3계층 다크모드는 DTCG의 "참조가 플랫폼 전반에서 일관
-  해석"되어야 한다는 원칙과 같은 방향 — 신규 색 추가 시 3계층 모두 정의해야 하는 co-newbiz 규칙은
-  "토큰 변경을 API 변경처럼 다뤄라"는 거버넌스 권고의 구체적 구현.
+## co-newbiz mapping
 
-## 출처
+- The `--bg/--text/--border/--accent` system in `handbook-variables.css` already follows a
+  **purpose-based Semantic tier** (consistent with the no-hardcoded-colors rule) — whether the Primitive
+  tier (raw hex) is separated into its own file needs separate verification.
+- The ":root → prefers-color-scheme → .dark" 3-tier dark mode points in the same direction as DTCG's
+  principle that "references must be interpreted consistently across platforms" — the co-newbiz rule that
+  new colors must be defined in all 3 tiers is a concrete implementation of the governance recommendation
+  to "treat token changes like API changes."
 
-- Design Tokens Community Group, "Design Tokens Format Module 2025.10" — https://www.designtokens.org/tr/drafts/format/ (접근일 2026-09-05)
-- CoderCops, "Design Tokens in 2026: The W3C Format Finally Standardizing Cross-Platform Design" — https://blog.codercops.com/blog/design-tokens-2026-w3c-format-guide (접근일 2026-09-05)
-- The Masterly, "Design Tokens: A Practical Guide to Naming, Tiers, and the Figma-to-Code Workflow" — https://www.themasterly.com/blog/design-tokens (접근일 2026-09-05)
-- Malaka Venugopal Reddy, "Design tokens with the W3C standard" — https://malakavenu.com/articles/design-tokens-w3c-2026 (접근일 2026-09-05)
+## Sources
+
+- Design Tokens Community Group, "Design Tokens Format Module 2025.10" — https://www.designtokens.org/tr/drafts/format/ (accessed 2026-09-05)
+- CoderCops, "Design Tokens in 2026: The W3C Format Finally Standardizing Cross-Platform Design" — https://blog.codercops.com/blog/design-tokens-2026-w3c-format-guide (accessed 2026-09-05)
+- The Masterly, "Design Tokens: A Practical Guide to Naming, Tiers, and the Figma-to-Code Workflow" — https://www.themasterly.com/blog/design-tokens (accessed 2026-09-05)
+- Malaka Venugopal Reddy, "Design tokens with the W3C standard" — https://malakavenu.com/articles/design-tokens-w3c-2026 (accessed 2026-09-05)

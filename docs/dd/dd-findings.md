@@ -1,59 +1,40 @@
 ---
 governance_doc_id: gov-dd-03
 layer: docs-content
-title: "DD 발견사항 기록 규칙"
+title: "DD Findings Recording Rules"
 scope: co-newbiz
 owner_agent: commercial-dd-agent
 version: "1.0.0"
 effective_from: "2026-09-05"
+lang: en
+counterpart: dd-findings_ko.md
 ---
-# 실사에서 뭔가를 발견했다면, 그다음엔 어떻게 하는가
+# Once due diligence uncovers something, what comes next
+> **Language**: **English** · [한국어](dd-findings_ko.md)
 
-[DD 개요]에서 설명한 실사 과정에서 문제나 리스크를 하나 발견했다고 해봅시다.
-예를 들어 "이 회사의 매출 중 40%가 고객 한 곳에서 나온다"는 사실을 알아냈다면, 이걸 회의록에
-한 줄 적어두고 넘어가는 것으로는 충분하지 않습니다. 그 고객이 떠나면 회사 가치가 얼마나
-떨어지는지까지 숫자로 계산해서 정식 기록으로 남겨야, 나중에 투자심의위원회(IC)가 이 발견사항을
-실제 투자 판단과 가격에 반영할 수 있습니다. co-newbiz는 이 정식 기록을 `dd_finding`이라고
-부릅니다.
+Suppose the due diligence process described in [the DD overview] uncovers a problem or a risk. For example, say you learn that "40% of this company's revenue comes from a single customer." Writing that down as one line in the meeting minutes and moving on is not enough. You must calculate — in numbers — how much the company's value would fall if that customer left, and keep it as a formal record, so that the Investment Committee (IC) can later reflect this finding in the actual investment decision and price. co-newbiz calls this formal record a `dd_finding`.
 
-## 발견사항 기록에 반드시 들어가야 하는 네 가지
+## The four things every finding record must contain
 
-- **무엇을 발견했는가(description)** — "매출이 안 좋아 보인다" 같은 인상이 아니라, 검증
-  가능한 사실을 명확한 문장으로 서술합니다.
-- **얼마나 영향을 주는가(value_impact)** — 정수 단위로, **KRW 백만원** 기준으로 금액을
-  환산합니다(내부 회계 규칙 ADR-0061). 예를 들어 위의 "고객 집중도" 사례라면, 그 고객을 잃었을
-  때 줄어드는 연간 매출·이익을 추정해 숫자로 남깁니다. 만약 금액으로 환산하는 것이 도저히
-  불가능한 성격의 발견(예: 평판 리스크)이라면, "왜 환산할 수 없는지" 그 사유를 반드시 함께
-  적습니다.
-- **어떤 전제와 연결되는가(assumption_key)** — 이 발견이 애초의 사업 계획에서 어떤 가정을
-  흔드는지 명시합니다. 예를 들어 "고객 유지율 95%를 전제로 세운 매출 계획"이라는 가정이 있었다면,
-  방금 발견한 고객 집중도 리스크는 바로 그 가정과 연결됩니다.
-- **증거는 어디 있는가(evidence_ref)** — 이 발견을 뒷받침하는 문서·자료의 위치를 남깁니다.
-  말로만 전해 들은 내용이 아니라는 것을 나중에도 확인할 수 있어야 합니다.
+- **What was found (description)** — not an impression such as "revenue looks weak," but a verifiable fact stated in clear sentences.
+- **How much impact it has (value_impact)** — the amount is converted in whole numbers, denominated in **KRW millions** (internal accounting rule ADR-0061). For the customer-concentration example above, you would estimate the annual revenue and profit lost if that customer left and record it as a number. If the finding is of a nature that simply cannot be converted into money (e.g., reputational risk), you must state the reason why conversion is impossible alongside it.
+- **Which assumption it ties to (assumption_key)** — you specify which assumption in the original business plan this finding shakes. If the plan contains the assumption "a revenue plan built on a 95% customer retention rate," then the customer-concentration risk just discovered ties directly to that assumption.
+- **Where the evidence is (evidence_ref)** — you record the location of the documents or materials supporting the finding, so that it can later be confirmed that this was not merely hearsay.
 
-## 발견부터 최종 투자안까지 이어지는 흐름
+## The flow from finding to final investment proposal
 
-**실사에서 문제 발견** → **`dd_finding`으로 정식 기록**(위 네 가지 포함) → **가격·투자안에
-반영**(구체적인 반영 절차는 [DD→밸류에이션 브릿지] 참고) → **투자심의위원회
-(IC) 패키지에 포함**
+**Problem found in due diligence** → **formally recorded as a `dd_finding`** (including the four elements above) → **reflected in price and the investment proposal** (see [the DD→valuation bridge] for the concrete reflection procedure) → **included in the Investment Committee (IC) package**
 
-이 흐름에서 중요한 것은, 발견사항이 "숫자로 이어지지 않으면" 그 뒤 어떤 단계에서도 반영될 수
-없다는 점입니다. 서술만 남기고 금액을 매기지 않은 발견은, 아무리 심각해 보여도 최종 투자 판단에
-자동으로는 반영되지 않습니다 — 그래서 value_impact 기재가 예외 없는 원칙으로 정해져 있습니다.
+What matters in this flow is that a finding "that does not translate into a number" cannot be reflected at any later stage. A finding that is described in prose but carries no amount — however serious it may look — is not automatically reflected in the final investment decision. That is why recording value_impact is established as a rule without exceptions.
 
-## 🌐 외부 참고 — 발견사항을 숫자로 바꾸는 것이 업계에서도 표준인가
+## 🌐 External Reference — Is converting findings into numbers also the industry standard?
 
-네, 그렇습니다. 업계 M&A 실사에서도 매도자가 스스로 발표한 이익(EBITDA)이 아니라, 실사를 거쳐
-정상화한 이익(Quality of Earnings, QoE)에 배수를 곱한 값이 최종 인수가격을 결정합니다. 즉
-발견사항은 원칙적으로 숫자로 환산을 시도하는 것이 표준이며, "환산 불가 사유만 적어두는 것"은
-예외 상황이지 기본값이 아닙니다. 또한 부채처럼 성격이 다른 항목은 이익 배수 계산과 별개로
-가격에서 직접 차감되는 등, 발견의 성격에 따라 반영되는 경로가 달라질 수 있습니다. 출처·상세는
-[docs/research/dd-findings-quantification.md] 문서 참조 (조사일 2026-09-05).
+Yes, it is. In industry M&A due diligence too, the final purchase price is determined by applying a multiple not to the seller's self-reported earnings (EBITDA) but to earnings normalized through due diligence (Quality of Earnings, QoE). In other words, the standard is to attempt to convert findings into numbers as a matter of principle; "recording only the reason conversion is impossible" is the exception, not the default. Also, items with a debt-like character are deducted directly from the price separately from the earnings-multiple calculation — the path through which a finding is reflected can vary depending on its nature. See the [docs/research/dd-findings-quantification.md] document for sources and details (research date 2026-09-05).
 
-## 출처 매핑
+## Source Mapping
 
-| 주장 | 근거 |
+| Claim | Basis |
 |---|---|
-| value_impact 단위·의무 | ADR-0061, business-manual_ko §"DD 발견사항" |
-| IC 패키지 포함 | ADR-0100, ic-package 라우트 |
-| 정량화 원칙 | docs/research/dd-findings-quantification.md |
+| value_impact unit and obligation | ADR-0061, business-manual_ko §"DD 발견사항" |
+| Inclusion in the IC package | ADR-0100, ic-package route |
+| Quantification principle | docs/research/dd-findings-quantification.md |
