@@ -6,15 +6,66 @@ var SEARCH_DATA = {
   DOCS: [
     /* ── KO ── */
     { path: 'index.html', title: 'co-newbiz 문서 허브', lang: 'ko' },
-    { path: 'procedures/index.html', title: '업무절차서', lang: 'ko' },
-    { path: 'procedures/greenfield-dd.html', title: '그린필드 실사', lang: 'ko' },
-    { path: 'procedures/brownfield-dd.html', title: '브라운필드 실사', lang: 'ko' },
-    { path: 'procedures/deal-structuring.html', title: '투자구조 설계', lang: 'ko' },
-    { path: 'procedures/entity-ic-review.html', title: 'Entity IC 심의', lang: 'ko' },
-    { path: 'procedures/jv-lifecycle-governance.html', title: 'JV 라이프사이클 거버넌스', lang: 'ko' }
+    { path: 'procedures/index.html', title: 'Procedures', lang: 'ko' },
+    { path: 'procedures/greenfield-dd.html', title: 'Greenfield DD', lang: 'ko' },
+    { path: 'procedures/brownfield-dd.html', title: 'Brownfield DD', lang: 'ko' },
+    { path: 'procedures/deal-structuring.html', title: 'Deal Structuring', lang: 'ko' },
+    { path: 'procedures/entity-ic-review.html', title: 'Entity IC Review', lang: 'ko' },
+    { path: 'procedures/jv-lifecycle-governance.html', title: 'JV Lifecycle Governance', lang: 'ko' },
+
+    /* ── EN ── */
+    { path: 'index_en.html', title: 'co-newbiz Knowledge Hub', lang: 'en' },
+    { path: 'procedures/index_en.html', title: 'Procedures', lang: 'en' },
+    { path: 'procedures/greenfield-dd_en.html', title: 'Greenfield DD', lang: 'en' },
+    { path: 'procedures/brownfield-dd_en.html', title: 'Brownfield DD', lang: 'en' },
+    { path: 'procedures/deal-structuring_en.html', title: 'Deal Structuring', lang: 'en' },
+    { path: 'procedures/entity-ic-review_en.html', title: 'Entity IC Review', lang: 'en' },
+    { path: 'procedures/jv-lifecycle-governance_en.html', title: 'JV Lifecycle Governance', lang: 'en' },
+
+    /* ── JA ── */
+    { path: 'index_ja.html', title: 'co-newbiz ドキュメントハブ', lang: 'ja' },
+    { path: 'procedures/index_ja.html', title: 'Procedures', lang: 'ja' },
+    { path: 'procedures/greenfield-dd_ja.html', title: 'Greenfield DD', lang: 'ja' },
+    { path: 'procedures/brownfield-dd_ja.html', title: 'Brownfield DD', lang: 'ja' },
+    { path: 'procedures/deal-structuring_ja.html', title: 'Deal Structuring', lang: 'ja' },
+    { path: 'procedures/entity-ic-review_ja.html', title: 'Entity IC Review', lang: 'ja' },
+    { path: 'procedures/jv-lifecycle-governance_ja.html', title: 'JV Lifecycle Governance', lang: 'ja' },
+
+    /* ── ES ── */
+    { path: 'index_es.html', title: 'co-newbiz Portal de Documentos', lang: 'es' },
+    { path: 'procedures/index_es.html', title: 'Procedures', lang: 'es' },
+    { path: 'procedures/greenfield-dd_es.html', title: 'Greenfield DD', lang: 'es' },
+    { path: 'procedures/brownfield-dd_es.html', title: 'Brownfield DD', lang: 'es' },
+    { path: 'procedures/deal-structuring_es.html', title: 'Deal Structuring', lang: 'es' },
+    { path: 'procedures/entity-ic-review_es.html', title: 'Entity IC Review', lang: 'es' },
+    { path: 'procedures/jv-lifecycle-governance_es.html', title: 'JV Lifecycle Governance', lang: 'es' }
   ],
 
   LABELS: {
+    en: {
+      placeholder: 'Search entire handbook — sections, items, scenarios…',
+      section: 'Section', scenario: 'Scenario', item: 'Item',
+      noResult: 'No results',
+      hint: function(n){ return n + ' documents searched. Navigates to exact position.'; },
+      building: 'Building index…'
+    },
+
+    es: {
+      placeholder: 'Buscar en todo el manual — secciones, elementos, escenarios…',
+      section: 'Sección', scenario: 'Escenario', item: 'Elemento',
+      noResult: 'Sin resultados',
+      hint: function(n){ return n + ' documentos buscados. Navega a la posición exacta.'; },
+      building: 'Construyendo índice…'
+    },
+
+    ja: {
+      placeholder: 'ハンドブック全体検索 — セクション・項目・シナリオ…',
+      section: 'セクション', scenario: 'シナリオ', item: '項目',
+      noResult: '結果なし',
+      hint: function(n){ return n + '文書から検索し、該当箇所に移動します。'; },
+      building: 'インデックス準備中…'
+    },
+
     ko: {
       placeholder: '핸드북 전체 검색 — 섹션·항목·시나리오…',
       section: '섹션', scenario: '시나리오', item: '항목',

@@ -7,33 +7,138 @@
     },
     {
       "path": "procedures/index.html",
-      "title": "업무절차서",
+      "title": "Procedures",
       "lang": "ko"
     },
     {
       "path": "procedures/greenfield-dd.html",
-      "title": "그린필드 실사",
+      "title": "Greenfield DD",
       "lang": "ko"
     },
     {
       "path": "procedures/brownfield-dd.html",
-      "title": "브라운필드 실사",
+      "title": "Brownfield DD",
       "lang": "ko"
     },
     {
       "path": "procedures/deal-structuring.html",
-      "title": "투자구조 설계",
+      "title": "Deal Structuring",
       "lang": "ko"
     },
     {
       "path": "procedures/entity-ic-review.html",
-      "title": "Entity IC 심의",
+      "title": "Entity IC Review",
       "lang": "ko"
     },
     {
       "path": "procedures/jv-lifecycle-governance.html",
-      "title": "JV 라이프사이클 거버넌스",
+      "title": "JV Lifecycle Governance",
       "lang": "ko"
+    },
+    {
+      "path": "index_en.html",
+      "title": "co-newbiz Knowledge Hub",
+      "lang": "en"
+    },
+    {
+      "path": "procedures/index_en.html",
+      "title": "Procedures",
+      "lang": "en"
+    },
+    {
+      "path": "procedures/greenfield-dd_en.html",
+      "title": "Greenfield DD",
+      "lang": "en"
+    },
+    {
+      "path": "procedures/brownfield-dd_en.html",
+      "title": "Brownfield DD",
+      "lang": "en"
+    },
+    {
+      "path": "procedures/deal-structuring_en.html",
+      "title": "Deal Structuring",
+      "lang": "en"
+    },
+    {
+      "path": "procedures/entity-ic-review_en.html",
+      "title": "Entity IC Review",
+      "lang": "en"
+    },
+    {
+      "path": "procedures/jv-lifecycle-governance_en.html",
+      "title": "JV Lifecycle Governance",
+      "lang": "en"
+    },
+    {
+      "path": "index_ja.html",
+      "title": "co-newbiz ドキュメントハブ",
+      "lang": "ja"
+    },
+    {
+      "path": "procedures/index_ja.html",
+      "title": "Procedures",
+      "lang": "ja"
+    },
+    {
+      "path": "procedures/greenfield-dd_ja.html",
+      "title": "Greenfield DD",
+      "lang": "ja"
+    },
+    {
+      "path": "procedures/brownfield-dd_ja.html",
+      "title": "Brownfield DD",
+      "lang": "ja"
+    },
+    {
+      "path": "procedures/deal-structuring_ja.html",
+      "title": "Deal Structuring",
+      "lang": "ja"
+    },
+    {
+      "path": "procedures/entity-ic-review_ja.html",
+      "title": "Entity IC Review",
+      "lang": "ja"
+    },
+    {
+      "path": "procedures/jv-lifecycle-governance_ja.html",
+      "title": "JV Lifecycle Governance",
+      "lang": "ja"
+    },
+    {
+      "path": "index_es.html",
+      "title": "co-newbiz Portal de Documentos",
+      "lang": "es"
+    },
+    {
+      "path": "procedures/index_es.html",
+      "title": "Procedures",
+      "lang": "es"
+    },
+    {
+      "path": "procedures/greenfield-dd_es.html",
+      "title": "Greenfield DD",
+      "lang": "es"
+    },
+    {
+      "path": "procedures/brownfield-dd_es.html",
+      "title": "Brownfield DD",
+      "lang": "es"
+    },
+    {
+      "path": "procedures/deal-structuring_es.html",
+      "title": "Deal Structuring",
+      "lang": "es"
+    },
+    {
+      "path": "procedures/entity-ic-review_es.html",
+      "title": "Entity IC Review",
+      "lang": "es"
+    },
+    {
+      "path": "procedures/jv-lifecycle-governance_es.html",
+      "title": "JV Lifecycle Governance",
+      "lang": "es"
     }
   ]
 }
