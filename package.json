@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "description": "co-newbiz — new-business-review AI team and system (L3 variant prototype)",
   "scripts": {
-    "test": "bun scripts/test-runner.ts integration",
+    "knowledge-hub:build": "cd knowledge-hub && bun run scripts/generate-portal.ts --all && bun run build-search-index --docs-dir docs",
+    "knowledge-hub:copy": "rm -rf app/web-next/public/knowledge-hub && cp -R knowledge-hub/docs app/web-next/public/knowledge-hub",
+        "test": "bun scripts/test-runner.ts integration",
     "test:unit": "bun scripts/test-runner.ts unit",
     "test:e2e": "bun scripts/test-runner.ts scenarios",
     "test:full": "bun scripts/test-runner.ts scenarios && bun scripts/test-runner.ts integration && bun scripts/test-runner.ts unit",

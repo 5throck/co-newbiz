@@ -203,6 +203,7 @@ export function LibraryView() {
       <h1>규정·체크리스트</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
         운영 매뉴얼·규정·체크리스트 문서를 열람합니다. (딜 단위 체크리스트 판정은 S4 이후 흐름 재구축 시 제공됩니다.)
+        온보딩·배포용 스냅샷은 <a href="/knowledge-hub/" className="underline underline-offset-2 text-[color:var(--accent)]">문서 허브</a>(ADR-0107)에서 제공됩니다.
       </p>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">

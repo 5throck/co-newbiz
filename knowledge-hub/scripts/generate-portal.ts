@@ -79,7 +79,7 @@ const t = (key: string, lang: Lang): string =>
   UI_STRINGS[key]?.[lang] ?? CHROME[lang]?.[key] ?? UI_STRINGS[key]?.[""] ?? CHROME[lang === "ja" || lang === "es" ? "en" : ""]?.[key] ?? key;
 
 // ── 포털 문서 레지스트리 (메뉴 SSOT — 사이드바·카드·배지 전부 여기서 생성) ──
-type DocKind = "procedure" | "checklist" | "md";
+type DocKind = "procedure" | "checklist" | "md" | "content";
 interface DocDef { slug: string; titleKo: string; titleEn: string; source: string; kind: DocKind; stage?: string }
 interface SectionDef { slug: string; titleKo: string; titleEn: string; blurbKo: string; blurbEn: string; docs: DocDef[] }
 
@@ -186,11 +186,25 @@ const SECTIONS: SectionDef[] = [
   },
   {
     slug: "design", titleKo: "디자인", titleEn: "Design", blurbKo: "디자인 철학·가이드·컴포넌트·표준 화면 패턴 종합입니다.", blurbEn: "Design philosophy, guide, components, and standard screen patterns.",
-    docs: [],
+    docs: [
+      { slug: "design-philosophy", titleKo: "디자인 철학·원칙", titleEn: "Design Philosophy & Principles", source: "content/design-philosophy.md", kind: "content" },
+      { slug: "design-tokens", titleKo: "디자인 가이드 — 토큰·타이포", titleEn: "Design Guide — Tokens & Typography", source: "content/design-tokens.md", kind: "content" },
+      { slug: "design-components", titleKo: "주요 컴포넌트 카탈로그", titleEn: "Component Catalog", source: "content/design-components.md", kind: "content" },
+      { slug: "design-screens", titleKo: "표준 화면 패턴 P0~P5", titleEn: "Standard Screen Patterns P0-P5", source: "content/design-screens.md", kind: "content" },
+      { slug: "design-accessibility", titleKo: "접근성·유니버설 디자인", titleEn: "Accessibility & UD", source: "content/design-accessibility.md", kind: "content" },
+    ],
   },
   {
     slug: "dd", titleKo: "DD 실사", titleEn: "Due Diligence", blurbKo: "7도메인 실사 방법론·발견사항 규칙·waiver 종합입니다.", blurbEn: "Seven-domain DD methodology, finding rules, and waivers.",
-    docs: [],
+    docs: [
+      { slug: "dd-overview", titleKo: "DD 개요·프로세스", titleEn: "DD Overview & Process", source: "content/dd-overview.md", kind: "content" },
+      { slug: "dd-domain-guides", titleKo: "도메인별 실사 가이드", titleEn: "Domain Guides", source: "content/dd-domain-guides.md", kind: "content" },
+      { slug: "dd-findings", titleKo: "발견사항 기록 규칙", titleEn: "Finding Rules", source: "content/dd-findings.md", kind: "content" },
+      { slug: "dd-tailored-checklists", titleKo: "맞춤 체크리스트", titleEn: "Tailored Checklists", source: "content/dd-tailored-checklists.md", kind: "content" },
+      { slug: "dd-waiver-kill", titleKo: "waiver·kill criteria", titleEn: "Waivers & Kill Criteria", source: "content/dd-waiver-kill.md", kind: "content" },
+      { slug: "dd-valuation-bridge", titleKo: "DD→밸류에이션 브릿지", titleEn: "DD to Valuation Bridge", source: "content/dd-valuation-bridge.md", kind: "content" },
+      { slug: "dd-best-practices", titleKo: "DD 운영 모범 사례", titleEn: "DD Best Practices", source: "content/dd-best-practices.md", kind: "content" },
+    ],
   },
 ];
 
@@ -213,17 +227,35 @@ function docLabel(sec: SectionDef, doc: DocDef, lang: Lang): string {
   return doc.stage ? `${doc.stage} ${base}` : base;
 }
 
+// 🌐 외부 참고 부착 맵 — 페이지 slug → research/*.md. 원본 우위 원칙 하에
+// 참고 블록으로만 부착된다(본문 편입 금지, 2026-09-05 위원회 합의).
+const RESEARCH: Record<string, string[]> = {
+  "procedures/deal-structuring": ["research/spc-structuring-practice.md"],
+  "procedures/brownfield-pre-fs": ["research/spc-structuring-practice.md"],
+  "procedures/deal-shape-chain": ["research/spc-structuring-practice.md"],
+  "checklists/commercial-dd": ["research/dd-commercial-workstreams.md"],
+  "reference/guide-expert-interview": ["research/expert-interview-practice.md"],
+  "reference/security-baseline": ["research/isms-baseline-mapping.md"],
+  "dd/dd-domain-guides": ["research/dd-commercial-workstreams.md"],
+  "dd/dd-best-practices": ["research/expert-interview-practice.md"],
+};
+
 // 파일럿 (Phase 0 수렴 게이트): 업무절차서는 S1~S12 전체 커버를 위해 전량 생성.
 // 사용자 승인 전 다른 카테고리는 파일럿 범위로 제한된다.
 const PILOT_EXEMPT_SECTIONS = new Set(["procedures"]);
 const PILOT = new Set(["deal-structuring", "brownfield-dd", "entity-ic-review", "greenfield-dd", "jv-lifecycle-governance"]);
 
 // ── 원본 읽기 + 해시 ────────────────────────────────────────────────────────
+function sourceAbs(relPath: string): string {
+  return relPath.startsWith("content/")
+    ? join(import.meta.dirname, "..", relPath)
+    : join(ROOT, relPath);
+}
 function sourceHash(relPath: string): string {
-  return createHash("sha256").update(readFileSync(join(ROOT, relPath))).digest("hex").slice(0, 12);
+  return createHash("sha256").update(readFileSync(sourceAbs(relPath))).digest("hex").slice(0, 12);
 }
 function readSource(relPath: string): string {
-  const abs = join(ROOT, relPath);
+  const abs = sourceAbs(relPath);
   if (!existsSync(abs)) throw new Error(`원본 없음: ${relPath}`);
   return readFileSync(abs, "utf-8");
 }
@@ -264,7 +296,11 @@ function mdToHtml(src: string): { html: string; hasMermaid: boolean } {
     hasMermaid = true;
     return `<div class="mermaid">${code}</div>`;
   });
-  return { html: marked.parse(converted) as string, hasMermaid };
+  const html = (marked.parse(converted) as string).replace(
+    /<pre>/g,
+    '<pre><button class="copy-btn" aria-label="Copy code">Copy</button>',
+  );
+  return { html, hasMermaid };
 }
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -347,9 +383,29 @@ function renderChecklist(doc: DocDef): Rendered {
   return { html, hasMermaid: false, title: parsed.title ?? doc.titleEn };
 }
 function renderMarkdown(doc: DocDef): Rendered {
-  const { html, hasMermaid } = mdToHtml(readSource(doc.source));
+  const { html: rawHtml, hasMermaid } = mdToHtml(readSource(doc.source));
+  const html = rewriteRelativeLinks(rawHtml, doc.source);
   const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/);
   return { html, hasMermaid, title: h1 ? h1[1].replace(/<[^>]+>/g, "").trim() : doc.titleEn };
+}
+
+// 마크다운 본문의 상대 링크를 저장소 원본(GitHub blob) 절대 경로로 재작성 —
+// 포털 문서 트리에는 원본 파일이 없으므로 상대 링크는 반드시 깨진다.
+function rewriteRelativeLinks(html: string, sourceRel: string): string {
+  const srcDir = sourceRel.includes("/") ? sourceRel.slice(0, sourceRel.lastIndexOf("/")) : "";
+  return html.replace(/href="([^"]+)"/g, (m, href: string) => {
+    if (/^(https?:|#|mailto:)/.test(href)) return m;
+    const clean = href.split("#")[0];
+    if (!clean) return m;
+    const depth = srcDir ? srcDir.split("/").length : 0;
+    const parts = (srcDir ? srcDir.split("/") : []);
+    for (const seg of clean.split("/")) {
+      if (seg === "..") parts.pop();
+      else if (seg !== ".") parts.push(seg);
+    }
+    void depth;
+    return `href="https://github.com/5throck/co-newbiz/blob/main/${parts.join("/")}"`;
+  });
 }
 
 // 문서 카드용 한 줄 설명 — 원본에서 자동 추출 (수작업 입력 금지)
@@ -518,12 +574,17 @@ const hashes: Record<string, string> = {};
 mkdirSync(DOCS, { recursive: true });
 
 for (const { sec, doc } of targets) {
-  const parsed: unknown = doc.kind === "md" ? null : yamlLoad(readSource(doc.source));
+  const parsed: unknown = doc.kind === "procedure" || doc.kind === "checklist" ? yamlLoad(readSource(doc.source)) : null;
   const govId = govIdOf(doc.source, parsed);
   const version = versionOf(doc.source, parsed);
   const hash = sourceHash(doc.source);
   hashes[doc.source] = hash;
-  const rendered = doc.kind === "procedure" ? renderProcedure(doc) : doc.kind === "checklist" ? renderChecklist(doc) : renderMarkdown(doc);
+  const rendered = doc.kind === "procedure" ? renderProcedure(doc) : doc.kind === "checklist" ? renderChecklist(doc) : renderMarkdown(doc); // content도 md 경로
+  const researchFiles = RESEARCH[`${sec.slug}/${doc.slug}`] ?? [];
+  const researchHtml = researchFiles.length
+    ? `<h2 id="external-reference">🌐 외부 참고</h2>\n      <div class="authority-note">${esc("아래는 외부 조사 기반 참고입니다. 원본 문서와 충돌하면 원본이 우위입니다.")}</div>\n` +
+      researchFiles.map((rf) => marked.parse(readFileSync(join(import.meta.dirname, "..", rf), "utf-8")) as string).join("\n")
+    : "";
 
   // 표준 메타 칩 블록 — 기계 판독 가능한 사실만 (게이트·단계/항목 수·버전·원본)
   const chips: string[] = [];

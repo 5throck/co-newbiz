@@ -28,6 +28,7 @@ co-newbiz/
   region-profiles/    per-region regulatory and incentive profiles (Stage 2+)
   process/            flow.spec.yaml — the process SSOT (12 stages S1~S12, 7 gates, flow.spec v2.2.0)
   handbook/           Korean platform handbook site (built with the handbook skill; docs/ is the static site)
+  knowledge-hub/      Documentation portal — version-pinned snapshots of policies/procedures/checklists/manuals (category-centric, ko/en/ja/es chrome, ADR-0107)
   docs/               process map, governance operations, manuals, ADRs
   memory/             session logs and meeting transcripts
 ```

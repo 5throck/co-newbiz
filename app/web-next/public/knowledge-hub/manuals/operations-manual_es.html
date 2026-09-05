@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operations Manual | co-newbiz Portal de Documentos</title>
+  <meta name="description" content="co-newbiz knowledge hub — versioned snapshot portal for policies, procedures, checklists, and manuals">
+  <link rel="stylesheet" href="../assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="../assets/css/handbook-components.css">
+  <style>
+    /* 포털 레이아웃 — 색상은 전부 handbook-variables.css(azure 3-layer 다크모드:
+       :root → prefers-color-scheme → .dark) 토큰에서만 가져온다.
+       이 파일에 색 하드코딩 금지. */
+    body { margin: 0; }
+    .portal-header {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; gap: 16px;
+      height: 56px; padding: 0 20px;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      transition: background-color .2s, border-color .2s;
+    }
+    .portal-header .brand { font-weight: 700; color: var(--text); text-decoration: none; font-size: 0.95em; white-space: nowrap; }
+    .portal-header .search-input {
+      flex: 0 1 320px; padding: 6px 10px; font-size: 0.85em;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg); color: var(--text);
+    }
+    .portal-header .header-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .portal-sidebar {
+      position: fixed; top: 56px; bottom: 0; left: 0; width: var(--sidebar-width);
+      overflow-y: auto; padding: 16px 0 32px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+      background: var(--bg2); border-right: 1px solid var(--border);
+      font-size: 0.86em;
+      transition: background-color .2s, border-color .2s;
+    }
+    .portal-sidebar nav ul { list-style: none; margin: 0 0 12px; padding: 0 12px; }
+    .portal-sidebar nav ul li { margin: 2px 0; }
+    .portal-sidebar nav ul li a { color: var(--text-muted); text-decoration: none; display: block; padding: 3px 6px; border-radius: var(--radius); }
+    .portal-sidebar nav ul li a:hover { color: var(--text); }
+    .portal-sidebar nav ul li a.active { color: var(--accent); background: var(--bg); font-weight: 600; }
+    .main-content {
+      margin-left: var(--sidebar-width); padding: 28px 40px 64px;
+      max-width: 980px;
+    }
+    .main-content article { max-width: 820px; }
+    .portal-breadcrumbs { font-size: 0.78em; color: var(--text-dim); margin: 0 0 14px; }
+    .portal-sidebar::-webkit-scrollbar { width: 8px; }
+    .portal-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .portal-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .breadcrumbs a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumbs a:hover { color: var(--accent); }
+    .doc-meta-block {
+      display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px;
+      font-size: 0.78em;
+    }
+    .doc-meta-block .chip {
+      border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px;
+      color: var(--text-muted); background: var(--bg2);
+    }
+    .doc-meta-block .chip.mandatory { color: var(--text-inverse); background: var(--accent-dark, var(--accent)); border-color: transparent; }
+    .authority-note {
+      background: var(--bg-note); border-left: 3px solid var(--border);
+      padding: 10px 14px; margin: 0 0 18px; border-radius: 4px;
+      font-size: 0.82em; color: var(--text-muted);
+    }
+    .gov-meta {
+      margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 0.78em; color: var(--text-dim);
+    }
+    footer {
+      margin-left: var(--sidebar-width); padding: 24px 40px;
+      border-top: 1px solid var(--border); font-size: 0.8em; color: var(--text-muted); text-align: center;
+      transition: border-color .2s;
+    }
+    .section-glyph { display: block; margin-bottom: 12px; }
+    .toc-box {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg2); padding: 12px 16px; margin: 0 0 20px; font-size: 0.84em;
+    }
+    .toc-box ul { list-style: none; margin: 6px 0 0; padding: 0; }
+    .toc-box li { margin: 2px 0; }
+    .toc-box a { color: var(--text-muted); text-decoration: none; }
+    .toc-box a:hover { color: var(--accent); }
+    /* 폭 대응: 표가 컨테이너보다 넓으면 가로 스크롤, 긴 토큰은 줄바꿈 */
+    /* 열 폭은 브라우저 auto table layout이 내용량에 비례해 배분한다.
+       overflow-wrap만 두고 고정 min-width는 두지 않는다(내용량 기준 요구). */
+    .table-scroll { overflow-x: auto; }
+    .main-content article table { table-layout: auto; }
+    .main-content article td, .main-content article th { overflow-wrap: anywhere; vertical-align: top; }
+    /* mermaid 다이어그램을 컨테이너 폭에 맞춤 */
+    .mermaid { max-width: 100%; overflow-x: auto; }
+    .mermaid svg { max-width: 100% !important; height: auto; }
+    @media print {
+      .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
+      .main-content, footer { margin-left: 0; }
+    }
+    @media (max-width: 800px) {
+      .portal-sidebar { display: none; }
+      .main-content, footer { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="portal-header">
+    <a href="../index_es.html" class="brand">📚 co-newbiz Portal de Documentos</a>
+    <input type="search" class="search-input" id="site-search" placeholder="Buscar documentos..." aria-label="Search">
+    <div class="header-actions">
+      <button class="dark-mode-toggle" id="dark-mode-toggle" aria-label="Toggle dark mode">🌓</button>
+      <div id="lang-switcher" class="lang-switcher">
+        <select id="lang-select" aria-label="Language"></select>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar portal-sidebar" id="sidebar">
+    <nav>
+      <p class="nav-section">Portal de Documentos</p>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../index_es.html">Inicio</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../policies/index_es.html">Policies</a></li>
+          <li style="padding-left:14px;"><a href="../policies/ent-a-addendum_es.html" style="font-size:0.85em;">Entity A Addendum</a></li>
+          <li style="padding-left:14px;"><a href="../policies/ent-b-addendum_es.html" style="font-size:0.85em;">Entity B Addendum</a></li>
+          <li style="padding-left:14px;"><a href="../policies/neb-policy_es.html" style="font-size:0.85em;">Group New-Business Review Policy</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../procedures/index_es.html">Procedures</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-screening_es.html" style="font-size:0.85em;">S1~S3 Greenfield Screening</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-screening_es.html" style="font-size:0.85em;">S1~S3 Brownfield Screening</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/company-profile-analysis_es.html" style="font-size:0.85em;">S3 Company Profile Analysis</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-pre-fs_es.html" style="font-size:0.85em;">S4 Greenfield Pre-FS</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-pre-fs_es.html" style="font-size:0.85em;">S4 Brownfield Pre-FS</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/deal-shape-chain_es.html" style="font-size:0.85em;">S4 Deal Shape Chain</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-capability-assessment_es.html" style="font-size:0.85em;">S5 Greenfield Capability Assessment</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-target-identification_es.html" style="font-size:0.85em;">S6 Brownfield Target Identification</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-target-screening_es.html" style="font-size:0.85em;">S7 Brownfield Target Screening</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-fs_es.html" style="font-size:0.85em;">S8 Greenfield FS</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-fs_es.html" style="font-size:0.85em;">S8 Brownfield FS</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-dd_es.html" style="font-size:0.85em;">S9 Greenfield DD</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-dd_es.html" style="font-size:0.85em;">S9 Brownfield DD</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/deal-structuring_es.html" style="font-size:0.85em;">S10 Deal Structuring</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/entity-ic-review_es.html" style="font-size:0.85em;">S11 Entity IC Review</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/group-investment-review_es.html" style="font-size:0.85em;">S11 Group Investment Review</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/entity-establishment-execution_es.html" style="font-size:0.85em;">S11 Entity Establishment Execution</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/jv-lifecycle-governance_es.html" style="font-size:0.85em;">S11 JV Lifecycle Governance</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/pmi-integration-execution_es.html" style="font-size:0.85em;">S11 PMI Integration Execution</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/portfolio-venture-monitoring_es.html" style="font-size:0.85em;">S12 Portfolio Venture Monitoring</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../checklists/index_es.html">Checklists</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/brownfield-feasibility_es.html" style="font-size:0.85em;">Brownfield Feasibility</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/commercial-dd_es.html" style="font-size:0.85em;">Commercial DD</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/deal-shape-presigning_es.html" style="font-size:0.85em;">Deal Shape Pre-Signing</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/entity-formation_es.html" style="font-size:0.85em;">Entity Formation</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/financial-dd_es.html" style="font-size:0.85em;">Financial DD</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/financing-plan_es.html" style="font-size:0.85em;">Financing Plan</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/greenfield-feasibility_es.html" style="font-size:0.85em;">Greenfield Feasibility</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/hr-dd_es.html" style="font-size:0.85em;">HR DD</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/legal-regulatory_es.html" style="font-size:0.85em;">Legal &amp; Regulatory</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/legal-dd_es.html" style="font-size:0.85em;">Legal DD</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/ma-special-topics_es.html" style="font-size:0.85em;">M&amp;A Special Topics</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/market-dd_es.html" style="font-size:0.85em;">Market DD</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/partnership_es.html" style="font-size:0.85em;">Partnership</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/rbd-technology_es.html" style="font-size:0.85em;">R&amp;BD Technology</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/site-selection_es.html" style="font-size:0.85em;">Site Selection</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/strategic-fit-screening_es.html" style="font-size:0.85em;">Strategic Fit Screening</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/target-screening_es.html" style="font-size:0.85em;">Target Screening</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/technical-dd_es.html" style="font-size:0.85em;">Technical DD</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../manuals/index_es.html">Manuals</a></li>
+          <li style="padding-left:14px;"><a href="../manuals/admin-manual_es.html" style="font-size:0.85em;">Admin Manual</a></li>
+          <li style="padding-left:14px;"><a href="../manuals/business-manual_es.html" style="font-size:0.85em;">Business Manual (analyst &amp; IC reviewers)</a></li>
+          <li style="padding-left:14px;"><a href="../manuals/operations-manual_es.html" class="active" style="font-size:0.85em;">Operations Manual</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../reference/index_es.html">Reference</a></li>
+          <li style="padding-left:14px;"><a href="../reference/governance-operations_es.html" style="font-size:0.85em;">Governance Operations</a></li>
+          <li style="padding-left:14px;"><a href="../reference/guide-expert-interview_es.html" style="font-size:0.85em;">Guide — Expert Interview Conduct</a></li>
+          <li style="padding-left:14px;"><a href="../reference/guide-proxy-chain-hop_es.html" style="font-size:0.85em;">Guide — Proxy Chain Hop Classification</a></li>
+          <li style="padding-left:14px;"><a href="../reference/ops-cadence_es.html" style="font-size:0.85em;">Ops Cadence</a></li>
+          <li style="padding-left:14px;"><a href="../reference/phase-definitions_es.html" style="font-size:0.85em;">Phase Definitions</a></li>
+          <li style="padding-left:14px;"><a href="../reference/process-map_es.html" style="font-size:0.85em;">Process Map</a></li>
+          <li style="padding-left:14px;"><a href="../reference/raci_es.html" style="font-size:0.85em;">RACI Matrix</a></li>
+          <li style="padding-left:14px;"><a href="../reference/rag-framework_es.html" style="font-size:0.85em;">RAG Framework</a></li>
+          <li style="padding-left:14px;"><a href="../reference/runbook-backup-restore_es.html" style="font-size:0.85em;">Runbook — Backup &amp; Restore</a></li>
+          <li style="padding-left:14px;"><a href="../reference/runbook-deployment_es.html" style="font-size:0.85em;">Runbook — Deployment</a></li>
+          <li style="padding-left:14px;"><a href="../reference/security-baseline_es.html" style="font-size:0.85em;">Security Baseline</a></li>
+          <li style="padding-left:14px;"><a href="../reference/security-model_es.html" style="font-size:0.85em;">Security Model</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../templates/index_es.html">Templates</a></li>
+          <li style="padding-left:14px;"><a href="../templates/bau-exit-evidence-pack-template_es.html" style="font-size:0.85em;">BAU Exit Evidence Pack</a></li>
+          <li style="padding-left:14px;"><a href="../templates/gate-pass-record-template_es.html" style="font-size:0.85em;">Gate Pass Record</a></li>
+          <li style="padding-left:14px;"><a href="../templates/ic-memo-template_es.html" style="font-size:0.85em;">IC Memo</a></li>
+          <li style="padding-left:14px;"><a href="../templates/jv-health-scorecard-template_es.html" style="font-size:0.85em;">JV Health Scorecard</a></li>
+          <li style="padding-left:14px;"><a href="../templates/partner-dd-report-template_es.html" style="font-size:0.85em;">Partner DD Report</a></li>
+          <li style="padding-left:14px;"><a href="../templates/portfolio-scorecard-rollup-template_es.html" style="font-size:0.85em;">Portfolio Scorecard Rollup</a></li>
+          <li style="padding-left:14px;"><a href="../templates/venture-transition-decision-template_es.html" style="font-size:0.85em;">Venture Transition Decision</a></li>
+          <li style="padding-left:14px;"><a href="../templates/venture-transition-evidence-template_es.html" style="font-size:0.85em;">Venture Transition Evidence</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../design/index_es.html">Design</a></li>
+          <li style="padding-left:14px;"><a href="../design/design-accessibility_es.html" style="font-size:0.85em;">Accessibility &amp; UD</a></li>
+          <li style="padding-left:14px;"><a href="../design/design-components_es.html" style="font-size:0.85em;">Component Catalog</a></li>
+          <li style="padding-left:14px;"><a href="../design/design-tokens_es.html" style="font-size:0.85em;">Design Guide — Tokens &amp; Typography</a></li>
+          <li style="padding-left:14px;"><a href="../design/design-philosophy_es.html" style="font-size:0.85em;">Design Philosophy &amp; Principles</a></li>
+          <li style="padding-left:14px;"><a href="../design/design-screens_es.html" style="font-size:0.85em;">Standard Screen Patterns P0-P5</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../dd/index_es.html">Due Diligence</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-best-practices_es.html" style="font-size:0.85em;">DD Best Practices</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-overview_es.html" style="font-size:0.85em;">DD Overview &amp; Process</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-valuation-bridge_es.html" style="font-size:0.85em;">DD to Valuation Bridge</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-domain-guides_es.html" style="font-size:0.85em;">Domain Guides</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-findings_es.html" style="font-size:0.85em;">Finding Rules</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-tailored-checklists_es.html" style="font-size:0.85em;">Tailored Checklists</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-waiver-kill_es.html" style="font-size:0.85em;">Waivers &amp; Kill Criteria</a></li>
+          </ul>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <div class="portal-breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index_es.html">Inicio</a> &gt; <a href="../manuals/index_es.html">Manuals</a> &gt; Operations Manual
+    </div>
+    <article>
+      <h1>Operations Manual</h1>
+<div class="doc-meta-block"><span class="chip">버전: —</span><span class="chip">원본: docs/manuals/operations-manual_ko.md@fc86e6c5cb3e</span></div>
+<div class="authority-note">Esta página es una <strong>instantánea con versión fija</strong> del documento original del repositorio. En caso de conflicto, <strong>prevalece el original</strong>. El cuerpo del texto se mantiene en el idioma del documento fuente.</div>
+<div class="toc-box"><p class="nav-section">목차</p><ul><li><a href="#sec-1">이 매뉴얼이 다루는 것</a></li><li><a href="#sec-2">1. 운영 리듬 (미팅 M7 기준)</a></li><li><a href="#sec-3">2. 배포 및 롤백</a></li><li><a href="#sec-4">3. 배치 운영</a></li><li><a href="#sec-5">4. 접근 제어 (운영자 대상)</a></li><li><a href="#sec-6">5. 사고 대응</a></li><li><a href="#sec-7">6. 관련 문서</a></li></ul></div>
+<h1>운영 매뉴얼 — 시스템 운영자</h1>
+<blockquote>
+<p><strong>언어</strong>: <a href="https://github.com/5throck/co-newbiz/blob/main/docs/manuals/operations-manual.md">English</a> · <strong>한국어</strong></p>
+</blockquote>
+<p><strong>독자</strong>: dba, sre, release-engineer, infra-automation-engineer(Stage 5 출시 후에는 이 역할의 인간 담당자)
+<strong>대상 아님</strong>: analyst(<code>business-manual.md</code> 참조), 시스템 관리자(<code>admin-manual.md</code> 참조)</p>
+<h2 id="sec-1">이 매뉴얼이 다루는 것</h2>
+<p>배치 운영, 백업/복구, 사고 대응, 배포/롤백 — 시스템을 계속 가동 상태로 유지하는 상시 운영 리듬. 이 시스템이 수행하는 비즈니스 프로세스 그 자체와는 구별된다.</p>
+<h2 id="sec-2">1. 운영 리듬 (미팅 M7 기준)</h2>
+<table>
+<thead>
+<tr>
+<th>담당</th>
+<th>주기</th>
+<th>업무</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>dba</td>
+<td>매일</td>
+<td>백업 성공 확인</td>
+</tr>
+<tr>
+<td>dba</td>
+<td>매주</td>
+<td>용량 및 쿼리 성능 검토</td>
+</tr>
+<tr>
+<td>dba</td>
+<td>매월</td>
+<td><strong>복구 훈련</strong> — 한 번도 복원해 본 적 없는 백업은 검증된 백업이 아니다. 첫 훈련: Stage 5 가동 1개월 후.</td>
+</tr>
+<tr>
+<td>sre</td>
+<td>매일</td>
+<td>수집 실패 분류(triage)</td>
+</tr>
+<tr>
+<td>sre</td>
+<td>상시</td>
+<td>알림 파이프라인 — (project, trigger_type) 쌍별 24시간 쿨다운, 히스테리시스는 RAG 7일 홀드와 동일하게</td>
+</tr>
+<tr>
+<td>sre</td>
+<td>사고 발생 시</td>
+<td>사고 대응 + 사후 분석</td>
+</tr>
+<tr>
+<td>security-engineer</td>
+<td>매주/분기</td>
+<td><code>docs/security-baseline.md</code> 참조 <em>(Stage 4)</em></td>
+</tr>
+</tbody></table>
+<h2 id="sec-3">2. 배포 및 롤백</h2>
+<ol>
+<li>모든 마이그레이션은 작성 시점에 <strong>reversible 여부가 태깅</strong>된다 — 사후에 추론하지 않는다.</li>
+<li>마이그레이션 직전에 백업을 실행한다.</li>
+<li>직후에 헬스체크를 실행한다.</li>
+<li>롤백은 릴리스 주기당 최소 1회, reversible 태그 마이그레이션으로 리허설한다.</li>
+<li><strong>되돌릴 수 없는(irreversible) 마이그레이션은 출시 전에 release-engineer + dba 공동 서명이 필요</strong> — 기본 리뷰보다 높은 기준이며, 의도된 것이다.</li>
+</ol>
+<h2 id="sec-4">3. 배치 운영</h2>
+<p>예약 수집 파이프라인(<code>newbiz.ts watch:run</code>, Stage 5에서 CLI가 착지하면)은 OS 레벨(Task Scheduler / systemd timer)에서 실행된다. <strong>인프로세스 타이머가 아니다</strong> — 인프로세스 타이머는 앱과 함께 죽고, 그러면 예약 모니터링의 목적 자체가 사라진다.</p>
+<p>파이프라인: 수집(cache-first) → 영향 탐지 → 자동 재실행 → RAG 재평가 → 알림. <code>job_run</code>이 이 파이프라인의 운영 감사 기록이다 — 예약 실행이 발화하지 않은 것처럼 보이면 가장 먼저 확인할 것.</p>
+<h2 id="sec-5">4. 접근 제어 (운영자 대상)</h2>
+<p>인간 운영자가 실행하는 CLI도 여전히 실제 <code>project_member</code> 컨텍스트로 해석된다(운영자 계정 또는 감사되는 <code>--as-user</code> 플래그) — <strong>need-to-know에 면제되는 신뢰된 운영자는 존재하지 않는다</strong>(미팅 M7-1 D-M7-1... / M7 D-M7-1). 로컬 CLI 접근을 우회로 취급하지 말 것.</p>
+<h2 id="sec-6">5. 사고 대응</h2>
+<ol>
+<li>sre가 분류하고 심각도를 매긴다.</li>
+<li>사고가 MNPI 플래그가 붙은 프로젝트에 닿아 있으면, <code>data_access_log</code>와 <code>insider_list</code> 기록은 부수 정보가 아니라 사고 기록의 일부다.</li>
+<li>사후 분석은 모든 프로덕션 사고에 필수이며, 운영 전용 포스트모템과 함께 거버넌스 KPI 세트(해당하는 경우 재작업률)에 투입된다.</li>
+</ol>
+<h2 id="sec-7">6. 관련 문서</h2>
+<ul>
+<li><code>docs/governance-operations.md</code> — 이 문서의 <em>시스템</em> 운영과 구별되는 <em>비즈니스</em> 거버넌스 운영(컴플라이언스, waiver).</li>
+<li><code>docs/security-baseline.md</code> <em>(Stage 4)</em>.</li>
+</ul>
+<nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+        <a href="../index_es.html" class="prev" style="text-decoration:none;color:var(--text);">
+          <div style="font-size:12px;color:var(--text-dim);">←</div>
+          <div>Manuals</div>
+        </a>
+        <a href="../index_es.html" class="next" style="text-decoration:none;color:var(--text);text-align:right;">
+          <div style="font-size:12px;color:var(--text-dim);">→</div>
+          <div>Inicio</div>
+        </a>
+      </nav>
+    </article>
+  </div>
+
+  <footer>
+    <p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p>
+  </footer>
+
+  <script src="../assets/js/dark-mode-toggle.js"></script>
+  <script src="../assets/js/site-search.js"></script>
+  <script src="../assets/js/lang-switcher.js"></script>
+  <script src="../assets/js/inpage-search.js"></script>
+  <script src="../assets/js/copy-code.js"></script>
+  
+</body>
+</html>

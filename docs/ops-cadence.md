@@ -10,7 +10,7 @@
 |---|---|---|
 | Daily | Health check, backup confirmation, collection-batch results/failures, error-log triage, notification queue | sre *(Stage 5)* |
 | Weekly | Dependency vulnerability scan, audit log review, capacity trend, staleness report, false-positive alert review, undefined-term report, compliance report + waivers nearing expiry | security-engineer, dba *(Stage 5)*; glossary-curator, compliance-officer *(active now)* |
-| Monthly | Recovery drill, access-permission review, query performance review, **RAG threshold calibration**, governance KPI aggregation, interpretation review/publication, ADR backlog cleanup | dba, security-engineer *(Stage 5)*; process-governance-manager, compliance-officer *(active now)* |
+| Monthly | Recovery drill, access-permission review, query performance review, **RAG threshold calibration**, governance KPI aggregation, interpretation review/publication, ADR backlog cleanup, **handbook sync audit** (knowledge-hub portal drift check per ADR-0107 — `handbook-sync-audit`) | dba, security-engineer *(Stage 5)*; process-governance-manager, compliance-officer, docs-writer *(active now)* |
 | Quarterly | Threat model refresh, DR drill, master-data consistency audit, **proxy-chain recalibration**, regulation/procedure periodic review (waiver-concentration clauses and interpretation-query topics set amendment priority), region profile refresh, onboarding material refresh | security-engineer, platform-lead *(Stage 5)*; process-governance-manager, compliance-officer, region-lead *(active now)* |
 | Annual | Full governance-document periodic review (`governance_doc.review_cycle_months`-driven forced re-approval of expired documents), full regulation-system retrospective | process-governance-manager, compliance-officer |
 

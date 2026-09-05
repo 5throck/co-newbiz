@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG 프레임워크 | co-newbiz 문서 허브</title>
+  <meta name="description" content="co-newbiz knowledge hub — versioned snapshot portal for policies, procedures, checklists, and manuals">
+  <link rel="stylesheet" href="../assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="../assets/css/handbook-components.css">
+  <style>
+    /* 포털 레이아웃 — 색상은 전부 handbook-variables.css(azure 3-layer 다크모드:
+       :root → prefers-color-scheme → .dark) 토큰에서만 가져온다.
+       이 파일에 색 하드코딩 금지. */
+    body { margin: 0; }
+    .portal-header {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; gap: 16px;
+      height: 56px; padding: 0 20px;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      transition: background-color .2s, border-color .2s;
+    }
+    .portal-header .brand { font-weight: 700; color: var(--text); text-decoration: none; font-size: 0.95em; white-space: nowrap; }
+    .portal-header .search-input {
+      flex: 0 1 320px; padding: 6px 10px; font-size: 0.85em;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg); color: var(--text);
+    }
+    .portal-header .header-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .portal-sidebar {
+      position: fixed; top: 56px; bottom: 0; left: 0; width: var(--sidebar-width);
+      overflow-y: auto; padding: 16px 0 32px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+      background: var(--bg2); border-right: 1px solid var(--border);
+      font-size: 0.86em;
+      transition: background-color .2s, border-color .2s;
+    }
+    .portal-sidebar nav ul { list-style: none; margin: 0 0 12px; padding: 0 12px; }
+    .portal-sidebar nav ul li { margin: 2px 0; }
+    .portal-sidebar nav ul li a { color: var(--text-muted); text-decoration: none; display: block; padding: 3px 6px; border-radius: var(--radius); }
+    .portal-sidebar nav ul li a:hover { color: var(--text); }
+    .portal-sidebar nav ul li a.active { color: var(--accent); background: var(--bg); font-weight: 600; }
+    .main-content {
+      margin-left: var(--sidebar-width); padding: 28px 40px 64px;
+      max-width: 980px;
+    }
+    .main-content article { max-width: 820px; }
+    .portal-breadcrumbs { font-size: 0.78em; color: var(--text-dim); margin: 0 0 14px; }
+    .portal-sidebar::-webkit-scrollbar { width: 8px; }
+    .portal-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .portal-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .breadcrumbs a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumbs a:hover { color: var(--accent); }
+    .doc-meta-block {
+      display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px;
+      font-size: 0.78em;
+    }
+    .doc-meta-block .chip {
+      border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px;
+      color: var(--text-muted); background: var(--bg2);
+    }
+    .doc-meta-block .chip.mandatory { color: var(--text-inverse); background: var(--accent-dark, var(--accent)); border-color: transparent; }
+    .authority-note {
+      background: var(--bg-note); border-left: 3px solid var(--border);
+      padding: 10px 14px; margin: 0 0 18px; border-radius: 4px;
+      font-size: 0.82em; color: var(--text-muted);
+    }
+    .gov-meta {
+      margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 0.78em; color: var(--text-dim);
+    }
+    footer {
+      margin-left: var(--sidebar-width); padding: 24px 40px;
+      border-top: 1px solid var(--border); font-size: 0.8em; color: var(--text-muted); text-align: center;
+      transition: border-color .2s;
+    }
+    .section-glyph { display: block; margin-bottom: 12px; }
+    .toc-box {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg2); padding: 12px 16px; margin: 0 0 20px; font-size: 0.84em;
+    }
+    .toc-box ul { list-style: none; margin: 6px 0 0; padding: 0; }
+    .toc-box li { margin: 2px 0; }
+    .toc-box a { color: var(--text-muted); text-decoration: none; }
+    .toc-box a:hover { color: var(--accent); }
+    /* 폭 대응: 표가 컨테이너보다 넓으면 가로 스크롤, 긴 토큰은 줄바꿈 */
+    /* 열 폭은 브라우저 auto table layout이 내용량에 비례해 배분한다.
+       overflow-wrap만 두고 고정 min-width는 두지 않는다(내용량 기준 요구). */
+    .table-scroll { overflow-x: auto; }
+    .main-content article table { table-layout: auto; }
+    .main-content article td, .main-content article th { overflow-wrap: anywhere; vertical-align: top; }
+    /* mermaid 다이어그램을 컨테이너 폭에 맞춤 */
+    .mermaid { max-width: 100%; overflow-x: auto; }
+    .mermaid svg { max-width: 100% !important; height: auto; }
+    @media print {
+      .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
+      .main-content, footer { margin-left: 0; }
+    }
+    @media (max-width: 800px) {
+      .portal-sidebar { display: none; }
+      .main-content, footer { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="portal-header">
+    <a href="../index.html" class="brand">📚 co-newbiz 문서 허브</a>
+    <input type="search" class="search-input" id="site-search" placeholder="문서 검색..." aria-label="Search">
+    <div class="header-actions">
+      <button class="dark-mode-toggle" id="dark-mode-toggle" aria-label="Toggle dark mode">🌓</button>
+      <div id="lang-switcher" class="lang-switcher">
+        <select id="lang-select" aria-label="Language"></select>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar portal-sidebar" id="sidebar">
+    <nav>
+      <p class="nav-section">문서 허브</p>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../index.html">홈</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../policies/index.html">규정집</a></li>
+          <li style="padding-left:14px;"><a href="../policies/neb-policy.html" style="font-size:0.85em;">그룹 신규사업 검토 정책</a></li>
+          <li style="padding-left:14px;"><a href="../policies/ent-a-addendum.html" style="font-size:0.85em;">ent-a 법인 추가 규정</a></li>
+          <li style="padding-left:14px;"><a href="../policies/ent-b-addendum.html" style="font-size:0.85em;">ent-b 법인 추가 규정</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../procedures/index.html">업무절차서</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-screening.html" style="font-size:0.85em;">S1~S3 그린필드 스크리닝</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-screening.html" style="font-size:0.85em;">S1~S3 브라운필드 스크리닝</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/company-profile-analysis.html" style="font-size:0.85em;">S3 기업 프로필 분석</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-pre-fs.html" style="font-size:0.85em;">S4 그린필드 Pre-FS</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-pre-fs.html" style="font-size:0.85em;">S4 브라운필드 Pre-FS</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/deal-shape-chain.html" style="font-size:0.85em;">S4 딜 셰이프 체인</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-capability-assessment.html" style="font-size:0.85em;">S5 그린필드 역량 평가</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-target-identification.html" style="font-size:0.85em;">S6 브라운필드 대상 후보 발굴</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-target-screening.html" style="font-size:0.85em;">S7 브라운필드 대상 스크리닝</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-fs.html" style="font-size:0.85em;">S8 그린필드 FS</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-fs.html" style="font-size:0.85em;">S8 브라운필드 FS</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-dd.html" style="font-size:0.85em;">S9 그린필드 실사</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-dd.html" style="font-size:0.85em;">S9 브라운필드 실사</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/deal-structuring.html" style="font-size:0.85em;">S10 투자구조 설계</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/entity-ic-review.html" style="font-size:0.85em;">S11 Entity IC 심의</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/group-investment-review.html" style="font-size:0.85em;">S11 그룹 투자 심의</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/entity-establishment-execution.html" style="font-size:0.85em;">S11 법인 설립 실행</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/jv-lifecycle-governance.html" style="font-size:0.85em;">S11 JV 라이프사이클 거버넌스</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/pmi-integration-execution.html" style="font-size:0.85em;">S11 PMI 통합 실행</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/portfolio-venture-monitoring.html" style="font-size:0.85em;">S12 포트폴리오 벤처 모니터링</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../checklists/index.html">체크리스트</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/greenfield-feasibility.html" style="font-size:0.85em;">그린필드 실현가능성</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/technical-dd.html" style="font-size:0.85em;">기술 실사</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/target-screening.html" style="font-size:0.85em;">대상 스크리닝</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/deal-shape-presigning.html" style="font-size:0.85em;">딜 셰이프 사전서명</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/legal-regulatory.html" style="font-size:0.85em;">법규·규제</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/legal-dd.html" style="font-size:0.85em;">법무 실사</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/entity-formation.html" style="font-size:0.85em;">법인 설립</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/brownfield-feasibility.html" style="font-size:0.85em;">브라운필드 실현가능성</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/commercial-dd.html" style="font-size:0.85em;">상업 실사</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/market-dd.html" style="font-size:0.85em;">시장 실사</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/hr-dd.html" style="font-size:0.85em;">인사 실사</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/site-selection.html" style="font-size:0.85em;">입지 선정</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/financing-plan.html" style="font-size:0.85em;">자금조달 계획</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/financial-dd.html" style="font-size:0.85em;">재무 실사</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/strategic-fit-screening.html" style="font-size:0.85em;">전략적 적합성 스크리닝</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/partnership.html" style="font-size:0.85em;">파트너십</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/ma-special-topics.html" style="font-size:0.85em;">M&amp;A 특수 주제</a></li>
+          <li style="padding-left:14px;"><a href="../checklists/rbd-technology.html" style="font-size:0.85em;">R&amp;BD 기술</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../manuals/index.html">업무 매뉴얼</a></li>
+          <li style="padding-left:14px;"><a href="../manuals/admin-manual.html" style="font-size:0.85em;">관리자 매뉴얼</a></li>
+          <li style="padding-left:14px;"><a href="../manuals/business-manual.html" style="font-size:0.85em;">비즈니스 매뉴얼 (analyst·IC 심사자)</a></li>
+          <li style="padding-left:14px;"><a href="../manuals/operations-manual.html" style="font-size:0.85em;">운영 매뉴얼 (운영자)</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../reference/index.html">참고문서</a></li>
+          <li style="padding-left:14px;"><a href="../reference/guide-expert-interview.html" style="font-size:0.85em;">가이드 — 전문가 인터뷰 수행</a></li>
+          <li style="padding-left:14px;"><a href="../reference/guide-proxy-chain-hop.html" style="font-size:0.85em;">가이드 — 프록시 체인 홉 분류</a></li>
+          <li style="padding-left:14px;"><a href="../reference/governance-operations.html" style="font-size:0.85em;">거버넌스 운영</a></li>
+          <li style="padding-left:14px;"><a href="../reference/phase-definitions.html" style="font-size:0.85em;">단계 정의</a></li>
+          <li style="padding-left:14px;"><a href="../reference/runbook-deployment.html" style="font-size:0.85em;">런북 — 배포</a></li>
+          <li style="padding-left:14px;"><a href="../reference/runbook-backup-restore.html" style="font-size:0.85em;">런북 — 백업·복구</a></li>
+          <li style="padding-left:14px;"><a href="../reference/security-model.html" style="font-size:0.85em;">보안 모델</a></li>
+          <li style="padding-left:14px;"><a href="../reference/security-baseline.html" style="font-size:0.85em;">보안 베이스라인</a></li>
+          <li style="padding-left:14px;"><a href="../reference/ops-cadence.html" style="font-size:0.85em;">운영 주기</a></li>
+          <li style="padding-left:14px;"><a href="../reference/process-map.html" style="font-size:0.85em;">프로세스 맵</a></li>
+          <li style="padding-left:14px;"><a href="../reference/raci.html" style="font-size:0.85em;">RACI 매트릭스</a></li>
+          <li style="padding-left:14px;"><a href="../reference/rag-framework.html" class="active" style="font-size:0.85em;">RAG 프레임워크</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../templates/index.html">산출물 템플릿</a></li>
+          <li style="padding-left:14px;"><a href="../templates/gate-pass-record-template.html" style="font-size:0.85em;">게이트 통과 기록</a></li>
+          <li style="padding-left:14px;"><a href="../templates/venture-transition-decision-template.html" style="font-size:0.85em;">벤처 전환 결정</a></li>
+          <li style="padding-left:14px;"><a href="../templates/venture-transition-evidence-template.html" style="font-size:0.85em;">벤처 전환 증적</a></li>
+          <li style="padding-left:14px;"><a href="../templates/partner-dd-report-template.html" style="font-size:0.85em;">파트너 DD 리포트</a></li>
+          <li style="padding-left:14px;"><a href="../templates/portfolio-scorecard-rollup-template.html" style="font-size:0.85em;">포트폴리오 스코어카드 롤업</a></li>
+          <li style="padding-left:14px;"><a href="../templates/bau-exit-evidence-pack-template.html" style="font-size:0.85em;">BAU exit 증적 팩</a></li>
+          <li style="padding-left:14px;"><a href="../templates/ic-memo-template.html" style="font-size:0.85em;">IC 메모</a></li>
+          <li style="padding-left:14px;"><a href="../templates/jv-health-scorecard-template.html" style="font-size:0.85em;">JV 헬스 스코어카드</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../design/index.html">디자인</a></li>
+          <li style="padding-left:14px;"><a href="../design/design-tokens.html" style="font-size:0.85em;">디자인 가이드 — 토큰·타이포</a></li>
+          <li style="padding-left:14px;"><a href="../design/design-philosophy.html" style="font-size:0.85em;">디자인 철학·원칙</a></li>
+          <li style="padding-left:14px;"><a href="../design/design-accessibility.html" style="font-size:0.85em;">접근성·유니버설 디자인</a></li>
+          <li style="padding-left:14px;"><a href="../design/design-components.html" style="font-size:0.85em;">주요 컴포넌트 카탈로그</a></li>
+          <li style="padding-left:14px;"><a href="../design/design-screens.html" style="font-size:0.85em;">표준 화면 패턴 P0~P5</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../dd/index.html">DD 실사</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-domain-guides.html" style="font-size:0.85em;">도메인별 실사 가이드</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-tailored-checklists.html" style="font-size:0.85em;">맞춤 체크리스트</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-findings.html" style="font-size:0.85em;">발견사항 기록 규칙</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-overview.html" style="font-size:0.85em;">DD 개요·프로세스</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-best-practices.html" style="font-size:0.85em;">DD 운영 모범 사례</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-valuation-bridge.html" style="font-size:0.85em;">DD→밸류에이션 브릿지</a></li>
+          <li style="padding-left:14px;"><a href="../dd/dd-waiver-kill.html" style="font-size:0.85em;">waiver·kill criteria</a></li>
+          </ul>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <div class="portal-breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">홈</a> &gt; <a href="../reference/index.html">참고문서</a> &gt; RAG 프레임워크
+    </div>
+    <article>
+      <h1>RAG 프레임워크</h1>
+<div class="doc-meta-block"><span class="chip">버전: —</span><span class="chip">원본: docs/rag-framework.md@2df9283c85d7</span></div>
+<div class="authority-note">이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용). 분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱의 문서·규정 화면 또는 저장소 원본을 확인하세요. 본문은 원본 문서의 언어로 유지됩니다.</div>
+<div class="toc-box"><p class="nav-section">목차</p><ul><li><a href="#sec-1">1. Six Dimensions</a></li><li><a href="#sec-2">2. Financial Dimension Bands (D-M3-1)</a></li><li><a href="#sec-3">2.5. Regulatory/Permit Dimension — Structural vs. Behavioral Remedies</a></li><li><a href="#sec-4">3. Data Confidence Dimension and Cap (D-M3-2, D-M3-3)</a></li><li><a href="#sec-5">4. Hysteresis (D-M3-4)</a></li><li><a href="#sec-6">5. Stage-Gate Threshold Applicability</a></li><li><a href="#sec-7">5-1. Stage-Gate Threshold Applicability — Market Dimension (Decision 6, draft)</a></li><li><a href="#sec-8">5-2. Technical/Execution and Risk Dimensions — Staged Evidence Layer (PR-7)</a></li><li><a href="#sec-9">5-3. Rule Evaluation Path (PR-9 activation)</a></li><li><a href="#sec-10">5-4. Kill-Criteria Evaluation Path (ADR-0057)</a></li><li><a href="#sec-11">6. Calibration (Stage 3 Follow-Up)</a></li><li><a href="#sec-12">7. Seed Data Shape (Stage 4/5 Forward Reference)</a></li><li><a href="#sec-13">8. Related</a></li></ul></div>
+<h1>RAG Scoring Framework — Detailed Rules</h1>
+<p><strong>Owner</strong>: process-governance-manager (with financial-analyst, quant-methodologist, risk-officer)
+<strong>Design of record</strong>: design v1.0 §4-2 / meeting M3 / ADR-0016
+<strong>Status</strong>: Stage 3 draft — thresholds below are the meeting M3 decisions (D-M3-1 through D-M3-4), specified concretely enough to seed the future <code>rag_rule</code> table (Stage 5). Manual application starts now.</p>
+<h2 id="sec-1">1. Six Dimensions</h2>
+<p>Financial, Market, Data Confidence, Regulatory/Permit, Technical/Execution, Risk. See <code>docs/process-map.md</code> for where each dimension&#39;s inputs originate.</p>
+<h2 id="sec-2">2. Financial Dimension Bands (D-M3-1)</h2>
+<table>
+<thead>
+<tr>
+<th>Grade</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Green</td>
+<td>IRR ≥ hurdle + 2.0pp <strong>AND</strong> DSCR ≥ 1.3x under the downside scenario</td>
+</tr>
+<tr>
+<td>Amber</td>
+<td>IRR ≥ hurdle, but below the Green band (either condition not met)</td>
+</tr>
+<tr>
+<td>Red</td>
+<td>IRR &lt; hurdle in the base case</td>
+</tr>
+</tbody></table>
+<p>Precondition: WACC/hurdle must be <code>assumption.kind = &#39;user&#39;</code> (design §4-1) before this dimension can be scored — meeting M1 fixed this as a Pre-FS entry condition, so the sequencing already holds.</p>
+<h2 id="sec-3">2.5. Regulatory/Permit Dimension — Structural vs. Behavioral Remedies</h2>
+<p>An antitrust or regulatory remedy is not a single grading pattern — two real, structurally different shapes have shown up in pilot cases, and they should be graded differently:</p>
+<ul>
+<li><strong>Behavioral remedy</strong> (an ongoing compliance obligation — e.g. <code>docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md</code>&#39;s 3-year supply/pricing conditions): grade Amber <strong>for the full duration of the obligation</strong>. There is no discharge event partway through — the obligation is either still active (Amber) or expired (re-evaluate).</li>
+<li><strong>Structural remedy</strong> (a one-time closing condition — e.g. <code>docs/pilots/pilot-008-delivery-hero-woowa-brothers.md</code>&#39;s mandatory divestiture): grade Amber <strong>while the condition is open</strong> (real closing risk exists — e.g. a divestiture buyer search could fail), but re-gradable toward Green <strong>once the condition is confirmed discharged</strong>, since nothing remains to monitor post-discharge, unlike a behavioral remedy.</li>
+</ul>
+<p>Do not apply one grading pattern to both shapes — a discharged structural remedy and a live behavioral remedy are not the same risk, even if both originated from a &quot;conditional approval.&quot;</p>
+<h2 id="sec-4">3. Data Confidence Dimension and Cap (D-M3-2, D-M3-3)</h2>
+<table>
+<thead>
+<tr>
+<th>Chain reliability grade</th>
+<th>Data confidence grade</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A</td>
+<td>Green</td>
+</tr>
+<tr>
+<td>B</td>
+<td>Amber</td>
+</tr>
+<tr>
+<td>C, or a staleness-gate violation</td>
+<td>Red (&quot;judgment withheld&quot;)</td>
+</tr>
+</tbody></table>
+<p><strong>The overall RAG rule is priority-ordered, not a weighted average</strong> (D-M3-3, this is the framework&#39;s single most load-bearing rule — see ADR-0016):</p>
+<pre><button class="copy-btn" aria-label="Copy code">Copy</button><code>overall = RED   if any dimension is RED, OR a Kill Criteria condition is triggered
+overall = GREEN if all six dimensions are GREEN (including data confidence)
+overall = AMBER otherwise
+</code></pre>
+<p>Data confidence caps the ceiling structurally, since it is one of the six dimensions the Green rule requires — a Grade-B proxy chain (confidence = Amber) makes an all-Green outcome impossible regardless of the other five dimensions&#39; strength.</p>
+<h2 id="sec-5">4. Hysteresis (D-M3-4)</h2>
+<table>
+<thead>
+<tr>
+<th>Transition</th>
+<th>Trigger</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Promote Amber → Green</td>
+<td>IRR ≥ hurdle + 2.0pp, sustained for one full run cycle (not a single day&#39;s fetch)</td>
+</tr>
+<tr>
+<td>Demote Green → Amber</td>
+<td>IRR &lt; hurdle + 0.5pp</td>
+</tr>
+<tr>
+<td>Minimum hold period</td>
+<td>7 days, measured against <code>run</code> timestamps — two manually re-triggered runs on the same calendar day do not satisfy the hold period</td>
+</tr>
+</tbody></table>
+<h2 id="sec-6">5. Stage-Gate Threshold Applicability</h2>
+<p>Per design §4-2, thresholds are declared per <code>stage_gate</code> — the bands above apply from FS onward, once a full financial model exists. Screening and Pre-FS use a reduced check (financial dimension is Amber-capped by default pending a completed model; the other five dimensions score normally).</p>
+<h2 id="sec-7">5-1. Stage-Gate Threshold Applicability — Market Dimension (Decision 6, draft)</h2>
+<p>The <code>market</code> dimension&#39;s <strong>evidence layer has landed</strong> (migration 0017, PR-6): the <code>project_variable_snapshot</code> table, the first scoring-var seeds (9 market / right-to-win vars + <code>market.link_fit_quality</code>), and five <code>market-dd-*</code> rule rows staged <code>enabled=0</code> with <code>_threshold_placeholder</code> scalars — the anti-tamper skeleton the thresholds meeting fills in. <strong>The thresholds meeting has now happened</strong>: the approved record <code>docs/decisions/market-thresholds.md</code> (2026-08-23) owns every number, the fillers, the <code>switching_cost_grade</code> CHECK enum (landed by migration 0019), and <code>competitive_intensity</code>&#39;s permanent ban as a standalone var; migration 0019 finalized all five staged rows in place and added the three record-mandated rows (the screening/pre-FS TAM-growth gate splits and <code>market-dd-right-to-win-absent</code>). <strong>Activation has landed</strong> (migration 0022, PR-9): the seven non-green market rows are <code>enabled=1</code> with <code>policy_id</code> + <code>thresholds_source</code> verbatim from the record, and <code>db/lib/rule-assessment.ts</code> grades them per run (§5-3); the green <code>market-dd-right-to-win</code> row alone stays <code>enabled=0</code> — the Decision 9 Green cap lifts only after calibration. This subsection documents the staged rule agreed in the design&#39;s Decision 6 (2026-08-22 RAG formalization design, §1.1), following the same pattern as §5&#39;s <code>financial</code> treatment.</p>
+<table>
+<thead>
+<tr>
+<th>Stage gate</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Screening</td>
+<td><code>market</code> is Amber-capped by default. Only <code>TAM</code> and <code>growth_rate</code> are evaluated, sourced from <code>fact_industry</code>. The other market axes (bargaining power, competitive intensity, switching cost, entry barriers, right-to-win) stay unassessed.</td>
+</tr>
+<tr>
+<td>Pre-FS</td>
+<td><code>TAM</code>/<code>growth_rate</code> must be evidence-backed (not merely present — an <code>evidence_ref</code> is required, not just a non-null value). The full six-axis <code>value_chain_link</code> evidence is still not expected at this stage.</td>
+</tr>
+<tr>
+<td>DD</td>
+<td>The full six-axis <code>value_chain_link</code> evidence activates, and the Amber cap lifts.</td>
+</tr>
+</tbody></table>
+<p>This mirrors the financial dimension&#39;s staged approach (§5): a dimension without a completed evidentiary base cannot produce a Green grade, but Amber/Red signal is still live where the available evidence supports it.</p>
+<h3>Corrected evidence mapping (Decision 6)</h3>
+<p>The design&#39;s meeting review corrected a mapping error in the original plan (see the design doc&#39;s &quot;뒤집힘 4&quot;): <code>value_chain_link.concentration_hhi</code> measures upstream/downstream bargaining power (industry concentration in adjacent supply-chain tiers), not horizontal competitive intensity — the two can point in opposite directions, and conflating them silently mis-grades. The corrected mapping:</p>
+<ul>
+<li><code>concentration_hhi</code> → <code>bargaining_power</code> (its original meaning), <strong>not</strong> <code>competitive_intensity</code>.</li>
+<li><code>competitive_intensity</code> is a <strong>new, still-unsourced</strong> var — to be sourced from <code>fact_industry</code> convention or <code>dimension_input</code>, not from <code>concentration_hhi</code>.</li>
+<li><code>switching_cost_grade</code> is a CHECK-constrained enum since migration 0019 (<code>negligible</code>|<code>low</code>|<code>moderate</code>|<code>high</code>|<code>very_high</code>, D-M-MKT-2), so an <code>in</code>-predicate over it is typo-safe; <code>substitution_threat</code> is CHECK-constrained since migration 0020 — the D-M-MKT-2 rider, a five-member ordinal mirroring <code>switching_cost_grade</code>&#39;s members, landed as an implementation proposal (a repo-wide scan found no established vocabulary anywhere) and <strong>ratified 2026-08-23</strong> by <code>docs/decisions/substitution-threat-vocabulary.md</code> (chair: process-governance-manager). No rule reads the column yet; the first that does may cite that record as its vocabulary source.</li>
+<li>Vars sourced from <code>value_chain_link</code> require <code>r2 &gt;= 0.6</code> (mirroring <code>gradeChain()</code>&#39;s own reliability threshold) — below that, the var is excluded as low-confidence rather than treated as present. The missing-vs-low-confidence distinction now exists at schema level: <code>project_variable_snapshot.status</code> carries a fourth member <code>low_confidence</code> (migration 0017 — the design DDL sketched three statuses, but Decision 6&#39;s own text requires the distinction). The enforcement has landed: <code>db/lib/snapshot-filler.ts</code> (the filler PR) writes all 22 seeded scoring vars once per run per the records&#39; var contracts — an arg-max link below r2 0.6 yields <code>low_confidence</code> for <code>market.bargaining_power_hhi</code> with the value kept, while <code>market.link_fit_quality</code> is written truthfully <code>present</code> even below the floor. The market rules are enabled since migration 0022 (PR-9) and evaluated per run by <code>db/lib/rule-assessment.ts</code> (§5-3).</li>
+</ul>
+<h2 id="sec-8">5-2. Technical/Execution and Risk Dimensions — Staged Evidence Layer (PR-7)</h2>
+<p>The <code>technical_execution</code> and <code>risk</code> dimensions&#39; <strong>evidence layer has landed</strong> (migration 0018, PR-7): 11 more <code>evidence_var</code> seeds — all <code>computed</code>, unlike market&#39;s asserted judgment vars, because every source is an existing table/column (<code>dd_finding</code>, <code>certification</code>, <code>permit</code>+<code>permit_edge</code>, <code>contingent_liability</code>, <code>covenant_test</code>, <code>partner_candidate</code>) — and eight <code>tech-dd-*</code> / <code>risk-dd-*</code> rule rows staged <code>enabled=0</code> (<code>technical_execution</code> ×4, <code>risk</code> ×4, per the risk agenda&#39;s Decision-8 axes: contingent liability in both agenda-sketched forms, covenant breach, partner-sourcing failure — the risk-officer kill-trigger the original mapping had entirely omitted). <strong>The thresholds records have now landed</strong>: <code>docs/decisions/technical-execution-thresholds.md</code> and <code>docs/decisions/risk-thresholds.md</code> (both 2026-08-23, replacing their <code>docs/decisions/open/</code> agendas), and migration 0019 finalized all eight staged rows in place to the records&#39; mapping tables (CHECK enums on every vocabulary column included) plus added the three technical Red rows (<code>tech-dd-trl-pre-validation</code>, <code>tech-dd-ip-disputed</code>, <code>tech-dd-cert-load-bearing-loss</code> with the new <code>cert.load_bearing_non_transferable_on_coc</code> var). <strong>Activation has landed</strong> (migration 0022, PR-9): all 11 rows are <code>enabled=1</code> with <code>policy_id</code> + <code>thresholds_source</code> verbatim from the records, and <code>db/lib/rule-assessment.ts</code> grades them per run (§5-3).</p>
+<p>Two boundary statements worth their own lines:</p>
+<ul>
+<li><strong><code>antitrust_finding</code> is excluded from <code>risk</code> by premise</strong> (risk agenda §2.1): it already feeds <code>regulatory_permit</code>, and counting one finding in two of the six dimensions would make the overall grade disproportionately sensitive to a single piece of evidence. Reversal requires a separate ADR, never a threshold decision.</li>
+<li><strong>No full gate ladder is documented for these dimensions yet</strong> — deliberately. Market&#39;s §5-1 ladder exists because the design&#39;s Decision 6 decided it; for technical/risk, the 2026-08-23 records assign stage gates per rule (all technical rows <code>dd</code>; the risk partner-sourcing row restated <code>pre_fs</code>, D-M-RISK-7) rather than a screening→pre_fs→fs ladder, and per-gate missing-evidence treatment beyond the predicates&#39; fail-closed <code>is_null</code> handling is still activation work (PR-9), not a settled ladder.</li>
+</ul>
+<h2 id="sec-9">5-3. Rule Evaluation Path (PR-9 activation)</h2>
+<p><code>db/lib/rule-assessment.ts</code> (<code>assessRulesForRun</code>) is the rule-evaluation consumer the staged layers waited on. Per run it:</p>
+<ol>
+<li>fills the run&#39;s <code>project_variable_snapshot</code> (<code>snapshot-filler.ts</code> 1.1.0 — live <code>project_industry</code> bindings are the default fact-family industry set),</li>
+<li>loads the stage gate&#39;s <strong>enabled</strong> rules (priority-ordered) and evaluates each <code>condition_expr</code> against the snapshot through the ADR-0046 predicate engine (Kleene semantics),</li>
+<li>grades each dimension by <strong>first-match-wins on priority</strong> (D-M-RISK-5, pinned for PR-9): the dimension grade is the grade of the highest-priority TRUE rule — Red dominance is structural because Red rules carry lower priority numbers (D-M-RISK-4 layer 2, D-M-TE-8),</li>
+<li>writes one <code>rag_assessment</code> row per <strong>assessed</strong> dimension — no rule TRUE and any rule UNASSESSED ⇒ the dimension is UNASSESSED and <strong>no row is written</strong> (a defaulted Amber is never persisted),</li>
+<li>grades all-rules-determinately-FALSE as <strong>Amber under the Decision 9 Green cap</strong> — never Green pre-calibration, with the cap named in the persisted rationale.</li>
+</ol>
+<p>The runtime guards mirror the migration-level ones: a green-graded rule winning a dimension <strong>throws</strong> instead of yielding Green (Decision 9 / D-M-MKT-11.2), and an enabled rule targeting a dimension outside market/technical_execution/risk throws rather than being silently skipped. <code>financial</code>/<code>data_confidence</code>/<code>regulatory_permit</code> keep their existing scorers (<code>rag-engine.ts</code>) — they are not predicate rules — and no overall row is composed here (ADR-0049 §2: an incomplete assessment renders no overall grade). Runs are immutable (ADR-0005): the snapshot composite PK makes grading the same run twice throw.</p>
+<h2 id="sec-10">5-4. Kill-Criteria Evaluation Path (ADR-0057)</h2>
+<p>The kill-criteria registry now has its runtime consumer: <code>db/lib/kill-criteria.ts</code> (<code>evaluateKillCriteria</code>) evaluates a procedure&#39;s <strong>enabled</strong> registry entries against the run&#39;s <code>project_variable_snapshot</code> through the same ADR-0046 predicate engine as §5-3 (identical var coercion; fill-once composition, supported order assess-first-then-evaluate). Semantics per ADR-0057: TRUE ⇒ <code>triggered</code> with the entry&#39;s action; <strong>UNASSESSED ⇒ listed in <code>unassessed</code>, the caller decides</strong> — the ADR-0049 honesty rule applied to kill criteria (absence of evidence is not a clean bill, and no defaulted halt either); FALSE ⇒ determinately not triggered. Read-only — the §1 line above (&quot;overall = RED if ... a Kill Criteria condition is triggered&quot;) stays a human-gate routing rule until gate-flow wiring consumes the evaluation record; that record now exists: <code>db/repositories/kill-criteria.repository.ts</code> (<code>recordKillCriteriaEvaluation</code>, ADR-0058 §1) persists the complete per-criterion ledger to <code>kill_criteria_evaluation</code> (migration 0023 — triggered/false/unassessed all recorded, anchors snapshotted; deliberately neither compliance_check nor gate_pass_record), and the gate-flow reader landed with it: <code>getRecordedEvaluation</code> (same repository, 1.1.0) groups the ledger into the gate-impact summary (<code>halt</code>/<code>mark_conditional</code>/<code>escalate_to_risk_officer</code>/<code>unassessed</code>/<code>evaluated_false</code>) with an explicit <code>never_evaluated</code> status — zero rows in the asked scope is never an empty-looking pass (ADR-0049 at read time). Facts only: whether a triggered criterion blocks the gate remains the human gate&#39;s call (non-negotiable boundary #2). The two ADR-0055 entries (covenant halt, D-M-RISK-2; partner mark_conditional, D-M-RISK-3) are enabled with <code>policy_id: gd-0022-risk-thresholds</code> — registry state 29 declared / 2 executable / 2 enabled (six ADR-0052 §A/§B deal-shape-chain and PMI entries joined inert 2026-08-23), load-time anti-tamper throwing on enabled-without-anchors.</p>
+<h2 id="sec-11">6. Calibration (Stage 3 Follow-Up)</h2>
+<p>Action item A-3 from meeting M3: a calibration dry-run tests the bands above against 5-10 historical decisions before they are trusted for live gating. This runs once entity onboarding under <code>docs/transition-plan.md</code> produces enough historical cases to calibrate against — tracked as a Stage 3 follow-up, not a blocker to using the bands manually in the interim (manual application lets a human sanity-check every grade before the calibration dataset exists).</p>
+<p><strong>Two different calibration paths, not one</strong> — <code>docs/pilots/pilot-004-sk-group-capital-rebalancing.md</code> finding F-1: the antitrust-screening-adjacent steps (RAG&#39;s Regulatory/Permit dimension, <code>brownfield-dd</code>&#39;s antitrust step) can be backtested against real, public regulatory decisions — pilots 001-003 did exactly this. <code>group-investment-review</code>&#39;s group-agenda-ranking step (step 4: IRR-over-hurdle spread + RAG grade + capital requested) <strong>cannot</strong> — its inputs are internal capital-allocation figures no group discloses at that granularity, publicly, ever. This step&#39;s calibration must wait for the team&#39;s own internal historical cases; there is no public-case substitute path for it, unlike the other steps.</p>
+<h2 id="sec-12">7. Seed Data Shape (Stage 4/5 Forward Reference)</h2>
+<p>The rules above are written to be directly encodable once the <code>rag_rule</code> table exists (design §4-2 schema): each row here becomes a <code>(stage_gate, dimension, grade, condition_expr, priority)</code> tuple. No schema work happens in Stage 3 — this section exists so Stage 4&#39;s SRS can point back to a settled source rather than re-deriving the thresholds from meeting transcripts.</p>
+<h2 id="sec-13">8. Related</h2>
+<ul>
+<li><code>docs/process-map.md</code> — where RAG assessment sits in the stage-gate flow.</li>
+<li><code>docs/manuals/business-manual.md</code> §3 — how a human reviewer should read a RAG grade.</li>
+<li><code>memory/meeting-2026-08-20-m3-rag-criteria.md</code> — the source meeting and full discussion.</li>
+</ul>
+<nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+        <a href="../index.html" class="prev" style="text-decoration:none;color:var(--text);">
+          <div style="font-size:12px;color:var(--text-dim);">←</div>
+          <div>참고문서</div>
+        </a>
+        <a href="../index.html" class="next" style="text-decoration:none;color:var(--text);text-align:right;">
+          <div style="font-size:12px;color:var(--text-dim);">→</div>
+          <div>홈</div>
+        </a>
+      </nav>
+    </article>
+  </div>
+
+  <footer>
+    <p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p>
+  </footer>
+
+  <script src="../assets/js/dark-mode-toggle.js"></script>
+  <script src="../assets/js/site-search.js"></script>
+  <script src="../assets/js/lang-switcher.js"></script>
+  <script src="../assets/js/inpage-search.js"></script>
+  <script src="../assets/js/copy-code.js"></script>
+  
+</body>
+</html>
