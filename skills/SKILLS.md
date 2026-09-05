@@ -30,6 +30,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `certification-roadmap` | 1.0.0 | active | certification-agent | 2026-08-20 | — | Wave 5.8H — certification gap analysis, strictly separate from permits |
 | `certification-transferability` | 1.2.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — CoC transferability confirmed against the certifying body's own rules; inference disallowed |
 | `checklist-authoring` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — item-by-item mandatory/waiver_eligible checklist layer |
+| `manual-authoring` | 1.0.0 | active | docs-writer | 2026-09-05 | — | Manual/SOP/governance-reference authoring standard — audience split, governance metadata, external-reference badge rules; feeds knowledge-hub generator |
 | `commercial-due-diligence` | 1.1.0 | active | commercial-dd-agent | 2026-08-20 | — | Wave 5.8H — checklist cdd-01-07, no-narrative-only-finding rule |
 | `community-partnership-planning` | 1.1.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8C — workforce-development partnerships and community-relations risk |
 | `company-intelligence` | 1.0.0 | active | market-intelligence-agent | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |

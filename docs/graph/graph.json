@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 582,
-    "edge_count": 967
+    "node_count": 583,
+    "edge_count": 968
   },
   "nodes": [
     {
@@ -2166,6 +2166,13 @@
       "type": "skill",
       "label": "management-incentive-review",
       "version": "1.1.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:manual-authoring",
+      "type": "skill",
+      "label": "manual-authoring",
+      "version": "1.0.0",
       "status": "active"
     },
     {
@@ -7101,6 +7108,12 @@
       "from": "agent:docs-writer",
       "to": "skill:hwp-document-processing",
       "source_ref": "skills/hwp-document-processing/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:docs-writer",
+      "to": "skill:manual-authoring",
+      "source_ref": "skills/manual-authoring/SKILL.md"
     },
     {
       "type": "owns",
