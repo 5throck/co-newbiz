@@ -64,7 +64,7 @@ const SCEN_LABEL: Record<string, string> = { base: "기본(Base)", upside: "상�
 const SCEN_CLASS: Record<string, string> = { base: "status-amber", upside: "status-not-started", downside: "status-not-started" };
 
 function fmt(n: number): string {
-  return n.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
+  return Math.round(n).toLocaleString("ko-KR");
 }
 
 export default function BusinessCasePage() {
@@ -202,7 +202,7 @@ export default function BusinessCasePage() {
         </details>
       )}
 
-      <div className="chart-pair">
+      <div className="chart-pair grid-3">
         {(data?.cases ?? []).map((c) => {
           const sims = Object.fromEntries((c.simulations ?? []).map((s) => [s.percentile, s]));
           return (

@@ -2597,14 +2597,17 @@
 }
 .driver-arrow { color: var(--muted-fg); font-size: 0.8rem; }
 
-/* ── Chart pair layout (좌/우) ── */
+/* ── Chart pair/triple layout (좌/우 or 좌/중/우) ── */
 .chart-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
 }
+.chart-pair.grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
 @media (max-width: 800px) {
-  .chart-pair { grid-template-columns: 1fr; }
+  .chart-pair, .chart-pair.grid-3 { grid-template-columns: 1fr; }
 }
 .chart-half { min-width: 0; }
 .chart-half h4 { margin: 0 0 0.4rem; font-size: 0.8rem; font-weight: 600; }

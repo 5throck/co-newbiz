@@ -99,6 +99,7 @@ export const NON_MENU_ROUTES: string[] = [
   "/projects/[id]/pipeline",
   "/projects/[id]/portfolio",
   "/projects/[id]/process",
+  "/projects/[id]/greenfield-feasibility",
 ];
 
 /** 관리자 전용 내비 (ADR-0091 역할-화면 분리) — 역시 본 파일이 SSOT다. */

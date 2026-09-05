@@ -13,8 +13,9 @@ import { useChartTheme } from "../../lib/echarts-theme.ts";
 
 const EChartsCore = dynamic(() => import("echarts-for-react"), { ssr: false });
 
-// S3 시너지 정합성 (/synergy) — Long List(S1 시장분석 + S2 기회발굴)를
-// 회사 단위 Short List로 좁히는 단계. S1 시장분석과 동일 패턴:
+// S3 시너지 정합성 (/synergy) — S1 시장분석 + S2 기회발굴 결과를 회사 단위로
+// 분석해 시너지 영역 후보 → 우선 시너지 영역으로 좁히는 단계.
+// (용어 규약: Long/Short List는 S6/S7 대상 후보 회사 전용 — ui-spec 2026-09-05)
 // ① 분석 대상 회사 테이블(등록·재분석) → ② 회사 선택 시 탭 구조 리포트.
 // 재분석 시 같은 분석 행을 재사용하고 새 버전(append-only)을 쌓는다.
 
@@ -58,14 +59,14 @@ function targetLabel(a: Pick<SynergyAnalysis, "target_type" | "member_name" | "g
   return a.company_name;
 }
 
-const STEP_TITLES = ["DART 재무 입수", "외부 리서치", "재무 강/약점 분석", "S1·S2 연계 시너지", "Short List 정리"];
+const STEP_TITLES = ["DART 재무 입수", "외부 리서치", "재무 강/약점 분석", "S1·S2 연계 시너지", "우선 시너지 영역 선별"];
 
 // ADR-0094 역할 분리 — 재무 현황·강/약점 상세는 /our-company(그룹/계열사 분석)가
-// 담당하고, /synergy는 시너지 고유 내용(연계 시너지·Short List)만 다룬다.
+// 담당하고, /synergy는 시너지 고유 내용(연계 시너지·우선 시너지 영역)만 다룬다.
 const TABS = [
   ["overview", "개요"],
   ["linkage", "연계 시너지"],
-  ["shortlist", "Short List"],
+  ["shortlist", "우선 시너지 영역"],
   ["refs", "출처·노트"],
 ] as const;
 
@@ -257,7 +258,7 @@ export function SynergyView() {
       
       <StageFrame stageId="S3">
         그룹/계열사 분석에서 만든 자사 프로파일(특정 계열사 또는 그룹 전체)을 S1 시장분석·S2 기회발굴
-        결과와 연결해 시너지 영역을 도출하고 Short List로 좁힙니다. 기회를 연결하면 완료 시 해당 기회에
+        결과와 연결해 시너지 영역 후보를 도출하고 우선 시너지 영역으로 좁힙니다. 기회를 연결하면 완료 시 해당 기회에
         synergy_score 권고가 기록됩니다 (ADR-0090).
       </StageFrame>
 
@@ -411,7 +412,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
   const [advancing, setAdvancing] = useState(false);
   const [advanceError, setAdvanceError] = useState<string | null>(null);
 
-  // S3 Short List -> S4 route-decision handoff: mark the linked opportunity
+  // S3 우선 시너지 영역 -> S4 route-decision handoff: mark the linked opportunity
   // "selected" and hand the synergy rationale to /route-decision as a
   // pre-fill starting point (editable, not locked).
   const opportunityId = p?.opportunity?.id ?? analysis.opportunity_id ?? null;
@@ -436,7 +437,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
         icon="🏢"
         summary={
           <span className="flex items-center gap-1">
-            <span className="section-meta">S3 Long List → Short List · 분석일 {analysisDate} · v{latest?.version_no ?? analysis.latest_version ?? 1}</span>
+            <span className="section-meta">S3 시너지 영역 선별 · 분석일 {analysisDate} · v{latest?.version_no ?? analysis.latest_version ?? 1}</span>
             {analysis.opportunity_name && <span className="status-chip status-in-progress" title={`연결 기회: ${analysis.opportunity_name}`}>기회: {analysis.opportunity_name}</span>}
             {(() => {
               const score = latest?.payload?.synergyScore;
@@ -508,7 +509,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
 
           {tab === "linkage" && (
             <div className="text-[0.88rem]">
-              <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">3</span> S1·S2 연계 시너지 영역 (Long List → 분석)</h3>
+              <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">3</span> S1·S2 연계 시너지 영역 (후보 탐색 → 본검증)</h3>
               <p className="mb-2 text-[0.8rem] text-[color:var(--muted-fg)]">
                 연계 시장: {p.marketLinkage.marketSummaries.map((m) => `${m.industry} (CAGR ${m.cagrPct ?? "?"}%${m.gapPct !== null ? `, 격차 ${m.gapPct > 0 ? "+" : ""}${m.gapPct}%` : ""})`).join(" · ") || "없음"}
               </p>
@@ -536,22 +537,22 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
 
           {tab === "shortlist" && (
             <div className="text-[0.88rem]">
-              <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge sizing-step-badge-deep">4</span> Short List — 시너지 영역 선별</h3>
-              <table className="data-table" aria-label="시너지 Short List">
-                <caption className="sr-only">시너지 Short List</caption>
+              <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge sizing-step-badge-deep">4</span> 우선 시너지 영역 — 선별 결과</h3>
+              <table className="data-table" aria-label="우선 시너지 영역">
+                <caption className="sr-only">우선 시너지 영역</caption>
                 <thead><tr><th scope="col">순위</th><th scope="col">영역</th><th scope="col">판정</th><th scope="col">사유</th></tr></thead>
                 <tbody>
                   {p.shortList.map((s) => (
                     <tr key={s.rank}>
                       <td className="tabular-nums font-semibold">{s.rank}</td>
                       <td className="font-semibold">{s.area}</td>
-                      <td><span className={`status-chip ${s.verdict.includes("Short") ? "status-green" : "status-not-started"}`}>{s.verdict}</span></td>
+                      <td><span className={`status-chip ${s.verdict.includes("Short") ? "status-green" : "status-not-started"}`}>{s.verdict.includes("Short") ? "선별" : s.verdict}</span></td>
                       <td className="text-[0.85rem]">{s.reason}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {/* Short List -> S4 route-decision handoff (opportunity.status -> selected,
+              {/* 우선 시너지 영역 -> S4 route-decision handoff (opportunity.status -> selected,
                   rationale carried over as an editable starting point). */}
               {opportunityId ? (
                 <div className="flex items-center gap-2 mt-2">
