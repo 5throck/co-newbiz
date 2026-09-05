@@ -82,7 +82,7 @@
 | `legal-due-diligence` | L3 | legal-counsel, legal-counsel | phase4, phase5 | antitrust-screening (follows), certification-transferability (composes_with), certification-transferability (composes_with), investment-vehicle-structuring (composes_with), jv-structuring (composes_with), k-law (follows), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
 | `legal-risk-register` | L3 | — | — | — | — | — |
 | `management-incentive-review` | L3 | hr-integration-agent, hr-integration-agent | phase4 | compensation-harmonization-analysis (composes_with), customer-attrition-risk (follows), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
-| `manual-authoring` | L3 | — | — | checklist-authoring (composes_with), documentation-writing (composes_with), governance-document-hierarchy (follows), handbook (composes_with), handbook-sync-audit (follows) | — | — |
+| `manual-authoring` | L3 | — | — | checklist-authoring (composes_with), documentation-writing (composes_with), governance-document-hierarchy (follows) | — | — |
 | `market-data-pipeline` | L3 | — | — | — | — | — |
 | `master-data-governance` | L3 | data-architect | — | data-normalization (composes_with), db-migration-governance (composes_with) | — | — |
 | `mcp-server-integration` | L3 | backend-engineer, platform-lead | — | rest-api-design, rest-api-design (composes_with), security-scan (composes_with), zod-contract-gate (composes_with) | — | — |
@@ -295,3 +295,4 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0105` | adr | — | — | — |
 | `adr:0106` | adr | — | — | — |
 | `adr:0107` | adr | — | manual-authoring | — |
+| `adr:0108` | adr | — | — | — |

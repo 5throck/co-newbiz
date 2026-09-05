@@ -1,4 +1,4 @@
-// @version 1.3.0
+// @version 1.3.2
 // Process Flow Spec → docs/process-flow.md generator (ADR-0074).
 // process/flow.spec.yaml is the SSOT; this script regenerates the markdown
 // reference. The drift test (tests/unit/process-flow.test.ts) validates the
@@ -57,7 +57,7 @@ const HEADER = `# Process Flow — 신규사업 검토 프로세스 (생성 문�
 > **⚠ 이 문서는 생성물입니다.** \`process/flow.spec.yaml\`(SSOT, ADR-0074)에서
 > \`bun scripts/co-newbiz/generate-process-flow.ts\`로 생성됩니다. 이 파일을
 > 직접 수정하지 마세요 — 수정은 사양에서, 본 문서는 참조용으로.
-> 설계 철학·원칙·베스트 프랙티스는 \`docs/design-guide.md\`와 ADR-0074를 참고하세요.
+> 설계 철학·원칙·베스트 프랙티스는 \`docs/design-system/design-guide.md\`와 ADR-0074를 참고하세요.
 
 `;
 
@@ -275,7 +275,7 @@ function generate(spec: FlowSpec): string {
     );
   }
   parts.push("## 설계 원칙 및 에이전트 오케스트레이션\n");
-  parts.push("이 프로세스는 Agentic-first, Human-final 원칩으로 운영된다 — 에이전트가 스테이지를 실행·권고하고, 사람은 IC 승인과 예외 개입만 수행한다 (docs/design-guide.md, ADR-0074).\n");
+  parts.push("이 프로세스는 Agentic-first, Human-final 원칩으로 운영된다 — 에이전트가 스테이지를 실행·권고하고, 사람은 IC 승인과 예외 개입만 수행한다 (docs/design-system/design-guide.md, ADR-0074).\n");
   parts.push("**스테이지별 담당 에이전트(오케스트레이터가 Activities의 agent 필드를 실행)**\n");
   for (const st of spec.stages) {
     const agents = [...new Set(st.activities.map((a) => a.agent))];

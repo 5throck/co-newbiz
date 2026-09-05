@@ -60,5 +60,5 @@ Amendments to this policy require an ADR (design §6.5/§11 trigger list) and a 
 
 - `policies/entities/*/addendum.md` — entity-specific additions
 - `procedures/_shared/*` — the procedures implementing this policy's requirements
-- `docs/governance-operations.md` — compliance monitoring, waivers, interpretation registry
-- `docs/transition-plan.md` — how existing review practice migrates to this policy
+- `docs/governance/governance-operations.md` — compliance monitoring, waivers, interpretation registry
+- `docs/planning/transition-plan.md` — how existing review practice migrates to this policy

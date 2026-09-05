@@ -4,6 +4,8 @@ translated_from_hash: PLACEHOLDER
 lang: ko
 lang_reason: source-material
 ---
+counterpart: admin-manual.md
+---
 
 # 관리자 매뉴얼 — 시스템 관리자
 
@@ -53,4 +55,4 @@ lang_reason: source-material
 
 ## 8. 관련 문서
 
-- `docs/governance-operations.md` — waiver 및 해석 운영(compliance-officer의 도메인. 이 매뉴얼의 시스템 관리 범위와 인접하지만 별개다).
+- `docs/governance/governance-operations.md` — waiver 및 해석 운영(compliance-officer의 도메인. 이 매뉴얼의 시스템 관리 범위와 인접하지만 별개다).

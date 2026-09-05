@@ -1,7 +1,7 @@
 # Runbook — Backup, Restore, and Rollback
 
 **Owner**: dba, release-engineer
-**Design of record**: ADR-0014 (deployment/rollback discipline), ADR-0015 (operating rhythm/SLOs), `docs/security-baseline.md`
+**Design of record**: ADR-0014 (deployment/rollback discipline), ADR-0015 (operating rhythm/SLOs), `docs/security/security-baseline.md`
 **Status**: Stage 5 Wave 5.9 — executable today. Verified by a real rehearsal (§4).
 
 ## 1. Tools
@@ -16,7 +16,7 @@ Every backup produces two files: `<name>.sqlite.<timestamp>.bak` and `<name>.sql
 ## 2. Backup — When
 
 - **Immediately before any migration** (ADR-0014) — not "recently," immediately.
-- **Daily** (`docs/ops-cadence.md`'s cadence table, Stage 5 automation row).
+- **Daily** (`docs/governance/ops-cadence.md`'s cadence table, Stage 5 automation row).
 - Before any operation with meaningful blast radius on the live data.
 
 ## 3. Rollback (Migration) Procedure

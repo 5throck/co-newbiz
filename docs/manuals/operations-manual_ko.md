@@ -4,6 +4,8 @@ translated_from_hash: PLACEHOLDER
 lang: ko
 lang_reason: source-material
 ---
+counterpart: operations-manual.md
+---
 
 # 운영 매뉴얼 — 시스템 운영자
 
@@ -26,7 +28,7 @@ lang_reason: source-material
 | sre | 매일 | 수집 실패 분류(triage) |
 | sre | 상시 | 알림 파이프라인 — (project, trigger_type) 쌍별 24시간 쿨다운, 히스테리시스는 RAG 7일 홀드와 동일하게 |
 | sre | 사고 발생 시 | 사고 대응 + 사후 분석 |
-| security-engineer | 매주/분기 | `docs/security-baseline.md` 참조 *(Stage 4)* |
+| security-engineer | 매주/분기 | `docs/security/security-baseline.md` 참조 *(Stage 4)* |
 
 ## 2. 배포 및 롤백
 
@@ -54,5 +56,5 @@ lang_reason: source-material
 
 ## 6. 관련 문서
 
-- `docs/governance-operations.md` — 이 문서의 *시스템* 운영과 구별되는 *비즈니스* 거버넌스 운영(컴플라이언스, waiver).
-- `docs/security-baseline.md` *(Stage 4)*.
+- `docs/governance/governance-operations.md` — 이 문서의 *시스템* 운영과 구별되는 *비즈니스* 거버넌스 운영(컴플라이언스, waiver).
+- `docs/security/security-baseline.md` *(Stage 4)*.

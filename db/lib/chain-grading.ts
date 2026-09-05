@@ -1,7 +1,7 @@
 // @version 1.0.0
 /**
  * Proxy-chain reliability grading — design v1.0 §4-5, meeting M4 decisions
- * D-M4-1 through D-M4-3, guidelines/proxy-chain-hop-classification.md.
+ * D-M4-1 through D-M4-3, docs/guidelines/proxy-chain-hop-classification.md.
  *
  * THE central correction from meeting M4 (D-M4-2): grade is driven by
  * STATISTICAL hop count, not total hop count. A chain with one engineering

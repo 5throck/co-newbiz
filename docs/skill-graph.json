@@ -552,6 +552,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0108",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent-lifecycle-manager",
       "type": "skill",
       "layer": "L3"
@@ -7009,6 +7014,12 @@
       }
     },
     {
+      "type": "references",
+      "from": "manual-authoring",
+      "to": "documentation-writing",
+      "source": "prose"
+    },
+    {
       "type": "follows",
       "from": "manual-authoring",
       "to": "governance-document-hierarchy",
@@ -7016,7 +7027,7 @@
       "provenance": {
         "file": "skills/manual-authoring/SKILL.md",
         "field": "relates_to",
-        "index": 4
+        "index": 2
       }
     },
     {
@@ -7034,41 +7045,6 @@
         "file": "skills/manual-authoring/SKILL.md",
         "field": "prerequisites"
       }
-    },
-    {
-      "type": "composes_with",
-      "from": "manual-authoring",
-      "to": "handbook",
-      "source": "relates_to",
-      "symmetric": true,
-      "provenance": {
-        "file": "skills/manual-authoring/SKILL.md",
-        "field": "relates_to",
-        "index": 2
-      }
-    },
-    {
-      "type": "references",
-      "from": "manual-authoring",
-      "to": "handbook",
-      "source": "prose"
-    },
-    {
-      "type": "follows",
-      "from": "manual-authoring",
-      "to": "handbook-sync-audit",
-      "source": "relates_to",
-      "provenance": {
-        "file": "skills/manual-authoring/SKILL.md",
-        "field": "relates_to",
-        "index": 3
-      }
-    },
-    {
-      "type": "references",
-      "from": "manual-authoring",
-      "to": "handbook-sync-audit",
-      "source": "prose"
     },
     {
       "type": "references",

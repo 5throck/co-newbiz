@@ -19,7 +19,7 @@ Its Decision section closes with a supporting argument that contains a dangling 
 The decision being referred to is real; only its status as an ADR is not. It was taken on 2026-08-20 by user decision, and its actual record is:
 
 - `CHANGELOG.md:83` — "R&BD (Research & Business Development) scope addition, per user decision — treated as a **Brown Field sub-type** (`case_subtype: rbd`), not a new top-level review type alongside GF/BF, since its deal mechanics (equity stake, license-in, spin-off carve-out) are BF-shaped rather than GF site-selection-shaped."
-- `docs/srs.md:94` — the same decision restated as a requirement.
+- `docs/architecture/srs.md:94` — the same decision restated as a requirement.
 
 This was found during the classification-model work, where the R&BD decision needed to be cited precisely. It is recorded here rather than silently repaired because the ADR README states that amending a decision requires a new ADR referencing the one it supersedes, not an edit to the existing record — and that discipline applies to a citation defect as much as to a substantive one. Editing ADR-0045 in place would erase the evidence that its argument once rested on a reference that did not resolve.
 
@@ -31,7 +31,7 @@ The four mandatory axes stand. The ownership assignment stands. The consequences
 
 ### 2. The 2026-08-20 R&BD decision is prior art, not an ADR
 
-It is recorded as a **non-ADR precedent** — a user decision with a real, citable record at `CHANGELOG.md:83` and `docs/srs.md:94`. Any document needing to cite it must cite those two locations. No ADR number may be assigned to it retroactively: back-filling a number into the sequence to satisfy a dangling reference would misrepresent when the decision entered the ADR record.
+It is recorded as a **non-ADR precedent** — a user decision with a real, citable record at `CHANGELOG.md:83` and `docs/architecture/srs.md:94`. Any document needing to cite it must cite those two locations. No ADR number may be assigned to it retroactively: back-filling a number into the sequence to satisfy a dangling reference would misrepresent when the decision entered the ADR record.
 
 ### 3. Nothing here claims to supersede a nonexistent ADR
 
@@ -41,7 +41,7 @@ A "supersedes ADR-NNNN" line pointing at a number that was never issued would cr
 
 ### 4. Going forward, ADR-0045's supporting argument reads against ADR-0047
 
-ADR-0045's argument — that a case-classification extension belongs inside an existing procedure rather than in a parallel one — is correct, but its precedent is now ADR-0047, which makes the same architectural choice explicitly: three orthogonal classification axes extend the existing procedure set rather than forking parallel procedures per case type. Once ADR-0047 is Accepted, a reader encountering the "ADR referenced in design §18.2" phrase should read it as pointing at ADR-0047 (with `CHANGELOG.md:83` and `docs/srs.md:94` as the original 2026-08-20 record), not at a missing document.
+ADR-0045's argument — that a case-classification extension belongs inside an existing procedure rather than in a parallel one — is correct, but its precedent is now ADR-0047, which makes the same architectural choice explicitly: three orthogonal classification axes extend the existing procedure set rather than forking parallel procedures per case type. Once ADR-0047 is Accepted, a reader encountering the "ADR referenced in design §18.2" phrase should read it as pointing at ADR-0047 (with `CHANGELOG.md:83` and `docs/architecture/srs.md:94` as the original 2026-08-20 record), not at a missing document.
 
 ## Consequences
 

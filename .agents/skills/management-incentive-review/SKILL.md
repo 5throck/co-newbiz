@@ -48,7 +48,7 @@ relates_to:
 golden-parachute/CoC-trigger compensation be modeled as a day-one cash
 outflow, never as a soft assumption. This skill is the review that produces
 that figure. Identity discipline applies throughout: `management_package`
-stores role/title-level data, never named individuals — `docs/security-model.md`
+stores role/title-level data, never named individuals — `docs/security/security-model.md`
 §7 item 6's byte-based surrogate-key CHECK is the DB-level enforcement of
 this, not a documentation convention this skill can relax.
 

@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: business-manual_ko.md
+---
+
 # Business Manual — Analysts & Committee Reviewers
 
 > **Language**: **English** · [한국어](business-manual_ko.md)
@@ -11,7 +16,7 @@ What to do at each gate, how to read a checklist, where deliverables go, and how
 
 ## 1. Your Role at Each Gate
 
-See `docs/process-map.md` for the authoritative deliverable/approver/RACI table. In summary:
+See `docs/governance/process-map.md` for the authoritative deliverable/approver/RACI table. In summary:
 
 | Gate | If you are an analyst | If you are an IC reviewer |
 |---|---|---|

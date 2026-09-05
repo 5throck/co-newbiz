@@ -3,7 +3,7 @@
 **Case type**: Group-level capital allocation (not a single deal — a multi-year reallocation pattern across sibling subsidiaries)
 **Region**: Korea (KR)
 **Run mode**: Manual (no system — Stage 3 pilot per ADR-0034)
-**Case source**: `docs/pilot-candidate-research.md` Candidate B, promoted per user instruction (2026-08-20)
+**Case source**: `docs/planning/pilot-candidate-research.md` Candidate B, promoted per user instruction (2026-08-20)
 **Status**: In progress
 
 ## 0. Purpose and Scope
@@ -39,7 +39,7 @@ Unlike pilots 001-003, where the gap was "internal DD data doesn't exist publicl
 
 | # | Finding | Type | Action |
 |---|---|---|---|
-| F-1 | Step 4's ranking formula cannot be calibrated or validated against public-case data, ever, by the nature of the inputs it requires (internal capital-allocation figures). Unlike the antitrust-screening steps (pilots 001-003), which have real regulatory decisions to backtest against, step 4 has no public analogue class to draw on. | Structural — informs calibration strategy | Note in `docs/rag-framework.md` §6 (calibration) that step 4's formula requires internal historical cases specifically — public-case calibration is not a substitute path for this step |
+| F-1 | Step 4's ranking formula cannot be calibrated or validated against public-case data, ever, by the nature of the inputs it requires (internal capital-allocation figures). Unlike the antitrust-screening steps (pilots 001-003), which have real regulatory decisions to backtest against, step 4 has no public analogue class to draw on. | Structural — informs calibration strategy | Note in `docs/governance/rag-framework.md` §6 (calibration) that step 4's formula requires internal historical cases specifically — public-case calibration is not a substitute path for this step |
 | F-2 | `group_ic_decision` is correctly scoped per-transaction; a multi-year strategic rebalancing (like this case) naturally decomposes into several per-transaction records rather than needing a new "strategic initiative" record type. | Positive — schema scoping confirmed correct | None needed |
 | F-3 | Step 2 (portfolio overlap) had a cleaner real-data fit in this case than in pilot 003, since these are genuinely non-overlapping businesses being rebalanced rather than a valuation-fairness dispute between similarly-classified entities. | Positive — process validated across a second, cleaner case | None needed |
 | F-4 (carried forward) | Pre-FS/FS/DD/Entity-IC schema gap remains open; this pilot did not add new content to it (this case's public disclosure is at the strategic-narrative level, not the gate-deliverable level pilot 003 uniquely provided). | Gap, unchanged | Same Stage 4 SRS action item, no new content from this pilot |

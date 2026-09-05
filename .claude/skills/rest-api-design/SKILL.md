@@ -2,7 +2,7 @@
 name: rest-api-design
 scope: co-newbiz
 description: >
-  Designs and reviews REST endpoints against `docs/api-spec.md`'s
+  Designs and reviews REST endpoints against `docs/architecture/api-spec.md`'s
   non-negotiable rules: membership filtering at the repository layer on
   every endpoint, session cookie + Bearer token auth, MNPI excluded from
   default list/search responses, non-member project detail is 404 not 403,

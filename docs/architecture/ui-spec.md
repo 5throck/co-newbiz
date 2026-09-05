@@ -1,0 +1,190 @@
+# UI Specification — co-newbiz
+
+**Owner**: frontend-engineer
+**Design of record**: design v1.0 §4-10 (task 4.4), `docs/architecture/srs.md` §12
+**Status**: Korean UI (design §4-1 language policy — deliverables/UI Korean, code/docs English). Implemented Stage 5 Wave 5.6 (`app/web/src/pages/`: `Login.tsx`, `PasswordChange.tsx`, `ProjectList.tsx`, `ProjectDetail.tsx`, `AdminConsole.tsx`) plus PR #65's eight Project Detail tabs (`app/web/src/components/`: `DataTab.tsx`, `AssumptionsTab.tsx`, `ModelTab.tsx`, `SimulationTab.tsx`, `VersionCompareTab.tsx`, `DdTab.tsx`, `PermitsTab.tsx`, `MaReviewTab.tsx`) — **partial; verified row-by-row against `app/web/src/` on 2026-08-21** (per-node markers in §2, per-rule notes in §1/§3/§4): the Project List page and Project Detail shell are built; 개요 / 절차 뷰어 / 용어집 (tooltip + standalone searchable view at `/glossary` + in-context auto-linking over key/en/ko — alias auto-detection gated on the list endpoint) are partial; Data / Assumptions / Model / Simulation / Version Comparison / DD / Regulatory & Permits / M&A Review are partial (read views built, write forms and charting deferred, see §2); 2 of Project Detail's 13 child views (Financial Analysis, Proxy Chain) plus Reports are not built at all; and the admin console covers 5 of §5's 10 designed sections (Users, Audit Log, Data Sources, Batch/Schedule, Database — the last one partial: retention only; see `skills/admin-console-operations/SKILL.md` for the section-by-section breakdown, which predates batch 4's two additions).
+
+## 1. Design Rules (Non-Negotiable)
+
+- **Every numeric figure carries a source tooltip** (`assumption_key`, `as_of`, `source`, `anchor_ref`) sourced directly from the API response envelope's `meta` block (FR-SYS-03) — never hand-typed.
+  *As-built (2026-08-21, PR #63): mechanism built — `SourceTooltip.tsx` (hover/focus/click-pin popover, keyboard + `aria-expanded`/`aria-describedby`, dark-mode via the existing custom properties) plus `provenanceOf()` in `api.ts`, which reads the envelope `meta` and merges per-row provenance columns the payload already carries (the RAG endpoint puts `run_id`/`assessed_at` per dimension in rows, not meta — both sources are API-sourced, neither hand-typed; absent fields are omitted, never placeholder-filled). Applied to: the RAG card's assessed-count figure and per-dimension grade badges (`run_id`, `assessed_at`, envelope `as_of`), and procedure threshold values (envelope `as_of` only). Backend gap: no route populates `assumption_key`/`source`/`anchor_ref` in `meta` today — api-spec §9's contract is not yet realized server-side — and the endpoints carrying per-row provenance (assumptions, observations, dd-findings) have no consuming view yet, so those unwritten figures stay un-wrapped rather than wearing empty tooltips.*
+- **Color is never the sole differentiator** for RAG status — icon + label + color together (FR-SYS-05), verified by `accessibility-audit` (WCAG 2.1 AA).
+  *As-built: met in `RagCard.tsx` — every grade badge renders icon + label + color together. The WCAG 2.1 AA audit itself is a runtime `accessibility-audit` run; not verifiable from source.*
+- **No "PASS" stamp anywhere in the human review surface** — output is always split verified / could-not-verify / needs-judgement (FR-REV-02).
+  *As-built: no PASS stamp exists in any built view — but the human review surface this rule governs is itself not yet built, so the rule holds by absence, not by exercise.*
+- **Glossary term tooltip** on any registered term in body text, dashed underline, click/hover popover (FR-SYS-04).
+  *As-built: built — `GlossaryTerm.tsx` implements the pattern (dashed underline, click/hover popover, keyboard-reachable button, wired to `/api/glossary/:term`), and since PR #65 batch 5 registered terms are auto-detected in body text: `glossary.tsx` provides `GlossaryProvider` (session-once `GET /api/glossary` fetch, authenticated mounts only), `useGlossaryTerms()` (lookup map built from key/en/ko), and the `GlossaryText` renderer (longest-match-first alternation; word-boundary + case-insensitive for Latin forms; exact-string for Korean forms — Hangul has no `\b` in JS regex; per-text segmentation memoized in a bounded module cache + React.memo). Applied to the free-text prose fields rendered today: DD finding descriptions, assumption rationales, contingent-liability descriptions, antitrust remedy details. Alias auto-detection stays gated — `GET /api/glossary` returns no aliases (they exist only on the per-term detail endpoint; no N+1 fetching to work around it). The two hand-placed example terms on 개요 remain as harmless explicit examples.*
+- **3-depth navigation maximum** (design §4-10).
+  *As-built: met — the deepest route is `/projects/:id` (depth 2); within-page sections are client-side tab state, not nested routes.*
+- Dark mode only (Onyx 2.0 design system, `color-scheme: dark`); layout responsive down to tablet width.
+  *As-built (2026-08-27, M1): dark-only via Onyx 2.0 tokens in `styles.css` — light mode removed, `color-scheme: dark` set on `:root`. Tablet responsiveness: sidebar collapses at ≤880px via AppShell media query; project-card grid uses `auto-fill`.*
+
+## 2. Information Architecture
+
+As-built markers, verified against `app/web/src/` on 2026-08-21: ✅ built · ⚠️ partial (reason given) · ❌ not built. The spec text stays the target; markers record what exists.
+
+```
+대시보드 (Dashboard)
+├── 프로젝트 목록 (Project List) — RAG card grid, staleness badges, notification center
+│   · ⚠️ partial: page, card grid, and create-form built; a notification-center entry (`NotificationBell.tsx` — one-shot `GET /api/notifications`, popover listing recent items with severity chips) added in PR #63, honestly counting recent-total because the notification table has no read/unread state (backend gap: no `read_at` column, no mark-read endpoint). RAG and staleness badges are implemented client-side but gated on optional list-payload fields (`rag_overall`, `rag_assessed_at`, `stale`) that `GET /api/projects` does not return yet (backend gap; no per-card `/rag` fetch was added to avoid an N+1 storm), so against today's backend cards still render project_no + created date only
+├── 프로젝트 상세 (Project Detail) · ✅ shell built (MNPI banner, tab navigation; see deltas below)
+│   ├── 개요 (Overview) — RAG signal card, history sparkline, transition log
+│   │   · ⚠️ partial: RAG signal card built per §3; history sparkline and transition log not built
+│   ├── 절차 뷰어 (Procedure Viewer) — merged shared/region/entity view with per-step source attribution
+│   │   · ⚠️ partial: merged view, per-step source badges, and thresholds built (§4); override flag + baseline link and R&BD checklist panel not built
+│   ├── 데이터 (Data) — series browser, staleness indicators
+│   │   · ⚠️ partial (PR #65): `DataTab.tsx` built — series search (`GET /api/series?q=`), selected series' latest-revision observations (`GET /api/series/:id/observations`, unit/source per row, value wrapped in `SourceTooltip`), and the recent data-change log (`GET /api/data-changes`, icon+label+color per change_type, old→new values). series charting built (ECharts time-series line chart via `EChart.tsx`, SSR-safe `next/dynamic` ssr:false). an `all_revisions=1` toggle added (checkbox on the observations section; the chart always plots per-period latest revisions while the table shows every revision). per-series staleness badges added (`GET /api/series` now carries the real `last_fetched_at`/`days_since_fetch`/`stale` with a 90-day threshold echoed in meta; the series table renders ● 수집 N일 전 / ■ 갱신 지연 — icon+label, never color-only). Deferred: none remaining for this view
+│   ├── 재무 분석 (Financial Analysis) — ROIC driver-tree waterfall, peer boxplot, projection with anchor markers · ⚠️ partial (2026-08-27 web-implementation-plan): ROIC driver-tree + margin-bridge waterfall built (`GET /api/projects/:id/roic-tree`, `RoicTree.tsx` on the 모델 tab) — computes ROIC/NOPAT margin from present fact_industry metrics, degrades to an honest "insufficient data" note when base metrics are absent; ECharts waterfall chart added (`RoicWaterfallChart.tsx`, `next/dynamic` ssr:false). Deferred: peer boxplot. Projection with anchor markers — engine-dependent, added an honest `EnginePendingPanel` placeholder (growth-projection endpoint is forward-design, not yet built).
+│   ├── 프록시 체인 (Proxy Chain) — chain diagram, hop-level reliability grade, error-band display · ⚠️ partial (2026-08-27 web-implementation-plan): hop-level reliability grade view built (`GET /api/projects/:id/proxy-chain-grade`, `ProxyChainGrade.tsx` on the 시장·체인 tab) — stored vs recomputed grade (db/lib/chain-grading.ts) with per-hop type/R²/CI table and mismatch warning. chain diagram (topology-based) and compounded-CI error-band display added. Deferred: none remaining for this view.
+│   ├── 가정 (Assumptions) — assumption registry, kind/rationale/ttl display
+│   │   · ⚠️ partial (PR #65): `AssumptionsTab.tsx` built — read-only registry table for the project's latest run (`GET /api/projects/:id/runs` then `GET /api/assumptions?run_id=`): assumption_key, kind chip, value (source-tooltipped), as_of, ttl_days, and a mandatory-visible rationale column (never hover-only) for `kind='assumed'` rows. a run picker added (defaults to the newest run, selectable from `GET /api/projects/:id/runs`). the write form (`POST /api/assumptions`) added (UI form in `AssumptionsTab.tsx`, posts to the existing endpoint). Deferred: none remaining for this view
+│   ├── 모델 (Model) — waterfall + tornado charts
+│   │   · ⚠️ partial (PR #65 batch 3): `ModelTab.tsx` built — runs list (`GET /api/projects/:id/runs`: label, input_hash short form, input_count, created_at, newest-first), create-run form (`POST /api/projects/:id/runs`: label, from_run_id dropdown defaulting to latest, `set` key/number override rows) with a 403 rendering a clear analyst-role message and the run's honest v1 note ("버전화된 입력 스냅샷" — valuation output arrives with the model engine), and a selected run's immutable input snapshot (`GET /api/runs/:id`, values source-tooltipped by assumption_key). Model waterfall + tornado — honest `EnginePendingPanel` placeholders added (valuation engine does not exist yet; no output to chart). Deferred: model-engine output view.
+│   ├── 시뮬레이션 (Simulation) — histogram + CDF, seed display
+│   │   · ⚠️ partial (PR #65 batch 3): `SimulationTab.tsx` built — run dropdown (default latest), trigger form (`POST /api/simulations`: iterations/seed optional, with the deterministic-seed note — omitted seed derives from the input hash), results from `GET /api/simulations/:id/results` as a quantile table (metric, p05/p50/p95/mean/std, source-tooltipped by run_id+as_of) with seed/iterations shown in the header from the envelope meta and a no-raw-draws honesty note; 400 `simulation_rejected` shows the server's caller-fixable message verbatim, 403 shows the analyst-role message. Histogram + CDF — (2026-08-28) REAL distribution built: the simulation bridge (`db/lib/simulation.ts` 1.1.0) now requests and persists the engine's per-iteration draws into `simulation_draw` (retention-purgeable per migration 0005), and `GET /api/simulations/:id/results` serves a server-side 40-bin histogram + 100-point CDF aggregate (raw draw rows are still never exposed — api.test.ts pins the absence of a `draws` property); `SimulationDistChart.tsx` renders the real distribution when present and keeps the clearly-labelled illustrative quantile reconstruction only as the fallback for pre-draw simulations. Deferred: simulation-history list (only the just-triggered simulation renders).
+│   ├── 버전 비교 (Version Comparison) — waterfall bridge between two runs
+│   │   · ⚠️ partial (PR #65 batch 3): `VersionCompareTab.tsx` built — two run selectors (A vs B, defaulting to the two most recent runs) over `GET /api/runs/:id/diff/:otherId`: changed rows (key, A → B values, signed delta with ▲ 증가/▼ 감소 icon+label+color — never color-only), B에 신규 (added) and A에서 제거됨 (removed) sections, both input_hashes displayed, and the honest v1 note that NPV-level decomposition arrives with the valuation engine. Waterfall-bridge — honest `EnginePendingPanel` placeholder added (NPV-level decomposition arrives with the valuation engine).
+│   ├── 법령·인허가 (Regulatory & Permits) — DAG with critical-path highlighting
+│   │   · ⚠️ partial (PR #65): `PermitsTab.tsx` built — `GET /api/projects/:id/permits?include_dag=1`; permit and certification lists (status icon+label+color) rendered as clearly-separated parallel sections, never merged; DAG shown as a hand-rolled client-side topological layering (Kahn's algorithm, no graph library) plus a plain edge list, critical-path nodes flagged with a border + badge (not color-only). a true node-link graph rendering added (hand-rolled SVG, client-side Kahn layering, cross-layer edges drawn, critical path highlighted red). Deferred: none remaining for this view
+│   ├── M&A 검토 (M&A Review, BF only) — antitrust HHI, customer-attrition risk, clawback exposure; R&BD sub-panel (TRL, IP/FTO status, commercialization-path, rbd_source) when technology_track=rbd
+│   │   · ⚠️ partial (PR #65 batch 2): `MaReviewTab.tsx` built with six sections — 독과점 (`GET /api/projects/:id/antitrust`: market_definition, HHI 사전/사후/변화 source-tooltipped, remedy_type chip none/behavioral/structural/prohibited with icon+label+color, discharge_confirmed_at), 인센티브 (`GET /api/projects/:id/incentives` grouped by direction prospective/granted, amount/npv/estimated_clawback source-tooltipped, obligation_json parsed to a readable summary, clawback exposure highlighted with a bordered ⚠ note), 부채·우발채무 (`GET /api/projects/:id/liabilities` — debt_instruments / contingent_liabilities / covenant_tests sub-sections; breached covenants get a ■ 이탈 badge, icon+label, not color-only), 부지 비교 (`GET /api/projects/:id/sites` — one row per site on one table, FR-GF-04), 파트너 (`GET /api/projects/:id/partners` — cards with score figures and a compliance-risk chip High/Medium/Low, icon+label+color), and 밸류체인 연관성 (`GET /api/projects/:id/value-chain-links` — from/to industry, direction, elasticity/lag/correlation/r²/pass-through/HHI, per-row assessed_at + evidence_ref provenance). BF-only gating NOT implemented: `GET /api/projects/:id` returns only id/project_no/created_at (+classification meta) — no case-type indicator exists in the payload, so the tab renders unconditionally (backend gap). (2026-08-28) 경영진 보상 (`GET /api/projects/:id/management-package` — executive_ref 역할 기반 식별자만, 실명 컬럼은 스키마에 없음 FR-MA-06/SEC-05; viewer 403 시 서버 메시지 그대로 표시) and 보수 벤치마크 (`GET /api/projects/:id/comp-benchmark` — 직군×등급 집계 전용) sections added (api-spec §4 as-built). Deferred: customer-attrition risk (no storage table exists — forward-design; findings today would live as dd_finding rows), and the R&BD sub-panel — which this wave implemented on the 실사 tab instead, where the R&BD rows actually live
+│   ├── 실사 (DD) — dd_finding list with value_impact links
+│   │   · ⚠️ partial (PR #65): `DdTab.tsx` built — `GET /api/projects/:id/dd-findings`, category filter chips (derived from the returned rows), finding cards (description, value_impact source-tooltipped by assumption_key, evidence_ref), and a visually distinct R&BD sub-panel (rbd_source, trl_grade, ip_ownership_status, commercialization_path) for `category='rbd'` rows. the write form (`POST /api/projects/:id/dd-findings`) added (UI form in `DdTab.tsx`, posts to the existing endpoint). value_impact deep-links added — a finding's assumption_key renders as an in-page link that switches to the 가정 tab with the whole-key lookup (`GET /api/assumptions?key=`, all runs) and an explicit return-to-run view control. Deferred: none remaining for this view
+│   ├── /market (S1 워크스페이스) — systematic-market-sizing 8단계 리포트 (2026-08-31 as-built): 산업 테이블 랜딩(분석 상태·분석일·재분석 액션, 신규 산업 분석 폼, LLM 구성 상태 표시) → 8단계 리치 리포트(기준 시장규모 삼각검증, 권역·세그먼트 배분 도넛/적층, 셀별 CAGR·시나리오 밴드 레인지 차트, 권역별 시나리오 2030, 4-A 연도별 점유율 적층 영역, 성장률 정합성, 외부 전망 대비 격차 분석(5-B — 입수 시), 기업 공시 교차검증 판정 표, 분석 한계 목록, 가정 레지스트리 등록 상태 라이브 뷰) + 버전 이력 바. 신규 분석은 lib/market-sizing-pipeline.ts가 LLM으로 SizingMatrix를 생성(버전 append-only, 수동 확정 항목 명시), 시장분석 인사이트는 /opportunities 상단 패널로 S2에 연동.
+│   ├── 시장·체인 (Market & Chain) — ADR-0066 Phase D
+│   │   · ⚠️ partial (PR #126): `MarketChainTab.tsx` built — 체인 구조 레이어 뷰 (`GET /api/projects/:id/value-chain/topology`, 링크 계수 테이블 포함), 노드별 5년 재무 테이블 + 폴백 임포트 미니폼 (`GET .../industries/:id/financials`, `POST .../financial-imports`), 구조 시뮬레이션 러너 (런/시나리오 선택 → `POST .../structure-simulations` → P05/P50/P95 결과 테이블; 미기록 드라이버·UNASSESSED 노드 배너 공개)
+│   ├── PMI·증거 (PMI & Evidence) — ADR-0063 write surfaces
+│   │   · ⚠️ partial (PR #119): `PmiEvidenceTab.tsx` built — 네 증거 테이블의 목록+입력 폼 (핵심인력 명부 `GET/POST /api/projects/:id/pmi/key-talent`, 시너지 인증 `.../pmi/synergy-certifications` — ≥9,000bp·2분기 규칙 힌트 표기, 딜 쉐이프 평가 `.../deal-shape-evaluations` — 8종 enum 셀렉트, 인센티브 마감일 `.../incentive-deadlines` — 최조 마감 선두 정렬) + 판단 변수 어설션 루프 (`GET/POST .../dimension-inputs`, 교차 검토 버튼; 검토 전 행은 "검토 대기" 명시). 금액 필드는 KRW 백만원 단위 라벨링 (ADR-0061)
+│   └── 용어집 (Glossary) — searchable, in-context
+│       · ⚠️ partial: tooltip component built and wired to `/api/glossary/:term`; searchable view built in PR #65 batch 4 as a top-level route (`/glossary`, `Glossary.tsx`) rather than a ProjectDetail tab — the glossary is workspace reference data with no project binding, and ProjectDetail's tab bar already carries 11 project-scoped tabs (route choice recorded here; the IA tree above keeps the node under Project Detail as the design target). Search is client-side over the fields the list payload carries (key/ko/en/category); alias search is not possible — `GET /api/glossary` returns no aliases (backend gap; aliases exist only on the per-term detail endpoint, which the cards' tooltip reuses for definition/why_it_matters). In-context auto-linking built in PR #65 batch 5 (`glossary.tsx`: provider + hook + `GlossaryText` renderer, applied to DD descriptions, assumption rationales, contingent-liability descriptions, antitrust remedy details — see §1's FR-SYS-04 note); alias auto-detection gated on the same list-endpoint gap; two hand-placed example terms remain on 개요
+├── 관리자 콘솔 (Admin Console) — see §5 · ⚠️ partial: all 10 of 10 sections built (Users, Logs, Data Sources, Batch/Schedule, Database retention, Notifications, Glossary — the last three render explicit read-only views; Governance docs, Master data, ADR index now render real read endpoints, see §5)
+└── 보고서 (Reports) — generated deliverable list, export controls · ⚠️ partial (2026-08-27 web-implementation-plan): document list + superseded chain built (`GET /api/reports`, `/reports` page, nav entry in `AppShell.tsx`); browser-print/PDF export wired, DOCX/HWPX/PDF export built (`GET /api/reports/:id/export?format=docx|hwpx|pdf` via `scripts/co-newbiz/report.ts` -> `python/report/render_*.py`)
+```
+
+As-built deltas not in the tree above:
+
+- The 대시보드 (Dashboard) root is not a separate screen — `/` redirects to `/projects`.
+- Project Detail ships a 멤버십 (Membership: user, project role, grantor, need-to-know basis) tab which this tree does not list — an addition, not a substitution.
+- 용어집's searchable view is a top-level route (`/glossary`), not a ProjectDetail child tab — the glossary is workspace reference data with no project binding (route choice rationale in the 용어집 node marker above).
+
+## 3. RAG Display Contract
+
+- **RAG signal card**: overall badge (icon + label + color) + six dimension sub-badges.
+  *As-built: built in `RagCard.tsx` — overall badge plus six hardcoded dimension sub-badges; since PR #63 each sub-badge and the assessed-count figure carry a source tooltip rendering the payload's `run_id`/`assessed_at` plus the envelope's `as_of`/`assessed_at` (FR-SYS-03).*
+- **Never render an overall grade without checking whether all six dimensions completed** — a partial assessment shows "평가 미완료" (assessment incomplete), never defaults to a color.
+  *As-built: built — an incomplete set renders 평가 미완료 for the overall grade and 미평가 per missing dimension; there is no default-color path.*
+- **Rationale line is mandatory display**, not a hover-only detail — "데이터 신뢰도 B등급으로 상한" (capped at Amber by Grade-B data confidence) must be visible without an extra click.
+  *As-built: built — rationale renders as an always-visible paragraph under each assessed dimension, not a hover detail.*
+- **Structural vs. behavioral remedy distinction** (`docs/governance/rag-framework.md` §2.5) shown explicitly on the Regulatory/Permit dimension sub-badge when applicable — "구조적 시정조치 이행완료" vs. "행태적 시정조치 이행중 (잔여 X개월)".
+  *As-built: not implemented — `RagDimension` carries no remedy-kind field, and the Regulatory/Permit sub-badge renders identically to every other dimension.*
+
+## 4. Procedure Viewer
+
+- Renders the **merged** result of `proc:resolve` (shared → region → entity precedence), with each step's source layer visually distinguished (e.g. a small badge: 공통/지역/각사).
+  *As-built: built in `ProcedureViewer.tsx` — merged `proc:resolve` output with 공통/지역/각사 source badges, an applied-layers line, and a thresholds block.*
+- A step that is an entity/region **override** (`add_steps`/`replace_steps`) is visually flagged, with a link back to the shared baseline step it modifies.
+  *As-built: not implemented — the `_source` badge shows which layer a step came from, but there is no override flag and no link back to the shared baseline step.*
+- For R&BD-flagged projects, an additional inline panel surfaces `checklists/rbd-technology-checklist.yaml` alongside the base Brown Field checklist.
+  *As-built: not implemented — no R&BD checklist panel exists; the viewer also resolves whatever procedure key the user types rather than binding to project context.*
+
+## 5. Admin Console
+
+| Section | Contents | Notes |
+|---|---|---|
+| 사용자 관리 (User Management) | Approve/suspend, role assignment | Does not grant project visibility (FR-SEC-02) |
+| 데이터베이스 관리 (Database) | Migration status, backup history | Read-heavy, links to `job_run` — *As-built (PR #65 batch 4): partial — the retention-policy half is built (table from `GET /api/admin/retention` + audited upsert form `POST /api/admin/retention`); migration status and backup history have no endpoints and render an explicit "아직 API가 없습니다" note, never placeholders* |
+| 배치·스케줄 관리 (Batch/Schedule) | `job_run` history, retry, `schedule_job` edit | — *As-built (PR #65 batch 4): job registry + last-run status/time + enable/disable toggle (optimistic, revert-on-error) built; `job_run` history beyond the latest run and the retry action are not built* |
+| 알림 관리 (Notifications) | `rag_rule` threshold editing (with mandatory ADR reference before save) | *As-built (2026-08-28): 알림 목록 + 감시 규칙 추가 form (`POST /api/watch`, `watch_rule.adr_ref` migration 0036). ADR reference is a client-side hard block — empty ref disables submission (FR-GOV/ui-spec §5), stored per rule.* |
+| 규정·절차 관리 (Governance) | `governance_doc` version list, `project_policy_pin` status, impact-analysis viewer | *As-built (2026-08-27): governance document list built (`GET /api/admin/governance` from `governance_doc`)* |
+| 용어집 관리 (Glossary) | Undefined-term queue from `glossary:lint`, registration workflow | *As-built (2026-08-28): 용어 목록 (`GET /api/glossary`) + registration workflow built (`POST /api/glossary`, admin-only; appends to the category YAML SSOT via `lib/glossary-write.ts`, `why_it_matters_ko` mandatory, duplicates rejected in favor of merging) + the undefined-term queue built (`GET /api/admin/glossary-lint` — the report-only scanner over skills/+docs/ prose, top-200 frequency-first findings with the total echoed in meta, curator-triage table above the registration form). Deferred: none remaining for this view* |
+| 데이터 소스 관리 (Data Sources) | Presence + last-success timestamp **only** — no key-value field exists in this UI at all, not just hidden | FR-SYS/design §4-9 |
+| 기준정보 관리 (Master Data) | `staging_unmapped` resolution queue | *As-built (2026-08-27): master-data queue built (`GET /api/admin/master-data` from `staging_unmapped`)* |
+| 거버넌스 (ADR/Stage Gate) | ADR index, stage-gate configuration | *As-built (2026-08-27): ADR index built (`GET /api/admin/adr` scanning `docs/adr/*.md`); Master data built (`GET /api/admin/master-data` from `staging_unmapped`)* |
+| 로그 관리 (Logs) | Audit log viewer, **no delete control rendered anywhere in this screen** | FR-SEC-07 |
+
+## 6. Accessibility
+
+- `accessibility-audit` skill run against every screen before Stage 5 release (WCAG 2.1 AA).
+- Keyboard navigation for all interactive elements, including the procedure-viewer's step-source badges and the RAG card's dimension drill-down.
+- Screen-reader labels distinguish "Green" (달성) from "OK" language ambiguity — Korean labels avoid traffic-light color-name-only phrasing.
+
+## 7. Related
+
+- `docs/architecture/api-spec.md` — the API this UI consumes exclusively (no direct DB access from the frontend)
+- `docs/governance/rag-framework.md` — the grading logic §3 renders
+- `docs/architecture/mcp-integration.md` — the parallel AI-client surface (not this UI, but the same underlying API)
+
+## As-built 2026-09-05 — 금액 표기 통일 + 용어 개선
+
+- 모든 금액 표기는 정수 + 콤마 (소수점 제외) — `fmt()` 헬퍼가
+  `Math.round(n).toLocaleString("ko-KR")`을 반환.
+- "프로젝트 차터" → "프로젝트 추진계획"으로 라벨 변경 (사용자 이해도 개선).
+- 사후관리(S12) 진입 조건 확인 완료: entity_ic+group_ic GO 및 설립 5단계 완료 필요.
+
+## As-built 2026-09-05 — 추진 전략 하위 메뉴 + 위원회 레지스트리 경로 수정
+
+- 탐색 섹션의 S4~S7 구간을 "추진 전략" 하위 메뉴로 재편: 진출방식 결정(/route-decision) ·
+  그린필드 — 자체 신설 진출(/greenfield) · 브라운필드 — 결합·투자(/brownfield).
+  부모 href는 첫 자식과 동일한 /our-company 패턴.
+- 위원회 레지스트리(procedures/_committees.yaml) 로딩 경로를 상위 탐색(walk-up)으로
+  수정 — 서버가 app/web-next에서 구동될 때 import.meta.dirname 소실 시
+  app/web-next/procedures를 참조하던 ENOENT 해소.
+- 용어 규약: "Long List/Short List"는 브라운필드 S6/S7의 대상 후보 회사 목록에만
+  사용한다. S3 시너지 화면의 동일 개념은 "시너지 영역 후보/우선 시너지 영역"으로
+  표기한다(용어 충돌 제거).
+
+## As-built 2026-09-05 — 로그인 배경 롤링 (ADR-0106)
+
+/login 히어로 영역이 신규사업 모티프 배경 3장(항만·가치사슬 / 도시·인프라 / 스마트
+제조·로봇)을 7초 간격 크로스페이드한다. 에셋은 저장소 내 자체 SVG(public/login-bg*.svg),
+텍스트 가독성은 베일 그라디언트, 모션은 prefers-reduced-motion 존중. 사이즈는
+cover + hero max-width 34rem 제한으로 텍스트 길이·패널 높이와 무관하게 안정.
+
+## As-built 2026-09-05 — S4 결정 근거 패널 + 결정 플로우 가이드
+
+/route-decision에 선택된 기회의 결정 근거 패널과 결정 플로우 가이드를 추가한다.
+- 결정 근거 패널(#evidence): 시장(scope·규모·CAGR), 발굴 근거(S2 rationale),
+  적합성 판정(fit_verdict/fit_rationale), 시너지 권고(synergy_score + 근거).
+- 위원회 심의 이력(#committee): 세션 상태·모드·생성일 + 회의록(markdown) 링크.
+- 결정 플로우 가이드(ol): 근거 확인 → 트랙 권고 검토 → 위원회 심의(선택) → 결정 기록.
+
+## As-built 2026-09-05 — 테이블 정렬 정합 + 목록 복귀 단일 패턴
+
+- 목록 테이블: th·td 정렬 일치(텍스트 좌측), 식별 컬럼 첫 열 배치(프로젝트 목록에
+  프로젝트명 컬럼 추가 — 0074 charter backfill 데이터 연동).
+- 목록 복귀: components/ListBackButton.tsx 단일 컴포넌트(시너지 상세·그룹/계열사
+  상세 적용), URL 기반 상세는 Topbar back-link. 화면별 자체 구현 금지.
+
+## As-built 2026-09-04 — StageFrame 단계 설명 문구 표준화
+
+단계 화면 설명 문구는 StageFrame children으로만 전달한다(프레임 밖 `<p>` 분리 금지).
+프레임이 0.9rem·muted-fg·leading-relaxed·mb-4로 서식을 표준화하고, 문장은 "~합니다."
+종결 1~3문장, 절차·ADR 참조는 문미 괄호로 통일한다(S1/S2/S3/S4/S5/S6·S7 화면 일괄 정정).
+
+## As-built 2026-09-04 — 내비게이션 SSOT + 프로젝트 하위 화면 등록 (ADR-0105)
+
+- 사이드바 메뉴의 SSOT는 `app/web-next/lib/navigation.ts`다(NAV_SECTIONS/ADMIN_NAV/NON_MENU_ROUTES/menuHrefs). AppShell은 이 파일만 렌더링하며 아이콘 매핑(ICON_BY_HREF)만 로컬로 보유한다. 새 표준 화면은 반드시 여기에 등록한다 — 누락·순서 드리프트는 `tests/unit/navigation.test.ts`(페이지↔메뉴 패리티, 탐색 섹션 순서, 중복 href, AppShell SSOT 사용)가 잡는다.
+- 프로젝트 하위 화면(/projects/[id]/business-case·dd·ic-review·portfolio·process·charter)은 전역 메뉴 대신 `ProjectSubNav` 상호 링크로 연동된다(상세 화면은 /projects 목록에서 진입).
+- 전역 파이프라인 대시보드는 `/pipeline`(모든 프로젝트의 S8~S12 단계·게이트 스냅샷 + HOLD 에이징).
+- 탐색 섹션 순서는 flow.spec 단계 순서를 따른다: 대시보드 → 시장분석(S1) → 기회 발굴(S2) → 시너지 정합성(S3) → 진출방식 결정(S4) → 역량 평가·진출전략(S5, greenfield) → 대상 후보 발굴(S6~S7, brownfield) → 프로젝트(S8~S12) → 프로젝트 파이프라인.
+
+## As-built 2026-09-02 — 시너지 정합성 하위 메뉴
+
+- 사이드바 탐색의 시너지 정합성은 하위 메뉴를 갖는다: 그룹/계열사 분석(/our-company) · 시너지·전략적 적합성(/synergy). NavItem.children 지원(AppShell), 자식은 들여쓰기 링크, 부모는 활성 그룹 라벨.
+- 그룹/계열사 분석 화면 제목은 "S3 그룹/계열사 분석"(StageFrame heading override — S3 지원 도구 표기, ADR-0089).
+- 시너지 정합성 신규 분석 폼: 대상(그룹/계열사 레지스트리, 프로파일 게이팅) + 기회 연결(선택) — 별도 회사 등록 없음(ADR-0090).
+
+## As-built 2026-09-03 — 관리자 콘솔 분할 (ADR-0091)
+
+- 역할-화면 분리: admin 계정은 관리 그룹(시스템 대시보드·사용자·토큰·로그·데이터소스·스케줄·데이터베이스·알림·용어집·거버넌스·마스터데이터·ADR)만 사용. 비관리자는 관리자 진입 불가(layout 게이트 + 기존 requireAdmin).
+- 라우트: /admin(시스템 대시보드), /admin/users|audit|data-sources|schedule|database|notifications|glossary|governance|master-data|adr — 섹션 상태는 URL 기반.
+- 시스템 대시보드: 감사 로그 30일 추이(라인), 사용자 역할 분포(도넛), 기오퍼널(바), 스케줄 성공/실패(바) — GET /api/admin/system-stats.
+- CRUD 보강: 사용자 역할 변경·비활성화/활성화 UI, 마스터데이터 DELETE, 발급 토큰/임시 비밀번호 1회 확인 모달.
+- 미구현(명시): 용어집 용어 수정/삭제(YAML 파일 기반 — 쓰기 API 설계 선행), 데이터베이스 백업 이력/마이그레이션 상태 API, 스케줄 수동 트리거, RAG 규칙 편집기.
+
+## 투자구조 설계 (S10, ADR-0106 as-built)
+
+- `/projects/[id]/deal-structure` — ProjectSubNav "투자구조" 탭. StageFrame S10 프레임 안에 두 섹션: (1) 투자구조 가설 카드(비히클 칩: direct/SPC/holdco/내부 스핀오프/JV, 자산·주식·지분·수표 믹스, 4축 노트 표, 근거, 아티팩트 참조 입력 + 4축 검토 완료 버튼), (2) 자금조달 sources & uses 표(조달/사용 합계·차액·균형 배지, 행 추가/삭제).
+- API: `GET/POST /api/projects/{id}/deal-structure` (action: hypothesize | complete_four_axis | add_financing_entry | remove_financing_entry). 4축 완료는 deal_structure_review 아티팩트 참조 필수, 재완료 불가.
+- S10 완료 술어: 최신 가설 4축 완료 AND sources == uses > 0 (최신 가설 미완료 시 재블록).
+- IC 패키지(S11)에 deal_structure 섹션 포함(최신 가설 + 균형 상태).

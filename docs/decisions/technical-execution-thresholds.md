@@ -3,7 +3,7 @@
 **Approval**: all decisions as drafted (user “go”, 2026-08-23); recorded alternatives remain recalibration candidates.
 
 **Date**: 2026-08-23
-**Chair and record owner**: process-governance-manager (owner of the D-M3 precedent, `docs/rag-framework.md` §2–§4)
+**Chair and record owner**: process-governance-manager (owner of the D-M3 precedent, `docs/governance/rag-framework.md` §2–§4)
 **Participants**: technical-dd-agent (technology evidence owner), certification-agent (certification transferability), platform-lead (predicate AST / schema feasibility, ADR-0046), risk-officer (adversarial challenge), process-governance-manager (chair)
 **Replaces**: `docs/decisions/open/technical-execution-thresholds.md` (the agenda; every `임계값 미정` slot is filled below)
 **Becomes**: the `thresholds_source` value cited by every `technical_execution` rule at PR-9 activation

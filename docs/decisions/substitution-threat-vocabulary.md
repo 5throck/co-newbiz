@@ -24,6 +24,6 @@ Basis:
 
 ## Consequences
 
-- The migration 0020 CHECK is no longer a proposal; it is the policy of record. Retiring the "pending ratification" riders in `docs/rag-framework.md` §5-1 and `docs/db-schema.md` (0020 note) lands in the same change.
+- The migration 0020 CHECK is no longer a proposal; it is the policy of record. Retiring the "pending ratification" riders in `docs/governance/rag-framework.md` §5-1 and `docs/architecture/db-schema.md` (0020 note) lands in the same change.
 - First consumer: a future `market` rule reading `substitution_threat` may cite this record as its vocabulary source.
 - Recalibration: member-set changes are threshold decisions (market-thresholds.md owns the axis) and require the same record-update path as D-M-MKT-2 — not a migration-side edit.

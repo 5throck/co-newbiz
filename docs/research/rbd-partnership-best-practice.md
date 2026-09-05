@@ -1,3 +1,7 @@
+---
+lang: en
+---
+
 > Provenance: researched by the rbd-research2 agent, 2026-08-23 (direct WebFetch of ~15 canonical URLs — NASA, EC Horizon annex, GAO, Stage-Gate Institute, ASAP, NVCA, NIH techtransfer; search backend rate-limited, resets 2026-09-01; 22 sources). Committed copy of .git/research/rbd-partnership-best-practice.md for ADR-0052 citation; the untracked original is the working input.
 
 # Research Report: R&BD Stage-Gating, Partner Sourcing & Due Diligence, and Technology Deal Governance

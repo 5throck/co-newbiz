@@ -70,7 +70,7 @@ procedure/skill graphs.
   generated markdown, and the evaluator aligned.
 - Human involvement concentrates in the IC approval queue and HOLD-supplement flows; every
   intermediate gate decision is auditable and overridable.
-- The design system (docs/design-guide.md) adopts "Agentic-first, Human-final" and
+- The design system (docs/design-system/design-guide.md) adopts "Agentic-first, Human-final" and
   "Definition-driven UI" as its first principles; the UI is a workbench for verifying agent
   output, not the process itself.
 - `process_run.spec_version` preserves the time-axis split between Definition and Execution.

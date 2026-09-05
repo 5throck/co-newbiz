@@ -3,7 +3,7 @@
 // a menu entry, (2) menu order drifts because order was hardcoded JSX.
 // The SSOT is lib/navigation.ts; AppShell must render only from it.
 import { test, expect, describe } from "bun:test";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const APP_DIR = "app/web-next/app";
@@ -54,15 +54,11 @@ describe("navigation SSOT (ADR-0105)", () => {
   });
 
   test("every menu href resolves to a real page", () => {
-    // Static assets served from app/web-next/public (e.g. the knowledge-hub
-    // portal, ADR-0107) are valid menu targets without a page.tsx route.
-    const STATIC_PUBLIC_HREFS = new Set(["/knowledge-hub/"]);
-    for (const href of STATIC_PUBLIC_HREFS) {
-      const asset = join("app/web-next/public", href.replace(/\/$/, ""), "index.html");
-      expect(existsSync(asset)).toBe(true);
-    }
+    // ADR-0108: the knowledge-hub static portal is retired — /library is the
+    // single documentation surface now, so no static-public-asset exemption
+    // is needed here any more.
     const pages = new Set(allPageRoutes());
-    const broken = menuHrefs().filter((href) => !pages.has(href) && !STATIC_PUBLIC_HREFS.has(href));
+    const broken = menuHrefs().filter((href) => !pages.has(href));
     expect(broken).toEqual([]);
   });
 

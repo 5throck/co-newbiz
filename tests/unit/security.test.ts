@@ -1,6 +1,6 @@
 // @version 1.0.0
 /**
- * Wave 5.5 information-protection tests — docs/security-model.md §7's full
+ * Wave 5.5 information-protection tests — docs/security/security-model.md §7's full
  * 8-point verification list, one describe per point, plus the account/
  * session flows of §4. Every asserted figure was first verified against the
  * real engines (bun -e smoke runs) before being encoded here — nothing is

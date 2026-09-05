@@ -7,7 +7,7 @@ description: >
   direct DB connection — enforced by a `bun:test` file-scan
   (`tests/unit/mcp.test.ts`), not just a design statement. Every new tool
   needs a matching REST endpoint first (`rest-api-design`); a tool
-  without one is a Stage 5 CI failure per `docs/mcp-integration.md` §6.
+  without one is a Stage 5 CI failure per `docs/architecture/mcp-integration.md` §6.
 
   Use when: "add an MCP tool", "MCP server integration", "MCP-REST
   parity", "no direct DB access from MCP".

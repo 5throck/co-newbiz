@@ -35,14 +35,14 @@ ADR-0015's own framing is exact: "a backup never restored is not
 verified" — a backup job that runs successfully every night but has never
 been the subject of an actual restore attempt provides false confidence,
 not real DR coverage. This is why the monthly recovery drill is on the
-fixed operating-rhythm calendar (`docs/ops-cadence.md`), not left as an
+fixed operating-rhythm calendar (`docs/governance/ops-cadence.md`), not left as an
 implicit "we should probably test this sometime" expectation.
 
 ## When to Use
 
 - Immediately before any migration (`deployment-and-release`'s requirement)
-- Monthly recovery drill (`docs/ops-cadence.md`)
-- Quarterly DR drill (`docs/security-baseline.md` §1)
+- Monthly recovery drill (`docs/governance/ops-cadence.md`)
+- Quarterly DR drill (`docs/security/security-baseline.md` §1)
 
 ## Execution Steps
 

@@ -4,7 +4,7 @@
 **Date**: 2026-09-03
 **Deciders**: user (standing directive), platform-lead (review), security-engineer (role separation review)
 **Design of record**: `app/web-next/app/admin/**` (layout + section routes), `app/api/admin/system-stats/route.ts`, `components/admin/AdminConsole.tsx`
-**Related**: ADR-0083 (visual standard), ADR-0086 (screen patterns), docs/api-spec.md §8 (admin endpoints never MCP-exposed)
+**Related**: ADR-0083 (visual standard), ADR-0086 (screen patterns), docs/architecture/api-spec.md §8 (admin endpoints never MCP-exposed)
 
 ## Context
 

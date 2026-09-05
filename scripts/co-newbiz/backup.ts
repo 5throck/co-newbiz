@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.0.1
 /**
- * SQLite backup — docs/security-baseline.md, ADR-0014, ADR-0015.
+ * SQLite backup — docs/security/security-baseline.md, ADR-0014, ADR-0015.
  *
  * ADR-0014: backup runs immediately before any migration. ADR-0015: "a
  * backup never restored is not verified" — this script also supports

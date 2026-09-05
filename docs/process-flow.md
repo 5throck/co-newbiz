@@ -3,7 +3,7 @@
 > **⚠ 이 문서는 생성물입니다.** `process/flow.spec.yaml`(SSOT, ADR-0074)에서
 > `bun scripts/co-newbiz/generate-process-flow.ts`로 생성됩니다. 이 파일을
 > 직접 수정하지 마세요 — 수정은 사양에서, 본 문서는 참조용으로.
-> 설계 철학·원칙·베스트 프랙티스는 `docs/design-guide.md`와 ADR-0074를 참고하세요.
+> 설계 철학·원칙·베스트 프랙티스는 `docs/design-system/design-guide.md`와 ADR-0074를 참고하세요.
 
 
 ## 프로세스 흐름 요약
@@ -91,7 +91,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 ## 설계 원칙 및 에이전트 오케스트레이션
 
-이 프로세스는 Agentic-first, Human-final 원칩으로 운영된다 — 에이전트가 스테이지를 실행·권고하고, 사람은 IC 승인과 예외 개입만 수행한다 (docs/design-guide.md, ADR-0074).
+이 프로세스는 Agentic-first, Human-final 원칩으로 운영된다 — 에이전트가 스테이지를 실행·권고하고, 사람은 IC 승인과 예외 개입만 수행한다 (docs/design-system/design-guide.md, ADR-0074).
 
 **스테이지별 담당 에이전트(오케스트레이터가 Activities의 agent 필드를 실행)**
 

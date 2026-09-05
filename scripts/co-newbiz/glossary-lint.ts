@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.1.1
 /**
  * glossary:lint — undefined-jargon report over the documented target
  * surfaces (ADR-0022 / glossary/_schema.yaml tooling_integrations:
@@ -8,7 +8,7 @@
  * skills/ and docs/; UI-string scanning lands when the web UI stabilizes.
  *
  * This is the weekly undefined-term report that backs the
- * glossary-curator's cadence (docs/ops-cadence.md Weekly row). It is
+ * glossary-curator's cadence (docs/governance/ops-cadence.md Weekly row). It is
  * REPORT-ONLY in v1: exit code is 0 regardless of findings, so it can run
  * in any pipeline without becoming a gate — turning findings into glossary
  * entries (or allowlist additions) is the curator's judgement, not a
@@ -203,7 +203,7 @@ export function printGlossaryLintReport(result: GlossaryLintResult, options: { q
   console.log(
     `\nGlossary lint: ${result.scannedFiles} file(s) scanned, ${result.known.length} registered term(s) in use, ${result.undefined.length} undefined-token finding(s).`,
   );
-  console.log("(report-only — exit 0 regardless; glossary-curator triages weekly per docs/ops-cadence.md)");
+  console.log("(report-only — exit 0 regardless; glossary-curator triages weekly per docs/governance/ops-cadence.md)");
 }
 
 if (import.meta.main) {

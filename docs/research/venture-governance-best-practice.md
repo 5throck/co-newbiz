@@ -1,3 +1,7 @@
+---
+lang: en
+---
+
 > Provenance: researched by the venture-research agent, 2026-08-22 (8+ searches; Cooper/Stage-Gate Institute, HM Treasury Green Book, DLA Piper, KLRI statute text, Korean law-firm guides; 38 sources). Committed copy of .git/research/venture-governance-best-practice.md for ADR-0051 citation; the untracked original is the working input.
 
 # Research Report: New-Business Review Governance — Published Best Practice (Areas A & B)

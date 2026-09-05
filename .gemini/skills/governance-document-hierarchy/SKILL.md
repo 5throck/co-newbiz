@@ -29,7 +29,7 @@ metadata:
 ## Context
 
 ADR-0035 fixes five governance layers, each with a distinct enforceability
-rule (`docs/governance-operations.md` §7):
+rule (`docs/governance/governance-operations.md` §7):
 
 | Layer | Enforceability | Example |
 |---|---|---|

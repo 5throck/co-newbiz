@@ -1,3 +1,7 @@
+---
+lang: en
+---
+
 > Provenance: researched by the pmi-jv-research2 agent, 2026-08-23 (workspace web-search quota exhausted mid-mission; sources located via browser search and fetched directly, all URLs reached 2026-08-22/23). Committed copy of .git/research/pmi-jv-lifecycle-best-practice.md for ADR-0052 citation; the untracked original is the working input.
 
 # PMI / JV Lifecycle / Corporate-Venture Monitoring — Best Practice Research

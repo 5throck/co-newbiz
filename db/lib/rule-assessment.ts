@@ -1,7 +1,7 @@
 // @version 1.0.0
 /**
  * Rule-based per-run RAG dimension grading — PR-9 activation. This is the
- * rule-evaluation consumer docs/db-schema.md said did not exist: it fills a
+ * rule-evaluation consumer docs/architecture/db-schema.md said did not exist: it fills a
  * run's variable snapshot (db/lib/snapshot-filler.ts 1.1.0), evaluates the
  * stage gate's ENABLED rag_rule rows against it through the ADR-0046
  * predicate engine (db/lib/predicate.ts — Kleene semantics), and writes one

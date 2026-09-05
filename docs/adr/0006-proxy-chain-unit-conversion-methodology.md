@@ -14,4 +14,4 @@ Distinguish engineering hops (fixed physical coefficients, no confidence penalty
 
 ## Consequences
 
-A 2-hop chain with one engineering and one statistical hop can reach Grade B, which would have been impossible under the pre-M4 rule. See `guidelines/proxy-chain-hop-classification.md`.
+A 2-hop chain with one engineering and one statistical hop can reach Grade B, which would have been impossible under the pre-M4 rule. See `docs/guidelines/proxy-chain-hop-classification.md`.

@@ -24,19 +24,18 @@ co-newbiz/
   agents/            도메인 에이전트(기능, 기술, 산업, 지역) + _core/_shared
   policies/          그룹 및 개별 법인(entity) 수준 규정
   procedures/        references: + overrides를 갖춘 shared/entity/region/group 절차
-  guidelines/        권장 등급(tier) 실무 문서
   checklists/        게이트 체크리스트, 항목 단위 mandatory:true/false
   templates/         산출물 템플릿(IC 메모 등)
   glossary/          비즈니스/재무/법무/기술/산업 용어 집합
   region-profiles/   지역별 규제·인센티브 프로필 (Stage 2+)
   process/           flow.spec.yaml — 프로세스 SSOT (12단계 S1~S12, 7개 게이트, v2.2.0)
-  handbook/          한국어 플랫폼 핸드북 사이트 (handbook 스킬로 생성; docs/가 정적 사이트)
-  knowledge-hub/     문서 포털 — 규정·절차·체크리스트·매뉴얼의 버전 고정 스냅샷 (카테고리 중심, 4개 언어 크롬, ADR-0107)
-  docs/              프로세스 맵, 거버넌스 운영, 매뉴얼, ADR
+  docs/              주제별 하위 폴더(meta/ architecture/ governance/ security/ design/ dd/
+                     planning/ guidelines/ manuals/ adr/ research/ runbooks/ ...) — 별도 생성
+                     사이트 없이 /library에서 전부 실시간 렌더링됨 (ADR-0108)
   memory/            세션 로그와 회의록
 ```
 
-검토 흐름은 12단계 스테이지-게이트 체인입니다(S1 시장분석 ... S11 투자심사·실행 → S12 사후관리). S10 투자구조 설계 단계에서 비히클(SPC 포함)·4대 축 검토·자금조달 sources & uses 균형을 다룹니다. AI 에이전트가 제안하고 모든 게이트 결정은 사람이 내립니다. `process/flow.spec.yaml`과 `docs/process-map.md` 참고.
+검토 흐름은 12단계 스테이지-게이트 체인입니다(S1 시장분석 ... S11 투자심사·실행 → S12 사후관리). S10 투자구조 설계 단계에서 비히클(SPC 포함)·4대 축 검토·자금조달 sources & uses 균형을 다룹니다. AI 에이전트가 제안하고 모든 게이트 결정은 사람이 내립니다. `process/flow.spec.yaml`과 `docs/governance/process-map.md` 참고.
 
 ## 빠른 시작
 

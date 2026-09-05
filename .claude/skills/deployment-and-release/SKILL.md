@@ -54,7 +54,7 @@ implies.
    reversible-tagged migration — pick one, actually roll it back in a
    non-production environment, confirm it works. A rollback plan that has
    never been executed is unverified, not proven
-6. **Record the drill result** — feeds `docs/security-baseline.md`'s
+6. **Record the drill result** — feeds `docs/security/security-baseline.md`'s
    quarterly DR-drill cadence and the general operating-rhythm discipline
 
 ## Output Format

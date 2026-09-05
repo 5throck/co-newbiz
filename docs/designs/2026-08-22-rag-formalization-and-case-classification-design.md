@@ -15,7 +15,7 @@
 
 ### 1.1 RAG 6차원 중 3개가 형식화되지 않았다
 
-`market` / `technical_execution` / `risk` 세 차원은 채점 함수가 없고, 호출자가 시나리오 JSON에 등급을 손으로 적어 넣는다. `docs/rag-framework.md`에는 이 세 차원의 판정 기준이 **산문으로도 존재하지 않는다.** `rag_rule` 테이블은 스키마상 존재하나, 확인된 사실은 다음과 같다:
+`market` / `technical_execution` / `risk` 세 차원은 채점 함수가 없고, 호출자가 시나리오 JSON에 등급을 손으로 적어 넣는다. `docs/governance/rag-framework.md`에는 이 세 차원의 판정 기준이 **산문으로도 존재하지 않는다.** `rag_rule` 테이블은 스키마상 존재하나, 확인된 사실은 다음과 같다:
 
 - INSERT 0건
 - 읽는 코드 0건
@@ -304,7 +304,7 @@ applies_when: { op: "in", var: "target.has_external_market_presence", values: [t
 
 **신규**: `value_chain_link` 기반 var는 `r2 < 0.6` 시 `gradeChain()`과 동일한 기준으로 **저신뢰 배제**(현재 부재 — 결측과 저신뢰를 구분 못 함).
 
-**신규 — 게이트별 축소 판정** (`docs/rag-framework.md`에 §5-부속으로 명문화, Task 2로 선반영):
+**신규 — 게이트별 축소 판정** (`docs/governance/rag-framework.md`에 §5-부속으로 명문화, Task 2로 선반영):
 
 - Screening: `market` Amber 상한 기본, TAM/성장률만 평가, 나머지 축은 unassessed
 - Pre-FS: TAM/성장률 출처화, 6축은 아직 unassessed
@@ -360,7 +360,7 @@ D-M3-1~4가 비보정 상태로 실사용됐다는 선례(process-governance-man
 | 0.1 | 이 계획(미팅 검토 반영본)을 정식 설계 문서로 작성 | 본 문서 |
 | 0.2 | 미팅 전사 정식 기록 | `memory/meeting-2026-08-22-rag-formalization-review.md` — 6개 관점 라운드1 결과 + 7개 뒤집힘 + 2개 미해결 후 사용자 확정 내역을 스킬 표준 형식(아젠다/라운드별 발언/종합/액션아이템)으로 |
 | 0.3 | ADR 초안 5건 우선 작성 (구현이 실제로 걸리는 것부터) | `docs/adr/0046-*`(술어 AST+증거레지스트리) / `0047-*`(3축 분류모델+case_subtype폐기+project_policy_pin) / `0048-*`(ADR-0037 개정) / `0049-*`(ADR-0016 개정, UNASSESSED 4번째 상태) / `0050-*`(ADR-0045 errata 각주) |
-| 0.4 | `docs/rag-framework.md`에 market 게이트별 축소판정 서브섹션 선반영(§5-부속, 결정 6) — 코드보다 문서가 먼저 | 문서만, 코드 없음 (본 세션 Task 2로 완료) |
+| 0.4 | `docs/governance/rag-framework.md`에 market 게이트별 축소판정 서브섹션 선반영(§5-부속, 결정 6) — 코드보다 문서가 먼저 | 문서만, 코드 없음 (본 세션 Task 2로 완료) |
 | 0.5 | `docs/decisions/open/{market,technical-execution,risk}-thresholds.md` 3건 — 미검증 임계값 미팅 아젠다 초안 | PR-9 전 사용자 승인 대상 |
 | — | **게이트**: 0.1-0.5 완료 후 사용자 승인 → PR-0 착수 | |
 
@@ -384,7 +384,7 @@ D-M3-1~4가 비보정 상태로 실사용됐다는 선례(process-governance-man
 
 원안의 PR-5b(waiver 무력화)는 결정 5 전면 재설계로 해소를 시도했다. **잔여 최고위험은 PR-5c(완결성 점검의 신규 로직 자체가 초회 실행부터 정확해야 한다는 점)** — risk-officer F6: 이 통제는 오늘 프로덕션 호출자가 0건이라, "기존 통제를 분류인지로 만드는" 것이 아니라 **"통제를 만들면서 동시에 분류인지로 만드는"** 상황이다. 완화: PR-5c를 무조건(6개 전부 필수) 버전으로 먼저 파일럿 세트에 그린으로 만든 뒤, 같은 PR 안에서 `applies_when` 조건을 얹는다 — 두 단계를 시간차 없이도 논리적으로 분리해 커밋한다.
 
-두 번째: PR-6(시장)이 `docs/rag-framework.md`에 산문 자체가 없는 상태에서 시작하므로, PR-1의 3치 논리 정확성과 PR-2의 저신뢰 배제가 먼저 자리잡지 않으면 첫 시장 규칙부터 결함이 재생산된다.
+두 번째: PR-6(시장)이 `docs/governance/rag-framework.md`에 산문 자체가 없는 상태에서 시작하므로, PR-1의 3치 논리 정확성과 PR-2의 저신뢰 배제가 먼저 자리잡지 않으면 첫 시장 규칙부터 결함이 재생산된다.
 
 ### 5.2 반조작 스테이징
 
@@ -472,6 +472,6 @@ cd Projects/co-newbiz && bun procedures/_validate.ts && bun scripts/co-newbiz/gr
 
 ## 관련 문서
 
-- `docs/rag-framework.md` — §5-부속(market 게이트별 축소판정, 결정 6)을 본 설계와 동시에 갱신(Task 2)
+- `docs/governance/rag-framework.md` — §5-부속(market 게이트별 축소판정, 결정 6)을 본 설계와 동시에 갱신(Task 2)
 - `docs/adr/0016-*`, `0037-*`, `0045-*` — 개정 대상
 - `memory/meeting-2026-08-22-rag-formalization-review.md` — 소스 미팅 전사(Stage 0.2, 별도 산출물)

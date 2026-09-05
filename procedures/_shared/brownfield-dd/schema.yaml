@@ -175,7 +175,7 @@ steps:
       APPLICABLE validator is missing; an applicable validator with no
       coverage row fails this step regardless of anything else. This is a
       completeness check with NO WAIVER PATH (design §8.9-1(f),
-      docs/governance-operations.md §2) — not a judgment call. The DD
+      docs/governance/governance-operations.md §2) — not a judgment call. The DD
       cross-validation (Decisions 5f/5g) runs alongside: classification-
       independent DD evidence contradicting the classification blocks DD
       exit only when the classification's provenance is weak. The four
@@ -203,8 +203,8 @@ kill_criteria:
 legal_basis:
   - "Group New Business Review Policy §2.3"
   - "Design v1.0 §4-6, §8.9-1(f) (six-validator no-waiver completeness check)"
-  - "docs/process-map.md — DD row"
-  - "docs/governance-operations.md §2 (no waiver for completeness checks)"
+  - "docs/governance/process-map.md — DD row"
+  - "docs/governance/governance-operations.md §2 (no waiver for completeness checks)"
   - "Meeting M5 (m5-ma-model-linkage.md) — fixed evaluation order"
   - "checklists/ma-special-topics-checklist.yaml"
   - "docs/pilots/pilot-010-affinity-lotte-rental.md finding F-2"

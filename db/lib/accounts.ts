@@ -1,6 +1,6 @@
 // @version 1.1.0
 /**
- * Account/session engine ??Wave 5.5, docs/security-model.md 짠4,
+ * Account/session engine ??Wave 5.5, docs/security/security-model.md 짠4,
  * ADR-0009 (PBKDF2 reuse), design v1.0 짠4-9.
  *
  * Passwords: PBKDF2-HMAC-SHA256 / 210,000 iterations / 16B salt / 32B key,

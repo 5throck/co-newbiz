@@ -82,7 +82,7 @@ Migrate every listed money column from REAL to INTEGER **in units of KRW million
   parity re-verification (identical seed may legitimately change once scales
   change — the run-versioning note must say so explicitly); simulation.ts
   composition; venture-scorecard rollup reads; UI number formatting via the
-  currency-aware renderer; `docs/db-schema.md` rows corrected in the same PR;
+  currency-aware renderer; `docs/architecture/db-schema.md` rows corrected in the same PR;
   checklist items bf-08/bf-09 unaffected semantically but their evidence
   snapshots change shape — a `project_policy_pin` retroactivity check per
   ADR-0021 before shipping.

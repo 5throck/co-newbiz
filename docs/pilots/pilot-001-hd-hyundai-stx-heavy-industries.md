@@ -3,7 +3,7 @@
 **Case type**: Brown Field (M&A)
 **Region**: Korea (KR)
 **Run mode**: Manual (no system — Stage 3 pilot per ADR-0034)
-**Case source**: `docs/pilot-candidate-research.md` — a real, publicly documented, already-completed deal (not a synthetic case; the FTC decision and deal facts are matters of public record)
+**Case source**: `docs/planning/pilot-candidate-research.md` — a real, publicly documented, already-completed deal (not a synthetic case; the FTC decision and deal facts are matters of public record)
 **Status**: In progress — this record is updated as each gate is walked
 
 ## 0. Purpose and Scope of This Pilot
@@ -26,7 +26,7 @@ Procedure: `procedures/_shared/brownfield-screening/schema.yaml`
 
 ## 2. Pre-FS
 
-Deliverable per `docs/process-map.md`: deal structure hypothesis; WACC/hurdle IRR confirmed `kind=user`.
+Deliverable per `docs/governance/process-map.md`: deal structure hypothesis; WACC/hurdle IRR confirmed `kind=user`.
 
 - **Deal structure hypothesis**: real public fact — 35.05% stake acquisition, KRW 81.3 billion, structured as a partial-stake purchase rather than a full buyout. This is directly usable as the hypothesis input.
 - **WACC/hurdle IRR**: **not available from public sources** — this is an internal, deal-sponsor-supplied input by design (`assumption.kind='user'`, design §4-1). This exercise cannot supply a real number here without fabricating one, so this pilot **stops short of a live financial model** and does not attempt to invent a WACC. This is flagged as a gap in scope, not a process defect (§6).
@@ -56,7 +56,7 @@ Checklist: `checklists/ma-special-topics-checklist.yaml`. Only the antitrust ite
 
 Not run — both require a completed valuation (§3, out of scope) and the six-way cross-check to actually complete (§4, only 3 of 9 items executable). This is the expected stopping point for a public-data-only pilot, not a process failure — see §6.
 
-**Illustrative RAG assessment** (per `docs/rag-framework.md`), for the one dimension with enough real data to grade:
+**Illustrative RAG assessment** (per `docs/governance/rag-framework.md`), for the one dimension with enough real data to grade:
 
 | Dimension | Grade (illustrative) | Rationale |
 |---|---|---|
@@ -71,7 +71,7 @@ Since not all six dimensions are gradable, no overall grade is produced — corr
 |---|---|---|---|
 | F-1 | The antitrust-screening path (steps 1-2 of Screening, ma-01/02/03 of the DD checklist) is fully executable end-to-end against real public data, with results consistent with the real-world outcome. | Positive — process validated | None needed |
 | F-2 | Pre-FS's WACC/hurdle requirement and DD's remaining six checklist items correctly cannot be completed from public information alone — this pilot cannot validate them, and no synthetic number was substituted to force completion. | Scope limitation, not a defect | Confirms the design's own rule (`assumption.kind='user'`, no fabrication) is being followed correctly by this exercise itself |
-| F-3 | No procedure schema exists yet for Pre-FS/FS/DD/Entity-IC stages specifically (only Screening and Group-level procedures are formalized as `schema.yaml` — see `procedures/_shared/`) — this pilot had to fall back to `docs/process-map.md`'s narrative deliverable table for those gates. | Gap | Track as a Stage 4 SRS input — these gates need formal procedure schemas before the system can enforce them, though the *content* (what's required at each gate) is already correct per this walkthrough |
+| F-3 | No procedure schema exists yet for Pre-FS/FS/DD/Entity-IC stages specifically (only Screening and Group-level procedures are formalized as `schema.yaml` — see `procedures/_shared/`) — this pilot had to fall back to `docs/governance/process-map.md`'s narrative deliverable table for those gates. | Gap | Track as a Stage 4 SRS input — these gates need formal procedure schemas before the system can enforce them, though the *content* (what's required at each gate) is already correct per this walkthrough |
 | F-4 | The RAG framework's "no overall grade without all six dimensions" rule held correctly under a genuinely incomplete input set — it did not default to Amber or attempt a partial score. | Positive — framework validated | None needed |
 
 ## 7. Verdict

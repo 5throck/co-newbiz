@@ -141,8 +141,8 @@ kill_criteria:
 legal_basis:
   - "Group New Business Review Policy §2.3"
   - "Design v1.0 §4-4"
-  - "docs/process-map.md — FS row"
-  - "docs/rag-framework.md §6 (base-rate calibration)"
+  - "docs/governance/process-map.md — FS row"
+  - "docs/governance/rag-framework.md §6 (base-rate calibration)"
   - "ADR-0052 §D.4 (quant-methodologist FS dispatches — steps 4-5)"
 
 owner_agent: process-governance-manager

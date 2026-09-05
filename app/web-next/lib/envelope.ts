@@ -2,7 +2,7 @@
 // { data, meta, error } contract, NextResponse instead of Hono's c.json.
 // Kept as a near-literal port rather than a rewrite: the MCP layer and any
 // future web client consume this exact shape, and re-deriving it would risk
-// a silent drift from docs/api-spec.md §9.
+// a silent drift from docs/architecture/api-spec.md §9.
 
 import { NextResponse } from "next/server";
 

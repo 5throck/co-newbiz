@@ -1,17 +1,17 @@
 # Runbook — Deployment and Release
 
 **Owner**: release-engineer, platform-lead
-**Design of record**: ADR-0014, `docs/security-baseline.md` §2 (pre-deployment gate)
+**Design of record**: ADR-0014, `docs/security/security-baseline.md` §2 (pre-deployment gate)
 **Status**: Post-cutover (ADR-0069/0070, Phase 5/6, 2026-08-26). Covers what actually exists today — `app/web-next/` (Next.js, serves both the REST API under `/api/**` and the web UI) and `mcp/co-newbiz/` (stdio MCP server). `app/server/` (Hono) and the old `app/web/` (Vite SPA) were decommissioned in Phase 6 — see `docs/designs/2026-08-25-web-stack-migration-nextjs-prisma_ko.md` for the migration record. No containerization/orchestration layer exists yet; this runbook is for a direct-process deployment.
 
-## 1. Pre-Deployment Gate (`docs/security-baseline.md` §2)
+## 1. Pre-Deployment Gate (`docs/security/security-baseline.md` §2)
 
 Run before every release, no exceptions:
 
 1. **Secrets/dependency scan**: `gitleaks detect -v --source .` — 0 leaks required. Weekly cadence also covers this; a release doesn't skip it because the weekly scan ran recently.
 2. **Test suite**: `bun test` — 0 failures required.
 3. **Audit gate**: `bun scripts/audit.ts` — 0 errors required (warnings reviewed, not necessarily blocking).
-4. **Threat-model currency check**: if this release touches a trust boundary (new API endpoint, new MCP tool, new auth path), confirm `docs/security-model.md` §2's STRIDE matrix and §8's verification-status table are still accurate — update them in the same PR, not as a follow-up.
+4. **Threat-model currency check**: if this release touches a trust boundary (new API endpoint, new MCP tool, new auth path), confirm `docs/security/security-model.md` §2's STRIDE matrix and §8's verification-status table are still accurate — update them in the same PR, not as a follow-up.
 
 ## 2. Build
 
@@ -39,7 +39,7 @@ Health check: `GET /api/health` should return `{"status":"ok"}`. This is the "he
 
 ## 5. MCP Server (Per Client)
 
-The MCP server is launched per-client via each AI client's own config (`.mcp.json` for Claude Code; see `docs/mcp-integration.md` §4 for the other three clients' config locations) — it is not a separately deployed service, each client spawns its own `bun run mcp/co-newbiz/index.ts` process over stdio. A release that changes the REST API surface should confirm the MCP tool layer still passes `tests/unit/mcp.test.ts`'s real stdio-transport test, not just the `dispatch()`-level tests, since that's the one that actually exercises the JSON-RPC wire protocol a real client uses.
+The MCP server is launched per-client via each AI client's own config (`.mcp.json` for Claude Code; see `docs/architecture/mcp-integration.md` §4 for the other three clients' config locations) — it is not a separately deployed service, each client spawns its own `bun run mcp/co-newbiz/index.ts` process over stdio. A release that changes the REST API surface should confirm the MCP tool layer still passes `tests/unit/mcp.test.ts`'s real stdio-transport test, not just the `dispatch()`-level tests, since that's the one that actually exercises the JSON-RPC wire protocol a real client uses.
 
 ## 6. Rollback
 
@@ -53,5 +53,5 @@ If the health check fails or a post-deploy issue surfaces: `docs/runbooks/backup
 ## 8. Related
 
 - `docs/runbooks/backup-restore.md` — the rollback mechanism this runbook depends on
-- `docs/security-baseline.md` — the pre-deployment gate this runbook executes
+- `docs/security/security-baseline.md` — the pre-deployment gate this runbook executes
 - `skills/deployment-and-release/SKILL.md`, `skills/db-migration-governance/SKILL.md` — the operational disciplines this runbook implements

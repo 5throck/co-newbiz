@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
-// @version 1.2.0
+// @version 1.2.1
 /**
  * rag — evaluate and persist a six-dimension RAG assessment from a scenario
- * JSON. Design v1.0 §4-2, docs/rag-framework.md, FR-RAG-01..08, Wave 5.3.
+ * JSON. Design v1.0 §4-2, docs/governance/rag-framework.md, FR-RAG-01..08, Wave 5.3.
  *
  * Follows the simulate <scenario-json-path> CLI pattern (design §4-8), with
  * one difference simulate does not need: rag_assessment.run_id references
@@ -159,7 +159,7 @@ export function assessScenario(
     })),
     overall_rationale: result.overall
       ? `${result.overall.rationale} ${result.hysteresisRationale}`
-      : "Assessment incomplete — fewer than six dimensions assessed and no assessed dimension is Red, so no overall grade is produced (docs/rag-framework.md; an incomplete assessment never defaults to a color).",
+      : "Assessment incomplete — fewer than six dimensions assessed and no assessed dimension is Red, so no overall grade is produced (docs/governance/rag-framework.md; an incomplete assessment never defaults to a color).",
     transition: result.transition,
   };
 }

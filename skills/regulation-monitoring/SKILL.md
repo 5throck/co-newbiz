@@ -48,7 +48,7 @@ as its data source.
    `industry-profiles/*.yaml` and `region-profiles/*.yaml` currently in use,
    plus any statute a `legal_risk_register` entry references
 2. **Scan via `k-law`**: query for amendments/new enactments on the watch
-   list, on a cadence set by `docs/ops-cadence.md`
+   list, on a cadence set by `docs/governance/ops-cadence.md`
 3. **Classify the change**:
    - Affects a specific active/prospective project's DD or certification
      status → route to that project's `statute-change-monitoring`

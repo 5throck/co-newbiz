@@ -21,15 +21,14 @@ co-newbiz/
   agents/            domain agents (functional, technical, industry, region) + _core/_shared
   policies/           group and entity-level regulations
   procedures/         shared/entity/region/group procedures with references: + overrides
-  guidelines/         recommended-tier practice docs
   checklists/         gate checklists, item-level mandatory:true/false
   templates/          deliverable templates (IC memo, etc.)
   glossary/           business/financial/legal/technical/industry term sets
   region-profiles/    per-region regulatory and incentive profiles (Stage 2+)
   process/            flow.spec.yaml — the process SSOT (12 stages S1~S12, 7 gates, flow.spec v2.2.0)
-  handbook/           Korean platform handbook site (built with the handbook skill; docs/ is the static site)
-  knowledge-hub/      Documentation portal — version-pinned snapshots of policies/procedures/checklists/manuals (category-centric, ko/en/ja/es chrome, ADR-0107)
-  docs/               process map, governance operations, manuals, ADRs
+  docs/               topic subfolders (meta/ architecture/ governance/ security/ design/ dd/
+                      planning/ guidelines/ manuals/ adr/ research/ runbooks/ ...); all rendered
+                      live via /library (ADR-0108) — no separate generated site
   memory/             session logs and meeting transcripts
 ```
 
@@ -37,7 +36,7 @@ The review flow is a 12-stage stage-gate chain (S1 market analysis ... S11
 investment review & execution -> S12 post-management) with a dedicated S10
 deal-structuring stage (investment vehicle incl. SPC, the four mandatory
 axes, financing sources & uses); AI agents propose, humans decide at every
-gate. See `process/flow.spec.yaml` and `docs/process-map.md`.
+gate. See `process/flow.spec.yaml` and `docs/governance/process-map.md`.
 
 ## Quick Start
 
