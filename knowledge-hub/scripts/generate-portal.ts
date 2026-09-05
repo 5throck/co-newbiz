@@ -497,6 +497,9 @@ function variant(p: string, lang: Lang): string {
 }
 function sidebarNav(activePath: string | null, generated: Set<string>, prefix: string, lang: Lang): string {
   const rel = (p: string): string => prefix + variant(p, lang);
+  // 현재 카테고리 = 활성 페이지의 섹션. 장은 사이드바에 절대 노출하지 않고,
+  // 현재 보고 있는 카테고리의 문서만 펼친다 (2026-09-05 사용자 피드백).
+  const activeSec = activePath ? activePath.split("/")[0] : null;
   const out: string[] = [
     `<p class="nav-section">${esc(t("brand", lang))}</p>`,
     `<ul style="margin:0 0 12px;">`,
@@ -505,19 +508,23 @@ function sidebarNav(activePath: string | null, generated: Set<string>, prefix: s
   ];
   for (const sec of SECTIONS) {
     const secTitle = secTitleOf(sec, lang);
-    const all = orderedDocs(sec, lang);
-    const docs = all.filter((d) => generated.has(`${sec.slug}/${d.slug}`));
+    const docs = orderedDocs(sec, lang).filter((d) => generated.has(`${sec.slug}/${d.slug}`));
+    const isActiveSec = activeSec === sec.slug;
     if (docs.length === 0) {
-      out.push(`<ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">${esc(secTitle)} (${esc(t("pendingSuffix", lang))})</span></li></ul>`);
+      out.push(`<ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="준비 중">${esc(secTitle)} (${esc(t("pendingSuffix", lang))})</span></li></ul>`);
       continue;
     }
-    out.push(`<ul style="margin:0 0 12px;">`);
-    out.push(`<li><a href="${rel(`${sec.slug}/index.html`)}"${activePath === `${sec.slug}/index.html` ? ' class="active"' : ""}>${esc(secTitle)}</a></li>`);
-    for (const d of docs) {
-      const active = activePath?.startsWith(`${sec.slug}/${d.slug}`) ? ' class="active"' : "";
-      out.push(`<li style="padding-left:14px;"><a href="${rel(`${sec.slug}/${d.slug}/index.html`)}"${active} style="font-size:0.85em;">${esc(docLabel(sec, d, lang))}</a></li>`);
+    if (isActiveSec) {
+      out.push(`<ul style="margin:0 0 12px;">`);
+      out.push(`<li><a href="${rel(`${sec.slug}/index.html`)}"${activePath === `${sec.slug}/index.html` ? ' class="active"' : ""}>${esc(secTitle)}</a></li>`);
+      for (const d of docs) {
+        const active = activePath?.startsWith(`${sec.slug}/${d.slug}`) ? ' class="active"' : "";
+        out.push(`<li style="padding-left:14px;"><a href="${rel(`${sec.slug}/${d.slug}/index.html`)}"${active} style="font-size:0.85em;">${esc(docLabel(sec, d, lang))}</a></li>`);
+      }
+      out.push(`</ul>`);
+    } else {
+      out.push(`<ul style="margin:0 0 12px;"><li><a href="${rel(`${sec.slug}/index.html`)}">${esc(secTitle)}</a></li></ul>`);
     }
-    out.push(`</ul>`);
   }
   return out.join("\n          ");
 }
@@ -732,14 +739,14 @@ for (const sec of SECTIONS) {
 for (const lang of ["", "en", "ja", "es"] as Lang[]) {
   const groups = SECTIONS.filter((sec) => sec.docs.some((d) => generated.has(`${sec.slug}/${d.slug}`)))
     .map((sec) => {
-      const docs = sec.docs.filter((d) => generated.has(`${sec.slug}/${d.slug}`));
+      const docs = orderedDocs(sec, lang).filter((d) => generated.has(`${sec.slug}/${d.slug}`));
       const pending = sec.docs.length - docs.length;
       const secLabel = secTitleOf(sec, lang);
-      const cards = docs
-        .map((d) => `        <a class="card" href="${sec.slug}/${variant(`${d.slug}/index.html`, lang)}">\n          <span class="tag tag-ref">${esc(secLabel)}</span>\n          <h2>${esc(docTitleOf(d, lang))}</h2>\n          <p>${esc(docBlurb(d))}</p>\n          <div class="go">${esc(t("openDoc", lang))} →</div>\n        </a>`)
-        .join("\n");
       const progress = ALL || pending === 0 ? "" : ` — ${esc(t("pilotLabel", lang))} ${docs.length} / ${esc(t("all", lang))} ${sec.docs.length}`;
-      return `<p class="section-label">${esc(secLabel)}${progress}</p>\n      <div class="grid">\n${cards}\n      </div>`;
+      const items = docs
+        .map((d) => `        <li style="margin:4px 0;"><a href="${sec.slug}/${variant(`${d.slug}/index.html`, lang)}">${esc(docLabel(sec, d, lang))}</a></li>`)
+        .join("\n");
+      return `<h2>${esc(secLabel)}${progress}</h2>\n      <p style="font-size:0.85em;color:var(--text-dim);margin:4px 0 8px;">${esc(lang === "en" ? sec.blurbEn : sec.blurbKo)}</p>\n      <ul style="margin:0 0 24px;">\n${items}\n      </ul>`;
     })
     .join("\n      ");
   const content = `<h1>co-newbiz ${esc(t("brand", lang))}</h1>
