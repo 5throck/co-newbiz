@@ -1,0 +1,24 @@
+{
+  "name": "knowledge-hub",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate-handbook": "bun run scripts/validate-handbook.ts --docs-dir docs",
+    "validate-nav": "bun run scripts/validate-nav.ts --docs-dir docs",
+    "check-a11y": "bun run scripts/check-a11y.ts --docs-dir docs",
+    "check-spell": "bun run scripts/check-spell.ts --docs-dir docs",
+    "check-lint": "bun run scripts/check-lint.ts --docs-dir docs",
+    "check-external-links": "bun run scripts/check-external-links.ts --docs-dir docs",
+    "build-search-index": "bun run scripts/build-search-index.ts --docs-dir docs",
+    "extract-copycode": "bun run scripts/extract-copycode.ts --docs-dir docs",
+    "check-structure": "bun run scripts/check-structure.ts --docs-dir docs",
+    "check-tables": "bun run scripts/check-tables.ts --docs-dir docs",
+    "update-footers": "bun run scripts/update-footers.ts --docs-dir docs",
+    "check-authoring": "bun run scripts/check-authoring.ts --project . --lang ko",
+    "check-i18n": "bun run scripts/check-i18n-parity.ts --docs-dir docs",
+    "apply-theme": "bun run scripts/apply-handbook-theme.ts --project . --theme azure",
+    "handbook-doctor": "bun run scripts/handbook-doctor.ts --project .",
+    "scaffold": "bun run scripts/scaffold-handbook.ts --project . --output handbook --lang ko",
+    "deploy": "bun run scripts/deploy-handbook.ts --project . --output handbook"
+  }
+}

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>그린필드 실사 — co-newbiz 문서 허브</title>
+  <meta name="description" content="co-newbiz 규정·절차·체크리스트·매뉴얼 문서 포털 (버전 고정 스냅샷)">
+  <link rel="stylesheet" href="../assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="../assets/css/handbook-components.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" class="sidebar-brand">📚 co-newbiz 문서 허브</a>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="../index.html">홈</a></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">규정집 (확장 예정)</span></li>
+      <li><a href="../procedures/index.html">업무절차서</a>
+      <ul>
+        <li><a href="../procedures/greenfield-dd.html" style="color:var(--accent);" style="font-size:0.86em;">그린필드 실사</a></li>
+        <li><a href="../procedures/brownfield-dd.html" style="font-size:0.86em;">브라운필드 실사</a></li>
+        <li><a href="../procedures/deal-structuring.html" style="font-size:0.86em;">투자구조 설계</a></li>
+        <li><a href="../procedures/entity-ic-review.html" style="font-size:0.86em;">Entity IC 심의</a></li>
+        <li><a href="../procedures/jv-lifecycle-governance.html" style="font-size:0.86em;">JV 라이프사이클 거버넌스</a></li>
+      </ul></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">체크리스트 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">업무 매뉴얼 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">프로세스·거버넌스 참고문서 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">산출물 템플릿 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">디자인 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">DD 실사 (확장 예정)</span></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button id="dark-toggle" title="Toggle dark mode" style="font-size:16px;cursor:pointer;background:none;border:none;">☀️</button>
+    </div>
+  </nav>
+  <main>
+    <article style="max-width:760px;">
+      <p class="authority-note" style="background:var(--bg-note);border-left:3px solid var(--border);padding:10px 14px;margin:0 0 16px;border-radius:4px;font-size:0.82em;color:var(--text-muted);">
+        이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용).
+        분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱 문서·규정 화면 또는 저장소 원본을 확인하세요.
+      </p>
+
+      <p></p>
+      <p><strong>게이트</strong>: DD · <strong>단계 수</strong>: 5</p>
+      <div class="mermaid">flowchart TD
+  S0["1. technical-dd-agent"]
+  S0 --> S1
+  S0 -.-> O0["dd_finding"]
+  S1["2. greenfield-agent"]
+  S1 --> S2
+  S1 -.-> O1["dd_finding"]
+  S2["3. greenfield-agent"]
+  S2 --> S3
+  S2 -.-> O2["dd_finding"]
+  S3["4. risk-officer"]
+  S3 --> S4
+  S3 -.-> O3["dd_valuation_bridge"]
+  S4["5. process-governance-manager"]
+  S4 -.-> O4["gate_pass_record"]</div>
+      <h2 id="steps">단계</h2>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px;">#</th>
+            <th style="text-align:left;padding:8px;">게이트</th>
+            <th style="text-align:left;padding:8px;">에이전트</th>
+            <th style="text-align:left;padding:8px;">스킬</th>
+            <th style="text-align:left;padding:8px;">산출물</th>
+            <th style="text-align:left;padding:8px;">설명</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr>
+        <td>1</td>
+        <td>DD</td>
+        <td>technical-dd-agent</td>
+        <td>site-visit-protocol</td>
+        <td>dd_finding</td>
+        <td><p>Site visit(s) against <code>checklists/technical-dd-checklist.yaml</code> and <code>checklists/site-selection-checklist.yaml</code> — findings land as dd_finding records with value_impact, never narrative-only.</p> </td>
+      </tr>
+
+      <tr>
+        <td>2</td>
+        <td>DD</td>
+        <td>greenfield-agent</td>
+        <td>talent-pipeline-planning</td>
+        <td>dd_finding</td>
+        <td><p>Talent pipeline and ramp-up curve validation against <code>checklists/site-selection-checklist.yaml</code> ss-07.</p> </td>
+      </tr>
+
+      <tr>
+        <td>3</td>
+        <td>DD</td>
+        <td>greenfield-agent</td>
+        <td>community-partnership-planning</td>
+        <td>dd_finding</td>
+        <td><p>Community acceptance and prior dispute history check (<code>checklists/site-selection-checklist.yaml</code> ss-08).</p> </td>
+      </tr>
+
+      <tr>
+        <td>4</td>
+        <td>DD</td>
+        <td>risk-officer</td>
+        <td>dd-to-valuation-bridge</td>
+        <td>dd_valuation_bridge</td>
+        <td><p>Every dd_finding with value_impact must land in the valuation bridge — design&#39;s most-common-failure-mode rule (DD and the model must not run separately).</p> </td>
+      </tr>
+
+      <tr>
+        <td>5</td>
+        <td>DD</td>
+        <td>process-governance-manager</td>
+        <td>stage-gate-governance</td>
+        <td>gate_pass_record</td>
+        <td><p>Confirm DD deliverables complete; open Entity IC.</p> </td>
+      </tr>
+        </tbody>
+      </table>
+      
+      <div class="gov-meta" style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:0.78em;color:var(--text-dim);">
+        문서 식별자 <code>shared-greenfield-dd</code> · 버전 <code>1.0.0</code> · 원본 <code>procedures/_shared/greenfield-dd/schema.yaml</code>@<code>d9738f65a1e0</code> · <a href="https://github.com/5throck/co-newbiz/blob/main/procedures/_shared/greenfield-dd/schema.yaml">원본 열기</a> — 이 스냅샷이 원본과 다르면 원본이 맞습니다.
+      </div>
+    </article>
+    <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+      <a href="../index.html" class="prev" style="text-decoration:none;color:var(--text);">
+        <div style="font-size:12px;color:var(--text-dim);">← 이전</div>
+        <div>홈</div>
+      </a>
+      <span></span>
+    </nav>
+  </main>
+<footer><p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p></footer>
+  <script src="../assets/js/copy-code.js"></script>
+  <script src="../assets/js/dark-mode-toggle.js"></script>
+  <script src="../assets/js/inpage-search.js"></script>
+  <script src="../assets/js/site-search.js"></script>
+  <script src="../assets/js/lang-switcher.js"></script>
+  <script src="../assets/js/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</body>
+</html>

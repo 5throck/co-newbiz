@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entity IC 심의 — co-newbiz 문서 허브</title>
+  <meta name="description" content="co-newbiz 규정·절차·체크리스트·매뉴얼 문서 포털 (버전 고정 스냅샷)">
+  <link rel="stylesheet" href="../assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="../assets/css/handbook-components.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" class="sidebar-brand">📚 co-newbiz 문서 허브</a>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="../index.html">홈</a></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">규정집 (확장 예정)</span></li>
+      <li><a href="../procedures/index.html">업무절차서</a>
+      <ul>
+        <li><a href="../procedures/greenfield-dd.html" style="font-size:0.86em;">그린필드 실사</a></li>
+        <li><a href="../procedures/brownfield-dd.html" style="font-size:0.86em;">브라운필드 실사</a></li>
+        <li><a href="../procedures/deal-structuring.html" style="font-size:0.86em;">투자구조 설계</a></li>
+        <li><a href="../procedures/entity-ic-review.html" style="color:var(--accent);" style="font-size:0.86em;">Entity IC 심의</a></li>
+        <li><a href="../procedures/jv-lifecycle-governance.html" style="font-size:0.86em;">JV 라이프사이클 거버넌스</a></li>
+      </ul></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">체크리스트 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">업무 매뉴얼 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">프로세스·거버넌스 참고문서 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">산출물 템플릿 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">디자인 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">DD 실사 (확장 예정)</span></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button id="dark-toggle" title="Toggle dark mode" style="font-size:16px;cursor:pointer;background:none;border:none;">☀️</button>
+    </div>
+  </nav>
+  <main>
+    <article style="max-width:760px;">
+      <p class="authority-note" style="background:var(--bg-note);border-left:3px solid var(--border);padding:10px 14px;margin:0 0 16px;border-radius:4px;font-size:0.82em;color:var(--text-muted);">
+        이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용).
+        분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱 문서·규정 화면 또는 저장소 원본을 확인하세요.
+      </p>
+
+      <p></p>
+      <p><strong>게이트</strong>: Entity IC · <strong>단계 수</strong>: 7</p>
+      <div class="mermaid">flowchart TD
+  S0["1. risk-officer"]
+  S0 --> S1
+  S0 -.-> O0["rag_assessment_proposed"]
+  S1["2. process-governance-manager"]
+  S1 --> S2
+  S1 -.-> O1["kill_criteria_check"]
+  S2["3. brownfield-agent"]
+  S2 --> S3
+  S2 -.-> O2["ic_memo"]
+  S3["4. valuation-agent"]
+  S3 --> S4
+  S3 -.-> O3["financing_readiness_check"]
+  S4["5. process-governance-manager"]
+  S4 --> S5
+  S4 -.-> O4["integrated_insight_review"]
+  S5["6. docs-writer"]
+  S5 --> S6
+  S5 -.-> O5["entity_ic_decision_deck"]
+  S6["7. entity-ic-reviewer"]
+  S6 -.-> O6["entity_ic_decision"]</div>
+      <h2 id="steps">단계</h2>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px;">#</th>
+            <th style="text-align:left;padding:8px;">게이트</th>
+            <th style="text-align:left;padding:8px;">에이전트</th>
+            <th style="text-align:left;padding:8px;">스킬</th>
+            <th style="text-align:left;padding:8px;">산출물</th>
+            <th style="text-align:left;padding:8px;">설명</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr>
+        <td>1</td>
+        <td>Entity IC</td>
+        <td>risk-officer</td>
+        <td>rag-scoring-framework</td>
+        <td>rag_assessment_proposed</td>
+        <td><p>AI-proposed RAG grade per docs/rag-framework.md — six dimensions, priority-ordered (not averaged), data confidence capping the ceiling. This is a PROPOSAL, never a decision.</p> </td>
+      </tr>
+
+      <tr>
+        <td>2</td>
+        <td>Entity IC</td>
+        <td>process-governance-manager</td>
+        <td>rag-scoring-framework</td>
+        <td>kill_criteria_check</td>
+        <td><p>Explicit pass/fail against every Kill Criteria condition applicable at this gate — see policies/group/neb-policy.md §4.</p> </td>
+      </tr>
+
+      <tr>
+        <td>3</td>
+        <td>Entity IC</td>
+        <td>brownfield-agent</td>
+        <td>dd-to-valuation-bridge</td>
+        <td>ic_memo</td>
+        <td><p>IC memo assembled per templates/deliverables/ic-memo-template.md — RAG table, DD findings, M&amp;A special-topics section (BF only), Kill Criteria check, three-stage reviewer sign-off table.</p> </td>
+      </tr>
+
+      <tr>
+        <td>4</td>
+        <td>Entity IC</td>
+        <td>valuation-agent</td>
+        <td>financing-plan-review</td>
+        <td>financing_readiness_check</td>
+        <td><p>Financing PRECONDITION before the decision step — the IC package must contain the chk-financing evidence: executed commitment papers (equity commitment letter; debt commitment letter + fee letter + term sheet) or a documented internal-funds approval path, sources-and-uses, covenant headroom/leverage analysis, funds-flow memorandum draft, FX plan where currencies differ. No committed financing evidence = precondition FAIL, not a judgment call — a financing contingency weakens the bid and belongs to no reviewer&#39;s discretion.</p> </td>
+      </tr>
+
+      <tr>
+        <td>4.5</td>
+        <td>Entity IC</td>
+        <td>process-governance-manager</td>
+        <td>insight-synthesis</td>
+        <td>integrated_insight_review</td>
+        <td><p>Integrate market, financial, legal/regulatory and M&amp;A special-topic outputs into a single strategic view with a mandatory cross-check, giving the human reviewer one coherent pre-IC package (graph-pilot wiring, backfill-report §4.1).</p> </td>
+      </tr>
+
+      <tr>
+        <td>4.6</td>
+        <td>Entity IC</td>
+        <td>docs-writer</td>
+        <td>executive-presentation</td>
+        <td>entity_ic_decision_deck</td>
+        <td><p>Build the Entity IC decision deck (Pyramid-Principle structure, one-page summary) from the integrated insight and valuation inputs (graph-pilot wiring).</p> </td>
+      </tr>
+
+      <tr>
+        <td>5</td>
+        <td>Entity IC</td>
+        <td>entity-ic-reviewer</td>
+        <td>stage-gate-governance</td>
+        <td>entity_ic_decision</td>
+        <td><p>Human reviewer confirms or corrects the AI-proposed RAG grade (with a reason if corrected — docs/manuals/business-manual.md §3) and records a decision: approved | rejected | conditional | withdrawn_pending_resubmission. The fourth state is not in the original design and was added per docs/pilots/pilot-003-doosan-bobcat-robotics.md finding F-2 — a real case (Doosan Bobcat/Robotics) withdrew and re-proposed with revised terms, a pattern the original three-state model could not represent. analysis_task.reviewed_by must be non-NULL on every required deliverable before this step can complete (design §8.9-1).</p> </td>
+      </tr>
+        </tbody>
+      </table>
+      
+      <div class="gov-meta" style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:0.78em;color:var(--text-dim);">
+        문서 식별자 <code>shared-entity-ic-review</code> · 버전 <code>1.2.0</code> · 원본 <code>procedures/_shared/entity-ic-review/schema.yaml</code>@<code>f74733c7567d</code> · <a href="https://github.com/5throck/co-newbiz/blob/main/procedures/_shared/entity-ic-review/schema.yaml">원본 열기</a> — 이 스냅샷이 원본과 다르면 원본이 맞습니다.
+      </div>
+    </article>
+    <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+      <a href="../index.html" class="prev" style="text-decoration:none;color:var(--text);">
+        <div style="font-size:12px;color:var(--text-dim);">← 이전</div>
+        <div>홈</div>
+      </a>
+      <span></span>
+    </nav>
+  </main>
+<footer><p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p></footer>
+  <script src="../assets/js/copy-code.js"></script>
+  <script src="../assets/js/dark-mode-toggle.js"></script>
+  <script src="../assets/js/inpage-search.js"></script>
+  <script src="../assets/js/site-search.js"></script>
+  <script src="../assets/js/lang-switcher.js"></script>
+  <script src="../assets/js/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</body>
+</html>

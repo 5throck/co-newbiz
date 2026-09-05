@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>투자구조 설계 — co-newbiz 문서 허브</title>
+  <meta name="description" content="co-newbiz 규정·절차·체크리스트·매뉴얼 문서 포털 (버전 고정 스냅샷)">
+  <link rel="stylesheet" href="../assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="../assets/css/handbook-components.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" class="sidebar-brand">📚 co-newbiz 문서 허브</a>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="../index.html">홈</a></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">규정집 (확장 예정)</span></li>
+      <li><a href="../procedures/index.html">업무절차서</a>
+      <ul>
+        <li><a href="../procedures/greenfield-dd.html" style="font-size:0.86em;">그린필드 실사</a></li>
+        <li><a href="../procedures/brownfield-dd.html" style="font-size:0.86em;">브라운필드 실사</a></li>
+        <li><a href="../procedures/deal-structuring.html" style="color:var(--accent);" style="font-size:0.86em;">투자구조 설계</a></li>
+        <li><a href="../procedures/entity-ic-review.html" style="font-size:0.86em;">Entity IC 심의</a></li>
+        <li><a href="../procedures/jv-lifecycle-governance.html" style="font-size:0.86em;">JV 라이프사이클 거버넌스</a></li>
+      </ul></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">체크리스트 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">업무 매뉴얼 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">프로세스·거버넌스 참고문서 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">산출물 템플릿 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">디자인 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">DD 실사 (확장 예정)</span></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button id="dark-toggle" title="Toggle dark mode" style="font-size:16px;cursor:pointer;background:none;border:none;">☀️</button>
+    </div>
+  </nav>
+  <main>
+    <article style="max-width:760px;">
+      <p class="authority-note" style="background:var(--bg-note);border-left:3px solid var(--border);padding:10px 14px;margin:0 0 16px;border-radius:4px;font-size:0.82em;color:var(--text-muted);">
+        이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용).
+        분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱 문서·규정 화면 또는 저장소 원본을 확인하세요.
+      </p>
+
+      <p></p>
+      <p><strong>게이트</strong>: DD · <strong>단계 수</strong>: 3</p>
+      <div class="mermaid">flowchart TD
+  S0["1. brownfield-agent"]
+  S0 --> S1
+  S0 -.-> O0["deal_structure_review"]
+  S1["2. brownfield-agent"]
+  S1 --> S2
+  S1 -.-> O1["four_axis_review_completion"]
+  S2["3. valuation-agent"]
+  S2 -.-> O2["financing_sources_uses_plan"]</div>
+      <h2 id="steps">단계</h2>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px;">#</th>
+            <th style="text-align:left;padding:8px;">게이트</th>
+            <th style="text-align:left;padding:8px;">에이전트</th>
+            <th style="text-align:left;padding:8px;">스킬</th>
+            <th style="text-align:left;padding:8px;">산출물</th>
+            <th style="text-align:left;padding:8px;">설명</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr>
+        <td>1</td>
+        <td>DD</td>
+        <td>brownfield-agent</td>
+        <td>investment-vehicle-structuring</td>
+        <td>deal_structure_review</td>
+        <td><p>Mature the deal-structure hypothesis: settle the vehicle (direct / SPC / holdco / internal_venture_spinoff / jv), the asset-or-stock form, the stake type, and the primary/secondary instrument mix; record the ADR-0045 four mandatory axis notes — tax structure, liability isolation, financing leverage, exit structure — each grounded in DD findings where they bear (contingent liabilities -&gt; liability isolation; withholding and deal-tax posture -&gt; tax structure; acquisition-finance capacity -&gt; financing leverage; staged exit or trade-sale path -&gt; exit structure). Record the rationale (mandatory) via db/repositories/deal-structure-hypothesis.repository.ts; a structure hypothesis without its rationale is rejected at the write layer.</p> </td>
+      </tr>
+
+      <tr>
+        <td>2</td>
+        <td>DD</td>
+        <td>brownfield-agent</td>
+        <td>investment-vehicle-structuring</td>
+        <td>four_axis_review_completion</td>
+        <td><p>Human-reviewer completion of the four-axis review — a deliberate, attributable act (completeFourAxisReview) that REQUIRES a deal_structure_review artifact reference; the completion is refused twice (no artifact ref, or already-completed hypothesis) rather than silently overwritten. The audit_log entry (four_axis_review_completed) is the review&#39;s evidence trail.</p> </td>
+      </tr>
+
+      <tr>
+        <td>3</td>
+        <td>DD</td>
+        <td>valuation-agent</td>
+        <td>financing-plan-review</td>
+        <td>financing_sources_uses_plan</td>
+        <td><p>Assemble the financing plan (sources &amp; uses, migration 0075) — every funding line (equity commitment, acquisition debt, parent loans, incentive proceeds) on the sources side and every deployment line (purchase price, fees, working-capital injection, reserve) on the uses side, in KRW 백만원 (the ADR-0061 unit convention). Certainty of funds is evidenced, never assumed: commitment papers or internal-funds approvals are referenced in the note column per skills/financing-plan-review. The S10 completion predicate requires sources == uses &gt; 0 — an unbalanced plan blocks stage exit the same way an unproven structure does.</p> </td>
+      </tr>
+        </tbody>
+      </table>
+      <h2 id="outputs">산출물</h2>
+      <ul><li>deal_structure_review (four-axis complete, artifact-referenced)</li><li>financing_sources_uses_plan (balanced)</li></ul>
+      <div class="gov-meta" style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:0.78em;color:var(--text-dim);">
+        문서 식별자 <code>shared-deal-structuring</code> · 버전 <code>1.0.0</code> · 원본 <code>procedures/_shared/deal-structuring/schema.yaml</code>@<code>db47ff9f1f21</code> · <a href="https://github.com/5throck/co-newbiz/blob/main/procedures/_shared/deal-structuring/schema.yaml">원본 열기</a> — 이 스냅샷이 원본과 다르면 원본이 맞습니다.
+      </div>
+    </article>
+    <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+      <a href="../index.html" class="prev" style="text-decoration:none;color:var(--text);">
+        <div style="font-size:12px;color:var(--text-dim);">← 이전</div>
+        <div>홈</div>
+      </a>
+      <span></span>
+    </nav>
+  </main>
+<footer><p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p></footer>
+  <script src="../assets/js/copy-code.js"></script>
+  <script src="../assets/js/dark-mode-toggle.js"></script>
+  <script src="../assets/js/inpage-search.js"></script>
+  <script src="../assets/js/site-search.js"></script>
+  <script src="../assets/js/lang-switcher.js"></script>
+  <script src="../assets/js/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</body>
+</html>

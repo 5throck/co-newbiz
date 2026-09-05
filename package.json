@@ -47,6 +47,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "js-yaml": "^5.4.1",
+    "marked": "^18.0.11",
     "zod": "4.4.3"
   },
   "engines": {

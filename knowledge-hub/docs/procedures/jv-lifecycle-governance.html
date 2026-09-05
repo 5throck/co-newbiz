@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JV 라이프사이클 거버넌스 — co-newbiz 문서 허브</title>
+  <meta name="description" content="co-newbiz 규정·절차·체크리스트·매뉴얼 문서 포털 (버전 고정 스냅샷)">
+  <link rel="stylesheet" href="../assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="../assets/css/handbook-components.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" class="sidebar-brand">📚 co-newbiz 문서 허브</a>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="../index.html">홈</a></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">규정집 (확장 예정)</span></li>
+      <li><a href="../procedures/index.html">업무절차서</a>
+      <ul>
+        <li><a href="../procedures/greenfield-dd.html" style="font-size:0.86em;">그린필드 실사</a></li>
+        <li><a href="../procedures/brownfield-dd.html" style="font-size:0.86em;">브라운필드 실사</a></li>
+        <li><a href="../procedures/deal-structuring.html" style="font-size:0.86em;">투자구조 설계</a></li>
+        <li><a href="../procedures/entity-ic-review.html" style="font-size:0.86em;">Entity IC 심의</a></li>
+        <li><a href="../procedures/jv-lifecycle-governance.html" style="color:var(--accent);" style="font-size:0.86em;">JV 라이프사이클 거버넌스</a></li>
+      </ul></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">체크리스트 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">업무 매뉴얼 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">프로세스·거버넌스 참고문서 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">산출물 템플릿 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">디자인 (확장 예정)</span></li>
+      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">DD 실사 (확장 예정)</span></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button id="dark-toggle" title="Toggle dark mode" style="font-size:16px;cursor:pointer;background:none;border:none;">☀️</button>
+    </div>
+  </nav>
+  <main>
+    <article style="max-width:760px;">
+      <p class="authority-note" style="background:var(--bg-note);border-left:3px solid var(--border);padding:10px 14px;margin:0 0 16px;border-radius:4px;font-size:0.82em;color:var(--text-muted);">
+        이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용).
+        분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱 문서·규정 화면 또는 저장소 원본을 확인하세요.
+      </p>
+
+      <p></p>
+      <p><strong>게이트</strong>: post_close · <strong>단계 수</strong>: 5</p>
+      <div class="mermaid">flowchart TD
+  S0["1. legal-counsel"]
+  S0 --> S1
+  S0 -.-> O0["jv_governance_review"]
+  S1["2. partnership-agent"]
+  S1 --> S2
+  S1 -.-> O1["jv_health_scorecard"]
+  S2["3. group-review-agent"]
+  S2 --> S3
+  S2 -.-> O2["jv_strategic_asset_review"]
+  S3["4. legal-counsel"]
+  S3 --> S4
+  S3 -.-> O3["jv_restructuring_decision"]
+  S4["5. legal-counsel"]
+  S4 -.-> O4["jv_exit_execution"]</div>
+      <h2 id="steps">단계</h2>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px;">#</th>
+            <th style="text-align:left;padding:8px;">게이트</th>
+            <th style="text-align:left;padding:8px;">에이전트</th>
+            <th style="text-align:left;padding:8px;">스킬</th>
+            <th style="text-align:left;padding:8px;">산출물</th>
+            <th style="text-align:left;padding:8px;">설명</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr>
+        <td>1</td>
+        <td>post_close</td>
+        <td>legal-counsel</td>
+        <td>jv-structuring</td>
+        <td>jv_governance_review</td>
+        <td><p>Operate [pmi-jv B.1]: board-approved JV governance framework review — only 45% of JVs have one (ILLUSTRATIVE; cited as the practice gap this step closes). Directors-only board attendance; quarterly board cadence plus one annual strategy off-site; reserved-matters map (board vs shareholder) with conflict-prone decisions moved to shareholders; conflict-of-interest protocol covering the three JV conflict types (business opportunity, self-dealing, information disclosure) with a deliberately-chosen fiduciary-duty approach; arm&#39;s-length pricing for parent-JV commercial relationships. Formation wrote these terms (deal-shape-chain P3/P4 + entity-formation JV addendum ef-14); this step reviews governance as it actually operates.</p> </td>
+      </tr>
+
+      <tr>
+        <td>2</td>
+        <td>post_close</td>
+        <td>partnership-agent</td>
+        <td>project-review</td>
+        <td>jv_health_scorecard</td>
+        <td><p>Monitor [pmi-jv B.2]: per-JV health scorecard across seven dimensions — performance, people, partner alignment, decision health, milestones &amp; funding, governance health, value-distribution symmetry. Scorecard weights and cadence are a thresholds-meeting item (ADR-0052 open question b); independent external governance review every 3 years (ILLUSTRATIVE cadence). Outputs persist via db/repositories/venture-scorecard.repository.ts recordVentureScorecardCycle with source_procedure &#39;jv-lifecycle-governance&#39; (ADR-0059, migration 0024): the seven dimensions map into the financial/strategic sections, and measure_key preserves dimension identity.</p> </td>
+      </tr>
+
+      <tr>
+        <td>3</td>
+        <td>post_close</td>
+        <td>group-review-agent</td>
+        <td>portfolio-fit-assessment</td>
+        <td>jv_strategic_asset_review</td>
+        <td><p>Annual strategic asset review per JV [pmi-jv B.2] carrying the parent-side disciplines of B.6: designated executive accountability for JVs (only 38% of companies have it, ILLUSTRATIVE), no &quot;corporate adhocracy&quot;, a JV portfolio gameboard by venture type × lifecycle phase, post-close lookbacks feeding standards. Feeds the Section E portfolio rollup (portfolio-venture-monitoring step 1).</p> </td>
+      </tr>
+
+      <tr>
+        <td>4</td>
+        <td>post_close</td>
+        <td>legal-counsel</td>
+        <td>jv-structuring</td>
+        <td>jv_restructuring_decision</td>
+        <td><p>Restructure [pmi-jv B.3, B.4]: formal triggers tied to metrics, not crisis-waiting — the baseline expectation that at least half of JVs fail on &gt;=1 owner objective and the median 39-month restructuring lag vs comparable wholly-owned businesses (both ILLUSTRATIVE) are the reason triggers must be metric-tied. Restructuring menu: scope, ownership, governance, economics, operating model, leadership. Deadlock ladder with binding time-boxes — functional managers 15-30d -&gt; senior executives 30-60d -&gt; CEOs -&gt; institutional mediation (day ranges ILLUSTRATIVE). Pre-agreed evolution paths in the JV agreement (&quot;inability to evolve&quot; is a named failure cause).</p> </td>
+      </tr>
+
+      <tr>
+        <td>5</td>
+        <td>post_close</td>
+        <td>legal-counsel</td>
+        <td>jv-structuring</td>
+        <td>jv_exit_execution</td>
+        <td><p>Exit — designed at formation, executed here [pmi-jv B.5]: the five-step exit-design practice (strategic end-game; trigger selection from 16 categories, typically 4-8 adopted (ILLUSTRATIVE); mechanisms put/call/buy-sell with ROFR/tag-drag protections; valuation including the two-appraisers-then-third process; post-exit transition across six areas — IP licensing, people/secondees, services, supply &amp; purchase, non-competes, debt/guarantees). Exit paths: sale to partner (65% of endings, ILLUSTRATIVE), third-party sale, IPO, unwind. Consumes the formation-time exit clauses the entity-formation JV addendum (ef-16) wrote — no duplication: this step exercises the mechanics formation created. Decision to exercise routes through Group IC (investment decisions are human, boundary #2).</p> </td>
+      </tr>
+        </tbody>
+      </table>
+      
+      <div class="gov-meta" style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:0.78em;color:var(--text-dim);">
+        문서 식별자 <code>shared-jv-lifecycle-governance</code> · 버전 <code>1.0.0</code> · 원본 <code>procedures/_shared/jv-lifecycle-governance/schema.yaml</code>@<code>8509ffbe1896</code> · <a href="https://github.com/5throck/co-newbiz/blob/main/procedures/_shared/jv-lifecycle-governance/schema.yaml">원본 열기</a> — 이 스냅샷이 원본과 다르면 원본이 맞습니다.
+      </div>
+    </article>
+    <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+      <a href="../index.html" class="prev" style="text-decoration:none;color:var(--text);">
+        <div style="font-size:12px;color:var(--text-dim);">← 이전</div>
+        <div>홈</div>
+      </a>
+      <span></span>
+    </nav>
+  </main>
+<footer><p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p></footer>
+  <script src="../assets/js/copy-code.js"></script>
+  <script src="../assets/js/dark-mode-toggle.js"></script>
+  <script src="../assets/js/inpage-search.js"></script>
+  <script src="../assets/js/site-search.js"></script>
+  <script src="../assets/js/lang-switcher.js"></script>
+  <script src="../assets/js/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</body>
+</html>
