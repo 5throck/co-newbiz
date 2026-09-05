@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2장 S1~S7 기회 발굴 가이드 — co-newbiz 플랫폼 핸드북</title>
+  <meta name="description" content="co-newbiz 신규사업 검토 AI 플랫폼 핸드북 — 2장 S1~S7 기회 발굴 가이드">
+  <link rel="stylesheet" href="assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="assets/css/handbook-components.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" class="sidebar-brand">📚 co-newbiz 핸드북</a>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html">홈</a></li>
+      <li><a href="chapter_01.html">1장 플랫폼 개요와 핵심 개념</a></li>
+      <li><a href="chapter_02.html" style="color:var(--accent);">2장 S1~S7 기회 발굴 가이드</a></li>
+      <li><a href="chapter_03.html">3장 S8~S11 프로젝트 가이드</a></li>
+      <li><a href="chapter_04.html">4장 게이트 심의와 의사결정</a></li>
+      <li><a href="chapter_05.html">5장 관리자·운영 가이드</a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button id="dark-toggle" title="Toggle dark mode" style="font-size:16px;cursor:pointer;background:none;border:none;">☀️</button>
+    </div>
+  </nav>
+  <main>
+    <article style="max-width:720px;">
+      <span class="chapter-eyebrow" style="font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;">2장</span>
+      <h1>2장 S1~S7 기회 발굴 가이드</h1>
+
+<p>S1~S7은 <strong>기회(opportunity)</strong>를 발굴하고 검증하는 구간입니다. 여기서의 모든 작업은 "이 기회를 계속 검토할 것인가"라는 게이트 판정을 향해 나아갑니다.</p>
+
+      <h2 id="s1">S1 시장분석 — 시장은 존재하는가?</h2>
+      <p>시장분석 화면에서 TAM·SAM·SOM 사이징 파이프라인을 실행합니다. 직접 통계가 없는 산업은 <strong>프록시 산업 체인</strong>(유사 산업의 단위환산·회귀 보정)으로 간접 추정하며, 프록시 등급이 낮으면 상위 게이트에서 불리합니다.</p>
+      <ul>
+        <li>시장 규모·CAGR·성장 드라이버를 확인하고 출처(RAG 등급)를 함께 읽습니다.</li>
+        <li>가치사슬(value chain) 상·하류 연계 분석으로 수요의 1차 원천을 점검합니다.</li>
+      </ul>
+
+      <h2 id="s2">S2 기회 발굴 — 무엇을 할 수 있는가?</h2>
+      <p>인사이트 종합 에이전트가 S1 결과를 입력으로 기회 후보를 생성합니다. 각 후보에 간단한 비즈니스 모델 스케치를 붙일 수 있습니다.</p>
+
+      <h2 id="s3">S3 시너지·적합성 — 우리와 맞는가?</h2>
+      <p>기회를 자사 프로필과 대비해 적합성을 채점하고, <strong>시너지 영역 후보</strong>를 도출한 뒤 <strong>우선 시너지 영역</strong>을 선정합니다. 시너지 점수는 규칙 기반 팩터(시장 매력도·산업 적합성·재무 여력·범위 적합)에 LLM이 ±10 범위로만 조정하는 하이브리드 방식입니다(ADR-0104).</p>
+      <p>팩터가 2개 미만이면 점수는 산출되지 않습니다 — 이는 버그가 아니라 <strong>근거 부족 시 침묵보다 공백을 택하는</strong> fail-closed 설계입니다.</p>
+
+      <h2 id="s4">S4 진출방식 결정 — 어떻게 들어갈 것인가?</h2>
+      <p>S4는 플랫폼의 분기점입니다. 세 가지 입력을 한 화면에서 비교합니다.</p>
+      <ol>
+        <li><strong>트랙 어드바이저:</strong> 시장 매력도·시너지·CAGR·불확실성·쇼트리스트 존재·역량 신호를 정규화해 Greenfield/Brownfield 권고와 근거를 제시합니다. 권고일 뿐입니다.</li>
+        <li><strong>5기준 채점(각 20%):</strong> 통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도. Greenfield를 선택해도 기록이 의무입니다(트랙 간 비교 가능성, ADR-0104).</li>
+        <li><strong>사전배제 규칙:</strong> 통제 필요도가 높고 파트너 지식이 암묵적이면 라이선스·공동개발은 배제됩니다.</li>
+      </ol>
+
+      <h2 id="s5">S5 역량 평가·진출전략 (Greenfield)</h2>
+      <p>자체 역량 대비 필요 역량의 격차를 평가하고 Build/Partner/Hire/Invest 중 해소 방안을 결정합니다. 비용·수익 구조 라인을 여기서 정의하면 S8 사업성 분석의 입력이 됩니다.</p>
+
+      <h2 id="s6-s7">S6~S7 대상 후보 발굴·스크리닝 (Brownfield)</h2>
+      <p>S6에서 대상 후보 풀(Long List)을 만들고, S7에서 소유권·규제 스크리닝을 거쳐 최종 후보(Short List)로 좁힙니다. 주의할 어휘 충돌:</p>
+      <div class="callout callout--info" style="background:var(--bg-info);border-left:3px solid var(--accent);padding:16px 20px;margin:20px 0;border-radius:4px;">
+        <strong>용어:</strong> S3의 '시너지 영역 후보/우선 시너지 영역'과 S6·S7의 'Long List/Short List'는 다른 개념입니다. S3는 시너지 영역을, S6·S7은 결합 대상 기업을 다룹니다.
+      </div>
+      <p>S7에서 후보를 제외(exclude)해도 발견 수 커버리지는 유지됩니다 — 제외도 근거가 기록되는 판정이기 때문입니다.</p>
+
+      <h2 id="hands-on">화면 조작 기본 흐름</h2>
+      <p>모든 단계 화면은 같은 패턴을 따릅니다. S3 화면을 예로 API 호출 순서를 보면:</p>
+      <pre><code class="language-bash"># 1. 시너지 분석 파이프라인 실행
+curl -X POST http://localhost:8787/api/synergy/analyses \
+  -H "Content-Type: application/json" \
+  -d '{"opportunity_id": "&lt;기회 ID&gt;"}'
+
+# 2. 결과 조회 (채점·권고 확인)
+curl http://localhost:8787/api/synergy/analyses?opportunity_id=&lt;기회 ID&gt;</code></pre>
+      <button class="copy-btn" aria-label="Copy code">Copy</button>
+      <p>실제 화면에서는 버튼 클릭으로 동일한 작업을 수행하며, 실행 로그는 화면 하단 <em>활동(activity)</em> 목록에 남습니다.</p>
+    </article>
+
+    <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+      <a href="chapter_01.html" class="prev" style="text-decoration:none;color:var(--text);">
+        <div style="font-size:12px;color:var(--text-dim);">← 이전</div>
+        <div>1장 플랫폼 개요와 핵심 개념</div>
+      </a>
+      <a href="chapter_03.html" class="next" style="text-decoration:none;color:var(--text);text-align:right;">
+        <div style="font-size:12px;color:var(--text-dim);">다음 →</div>
+        <div>3장 S8~S11 프로젝트 가이드</div>
+      </a>
+    </nav>
+  </main>
+
+<footer><p>© 2026 co-newbiz handbook · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p></footer>
+  <script src="assets/js/copy-code.js"></script>
+  <script src="assets/js/dark-mode-toggle.js"></script>
+  <script src="assets/js/inpage-search.js"></script>
+  <script src="assets/js/site-search.js"></script>
+  <script src="assets/js/lang-switcher.js"></script>
+</body>
+</html>

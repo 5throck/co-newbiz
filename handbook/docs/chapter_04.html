@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4장 게이트 심의와 의사결정 — co-newbiz 플랫폼 핸드북</title>
+  <meta name="description" content="co-newbiz 신규사업 검토 AI 플랫폼 핸드북 — 4장 게이트 심의와 의사결정">
+  <link rel="stylesheet" href="assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="assets/css/handbook-components.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" class="sidebar-brand">📚 co-newbiz 핸드북</a>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html">홈</a></li>
+      <li><a href="chapter_01.html">1장 플랫폼 개요와 핵심 개념</a></li>
+      <li><a href="chapter_02.html">2장 S1~S7 기회 발굴 가이드</a></li>
+      <li><a href="chapter_03.html">3장 S8~S11 프로젝트 가이드</a></li>
+      <li><a href="chapter_04.html" style="color:var(--accent);">4장 게이트 심의와 의사결정</a></li>
+      <li><a href="chapter_05.html">5장 관리자·운영 가이드</a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button id="dark-toggle" title="Toggle dark mode" style="font-size:16px;cursor:pointer;background:none;border:none;">☀️</button>
+    </div>
+  </nav>
+  <main>
+    <article style="max-width:720px;">
+      <span class="chapter-eyebrow" style="font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;">4장</span>
+      <h1>4장 게이트 심의와 의사결정</h1>
+
+<p>게이트는 스테이지 사이의 판정 지점이며, 판정은 언제나 사람이 내립니다. 화면의 게이트 결정 카드에서 APPROVE(승인)·HOLD(보류)·KILL(중단)을 선택합니다.</p>
+
+      <h2 id="gates">7개 게이트</h2>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px;">게이트</th>
+            <th style="text-align:left;padding:8px;">위치</th>
+            <th style="text-align:left;padding:8px;">핵심 판정</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">screening</td><td style="padding:8px;">S1→S2</td><td style="padding:8px;">시장 존재 인정, 기회 검토 지속 여부</td></tr>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">pre_fs</td><td style="padding:8px;">S4 구간</td><td style="padding:8px;">WACC·hurdle IRR 등 FS 입력 확정</td></tr>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">target_screening</td><td style="padding:8px;">S6→S7 (BF)</td><td style="padding:8px;">최종 대상 후보 확정</td></tr>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">fs</td><td style="padding:8px;">S8→S9</td><td style="padding:8px;">채택된 Business Case의 사업성 인정</td></tr>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">dd</td><td style="padding:8px;">S9→S10</td><td style="padding:8px;">필수 실사 항목 전부 해소</td></tr>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">entity_ic</td><td style="padding:8px;">S10</td><td style="padding:8px;">개별 딜 투자 승인</td></tr>
+          <tr><td style="padding:8px;">group_ic</td><td style="padding:8px;">S10</td><td style="padding:8px;">그룹 포트폴리오 관점 승인(조건부 승인 포함)</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="rag">RAG 등급 읽는 법</h2>
+      <ul>
+        <li><strong>종합 색상 하나를 표면값으로 받아들이지 마세요.</strong> 6차원 세부내역을 읽어야 합니다. 종합 Green은 data confidence를 포함해 6개 차원 전부가 Green일 때만 나옵니다.</li>
+        <li><strong>data confidence가 전체를 상한 제한합니다.</strong> 종합 Amber인데 재무 차원이 강해 보이면 data confidence부터 확인하세요.</li>
+        <li><strong>rationale 행은 어떤 규칙이 발화했는지</strong>를 알려줍니다. 그렇지 않다면 결함입니다 — 플래그하세요.</li>
+      </ul>
+      <p>AI가 제안한 RAG 등급은 IC 심사자가 확인하거나 <strong>사유를 붙여 정정</strong>합니다. 정정 기록은 감사 로그로 남습니다.</p>
+
+      <h2 id="waiver">waiver — 필수 항목의 예외</h2>
+      <p>필수(mandatory) 체크 항목이 미충족인 상태로 게이트를 통과하려면 활성 waiver가 필요합니다. waiver에는 사유·승인자·만료일이 기록되며, "waiver 불가능한 필수 항목"은 정의상 예외가 없습니다 — KILL을 의미합니다. 권장 항목의 부재는 waiver가 아니라 사유 진술만으로 충분합니다.</p>
+
+      <h2 id="kill">Kill Criteria</h2>
+      <p>각 게이트는 중단 기준을 갖습니다. 대표적인 것:</p>
+      <ul>
+        <li>프록시 등급 B 이하인데 상위 게이트 통과를 요구하는 경우</li>
+        <li>필수 DD 항목이 waiver 불가 상태로 미충족인 경우</li>
+        <li>S4 5기준 채점에서 사전배제 규칙에 걸리는 대안이 유일하게 남은 경우</li>
+      </ul>
+      <p>KILL은 실패가 아니라 <strong>학습이 캡처된 종료</strong>입니다. 사후관리의 <code>kill_with_learning_captured</code>가 이 철학을 이어받습니다.</p>
+
+      <h2 id="audit">감사 기록</h2>
+      <p>모든 게이트 결정에는 누가(who)·언제(when)·무엇을 근거로(산출물 참조)가 기록됩니다. HOLD된 게이트는 <code>/pipeline</code>에서 경과일과 함께 추적되며, 오래된 HOLD는 포트폴리오 차원의 리스크 신호입니다.</p>
+
+      <div class="callout callout--info" style="background:var(--bg-info);border-left:3px solid var(--accent);padding:16px 20px;margin:20px 0;border-radius:4px;">
+        <strong>원본:</strong> 게이트별 analyst·IC reviewer의 역할 상세는 docs/manuals/business-manual_ko.md 1절이 권위 있는 원본입니다.
+      </div>
+    </article>
+
+    <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+      <a href="chapter_03.html" class="prev" style="text-decoration:none;color:var(--text);">
+        <div style="font-size:12px;color:var(--text-dim);">← 이전</div>
+        <div>3장 S8~S11 프로젝트 가이드</div>
+      </a>
+      <a href="chapter_05.html" class="next" style="text-decoration:none;color:var(--text);text-align:right;">
+        <div style="font-size:12px;color:var(--text-dim);">다음 →</div>
+        <div>5장 관리자·운영 가이드</div>
+      </a>
+    </nav>
+  </main>
+
+<footer><p>© 2026 co-newbiz handbook · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p></footer>
+  <script src="assets/js/copy-code.js"></script>
+  <script src="assets/js/dark-mode-toggle.js"></script>
+  <script src="assets/js/inpage-search.js"></script>
+  <script src="assets/js/site-search.js"></script>
+  <script src="assets/js/lang-switcher.js"></script>
+</body>
+</html>

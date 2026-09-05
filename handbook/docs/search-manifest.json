@@ -1,0 +1,34 @@
+{
+  "pages": [
+    {
+      "path": "index.html",
+      "title": "co-newbiz 플랫폼 핸드북",
+      "lang": "ko"
+    },
+    {
+      "path": "chapter_01.html",
+      "title": "1장 플랫폼 개요와 핵심 개념",
+      "lang": "ko"
+    },
+    {
+      "path": "chapter_02.html",
+      "title": "2장 S1~S7 기회 발굴 가이드",
+      "lang": "ko"
+    },
+    {
+      "path": "chapter_03.html",
+      "title": "3장 S8~S11 프로젝트 가이드",
+      "lang": "ko"
+    },
+    {
+      "path": "chapter_04.html",
+      "title": "4장 게이트 심의와 의사결정",
+      "lang": "ko"
+    },
+    {
+      "path": "chapter_05.html",
+      "title": "5장 관리자·운영 가이드",
+      "lang": "ko"
+    }
+  ]
+}
