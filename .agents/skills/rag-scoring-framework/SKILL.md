@@ -52,7 +52,7 @@ relates_to:
 
 ## Context
 
-`docs/rag-framework.md`'s single most load-bearing rule (D-M3-3): the
+`docs/governance/rag-framework.md`'s single most load-bearing rule (D-M3-3): the
 overall grade is priority-ordered, not averaged. A weighted average would
 let five strong dimensions mathematically outweigh one RED dimension — the
 priority-ordered rule refuses that outcome by design, since a RED dimension
@@ -94,7 +94,7 @@ exist and must be graded differently.
    Amber-capped pending a completed model; the other five score normally
 5. **Never render an overall grade without checking all six dimensions
    completed** — a partial assessment shows incomplete, not a default grade
-   (`docs/ui-spec.md` §3's display contract, already implemented in the web UI)
+   (`docs/architecture/ui-spec.md` §3's display contract, already implemented in the web UI)
 
 ## Output Format
 

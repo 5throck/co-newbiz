@@ -47,7 +47,7 @@ Addendum (2026-09-03): table HEADER cells are centered by default
 (`.data-table th { text-align: center }`) — body cells stay left-aligned and numeric
 columns stay right-aligned (`.col-num`, header included). Per-column overrides are the
 only sanctioned exception; re-lefting the default in a new table is a review finding.
-Recorded in `docs/design-guide.md` §6.
+Recorded in `docs/design/design-guide.md` §6.
 
 ## Consequences
 

@@ -6,7 +6,7 @@ description: >
   lead-lag search (`python/correlation.py`), reporting beta, R-squared, the
   lag that maximizes fit, and a 95% confidence interval. Never runs against
   an engineering hop — that classification happens before calibration, per
-  `guidelines/proxy-chain-hop-classification.md`, not as part of this skill.
+  `docs/guidelines/proxy-chain-hop-classification.md`, not as part of this skill.
 
   Use when: "calibrate a proxy hop", "lead-lag regression", "unit
   conversion coefficient", "beta calibration for a proxy chain".
@@ -36,7 +36,7 @@ relates_to:
 This skill is intentionally narrow: it calibrates one already-classified
 statistical hop. Classification (engineering vs. statistical) is a
 methodology judgment that happens first, per
-`guidelines/proxy-chain-hop-classification.md` — an engineering hop's fixed
+`docs/guidelines/proxy-chain-hop-classification.md` — an engineering hop's fixed
 physical coefficient never goes through this calibration at all.
 `python/correlation.py` searches over a lag window (the "engine leads ship
 demand by N months" question) rather than assuming zero lag, since the

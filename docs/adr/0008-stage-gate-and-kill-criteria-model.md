@@ -14,4 +14,4 @@ Define an explicit, binding Kill Criteria list at the group-policy level (`polic
 
 ## Consequences
 
-Kill Criteria are policy content, not code — an amendment goes through the standard policy-change pipeline (`docs/governance-operations.md` §5), not an ad hoc edit.
+Kill Criteria are policy content, not code — an amendment goes through the standard policy-change pipeline (`docs/governance/governance-operations.md` §5), not an ad hoc edit.

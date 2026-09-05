@@ -11,7 +11,7 @@ description: >
   technology transitions.
 
 required_top_level:
-  - code            # KSIC code (md_industry.ksic_code anchor, docs/db-schema.md §2)
+  - code            # KSIC code (md_industry.ksic_code anchor, docs/architecture/db-schema.md §2)
   - name_ko
   - value_chain_structure
   - cycle_position_indicators

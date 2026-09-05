@@ -2,7 +2,7 @@
 name: ui-information-architecture
 scope: co-newbiz
 description: >
-  Designs and reviews SPA screens against `docs/ui-spec.md`'s non-
+  Designs and reviews SPA screens against `docs/architecture/ui-spec.md`'s non-
   negotiable rules: source tooltips from the API envelope's `meta` block
   (never hand-typed), color never the sole differentiator for RAG status,
   no "PASS" stamp anywhere, glossary tooltips on registered terms,

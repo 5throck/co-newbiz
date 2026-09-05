@@ -1,7 +1,7 @@
 // @version 1.0.0
 /**
  * Compliance / waiver / interpretation engine — design v1.0 §2-5, ADR-0036,
- * ADR-0037, FR-GOV-09..12, docs/governance-operations.md.
+ * ADR-0037, FR-GOV-09..12, docs/governance/governance-operations.md.
  *
  * ADR-0037 gate blocking: a gate is BLOCKED when a mandatory deliverable is
  * missing or a mandatory checklist item is incomplete — unless an active

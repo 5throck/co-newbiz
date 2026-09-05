@@ -10,7 +10,7 @@ Without an explicit mapping from regulation clause to implementing system featur
 
 ## Decision
 
-Stage 4 must produce `docs/traceability-matrix.md` mapping every mandatory-tier regulation clause through procedure step, system requirement, implementation, and test.
+Stage 4 must produce `docs/governance/traceability-matrix.md` mapping every mandatory-tier regulation clause through procedure step, system requirement, implementation, and test.
 
 ## Consequences
 

@@ -4,7 +4,7 @@ scope: co-newbiz
 description: >
   Operates the admin console's built sections (users, audit log, data
   sources — Wave 5.6A/5.6B; batch-schedule and retention — 2026-08-21
-  batch 4) and documents the remaining 5 of `docs/ui-spec.md`
+  batch 4) and documents the remaining 5 of `docs/architecture/ui-spec.md`
   §5's 10 designed sections not yet implemented. Admin role never grants
   project data visibility (FR-SEC-02); audit log renders no delete control
   anywhere (FR-SEC-07); a notification-threshold edit without a linked ADR
@@ -30,7 +30,7 @@ metadata:
 
 ## Context
 
-**Adaptation note**: `docs/ui-spec.md` §5 designs 10 admin console sections
+**Adaptation note**: `docs/architecture/ui-spec.md` §5 designs 10 admin console sections
 (User Management, Database, Batch-Schedule, Notifications, Governance,
 Glossary, Data Sources, Master Data, ADR/Stage-Gate, Logs). 5 of them are
 built: Users, Audit Log, Data Sources (Wave 5.6B) plus Batch-Schedule

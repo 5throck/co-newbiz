@@ -53,4 +53,4 @@ lang_reason: source-material
 
 ## 8. 관련 문서
 
-- `docs/governance-operations.md` — waiver 및 해석 운영(compliance-officer의 도메인. 이 매뉴얼의 시스템 관리 범위와 인접하지만 별개다).
+- `docs/governance/governance-operations.md` — waiver 및 해석 운영(compliance-officer의 도메인. 이 매뉴얼의 시스템 관리 범위와 인접하지만 별개다).

@@ -132,7 +132,7 @@ financial/strategic sections, class rollup, `insufficient_evidence`
 exceptions) + the transition-decision panel — explicitly marked as a **human
 decision of the venture-portfolio-IC**, rendering prior decisions with
 rationale. Built on the Onyx 3.0 standard screen system
-(`docs/design-guide.md`, `StageFrame`, semantic tokens), `design:lint` at 0
+(`docs/design/design-guide.md`, `StageFrame`, semantic tokens), `design:lint` at 0
 violations — user-mandated.
 
 ### 4. S11 completion in `process-flow.ts` (project branch) — the last placeholder

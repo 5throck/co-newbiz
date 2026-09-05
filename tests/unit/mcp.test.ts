@@ -1,6 +1,6 @@
 // @version 1.4.0
 /**
- * MCP server tests — docs/mcp-integration.md. Runs a real HTTP server
+ * MCP server tests — docs/architecture/mcp-integration.md. Runs a real HTTP server
  * (Bun.serve on an ephemeral port dispatching to app/web-next's Route
  * Handlers) and calls the MCP server's own dispatch() against it over real
  * HTTP with real Bearer tokens — not mocked handlers. A separate describe

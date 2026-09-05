@@ -45,7 +45,7 @@ partner, or a competitor named in `competitive-intelligence`'s output.
 - Deep-dive company profiles feeding `md_company` master data
 - DD support requiring subsidiary/ownership-structure detail
 - Leadership/governance profiling for `management_package` context (identity is
-  never stored there — see `docs/security-model.md` §7 item 6; this skill's
+  never stored there — see `docs/security/security-model.md` §7 item 6; this skill's
   output stays outside the DB, in `deliverables/`)
 
 ## Execution Steps

@@ -68,7 +68,7 @@ a coherent narrative for the Entity IC / Group IC approval gate.
 3. **Cross-Domain Reconciliation** (mandatory): where analyses disagree, document
    the tension explicitly rather than forcing consensus. Classify as:
    (a) resolvable with more data, (b) context-dependent, (c) genuine trade-off
-4. **Data-Confidence Check**: confirm the RAG data-confidence cap (docs/rag-framework.md
+4. **Data-Confidence Check**: confirm the RAG data-confidence cap (docs/governance/rag-framework.md
    §2) is reflected in the synthesis — a two-hop proxy estimate does not get
    treated as equivalent to a live, high-confidence figure just because the
    narrative reads confidently

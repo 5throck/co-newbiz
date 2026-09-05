@@ -28,7 +28,7 @@ function requireToken(): string {
   const token = process.env.CO_NEWBIZ_API_TOKEN;
   if (!token) {
     throw new MCPConfigError(
-      "CO_NEWBIZ_API_TOKEN is not set. Issue one via POST /api/tokens while logged in to the web app, then set it in this MCP server's environment (docs/mcp-integration.md §2).",
+      "CO_NEWBIZ_API_TOKEN is not set. Issue one via POST /api/tokens while logged in to the web app, then set it in this MCP server's environment (docs/architecture/mcp-integration.md §2).",
     );
   }
   return token;

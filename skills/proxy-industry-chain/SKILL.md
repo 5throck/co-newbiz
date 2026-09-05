@@ -45,7 +45,7 @@ relates_to:
 
 ## Context
 
-`guidelines/proxy-chain-hop-classification.md` (recommended layer — a
+`docs/guidelines/proxy-chain-hop-classification.md` (recommended layer — a
 methodology judgment call, not a hard rule) gives the classification test:
 a hop with a fixed physical/engineering conversion factor (doesn't change
 with market conditions) is an **engineering hop** and does not degrade the
@@ -69,7 +69,7 @@ chain reliability caps the confidence of every downstream conclusion.
 1. **Identify the proxy chain**: the sequence of upstream industries
    connecting a data-available industry to the target (e.g. crankshaft →
    marine engine → ship)
-2. **Classify every hop** per `guidelines/proxy-chain-hop-classification.md`:
+2. **Classify every hop** per `docs/guidelines/proxy-chain-hop-classification.md`:
    engineering (fixed physical constant) vs. statistical (regression-derived)
 3. **For statistical hops**: use `unit-conversion-calibration`'s methodology
    for the regression, recording R² and lead-lag defensibility per hop

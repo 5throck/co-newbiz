@@ -74,7 +74,7 @@ project must already exist.
    - Context and Problem
    - Analysis and Findings (from `insight-synthesis`)
    - RAG Signal (overall + six dimensions, with rationale — never color-only,
-     matching `docs/ui-spec.md` §3's display contract even in a static deck)
+     matching `docs/architecture/ui-spec.md` §3's display contract even in a static deck)
    - Business Case (financial-statement-analysis + applicable M&A special-topic
      findings: investment summary, IRR/NPV, key risks, integration cost impact)
    - Recommended Path Forward

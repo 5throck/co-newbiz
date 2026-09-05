@@ -10,7 +10,7 @@ An indefinite waiver is a de facto, unrecorded repeal of the clause it exempts; 
 
 ## Decision
 
-Every waiver requires an expiry date — no indefinite waivers. Repeated waivers against the same clause are read as evidence the clause needs amendment, feeding directly into governance KPI-driven amendment priority (`docs/governance-operations.md` §2/§4), not as a compliance failure pattern.
+Every waiver requires an expiry date — no indefinite waivers. Repeated waivers against the same clause are read as evidence the clause needs amendment, feeding directly into governance KPI-driven amendment priority (`docs/governance/governance-operations.md` §2/§4), not as a compliance failure pattern.
 
 ## Consequences
 

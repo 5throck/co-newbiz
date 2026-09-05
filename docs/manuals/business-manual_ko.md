@@ -18,7 +18,7 @@ lang_reason: source-material
 
 ## 1. 게이트별 역할
 
-권위 있는 산출물/승인자/RACI 표는 `docs/process-map.md`를 참조할 것. 요약하면:
+권위 있는 산출물/승인자/RACI 표는 `docs/governance/process-map.md`를 참조할 것. 요약하면:
 
 | 게이트 | analyst인 경우 | IC reviewer인 경우 |
 |---|---|---|

@@ -10,7 +10,7 @@ Without a defined operating cadence, monitoring and maintenance tasks (backup ve
 
 ## Decision
 
-Define daily/weekly/monthly/quarterly/annual operating rhythm (`docs/ops-cadence.md`) with named owners per task, including the monthly recovery drill (a backup never restored is not verified) and monthly RAG threshold calibration.
+Define daily/weekly/monthly/quarterly/annual operating rhythm (`docs/governance/ops-cadence.md`) with named owners per task, including the monthly recovery drill (a backup never restored is not verified) and monthly RAG threshold calibration.
 
 ## Consequences
 

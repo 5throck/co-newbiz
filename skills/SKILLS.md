@@ -30,7 +30,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `certification-roadmap` | 1.0.0 | active | certification-agent | 2026-08-20 | — | Wave 5.8H — certification gap analysis, strictly separate from permits |
 | `certification-transferability` | 1.2.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — CoC transferability confirmed against the certifying body's own rules; inference disallowed |
 | `checklist-authoring` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — item-by-item mandatory/waiver_eligible checklist layer |
-| `manual-authoring` | 1.0.0 | active | docs-writer | 2026-09-05 | — | Manual/SOP/governance-reference authoring standard — audience split, governance metadata, external-reference badge rules; feeds knowledge-hub generator |
+| `manual-authoring` | 2.1.0 | active | docs-writer | 2026-09-06 | — | Manual/SOP/governance-reference authoring standard — audience split, governance metadata, external-reference badge rules; documents render live via `/library` (ADR-0108), no generator step |
 | `commercial-due-diligence` | 1.1.0 | active | commercial-dd-agent | 2026-08-20 | — | Wave 5.8H — checklist cdd-01-07, no-narrative-only-finding rule |
 | `community-partnership-planning` | 1.1.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8C — workforce-development partnerships and community-relations risk |
 | `company-intelligence` | 1.0.0 | active | market-intelligence-agent | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
@@ -45,7 +45,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `database-operations` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8K (design §9.2 merge) — absorbs backup-and-dr; ADR-0015 "a backup never restored is not verified" |
 | `db-migration-governance` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — ADR-0001/0002 SQLite portability-regime conventions |
 | `dd-to-valuation-bridge` | 1.1.0 | active | valuation-agent | 2026-08-20 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams |
-| `deal-execution-playbook` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — navigates `docs/process-map.md`/`docs/raci.md`'s real per-gate RACI, never restates |
+| `deal-execution-playbook` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — navigates `docs/governance/process-map.md`/`docs/governance/raci.md`'s real per-gate RACI, never restates |
 | `deal-workspace-operations` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — open/membership real and live; closure/archival not yet implemented, gap flagged explicitly |
 | `debt-and-contingent-liability-simulation` | 1.1.0 | active | risk-officer | 2026-08-20 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
 | `decision-record` | 1.1.0 | active | pm | — | — | — |
@@ -127,7 +127,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `sample-driven-report-writing` | 1.0.0 | active | docs-writer | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
 | `scenario-planning` | 1.1.0 | active | risk-officer | 2026-08-20 | — | Wave 5.8G — discrete downside/base/upside cases incl. mandatory +200bp rate-shock test |
 | `script-lifecycle-manager` | 1.2.0 | active | pm | 2026-05-30 | — | — |
-| `security-baseline-review` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — orchestrates `docs/security-baseline.md`'s real recurring cadence |
+| `security-baseline-review` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — orchestrates `docs/security/security-baseline.md`'s real recurring cadence |
 | `security-scan` | 1.2.0 | active | pm | 2026-07-19 | — | Reassigned from security-expert — not defined in templates/common/agents/ or any variant, caused orphan on every propagated variant |
 | `site-infrastructure-assessment` | 1.1.0 | active | greenfield-agent | 2026-08-20 | — | Wave 5.8C — mandatory infrastructure-minimums exclusion filter |
 | `site-visit-protocol` | 1.1.0 | active | technical-dd-agent | 2026-08-20 | — | Wave 5.8H — evidence-capture discipline (photo/measurement/log) |

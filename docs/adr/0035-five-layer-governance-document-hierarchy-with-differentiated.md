@@ -14,4 +14,4 @@ Fix five layers — policy and procedure are mandatory (waiver required to devia
 
 ## Consequences
 
-See `docs/governance-operations.md` §7 for the operational summary of this table.
+See `docs/governance/governance-operations.md` §7 for the operational summary of this table.

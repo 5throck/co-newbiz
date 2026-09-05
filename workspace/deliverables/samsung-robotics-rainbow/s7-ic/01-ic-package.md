@@ -117,7 +117,7 @@ reviewed_by: PENDING
 
 ## 4. 제안 RAG 등급과 근거
 
-`docs/rag-framework.md` §3의 **우선순위 규칙(가중평균 아님)**: `overall = RED if any dimension is RED, or a Kill Criteria condition is triggered`.
+`docs/governance/rag-framework.md` §3의 **우선순위 규칙(가중평균 아님)**: `overall = RED if any dimension is RED, or a Kill Criteria condition is triggered`.
 
 | 차원 | 제안 등급 | 발화한 규칙 / 근거 |
 |---|:---:|---|

@@ -7,7 +7,7 @@ description: >
   the governance KPI set that drives amendment priority. Absorbs the
   training/notice follow-up step and KPI reporting — neither has a
   standalone product distinct from a compliance-check result
-  (`docs/governance-operations.md` §1/§4, design §9.2's merge decision).
+  (`docs/governance/governance-operations.md` §1/§4, design §9.2's merge decision).
 
   Use when: "compliance check", "is this gate blocked", "governance KPI",
   "gate cycle time", "checklist completion rate", "waiver concentration".
@@ -61,7 +61,7 @@ fails **and there is no active waiver** covering the specific gap
 ## When to Use
 
 - At every stage gate, before the gate is considered passable
-- Monthly governance-KPI review (`docs/ops-cadence.md`)
+- Monthly governance-KPI review (`docs/governance/ops-cadence.md`)
 - Deciding whether a repeated gap pattern is a training/notice issue (log
   and address directly — no separate skill needed for this) or a signal the
   underlying regulation doesn't match reality (→ amendment priority)

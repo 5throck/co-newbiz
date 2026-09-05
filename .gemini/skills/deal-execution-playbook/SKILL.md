@@ -5,8 +5,8 @@ description: >
   The gate-by-gate execution map: for each of the six gates (Screening →
   Pre-FS → FS → DD → Entity IC → Group IC), which deliverable is due, which
   agent is R (responsible), which condition is a Kill Criteria candidate,
-  and where a human review point sits — per `docs/process-map.md`'s and
-  `docs/raci.md`'s actual RACI tables, never restated or improvised.
+  and where a human review point sits — per `docs/governance/process-map.md`'s and
+  `docs/governance/raci.md`'s actual RACI tables, never restated or improvised.
 
   Use when: "what happens at this gate", "who owns this deliverable",
   "deal execution sequence", "gate RACI".
@@ -34,7 +34,7 @@ metadata:
 
 ## Context
 
-`docs/process-map.md` and `docs/raci.md` are the authoritative source this
+`docs/governance/process-map.md` and `docs/governance/raci.md` are the authoritative source this
 skill navigates, not restates — the deliverable, blocking-condition, and
 RACI columns per gate live there and change independently of this skill.
 Note the document's own warning: this is the *business review process* map,
@@ -51,7 +51,7 @@ system that runs this process, not the process itself).
 
 1. **Identify the project's current gate** (Screening/Pre-FS/FS/DD/Entity
    IC/Group IC) and Green Field vs. Brown Field track
-2. **Pull the gate's row from `docs/process-map.md`**: deliverable, blocking
+2. **Pull the gate's row from `docs/governance/process-map.md`**: deliverable, blocking
    condition, approver, R/A/C/I — read directly, never reconstructed from memory
 3. **Dispatch the R agent(s)** for the deliverable, with the C agents
    consulted and I agents informed per the table — this is PM's dispatch

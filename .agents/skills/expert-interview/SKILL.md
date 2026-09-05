@@ -2,7 +2,7 @@
 name: expert-interview
 scope: co-newbiz
 description: >
-  Conducts external expert interviews per `guidelines/expert-interview-conduct.md`:
+  Conducts external expert interviews per `docs/guidelines/expert-interview-conduct.md`:
   compliance clearance before contact, triangulation as the actual target
   (2-3 independent sources for any material claim, not optional polish),
   disconfirming questions structured explicitly (not just validating the
@@ -29,7 +29,7 @@ metadata:
 
 ## Context
 
-`guidelines/expert-interview-conduct.md` (recommended layer — deviation
+`docs/guidelines/expert-interview-conduct.md` (recommended layer — deviation
 requires a stated reason, not a blocked gate) sets one hard-edged rule
 inside a recommended-enforceability document: an untriangulated claim
 feeding a valuation assumption is tagged `assumed` with the limitation

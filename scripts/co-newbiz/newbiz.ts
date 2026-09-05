@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.13.0
+// @version 1.13.1
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -44,7 +44,7 @@
  *
  * Remaining commands (fetch, md:sync, law:sync, policy:sync, policy:impact,
  * fin:project, calibrate, convert) land in their later PRs per
- * docs/dev-plan.md — assume, glossary:lint and adr:new landed with the CLI
+ * docs/planning/dev-plan.md — assume, glossary:lint and adr:new landed with the CLI
  * batch wave (scripts/co-newbiz/assume.ts, glossary-lint.ts, adr-new.ts);
  * glossary ENTRY validation stays at `bun glossary/_validate.ts` (package.json
  * alias glossary:validate). Unbuilt commands are not stubbed here to avoid a

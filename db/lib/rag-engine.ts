@@ -1,6 +1,6 @@
 // @version 1.0.0
 /**
- * RAG grading engine — design v1.0 §4-2, docs/rag-framework.md (meeting M3
+ * RAG grading engine — design v1.0 §4-2, docs/governance/rag-framework.md (meeting M3
  * decisions D-M3-1..D-M3-4), FR-RAG-01..08, ADR-0016.
  *
  * THE single most load-bearing rule (ADR-0016): overall grading is
@@ -342,7 +342,7 @@ export interface RagEvaluation {
    * Null when the assessment is incomplete AND no assessed dimension is
    * Red/Kill-Criteria-triggered — "insufficient data to grade at all" is a
    * real, distinct outcome, not a state that defaults to any color
-   * (docs/rag-framework.md, docs/ui-spec.md §3). A Red finding or a Kill
+   * (docs/governance/rag-framework.md, docs/architecture/ui-spec.md §3). A Red finding or a Kill
    * Criteria trigger still forces overall=Red even when incomplete —
    * danger is never hidden behind "not enough data yet" (mirrors the
    * hysteresis rule that Red always takes effect immediately).

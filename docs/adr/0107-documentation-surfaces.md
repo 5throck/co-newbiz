@@ -1,6 +1,6 @@
 # ADR-0107: Documentation surfaces — knowledge-hub portal, platform handbook, and web library role separation
 
-- Status: Accepted
+- Status: **Superseded by ADR-0108** (2026-09-06) — the knowledge-hub static portal this ADR carved out as a distinct surface was retired; `/library` is now the single documentation surface. Kept for history.
 - Date: 2026-09-05
 - Deciders: New Business Review Lead (PM), per user direction
 - Related: ADR-0091 (role separation), ADR-0105 (navigation SSOT), ADR-0106 (deal structuring stage), governance-document-hierarchy (skills/), CLAUDE.md "procedures/*.yaml is authoritative"

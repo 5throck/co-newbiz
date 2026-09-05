@@ -10,7 +10,7 @@ A regulation that lives only in a document, with no system-level consequence for
 
 ## Decision
 
-A gate is blocked automatically if a required deliverable is missing or a mandatory checklist item is incomplete, unless an active (non-expired) waiver covers the specific gap. This is the mechanism, not a policy statement — see `docs/governance-operations.md` §1.
+A gate is blocked automatically if a required deliverable is missing or a mandatory checklist item is incomplete, unless an active (non-expired) waiver covers the specific gap. This is the mechanism, not a policy statement — see `docs/governance/governance-operations.md` §1.
 
 ## Consequences
 

@@ -46,4 +46,4 @@ Account management, regulation-version administration, master-data administratio
 
 ## 8. Related
 
-- `docs/governance-operations.md` — waiver and interpretation administration (compliance-officer's domain, adjacent to but distinct from this manual's system-admin scope).
+- `docs/governance/governance-operations.md` — waiver and interpretation administration (compliance-officer's domain, adjacent to but distinct from this manual's system-admin scope).

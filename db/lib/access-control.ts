@@ -1,7 +1,7 @@
 // @version 1.1.0
 /**
  * Access-control engine — FR-SEC-04/06/07 enforcement wrapper (Wave 5.5,
- * docs/security-model.md §5-6, ADR-0038/0040/0012).
+ * docs/security/security-model.md §5-6, ADR-0038/0040/0012).
  *
  * The repository layer (db/repositories/project.repository.ts) owns the
  * deny-by-default READ path; this engine owns the WRITE path around

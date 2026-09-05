@@ -1,4 +1,4 @@
-// API client — docs/api-spec.md §9's response envelope, consumed everywhere.
+// API client — docs/architecture/api-spec.md §9's response envelope, consumed everywhere.
 // The SPA never talks to the DB directly (ui-spec §7); this is the one file
 // that knows the fetch/cookie/error-shape details so every page component
 // only sees typed data.

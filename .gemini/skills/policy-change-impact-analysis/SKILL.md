@@ -3,7 +3,7 @@ name: policy-change-impact-analysis
 scope: co-newbiz
 description: >
   Runs the mandatory impact-analysis step of the Policy Change -> System
-  Reflection Pipeline (`docs/governance-operations.md` §5, ADR-0021) before
+  Reflection Pipeline (`docs/governance/governance-operations.md` §5, ADR-0021) before
   any Policy/Procedure amendment ships: identifies every `procedure`,
   `rag_rule`, `assumption`, checklist, and glossary term reference the
   change touches, and decides retroactivity for in-flight projects via

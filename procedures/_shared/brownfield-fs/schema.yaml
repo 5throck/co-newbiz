@@ -160,7 +160,7 @@ kill_criteria:
 legal_basis:
   - "Group New Business Review Policy §2.3"
   - "Design v1.0 §4-4, §4-6"
-  - "docs/process-map.md — FS row"
+  - "docs/governance/process-map.md — FS row"
   - "Meeting M5 (m5-ma-model-linkage.md) — fixed evaluation order"
   - "ADR-0045 (investment-vehicle-structuring as a deal-structure axis — four mandatory review axes)"
   - "ADR-0051 (workflow gap closure — four-axis review step added at FS)"

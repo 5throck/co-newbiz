@@ -66,7 +66,7 @@ relates_to:
 ## Context
 
 Reused from `Projects/co-consult/skills/financial-statement-analysis` and adapted
-to co-newbiz's own port of the same pipeline (Stage 5 Wave 5.2, `docs/db-schema.md`
+to co-newbiz's own port of the same pipeline (Stage 5 Wave 5.2, `docs/architecture/db-schema.md`
 §4, design v1.0 §4-4). The Python stages (`validate.py`/`normalize.py`/`kpi.py`/
 `driver_tree.py`) are the same code, ported verbatim; the TypeScript orchestration
 is co-newbiz's own CLI, not co-consult's `financial-pipeline.ts`.

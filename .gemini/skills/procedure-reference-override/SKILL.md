@@ -71,7 +71,7 @@ wired through `GET /api/procedures/resolve` and the MCP `get_procedure` tool).
 5. **Verify resolution**: `bun scripts/co-newbiz/newbiz.ts proc:resolve <key> --entity <e>` (or `GET /api/procedures/resolve?procedure=<key>&entity=<e>`)
    and confirm the merged result's step order and `_source` badges
    (shared/region/entity) match intent — this is exactly what the procedure
-   viewer (`docs/ui-spec.md` §4) renders
+   viewer (`docs/architecture/ui-spec.md` §4) renders
 
 ## Output Format
 

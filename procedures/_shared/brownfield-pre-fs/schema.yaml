@@ -81,7 +81,7 @@ kill_criteria:
 legal_basis:
   - "Group New Business Review Policy §2.3"
   - "Design v1.0 §4-1, non-negotiable boundary #5 (permit/certification separation, no inference)"
-  - "docs/process-map.md — Pre-FS row"
+  - "docs/governance/process-map.md — Pre-FS row"
   - "Meeting M1 (process-2026-08-20-m1-process-skeleton.md)"
   - "docs/pilots/pilot-011-posco-amberoad.md (R&BD as a Brown Field sub-type)"
   - "docs/pilots/pilot-014-c2y-university-techholdings.md finding F-4 (minority venture investment as an R&BD deal shape)"

@@ -2,9 +2,9 @@
 name: security-baseline-review
 scope: co-newbiz
 description: >
-  Runs `docs/security-baseline.md`'s recurring cadence: weekly dependency/
+  Runs `docs/security/security-baseline.md`'s recurring cadence: weekly dependency/
   secrets scans, monthly access-permission review, quarterly threat-model
-  refresh (`docs/security-model.md`'s STRIDE matrix re-walked against any
+  refresh (`docs/security/security-model.md`'s STRIDE matrix re-walked against any
   schema/API change since last review) and DR drill, security review
   required (not optional) on every schema change touching information-
   protection tables.
@@ -34,7 +34,7 @@ metadata:
 
 ## Context
 
-`docs/security-baseline.md` is the authoritative cadence table this skill
+`docs/security/security-baseline.md` is the authoritative cadence table this skill
 executes, not restates — its own header notes it's "Not yet executable
 (Stage 5, once the system exists)," meaning this skill is the first actual
 operational execution of a cadence that was previously only documented
@@ -47,7 +47,7 @@ application on the correct cadence, it doesn't reimplement their function.
 
 - Weekly, monthly, quarterly per the baseline's own cadence table
 - Before any deployment (pre-deployment gate)
-- Any schema change touching an information-protection table (`docs/db-schema.md` §9)
+- Any schema change touching an information-protection table (`docs/architecture/db-schema.md` §9)
 
 ## Execution Steps
 
@@ -55,7 +55,7 @@ application on the correct cadence, it doesn't reimplement their function.
    secrets scan (gitleaks), false-positive alert review
 2. **Monthly**: access-permission review (delegates to
    `access-control-review`'s own detailed skill, not duplicated here)
-3. **Quarterly**: threat-model refresh — re-walk `docs/security-model.md`'s
+3. **Quarterly**: threat-model refresh — re-walk `docs/security/security-model.md`'s
    STRIDE matrix against every schema/API change since the last review,
    plus the DR drill (`database-operations`)
 4. **On every dependency bump**: CVE check before merge (delegates to

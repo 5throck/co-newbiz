@@ -4,7 +4,7 @@ scope: co-newbiz
 description: >
   Stamps every agent-produced deliverable with its producing agent, a
   confidence grade, and a human-review record before it counts as complete
-  — `docs/process-map.md`'s `analysis_task.reviewed_by` field is the
+  — `docs/governance/process-map.md`'s `analysis_task.reviewed_by` field is the
   concrete mechanism referenced (a NULL value blocks Entity IC). As of
   2026-08-28 the write/UI path is implemented: `GET/POST
   /api/projects/:id/analysis-tasks` (lazy-creates the required deliverables
@@ -34,7 +34,7 @@ metadata:
 
 ## Context
 
-**Adaptation note (updated 2026-08-28, see design doc §20.4)**: `docs/process-map.md`'s
+**Adaptation note (updated 2026-08-28, see design doc §20.4)**: `docs/governance/process-map.md`'s
 Entity IC gate row names `analysis_task.reviewed_by NULL on any required
 deliverable` as a blocking condition. The `analysis_task` table exists
 (`db/migrations/0011_dd_finding_and_remaining_tables.sql`) and the

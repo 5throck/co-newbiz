@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // @version 1.5.0
 /**
- * co-newbiz MCP server — docs/mcp-integration.md.
+ * co-newbiz MCP server — docs/architecture/mcp-integration.md.
  *
  * Calls the REST API exclusively (ADR-0011, FR-SYS-01) — see
  * shared/rest-client.ts's header for the non-negotiable rule this file

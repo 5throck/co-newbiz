@@ -1,7 +1,7 @@
 // @version 1.2.0
 /**
  * Project repository — the reference implementation of the deny-by-default
- * access pattern (FR-SEC-01/02/03/04/06, docs/security-model.md §2).
+ * access pattern (FR-SEC-01/02/03/04/06, docs/security/security-model.md §2).
  *
  * RULE: every read here takes a `callerId` and filters through
  * `project_member` — there is no function that returns project data without

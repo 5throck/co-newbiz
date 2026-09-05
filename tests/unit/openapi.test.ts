@@ -1,11 +1,11 @@
 // @version 1.0.0
 /**
- * OpenAPI drift gate — docs/mcp-integration.md §6, docs/api-spec.md Status.
+ * OpenAPI drift gate — docs/architecture/mcp-integration.md §6, docs/architecture/api-spec.md Status.
  *
  * Extracts every (method, path) route declaration from
  * app/web-next/app/api/**\/route.ts (ADR-0069/0070 Phase 6 test port —
  * was app/server/*.ts's Hono `router.get(...)` calls before the cutover)
- * and asserts set equality with docs/openapi.yaml in BOTH directions: a
+ * and asserts set equality with docs/architecture/openapi.yaml in BOTH directions: a
  * route without a spec entry fails (undocumented surface), and a spec
  * entry without a route fails (documented but not built — the
  * openapi.yaml mistake this gate exists to catch). Also enforces the
@@ -64,7 +64,7 @@ function declaredRoutes(): Set<string> {
   return routes;
 }
 
-const spec = yaml.load(readFileSync("docs/openapi.yaml", "utf8")) as {
+const spec = yaml.load(readFileSync("docs/architecture/openapi.yaml", "utf8")) as {
   openapi?: string;
   paths?: Record<string, Record<string, unknown>>;
 };
@@ -79,7 +79,7 @@ function specRoutes(): Set<string> {
   return routes;
 }
 
-describe("docs/openapi.yaml drift gate (mcp-integration.md §6)", () => {
+describe("docs/architecture/openapi.yaml drift gate (mcp-integration.md §6)", () => {
   test("the spec is OpenAPI 3.1", () => {
     expect(spec.openapi).toBe("3.1.0");
   });

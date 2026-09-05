@@ -2,7 +2,7 @@
 /**
  * Minimal ULID generator — 26-char Crockford base32, 48-bit timestamp + 80-bit randomness.
  * Used for every table's primary key per ADR-0002 (no AUTOINCREMENT, no implicit ROWID
- * dependence) — see docs/db-schema.md §12.
+ * dependence) — see docs/architecture/db-schema.md §12.
  */
 
 const ENCODING = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford base32, no I/L/O/U

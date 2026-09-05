@@ -8,7 +8,7 @@
 
 ## Context
 
-Three of the six RAG dimensions — `market`, `technical_execution`, and `risk` — have no scoring function. Callers write the grade into a scenario JSON by hand, and `docs/rag-framework.md` does not state the criteria for these three even in prose. The `rag_rule` table exists but has **0 rows inserted and 0 code paths reading it**, which makes this the last moment at which its shape can be changed without a data migration or a compatibility shim.
+Three of the six RAG dimensions — `market`, `technical_execution`, and `risk` — have no scoring function. Callers write the grade into a scenario JSON by hand, and `docs/governance/rag-framework.md` does not state the criteria for these three even in prose. The `rag_rule` table exists but has **0 rows inserted and 0 code paths reading it**, which makes this the last moment at which its shape can be changed without a data migration or a compatibility shim.
 
 Formalizing the three missing dimensions requires deciding, first, in what language a rule condition is written, and second, where the values that a condition refers to come from. Three candidate condition formats were considered:
 

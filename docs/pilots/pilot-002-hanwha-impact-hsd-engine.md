@@ -3,7 +3,7 @@
 **Case type**: Brown Field (M&A)
 **Region**: Korea (KR)
 **Run mode**: Manual (no system — Stage 3 pilot per ADR-0034)
-**Case source**: `docs/pilot-candidate-research.md` — a real, publicly documented, already-completed deal, held in reserve after pilot 001 and now promoted per user instruction (2026-08-20)
+**Case source**: `docs/planning/pilot-candidate-research.md` — a real, publicly documented, already-completed deal, held in reserve after pilot 001 and now promoted per user instruction (2026-08-20)
 **Status**: In progress
 
 ## 0. Purpose and Scope

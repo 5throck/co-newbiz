@@ -57,8 +57,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "분석·참조",
     items: [
       { href: "/benchmarks", label: "벤치마킹 사례" },
-      { href: "/library", label: "문서·규정" },
-      { href: "/knowledge-hub/", label: "문서 허브" },
+      { href: "/library", label: "문서 허브" },
       { href: "/glossary", label: "용어집" },
       { href: "/strategy", label: "R&BD 전략" },
     ],

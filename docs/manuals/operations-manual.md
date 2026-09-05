@@ -19,7 +19,7 @@ Batch operations, backup/recovery, incident response, and deployment/rollback �
 | sre | Daily | Fetch-failure triage |
 | sre | Continuous | Alert pipeline — cooldown 24h per (project, trigger_type) pair, hysteresis mirrors the RAG 7-day hold |
 | sre | On incident | Incident response + post-incident analysis |
-| security-engineer | Weekly/Quarterly | See `docs/security-baseline.md` *(Stage 4)* |
+| security-engineer | Weekly/Quarterly | See `docs/security/security-baseline.md` *(Stage 4)* |
 
 ## 2. Deployment & Rollback
 
@@ -47,5 +47,5 @@ The CLI, run by a human operator, still resolves to a real `project_member` cont
 
 ## 6. Related
 
-- `docs/governance-operations.md` — the *business* governance operation (compliance, waivers), distinct from this document's *system* operation.
-- `docs/security-baseline.md` *(Stage 4)*.
+- `docs/governance/governance-operations.md` — the *business* governance operation (compliance, waivers), distinct from this document's *system* operation.
+- `docs/security/security-baseline.md` *(Stage 4)*.

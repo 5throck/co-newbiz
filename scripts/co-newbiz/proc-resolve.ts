@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.2.1
 /**
  * proc:resolve — merges a shared procedure with its region/entity overrides,
  * per design v1.0 §6.3's references:/overrides: model (safety_os
@@ -8,7 +8,7 @@
  *
  * Every merged step carries `_source` (`shared` | `region` | `entity`) so a
  * caller (CLI output, and eventually the UI's Procedure Viewer per
- * docs/ui-spec.md §4) can show provenance per step, not just the merge
+ * docs/architecture/ui-spec.md §4) can show provenance per step, not just the merge
  * result.
  *
  * v1.1.0 (design of record 2026-08-22, Decision 8 / PR-3): also parses and

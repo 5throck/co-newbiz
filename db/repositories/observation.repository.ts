@@ -1,7 +1,7 @@
 // @version 1.0.0
 /**
  * ensure_fresh() — cache-first, revision-preserving observation ingest.
- * FR-DATA-05 (docs/srs.md §2), design v1.0 §4-1, ADR-0004.
+ * FR-DATA-05 (docs/architecture/srs.md §2), design v1.0 §4-1, ADR-0004.
  *
  * Contract:
  *   1. If a cached observation exists and is within its validity window,

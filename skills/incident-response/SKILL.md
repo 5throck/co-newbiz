@@ -2,7 +2,7 @@
 name: incident-response
 scope: co-newbiz
 description: >
-  Runs incident response per `docs/security-baseline.md` §5: `sre`
+  Runs incident response per `docs/security/security-baseline.md` §5: `sre`
   triages and classifies severity; an incident touching an
   `mnpi_flag=true` project pulls `data_access_log`/`insider_list` into the
   incident record, not as an afterthought; post-incident analysis is

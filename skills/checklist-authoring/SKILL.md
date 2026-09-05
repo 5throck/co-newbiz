@@ -63,7 +63,7 @@ item `bf-01`) — distinct from a mandatory item that *can* be waived through
 4. **Validate**: `bun procedures/_validate.ts` (or the checklist-specific
    validator if separate) confirms schema completeness
 5. **Route for approval** matching the item's layer per
-   `docs/governance-operations.md` §2's approval-authority table — a new
+   `docs/governance/governance-operations.md` §2's approval-authority table — a new
    mandatory item is itself effectively a procedure amendment and should go
    through `policy-change-impact-analysis` if it affects in-flight projects
 

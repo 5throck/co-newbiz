@@ -6,7 +6,7 @@ description: >
   row cross-checked against continued need, stale memberships revoked (not
   left to expire passively), `wall_group` assignments reviewed for
   continued relevance, admin-role holder count reviewed quarterly and kept
-  minimal by design (`docs/security-baseline.md` §4).
+  minimal by design (`docs/security/security-baseline.md` §4).
 
   Use when: "access permission review", "stale membership revocation",
   "wall_group relevance check", "admin role count review".
