@@ -1,0 +1,39 @@
+{
+  "pages": [
+    {
+      "path": "index.html",
+      "title": "co-newbiz 문서 허브",
+      "lang": "ko"
+    },
+    {
+      "path": "procedures/index.html",
+      "title": "업무절차서",
+      "lang": "ko"
+    },
+    {
+      "path": "procedures/greenfield-dd.html",
+      "title": "그린필드 실사",
+      "lang": "ko"
+    },
+    {
+      "path": "procedures/brownfield-dd.html",
+      "title": "브라운필드 실사",
+      "lang": "ko"
+    },
+    {
+      "path": "procedures/deal-structuring.html",
+      "title": "투자구조 설계",
+      "lang": "ko"
+    },
+    {
+      "path": "procedures/entity-ic-review.html",
+      "title": "Entity IC 심의",
+      "lang": "ko"
+    },
+    {
+      "path": "procedures/jv-lifecycle-governance.html",
+      "title": "JV 라이프사이클 거버넌스",
+      "lang": "ko"
+    }
+  ]
+}
