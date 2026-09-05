@@ -82,6 +82,14 @@
       transition: border-color .2s;
     }
     .section-glyph { display: block; margin-bottom: 12px; }
+    .toc-box {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg2); padding: 12px 16px; margin: 0 0 20px; font-size: 0.84em;
+    }
+    .toc-box ul { list-style: none; margin: 6px 0 0; padding: 0; }
+    .toc-box li { margin: 2px 0; }
+    .toc-box a { color: var(--text-muted); text-decoration: none; }
+    .toc-box a:hover { color: var(--accent); }
     @media print {
       .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
       .main-content, footer { margin-left: 0; }
@@ -110,25 +118,21 @@
           <ul style="margin:0 0 12px;">
           <li><a href="../index_es.html">Inicio</a></li>
           </ul>
-          <p class="nav-section">Rules &amp; Procedures</p>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Policies (próximamente)</span></li></ul>
           <ul style="margin:0 0 12px;">
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Policies (próximamente)</span></li>
           <li><a href="../procedures/index_es.html">Procedures</a></li>
           <li style="padding-left:14px;"><a href="../procedures/greenfield-dd_es.html" style="font-size:0.85em;">Greenfield DD</a></li>
           <li style="padding-left:14px;"><a href="../procedures/brownfield-dd_es.html" class="active" style="font-size:0.85em;">Brownfield DD</a></li>
           <li style="padding-left:14px;"><a href="../procedures/deal-structuring_es.html" style="font-size:0.85em;">Deal Structuring</a></li>
           <li style="padding-left:14px;"><a href="../procedures/entity-ic-review_es.html" style="font-size:0.85em;">Entity IC Review</a></li>
           <li style="padding-left:14px;"><a href="../procedures/jv-lifecycle-governance_es.html" style="font-size:0.85em;">JV Lifecycle Governance</a></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Checklists (próximamente)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Due Diligence (próximamente)</span></li>
           </ul>
-          <p class="nav-section">Reference &amp; Guides</p>
-          <ul style="margin:0 0 12px;">
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Manuals (próximamente)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Reference (próximamente)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Templates (próximamente)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Design (próximamente)</span></li>
-          </ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Checklists (próximamente)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Manuals (próximamente)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Reference (próximamente)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Templates (próximamente)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Design (próximamente)</span></li></ul>
+          <ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Due Diligence (próximamente)</span></li></ul>
     </nav>
   </aside>
 
@@ -140,6 +144,7 @@
       <h1>Brownfield DD</h1>
 <div class="doc-meta-block"><span class="chip">게이트: DD</span><span class="chip">단계: 15</span><span class="chip">버전: 1.6.0</span><span class="chip">원본: procedures/_shared/brownfield-dd/schema.yaml@7240e0a19a29</span><span class="chip">본문은 원본 언어 유지</span></div>
 <div class="authority-note">Esta página es una <strong>instantánea con versión fija</strong> del documento original del repositorio. En caso de conflicto, <strong>prevalece el original</strong>. El cuerpo del texto se mantiene en el idioma del documento fuente.</div>
+
 
       <p></p>
       <div class="mermaid">flowchart TD

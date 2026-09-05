@@ -36,22 +36,19 @@ const CHECK = args.includes("--check");
 // ── UI 크롬 이중 사전 (본문은 원본 언어 그대로 — 크롬만 이중화) ─────────────
 type Lang = "" | "en" | "ja" | "es"; // "" = 기본(한국어 크롬). en/ja/es는 크롬만 번역, 본문은 원본 언어.
 const EN: Record<string, string> = {
-  brand: "Knowledge Hub", home: "Home", searchPlaceholder: "Search documents...", openDoc: "Open document",
-  groupRules: "Rules & Procedures", groupRef: "Reference & Guides", pendingSuffix: "upcoming",
+  brand: "Knowledge Hub", home: "Home", searchPlaceholder: "Search documents...", openDoc: "Open document", groupRef: "Reference & Guides", pendingSuffix: "upcoming",
   pilotLabel: "pilot", all: "all", version: "version", source: "source",
   baseline: "baseline", snapshotDate: "snapshot date", bodyInSourceLang: "body in source language",
   authority: 'This page is a <strong>version-pinned snapshot</strong> of the repository original (for onboarding and distribution). In any conflict, <strong>the repository original prevails</strong> — check the web app\'s documents screen or the repository for the latest version. Body text is kept in the source document\'s language.',
 };
 const JA: Record<string, string> = {
-  brand: "ドキュメントハブ", home: "ホーム", searchPlaceholder: "ドキュメント検索...", openDoc: "文書を開く",
-  groupRules: "規約・手続き", groupRef: "参照・ガイド", pendingSuffix: "拡張予定",
+  brand: "ドキュメントハブ", home: "ホーム", searchPlaceholder: "ドキュメント検索...", openDoc: "文書を開く", groupRef: "参照・ガイド", pendingSuffix: "拡張予定",
   pilotLabel: "パイロット", all: "全", version: "バージョン", source: "原文",
   baseline: "基準", snapshotDate: "スナップショット日", bodyInSourceLang: "本文は原文の言語を維持",
   authority: 'このページはリポジトリ原文の<strong>バージョン固定スナップショット</strong>です。矛盾する場合は<strong>リポジトリの原文が優先</strong>されます。本文は原文の言語で維持されます。',
 };
 const ES: Record<string, string> = {
-  brand: "Portal de Documentos", home: "Inicio", searchPlaceholder: "Buscar documentos...", openDoc: "Abrir documento",
-  groupRules: "Normas y Procedimientos", groupRef: "Referencia y Guías", pendingSuffix: "próximamente",
+  brand: "Portal de Documentos", home: "Inicio", searchPlaceholder: "Buscar documentos...", openDoc: "Abrir documento", groupRef: "Referencia y Guías", pendingSuffix: "próximamente",
   pilotLabel: "piloto", all: "total", version: "versión", source: "fuente",
   baseline: "base", snapshotDate: "fecha del snapshot", bodyInSourceLang: "cuerpo en el idioma original",
   authority: 'Esta página es una <strong>instantánea con versión fija</strong> del documento original del repositorio. En caso de conflicto, <strong>prevalece el original</strong>. El cuerpo del texto se mantiene en el idioma del documento fuente.',
@@ -61,8 +58,6 @@ const UI_STRINGS: Record<string, Record<Lang, string>> = {
   home: { "": "홈", en: "Home" },
   searchPlaceholder: { "": "문서 검색...", en: "Search documents..." },
   openDoc: { "": "문서 열기", en: "Open document" },
-  groupRules: { "": "규정·절차", en: "Rules & Procedures" },
-  groupRef: { "": "참조·가이드", en: "Reference & Guides" },
   pendingSuffix: { "": "확장 예정", en: "upcoming" },
   pilotLabel: { "": "파일럿", en: "pilot" },
   all: { "": "전체", en: "all" },
@@ -197,11 +192,22 @@ const SECTIONS: SectionDef[] = [
   },
 ];
 
-// 내비 그룹 — 웹앱 메뉴(ADR-0105)의 섹션 라벨 패턴 준용
-const NAV_GROUPS: Array<{ labelKo: string; labelEn: string; sections: string[] }> = [
-  { labelKo: "규정·절차", labelEn: "Rules & Procedures", sections: ["policies", "procedures", "checklists", "dd"] },
-  { labelKo: "참조·가이드", labelEn: "Reference & Guides", sections: ["manuals", "reference", "templates", "design"] },
-];
+// 정렬: 카테고리 내 문서 순서. 절차서는 S-flow(레지스트리 순서 = 프로세스 흐름)
+// 유지가 탐색의 핵심이라 예외(위원회 심의 2026-09-05 — 가나다 정렬 시 Pre-FS가
+// 스크리닝보다 앞에 오는 등 흐름 붕괴), 나머지 카테고리는 크롬 언어 제목 기준
+// 가나다/알파벳순. 라벨 우선순위 신호로 절차서에 흐름 번호 프리픽스를 붙인다.
+const KO_COLLATOR = new Intl.Collator("ko", { sensitivity: "base" });
+const EN_COLLATOR = new Intl.Collator("en", { sensitivity: "base" });
+function orderedDocs(sec: SectionDef, lang: Lang): DocDef[] {
+  if (sec.slug === "procedures") return sec.docs;
+  const key = (d: DocDef): string => (lang === "" ? d.titleKo : d.titleEn);
+  const collator = lang === "" ? KO_COLLATOR : EN_COLLATOR;
+  return [...sec.docs].sort((a, b) => key(a).localeCompare(key(b), lang === "" ? "ko" : "en", { sensitivity: "base" }));
+}
+function docLabel(sec: SectionDef, doc: DocDef, lang: Lang): string {
+  // 절차서는 레지스트리 순서 = S-flow 순서(가나다 대신 흐름 유지, 2026-09-05 회의 합의)
+  return lang === "" ? doc.titleKo : doc.titleEn;
+}
 
 // 파일럿 (Phase 0 수렴 게이트): 절차서 5건만. --all 시 전체.
 const PILOT = new Set(["deal-structuring", "brownfield-dd", "entity-ic-review", "greenfield-dd", "jv-lifecycle-governance"]);
@@ -360,6 +366,23 @@ function docBlurb(doc: DocDef): string {
   }
 }
 
+// handbook Chapter 구조 차용 — 본문 h2 목차(TOC) 박스 생성.
+// 퀴즈/예제/CourseOverview 등 나머지 handbook 타입은 non-goal (2026-09-05 회의).
+function buildToc(html: string): { html: string; toc: string } {
+  let n = 0;
+  const items: string[] = [];
+  const withIds = html.replace(/<h2([^>]*)>([\s\S]*?)<\/h2>/g, (_m, attrs: string, text: string) => {
+    const existing = attrs.match(/id="([^"]+)"/);
+    const id = existing ? existing[1] : `sec-${++n}`;
+    items.push(`<li><a href="#${id}">${text.replace(/<[^>]+>/g, "")}</a></li>`);
+    return `<h2 id="${id}">${text}</h2>`;
+  });
+  const toc = items.length >= 2
+    ? `<div class="toc-box"><p class="nav-section">목차</p><ul>${items.join("")}</ul></div>`
+    : "";
+  return { html: withIds, toc };
+}
+
 // ── 셸 조립 (template.html + UI 크롬 lang) ─────────────────────────────────
 function titleFor(lang: Lang, doc: DocDef): string {
   return docTitleOf(doc, lang);
@@ -384,21 +407,19 @@ function sidebarNav(activePath: string | null, generated: Set<string>, prefix: s
     `<li><a href="${rel("index.html")}"${activePath === null ? ' class="active"' : ""}>${esc(t("home", lang))}</a></li>`,
     `</ul>`,
   ];
-  for (const group of NAV_GROUPS) {
-    out.push(`<p class="nav-section">${esc(groupLabelOf(group, lang))}</p>`);
+  for (const sec of SECTIONS) {
+    const secTitle = secTitleOf(sec, lang);
+    const all = orderedDocs(sec, lang);
+    const docs = all.filter((d) => generated.has(`${sec.slug}/${d.slug}`));
+    if (docs.length === 0) {
+      out.push(`<ul style="margin:0 0 12px;"><li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">${esc(secTitle)} (${esc(t("pendingSuffix", lang))})</span></li></ul>`);
+      continue;
+    }
     out.push(`<ul style="margin:0 0 12px;">`);
-    for (const slug of group.sections) {
-      const sec = SECTIONS.find((x) => x.slug === slug)!;
-      const docs = sec.docs.filter((d) => generated.has(`${sec.slug}/${d.slug}`));
-      if (docs.length === 0) {
-        out.push(`<li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">${esc(secTitleOf(sec, lang))} (${esc(t("pendingSuffix", lang))})</span></li>`);
-        continue;
-      }
-      out.push(`<li><a href="${rel(`${sec.slug}/index.html`)}"${activePath === `${sec.slug}/index.html` ? ' class="active"' : ""}>${esc(secTitleOf(sec, lang))}</a></li>`);
-      for (const d of docs) {
-        const active = activePath === `${sec.slug}/${d.slug}.html` ? ' class="active"' : "";
-        out.push(`<li style="padding-left:14px;"><a href="${rel(`${sec.slug}/${d.slug}.html`)}"${active} style="font-size:0.85em;">${esc(docTitleOf(d, lang))}</a></li>`);
-      }
+    out.push(`<li><a href="${rel(`${sec.slug}/index.html`)}"${activePath === `${sec.slug}/index.html` ? ' class="active"' : ""}>${esc(secTitle)}</a></li>`);
+    for (const d of docs) {
+      const active = activePath === `${sec.slug}/${d.slug}.html` ? ' class="active"' : "";
+      out.push(`<li style="padding-left:14px;"><a href="${rel(`${sec.slug}/${d.slug}.html`)}"${active} style="font-size:0.85em;">${esc(docLabel(sec, d, lang))}</a></li>`);
     }
     out.push(`</ul>`);
   }
@@ -516,7 +537,8 @@ for (const { sec, doc } of targets) {
           <div>${esc(t("home", lang))}</div>
         </a>
       </nav>`;
-    const content = `<h1>${esc(title)}</h1>\n${metaBlock}\n<div class="authority-note">${t("authority", lang)}</div>\n${rendered.html}${chapterNav}`;
+    const tocApplied = buildToc(rendered.html);
+    const content = `<h1>${esc(title)}</h1>\n${metaBlock}\n<div class="authority-note">${t("authority", lang)}</div>\n${tocApplied.toc}\n${tocApplied.html}${chapterNav}`;
     pages.push({
       path: join(DOCS, sec.slug, variant(`${doc.slug}.html`, lang)),
       html: renderPage(
