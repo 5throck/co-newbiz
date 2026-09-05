@@ -626,7 +626,7 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
           </h3>
           <div className="summary-cards">
             <div className="summary-card glass">
-              <span className="summary-value mono-num">${matrix.anchor.total.toFixed(2)}B</span>
+              <span className="summary-value mono-num">${Math.round(matrix.anchor.total).toLocaleString()}B</span>
               <span className="text-label">기준 시장규모 (2026)</span>
             </div>
             <div className="summary-card glass">
@@ -634,7 +634,7 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
               <span className="text-label">성장률 (연평균, 2026→2030)</span>
             </div>
             <div className="summary-card glass">
-              <span className="summary-value mono-num">${proj2030Total.toFixed(2)}B</span>
+              <span className="summary-value mono-num">${Math.round(proj2030Total).toLocaleString()}B</span>
               <span className="text-label">2030 전망 (기본 시나리오)</span>
             </div>
             <div className="summary-card glass">
@@ -1340,7 +1340,7 @@ function AnchorChart({ matrix }: { matrix: SizingMatrix }) {
         barMaxWidth: 24,
         markLine: {
           symbol: "none",
-          data: [{ xAxis: matrix.anchor.total, label: { formatter: `앵커 $${matrix.anchor.total.toFixed(2)}B`, color: ct.muted }, lineStyle: { color: ct.color[3], type: "dashed" as const, width: 2 } }],
+          data: [{ xAxis: matrix.anchor.total, label: { formatter: `앵커 $${Math.round(matrix.anchor.total).toLocaleString()}B`, color: ct.muted }, lineStyle: { color: ct.color[3], type: "dashed" as const, width: 2 } }],
         },
       },
     ],
@@ -1418,7 +1418,7 @@ function RegionTable({ matrix }: { matrix: SizingMatrix }) {
                 {segs.map((seg) => (
                   <td key={seg.code} className="tabular-nums">{Math.round(((g[seg.code] ?? 0) / g.total) * 1000) / 10}%</td>
                 ))}
-                <td className="tabular-nums font-semibold">{g.total.toFixed(2)} (앵커 ${matrix.anchor.total.toFixed(2)})</td>
+                <td className="tabular-nums font-semibold">{g.total.toFixed(2)} (앵커 ${Math.round(matrix.anchor.total).toLocaleString()})</td>
               </>
             );
           })()}

@@ -1,0 +1,43 @@
+governance_doc_id: chk-financial-dd-checklist
+layer: checklist
+title: "Financial Due Diligence Checklist"
+scope: shared
+enforceability: mixed
+owner_agent: financial-analyst
+version: "1.0.0"
+effective_from: "2026-09-05"
+gate: DD
+
+items:
+  - id: fdd-01
+    text: "Quality of earnings assessed — revenue recognition policy reviewed, one-time/non-recurring items identified and normalized"
+    mandatory: true
+    waiver_eligible: true
+  - id: fdd-02
+    text: "Working capital analysis completed — normalized NWC, seasonal patterns, and minimum cash requirements quantified"
+    mandatory: true
+    waiver_eligible: true
+  - id: fdd-03
+    text: "Debt schedule confirmed — all borrowings, lease liabilities, contingent liabilities, and off-balance-sheet items listed with rates and maturities"
+    mandatory: true
+    waiver_eligible: true
+  - id: fdd-04
+    text: "Tax position reviewed — effective tax rate vs. statutory, open audits, NOL carryforwards, transfer-pricing exposure"
+    mandatory: true
+    waiver_eligible: true
+  - id: fdd-05
+    text: "Cash flow quality verified — operating cash flow vs. EBITDA reconciliation, capex split maintenance vs. growth, DSO/DPO trends"
+    mandatory: true
+    waiver_eligible: true
+  - id: fdd-06
+    text: "Related-party transactions identified and evaluated — pricing fairness, necessity, and post-closing treatment determined"
+    mandatory: true
+    waiver_eligible: true
+  - id: fdd-07
+    text: "Management accounts vs. audited statements bridged — material variances explained and adjustments validated"
+    mandatory: true
+    waiver_eligible: true
+  - id: fdd-08
+    text: "Financial projections (budget/plan) assessed — assumptions vs. historical performance, market benchmarks, and sensitivity analysis performed"
+    mandatory: true
+    waiver_eligible: true

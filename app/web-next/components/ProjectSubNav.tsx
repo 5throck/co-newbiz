@@ -3,6 +3,8 @@
 // standard screen is never an orphan (menu 등록 외 상세 화면 연동 규약).
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { api } from "../lib/api.ts";
 
 const SUB_PAGES = [
   { seg: "", label: "개요" },
@@ -10,12 +12,18 @@ const SUB_PAGES = [
   { seg: "/dd", label: "실사·검증" },
   { seg: "/ic-review", label: "IC 심의" },
   { seg: "/portfolio", label: "사후관리" },
-  { seg: "/charter", label: "차터" },
+  { seg: "/charter", label: "추진계획" },
   { seg: "/process", label: "프로세스" },
 ] as const;
 
 export function ProjectSubNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
+  const [track, setTrack] = useState<string | null>(null);
+  useEffect(() => {
+    api.get<{ process: { track: string | null } | null }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
+      .then((r) => setTrack(r.data.process?.track ?? null))
+      .catch(() => {});
+  }, [projectId]);
   const base = `/projects/${projectId}`;
   return (
     <nav aria-label="프로젝트 화면" className="flex flex-wrap gap-1 mb-3 text-[0.82rem]">

@@ -7,8 +7,8 @@ import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 
-// 프로젝트 차터 (ADR-0104) — 최신 차터 버전 열람 + KPI 사전 확정(pre-commit)표
-// + 버전 이력 + 수정안(amendment) 제출. 차터 수정은 append-only: 기존 버전을
+// 프로젝트 추진계획 (ADR-0104) — 최신 추진계획 버전 열람 + KPI 사전 확정(pre-commit)표
+// + 버전 이력 + 수정안(amendment) 제출. 추진계획 수정은 append-only: 기존 버전을
 // 덮어쓰지 않고 새 버전이 추가되며, note(변경 사유)가 필수다 — 스코프 크리프를
 // 추적하기 위해서다 (C3). 수정 기록은 analyst+ 인간 행위다.
 
@@ -97,7 +97,7 @@ function CharterViewInner() {
   return (
     <main>
       <ProjectSubNav projectId={projectId} />
-      <StageFrame stageId="S8" heading="프로젝트 차터 — 목적·범위·KPI 사전 확정">
+      <StageFrame stageId="S8" heading="프로젝트 추진계획 — 목적·범위·KPI 사전 확정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
           차터는 프로젝트의 목적·시장 범위·밸류체인 노드·진입 범위·KPI를 게이트 심의 전에
           문서로 고정합니다. 수정은 append-only 버전으로만 이루어지며 변경 사유(note)가 필수입니다 (ADR-0104 C3).
@@ -118,9 +118,9 @@ function CharterViewInner() {
         {!data && !error && <p className="text-[0.82rem]">불러오는 중...</p>}
 
         {latest && (
-          <section className="market-section sizing-step" aria-label={`최신 차터 v${latest.version}`}>
+          <section className="market-section sizing-step" aria-label={`최신 추진계획 v${latest.version}`}>
             <h3 className="sizing-step-title text-[0.9rem]">
-              최신 차터 v{latest.version}
+              최신 추진계획 v{latest.version}
               <span className="ml-2 text-[0.72rem] text-[color:var(--muted-fg)]">
                 {latest.source} · {latest.built_by} · {latest.built_at.slice(0, 10)}
               </span>

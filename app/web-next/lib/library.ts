@@ -214,4 +214,8 @@ export const DD_WORKSPACE_CHECKLISTS: Record<string, string> = {
   commercial: "chk-commercial-dd-checklist",
   technical: "chk-technical-dd-checklist",
   legal: "chk-legal-dd-checklist",
+  financial: "chk-financial-dd-checklist",
+  hr: "chk-hr-dd-checklist",
+  market: "chk-market-dd-checklist",
+  financing: "chk-financing-plan-checklist",
 };

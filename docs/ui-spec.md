@@ -114,6 +114,13 @@ As-built deltas not in the tree above:
 - `docs/rag-framework.md` — the grading logic §3 renders
 - `docs/mcp-integration.md` — the parallel AI-client surface (not this UI, but the same underlying API)
 
+## As-built 2026-09-05 — 금액 표기 통일 + 용어 개선
+
+- 모든 금액 표기는 정수 + 콤마 (소수점 제외) — `fmt()` 헬퍼가
+  `Math.round(n).toLocaleString("ko-KR")`을 반환.
+- "프로젝트 차터" → "프로젝트 추진계획"으로 라벨 변경 (사용자 이해도 개선).
+- 사후관리(S11) 진입 조건 확인 완료: entity_ic+group_ic GO 및 설립 5단계 완료 필요.
+
 ## As-built 2026-09-05 — 추진 전략 하위 메뉴 + 위원회 레지스트리 경로 수정
 
 - 탐색 섹션의 S4~S7 구간을 "추진 전략" 하위 메뉴로 재편: 진출방식 결정(/route-decision) ·

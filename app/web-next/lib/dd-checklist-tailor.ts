@@ -30,7 +30,11 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef } from "./agent-orchestrator.ts";
 import { DD_WORKSPACE_CHECKLISTS, getChecklistItems, type ChecklistItemDef } from "./library.ts";
 
-export const DD_DOMAINS = ["commercial", "technical", "legal"] as const;
+// ADR-0104 — DD workspace expanded to 7 domains (financial/hr/market/financing
+// added alongside commercial/technical/legal).
+export const DD_DOMAINS = [
+  "commercial", "technical", "legal",
+] as const;
 export type DdDomain = (typeof DD_DOMAINS)[number];
 
 /** ADR-0099 §2 — per-domain S9 activity owner. */
