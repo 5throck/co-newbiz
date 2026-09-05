@@ -19,7 +19,7 @@ metadata:
     - facilitate meeting
 ---
 
-This is a shortcut alias for the `meeting-facilitation` skill. The actual implementation resides in `.claude/commands/meeting.md` and `.gemini/commands/meeting.md`.
+This is a shortcut alias for the `meeting-facilitation` skill. The full documentation resides in `.claude/commands/meeting.md` and `.gemini/commands/meeting.md`; the deliberation engine itself runs via `bun scripts/co-newbiz/meeting.ts`.
 
 ## When to Use
 
