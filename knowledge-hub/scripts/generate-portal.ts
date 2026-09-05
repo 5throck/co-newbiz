@@ -18,7 +18,7 @@
 //   bun scripts/generate-portal.ts --all      # 전체 문서 생성
 //   bun scripts/generate-portal.ts --check    # 해시 검증만 (생성 없이)
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join, basename, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import { load as yamlLoad } from "js-yaml";
@@ -36,19 +36,23 @@ const CHECK = args.includes("--check");
 // ── UI 크롬 이중 사전 (본문은 원본 언어 그대로 — 크롬만 이중화) ─────────────
 type Lang = "" | "en" | "ja" | "es"; // "" = 기본(한국어 크롬). en/ja/es는 크롬만 번역, 본문은 원본 언어.
 const EN: Record<string, string> = {
-  brand: "Knowledge Hub", home: "Home", searchPlaceholder: "Search documents...", openDoc: "Open document", groupRef: "Reference & Guides", pendingSuffix: "upcoming",
+  brand: "Knowledge Hub", home: "Home", searchPlaceholder: "Search documents...", openDoc: "Open document", pendingSuffix: "upcoming",
   pilotLabel: "pilot", all: "all", version: "version", source: "source",
   baseline: "baseline", snapshotDate: "snapshot date", bodyInSourceLang: "body in source language",
   authority: 'This page is a <strong>version-pinned snapshot</strong> of the repository original (for onboarding and distribution). In any conflict, <strong>the repository original prevails</strong> — check the web app\'s documents screen or the repository for the latest version. Body text is kept in the source document\'s language.',
 };
 const JA: Record<string, string> = {
-  brand: "ドキュメントハブ", home: "ホーム", searchPlaceholder: "ドキュメント検索...", openDoc: "文書を開く", groupRef: "参照・ガイド", pendingSuffix: "拡張予定",
+  chapters: "章", chapterNoun: "章", chapterUnit: "", readChapter: "章を読む",
+  prevChapter: "前の章", nextChapter: "次の章",
+  brand: "ドキュメントハブ", home: "ホーム", searchPlaceholder: "ドキュメント検索...", openDoc: "文書を開く", prevChapter: "前の章", nextChapter: "次の章", readChapter: "章を読む", chapters: "章", chapterNoun: "章", chapterUnit: "", pendingSuffix: "拡張予定",
   pilotLabel: "パイロット", all: "全", version: "バージョン", source: "原文",
   baseline: "基準", snapshotDate: "スナップショット日", bodyInSourceLang: "本文は原文の言語を維持",
   authority: 'このページはリポジトリ原文の<strong>バージョン固定スナップショット</strong>です。矛盾する場合は<strong>リポジトリの原文が優先</strong>されます。本文は原文の言語で維持されます。',
 };
 const ES: Record<string, string> = {
-  brand: "Portal de Documentos", home: "Inicio", searchPlaceholder: "Buscar documentos...", openDoc: "Abrir documento", groupRef: "Referencia y Guías", pendingSuffix: "próximamente",
+  chapters: "Capítulos", chapterNoun: "Cap.", chapterUnit: "", readChapter: "Leer capítulo",
+  prevChapter: "Capítulo anterior", nextChapter: "Capítulo siguiente",
+  brand: "Portal de Documentos", home: "Inicio", searchPlaceholder: "Buscar documentos...", openDoc: "Abrir documento", prevChapter: "Capítulo anterior", nextChapter: "Capítulo siguiente", readChapter: "Leer capítulo", chapters: "Capítulos", chapterNoun: "Cap.", chapterUnit: "", pendingSuffix: "próximamente",
   pilotLabel: "piloto", all: "total", version: "versión", source: "fuente",
   baseline: "base", snapshotDate: "fecha del snapshot", bodyInSourceLang: "cuerpo en el idioma original",
   authority: 'Esta página es una <strong>instantánea con versión fija</strong> del documento original del repositorio. En caso de conflicto, <strong>prevalece el original</strong>. El cuerpo del texto se mantiene en el idioma del documento fuente.',
@@ -73,6 +77,12 @@ const UI_STRINGS: Record<string, Record<Lang, string>> = {
     "": "본문은 원본 언어 유지",
     en: "body in source language",
   },
+  chapters: { "": "장", en: "Chapters" },
+  chapterNoun: { "": "장", en: "Ch." },
+  chapterUnit: { "": "개", en: "" },
+  readChapter: { "": "장 읽기", en: "Read chapter" },
+  prevChapter: { "": "이전 장", en: "Prev chapter" },
+  nextChapter: { "": "다음 장", en: "Next chapter" },
 };
 const CHROME: Record<Lang, Record<string, string>> = { "": {}, en: EN, ja: JA, es: ES };
 const t = (key: string, lang: Lang): string =>
@@ -307,6 +317,26 @@ function esc(s: string): string {
 }
 
 interface Rendered { html: string; hasMermaid: boolean; title: string }
+interface Chapter { title: string; html: string; hasMermaid: boolean }
+
+// 문서 → 장 분할 (2026-09-05 사용자 구조 확정):
+//  md/content = 도입부(개요) + h2 섹션 각각 | 절차서·체크리스트 = 개요 + h2 구간(단계·항목·산출물)
+function splitIntoChapters(rendered: Rendered): Chapter[] {
+  const parts = rendered.html.split(/(?=<h2)/).map((p) => p.trim()).filter((p) => p.length > 0);
+  if (parts.length <= 1) return [{ title: "본문", html: rendered.html, hasMermaid: rendered.hasMermaid }];
+  const chapters: Chapter[] = [];
+  parts.forEach((part, i) => {
+    const m = part.match(/^<h2[^>]*>([\s\S]*?)<\/h2>/);
+    if (m) {
+      chapters.push({ title: m[1].replace(/<[^>]+>/g, "").trim(), html: part, hasMermaid: part.includes('class="mermaid"') });
+    } else {
+      // 도입부 — h1 중복 제거 후 내용이 있으면 개요 장으로
+      const noH1 = part.replace(/^<h1[^>]*>[\s\S]*?<\/h1>/, "").trim();
+      if (noH1) chapters.push({ title: "개요", html: noH1, hasMermaid: noH1.includes('class="mermaid"') });
+    }
+  });
+  return chapters;
+}
 function renderProcedure(doc: DocDef): Rendered {
   const parsed = yamlLoad(readSource(doc.source)) as {
     title?: string; gate?: string; steps?: Array<Record<string, unknown>>; outputs?: string[]; description?: string;
@@ -484,8 +514,8 @@ function sidebarNav(activePath: string | null, generated: Set<string>, prefix: s
     out.push(`<ul style="margin:0 0 12px;">`);
     out.push(`<li><a href="${rel(`${sec.slug}/index.html`)}"${activePath === `${sec.slug}/index.html` ? ' class="active"' : ""}>${esc(secTitle)}</a></li>`);
     for (const d of docs) {
-      const active = activePath === `${sec.slug}/${d.slug}.html` ? ' class="active"' : "";
-      out.push(`<li style="padding-left:14px;"><a href="${rel(`${sec.slug}/${d.slug}.html`)}"${active} style="font-size:0.85em;">${esc(docLabel(sec, d, lang))}</a></li>`);
+      const active = activePath?.startsWith(`${sec.slug}/${d.slug}`) ? ' class="active"' : "";
+      out.push(`<li style="padding-left:14px;"><a href="${rel(`${sec.slug}/${d.slug}/index.html`)}"${active} style="font-size:0.85em;">${esc(docLabel(sec, d, lang))}</a></li>`);
     }
     out.push(`</ul>`);
   }
@@ -567,7 +597,7 @@ for (const sec of SECTIONS) {
 const generated = new Set<string>();
 for (const { sec, doc } of targets) generated.add(`${sec.slug}/${doc.slug}`);
 
-// 2패스: 렌더 + ko/en 크롬 변종 생성
+// 2패스: 렌더 — 문서 홈(장 카드 목록) + 장 페이지(이전/다음), ko/en/ja/es 크롬
 interface PageWrite { path: string; html: string }
 const pages: PageWrite[] = [];
 const hashes: Record<string, string> = {};
@@ -579,14 +609,17 @@ for (const { sec, doc } of targets) {
   const version = versionOf(doc.source, parsed);
   const hash = sourceHash(doc.source);
   hashes[doc.source] = hash;
-  const rendered = doc.kind === "procedure" ? renderProcedure(doc) : doc.kind === "checklist" ? renderChecklist(doc) : renderMarkdown(doc); // content도 md 경로
+  const rendered = doc.kind === "procedure" ? renderProcedure(doc) : doc.kind === "checklist" ? renderChecklist(doc) : renderMarkdown(doc);
+  const chapters = splitIntoChapters(rendered);
+
+  // 리서치(🌐 외부 참고)는 문서 수준 부착 — 장 카드 목록(문서 홈) 하단에 표기
   const researchFiles = RESEARCH[`${sec.slug}/${doc.slug}`] ?? [];
   const researchHtml = researchFiles.length
-    ? `<h2 id="external-reference">🌐 외부 참고</h2>\n      <div class="authority-note">${esc("아래는 외부 조사 기반 참고입니다. 원본 문서와 충돌하면 원본이 우위입니다.")}</div>\n` +
+    ? `<h2>🌐 ${esc("외부 참고")}</h2>\n      <div class="authority-note">${esc("아래는 외부 조사 기반 참고입니다. 원본 문서와 충돌하면 원본이 우위입니다.")}</div>\n` +
       researchFiles.map((rf) => marked.parse(readFileSync(join(import.meta.dirname, "..", rf), "utf-8")) as string).join("\n")
     : "";
 
-  // 표준 메타 칩 블록 — 기계 판독 가능한 사실만 (게이트·단계/항목 수·버전·원본)
+  // 표준 메타 칩 블록
   const chips: string[] = [];
   const p = parsed as { gate?: string; steps?: unknown[] } | null;
   if (p?.gate) chips.push(`게이트: ${esc(String(p.gate))}`);
@@ -595,30 +628,84 @@ for (const { sec, doc } of targets) {
   chips.push(`${t("version", "")}: ${esc(version)}`);
   chips.push(`${t("source", "")}: ${esc(doc.source)}@${hash}`);
   const metaBlock = `<div class="doc-meta-block">${chips.map((c) => `<span class="chip">${c}</span>`).join("")}</div>`;
-  const govMeta = `<div class="gov-meta">문서 식별자 <code>${esc(govId)}</code> · ${esc(t("version", ""))} <code>${esc(version)}</code> · ${esc(t("source", ""))} <code>${esc(doc.source)}</code>@<code>${hash}</code> · <a href="https://github.com/5throck/co-newbiz/blob/main/${esc(doc.source)}">${esc("원본 열기")}</a> — 이 스냅샷이 원본과 다르면 원본이 맞습니다.</div>`;
+  const govMeta = `<div class="gov-meta">문서 식별자 <code>${esc(govId)}</code> · ${esc(t("version", ""))} <code>${esc(version)}</code> · ${esc(t("source", ""))} <code>${esc(doc.source)}</code>@<code>${hash}</code> · <a href="https://github.com/5throck/co-newbiz/blob/main/${esc(doc.source.startsWith("content/") ? "knowledge-hub/" : "")}${esc(doc.source)}">${esc("원본 열기")}</a> — 이 스냅샷이 원본과 다르면 원본이 맞습니다.</div>`;
+
+  const docDir = join(DOCS, sec.slug, doc.slug);
 
   for (const lang of ["", "en", "ja", "es"] as Lang[]) {
-    const title = titleFor(lang, doc);
-    const chapterNav = `<nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
-        <a href="../${variant("index.html", lang)}" class="prev" style="text-decoration:none;color:var(--text);">
-          <div style="font-size:12px;color:var(--text-dim);">←</div>
-          <div>${esc(secTitleOf(sec, lang))}</div>
+    const docTitle = titleFor(lang, doc);
+    mkdirSync(docDir, { recursive: true });
+
+    // 장 페이지 (ch-01..ch-N) — 이전/다음 장 네비게이션
+    chapters.forEach((ch, ci) => {
+      const chSlug = `ch-${String(ci + 1).padStart(2, "0")}`;
+      const prevHref = ci === 0 ? variant("index.html", lang) : variant(`ch-${String(ci).padStart(2, "0")}.html`, lang);
+      const nextHref = ci + 1 < chapters.length ? variant(`ch-${String(ci + 2).padStart(2, "0")}.html`, lang) : null;
+      const prevTitle = ci === 0 ? t("chapters", lang) : chapters[ci - 1].title;
+      // 장 분리 후 하위 제목을 한 단계씩 승격 (h3→h2, h4→h3) — 장 제목이 h1이므로 위계 유지
+      const body = ch.html.replace(/^<h2[^>]*>[\s\S]*?<\/h2>/, "").replace(/<h4/g, "<h3").replace(/<\/h4>/g, "</h3>").replace(/<h3/g, "<h2").replace(/<\/h3>/g, "</h2>");
+      const content = `<h1>${esc(ch.title)}</h1>\n<div class="authority-note">${t("authority", lang)}</div>\n${body}`;
+      const nav = `<nav class="chapter-nav" style="display:flex;justify-content:space-between;gap:12px;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+        <a href="${prevHref}" class="prev" style="text-decoration:none;color:var(--text);${ci === 0 ? "visibility:hidden;" : ""}">
+          <div style="font-size:12px;color:var(--text-dim);">← ${esc(t("prevChapter", lang))}</div>
+          <div>${esc(ci === 0 ? docTitle : prevTitle)}</div>
         </a>
-        <a href="../${variant("index.html", lang)}" class="next" style="text-decoration:none;color:var(--text);text-align:right;">
-          <div style="font-size:12px;color:var(--text-dim);">→</div>
-          <div>${esc(t("home", lang))}</div>
-        </a>
+        ${nextHref
+          ? `<a href="${nextHref}" class="next" style="text-decoration:none;color:var(--text);text-align:right;">
+              <div style="font-size:12px;color:var(--text-dim);">${esc(t("nextChapter", lang))} →</div>
+              <div>${esc(chapters[ci + 1].title)}</div>
+            </a>`
+          : `<a href="${variant("index.html", lang)}" class="next" style="text-decoration:none;color:var(--text);text-align:right;">
+              <div style="font-size:12px;color:var(--text-dim);">→</div>
+              <div>${esc(docTitle)} ${esc(t("chapters", lang))}</div>
+            </a>`}
       </nav>`;
-    const tocApplied = buildToc(rendered.html);
-    const content = `<h1>${esc(title)}</h1>\n${metaBlock}\n<div class="authority-note">${t("authority", lang)}</div>\n${tocApplied.toc}\n${tocApplied.html}${chapterNav}`;
+      pages.push({
+        path: join(docDir, variant(`${chSlug}.html`, lang)),
+        html: renderPage(
+          { title: `${docTitle} — ${ch.title}`, activePath: `${sec.slug}/${doc.slug}`, breadcrumbs: breadcrumbsHtml(sec, docTitle, "../../", lang), content: content + nav, govMeta, hasMermaid: ch.hasMermaid, prefix: "../../" },
+          generated,
+          lang,
+        ),
+      });
+    });
+
+    // 문서 홈 — 장 카드 목록
+    const cards = chapters
+      .map((ch, ci) => {
+        // 카드 설명: 다이어그램 소스·표 내용 제외하고 서술문만 추출
+        const prose = ch.html
+          .replace(/<div class="mermaid">[\s\S]*?<\/div>/g, " ")
+          .replace(/<table[\s\S]*?<\/table>/g, " ")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        const blurb = prose.length > 110 ? prose.slice(0, 107) + "…" : prose || ch.title;
+        return `        <a class="card" href="${variant(`ch-${String(ci + 1).padStart(2, "0")}.html`, lang)}">\n          <span class="tag tag-ref">${esc(String(ci + 1))}${esc(t("chapterNoun", lang))}</span>\n          <h2>${esc(ch.title)}</h2>\n          <p>${esc(blurb)}\u2026</p>\n          <div class="go">${esc(t("readChapter", lang))} →</div>\n        </a>`;
+      })
+      .join("\n");
+    const content = `<h1>${esc(docTitle)}</h1>\n${metaBlock}\n<div class="authority-note">${t("authority", lang)}</div>\n<p class="section-label">${esc(t("chapters", lang))} ${chapters.length}${esc(t("chapterUnit", lang))}</p>\n      <div class="grid">\n${cards}\n      </div>\n${researchHtml}`;
     pages.push({
-      path: join(DOCS, sec.slug, variant(`${doc.slug}.html`, lang)),
+      path: join(docDir, variant("index.html", lang)),
       html: renderPage(
-        { title, activePath: `${sec.slug}/${doc.slug}.html`, breadcrumbs: breadcrumbsHtml(sec, title, "../", lang), content, govMeta, hasMermaid: rendered.hasMermaid, prefix: "../" },
+        { title: docTitle, activePath: `${sec.slug}/${doc.slug}`, breadcrumbs: breadcrumbsHtml(sec, docTitle, "../../", lang), content, govMeta, hasMermaid: false, prefix: "../../" },
         generated,
         lang,
       ),
     });
+  }
+}
+
+// 스테일 페이지 정리 — 이번 실행에서 만들어지지 않은 html 삭제 (문서 페이지가
+// sec/slug.html → sec/slug/ 디렉터리 구조로 이동했기 때문)
+for (const sec of SECTIONS) {
+  const dir = join(DOCS, sec.slug);
+  if (!existsSync(dir)) continue;
+  for (const f of readdirSync(dir)) {
+    if (f.endsWith(".html") && !f.startsWith("index")) {
+      const stale = join(dir, f);
+      if (!pages.some((pg) => pg.path === stale)) rmSync(stale);
+    }
   }
 }
 
@@ -630,7 +717,7 @@ for (const sec of SECTIONS) {
     const secTitle = secTitleOf(sec, lang);
     const blurb = lang === "en" ? sec.blurbEn : sec.blurbKo;
     const cards = docs
-      .map((d) => `        <a class="card" href="${variant(`${d.slug}.html`, lang)}">\n          <span class="tag tag-ref">${esc(secTitleOf(sec, lang))}</span>\n          <h2>${esc(docTitleOf(d, lang))}</h2>\n          <p>${esc(docBlurb(d))}</p>\n          <div class="go">${esc(t("openDoc", lang))} →</div>\n        </a>`)
+      .map((d) => `        <a class="card" href="${variant(`${d.slug}/index.html`, lang)}">\n          <span class="tag tag-ref">${esc(secTitleOf(sec, lang))}</span>\n          <h2>${esc(docTitleOf(d, lang))}</h2>\n          <p>${esc(docBlurb(d))}</p>\n          <div class="go">${esc(t("openDoc", lang))} →</div>\n        </a>`)
       .join("\n");
     const glyph = `<svg width="72" height="40" viewBox="0 0 72 40" aria-hidden="true" class="section-glyph"><rect x="2" y="6" width="44" height="6" rx="3" fill="var(--border)"/><rect x="2" y="18" width="60" height="6" rx="3" fill="var(--border)"/><rect x="2" y="30" width="34" height="6" rx="3" fill="var(--accent)"/></svg>`;
     const content = `<h1>${esc(secTitle)}</h1>\n      ${glyph}\n      <p>${esc(blurb)}</p>\n      <div class="grid">\n${cards}\n      </div>`;
@@ -649,7 +736,7 @@ for (const lang of ["", "en", "ja", "es"] as Lang[]) {
       const pending = sec.docs.length - docs.length;
       const secLabel = secTitleOf(sec, lang);
       const cards = docs
-        .map((d) => `        <a class="card" href="${sec.slug}/${variant(`${d.slug}.html`, lang)}">\n          <span class="tag tag-ref">${esc(secLabel)}</span>\n          <h2>${esc(docTitleOf(d, lang))}</h2>\n          <p>${esc(docBlurb(d))}</p>\n          <div class="go">${esc(t("openDoc", lang))} →</div>\n        </a>`)
+        .map((d) => `        <a class="card" href="${sec.slug}/${variant(`${d.slug}/index.html`, lang)}">\n          <span class="tag tag-ref">${esc(secLabel)}</span>\n          <h2>${esc(docTitleOf(d, lang))}</h2>\n          <p>${esc(docBlurb(d))}</p>\n          <div class="go">${esc(t("openDoc", lang))} →</div>\n        </a>`)
         .join("\n");
       const progress = ALL || pending === 0 ? "" : ` — ${esc(t("pilotLabel", lang))} ${docs.length} / ${esc(t("all", lang))} ${sec.docs.length}`;
       return `<p class="section-label">${esc(secLabel)}${progress}</p>\n      <div class="grid">\n${cards}\n      </div>`;
@@ -673,19 +760,14 @@ for (const pg of pages) {
   writeFileSync(pg.path, pg.html);
 }
 
-// 검색 매니페스트 (ko 기본 + en 변종)
+// 검색 매니페스트 — 생성된 모든 페이지 스캔 (문서 홈 + 장 페이지 전부)
 const manifest: Array<{ path: string; title: string; lang: string }> = [];
-for (const lang of ["ko", "en", "ja", "es"] as const) {
-  const L: Lang = lang === "ko" ? "" : (lang as Lang);
-  manifest.push({ path: `index${lang === "ko" ? "" : `_${lang}`}.html`, title: `co-newbiz ${t("brand", L)}`, lang });
-  for (const sec of SECTIONS) {
-    const docs = sec.docs.filter((d) => generated.has(`${sec.slug}/${d.slug}`));
-    if (docs.length === 0) continue;
-    manifest.push({ path: `${sec.slug}/index${lang === "ko" ? "" : `_${lang}`}.html`, title: secTitleOf(sec, lang), lang });
-    for (const d of docs) {
-      manifest.push({ path: `${sec.slug}/${d.slug}${lang === "ko" ? "" : `_${lang}`}.html`, title: docTitleOf(d, lang), lang });
-    }
-  }
+for (const pg of pages) {
+  const rel = pg.path.slice(DOCS.length + 1).replace(/\\/g, "/");
+  const m = rel.match(/_([a-z]{2})\.html$/);
+  const lang = m ? m[1] : "ko";
+  const titleMatch = pg.html.match(/<title>([\s\S]*?) \| co-newbiz/);
+  manifest.push({ path: rel, title: titleMatch ? titleMatch[1] : rel, lang });
 }
 writeFileSync(join(DOCS, "search-manifest.json"), JSON.stringify({ pages: manifest }, null, 2));
 writeFileSync(HASHES_FILE, JSON.stringify(hashes, null, 2));
