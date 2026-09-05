@@ -93,7 +93,10 @@
     /* 폭 대응: 표가 컨테이너보다 넓으면 가로 스크롤, 긴 토큰은 줄바꿈 */
     .table-scroll { overflow-x: auto; }
     .table-scroll table { min-width: 640px; }
-    .main-content article td, .main-content article th { word-break: break-word; vertical-align: top; }
+    .table-scroll th:nth-child(3), .table-scroll td:nth-child(3) { min-width: 7.5rem; }
+    .table-scroll th:nth-child(4), .table-scroll td:nth-child(4) { min-width: 9rem; }
+    .table-scroll th:nth-child(5), .table-scroll td:nth-child(5) { min-width: 11.5rem; }
+    .main-content article td, .main-content article th { word-break: normal; overflow-wrap: anywhere; vertical-align: top; }
     .main-content article td.desc { min-width: 280px; }
     /* mermaid 다이어그램을 컨테이너 폭에 맞춤 */
     .mermaid { max-width: 100%; overflow-x: auto; }
