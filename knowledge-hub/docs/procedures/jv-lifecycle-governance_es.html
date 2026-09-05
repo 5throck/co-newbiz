@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JV Lifecycle Governance | co-newbiz Portal de Documentos</title>
+  <meta name="description" content="co-newbiz knowledge hub — versioned snapshot portal for policies, procedures, checklists, and manuals">
+  <link rel="stylesheet" href="../assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="../assets/css/handbook-components.css">
+  <style>
+    /* 포털 레이아웃 — 색상은 전부 handbook-variables.css(azure 3-layer 다크모드:
+       :root → prefers-color-scheme → .dark) 토큰에서만 가져온다.
+       이 파일에 색 하드코딩 금지. */
+    body { margin: 0; }
+    .portal-header {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; gap: 16px;
+      height: 56px; padding: 0 20px;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      transition: background-color .2s, border-color .2s;
+    }
+    .portal-header .brand { font-weight: 700; color: var(--text); text-decoration: none; font-size: 0.95em; white-space: nowrap; }
+    .portal-header .search-input {
+      flex: 0 1 320px; padding: 6px 10px; font-size: 0.85em;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg); color: var(--text);
+    }
+    .portal-header .header-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .dark-mode-toggle {
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 4px 8px; cursor: pointer; color: var(--text); font-size: 0.9em;
+    }
+    .lang-switcher select {
+      padding: 4px 6px; font-size: 0.82em; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    }
+    .portal-sidebar {
+      position: fixed; top: 56px; bottom: 0; left: 0; width: var(--sidebar-width);
+      overflow-y: auto; padding: 16px 0 32px;
+      background: var(--bg2); border-right: 1px solid var(--border);
+      font-size: 0.86em;
+      transition: background-color .2s, border-color .2s;
+    }
+    .portal-sidebar nav ul { list-style: none; margin: 0 0 12px; padding: 0 12px; }
+    .portal-sidebar nav ul li { margin: 2px 0; }
+    .portal-sidebar nav ul li a { color: var(--text-muted); text-decoration: none; display: block; padding: 3px 6px; border-radius: var(--radius); }
+    .portal-sidebar nav ul li a:hover { color: var(--text); }
+    .portal-sidebar nav ul li a.active { color: var(--accent); background: var(--bg); font-weight: 600; }
+    .main-content {
+      margin-left: var(--sidebar-width); padding: 28px 40px 64px;
+      max-width: 980px;
+    }
+    .main-content article { max-width: 820px; }
+    .breadcrumbs { font-size: 0.78em; color: var(--text-dim); margin: 0 0 14px; }
+    .breadcrumbs a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumbs a:hover { color: var(--accent); }
+    .doc-meta-block {
+      display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px;
+      font-size: 0.78em;
+    }
+    .doc-meta-block .chip {
+      border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px;
+      color: var(--text-muted); background: var(--bg2);
+    }
+    .doc-meta-block .chip.mandatory { color: var(--text-inverse); background: var(--accent-dark, var(--accent)); border-color: transparent; }
+    .authority-note {
+      background: var(--bg-note); border-left: 3px solid var(--border);
+      padding: 10px 14px; margin: 0 0 18px; border-radius: 4px;
+      font-size: 0.82em; color: var(--text-muted);
+    }
+    .gov-meta {
+      margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 0.78em; color: var(--text-dim);
+    }
+    footer {
+      margin-left: var(--sidebar-width); padding: 24px 40px;
+      border-top: 1px solid var(--border); font-size: 0.8em; color: var(--text-muted); text-align: center;
+      transition: border-color .2s;
+    }
+    .section-glyph { display: block; margin-bottom: 12px; }
+    @media print {
+      .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
+      .main-content, footer { margin-left: 0; }
+    }
+    @media (max-width: 800px) {
+      .portal-sidebar { display: none; }
+      .main-content, footer { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="portal-header">
+    <a href="../index_es.html" class="brand">📚 co-newbiz Portal de Documentos</a>
+    <input type="search" class="search-input" id="site-search" placeholder="Buscar documentos..." aria-label="Search">
+    <div class="header-actions">
+      <button class="dark-mode-toggle" id="dark-mode-toggle" aria-label="Toggle dark mode">🌓</button>
+      <div id="lang-switcher" class="lang-switcher">
+        <select id="lang-select" aria-label="Language"></select>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar portal-sidebar" id="sidebar">
+    <nav>
+      <p class="nav-section">Portal de Documentos</p>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../index_es.html">Inicio</a></li>
+          </ul>
+          <p class="nav-section">Rules &amp; Procedures</p>
+          <ul style="margin:0 0 12px;">
+          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Policies (próximamente)</span></li>
+          <li><a href="../procedures/index_es.html">Procedures</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-dd_es.html" style="font-size:0.85em;">Greenfield DD</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/brownfield-dd_es.html" style="font-size:0.85em;">Brownfield DD</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/deal-structuring_es.html" style="font-size:0.85em;">Deal Structuring</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/entity-ic-review_es.html" style="font-size:0.85em;">Entity IC Review</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/jv-lifecycle-governance_es.html" class="active" style="font-size:0.85em;">JV Lifecycle Governance</a></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Checklists (próximamente)</span></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Due Diligence (próximamente)</span></li>
+          </ul>
+          <p class="nav-section">Reference &amp; Guides</p>
+          <ul style="margin:0 0 12px;">
+          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Manuals (próximamente)</span></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Reference (próximamente)</span></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Templates (próximamente)</span></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="pilot pending">Design (próximamente)</span></li>
+          </ul>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index_es.html">Inicio</a> &gt; <a href="../procedures/index_es.html">Procedures</a> &gt; JV Lifecycle Governance
+    </nav>
+    <article>
+      <h1>JV Lifecycle Governance</h1>
+<div class="doc-meta-block"><span class="chip">게이트: post_close</span><span class="chip">단계: 5</span><span class="chip">버전: 1.0.0</span><span class="chip">원본: procedures/_shared/jv-lifecycle-governance/schema.yaml@8509ffbe1896</span><span class="chip">본문은 원본 언어 유지</span></div>
+<div class="authority-note">Esta página es una <strong>instantánea con versión fija</strong> del documento original del repositorio. En caso de conflicto, <strong>prevalece el original</strong>. El cuerpo del texto se mantiene en el idioma del documento fuente.</div>
+
+      <p></p>
+      <div class="mermaid">flowchart TD
+  S0["1. legal-counsel"]
+  S0 --> S1
+  S0 -.-> O0["jv_governance_review"]
+  S1["2. partnership-agent"]
+  S1 --> S2
+  S1 -.-> O1["jv_health_scorecard"]
+  S2["3. group-review-agent"]
+  S2 --> S3
+  S2 -.-> O2["jv_strategic_asset_review"]
+  S3["4. legal-counsel"]
+  S3 --> S4
+  S3 -.-> O3["jv_restructuring_decision"]
+  S4["5. legal-counsel"]
+  S4 -.-> O4["jv_exit_execution"]</div>
+      <h2 id="steps">단계</h2>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px;white-space:nowrap;">#</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">Gate</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">Agent</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">Skill</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">Output</th>
+            <th style="text-align:left;padding:8px;">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td style="padding:8px;white-space:nowrap;">1</td>
+          <td style="padding:8px;white-space:nowrap;">post_close</td>
+          <td style="padding:8px;white-space:nowrap;">legal-counsel</td>
+          <td style="padding:8px;white-space:nowrap;">jv-structuring</td>
+          <td style="padding:8px;white-space:nowrap;">jv_governance_review</td>
+          <td style="padding:8px;"><p>Operate [pmi-jv B.1]: board-approved JV governance framework review — only 45% of JVs have one (ILLUSTRATIVE; cited as the practice gap this step closes). Directors-only board attendance; quarterly board cadence plus one annual strategy off-site; reserved-matters map (board vs shareholder) with conflict-prone decisions moved to shareholders; conflict-of-interest protocol covering the three JV conflict types (business opportunity, self-dealing, information disclosure) with a deliberately-chosen fiduciary-duty approach; arm&#39;s-length pricing for parent-JV commercial relationships. Formation wrote these terms (deal-shape-chain P3/P4 + entity-formation JV addendum ef-14); this step reviews governance as it actually operates.</p> </td>
+        </tr>
+
+        <tr>
+          <td style="padding:8px;white-space:nowrap;">2</td>
+          <td style="padding:8px;white-space:nowrap;">post_close</td>
+          <td style="padding:8px;white-space:nowrap;">partnership-agent</td>
+          <td style="padding:8px;white-space:nowrap;">project-review</td>
+          <td style="padding:8px;white-space:nowrap;">jv_health_scorecard</td>
+          <td style="padding:8px;"><p>Monitor [pmi-jv B.2]: per-JV health scorecard across seven dimensions — performance, people, partner alignment, decision health, milestones &amp; funding, governance health, value-distribution symmetry. Scorecard weights and cadence are a thresholds-meeting item (ADR-0052 open question b); independent external governance review every 3 years (ILLUSTRATIVE cadence). Outputs persist via db/repositories/venture-scorecard.repository.ts recordVentureScorecardCycle with source_procedure &#39;jv-lifecycle-governance&#39; (ADR-0059, migration 0024): the seven dimensions map into the financial/strategic sections, and measure_key preserves dimension identity.</p> </td>
+        </tr>
+
+        <tr>
+          <td style="padding:8px;white-space:nowrap;">3</td>
+          <td style="padding:8px;white-space:nowrap;">post_close</td>
+          <td style="padding:8px;white-space:nowrap;">group-review-agent</td>
+          <td style="padding:8px;white-space:nowrap;">portfolio-fit-assessment</td>
+          <td style="padding:8px;white-space:nowrap;">jv_strategic_asset_review</td>
+          <td style="padding:8px;"><p>Annual strategic asset review per JV [pmi-jv B.2] carrying the parent-side disciplines of B.6: designated executive accountability for JVs (only 38% of companies have it, ILLUSTRATIVE), no &quot;corporate adhocracy&quot;, a JV portfolio gameboard by venture type × lifecycle phase, post-close lookbacks feeding standards. Feeds the Section E portfolio rollup (portfolio-venture-monitoring step 1).</p> </td>
+        </tr>
+
+        <tr>
+          <td style="padding:8px;white-space:nowrap;">4</td>
+          <td style="padding:8px;white-space:nowrap;">post_close</td>
+          <td style="padding:8px;white-space:nowrap;">legal-counsel</td>
+          <td style="padding:8px;white-space:nowrap;">jv-structuring</td>
+          <td style="padding:8px;white-space:nowrap;">jv_restructuring_decision</td>
+          <td style="padding:8px;"><p>Restructure [pmi-jv B.3, B.4]: formal triggers tied to metrics, not crisis-waiting — the baseline expectation that at least half of JVs fail on &gt;=1 owner objective and the median 39-month restructuring lag vs comparable wholly-owned businesses (both ILLUSTRATIVE) are the reason triggers must be metric-tied. Restructuring menu: scope, ownership, governance, economics, operating model, leadership. Deadlock ladder with binding time-boxes — functional managers 15-30d -&gt; senior executives 30-60d -&gt; CEOs -&gt; institutional mediation (day ranges ILLUSTRATIVE). Pre-agreed evolution paths in the JV agreement (&quot;inability to evolve&quot; is a named failure cause).</p> </td>
+        </tr>
+
+        <tr>
+          <td style="padding:8px;white-space:nowrap;">5</td>
+          <td style="padding:8px;white-space:nowrap;">post_close</td>
+          <td style="padding:8px;white-space:nowrap;">legal-counsel</td>
+          <td style="padding:8px;white-space:nowrap;">jv-structuring</td>
+          <td style="padding:8px;white-space:nowrap;">jv_exit_execution</td>
+          <td style="padding:8px;"><p>Exit — designed at formation, executed here [pmi-jv B.5]: the five-step exit-design practice (strategic end-game; trigger selection from 16 categories, typically 4-8 adopted (ILLUSTRATIVE); mechanisms put/call/buy-sell with ROFR/tag-drag protections; valuation including the two-appraisers-then-third process; post-exit transition across six areas — IP licensing, people/secondees, services, supply &amp; purchase, non-competes, debt/guarantees). Exit paths: sale to partner (65% of endings, ILLUSTRATIVE), third-party sale, IPO, unwind. Consumes the formation-time exit clauses the entity-formation JV addendum (ef-16) wrote — no duplication: this step exercises the mechanics formation created. Decision to exercise routes through Group IC (investment decisions are human, boundary #2).</p> </td>
+        </tr>
+        </tbody>
+      </table>
+      <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+        <a href="../index_es.html" class="prev" style="text-decoration:none;color:var(--text);">
+          <div style="font-size:12px;color:var(--text-dim);">←</div>
+          <div>Procedures</div>
+        </a>
+        <a href="../index_es.html" class="next" style="text-decoration:none;color:var(--text);text-align:right;">
+          <div style="font-size:12px;color:var(--text-dim);">→</div>
+          <div>Inicio</div>
+        </a>
+      </nav>
+    </article>
+  </div>
+
+  <footer>
+    <p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p>
+  </footer>
+
+  <script src="../assets/js/dark-mode-toggle.js"></script>
+  <script src="../assets/js/site-search.js"></script>
+  <script src="../assets/js/lang-switcher.js"></script>
+  <script src="../assets/js/inpage-search.js"></script>
+  <script src="../assets/js/copy-code.js"></script>
+  <script src="../assets/js/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'neutral' });</script>
+</body>
+</html>
