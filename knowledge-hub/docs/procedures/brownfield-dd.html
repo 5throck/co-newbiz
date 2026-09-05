@@ -90,6 +90,14 @@
     .toc-box li { margin: 2px 0; }
     .toc-box a { color: var(--text-muted); text-decoration: none; }
     .toc-box a:hover { color: var(--accent); }
+    /* 폭 대응: 표가 컨테이너보다 넓으면 가로 스크롤, 긴 토큰은 줄바꿈 */
+    .table-scroll { overflow-x: auto; }
+    .table-scroll table { min-width: 640px; }
+    .main-content article td, .main-content article th { word-break: break-word; vertical-align: top; }
+    .main-content article td.desc { min-width: 280px; }
+    /* mermaid 다이어그램을 컨테이너 폭에 맞춤 */
+    .mermaid { max-width: 100%; overflow-x: auto; }
+    .mermaid svg { max-width: 100% !important; height: auto; }
     @media print {
       .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
       .main-content, footer { margin-left: 0; }
@@ -193,6 +201,7 @@
   S14["15. process-governance-manager"]
   S14 -.-> O14["gate_pass_record"]</div>
       <h2 id="steps">단계</h2>
+      <div class="table-scroll">
       <table style="width:100%;border-collapse:collapse;margin:20px 0;">
         <thead>
           <tr style="border-bottom:2px solid var(--border);">
@@ -208,139 +217,140 @@
         <tr>
           <td style="padding:8px;white-space:nowrap;">1</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">commercial-dd-agent</td>
-          <td style="padding:8px;white-space:nowrap;">commercial-due-diligence</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Customer/channel/pricing-power checks per <code>checklists/commercial-dd-checklist.yaml</code>.</p> </td>
+          <td style="padding:8px;">commercial-dd-agent</td>
+          <td style="padding:8px;">commercial-due-diligence</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Customer/channel/pricing-power checks per <code>checklists/commercial-dd-checklist.yaml</code>.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">2</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">technical-dd-agent</td>
-          <td style="padding:8px;white-space:nowrap;">technical-due-diligence</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Site visit, remaining equipment life, TRL, EHS per <code>checklists/technical-dd-checklist.yaml</code>.</p> </td>
+          <td style="padding:8px;">technical-dd-agent</td>
+          <td style="padding:8px;">technical-due-diligence</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Site visit, remaining equipment life, TRL, EHS per <code>checklists/technical-dd-checklist.yaml</code>.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">3</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">technical-dd-agent</td>
-          <td style="padding:8px;white-space:nowrap;">technical-due-diligence</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>R&amp;BD deals only (technology_track: rbd on the 3-axis classification — technology/IP acquisition, license-in, or internal-venture spin-off carve-out; the <code>case_subtype</code> field this step previously cited was retired by ADR-0047): run <code>checklists/rbd-technology-checklist.yaml</code> in addition to step 2 — covers core-technology TRL (distinct from production-process TRL), government co-funding conditions, IP/freedom-to-operate diligence, the build/license/spin-off commercialization-path decision, and continuing parent-entity relationship terms where the target originated as an internal venture. See docs/pilots/pilot-011-posco-amberoad.md. Not applicable (skip) for non-R&amp;BD deals.</p> </td>
+          <td style="padding:8px;">technical-dd-agent</td>
+          <td style="padding:8px;">technical-due-diligence</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>R&amp;BD deals only (technology_track: rbd on the 3-axis classification — technology/IP acquisition, license-in, or internal-venture spin-off carve-out; the <code>case_subtype</code> field this step previously cited was retired by ADR-0047): run <code>checklists/rbd-technology-checklist.yaml</code> in addition to step 2 — covers core-technology TRL (distinct from production-process TRL), government co-funding conditions, IP/freedom-to-operate diligence, the build/license/spin-off commercialization-path decision, and continuing parent-entity relationship terms where the target originated as an internal venture. See docs/pilots/pilot-011-posco-amberoad.md. Not applicable (skip) for non-R&amp;BD deals.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">4</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">market-intelligence-agent</td>
-          <td style="padding:8px;white-space:nowrap;">competitive-intelligence</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Market DD per <code>checklists/market-dd-checklist.yaml</code> (mdd-01..) — TAM/SAM triangulation, competitive set, moat, customer concentration, churn, 80/20 revenue vs. thesis. Thesis-by-thesis validation verdicts (validated/partially/invalidated) feed the valuation bridge via retention-adjusted revenue impact and bid-adjustment recommendations. Runs alongside, not inside, commercial DD (step 1): step 1 tests the TARGET&#39;s commercial position; this step tests the MARKET the target sits in (ADR-0051).</p> </td>
+          <td style="padding:8px;">market-intelligence-agent</td>
+          <td style="padding:8px;">competitive-intelligence</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Market DD per <code>checklists/market-dd-checklist.yaml</code> (mdd-01..) — TAM/SAM triangulation, competitive set, moat, customer concentration, churn, 80/20 revenue vs. thesis. Thesis-by-thesis validation verdicts (validated/partially/invalidated) feed the valuation bridge via retention-adjusted revenue impact and bid-adjustment recommendations. Runs alongside, not inside, commercial DD (step 1): step 1 tests the TARGET&#39;s commercial position; this step tests the MARKET the target sits in (ADR-0051).</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">5</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">legal-counsel</td>
-          <td style="padding:8px;white-space:nowrap;">legal-due-diligence</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Legal DD per <code>checklists/legal-dd-checklist.yaml</code> (ldd-01..) — corporate standing/cap table, CoC/anti-assignment contract scan, litigation, IP title chain, employment/legal exposure, environmental/real-estate/ data-protection/anti-bribery/tax. Output is a RAG findings register: red = deal-structural/remediation, amber = warranty/indemnity, green = acceptable. Red/amber findings map to SPA protections (specific indemnities, escrow sizing, CPs) and valuation adjustments through the dd-to-valuation-bridge. Distinct from the certification-transferability step (step 11) and from screening-level chk-legal-regulatory — legal basis for transferability lives there, this step supplies the evidence.</p> </td>
+          <td style="padding:8px;">legal-counsel</td>
+          <td style="padding:8px;">legal-due-diligence</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Legal DD per <code>checklists/legal-dd-checklist.yaml</code> (ldd-01..) — corporate standing/cap table, CoC/anti-assignment contract scan, litigation, IP title chain, employment/legal exposure, environmental/real-estate/ data-protection/anti-bribery/tax. Output is a RAG findings register: red = deal-structural/remediation, amber = warranty/indemnity, green = acceptable. Red/amber findings map to SPA protections (specific indemnities, escrow sizing, CPs) and valuation adjustments through the dd-to-valuation-bridge. Distinct from the certification-transferability step (step 11) and from screening-level chk-legal-regulatory — legal basis for transferability lives there, this step supplies the evidence.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">6</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">antitrust-agent</td>
-          <td style="padding:8px;white-space:nowrap;">antitrust-screening</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>HHI/HHI-delta finalized, multi-jurisdiction filing confirmed, gun-jumping check — <code>checklists/ma-special-topics-checklist.yaml</code> ma-01/02/03. Covers common-ownership/common-control combinations (a sponsor already controlling one competitor acquiring another), not only direct mergers of the target entities — docs/pilots/pilot-010-affinity-lotte-rental.md is a real prohibited deal of exactly this shape, the pilot set&#39;s first outright-block outcome. Real-case pattern reference: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md (horizontal, conditional approval) vs. docs/pilots/pilot-002-hanwha-impact-hsd-engine.md (vertical, unconditional approval) — the same step must correctly discriminate between these risk shapes, not apply one template.</p> </td>
+          <td style="padding:8px;">antitrust-agent</td>
+          <td style="padding:8px;">antitrust-screening</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>HHI/HHI-delta finalized, multi-jurisdiction filing confirmed, gun-jumping check — <code>checklists/ma-special-topics-checklist.yaml</code> ma-01/02/03. Covers common-ownership/common-control combinations (a sponsor already controlling one competitor acquiring another), not only direct mergers of the target entities — docs/pilots/pilot-010-affinity-lotte-rental.md is a real prohibited deal of exactly this shape, the pilot set&#39;s first outright-block outcome. Real-case pattern reference: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md (horizontal, conditional approval) vs. docs/pilots/pilot-002-hanwha-impact-hsd-engine.md (vertical, unconditional approval) — the same step must correctly discriminate between these risk shapes, not apply one template.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">7</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">hr-integration-agent</td>
-          <td style="padding:8px;white-space:nowrap;">management-incentive-review</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Executive CoC-trigger compensation and compensation-harmonization-analysis — <code>checklists/ma-special-topics-checklist.yaml</code> ma-04 through ma-06.</p> </td>
+          <td style="padding:8px;">hr-integration-agent</td>
+          <td style="padding:8px;">management-incentive-review</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Executive CoC-trigger compensation and compensation-harmonization-analysis — <code>checklists/ma-special-topics-checklist.yaml</code> ma-04 through ma-06.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">8</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">customer-retention-agent</td>
-          <td style="padding:8px;white-space:nowrap;">customer-attrition-risk</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Change-of-control clause scan across customer AND supplier contracts (checklist ma-07/08, widened per docs/pilots/pilot-002-hanwha-impact-hsd-engine.md finding F-2 — a retained seller-side supply relationship is the same risk category as a customer contract).</p> </td>
+          <td style="padding:8px;">customer-retention-agent</td>
+          <td style="padding:8px;">customer-attrition-risk</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Change-of-control clause scan across customer AND supplier contracts (checklist ma-07/08, widened per docs/pilots/pilot-002-hanwha-impact-hsd-engine.md finding F-2 — a retained seller-side supply relationship is the same risk category as a customer contract).</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">9</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">incentive-agent</td>
-          <td style="padding:8px;white-space:nowrap;">incentive-clawback-assessment</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Clawback exposure on any contemplated relocation/restructuring — checklist ma-09.</p> </td>
+          <td style="padding:8px;">incentive-agent</td>
+          <td style="padding:8px;">incentive-clawback-assessment</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Clawback exposure on any contemplated relocation/restructuring — checklist ma-09.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">10</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">valuation-agent</td>
-          <td style="padding:8px;white-space:nowrap;">debt-and-contingent-liability-simulation</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Contingent liabilities and covenant-breach scenario — checklist ma-10/11.</p> </td>
+          <td style="padding:8px;">valuation-agent</td>
+          <td style="padding:8px;">debt-and-contingent-liability-simulation</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Contingent liabilities and covenant-breach scenario — checklist ma-10/11.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">11</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">legal-counsel</td>
-          <td style="padding:8px;white-space:nowrap;">certification-transferability</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Certification transferability confirmed LAST among the validators per meeting M5&#39;s fixed evaluation order (checklist ma-12) — a non-transferable certification can strip the entire acquisition premium and must not be computed against a valuation that already assumed it. The transferability judgment is legal-counsel&#39;s call (design of record 2026-08-22 §5 PR-3, meeting legal-review findings #1/#6); certification-agent provides the requirement/roadmap input.</p> </td>
+          <td style="padding:8px;">legal-counsel</td>
+          <td style="padding:8px;">certification-transferability</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Certification transferability confirmed LAST among the validators per meeting M5&#39;s fixed evaluation order (checklist ma-12) — a non-transferable certification can strip the entire acquisition premium and must not be computed against a valuation that already assumed it. The transferability judgment is legal-counsel&#39;s call (design of record 2026-08-22 §5 PR-3, meeting legal-review findings #1/#6); certification-agent provides the requirement/roadmap input.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">12</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">valuation-agent</td>
-          <td style="padding:8px;white-space:nowrap;">financing-plan-review</td>
-          <td style="padding:8px;white-space:nowrap;">financing_readiness_check</td>
-          <td style="padding:8px;"><p>Financing evidence pack per <code>checklists/financing-plan-checklist.yaml</code> (fin-01..) — cash/debt/equity mix with sources-and-uses, executed commitment papers or documented internal-funds approval path, covenant headroom, funds-flow memorandum draft, FX plan, escrow sizing, reverse-termination-fee sizing where buyer retains funding risk (4-7% EV benchmark ILLUSTRATIVE until the thresholds meeting — ADR-0051 open question (c)). Certainty of funds is evidenced here so the IC package carries a financing_readiness_check, not a financing contingency.</p> </td>
+          <td style="padding:8px;">valuation-agent</td>
+          <td style="padding:8px;">financing-plan-review</td>
+          <td style="padding:8px;">financing_readiness_check</td>
+          <td class="desc" style="padding:8px;"><p>Financing evidence pack per <code>checklists/financing-plan-checklist.yaml</code> (fin-01..) — cash/debt/equity mix with sources-and-uses, executed commitment papers or documented internal-funds approval path, covenant headroom, funds-flow memorandum draft, FX plan, escrow sizing, reverse-termination-fee sizing where buyer retains funding risk (4-7% EV benchmark ILLUSTRATIVE until the thresholds meeting — ADR-0051 open question (c)). Certainty of funds is evidenced here so the IC package carries a financing_readiness_check, not a financing contingency.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">13</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">hr-integration-agent</td>
-          <td style="padding:8px;white-space:nowrap;">org-readiness-assessment</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>HR DD per <code>checklists/hr-dd-checklist.yaml</code> (hdd-01..) — key-person map with retention actions, stay-bonus budget (12-24 month benchmark ILLUSTRATIVE — ADR-0051 open question (c)), org/leadership bench, CBA successorship and pension exposure, employment-transfer regime per jurisdiction, culture distance, day-1 and first-100-days plan. Compensation review stays in the validator step (step 7); this step is the wider organizational and labor-relations picture.</p> </td>
+          <td style="padding:8px;">hr-integration-agent</td>
+          <td style="padding:8px;">org-readiness-assessment</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>HR DD per <code>checklists/hr-dd-checklist.yaml</code> (hdd-01..) — key-person map with retention actions, stay-bonus budget (12-24 month benchmark ILLUSTRATIVE — ADR-0051 open question (c)), org/leadership bench, CBA successorship and pension exposure, employment-transfer regime per jurisdiction, culture distance, day-1 and first-100-days plan. Compensation review stays in the validator step (step 7); this step is the wider organizational and labor-relations picture.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">14</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">compliance-officer</td>
-          <td style="padding:8px;white-space:nowrap;">compliance-monitoring</td>
-          <td style="padding:8px;white-space:nowrap;">six_validator_completeness_check</td>
-          <td style="padding:8px;"><p>Six-validator completeness is recorded as THREE numbers — declared 6 / applicable N / completed M (ADR-0048 §4; the durable record is written by db/repositories/compliance.repository.ts). All six M&amp;A validators (steps 6-11, mapped to antitrust/HR/customer/incentive/contingent- liability/certification — certification LAST, unchanged relative order) are DECLARED for every project. A validator the applicability registry does not apply to the live classification (ADR-0048 — the only skip family is greenfield+internal, contingent-liability regained when technology_track=rbd) is covered-with-reason: a compliance_check row result=&#39;not_applicable&#39; carrying the rendered applies_when sentence plus the classification and approver trace — NEVER &#39;pass&#39;. The no-waiver halt (kill criterion below) fires when an APPLICABLE validator is missing; an applicable validator with no coverage row fails this step regardless of anything else. This is a completeness check with NO WAIVER PATH (design §8.9-1(f), docs/governance-operations.md §2) — not a judgment call. The DD cross-validation (Decisions 5f/5g) runs alongside: classification- independent DD evidence contradicting the classification blocks DD exit only when the classification&#39;s provenance is weak. The four DD-expansion steps (4 market, 5 legal, 12 financing, 13 HR) are OUTSIDE the no-waiver core: mandatory but with the standard waiver path (ADR-0051; whether legal DD joins the core is an open question for the thresholds meeting, not decided here).</p> </td>
+          <td style="padding:8px;">compliance-officer</td>
+          <td style="padding:8px;">compliance-monitoring</td>
+          <td style="padding:8px;">six_validator_completeness_check</td>
+          <td class="desc" style="padding:8px;"><p>Six-validator completeness is recorded as THREE numbers — declared 6 / applicable N / completed M (ADR-0048 §4; the durable record is written by db/repositories/compliance.repository.ts). All six M&amp;A validators (steps 6-11, mapped to antitrust/HR/customer/incentive/contingent- liability/certification — certification LAST, unchanged relative order) are DECLARED for every project. A validator the applicability registry does not apply to the live classification (ADR-0048 — the only skip family is greenfield+internal, contingent-liability regained when technology_track=rbd) is covered-with-reason: a compliance_check row result=&#39;not_applicable&#39; carrying the rendered applies_when sentence plus the classification and approver trace — NEVER &#39;pass&#39;. The no-waiver halt (kill criterion below) fires when an APPLICABLE validator is missing; an applicable validator with no coverage row fails this step regardless of anything else. This is a completeness check with NO WAIVER PATH (design §8.9-1(f), docs/governance-operations.md §2) — not a judgment call. The DD cross-validation (Decisions 5f/5g) runs alongside: classification- independent DD evidence contradicting the classification blocks DD exit only when the classification&#39;s provenance is weak. The four DD-expansion steps (4 market, 5 legal, 12 financing, 13 HR) are OUTSIDE the no-waiver core: mandatory but with the standard waiver path (ADR-0051; whether legal DD joins the core is an open question for the thresholds meeting, not decided here).</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">15</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">process-governance-manager</td>
-          <td style="padding:8px;white-space:nowrap;">stage-gate-governance</td>
-          <td style="padding:8px;white-space:nowrap;">gate_pass_record</td>
-          <td style="padding:8px;"><p>Confirm DD deliverables complete; open Entity IC.</p> </td>
+          <td style="padding:8px;">process-governance-manager</td>
+          <td style="padding:8px;">stage-gate-governance</td>
+          <td style="padding:8px;">gate_pass_record</td>
+          <td class="desc" style="padding:8px;"><p>Confirm DD deliverables complete; open Entity IC.</p> </td>
         </tr>
         </tbody>
       </table>
+      </div>
       <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
         <a href="../index.html" class="prev" style="text-decoration:none;color:var(--text);">
           <div style="font-size:12px;color:var(--text-dim);">←</div>
@@ -364,6 +374,6 @@
   <script src="../assets/js/inpage-search.js"></script>
   <script src="../assets/js/copy-code.js"></script>
   <script src="../assets/js/mermaid.min.js"></script>
-  <script>mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'neutral' });</script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true } });</script>
 </body>
 </html>

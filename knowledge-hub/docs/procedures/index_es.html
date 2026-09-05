@@ -90,6 +90,14 @@
     .toc-box li { margin: 2px 0; }
     .toc-box a { color: var(--text-muted); text-decoration: none; }
     .toc-box a:hover { color: var(--accent); }
+    /* 폭 대응: 표가 컨테이너보다 넓으면 가로 스크롤, 긴 토큰은 줄바꿈 */
+    .table-scroll { overflow-x: auto; }
+    .table-scroll table { min-width: 640px; }
+    .main-content article td, .main-content article th { word-break: break-word; vertical-align: top; }
+    .main-content article td.desc { min-width: 280px; }
+    /* mermaid 다이어그램을 컨테이너 폭에 맞춤 */
+    .mermaid { max-width: 100%; overflow-x: auto; }
+    .mermaid svg { max-width: 100% !important; height: auto; }
     @media print {
       .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
       .main-content, footer { margin-left: 0; }

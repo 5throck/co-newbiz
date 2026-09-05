@@ -90,6 +90,14 @@
     .toc-box li { margin: 2px 0; }
     .toc-box a { color: var(--text-muted); text-decoration: none; }
     .toc-box a:hover { color: var(--accent); }
+    /* 폭 대응: 표가 컨테이너보다 넓으면 가로 스크롤, 긴 토큰은 줄바꿈 */
+    .table-scroll { overflow-x: auto; }
+    .table-scroll table { min-width: 640px; }
+    .main-content article td, .main-content article th { word-break: break-word; vertical-align: top; }
+    .main-content article td.desc { min-width: 280px; }
+    /* mermaid 다이어그램을 컨테이너 폭에 맞춤 */
+    .mermaid { max-width: 100%; overflow-x: auto; }
+    .mermaid svg { max-width: 100% !important; height: auto; }
     @media print {
       .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
       .main-content, footer { margin-left: 0; }
@@ -163,6 +171,7 @@
   S4["5. process-governance-manager"]
   S4 -.-> O4["gate_pass_record"]</div>
       <h2 id="steps">단계</h2>
+      <div class="table-scroll">
       <table style="width:100%;border-collapse:collapse;margin:20px 0;">
         <thead>
           <tr style="border-bottom:2px solid var(--border);">
@@ -178,49 +187,50 @@
         <tr>
           <td style="padding:8px;white-space:nowrap;">1</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">technical-dd-agent</td>
-          <td style="padding:8px;white-space:nowrap;">site-visit-protocol</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Site visit(s) against <code>checklists/technical-dd-checklist.yaml</code> and <code>checklists/site-selection-checklist.yaml</code> — findings land as dd_finding records with value_impact, never narrative-only.</p> </td>
+          <td style="padding:8px;">technical-dd-agent</td>
+          <td style="padding:8px;">site-visit-protocol</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Site visit(s) against <code>checklists/technical-dd-checklist.yaml</code> and <code>checklists/site-selection-checklist.yaml</code> — findings land as dd_finding records with value_impact, never narrative-only.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">2</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">greenfield-agent</td>
-          <td style="padding:8px;white-space:nowrap;">talent-pipeline-planning</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Talent pipeline and ramp-up curve validation against <code>checklists/site-selection-checklist.yaml</code> ss-07.</p> </td>
+          <td style="padding:8px;">greenfield-agent</td>
+          <td style="padding:8px;">talent-pipeline-planning</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Talent pipeline and ramp-up curve validation against <code>checklists/site-selection-checklist.yaml</code> ss-07.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">3</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">greenfield-agent</td>
-          <td style="padding:8px;white-space:nowrap;">community-partnership-planning</td>
-          <td style="padding:8px;white-space:nowrap;">dd_finding</td>
-          <td style="padding:8px;"><p>Community acceptance and prior dispute history check (<code>checklists/site-selection-checklist.yaml</code> ss-08).</p> </td>
+          <td style="padding:8px;">greenfield-agent</td>
+          <td style="padding:8px;">community-partnership-planning</td>
+          <td style="padding:8px;">dd_finding</td>
+          <td class="desc" style="padding:8px;"><p>Community acceptance and prior dispute history check (<code>checklists/site-selection-checklist.yaml</code> ss-08).</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">4</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">risk-officer</td>
-          <td style="padding:8px;white-space:nowrap;">dd-to-valuation-bridge</td>
-          <td style="padding:8px;white-space:nowrap;">dd_valuation_bridge</td>
-          <td style="padding:8px;"><p>Every dd_finding with value_impact must land in the valuation bridge — design&#39;s most-common-failure-mode rule (DD and the model must not run separately).</p> </td>
+          <td style="padding:8px;">risk-officer</td>
+          <td style="padding:8px;">dd-to-valuation-bridge</td>
+          <td style="padding:8px;">dd_valuation_bridge</td>
+          <td class="desc" style="padding:8px;"><p>Every dd_finding with value_impact must land in the valuation bridge — design&#39;s most-common-failure-mode rule (DD and the model must not run separately).</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">5</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">process-governance-manager</td>
-          <td style="padding:8px;white-space:nowrap;">stage-gate-governance</td>
-          <td style="padding:8px;white-space:nowrap;">gate_pass_record</td>
-          <td style="padding:8px;"><p>Confirm DD deliverables complete; open Entity IC.</p> </td>
+          <td style="padding:8px;">process-governance-manager</td>
+          <td style="padding:8px;">stage-gate-governance</td>
+          <td style="padding:8px;">gate_pass_record</td>
+          <td class="desc" style="padding:8px;"><p>Confirm DD deliverables complete; open Entity IC.</p> </td>
         </tr>
         </tbody>
       </table>
+      </div>
       <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
         <a href="../index_es.html" class="prev" style="text-decoration:none;color:var(--text);">
           <div style="font-size:12px;color:var(--text-dim);">←</div>
@@ -244,6 +254,6 @@
   <script src="../assets/js/inpage-search.js"></script>
   <script src="../assets/js/copy-code.js"></script>
   <script src="../assets/js/mermaid.min.js"></script>
-  <script>mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'neutral' });</script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true } });</script>
 </body>
 </html>
