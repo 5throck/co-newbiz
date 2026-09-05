@@ -1851,6 +1851,53 @@
   line-height: 1.6;
   color: color-mix(in oklab, var(--fg) 88%, var(--muted-fg));
 }
+/* Markdown tables (marked output) — ADR-0088 cell rules: keep-all +
+   overflow-wrap, generous cell padding on the 8px grid, token-only colors.
+   display:block + overflow-x keeps wide tables scrollable instead of
+   squashing the master-detail column. */
+.library-doc-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.88rem;
+}
+.library-doc-body th,
+.library-doc-body td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.library-doc-body th {
+  background: var(--surface-2);
+  color: var(--muted-fg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.library-doc-body tbody tr:nth-child(even) {
+  background: color-mix(in oklab, var(--surface-2) 45%, var(--surface));
+}
+.library-doc-body blockquote {
+  margin: 0.6rem 0;
+  padding: 0.4rem 0.9rem;
+  border-left: 3px solid color-mix(in oklab, var(--primary) 55%, var(--border));
+  border-radius: var(--radius-sm, 0.5rem);
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+}
+.library-doc-body blockquote p {
+  margin: 0.25rem 0;
+}
+.library-doc-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.2rem 0;
+}
 @media (max-width: 880px) {
   .library-layout {
     grid-template-columns: 1fr;

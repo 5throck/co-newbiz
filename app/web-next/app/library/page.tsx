@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { marked } from "marked";
 import { api } from "../../lib/api.ts";
+import { SectionToolbar } from "../../components/layout.tsx";
 
 // 문서 허브 — 정책집·절차서·체크리스트·매뉴얼·참고문서·템플릿·디자인·DD 실사
 // 문서 전체를 저장소 원본에서 실시간으로 읽어 열람하는 단일 화면(ADR-0108).
@@ -140,7 +141,7 @@ const CATEGORY_TABS: Array<{ category: Category; label: string }> = [
 
 // 언어 필터 — 기본값은 한국어(ADR-0108 문서 언어 규약: 본문 원본은 한국어 우선).
 type LangFilter = "ko" | "en" | "all";
-const LANG_FILTERS: Array<{ value: LangFilter; label: string }> = [
+const LANG_OPTIONS: Array<{ value: LangFilter; label: string }> = [
   { value: "ko", label: "한국어" },
   { value: "en", label: "English" },
   { value: "all", label: "전체" },
@@ -168,6 +169,8 @@ export function LibraryView() {
     [docs, docCategory, langFilter],
   );
 
+  const categoryLabel = CATEGORY_TABS.find((t) => t.category === docCategory)?.label ?? docCategory;
+
   return (
     <main>
       <h1>문서 허브</h1>
@@ -184,20 +187,6 @@ export function LibraryView() {
         <p>불러오는 중...</p>
       ) : (
         <>
-          <div className="library-tabs" role="tablist" aria-label="문서 언어">
-            {LANG_FILTERS.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                role="tab"
-                aria-selected={langFilter === value}
-                className={`library-tab ${langFilter === value ? "library-tab-active" : ""}`}
-                onClick={() => setLangFilter(value)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
           <div className="library-tabs" role="tablist" aria-label="문서 종류">
             {CATEGORY_TABS.map(({ category, label }) => (
               <button
@@ -212,6 +201,28 @@ export function LibraryView() {
               </button>
             ))}
           </div>
+          <SectionToolbar
+            title={categoryLabel}
+            icon="📄"
+            count={docList.length}
+            filters={
+              <label className="section-meta">
+                언어{" "}
+                <select
+                  value={langFilter}
+                  onChange={(e) => setLangFilter(e.target.value as LangFilter)}
+                  className="sizing-new-input sizing-new-input-sm"
+                  aria-label="문서 언어 필터"
+                >
+                  {LANG_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            }
+          />
           <DocViewer docs={docList} allDocs={docs} />
         </>
       )}
