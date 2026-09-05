@@ -275,6 +275,7 @@ function renderProcedure(doc: DocDef): Rendered {
   const parsed = yamlLoad(readSource(doc.source)) as {
     title?: string; gate?: string; steps?: Array<Record<string, unknown>>; outputs?: string[]; description?: string;
   };
+  void doc;
   const steps = parsed.steps ?? [];
   const lines: string[] = ["flowchart TD"];
   steps.forEach((s, i) => {
@@ -374,8 +375,9 @@ function docBlurb(doc: DocDef): string {
   }
 }
 
-// handbook Chapter 구조 차용 — 본문 h2 목차(TOC) 박스 생성.
-// 퀴즈/예제/CourseOverview 등 나머지 handbook 타입은 non-goal (2026-09-05 회의).
+// handbook Chapter 구조 차용 — 본문 h2에 앵커를 부여해 화면 내 이동 가능하게 함.
+// 목차 박스는 섹션이 많은 문서에서만 표기한다(2~3개 h2를 반복 표기하는
+// 이중 구성 해소 — 2026-09-05 사용자 피드백).
 function buildToc(html: string): { html: string; toc: string } {
   let n = 0;
   const items: string[] = [];
@@ -385,7 +387,7 @@ function buildToc(html: string): { html: string; toc: string } {
     items.push(`<li><a href="#${id}">${text.replace(/<[^>]+>/g, "")}</a></li>`);
     return `<h2 id="${id}">${text}</h2>`;
   });
-  const toc = items.length >= 2
+  const toc = items.length >= 4
     ? `<div class="toc-box"><p class="nav-section">목차</p><ul>${items.join("")}</ul></div>`
     : "";
   return { html: withIds, toc };
@@ -531,7 +533,6 @@ for (const { sec, doc } of targets) {
   if (doc.kind === "checklist") chips.push(`항목: ${(parsed as { items?: unknown[] })?.items?.length ?? 0}`);
   chips.push(`${t("version", "")}: ${esc(version)}`);
   chips.push(`${t("source", "")}: ${esc(doc.source)}@${hash}`);
-  chips.push(esc(t("bodyInSourceLang", "")));
   const metaBlock = `<div class="doc-meta-block">${chips.map((c) => `<span class="chip">${c}</span>`).join("")}</div>`;
   const govMeta = `<div class="gov-meta">문서 식별자 <code>${esc(govId)}</code> · ${esc(t("version", ""))} <code>${esc(version)}</code> · ${esc(t("source", ""))} <code>${esc(doc.source)}</code>@<code>${hash}</code> · <a href="https://github.com/5throck/co-newbiz/blob/main/${esc(doc.source)}">${esc("원본 열기")}</a> — 이 스냅샷이 원본과 다르면 원본이 맞습니다.</div>`;
 
