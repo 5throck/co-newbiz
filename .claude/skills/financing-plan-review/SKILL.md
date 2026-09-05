@@ -9,7 +9,7 @@ description: >
   assumed by a financing contingency.
 
   Use when: "financing plan", "certainty of funds", "sources and uses".
-version: 1.1.0
+version: 1.2.0
 last_reviewed: 2026-08-23
 status: active
 owner: valuation-agent
@@ -22,6 +22,7 @@ metadata:
     - sources and uses
 
   procedure_keys:
+    - deal-structuring
     - brownfield-dd
     - entity-ic-review
 relates_to:

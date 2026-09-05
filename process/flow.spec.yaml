@@ -440,7 +440,7 @@ stages:
       - id: deal-structure-hypothesis
         agent: brownfield-agent
         skills: [investment-vehicle-structuring]
-        procedure: [brownfield-fs, deal-shape-chain]
+        procedure: [deal-structuring, brownfield-fs, deal-shape-chain]
         # 비히클(direct/SPC/holdco/internal_venture_spinoff/jv)·자산/주식·지분·
         # 수표/instrument 믹스 가설을 세우고 4대 축 노트(절세·책임격리·
         # 레버리지·엑싯)를 기록한다. 완료 플래그는 근거 아티팩트 참조가
@@ -448,7 +448,7 @@ stages:
       - id: financing-plan
         agent: valuation-agent
         skills: [financing-plan-review]
-        procedure: [entity-ic-review]
+        procedure: [deal-structuring]
         # sources & uses를 수집해 균형(조달=사용)을 맞추고, 커버넌트 여력·
         # 자금 확정성 증빙을 IC 패키지에 첨부 가능한 형태로 남긴다.
     requiredArtifacts:
