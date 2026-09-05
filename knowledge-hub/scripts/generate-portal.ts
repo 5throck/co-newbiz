@@ -29,6 +29,8 @@ const ROOT = join(import.meta.dirname, "..", "..");
 const DOCS = join(import.meta.dirname, "..", "docs");
 const HASHES_FILE = join(import.meta.dirname, "..", "sources-hashes.json");
 
+const BASE_HTML = readFileSync(join(ROOT, "skills", "handbook", "templates", "base.html"), "utf-8");
+
 const args = process.argv.slice(2);
 const ALL = args.includes("--all");
 const CHECK = args.includes("--check");
@@ -223,17 +225,17 @@ function renderProcedure(doc: DocDef): { html: string; hasMermaid: boolean; titl
 
   const html = `
       <p>${esc(parsed.description ?? "")}</p>
-      <p><strong>게이트</strong>: ${esc(parsed.gate ?? "—")} · <strong>단계 수</strong>: ${steps.length}</p>
+      <p>소속 게이트: ${esc(parsed.gate ?? "—")} · 단계 수: ${steps.length}건</p>
       <div class="mermaid">${mermaid}</div>
       <h2 id="steps">단계</h2>
       <table style="width:100%;border-collapse:collapse;margin:20px 0;">
         <thead>
           <tr style="border-bottom:2px solid var(--border);">
-            <th style="text-align:left;padding:8px;">#</th>
-            <th style="text-align:left;padding:8px;">게이트</th>
-            <th style="text-align:left;padding:8px;">에이전트</th>
-            <th style="text-align:left;padding:8px;">스킬</th>
-            <th style="text-align:left;padding:8px;">산출물</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">#</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">게이트</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">에이전트</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">스킬</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">산출물</th>
             <th style="text-align:left;padding:8px;">설명</th>
           </tr>
         </thead>
@@ -261,9 +263,9 @@ function renderChecklist(doc: DocDef): { html: string; hasMermaid: boolean; titl
       <table style="width:100%;border-collapse:collapse;margin:20px 0;">
         <thead>
           <tr style="border-bottom:2px solid var(--border);">
-            <th style="text-align:left;padding:8px;">ID</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">ID</th>
             <th style="text-align:left;padding:8px;">항목</th>
-            <th style="text-align:left;padding:8px;">등급</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">등급</th>
           </tr>
         </thead>
         <tbody>${rows}
@@ -283,83 +285,58 @@ const NAV_ORDER = ["policies", "procedures", "checklists", "manuals", "reference
 
 function sidebarNav(activePath: string | null, generated: Set<string>, prefix: string): string {
   const rel = (p: string): string => prefix + p;
-  const items: string[] = [`      <li><a href="${rel("index.html")}"${activePath === null ? ' style="color:var(--accent);"' : ""}>홈</a></li>`];
+  const items: string[] = [`<li><a href="${rel("index.html")}"${activePath === null ? ' class="active"' : ""}>홈</a></li>`];
   for (const sec of SECTIONS) {
     const docs = sec.docs.filter((d) => generated.has(`${sec.slug}/${d.slug}`));
     if (docs.length === 0) {
-      items.push(`      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">${esc(sec.titleKo)} (확장 예정)</span></li>`);
+      items.push(`<li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">${esc(sec.titleKo)} (확장 예정)</span></li>`);
       continue;
     }
-    const sub = docs
-      .map((d) => {
-        const href = rel(`${sec.slug}/${d.slug}.html`);
-        const active = activePath === `${sec.slug}/${d.slug}.html` ? ' style="color:var(--accent);"' : "";
-        return `        <li><a href="${href}"${active} style="font-size:0.86em;">${esc(d.titleKo || d.slug)}</a></li>`;
-      })
-      .join("\n");
-    items.push(`      <li><a href="${rel(`${sec.slug}/index.html`)}"${activePath === `${sec.slug}/index.html` ? ' style="color:var(--accent);"' : ""}>${esc(sec.titleKo)}</a>\n      <ul>\n${sub}\n      </ul></li>`);
+    items.push(`<li><a href="${rel(`${sec.slug}/index.html`)}"${activePath === `${sec.slug}/index.html` ? ' class="active"' : ""}>${esc(sec.titleKo)}</a></li>`);
+    for (const d of docs) {
+      const active = activePath === `${sec.slug}/${d.slug}.html` ? ' class="active"' : "";
+      items.push(`<li style="padding-left:14px;"><a href="${rel(`${sec.slug}/${d.slug}.html`)}"${active} style="font-size:0.85em;">${esc(d.titleKo || d.slug)}</a></li>`);
+    }
   }
-  return items.join("\n");
+  return items.join("\n          ");
 }
 
 const FOOTER = '<footer><p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p></footer>';
 
 function pageHtml(title: string, activePath: string | null, content: string, govMeta: string | null, hasMermaid: boolean, generated: Set<string>, prefix = ""): string {
   const A = (p: string): string => prefix + p;
+  const nav = sidebarNav(activePath, generated, prefix);
+  let html = BASE_HTML;
+  html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(title)} | co-newbiz 문서 허브</title>`);
+  html = html.replace(/<!-- SIDEBAR-LINKS -->[\s\S]*?(<\/ul>)/, `${nav}\n        $1`);
+  // 본문: 권위 고지 + 콘텐츠(h1 포함 보장) + gov-meta
+  const inner = `<div class="authority-note" style="background:var(--bg-note);border-left:3px solid var(--border);padding:10px 14px;margin:0 0 16px;border-radius:4px;font-size:0.82em;color:var(--text-muted);">
+        이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용). 분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱 문서·규정 화면 또는 저장소 원본을 확인하세요.
+      </div>
+      <h1>${esc(title)}</h1>
+${content}
+      ${govMeta ? `<div class="gov-meta" style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:0.78em;color:var(--text-dim);">${govMeta}</div>` : ""}
+      <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+        <a href="${A("index.html")}" class="prev" style="text-decoration:none;color:var(--text);">
+          <div style="font-size:12px;color:var(--text-dim);">← 이전</div>
+          <div>홈</div>
+        </a>
+        <span></span>
+      </nav>`;
+  html = html.replace("<!-- MAIN-CONTENT -->", inner);
+  // 푸터: 검증기 요건(plain <footer> + CC BY-NC-SA + standards 저장소 링크)
+  html = html.replace(/<footer class="site-footer">[\s\S]*?<\/footer>/, FOOTER);
+  // 브랜드 치환
+  html = html.replace(/co-deck/g, "co-newbiz 문서 허브");
+  // 스크립트: base.html 기본 4종 + copy-code + mermaid(조건부)
   const scripts = [
     `<script src="${A("assets/js/copy-code.js")}"></script>`,
-    `<script src="${A("assets/js/dark-mode-toggle.js")}"></script>`,
-    `<script src="${A("assets/js/inpage-search.js")}"></script>`,
-    `<script src="${A("assets/js/site-search.js")}"></script>`,
-    `<script src="${A("assets/js/lang-switcher.js")}"></script>`,
     ...(hasMermaid
       ? [`<script src="${A("assets/js/mermaid.min.js")}"></script>`, "<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>"]
       : []),
   ].join("\n  ");
-  return `<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${esc(title)} — co-newbiz 문서 허브</title>
-  <meta name="description" content="co-newbiz 규정·절차·체크리스트·매뉴얼 문서 포털 (버전 고정 스냅샷)">
-  <link rel="stylesheet" href="${A("assets/css/handbook-variables.css")}">
-  <link rel="stylesheet" href="${A("assets/css/handbook-components.css")}">
-</head>
-<body>
-  <nav class="sidebar">
-    <div class="sidebar-header">
-      <a href="index.html" class="sidebar-brand">📚 co-newbiz 문서 허브</a>
-    </div>
-    <ul class="sidebar-nav">
-${sidebarNav(activePath, generated, prefix)}
-    </ul>
-    <div class="sidebar-footer">
-      <button id="dark-toggle" title="Toggle dark mode" style="font-size:16px;cursor:pointer;background:none;border:none;">☀️</button>
-    </div>
-  </nav>
-  <main>
-    <article style="max-width:760px;">
-      <p class="authority-note" style="background:var(--bg-note);border-left:3px solid var(--border);padding:10px 14px;margin:0 0 16px;border-radius:4px;font-size:0.82em;color:var(--text-muted);">
-        이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용).
-        분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱 문서·규정 화면 또는 저장소 원본을 확인하세요.
-      </p>
-${content}
-      ${govMeta ? `<div class="gov-meta" style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:0.78em;color:var(--text-dim);">\n        ${govMeta}\n      </div>` : ""}
-    </article>
-    <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
-      <a href="${A("index.html")}" class="prev" style="text-decoration:none;color:var(--text);">
-        <div style="font-size:12px;color:var(--text-dim);">← 이전</div>
-        <div>홈</div>
-      </a>
-      <span></span>
-    </nav>
-  </main>
-${FOOTER}
-  ${scripts}
-</body>
-</html>
-`;
+  html = html.replace("</body>", `  ${scripts}\n</body>`);
+  return html;
 }
 
 function govMetaHtml(doc: DocDef, govId: string, version: string, hash: string): string {
@@ -454,7 +431,7 @@ for (const sec of SECTIONS) {
   const html = pageHtml(
     sec.titleKo,
     `${sec.slug}/index.html`,
-    `<h1>${esc(sec.titleKo)}</h1>\n      <p>${esc(sec.blurb)}</p>\n      <table style="width:100%;border-collapse:collapse;margin:20px 0;">\n        <thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">문서</th><th style="text-align:left;padding:8px;">원본</th></tr></thead>\n        <tbody>\n${list}\n        </tbody>\n      </table>`,
+    `<h1>${esc(sec.titleKo)}</h1>\n      <p>${esc(sec.blurb)}</p>\n      <table style="width:100%;border-collapse:collapse;margin:20px 0;">\n        <thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">문서</th><th style="text-align:left;padding:8px;">원본 경로</th></tr></thead>\n        <tbody>\n${list}\n        </tbody>\n      </table>`,
     null,
     false,
     generated,

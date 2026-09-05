@@ -3,47 +3,255 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>브라운필드 실사 — co-newbiz 문서 허브</title>
-  <meta name="description" content="co-newbiz 규정·절차·체크리스트·매뉴얼 문서 포털 (버전 고정 스냅샷)">
-  <link rel="stylesheet" href="../assets/css/handbook-variables.css">
-  <link rel="stylesheet" href="../assets/css/handbook-components.css">
+  <title>브라운필드 실사 | co-newbiz 문서 허브</title>
+  <link rel="stylesheet" href="assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="assets/css/handbook-components.css">
+  <style>
+    /* ===== Base Layout ===== */
+    :root {
+      --bg: #ffffff;
+      --bg2: #f5f5f7;
+      --text: #1d1d1f;
+      --text-muted: #6e6e73;
+      --border: #d2d2d7;
+      --accent: #0066cc;
+      --accent-hover: #004499;
+      --bg-info: #e8f4fd;
+      --bg-note: #fffbe6;
+      --bg-warn: #fff3e0;
+      --bg-success: #e8f5e9;
+      --bg-error: #fdecea;
+      --sidebar-width: 220px;
+      --header-height: 56px;
+      --code-bg: #f5f5f7;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --radius: 6px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1a1a2e;
+      --bg2: #16213e;
+      --text: #e0e0e0;
+      --text-muted: #a0a0a0;
+      --border: #333355;
+      --accent: #4da6ff;
+      --accent-hover: #80bfff;
+      --bg-info: #1a3a5c;
+      --bg-note: #3d3520;
+      --bg-warn: #3d2e1a;
+      --bg-success: #1a3d2e;
+      --bg-error: #3d1a1a;
+      --code-bg: #0f0f23;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    /* ===== Header ===== */
+    .site-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 100;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .site-header .logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--accent);
+      text-decoration: none;
+      margin-right: 24px;
+      white-space: nowrap;
+      transition: color 0.2s;
+    }
+
+    .site-header .search-input {
+      flex: 0 1 320px;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background-color: var(--bg2);
+      color: var(--text);
+      font-size: 0.875rem;
+      transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .site-header .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .site-header .header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .dark-mode-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 10px;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 0.875rem;
+      transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .dark-mode-toggle:hover {
+      background-color: var(--bg2);
+    }
+
+    .lang-switcher {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background-color: var(--bg2);
+      color: var(--text);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      width: var(--sidebar-width);
+      height: calc(100vh - var(--header-height));
+      overflow-y: auto;
+      background-color: var(--bg2);
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .sidebar nav ul {
+      list-style: none;
+    }
+
+    .sidebar nav ul li a {
+      display: block;
+      padding: 8px 20px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .sidebar nav ul li a:hover,
+    .sidebar nav ul li a.active {
+      color: var(--accent);
+      background-color: var(--bg);
+    }
+
+    /* SIDEBAR-LINKS */
+
+    /* ===== Main Content ===== */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      margin-top: var(--header-height);
+      padding: 32px 40px 60px;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    .main-content article {
+      max-width: 900px;
+    }
+
+    /* MAIN-CONTENT */
+
+    /* ===== Footer ===== */
+    .site-footer {
+      margin-left: var(--sidebar-width);
+      padding: 24px 40px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      text-align: center;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .site-footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+      .main-content,
+      .site-footer {
+        margin-left: 0;
+      }
+    }
+  </style>
 </head>
 <body>
-  <nav class="sidebar">
-    <div class="sidebar-header">
-      <a href="index.html" class="sidebar-brand">📚 co-newbiz 문서 허브</a>
+  <!-- Header -->
+  <header class="site-header">
+    <a href="index.html" class="logo">co-newbiz 문서 허브</a>
+    <input type="search" class="search-input" placeholder="Search handbook..." id="site-search">
+    <div class="header-actions">
+      <button class="dark-mode-toggle" id="dark-mode-toggle" aria-label="Toggle dark mode">&#9790;</button>
+      <select class="lang-switcher" id="lang-switcher">
+        <option value="ko" selected>KR</option>
+        <option value="en">EN</option>
+      </select>
     </div>
-    <ul class="sidebar-nav">
-      <li><a href="../index.html">홈</a></li>
-      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">규정집 (확장 예정)</span></li>
-      <li><a href="../procedures/index.html">업무절차서</a>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <nav>
       <ul>
-        <li><a href="../procedures/greenfield-dd.html" style="font-size:0.86em;">그린필드 실사</a></li>
-        <li><a href="../procedures/brownfield-dd.html" style="color:var(--accent);" style="font-size:0.86em;">브라운필드 실사</a></li>
-        <li><a href="../procedures/deal-structuring.html" style="font-size:0.86em;">투자구조 설계</a></li>
-        <li><a href="../procedures/entity-ic-review.html" style="font-size:0.86em;">Entity IC 심의</a></li>
-        <li><a href="../procedures/jv-lifecycle-governance.html" style="font-size:0.86em;">JV 라이프사이클 거버넌스</a></li>
-      </ul></li>
-      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">체크리스트 (확장 예정)</span></li>
-      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">업무 매뉴얼 (확장 예정)</span></li>
-      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">프로세스·거버넌스 참고문서 (확장 예정)</span></li>
-      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">산출물 템플릿 (확장 예정)</span></li>
-      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">디자인 (확장 예정)</span></li>
-      <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">DD 실사 (확장 예정)</span></li>
-    </ul>
-    <div class="sidebar-footer">
-      <button id="dark-toggle" title="Toggle dark mode" style="font-size:16px;cursor:pointer;background:none;border:none;">☀️</button>
-    </div>
-  </nav>
-  <main>
-    <article style="max-width:760px;">
-      <p class="authority-note" style="background:var(--bg-note);border-left:3px solid var(--border);padding:10px 14px;margin:0 0 16px;border-radius:4px;font-size:0.82em;color:var(--text-muted);">
-        이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용).
-        분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱 문서·규정 화면 또는 저장소 원본을 확인하세요.
-      </p>
+        <li><a href="../index.html">홈</a></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">규정집 (확장 예정)</span></li>
+          <li><a href="../procedures/index.html">업무절차서</a></li>
+          <li style="padding-left:14px;"><a href="../procedures/greenfield-dd.html" style="font-size:0.85em;">그린필드 실사</a></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">체크리스트 (확장 예정)</span></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">업무 매뉴얼 (확장 예정)</span></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">프로세스·거버넌스 참고문서 (확장 예정)</span></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">산출물 템플릿 (확장 예정)</span></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">디자인 (확장 예정)</span></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">DD 실사 (확장 예정)</span></li>
+        </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <article>
+      <div class="authority-note" style="background:var(--bg-note);border-left:3px solid var(--border);padding:10px 14px;margin:0 0 16px;border-radius:4px;font-size:0.82em;color:var(--text-muted);">
+        이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용). 분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱 문서·규정 화면 또는 저장소 원본을 확인하세요.
+      </div>
+      <h1>브라운필드 실사</h1>
 
       <p></p>
-      <p><strong>게이트</strong>: DD · <strong>단계 수</strong>: 15</p>
+      <p>소속 게이트: DD · 단계 수: 15건</p>
       <div class="mermaid">flowchart TD
   S0["1. commercial-dd-agent"]
   S0 --> S1
@@ -93,11 +301,11 @@
       <table style="width:100%;border-collapse:collapse;margin:20px 0;">
         <thead>
           <tr style="border-bottom:2px solid var(--border);">
-            <th style="text-align:left;padding:8px;">#</th>
-            <th style="text-align:left;padding:8px;">게이트</th>
-            <th style="text-align:left;padding:8px;">에이전트</th>
-            <th style="text-align:left;padding:8px;">스킬</th>
-            <th style="text-align:left;padding:8px;">산출물</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">#</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">게이트</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">에이전트</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">스킬</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;">산출물</th>
             <th style="text-align:left;padding:8px;">설명</th>
           </tr>
         </thead>
@@ -239,24 +447,26 @@
         </tbody>
       </table>
       
-      <div class="gov-meta" style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:0.78em;color:var(--text-dim);">
-        문서 식별자 <code>shared-brownfield-dd</code> · 버전 <code>1.6.0</code> · 원본 <code>procedures/_shared/brownfield-dd/schema.yaml</code>@<code>7240e0a19a29</code> · <a href="https://github.com/5throck/co-newbiz/blob/main/procedures/_shared/brownfield-dd/schema.yaml">원본 열기</a> — 이 스냅샷이 원본과 다르면 원본이 맞습니다.
-      </div>
+      <div class="gov-meta" style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:0.78em;color:var(--text-dim);">문서 식별자 <code>shared-brownfield-dd</code> · 버전 <code>1.6.0</code> · 원본 <code>procedures/_shared/brownfield-dd/schema.yaml</code>@<code>7240e0a19a29</code> · <a href="https://github.com/5throck/co-newbiz/blob/main/procedures/_shared/brownfield-dd/schema.yaml">원본 열기</a> — 이 스냅샷이 원본과 다르면 원본이 맞습니다.</div>
+      <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+        <a href="../index.html" class="prev" style="text-decoration:none;color:var(--text);">
+          <div style="font-size:12px;color:var(--text-dim);">← 이전</div>
+          <div>홈</div>
+        </a>
+        <span></span>
+      </nav>
     </article>
-    <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
-      <a href="../index.html" class="prev" style="text-decoration:none;color:var(--text);">
-        <div style="font-size:12px;color:var(--text-dim);">← 이전</div>
-        <div>홈</div>
-      </a>
-      <span></span>
-    </nav>
-  </main>
-<footer><p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p></footer>
+  </div>
+
+  <!-- Footer -->
+  <footer><p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p></footer>
+
+  <!-- Scripts -->
+  <script src="assets/js/dark-mode-toggle.js"></script>
+  <script src="assets/js/site-search.js"></script>
+  <script src="assets/js/lang-switcher.js"></script>
+  <script src="assets/js/inpage-search.js"></script>
   <script src="../assets/js/copy-code.js"></script>
-  <script src="../assets/js/dark-mode-toggle.js"></script>
-  <script src="../assets/js/inpage-search.js"></script>
-  <script src="../assets/js/site-search.js"></script>
-  <script src="../assets/js/lang-switcher.js"></script>
   <script src="../assets/js/mermaid.min.js"></script>
   <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
 </body>
