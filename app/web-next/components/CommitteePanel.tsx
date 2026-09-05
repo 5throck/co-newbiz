@@ -60,6 +60,14 @@ const CRITERIA_COLS: Array<{ key: string; label: string }> = [
   { key: "speed_to_capability", label: "역량확보 속도" },
 ];
 
+const CRITERIA_KO: Record<string, string> = {
+  control_need: "통제 필요도",
+  capability_criticality: "역량 결정성",
+  market_uncertainty: "시장 불확실성",
+  integration_capacity: "통합 역량",
+  speed_to_capability: "역량확보 속도",
+};
+
 export function CommitteePanel({
   opportunityId,
   committeeKey,
@@ -283,7 +291,7 @@ export function CommitteePanel({
                       <th scope="col">권고</th>
                       <th scope="col">confidence</th>
                       <th scope="col">veto</th>
-                      {CRITERIA_COLS.map((c) => <th scope="col" key={c.key}>{c.label}</th>)}
+                      {CRITERIA_COLS.map((c) => <th scope="col" key={CRITERIA_KO[c.key] ?? c.key}>{c.label}</th>)}
                     </tr>
                   </thead>
                   <tbody>
@@ -308,7 +316,7 @@ export function CommitteePanel({
                           <td className="tabular-nums text-[0.75rem]">{meta.confidence ?? p.confidence ?? "—"}</td>
                           <td>{meta.veto_dissent ? <span className="status-chip status-red">veto</span> : "—"}</td>
                           {CRITERIA_COLS.map((c) => (
-                            <td key={c.key} className="tabular-nums text-[0.78rem]">{meta.criteria_scores?.[c.key] ?? "—"}</td>
+                            <td key={CRITERIA_KO[c.key] ?? c.key} className="tabular-nums text-[0.78rem]">{meta.criteria_scores?.[c.key] ?? "—"}</td>
                           ))}
                         </tr>
                       );

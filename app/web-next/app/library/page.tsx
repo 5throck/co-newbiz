@@ -6,7 +6,7 @@ import { api } from "../../lib/api.ts";
 // 규정·체크리스트 — 운영 매뉴얼·규정·체크리스트 문서를 열람한다.
 // (딜 단위 체크리스트 판정은 S4 이후 흐름 재구축 시 다시 제공된다.)
 
-type Category = "checklist" | "manual" | "policy";
+type Category = "checklist" | "manual" | "policy" | "sop";
 
 interface ChecklistDoc {
   id: string;
@@ -222,6 +222,9 @@ export function LibraryView() {
             </button>
             <button type="button" role="tab" aria-selected={docCategory === "checklist"} className={`library-tab ${docCategory === "checklist" ? "library-tab-active" : ""}`} onClick={() => setDocCategory("checklist")}>
               체크리스트
+            </button>
+            <button type="button" role="tab" aria-selected={docCategory === "sop"} className={`library-tab ${docCategory === "sop" ? "library-tab-active" : ""}`} onClick={() => setDocCategory("sop")}>
+              SOP·절차서
             </button>
           </div>
           <DocViewer docs={docList} />

@@ -99,7 +99,7 @@ function CharterViewInner() {
       <ProjectSubNav projectId={projectId} />
       <StageFrame stageId="S8" heading="프로젝트 추진계획 — 목적·범위·KPI 사전 확정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
-          차터는 프로젝트의 목적·시장 범위·밸류체인 노드·진입 범위·KPI를 게이트 심의 전에
+          추진계획은 프로젝트의 목적·시장 범위·밸류체인 노드·진입 범위·KPI를 게이트 심의 전에
           문서로 고정합니다. 수정은 append-only 버전으로만 이루어지며 변경 사유(note)가 필수입니다 (ADR-0104 C3).
           {data && (
             <>

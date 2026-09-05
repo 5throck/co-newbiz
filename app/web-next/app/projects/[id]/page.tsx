@@ -68,8 +68,8 @@ export default function ProjectOverviewPage() {
         <h1 className="text-[1.05rem] font-semibold">프로젝트 개요 — {data.project_name ?? projectId}</h1>
       </header>
 
-      <section aria-label="차터 요약" className="market-section">
-        <h2 className="text-[0.92rem] font-semibold mb-2">차터 요약 {latest ? `(v${latest.version})` : ""}</h2>
+      <section aria-label="추진계획 요약" className="market-section">
+        <h2 className="text-[0.92rem] font-semibold mb-2">추진계획 요약 {latest ? `(v${latest.version})` : ""}</h2>
         {latest ? (
           <dl className="text-[0.85rem] space-y-1">
             <div><dt className="inline font-semibold mr-1">목적:</dt><dd className="inline">{latest.purpose}</dd></div>
@@ -78,7 +78,7 @@ export default function ProjectOverviewPage() {
             <div><dt className="inline font-semibold mr-1">KPI:</dt><dd className="inline">{latest.kpis?.length ? latest.kpis.map((k) => `${k.label}: ${k.target}`).join(" · ") : "미설정"}</dd></div>
           </dl>
         ) : (
-          <p className="text-[color:var(--muted-fg)] text-[0.85rem]">차터가 아직 생성되지 않았습니다.</p>
+          <p className="text-[color:var(--muted-fg)] text-[0.85rem]">추진계획이 아직 생성되지 않았습니다.</p>
         )}
       </section>
 
