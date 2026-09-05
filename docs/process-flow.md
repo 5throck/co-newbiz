@@ -103,8 +103,8 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - S6 대상 후보 발굴: `brownfield-agent`, `market-intelligence-agent`
 - S7 대상 스크리닝: `brownfield-agent`, `antitrust-agent`
 - S8 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`
-- S9 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`
-- S10 투자심사·실행: `pm`, `brownfield-agent`, `risk-officer`, `group-review-agent`, `process-governance-manager`
+- S9 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`, `compliance-officer`
+- S10 투자심사·실행: `pm`, `brownfield-agent`, `risk-officer`, `group-review-agent`, `process-governance-manager`, `pmi-agent`
 - S11 사후 관리: `group-review-agent`
 
 스킬·프로시저 대응은 각 스테이지의 Activities 표를, 전체 매핑 근거는 ADR-0074를 참고한다.
@@ -233,6 +233,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **Activities**
 - route-strategy · agent: `pm` · skills: `deal-execution-playbook`, `jv-structuring`, `partner-sourcing-strategy` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`, `deal-shape-chain`
 - deal-shape-evaluation · agent: `brownfield-agent` · skills: `deal-execution-playbook` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`, `deal-shape-chain`
+- route-advisory · agent: `pm` · skills:  · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`, `deal-shape-chain`
 
 **필수 산출물**
 - 트랙 결정(GF/BF)·근거
@@ -429,6 +430,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - commercial-dd · agent: `commercial-dd-agent` · skills: `commercial-due-diligence` · procedure: `greenfield-dd`, `brownfield-dd`
 - technical-dd · agent: `technical-dd-agent` · skills: `technical-due-diligence`, `site-infrastructure-assessment` · procedure: `greenfield-dd`, `brownfield-dd`
 - legal-dd · agent: `legal-counsel` · skills: `legal-due-diligence`, `regulatory-screening` · procedure: `greenfield-dd`, `brownfield-dd`
+- dd-waiver-review · agent: `compliance-officer` · skills: `waiver-management` · procedure: `greenfield-dd`, `brownfield-dd`
 
 **필수 산출물**
 - DD 체크리스트 판정(필수 항목 해소)
@@ -461,18 +463,22 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **Activities**
 - ic-preparation · agent: `pm` · skills: `executive-presentation`, `sample-driven-report-writing` · procedure: `entity-ic-review`, `group-investment-review`
-- investment-structuring · agent: `brownfield-agent` · skills: `investment-vehicle-structuring`, `financing-plan-review` · procedure: `entity-ic-review`
+- charter-baseline · agent: `pm` · skills:  · procedure: `entity-ic-review`
+- investment-structuring · agent: `brownfield-agent` · skills: `investment-vehicle-structuring`, `financing-plan-review` · procedure: `entity-ic-review`, `jv-lifecycle-governance`
 - risk-review · agent: `risk-officer` · skills: `legal-risk-register` · procedure: `entity-ic-review`, `group-investment-review`
 - group-review · agent: `group-review-agent` · skills: `group-level-review` · procedure: `entity-ic-review`, `group-investment-review`
 - entity-establishment-execution · agent: `process-governance-manager` · skills: `legal-due-diligence`, `k-law`, `certification-transferability`, `org-readiness-assessment`, `stage-gate-governance` · procedure: `entity-establishment-execution`
+- pmi-kickoff · agent: `pmi-agent` · skills: `pmi-planning` · procedure: `pmi-integration-execution`
 
 **필수 산출물**
 - IC 패키지
+- 추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋
 - 사람 최종 승인(reviewer 기록)
 - 설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})
 
 **완료 기준**
 - Entity IC와 Group IC 승인이 모두 기록되었다
+- 추진계획(차터) 기준선이 확정되고 append-only 변경 이력이 시작되었다
 - origin∈{internal,joint}인 프로젝트는 entity-establishment-execution 5단계 완료 기록이 존재한다
 
 **적용 트랙**: greenfield, brownfield
