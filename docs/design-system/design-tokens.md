@@ -15,7 +15,7 @@ effective_from: "2026-09-05"
 미리 정의해두고, 화면 코드는 그 이름표만 참조하게 만듭니다.
 
 이 토큰의 유일한 원본은 실제 서비스 화면(`app/web-next`)이 쓰는 `app/styles.css`이고,
-그 설계 의도를 글로 정리한 것이 `docs/design/design-guide.md`입니다. 지금 이 문서를 읽고 있는
+그 설계 의도를 글로 정리한 것이 `docs/design-system/design-guide.md`입니다. 지금 이 문서를 읽고 있는
 `/library` 화면도 앱의 다른 모든 화면과 똑같이 이 `app/styles.css`를 직접 불러 쓰기 때문에
 (ADR-0108 — 별도로 빌드되는 문서 포털이 없어지고 앱 자체가 유일한 렌더링 표면이 됨), 색깔을
 서로 "맞추는" 별도 작업 자체가 필요 없습니다 — 애초에 같은 CSS를 보고 있는 같은 화면입니다.
@@ -66,7 +66,7 @@ API를 바꾸는 것과 같은 무게로 신중히 다룰 것을 권고합니다
 
 | 주장 | 근거 |
 |---|---|
-| 토큰 목록 | app/web-next/app/styles.css, docs/design/design-guide.md |
+| 토큰 목록 | app/web-next/app/styles.css, docs/design-system/design-guide.md |
 | 금액 표기 | ADR-0061(dd value_impact 단위), 2026-09-05 디자인 정비 PR #219 |
 | 토큰 아키텍처 관행 | docs/research/design-token-architecture.md |
 | 단일 렌더링 표면(별도 테마 동기화 불필요) | ADR-0108, app/web-next/app/library/page.tsx |

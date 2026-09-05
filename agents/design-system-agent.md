@@ -12,7 +12,7 @@ model: inherit
 domain: technical
 subdomain: design
 description: >
-  Verifies compliance with docs/design/design-guide.md (Onyx 3.0) token, typography,
+  Verifies compliance with docs/design-system/design-guide.md (Onyx 3.0) token, typography,
   and component specs; fixes design:lint violations (hardcoded colors,
   color-only states, accessibility issues); keeps new screens aligned with
   the guide.
@@ -37,7 +37,7 @@ required_skills:
 
 ## Role Description
 
-Guardian of the Onyx 3.0 design system (docs/design/design-guide.md). Verifies that the token
+Guardian of the Onyx 3.0 design system (docs/design-system/design-guide.md). Verifies that the token
 system (color, typography, spacing) and component specs are applied consistently across
 every screen, and remediates violations.
 

@@ -206,11 +206,11 @@ const TEMPLATE_DOCS: CuratedDoc[] = [
 ];
 
 const DESIGN_DOCS: CuratedDoc[] = [
-  { slug: "design-philosophy", title: "디자인 철학·원칙", file: "docs/design/design-philosophy.md" },
-  { slug: "design-tokens", title: "디자인 가이드 — 토큰·타이포", file: "docs/design/design-tokens.md" },
-  { slug: "design-components", title: "주요 컴포넌트 카탈로그", file: "docs/design/design-components.md" },
-  { slug: "design-screens", title: "표준 화면 패턴 P0~P5", file: "docs/design/design-screens.md" },
-  { slug: "design-accessibility", title: "접근성·유니버설 디자인", file: "docs/design/design-accessibility.md" },
+  { slug: "design-philosophy", title: "디자인 철학·원칙", file: "docs/design-system/design-philosophy.md" },
+  { slug: "design-tokens", title: "디자인 가이드 — 토큰·타이포", file: "docs/design-system/design-tokens.md" },
+  { slug: "design-components", title: "주요 컴포넌트 카탈로그", file: "docs/design-system/design-components.md" },
+  { slug: "design-screens", title: "표준 화면 패턴 P0~P5", file: "docs/design-system/design-screens.md" },
+  { slug: "design-accessibility", title: "접근성·유니버설 디자인", file: "docs/design-system/design-accessibility.md" },
 ];
 
 const DD_DOCS: CuratedDoc[] = [

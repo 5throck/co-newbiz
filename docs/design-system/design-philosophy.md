@@ -13,7 +13,7 @@ co-newbiz 웹사이트는 신규사업 검토의 전체 12단계(S1~S12)를 다�
 화면이 수십 개에 이르다 보니, 담당자마다 제각각의 방식으로 만들면 사용자는 화면마다 다시
 사용법을 익혀야 합니다. 이를 막기 위해 모든 화면이 공통으로 따르는 다섯 가지 설계 원칙을
 정리했습니다. (근거 문서: `docs/designs/2026-09-01-standard-screen-patterns-design_ko.md`,
-`docs/design/design-guide.md`)
+`docs/design-system/design-guide.md`)
 
 1. **"진행 중"과 "확정됨"을 헷갈리게 하지 않는다** — 화면에는 두 종류의 표시가 섞여 있습니다.
    하나는 "지금 어디까지 왔는가"를 나타내는 **상태**(예: 진행중, 대기)이고, 다른 하나는
@@ -52,6 +52,6 @@ co-newbiz 웹사이트는 신규사업 검토의 전체 12단계(S1~S12)를 다�
 | 주장 | 근거 |
 |---|---|
 | 경계 #2 시각 분리 | docs/adr/0106, flow.spec 경계 불변식 |
-| 토큰 우선 | docs/design/design-guide.md, 표준화면패턴 설계문서 §2 |
+| 토큰 우선 | docs/design-system/design-guide.md, 표준화면패턴 설계문서 §2 |
 | 접근성 출하 조건 | ui-spec as-built(UD 감사), manual-authoring 스킬 |
 | HITL 설계 관행 | docs/research/human-in-the-loop-ui.md |

@@ -109,7 +109,7 @@ cleanup ADR ever relaxes ADR-0014's additive-only rule for legacy tables,
 
 Single S10 screen: IC package summary + `GateDecisionPanel` ×2 (entity_ic,
 group_ic) + establishment 5-step progress. Built on the Onyx 3.0 standard
-screen system (`docs/design/design-guide.md`, semantic tokens, `StageFrame`), with
+screen system (`docs/design-system/design-guide.md`, semantic tokens, `StageFrame`), with
 `design:lint` at 0 violations — user-mandated.
 
 ### 4. Boundary #2, explicitly
