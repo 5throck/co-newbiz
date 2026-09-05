@@ -1,4 +1,4 @@
-// GET /api/projects/[id]/ic-package — the S10 IC package, read-only (ADR-0100
+// GET /api/projects/[id]/ic-package — the S11 IC package, read-only (ADR-0100
 // §2). The package the Entity/Group IC committees read: the adopted business
 // case with its valuation simulations (0068), the DD summary (applied
 // checklist completion + findings), the AI-PROPOSED RAG grade (explicitly
@@ -16,6 +16,8 @@ import { latestGateDecisions, type GateId, type GateVerdict } from "../../../../
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { ddCompletionSummary, type DdCompletionSummary, type FindingRow } from "../../../../../lib/dd-checklist-tailor.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { getHypotheses } from "../../../../../../../db/repositories/deal-structure-hypothesis.repository.ts";
+import { financingTotals, listFinancingEntries } from "../../../../../../../db/repositories/financing-plan.repository.ts";
 
 const IC_GATES: GateId[] = ["entity_ic", "group_ic"];
 const TOP_FINDINGS = 10;
@@ -114,6 +116,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }),
         history,
       },
+      deal_structure: (() => {
+        // S10 투자구조 설계 산출물 (flow.spec v2.2.0) — 최신 가설의 4축 검토
+        // 상태와 sources & uses 균형을 IC가 그대로 본다.
+        const hypotheses = getHypotheses(id, db);
+        const latestHypothesis = hypotheses[0] ?? null;
+        const totals = financingTotals(id, db);
+        return {
+          latest_hypothesis: latestHypothesis,
+          hypothesis_count: hypotheses.length,
+          four_axis_review_completed: latestHypothesis?.four_axis_review_completed === 1,
+          financing: { entries: listFinancingEntries(id, db), totals },
+          balanced: totals.balanced,
+        };
+      })(),
       establishment: (() => {
         const steps = listEstablishmentSteps(id);
         const progress = establishmentProgress(id);

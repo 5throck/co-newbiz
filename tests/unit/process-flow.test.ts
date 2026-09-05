@@ -141,7 +141,7 @@ describe("process flow spec integrity (ADR-0074)", () => {
     expect(existsSync(metaPath)).toBe(true);
     const src = readFileSync(metaPath, "utf-8");
     const specStages = (spec as { stages: Array<Stage> }).stages;
-    expect(specStages.length).toBe(11);
+    expect(specStages.length).toBe(12);
     for (const st of specStages) {
       const row = src.match(new RegExp(`id: "${st.id}", sequence: [0-9]+, name: "${st.name}"`));
       expect(row).not.toBeNull();

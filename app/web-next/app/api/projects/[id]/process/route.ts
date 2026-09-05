@@ -1,7 +1,7 @@
-// Project-side process evaluation (S8–S11) — mirrors /api/opportunities/[id]
+// Project-side process evaluation (S8–S12) — mirrors /api/opportunities/[id]
 // /process. The opportunity branch is evaluated by the same engine through
 // the source_opportunity_id backlink (S1–S7), so one response carries the
-// full S1–S11 chain. Deny-by-default: visibleProject (members only; admins
+// full S1–S12 chain. Deny-by-default: visibleProject (members only; admins
 // blocked per ADR-0091 role separation).
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";

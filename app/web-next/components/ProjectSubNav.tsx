@@ -1,4 +1,4 @@
-// Project sub-navigation (ADR-0105) — the S8~S11 project surfaces are
+// Project sub-navigation (ADR-0105) — the S8~S12 project surfaces are
 // sibling detail pages under /projects/[id]; this bar keeps them linked so a
 // standard screen is never an orphan (menu 등록 외 상세 화면 연동 규약).
 import Link from "next/link";
@@ -10,6 +10,7 @@ const SUB_PAGES = [
   { seg: "", label: "개요" },
   { seg: "/business-case", label: "사업성 분석" },
   { seg: "/dd", label: "실사·검증" },
+  { seg: "/deal-structure", label: "투자구조" },
   { seg: "/ic-review", label: "IC 심의" },
   { seg: "/portfolio", label: "사후관리" },
   { seg: "/charter", label: "추진계획" },

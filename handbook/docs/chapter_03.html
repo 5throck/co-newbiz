@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3장 S8~S11 프로젝트 가이드 — co-newbiz 플랫폼 핸드북</title>
-  <meta name="description" content="co-newbiz 신규사업 검토 AI 플랫폼 핸드북 — 3장 S8~S11 프로젝트 가이드">
+  <title>3장 S8~S12 프로젝트 가이드 — co-newbiz 플랫폼 핸드북</title>
+  <meta name="description" content="co-newbiz 신규사업 검토 AI 플랫폼 핸드북 — 3장 S8~S12 프로젝트 가이드">
   <link rel="stylesheet" href="assets/css/handbook-variables.css">
   <link rel="stylesheet" href="assets/css/handbook-components.css">
 </head>
@@ -17,7 +17,7 @@
       <li><a href="index.html">홈</a></li>
       <li><a href="chapter_01.html">1장 플랫폼 개요와 핵심 개념</a></li>
       <li><a href="chapter_02.html">2장 S1~S7 기회 발굴 가이드</a></li>
-      <li><a href="chapter_03.html" style="color:var(--accent);">3장 S8~S11 프로젝트 가이드</a></li>
+      <li><a href="chapter_03.html" style="color:var(--accent);">3장 S8~S12 프로젝트 가이드</a></li>
       <li><a href="chapter_04.html">4장 게이트 심의와 의사결정</a></li>
       <li><a href="chapter_05.html">5장 관리자·운영 가이드</a></li>
     </ul>
@@ -28,9 +28,9 @@
   <main>
     <article style="max-width:720px;">
       <span class="chapter-eyebrow" style="font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;">3장</span>
-      <h1>3장 S8~S11 프로젝트 가이드</h1>
+      <h1>3장 S8~S12 프로젝트 가이드</h1>
 
-<p>S8에서 기회는 <strong>프로젝트</strong>로 승격되고, 이후 단계는 프로젝트 화면의 하위 탭(사업성 분석·실사·검증·IC 심의·사후관리)에서 진행됩니다.</p>
+<p>S8에서 기회는 <strong>프로젝트</strong>로 승격되고, 이후 단계는 프로젝트 화면의 하위 탭(사업성 분석·실사·검증·투자구조·IC 심의·사후관리)에서 진행됩니다.</p>
 
       <h2 id="s8">S8 사업성 분석 — 돈이 되는가?</h2>
       <p><strong>3-케이스 자동 생성</strong> 버튼으로 base/upside/downside 세 시나리오의 Business Case를 생성합니다. 각 카드에는 몬테카를로 시뮬레이션의 NPV 분위수(p05·p50·p95)와 IRR이 나란히 배치되어 상호 비교할 수 있습니다.</p>
@@ -48,22 +48,29 @@
         <li>필수 항목 미충족은 활성 waiver 없이는 DD 게이트를 통과할 수 없습니다.</li>
       </ul>
 
-      <h2 id="s10">S10 투자심사·실행 — 투자할 것인가?</h2>
+      <h2 id="s10">S10 투자구조 설계 — 어떤 그릇으로, 어떤 자금으로?</h2>
+      <p>IC 심의에 앞서 <strong>투자구조</strong>를 설계합니다. 투자구조 탭에서 세 가지를 기록합니다.</p>
+      <ul>
+        <li><strong>비히클:</strong> 직접 투자(direct) / <strong>SPC·SPV(목적법인)</strong> / 홀딩스 경유(holdco) / 내부 벤처 스핀오프 / JV.</li>
+        <li><strong>4대 축 검토(ADR-0045):</strong> 절세 구조·책임 격리·재무 레버리지·엑싯 구조. 완료 처리에는 deal_structure_review 아티팩트 참조가 필수이며, 감사 로그에 기록됩니다.</li>
+        <li><strong>자금조달 계획(sources &amp; uses):</strong> 조달 합계와 사용 합계가 균형(조달=사용&gt;0)을 이뤄야 S10이 완료됩니다.</li>
+      </ul>
+      <h2 id="s11">S11 투자심사·실행 — 투자할 것인가?</h2>
       <p>IC 패키지(사업계획·DD·RAG·검토)를 구성해 Entity IC와 Group IC 심의를 받습니다.</p>
       <ul>
         <li><strong>위원회 스코어카드:</strong> 좌석별 5기준 1~3 채점이 집계(중앙값·분산)되고, 회의록이 생성·확정됩니다.</li>
-        <li><strong>추진계획(차터):</strong> 목적·트랙 근거·진출 범위·KPI 선커밋을 IC 심의 입력으로 제출하며, 변경은 append-only 이력으로 기록됩니다. KPI 선커밋은 S11 스코어카드 목표값으로 자동 병합됩니다.</li>
+        <li><strong>추진계획(차터):</strong> 목적·트랙 근거·진출 범위·KPI 선커밋을 IC 심의 입력으로 제출하며, 변경은 append-only 이력으로 기록됩니다. KPI 선커밋은 S12 스코어카드 목표값으로 자동 병합됩니다.</li>
         <li><strong>설립 실행:</strong> 신설 법인(origin이 internal·joint)인 경우에만 나타나며, 설립준비→등기→인허가 분류→인력이전→완료확인 5단계 증적을 요구합니다.</li>
       </ul>
 
-      <h2 id="s11">S11 사후 관리 — 궤도에 올랐는가?</h2>
+      <h2 id="s12">S12 사후 관리 — 궤도에 올랐는가?</h2>
       <p>분기별 벤처 스코어카드를 갱신하고 전환 결정을 내립니다. 어휘는 5종으로 고정되어 있습니다: <code>next_tranche_released</code> / <code>held_evidence_incomplete</code> / <code>graduate_to_core</code> / <code>reduce_or_divest</code> / <code>kill_with_learning_captured</code>.</p>
       <div class="callout callout--info" style="background:var(--bg-info);border-left:3px solid var(--accent);padding:16px 20px;margin:20px 0;border-radius:4px;">
-        <strong>주의:</strong> S11의 kill/graduate는 S1~S10의 Kill Criteria와 범주가 다른 포트폴리오 거버넌스 결정입니다.
+        <strong>주의:</strong> S12의 kill/graduate는 S1~S11의 Kill Criteria와 범주가 다른 포트폴리오 거버넌스 결정입니다.
       </div>
 
       <h2 id="pipeline">프로젝트 파이프라인 화면</h2>
-      <p><code>/pipeline</code>에서 모든 프로젝트의 S8~S11 퍼널 현황과 HOLD 상태 게이트의 경과일(gate aging)을 한 화면에서 볼 수 있습니다. 파이프라인이 인간 결정 대기로 일시정지되면 위원회 브리핑 팩이 자동 첨부됩니다.</p>
+      <p><code>/pipeline</code>에서 모든 프로젝트의 S8~S12 퍼널 현황과 HOLD 상태 게이트의 경과일(gate aging)을 한 화면에서 볼 수 있습니다. 파이프라인이 인간 결정 대기로 일시정지되면 위원회 브리핑 팩이 자동 첨부됩니다.</p>
     </article>
 
     <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">

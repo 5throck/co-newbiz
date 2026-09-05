@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { StageFrame } from "../../components/StageFrame.tsx";
 
-// 프로젝트 파이프라인 — D1/D2 (ADR-0104): 선발된 모든 프로젝트의 S8~S11 퍼널
+// 프로젝트 파이프라인 — D1/D2 (ADR-0104): 선발된 모든 프로젝트의 S8~S12 퍼널
 // 스냅샷 + HOLD/kill 게이트 에이징. 읽기 전용 화면 — 결정 기록은 각 게이트
 // 표면(IC 심의 등)에서 인간이 수행한다 (경계 #2).
 

@@ -8,7 +8,7 @@ import { useAuth } from "../../../../lib/auth-client.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 
-// S11 사후 관리 — 포트폴리오 스코어카드 열람 + 포트폴리오 전환 결정 기록 화면
+// S12 사후 관리 — 포트폴리오 스코어카드 열람 + 포트폴리오 전환 결정 기록 화면
 // (ADR-0101 §3). 이 화면은 venture-portfolio-IC의 '인적 결정'을 기록하는
 // 표면이다 (경계 #2 — 트랜치 집행과 kill/divest는 투자결정이므로 사람의
 // 행위다): 스코어카드는 데이터만 보여주며 kill/fund 권고를 하지 않고, 결정
@@ -41,7 +41,7 @@ interface ScorecardView {
   decisions: { latest: DecisionRow | null; history: DecisionRow[] };
 }
 
-// flow.spec v2.0.0 S11 어휘 5종 (PORTFOLIO_TRANSITIONS의 UI 라벨). 0071 CHECK와
+// flow.spec v2.0.0 S12 어휘 5종 (PORTFOLIO_TRANSITIONS의 UI 라벨). 0071 CHECK와
 // 동일 어휘 — 서버가 재검증한다.
 const TRANSITION_LABELS: Record<string, string> = {
   next_tranche_released: "다음 트랜치 집행",
@@ -116,9 +116,9 @@ export default function PortfolioPage() {
   return (
     <main>
       <ProjectSubNav projectId={projectId} />
-      <StageFrame stageId="S11" heading="S11 사후 관리 — 포트폴리오 스코어카드 · 전환 결정">
+      <StageFrame stageId="S12" heading="S12 사후 관리 — 포트폴리오 스코어카드 · 전환 결정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
-          분기별 스코어카드가 갱신되어야 S11 완료 기준이 충족됩니다 (최신 분기 또는 직전 분기 — ADR-0101 §4).
+          분기별 스코어카드가 갱신되어야 S12 완료 기준이 충족됩니다 (최신 분기 또는 직전 분기 — ADR-0101 §4).
           {view && rollup?.review_cycle && (
             <span className={`status-chip ${rollup.financial.length + rollup.strategic.length > 0 ? "status-green" : "status-amber"} ml-2`}>
               {rollup.financial.length + rollup.strategic.length > 0

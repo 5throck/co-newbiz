@@ -2453,10 +2453,51 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/deal-structure:
+    get:
+      operationId: getProjectDealStructure
+      summary: S10 deal structuring — deal-structure hypotheses (ADR-0045 four-axis) plus the financing plan (sources & uses, migration 0075); member-visible only.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: actProjectDealStructure
+      summary: "One action endpoint: hypothesize | complete_four_axis (artifact_ref required) | add_financing_entry | remove_financing_entry (analyst+)."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/portfolio/pipeline:
     get:
       operationId: getPortfolioPipeline
-      summary: Portfolio S8-S11 pipeline snapshot (per-project stage/gates) plus HOLD/kill gate aging; member-visible projects only.
+      summary: Portfolio S8-S12 pipeline snapshot (per-project stage/gates) plus HOLD/kill gate aging; member-visible projects only.
       tags:
         - Reference
       responses:
@@ -2467,7 +2508,7 @@ paths:
   /api/projects/{id}/process:
     get:
       operationId: getProjectProcess
-      summary: Full S1-S11 process evaluation for the project (project branch + source-opportunity backlink); member-visible only.
+      summary: Full S1-S12 process evaluation for the project (project branch + source-opportunity backlink); member-visible only.
       tags:
         - Reference
       parameters:

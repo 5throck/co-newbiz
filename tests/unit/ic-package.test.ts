@@ -1,6 +1,6 @@
 // @version 1.0.0
 /**
- * S10 IC package & project-keyed establishment — ADR-0100 regression.
+ * S11 IC package & project-keyed establishment — ADR-0100 regression.
  *
  * Proves, against the REAL route handlers (nextRequest harness) and the real
  * scratch SQLite:
@@ -13,7 +13,7 @@
  *      semantics: step-5 sequence enforcement, viewer 403, non-member 404;
  *  (d) boundary #2: the RAG grade travels ONLY as a labeled proposal and the
  *      GET route performs no gate writes (and exposes no write verb at all);
- *  (e) S10 completion flips only when BOTH gates are go AND establishment is
+ *  (e) S11 completion flips only when BOTH gates are go AND establishment is
  *      5/5 (origin internal).
  */
 
@@ -38,6 +38,32 @@ const { ulid } = await import("../../db/lib/ulid.ts");
 const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
 
 const NOW = new Date().toISOString();
+
+/** S10 투자구조 설계 완료 픽스처 (flow.spec v2.2.0 술어) — 4축 검토 완료된
+ * 가설 1건 + sources == uses > 0 인 자금조달 행. 정합 술어 검사가 S10을
+ * 통과하도록 직접 INSERT 한다 (거버넌스 레이어는 별도 테스트에서 검증). */
+function seedS10Complete(pid: string) {
+  db.run(
+    `INSERT INTO deal_structure_hypothesis
+       (id, project_id, asset_or_stock, stake_type, instrument_mix, vehicle,
+        tax_structure_note, liability_isolation_note, financing_leverage_note,
+        exit_structure_note, four_axis_review_completed, hypothesized_by, hypothesized_at, rationale)
+     VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?,?)`,
+    [ulid(), pid, "stock", "majority", "mixed", "spc",
+     "법인세 특례 검토", "SPC 자산 격리", "AC 대출 60%", "5년 후 매각",
+     ANALYST, NOW, "SPC 경유 구조 — 4축 검토 완료"],
+  );
+  db.run(
+    `INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at)
+     VALUES (?,?,?,?,?,?,?)`,
+    [ulid(), pid, "source", "출자금 + AC 대출", 1000, ANALYST, NOW],
+  );
+  db.run(
+    `INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at)
+     VALUES (?,?,?,?,?,?,?)`,
+    [ulid(), pid, "use", "주식 인수 대금", 1000, ANALYST, NOW],
+  );
+}
 
 function req(path: string, init?: RequestInit) {
   return nextRequest(path, init);
@@ -74,7 +100,7 @@ beforeAll(async () => {
   sourceOppId = ulid();
   db.run(
     "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [sourceOppId, "S10 테스트 기회", "테스트 산업", "selected", ANALYST, NOW],
+    [sourceOppId, "S11 테스트 기회", "테스트 산업", "selected", ANALYST, NOW],
   );
   db.run(
     "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?)",
@@ -85,8 +111,9 @@ beforeAll(async () => {
      VALUES (?,?,?,?,?,?,?,?,?)`,
     [ulid(), sourceOppId, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
   );
-  projectId = promoteOpportunity(sourceOppId, { promotedBy: ANALYST, needToKnowBasis: "S10 test promoter" }).project.id;
-  // S10 establishment applies to origin∈{internal,joint} (ADR-0047) — pin it.
+  projectId = promoteOpportunity(sourceOppId, { promotedBy: ANALYST, needToKnowBasis: "S11 test promoter" }).project.id;
+  seedS10Complete(projectId);
+  // S11 establishment applies to origin∈{internal,joint} (ADR-0047) — pin it.
   db.run("UPDATE md_project SET origin = 'internal' WHERE id = ?", [projectId]);
 
   // S8 artifact: one case + one persisted simulation percentile.
@@ -169,7 +196,7 @@ describe("(a) migration 0070 — project_id backfill from the opportunity backli
   });
 });
 
-describe("(b) the IC package aggregates the S10 read surface", () => {
+describe("(b) the IC package aggregates the S11 read surface", () => {
   test("adopted case + simulations + DD completion + RAG proposal + gates + establishment", async () => {
     // Adopt the S8 case — a human action through the adopt endpoint.
     const adopt = await req(`/api/projects/${projectId}/business-case/adopt`, {
@@ -292,7 +319,7 @@ describe("(d) boundary #2 — RAG is a labeled proposal; the read writes nothing
   });
 });
 
-describe("(e) S10 completion — both gates go AND establishment 5/5", () => {
+describe("(e) S11 completion — both gates go AND establishment 5/5", () => {
   test("one gate go is not enough", async () => {
     const res = await req(`/api/projects/${projectId}/gate-decisions`, {
       method: "POST", headers: { cookie: analystCookie },
@@ -302,11 +329,11 @@ describe("(e) S10 completion — both gates go AND establishment 5/5", () => {
 
     const before = evaluateProcess({ type: "project", id: projectId });
     expect(before.gateStatus.entity_ic).toBe("go");
-    expect(before.completedStages).not.toContain("S10");
+    expect(before.completedStages).not.toContain("S11");
     expect(before.blockers.join("\n")).toContain("Group IC");
   });
 
-  test("both gates go + 5/5 flips S10 complete (origin internal)", async () => {
+  test("both gates go + 5/5 flips S11 complete (origin internal)", async () => {
     const res = await req(`/api/projects/${projectId}/gate-decisions`, {
       method: "POST", headers: { cookie: analystCookie },
       body: JSON.stringify({ gate: "group_ic", decision: "go", rationale: "그룹 투자심사 인적 결재" }),
@@ -315,15 +342,15 @@ describe("(e) S10 completion — both gates go AND establishment 5/5", () => {
 
     const after = evaluateProcess({ type: "project", id: projectId });
     expect(after.gateStatus).toMatchObject({ entity_ic: "go", group_ic: "go" });
-    expect(after.completedStages).toContain("S10");
-    expect(after.currentStage).toBe("S11");
+    expect(after.completedStages).toContain("S11");
+    expect(after.currentStage).toBe("S12");
   });
 
-  test("backsliding one establishment step un-completes S10", () => {
+  test("backsliding one establishment step un-completes S11", () => {
     db.run("UPDATE entity_establishment_step SET status = 'halted' WHERE project_id = ? AND step_no = 5", [projectId]);
     const halted = evaluateProcess({ type: "project", id: projectId });
-    expect(halted.completedStages).not.toContain("S10");
+    expect(halted.completedStages).not.toContain("S11");
     db.run("UPDATE entity_establishment_step SET status = 'done' WHERE project_id = ? AND step_no = 5", [projectId]);
-    expect(evaluateProcess({ type: "project", id: projectId }).completedStages).toContain("S10");
+    expect(evaluateProcess({ type: "project", id: projectId }).completedStages).toContain("S11");
   });
 });

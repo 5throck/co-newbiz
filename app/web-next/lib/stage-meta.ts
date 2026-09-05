@@ -2,7 +2,7 @@
 // tests/unit/process-flow.test.ts의 stage-meta 정합 테스트가 스펙과의 일치를 강제한다.
 // 표준 화면 패턴 P0 StageFrame/StageRail의 유일한 데이터원 (ADR-0086).
 
-export type StageMetaId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11";
+export type StageMetaId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11" | "S12";
 export type GateMetaId = "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
 export type TrackId = "greenfield" | "brownfield";
 
@@ -36,8 +36,9 @@ export const STAGE_META: StageMeta[] = [
   { id: "S7", sequence: 7, name: "대상 스크리닝", objective: "어떤 대상이 유망한가?", applicableTracks: ["brownfield"], gateIds: ["target_screening"], onComplete: "S8" },
   { id: "S8", sequence: 8, name: "사업성 분석", objective: "돈이 되는가?", applicableTracks: ["greenfield", "brownfield"], gateIds: ["fs"], onComplete: "S9" },
   { id: "S9", sequence: 9, name: "실사·검증", objective: "사실인가? 위험은 무엇인가?", applicableTracks: ["greenfield", "brownfield"], gateIds: ["dd"], onComplete: "S10" },
-  { id: "S10", sequence: 10, name: "투자심사·실행", objective: "투자할 것인가?", applicableTracks: ["greenfield", "brownfield"], gateIds: ["entity_ic", "group_ic"], onComplete: "S11" },
-  { id: "S11", sequence: 11, name: "사후 관리", objective: "투자 후 사업이 궤도에 올랐는가?", applicableTracks: ["greenfield", "brownfield"], gateIds: [], onComplete: "terminal" },
+  { id: "S10", sequence: 10, name: "투자구조 설계", objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가?", applicableTracks: ["greenfield", "brownfield"], gateIds: [], onComplete: "S11" },
+  { id: "S11", sequence: 11, name: "투자심사·실행", objective: "투자할 것인가?", applicableTracks: ["greenfield", "brownfield"], gateIds: ["entity_ic", "group_ic"], onComplete: "S12" },
+  { id: "S12", sequence: 12, name: "사후 관리", objective: "투자 후 사업이 궤도에 올랐는가?", applicableTracks: ["greenfield", "brownfield"], gateIds: [], onComplete: "terminal" },
 ];
 
 export function getStageMeta(id: StageMetaId): StageMeta {

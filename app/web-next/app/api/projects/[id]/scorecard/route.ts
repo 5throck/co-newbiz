@@ -1,4 +1,4 @@
-// GET /api/projects/[id]/scorecard — the S11 quarterly portfolio-scorecard
+// GET /api/projects/[id]/scorecard — the S12 quarterly portfolio-scorecard
 // view (ADR-0101 §2). Reads via db/repositories/venture-scorecard
 // .repository.ts's getPortfolioRollup DIRECTLY — no logic is extracted or
 // duplicated (the `scorecard:rollup` CLI is a print wrapper over the same

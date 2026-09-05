@@ -180,7 +180,7 @@ const OPPORTUNITY_GATES: GateId[] = ["screening", "pre_fs", "target_screening"];
  * decision plus the track's S5/S6 entry-strategy work, target_screening after
  * S7. Pending-but-not-yet-relevant gates must NOT pause the pipeline — the
  * stage work in front of them is what the rules below handle first. Note
- * evaluateProcess walks S1–S11 for opportunities too, so currentStage alone
+ * evaluateProcess walks S1–S12 for opportunities too, so currentStage alone
  * cannot distinguish "gate pending" from "carrier scope finished".
  */
 function firstPendingGate(ev: ProcessEvaluation, gates: GateId[]): GateId | null {
@@ -344,36 +344,36 @@ const PROJECT_RULES: Rule[] = [
     // dd gate pending while the S9 checklist is fully resolved. currentStage is
     // NOT part of this predicate: evaluateProcess sets currentStage only for
     // INCOMPLETE stages, so once S9 completes the loop is already looking at
-    // S10 — keying on currentStage would make this rule dead and let the run
+    // S11 — keying on currentStage would make this rule dead and let the run
     // skip the dd gate straight to entity_ic.
     key: "gate_decision:dd",
     kind: "human",
     when: ({ ev }) => ev.gateStatus.dd !== "go" && ev.completedStages.includes("S9"),
   },
   {
-    // S10/S11 are human gates BY DESIGN (ADR-0102 §2): the IC approval is
+    // S11/S12 are human gates BY DESIGN (ADR-0102 §2): the IC approval is
     // recorded by humans through their own routes; the pipeline always stops
     // here and never proposes to short-circuit it.
     key: "gate_decision:entity_ic",
     kind: "human",
-    when: ({ ev }) => ev.currentStage === "S10" && ev.gateStatus.entity_ic !== "go",
+    when: ({ ev }) => ev.currentStage === "S11" && ev.gateStatus.entity_ic !== "go",
   },
   {
     key: "gate_decision:group_ic",
     kind: "human",
-    when: ({ ev }) => ev.currentStage === "S10" && ev.gateStatus.entity_ic === "go" && ev.gateStatus.group_ic !== "go",
+    when: ({ ev }) => ev.currentStage === "S11" && ev.gateStatus.entity_ic === "go" && ev.gateStatus.group_ic !== "go",
   },
   {
     // 설립 실행 기록 — chk-entity-formation evidence, human-recorded.
-    key: "no_automation:S10",
-    kind: "human",
-    when: ({ ev }) => ev.currentStage === "S10",
-  },
-  {
-    // 스코어카드 갱신 — the operating owner's quarterly record (ADR-0101).
     key: "no_automation:S11",
     kind: "human",
     when: ({ ev }) => ev.currentStage === "S11",
+  },
+  {
+    // 스코어카드 갱신 — the operating owner's quarterly record (ADR-0101).
+    key: "no_automation:S12",
+    kind: "human",
+    when: ({ ev }) => ev.currentStage === "S12",
   },
 ];
 
@@ -444,11 +444,11 @@ export async function advancePipeline(pipelineRunId: string, opts: { actor?: str
       return { run: getRun(run.id), actions };
     }
 
-    // Everything complete — the project branch reaching S11-complete. (An
+    // Everything complete — the project branch reaching S12-complete. (An
     // opportunity never completes: its terminal transition is promotion.)
     if (run.entity_type === "project" && ev.currentStage === null && ev.nextStage === null) {
-      setRunState(run.id, "completed", { currentStage: "S11" });
-      actions.push("completed:S11");
+      setRunState(run.id, "completed", { currentStage: "S12" });
+      actions.push("completed:S12");
       return { run: getRun(run.id), actions };
     }
 

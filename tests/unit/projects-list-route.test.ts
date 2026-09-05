@@ -1,6 +1,6 @@
 /**
  * GET /api/projects — deny-by-default list surface backing the /projects
- * nav entry point (S8-S11 project screens previously had no list-level
+ * nav entry point (S8-S12 project screens previously had no list-level
  * entry point). Mirrors the scratch-SQLite + nextRequest pattern used by
  * tests/unit/api.test.ts, kept minimal since this is a nav/list addition
  * rather than a new feature surface.

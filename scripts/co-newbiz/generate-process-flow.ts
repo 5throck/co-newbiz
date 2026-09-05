@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.3.0
 // Process Flow Spec → docs/process-flow.md generator (ADR-0074).
 // process/flow.spec.yaml is the SSOT; this script regenerates the markdown
 // reference. The drift test (tests/unit/process-flow.test.ts) validates the
@@ -7,7 +7,7 @@
 // Usage: bun scripts/co-newbiz/generate-process-flow.ts [--check]
 //   --check : exit 1 if docs/process-flow.md would change (CI mode).
 //
-// v1.2.0 — appends a hand-authored ADDENDUM (S8–S11 automation surfaces,
+// v1.3.0 — appends a hand-authored ADDENDUM (S8–S12 automation surfaces,
 // steering committees, e2e pipeline, deferred capabilities) after the
 // generated spec reference. The addendum lives HERE, not in the output file,
 // so the generated-vs-file equality check above still holds.
@@ -120,7 +120,7 @@ const ADDENDUM = `
 
 # Addendum — Implemented automation state (v2.0.0, ADR-0095~0102)
 
-> 이 부분은 사양에서 생성되지 않는 **hand-maintained addendum**이다. 본문(S1~S11
+> 이 부분은 사양에서 생성되지 않는 **hand-maintained addendum**이다. 본문(S1~S12
 > stage/gate reference)은 flow.spec.yaml의 생성물이고, 이 아래 단락은 구현된
 > 자동화 표면(ADR-0095~0102, PRs #191~#199)을 문서화한다. 수정은 이 상수
 > (\`scripts/co-newbiz/generate-process-flow.ts\`의 \`ADDENDUM\`)에서 한다.
@@ -139,7 +139,7 @@ Two entity lifecycles (ADR-0094/0095):
 - **opportunity** carries S1–S7. Track is derived from the S4
   \`route_decision\` (process-flow.ts:353); track-inapplicable stages render as
   \`skipped\`, downstream siblings of an incomplete stage as \`locked\`.
-- **project** carries S8–S11. The **S7→S8 handoff is promotion**
+- **project** carries S8–S12. The **S7→S8 handoff is promotion**
   (\`promoteOpportunity\`, \`db/repositories/project.repository.ts\`; wired by
   \`app/web-next/lib/pipeline.ts:290\`) — preconditions verify the track-specific
   S5 output (greenfield) or S7 Short List (brownfield) before the project row
@@ -158,15 +158,16 @@ Two entity lifecycles (ADR-0094/0095):
 | S7 | every target shortlisted (knock-outs passed) or excluded with reason; 0 knock-out-passed candidates surfaces the target_screening KILL criterion | process-flow.ts:192–212 |
 | S8 | ≥1 \`business_case_model\` for the project AND ≥1 \`valuation_simulation\` row (NPV percentiles) — ADR-0098 | process-flow.ts:236–258 |
 | S9 | \`ddCompletionSummary\`: total > 0, pending = 0, mandatoryUnmet = 0 — ADR-0099 | process-flow.ts:259–275 |
-| S10 | \`entity_ic\` AND \`group_ic\` gate decisions both \`go\` (human record only); for origin ∈ {internal, joint}, \`establishmentProgress\` = 5/5 — ADR-0100 | process-flow.ts:276–294 |
-| S11 | \`venture_scorecard\` exists with a fresh review cycle (current or previous quarter, \`isFreshReviewCycle\`) — ADR-0101 | process-flow.ts:295–311 |
+| S10 | latest \`deal_structure_hypothesis\` has \`four_axis_review_completed\` = 1 AND \`financing_sources_uses\` sources == uses > 0 (balanced) — flow.spec v2.2.0, ADR-0045 | process-flow.ts:281–309 |
+| S11 | \`entity_ic\` AND \`group_ic\` gate decisions both \`go\` (human record only); for origin ∈ {internal, joint}, \`establishmentProgress\` = 5/5 — ADR-0100 | process-flow.ts:310–328 |
+| S12 | \`venture_scorecard\` exists with a fresh review cycle (current or previous quarter, \`isFreshReviewCycle\`) — ADR-0101 | process-flow.ts:329–347 |
 
 Gate semantics: every gate verdict is a human-recorded \`gate_decision\` row
 (ADR-0053 \`decision_authority: human\`; ADR-0094 — the sole human-confirmation
 ledger). HOLD blocks re-evaluation of the current stage's gate, not the work
 itself (process-flow.ts:394–399, 463–472); any \`kill\` terminates the entity.
 
-## Automation surfaces per stage (S8–S11)
+## Automation surfaces per stage (S8–S12)
 
 - **S8 — 3-scenario business-case generation (ADR-0098)**:
   \`generateBusinessCases\` runs the FS scenario contract (downside / base /
@@ -182,18 +183,25 @@ itself (process-flow.ts:394–399, 463–472); any \`kill\` terminates the entit
   (no source URL / real source) is recorded with reliability grade **C** — the
   seam's limits stay legible to the human reviewer instead of fabricating
   authority.
-- **S10 — IC package, dual gates, establishment (ADR-0100)**: the IC package
+- **S10 — deal structuring (flow.spec v2.2.0, ADR-0045)**: the deal-structure
+  surface records the vehicle hypothesis (direct / SPC / holdco / internal-venture
+  spin-off / JV) with the four mandatory axis notes (tax / liability isolation /
+  financing leverage / exit) and assembles the financing plan (sources & uses,
+  migration 0075). Four-axis completion demands a \`deal_structure_review\`
+  artifact reference (single deliberate setter); S10 completes only when the
+  latest hypothesis is four-axis-complete AND sources balance uses.
+- **S11 — IC package, dual gates, establishment (ADR-0100)**: the IC package
   surface assembles the project evidence for \`entity_ic\` → \`group_ic\`
   (both human gates). For origin ∈ {internal, joint}, establishment execution is
   tracked as **project-keyed** 5 steps (setup → registration/permit
   classification → personnel transfer → completion check; \`chk-entity-formation\`
   evidence); the opportunity-keyed ADR-0057 pattern is deprecated.
-- **S11 — scorecard and transitions (ADR-0101)**: the portfolio scorecard view
+- **S12 — scorecard and transitions (ADR-0101)**: the portfolio scorecard view
   reads \`venture_scorecard\` per project; kill/graduate outcomes are recorded in
   a human transition-decision ledger using the venture-portfolio-ic vocabulary
   (next_tranche_released / held_evidence_incomplete / graduate_to_core /
   reduce_or_divest / kill_with_learning_captured) — portfolio governance, a
-  different category from the S1–S10 kill criteria.
+  different category from the S1–S11 kill criteria.
 
 ## Steering committee system (ADR-0097, \`procedures/_committees.yaml\`)
 
@@ -220,7 +228,7 @@ Two registered committees — \`route-steering-committee\` (S4 route decision) a
 and an initiating company (\`md_company\`), \`advancePipeline\`
 (pipeline.ts:386) executes the current stage's automation, re-evaluates, and
 **pauses only at human decision points** (gate go/hold/kill, business-case
-adoption, checklist final approval, track/route confirmation, S11 transition).
+adoption, checklist final approval, track/route confirmation, S12 transition).
 \`pipeline_run\` (migration 0072) carries status \`running\` /
 \`paused_for_human\` / \`completed\` / \`failed\` / \`killed\`; a pause writes a
 \`pipeline_paused\` notification (pipeline.ts:497). The OS-scheduler batch
@@ -247,7 +255,7 @@ Declared gaps, not hidden ones:
   (\`_committees.yaml\` follow-up note).
 - **Scorecard weights / cadence (ADR-0052 open question b)** — the exact
   venture-scorecard weighting scheme and revisit cadence remain an open
-  question; S11 currently pins only the quarterly freshness predicate.
+  question; S12 currently pins only the quarterly freshness predicate.
 `;
 
 function generate(spec: FlowSpec): string {

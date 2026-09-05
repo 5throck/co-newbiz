@@ -1,4 +1,4 @@
-// Portfolio pipeline (D1/D2) — every promoted project's S8~S11 stage + gate
+// Portfolio pipeline (D1/D2) — every promoted project's S8~S12 stage + gate
 // snapshot, plus HOLD/kill gate aging across the portfolio. Member-visible
 // only (each project is filtered through visibleProject; admins get an empty
 // list per ADR-0091 role separation).

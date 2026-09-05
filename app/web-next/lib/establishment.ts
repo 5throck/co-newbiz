@@ -1,4 +1,4 @@
-// establishment — shared read/write model for the S10 설립 실행 5단계 record
+// establishment — shared read/write model for the S11 설립 실행 5단계 record
 // (entity-establishment-execution, ADR-0085; project key ADR-0100 §1/§2).
 //
 // One ledger, two projections. entity_establishment_step rows carry BOTH
@@ -92,7 +92,7 @@ export interface EstablishmentProgress {
   complete: boolean;
 }
 
-/** Distinct completed step numbers for the project — the S10 predicate input
+/** Distinct completed step numbers for the project — the S11 predicate input
  * (process-flow) and the IC-package progress (n/5) both read this, so the
  * count cannot drift between surfaces. */
 export function establishmentProgress(projectId: string): EstablishmentProgress {

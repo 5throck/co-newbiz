@@ -1,7 +1,7 @@
 "use client";
 
 // 프로젝트 개요 (ADR-0104) — ProjectSubNav "개요" 진입점. 차터 최신본과
-// S4~S11 프로세스 스냅샷을 한 화면에서 요약한다.
+// S4~S12 프로세스 스냅샷을 한 화면에서 요약한다.
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "../../../lib/api.ts";

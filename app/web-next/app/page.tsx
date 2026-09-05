@@ -29,7 +29,7 @@ interface DashboardData {
 const STATUS_LABELS: Record<string, string> = { identified: "발굴", assessed: "평가", selected: "선별", dropped: "제외" };
 const GATE_LABELS: Record<string, string> = { screening: "Screening", pre_fs: "Pre-FS", target_screening: "Target Screening", fs: "FS", dd: "DD", entity_ic: "Entity IC", group_ic: "Group IC" };
 const GATE_CLASS: Record<string, string> = { go: "status-green", hold: "status-amber", kill: "status-red" };
-const STAGE_ORDER = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11"];
+const STAGE_ORDER = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S11", "S12"];
 
 export default function DashboardPage() {
   const ct = useChartTheme();
@@ -55,7 +55,7 @@ export default function DashboardPage() {
     count: opps.filter((o) => o.status === status).length,
   }));
 
-  // 프로젝트 단계 분포 (S8~S11)
+  // 프로젝트 단계 분포 (S8~S12)
   const stageCounts = STAGE_ORDER.slice(7).map((s) => ({
     stage: s,
     count: projects.filter((p) => p.currentStage === s).length,
@@ -157,7 +157,7 @@ export default function DashboardPage() {
           <EChartsCore option={funnelOption} style={{ height: 260 }} />
         </section>
         <section className="chart-card glass" aria-label="프로젝트 단계 분포">
-          <h3 className="text-label mb-2">프로젝트 단계 분포 (S8~S11)</h3>
+          <h3 className="text-label mb-2">프로젝트 단계 분포 (S8~S12)</h3>
           <EChartsCore option={stageChartOption} style={{ height: 260 }} />
         </section>
       </div>

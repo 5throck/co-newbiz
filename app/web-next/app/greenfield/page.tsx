@@ -140,7 +140,7 @@ export function GreenfieldView() {
             icon="⚙️"
             summary={
               <span className="flex items-center gap-1">
-                <span className="status-chip status-not-started" title="P4 실행형: 평가 구성요소 진행 — S10 설립실행과 동일 상태 어휘">
+                <span className="status-chip status-not-started" title="P4 실행형: 평가 구성요소 진행 — S11 설립실행과 동일 상태 어휘">
                   {selected.opportunity.assessed_at ? "done" : "in_progress"} · {[gaps.length > 0, entryStrategy !== "", bcLines.length > 0].filter(Boolean).length}/3 구성요소
                 </span>
                 {selected.opportunity.assessed_at && <span className="status-chip status-green">평가 기록 v1+</span>}

@@ -1,6 +1,6 @@
 // @version 1.0.0
 /**
- * S11 post-management — ADR-0101 regression.
+ * S12 post-management — ADR-0101 regression.
  *
  * Proves, against the REAL route handlers (nextRequest harness) and the real
  * scratch SQLite:
@@ -14,7 +14,7 @@
  *      'venture-portfolio-ic' while the session user rides the recorder
  *      lineage (run.created_by, surfaced as recorded_by), and appendAudit
  *      fires;
- *  (c) S11 completion flips ONLY when a fresh-cycle scorecard row exists —
+ *  (c) S12 completion flips ONLY when a fresh-cycle scorecard row exists —
  *      no rows blocks, a stale latest cycle blocks naming the stale cycle,
  *      a current/previous-quarter cycle completes;
  *  (d) the ledger is append-only: a second POST for the same review_cycle is
@@ -45,6 +45,32 @@ const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts
 const { currentReviewCycle, shiftReviewCycle } = await import("../../app/web-next/lib/portfolio.ts");
 
 const NOW = new Date().toISOString();
+
+/** S10 투자구조 설계 완료 픽스처 (flow.spec v2.2.0 술어) — 4축 검토 완료된
+ * 가설 1건 + sources == uses > 0 인 자금조달 행. 정합 술어 검사가 S10을
+ * 통과하도록 직접 INSERT 한다 (거버넌스 레이어는 별도 테스트에서 검증). */
+function seedS10Complete(pid: string) {
+  db.run(
+    `INSERT INTO deal_structure_hypothesis
+       (id, project_id, asset_or_stock, stake_type, instrument_mix, vehicle,
+        tax_structure_note, liability_isolation_note, financing_leverage_note,
+        exit_structure_note, four_axis_review_completed, hypothesized_by, hypothesized_at, rationale)
+     VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?,?)`,
+    [ulid(), pid, "stock", "majority", "mixed", "spc",
+     "법인세 특례 검토", "SPC 자산 격리", "AC 대출 60%", "5년 후 매각",
+     ANALYST, NOW, "SPC 경유 구조 — 4축 검토 완료"],
+  );
+  db.run(
+    `INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at)
+     VALUES (?,?,?,?,?,?,?)`,
+    [ulid(), pid, "source", "출자금 + AC 대출", 1000, ANALYST, NOW],
+  );
+  db.run(
+    `INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at)
+     VALUES (?,?,?,?,?,?,?)`,
+    [ulid(), pid, "use", "주식 인수 대금", 1000, ANALYST, NOW],
+  );
+}
 const CURRENT_CYCLE = currentReviewCycle();
 const STALE_CYCLE = shiftReviewCycle(CURRENT_CYCLE, -3); // one full quarter older than the freshness window
 
@@ -63,7 +89,7 @@ let analystCookie = "";
 let viewerCookie = "";
 let outsiderCookie = "";
 let projectId = "";
-let project2Id = ""; // a SECOND project for the S11 freshness sequence — self-contained cycle history
+let project2Id = ""; // a SECOND project for the S12 freshness sequence — self-contained cycle history
 let runId = "";
 let runId2 = ""; // project2's own run (scorecard rows are run-scoped per ADR-0005)
 
@@ -104,7 +130,7 @@ beforeAll(async () => {
   const sourceOppId = ulid();
   db.run(
     "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [sourceOppId, "S11 테스트 기회", "테스트 산업", "selected", ANALYST, NOW],
+    [sourceOppId, "S12 테스트 기회", "테스트 산업", "selected", ANALYST, NOW],
   );
   db.run(
     "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?)",
@@ -115,24 +141,26 @@ beforeAll(async () => {
      VALUES (?,?,?,?,?,?,?,?,?)`,
     [ulid(), sourceOppId, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
   );
-  projectId = promoteOpportunity(sourceOppId, { promotedBy: ANALYST, needToKnowBasis: "S11 test promoter" }).project.id;
-  // The S11 freshness sequence runs on its own project whose scorecard
+  projectId = promoteOpportunity(sourceOppId, { promotedBy: ANALYST, needToKnowBasis: "S12 test promoter" }).project.id;
+  seedS10Complete(projectId);
+  // The S12 freshness sequence runs on its own project whose scorecard
   // history starts empty (no cross-test cycle pollution).
-  project2Id = promoteAnother("S11 신선도 테스트 기회");
-  // S10 applies establishment to origin∈{internal,joint} (ADR-0047) — pin it
+  project2Id = promoteAnother("S12 신선도 테스트 기회");
+  seedS10Complete(project2Id);
+  // S11 applies establishment to origin∈{internal,joint} (ADR-0047) — pin it
   // and complete the 5 steps + both IC gates so the process's current stage
-  // IS S11 (blockers only surface for the current stage).
+  // IS S12 (blockers only surface for the current stage).
   db.run("UPDATE md_project SET origin = 'internal' WHERE id = ?", [projectId]);
   db.run("UPDATE md_project SET origin = 'internal' WHERE id = ?", [project2Id]);
 
   // S8 (case + simulation) and S9 (judged checklist item) artifacts.
   db.run(
     "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
-    ["bc-pf1", projectId, "greenfield_cost", "S11 케이스", 5, ANALYST, NOW],
+    ["bc-pf1", projectId, "greenfield_cost", "S12 케이스", 5, ANALYST, NOW],
   );
   db.run(
     "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
-    ["bc-pf2", project2Id, "greenfield_cost", "S11 신선도 케이스", 5, ANALYST, NOW],
+    ["bc-pf2", project2Id, "greenfield_cost", "S12 신선도 케이스", 5, ANALYST, NOW],
   );
   for (const pid of [projectId, project2Id]) {
     const modelId = pid === projectId ? "bc-pf1" : "bc-pf2";
@@ -145,7 +173,7 @@ beforeAll(async () => {
       [ulid(), pid, "custom:commercial", ulid(), "pass", ANALYST, NOW],
     );
   }
-  // S10: 5 establishment steps + both IC gate records.
+  // S11: 5 establishment steps + both IC gate records.
   const setupOpps: Array<{ oppId: string; pid: string }> = [{ oppId: sourceOppId, pid: projectId }];
   const p2 = db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(project2Id) as { source_opportunity_id: string };
   setupOpps.push({ oppId: p2.source_opportunity_id, pid: project2Id });
@@ -160,7 +188,7 @@ beforeAll(async () => {
     for (const gate of ["entity_ic", "group_ic"]) {
       const res = await req(`/api/projects/${pid}/gate-decisions`, {
         method: "POST", headers: { cookie: analystCookie },
-        body: JSON.stringify({ gate, decision: "go", rationale: "S11 도달을 위한 IC 승인 기록 (테스트)" }),
+        body: JSON.stringify({ gate, decision: "go", rationale: "S12 도달을 위한 IC 승인 기록 (테스트)" }),
       });
       expect(res.status).toBe(201);
     }
@@ -332,30 +360,30 @@ describe("(b) transition-decision POST — the recorder pattern", () => {
   });
 });
 
-describe("(c) S11 completion — latest-cycle freshness (ADR-0101 §4)", () => {
-  // The freshness sequence runs on project2, whose S8–S10 were completed in
-  // setup so S11 is the current stage and its blockers actually surface.
-  test("no scorecard rows at all: S11 is current and blocked on the artifact", () => {
+describe("(c) S12 completion — latest-cycle freshness (ADR-0101 §4)", () => {
+  // The freshness sequence runs on project2, whose S8–S11 were completed in
+  // setup so S12 is the current stage and its blockers actually surface.
+  test("no scorecard rows at all: S12 is current and blocked on the artifact", () => {
     const empty = evaluateProcess({ type: "project", id: project2Id });
-    expect(empty.completedStages).toContain("S10");
-    expect(empty.completedStages).not.toContain("S11");
-    expect(empty.currentStage).toBe("S11");
+    expect(empty.completedStages).toContain("S11");
+    expect(empty.completedStages).not.toContain("S12");
+    expect(empty.currentStage).toBe("S12");
     expect(empty.blockers.join("\n")).toContain("벤처 스코어카드가 필요합니다");
   });
 
-  test("a STALE latest cycle does not complete S11 and names the stale cycle", () => {
+  test("a STALE latest cycle does not complete S12 and names the stale cycle", () => {
     recordCycle(STALE_CYCLE, "stale_measure", "on_target", project2Id);
     const stale = evaluateProcess({ type: "project", id: project2Id });
-    expect(stale.completedStages).not.toContain("S11");
-    expect(stale.currentStage).toBe("S11");
+    expect(stale.completedStages).not.toContain("S12");
+    expect(stale.currentStage).toBe("S12");
     expect(stale.blockers.join("\n")).toContain(STALE_CYCLE);
   });
 
-  test("recording a CURRENT-quarter cycle flips S11 complete", () => {
+  test("recording a CURRENT-quarter cycle flips S12 complete", () => {
     recordCycle(CURRENT_CYCLE, "fresh_measure", "on_target", project2Id);
     const done = evaluateProcess({ type: "project", id: project2Id });
-    expect(done.completedStages).toContain("S11");
-    expect(done.currentStage).toBeNull(); // S11 is terminal (onComplete: terminal)
+    expect(done.completedStages).toContain("S12");
+    expect(done.currentStage).toBeNull(); // S12 is terminal (onComplete: terminal)
   });
 });
 
