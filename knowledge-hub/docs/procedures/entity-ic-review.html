@@ -26,14 +26,6 @@
       background: var(--bg); color: var(--text);
     }
     .portal-header .header-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-    .dark-mode-toggle {
-      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 4px 8px; cursor: pointer; color: var(--text); font-size: 0.9em;
-    }
-    .lang-switcher select {
-      padding: 4px 6px; font-size: 0.82em; border-radius: var(--radius);
-      border: 1px solid var(--border); background: var(--bg); color: var(--text);
-    }
     .portal-sidebar {
       position: fixed; top: 56px; bottom: 0; left: 0; width: var(--sidebar-width);
       overflow-y: auto; padding: 16px 0 32px;
@@ -91,13 +83,11 @@
     .toc-box a { color: var(--text-muted); text-decoration: none; }
     .toc-box a:hover { color: var(--accent); }
     /* 폭 대응: 표가 컨테이너보다 넓으면 가로 스크롤, 긴 토큰은 줄바꿈 */
+    /* 열 폭은 브라우저 auto table layout이 내용량에 비례해 배분한다.
+       overflow-wrap만 두고 고정 min-width는 두지 않는다(내용량 기준 요구). */
     .table-scroll { overflow-x: auto; }
-    .table-scroll table { min-width: 640px; }
-    .table-scroll th:nth-child(3), .table-scroll td:nth-child(3) { min-width: 7.5rem; }
-    .table-scroll th:nth-child(4), .table-scroll td:nth-child(4) { min-width: 9rem; }
-    .table-scroll th:nth-child(5), .table-scroll td:nth-child(5) { min-width: 11.5rem; }
-    .main-content article td, .main-content article th { word-break: normal; overflow-wrap: anywhere; vertical-align: top; }
-    .main-content article td.desc { min-width: 280px; }
+    .main-content article table { table-layout: auto; }
+    .main-content article td, .main-content article th { overflow-wrap: anywhere; vertical-align: top; }
     /* mermaid 다이어그램을 컨테이너 폭에 맞춤 */
     .mermaid { max-width: 100%; overflow-x: auto; }
     .mermaid svg { max-width: 100% !important; height: auto; }
@@ -184,12 +174,12 @@
       <table style="width:100%;border-collapse:collapse;margin:20px 0;">
         <thead>
           <tr style="border-bottom:2px solid var(--border);">
-            <th style="text-align:left;padding:8px;white-space:nowrap;">#</th>
-            <th style="text-align:left;padding:8px;white-space:nowrap;">Gate</th>
-            <th style="text-align:left;padding:8px;white-space:nowrap;">Agent</th>
-            <th style="text-align:left;padding:8px;white-space:nowrap;">Skill</th>
-            <th style="text-align:left;padding:8px;white-space:nowrap;">Output</th>
-            <th style="text-align:left;padding:8px;">Description</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;width:3%;">#</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;width:7%;">Gate</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;width:11%;">Agent</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;width:14%;">Skill</th>
+            <th style="text-align:left;padding:8px;white-space:nowrap;width:15%;">Output</th>
+            <th style="text-align:left;padding:8px;width:50%;">Description</th>
           </tr>
         </thead>
         <tbody>
