@@ -228,7 +228,12 @@
   <aside class="sidebar">
     <nav>
       <ul>
-        <li><a href="../index.html">홈</a></li>
+        <p class="nav-section">포털</p>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../index.html">홈</a></li>
+          </ul>
+          <p class="nav-section">규정·절차</p>
+          <ul style="margin:0 0 12px;">
           <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">규정집 (확장 예정)</span></li>
           <li><a href="../procedures/index.html" class="active">업무절차서</a></li>
           <li style="padding-left:14px;"><a href="../procedures/greenfield-dd.html" style="font-size:0.85em;">그린필드 실사</a></li>
@@ -237,11 +242,15 @@
           <li style="padding-left:14px;"><a href="../procedures/entity-ic-review.html" style="font-size:0.85em;">Entity IC 심의</a></li>
           <li style="padding-left:14px;"><a href="../procedures/jv-lifecycle-governance.html" style="font-size:0.85em;">JV 라이프사이클 거버넌스</a></li>
           <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">체크리스트 (확장 예정)</span></li>
+          <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">DD 실사 (확장 예정)</span></li>
+          </ul>
+          <p class="nav-section">참조·가이드</p>
+          <ul style="margin:0 0 12px;">
           <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">업무 매뉴얼 (확장 예정)</span></li>
           <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">프로세스·거버넌스 참고문서 (확장 예정)</span></li>
           <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">산출물 템플릿 (확장 예정)</span></li>
           <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">디자인 (확장 예정)</span></li>
-          <li><span style="color:var(--text-dim);cursor:default;" title="파일럿 승인 후 확장">DD 실사 (확장 예정)</span></li>
+          </ul>
         </ul>
     </nav>
   </aside>
@@ -255,16 +264,38 @@
       <h1>업무절차서</h1>
 <h1>업무절차서</h1>
       <p>스테이지별 공유 절차서입니다. procedures/*.yaml이 권위 원본입니다.</p>
-      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
-        <thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">문서</th><th style="text-align:left;padding:8px;">원본 경로</th></tr></thead>
-        <tbody>
-          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;"><a href="greenfield-dd.html">그린필드 실사</a></td><td style="padding:8px;">procedures/_shared/greenfield-dd/schema.yaml</td></tr>
-          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;"><a href="brownfield-dd.html">브라운필드 실사</a></td><td style="padding:8px;">procedures/_shared/brownfield-dd/schema.yaml</td></tr>
-          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;"><a href="deal-structuring.html">투자구조 설계</a></td><td style="padding:8px;">procedures/_shared/deal-structuring/schema.yaml</td></tr>
-          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;"><a href="entity-ic-review.html">Entity IC 심의</a></td><td style="padding:8px;">procedures/_shared/entity-ic-review/schema.yaml</td></tr>
-          <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;"><a href="jv-lifecycle-governance.html">JV 라이프사이클 거버넌스</a></td><td style="padding:8px;">procedures/_shared/jv-lifecycle-governance/schema.yaml</td></tr>
-        </tbody>
-      </table>
+      <div class="grid">
+        <a class="card" href="greenfield-dd.html">
+          <span class="tag tag-ref">업무절차서</span>
+          <h2>그린필드 실사</h2>
+          <p>절차서 단계·게이트·산출물 정의</p>
+          <div class="go">문서 열기 →</div>
+        </a>
+        <a class="card" href="brownfield-dd.html">
+          <span class="tag tag-ref">업무절차서</span>
+          <h2>브라운필드 실사</h2>
+          <p>절차서 단계·게이트·산출물 정의</p>
+          <div class="go">문서 열기 →</div>
+        </a>
+        <a class="card" href="deal-structuring.html">
+          <span class="tag tag-ref">업무절차서</span>
+          <h2>투자구조 설계</h2>
+          <p>절차서 단계·게이트·산출물 정의</p>
+          <div class="go">문서 열기 →</div>
+        </a>
+        <a class="card" href="entity-ic-review.html">
+          <span class="tag tag-ref">업무절차서</span>
+          <h2>Entity IC 심의</h2>
+          <p>절차서 단계·게이트·산출물 정의</p>
+          <div class="go">문서 열기 →</div>
+        </a>
+        <a class="card" href="jv-lifecycle-governance.html">
+          <span class="tag tag-ref">업무절차서</span>
+          <h2>JV 라이프사이클 거버넌스</h2>
+          <p>절차서 단계·게이트·산출물 정의</p>
+          <div class="go">문서 열기 →</div>
+        </a>
+      </div>
       
       <nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
         <a href="../index.html" class="prev" style="text-decoration:none;color:var(--text);">
