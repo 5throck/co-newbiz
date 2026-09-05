@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG 프레임워크 — 4. Hysteresis (D-M3-4) | co-newbiz 문서 허브</title>
+  <meta name="description" content="co-newbiz knowledge hub — versioned snapshot portal for policies, procedures, checklists, and manuals">
+  <link rel="stylesheet" href="../../assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="../../assets/css/handbook-components.css">
+  <style>
+    /* 포털 레이아웃 — 색상은 전부 handbook-variables.css(azure 3-layer 다크모드:
+       :root → prefers-color-scheme → .dark) 토큰에서만 가져온다.
+       이 파일에 색 하드코딩 금지. */
+    body { margin: 0; }
+    .portal-header {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; gap: 16px;
+      height: 56px; padding: 0 20px;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      transition: background-color .2s, border-color .2s;
+    }
+    .portal-header .brand { font-weight: 700; color: var(--text); text-decoration: none; font-size: 0.95em; white-space: nowrap; }
+    .portal-header .search-input {
+      flex: 0 1 320px; padding: 6px 10px; font-size: 0.85em;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg); color: var(--text);
+    }
+    .portal-header .header-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .portal-sidebar {
+      position: fixed; top: 56px; bottom: 0; left: 0; width: var(--sidebar-width);
+      overflow-y: auto; padding: 16px 0 32px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+      background: var(--bg2); border-right: 1px solid var(--border);
+      font-size: 0.86em;
+      transition: background-color .2s, border-color .2s;
+    }
+    .portal-sidebar nav ul { list-style: none; margin: 0 0 12px; padding: 0 12px; }
+    .portal-sidebar nav ul li { margin: 2px 0; }
+    .portal-sidebar nav ul li a { color: var(--text-muted); text-decoration: none; display: block; padding: 3px 6px; border-radius: var(--radius); }
+    .portal-sidebar nav ul li a:hover { color: var(--text); }
+    .portal-sidebar nav ul li a.active { color: var(--accent); background: var(--bg); font-weight: 600; }
+    .main-content {
+      margin-left: var(--sidebar-width); padding: 28px 40px 64px;
+      max-width: 980px;
+    }
+    .main-content article { max-width: 820px; }
+    .portal-breadcrumbs { font-size: 0.78em; color: var(--text-dim); margin: 0 0 14px; }
+    .portal-sidebar::-webkit-scrollbar { width: 8px; }
+    .portal-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .portal-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .breadcrumbs a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumbs a:hover { color: var(--accent); }
+    .doc-meta-block {
+      display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px;
+      font-size: 0.78em;
+    }
+    .doc-meta-block .chip {
+      border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px;
+      color: var(--text-muted); background: var(--bg2);
+    }
+    .doc-meta-block .chip.mandatory { color: var(--text-inverse); background: var(--accent-dark, var(--accent)); border-color: transparent; }
+    .authority-note {
+      background: var(--bg-note); border-left: 3px solid var(--border);
+      padding: 10px 14px; margin: 0 0 18px; border-radius: 4px;
+      font-size: 0.82em; color: var(--text-muted);
+    }
+    .gov-meta {
+      margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 0.78em; color: var(--text-dim);
+    }
+    footer {
+      margin-left: var(--sidebar-width); padding: 24px 40px;
+      border-top: 1px solid var(--border); font-size: 0.8em; color: var(--text-muted); text-align: center;
+      transition: border-color .2s;
+    }
+    .section-glyph { display: block; margin-bottom: 12px; }
+    .toc-box {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg2); padding: 12px 16px; margin: 0 0 20px; font-size: 0.84em;
+    }
+    .toc-box ul { list-style: none; margin: 6px 0 0; padding: 0; }
+    .toc-box li { margin: 2px 0; }
+    .toc-box a { color: var(--text-muted); text-decoration: none; }
+    .toc-box a:hover { color: var(--accent); }
+    /* 폭 대응: 표가 컨테이너보다 넓으면 가로 스크롤, 긴 토큰은 줄바꿈 */
+    /* 열 폭은 브라우저 auto table layout이 내용량에 비례해 배분한다.
+       overflow-wrap만 두고 고정 min-width는 두지 않는다(내용량 기준 요구). */
+    .table-scroll { overflow-x: auto; }
+    .main-content article table { table-layout: auto; }
+    .main-content article td, .main-content article th { overflow-wrap: anywhere; vertical-align: top; }
+    /* mermaid 다이어그램을 컨테이너 폭에 맞춤 */
+    .mermaid { max-width: 100%; overflow-x: auto; }
+    .mermaid svg { max-width: 100% !important; height: auto; }
+    @media print {
+      .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
+      .main-content, footer { margin-left: 0; }
+    }
+    @media (max-width: 800px) {
+      .portal-sidebar { display: none; }
+      .main-content, footer { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="portal-header">
+    <a href="../../index.html" class="brand">📚 co-newbiz 문서 허브</a>
+    <input type="search" class="search-input" id="site-search" placeholder="문서 검색..." aria-label="Search">
+    <div class="header-actions">
+      <button class="dark-mode-toggle" id="dark-mode-toggle" aria-label="Toggle dark mode">🌓</button>
+      <div id="lang-switcher" class="lang-switcher">
+        <select id="lang-select" aria-label="Language"></select>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar portal-sidebar" id="sidebar">
+    <nav>
+      <p class="nav-section">문서 허브</p>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../index.html">홈</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../policies/index.html">규정집</a></li>
+          <li style="padding-left:14px;"><a href="../../policies/neb-policy/index.html" style="font-size:0.85em;">그룹 신규사업 검토 정책</a></li>
+          <li style="padding-left:14px;"><a href="../../policies/ent-a-addendum/index.html" style="font-size:0.85em;">ent-a 법인 추가 규정</a></li>
+          <li style="padding-left:14px;"><a href="../../policies/ent-b-addendum/index.html" style="font-size:0.85em;">ent-b 법인 추가 규정</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../procedures/index.html">업무절차서</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/greenfield-screening/index.html" style="font-size:0.85em;">S1~S3 그린필드 스크리닝</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-screening/index.html" style="font-size:0.85em;">S1~S3 브라운필드 스크리닝</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/company-profile-analysis/index.html" style="font-size:0.85em;">S3 기업 프로필 분석</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/greenfield-pre-fs/index.html" style="font-size:0.85em;">S4 그린필드 Pre-FS</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-pre-fs/index.html" style="font-size:0.85em;">S4 브라운필드 Pre-FS</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/deal-shape-chain/index.html" style="font-size:0.85em;">S4 딜 셰이프 체인</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/greenfield-capability-assessment/index.html" style="font-size:0.85em;">S5 그린필드 역량 평가</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-target-identification/index.html" style="font-size:0.85em;">S6 브라운필드 대상 후보 발굴</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-target-screening/index.html" style="font-size:0.85em;">S7 브라운필드 대상 스크리닝</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/greenfield-fs/index.html" style="font-size:0.85em;">S8 그린필드 FS</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-fs/index.html" style="font-size:0.85em;">S8 브라운필드 FS</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/greenfield-dd/index.html" style="font-size:0.85em;">S9 그린필드 실사</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-dd/index.html" style="font-size:0.85em;">S9 브라운필드 실사</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/deal-structuring/index.html" style="font-size:0.85em;">S10 투자구조 설계</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/entity-ic-review/index.html" style="font-size:0.85em;">S11 Entity IC 심의</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/group-investment-review/index.html" style="font-size:0.85em;">S11 그룹 투자 심의</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/entity-establishment-execution/index.html" style="font-size:0.85em;">S11 법인 설립 실행</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/jv-lifecycle-governance/index.html" style="font-size:0.85em;">S11 JV 라이프사이클 거버넌스</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/pmi-integration-execution/index.html" style="font-size:0.85em;">S11 PMI 통합 실행</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/portfolio-venture-monitoring/index.html" style="font-size:0.85em;">S12 포트폴리오 벤처 모니터링</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../checklists/index.html">체크리스트</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/greenfield-feasibility/index.html" style="font-size:0.85em;">그린필드 실현가능성</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/technical-dd/index.html" style="font-size:0.85em;">기술 실사</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/target-screening/index.html" style="font-size:0.85em;">대상 스크리닝</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/deal-shape-presigning/index.html" style="font-size:0.85em;">딜 셰이프 사전서명</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/legal-regulatory/index.html" style="font-size:0.85em;">법규·규제</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/legal-dd/index.html" style="font-size:0.85em;">법무 실사</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/entity-formation/index.html" style="font-size:0.85em;">법인 설립</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/brownfield-feasibility/index.html" style="font-size:0.85em;">브라운필드 실현가능성</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/commercial-dd/index.html" style="font-size:0.85em;">상업 실사</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/market-dd/index.html" style="font-size:0.85em;">시장 실사</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/hr-dd/index.html" style="font-size:0.85em;">인사 실사</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/site-selection/index.html" style="font-size:0.85em;">입지 선정</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/financing-plan/index.html" style="font-size:0.85em;">자금조달 계획</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/financial-dd/index.html" style="font-size:0.85em;">재무 실사</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/strategic-fit-screening/index.html" style="font-size:0.85em;">전략적 적합성 스크리닝</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/partnership/index.html" style="font-size:0.85em;">파트너십</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/ma-special-topics/index.html" style="font-size:0.85em;">M&amp;A 특수 주제</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/rbd-technology/index.html" style="font-size:0.85em;">R&amp;BD 기술</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../manuals/index.html">업무 매뉴얼</a></li>
+          <li style="padding-left:14px;"><a href="../../manuals/admin-manual/index.html" style="font-size:0.85em;">관리자 매뉴얼</a></li>
+          <li style="padding-left:14px;"><a href="../../manuals/business-manual/index.html" style="font-size:0.85em;">비즈니스 매뉴얼 (analyst·IC 심사자)</a></li>
+          <li style="padding-left:14px;"><a href="../../manuals/operations-manual/index.html" style="font-size:0.85em;">운영 매뉴얼 (운영자)</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../reference/index.html">참고문서</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/guide-expert-interview/index.html" style="font-size:0.85em;">가이드 — 전문가 인터뷰 수행</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/guide-proxy-chain-hop/index.html" style="font-size:0.85em;">가이드 — 프록시 체인 홉 분류</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/governance-operations/index.html" style="font-size:0.85em;">거버넌스 운영</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/phase-definitions/index.html" style="font-size:0.85em;">단계 정의</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/runbook-deployment/index.html" style="font-size:0.85em;">런북 — 배포</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/runbook-backup-restore/index.html" style="font-size:0.85em;">런북 — 백업·복구</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/security-model/index.html" style="font-size:0.85em;">보안 모델</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/security-baseline/index.html" style="font-size:0.85em;">보안 베이스라인</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/ops-cadence/index.html" style="font-size:0.85em;">운영 주기</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/process-map/index.html" style="font-size:0.85em;">프로세스 맵</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/raci/index.html" style="font-size:0.85em;">RACI 매트릭스</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/rag-framework/index.html" class="active" style="font-size:0.85em;">RAG 프레임워크</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../templates/index.html">산출물 템플릿</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/gate-pass-record-template/index.html" style="font-size:0.85em;">게이트 통과 기록</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/venture-transition-decision-template/index.html" style="font-size:0.85em;">벤처 전환 결정</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/venture-transition-evidence-template/index.html" style="font-size:0.85em;">벤처 전환 증적</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/partner-dd-report-template/index.html" style="font-size:0.85em;">파트너 DD 리포트</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/portfolio-scorecard-rollup-template/index.html" style="font-size:0.85em;">포트폴리오 스코어카드 롤업</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/bau-exit-evidence-pack-template/index.html" style="font-size:0.85em;">BAU exit 증적 팩</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/ic-memo-template/index.html" style="font-size:0.85em;">IC 메모</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/jv-health-scorecard-template/index.html" style="font-size:0.85em;">JV 헬스 스코어카드</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../design/index.html">디자인</a></li>
+          <li style="padding-left:14px;"><a href="../../design/design-tokens/index.html" style="font-size:0.85em;">디자인 가이드 — 토큰·타이포</a></li>
+          <li style="padding-left:14px;"><a href="../../design/design-philosophy/index.html" style="font-size:0.85em;">디자인 철학·원칙</a></li>
+          <li style="padding-left:14px;"><a href="../../design/design-accessibility/index.html" style="font-size:0.85em;">접근성·유니버설 디자인</a></li>
+          <li style="padding-left:14px;"><a href="../../design/design-components/index.html" style="font-size:0.85em;">주요 컴포넌트 카탈로그</a></li>
+          <li style="padding-left:14px;"><a href="../../design/design-screens/index.html" style="font-size:0.85em;">표준 화면 패턴 P0~P5</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../dd/index.html">DD 실사</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-domain-guides/index.html" style="font-size:0.85em;">도메인별 실사 가이드</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-tailored-checklists/index.html" style="font-size:0.85em;">맞춤 체크리스트</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-findings/index.html" style="font-size:0.85em;">발견사항 기록 규칙</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-overview/index.html" style="font-size:0.85em;">DD 개요·프로세스</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-best-practices/index.html" style="font-size:0.85em;">DD 운영 모범 사례</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-valuation-bridge/index.html" style="font-size:0.85em;">DD→밸류에이션 브릿지</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-waiver-kill/index.html" style="font-size:0.85em;">waiver·kill criteria</a></li>
+          </ul>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <div class="portal-breadcrumbs" aria-label="Breadcrumb">
+      <a href="../../index.html">홈</a> &gt; <a href="../../reference/index.html">참고문서</a> &gt; RAG 프레임워크
+    </div>
+    <article>
+      <h1>4. Hysteresis (D-M3-4)</h1>
+<div class="authority-note">이 페이지는 저장소 원본 문서의 <strong>버전 고정 스냅샷</strong>입니다(온보딩·배포용). 분쟁 시 <strong>원본 문서가 우위</strong>입니다 — 최신판은 웹앱의 문서·규정 화면 또는 저장소 원본을 확인하세요. 본문은 원본 문서의 언어로 유지됩니다.</div>
+
+<table>
+<thead>
+<tr>
+<th>Transition</th>
+<th>Trigger</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Promote Amber → Green</td>
+<td>IRR ≥ hurdle + 2.0pp, sustained for one full run cycle (not a single day&#39;s fetch)</td>
+</tr>
+<tr>
+<td>Demote Green → Amber</td>
+<td>IRR &lt; hurdle + 0.5pp</td>
+</tr>
+<tr>
+<td>Minimum hold period</td>
+<td>7 days, measured against <code>run</code> timestamps — two manually re-triggered runs on the same calendar day do not satisfy the hold period</td>
+</tr>
+</tbody></table><nav class="chapter-nav" style="display:flex;justify-content:space-between;gap:12px;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+        <a href="ch-05.html" class="prev" style="text-decoration:none;color:var(--text);">
+          <div style="font-size:12px;color:var(--text-dim);">← 이전 장</div>
+          <div>3. Data Confidence Dimension and Cap (D-M3-2, D-M3-3)</div>
+        </a>
+        <a href="ch-07.html" class="next" style="text-decoration:none;color:var(--text);text-align:right;">
+              <div style="font-size:12px;color:var(--text-dim);">다음 장 →</div>
+              <div>5. Stage-Gate Threshold Applicability</div>
+            </a>
+      </nav>
+    </article>
+  </div>
+
+  <footer>
+    <p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p>
+  </footer>
+
+  <script src="../../assets/js/dark-mode-toggle.js"></script>
+  <script src="../../assets/js/site-search.js"></script>
+  <script src="../../assets/js/lang-switcher.js"></script>
+  <script src="../../assets/js/inpage-search.js"></script>
+  <script src="../../assets/js/copy-code.js"></script>
+  
+</body>
+</html>

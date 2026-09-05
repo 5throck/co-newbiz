@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG Framework — 5-1. Stage-Gate Threshold Applicability — Market Dimension (Decision 6, draft) | co-newbiz Portal de Documentos</title>
+  <meta name="description" content="co-newbiz knowledge hub — versioned snapshot portal for policies, procedures, checklists, and manuals">
+  <link rel="stylesheet" href="../../assets/css/handbook-variables.css">
+  <link rel="stylesheet" href="../../assets/css/handbook-components.css">
+  <style>
+    /* 포털 레이아웃 — 색상은 전부 handbook-variables.css(azure 3-layer 다크모드:
+       :root → prefers-color-scheme → .dark) 토큰에서만 가져온다.
+       이 파일에 색 하드코딩 금지. */
+    body { margin: 0; }
+    .portal-header {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; gap: 16px;
+      height: 56px; padding: 0 20px;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      transition: background-color .2s, border-color .2s;
+    }
+    .portal-header .brand { font-weight: 700; color: var(--text); text-decoration: none; font-size: 0.95em; white-space: nowrap; }
+    .portal-header .search-input {
+      flex: 0 1 320px; padding: 6px 10px; font-size: 0.85em;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg); color: var(--text);
+    }
+    .portal-header .header-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .portal-sidebar {
+      position: fixed; top: 56px; bottom: 0; left: 0; width: var(--sidebar-width);
+      overflow-y: auto; padding: 16px 0 32px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+      background: var(--bg2); border-right: 1px solid var(--border);
+      font-size: 0.86em;
+      transition: background-color .2s, border-color .2s;
+    }
+    .portal-sidebar nav ul { list-style: none; margin: 0 0 12px; padding: 0 12px; }
+    .portal-sidebar nav ul li { margin: 2px 0; }
+    .portal-sidebar nav ul li a { color: var(--text-muted); text-decoration: none; display: block; padding: 3px 6px; border-radius: var(--radius); }
+    .portal-sidebar nav ul li a:hover { color: var(--text); }
+    .portal-sidebar nav ul li a.active { color: var(--accent); background: var(--bg); font-weight: 600; }
+    .main-content {
+      margin-left: var(--sidebar-width); padding: 28px 40px 64px;
+      max-width: 980px;
+    }
+    .main-content article { max-width: 820px; }
+    .portal-breadcrumbs { font-size: 0.78em; color: var(--text-dim); margin: 0 0 14px; }
+    .portal-sidebar::-webkit-scrollbar { width: 8px; }
+    .portal-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .portal-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .breadcrumbs a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumbs a:hover { color: var(--accent); }
+    .doc-meta-block {
+      display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px;
+      font-size: 0.78em;
+    }
+    .doc-meta-block .chip {
+      border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px;
+      color: var(--text-muted); background: var(--bg2);
+    }
+    .doc-meta-block .chip.mandatory { color: var(--text-inverse); background: var(--accent-dark, var(--accent)); border-color: transparent; }
+    .authority-note {
+      background: var(--bg-note); border-left: 3px solid var(--border);
+      padding: 10px 14px; margin: 0 0 18px; border-radius: 4px;
+      font-size: 0.82em; color: var(--text-muted);
+    }
+    .gov-meta {
+      margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 0.78em; color: var(--text-dim);
+    }
+    footer {
+      margin-left: var(--sidebar-width); padding: 24px 40px;
+      border-top: 1px solid var(--border); font-size: 0.8em; color: var(--text-muted); text-align: center;
+      transition: border-color .2s;
+    }
+    .section-glyph { display: block; margin-bottom: 12px; }
+    .toc-box {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg2); padding: 12px 16px; margin: 0 0 20px; font-size: 0.84em;
+    }
+    .toc-box ul { list-style: none; margin: 6px 0 0; padding: 0; }
+    .toc-box li { margin: 2px 0; }
+    .toc-box a { color: var(--text-muted); text-decoration: none; }
+    .toc-box a:hover { color: var(--accent); }
+    /* 폭 대응: 표가 컨테이너보다 넓으면 가로 스크롤, 긴 토큰은 줄바꿈 */
+    /* 열 폭은 브라우저 auto table layout이 내용량에 비례해 배분한다.
+       overflow-wrap만 두고 고정 min-width는 두지 않는다(내용량 기준 요구). */
+    .table-scroll { overflow-x: auto; }
+    .main-content article table { table-layout: auto; }
+    .main-content article td, .main-content article th { overflow-wrap: anywhere; vertical-align: top; }
+    /* mermaid 다이어그램을 컨테이너 폭에 맞춤 */
+    .mermaid { max-width: 100%; overflow-x: auto; }
+    .mermaid svg { max-width: 100% !important; height: auto; }
+    @media print {
+      .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
+      .main-content, footer { margin-left: 0; }
+    }
+    @media (max-width: 800px) {
+      .portal-sidebar { display: none; }
+      .main-content, footer { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="portal-header">
+    <a href="../../index_es.html" class="brand">📚 co-newbiz Portal de Documentos</a>
+    <input type="search" class="search-input" id="site-search" placeholder="Buscar documentos..." aria-label="Search">
+    <div class="header-actions">
+      <button class="dark-mode-toggle" id="dark-mode-toggle" aria-label="Toggle dark mode">🌓</button>
+      <div id="lang-switcher" class="lang-switcher">
+        <select id="lang-select" aria-label="Language"></select>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar portal-sidebar" id="sidebar">
+    <nav>
+      <p class="nav-section">Portal de Documentos</p>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../index_es.html">Inicio</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../policies/index_es.html">Policies</a></li>
+          <li style="padding-left:14px;"><a href="../../policies/ent-a-addendum/index_es.html" style="font-size:0.85em;">Entity A Addendum</a></li>
+          <li style="padding-left:14px;"><a href="../../policies/ent-b-addendum/index_es.html" style="font-size:0.85em;">Entity B Addendum</a></li>
+          <li style="padding-left:14px;"><a href="../../policies/neb-policy/index_es.html" style="font-size:0.85em;">Group New-Business Review Policy</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../procedures/index_es.html">Procedures</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/greenfield-screening/index_es.html" style="font-size:0.85em;">S1~S3 Greenfield Screening</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-screening/index_es.html" style="font-size:0.85em;">S1~S3 Brownfield Screening</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/company-profile-analysis/index_es.html" style="font-size:0.85em;">S3 Company Profile Analysis</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/greenfield-pre-fs/index_es.html" style="font-size:0.85em;">S4 Greenfield Pre-FS</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-pre-fs/index_es.html" style="font-size:0.85em;">S4 Brownfield Pre-FS</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/deal-shape-chain/index_es.html" style="font-size:0.85em;">S4 Deal Shape Chain</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/greenfield-capability-assessment/index_es.html" style="font-size:0.85em;">S5 Greenfield Capability Assessment</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-target-identification/index_es.html" style="font-size:0.85em;">S6 Brownfield Target Identification</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-target-screening/index_es.html" style="font-size:0.85em;">S7 Brownfield Target Screening</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/greenfield-fs/index_es.html" style="font-size:0.85em;">S8 Greenfield FS</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-fs/index_es.html" style="font-size:0.85em;">S8 Brownfield FS</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/greenfield-dd/index_es.html" style="font-size:0.85em;">S9 Greenfield DD</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/brownfield-dd/index_es.html" style="font-size:0.85em;">S9 Brownfield DD</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/deal-structuring/index_es.html" style="font-size:0.85em;">S10 Deal Structuring</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/entity-ic-review/index_es.html" style="font-size:0.85em;">S11 Entity IC Review</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/group-investment-review/index_es.html" style="font-size:0.85em;">S11 Group Investment Review</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/entity-establishment-execution/index_es.html" style="font-size:0.85em;">S11 Entity Establishment Execution</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/jv-lifecycle-governance/index_es.html" style="font-size:0.85em;">S11 JV Lifecycle Governance</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/pmi-integration-execution/index_es.html" style="font-size:0.85em;">S11 PMI Integration Execution</a></li>
+          <li style="padding-left:14px;"><a href="../../procedures/portfolio-venture-monitoring/index_es.html" style="font-size:0.85em;">S12 Portfolio Venture Monitoring</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../checklists/index_es.html">Checklists</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/brownfield-feasibility/index_es.html" style="font-size:0.85em;">Brownfield Feasibility</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/commercial-dd/index_es.html" style="font-size:0.85em;">Commercial DD</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/deal-shape-presigning/index_es.html" style="font-size:0.85em;">Deal Shape Pre-Signing</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/entity-formation/index_es.html" style="font-size:0.85em;">Entity Formation</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/financial-dd/index_es.html" style="font-size:0.85em;">Financial DD</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/financing-plan/index_es.html" style="font-size:0.85em;">Financing Plan</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/greenfield-feasibility/index_es.html" style="font-size:0.85em;">Greenfield Feasibility</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/hr-dd/index_es.html" style="font-size:0.85em;">HR DD</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/legal-regulatory/index_es.html" style="font-size:0.85em;">Legal &amp; Regulatory</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/legal-dd/index_es.html" style="font-size:0.85em;">Legal DD</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/ma-special-topics/index_es.html" style="font-size:0.85em;">M&amp;A Special Topics</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/market-dd/index_es.html" style="font-size:0.85em;">Market DD</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/partnership/index_es.html" style="font-size:0.85em;">Partnership</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/rbd-technology/index_es.html" style="font-size:0.85em;">R&amp;BD Technology</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/site-selection/index_es.html" style="font-size:0.85em;">Site Selection</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/strategic-fit-screening/index_es.html" style="font-size:0.85em;">Strategic Fit Screening</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/target-screening/index_es.html" style="font-size:0.85em;">Target Screening</a></li>
+          <li style="padding-left:14px;"><a href="../../checklists/technical-dd/index_es.html" style="font-size:0.85em;">Technical DD</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../manuals/index_es.html">Manuals</a></li>
+          <li style="padding-left:14px;"><a href="../../manuals/admin-manual/index_es.html" style="font-size:0.85em;">Admin Manual</a></li>
+          <li style="padding-left:14px;"><a href="../../manuals/business-manual/index_es.html" style="font-size:0.85em;">Business Manual (analyst &amp; IC reviewers)</a></li>
+          <li style="padding-left:14px;"><a href="../../manuals/operations-manual/index_es.html" style="font-size:0.85em;">Operations Manual</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../reference/index_es.html">Reference</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/governance-operations/index_es.html" style="font-size:0.85em;">Governance Operations</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/guide-expert-interview/index_es.html" style="font-size:0.85em;">Guide — Expert Interview Conduct</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/guide-proxy-chain-hop/index_es.html" style="font-size:0.85em;">Guide — Proxy Chain Hop Classification</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/ops-cadence/index_es.html" style="font-size:0.85em;">Ops Cadence</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/phase-definitions/index_es.html" style="font-size:0.85em;">Phase Definitions</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/process-map/index_es.html" style="font-size:0.85em;">Process Map</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/raci/index_es.html" style="font-size:0.85em;">RACI Matrix</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/rag-framework/index_es.html" class="active" style="font-size:0.85em;">RAG Framework</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/runbook-backup-restore/index_es.html" style="font-size:0.85em;">Runbook — Backup &amp; Restore</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/runbook-deployment/index_es.html" style="font-size:0.85em;">Runbook — Deployment</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/security-baseline/index_es.html" style="font-size:0.85em;">Security Baseline</a></li>
+          <li style="padding-left:14px;"><a href="../../reference/security-model/index_es.html" style="font-size:0.85em;">Security Model</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../templates/index_es.html">Templates</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/bau-exit-evidence-pack-template/index_es.html" style="font-size:0.85em;">BAU Exit Evidence Pack</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/gate-pass-record-template/index_es.html" style="font-size:0.85em;">Gate Pass Record</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/ic-memo-template/index_es.html" style="font-size:0.85em;">IC Memo</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/jv-health-scorecard-template/index_es.html" style="font-size:0.85em;">JV Health Scorecard</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/partner-dd-report-template/index_es.html" style="font-size:0.85em;">Partner DD Report</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/portfolio-scorecard-rollup-template/index_es.html" style="font-size:0.85em;">Portfolio Scorecard Rollup</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/venture-transition-decision-template/index_es.html" style="font-size:0.85em;">Venture Transition Decision</a></li>
+          <li style="padding-left:14px;"><a href="../../templates/venture-transition-evidence-template/index_es.html" style="font-size:0.85em;">Venture Transition Evidence</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../design/index_es.html">Design</a></li>
+          <li style="padding-left:14px;"><a href="../../design/design-accessibility/index_es.html" style="font-size:0.85em;">Accessibility &amp; UD</a></li>
+          <li style="padding-left:14px;"><a href="../../design/design-components/index_es.html" style="font-size:0.85em;">Component Catalog</a></li>
+          <li style="padding-left:14px;"><a href="../../design/design-tokens/index_es.html" style="font-size:0.85em;">Design Guide — Tokens &amp; Typography</a></li>
+          <li style="padding-left:14px;"><a href="../../design/design-philosophy/index_es.html" style="font-size:0.85em;">Design Philosophy &amp; Principles</a></li>
+          <li style="padding-left:14px;"><a href="../../design/design-screens/index_es.html" style="font-size:0.85em;">Standard Screen Patterns P0-P5</a></li>
+          </ul>
+          <ul style="margin:0 0 12px;">
+          <li><a href="../../dd/index_es.html">Due Diligence</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-best-practices/index_es.html" style="font-size:0.85em;">DD Best Practices</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-overview/index_es.html" style="font-size:0.85em;">DD Overview &amp; Process</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-valuation-bridge/index_es.html" style="font-size:0.85em;">DD to Valuation Bridge</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-domain-guides/index_es.html" style="font-size:0.85em;">Domain Guides</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-findings/index_es.html" style="font-size:0.85em;">Finding Rules</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-tailored-checklists/index_es.html" style="font-size:0.85em;">Tailored Checklists</a></li>
+          <li style="padding-left:14px;"><a href="../../dd/dd-waiver-kill/index_es.html" style="font-size:0.85em;">Waivers &amp; Kill Criteria</a></li>
+          </ul>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <div class="portal-breadcrumbs" aria-label="Breadcrumb">
+      <a href="../../index_es.html">Inicio</a> &gt; <a href="../../reference/index_es.html">Reference</a> &gt; RAG Framework
+    </div>
+    <article>
+      <h1>5-1. Stage-Gate Threshold Applicability — Market Dimension (Decision 6, draft)</h1>
+<div class="authority-note">Esta página es una <strong>instantánea con versión fija</strong> del documento original del repositorio. En caso de conflicto, <strong>prevalece el original</strong>. El cuerpo del texto se mantiene en el idioma del documento fuente.</div>
+
+<p>The <code>market</code> dimension&#39;s <strong>evidence layer has landed</strong> (migration 0017, PR-6): the <code>project_variable_snapshot</code> table, the first scoring-var seeds (9 market / right-to-win vars + <code>market.link_fit_quality</code>), and five <code>market-dd-*</code> rule rows staged <code>enabled=0</code> with <code>_threshold_placeholder</code> scalars — the anti-tamper skeleton the thresholds meeting fills in. <strong>The thresholds meeting has now happened</strong>: the approved record <code>docs/decisions/market-thresholds.md</code> (2026-08-23) owns every number, the fillers, the <code>switching_cost_grade</code> CHECK enum (landed by migration 0019), and <code>competitive_intensity</code>&#39;s permanent ban as a standalone var; migration 0019 finalized all five staged rows in place and added the three record-mandated rows (the screening/pre-FS TAM-growth gate splits and <code>market-dd-right-to-win-absent</code>). <strong>Activation has landed</strong> (migration 0022, PR-9): the seven non-green market rows are <code>enabled=1</code> with <code>policy_id</code> + <code>thresholds_source</code> verbatim from the record, and <code>db/lib/rule-assessment.ts</code> grades them per run (§5-3); the green <code>market-dd-right-to-win</code> row alone stays <code>enabled=0</code> — the Decision 9 Green cap lifts only after calibration. This subsection documents the staged rule agreed in the design&#39;s Decision 6 (2026-08-22 RAG formalization design, §1.1), following the same pattern as §5&#39;s <code>financial</code> treatment.</p>
+<table>
+<thead>
+<tr>
+<th>Stage gate</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Screening</td>
+<td><code>market</code> is Amber-capped by default. Only <code>TAM</code> and <code>growth_rate</code> are evaluated, sourced from <code>fact_industry</code>. The other market axes (bargaining power, competitive intensity, switching cost, entry barriers, right-to-win) stay unassessed.</td>
+</tr>
+<tr>
+<td>Pre-FS</td>
+<td><code>TAM</code>/<code>growth_rate</code> must be evidence-backed (not merely present — an <code>evidence_ref</code> is required, not just a non-null value). The full six-axis <code>value_chain_link</code> evidence is still not expected at this stage.</td>
+</tr>
+<tr>
+<td>DD</td>
+<td>The full six-axis <code>value_chain_link</code> evidence activates, and the Amber cap lifts.</td>
+</tr>
+</tbody></table>
+<p>This mirrors the financial dimension&#39;s staged approach (§5): a dimension without a completed evidentiary base cannot produce a Green grade, but Amber/Red signal is still live where the available evidence supports it.</p>
+<h2>Corrected evidence mapping (Decision 6)</h2>
+<p>The design&#39;s meeting review corrected a mapping error in the original plan (see the design doc&#39;s &quot;뒤집힘 4&quot;): <code>value_chain_link.concentration_hhi</code> measures upstream/downstream bargaining power (industry concentration in adjacent supply-chain tiers), not horizontal competitive intensity — the two can point in opposite directions, and conflating them silently mis-grades. The corrected mapping:</p>
+<ul>
+<li><code>concentration_hhi</code> → <code>bargaining_power</code> (its original meaning), <strong>not</strong> <code>competitive_intensity</code>.</li>
+<li><code>competitive_intensity</code> is a <strong>new, still-unsourced</strong> var — to be sourced from <code>fact_industry</code> convention or <code>dimension_input</code>, not from <code>concentration_hhi</code>.</li>
+<li><code>switching_cost_grade</code> is a CHECK-constrained enum since migration 0019 (<code>negligible</code>|<code>low</code>|<code>moderate</code>|<code>high</code>|<code>very_high</code>, D-M-MKT-2), so an <code>in</code>-predicate over it is typo-safe; <code>substitution_threat</code> is CHECK-constrained since migration 0020 — the D-M-MKT-2 rider, a five-member ordinal mirroring <code>switching_cost_grade</code>&#39;s members, landed as an implementation proposal (a repo-wide scan found no established vocabulary anywhere) and <strong>ratified 2026-08-23</strong> by <code>docs/decisions/substitution-threat-vocabulary.md</code> (chair: process-governance-manager). No rule reads the column yet; the first that does may cite that record as its vocabulary source.</li>
+<li>Vars sourced from <code>value_chain_link</code> require <code>r2 &gt;= 0.6</code> (mirroring <code>gradeChain()</code>&#39;s own reliability threshold) — below that, the var is excluded as low-confidence rather than treated as present. The missing-vs-low-confidence distinction now exists at schema level: <code>project_variable_snapshot.status</code> carries a fourth member <code>low_confidence</code> (migration 0017 — the design DDL sketched three statuses, but Decision 6&#39;s own text requires the distinction). The enforcement has landed: <code>db/lib/snapshot-filler.ts</code> (the filler PR) writes all 22 seeded scoring vars once per run per the records&#39; var contracts — an arg-max link below r2 0.6 yields <code>low_confidence</code> for <code>market.bargaining_power_hhi</code> with the value kept, while <code>market.link_fit_quality</code> is written truthfully <code>present</code> even below the floor. The market rules are enabled since migration 0022 (PR-9) and evaluated per run by <code>db/lib/rule-assessment.ts</code> (§5-3).</li>
+</ul><nav class="chapter-nav" style="display:flex;justify-content:space-between;gap:12px;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
+        <a href="ch-07_es.html" class="prev" style="text-decoration:none;color:var(--text);">
+          <div style="font-size:12px;color:var(--text-dim);">← Capítulo anterior</div>
+          <div>5. Stage-Gate Threshold Applicability</div>
+        </a>
+        <a href="ch-09_es.html" class="next" style="text-decoration:none;color:var(--text);text-align:right;">
+              <div style="font-size:12px;color:var(--text-dim);">Capítulo siguiente →</div>
+              <div>5-2. Technical/Execution and Risk Dimensions — Staged Evidence Layer (PR-7)</div>
+            </a>
+      </nav>
+    </article>
+  </div>
+
+  <footer>
+    <p>© 2026 co-newbiz knowledge hub · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a href="https://github.com/5throck/ai-workspace-standards">ai-workspace-standards</a></p>
+  </footer>
+
+  <script src="../../assets/js/dark-mode-toggle.js"></script>
+  <script src="../../assets/js/site-search.js"></script>
+  <script src="../../assets/js/lang-switcher.js"></script>
+  <script src="../../assets/js/inpage-search.js"></script>
+  <script src="../../assets/js/copy-code.js"></script>
+  
+</body>
+</html>
