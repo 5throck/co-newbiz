@@ -90,6 +90,14 @@
     .toc-box li { margin: 2px 0; }
     .toc-box a { color: var(--text-muted); text-decoration: none; }
     .toc-box a:hover { color: var(--accent); }
+    /* 폭 대응: 표가 컨테이너보다 넓으면 가로 스크롤, 긴 토큰은 줄바꿈 */
+    .table-scroll { overflow-x: auto; }
+    .table-scroll table { min-width: 640px; }
+    .main-content article td, .main-content article th { word-break: break-word; vertical-align: top; }
+    .main-content article td.desc { min-width: 280px; }
+    /* mermaid 다이어그램을 컨테이너 폭에 맞춤 */
+    .mermaid { max-width: 100%; overflow-x: auto; }
+    .mermaid svg { max-width: 100% !important; height: auto; }
     @media print {
       .portal-header, .portal-sidebar, .chapter-nav { display: none !important; }
       .main-content, footer { margin-left: 0; }
@@ -157,6 +165,7 @@
   S2["3. valuation-agent"]
   S2 -.-> O2["financing_sources_uses_plan"]</div>
       <h2 id="steps">단계</h2>
+      <div class="table-scroll">
       <table style="width:100%;border-collapse:collapse;margin:20px 0;">
         <thead>
           <tr style="border-bottom:2px solid var(--border);">
@@ -172,31 +181,32 @@
         <tr>
           <td style="padding:8px;white-space:nowrap;">1</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">brownfield-agent</td>
-          <td style="padding:8px;white-space:nowrap;">investment-vehicle-structuring</td>
-          <td style="padding:8px;white-space:nowrap;">deal_structure_review</td>
-          <td style="padding:8px;"><p>Mature the deal-structure hypothesis: settle the vehicle (direct / SPC / holdco / internal_venture_spinoff / jv), the asset-or-stock form, the stake type, and the primary/secondary instrument mix; record the ADR-0045 four mandatory axis notes — tax structure, liability isolation, financing leverage, exit structure — each grounded in DD findings where they bear (contingent liabilities -&gt; liability isolation; withholding and deal-tax posture -&gt; tax structure; acquisition-finance capacity -&gt; financing leverage; staged exit or trade-sale path -&gt; exit structure). Record the rationale (mandatory) via db/repositories/deal-structure-hypothesis.repository.ts; a structure hypothesis without its rationale is rejected at the write layer.</p> </td>
+          <td style="padding:8px;">brownfield-agent</td>
+          <td style="padding:8px;">investment-vehicle-structuring</td>
+          <td style="padding:8px;">deal_structure_review</td>
+          <td class="desc" style="padding:8px;"><p>Mature the deal-structure hypothesis: settle the vehicle (direct / SPC / holdco / internal_venture_spinoff / jv), the asset-or-stock form, the stake type, and the primary/secondary instrument mix; record the ADR-0045 four mandatory axis notes — tax structure, liability isolation, financing leverage, exit structure — each grounded in DD findings where they bear (contingent liabilities -&gt; liability isolation; withholding and deal-tax posture -&gt; tax structure; acquisition-finance capacity -&gt; financing leverage; staged exit or trade-sale path -&gt; exit structure). Record the rationale (mandatory) via db/repositories/deal-structure-hypothesis.repository.ts; a structure hypothesis without its rationale is rejected at the write layer.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">2</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">brownfield-agent</td>
-          <td style="padding:8px;white-space:nowrap;">investment-vehicle-structuring</td>
-          <td style="padding:8px;white-space:nowrap;">four_axis_review_completion</td>
-          <td style="padding:8px;"><p>Human-reviewer completion of the four-axis review — a deliberate, attributable act (completeFourAxisReview) that REQUIRES a deal_structure_review artifact reference; the completion is refused twice (no artifact ref, or already-completed hypothesis) rather than silently overwritten. The audit_log entry (four_axis_review_completed) is the review&#39;s evidence trail.</p> </td>
+          <td style="padding:8px;">brownfield-agent</td>
+          <td style="padding:8px;">investment-vehicle-structuring</td>
+          <td style="padding:8px;">four_axis_review_completion</td>
+          <td class="desc" style="padding:8px;"><p>Human-reviewer completion of the four-axis review — a deliberate, attributable act (completeFourAxisReview) that REQUIRES a deal_structure_review artifact reference; the completion is refused twice (no artifact ref, or already-completed hypothesis) rather than silently overwritten. The audit_log entry (four_axis_review_completed) is the review&#39;s evidence trail.</p> </td>
         </tr>
 
         <tr>
           <td style="padding:8px;white-space:nowrap;">3</td>
           <td style="padding:8px;white-space:nowrap;">DD</td>
-          <td style="padding:8px;white-space:nowrap;">valuation-agent</td>
-          <td style="padding:8px;white-space:nowrap;">financing-plan-review</td>
-          <td style="padding:8px;white-space:nowrap;">financing_sources_uses_plan</td>
-          <td style="padding:8px;"><p>Assemble the financing plan (sources &amp; uses, migration 0075) — every funding line (equity commitment, acquisition debt, parent loans, incentive proceeds) on the sources side and every deployment line (purchase price, fees, working-capital injection, reserve) on the uses side, in KRW 백만원 (the ADR-0061 unit convention). Certainty of funds is evidenced, never assumed: commitment papers or internal-funds approvals are referenced in the note column per skills/financing-plan-review. The S10 completion predicate requires sources == uses &gt; 0 — an unbalanced plan blocks stage exit the same way an unproven structure does.</p> </td>
+          <td style="padding:8px;">valuation-agent</td>
+          <td style="padding:8px;">financing-plan-review</td>
+          <td style="padding:8px;">financing_sources_uses_plan</td>
+          <td class="desc" style="padding:8px;"><p>Assemble the financing plan (sources &amp; uses, migration 0075) — every funding line (equity commitment, acquisition debt, parent loans, incentive proceeds) on the sources side and every deployment line (purchase price, fees, working-capital injection, reserve) on the uses side, in KRW 백만원 (the ADR-0061 unit convention). Certainty of funds is evidenced, never assumed: commitment papers or internal-funds approvals are referenced in the note column per skills/financing-plan-review. The S10 completion predicate requires sources == uses &gt; 0 — an unbalanced plan blocks stage exit the same way an unproven structure does.</p> </td>
         </tr>
         </tbody>
       </table>
+      </div>
       <h2 id="outputs">Outputs</h2>
       <ul><li>deal_structure_review (four-axis complete, artifact-referenced)</li><li>financing_sources_uses_plan (balanced)</li></ul><nav class="chapter-nav" style="display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);">
         <a href="../index_es.html" class="prev" style="text-decoration:none;color:var(--text);">
@@ -221,6 +231,6 @@
   <script src="../assets/js/inpage-search.js"></script>
   <script src="../assets/js/copy-code.js"></script>
   <script src="../assets/js/mermaid.min.js"></script>
-  <script>mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'neutral' });</script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true } });</script>
 </body>
 </html>

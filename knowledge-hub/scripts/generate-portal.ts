@@ -283,15 +283,16 @@ function renderProcedure(doc: DocDef): Rendered {
         <tr>
           <td style="padding:8px;white-space:nowrap;">${esc(String(s.id ?? i + 1))}</td>
           <td style="padding:8px;white-space:nowrap;">${esc(String(s.gate ?? "—"))}</td>
-          <td style="padding:8px;white-space:nowrap;">${esc(String(s.agent_key ?? "—"))}</td>
-          <td style="padding:8px;white-space:nowrap;">${esc(String(s.skill_key ?? "—"))}</td>
-          <td style="padding:8px;white-space:nowrap;">${esc(String(s.output_type ?? "—"))}</td>
-          <td style="padding:8px;">${marked.parse(String(s.description ?? "")).toString().replace(/\n/g, " ")}</td>
+          <td style="padding:8px;">${esc(String(s.agent_key ?? "—"))}</td>
+          <td style="padding:8px;">${esc(String(s.skill_key ?? "—"))}</td>
+          <td style="padding:8px;">${esc(String(s.output_type ?? "—"))}</td>
+          <td class="desc" style="padding:8px;">${marked.parse(String(s.description ?? "")).toString().replace(/\n/g, " ")}</td>
         </tr>`).join("\n");
   const html = `
       <p>${esc(parsed.description ?? "")}</p>
       <div class="mermaid">${lines.join("\n")}</div>
       <h2 id="steps">단계</h2>
+      <div class="table-scroll">
       <table style="width:100%;border-collapse:collapse;margin:20px 0;">
         <thead>
           <tr style="border-bottom:2px solid var(--border);">
@@ -306,6 +307,7 @@ function renderProcedure(doc: DocDef): Rendered {
         <tbody>${stepRows}
         </tbody>
       </table>
+      </div>
       ${(parsed.outputs?.length ?? 0) > 0 ? `<h2 id="outputs">Outputs</h2>\n      <ul>${parsed.outputs!.map((o) => `<li>${esc(String(o))}</li>`).join("")}</ul>` : ""}`;
   return { html, hasMermaid: true, title: parsed.title ?? doc.titleEn };
 }
@@ -451,7 +453,7 @@ function renderPage(input: PageInput, generated: Set<string>, lang: Lang): strin
   html = html.replace("<!-- CONTENT -->", input.content);
   html = html.replace(/<footer class="portal-footer">[\s\S]*?<\/footer>/, FOOTER);
   const scripts = input.hasMermaid
-    ? [`<script src="${A("assets/js/mermaid.min.js")}"></script>`, `<script>mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'neutral' });</script>`]
+    ? [`<script src="${A("assets/js/mermaid.min.js")}"></script>`, `<script>mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true } });</script>`]
     : [];
   html = html.replace("</body>", `  ${scripts.join("\n  ")}\n</body>`);
   return html;
