@@ -96,7 +96,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `archive-memory.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `audit.ts` | L0 | 2.29.1 | active | —| —| L0+L1 | —|
+| `audit.ts` | L0 | 2.29.2 | active | —| —| L0+L1 | —|
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
@@ -183,6 +183,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `tests/apply-handbook-theme.test.ts` | co-newbiz | 1.0.1 | active | —| —| L3-only (project-local bun:test unit tests for handbook/apply-handbook-theme.ts) | —|
 | `tests/check-structure.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test regression tests for handbook/check-structure.ts, fixtures mirror real production bugs) | —|
 | `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
+| `upgrade-project.ts` | L0 | 1.18.0 | active | `--variant`, `--platform`, `--dry-run`, `--prune-removed`, `--rollback`, `--yes` | —| L3 | —|
 
 ---
 
