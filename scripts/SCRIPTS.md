@@ -57,6 +57,8 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | script | source | version | status | removal-date | security-advisory | layer | pair |
 |--------|--------|---------|--------|--------------|-------------------|-------|------|
 | `agent-create.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
+| `skill-session-review.ts` | L0 | 1.0.0 | active | `--date`, `--json`, `--dry-run` | —| L0+L1 | —|
+| `design-lint.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `co-newbiz/newbiz.ts` | co-newbiz | 1.13.1 | active | —| —| L3-only (project-local analysis-engine CLI, design v1.0 §4-8, not part of L0/L1/L2 lineage; v1.13.0 adds the `db:export` case delegating to db-export.ts) | —|
 | `co-newbiz/env-check.ts` | co-newbiz | 1.1.0 | active | —| —| L3-only (project-local, ADR-0075 pre-flight gate for pipeline API stages — verifies `.env` has the four required keys (DART_API_KEY, LAW_API_OC, KOSIS_API_KEY, CO_NEWBIZ_API_TOKEN; names only, values never printed), reports CRLF contamination with the canonical `tr -d '\r'` load preamble, `--exports` emits CRLF-stripped shell-safe export lines for `eval`-based loading in shells without process substitution; --probe` live-validates LLM/DART/Tavily credentials with 1-request HTTP probes (flags rejected keys with status evidence) | —|
 | `tmp-gen-analyses.ts` | L0 | 0.1.0 | experimental | —| —| L0-only (one-off scratch seeder from the 2026-08-31 session — creates the Humanoid Robot industry row and in-progress market-sizing/synergy analyses directly via bun:sqlite, then runs the S1 sizing and S3 synergy pipelines; superseded by the web pipelines, kept only to reproduce that session's seed state) | —|
@@ -94,10 +96,10 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `archive-memory.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `audit.ts` | L0 | 2.28.0 | active | —| —| L0+L1 | —|
+| `audit.ts` | L0 | 2.29.1 | active | —| —| L0+L1 | —|
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `compile-tokens.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `compile-tokens.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `dev-sync.ts` | L0 | 1.9.0 | active | —| —| L0+L1 | —|
 | `dispatch-parallel.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `dispatch-serial.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
@@ -110,7 +112,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `helpers/security-validator.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `helpers/pm-md-parser.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/template-utils.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
-| `hooks/gateguard-fact-force.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
+| `hooks/gateguard-fact-force.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `hooks/post-write-lifecycle-check.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `hooks/pre-commit.ts` | L0 | 1.5.10 | active | —| —| L0+L1 | —|
 | `hooks/pre-push.ts` | L0 | 1.2.9 | active | —| —| L0+L1 | —|
@@ -121,7 +123,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `lib/pipeline-state.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `lib/platform-context.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/ssrf.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `lifecycle-sync-audit.ts` | L0 | 1.5.0 | active | —| —| L0+L1 | —|
+| `lifecycle-sync-audit.ts` | L0 | 1.6.0 | active | —| —| L0+L1 | —|
 | `md-to-ooxml.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `qa-gate.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `readme-lifecycle-audit.ts` | L0 | 1.0.4 | active | —| —| L0+L1 | —|
@@ -140,7 +142,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `validate-agents.ts` | L0 | 1.0.5 | active | —| —| L0+L1 | —|
 | `validate-doc-folder.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `validate-docs-links.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `validate-md-language.ts` | L0 | 1.8.0 | active | —| —| L0+L1 | —|
+| `validate-md-language.ts` | L0 | 1.9.0 | active | —| —| L0+L1 | —|
 | `validate-model-registry.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `validate-skills.ts` | L0 | 1.3.1 | active | —| —| L0+L1 | —|
 | `verify-agent-deliverables.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|

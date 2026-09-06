@@ -7,6 +7,11 @@
       "layer": "L3"
     },
     {
+      "id": "accessibility-audit",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "admin-console-operations",
       "type": "skill",
       "layer": "L3"
@@ -1377,6 +1382,11 @@
       "layer": "L3"
     },
     {
+      "id": "token-usage-lint",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "translate",
       "type": "skill",
       "layer": "L3"
@@ -1388,6 +1398,11 @@
     },
     {
       "id": "ui-information-architecture",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "ui-ux-design-intelligence",
       "type": "skill",
       "layer": "L3"
     },
@@ -10399,6 +10414,17 @@
       "source": "skill_manifest"
     },
     {
+      "type": "follows",
+      "from": "token-usage-lint",
+      "to": "ui-ux-design-intelligence",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/token-usage-lint/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "used_by",
       "from": "translate",
       "to": "docs-writer",
@@ -10560,6 +10586,12 @@
     {
       "type": "references",
       "from": "ui-information-architecture",
+      "to": "accessibility-audit",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "ui-information-architecture",
       "to": "agent-output-provenance",
       "source": "prose"
     },
@@ -10579,6 +10611,17 @@
       "from": "ui-information-architecture",
       "to": "rest-api-design",
       "source": "prose"
+    },
+    {
+      "type": "follows",
+      "from": "ui-ux-design-intelligence",
+      "to": "documentation-writing",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/ui-ux-design-intelligence/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
     },
     {
       "type": "references",
