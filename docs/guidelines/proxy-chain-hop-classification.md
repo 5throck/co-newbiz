@@ -7,6 +7,8 @@ enforceability: recommended
 owner_agent: quant-methodologist
 version: "1.0.0"
 effective_from: "2026-08-20"
+lang: en
+counterpart: proxy-chain-hop-classification_ko.md
 ---
 
 # Guideline: Proxy Chain Hop Classification

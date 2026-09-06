@@ -13,6 +13,8 @@ const SUB_PAGES = [
   { seg: "/deal-structure", label: "투자구조" },
   { seg: "/ic-review", label: "IC 심의" },
   { seg: "/portfolio", label: "사후관리" },
+  { seg: "/partnership", label: "파트너·JV" },
+  { seg: "/pmi", label: "PMI" },
   { seg: "/charter", label: "추진계획" },
   { seg: "/process", label: "프로세스" },
 ] as const;

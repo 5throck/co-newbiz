@@ -1,6 +1,7 @@
 ---
-lang: ko
+lang: en
 lang_reason: proper-noun
+counterpart: rag-framework_ko.md
 ---
 
 # RAG Scoring Framework — Detailed Rules
@@ -76,7 +77,7 @@ This mirrors the financial dimension's staged approach (§5): a dimension withou
 
 ### Corrected evidence mapping (Decision 6)
 
-The design's meeting review corrected a mapping error in the original plan (see the design doc's "뒤집힘 4"): `value_chain_link.concentration_hhi` measures upstream/downstream bargaining power (industry concentration in adjacent supply-chain tiers), not horizontal competitive intensity — the two can point in opposite directions, and conflating them silently mis-grades. The corrected mapping:
+The design's meeting review corrected a mapping error in the original plan (see "flip #4" in the design doc's meeting-synthesis section — the Korean original uses the term "deojipim", meaning a reversed/overturned assumption): `value_chain_link.concentration_hhi` measures upstream/downstream bargaining power (industry concentration in adjacent supply-chain tiers), not horizontal competitive intensity — the two can point in opposite directions, and conflating them silently mis-grades. The corrected mapping:
 
 - `concentration_hhi` → `bargaining_power` (its original meaning), **not** `competitive_intensity`.
 - `competitive_intensity` is a **new, still-unsourced** var — to be sourced from `fact_industry` convention or `dimension_input`, not from `concentration_hhi`.

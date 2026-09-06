@@ -5,17 +5,18 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { deriveAndSaveFactors, loadOpportunityWithFactors, readFactors, saveFactors } from "../../../../../lib/opportunity-factors.ts";
+import { route } from "../../../../../lib/route.ts";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
   const loaded = loadOpportunityWithFactors(id);
   if (!loaded) return notFound();
   return ok({ factors: loaded.factors, source: loaded.source }, 200);
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "요인 자동 도출은 analyst 역할 이상이어야 합니다.");
@@ -28,9 +29,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { factors, source } = await deriveAndSaveFactors(db, row);
   appendAudit(db, { actor: auth.auth.userId, action: "opportunity.factors.derive", target: id, now: new Date().toISOString() });
   return ok({ factors, source }, 200);
-}
+});
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const PUT = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "요인 등록은 analyst 역할 이상이어야 합니다.");
@@ -50,9 +51,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   saveFactors(db, id, factors, source);
   appendAudit(db, { actor: auth.auth.userId, action: "opportunity.factors.update", target: `${id}:add:${type}`, now: new Date().toISOString() });
   return ok({ factors, source }, 200);
-}
+});
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "요인 삭제는 analyst 역할 이상이어야 합니다.");
@@ -71,4 +72,4 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   saveFactors(db, id, factors, row.factors_source ?? "manual");
   appendAudit(db, { actor: auth.auth.userId, action: "opportunity.factors.update", target: `${id}:remove:${type}:${index}`, now: new Date().toISOString() });
   return ok({ factors }, 200);
-}
+});

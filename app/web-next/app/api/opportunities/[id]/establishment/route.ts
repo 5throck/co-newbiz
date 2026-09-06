@@ -8,6 +8,7 @@ import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 
 const STATUSES = ["pending", "in_progress", "done", "halted", "escalated"] as const;
 const ORIGINS = ["internal", "joint"] as const;
@@ -19,7 +20,7 @@ const STEP_TITLES: Record<number, string> = {
   5: "완료확인(IP양도체인·거버넌스 베이스라인)",
 };
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -45,9 +46,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     200,
     { count: steps.length },
   );
-}
+});
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const PUT = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
@@ -117,4 +118,4 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     id: rowId, step_no: stepNo, status, title: STEP_TITLES[stepNo],
     step_done: doneCount > 0, updated_at: now,
   }, 200);
-}
+});

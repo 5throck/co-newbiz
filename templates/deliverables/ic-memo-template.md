@@ -7,6 +7,8 @@ enforceability: recommended
 owner_agent: docs-writer
 version: "1.1.0"
 effective_from: "2026-08-20"
+lang: en
+counterpart: ic-memo-template_ko.md
 ---
 
 <!--

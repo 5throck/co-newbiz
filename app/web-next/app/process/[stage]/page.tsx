@@ -49,6 +49,20 @@ export default function ProcessStagePage() {
 
   const cards = CARD_SETS[stageId]?.() ?? [];
 
+  if (cards.length === 0) {
+    // S4+ 재구축 전까지 빈 그리드 대신 미제공 상태를 명시한다 — 스테이지가
+    // 조용히 비어 보이면 게이트 산출물이 없는 것으로 오독될 수 있다.
+    return (
+      <StageFrame stageId={stage as StageMetaId}>
+        <h2 className="mb-2 text-[1rem]">실행 기능</h2>
+        <p className="text-[color:var(--muted-fg)]">
+          {stageId} 단계의 실행 기능은 flow.spec v2.0.0 재설계에 따라 재구축 예정입니다.
+          딜 단위 작업은 딜 상세 화면에서 진행하세요.
+        </p>
+      </StageFrame>
+    );
+  }
+
   return (
     <StageFrame stageId={stage as StageMetaId}>
       <h2 className="mb-2 text-[1rem]">실행 기능</h2>

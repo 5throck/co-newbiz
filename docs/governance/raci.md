@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: raci_ko.md
+---
+
 # RACI — Stage Gate Review Process
 
 **Owner**: process-governance-manager

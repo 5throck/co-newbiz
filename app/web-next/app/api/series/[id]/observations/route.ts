@@ -2,8 +2,9 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { ok, provenance } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id: seriesId } = await params;
@@ -30,4 +31,4 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     count: rows.length,
     ...(sources.size === 1 ? provenance({ source: rows[0].source_id }) : {}),
   });
-}
+});

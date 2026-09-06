@@ -21,10 +21,12 @@ import * as yaml from "js-yaml";
 const METHODS = ["get", "post", "put", "patch", "delete"] as const;
 const API_ROOT = join("app", "web-next", "app", "api");
 
-// A Next.js Route Handler declares its methods as exported top-level HTTP-
-// verb functions (`export async function GET(...)`, etc.) — anchoring on
-// `export` + line start keeps any unrelated identifier named e.g. `get`
-// out of the match set (see declaredRoutes()'s per-method RegExp below).
+// A Next.js Route Handler declares its methods either as exported top-level
+// HTTP-verb functions (`export async function GET(...)`) or wrapped in the
+// envelope-guaranteeing error wrapper (`export const GET = route(async
+// (...) => ...)` from lib/route.ts) — anchoring on `export` + line start
+// keeps any unrelated identifier named e.g. `get` out of the match set
+// (see declaredRoutes()'s per-method RegExp below).
 
 /** Next.js `[param]` directory segments become OpenAPI `{param}` segments. */
 function normalizeSegment(segment: string): string {
@@ -56,7 +58,10 @@ function declaredRoutes(): Set<string> {
   for (const { urlPath, file } of files) {
     const source = readFileSync(file, "utf8");
     for (const method of METHODS) {
-      const re = new RegExp(`^export\\s+(?:async\\s+)?function\\s+${method.toUpperCase()}\\b`, "m");
+      const re = new RegExp(
+        `^export\\s+(?:(?:async\\s+)?function\\s+|const\\s+)${method.toUpperCase()}\\b`,
+        "m",
+      );
       if (re.test(source)) routes.add(`${method.toUpperCase()} ${urlPath}`);
     }
   }

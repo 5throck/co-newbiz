@@ -1170,6 +1170,446 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/partners:
+    get:
+      operationId: listProjectPartners
+      summary: Partnership DD workspace — partner candidates of the project with their nested DD findings (S11 partnership flow).
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createPartnerCandidate
+      summary: Record a partner candidate. Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/partners/{partnerId}:
+    put:
+      operationId: updateProjectPartner
+      summary: Partially update a partner candidate (status, NDA, notes). Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProjectPartner
+      summary: Delete a partner candidate and cascade its DD findings; blocked while JV terms reference it. Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/partners/{partnerId}/findings:
+    post:
+      operationId: createPartnerFinding
+      summary: Record a partner DD finding (workstream + severity high|medium|low + description). Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/partners/{partnerId}/findings/{findingId}:
+    put:
+      operationId: updatePartnerFinding
+      summary: Update a partner DD finding (severity, description). Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: findingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deletePartnerFinding
+      summary: Delete a partner DD finding. Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: findingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/jv-terms:
+    get:
+      operationId: listJvTerms
+      summary: JV lifecycle workspace — JV terms of the project joined with partner names (S11 JV governance flow).
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createJvTerm
+      summary: Record JV terms (equity split, governance, veto matters, exit clause) for a partner candidate of this project. One term per partner. Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/jv-terms/{termId}:
+    put:
+      operationId: updateJvTerm
+      summary: Update JV terms. Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: termId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteJvTerm
+      summary: Delete JV terms. Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: termId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/pmi/key-talent:
+    get:
+      operationId: listPmiKeyTalent
+      summary: PMI workspace — key talent retention list with status (active|retained|exited) and exit dates (S11 PMI flow).
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createPmiKeyTalent
+      summary: Add a key talent to the PMI retention list. Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/pmi/key-talent/{talentId}:
+    put:
+      operationId: updatePmiKeyTalent
+      summary: Update key talent status (retention confirmation, exit — sets exit_date automatically). Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: talentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deletePmiKeyTalent
+      summary: Remove a key talent entry. Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: talentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/pmi/synergy-certifications:
+    get:
+      operationId: listPmiSynergyCertifications
+      summary: PMI workspace — synergy certifications (run-rate bp, sustained quarters, certified_by, evidence).
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createPmiSynergyCertification
+      summary: Certify a synergy (run_rate_bp + sustained_quarters); certified_by is forced to the session user. Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/pmi/synergy-certifications/{certificationId}:
+    delete:
+      operationId: deletePmiSynergyCertification
+      summary: Un-certify (revoke) a synergy certification. Analyst+; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: certificationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   put /api/projects/{id}/sites:
     PUT:
       operationId: updateSiteCandidate

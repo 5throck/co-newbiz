@@ -4,8 +4,9 @@
 import { authenticate } from "../../../lib/auth.ts";
 import { ok } from "../../../lib/envelope.ts";
 import { getProviderConfig } from "../../../lib/llm.ts";
+import { route } from "../../../lib/route.ts";
 
-export async function GET(request: Request) {
+export const GET = route(async (request: Request) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const cfg = getProviderConfig();
@@ -18,4 +19,4 @@ export async function GET(request: Request) {
     200,
     { configured: cfg !== null },
   );
-}
+});

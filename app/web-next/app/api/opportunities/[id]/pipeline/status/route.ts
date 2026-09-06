@@ -8,8 +8,9 @@ import { getDb } from "../../../../../../../../db/client.ts";
 import { pauseLinkFor, type PipelineRunRow } from "../../../../../../../../app/web-next/lib/pipeline.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
+import { route } from "../../../../../../lib/route.ts";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -46,4 +47,4 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     updated_at: run.updated_at,
     segments: rows.map((r) => ({ id: r.id, entity_type: r.entity_type, status: r.status, updated_at: r.updated_at })),
   });
-}
+});

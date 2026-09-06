@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useModalFocus } from "../lib/use-modal-focus.ts";
 
 /* ── ConfirmDialog + useConfirm ── */
 
@@ -27,10 +28,12 @@ export function ConfirmDialog({
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const { panelRef, onKeyDown } = useModalFocus(onClose);
   if (!state || !mounted) return null;
   return createPortal(
-    <div className="modal-backdrop" onClick={onClose} role="presentation">
+    <div className="modal-backdrop" onClick={onClose} role="presentation" onKeyDown={onKeyDown}>
       <div
+        ref={panelRef}
         className="modal-panel"
         role="alertdialog"
         aria-modal="true"

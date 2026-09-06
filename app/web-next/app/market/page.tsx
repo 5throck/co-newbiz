@@ -1315,7 +1315,7 @@ function StepSensitivityChart({ stepNumber, sensitivities }: { stepNumber?: numb
   return (
     <div className="mt-4">
       {stepNumber !== undefined && <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">주요 드라이버 민감도 (민감도 절댓값 ≥ 0.3 → 주요 드라이버)</h4>}
-      <EChart option={option} height={Math.max(140, labels.length * 40 + 48)} />
+      <EChart option={option} ariaLabel="주요 드라이버 민감도" height={Math.max(140, labels.length * 40 + 48)} />
     </div>
   );
 }
@@ -1346,7 +1346,7 @@ function AnchorChart({ matrix }: { matrix: SizingMatrix }) {
     ],
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-  return <EChart option={option} height={170} />;
+  return <EChart option={option} ariaLabel="TAM/SAM/SOM 앵커 규모" height={170} />;
 }
 
 function RegionWeightDonut({ matrix }: { matrix: SizingMatrix }) {
@@ -1362,7 +1362,7 @@ function RegionWeightDonut({ matrix }: { matrix: SizingMatrix }) {
       data: matrix.regions.map((r, i) => ({ name: r.label, value: r.weight, itemStyle: { color: ct.color[i % ct.color.length] } })),
     }],
   };
-  return <EChart option={option as never} height={280} />;
+  return <EChart option={option as never} ariaLabel="지역별 가중치 비중" height={280} />;
 }
 
 function SegmentMixStack({ matrix }: { matrix: SizingMatrix }) {
@@ -1383,7 +1383,7 @@ function SegmentMixStack({ matrix }: { matrix: SizingMatrix }) {
     })),
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const }, valueFormatter: (v: unknown) => `${Number(v)}%` },
   };
-  return <EChart option={option} height={280} />;
+  return <EChart option={option} ariaLabel="부문별 시장 구성" height={280} />;
 }
 
 function RegionTable({ matrix }: { matrix: SizingMatrix }) {
@@ -1446,7 +1446,7 @@ function CagrGroupedBar({ matrix }: { matrix: SizingMatrix }) {
     })),
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const }, valueFormatter: (v: unknown) => `${(Number(v) * 100).toFixed(1)}%` },
   };
-  return <EChart option={option} height={280} />;
+  return <EChart option={option} ariaLabel="부문별 CAGR 비교" height={280} />;
 }
 
 function ProjectionChart({ matrix }: { matrix: SizingMatrix }) {
@@ -1468,7 +1468,7 @@ function ProjectionChart({ matrix }: { matrix: SizingMatrix }) {
     ],
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-  return <EChart option={option} height={280} />;
+  return <EChart option={option} ariaLabel="연도별 시장 규모 전망" height={280} />;
 }
 
 function ScenarioBandChart({ matrix }: { matrix: SizingMatrix }) {
@@ -1503,7 +1503,7 @@ function ScenarioBandChart({ matrix }: { matrix: SizingMatrix }) {
       },
     },
   };
-  return <EChart option={option} height={Math.max(280, rows.length * 17 + 48)} />;
+  return <EChart option={option} ariaLabel="시나리오별 성장률 밴드" height={Math.max(280, rows.length * 17 + 48)} />;
 }
 
 const SCENARIOS_META = [
@@ -1532,7 +1532,7 @@ function RegionScenarioChart({ matrix }: { matrix: SizingMatrix }) {
     })),
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-  return <EChart option={option} height={280} />;
+  return <EChart option={option} ariaLabel="지역·부문별 시나리오 CAGR" height={280} />;
 }
 
 function RegionScenarioTable({ matrix }: { matrix: SizingMatrix }) {
@@ -1597,7 +1597,7 @@ function YearlyShareAreaChart({ matrix }: { matrix: SizingMatrix }) {
     })),
     tooltip: { trigger: "axis" as const, valueFormatter: (v: unknown) => `${Number(v)}%` },
   };
-  return <EChart option={option} height={300} />;
+  return <EChart option={option} ariaLabel="연도별 지역 점유율 추이" height={300} />;
 }
 
 function YearlySizeStackedBar({ matrix }: { matrix: SizingMatrix }) {
@@ -1617,7 +1617,7 @@ function YearlySizeStackedBar({ matrix }: { matrix: SizingMatrix }) {
     })),
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-  return <EChart option={option} height={300} />;
+  return <EChart option={option} ariaLabel="연도별 지역 시장 규모" height={300} />;
 }
 
 function YearlyShareTable({ matrix }: { matrix: SizingMatrix }) {
@@ -1666,7 +1666,7 @@ function ConsistencyChart({ matrix }: { matrix: SizingMatrix }) {
     }],
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-  return <EChart option={option} height={140} />;
+  return <EChart option={option} ariaLabel="가정 일관성 진단" height={140} />;
 }
 
 function RegistryStatus({ sizing, isFrozen, referenceImplementation }: {

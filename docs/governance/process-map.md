@@ -1,6 +1,7 @@
 ---
-lang: ko
+lang: en
 lang_reason: proper-noun
+counterpart: process-map_ko.md
 ---
 
 # Process Map — co-newbiz New Business Review
@@ -16,7 +17,7 @@ lang_reason: proper-noun
 Screening → Pre-FS → FS → DD → Entity IC → Group IC
 ```
 
-**Stage chain (flow.spec v2.2.0, ADR-0106)**: S1 시장분석 → S2 기회 발굴 → S3 시너지·적합성 → S4 진출방식 결정 → S5 역량 평가·진출전략(GF) / S6~S7 대상 후보 발굴·스크리닝(BF) → S8 사업성 분석 → S9 실사·검증 → **S10 투자구조 설계** → S11 투자심사·실행 → S12 사후 관리. Stages are work intervals; gates (Screening~Group IC, unchanged ids) sit between them. Stage ≠ Gate; historical ADRs keep their pre-v2.2.0 numbering (ADR-0106 is the mapping of record).
+**Stage chain (flow.spec v2.2.0, ADR-0106)**: S1 market analysis → S2 opportunity discovery → S3 synergy/fit → S4 entry-mode decision → S5 capability assessment & entry strategy (GF) / S6–S7 target identification & screening (BF) → S8 business-case analysis → S9 DD & verification → **S10 deal structuring** → S11 investment review & execution → S12 post-investment management. (Korean stage names in the ko counterpart.) Stages are work intervals; gates (Screening~Group IC, unchanged ids) sit between them. Stage ≠ Gate; historical ADRs keep their pre-v2.2.0 numbering (ADR-0106 is the mapping of record).
 
 **Deal structuring stage (S10, ADR-0045/0106)**: between the DD gate and Entity IC, the deal structure is designed in `procedures/_shared/deal-structuring/` — the vehicle (direct / SPC / holdco / internal-venture spinoff / JV) plus the four mandatory axes (tax structure, liability isolation, financing leverage, exit structure) land in `deal_structure_hypothesis` with an artifact-referenced four-axis review, and the financing plan (`financing_sources_uses`, migration 0075) must balance (sources == uses > 0). The S11 IC package embeds this structure so the committees approve what S10 produced. The pre-FS step-2 hypothesis remains the early draft this stage matures.
 
@@ -42,7 +43,7 @@ Screening → Pre-FS → FS → DD → Entity IC → Group IC
 
 ## Certification & Permit Tracks (Parallel, Not Merged)
 
-Permits (`permit`/`permit_edge`) and certifications (`certification`/`certification_edge`) run as **separate DAGs with separate critical paths** — a permit lets you operate, a certification lets you sell. See [glossary: 선급](../../glossary/industry.yaml) and design section 8.8-1.
+Permits (`permit`/`permit_edge`) and certifications (`certification`/`certification_edge`) run as **separate DAGs with separate critical paths** — a permit lets you operate, a certification lets you sell. See the glossary entry *seon-geup (type approval)* in `glossary/industry.yaml` and design section 8.8-1.
 
 ## RACI Legend
 R = Responsible (does the work), A = Accountable (owns the outcome, single name), C = Consulted (two-way input before decision), I = Informed (told after decision).

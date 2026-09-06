@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: phase-definitions_ko.md
+---
+
 # Phase Definitions
 
 This document defines the standard workflow phases used across all variants. Each variant customizes the specialist agents for phases 1–5 while the overall structure remains consistent.

@@ -92,12 +92,27 @@ export function latestRouteDecision(opportunityId: string): { id: string; track:
     .get(opportunityId) as { id: string; track: "greenfield" | "brownfield"; sub_track: string | null } | undefined;
 }
 
-// ── Opportunity stage completion (S1–S3) ─────────────────────────────────
-function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): { complete: boolean; blockers: string[]; missing: string[] } {
-  let blockers: string[] = [];
-  const missing: string[] = [];
-  let complete = false;
-  if (stage.id === "S1") {
+// ── Stage completion predicate registry ──────────────────────────────────
+// Each stage's completion predicate is REGISTERED here, keyed by stage id,
+// instead of living in an if/else chain inside the evaluator body. A new
+// stage or case type adds its own entry (and the evaluator falls back to the
+// documented default for unmapped stages) — the engine body stays untouched.
+// Entries return the full evaluation (blockers/missing included) so early
+// returns behave identically to the original inline branches.
+type StageEvaluation = { complete: boolean; blockers: string[]; missing: string[] };
+interface OpportunityStageArgs {
+  opp: OpportunityRow;
+}
+interface ProjectStageArgs {
+  project: ProjectRowLite;
+  gateStatus: Partial<Record<GateId, GateVerdict>>;
+}
+
+const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunityStageArgs) => StageEvaluation>> = {
+  S1: ({ opp }) => {
+    let blockers: string[] = [];
+    const missing: string[] = [];
+    let complete = false;
     // S1 산출물은 산업 단위 시장분석(market-sizing 매트릭스·프록시 체인)이다.
     // 기회가 분석된 산업(market_scope)에서 파생된 경우 산업 산출물로
     // 완료기준을 대체 충족한다 — 개별 기회 필드는 S2 평가 입력으로 보완된다.
@@ -131,10 +146,20 @@ function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): 
       }
     }
     complete = !missing.length; // blockers에 권고 문구가 있어도 산출물이 있으면 완료
-  } else if (stage.id === "S2") {
+    return { complete, blockers, missing };
+  },
+  S2: ({ opp }) => {
+    let blockers: string[] = [];
+    const missing: string[] = [];
+    let complete = false;
     if (opp.attractiveness_score === null) { blockers.push("매력도 평가가 필요합니다"); missing.push("기회 매력도 평가"); }
     complete = blockers.length === 0;
-  } else if (stage.id === "S3") {
+    return { complete, blockers, missing };
+  },
+  S3: ({ opp }) => {
+    let blockers: string[] = [];
+    const missing: string[] = [];
+    let complete = false;
     if (opp.synergy_score === null) { blockers.push("시너지 평가가 필요합니다"); missing.push("시너지 평가"); }
     if (!opp.rationale) { blockers.push("전략적 적합성 판단 근거가 필요합니다"); missing.push("전략적 적합성 판단"); }
     // flow.spec S3 completionCriteria: 최소 1개 기회가 selected. 이 기회 자체가
@@ -147,7 +172,12 @@ function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): 
       missing.push("기회 선택(selected)");
     }
     complete = missing.length === 0;
-  } else if (stage.id === "S4") {
+    return { complete, blockers, missing };
+  },
+  S4: ({ opp }) => {
+    let blockers: string[] = [];
+    const missing: string[] = [];
+    let complete = false;
     // flow.spec S4 completionCriteria: route_decision 존재(트랙 필수).
     // brownfield는 sub_track(7 라우트 중 1)과 5-criteria 채점까지 요구한다.
     const decision = latestRouteDecision(opp.id);
@@ -160,7 +190,12 @@ function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): 
       if (scoreCount < 5) { blockers.push(`5-criteria 채점 부족 (${scoreCount}/5)`); missing.push("5-criteria 채점"); }
     }
     complete = missing.length === 0;
-  } else if (stage.id === "S5") {
+    return { complete, blockers, missing };
+  },
+  S5: ({ opp }) => {
+    let blockers: string[] = [];
+    const missing: string[] = [];
+    let complete = false;
     // flow.spec S5 (greenfield only): 역량 격차+해소 방식, 진출전략, 검토한 대안.
     const a = getDb()
       .query("SELECT capability_gaps_json, entry_strategy, alternatives_considered FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
@@ -174,7 +209,12 @@ function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): 
       if (!a.alternatives_considered) { blockers.push("검토한 대안 기록이 필요합니다"); missing.push("검토한 대안"); }
     }
     complete = missing.length === 0;
-  } else if (stage.id === "S6") {
+    return { complete, blockers, missing };
+  },
+  S6: ({ opp }) => {
+    let blockers: string[] = [];
+    const missing: string[] = [];
+    let complete = false;
     // flow.spec S6 (brownfield only): Target Universe 정의 + Long List 최소 커버리지.
     let universe: { min_long_list?: number } | null = null;
     try { universe = opp.target_universe_json ? JSON.parse(opp.target_universe_json) as { min_long_list?: number } : null; } catch { /* treat as undefined */ }
@@ -194,7 +234,12 @@ function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): 
       missing.push("Long List 최소 커버리지");
     }
     complete = missing.length === 0;
-  } else if (stage.id === "S7") {
+    return { complete, blockers, missing };
+  },
+  S7: ({ opp }) => {
+    let blockers: string[] = [];
+    const missing: string[] = [];
+    let complete = false;
     // flow.spec S7 (brownfield only): 전 후보가 shortlisted(스크리닝 근거 포함) 또는
     // exclusion_reason 보유. Kill criterion: knock-out 통과 후보 0건 → KILL 검토.
     const targets = listTargets(opp.id);
@@ -214,8 +259,14 @@ function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): 
       missing.push("knock-out 통과 Short List");
     }
     complete = missing.length === 0;
-  }
-  return { complete, blockers, missing };
+    return { complete, blockers, missing };
+  },
+};
+
+/** Unmapped opportunity stages default to not-complete (no blockers recorded). */
+function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): StageEvaluation {
+  const predicate = OPPORTUNITY_STAGE_COMPLETION[stage.id];
+  return predicate ? predicate({ opp }) : { complete: false, blockers: [], missing: [] };
 }
 
 interface ProjectRowLite {
@@ -227,18 +278,21 @@ interface ProjectRowLite {
 }
 
 /**
- * Project stage completion (S8–S12). Each check is deliberately a SIMPLE
- * existing-schema probe — Phase 3 (FS), Phase 4 (DD), Phase 5 (IC/설립) and
- * Phase 6 (포트폴리오) refine each one against their own richer artifacts;
- * this skeleton (ADR-0095) only pins the type and the spec port. Every check
- * is now a real predicate: S8 = ADR-0098, S9 = ADR-0099, S11 = ADR-0100,
- * S12 = ADR-0101 (latest-cycle freshness) — no REFINEMENT markers remain.
+ * Project stage completion (S8–S12), registered per stage id in
+ * PROJECT_STAGE_COMPLETION below (same registry pattern as the opportunity
+ * stages — a new project stage registers a predicate instead of editing the
+ * evaluator body). Each check is deliberately a SIMPLE existing-schema probe —
+ * Phase 3 (FS), Phase 4 (DD), Phase 5 (IC/설립) and Phase 6 (포트폴리오)
+ * refine each one against their own richer artifacts; this skeleton
+ * (ADR-0095) only pins the type and the spec port. Every check is now a real
+ * predicate: S8 = ADR-0098, S9 = ADR-0099, S11 = ADR-0100, S12 = ADR-0101
+ * (latest-cycle freshness) — no REFINEMENT markers remain.
  */
-function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, gateStatus: Partial<Record<GateId, GateVerdict>>): { complete: boolean; blockers: string[]; missing: string[] } {
-  const blockers: string[] = [];
-  const missing: string[] = [];
-  const db = getDb();
-  if (stage.id === "S8") {
+const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs) => StageEvaluation>> = {
+  S8: ({ project }) => {
+    const blockers: string[] = [];
+    const missing: string[] = [];
+    const db = getDb();
     // ADR-0098 (Phase 3): "민감도가 포함된 정량 평가가 존재한다 (시뮬레이션
     // 또는 밸류에이션 범위)" — mechanically checkable: ≥1 business_case_model
     // for the project AND ≥1 valuation_simulation row (the persisted NPV
@@ -261,7 +315,11 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
         missing.push("시뮬레이션 NPV 분위수");
       }
     }
-  } else if (stage.id === "S9") {
+    return { complete: missing.length === 0, blockers, missing };
+  },
+  S9: ({ project }) => {
+    const blockers: string[] = [];
+    const missing: string[] = [];
     // 적용 체크리스트 범위·필수 미충족 0건 검사
     // (ADR-0099 §5 — completion summary is the single source of the counts).
     const state = ddCompletionSummary(project.id);
@@ -278,7 +336,12 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
         missing.push("필수 항목 해소");
       }
     }
-  } else if (stage.id === "S10") {
+    return { complete: missing.length === 0, blockers, missing };
+  },
+  S10: ({ project }) => {
+    const blockers: string[] = [];
+    const missing: string[] = [];
+    const db = getDb();
     // 투자구조 설계 (flow.spec v2.2.0): 4축 검토 완료 + sources & uses 균형.
     const latest = db
       .query(
@@ -307,7 +370,11 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
       );
       missing.push("자금조달 계획(sources & uses 균형)");
     }
-  } else if (stage.id === "S11") {
+    return { complete: missing.length === 0, blockers, missing };
+  },
+  S11: ({ project, gateStatus }) => {
+    const blockers: string[] = [];
+    const missing: string[] = [];
     // IC 승인은 게이트 기록으로만 판단한다 (사람 최종 승인, ADR-0053).
     if (gateStatus.entity_ic !== "go") {
       blockers.push("Entity IC 승인 기록이 필요합니다");
@@ -326,7 +393,12 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
         missing.push("설립 실행 기록(5단계 완료)");
       }
     }
-  } else if (stage.id === "S12") {
+    return { complete: missing.length === 0, blockers, missing };
+  },
+  S12: ({ project }) => {
+    const blockers: string[] = [];
+    const missing: string[] = [];
+    const db = getDb();
     // ADR-0101 §4 (Phase 6): "분기별 스코어카드가 갱신되었다"를 기계적으로
     // 검사한다 — 프로젝트의 MAX(review_cycle)가 존재하고 그 주기가 신선해야
     // 한다 (현재 분기 또는 직전 분기; lib/portfolio.ts의 isFreshReviewCycle
@@ -343,8 +415,17 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
       blockers.push(`스코어카드 주기가 낡았습니다 (최신 ${latest.c} — 현재 분기 기준 갱신 필요)`);
       missing.push("분기별 스코어카드 갱신");
     }
-  }
-  return { complete: missing.length === 0, blockers, missing };
+    return { complete: missing.length === 0, blockers, missing };
+  },
+};
+
+/**
+ * Unmapped project stages default to complete (no checks registered) —
+ * matches the previous fall-through behavior of the if/else chain.
+ */
+function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, gateStatus: Partial<Record<GateId, GateVerdict>>): StageEvaluation {
+  const predicate = PROJECT_STAGE_COMPLETION[stage.id];
+  return predicate ? predicate({ project, gateStatus }) : { complete: true, blockers: [], missing: [] };
 }
 
 interface OpportunityRow {

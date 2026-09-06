@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: security-baseline_ko.md
+---
+
 # Security Baseline — co-newbiz
 
 **Owner**: security-engineer
