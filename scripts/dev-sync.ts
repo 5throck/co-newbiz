@@ -1,4 +1,10 @@
 // @version 1.9.0
+// v1.9.0: feat(skill-review): step 3.96c session-evidence skill review (SkillHone-inspired) —
+//           runs skill-session-review.ts (non-fatal) after 3.96a/3.96b to accumulate
+//           Observed Symptom + Evidence records into memory/skill-review/, plus a
+//           non-fatal full skill-dependency-analysis --report pass; step 2 session
+//           template gains an optional `## Skills Used` evidence section comment.
+//           Design doc: docs/designs/2026-09-06-skill-session-review-design.md
 // v1.7.8: feat(skill-graph): step 4.65 scope loop (ADR-0060 Amendment 2) — after the L0
 //           unified graph gate, generate+verify every template scope (templates/common +
 //           templates/co-*) so each variant template ships its own docs/skill-graph.json;
@@ -140,6 +146,71 @@ let separator = "";
 const memoryFile = path.join('memory', `${date}.md`);
 if (fs.existsSync(memoryFile)) { separator = "\n---\n\n"; }
 
+// Idempotency check: skip append if a Session Summary with the same
+// commit message already exists for today (prevents duplicates when
+// /sync is re-run on the same day).
+let alreadyLogged = false;
+if (fs.existsSync(memoryFile)) {
+    const existing = fs.readFileSync(memoryFile, 'utf-8');
+    // Match a Session Summary header followed by the same message
+    const duplicatePattern = new RegExp(
+        `^## Session Summary\\s*\\n${msg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+        'm'
+    );
+    alreadyLogged = duplicatePattern.test(existing);
+}
+
+if (alreadyLogged) {
+    console.log(`${YELLOW}⚙ Session summary already logged for today — skipping append (idempotent).${RESET}`);
+} else {
+    // Session-evidence section (skill review loop): only append the skeleton
+    // when the log doesn't already carry a `## Skills Used` section — the
+    // agent is expected to fill it while the session is still open, BEFORE
+    // /sync runs (skills/sync/SKILL.md).
+    const skillsUsedSection = /^## Skills Used\s*$/m.test(
+        fs.existsSync(memoryFile) ? fs.readFileSync(memoryFile, 'utf-8') : ''
+    )
+        ? ''
+        : `
+## Skills Used
+<!-- Optional session evidence for the skill review loop
+     (docs/designs/2026-09-06-skill-session-review-design.md). Edit this entry
+     into memory/YYYY-MM-DD.md while the session is still open — one block per
+     skill actually loaded this session:
+- skill: <skill-name>
+  usage: primary | supporting
+  outcome: completed | partial | failed | abandoned
+  observations:
+    - "<what worked / what required manual workarounds>"
+Remove this comment when filled. Unfilled sections are skipped by
+skill-session-review.ts (WARN only on malformed entries).
+-->
+`;
+    const template = `${separator}## Session Summary
+${msg}
+
+## Changes
+${fileLines}
+
+## Decisions
+- None
+
+## Open Issues
+- None
+${skillsUsedSection}`;
+
+    fs.appendFileSync(memoryFile, template, 'utf8');
+}
+
+// 2. Update MEMORY.md index
+try {
+    await $`bun run scripts/sync-md.ts ${date} "${msg}"`;
+} catch (e) {
+    console.log(`${RED}❌ sync-md.ts failed: ${e}${RESET}`);
+    if (import.meta.main) {
+      process.exit(1);
+    }
+}
 
 // 2.5 Generate scripts/README.md
 const genReadmeTs = path.join('scripts', 'generate-scripts-readme.ts');
@@ -290,6 +361,30 @@ if (fs.existsSync('docs/decisions') && fs.existsSync('scripts/validate-decisions
         if (import.meta.main) process.exit(1);
     } else {
         console.log(`${GREEN}✓ Decision record chain validation passed${RESET}`);
+    }
+}
+
+// 3.96c Session-evidence skill review (non-fatal — SkillHone-inspired loop;
+//      design doc: docs/designs/2026-09-06-skill-session-review-design.md).
+//      Accumulates Observed Symptom + Evidence records from the day's
+//      `## Skills Used` section into memory/skill-review/ and runs structural
+//      checks on session-modified skills. Diagnosis/candidate stay empty for
+//      human triage — evaluation is automatic, revision is human-approved.
+//      Also emits the full skill-dependency-analysis health report as a
+//      non-fatal warning pass (previously manual/quarterly only).
+if (fs.existsSync('scripts/skill-session-review.ts')) {
+    console.log('📋 Step 3.96c: Session-evidence skill review...');
+    const reviewRes = await $`bun scripts/skill-session-review.ts`.nothrow();
+    if (reviewRes.exitCode !== 0) {
+        console.warn(`⚠️  Step 3.96c: skill-session-review.ts failed (non-blocking, exit ${reviewRes.exitCode})`);
+    }
+    // Full health report pass — the analyzer is L0-only, so this sub-step only
+    // runs where the script exists (workspace root / L0 dev machines).
+    if (fs.existsSync('scripts/skill-dependency-analysis.ts')) {
+        const depReport = await $`bun scripts/skill-dependency-analysis.ts --report`.nothrow();
+        if (depReport.exitCode !== 0) {
+            console.warn(`⚠️  Step 3.96c: skill-dependency-analysis reported issues (non-blocking, exit ${depReport.exitCode})`);
+        }
     }
 }
 
@@ -537,52 +632,6 @@ if (fs.existsSync(genManifestTs)) {
     console.log(`${GREEN}✓ VERSION_MANIFEST.md generated${RESET}`);
 }
 
-async function logSessionMemory() {
-// Idempotency check: skip append if a Session Summary with the same
-// commit message already exists for today (prevents duplicates when
-// /sync is re-run on the same day).
-let alreadyLogged = false;
-if (fs.existsSync(memoryFile)) {
-    const existing = fs.readFileSync(memoryFile, 'utf-8');
-    // Match a Session Summary header followed by the same message
-    const duplicatePattern = new RegExp(
-        `^## Session Summary\\s*\\n${msg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
-        'm'
-    );
-    alreadyLogged = duplicatePattern.test(existing);
-}
-
-if (alreadyLogged) {
-    console.log(`${YELLOW}⚙ Session summary already logged for today — skipping append (idempotent).${RESET}`);
-} else {
-    const template = `${separator}## Session Summary
-${msg}
-
-## Changes
-${fileLines}
-
-## Decisions
-- None
-
-## Open Issues
-- None
-`;
-
-    fs.appendFileSync(memoryFile, template, 'utf8');
-}
-
-// 2. Update MEMORY.md index
-try {
-    await $`bun run scripts/sync-md.ts ${date} "${msg}"`;
-} catch (e) {
-    console.log(`${RED}❌ sync-md.ts failed: ${e}${RESET}`);
-    if (import.meta.main) {
-      process.exit(1);
-    }
-}
-}
-
-
 // 4.9 Audit gate — call audit.ts directly (platform-independent, no shell intermediary)
 //     Runs AFTER publish + skill sync so templates/common/ is up-to-date with scrub.
 const auditRes = await $`bun scripts/audit.ts`.nothrow();
@@ -592,9 +641,6 @@ if (auditRes.exitCode !== 0) {
       process.exit(1);
     }
 }
-// Session memory is written only AFTER the audit gate passes — a blocked
-// sync must not leave a session log for a commit that never happened.
-await logSessionMemory();
 
 // 5. Branch -> commit -> push -> PR
 let currentBranch = "";

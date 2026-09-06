@@ -9,6 +9,7 @@
 | Skill | Layer | Required-by Agents | Phases | Relates-to | Inputs | Outputs |
 |-------|-------|-------------------|--------|------------|--------|---------|
 | `access-control-review` | L3 | frontend-engineer, security-engineer | — | security-baseline-review (composes_with), security-scan (composes_with), ui-information-architecture (composes_with), vulnerability-management (composes_with) | — | — |
+| `accessibility-audit` | L3 | — | — | — | — | — |
 | `admin-console-operations` | L3 | — | — | — | — | — |
 | `adr-governance` | L3 | — | — | — | — | — |
 | `agent-lifecycle-manager` | L3 | — | — | — | — | — |
@@ -134,9 +135,11 @@
 | `talent-pipeline-planning` | L3 | greenfield-agent | phase4 | community-partnership-planning (follows), greenfield-feasibility (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with) | — | — |
 | `team-builder` | L3 | — | — | — | — | — |
 | `technical-due-diligence` | L3 | technical-dd-agent | phase4 | competitive-intelligence (follows), site-visit-protocol (composes_with) | — | — |
+| `token-usage-lint` | L3 | — | — | ui-ux-design-intelligence (follows) | — | — |
 | `translate` | L3 | docs-writer | — | sample-driven-report-writing (composes_with) | — | — |
 | `two-tier-approval-chain` | L3 | process-governance-manager, process-governance-manager | phase5 | insight-synthesis (composes_with), portfolio-fit-assessment (follows), project-review (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), stage-gate-governance (composes_with), strategic-fit-screening (composes_with) | — | — |
 | `ui-information-architecture` | L3 | frontend-engineer | — | access-control-review (composes_with) | — | — |
+| `ui-ux-design-intelligence` | L3 | — | — | documentation-writing (follows) | — | — |
 | `unit-conversion-calibration` | L3 | quant-methodologist | phase3 | stage-gate-governance (follows) | — | — |
 | `update-bun-packages` | L3 | — | — | — | — | — |
 | `validate-docs-links` | L3 | — | — | — | — | — |
