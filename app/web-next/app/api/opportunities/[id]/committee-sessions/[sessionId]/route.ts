@@ -6,11 +6,10 @@ import { authenticate } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
 import { getCommitteeSession } from "../../../../../../lib/committee-session.ts";
+import { route } from "../../../../../../lib/route.ts";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string; sessionId: string }> },
-) {
+export const GET = route(
+  async (request: Request, { params }: { params: Promise<{ id: string; sessionId: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id, sessionId } = await params;
@@ -25,4 +24,5 @@ export async function GET(
   const transcript = getCommitteeSession(sessionId);
   if (!transcript) return notFound();
   return ok(transcript, 200);
-}
+  },
+);

@@ -23,6 +23,7 @@ export interface LibraryDocSummary {
   version?: string;
   owner_agent?: string;
   item_count?: number;
+  // 단일 파일 문서는 그 내용 언어를, md 문서는 ko/en 페어 중 자기 파일의 언어를 표시한다.
   lang: "en" | "ko";
 }
 
@@ -180,29 +181,50 @@ const PROCEDURE_DOCS: CuratedDoc[] = [
 ];
 
 const REFERENCE_DOCS: CuratedDoc[] = [
-  { slug: "process-map", title: "프로세스 맵", file: "docs/governance/process-map.md", lang: "en" },
-  { slug: "raci", title: "RACI 매트릭스", file: "docs/governance/raci.md", lang: "en" },
-  { slug: "governance-operations", title: "거버넌스 운영", file: "docs/governance/governance-operations.md", lang: "en" },
-  { slug: "ops-cadence", title: "운영 주기", file: "docs/governance/ops-cadence.md", lang: "en" },
-  { slug: "phase-definitions", title: "단계 정의", file: "docs/phase-definitions.md", lang: "en" },
-  { slug: "rag-framework", title: "RAG 프레임워크", file: "docs/governance/rag-framework.md", lang: "en" },
-  { slug: "security-model", title: "보안 모델", file: "docs/security/security-model.md", lang: "en" },
-  { slug: "security-baseline", title: "보안 베이스라인", file: "docs/security/security-baseline.md", lang: "en" },
-  { slug: "runbook-deployment", title: "런북 — 배포", file: "docs/runbooks/deployment.md", lang: "en" },
-  { slug: "runbook-backup-restore", title: "런북 — 백업·복구", file: "docs/runbooks/backup-restore.md", lang: "en" },
-  { slug: "guide-expert-interview", title: "가이드 — 전문가 인터뷰 수행", file: "docs/guidelines/expert-interview-conduct.md", lang: "en" },
-  { slug: "guide-proxy-chain-hop", title: "가이드 — 프록시 체인 홉 분류", file: "docs/guidelines/proxy-chain-hop-classification.md", lang: "en" },
+  // ko/en 페어 — 같은 slug에 lang만 다른 항목을 나열한다.
+  { slug: "process-map-ko", title: "프로세스 맵", file: "docs/governance/process-map_ko.md", lang: "ko" },
+  { slug: "process-map", title: "Process Map", file: "docs/governance/process-map.md", lang: "en" },
+  { slug: "raci-ko", title: "RACI 매트릭스", file: "docs/governance/raci_ko.md", lang: "ko" },
+  { slug: "raci", title: "RACI Matrix", file: "docs/governance/raci.md", lang: "en" },
+  { slug: "governance-operations-ko", title: "거버넌스 운영", file: "docs/governance/governance-operations_ko.md", lang: "ko" },
+  { slug: "governance-operations", title: "Governance Operations", file: "docs/governance/governance-operations.md", lang: "en" },
+  { slug: "ops-cadence-ko", title: "운영 주기", file: "docs/governance/ops-cadence_ko.md", lang: "ko" },
+  { slug: "ops-cadence", title: "Operating Cadence", file: "docs/governance/ops-cadence.md", lang: "en" },
+  { slug: "phase-definitions-ko", title: "단계 정의", file: "docs/phase-definitions_ko.md", lang: "ko" },
+  { slug: "phase-definitions", title: "Stage Definitions", file: "docs/phase-definitions.md", lang: "en" },
+  { slug: "rag-framework-ko", title: "RAG 프레임워크", file: "docs/governance/rag-framework_ko.md", lang: "ko" },
+  { slug: "rag-framework", title: "RAG Framework", file: "docs/governance/rag-framework.md", lang: "en" },
+  { slug: "security-model-ko", title: "보안 모델", file: "docs/security/security-model_ko.md", lang: "ko" },
+  { slug: "security-model", title: "Security Model", file: "docs/security/security-model.md", lang: "en" },
+  { slug: "security-baseline-ko", title: "보안 베이스라인", file: "docs/security/security-baseline_ko.md", lang: "ko" },
+  { slug: "security-baseline", title: "Security Baseline", file: "docs/security/security-baseline.md", lang: "en" },
+  { slug: "runbook-deployment-ko", title: "런북 — 배포", file: "docs/runbooks/deployment_ko.md", lang: "ko" },
+  { slug: "runbook-deployment", title: "Runbook — Deployment", file: "docs/runbooks/deployment.md", lang: "en" },
+  { slug: "runbook-backup-restore-ko", title: "런북 — 백업·복구", file: "docs/runbooks/backup-restore_ko.md", lang: "ko" },
+  { slug: "runbook-backup-restore", title: "Runbook — Backup & Restore", file: "docs/runbooks/backup-restore.md", lang: "en" },
+  { slug: "guide-expert-interview-ko", title: "가이드 — 전문가 인터뷰 수행", file: "docs/guidelines/expert-interview-conduct_ko.md", lang: "ko" },
+  { slug: "guide-expert-interview", title: "Guide — Conducting Expert Interviews", file: "docs/guidelines/expert-interview-conduct.md", lang: "en" },
+  { slug: "guide-proxy-chain-hop-ko", title: "가이드 — 프록시 체인 홉 분류", file: "docs/guidelines/proxy-chain-hop-classification_ko.md", lang: "ko" },
+  { slug: "guide-proxy-chain-hop", title: "Guide — Proxy Chain Hop Classification", file: "docs/guidelines/proxy-chain-hop-classification.md", lang: "en" },
 ];
 
 const TEMPLATE_DOCS: CuratedDoc[] = [
-  { slug: "ic-memo-template", title: "IC 메모", file: "templates/deliverables/ic-memo-template.md", lang: "en" },
-  { slug: "gate-pass-record-template", title: "게이트 통과 기록", file: "templates/deliverables/gate-pass-record-template.md", lang: "en" },
-  { slug: "partner-dd-report-template", title: "파트너 DD 리포트", file: "templates/deliverables/partner-dd-report-template.md", lang: "en" },
-  { slug: "jv-health-scorecard-template", title: "JV 헬스 스코어카드", file: "templates/deliverables/jv-health-scorecard-template.md", lang: "en" },
-  { slug: "portfolio-scorecard-rollup-template", title: "포트폴리오 스코어카드 롤업", file: "templates/deliverables/portfolio-scorecard-rollup-template.md", lang: "en" },
-  { slug: "venture-transition-decision-template", title: "벤처 전환 결정", file: "templates/deliverables/venture-transition-decision-template.md", lang: "en" },
-  { slug: "venture-transition-evidence-template", title: "벤처 전환 증적", file: "templates/deliverables/venture-transition-evidence-template.md", lang: "en" },
-  { slug: "bau-exit-evidence-pack-template", title: "BAU exit 증적 팩", file: "templates/deliverables/bau-exit-evidence-pack-template.md", lang: "en" },
+  { slug: "ic-memo-template-ko", title: "IC 메모", file: "templates/deliverables/ic-memo-template_ko.md", lang: "ko" },
+  { slug: "ic-memo-template", title: "IC Memo", file: "templates/deliverables/ic-memo-template.md", lang: "en" },
+  { slug: "gate-pass-record-template-ko", title: "게이트 통과 기록", file: "templates/deliverables/gate-pass-record-template_ko.md", lang: "ko" },
+  { slug: "gate-pass-record-template", title: "Gate Pass Record", file: "templates/deliverables/gate-pass-record-template.md", lang: "en" },
+  { slug: "partner-dd-report-template-ko", title: "파트너 DD 리포트", file: "templates/deliverables/partner-dd-report-template_ko.md", lang: "ko" },
+  { slug: "partner-dd-report-template", title: "Partner DD Report", file: "templates/deliverables/partner-dd-report-template.md", lang: "en" },
+  { slug: "jv-health-scorecard-template-ko", title: "JV 헬스 스코어카드", file: "templates/deliverables/jv-health-scorecard-template_ko.md", lang: "ko" },
+  { slug: "jv-health-scorecard-template", title: "JV Health Scorecard", file: "templates/deliverables/jv-health-scorecard-template.md", lang: "en" },
+  { slug: "portfolio-scorecard-rollup-template-ko", title: "포트폴리오 스코어카드 롤업", file: "templates/deliverables/portfolio-scorecard-rollup-template_ko.md", lang: "ko" },
+  { slug: "portfolio-scorecard-rollup-template", title: "Portfolio Scorecard Rollup", file: "templates/deliverables/portfolio-scorecard-rollup-template.md", lang: "en" },
+  { slug: "venture-transition-decision-template-ko", title: "벤처 전환 결정", file: "templates/deliverables/venture-transition-decision-template_ko.md", lang: "ko" },
+  { slug: "venture-transition-decision-template", title: "Venture Transition Decision", file: "templates/deliverables/venture-transition-decision-template.md", lang: "en" },
+  { slug: "venture-transition-evidence-template-ko", title: "벤처 전환 증적", file: "templates/deliverables/venture-transition-evidence-template_ko.md", lang: "ko" },
+  { slug: "venture-transition-evidence-template", title: "Venture Transition Evidence", file: "templates/deliverables/venture-transition-evidence-template.md", lang: "en" },
+  { slug: "bau-exit-evidence-pack-template-ko", title: "BAU exit 증적 팩", file: "templates/deliverables/bau-exit-evidence-pack-template_ko.md", lang: "ko" },
+  { slug: "bau-exit-evidence-pack-template", title: "BAU Exit Evidence Pack", file: "templates/deliverables/bau-exit-evidence-pack-template.md", lang: "en" },
 ];
 
 
@@ -225,7 +247,8 @@ const DESIGN_TITLES_EN: Record<string, string> = {
 // design-system/dd 문서는 ko(_ko.md)/en(.md) 페어 — 각 파일 frontmatter의
 // `counterpart:`가 쌍대상을 가리킨다(ADR-0108 문서 언어 규약).
 const DESIGN_DOCS: CuratedDoc[] = [
-  { slug: "design-guide", title: "Design Guide — Onyx 3.0", file: "docs/design-system/design-guide.md", lang: "en" },
+  { slug: "design-guide-ko", title: "디자인 가이드 — Onyx 3.0", file: "docs/design-system/design-guide_ko.md", lang: "ko" as const },
+  { slug: "design-guide", title: "Design Guide — Onyx 3.0", file: "docs/design-system/design-guide.md", lang: "en" as const },
   ...["design-philosophy", "design-tokens", "design-components", "design-screens", "design-accessibility"].flatMap((slug) => [
     { slug: `${slug}-ko`, title: DESIGN_TITLES[slug]!, file: `docs/design-system/${slug}_ko.md`, lang: "ko" as const },
     { slug, title: DESIGN_TITLES_EN[slug]!, file: `docs/design-system/${slug}.md`, lang: "en" as const },

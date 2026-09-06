@@ -8,6 +8,8 @@ owner_agent: docs-writer
 version: "1.0.0"
 effective_from: "2026-08-23"
 output_type: bau_exit_evidence_pack
+lang: en
+counterpart: bau-exit-evidence-pack-template_ko.md
 ---
 
 <!--

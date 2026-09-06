@@ -11,6 +11,8 @@ owner_agent: process-governance-manager
 approver_role: entity-ic
 effective_from: "2026-08-20"
 review_cycle_months: 12
+lang: en
+counterpart: addendum_ko.md
 ---
 
 # Entity Addendum — ent-a

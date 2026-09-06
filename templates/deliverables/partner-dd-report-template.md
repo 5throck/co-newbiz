@@ -8,6 +8,8 @@ owner_agent: docs-writer
 version: "1.0.0"
 effective_from: "2026-08-23"
 output_type: partner_dd_report
+lang: en
+counterpart: partner-dd-report-template_ko.md
 ---
 
 <!--

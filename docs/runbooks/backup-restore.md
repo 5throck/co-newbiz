@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: backup-restore_ko.md
+---
+
 # Runbook — Backup, Restore, and Rollback
 
 **Owner**: dba, release-engineer

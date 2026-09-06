@@ -10,6 +10,8 @@ owner_agent: process-governance-manager
 approver_role: group-ic
 effective_from: "2026-08-20"
 review_cycle_months: 12
+lang: en
+counterpart: neb-policy_ko.md
 ---
 
 # Group New Business Review Policy

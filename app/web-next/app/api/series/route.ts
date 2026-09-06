@@ -6,10 +6,11 @@
 import { getDb } from "../../../../../db/client.ts";
 import { authenticate } from "../../../lib/auth.ts";
 import { ok } from "../../../lib/envelope.ts";
+import { route } from "../../../lib/route.ts";
 
 const STALENESS_THRESHOLD_DAYS = 90;
 
-export async function GET(request: Request) {
+export const GET = route(async (request: Request) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const url = new URL(request.url);
@@ -40,4 +41,4 @@ export async function GET(request: Request) {
     return { ...r, days_since_fetch: days, stale: days === null ? true : days > STALENESS_THRESHOLD_DAYS };
   });
   return ok(withStaleness, 200, { count: withStaleness.length, staleness_threshold_days: STALENESS_THRESHOLD_DAYS });
-}
+});

@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 585,
+    "node_count": 587,
     "edge_count": 968
   },
   "nodes": [
@@ -546,6 +546,16 @@
       "id": "adr:0108",
       "type": "adr",
       "label": "ADR-0108: Single documentation surface — retire the static knowledge-hub portal, extend `/library`"
+    },
+    {
+      "id": "adr:0109",
+      "type": "adr",
+      "label": "ADR-0109: Envelope-guaranteed route handlers — `route()` wraps every API handler so uncaught errors honor the §9 envelope"
+    },
+    {
+      "id": "adr:0110",
+      "type": "adr",
+      "label": "ADR-0110: Registry-driven extensibility — stage-completion predicate maps, the scoring-weights data module, and the JV/PMI/partnership workspaces as the first consumer"
     },
     {
       "id": "agent:antitrust-agent",

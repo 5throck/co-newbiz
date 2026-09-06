@@ -8,6 +8,8 @@ owner_agent: docs-writer
 version: "1.0.0"
 effective_from: "2026-08-23"
 output_type: venture_transition_evidence
+lang: en
+counterpart: venture-transition-evidence-template_ko.md
 ---
 
 <!--

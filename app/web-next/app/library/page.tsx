@@ -139,12 +139,13 @@ const CATEGORY_TABS: Array<{ category: Category; label: string }> = [
   { category: "dd", label: "DD 실사" },
 ];
 
-// 언어 필터 — 기본값은 한국어(ADR-0108 문서 언어 규약: 본문 원본은 한국어 우선).
+// 언어 필터 — 기본값은 전체. 문서는 ko/en 페어 파일로 관리되고 언어가 섞인
+// 문서는 없으므로 필터는 ko/en만 좁혀 본다.
 type LangFilter = "ko" | "en" | "all";
 const LANG_OPTIONS: Array<{ value: LangFilter; label: string }> = [
+  { value: "all", label: "전체" },
   { value: "ko", label: "한국어" },
   { value: "en", label: "English" },
-  { value: "all", label: "전체" },
 ];
 
 // ── 페이지 ─────────────────────────────────────────────────────────────────
@@ -152,7 +153,7 @@ export function LibraryView() {
   const [docs, setDocs] = useState<DocSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [docCategory, setDocCategory] = useState<Category>("policy");
-  const [langFilter, setLangFilter] = useState<LangFilter>("ko");
+  const [langFilter, setLangFilter] = useState<LangFilter>("all");
 
   useEffect(() => {
     api

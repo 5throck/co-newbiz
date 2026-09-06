@@ -8,6 +8,8 @@ owner_agent: docs-writer
 version: "1.0.0"
 effective_from: "2026-08-23"
 output_type: gate_pass_record
+lang: en
+counterpart: gate-pass-record-template_ko.md
 ---
 
 <!--

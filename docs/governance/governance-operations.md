@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: governance-operations_ko.md
+---
+
 # Governance Operations
 
 **Owner**: compliance-officer

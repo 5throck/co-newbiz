@@ -24,7 +24,7 @@ Token names describe "where the value is used," not "what color it is." For exam
 | `--bg`, `--bg2`, `--bg3` | Three levels of screen background (base background / panel background / emphasized background) |
 | `--text`, `--text-muted`, `--text-dim` | Body text / secondary explanatory text / dimmed text |
 | `--border` | The color used only for drawing lines (borders only) |
-| `--accent` family | Emphasis color for elements the user interacts with (links, the currently selected tab, etc.) |
+| `--accent` family | Emphasis color for elements the user interacts with (links, the currently selected tab, etc.). `--accent-fg` is the foreground color used **on** accent backgrounds — light (`#ffffff`) in light theme, dark (`#0a0c10`) in dark theme — so accent-filled buttons keep 4.5:1 contrast in both themes |
 | `--bg-info/note/warn/success/error` | Background colors for notification boxes such as info, caution, success, and error |
 
 When building screens, colors must be specified only through these tokens; raw color values like `#0000FF` are never written into code. The product screens switch light/dark via the `[data-theme="dark"]` attribute, while this documentation portal switches in three steps: `:root` (default) → `prefers-color-scheme` (auto-detected device setting) → `.dark` (manually enabled by the user) — the trigger for switching differs between the two screens, but the resulting color values themselves are kept identical.
@@ -33,6 +33,7 @@ When building screens, colors must be specified only through these tokens; raw c
 
 - Body text is 15px with 1.65× line height, secondary explanations are 14px, and the smallest labels (micro text) are 12px — these size differences are what let the screen communicate "is this a heading, body text, or a side note?"
 - Spacing between elements always follows multiples of 8px (`--spacing-unit`). Arbitrary numbers (e.g., 13px, 17px) are avoided in favor of a steady rhythm like 8, 16, 24, 32, so margins never look uneven from screen to screen.
+- Corner radius uses the token scale — `--radius-sm`, `--radius-md` (0.625rem), `--radius-lg`, and `--radius-full` (pills/circles) — never a raw px value; `--radius-md` is the default for interactive controls (buttons, inputs, chips).
 - Amounts are written as integers without decimals, in units of a million KRW, with commas every three digits (e.g., 9,000). This notation is standardized across all screens.
 
 ## 🌐 External Reference — How design tokens are managed in the industry

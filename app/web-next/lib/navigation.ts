@@ -99,6 +99,8 @@ export const NON_MENU_ROUTES: string[] = [
   "/projects/[id]/ic-review",
   "/projects/[id]/pipeline",
   "/projects/[id]/portfolio",
+  "/projects/[id]/partnership",
+  "/projects/[id]/pmi",
   "/projects/[id]/process",
   "/projects/[id]/greenfield-feasibility",
 ];

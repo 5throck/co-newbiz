@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Validate docs/ folder structure compliance
- * @version 1.1.0
+ * @version 1.2.0
  * Ensures required subdirectories exist in docs/ folder
  */
 
@@ -18,14 +18,17 @@ interface ValidationResult {
 }
 
 // Required subdirectories in docs/
+// 'constitution' moved to optional: ADR-0108 restructured docs/ into topic
+// folders and retired the constitution portal surface (L0 CONSTITUTION.md
+// remains the constitution of record; docs/constitution/ no longer exists).
 const REQUIRED_FOLDERS = [
-  'constitution',
   'governance',
   'lifecycle',
 ];
 
 // Optional subdirectories (checked but not required)
 const OPTIONAL_FOLDERS = [
+  'constitution',
   'variant',
   'superpowers',
 ];

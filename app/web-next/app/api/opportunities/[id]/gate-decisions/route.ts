@@ -11,11 +11,12 @@ import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { latestGateDecisions } from "../../../../../lib/process-flow.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 
 const GATES = new Set(["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"]);
 const DECISIONS = new Set(["go", "hold", "kill"]);
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -39,9 +40,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }));
   return ok({ latest, history,
   }, 200, { count: history.length });
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
@@ -102,4 +103,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   );
   appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
   return ok({ id: gid, gate: body.gate, decision: body.decision }, 201);
-}
+});

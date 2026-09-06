@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: security-model_ko.md
+---
+
 # Security Model ??co-newbiz
 
 **Owner**: security-engineer (with legal-counsel, compliance-officer)

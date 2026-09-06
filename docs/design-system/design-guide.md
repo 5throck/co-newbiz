@@ -1,3 +1,13 @@
+---
+governance_doc_id: gov-des-00
+layer: docs-content
+title: "Design Guide — Onyx 3.0"
+scope: co-newbiz
+owner_agent: design-system-agent
+version: "1.0.0"
+lang: en
+counterpart: design-guide_ko.md
+---
 # Design Guide — co-newbiz Onyx 3.0
 
 > **Status**: v1.0 — the design policy of record for the web app

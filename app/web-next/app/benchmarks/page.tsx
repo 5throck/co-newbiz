@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
+import { useModalFocus } from "../../lib/use-modal-focus.ts";
 
 // 벤치마킹 사례 (/benchmarks) — 외부 유사 딜 사례 라이브러리. 모든 로그인
 // 사용자가 조회·검색할 수 있고 등록·수정은 관리자 콘솔에서 수행한다.
@@ -36,6 +37,8 @@ export function BenchmarksView() {
   const [q, setQ] = useState("");
   const [dealType, setDealType] = useState<string>("");
   const [detailCase, setDetailCase] = useState<BenchmarkCase | null>(null);
+  const closeModal = useCallback(() => setDetailCase(null), []);
+  const { panelRef, onKeyDown } = useModalFocus(closeModal);
 
   const load = useCallback(() => {
     const params = new URLSearchParams();
@@ -137,8 +140,8 @@ export function BenchmarksView() {
         </>
       )}
       {detailCase && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={`${detailCase.title} 상세`} onClick={() => setDetailCase(null)}>
-          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={`${detailCase.title} 상세`} onClick={closeModal} onKeyDown={onKeyDown}>
+          <div ref={panelRef} className="modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <h2>{detailCase.title}</h2>
               <button type="button" className="btn-ghost" onClick={() => setDetailCase(null)} aria-label="닫기">

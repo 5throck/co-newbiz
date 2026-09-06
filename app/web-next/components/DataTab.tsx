@@ -197,7 +197,7 @@ export function DataTab() {
               </tbody>
             </table>
           )}
-          {chartOption && <EChart option={chartOption} height={280} />}
+          {chartOption && <EChart option={chartOption} ariaLabel={`${selected} 관측치 차트`} height={280} />}
         </section>
       )}
 

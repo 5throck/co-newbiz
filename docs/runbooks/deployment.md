@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: deployment_ko.md
+---
+
 # Runbook — Deployment and Release
 
 **Owner**: release-engineer, platform-lead

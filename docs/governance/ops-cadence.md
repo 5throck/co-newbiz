@@ -1,3 +1,8 @@
+---
+lang: en
+counterpart: ops-cadence_ko.md
+---
+
 # Operating Rhythm and Concurrent-Deal Capacity
 
 **Owner**: process-governance-manager (with platform-lead for the system-dependent rows)

@@ -6,11 +6,12 @@ import { authenticate } from "../../../../../lib/auth.ts";
 import { computeTrackAdvisory } from "../../../../../lib/track-advisory.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../db/client.ts";
+import { route } from "../../../../../lib/route.ts";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
   if (!getDb().query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
   return ok(computeTrackAdvisory(getDb(), id), 200);
-}
+});

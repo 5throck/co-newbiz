@@ -142,6 +142,8 @@ All project-scoped via membership (404-not-403); writes analyst-gated and audit-
 
 Every numeric figure in `data` that traces to an `assumption` carries its `assumption_key`, `as_of`, `source`, and `anchor_ref` in `meta` — this is the API-level realization of FR-SYS-03 (UI source tooltips read directly from this envelope, no separate lookup).
 
+**Enforcement (ADR-0109):** the envelope is guaranteed on the error path by the `route()` wrapper in `app/web-next/lib/route.ts` — every API route handler is exported as `route(async ...)`, so an uncaught exception is converted into `fail(500, "internal_error", <message>)` in this same envelope instead of Next.js's default HTML 500, which JSON clients (`lib/api.ts`, the MCP REST layer) cannot parse. Handler-returned `Response`s (401/403/404/409) pass through untouched; the wrapper only covers what escapes.
+
 Landing state: `ok()` carries provenance fields into `meta` via `envelope.ts`'s `provenance()` normalizer (`assumption_key`/`source`/`anchor_ref`/`run_id`; null/blank values are dropped so absent stays absent), attached **only where a route derives them from the rows it returns**: `GET /api/series/:id/observations` sets `source` when every returned row shares one `source_id`, and `POST /api/projects/:id/dd-findings` links the finding's `assumption_key` to the latest assumption-registry row for that key (`run_id`, `anchor_ref`). A multi-row response whose rows carry differing provenance keeps it per-row — the rows already carry their own columns — and never collapses it into one fabricated meta entry.
 
 ## 10. Rate Limiting and Abuse Prevention

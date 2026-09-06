@@ -12,6 +12,7 @@ import {
 } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { useConfirm } from "../../components/crud.tsx";
+import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import dynamic from "next/dynamic";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
@@ -108,6 +109,9 @@ export function AdminConsole({ section }: { section: Section }) {
   const [showAuditTable, setShowAuditTable] = useState(false);
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const { confirm, confirmDialog } = useConfirm();
+  const { panelRef: secretModalPanelRef, onKeyDown: secretModalKeyDown } = useModalFocus(
+    () => setIssuedSecret(null),
+  );
   const [newUserId, setNewUserId] = useState("");
   const [newUserRole, setNewUserRole] = useState<"analyst" | "viewer" | "admin">("analyst");
   const [notice, setNotice] = useState<string | null>(null);
@@ -409,8 +413,8 @@ export function AdminConsole({ section }: { section: Section }) {
       {confirmDialog}
       <h1>{SECTION_TITLE[section]}</h1>
       {issuedSecret && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="발급된 비밀 정보">
-          <div className="modal-panel">
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="발급된 비밀 정보" onKeyDown={secretModalKeyDown}>
+          <div ref={secretModalPanelRef} className="modal-panel">
             <div className="modal-head"><h2>✅ {issuedSecret.kind} 발급 완료</h2></div>
             <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-2 mb-2">
               아래 값은 <strong>지금 이 창에서만</strong> 표시됩니다 — 닫으면 다시 볼 수 없습니다. 안전한 곳에 저장하세요.

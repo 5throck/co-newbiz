@@ -7,6 +7,8 @@ enforceability: recommended
 owner_agent: commercial-dd-agent
 version: "1.0.0"
 effective_from: "2026-08-20"
+lang: en
+counterpart: expert-interview-conduct_ko.md
 ---
 
 # Guideline: Expert Interview Conduct

@@ -9,6 +9,15 @@
 //
 // Fail-closed: with fewer than MIN_FACTORS usable factors the score is null
 // and the missing inputs are listed — never a fabricated number.
+//
+// All tunable methodology numbers (factor weights, curve breakpoints,
+// financial-capacity slopes) live in lib/scoring-weights.ts — the single
+// data module for scoring defaults (ADR-0024/0044 profile-first principle).
+import {
+  FINANCIAL_CAPACITY_PARAMS,
+  MARKET_ATTRACTIVENESS_CURVE,
+  SYNERGY_FACTOR_WEIGHTS,
+} from "./scoring-weights.ts";
 
 export interface ScoreFactor {
   key: "market_attractiveness" | "industry_match" | "financial_capacity" | "scope_match";
@@ -79,14 +88,21 @@ export function computeSynergyScore(inputs: ScoreInputs): SynergyScoreResult {
   // mature markets are not flattened to 0: 0%→0, 8%→50, 35%+→100.
   if (market && market.cagr !== null) {
     const c = market.cagr;
-    const value = c <= 0.08 ? clamp((c / 0.08) * 50) : clamp(50 + ((c - 0.08) / 0.27) * 50);
+    const { cagrMidpoint, cagrUpperSpan, midpointScore } = MARKET_ATTRACTIVENESS_CURVE;
+    const value =
+      c <= cagrMidpoint
+        ? clamp((c / cagrMidpoint) * midpointScore)
+        : clamp(midpointScore + ((c - cagrMidpoint) / cagrUpperSpan) * midpointScore);
     factors.push({
-      key: "market_attractiveness", label: "시장 매력도", baseWeight: 0.35, weight: 0.35, value,
+      key: "market_attractiveness", label: "시장 매력도",
+      baseWeight: SYNERGY_FACTOR_WEIGHTS.market_attractiveness, weight: SYNERGY_FACTOR_WEIGHTS.market_attractiveness, value,
       note: `${market.industry} 성장률 ${(c * 100).toFixed(1)}% → 정규화 ${value.toFixed(0)}/100`,
     });
   } else {
     missing.push("완료된 S1 시장분석(CAGR) 없음 — 시장 매력도 팩터 미반영");
-    factors.push({ key: "market_attractiveness", label: "시장 매력도", baseWeight: 0.35, weight: 0, value: null, note: "입력 부재로 제외" });
+    factors.push({
+      key: "market_attractiveness", label: "시장 매력도",
+      baseWeight: SYNERGY_FACTOR_WEIGHTS.market_attractiveness, weight: 0, value: null, note: "입력 부재로 제외" });
   }
 
   // 2) Industry match — S1 후방/전방 산업 × 프로파일 산업노출/강점 교집합.
@@ -96,12 +112,13 @@ export function computeSynergyScore(inputs: ScoreInputs): SynergyScoreResult {
   if (related.length && (exposure.length || strengths.length)) {
     const value = overlapScore(related, [...exposure, ...strengths]);
     factors.push({
-      key: "industry_match", label: "산업·역량 교집합", baseWeight: 0.3, weight: 0.3, value,
+      key: "industry_match", label: "산업·역량 교집합",
+      baseWeight: SYNERGY_FACTOR_WEIGHTS.industry_match, weight: SYNERGY_FACTOR_WEIGHTS.industry_match, value,
       note: `S1 인접 산업 ${related.length}개 중 프로파일 노출/강점과 매칭 ${Math.round((value / 100) * related.length)}건 (노출 ${exposure.length}·강점 ${strengths.length}개 대조)`,
     });
   } else {
     missing.push("S1 인접 산업 또는 프로파일 산업노출 부재 — 산업 매칭 팩터 미반영");
-    factors.push({ key: "industry_match", label: "산업·역량 교집합", baseWeight: 0.3, weight: 0, value: null, note: "입력 부재로 제외" });
+    factors.push({ key: "industry_match", label: "산업·역량 교집합", baseWeight: SYNERGY_FACTOR_WEIGHTS.industry_match, weight: 0, value: null, note: "입력 부재로 제외" });
   }
 
   // 3) Financial capacity — 최신 연도 DART 비율 (부채비율 낮을수록, ROE·마진 높을수록 유리).
@@ -111,29 +128,32 @@ export function computeSynergyScore(inputs: ScoreInputs): SynergyScoreResult {
     const debt = latest.debtRatio ?? null;
     const roe = latest.roe ?? null;
     const margin = latest.operatingMargin ?? null;
-    const debtPenalty = debt !== null ? clamp((debt - 0.4) * 180, -40, 40) : 0;
-    const roePoints = roe !== null ? clamp(roe * 350) : 0;
-    const marginPoints = margin !== null ? clamp(margin * 300) : 0;
-    const value = clamp(45 + roePoints * 0.5 + marginPoints * 0.3 - debtPenalty);
+    const P = FINANCIAL_CAPACITY_PARAMS;
+    const debtPenalty = debt !== null ? clamp((debt - P.debtFloor) * P.debtPenaltySlope, P.debtPenaltyMin, P.debtPenaltyMax) : 0;
+    const roePoints = roe !== null ? clamp(roe * P.roeSlope) : 0;
+    const marginPoints = margin !== null ? clamp(margin * P.marginSlope) : 0;
+    const value = clamp(P.base + roePoints * P.roeContribution + marginPoints * P.marginContribution - debtPenalty);
     factors.push({
-      key: "financial_capacity", label: "재무 여력", baseWeight: 0.2, weight: 0.2, value,
+      key: "financial_capacity", label: "재무 여력",
+      baseWeight: SYNERGY_FACTOR_WEIGHTS.financial_capacity, weight: SYNERGY_FACTOR_WEIGHTS.financial_capacity, value,
       note: `${latest.year}년 부채비율 ${debt !== null ? (debt * 100).toFixed(0) + "%" : "—"}, ROE ${roe !== null ? (roe * 100).toFixed(1) + "%" : "—"}, 영업이익률 ${margin !== null ? (margin * 100).toFixed(1) + "%" : "—"}`,
     });
   } else {
     missing.push("DART 재무 비율 없음 — 재무 여력 팩터 미반영");
-    factors.push({ key: "financial_capacity", label: "재무 여력", baseWeight: 0.2, weight: 0, value: null, note: "입력 부재로 제외" });
+    factors.push({ key: "financial_capacity", label: "재무 여력", baseWeight: SYNERGY_FACTOR_WEIGHTS.financial_capacity, weight: 0, value: null, note: "입력 부재로 제외" });
   }
 
   // 4) Scope match — 기회 market_scope와 시장분석 산업명 일치도.
   if (inputs.opportunity?.market_scope) {
     const value = matched ? 100 : overlapScore([inputs.opportunity.market_scope, inputs.opportunity.value_chain_node ?? ""], market ? [market.industry] : []);
     factors.push({
-      key: "scope_match", label: "기회-시장 일치도", baseWeight: 0.15, weight: 0.15, value,
+      key: "scope_match", label: "기회-시장 일치도",
+      baseWeight: SYNERGY_FACTOR_WEIGHTS.scope_match, weight: SYNERGY_FACTOR_WEIGHTS.scope_match, value,
       note: matched ? `기회 범위 '${inputs.opportunity.market_scope}' ↔ S1 산업명 직접 일치` : `직접 일치 없음 — 어휘 겹침 기준 ${value.toFixed(0)}/100`,
     });
   } else {
     missing.push("기회 market_scope 미기재 — 일치도 팩터 미반영");
-    factors.push({ key: "scope_match", label: "기회-시장 일치도", baseWeight: 0.15, weight: 0, value: null, note: "입력 부재로 제외" });
+    factors.push({ key: "scope_match", label: "기회-시장 일치도", baseWeight: SYNERGY_FACTOR_WEIGHTS.scope_match, weight: 0, value: null, note: "입력 부재로 제외" });
   }
 
   const usable = factors.filter((f) => f.value !== null);

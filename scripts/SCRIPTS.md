@@ -138,7 +138,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `audit-variant.ts` | co-newbiz | 0.1.0 | active | —| —| L3-only (project-local variant audit — pluggable checks per ADR-0038) | —|
 | `translate-readme.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `validate-agents.ts` | L0 | 1.0.5 | active | —| —| L0+L1 | —|
-| `validate-doc-folder.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `validate-doc-folder.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `validate-docs-links.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `validate-md-language.ts` | L0 | 1.8.0 | active | —| —| L0+L1 | —|
 | `validate-model-registry.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|

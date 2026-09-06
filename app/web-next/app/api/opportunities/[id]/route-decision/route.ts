@@ -9,6 +9,7 @@ import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 
 const TRACKS = ["greenfield", "brownfield"] as const;
 const GF_SUB = ["existing_business_rbd", "intra_venture"] as const;
@@ -41,7 +42,7 @@ function validateScores(raw: unknown): { scores: ScoreInput[] } | { error: strin
   return { scores: [...seen.values()] };
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -52,9 +53,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!opp) return notFound();
   const decisions = listRouteDecisionsWithScores(id);
   return ok({ opportunity: opp, decisions }, 200, { count: decisions.length });
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
@@ -151,4 +152,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     id: decisionId, track, sub_track: subTrack, rationale, decided_at: now,
     intent: intentValue, total_score: total, staging_recommended: stagingRecommended,
   }, 201);
-}
+});

@@ -1,7 +1,6 @@
-// Phase 2 port of app/server/middleware.ts's requireAuth/requireAdmin
-// (ADR-0069/0070). This IS the "shared wrapper" ADR-0070 §Decision-2/3
-// mandates every app/api/** Route Handler call — the Next.js-side successor
-// to ADR-0011's single enforcement point. Every Route Handler must call
+// Next.js Route Handler auth gate (ADR-0069/0070, ex-app/server/middleware.ts).
+// This IS the "shared wrapper" ADR-0070 §Decision-2/3 mandates every
+// app/api/** Route Handler call. Every Route Handler must call
 // `authenticate(request)` before touching any data; there is no
 // `middleware.ts`-matcher shortcut (Next.js edge middleware cannot reach
 // the Prisma/bun:sqlite client — see ADR-0070 §Decision-3) and no Server
@@ -9,12 +8,9 @@
 //
 // Deliberately reuses db/lib/accounts.ts's validateSession and
 // db/lib/api-tokens.ts's validateApiToken UNCHANGED — same password
-// hashing, same session/token lifecycle, same audit trail as the Hono
-// side. Porting the HTTP layer does not mean re-deriving the security
-// model; PBKDF2/session/CSRF logic living in db/lib/* is reused verbatim
-// by both app/server (Hono, current) and app/web-next (Next.js, this
-// phase) for as long as both exist side by side (design doc §6 Phase 4
-// shadow-traffic period).
+// hashing, same session/token lifecycle, same audit trail. The retired
+// side-by-side Hono server shared these db/lib modules too, and web-next
+// is now the only HTTP layer.
 
 import { getDb } from "../../../db/client.ts";
 import { validateSession, type UserRole } from "../../../db/lib/accounts.ts";
