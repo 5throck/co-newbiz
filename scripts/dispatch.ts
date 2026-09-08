@@ -75,7 +75,7 @@ PARALLEL OPTIONS:
               Priority: high | medium | low (default: medium)
 
               Example:
-                --task "Audit code:code-auditor:Check quality:high"
+                --task "Audit code:compliance-officer:Check quality:high"
 
 SERIAL OPTIONS:
   --pipeline <file.ts>

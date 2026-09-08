@@ -13,7 +13,7 @@
 
 ## Roster Overview
 
-**38 agents** across four domains, coordinated by PM as New Business Review Lead. Domain leads are design and review owners, not dispatchers — the workspace flat PM Gateway is preserved in full; see `agents/pm.md` for the coordination loop.
+**40 agents** across four domains, coordinated by PM as New Business Review Lead. Domain leads are design and review owners, not dispatchers — the workspace flat PM Gateway is preserved in full; see `agents/pm.md` for the coordination loop.
 
 | Domain | Count | Lead |
 |---|---|---|
@@ -22,7 +22,7 @@
 | technical | 10 | `platform-lead` |
 | industry | 1 | `industry-lead` |
 | region | 1 | `region-lead` |
-| `_shared` | 1 | — |
+| `_shared` | 2 | — |
 
 ---
 
@@ -62,16 +62,16 @@
 | ir-agent | [`agents/ir-agent.md`](agents/ir-agent.md) | Medium | governance | Investor relations advisory: equity story, disclosure discipline, investor communications, and market perception risk |
 | ip-agent | [`agents/ip-agent.md`](agents/ip-agent.md) | Medium | governance | Patent and IP advisory: patent landscape, freedom-to-operate, IP valuation, trade secrets, and technology licensing |
 
-## Technical Domain — System Build & Run (9)
+## Technical Domain — System Build & Run (10)
 
 | Agent | File | Tier | Subdomain | Role |
 |---|---|---|---|---|
 | **platform-lead** | [`agents/platform-lead.md`](agents/platform-lead.md) | High | _lead | Domain lead for technical |
-
-| **design-system-agent** | [`agents/design-system-agent.md`](agents/design-system-agent.md) | Medium | design | Onyx 3.0 design system governance — token, component, and accessibility consistency enforcement (design-lint) || data-architect | [`agents/data-architect.md`](agents/data-architect.md) | High | data | ERD, master data governance, normalization, indexing, migration, and portability |
+| **design-system-agent** | [`agents/design-system-agent.md`](agents/design-system-agent.md) | Medium | design | Onyx 3.0 design system governance — token, component, and accessibility consistency enforcement (design-lint) |
+| data-architect | [`agents/data-architect.md`](agents/data-architect.md) | High | data | ERD, master data governance, normalization, indexing, migration, and portability |
 | dba | [`agents/dba.md`](agents/dba.md) | Medium | data | Database operations: backup/restore, monthly recovery drills, performance tuning, and capacity management |
-| backend-engineer | [`agents/backend-engineer.md`](agents/backend-engineer.md) | Medium | app | Hono REST API, authentication, MCP server, the analysis-engine CLI, and the monitoring/alerting pipeline |
-| frontend-engineer | [`agents/frontend-engineer.md`](agents/frontend-engineer.md) | Medium | app | React/Vite UI, ECharts visualizations, the RAG dashboard, the admin console, and accessibility |
+| backend-engineer | [`agents/backend-engineer.md`](agents/backend-engineer.md) | Medium | app | Next.js Route Handler API (App Router, ADR-0069), authentication, MCP server, the analysis-engine CLI, and the monitoring/alerting pipeline |
+| frontend-engineer | [`agents/frontend-engineer.md`](agents/frontend-engineer.md) | Medium | app | Next.js App Router UI, ECharts visualizations, the RAG dashboard, the admin console, and accessibility |
 | release-engineer | [`agents/release-engineer.md`](agents/release-engineer.md) | Medium | ops | Build and deployment pipeline, migration execution ordering, and rollback procedures |
 | sre | [`agents/sre.md`](agents/sre.md) | Medium | ops | Monitoring and alerting, log pipeline, and incident response with post-incident analysis |
 | infra-automation-engineer | [`agents/infra-automation-engineer.md`](agents/infra-automation-engineer.md) | Medium | ops | OS configuration, service registration, the scheduled-collection scheduler, and health-check/cleanup automation |
@@ -89,18 +89,20 @@
 |---|---|---|---|---|
 | **region-lead** | [`agents/region-lead.md`](agents/region-lead.md) | High | _lead | Domain lead for region — owns the region-profiles/*.yaml system |
 
-## Shared — Belongs to No Single Domain (1)
+## Shared — Belongs to No Single Domain (2)
 
 | Agent | File | Tier | Subdomain | Role |
 |---|---|---|---|---|
 | docs-writer | [`agents/docs-writer.md`](agents/docs-writer.md) | Medium | _shared | Document formatting and language-policy enforcement across all four domains |
+| i18n-specialist | [`agents/i18n-specialist.md`](agents/i18n-specialist.md) | Medium | _shared | Locale configuration (BCP 47), locale-specific formatting, text layout guidance, and the i18n audit suite across all four domains |
 
 ---
 
 ## Governance
 
-- **PM Gateway**: PM is the only agent users may directly invoke. All 37 specialist agents require PM dispatch.
-- **Three-stage review**: every deliverable passes AI 1st (formal) -> AI 2nd (cross-domain, different domain than the author) -> human final (judgement and approval). See `agents/pm.md` Dispatch Protocol.
+- **PM Gateway**: PM is the only agent users may directly invoke. All 39 specialist agents require PM dispatch.
+- **Three-stage review**: every deliverable passes AI 1st (formal) -> AI 2nd (cross-domain, different domain than the author) -> human final (judgement and approval). See `agents/pm.md` "Deal Pipeline Orchestration" and the `deal-pipeline-orchestration` skill.
+- **Process authority layering**: `process/flow.spec.yaml` (ADR-0074) is the SSOT for stages/gates and for **stage-level agent dispatch** (its `activities[].agent` is who PM dispatches for pipeline work); `procedures/_shared/*/schema.yaml` governs **within-procedure step assignments** (`agent_key`) and is authoritative over `skills/*.md`. Where a stage activity and a procedure step name different agents for the same work, the flow.spec activity governs pipeline dispatch and the procedure governs its internal steps — a divergence is a defect to reconcile, not a choice.
 - **Non-negotiable boundaries**: agents inherit caller permissions and hold no accounts of their own; gate approval and investment decisions belong to humans; `procedures/*.yaml` is authoritative over `skills/*.md`; data confidence caps the RAG grade; permits and certifications are tracked separately.
 - Run `bun run agent:verify` after any change to this roster.
 
