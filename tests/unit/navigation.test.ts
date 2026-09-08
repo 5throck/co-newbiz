@@ -6,7 +6,9 @@ import { test, expect, describe } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const APP_DIR = "app/web-next/app";
+const PROJECT_ROOT = join(import.meta.dirname, "../..");
+
+const APP_DIR = join(PROJECT_ROOT, "app/web-next/app");
 const NAV_MODULE = "../../app/web-next/lib/navigation.ts";
 
 function* walkPages(dir: string): Generator<string> {
@@ -43,7 +45,7 @@ function allPageRoutes(): string[] {
 
 const { NAV_SECTIONS, NON_MENU_ROUTES, menuHrefs, ADMIN_NAV } = await import(NAV_MODULE);
 // AppShell must be the only renderer — assert it consumes the SSOT.
-const appShellSource = readFileSync("app/web-next/components/AppShell.tsx", "utf8");
+const appShellSource = readFileSync(join(PROJECT_ROOT, "app/web-next/components/AppShell.tsx"), "utf8");
 
 describe("navigation SSOT (ADR-0105)", () => {
   test("every rendered page is either in the menu or explicitly non-menu", () => {

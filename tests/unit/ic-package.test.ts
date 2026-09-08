@@ -19,8 +19,11 @@
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
 
-const TEST_DB_PATH = "db/data/test-ic-package.sqlite";
+const PROJECT_ROOT = join(import.meta.dirname, "../..");
+
+const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-ic-package.sqlite");
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
@@ -171,7 +174,7 @@ describe("(a) migration 0070 — project_id backfill from the opportunity backli
     ).toBeNull();
 
     // Run the migration's own backfill statement, verbatim from the file.
-    const sql = readFileSync("db/migrations/0070_entity_establishment_project_key.sql", "utf8");
+    const sql = readFileSync(join(PROJECT_ROOT, "db/migrations/0070_entity_establishment_project_key.sql"), "utf8");
     const update = sql
       .split("\n")
       .filter((l) => !l.trim().startsWith("--"))
@@ -188,7 +191,7 @@ describe("(a) migration 0070 — project_id backfill from the opportunity backli
   });
 
   test("0070 is additive-only: ALTER + backfill UPDATE + index (ADR-0014)", () => {
-    const sql = readFileSync("db/migrations/0070_entity_establishment_project_key.sql", "utf8");
+    const sql = readFileSync(join(PROJECT_ROOT, "db/migrations/0070_entity_establishment_project_key.sql"), "utf8");
     expect(sql).toContain("ADD COLUMN project_id TEXT REFERENCES md_project(id)");
     expect(sql).toContain("WHERE project_id IS NULL");
     expect(sql).toContain("CREATE INDEX IF NOT EXISTS idx_ees_project");
@@ -313,7 +316,7 @@ describe("(d) boundary #2 — RAG is a labeled proposal; the read writes nothing
     expect(after).toBe(before);
 
     // The route file exports GET only — the IC read can never confirm anything.
-    const src = readFileSync("app/web-next/app/api/projects/[id]/ic-package/route.ts", "utf8");
+    const src = readFileSync(join(PROJECT_ROOT, "app/web-next/app/api/projects/[id]/ic-package/route.ts"), "utf8");
     expect(src).toContain("export async function GET");
     expect(src).not.toMatch(/export async function (POST|PUT|PATCH|DELETE)/);
   });

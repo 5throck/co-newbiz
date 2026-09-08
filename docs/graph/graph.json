@@ -3536,187 +3536,187 @@
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-dd__any_of_six_ma_validators_missing_at_dd_exit",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-dd__certification_transferability_computed_by_inference_not_confirmation",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-dd__covenant_breach_with_coc_acceleration_under_downside",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-dd__partner_dependency_unconfirmed_and_no_alternative",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-fs__qoe_reveals_material_earnings_quality_gap_unexplained",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-pre-fs__wacc_hurdle_still_assumed",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-screening__no_viable_target_in_longlist",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-screening__preliminary_hhi_flags_certain_block",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:deal-shape-chain__no_viable_deal_shape",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:deal-shape-chain__partner_dd_red_financial_distress",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:deal-shape-chain__partner_dd_red_ip_chain",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:entity-establishment-execution__employment_transfer_without_consent_determination",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:entity-establishment-execution__ip_assignment_chain_incomplete_at_establishment",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:entity-establishment-execution__origin_classification_missing_at_entity_ic_exit",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:entity-ic-review__analysis_task_reviewed_by_null_on_required_deliverable",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:entity-ic-review__kill_criteria_condition_triggered",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-dd__wastewater_capacity_insufficient_and_no_mitigation",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-fs__growth_projection_outside_top_decile_without_risk_officer_signoff",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-fs__permit_critical_path_exceeds_incentive_deadline",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-pre-fs__wacc_hurdle_still_assumed",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-screening__partner_dependency_unconfirmed_and_no_alternative",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-screening__zero_site_clears_infrastructure_minimums",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:pmi-integration-execution__clean_team_protocol_breach",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:pmi-integration-execution__key_talent_attrition_above_threshold_at_90d",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:pmi-integration-execution__synergy_run_rate_uncertified_at_bau_handover",
-      "source_ref": "docs\\adr\\0060-kill-criteria-executability-classification.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0062",
       "to": "rule:brownfield-screening__preliminary_hhi_flags_certain_block",
-      "source_ref": "docs\\adr\\0062-antitrust-premise-reversal-early-screen-var.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0062-antitrust-premise-reversal-early-screen-var.md"
     },
     {
       "type": "activates_reverses",
       "from": "dec:2026-08-24-residual-decisions-pack",
       "to": "rule:brownfield-screening__preliminary_hhi_flags_certain_block",
-      "source_ref": "docs\\decisions\\2026-08-24-residual-decisions-pack.md"
+      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/decisions/2026-08-24-residual-decisions-pack.md"
     },
     {
       "type": "anchored_by",

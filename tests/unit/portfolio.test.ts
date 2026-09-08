@@ -25,7 +25,10 @@
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 
-const TEST_DB_PATH = "db/data/test-portfolio.sqlite";
+const PROJECT_ROOT = join(import.meta.dirname, "../..");
+import { join } from "node:path";
+
+const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-portfolio.sqlite");
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
@@ -410,13 +413,13 @@ describe("(d) append-only ledger + migration shape", () => {
     expect(data.decisions.latest?.decision).toBe("held_evidence_incomplete");
 
     // Append-only: no UPDATE/DELETE path exists anywhere for the table.
-    const routeSrc = readFileSync("app/web-next/app/api/projects/[id]/transition-decision/route.ts", "utf8");
+    const routeSrc = readFileSync(join(PROJECT_ROOT, "app/web-next/app/api/projects/[id]/transition-decision/route.ts"), "utf8");
     expect(routeSrc).not.toMatch(/UPDATE venture_transition_decision|DELETE FROM venture_transition_decision/i);
     expect(routeSrc).toContain("INSERT INTO venture_transition_decision");
   });
 
   test("0071 is additive-only and carries the ADR-0101 §1 shape verbatim", () => {
-    const sql = readFileSync("db/migrations/0071_venture_transition_decision.sql", "utf8");
+    const sql = readFileSync(join(PROJECT_ROOT, "db/migrations/0071_venture_transition_decision.sql"), "utf8");
     expect(sql).toContain("CREATE TABLE venture_transition_decision");
     expect(sql).toContain("review_cycle GLOB '????-Q[1-4]'");
     expect(sql).toContain("decided_by TEXT NOT NULL CHECK (decided_by = 'venture-portfolio-ic')");

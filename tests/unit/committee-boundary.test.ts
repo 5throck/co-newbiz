@@ -15,8 +15,11 @@
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
 
-const TEST_DB_PATH = "db/data/test-committee-boundary.sqlite";
+const PROJECT_ROOT = join(import.meta.dirname, "../..");
+
+const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-committee-boundary.sqlite");
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 process.env.CO_NEWBIZ_COMMITTEE_AGENTS = "deterministic";
 
@@ -263,7 +266,7 @@ const { readFileSync } = await import("node:fs");
 
 describe("_committees.yaml validation", () => {
   test("the shipped registry passes with both committees", () => {
-    const doc = yaml.load(readFileSync("procedures/_committees.yaml", "utf-8"), { schema: yaml.JSON_SCHEMA });
+    const doc = yaml.load(readFileSync(join(PROJECT_ROOT, "procedures/_committees.yaml"), "utf-8"), { schema: yaml.JSON_SCHEMA });
     const result = validateCommitteeRegistry(doc, new Set<string>());
     expect(result.committeeCount).toBe(2);
     expect(result.issues.filter((i) => i.severity === "error")).toEqual([]);
@@ -342,7 +345,7 @@ describe("_committees.yaml functional-expert composition", () => {
   ];
 
   function loadCommittees(): Record<string, { members: Array<{ type: string; key: string; veto_dissent?: boolean }> }> {
-    return (yaml.load(readFileSync("procedures/_committees.yaml", "utf-8"), { schema: yaml.JSON_SCHEMA }) as {
+    return (yaml.load(readFileSync(join(PROJECT_ROOT, "procedures/_committees.yaml"), "utf-8"), { schema: yaml.JSON_SCHEMA }) as {
       committees: Record<string, { members: Array<{ type: string; key: string; veto_dissent?: boolean }> }>;
     }).committees;
   }
@@ -377,7 +380,7 @@ describe("_committees.yaml functional-expert composition", () => {
   });
 
   test("the validator passes with the expanded membership (agent files exist)", () => {
-    const doc = yaml.load(readFileSync("procedures/_committees.yaml", "utf-8"), { schema: yaml.JSON_SCHEMA });
+    const doc = yaml.load(readFileSync(join(PROJECT_ROOT, "procedures/_committees.yaml"), "utf-8"), { schema: yaml.JSON_SCHEMA });
     const result = validateCommitteeRegistry(doc, new Set<string>());
     expect(result.committeeCount).toBe(2);
     expect(result.issues.filter((i) => i.severity === "error")).toEqual([]);

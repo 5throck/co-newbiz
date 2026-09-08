@@ -17,9 +17,11 @@
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
+
+const PROJECT_ROOT = join(import.meta.dirname, "../..");
 import type { Server } from "bun";
 
-const TEST_DB_PATH = "db/data/test-mcp.sqlite";
+const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-mcp.sqlite");
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
@@ -84,7 +86,7 @@ function walkTs(dir: string): string[] {
 describe("ADR-0011 — no direct DB access from the MCP server (FR-SYS-01)", () => {
   test("no file under mcp/co-newbiz imports bun:sqlite or a db module", () => {
     const forbidden = /^\s*import\b.*(bun:sqlite|db\/client|db\/repositories|db\/lib)/m;
-    const offenders = walkTs("mcp/co-newbiz").filter((f) => forbidden.test(readFileSync(f, "utf8")));
+    const offenders = walkTs(join(PROJECT_ROOT, "mcp/co-newbiz")).filter((f) => forbidden.test(readFileSync(f, "utf8")));
     expect(offenders).toEqual([]);
   });
 });
@@ -107,7 +109,7 @@ describe("tool catalog", () => {
   });
 
   test("every TOOLS entry has a dispatch case (no advertised-but-uncallable tool)", async () => {
-    const source = readFileSync("mcp/co-newbiz/index.ts", "utf8");
+    const source = readFileSync(join(PROJECT_ROOT, "mcp/co-newbiz/index.ts"), "utf8");
     const { TOOLS } = await import("../../mcp/co-newbiz/index.ts");
     for (const tool of TOOLS) {
       expect(source).toContain(`case "${tool.name}"`);
@@ -267,7 +269,7 @@ describe("real stdio JSON-RPC transport (not just dispatch())", () => {
     const client = new Client({ name: "test-client", version: "1.0.0" }, { capabilities: {} });
     const transport = new StdioClientTransport({
       command: "bun",
-      args: ["run", "mcp/co-newbiz/index.ts"],
+      args: ["run", join(PROJECT_ROOT, "mcp/co-newbiz/index.ts")],
       env: {
         CO_NEWBIZ_API_BASE_URL: process.env.CO_NEWBIZ_API_BASE_URL ?? "",
         CO_NEWBIZ_API_TOKEN: writeToken,
