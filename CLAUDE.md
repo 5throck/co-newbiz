@@ -233,6 +233,8 @@ The execution plan table format, the Design Gate (Row 0) rule, exemption categor
 ### 6. Native Sub-agents (`Agent` Tool)
 Use the native `Agent` tool to spawn sub-agents for parallel or isolated tasks. Sub-agents load their role-based configurations from `agents/<name>.md`.
 
+> **Project subagent types**: `.claude/agents/<name>.md` is generated for all 40 roster agents (run `bun run agents:personas` after any roster change; CI checks drift). In Claude Code you may dispatch with `subagent_type: "<agent-name>"` directly — no need to paste the persona into the prompt. On other harnesses, keep inlining the `agents/<name>.md` body as below.
+
 > **Agent Architecture**: See [docs/context.md](docs/context.md) for governance rules.
 > **Agent Roster**: See [AGENTS.md](AGENTS.md) for the canonical index of all available agents.
 > **docs-writer tier**: Medium (claude-sonnet-5-0) — upgraded from Low per 2026-05-28 team restructuring.

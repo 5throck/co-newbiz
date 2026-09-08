@@ -59,6 +59,14 @@ jobs:
           bun run design:lint
           (cd app/web-next && bun run lint:design)
 
+      # WCAG AA token-pair contrast in both themes (design-accessibility rule 6)
+      - name: Contrast check
+        run: bun run contrast:check
+
+      # .claude/agents/ personas must match the agents/ roster (generated files)
+      - name: Agent personas drift check
+        run: bun run agents:personas -- --check
+
   secret-scan:
     name: Secret Scan
     runs-on: ubuntu-latest
