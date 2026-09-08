@@ -2,16 +2,17 @@
 name: stage-gate-governance
 scope: co-newbiz
 description: >
-  Runs the Screening -> Pre-FS -> FS -> DD -> Entity IC -> Group IC gate
-  sequence and the 6-item binding Kill Criteria list (ADR-0008,
+  Runs the Screening -> Pre-FS -> Target Screening (brownfield) -> FS -> DD ->
+  Entity IC -> Group IC gate sequence (7 gates, flow.spec.yaml v2.2.x) and the
+  6-item binding Kill Criteria list (ADR-0008,
   `policies/group/neb-policy.md` §4) — distinct from and stricter than RAG
   grading. A Kill Criteria hit halts the project outright; only Group IC can
   override, and only with an explicit recorded decision.
 
   Use when: "stage gate", "kill criteria", "gate sequence", "halt the
   project", "does this trigger a kill criterion".
-version: 1.3.0
-last_reviewed: 2026-08-23
+version: 1.4.0
+last_reviewed: 2026-09-08
 status: active
 owner: process-governance-manager
 prerequisites: none
@@ -61,7 +62,8 @@ metadata:
 
 ## Context
 
-The gate sequence per procedure `gate` fields is Screening → Pre-FS → FS →
+The gate sequence per procedure `gate` fields is Screening → Pre-FS →
+Target Screening (brownfield only, between Pre-FS and FS at S7) → FS →
 DD → Entity IC → Group IC (Green Field and Brown Field each have their own
 per-stage procedures under `procedures/_shared/`). Brown Field acquisitions
 add a post-approval `post_close` slot governed by
