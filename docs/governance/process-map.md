@@ -14,10 +14,12 @@ counterpart: process-map_ko.md
 ## Stage Gate Sequence
 
 ```
-Screening → Pre-FS → FS → DD → Entity IC → Group IC
+Screening → Pre-FS → Target Screening (brownfield) → FS → DD → Entity IC → Group IC
 ```
 
 **Stage chain (flow.spec v2.2.0, ADR-0106)**: S1 market analysis → S2 opportunity discovery → S3 synergy/fit → S4 entry-mode decision → S5 capability assessment & entry strategy (GF) / S6–S7 target identification & screening (BF) → S8 business-case analysis → S9 DD & verification → **S10 deal structuring** → S11 investment review & execution → S12 post-investment management. (Korean stage names in the ko counterpart.) Stages are work intervals; gates (Screening~Group IC, unchanged ids) sit between them. Stage ≠ Gate; historical ADRs keep their pre-v2.2.0 numbering (ADR-0106 is the mapping of record).
+
+**Agent-assignment authority**: `process/flow.spec.yaml` `activities[].agent` is authoritative for **stage-level pipeline dispatch** (who PM dispatches for the stage's work); each procedure's `agent_key` is authoritative for its **internal steps**. A divergence between the two for the same work is a defect to reconcile, not a choice (see AGENTS.md "Process authority layering"). Harness dispatch mechanics are the `deal-pipeline-orchestration` skill.
 
 **Deal structuring stage (S10, ADR-0045/0106)**: between the DD gate and Entity IC, the deal structure is designed in `procedures/_shared/deal-structuring/` — the vehicle (direct / SPC / holdco / internal-venture spinoff / JV) plus the four mandatory axes (tax structure, liability isolation, financing leverage, exit structure) land in `deal_structure_hypothesis` with an artifact-referenced four-axis review, and the financing plan (`financing_sources_uses`, migration 0075) must balance (sources == uses > 0). The S11 IC package embeds this structure so the committees approve what S10 produced. The pre-FS step-2 hypothesis remains the early draft this stage matures.
 

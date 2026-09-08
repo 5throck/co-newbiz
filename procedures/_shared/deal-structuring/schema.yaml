@@ -87,3 +87,14 @@ references:
   - db/repositories/financing-plan.repository.ts
   - skills/investment-vehicle-structuring/SKILL.md
   - skills/financing-plan-review/SKILL.md
+legal_basis:
+  - "Group New Business Review Policy §2.3"
+  - "Design v1.0 §4-6"
+  - "docs/governance/process-map.md — Deal structuring stage (S10)"
+  - "ADR-0045 (four mandatory structure axes + vehicle choice)"
+  - "ADR-0106 (S10 투자구조 설계 as its own stage between S9 and IC)"
+  - "db/migrations/0013_classification_infra.sql — deal_structure_hypothesis incl. four_axis_review_completed"
+  - "db/migrations/0075 — financing_sources_uses (balanced sources == uses > 0)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-09-08"
