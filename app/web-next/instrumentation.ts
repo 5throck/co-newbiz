@@ -11,11 +11,11 @@ function randomPassword(bytes = 16): string {
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  // Committee deliberation LLM mode (ADR-0097 §5 seam): when
-  // CO_NEWBIZ_COMMITTEE_AGENTS=llm AND lib/llm.ts is configured, register the
-  // LLM CallAgent factory. Independent of the DB bootstrap below and wrapped
-  // so a failure here can never prevent boot — deliberation would simply stay
-  // on the deterministic templates.
+  // Executor seams (ADR-0097 §5 / ADR-0098 / ADR-0099): committee deliberation
+  // (above) plus the S8 business-case and S9 DD-tailor executors. Each is
+  // activated by its own CO_NEWBIZ_*_AGENTS=llm env var AND a configured LLM
+  // client; failures here never prevent boot — the deterministic executors
+  // remain the fallback and the regression-test surface.
   try {
     if (process.env.CO_NEWBIZ_COMMITTEE_AGENTS === "llm") {
       const { isLlmConfigured } = await import("./lib/llm.ts");
@@ -28,8 +28,30 @@ export async function register() {
         console.warn("[bootstrap] CO_NEWBIZ_COMMITTEE_AGENTS=llm but no LLM configured (CO_NEWBIZ_LLM_PROVIDER/API_KEY/MODEL) — staying deterministic.");
       }
     }
+    if (process.env.CO_NEWBIZ_BUSINESS_CASE_AGENTS === "llm") {
+      const { isLlmConfigured } = await import("./lib/llm.ts");
+      const { setBusinessCaseExecutorFactory } = await import("./lib/business-case-generator.ts");
+      const { makeLlmBusinessCaseExecutor } = await import("./lib/llm-executors.ts");
+      if (isLlmConfigured()) {
+        setBusinessCaseExecutorFactory(() => makeLlmBusinessCaseExecutor());
+        console.log("[bootstrap] business-case executor: LLM prose mode registered (persistence stays deterministic).");
+      } else {
+        console.warn("[bootstrap] CO_NEWBIZ_BUSINESS_CASE_AGENTS=llm but no LLM configured — staying deterministic.");
+      }
+    }
+    if (process.env.CO_NEWBIZ_DD_TAILOR_AGENTS === "llm") {
+      const { isLlmConfigured } = await import("./lib/llm.ts");
+      const { setDdTailorExecutorFactory } = await import("./lib/dd-checklist-tailor.ts");
+      const { makeLlmDdTailorExecutor } = await import("./lib/llm-executors.ts");
+      if (isLlmConfigured()) {
+        setDdTailorExecutorFactory(() => makeLlmDdTailorExecutor());
+        console.log("[bootstrap] DD-tailor executor: LLM mode registered (sources stay unsourced/C per ADR-0099 §6).");
+      } else {
+        console.warn("[bootstrap] CO_NEWBIZ_DD_TAILOR_AGENTS=llm but no LLM configured — staying deterministic.");
+      }
+    }
   } catch (err) {
-    console.warn("[bootstrap] committee LLM factory registration skipped:", err instanceof Error ? err.message : err);
+    console.warn("[bootstrap] executor factory registration skipped:", err instanceof Error ? err.message : err);
   }
 
   try {

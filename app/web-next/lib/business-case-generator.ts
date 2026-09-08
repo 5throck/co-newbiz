@@ -252,8 +252,10 @@ export function setBusinessCaseExecutorFactory(next: ExecutorFactory | null): vo
   executorFactory = next;
 }
 
-/** Deterministic default — role-templated output, seeded computation, real rows. */
-function defaultExecutor(): BusinessCaseStepExecutor {
+/** Deterministic default — role-templated output, seeded computation, real rows.
+ *  Exported for the LLM executor, which delegates persistence here and enriches
+ *  only the returned prose. */
+export function defaultExecutor(): BusinessCaseStepExecutor {
   return async (step, ctx) => {
     const db = getDb();
     const delta = SCENARIO_DELTA[ctx.scenario];
