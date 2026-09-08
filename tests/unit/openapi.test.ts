@@ -16,10 +16,12 @@
 import { test, expect, describe } from "bun:test";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+
+const PROJECT_ROOT = join(import.meta.dirname, "../..");
 import * as yaml from "js-yaml";
 
 const METHODS = ["get", "post", "put", "patch", "delete"] as const;
-const API_ROOT = join("app", "web-next", "app", "api");
+const API_ROOT = join(PROJECT_ROOT, "app", "web-next", "app", "api");
 
 // A Next.js Route Handler declares its methods either as exported top-level
 // HTTP-verb functions (`export async function GET(...)`) or wrapped in the
@@ -69,7 +71,7 @@ function declaredRoutes(): Set<string> {
   return routes;
 }
 
-const spec = yaml.load(readFileSync("docs/architecture/openapi.yaml", "utf8")) as {
+const spec = yaml.load(readFileSync(join(PROJECT_ROOT, "docs/architecture/openapi.yaml"), "utf8")) as {
   openapi?: string;
   paths?: Record<string, Record<string, unknown>>;
 };
