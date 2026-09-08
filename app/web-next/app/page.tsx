@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { api } from "../lib/api.ts";
 import { useChartTheme } from "../lib/echarts-theme.ts";
 import { PipelineStatus } from "../components/PipelineStatus.tsx";
+import { PageHeader } from "../components/layout.tsx";
 
 const EChartsCore = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -29,7 +30,7 @@ interface DashboardData {
 const STATUS_LABELS: Record<string, string> = { identified: "발굴", assessed: "평가", selected: "선별", dropped: "제외" };
 const GATE_LABELS: Record<string, string> = { screening: "Screening", pre_fs: "Pre-FS", target_screening: "Target Screening", fs: "FS", dd: "DD", entity_ic: "Entity IC", group_ic: "Group IC" };
 const GATE_CLASS: Record<string, string> = { go: "status-green", hold: "status-amber", kill: "status-red" };
-const STAGE_ORDER = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S11", "S12"];
+const STAGE_ORDER = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "S12"];
 
 export default function DashboardPage() {
   const ct = useChartTheme();
@@ -128,7 +129,7 @@ export default function DashboardPage() {
 
   return (
     <main className="dashboard-page">
-      <h1 className="text-2xl font-bold mb-6">대시보드</h1>
+      <PageHeader title="대시보드" />
 
       {/* KPI 카드 */}
       <div className="summary-cards">
@@ -195,7 +196,7 @@ export default function DashboardPage() {
           <ul className="space-y-2">
             {opps.slice(0, 5).map((o) => (
               <li key={o.id}>
-                <Link href="/opportunities" className="flex items-center gap-3 p-2 rounded hover:bg-[rgba(255,255,255,0.04)] transition-colors">
+                <Link href="/opportunities" className="list-row-link flex items-center gap-3 p-2 rounded transition-colors">
                   <span className="font-semibold">{o.name}</span>
                   <span className="text-sm text-[color:var(--muted-fg)]">{STATUS_LABELS[o.status]}</span>
                   <PipelineStatus opportunityId={o.id} />
