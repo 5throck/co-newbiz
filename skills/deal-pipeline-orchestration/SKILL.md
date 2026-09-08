@@ -140,6 +140,7 @@ decision. Report verified / could-not-verify / needs-judgement.
 | Committees | `/api/opportunities/:id/committee-sessions/**` | rounds, positions, advance, minutes |
 | Charter baseline | `GET/POST /api/projects/:id/charter` | S11 KPI pre-commit |
 | DD checklist | `/api/projects/:id/dd-checklist/*` | tailoring + checklist approval hold |
+| Waivers (S9) | `GET/POST /api/projects/:id/waivers` · `PATCH .../waivers/:waiverId` | request/approve/reject/revoke; expiry date authoritative (ADR-0036) |
 
 ## Environment Discipline (ADR-0075 — before any API-dependent activity)
 
