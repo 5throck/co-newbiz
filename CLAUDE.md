@@ -213,7 +213,7 @@ Explicit invocation: `/meeting "topic" [--agents a,b] [--rounds N] [--dialogue]`
 
 **MANDATORY PM GATEWAY**: All specialist agent dispatch MUST go through PM.
 
-For the **4-level enforcement model**, **mandatory criteria**, **execution plan format**, and **phase determination**, see [AGENTS.md §3 and §5](AGENTS.md).
+For the **4-level enforcement model**, **mandatory criteria**, and **phase determination**, see the Dispatch Protocol and Deal Pipeline Orchestration sections of [`agents/pm.md`](agents/pm.md) and [`docs/phase-definitions.md`](docs/phase-definitions.md).
 
 #### Claude Code-Specific Dispatch
 
@@ -233,6 +233,8 @@ The execution plan table format, the Design Gate (Row 0) rule, exemption categor
 ### 6. Native Sub-agents (`Agent` Tool)
 Use the native `Agent` tool to spawn sub-agents for parallel or isolated tasks. Sub-agents load their role-based configurations from `agents/<name>.md`.
 
+> **Project subagent types**: `.claude/agents/<name>.md` is generated for all 40 roster agents (run `bun run agents:personas` after any roster change; CI checks drift). In Claude Code you may dispatch with `subagent_type: "<agent-name>"` directly — no need to paste the persona into the prompt. On other harnesses, keep inlining the `agents/<name>.md` body as below.
+
 > **Agent Architecture**: See [docs/context.md](docs/context.md) for governance rules.
 > **Agent Roster**: See [AGENTS.md](AGENTS.md) for the canonical index of all available agents.
 > **docs-writer tier**: Medium (claude-sonnet-5-0) — upgraded from Low per 2026-05-28 team restructuring.
@@ -240,24 +242,24 @@ Use the native `Agent` tool to spawn sub-agents for parallel or isolated tasks. 
 **Agent Dispatch** - use the `Agent` tool (not a bash CLI command):
 ```
 Agent(
-  description   = "Implement automation script",
-  prompt        = "You are an automation engineer. [paste agents/automation-engineer.md content here]\n\nTask: Implement the script per the approved plan.",
+  description   = "Implement API endpoint",
+  prompt        = "You are the backend-engineer. [paste agents/backend-engineer.md content here]\n\nTask: Implement the endpoint per the approved plan.",
   subagent_type = "claude",  // platform agent type; embed the agents/<name>.md role definition in the prompt
-  model         = "haiku"    // automation-engineer is Low-tier (registry: claude-haiku-4-5) — see registry→model mapping below
+  model         = "sonnet"   // backend-engineer is Medium-tier (registry: claude-sonnet-5-0) — see registry→model mapping below
 )
 ```
 
 > **Registry name → `model` parameter mapping**: `docs/workspace-schema.json` and the tables above name models by full registry ID (e.g. `claude-opus-5-0`) for cross-platform documentation. The native `Agent` tool's `model` parameter only accepts the short aliases `sonnet | opus | haiku | fable`. <!-- Note: `fable` is a forward-looking alias not yet registered in workspace-schema.json --> When dispatching, translate the agent's tier to its registry model, then to the matching alias: High → `claude-opus-5-0` → `model = "opus"`; Medium → `claude-sonnet-5-0` → `model = "sonnet"`; Low → `claude-haiku-4-5` → `model = "haiku"`. Omitting `model` lets the subagent fall back to its frontmatter (`model: inherit`), which inherits the parent session's model instead of the tier-appropriate one — always set `model` explicitly to actually get the cost-tier benefit.
 
-Each implementation task follows the **Phase 4 execution loop** (see [AGENTS.md - Subagent Roster](AGENTS.md#subagent-roster)):
-1. **automation-engineer** implements the changes (or code-writer for project-specific agents).
+Each implementation task follows the **Phase 4 execution loop** (agent roster: see [AGENTS.md](AGENTS.md) Roster Overview):
+1. **backend-engineer** (or the task's domain specialist) implements the changes.
 2. **PM** verifies against acceptance criteria by running `bun scripts/audit.ts` directly.
 3. **Quality gate (audit script)** validates compliance.
 
 > Loop and correct if review errors are flagged - maximum **3 iterations** before escalating to the user.
 
 #### Cost Optimization (3-Tier Model Strategy)
-The High/Medium/Low tier concept and its usage rules are the Single Source of Truth in [AGENTS.md §3.6 3-Tier Strategy](AGENTS.md#36-3-tier-strategy). Claude Code's model-ID mapping (overridden per agent invocation when appropriate):
+The High/Medium/Low tier concept and its usage rules: each agent's tier lives in its frontmatter (`agents/*.md`); cross-platform registry model IDs live in `docs/workspace-schema.json`. Claude Code's model-ID mapping (overridden per agent invocation when appropriate):
 - **High-tier** → `claude-opus-5-0`
 - **Medium-tier** → `claude-sonnet-5-0`
 - **Low-tier** → `claude-haiku-4-5`

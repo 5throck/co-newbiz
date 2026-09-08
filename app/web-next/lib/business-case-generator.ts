@@ -28,6 +28,22 @@
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef, type CallAgent } from "./agent-orchestrator.ts";
+import { specAgentFor } from "./spec-activities.ts";
+
+// Per-step S8 agent assignment reads from process/flow.spec.yaml (SSOT,
+// ADR-0074) — each execution step maps to the spec activity that owns its
+// procedure contract; the agent comes from the spec, so a spec reassignment
+// flows through without code change.
+export const STEP_TO_SPEC_ACTIVITY: Record<BusinessCaseStep, string> = {
+  growth_projection: "business-case-modeling",
+  valuation_model: "valuation",
+  distributional_valuation: "quant-methods",
+  scenario_risk_assessment: "quant-methods",
+};
+
+export function businessCaseAgentFor(step: BusinessCaseStep): string {
+  return specAgentFor("S8", STEP_TO_SPEC_ACTIVITY[step]);
+}
 
 export const SCENARIOS = ["base", "upside", "downside"] as const;
 export type Scenario = (typeof SCENARIOS)[number];
@@ -353,10 +369,7 @@ export async function generateBusinessCases(
   for (const scenario of SCENARIOS) {
     const ctx: StepContext = { scenario, inputs };
     for (const step of ["growth_projection", "valuation_model", "distributional_valuation", "scenario_risk_assessment"] as BusinessCaseStep[]) {
-      const agentKey =
-        step === "growth_projection" ? "financial-analyst"
-        : step === "valuation_model" ? "valuation-agent"
-        : "quant-methodologist";
+      const agentKey = businessCaseAgentFor(step);
       activities.push({
         activityId: `${scenario}:${step}`,
         agentKey,

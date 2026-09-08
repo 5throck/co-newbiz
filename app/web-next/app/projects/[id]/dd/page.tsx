@@ -7,6 +7,7 @@ import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { GateDecisionPanel } from "../../../../components/GateDecisionPanel.tsx";
+import { WaiverPanel } from "../../../../components/WaiverPanel.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 
 // S9 실사·검증 — 표준 DD 체크리스트 판정 + 산업 맞춤 제안 승인 화면 (ADR-0099 §4).
@@ -339,6 +340,9 @@ export default function DdPage() {
           </>
         )}
 
+        <div className="mt-4">
+          <WaiverPanel projectId={projectId} />
+        </div>
         <div className="mt-4">
           <GateDecisionPanel opportunityId={projectId} gates={["dd"]} entityType="project" />
         </div>

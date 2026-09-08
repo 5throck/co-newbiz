@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { PageHeader } from "../../../../components/layout.tsx";
 import { api } from "../../../../lib/api.ts";
 
 interface StageView {
@@ -133,7 +134,7 @@ export default function ProjectProcessPage() {
     <main className="p-6 space-y-4">
       <ProjectSubNav projectId={projectId} />
       <header>
-        <h1 className="text-[1.05rem] font-semibold">프로세스 현황 — {data.project.project_no ?? data.project.id}</h1>
+        <PageHeader title={`프로세스 현황 — ${data.project.project_no ?? data.project.id}`} />
         {data.track && (
           <p className="text-[0.82rem] text-[color:var(--muted-fg)]">
             트랙: {data.track}{data.subTrack ? ` / ${data.subTrack}` : ""} · 현재 {data.currentStage ?? "—"} · 다음 {data.nextStage ?? "—"}

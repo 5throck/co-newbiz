@@ -61,6 +61,9 @@ cd app/web-next && bun scripts/design-lint.ts
 | 진출방식 결정 (S4) | GitBranch | 내비 |
 | 역량 평가·진출전략 (S5) | Sprout | 내비 |
 | 대상 후보 발굴 (S6) | Target | 내비 |
+| 벤치마킹 사례 | Building2 | 내비 |
+| 전략 | Compass | 내비 |
+| 프로젝트 파이프라인 | ListChecks | 내비 |
 | 관리자 | Shield | 내비 |
 | 규정·체크리스트 | LibraryBig | 내비 |
 | 용어집 | BookOpen | 내비 |
@@ -68,3 +71,5 @@ cd app/web-next && bun scripts/design-lint.ts
 | 되돌리기 (상세→목록) | ChevronLeft | Topbar |
 | 라이트/다크 모드 | Sun / Moon | Topbar |
 | 로그아웃 | LogOut | Topbar |
+
+관리 콘솔 개별 화면 아이콘 (`ADMIN_ICON_BY_HREF`): LayoutDashboard(시스템 대시보드), Users(사용자·토큰), ScrollText(감사 로그), Database(데이터 소스), CalendarClock(스케줄), HardDrive(데이터베이스), Bell(알림), BookOpen(용어집), Scale(거버넌스), Layers(마스터 데이터), FileText(ADR). 도메인 개념당 1개 원칙 유지 — 기존 내비 아이콘과 중복되지 않게 개념을 구분해 등록.

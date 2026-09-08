@@ -32,12 +32,16 @@ interface DispatchResult {
 
 /**
  * Default parallel agent configurations for workspace workflows.
- * Roles map to agent definitions in agents/ directory.
+ * Roles map to agent definitions in agents/ directory (co-newbiz roster).
+ *
+ * NOTE: these stubs print dispatch plans only — the harness Agent tool cannot
+ * be called from a subprocess. For actual multi-agent pipeline execution see
+ * the `deal-pipeline-orchestration` skill (S1–S12) and `agents/pm.md`.
  */
 const defaultTasks: ParallelAgentTask[] = [
   {
     description: "Codebase analysis",
-    role: "architect",
+    role: "platform-lead",
     task: "Analyze the codebase structure and identify key patterns",
     context: [
       "Look for architectural patterns",
@@ -61,7 +65,7 @@ const defaultTasks: ParallelAgentTask[] = [
   },
   {
     description: "Security review",
-    role: "security-expert",
+    role: "security-engineer",
     task: "Run security checks on the project",
     context: [
       "Scan for secrets or unsafe patterns",
@@ -73,7 +77,7 @@ const defaultTasks: ParallelAgentTask[] = [
   },
   {
     description: "Quality gate audit",
-    role: "auditor",
+    role: "compliance-officer",
     task: "Run bun scripts/audit.ts and report all findings",
     context: [
       "Run full workspace audit",

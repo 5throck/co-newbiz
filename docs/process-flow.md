@@ -95,7 +95,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **스테이지별 담당 에이전트(오케스트레이터가 Activities의 agent 필드를 실행)**
 
-- S1 시장분석: `market-intelligence-agent`, `industry-lead`
+- S1 시장분석: `market-intelligence-agent`
 - S2 기회 발굴: `market-intelligence-agent`, `greenfield-agent`
 - S3 시너지·전략적 적합성: `process-governance-manager`, `risk-officer`, `financial-analyst`
 - S4 진출방식 결정: `pm`, `brownfield-agent`
@@ -123,7 +123,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **Activities**
 - market-research · agent: `market-intelligence-agent` · skills: `market-data-pipeline`, `proxy-industry-chain`, `systematic-market-sizing` · procedure: `greenfield-screening`, `brownfield-screening`
 - competitive-intelligence · agent: `market-intelligence-agent` · skills: `competitive-intelligence` · procedure: `greenfield-screening`, `brownfield-screening`
-- value-chain-analysis · agent: `industry-lead` · skills: `value-chain-linkage-analysis`, `value-chain-stage-financials` · procedure: `greenfield-screening`, `brownfield-screening`
+- value-chain-analysis · agent: `market-intelligence-agent` · skills: `value-chain-linkage-analysis`, `value-chain-stage-financials` · procedure: `greenfield-screening`, `brownfield-screening`
 
 **필수 산출물**
 - 시장 규모·성장 추정
@@ -159,8 +159,8 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 가치사슬 구조 (S1)
 
 **Activities**
-- opportunity-discovery · agent: `market-intelligence-agent` · skills: `insight-synthesis` · procedure: `greenfield-screening`, `brownfield-screening`
-- business-model-sketch · agent: `greenfield-agent` · skills: `scenario-planning` · procedure: `greenfield-screening`, `brownfield-screening`
+- opportunity-discovery · agent: `market-intelligence-agent` · skills: `insight-synthesis` · procedure: `opportunity-discovery`, `greenfield-screening`, `brownfield-screening`
+- business-model-sketch · agent: `greenfield-agent` · skills: `scenario-planning` · procedure: `opportunity-discovery`, `greenfield-screening`, `brownfield-screening`
 
 **필수 산출물**
 - 기회 등록(가치사슬 노드·매력도)

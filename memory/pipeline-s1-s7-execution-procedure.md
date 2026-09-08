@@ -1,25 +1,28 @@
-# Pipeline S1–S7 Execution Procedure (Project Memory)
+# Pipeline Execution Procedure (Project Memory)
 
-> Renumbered 2026-09-04 to flow.spec v2.0.0 (was v1 S1-S7 numbering)
->
-> Standing procedure for executing the pipeline (S1 market → S2 opportunity →
-> S3 synergy/fit → S4 route decision → S8 business case → S9 DD → S10 IC) against a case
-> project. In flow.spec v2.0.0, S6/S7 are the brownfield target longlist/screening stages.
+> Renumbered 2026-09-08 to flow.spec **v2.2.x** (S10 투자구조 설계 inserted at
+> v2.2.0; IC moved S10→S11). The operational runbook now lives in the
+> **`deal-pipeline-orchestration`** skill (dispatch loop, gates, committees,
+> three-stage review, environment discipline) — this memory file keeps only
+> the run-specific lessons and the stage map at a glance.
 > First distilled from the `samsung-robotics-rainbow` process-check run
 > (2026-08-31); see `deliverables/samsung-robotics-rainbow/governance/00-governance-summary.md`.
 > Update this file whenever a run uncovers a new environment or execution lesson.
 
-## 1. Stage sequence and gates
+## 1. Stage map (flow.spec v2.2.x)
 
 | Stage | Deliverables | Gate | Authority |
 |---|---|---|---|
 | S1 market | market sizing, competitive intelligence, value-chain analysis | Screening | AI formal review |
 | S2 opportunity | opportunity registry, business-model sketch | Screening | AI formal review |
 | S3 synergy/fit | strategic-fit checklist result, synergy analysis | Screening | AI formal review (threshold: ADR-0051 open question (b) — unresolved) |
-| S4 route | route decision (`track` recorded) | Pre-FS entry | PM records; `decided_by` must name the human approver |
-| S8 business case (was v1 S5 feasibility) | DCF/comparables/Monte Carlo, WACC assembly | FS | WACC/hurdle must reach `kind='user'` before gate exit |
-| S9 DD (was v1 S6) | checklist judgments (commercial/technical/legal/regulatory/special topics) | DD | fail-closed: unresolved mandatory items ⇒ Fail |
-| S10 IC (was v1 S7) | IC package, risk register, kill-criteria evaluation | Entity IC → Group IC | human `reviewed_by`; never fabricate approval |
+| S4 route | route decision (`track` recorded) | Pre-FS | PM records; `decided_by` must name the human approver |
+| S5 capability (GF) / S6–S7 target longlist & screening (BF) | capability gap & entry strategy / Target Universe, Long→Short List | Pre-FS / Target Screening | Target Screening gate is brownfield-only |
+| S8 business case | DCF/comparables/Monte Carlo, WACC assembly | FS | WACC/hurdle must reach `kind='user'` before gate exit |
+| S9 DD | checklist judgments (commercial/technical/legal/regulatory/special topics) | DD | fail-closed: unresolved mandatory items ⇒ Fail (waiver via `waiver-management`) |
+| S10 deal structuring | vehicle + four-axis review + balanced sources & uses | — (no gate) | feeds the S11 IC package |
+| S11 investment review & execution | IC package, charter baseline, kill-criteria evaluation, establishment | Entity IC → Group IC | human `reviewed_by`; never fabricate approval |
+| S12 post-investment | venture scorecard, transition decisions | — (no gate) | quarterly refresh; five transition vocabularies |
 
 Non-negotiables during any run: no PASS stamps without evidence; silence is not
 approval; missing data access is recorded as a limitation, never silently skipped.
@@ -27,9 +30,10 @@ approval; missing data access is recorded as a limitation, never silently skippe
 ## 2. Procedure and checklist sources
 
 - Shared procedure schemas: `procedures/_shared/<procedure>/schema.yaml`
-  (known gap: no shared YAML for S2 opportunity discovery — see governance summary §2.2).
+  (the S2 gap — no shared YAML for opportunity discovery, governance summary
+  §2.2 — was closed 2026-09-08 with `procedures/_shared/opportunity-discovery/`).
 - Checklists: `checklists/*.yaml` (strategic-fit for S3; the five DD checklists for S9).
-- Kill criteria: `procedures/_kill-criteria/*.json` evaluated at S9/S10 with `evidence_ref` citations.
+- Kill criteria: `procedures/_kill-criteria/*.json` evaluated at S9/S11 with `evidence_ref` citations.
 
 ## 3. Skills used per stage
 
@@ -38,12 +42,11 @@ approval; missing data access is recorded as a limitation, never silently skippe
   record the limitation explicitly and triangulate — never fill with assumption.
 - Data confidence caps the RAG grade (ADR-0016/0049).
 
-## 4. Environment loading (mandatory before any API-dependent stage)
+## 4. Environment loading
 
-> Formalized as ADR-0075 (`docs/adr/0075-pipeline-execution-environment-discipline.md`);
-> design in `docs/designs/2026-08-31-pipeline-execution-environment.md`; pre-flight gate is
-> `bun scripts/co-newbiz/env-check.ts` (run it before S1; `--exports` emits CRLF-safe
-> export lines for shells without process substitution).
+> Formalized as ADR-0075 and now carried in the `deal-pipeline-orchestration`
+> skill ("Environment Discipline") — that skill is authoritative. The lessons
+> below are the original run evidence behind them.
 
 1. **`device_bash` starts a fresh shell on every call.** There is no persistent
    environment. Every command that needs secrets must source `.env` itself, and any

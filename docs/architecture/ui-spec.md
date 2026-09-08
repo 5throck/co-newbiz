@@ -1,5 +1,17 @@
 # UI Specification — co-newbiz
 
+> **⚠ Status note (2026-09-08)**: this spec's as-built markers were recorded
+> against the decommissioned `app/web/src/` stack (Hono/React-Vite, removed by
+> ADR-0069's cutover, PR #142). The current and only web surface is
+> **`app/web-next`** (Next.js App Router, Route Handlers, Bun + `bun:sqlite`).
+> The design system is **Onyx 3.0 — light default + dark** (`[data-theme="dark"]`),
+> not the Onyx 2.0 dark-only setup described below. For current design rules
+> and screen patterns, `docs/design-system/design-guide.md` (gov-des-00) and
+> `docs/design-system/design-screens.md` (gov-des-04) are the design policy of
+> record; this file remains as the FR-mapped as-built history and its rule
+> rationale (§1) still applies.
+
+
 **Owner**: frontend-engineer
 **Design of record**: design v1.0 §4-10 (task 4.4), `docs/architecture/srs.md` §12
 **Status**: Korean UI (design §4-1 language policy — deliverables/UI Korean, code/docs English). Implemented Stage 5 Wave 5.6 (`app/web/src/pages/`: `Login.tsx`, `PasswordChange.tsx`, `ProjectList.tsx`, `ProjectDetail.tsx`, `AdminConsole.tsx`) plus PR #65's eight Project Detail tabs (`app/web/src/components/`: `DataTab.tsx`, `AssumptionsTab.tsx`, `ModelTab.tsx`, `SimulationTab.tsx`, `VersionCompareTab.tsx`, `DdTab.tsx`, `PermitsTab.tsx`, `MaReviewTab.tsx`) — **partial; verified row-by-row against `app/web/src/` on 2026-08-21** (per-node markers in §2, per-rule notes in §1/§3/§4): the Project List page and Project Detail shell are built; 개요 / 절차 뷰어 / 용어집 (tooltip + standalone searchable view at `/glossary` + in-context auto-linking over key/en/ko — alias auto-detection gated on the list endpoint) are partial; Data / Assumptions / Model / Simulation / Version Comparison / DD / Regulatory & Permits / M&A Review are partial (read views built, write forms and charting deferred, see §2); 2 of Project Detail's 13 child views (Financial Analysis, Proxy Chain) plus Reports are not built at all; and the admin console covers 5 of §5's 10 designed sections (Users, Audit Log, Data Sources, Batch/Schedule, Database — the last one partial: retention only; see `skills/admin-console-operations/SKILL.md` for the section-by-section breakdown, which predates batch 4's two additions).
@@ -16,8 +28,8 @@
   *As-built: built — `GlossaryTerm.tsx` implements the pattern (dashed underline, click/hover popover, keyboard-reachable button, wired to `/api/glossary/:term`), and since PR #65 batch 5 registered terms are auto-detected in body text: `glossary.tsx` provides `GlossaryProvider` (session-once `GET /api/glossary` fetch, authenticated mounts only), `useGlossaryTerms()` (lookup map built from key/en/ko), and the `GlossaryText` renderer (longest-match-first alternation; word-boundary + case-insensitive for Latin forms; exact-string for Korean forms — Hangul has no `\b` in JS regex; per-text segmentation memoized in a bounded module cache + React.memo). Applied to the free-text prose fields rendered today: DD finding descriptions, assumption rationales, contingent-liability descriptions, antitrust remedy details. Alias auto-detection stays gated — `GET /api/glossary` returns no aliases (they exist only on the per-term detail endpoint; no N+1 fetching to work around it). The two hand-placed example terms on 개요 remain as harmless explicit examples.*
 - **3-depth navigation maximum** (design §4-10).
   *As-built: met — the deepest route is `/projects/:id` (depth 2); within-page sections are client-side tab state, not nested routes.*
-- Dark mode only (Onyx 2.0 design system, `color-scheme: dark`); layout responsive down to tablet width.
-  *As-built (2026-08-27, M1): dark-only via Onyx 2.0 tokens in `styles.css` — light mode removed, `color-scheme: dark` set on `:root`. Tablet responsiveness: sidebar collapses at ≤880px via AppShell media query; project-card grid uses `auto-fill`.*
+- Light default + dark theme (Onyx 3.0 design system, `[data-theme="dark"]`); layout responsive down to tablet width.
+  *As-built (superseding the 2026-08-27 Onyx 2.0 dark-only note): Onyx 3.0 in `app/web-next/app/styles.css` — light default, dark via `[data-theme="dark"]`. Tablet responsiveness: sidebar collapses at ≤880px via AppShell media query.*
 
 ## 2. Information Architecture
 

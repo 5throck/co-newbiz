@@ -20,7 +20,16 @@ import {
   Landmark,
   Lightbulb,
   Handshake,
-  GitMerge,
+  Building2,
+  Compass,
+  Bell,
+  CalendarClock,
+  Scale,
+  Layers,
+  HardDrive,
+  Database,
+  Users,
+  ScrollText,
   FolderKanban,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
@@ -42,17 +51,33 @@ const ICON_BY_HREF: Record<string, ReactNode> = {
   "/": <LayoutDashboard size={18} />,
   "/market": <LineChart size={18} />,
   "/opportunities": <Lightbulb size={18} />,
-  "/our-company": <Handshake size={18} />,
-  "/synergy": <GitMerge size={18} />,
+  "/our-company": <Landmark size={18} />,
+  "/synergy": <Handshake size={18} />,
   "/route-decision": <GitBranch size={18} />,
   "/greenfield": <Sprout size={18} />,
   "/brownfield": <Target size={18} />,
   "/projects": <FolderKanban size={18} />,
   "/pipeline": <ListChecks size={18} />,
-  "/benchmarks": <Landmark size={18} />,
+  "/benchmarks": <Building2 size={18} />,
   "/library": <LibraryBig size={18} />,
   "/glossary": <BookOpen size={18} />,
-  "/strategy": <Target size={18} />,
+  "/strategy": <Compass size={18} />,
+};
+
+// 관리 콘솔 내비 — 어휘표 원칙(도메인 개념당 1개)에 따라 각 화면에 개별 아이콘을
+// 부여한다. generic 폴백(CHILD_ICON)은 비메뉴 하위 경로에만 쓴다.
+const ADMIN_ICON_BY_HREF: Record<string, ReactNode> = {
+  "/admin": <LayoutDashboard size={18} />,
+  "/admin/users": <Users size={18} />,
+  "/admin/audit": <ScrollText size={18} />,
+  "/admin/data-sources": <Database size={18} />,
+  "/admin/schedule": <CalendarClock size={18} />,
+  "/admin/database": <HardDrive size={18} />,
+  "/admin/notifications": <Bell size={18} />,
+  "/admin/glossary": <BookOpen size={18} />,
+  "/admin/governance": <Scale size={18} />,
+  "/admin/master-data": <Layers size={18} />,
+  "/admin/adr": <FileText size={18} />,
 };
 const CHILD_ICON: ReactNode = <Landmark size={14} />;
 
@@ -141,7 +166,7 @@ function Sidebar() {
                   href={item.href}
                   className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
                 >
-                  {ICON_BY_HREF[item.href] ?? CHILD_ICON}
+                  {ADMIN_ICON_BY_HREF[item.href] ?? CHILD_ICON}
                   <span>{item.label}</span>
                 </Link>
               );

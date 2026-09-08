@@ -28,6 +28,7 @@
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef } from "./agent-orchestrator.ts";
+import { specAgentFor } from "./spec-activities.ts";
 import { DD_WORKSPACE_CHECKLISTS, getChecklistItems, type ChecklistItemDef } from "./library.ts";
 
 // ADR-0104 — DD workspace expanded to 7 domains (financial/hr/market/financing
@@ -37,12 +38,20 @@ export const DD_DOMAINS = [
 ] as const;
 export type DdDomain = (typeof DD_DOMAINS)[number];
 
-/** ADR-0099 §2 — per-domain S9 activity owner. */
-export const DD_DOMAIN_AGENTS: Record<DdDomain, string> = {
-  commercial: "commercial-dd-agent",
-  technical: "technical-dd-agent",
-  legal: "legal-counsel",
+/** ADR-0099 §2 — per-domain S9 activity owner, read from process/flow.spec.yaml
+ * (SSOT, ADR-0074) via the domain→spec-activity mapping below. */
+export const DD_DOMAIN_TO_SPEC_ACTIVITY: Record<DdDomain, string> = {
+  commercial: "commercial-dd",
+  technical: "technical-dd",
+  legal: "legal-dd",
 };
+
+export const DD_DOMAIN_AGENTS: Record<DdDomain, string> = Object.fromEntries(
+  (Object.keys(DD_DOMAIN_TO_SPEC_ACTIVITY) as DdDomain[]).map((d) => [
+    d,
+    specAgentFor("S9", DD_DOMAIN_TO_SPEC_ACTIVITY[d]),
+  ]),
+) as Record<DdDomain, string>;
 
 export const DD_TAILOR_STAGE = "s9_dd_checklist_tailoring";
 /** checklist_id prefix under which an APPROVED custom item gets its judgment state row. */

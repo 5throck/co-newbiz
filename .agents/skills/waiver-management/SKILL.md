@@ -7,12 +7,13 @@ description: >
   Every waiver has a mandatory expiry (ADR-0036); the six-validator Brown
   Field cross-check has no waiver path at all (it is a completeness check,
   not a judgment call). Backed by `db/lib/compliance.ts` and
-  `POST/GET /api/projects/:id/waivers`.
+  `GET/POST /api/projects/:id/waivers` + `PATCH /api/projects/:id/waivers/:waiverId`
+  (S9 DD surface: the WaiverPanel on the DD page).
 
   Use when: "file a waiver", "waiver request", "approve a waiver",
   "waiver expiry", "waiver concentration".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.0.1
+last_reviewed: 2026-09-08
 status: active
 owner: compliance-officer
 prerequisites: none
@@ -57,9 +58,10 @@ procedure-layer waiver → `process-governance-manager`; checklist-item waiver
    lands `pending` unless approved at filing time
 3. **Route to the correct approver** by layer (regulation → Group IC;
    procedure → `process-governance-manager`; checklist item → domain lead)
-4. **Approve or reject**: approval sets `approved_by`/`approved_at`,
-   flipping status to `active`; a rejected request stays `pending` and
-   expires unused (no separate rejection state needed — the gate stays
+4. **Approve or reject** (`PATCH .../waivers/:waiverId`):
+   approval sets `approved_by`/`approved_at`, flipping status to `active`;
+   rejection records the schema-reserved `rejected` status — an explicit
+   record beats a request silently rotting as `pending` (the gate stays
    blocked either way)
 5. **Monitor concentration**: `waiverConcentration()` flags ≥3 (default
    threshold) waivers on the same `governance_doc_id`+`clause_ref` pair —

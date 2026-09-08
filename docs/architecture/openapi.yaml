@@ -3006,6 +3006,77 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/waivers:
+    get:
+      operationId: listProjectWaivers
+      summary: Waiver list for the project with date-authoritative effective status (ADR-0036) plus the governance-doc reference list.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: requestProjectWaiver
+      summary: File a waiver request (S9 dd-waiver-review); expires_at is mandatory and must be future — indefinite/past dates are refused (ADR-0036). Analyst+.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/waivers/{waiverId}:
+    patch:
+      operationId: decideProjectWaiver
+      summary: Record the human waiver decision — approve (pending → active), reject (pending → rejected), revoke (active → revoked; expiry otherwise IS the enforcement). Analyst+.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: waiverId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/projects/{id}/ic-package:
     get:
       operationId: getProjectIcPackage

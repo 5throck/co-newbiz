@@ -227,6 +227,87 @@ export function waiverConcentration(db: Database, threshold = 3): WaiverConcentr
 }
 
 // ---------------------------------------------------------------------------
+// Waiver lifecycle management (skills/waiver-management; surfaced by
+// GET/POST /api/projects/:id/waivers and PATCH .../waivers/:waiverId)
+// ---------------------------------------------------------------------------
+
+export interface WaiverRow {
+  id: string;
+  project_id: string;
+  governance_doc_id: string;
+  clause_ref: string;
+  reason: string;
+  requested_by: string;
+  approver_role: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  expires_at: string;
+  status: string;
+  created_at: string;
+}
+
+export interface WaiverView extends WaiverRow {
+  /**
+   * Effective state derived at read time — the expiry date is authoritative
+   * (ADR-0036): a waiver whose expires_at has passed reads 'expired' whatever
+   * the status column still says. The DB row is never rewritten for expiry.
+   */
+  effective_status: "pending" | "active" | "expired" | "rejected" | "revoked";
+}
+
+export function listProjectWaivers(db: Database, options: { projectId: string; now: string }): WaiverView[] {
+  const rows = db
+    .query("SELECT * FROM waiver WHERE project_id = ? ORDER BY created_at DESC, id DESC")
+    .all(options.projectId) as WaiverRow[];
+  return rows.map((row) => {
+    const dateExpired = row.expires_at <= options.now;
+    const effective: WaiverView["effective_status"] =
+      dateExpired && (row.status === "active" || row.status === "expired")
+        ? "expired"
+        : (row.status as WaiverView["effective_status"]);
+    return { ...row, effective_status: effective };
+  });
+}
+
+export type WaiverDecision = "approve" | "reject" | "revoke";
+
+export interface DecideWaiverOptions {
+  id: string;
+  decision: WaiverDecision;
+  decidedBy: string;
+  now: string;
+}
+
+/**
+ * Record a human decision on a waiver request. approve (pending → active,
+ * sets approved_by/approved_at), reject (pending → 'rejected' — the schema
+ * reserved this state; an explicit record beats a request silently rotting as
+ * pending), revoke (active → 'revoked' — only when the justification became
+ * invalid; expiry otherwise IS the enforcement mechanism, per the skill).
+ */
+export function decideWaiver(db: Database, options: DecideWaiverOptions): WaiverRow {
+  const row = db.query("SELECT * FROM waiver WHERE id = ?").get(options.id) as WaiverRow | undefined;
+  if (!row) throw new Error(`waiver ${options.id} not found`);
+
+  if (options.decision === "approve") {
+    if (row.status !== "pending") throw new Error(`waiver ${options.id} is '${row.status}' — only a pending request can be approved`);
+    if (row.expires_at <= options.now) throw new Error(`waiver ${options.id} expires_at already passed — approve a re-filed request instead`);
+    db.run("UPDATE waiver SET status = 'active', approved_by = ?, approved_at = ? WHERE id = ?", [
+      options.decidedBy,
+      options.now,
+      options.id,
+    ]);
+  } else if (options.decision === "reject") {
+    if (row.status !== "pending") throw new Error(`waiver ${options.id} is '${row.status}' — only a pending request can be rejected`);
+    db.run("UPDATE waiver SET status = 'rejected' WHERE id = ?", [options.id]);
+  } else {
+    if (row.status !== "active") throw new Error(`waiver ${options.id} is '${row.status}' — only an active waiver can be revoked`);
+    db.run("UPDATE waiver SET status = 'revoked' WHERE id = ?", [options.id]);
+  }
+  return db.query("SELECT * FROM waiver WHERE id = ?").get(options.id) as WaiverRow;
+}
+
+// ---------------------------------------------------------------------------
 // Interpretation registry
 // ---------------------------------------------------------------------------
 

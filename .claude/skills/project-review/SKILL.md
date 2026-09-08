@@ -12,8 +12,8 @@ description: >
   phase schema changes, workspace-schema.json modified, new variant added);
   QA escalation from auditor (audit.ts ERROR >= 3 or security Critical finding).
 owner: pm
-version: 1.4.0
-last_reviewed: 2026-08-23
+version: 1.5.0
+last_reviewed: 2026-09-08
 prerequisites: []
 metadata:
   type: process
@@ -111,6 +111,8 @@ Map available agents to review domains. Present the plan table and wait for user
 | 5 | Security | security-expert or security-monitor | Medium | Secrets, CI permissions, injection risks |
 | 6 | Lifecycle | lifecycle-manager | Medium | Agent/skill/script health, sync parity |
 | 7 | Scaffolding | scaffolding-expert (workspace only) | Medium | Template structure, variant contract |
+| 8 | Design system | design-system-agent (if available, else PM) | Medium | `bun run design:lint` + web-next `lint:design`, design-tokens.json ↔ `app/web-next/app/styles.css` ↔ `docs/design-system/*` drift, standard-screen pattern (P0–P5) conformance |
+| 9 | Process spec consistency | process-governance-manager (if available, else PM) | High | `process/flow.spec.yaml` ↔ `app/web-next/lib/{stage-meta,process-flow}.ts` ↔ generated `docs/process-flow.md` ↔ UI surfaces; gate counts across skills/docs/DB constraints; entry-criteria vs transition-chain integrity |
 
 > If an agent is not available for a domain, PM covers that domain directly with a lightweight check.
 
@@ -253,6 +255,8 @@ mcp__base-map__review_code(
 | Security | | | | |
 | Lifecycle | | | | |
 | Scaffolding | | | | |
+| Design system | | | | |
+| Process spec | | | | |
 | **Total** | | | | |
 ```
 
@@ -263,7 +267,7 @@ Create a prioritized action item table:
 | # | Owner | Deliverable | Priority | Phase |
 |---|-------|-------------|----------|-------|
 
-> Pass `--tasks` flag to automatically convert action items into tracked tasks via `TaskCreate`.
+> Pass `--tasks` flag to automatically convert action items into tracked tasks in the session's task list (TodoWrite/TaskCreate where the platform provides one).
 
 ## Platform Execution Notes
 

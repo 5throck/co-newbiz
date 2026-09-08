@@ -38,25 +38,29 @@ interface SerialExecutionOptions {
 
 /**
  * Default serial pipeline for workspace development workflow.
- * Roles map to agent definitions in agents/ directory.
+ * Roles map to agent definitions in agents/ directory (co-newbiz roster).
+ *
+ * NOTE: this stub prints a serial plan only — the harness Agent tool cannot
+ * be called from a subprocess. For actual multi-agent pipeline execution see
+ * the `deal-pipeline-orchestration` skill (S1-S12) and `agents/pm.md`.
  */
 const defaultPipeline: SerialAgentTask[] = [
   {
     description: "Implement feature",
-    role: "automation-engineer",
+    role: "backend-engineer",
     task: "Implement the new feature following the approved specification",
     verifyOutput: true
   },
   {
     description: "Review implementation",
-    role: "architect",
+    role: "platform-lead",
     task: "Review the implemented feature for correctness and quality",
     dependsOn: "Implement feature",
     verifyOutput: true
   },
   {
     description: "Run quality gate",
-    role: "auditor",
+    role: "compliance-officer",
     task: "Run bun scripts/audit.ts and verify all checks pass",
     dependsOn: "Review implementation",
     verifyOutput: true
@@ -70,7 +74,7 @@ const defaultPipeline: SerialAgentTask[] = [
   },
   {
     description: "Lifecycle update",
-    role: "lifecycle-manager",
+    role: "pm",
     task: "Bump versions and update SCRIPTS.md / AGENTS.md as required",
     dependsOn: "Generate documentation"
   }
