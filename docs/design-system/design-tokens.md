@@ -21,24 +21,27 @@ Token names describe "where the value is used," not "what color it is." For exam
 
 | Token | Purpose |
 |---|---|
-| `--bg`, `--bg2`, `--bg3` | Three levels of screen background (base background / panel background / emphasized background) |
-| `--text`, `--text-muted`, `--text-dim` | Body text / secondary explanatory text / dimmed text |
-| `--border` | The color used only for drawing lines (borders only) |
-| `--accent` family | Emphasis color for elements the user interacts with (links, the currently selected tab, etc.). `--accent-fg` is the foreground color used **on** accent backgrounds — light (`#ffffff`) in light theme, dark (`#0a0c10`) in dark theme — so accent-filled buttons keep 4.5:1 contrast in both themes |
-| `--bg-info/note/warn/success/error` | Background colors for notification boxes such as info, caution, success, and error |
+| `--bg`, `--fg`, `--surface`, `--surface-2`, `--surface-elevated` | Base background, body text, and the 3-level surface elevation (panel / subtle-fill / elevated) |
+| `--muted-bg`, `--muted-fg` | Muted fill and secondary explanatory text |
+| `--border`, `--border-subtle`, `--border-bright` | Border colors — default / subtle divider / emphasized outline |
+| `--primary` (+ `--primary-h/s/l` channels, `--primary-dim/-bg/-border`) | The brand/emphasis color, defined over HSL channels so variants derive with dynamic opacity |
+| `--accent`, `--accent-fg` | Emphasis color for elements the user interacts with (links, the currently selected tab). `--accent-fg` is the foreground used **on** accent backgrounds — `#ffffff` in light theme — so accent-filled buttons keep 4.5:1 contrast |
+| `--success`, `--warning`, `--danger` (+ `-bg` variants) | Status colors for approval/caution/risk signals |
+| `--green-bg/-fg/-border`, `--amber-*`, `--red-*` | RAG grade chip colors (light- and dark-tuned pairs) |
+| `--input-bg`, `--hover-bg`, `--sidebar-bg` | Theme-scoped interaction surfaces (no hardcoded whites/blacks) |
 
 When building screens, colors must be specified only through these tokens; raw color values like `#0000FF` are never written into code. The product screens switch light/dark via the `[data-theme="dark"]` attribute, while this documentation portal switches in three steps: `:root` (default) → `prefers-color-scheme` (auto-detected device setting) → `.dark` (manually enabled by the user) — the trigger for switching differs between the two screens, but the resulting color values themselves are kept identical.
 
 ## Font sizes and spacing
 
 - Body text is 15px with 1.65× line height, secondary explanations are 14px, and the smallest labels (micro text) are 12px — these size differences are what let the screen communicate "is this a heading, body text, or a side note?"
-- Spacing between elements always follows multiples of 8px (`--spacing-unit`). Arbitrary numbers (e.g., 13px, 17px) are avoided in favor of a steady rhythm like 8, 16, 24, 32, so margins never look uneven from screen to screen.
+- Spacing follows an 8px rhythm (8/16/24/32) — spacing values are utility literals on the 8px grid rather than a spacing token; arbitrary numbers (e.g., 13px, 17px) are avoided so margins keep a steady rhythm across screens.
 - Corner radius uses the token scale — `--radius-sm`, `--radius-md` (0.625rem), `--radius-lg`, and `--radius-full` (pills/circles) — never a raw px value; `--radius-md` is the default for interactive controls (buttons, inputs, chips).
 - Amounts are written as integers without decimals, in units of a million KRW, with commas every three digits (e.g., 9,000). This notation is standardized across all screens.
 
 ## 🌐 External Reference — How design tokens are managed in the industry
 
-As of 2026, the industry standard is the W3C-defined common format (the specification that solved the problem of design tools and code exporting tokens in incompatible formats) together with a three-tier structure of **raw value → semantic name → component-specific value**. For example, layering `blue-500` (raw value) → `action-color` (semantic name) → `button-bg-primary` (button-specific value) means changing a single value propagates cleanly to every screen that references it. co-newbiz's `--bg`/`--text`/`--border`/`--accent` system already follows the "purpose-based semantic naming" tier and is in line with this trend. The industry also recommends starting small, with roughly 30–50 tokens, and treating token changes with the same weight as a breaking shared-API change. For sources and details, see [docs/research/design-token-architecture.md] (surveyed 2026-09-05).
+As of 2026, the industry standard is the W3C-defined common format (the specification that solved the problem of design tools and code exporting tokens in incompatible formats) together with a three-tier structure of **raw value → semantic name → component-specific value**. For example, layering `blue-500` (raw value) → `action-color` (semantic name) → `button-bg-primary` (button-specific value) means changing a single value propagates cleanly to every screen that references it. co-newbiz's `--bg`/`--fg`/`--border`/`--accent` system already follows the "purpose-based semantic naming" tier and is in line with this trend. The industry also recommends starting small, with roughly 30–50 tokens, and treating token changes with the same weight as a breaking shared-API change. For sources and details, see [docs/research/design-token-architecture.md] (surveyed 2026-09-05).
 
 ## Source Mapping
 

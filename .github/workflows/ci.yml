@@ -51,6 +51,14 @@ jobs:
           bun run procedures:lint
           bun run checklists:lint
 
+      # Onyx 3.0 design-guide enforcement (docs/design-system/design-guide.md):
+      # root lint covers web-next tsx (colors/IME/nested-main/aria-label), the
+      # web-next lint adds ADR-0082/0083/0086 screen rules.
+      - name: Design lint
+        run: |
+          bun run design:lint
+          (cd app/web-next && bun run lint:design)
+
   secret-scan:
     name: Secret Scan
     runs-on: ubuntu-latest

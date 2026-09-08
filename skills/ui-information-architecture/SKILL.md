@@ -31,7 +31,7 @@ metadata:
 ## Context
 
 Wave 5.6B already implements this discipline for the screens it built
-(`app/web/src/`) — this skill is the design/review standard for any new
+(`app/web-next/`) — this skill is the design/review standard for any new
 screen, including the deferred financial charts, proxy-chain diagram,
 simulation histogram, and other screens explicitly out of Wave 5.6B's
 scope pending their backing API endpoints. The routing bug Wave 5.6B found
