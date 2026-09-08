@@ -1,0 +1,63 @@
+schema_version: "1.0"
+procedure_id: shared-opportunity-discovery
+title: "Opportunity Discovery (S2)"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: Screening
+# flow.spec v2.2.2 — S2 기회 발굴 now has its own procedure. Until now S2 work
+# borrowed the screening procedures (the 2026-08-31 samsung-robotics-rainbow
+# process-check run logged this as governance summary §2.2's known gap: "no
+# shared YAML for S2 opportunity discovery"). The screening procedures remain
+# the S1/S3 and gate-record owners; this procedure owns ONLY the S2 work
+# interval: turning S1 market/value-chain outputs into registered,
+# attractiveness-scored opportunities (the funnel that S3 then screens for
+# strategic fit).
+#
+# Track note: both activities run on both tracks — the funnel precedes the S4
+# route decision, so greenfield/brownfield procedures take over from S4/S5/S6
+# respectively, not here.
+
+steps:
+  - id: 1
+    gate: Screening
+    agent_key: market-intelligence-agent
+    skill_key: insight-synthesis
+    output_type: opportunity_insight_synthesis
+    description: >
+      Synthesize the S1 outputs — market size/growth estimate, value-chain
+      structure, and (when present) the forward-outlook gap analysis with
+      new/strengthening driver factors — into concrete opportunity insights:
+      which value-chain nodes or adjacent positions carry unmet demand,
+      structural margin, or timing advantage. Each insight names its evidence
+      (S1 artifact or observation) and its data-confidence grade; data
+      confidence caps the RAG grade (ADR-0016/0049). Fail-closed: a node with
+      no quantified demand basis is recorded as a limitation, never promoted
+      as an insight.
+  - id: 2
+    gate: Screening
+    agent_key: greenfield-agent
+    skill_key: scenario-planning
+    output_type: opportunity_registry_entry
+    description: >
+      Register the surviving opportunities in the funnel (identified →
+      assessed): value-chain node, one-line business-model sketch (upside /
+      base / downside framing per scenario-planning), and the attractiveness
+      score. The funnel vocabulary is identified → assessed → selected →
+      dropped; only S3 synergy/fit screening moves an opportunity to
+      selected. The S2 completion predicate requires at least one registered
+      opportunity WITH an attractiveness rating — an unrated registration is
+      an unfinished S2 (process/flow.spec.yaml S2 completionCriteria).
+
+legal_basis:
+  - "Group New Business Review Policy §2.1"
+  - "Design v1.0 §6 (stage S2 기회 발굴)"
+  - "process/flow.spec.yaml v2.2.x — S2 activities (opportunity-discovery, business-model-sketch)"
+  - "docs/governance/process-map.md — Screening row"
+  - "2026-08-31 process-check run governance summary §2.2 (gap closure of record)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-09-08"

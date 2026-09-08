@@ -54,6 +54,7 @@ metadata:
     - greenfield-pre-fs
     - greenfield-screening
     - group-investment-review
+    - opportunity-discovery
     - pmi-integration-execution
     - portfolio-venture-monitoring
     - brownfield-target-screening

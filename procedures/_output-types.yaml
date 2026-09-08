@@ -73,6 +73,8 @@ output_types:
   internal_prescreen_record: "GF-internal — pre-feasibility self-check before the full procedure entry"
   kill_criteria_check: "Explicit pass/fail against every Kill Criterion applicable at the gate"
   market_sizing: "TAM / growth estimate — proxy chain where no direct market data exists"
+  opportunity_insight_synthesis: "S2 opportunity discovery — value-chain-node opportunity insights synthesized from S1 outputs, evidence- and confidence-tagged (procedure shared-opportunity-discovery)"
+  opportunity_registry_entry: "S2 opportunity discovery — registered funnel opportunity (node + business-model sketch + attractiveness rating) feeding S3 screening (procedure shared-opportunity-discovery)"
   partner_dd_report: "Deal-shape chain P2 — seven-workstream partner DD report with deal-shape recommendation (ADR-0052 §A)"
   partner_fit_screen_result: "Deal-shape chain P1 — knock-out + scorecard screen on the partnership, not the market (ADR-0052 §A)"
   partner_sourcing_funnel: "Deal-shape chain P0 — scouting funnel with per-candidate recommended deal shape and route (ADR-0052 §A)"

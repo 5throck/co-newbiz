@@ -18,6 +18,7 @@ prerequisites: none
 metadata:
   procedure_keys:
     - entity-ic-review
+    - opportunity-discovery
   type: process
   triggers:
     - synthesize insights

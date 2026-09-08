@@ -159,8 +159,8 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 가치사슬 구조 (S1)
 
 **Activities**
-- opportunity-discovery · agent: `market-intelligence-agent` · skills: `insight-synthesis` · procedure: `greenfield-screening`, `brownfield-screening`
-- business-model-sketch · agent: `greenfield-agent` · skills: `scenario-planning` · procedure: `greenfield-screening`, `brownfield-screening`
+- opportunity-discovery · agent: `market-intelligence-agent` · skills: `insight-synthesis` · procedure: `opportunity-discovery`, `greenfield-screening`, `brownfield-screening`
+- business-model-sketch · agent: `greenfield-agent` · skills: `scenario-planning` · procedure: `opportunity-discovery`, `greenfield-screening`, `brownfield-screening`
 
 **필수 산출물**
 - 기회 등록(가치사슬 노드·매력도)

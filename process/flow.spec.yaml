@@ -21,7 +21,10 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.2.1"
+  version: "2.2.2"
+  # v2.2.2 — S2 기회 발굴 gets its own procedure (shared-opportunity-discovery,
+  #   closing the 2026-08-31 run gap "no shared YAML for S2"); the S2
+  #   activities now reference it ahead of the screening procedures.
   # v2.2.1 — S11 entryCriteria corrected from "S9 완료" to "S10 완료": the
   #   v2.2.0 renumbering inserted S10 투자구조 설계 between S9 and S11 but
   #   left S11's entry criteria stale (S11 inputs already referenced S10
@@ -155,11 +158,11 @@ stages:
       - id: opportunity-discovery
         agent: market-intelligence-agent
         skills: [insight-synthesis]
-        procedure: [greenfield-screening, brownfield-screening]
+        procedure: [opportunity-discovery, greenfield-screening, brownfield-screening]
       - id: business-model-sketch
         agent: greenfield-agent
         skills: [scenario-planning]
-        procedure: [greenfield-screening, brownfield-screening]
+        procedure: [opportunity-discovery, greenfield-screening, brownfield-screening]
     requiredArtifacts:
       - 기회 등록(가치사슬 노드·매력도)
     completionCriteria:

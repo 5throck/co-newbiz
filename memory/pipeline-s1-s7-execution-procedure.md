@@ -30,7 +30,8 @@ approval; missing data access is recorded as a limitation, never silently skippe
 ## 2. Procedure and checklist sources
 
 - Shared procedure schemas: `procedures/_shared/<procedure>/schema.yaml`
-  (known gap: no shared YAML for S2 opportunity discovery — see governance summary §2.2).
+  (the S2 gap — no shared YAML for opportunity discovery, governance summary
+  §2.2 — was closed 2026-09-08 with `procedures/_shared/opportunity-discovery/`).
 - Checklists: `checklists/*.yaml` (strategic-fit for S3; the five DD checklists for S9).
 - Kill criteria: `procedures/_kill-criteria/*.json` evaluated at S9/S11 with `evidence_ref` citations.
 

@@ -19,6 +19,7 @@ metadata:
   type: domain
   procedure_keys:
     - greenfield-fs
+    - opportunity-discovery
     - brownfield-fs
     - greenfield-capability-assessment
   triggers:
