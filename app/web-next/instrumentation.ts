@@ -10,6 +10,28 @@ function randomPassword(bytes = 16): string {
 
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  // Committee deliberation LLM mode (ADR-0097 §5 seam): when
+  // CO_NEWBIZ_COMMITTEE_AGENTS=llm AND lib/llm.ts is configured, register the
+  // LLM CallAgent factory. Independent of the DB bootstrap below and wrapped
+  // so a failure here can never prevent boot — deliberation would simply stay
+  // on the deterministic templates.
+  try {
+    if (process.env.CO_NEWBIZ_COMMITTEE_AGENTS === "llm") {
+      const { isLlmConfigured } = await import("./lib/llm.ts");
+      const { setCallAgentFactory } = await import("./lib/committee-agents.ts");
+      const { makeLlmCommitteeAgent } = await import("./lib/committee-llm.ts");
+      if (isLlmConfigured()) {
+        setCallAgentFactory(() => makeLlmCommitteeAgent());
+        console.log("[bootstrap] committee agents: LLM mode registered.");
+      } else {
+        console.warn("[bootstrap] CO_NEWBIZ_COMMITTEE_AGENTS=llm but no LLM configured (CO_NEWBIZ_LLM_PROVIDER/API_KEY/MODEL) — staying deterministic.");
+      }
+    }
+  } catch (err) {
+    console.warn("[bootstrap] committee LLM factory registration skipped:", err instanceof Error ? err.message : err);
+  }
+
   try {
     const { runMigrations } = await import("../../db/migrate.ts");
     const { getDb } = await import("../../db/client.ts");

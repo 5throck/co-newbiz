@@ -187,7 +187,7 @@ PM must also append the same entry to the active `memory/YYYY-MM-DD.md` session 
 
 ## Meeting Facilitation
 
-When `/meeting` is invoked, the deliberation engine (`bun scripts/co-newbiz/meeting.ts` → `runDeliberationRounds`, ADR-0096) runs the meeting: participants speak in rounds from their role templates, then the synthesizer consolidates agreements and action items and writes the transcript. Web-side committee sessions (`/api/opportunities/:id/committee-sessions/*`) use the same engine with database persistence. Unless an LLM factory is registered at server bootstrap, the engine is **deterministic** — it does not load `agents/*.md` personas; treat its output as a structured scaffold, not the specialists' judgment.
+When `/meeting` is invoked, the deliberation engine (`bun scripts/co-newbiz/meeting.ts` → `runDeliberationRounds`, ADR-0096) runs the meeting: participants speak in rounds from their role templates, then the synthesizer consolidates agreements and action items and writes the transcript. Web-side committee sessions (`/api/opportunities/:id/committee-sessions/*`) use the same engine with database persistence. The engine is **deterministic by default**; when `CO_NEWBIZ_COMMITTEE_AGENTS=llm` and the LLM client (`lib/llm.ts`) is configured, server bootstrap registers the LLM factory (`lib/committee-llm.ts`) and members generate model-backed positions. Either way it does not load `agents/*.md` personas; treat its output as a structured scaffold or model position, not the specialists' judgment.
 
 **PM's role in a meeting**:
 - Open with a brief facilitator statement setting the agenda
