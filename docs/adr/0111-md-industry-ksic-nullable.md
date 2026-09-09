@@ -89,6 +89,22 @@ Four profile anchors were found to conflict with the 11th revision and are
 anchors is owner-approved content and follows the normal profile-governance
 path — the picker must not assert code↔industry mappings it cannot verify.
 
+### Anchor correction (approved same day, 2026-09-10)
+
+The owner approved the anchor corrections. The in-force classification was
+pinned with a second, independent evidence line before rewriting: DART-
+registered induty codes of pure-play companies (두산로보틱스 = 2928, 한화오션 =
+3111, SFA반도체/DB하이텍 = 2611 전자집적회로) agree with the KSIC-11 database
+and rule out the "2차 조정안" crosswalk the profiles had originally cited.
+Applied: `KSIC264.yaml`→`KSIC261.yaml` (code 261), `KSIC29192.yaml`→
+`KSIC29280.yaml` (code 29280), `KSIC30111.yaml`→`KSIC31111.yaml` (code 31111),
+`KSIC30303.yaml`→`KSIC3131.yaml` (code 3131, 소분류 — no dedicated 우주선
+5-digit code exists). The four codes re-joined the picker dataset with their
+official names; `migration 0079` remaps any `md_industry.ksic_code` rows
+written under the stale anchors (collision-guarded; the HYD-BRK sentinel is
+untouched). The research doc records a dated correction of the rejected
+crosswalk claims.
+
 ## Consequences
 
 - No new fabricated identity codes are ever written; existing ones disappear

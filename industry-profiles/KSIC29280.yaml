@@ -1,5 +1,6 @@
-code: "29192"
-name_ko: 산업용 로봇 제조업 (KSIC 29192 — 휴머노이드·협동로봇·서비스로봇 포함; 서비스로봇은 일부 26 계열 분류 병행)
+code: "29280"
+name_ko: 산업용 로봇 제조업 (KSIC 29280 — 휴머노이드·협동로봇·서비스로봇 포함; 서비스로봇은 일부 26 계열 분류 병행)
+# Anchor corrected 2026-09-10: the previous anchor 29192 is 분사기 및 소화기 제조업 in the in-force 11th revision; 29280 산업용 로봇 제조업 verified via the KSIC-11 DB and DART-registered induty code (두산로보틱스 = 2928). See ADR-0111 revision 2026-09-10 (anchor correction).
 
 value_chain_structure:
   source: >

@@ -1,6 +1,20 @@
 # Machinery, Robotics, Defense & Digital Profiles — Research Notes (2026-09)
 
-**Purpose**: research backing for `KSIC29241.yaml`(건설기계), `KSIC29192.yaml`(산업용·휴머노이드 로봇), `KSIC31312.yaml`(드론), `KSIC30111.yaml`(선박·잠수함), `KSIC30303.yaml`(우주선·발사체), `KSIC63999.yaml`(정보보안).
+**Purpose**: research backing for `KSIC29241.yaml`(건설기계), `KSIC29280.yaml`(산업용·휴머노이드 로봇), `KSIC31312.yaml`(드론), `KSIC31111.yaml`(선박·잠수함), `KSIC3131.yaml`(우주선·발사체), `KSIC63999.yaml`(정보보안).
+
+## Correction (2026-09-10) — anchors re-verified against the in-force 11th revision
+
+The "2차 조정안 신구 대조표" renumberings recorded on 2026-09-09 (로봇
+29280→29192, 선박 31111→30111, 우주선 30303 신설) turned out to be from a
+**proposal that is not in force**. Re-verification on 2026-09-10 against the
+KSIC-11 database (categoryofbusiness.com, itself validated via the official
+10801→10901/10902 split and the 282 rename) plus DART-registered induty codes
+(두산로보틱스 = 2928, 한화오션 = 3111, SFA반도체·DB하이텍 = 2611) confirms the
+in-force codes: 산업용 로봇 = **29280**, 강선 건조업 = **31111**, 반도체 =
+**261**(26111 메모리/26112 비메모리), 우주선 = 3131 계열 — and 30111/30303 do
+not exist. Profile files were renamed accordingly (KSIC29280/KSIC31111/
+KSIC3131/KSIC261); see ADR-0111 revision 2026-09-10. Section headings below
+keep the old file names as historical pointers into the original survey.
 
 ## KSIC29241 — 건설 및 채광용 기계장비 제조업
 
@@ -54,9 +68,11 @@
 
 ## Honesty notes
 
-- KSIC 앵커는 모두 제11차 개정(2024-07-01 시행) 기준으로 확인했으며, 특히
+- ~~KSIC 앵커는 모두 제11차 개정(2024-07-01 시행) 기준으로 확인했으며, 특히
   로봇(29280→29192), 선박(31111→30111), 우주선(30303 신설), 발전(35101/2→35111/12/13/14/15)
-  은 신구 대조표로 검증했다.
+  은 신구 대조표로 검증했다.~~ **[Corrected 2026-09-10]** 위 2차 조정안 수치는
+  미시행 제안이었다. 현행 확인 결과: 로봇 29280·선박 31111·반도체 261·우주선
+  3131 (발전 3511x 재번호는 현행 맞음) — 상기 Correction 섹션과 ADR-0111 참조.
 - 휴머노이드 로봇은 29192 산업용 로봇에 포함되나, 서비스 로봇 일부는 다른
   분류 병행 가능성을 프로필 name_ko에 명시했다.
 - 발전소 O&M은 독립 세분류 코드가 확인되지 않아 3511 소분류를 앵커로 두고

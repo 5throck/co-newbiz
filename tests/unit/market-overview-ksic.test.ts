@@ -148,6 +148,53 @@ describe("migration 0078 — ksic_code nullable + NEW-* cleanup", () => {
   });
 });
 
+describe("migration 0079 — stale profile-anchor remap", () => {
+  test("remaps 264/29192/30111/30303 to 261/29280/31111/3131, guarding collisions", () => {
+    const path = "db/data/test-ksic-migration-0079.sqlite";
+    for (const s of ["", "-wal", "-shm"]) if (existsSync(path + s)) rmSync(path + s);
+    const raw = new Database(path, { create: true });
+    try {
+      raw.run(`
+        CREATE TABLE md_industry (
+          id TEXT PRIMARY KEY NOT NULL,
+          ksic_code TEXT,
+          naics_code TEXT,
+          isic_code TEXT,
+          name_ko TEXT NOT NULL,
+          name_en TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+        CREATE UNIQUE INDEX idx_md_industry_ksic ON md_industry(ksic_code);
+      `);
+      const ins = raw.query(
+        "INSERT INTO md_industry (id, ksic_code, naics_code, isic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?,?,?)",
+      );
+      ins.run(["r-1", "29192", null, null, "로봇 산업", "x", NOW]); // remappable (no 29280 owner)
+      ins.run(["r-2", "264", null, null, "반도체 산업", "x", NOW]); // remappable
+      ins.run(["r-4", "30111", null, null, "충돌 조선 산업", "x", NOW]); // target 31111 already owned below
+      ins.run(["r-5", "31111", null, null, "이미 31111 보유 산업", "x", NOW]);
+      ins.run(["r-6", "HYD-BRK", null, null, "유압브레이커", "x", NOW]); // sentinel untouched
+
+      const sql = readFileSync(
+        join(import.meta.dirname, "..", "..", "db", "migrations", "0079_profile_anchor_remap.sql"),
+        "utf-8",
+      );
+      raw.run(sql);
+
+      const rows = raw.query("SELECT id, ksic_code FROM md_industry ORDER BY id").all() as Array<{ id: string; ksic_code: string | null }>;
+      const codeOf = (id: string) => rows.find((r) => r.id === id)!.ksic_code;
+      expect(codeOf("r-1")).toBe("29280"); // remapped
+      expect(codeOf("r-2")).toBe("261"); // remapped
+      expect(codeOf("r-4")).toBe("30111"); // collision: guard left the old value
+      expect(codeOf("r-5")).toBe("31111"); // owner keeps the code
+      expect(codeOf("r-6")).toBe("HYD-BRK"); // sentinel untouched
+    } finally {
+      raw.close();
+      for (const s of ["", "-wal", "-shm"]) if (existsSync(path + s)) rmSync(path + s);
+    }
+  });
+});
+
 describe("POST /api/market-overview/analyses — KSIC handling", () => {
   test("no code → industry stored with NULL ksic_code, never a NEW- placeholder", async () => {
     const res = await req("/api/market-overview/analyses", {
@@ -272,6 +319,17 @@ describe("GET /api/market-overview/ksic — curated master search", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { entries: Array<{ code: string; name_ko: string }> } };
     expect(body.data.entries.some((e) => e.code === "29241")).toBe(true);
+    expect(body.data.entries.some((e) => e.code === "29280")).toBe(true);
+  });
+
+  test("corrected profile anchors are searchable (261/31111)", async () => {
+    const res = await req("/api/market-overview/ksic?q=26", { headers: { cookie: analystCookie } });
+    const body = (await res.json()) as { data: { entries: Array<{ code: string; name_ko: string }> } };
+    expect(body.data.entries.some((e) => e.code === "261" && e.name_ko === "반도체 제조업")).toBe(true);
+
+    const res2 = await req("/api/market-overview/ksic?q=311", { headers: { cookie: analystCookie } });
+    const body2 = (await res2.json()) as { data: { entries: Array<{ code: string; name_ko: string }> } };
+    expect(body2.data.entries.some((e) => e.code === "31111" && e.name_ko === "강선 건조업")).toBe(true);
   });
 
   test("Korean name search works — 74100 shows its official 11th-revision name (ADR-0111 revision)", async () => {
@@ -293,7 +351,7 @@ describe("GET /api/market-overview/ksic — curated master search", () => {
     const res = await req("/api/market-overview/ksic", { headers: { cookie: analystCookie } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { entries: unknown[] }, meta: { count: number } };
-    expect(body.data.entries.length).toBe(9);
-    expect(body.meta.count).toBe(9);
+    expect(body.data.entries.length).toBe(13);
+    expect(body.meta.count).toBe(13);
   });
 });

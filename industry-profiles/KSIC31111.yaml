@@ -1,9 +1,10 @@
-code: "30111"
-name_ko: 선박 건조업 (KSIC 30111 강선 건조업 — 군사용 선박·잠수함·LNG선·해양플랜트 포함)
+code: "31111"
+name_ko: 선박 건조업 (KSIC 31111 강선 건조업 — 군사용 선박·잠수함·LNG선·해양플랜트 포함)
+# Anchor corrected 2026-09-10: the previous anchor 30111 does not exist in the in-force 11th revision; 31111 강선 건조업 verified via the KSIC-11 DB and DART-registered induty code (한화오션 = 3111 선박 및 보트 건조업). See ADR-0111 revision 2026-09-10 (anchor correction).
 
 value_chain_structure:
   source: >
-    KSIC 30111 정의(강선 건조업 — 군사용 선박 잠수함·군함 포함, 11차 개정),
+    KSIC 31111 정의(강선 건조업 — 군사용 선박 잠수함·군함 포함, 11차 개정),
     Clarksons Research 수주잔고 통계, 한국조선해양 플랜트 협회(KSNA). Links
     in the research doc.
   verified_on: "2026-09-09"
