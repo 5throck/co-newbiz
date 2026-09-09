@@ -1,7 +1,7 @@
 # Product Backlog Roadmap — co-newbiz (2026-09)
 
 **Owner**: pm
-**Status**: Active — approved 2026-09-09 (user-approved master plan; waves execute sequentially)
+**Status**: Active — approved 2026-09-09. Execution status (2026-09-09): Wave A done (#243/#244/#246), Wave B done (#249), Wave C done (#250), Wave D done (#251), Wave E done (pilot KSIC264 + research doc + authoring guide, this PR), Wave F briefs delivered (`docs/decisions/open/2026-09-09-thresholds-brief-*.md`) — the underlying policy decisions now rest with the project owner.
 **Origin**: full product review 2026-09-08/09; supersedes the "Still open" list in `docs/meta/co-newbiz.context.md` as the working backlog index
 **Execution model**: one wave = one branch → `/sync` pipeline → PR → CI green → merge; signature waves (A1, B1, C1, D1–D3) require a `docs/designs/` design doc approved before implementation (Design Gate)
 
