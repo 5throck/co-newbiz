@@ -1,5 +1,6 @@
-code: "264"
-name_ko: 반도체소자 제조업 (KSIC 264 — 메모리·파운드리·팹리스 설계·패키징 포함)
+code: "261"
+name_ko: 반도체 제조업 (KSIC 261 — 메모리(26111)·비메모리(26112) 전자집적회로, 파운드리·팹리스 설계·패키징 생태계 포함)
+# Anchor corrected 2026-09-10: the previous anchor 264 is 통신·방송장비 제조업 in the in-force 11th revision; 261 반도체 제조업 verified via the KSIC-11 DB and DART-registered induty codes (SFA반도체/DB하이텍 = 2611 전자집적회로). See ADR-0111 revision 2026-09-10 (anchor correction).
 
 value_chain_structure:
   source: >

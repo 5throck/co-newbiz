@@ -1,9 +1,13 @@
 {
-  "source": "Curated subset — codes anchored by industry-profiles/KSIC*.yaml. Official KSIC 11th-revision names verified 2026-09-10 against the categoryofbusiness.com KSIC-11 database, cross-checked with official 11th-revision renumbering examples (10801→10901/10902, 282 rename). Profile aliases live in the detail field, never in name_ko. Anchors conflicting with the 11th revision (264/29192/30111/30303) are EXCLUDED from this dataset pending profile correction — see ADR-0111 revision note. Extend from KOSTAT's official list (kssc.kostat.go.kr); not the full ~10k-code master.",
+  "source": "Curated subset — codes anchored by industry-profiles/KSIC*.yaml. Official KSIC 11th-revision names verified 2026-09-10 against the categoryofbusiness.com KSIC-11 database, cross-checked with official 11th-revision renumbering examples (10801→10901/10902, 282 rename) and DART-registered induty codes (두산로보틱스=2928, 한화오션=3111, SFA반도체·DB하이텍=2611). Profile aliases live in the detail field, never in name_ko. Profile anchors corrected 2026-09-10 to the in-force 11th revision (264→261, 29192→29280, 30111→31111, 30303→3131) — see ADR-0111 revision note. Extend from KOSTAT's official list (kssc.kostat.go.kr); not the full ~10k-code master.",
   "revision": 11,
   "codes": [
+    { "code": "261", "name_ko": "반도체 제조업", "detail": "프로필 별칭: 반도체소자 제조업 — 메모리(26111)·비메모리(26112) 전자집적회로, 파운드리·팹리스 설계·패키징 생태계 포함", "profile": true },
     { "code": "282", "name_ko": "일차전지 및 이차전지 제조업", "detail": "리튬이온 셀·팩, 양극/음극/전해액/분리막 소재 생태계 포함", "profile": true },
     { "code": "29241", "name_ko": "건설 및 채광용 기계장비 제조업", "detail": "굴삭기·휠로더·덤프트럭·크레인 등 건설기계 전반", "profile": true },
+    { "code": "29280", "name_ko": "산업용 로봇 제조업", "detail": "휴머노이드·협동로봇·서비스로봇 포함", "profile": true },
+    { "code": "31111", "name_ko": "강선 건조업", "detail": "프로필 별칭: 선박 건조업 — 군사용 선박·잠수함·LNG선·해양플랜트 포함", "profile": true },
+    { "code": "3131", "name_ko": "항공기, 우주선 및 보조장치 제조업", "detail": "프로필 별칭: 우주선 제조업 — 우주발사체·인공위성·위성 부품 포함", "profile": true },
     { "code": "31312", "name_ko": "무인 항공기 및 무인 비행장치 제조업", "detail": "드론·UAM/eVTOL·군용 무인기 포함", "profile": true },
     { "code": "35111", "name_ko": "원자력 발전업", "detail": "경수형 대형 원전과 소형모듈 SMR 포함", "profile": true },
     { "code": "35113", "name_ko": "화력 발전업", "detail": "유연소·무연소 석탄, LNG 복합화력, 암모니아·수소 혼소 전환 포함", "profile": true },

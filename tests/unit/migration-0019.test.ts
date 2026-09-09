@@ -198,7 +198,7 @@ beforeAll(() => {
   industryA = ulid();
   industryB = ulid();
   db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [industryA, "30110", "선박용 엔진", "Marine engines", NOW]);
-  db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [industryB, "30111", "조선업", "Shipbuilding", NOW]);
+  db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [industryB, "31111", "조선업", "Shipbuilding", NOW]);
 });
 
 afterAll(() => {

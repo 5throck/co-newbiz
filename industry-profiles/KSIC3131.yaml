@@ -1,5 +1,6 @@
-code: "30303"
-name_ko: 우주선 제조업 (KSIC 30303 — 우주발사체·인공위성·위성 부품 포함; 우주 산업 전반)
+code: "3131"
+name_ko: 우주선 제조업 (KSIC 3131 항공기, 우주선 및 보조장치 제조업 — 우주발사체·인공위성·위성 부품 포함; 우주 산업 전반)
+# Anchor corrected 2026-09-10: the previous anchor 30303 does not exist in the in-force 11th revision; 3131 항공기, 우주선 및 보조장치 제조업 (소분류, 우주선 포함) verified via the KSIC-11 DB. See ADR-0111 revision 2026-09-10 (anchor correction).
 
 value_chain_structure:
   source: >

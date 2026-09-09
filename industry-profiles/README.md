@@ -3,7 +3,7 @@
 How to add or update an industry profile (`<CODE>.yaml`) under `industry-profiles/`.
 The schema contract is `industry-profiles/_schema.yaml`; the validator is
 `industry-profiles/_validate.ts` (run by `procedures:lint` — a failing profile
-blocks CI). Exemplar: `KSIC264.yaml` (Wave E pilot).
+blocks CI). Exemplar: `KSIC261.yaml` (Wave E pilot).
 
 ## Procedure
 
