@@ -388,7 +388,12 @@ export function getPortfolioRollup(
   // consumers navigate (never latest-value-only, ADR-0059 §2).
   const reviewCyclesAvailable = (
     db
-      .query(`SELECT DISTINCT review_cycle FROM venture_scorecard ${scope ? `WHERE project_id IN (${placeholders})` : ""} ORDER BY review_cycle`)
+      .query(
+        `SELECT DISTINCT v.review_cycle
+         FROM venture_scorecard v JOIN md_project p ON p.id = v.project_id
+         WHERE p.status = 'open'${scope ? ` AND v.project_id IN (${placeholders})` : ""}
+         ORDER BY v.review_cycle`,
+      )
       .all(...scopeParams) as Array<{ review_cycle: string }>
   ).map((r) => r.review_cycle);
 
@@ -400,7 +405,7 @@ export function getPortfolioRollup(
         .query(
           `SELECT v.*, p.project_no
            FROM venture_scorecard v JOIN md_project p ON p.id = v.project_id
-           WHERE v.review_cycle = ?${scope ? ` AND v.project_id IN (${placeholders})` : ""}
+           WHERE p.status = 'open' AND v.review_cycle = ?${scope ? ` AND v.project_id IN (${placeholders})` : ""}
            ORDER BY p.project_no, v.section, v.measure_key`,
         )
         .all(resolved, ...scopeParams) as PortfolioRollupRow[])

@@ -271,6 +271,8 @@ describe("shape: four new tables + md_project.current_stage_gate", () => {
       "origin", "source_opportunity_id", "track",
       // 0074 (ADR-0104): charter columns appended.
       "project_name", "charter_json", "charter_confirmed_at",
+      // 0076 (Wave B1): lifecycle columns appended; current_stage_gate stays fourth.
+      "status", "closed_at", "closure_reason",
     ]);
   });
 

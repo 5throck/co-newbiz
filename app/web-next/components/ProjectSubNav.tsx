@@ -9,9 +9,12 @@ import { api } from "../lib/api.ts";
 const SUB_PAGES = [
   { seg: "", label: "개요" },
   { seg: "/business-case", label: "사업성 분석" },
+  { seg: "/financial-analysis", label: "재무분석" },
   { seg: "/dd", label: "실사·검증" },
+  { seg: "/proxy-chain", label: "프록시 체인" },
   { seg: "/deal-structure", label: "투자구조" },
   { seg: "/ic-review", label: "IC 심의" },
+  { seg: "/reports", label: "보고서" },
   { seg: "/portfolio", label: "사후관리" },
   { seg: "/partnership", label: "파트너·JV" },
   { seg: "/pmi", label: "PMI" },
