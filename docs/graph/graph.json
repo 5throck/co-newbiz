@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 605,
+    "node_count": 606,
     "edge_count": 1003
   },
   "nodes": [
@@ -556,6 +556,11 @@
       "id": "adr:0110",
       "type": "adr",
       "label": "ADR-0110: Registry-driven extensibility — stage-completion predicate maps, the scoring-weights data module, and the JV/PMI/partnership workspaces as the first consumer"
+    },
+    {
+      "id": "adr:0111",
+      "type": "adr",
+      "label": "ADR-0111: `md_industry.ksic_code` becomes nullable — retiring the fabricated `NEW-*` placeholder codes and adding a KSIC code picker"
     },
     {
       "id": "agent:antitrust-agent",

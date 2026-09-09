@@ -4,6 +4,7 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { fail, forbidden, notFound, ok, badRequest } from "../../../../../lib/envelope.ts";
+import { parseKsicInput } from "../../../../../lib/ksic.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
@@ -216,8 +217,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
   const { industryId } = await params;
   const body = (await request.json().catch(() => null)) as { name_ko?: string; ksic_code?: string | null } | null;
   const name = body?.name_ko?.trim();
-  const code = body?.ksic_code?.trim();
   if (!name) return badRequest("invalid_request", "산업명은 필수입니다.");
+  const ksic = parseKsicInput(body?.ksic_code);
+  if (!ksic.ok) return badRequest("invalid_ksic_code", ksic.reason);
+  const code = ksic.code;
 
   const db = getDb();
   const industry = db
@@ -226,8 +229,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
   if (!industry) return notFound();
 
   try {
-    db.query("UPDATE md_industry SET name_ko = ?, ksic_code = ? WHERE id = ?").run(name, code || null, industryId);
+    db.query("UPDATE md_industry SET name_ko = ?, ksic_code = ? WHERE id = ?").run(name, code, industryId);
   } catch (err) {
+    if (err instanceof Error && err.message.includes("UNIQUE")) {
+      return fail(409, "code_in_use", `KSIC 코드 ${code}는 이미 다른 산업에 할당되어 있습니다.`);
+    }
     return fail(500, "update_failed", `산업 정보 수정 중 오류가 발생했습니다: ${err instanceof Error ? err.message : String(err)}`);
   }
   const updated = db

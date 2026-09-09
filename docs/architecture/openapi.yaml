@@ -1989,6 +1989,25 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/market-overview/ksic:
+    get:
+      operationId: searchKsicCodes
+      summary: Search the curated KSIC master dataset backing the /market code picker (ADR-0111).
+      tags:
+        - Analysis
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Code prefix (digits) or Korean name substring; empty returns the full curated list.
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/market-overview/insights:
     get:
       operationId: getMarketInsights
