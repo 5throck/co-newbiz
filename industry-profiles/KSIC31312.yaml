@@ -1,0 +1,84 @@
+code: "31312"
+name_ko: 무인 항공기 및 무인 비행장치 제조업 (KSIC 31312 — 드론·UAM/eVTOL·군용 무인기 포함)
+
+value_chain_structure:
+  source: >
+    K-드론 시스템 국가전략기술 지정(과기정통부 2022), 항공안전법 드론
+    규제 체계(국토부·항공안전본부), 국내 드론 기업 공시(한국공항공사·
+    드론 ·유센). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    upstream_tiers:
+      - "비행 제어기(FC): 자동비행 SW·센서 융합(IMU·GPS·비전), 송수신 모듈"
+      - "배터리(리튬폴리머 — 이차전지 생태계와 공유), 모터·프로펠러(블레이드)"
+      - "군용: 광학·적외선 카메라(한빛비전 등), 레이더·전자전 장비"
+    midstream_tiers:
+      - "드론 완성기: 민수(현대모비스 계열·드론웨이), 군용(한국공항공사·LIG넥스원 위탁)"
+      - "UAM/eVTOL: 현대차 Supernal(2028 상업화 목표), SOC·기타 스타트업"
+      - "운항 서비스: 물류 배송(드론·이륙), 측량·감시(농업·재해)"
+    downstream_tiers:
+      - "군사(정찰·타격), 물류(쿠팡·이마트 배송 실증), 측량(토지·건설), 농약 방제, 재해 대응(산불·홍수), 방송 촬영"
+      - "드론 ID·원격 식별은 전 국민 의무화 — 드론 등록 수 증가"
+    typical_proxy_chain_depth: 2
+    unit_of_output: "대(생산·수출), 비행 시간(서비스)"
+
+cycle_position_indicators:
+  source: >
+    드론 등록 수·산업 규모 보도(국토부 드론 산업 실태조사 — 등록 수 급증,
+    UAM 상용화 로드맵 2025·), 군수 수출 동향(한국공항공사·LIG넥스원
+    수출). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: market-intelligence-agent
+  data:
+    cycle_driver: >
+      규제 완화(비행 승인 간소화)와 군수 수출(전장 드론 — 우크라이나 전쟁
+      이후 군용 드론 수요 폭증)이 양대 동력. UAM은 인프라(버티포트)·
+      인증이 도입 시점을 결정.
+    typical_cycle_length_years: 4
+    current_phase_note: >
+      민수는 성장 국면(드론 등록 수 급증), 군수는 전환 국면(우크라이나
+      전쟁 이후 저가·대량 군용 드론 수요 — FPV 드론 국산화 경쟁), UAM은
+      2028 상용화 목표로 인증 준비 단계.
+    peak_earnings_caveat: >
+      군수 드론은 전시 수요로 창출된 일회성 수주 — 종전 이후 수요
+      지속성을 판단해야 한다. 민수는 규제 완화 속도가 수익화 속도를
+      결정한다.
+
+regulatory_landscape:
+  source: >
+    항공안전법(드론 비행 허가·등록 의무, 250g 이상), 드론 ID 장착 의무,
+    국가전략기술 지정(K-드론 시스템 — 과기정통부 2022), UAM 특법(한국형
+    UAM 고도화 로드맵). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: legal-counsel
+  data:
+    primary_regimes:
+      - "항공안전법 — 250g 이상 드론 등록·조종 자격·비행 승인(국토부·항공안전본부)"
+      - "드론 ID 장착 의무(2021~) — 원격 식별 필수"
+      - "군용: 방위사업법(방위사업청 수주), 수출통제(전략물자법 — 무인기 수출 국가별 승인)"
+      - "UAM 특법(2023 제정) — UAM 운항 인증·버티포트 허가 신설"
+    licensing_or_certification_bodies:
+      - "국토부 항공안전본부(비행 승인), 한국교통안전공단(드론 안전 인증), 방위사업청(군용 수주 자격)"
+    cross_border_notes: >
+      드론 수출은 전략물자(군용)와 이중용도(민수) 구분이 중요 — 우크라이나
+      사례에서 보듯 민수 드론의 군용 전용이 수출 통제 대상이 될 수 있다.
+
+technology_transitions:
+  source: >
+    AI 자율 비행(SWARM 군집), eVTOL 배터리 밀도 개선, 원격 ID·UTM(드론
+    교통관리) 시스템 구축. Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    known_transitions:
+      - "조종: 수동 → AI 자율 비행(군집·SWARM 군집 전술) — 군수 핵심"
+      - "동력: 전동 → 수소연료전지(장시간 비행), 수소 연료전지 드론 실증"
+      - "UAM/eVTOL: 개념 실증 → 인증 취득 단계(2028 상용화 목표)"
+    transition_driver: >
+      AI 자율화(조종사 없이 임무 수행)와 수소·배터리 개량이 비행 시간을
+      늘려 응용 범위 확대 — 군집·네트워크 협업이 단일 드론을 대체.
+    expected_timeline: "2026~2027 UAM 인증·시제기 비행, 2028 UAM 상용화(민간), 2027~2030 군용 드론 대량 양산"
+    demand_structure_impact: >
+      드론이 '촬영·취미'에서 '군수·물류·측량 인프라'로 수요가 재편되며
+      OSAT처럼 드론 관제·데이터 서비스가 새로운 수익 모델로 형성.

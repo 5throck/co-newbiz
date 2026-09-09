@@ -1,0 +1,85 @@
+code: "35113"
+name_ko: 화력 발전업 (KSIC 35113 — 유연소·무연소 석탄, LNG 복합화력, 암모니아·수소 혼소 전환 포함)
+
+value_chain_structure:
+  source: >
+    제10차 전력수급기본계획(2024 — 석탄·LNG 발전 비중 축소 로드맵과 가스터빈
+    신규 계통 확정), 전력거래소 전력시장 운영 현황. Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    upstream_tiers:
+      - "연료: 유연소(석탄 수입 의존 — 호주·인도네시아), LNG(장기 SPA + 현물), 향후 암모니아(일본 조선소·산화암모니아 수입 파이프라인)"
+      - "설비: 가스터빈(GE 7HA·SIEMENS·MHI 독과점), 보일러·터빈(두산에너빌리티)"
+    midstream_tiers:
+      - "발전 사업자: 한전 계열 6개 발전사(남동·중부·서부·동서·한남·제주), IPP, 계통 연계"
+      - "전환 공사: 기존 석탄 유연소 → LNG 복합화력 전환(10개소 진행), 암모니아 혼소 실증(덕수·당진)"
+    downstream_tiers:
+      - "한전 계통 판매(SMP 정산) — 수요는 AI 데이터센터 신규 부하로 구조적 증가 중"
+      - "인접 사업: 열병합, 스팀 공급(산업단지)"
+    typical_proxy_chain_depth: 1
+    unit_of_output: "MWh 발전량 / MW 설비용량"
+
+cycle_position_indicators:
+  source: >
+    제10차 전력수급기본계획(석탄 감축 — 2036년 석탄 21.2%→3.2% 가동 조정),
+    LNG 발전 비중 유지(2036년 14.2%), 암모니아 혼소 2030 실증 목표(전력거래소·
+    산업통상자원부). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: market-intelligence-agent
+  data:
+    cycle_driver: >
+      연료 가격(LNG 스폿가)과 탄소 규제가 마진을 결정 — SMP는 연료비 연동,
+      배출권 거래제(K-ETS) 비용이 화력 경쟁력을 직접 압박.
+    typical_cycle_length_years: 7
+    current_phase_note: >
+      석탄은 퇴출 로드맵(상시 조정 국면), LNG 복합화력은 전환 수혜(10개소
+      석탄→LNG 전환 착수), 암모니아 혼소는 실증 단계. 신규 LNG 계통은
+      10차 계획에서 유지 — 데이터센터 신규 부하가 LNG 수요를 지지.
+    peak_earnings_caveat: >
+      LNG 발전 마진은 국제 가스 가격 스파이크(2022년 유럽 사례)에 취약하며
+      계통 예비력 기여도에 따른 용량급반영 시장(CM) 도입이 수익 구조를
+      변경 중이다. 연료비 전가 구조를 확인 없이 SMP 스프레드를
+      정상화하지 말 것.
+
+regulatory_landscape:
+  source: >
+    전기사업법(발전사업 허가), K-ETS 배출권거래제(할당·경매), 환경부
+    신석탄발전 금지(2024-10 환경영향평가 지침 — 서해 등), 암모니아 혼소
+    실증 규제 샌드박스. Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: legal-counsel
+  data:
+    primary_regimes:
+      - "전기사업법 발전사업 허가(산업통상자원부)"
+      - "신규 석탄발전 사실상 금지(환경부 2024-10 환경영향평가 가이드라인 — 서해·남해 연안 신규 석탄 반대, 목표: 2036년까지 전량 퇴출)"
+      - "K-ETS 3기 계획기간(2026~2030) 배출권 할당 — 화력 사업자의 핵심 비용 항목"
+      - "암모니아·수소 혼소 전환은 '청정화력'으로 분류해 지원하는 특례 입법 추진"
+    licensing_or_certification_bodies:
+      - "산업통상자원부(발전사업 허가), 환경부(환경영향평가), 전력거래소(시장 참가 자격)"
+      - "배출 시설 운영자 배출량 보고·검증(온실가스 종합정보센터)"
+    cross_border_notes: >
+      LNG 장기계약은 계약 가격 공식(유가 연동)이 FEOC·EU CBAM 등 해외 규제와
+      간접 충돌할 수 있다 — 연료 조달과 전력 판매 시장의 규제 체계를
+      별도 검토할 것.
+
+technology_transitions:
+  source: >
+    암모니아 100% 전소 가스터빈(IHI·GE 개발)과 국내 혼소 실증(전남 발전),
+    CCUS(탄소포집 저장법 2024-05 시행), AI 데이터센터 전력 수요 전망. Links
+    in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    known_transitions:
+      - "석탄 → LNG 복합화력 → 암모니아 100% 전소(2030~2035 상용 목표)"
+      - "CCUS(탄소포집·저장) — 2024-05 탄소중립·녹색성장 기본법 시행으로 제도화, 저장 처분 인허가 신설"
+      - "디지털화: AI 기반 예지보전과 발전소 자동 운전(O&M 수요 구조 변화)"
+    transition_driver: >
+      탈탄소 규제 + 데이터센터 전력 수요 폭증의 이중 압력 — '안정적 발전'
+      자산은 유지하되 탄소 강도만 낮추는 전환이 자금 시장의 조건이 되고 있음.
+    expected_timeline: "2026~2027 암모니아 20% 혼소 상용 실증, 2030 50~100% 전소 실증, 2030~2035 CCUS 상용화"
+    demand_structure_impact: >
+      기존 석탄 자산의 조기 퇴역이 유휴 자산을 만들고, 전환(전용·혼소)·CCUS
+      사업이 새로운 엔지니어링·O&M 수요를 만든다. 발전소 부지의 재생에너지
+      연계(계통 인접) 활용도 동시에 증가.

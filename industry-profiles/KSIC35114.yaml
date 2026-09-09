@@ -1,0 +1,83 @@
+code: "35114"
+name_ko: 신재생에너지 발전업 (KSIC 35114 태양력 + 35115 풍력 대표 — 태양광·풍력·연료전지 등 재생에너지 발전 전반)
+
+value_chain_structure:
+  source: >
+    제10차 전력수급기본계획(2024 — 2036년 재생에너지 비중 40% 목표), 신재생
+    에너지산업 특수분류('24.12 개정, 한국에너지공단 신재생에너지센터), RPS·
+    REC 제도(산업통상자원부 고시). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    upstream_tiers:
+      - "태양광: 셀·모듈(중국산 비중 높음 — 한화큐셀 국내), 인버터·구조물·ESS(계통 안정화 필수)"
+      - "풍력: 터빈(베스타스·GE·도요타), 타워·블레이드 국내 제작, 항만 설치선(자켓·모노파일)"
+      - "연료전지: 두산퓨얼셀(인산형), 블룸에너지"
+    midstream_tiers:
+      - "발전 사업자: 한전 계열·IPP·지역발전·주민참여형 — 토지 확보와 계통 연계 허가가 사업성의 절반"
+      - "RE100 PPA 사업자: SK네트웍스·한화·남부발전 등 (직접 PPA 확대)"
+    downstream_tiers:
+      - "한전 계통 판매 + REC(REC 가격 급락이 수익성의 최대 변수) + 직접 PPA(기업 RE100 수요)"
+      - "수요 주체 이동: RE100 기업(삼성·SK 계열사 공급망 탈탄소)이 REC·PPA의 주요 구매자"
+    typical_proxy_chain_depth: 1
+    unit_of_output: "MWh 발전량 / kW 설비용량"
+
+cycle_position_indicators:
+  source: >
+    제10차 전력수급기본계획(2036년 재생 40%, 태양광 77GW·풍력 41.6GW 목표),
+    REC 가격 하락(2023~2024 급락)과 직접 PPA 확산 동향, 제주·서해 풍력 실증.
+    Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: market-intelligence-agent
+  data:
+    cycle_driver: >
+      정부 목표 비중(RPS 공급의무화 할당량) + REC 가격 + 금리(태양광은 자금
+      조달 민감도가 높음). 토지·계통 인허가가 공급 속도를 결정.
+    typical_cycle_length_years: 3
+    current_phase_note: >
+      태양광은 REC 가격 하락과 규제(농지·숲)로 성장 둔화, 풍력(특히 해상)은
+      10차 계획 확대 구간 — 그러나 계통 연계 용량 부족이 신규 수주의 실질
+      병목. 연료전지는 데이터센터 상용전원으로 수요 이동 중.
+    peak_earnings_caveat: >
+      재생에너지는 가동 한계비용이 0에 가까워 '발전량 × REC 가격' 구조 —
+      과잉 설비 시대에는 REC·전량구매 가격 하락으로 사업성이 반전된다.
+      입지 경쟁력(일조량·풍속)과 계통 혼잡도를 함께 확인할 것.
+
+regulatory_landscape:
+  source: >
+    신재생에너지·에너지사용합리화 등에 관한 법률(RPS 할당 의무), RE100 직접
+    PPA 제도(2021 도입), 국토부 태양광 입지 규제(농경지·산지 제한 강화).
+    Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: legal-counsel
+  data:
+    primary_regimes:
+      - "신재생에너지법 — RPS(발전사업자 의무 할당)·REC 가중치(입지별 0.2~2.0)"
+      - "전기사업법 — 발전사업 허가 + 계통연계(한전 승인) — 계통 혼잡 지역 신규 접수 제한"
+      - "직접 PPA 제도 — 기업-발전사업자 직접 전력 구매 계약(2021~), RE100 수요 충족 수단"
+      - "입지 규제 — 농지전용·산지전용 허가, 주민 수용성(이해관계인 동의 강화)"
+    licensing_or_certification_bodies:
+      - "산업통상자원부(허가), 한국에너지공단(신재생 인증·REC 발급), KS인증(모듈)"
+    cross_border_notes: >
+      해상풍력은 조업 구역(해군·어업·항만)과의 협의가 국제 표준 — 국내는
+      해양공간정보법 기반 해양 공간 계획 수립 중. EU 회원국 인증(EoD)은
+      국내 인증과 호환되지 않는다.
+
+technology_transitions:
+  source: >
+    대형 모듈(600W+)·양면 발전, 에너지저장(ESS) 필수화, 수소 연료전지(계통
+    보조), 부유식 해상풍력 실증(울산). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    known_transitions:
+      - "태양광: PERC → TOPCon/HJT 고전압 모듈, BIPV(건물 일체형) 확산"
+      - "풍력: 육상 → 해상(부유식) — 8GW+ 대규모 단지(전남 신안 등)"
+      - "계통: 단순 발전 → ESS 연계·가상발전소(VPP)·수소 생산(그린수소) 결합"
+    transition_driver: >
+      계통 한계(간헐성)가 재생에너지 확대의 병목 — ESS·수소·VPP와의
+      결합이 선택이 아닌 필수가 되는 구조.
+    expected_timeline: "2026~2028 직접 PPA 시장 성숙, 2027~2030 부유식 해상풍력 상용화, 2030 그린수소 발전 실증"
+    demand_structure_impact: >
+      단순 발전 판매에서 '탄소 프리 전력의 자격 증명(REC·패스포트)' 판매로
+      전환 — RE100 기업 공급망 탈탄소가 신규 수요의 주축.

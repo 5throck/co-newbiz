@@ -1,0 +1,89 @@
+code: "30111"
+name_ko: 선박 건조업 (KSIC 30111 강선 건조업 — 군사용 선박·잠수함·LNG선·해양플랜트 포함)
+
+value_chain_structure:
+  source: >
+    KSIC 30111 정의(강선 건조업 — 군사용 선박 잠수함·군함 포함, 11차 개정),
+    Clarksons Research 수주잔고 통계, 한국조선해양 플랜트 협회(KSNA). Links
+    in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    upstream_tiers:
+      - "해양 강판(포스코·현대제철 — 조선용 후판), 조선 해양 플랜트 특수 소재(니켈 합금, 고망간 스틸)"
+      - "선박 엔진(현대엔진기계, HD현대인프라) — LNG 이중연료·암모니아 엔진"
+      - "선박 장비: 크레인, 펌프, 베어링 (수입 의존 부분)"
+    midstream_tiers:
+      - "조선소: HD현대중공업(울산·군산), 한화오션(거제), 삼성중공업(거제) — 쌍방울 K조선 3강 구도"
+      - "해양 플랜트: FPSO·FLNG·해상풍력 설치선(부유식 지지 구조물)"
+      - "특수: 잠수함(대우조선해양 계열 — 장보고 3단계 KSS-III), 군함·구조함(현대·한화 계열)"
+    downstream_tiers:
+      - "해운사(컨테이너·탱커·벌크), 에너지사(LNG·암모니아 운반선), 국가(군함·잠수함 — 방위사업청), 해상풍력 설치선(전용선 수요)"
+      - "IMO 탄소 규제(EEXI·CII)로 노후선 교체 수요 지속"
+    typical_proxy_chain_depth: 2
+    unit_of_output: "CGT(표준화물운송단위), 수주잔고 기간(년), 수주액 USD"
+
+cycle_position_indicators:
+  source: >
+    Clarksons Research 수주잔고·신조 가격 지수(2021~2026 상승 사이클),
+    국내 조선 수주잔고 3년 이상 (수주-납기 시차), 1980년대 조선 공황과
+    2008년 서브프라임 이후 침체의 이력. Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: market-intelligence-agent
+  data:
+    cycle_driver: >
+      해운 운임(컨테이너·탱커·벌크) → 선주의 신조 발주 — 운임 사이클이
+      수주 사이클을 선행하며, 조선소는 수주에서 인도까지 2~4년 시차.
+      IMO 탄소 규제가 기존 선박의 조기 퇴역·교체 수요를 만든다.
+    typical_cycle_length_years: 8
+    current_phase_note: >
+      2021~2026 상승 사이클(LNG선·컨테이너·탱커 동시 호조 + IMO 규제로
+      교체 수요) — 수주잔고 3년 이상. 한국 조선 3강은 수주 포화로 고
+      부가가지 선종(LNG·암모니아·잠수함) 위주 수주 전략.
+    peak_earnings_caveat: >
+      조선업의 전형적 패턴: 운임 급등 → 수주 폭증 → 조선소 증설 → 공급
+      과잉 → 수주 급감 → 경쟁 심화. 현재 상승 국면의 연장 여부는
+      IMO 탄소 규제 시행(2027~)과 중국 조선소 증설 속도에 달려 있다.
+
+regulatory_landscape:
+  source: >
+    IMO 규제 체계(EEXI·CII 단기, 2050 탄소중립 전략 2023 개정), EU ETS
+    해운 확장(2024), FuelEU Maritime(2025), 방위사업법(군함·잠수함 수주).
+    Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: legal-counsel
+  data:
+    primary_regimes:
+      - "IMO 규제: EEXI(기존선 에너지 효율)·CII(탄소 강도 등급) 시행 중, IMO Net-Zero Framework(탄소세 형태) 2026~2027 채택 논의(일부 연기 가능성)"
+      - "EU ETS — 2024년부터 해운 부문 배출권 거래 확장(단계적 비율 증가)"
+      - "FuelEU Maritime — 2025년부터 선박 연료 탄소 강도 의무 감축"
+      - "방위사업법 — 군함·잠수함 수주는 방위사업청 절차(계약 변경·품질 보증)"
+    licensing_or_certification_bodies:
+      - "한국선급(KR)·DNV·ABS·LR — 선급 등록·검증(설계 승인, 건조 검사, 인증서)"
+      - "IMO 관련 협약(MARPOL·SOLAS) 준수 인증"
+    cross_border_notes: >
+      LNG·암모니아 운반선은 화물 특성상 국제 규제(IGC Code) 적용 —
+      설계·건조 인증이 국제 협약에 기반. 잠수함은 수출 시 국가 간
+      방위산업 협정(기술 이전 승인) 선행.
+
+technology_transitions:
+  source: >
+    암모니아·메탄올 이중연료 엔진 양산(현대엔진기계·MAN·WinGD), 무인
+    자율운항 선박(MASS) 국제 규제 논의, LNG선·LNGC(액화 수소) 운반선
+    실증. Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    known_transitions:
+      - "연료: 중유(HFO) → LNG 이중연료 → 메탄올·암모니아 이중연료 (IMO 탄소 중립 규제 대응)"
+      - "자율운항: MASS(Maritime Autonomous Surface Ships) 국제 규제 논의 — 무인 원격 조종 실증"
+      - "친환경 선박: 풍력 보조 추진(로터 세일), 태양광 보조, 전기 추진(내항선)"
+    transition_driver: >
+      IMO 탄소 규제가 신조 수요의 직접 동력 — 규제 충족을 위해 기존
+      선박 교체가 강제되는 구조(노후선 35%가 규제 미충족 예상). 암모니아
+      연료는 안전성(독성) 검증이 남은 상태.
+    expected_timeline: "2026~2028 암모니아·메탄올 이중연료선 양산 확대, 2027~2030 자율운항 상용화(국내 연안), 2030 LNGC(액화수소) 실증"
+    demand_structure_impact: >
+      IMO 규제 대응 교체 수요는 특정 선종(탱커·벌크·컨테이너)에 집중 —
+      조선소는 고부가가지 선종(LNG·암모니아) 선호로 경쟁이 치열해짐.
+      친환경 연료 인프라(암모니아 정박지, 충전)가 새로운 수요 영역.

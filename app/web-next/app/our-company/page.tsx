@@ -326,6 +326,8 @@ export function OurCompanyView() {
       await api.post(`/api/our-company/members/${memberId}/analyze`, {});
     } catch (err) {
       setError(err instanceof Error ? err.message : "분석 시작 실패");
+      // 시작 실패 시 loading 상태를 지우지 않으면 버튼이 "분석 중..."에 영구 머문다.
+      setProfiles((prev) => { const n = { ...prev }; delete n[memberId]; return n; });
     }
   }
 

@@ -25,6 +25,13 @@ function readCookie(name: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// Dev 서버 재시작·재컴파일 창에서 요청이 끊기면 응답 헤더만 오고 본문이 비어
+// res.json()이 브라우저 원문 에러("Unexpected end of JSON input")를 던진다.
+// 그 원문이 UI에 그대로 노출되지 않도록 판독 가능한 ApiError로 바꾼다.
+function invalidResponse(res: Response): ApiError {
+  return new ApiError(res.status || 0, "invalid_response", "서버 응답이 비어 있거나 손상되었습니다 — 잠시 후 다시 시도하세요.");
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>> {
   const headers: Record<string, string> = { "Content-Type": "application/json", ...(init?.headers as Record<string, string>) };
   // multipart 업로드는 브라우저가 boundary를 설정해야 하므로 Content-Type을 제거한다.
@@ -35,12 +42,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>
     const csrf = readCookie("co_newbiz_csrf");
     if (csrf) headers["X-CSRF-Token"] = csrf;
   }
-  const res = await fetch(path, {
-    credentials: "include",
-    headers,
-    ...init,
-  });
-  const body = (await res.json()) as Envelope<T>;
+  const send = () => fetch(path, { credentials: "include", headers, ...init });
+  let res = await send();
+  let body: Envelope<T>;
+  try {
+    body = (await res.json()) as Envelope<T>;
+  } catch {
+    // 빈 본문은 일시적 끊김일 뿐 서버 판정이 아니므로, 멱등한 GET에 한해 1회 재시도한다.
+    if (method !== "GET") throw invalidResponse(res);
+    res = await send();
+    body = await res.json().catch(() => {
+      throw invalidResponse(res);
+    });
+  }
   if (!res.ok) {
     throw new ApiError(res.status, body.error?.code ?? "unknown_error", body.error?.message ?? "Request failed.");
   }

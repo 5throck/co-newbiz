@@ -1,0 +1,82 @@
+code: "3511"
+name_ko: 발전소 O&M (KSIC 3511 발전업 소분류 앵커 — 발전소 운전 위탁·정비 전문 서비스; 독립 O&M 사업자는 시설관리(N74)·기계수리(331)로 분류되기도 하므로 앵커 선택 시 주의)
+
+value_chain_structure:
+  source: >
+    한전KPS 사업 구조(원자력·화력·재생에너지 정비 — 국내 독점 근접 구도),
+    제10차 전력수급기본계획(O&M 자산 수명 연장 필요성), 예지보전 솔루션
+    공급사 보도. Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    upstream_tiers:
+      - "진단 기술: AI 예지보전(고장 예측), 초음파·열화상 비파괴검사, 드론 점검(보일러·풍력 블레이드)"
+      - "부품·소모품: 터빈 블레이드 재제조, 보일러 튜브, 인버터 캐패시터(태양광 10년 수명 한계)"
+    midstream_tiers:
+      - "정비 전문: 한전KPS(원자력·화력 정비 점유율 높음), 발전사 자회사 정비팀, 민간 전문 O&M(SM·세림 등 태양광 O&M)"
+      - "원전 특수 정비: 방사선 환경 작업(전문 자격·면허 필수)"
+    downstream_tiers:
+      - "발전사·IPP·태양광 SPF 사업자(정비 외주), 산업단지 열병합, 오프그리드 데이터센터(SMR·연료전지 O&M 신규 수요)"
+      - "태양광 노후화: 2010년대 초 설치분(수명 20년) 대규모 재투자(REPOWERING) 수요 진입"
+    typical_proxy_chain_depth: 1
+    unit_of_output: "정비 계약 건수 / kW 정비 계약 단가, MTBF(평균 고장 간격)"
+
+cycle_position_indicators:
+  source: >
+    한전KPS 공시(정비 매출은 설비 이력 함수), 태양광 O&M 시장 형성 보도
+    (2010년대 초 대규모 SPF 20년 수명 도래). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: market-intelligence-agent
+  data:
+    cycle_driver: >
+      설비 노후화 이력(설치 연도별 곡선)과 신규 설치 지체 — 신규 발전소
+      건설 둔화는 5~10년 뒤 O&M 수요 감소가 아니라 '기존 자산의 수명
+      연장 정비' 수요 증가로 전환된다.
+    typical_cycle_length_years: 5
+    current_phase_note: >
+      석탄 퇴출 로드맵과 무관하게 기존 화력·원전의 가동 연장 정비는
+      유지되고, 태양광(2011~2015 대규모 설치분)·ESS 화재 이후 안전 점검
+      수요가 급증. 반도체·데이터센터용 무정전 전원(UPS) 정비도 병행
+      성장.
+    peak_earnings_caveat: >
+      정비 계약은 발전소 가동률·계약 갱신 주기(보통 1~3년)에 종속 —
+      발전소 퇴역 발표가 O&M 매출 감소로 직결된다. 원전은 정지 기간
+      (재장전·정비) 스케줄에 따라 매출이 불균등하다.
+
+regulatory_landscape:
+  source: >
+    전기사업법(발전 설비의 정기 검사·안전관리 의무), 원자력안전법(주기적
+    안전검사·특정재해 대비), 태양광 화재 이후 ESS 안전관리제(산업통상자원부
+    고시), ISMS-P(정비 원격 접근 보안). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: legal-counsel
+  data:
+    primary_regimes:
+      - "전기사업법 — 발전용 전기설비의 정기검사·안전관리 규정(자체 점검 + 외부 전문기기)"
+      - "원자력안전법 — 주기적 검사(계획예방정비), 사고 시 원안위 보고 의무"
+      - "ESS 안전관리제 — 일정 용량 이상 ESS 설치·운영 안전 관리 기준(통합 인증제)"
+    licensing_or_certification_bodies:
+      - "한국전기안전공사(전기 안전), 원자력안전본부 자격(방사선 작업), KOSHA/건설업 기술자 등급(대형 정비 공사)"
+    cross_border_notes: >
+      해외 발전소 O&M 진출은 현국 전기 기술 자격 상호 인정 협정 필요 —
+      한국 KPS 모델(중동·동남아 정비 수주)이 선례.
+
+technology_transitions:
+  source: >
+    AI 예지보전(PdM) 솔루션 시장 성장, 디지털 트윈 발전소 시연, 드론·로봇
+    점검(태양광 청소 로봇, 원전 격납건물 로봇). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    known_transitions:
+      - "사후 정비(BM) → 예방 정비(PM) → 예지 정비(PdM: AI 고장 예측)"
+      - "태양광: 인력 청소 → 청소 로봇·드론 열화상 진단 자동화"
+      - "원전: 디지털 I&C 교체와 가상현실 훈련(정비 인력 훈련 효율화)"
+    transition_driver: >
+      숙련 기술 인력 은퇴(기술 단절)와 원격지 자산 확산 — 인력 의존
+      O&M을 자동 진단·원격 운영으로 대체하는 것이 생존 전략.
+    expected_timeline: "2026~2028 AI 예지보전 표준화, 2027~2030 태양광 REPOWERING 정비 대량 수요"
+    demand_structure_impact: >
+      O&M이 노동집약 계약 사업에서 '진단 데이터 구독 + 소프트웨어' 결합
+      사업으로 재편 — 발전사와 O&M 사업자 간 데이터 소유권 계약이 새로운
+      협상 포인트.

@@ -19,8 +19,8 @@
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
     "framer-motion": "^13.2.0",
-    "lucide-react": "^1.39.0",
-    "marked": "^18.0.11",
+    "lucide-react": "^1.43.0",
+    "marked": "^18.0.12",
     "next": "16.2.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -28,10 +28,10 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "^1.4.2",
     "@types/node": "^20.19.43",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.5",
+    "@types/react-dom": "^19.2.7",
     "prisma": "^7.10.0",
     "typescript": "^5.9.3"
   }
