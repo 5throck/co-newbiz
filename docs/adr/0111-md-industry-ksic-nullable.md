@@ -72,6 +72,23 @@ patterns rejected that interaction: it was reworked to the explicit
 search-button pattern above in the same working day. The API, dataset,
 validation, and nullable-migration decisions in this ADR are unchanged.
 
+## Revision 2026-09-10 (official-name verification amendment)
+
+`name_ko` in the curated dataset now carries the **official KSIC 11th-revision
+name** for every code; profile-internal labels ("발전소 O&M 서비스업" for
+74100, "신재생에너지 발전업" for 35114, "수소 연료전지 발전업" for 35119,
+"정보보안 서비스업" for 63999) moved to the detail field as explicit aliases,
+after a user report showed 74100 rendered under its alias. Verification source:
+the categoryofbusiness.com KSIC-11 database, cross-checked against official
+11th-revision renumbering examples (10801 → 10901/10902; the 282 rename).
+Four profile anchors were found to conflict with the 11th revision and are
+**excluded from the dataset pending profile correction**: 264 (semiconductors;
+11차 264 = 통신·방송장비, 반도체 = 261/26111/26112), 29192 (robots; 11차 29192 =
+분사기·소화기, 산업용 로봇 = 29280), 30111 (shipbuilding; 11차 강선 = 31111),
+30303 (space; no such 11차 code, 우주선 under 3131). Correcting those profile
+anchors is owner-approved content and follows the normal profile-governance
+path — the picker must not assert code↔industry mappings it cannot verify.
+
 ## Consequences
 
 - No new fabricated identity codes are ever written; existing ones disappear

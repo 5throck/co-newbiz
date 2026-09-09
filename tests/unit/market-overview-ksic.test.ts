@@ -268,24 +268,32 @@ describe("GET /api/market-overview/ksic — curated master search", () => {
   });
 
   test("code prefix search finds profile entries", async () => {
-    const res = await req("/api/market-overview/ksic?q=291", { headers: { cookie: analystCookie } });
+    const res = await req("/api/market-overview/ksic?q=292", { headers: { cookie: analystCookie } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { entries: Array<{ code: string; name_ko: string }> } };
-    expect(body.data.entries.some((e) => e.code === "29192")).toBe(true);
+    expect(body.data.entries.some((e) => e.code === "29241")).toBe(true);
   });
 
-  test("name substring search works in Korean", async () => {
-    const res = await req(`/api/market-overview/ksic?q=${encodeURIComponent("로봇")}`, { headers: { cookie: analystCookie } });
+  test("Korean name search works — 74100 shows its official 11th-revision name (ADR-0111 revision)", async () => {
+    const res = await req(`/api/market-overview/ksic?q=${encodeURIComponent("사업시설")}`, { headers: { cookie: analystCookie } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { entries: Array<{ code: string; name_ko: string }> } };
+    const entry = body.data.entries.find((e) => e.code === "74100");
+    expect(entry?.name_ko).toBe("사업시설 유지·관리 서비스업");
+  });
+
+  test("profile alias search matches via the detail field", async () => {
+    const res = await req(`/api/market-overview/ksic?q=${encodeURIComponent("발전소")}`, { headers: { cookie: analystCookie } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { entries: Array<{ code: string }> } };
-    expect(body.data.entries.some((e) => e.code === "29192")).toBe(true);
+    expect(body.data.entries.some((e) => e.code === "74100")).toBe(true);
   });
 
   test("empty query returns the full curated list", async () => {
     const res = await req("/api/market-overview/ksic", { headers: { cookie: analystCookie } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { entries: unknown[] }, meta: { count: number } };
-    expect(body.data.entries.length).toBe(13);
-    expect(body.meta.count).toBe(13);
+    expect(body.data.entries.length).toBe(9);
+    expect(body.meta.count).toBe(9);
   });
 });

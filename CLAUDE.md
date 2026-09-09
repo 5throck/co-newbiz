@@ -326,7 +326,7 @@ All shared Git/PR rules are in [docs/context.md](docs/context.md). Claude Code-s
 
 - **PR Language**: Governed by [docs/context.md](docs/context.md). All PR titles, bodies, and review comments must be written in English - no exceptions.
 
-*Last Updated: 2026-09-01 — removed redundant N-1/N boilerplate rows; /sync already covers lifecycle + audit + commit + push + PR; previous: 2026-06-21 inlined N-1/N rows*
+*Last Updated: 2026-09-09 — removed redundant N-1/N boilerplate rows; /sync already covers lifecycle + audit + commit + push + PR; previous: 2026-06-21 inlined N-1/N rows*
 <!-- COMMON-CLAUDE:END -->
 
 
@@ -396,6 +396,8 @@ Regulations, gate approvals, investment decisions, the security and privacy mode
 | `region-profiles/**`, `industry-profiles/**` | `source` / `verified_on` / `maintainer` are mandatory on every field; `_validate.ts` rejects unsourced fields |
 | `glossary/**` | Re-run glossary lint; check the four tooling integrations still resolve |
 | DB schema, auth, MCP tool scope | ADR required — see the ADR trigger list in the design doc |
+
+> **Workspace schema-governance baseline**: any DB schema change requires an ADR before merge. The project-specific ADR trigger list (design doc / `adr-governance`) remains authoritative for this project and extends — never replaces — the workspace baseline.
 
 ### Disclaimer
 
