@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.0.1
 // sync-agent-personas — generate Claude Code subagent definitions
 // (.claude/agents/<name>.md) from the canonical roster (agents/*.md).
 //
@@ -28,7 +28,7 @@ const TIER_MODEL: Record<string, string> = { high: "opus", medium: "sonnet", low
 interface Frontmatter { name: string; description: string; tierClaude?: string; status: string }
 
 function parseAgent(file: string): { key: string; fm: Frontmatter; body: string } | null {
-  const text = readFileSync(file, "utf8");
+  const text = readFileSync(file, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const end = text.indexOf("\n---", 3);
   if (!text.startsWith("---") || end === -1) return null;
   const raw = text.slice(3, end);

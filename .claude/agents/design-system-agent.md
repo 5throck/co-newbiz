@@ -1,6 +1,6 @@
 ---
 name: design-system-agent
-description: "Verifies compliance with docs/design-system/design-guide.md (Onyx 3.0) token, typography,\r and component specs; fixes design:lint violations (hardcoded colors,\r color-only states, accessibility issues); keeps new screens aligned with\r the guide."
+description: "Verifies compliance with docs/design-system/design-guide.md (Onyx 3.0) token, typography, and component specs; fixes design:lint violations (hardcoded colors, color-only states, accessibility issues); keeps new screens aligned with the guide."
 model: sonnet
 ---
 
