@@ -8362,18 +8362,6 @@
       }
     },
     {
-      "type": "composes_with",
-      "from": "project-review",
-      "to": "insight-synthesis",
-      "source": "relates_to",
-      "symmetric": true,
-      "provenance": {
-        "file": "skills/project-review/SKILL.md",
-        "field": "relates_to",
-        "index": 2
-      }
-    },
-    {
       "type": "used_by",
       "from": "project-review",
       "to": "partnership-agent",
@@ -8403,17 +8391,6 @@
       "source": "skill_manifest"
     },
     {
-      "type": "follows",
-      "from": "project-review",
-      "to": "portfolio-fit-assessment",
-      "source": "relates_to",
-      "provenance": {
-        "file": "skills/project-review/SKILL.md",
-        "field": "relates_to",
-        "index": 0
-      }
-    },
-    {
       "type": "used_by",
       "from": "project-review",
       "to": "process-governance-manager",
@@ -8431,51 +8408,10 @@
       "source": "skill_manifest"
     },
     {
-      "type": "composes_with",
+      "type": "references",
       "from": "project-review",
-      "to": "rag-scoring-framework",
-      "source": "relates_to",
-      "symmetric": true,
-      "provenance": {
-        "file": "skills/project-review/SKILL.md",
-        "field": "relates_to",
-        "index": 3
-      }
-    },
-    {
-      "type": "follows",
-      "from": "project-review",
-      "to": "stage-gate-governance",
-      "source": "relates_to",
-      "provenance": {
-        "file": "skills/project-review/SKILL.md",
-        "field": "relates_to",
-        "index": 1
-      }
-    },
-    {
-      "type": "composes_with",
-      "from": "project-review",
-      "to": "strategic-fit-screening",
-      "source": "relates_to",
-      "symmetric": true,
-      "provenance": {
-        "file": "skills/project-review/SKILL.md",
-        "field": "relates_to",
-        "index": 4
-      }
-    },
-    {
-      "type": "composes_with",
-      "from": "project-review",
-      "to": "two-tier-approval-chain",
-      "source": "relates_to",
-      "symmetric": true,
-      "provenance": {
-        "file": "skills/project-review/SKILL.md",
-        "field": "relates_to",
-        "index": 5
-      }
+      "to": "validate-docs-links",
+      "source": "prose"
     },
     {
       "type": "phase",
