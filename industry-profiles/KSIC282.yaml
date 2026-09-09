@@ -1,0 +1,91 @@
+code: "282"
+name_ko: 일차전지 및 이차전지 제조업 (KSIC 282 — 리튬이온 셀·팩, 양극/음극/전해액/분리막 소재 생태계 포함)
+
+value_chain_structure:
+  source: >
+    KSIC 11차 개정 (2024-07-01 시행 — '일차전지 및 축전지 제조업'을 '일차전지 및
+    이차전지 제조업'으로 개정, kssc.kostat.go.kr 및 categoryofbusiness.com/ksic/11/28209);
+    EU Battery Regulation (EU) 2023/1542 compliance literature; Korean cell-maker
+    disclosures (LG에너지솔루션·삼성SDI·SK온). See
+    docs/research/secondary-battery-industry-profile-2026-09.md for links.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    upstream_tiers:
+      - "광물·전구체: 리튬·니켈·코발트 (수입 의존 높음), 전구체 및 양극재(포스코퓨처엠, 에코프로비엠, LG화학), 음극재(포스코), 전해액(동화화인테크), 분리막(SK아이이테크, WCP)"
+      - "장비: 전조·코팅·조립·화성화 라인 설비 (국내 중소 장비 생태계)"
+    midstream_tiers:
+      - "셀 제조: LG에너지솔루션·삼성SDI·SK온(원통형/파우치/프리즘형), CATL·BYD(중국, 규모·LFP 주도)"
+      - "셀→팩 조립은 OEM 인접에서 진행; 화성화(aging/formatting)가 품질·수율의 병목 공정"
+    downstream_tiers:
+      - "EV(전기차 승용·상용)가 최대 수요처, ESS(재생에너지 정산), 소형 모빌리티· IT"
+      - "수요는 각국 보조금·규제 일정(EV 의무판매, 탄소규제)에 정책 연동 — 정책 변동이 수요를 선행 이동시킨다"
+    typical_proxy_chain_depth: 2
+    unit_of_output: "GWh (셀 생산능력·출하량 기준)"
+
+cycle_position_indicators:
+  source: >
+    Korean cell-maker utilization and investment-adjustment disclosures (2024),
+    EU/US EV demand and subsidy policy reporting — see the research doc.
+  verified_on: "2026-09-09"
+  maintainer: market-intelligence-agent
+  data:
+    cycle_driver: >
+      EV 보급 속도(정책 보조금·규제 일정 연동)와 ESS 수요. 2022~2023년의 공격적
+      증설 이후 2024년 유럽 EV 수요 둔화·미국 IRA 세부규정(FEOC) 강화로 가동률
+      하락 — 업계는 증설 조정 국면을 거쳤다.
+    typical_cycle_length_years: 5
+    current_phase_note: >
+      2024~2025년은 공급과잉 조정 국면(가동률 저하, 증설 축소 발표). 완성차
+      OEM의 전략적 재충전(re-arm) 수요와 ESS가 회복 앵커. 신규 진입 검토 시
+      2022년 피크의 시장규모를 정상화하지 말 것 — 그 증설 결정의 상당수가
+      이미 조정 국면의 원인이다.
+    peak_earnings_caveat: >
+      이차전지는 설비 리드타임(1.5~2년)이 길어 수요 피크에서 결정된 증설이
+      공급 피크로 도착하는 시차가 크다. 가동률과 계약 잔고(backlog)를
+      시장규모보다 우선 확인할 것.
+
+regulatory_landscape:
+  source: >
+    Regulation (EU) 2023/1542 (EUR-Lex summary), battery passport compliance
+    guides (Circularise, digiprodpass, Tracex), US IRA FEOC rules, Korean
+    K-배터리 전략 — links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: legal-counsel
+  data:
+    primary_regimes:
+      - "EU 배터리규정 (EU) 2023/1542: 탄소발자국 선언(EV·산업용 ≥2kWh — 제조 site·batch 단위), 2027-02-18부터 배터리 패스포트(디지털 이력) 의무, 담보·재활용 함유율 단계 의무화"
+      - "미국 IRA: 청정차 세액공제의 FEOC(우려 외국 단체) 배제 요건 — 중국산 소재·부품 의존 시 보조금 배제가 수요 구조를 직접 변경"
+      - "한국: K-배터리 발전전략(차세대·소형·ESS 다변화 지원), 조세특례제한법 국가첨단전략기술 시설투자 세액공제"
+    licensing_or_certification_bodies:
+      - "EU: 각국 지정 통지기관(공지기관) 적합성 평가 — CE 적합성 외 배터리 규정 전용 평가"
+      - "UN38.3 수송 인증(리튬전지 운송 필수), KS/KBIA 성능 인증(국내)"
+    cross_border_notes: >
+      EU 규정은 완성차뿐 아니라 배터리 수입 자체에 적용되어 소재 단계까지
+      실사(due diligence) 요구가 역전파된다. FEOC 규칙은 소재 '원산지'와
+      '소유 구조'를 동시에 보므로, 중국 합작 지분 구조가 미국 시장 수요 적합성을
+      바꾼다 — 신규 진입 검토 시 소재 조달 지도와 고객 시장 지도를 겹쳐 볼 것.
+
+technology_transitions:
+  source: >
+    Benchmark Minerals ("Will 2027 be the year of the solid-state EV battery"),
+    solid-state timeline analyses (roadethos.com), Samsung SDI all-solid-state
+    2027 mass-production target announcements — links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    known_transitions:
+      - "화학구조: 삼원(NCM) → LFP 확산(중국 주도 가격 경쟁력, EV·ESS 겸용) — 고니켈 삼원은 프리미엄·장거리 세그먼트로 수렴"
+      - "전고체(solid-state): Samsung SDI 2027 양산 목표, CATL 2027 시제, BYD 2027 시험 — 단, 대규모 양산은 2030년 이후로 보는 분석이 우세"
+      - "나트륨이온: LFP 하위 세그먼트 잠재 대체 (자원 전략 변수)"
+      - "셀투팩(CTP)·셀투섀시: 팩 공정 소거 — OSAT·모듈 사업 구조에 직접 영향"
+    transition_driver: >
+      차량 가격 경쟁(Wh당 원가)과 주행거리 요구의 동시 상승 — 화학구조 선택이
+      세그먼트 전략이 되었고, 제조 원가의 절반 이상이 소재에 좌우된다.
+    expected_timeline: "2026~2027 LFP/중니켈 확산과 전고체 시제 병행, 2027 전고체 소량 양산 시작(대규모는 2030년 이후 가능성), 2027-02-18 EU 배터리 패스포트 의무화"
+    demand_structure_impact: >
+      탄소발자국·패스포트 규정은 '어디서, 어떻게 만들었는가'를 수요 자격
+      조건으로 바꾼다 — 청정 전력 기반 공장과 공급망 실사 역량이 가격 경쟁력과
+      동등한 수요 자격이 된다. 전고체 전환은 기존 습식 공정 자산의 잉여화
+      리스크를 만들므로, 신규 진입은 공정 자산의 기술 수명을 명시적으로
+      검증해야 한다.
