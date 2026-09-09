@@ -126,10 +126,11 @@ export function MarketView() {
       .catch((e) => setError(e instanceof Error ? e.message : "상세 불러오기 실패"));
   }, [selectedIndustry]);
 
-  // KSIC 코드 검색 — DART 검색과 동일한 표준 패턴: 입력 + 명시적 "🔍 검색" 버튼,
+  // KSIC 코드 검색 — DART 검색과 동일한 표준 패턴(이름으로 검색 → 결과 선택 시 코드 채움):
+  // 명시적 "🔍 검색" 버튼, 검색어는 KSIC 입력값을 우선하고 비어 있으면 산업명으로 조회.
   // 결과는 sizing-note-list 목록으로 제시하고 선택은 클릭(aria-pressed + ✔ 표시).
   async function searchKsicCodes() {
-    const q = newCode.trim();
+    const q = newCode.trim() || newName.trim();
     if (!q || ksicSearching) return;
     setKsicSearching(true);
     setError(null);
@@ -338,7 +339,7 @@ export function MarketView() {
                     placeholder="예: 28121"
                     className="sizing-new-input sizing-new-input-sm"
                   />
-                  <button type="button" className="btn-ghost btn-sm" disabled={ksicSearching || !newCode.trim()} onClick={() => void searchKsicCodes()}>
+                  <button type="button" className="btn-ghost btn-sm" disabled={ksicSearching || (!newCode.trim() && !newName.trim())} onClick={() => void searchKsicCodes()}>
                     {ksicSearching ? "검색 중..." : "🔍 KSIC 검색"}
                   </button>
                 </span>
@@ -369,7 +370,7 @@ export function MarketView() {
               </ul>
             )}
             <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
-              KSIC 코드는 선택 — 🔍 검색으로 코드를 찾아 선택하거나 직접 입력하세요(미지정 시 "—" 표시). 업종 프로필이 있는 코드는 표기됩니다.
+              KSIC 코드는 선택 — 산업명 또는 코드로 🔍 검색한 뒤 목록에서 선택하거나 직접 입력하세요(미지정 시 "—" 표시). 업종 프로필이 있는 코드는 표기됩니다.
               systematic-market-sizing 8단계 파이프라인이 순서대로 실행되며, 완료 전까지는 목록에 "분석 중"으로 표시됩니다.
               {llmStatus && (llmStatus.configured
                 ? <> LLM 요약 사용: <strong>{llmStatus.provider} / {llmStatus.model}</strong></>
