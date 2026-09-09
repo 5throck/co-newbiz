@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Backfills the hydraulic-breaker research report as a REGULAR market-sizing
  * analysis version — the one-time migration that retires the HYD-BRK sentinel
@@ -159,8 +159,9 @@ function main(): void {
   const db = getDb();
   const now = new Date().toISOString();
 
+  // 이름 변형(유압브레이커/유압식 브레이커 등)까지 커버 — 센티널 코드 우선.
   const industry = db.query(
-    "SELECT id, ksic_code, name_ko FROM md_industry WHERE ksic_code IN (?, ?) OR name_ko = '유압브레이커' ORDER BY CASE WHEN ksic_code = ? THEN 0 ELSE 1 END LIMIT 1",
+    "SELECT id, ksic_code, name_ko FROM md_industry WHERE ksic_code IN (?, ?) OR name_ko LIKE '%브레이커%' ORDER BY CASE WHEN ksic_code = ? THEN 0 ELSE 1 END LIMIT 1",
   ).get(LEGACY_KSIC, REAL_KSIC, REAL_KSIC) as
     | { id: string; ksic_code: string | null; name_ko: string }
     | undefined;
@@ -170,8 +171,8 @@ function main(): void {
   }
 
   db.transaction(() => {
-    // 1. legacy sentinel code → real KSIC (collision-guarded, fallback NULL)
-    if (industry.ksic_code === LEGACY_KSIC) {
+    // 1. legacy sentinel code or 미지정 → real KSIC (collision-guarded, fallback NULL)
+    if (industry.ksic_code === LEGACY_KSIC || industry.ksic_code === null) {
       const taken = db.query("SELECT 1 FROM md_industry WHERE ksic_code = ?").get(REAL_KSIC);
       db.run("UPDATE md_industry SET ksic_code = ? WHERE id = ?", [taken ? null : REAL_KSIC, industry.id]);
     }
