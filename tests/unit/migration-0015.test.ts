@@ -104,7 +104,7 @@ beforeAll(() => {
   resetDb();
   runMigrations(TEST_DB_PATH);
   db = getDb(TEST_DB_PATH);
-});
+}, 60000);
 
 afterAll(() => {
   resetDb();

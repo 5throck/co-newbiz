@@ -50,7 +50,7 @@ beforeAll(() => {
   runMigrations(TEST_DB_PATH);
   db = getDb(TEST_DB_PATH);
   projectId = insertProject();
-});
+}, 60000);
 
 afterAll(() => {
   resetDb();

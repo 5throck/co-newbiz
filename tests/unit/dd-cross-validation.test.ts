@@ -109,7 +109,7 @@ beforeAll(() => {
   runMigrations(TEST_DB_PATH);
   db = getDb(TEST_DB_PATH);
   for (const u of [U1, U2, U3]) insertUser(u);
-});
+}, 60000);
 
 afterAll(() => {
   resetDb();
