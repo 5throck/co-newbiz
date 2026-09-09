@@ -85,7 +85,7 @@ beforeAll(() => {
   insertUser(U1);
   insertUser(U2);
   insertUser(U3);
-});
+}, 60000);
 
 afterAll(() => {
   resetDb();
