@@ -306,3 +306,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20260908-02` | decision | `waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
 | `dec:DEC-20260909-02` | decision | — | — | — |
+| `dec:DEC-20260909-03` | decision | `policy-change-impact-analysis`, `strategic-fit-screening` | — | — |
+| `dec:DEC-20260909-04` | decision | `policy-change-impact-analysis` | — | — |
+| `dec:DEC-20260909-05` | decision | `policy-change-impact-analysis` | — | — |
+| `dec:DEC-20260909-06` | decision | `policy-change-impact-analysis` | — | — |

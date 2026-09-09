@@ -42,9 +42,10 @@ steps:
       `checklists/strategic-fit-screening-checklist.yaml`, desk research and
       sponsor knowledge only, no commissioned analysis. Decision vocabulary
       is Go/Kill/Hold/Recycle with written feedback recorded on every
-      rejection. Scorecard weights and advance thresholds are ILLUSTRATIVE
-      until the thresholds meeting under docs/decisions/open/ (ADR-0051
-      open question (b)).
+      rejection. Scorecard weights and advance thresholds are ADOPTED POLICY
+      per DEC-20260909-03 (ADR-0051 (b) resolved 2026-09-09); a
+      recalibration review follows the first 5 scorecard-bearing runs with
+      confirmed outcomes.
   - id: 3
     gate: Screening
     agent_key: antitrust-agent

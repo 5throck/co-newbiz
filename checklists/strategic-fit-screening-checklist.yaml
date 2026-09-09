@@ -14,12 +14,12 @@ gate: Screening
 # scored 0-10 weighted on a visible scorecard. Evidence allowed at this gate: desk
 # research and the sponsor's own knowledge only — no commissioned analysis.
 #
-# THRESHOLDS ARE ILLUSTRATIVE: the scoring weights and advance thresholds cited in
-# item texts (e.g. >=60/100 advance, 45-59 Hold/Recycle, <45 Kill, from Cooper Gate 1
-# and Green Book SOC practice) are illustrations from published practice, NOT activated
-# policy. Activation requires the thresholds meeting recorded under docs/decisions/open/
-# — the same rule that keeps rag_rule rows at enabled=0 until a dated decision record
-# exists (ADR-0051 open question (b)).
+# THRESHOLDS ARE ADOPTED POLICY (DEC-20260909-03, 2026-09-09): the scoring weights
+# and advance thresholds cited in item texts (e.g. >=60/100 advance, 45-59
+# Hold/Recycle, <45 Kill, from Cooper Gate 1 and Green Book SOC practice) are
+# activated policy per ADR-0051 open question (b)'s resolution. Condition: a
+# recalibration review is mandatory after the first 5 scorecard-bearing runs with
+# confirmed outcomes (see the DEC record).
 
 items:
   # Part 1 — must-meet knock-outs (any Fail = reject at screen)

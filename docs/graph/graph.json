@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 600,
+    "node_count": 604,
     "edge_count": 992
   },
   "nodes": [
@@ -1249,6 +1249,26 @@
       "id": "dec:DEC-20260909-02",
       "type": "decision",
       "label": "dec:DEC-20260909-02"
+    },
+    {
+      "id": "dec:DEC-20260909-03",
+      "type": "decision",
+      "label": "dec:DEC-20260909-03"
+    },
+    {
+      "id": "dec:DEC-20260909-04",
+      "type": "decision",
+      "label": "dec:DEC-20260909-04"
+    },
+    {
+      "id": "dec:DEC-20260909-05",
+      "type": "decision",
+      "label": "dec:DEC-20260909-05"
+    },
+    {
+      "id": "dec:DEC-20260909-06",
+      "type": "decision",
+      "label": "dec:DEC-20260909-06"
     },
     {
       "id": "dec:market-thresholds",
