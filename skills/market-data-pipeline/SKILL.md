@@ -39,7 +39,9 @@ metadata:
 `scripts/co-newbiz/newbiz.ts` as `fetch` and `md:sync`. This skill is now the
 operating manual for the live pipeline: k-* skills define source-specific
 usage discipline, adapters execute collection, and `ensure_fresh()` owns
-cache-first revision preservation.
+cache-first revision preservation. Initial KOSIS monthly index seeds are
+live-verified; future KOSIS series must record `tblId`, `itmId`, and every
+required `objL*` coordinate before `_verified` is set true.
 
 ## Policy (ADR-0004)
 
@@ -63,6 +65,7 @@ Storage grows monotonically with revisions, offset by the archival policy
 
 - Any time a project needs external market/industry time-series data
 - When refreshing master-data catalogs from DART or law sources
+- When adding KOSIS series only after live coordinate verification
 
 ## Execution Steps
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.16.1
+// @version 1.16.2
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -117,9 +117,39 @@ function upsertPeriod(db: ReturnType<typeof getDb>, periodKey: string): string {
   return id;
 }
 
+function resolveMonthlyPeriods(fromArg: string | undefined, toArg: string | undefined): string[] {
+  const ym = /^\d{4}-\d{2}$/;
+  const year = new Date().getUTCFullYear();
+  const from = fromArg ?? `${year}-01`;
+  const to = toArg ?? `${year}-12`;
+  if (!ym.test(from) || !ym.test(to)) {
+    console.error("fetch: --from/--to must use YYYY-MM.");
+    process.exit(2);
+  }
+  const [fromYear, fromMonth] = from.split("-").map(Number);
+  const [toYear, toMonth] = to.split("-").map(Number);
+  if (fromMonth < 1 || fromMonth > 12 || toMonth < 1 || toMonth > 12) {
+    console.error("fetch: --from/--to months must be 01-12.");
+    process.exit(2);
+  }
+  const start = fromYear * 12 + fromMonth;
+  const end = toYear * 12 + toMonth;
+  if (start > end) {
+    console.error("fetch: --from must be earlier than or equal to --to.");
+    process.exit(2);
+  }
+  const periods: string[] = [];
+  for (let cursor = start; cursor <= end; cursor++) {
+    const y = Math.floor((cursor - 1) / 12);
+    const m = ((cursor - 1) % 12) + 1;
+    periods.push(`${y}-${String(m).padStart(2, "0")}`);
+  }
+  return periods;
+}
+
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|kosis|law|opendata> [--series <id>] [--list] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
+  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
 }
 
 switch (command) {
@@ -522,6 +552,10 @@ switch (command) {
     };
     const seriesIdIdx = args.indexOf("--series");
     const seriesArg = seriesIdIdx >= 0 ? args[seriesIdIdx + 1] : undefined;
+    const fromIdx = args.indexOf("--from");
+    const toIdx = args.indexOf("--to");
+    const fromArg = fromIdx >= 0 ? args[fromIdx + 1] : undefined;
+    const toArg = toIdx >= 0 ? args[toIdx + 1] : undefined;
     const all = args.includes("--all");
     let failures = 0;
 
@@ -570,10 +604,7 @@ switch (command) {
           console.error(`  isolated failure ${s.seriesId}: ${err instanceof Error ? err.message : err}`);
           continue;
         }
-        // Current year, all months — the KOSIS seed series are monthly.
-        const year = new Date().getUTCFullYear();
-        for (let m = 1; m <= 12; m++) {
-          const periodKey = `${year}-${String(m).padStart(2, "0")}`;
+        for (const periodKey of resolveMonthlyPeriods(fromArg, toArg)) {
           try {
             const periodId = upsertPeriod(db, periodKey);
             const periodFetcher = async () => rawFetcher(periodKey);
@@ -595,11 +626,11 @@ switch (command) {
       break;
     }
 
-    // catalog adapters: md:sync semantics. dart's corpList is a full-market
+    // catalog adapters: md:sync semantics. dart's corpCode dump is a full-market
     // dump (~100k rows) — require explicit opt-in so a typo'd fetch never
     // pulls it uninvited (law's whitelist default keeps it small).
     if (source === "dart" && !args.includes("--all")) {
-      console.error("fetch: dart catalog is the full-market corp list — pass --all explicitly.");
+      console.error("fetch: dart catalog is the full-market corpCode dump — pass --all explicitly.");
       process.exit(2);
     }
     registerSource();

@@ -25,6 +25,7 @@ registry makes adding a source a one-line change.
 
 ### Wave A — Data pipeline (landed; live source breadth expands operationally)
 - **A1. Source-adapter framework + fetch + md:sync** (design doc required) — 4 adapters (dart/kosis/opendata/law), `fetch` CLI case, catalog seeding (`md:sync`: md_industry/md_source/md_period/md_unit/md_company/md_statute). Fixture-Fetcher tests for idempotency/revision preservation/change log.
+  - 2026-09-09 operations note: initial KOSIS monthly index seeds are live-verified and can be fetched with bounded `--from YYYY-MM --to YYYY-MM` ranges; add future series only after recording `tblId` + `itmId` + every required `objL*` coordinate.
 - **A2. calibrate + convert** — CLI wrappers: `python/correlation.py` OLS/lead-lag → `proxy_link`/`proxy_chain` upsert (grades A/B/C); unit conversion through `md_unit.si_coefficient` + proxy coefficients with compounded-CI error bands.
 - **A3. policy:sync / policy:impact / fin:project** — policy-doc registry + impact reverse-index (skills/procedures), project financial rollup. (`law:sync` is absorbed by the A1 law adapter; `export` already exists as `db:export`.)
 

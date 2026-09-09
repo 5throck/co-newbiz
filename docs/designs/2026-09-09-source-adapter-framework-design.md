@@ -51,7 +51,7 @@ export const SOURCE_ADAPTERS: Record<string, SourceAdapter>;
 
 | Adapter | kind | Endpoint | Credential | Output |
 |---|---|---|---|---|
-| `dart` | catalog | DART OpenAPI (generalizes `dart-collect.ts`) | `DART_API_KEY` | `md_company` (dart_corp_code) via corpList.xml |
+| `dart` | catalog | DART OpenAPI (generalizes `dart-collect.ts`) | `DART_API_KEY` | `md_company` (dart_corp_code) via corpCode.xml |
 | `kosis` | observations | KOSIS stats API | `KOSIS_API_KEY` | `fact_market_observation` series |
 | `law` | catalog | 법제처 법령검색 (`law.go.kr/DRF/lawSearch.do`, JSON) | `LAW_API_OC` | `md_statute` (korea_statute_id) |
 | `opendata` | catalog | data.go.kr (extension point — transport shared with law) | `DATA_GO_KR_API_KEY` | none onboarded yet |
@@ -67,9 +67,10 @@ export const SOURCE_ADAPTERS: Record<string, SourceAdapter>;
 ### 1.3 KOSIS series mapping
 
 - `SeriesDescriptor` = `{seriesId, adapter, title, unitCode, periodType, orgId,
-  tblId, _verified}`. Seed entries ship **`_verified: false` by design** — the
-  orgId/tblId pairs must be confirmed against the live KOSIS API before outputs
-  are trusted (decided 2026-09-09: small default seed, extended in operation).
+  tblId, itmId, objL1..objL8, _verified}`. New seed entries ship
+  **`_verified: false` by design** until the `orgId`/`tblId`/`itmId`/required
+  `objL*` coordinates are confirmed against the live KOSIS API. The initial
+  monthly index seeds were verified on 2026-09-09.
 - KOSIS responses normalize to per-period `{value, contentHash=sha256(raw), raw}`.
   Unknown unit strings are **quarantined** (`kosis-units.ts`) — a silently wrong
   unit would poison downstream analysis (FR-DATA-03).
@@ -77,9 +78,9 @@ export const SOURCE_ADAPTERS: Record<string, SourceAdapter>;
 ## 2. fetch CLI
 
 ```
-bun scripts/co-newbiz/newbiz.ts fetch --source kosis [--series <id>]
+bun scripts/co-newbiz/newbiz.ts fetch --source kosis [--series <id>] [--from YYYY-MM] [--to YYYY-MM]
 bun scripts/co-newbiz/newbiz.ts fetch --source law [--all]
-bun scripts/co-newbiz/newbiz.ts fetch --source dart --all   # corpList is a full-market dump — --all required
+bun scripts/co-newbiz/newbiz.ts fetch --source dart --all   # corpCode is a full-market dump — --all required
 ```
 
 - Observation series: current-year months, one `ensure_fresh()` per period — the
@@ -125,5 +126,5 @@ recorded in the PR body. Limitations recorded otherwise.
 
 ## 7. Open questions resolved (2026-09-09)
 
-1. KOSIS seed: small default set shipped unverified; extended in operation.
+1. KOSIS seed: small default set shipped; initial monthly index seeds verified on 2026-09-09, future additions remain unverified until live coordinates are recorded.
 2. law scope: whitelist default, `--all` for the full sweep.

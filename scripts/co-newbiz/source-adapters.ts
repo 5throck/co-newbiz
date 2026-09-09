@@ -1,4 +1,4 @@
-// @version 1.0.1
+// @version 1.0.2
 /**
  * source-adapters.ts — the pluggable data-source adapter framework
  * (design: docs/designs/2026-09-09-source-adapter-framework-design.md).
@@ -14,8 +14,8 @@
  *  - A missing credential makes the adapter report disabled; the CLI exits
  *    nonzero rather than silently returning empty results.
  *  - An unknown KOSIS unit is quarantined (kosis-units.ts), never guessed.
- *  - Seed statIds carry "_verified": false until confirmed against the live
- *    KOSIS API — the seed ships unverified-by-design, not as authority.
+ *  - New seed statIds carry "_verified": false until confirmed against the
+ *    live KOSIS API — future seeds ship unverified-by-design, not as authority.
  */
 
 import { ulid } from "../../db/lib/ulid.ts";
@@ -37,6 +37,13 @@ export interface SeriesDescriptor {
   orgId?: string;
   tblId?: string;
   objL1?: string;
+  objL2?: string;
+  objL3?: string;
+  objL4?: string;
+  objL5?: string;
+  objL6?: string;
+  objL7?: string;
+  objL8?: string;
   itmId?: string;
   /** Seed entries ship unverified; flip after a live-API confirmation */
   _verified?: boolean;
@@ -118,15 +125,15 @@ const dartAdapter: SourceAdapter = {
   async listCatalog() {
     const apiKey = requireKey("DART_API_KEY");
     const upserts: CatalogUpsert[] = [];
-    // DART corpList.xml is the one DART endpoint that is XML-only; fetch the
+    // DART corpCode.xml is the one DART endpoint that is XML-only; fetch the
     // ZIP, decompress, and parse the COMPANY rows. (Full XML parsing lives in
     // the CLI case — here we produce upserts from the standard list.)
-    const url = `https://opendart.fss.or.kr/api/corpList.xml?crtfc_key=${encodeURIComponent(apiKey)}`;
+    const url = `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${encodeURIComponent(apiKey)}`;
     const { safeFetch } = await import("../lib/ssrf.ts");
     const res = await safeFetch(url, { signal: AbortSignal.timeout(60_000) });
-    if (!res.ok) throw new Error(`DART corpList: HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`DART corpCode: HTTP ${res.status}`);
     const rows = parseCorpXml(Buffer.from(await res.arrayBuffer()));
-    if (rows.length === 0) throw new Error("DART corpList: ZIP/XML parse yielded no company rows.");
+    if (rows.length === 0) throw new Error("DART corpCode: ZIP/XML parse yielded no company rows.");
     for (const row of rows) {
       const corpCode = row.corp_code;
       const nameKo = row.corp_name;
@@ -147,24 +154,28 @@ const dartAdapter: SourceAdapter = {
  *  a series; fetch --list shows the _verified flag. Extend freely. */
 const KOSIS_SEED_SERIES: SeriesDescriptor[] = [
   {
-    seriesId: "kosis:9012011",
+    seriesId: "kosis:2011011:DT_1JH20201:T1:0",
     adapter: "kosis",
     orgId: "101",
-    tblId: "9012011",
-    title: "산업생산지수 (광공업·제조업 제외, 사업체조사 기준) — SEED, verify tblId against KOSIS before production",
+    tblId: "DT_1JH20201",
+    itmId: "T1",
+    objL1: "0",
+    title: "전산업생산지수(원지수, 농림어업 제외, 2020=100) — KOSIS verified 2026-09-09",
     unitCode: "index",
     periodType: "month",
-    _verified: false,
+    _verified: true,
   },
   {
-    seriesId: "kosis:2001109",
+    seriesId: "kosis:1970002:DT_1F02011:T11:10",
     adapter: "kosis",
     orgId: "101",
-    tblId: "2001109",
-    title: "광업·제조업 생산자출하지수 — SEED, verify tblId against KOSIS before production",
+    tblId: "DT_1F02011",
+    itmId: "T11",
+    objL1: "10",
+    title: "기본분류 일부항목 제외 광공업 생산자제품 출하지수(원지수, 2020=100) — KOSIS verified 2026-09-09",
     unitCode: "index",
     periodType: "month",
-    _verified: false,
+    _verified: true,
   },
 ];
 
@@ -189,7 +200,7 @@ const kosisAdapter: SourceAdapter = {
     }
     if (!series.objL1 || !series.itmId) {
       throw new Error(
-        `kosis: series '${ctx.seriesId}' is not live-fetchable yet — verify objL1/itmId against KOSIS and update KOSIS_SEED_SERIES before collection.`,
+        `kosis: series '${ctx.seriesId}' is not live-fetchable yet — verify objL*/itmId against KOSIS and update KOSIS_SEED_SERIES before collection.`,
       );
     }
     const apiKey = requireKey("KOSIS_API_KEY");
@@ -197,7 +208,31 @@ const kosisAdapter: SourceAdapter = {
       // KOSIS stats API: one call per series returns the full period range;
       // periodKey (YYYY-MM or YYYY) narrows the parsed row.
       const compactPeriod = periodKey.replace("-", "");
-      const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${encodeURIComponent(apiKey)}&orgId=${encodeURIComponent(series.orgId!)}&tblId=${encodeURIComponent(series.tblId!)}&objL1=${encodeURIComponent(series.objL1!)}&itmId=${encodeURIComponent(series.itmId!)}&prdSe=M&startPrdDe=${encodeURIComponent(compactPeriod)}&endPrdDe=${encodeURIComponent(compactPeriod)}&format=json`;
+      const params = new URLSearchParams({
+        method: "getList",
+        apiKey,
+        orgId: series.orgId!,
+        tblId: series.tblId!,
+        itmId: series.itmId!,
+        prdSe: "M",
+        startPrdDe: compactPeriod,
+        endPrdDe: compactPeriod,
+        format: "json",
+        jsonVD: "Y",
+      });
+      for (const [key, value] of Object.entries({
+        objL1: series.objL1,
+        objL2: series.objL2,
+        objL3: series.objL3,
+        objL4: series.objL4,
+        objL5: series.objL5,
+        objL6: series.objL6,
+        objL7: series.objL7,
+        objL8: series.objL8,
+      })) {
+        if (value) params.set(key, value);
+      }
+      const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?${params.toString()}`;
       const payload = await getJson(url);
       if (!Array.isArray(payload)) {
         const err = payload as { err?: string; errMsg?: string; errMessage?: string };
@@ -322,22 +357,63 @@ export function upsertCatalog(
   let existing = 0;
   const now = new Date().toISOString();
   for (const up of upserts) {
-    const keyCols = Object.keys(up.naturalKey);
-    const where = keyCols.map((c) => `${c} = ?`).join(" AND ");
-    const found = db.query(`SELECT id FROM ${up.table} WHERE ${where}`).get(...keyCols.map((c) => up.naturalKey[c])) as
-      | { id: string }
-      | undefined;
+    const found = findCatalogByNaturalKey(db, up) as { id: string } | undefined;
     if (found) {
       existing++;
       continue;
     }
-    const cols = [...keyCols, ...Object.keys(up.values)];
-    const vals = [...keyCols.map((c) => up.naturalKey[c]), ...Object.values(up.values)];
-    db.run(
-      `INSERT INTO ${up.table} (id, ${cols.join(", ")}, created_at) VALUES (${["?", ...cols.map(() => "?"), "?"].join(", ")})`,
-      [ulid(), ...vals, now],
-    );
+    insertCatalogByNaturalKey(db, up, ulid(), now);
     inserted++;
   }
   return { inserted, existing };
+}
+
+function findCatalogByNaturalKey(
+  db: { query: (sql: string, ...args: unknown[]) => { get: (...args: unknown[]) => unknown } },
+  up: CatalogUpsert,
+): unknown {
+  switch (up.table) {
+    case "md_company":
+      return db.query("SELECT id FROM md_company WHERE dart_corp_code = ?").get(up.naturalKey.dart_corp_code);
+    case "md_statute":
+      return db.query("SELECT id FROM md_statute WHERE korea_statute_id = ?").get(up.naturalKey.korea_statute_id);
+    case "md_industry":
+      return db.query("SELECT id FROM md_industry WHERE code = ?").get(up.naturalKey.code);
+    case "md_source":
+      return db.query("SELECT id FROM md_source WHERE code = ?").get(up.naturalKey.code);
+  }
+}
+
+function insertCatalogByNaturalKey(
+  db: { run: (sql: string, ...args: unknown[]) => void },
+  up: CatalogUpsert,
+  id: string,
+  now: string,
+): void {
+  switch (up.table) {
+    case "md_company":
+      db.run(
+        "INSERT INTO md_company (id, dart_corp_code, name_ko, name_en, created_at) VALUES (?, ?, ?, ?, ?)",
+        [id, up.naturalKey.dart_corp_code, up.values.name_ko ?? null, up.values.name_en ?? null, now],
+      );
+      return;
+    case "md_statute":
+      db.run(
+        "INSERT INTO md_statute (id, korea_statute_id, foreign_framework_key, created_at) VALUES (?, ?, ?, ?)",
+        [id, up.naturalKey.korea_statute_id, up.values.foreign_framework_key ?? null, now],
+      );
+      return;
+    case "md_industry":
+      db.run(
+        "INSERT INTO md_industry (id, code, name_ko, name_en, created_at) VALUES (?, ?, ?, ?, ?)",
+        [id, up.naturalKey.code, up.values.name_ko ?? null, up.values.name_en ?? null, now],
+      );
+      return;
+    case "md_source":
+      db.run(
+        "INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?, ?, ?, ?)",
+        [id, up.naturalKey.code, up.values.reliability_grade ?? "C", now],
+      );
+      return;
+  }
 }

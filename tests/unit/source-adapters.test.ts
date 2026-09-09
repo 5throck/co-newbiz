@@ -68,6 +68,7 @@ describe("kosis unit quarantine", () => {
   test("known units resolve; unknown units are quarantined (never guessed)", () => {
     expect(resolveKosisUnit("억원")?.unitCode).toBe("krw_100m");
     expect(resolveKosisUnit("%")?.dimension).toBe("ratio");
+    expect(resolveKosisUnit(`2020${String.fromCharCode(0xff1d)}100`)?.unitCode).toBe("index");
     expect(resolveKosisUnit("페타줄")).toBeNull(); // quarantine
     expect(resolveKosisUnit(undefined)).toBeNull();
     expect(Object.keys(KOSIS_UNITS).length).toBeGreaterThanOrEqual(8);
