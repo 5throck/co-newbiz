@@ -1,0 +1,89 @@
+code: "35111"
+name_ko: 원자력 발전업 (KSIC 35111 — 경수형 대형 원전과 소형모듈 SMR 포함)
+
+value_chain_structure:
+  source: >
+    제10차 전력수급기본계획(2024, 전력거래소/기획재정부 확정), 제9차 전력 수급
+    기본계획 대비 재생·원자력 비중 상향; 원자력 진흥 종합계획(2024-06, 국가원자력
+    안전위원회/과기정통부 공동). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    upstream_tiers:
+      - "핵연료 주기: 농축우라늄 수입(러시아 의존 축소), 핵연료 설계·제조(KEPCO-NF)"
+      - "주요 설비: 증기발생기·격리용기·주펌프(중대형 단조품 — DOOSAN Enerbility), I&C(미원상사 계열)"
+      - "SMR: NuScale VOYGR 설계 라이선스 기반(두산에너빌리티 제작 참여), 국내 SMR 생태계 협력"
+    midstream_tiers:
+      - "발전소 EPC·운영: 한전형 APR1400 (신한울 3·4호기), 스마트 원자력(안전성 개선), 복합 인프라"
+      - "O&M: 한전KPS 등 전문 정비기업 + 원전 운전 위탁 구조"
+    downstream_tiers:
+      - "전력 판매는 한전 독점 구조(계통 연계), 간접 수요처: 전력 집약 산업(데이터센터·반도체)의 무탄소 전력 수요가 원전 재평가 견인"
+      - "수출: 폴란드(파트너십 협정), 체코·사우디 등 건설 협력 — 국가 간 정부 협정이 선행 조건"
+    typical_proxy_chain_depth: 2
+    unit_of_output: "MWh 발전량 / MW 설비용량"
+
+cycle_position_indicators:
+  source: >
+    제10차 전력수급기본계획 (2024-02 확정 — 2036년 원자력 32.4% 비중 목표),
+    COP28 삼배(3x nuclear) 선언 참여국 동향; 원자력 진흥 종합계획(2024).
+    Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: market-intelligence-agent
+  data:
+    cycle_driver: >
+      정부 전력수급 계획의 원전 비중 결정이 신규 착수의 직접 동력 — 민수 시장이
+      아니라 '계획 승인 → 입찰 → 인허가' 사이클. 2035년 전후 탈원전 정책
+      보정 이후 신규 계획 재개.
+    typical_cycle_length_years: 10
+    current_phase_note: >
+      신규 국내 착수는 제한적(신한울 3·4호 완공 접근, 새울·삼괴 후보). 반면
+      SMR(소형모듈)·수출(폴란드 사전협약, 체코 AP1000 우선협상)이 성장
+      축으로 전환 중. 탈원전 기조에서 원전 확대 기조로의 정책 반전 직후라
+      정책 지속성이 핵심 리스크.
+    peak_earnings_caveat: >
+      원전 수주는 계약금·진도 기준 수금 구조로 긴 계약 기간(7~10년) 동안
+      마진이 뒤늦게 실현된다. 수주잔고 피크가 곧 실적 피크가 아니며, 상용
+      전 사고(quality issue) 시 하자보수 비용이 사업성을 반전시킬 수 있다
+      (신한울 1·2호기 전례).
+
+regulatory_landscape:
+  source: >
+    원자력안전법·전기사업법(원안위 발전용 원자로 인허가), 미국 123협정(한미
+    원자력 협정 2015 개정 — 재처리·농축 제한), 수출 통제(NSG 가이드라인).
+    Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: legal-counsel
+  data:
+    primary_regimes:
+      - "원자력안전법 — 발전용 원자로 건설·운영 허가(원자력안전위원회), 안전성 분석 보고서(SAR) 검토가 착수 선행 조건"
+      - "전기사업법 — 발전사업 허가 + 한전 계통연계 승인"
+      - "수출 시: 상대국 원자력 협정(123협정 유사) + 미국 기술 사용 시 미 협정·수출통제 동시 적용 — 삼중 규제"
+    licensing_or_certification_bodies:
+      - "한국: 원자력안전위원회(인허가), KINS(기술검토), KOLAS 인증 시험기관"
+      - "ASME N 인증(원전 주요 압력용기 제작 자격), ISO 19443(핵품질)"
+    cross_border_notes: >
+      한국산 원전 수출은 한국-미국 원자력 협정의 기술 보호 조항(농축·재처리
+      사전 동의)과 상대국 협정을 동시에 만족해야 한다. SMR의 경우 미국 설계
+      라이선스(NuScale 등)를 사용하면 미국 규제 승인 이력이 수출 자격의
+      전제가 된다.
+
+technology_transitions:
+  source: >
+    이노베이션 원자력(2024-06 원자력 혁신위원회 — 스마트 원자력 건설 기법),
+    SMR 수출 동향(NuScale-두산, 체코 EDU II 우선협상 2024-09), AI 데이터센터
+    전력 수요 관련 보도. Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    known_transitions:
+      - "대형 경수소 → SMR(소형모듈)·FTU(플로팅 원전) — 모듈러 공장 제작 전환"
+      - "건설 기법: 현장 순차 공법 → 모듈러 사전제작·이노베이션 공법(기간 단축)"
+      - "수요 구조: 계통 전력 → AI 데이터센터 전용 오프그리드 SMR(Microsoft-Three Mile Island 재가동 협약 사례)"
+    transition_driver: >
+      AI 데이터센터 무탄소 베이스로드 수요 급증 + 탈탄소 정책 — 재생에너지
+      간헐성을 보완하는 '안정적 무탄소 전력'으로 원전이 재평가.
+    expected_timeline: "SMR 상업 가동 2029~2033년(체코·폴란드·국내), AI 전용 SMR 계약은 2026~2027년 확산 예상"
+    demand_structure_impact: >
+      발전업체 중심의 수요가 아니라 데이터센터·산업 단지의 전력 구매자
+      (PPA) 중심으로 수요 주체가 이동 — 원전 수주가 정부 계획 없이도
+      민간 PPA로 성립되는 새 경로가 열림.

@@ -1,0 +1,91 @@
+code: "30303"
+name_ko: 우주선 제조업 (KSIC 30303 — 우주발사체·인공위성·위성 부품 포함; 우주 산업 전반)
+
+value_chain_structure:
+  source: >
+    우주개발 진흥법(2023 시행 — 우주산업 특별법 기반), 한국형 발사체(NURI)
+    개발(한국항공우주연구원 KARI), 우주산업 로드맵(과기정통부 — 우주경제
+    목표). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    upstream_tiers:
+      - "발사체 부품: 터보펌프·연소기·노즐(국내 정밀 가공), 고압 탱크(복합재 — 한국항공우주산업)"
+      - "위성: 원격탐사·통신 위성 본체(한국항공우주산업 KARI 협력), 광학·SAR 탑재체(SPA); LIG넥스원(정찰 위성)"
+      - "지상국: 안테나·관제 SW(Satrec Initiative 등)"
+    midstream_tiers:
+      - "발사체: 누리호(KARI 개발 — 한화에어로스페이스 이관), 민간 발사체(이노스페이스 한경(하이퍼소닉), 인노스페이스), SpaceX Falcon 9 재사용 성공"
+      - "위성 제조: Satrec Initiative(광학 위성 수출), 천리안·아리랑 위성(KARI), 소형 위성 스타트업"
+      - "서비스: 위성 데이터 판매(광학·SAR 영상), 통신(LEO 위성 인터넷 — Starlink 경쟁)"
+    downstream_tiers:
+      - "정부: 국가 우주 프로그램(달 탐사 2단계, 한국형 발사체 체계화), 군사 위성(정찰·통신)"
+      - "민간: 위성 인터넷(LEO), 지구관측 데이터 판매, 우주 관광(장기)"
+      - "수출: 위성 영상·부품 수출(미국·유럽 우주 기업 협력)"
+    typical_proxy_chain_depth: 3
+    unit_of_output: "발사 건수 / 위성 대수 / 발사체 중량(kg to LEO)"
+
+cycle_position_indicators:
+  source: >
+    우주개발 진흥법 시행(2023-06 — 우주산업 특별법), 한국형 발사체 누리호
+    3차 발사 성공(2023-05 — 완전 자체 기술), LEO 위성 통신 수요 성장,
+    우주산업 규모 전망(과기정통부 — 2045년 국내 우주경제). Links in the
+    research doc.
+  verified_on: "2026-09-09"
+  maintainer: market-intelligence-agent
+  data:
+    cycle_driver: >
+      국가 우주예산(과기정통부·방위사업청)과 민간 투자(스타트업 VC)의
+      교차. 발사 성공·실패가 수주 신뢰도를 직접 좌우. LEO 위성 통신
+      대량 발사 수요가 발사체 시장을 성장시키는 동력.
+    typical_cycle_length_years: 8
+    current_phase_note: >
+      국내는 성장 초기 — 누리호 3차 성공으로 자체 발사체 기술 확보,
+      민간 발사체·위성 스타트업 증가. 글로벌은 SpaceX 독점적 주도(발사
+      비용 격차) — 국내 발사체는 비용 경쟁력이 핵심 과제.
+    peak_earnings_caveat: >
+      발사 실패 시 전량 손실 + 수주 신뢰 하락이 복합 작용 — 보험 비용과
+      재발사 검증 비용이 사업성을 좌우. 위성 수명(5~15년) 이후 교체
+      수요가 반복 수익을 만든다.
+
+regulatory_landscape:
+  source: >
+    우주개발 진흥법(2023-06 시행 — 민간 우주활동 허가 체계 신설), 국제
+    우주 조약(우주조약 1967 — 발사 책임 국가 귀속), ITAR(미국 수출통제 —
+    위성 부품 협력 제한). Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: legal-counsel
+  data:
+    primary_regimes:
+      - "우주개발 진흥법(2023) — 민간 발사·위성 운영 허가 체계 신설(국가우주위원회 승인), 발사 보험·사고 배상 의무"
+      - "우주조약(1967) — 발사 국가의 책임 원칙(제3국 피해 배상)"
+      - "ITAR(미국) — 미국 위성 부품·기술 수출 통제(한국 기업 협력 제한 요인)"
+      - "주파수 할당 — ITU 국제 등록(위성 통신 필수)"
+    licensing_or_certification_bodies:
+      - "과기정통부·국가우주위원회(발사 허가), 한국항공우주산업(KAIA? — 인증), NASA/ESA 협력 인증"
+      - "ISO 24113(우주잔해 감축) — 위성 폐기 계획 의무화 추세"
+    cross_border_notes: >
+      미국 ITAR는 미국 부품이 포함된 위성의 수출·협력에 엄격한 제한 —
+      한국 기업의 미국 파트너 협력 시 ITAR 면제·라이선스가 선행 조건.
+      발사 책임은 발사 국가(한국)가 부담하므로 민간 발사도 국가 보증
+      구조가 필요.
+
+technology_transitions:
+  source: >
+    SpaceX Falcon 9 재사용(부스터 회수)·스타십 개발, 소형 위성(큐브샛)
+    대량 생산, 전파·광학 위성 정밀도 개선, 누리호 후속(KSLV-III) 개발.
+    Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    known_transitions:
+      - "발사체: 1회용 → 재사용(SpaceX Falcon 9 부스터 회수 재발사 — 발사 비용 1/10 축소)"
+      - "위성: 대형 고가 → 소형 대량 생산(큐브샛·LEO 통신 스타링크 수천 대)"
+      - "민영화: 정부 주도 → 민간 발사·위성 기업 성장(SpaceX·Rocket Lab 모델)"
+    transition_driver: >
+      발사 비용 하락이 우주 산업 전체의 경제성을 바꿈 — 재사용 기술이
+      핵심. 소형 위성 대량 생산으로 LEO 통신·관측 수요 폭증.
+    expected_timeline: "2026~2028 민간 발사체 상용화(국내), 2028~2032 LEO 통신 위성 군집 구축, 2032+ 달·화성 탐사(장기)"
+    demand_structure_impact: >
+      발사체가 정부 전용에서 상용 서비스(다발 발사)로 전환 — 발사 비용이
+      낮아질수록 위성 수요가 폭증(수요 탄성 높음). 위성 데이터의 실시간
+      판매가 새로운 수익 모델.

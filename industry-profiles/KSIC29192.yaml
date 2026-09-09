@@ -1,0 +1,92 @@
+code: "29192"
+name_ko: 산업용 로봇 제조업 (KSIC 29192 — 휴머노이드·협동로봇·서비스로봇 포함; 서비스로봇은 일부 26 계열 분류 병행)
+
+value_chain_structure:
+  source: >
+    IFR World Robotics 2024-2025 보고(산업용·서비스 로봇 설치 통계), 국내
+    로봇산업 기본계획(산업통상자원부·중기부 2023 — 로봇 R&D 통합), 휴머노이드
+    개발 동향(Tesla Optimus, Figure-OpenAI, NVIDIA GR00T 파운데이션 모델).
+    Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    upstream_tiers:
+      - "관절 감속기(HD — 나베스코 의존 탈피 레인보우로보 등), 서보모터·드라이버(RS Automation), 토크센서, 손가락 집기장치(dexterous hand)"
+      - "AI 두뇌: 파운데이션 모델(NVIDIA GR00T, 구글 Gemini Robotics) — 로봇체계의 핵심 차별화 축"
+      - "베터리·구조재(경량 티타늄·플라스틱), 센서(라이다·뎁스카메라·6축 F/T 센서)"
+    midstream_tiers:
+      - "로봇 완성기: 산업용(현대로보틱스-보스턴다이내믹스, 레인보우로보스), 협동로봇(유니버설 로봇스·두루로보틱스·한국 로봇)"
+      - "휴머노이드: Tesla Optimus(생산 예정), Figure 02(Apple/BMW 파일럿), Apptronik, 국내 Rainbow Robotics·애드로보틱스·뉴로메카"
+      - "SI·통합: 현장별 로봇 설치·프로그래밍 (물류·조립·용접·검사)"
+    downstream_tiers:
+      - "산업용: 전자·자동차 조립라인(국내 전자산업이 국내 최대 수요처), 물류(AMR)"
+      - "휴머노이드 조기 수요처: 제조 검사·운반, 헬스케어, 물류 피킹 — 인건비 대체 경제성이 도입 결정 변수"
+      - "특수: 원전·재해 현장(재해 대응 로봇 — 국가 R&D)"
+    typical_proxy_chain_depth: 2
+    unit_of_output: "대(설치 대수), 설치 밀도(종업원 1만 명당 대수)"
+
+cycle_position_indicators:
+  source: >
+    IFR World Robotics(2024년 세계 산업용 로봇 설치 밀도·한국 세계 1위 지속),
+    휴머노이드 투자 발표 트래킹(Tesla·Figure·Apptronik 자금 조달), 국내
+    로봇 기업 공시. Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: market-intelligence-agent
+  data:
+    cycle_driver: >
+      제조 현장 인건비 상승·인력 부족(구조적)과 AI 파운데이션 모델 성숙도
+      (로봇이 스크립트 로직을 벗어나 실환자 적응 가능한 시점)의 교차.
+      휴머노이드는 AI 모델 성능·배터리·관절 부품 3요소가 동시에 도달해야
+      상용화.
+    typical_cycle_length_years: 7
+    current_phase_note: >
+      산업용 로봇은 성숙 국면(자동차·전자 중심, 성장 둔화), 협동·AMR은
+      성장 국면, 휴머노이드는 도입 직전(2026~2028 파일럿 배치 시작 예상).
+      휴머노이드 수익화는 2027년 이후로 보는 분석이 다수.
+    peak_earnings_caveat: >
+      휴머노이드 관련 주가·기대치는 이미 높음 — 실제 상업 배치 전에
+      수주·매출이 없는 '전망 단계'이며, 파일럿 실적을 정상화하면 안 된다.
+      산업용 로봇은 반도체·자동차 CAPEX 사이클에 직결되어 별도로
+      순환한다.
+
+regulatory_landscape:
+  source: >
+    산업안전보건법(협동로봇 안전 인증 — 안전인증대상), 로봇산업 진흥법,
+    ISO 10218(산업용 로봇 안전)·ISO/TS 15066(협동로봇), 미국 NIST 휴머노이드
+    표준화 논의. Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: legal-counsel
+  data:
+    primary_regimes:
+      - "로봇산업 진흥에 관한 법률 — 로봇 R&D·보급 지원(로봇 융합 법제 자유특구)"
+      - "산업안전보건법 — 협동로봇 안전인증대상 지정(안전인증 필수), 산업 현장 배치 시 안전 기준"
+      - "무인이동체·휴머노이드: 공공 장소 배치 시 개인정보(카메라)·안전 책임 소재 법제화 진행 중"
+    licensing_or_certification_bodies:
+      - "한국산업기술시험원(KTL)·건설기계인증원 — 안전 인증"
+      - "ISO 10218/TS 15066(안전 규격), UL 3300(서비스 로봇)"
+    cross_border_notes: >
+      수출 대상국 안전 인증(CE·UL)이 국내와 상이 — 특히 휴머노이드는
+      국제 표준이 아직 정립 전이라 수출 시 개별 협의 필요.
+
+technology_transitions:
+  source: >
+    NVIDIA GR00T/Gemini Robotics 파운데이션 모델 발표, Tesla Optimus Gen 2
+    데모, 국내 레인보우로보스-Rainbow AI·뉴로메카 기술 로드맵. Links in
+    the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    known_transitions:
+      - "제어: 스크립트 기반 → AI 파운데이션 모델(VLA — vision-language-action) 기반 자율 작업"
+      - "형태: 고정산업용 → 휴머노이드·4족 보행 로봇(다목적 이동성)"
+      - "현장: 조립라인 고정 → 물류·순찰·재해 대응·헬스케어로 확산"
+    transition_driver: >
+      멀티모달 AI(영상·언어·행동 통합)의 성숙이 로봇을 '프로그램되는 장비'
+      에서 '지시를 이해하는 협업자'로 전환 — 인간-로봇 협업 안전 기준이
+      새로 요구됨.
+    expected_timeline: "2026~2027 휴머노이드 제조 현장 파일럿(현대차 미국 공장 등), 2028~2030 상업 배치 확대, 2030+ 가정용"
+    demand_structure_impact: >
+      로봇이 단일 목적 설비에서 범용 생산 단위로 전환되면, 로봇 판매가
+      아니라 '로봇 인력 임대(RaaS — Robot as a Service)' 구독이 주 수익
+      모델이 될 수 있음. 기존 설비 투자(CAPEX)와 다른 운영비(OPEX) 모델의
+      수요 구조.

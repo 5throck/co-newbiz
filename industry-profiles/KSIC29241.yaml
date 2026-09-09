@@ -1,0 +1,85 @@
+code: "29241"
+name_ko: 건설 및 채광용 기계장비 제조업 (KSIC 29241 — 굴삭기·휠로더·덤프트럭·크레인 등 건설기계 전반)
+
+value_chain_structure:
+  source: >
+    기획재정부 건설기계 판매동향 조사(월별), 한국건설기계산업협회(KOCEMA)
+    수출입 통계, 글로벌 경쟁 구도(Caterpillar·Komatsu·XCMG·현대건설기계).
+    Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    upstream_tiers:
+      - "핵심 부품: 유압 펌프·메인 밸브(일본 Kawasaki·독일 Bosch Rexroth 의존 국산화 진행), 엔진(Stage V/Tier 4 대응), 제어 컨트롤러"
+      - "철강: 특수 강판(고장력 강판 — 포스코 GIGA STEEL)"
+    midstream_tiers:
+      - "완성기 제조: 현대건설기계(Develon), 두산인프라코어(피프티노빌리티 인수), HD현대건설기계, CATL 중국 경쟁(XCMG·SANY·Zoomlion)"
+      - "렌탈·리스 채널이 실제 수요의 절반 이상 — OEM 직판 대신 렌탈사 대량 판매"
+    downstream_tiers:
+      - "인프라 건설(국내 사회간접자본 SOC 사업 사이클 연동), 광업(호주·인도네시아 수출), 미국 인프라 투자법(IRA/IIJA) 수요"
+      - "임대업(유압굴삭기 단기 임대 시장)"
+    typical_proxy_chain_depth: 2
+    unit_of_output: "대(판매·수출 대수), 수출액 USD"
+
+cycle_position_indicators:
+  source: >
+    기획재정부 건설기계 판매동향(굴삭기 판매 = 경기 선행지표), KOCEMA
+    수출입 동향(북미·유럽 대형 프로젝트 수주), 중국 시장 점유율 보도.
+    Links in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: market-intelligence-agent
+  data:
+    cycle_driver: >
+      국가 인프라 투자(공공 건설 예산)와 부동산 개발 사이클 — 굴삭기 판매
+      증감은 건설 경기 선행지표로 활용된다. 수출 비중 확대(북미·유럽)로
+      환율·해외 인프라 사업이 성장 변수.
+    typical_cycle_length_years: 5
+    current_phase_note: >
+      국내 SOC 예산 확대와 미국 인프라법(IIJA) 수요로 2023~2026 수출
+      성장. 중국 제조사의 가격 공세(전동기·저가 모델)와 유럽 배출규제
+      (Stage V) 대응 비용 증가가 마진 압박 요인.
+    peak_earnings_caveat: >
+      건설기계 수주는 대규모 건설 착수 피크에서 결정되지만, 납품은
+      6~12개월 후 — 착수 발표 피크가 곧 매출 피크가 아니다. 렌탈사
+      재구매 주기(보통 3~5년)가 재고 사이클을 지배한다.
+
+regulatory_landscape:
+  source: >
+    EU Stage V 배출규제(비도로 이동식 기계), 미국 EPA Tier 4 Final, 국내
+    건설기계 관리법(건설기계 운전사 자격·검사), 소음·배출 규제 강화. Links
+    in the research doc.
+  verified_on: "2026-09-09"
+  maintainer: legal-counsel
+  data:
+    primary_regimes:
+      - "EU Stage V — 비도로 이동식 기계 배출규제(2020년부터 단계 시행), 미국 EPA Tier 4 Final 대응 필수"
+      - "건설기계 관리법 — 국내 건설기계 운전 자격(굴삭기·크레인 등 자격증), 정기검사 의무"
+      - "수출 상대국 규제: 북미·유럽 배출 + 안전 기준(rollover protection FOPS/ROPS 인증)"
+    licensing_or_certification_bodies:
+      - "한국산업인력공단(건설기계 운전기능사), 한국건설기계인협회(검사)"
+      - "수출 대상국 인증: CE(유럽), EPA/카버파인(미국), 중국 CCC"
+    cross_border_notes: >
+      배출 규제는 국가별 단계가 상이 — 동일 모델을 지역별 배출 규격으로
+      생산하는 복수 라인 구조 필요. 무인·전동기 모델은 국가별 안전 인증이
+      새로운 진입 장벽.
+
+technology_transitions:
+  source: >
+    전동 굴삭기 배터리 모델 발표(CAT·현대), 무인 원격 조종·GPS 제어(자동
+    유압 굴삭기), 텔레매틱스 데이터 기반 예지보전(U+IoT) 보도. Links in
+    the research doc.
+  verified_on: "2026-09-09"
+  maintainer: industry-lead
+  data:
+    known_transitions:
+      - "연료: 디젤 → 전동(배터리·수소연료전지) — 도심 건설 현장 배출 규제 견인"
+      - "자동화: GPS 기반 자동 유압 굴삭기(Trimble 지원), 무인 원격 조종·드론 매핑 연계"
+      - "연결성: 텔레매틱스(원격 진단·예지보전) — OEM에서 구독 수익 모델로 전환"
+    transition_driver: >
+      도시 배출 규제(무배출 구역), 건설 인력 부족(자동화 수요), 연료비
+      절감(전동이 디젤 대비 유지비 우위)이 동시 작용.
+    expected_timeline: "2026~2028 전동 소형 굴삭기 양산 확대, 2028~2030 무인 원격 굴삭기 상용화(광산 먼저)"
+    demand_structure_impact: >
+      OEM의 수익 모델이 '판매 → 판매 + 텔레매틱스 구독 + 부품·정비'로
+      전환되며, 부품 수명 예측 데이터가 새로운 수익 자원이 됨. 전동 전환
+      시 기존 유압 부품 공급사의 수요가 소형화·전자화로 이동.
