@@ -213,7 +213,10 @@ export async function completeOrFallback(
   if (!cfg) return { source: "synthesis", provider: "deterministic", text: fallback() };
   try {
     return { source: "llm", provider: cfg.provider, text: await complete(messages, opts) };
-  } catch {
+  } catch (err) {
+    // 폴백 자체는 설계된 동작이지만 사유가 로그에 없으면 현장에서 진단 불가 —
+    // 실제 원인(HTTP 상태·타임아웃·빈 응답)을 남긴다.
+    console.error(`llm fallback (${cfg.provider}/${cfg.model}):`, err instanceof Error ? err.message : err);
     return { source: "synthesis", provider: "deterministic", text: fallback() };
   }
 }
