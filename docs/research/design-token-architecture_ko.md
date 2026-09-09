@@ -34,7 +34,7 @@ counterpart: design-token-architecture.md
   해석"되어야 한다는 원칙과 같은 방향 — 신규 색 추가 시 3계층 모두 정의해야 하는 co-newbiz 규칙은
   "토큰 변경을 API 변경처럼 다뤄라"는 거버넌스 권고의 구체적 구현.
 
-## 출처
+## References (출처)
 
 - Design Tokens Community Group, "Design Tokens Format Module 2025.10" — https://www.designtokens.org/tr/drafts/format/ (접근일 2026-09-05)
 - CoderCops, "Design Tokens in 2026: The W3C Format Finally Standardizing Cross-Platform Design" — https://blog.codercops.com/blog/design-tokens-2026-w3c-format-guide (접근일 2026-09-05)

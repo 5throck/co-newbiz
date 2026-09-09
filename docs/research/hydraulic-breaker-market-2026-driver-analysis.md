@@ -214,3 +214,16 @@ Once a `co-newbiz` project run exists for a hydraulic-breaker-related deal or ma
 file's §4.2–4.4 figures should be re-entered via `set_assumption` (`kind='assumed'`, with
 `rationale` pointing back to this file's section number) — one row per region×segment×scenario
 combination, per the design's registry-backed evidence-plane contract (`docs/evidence/README.md`).
+
+## References
+
+Numbered source references (`source #1` … `source #38`) resolve to the source
+registry compiled in the originating research session; the registry is not
+reproduced here — this file cites by number. First-party sources validated and
+named in the document body:
+
+- Epiroc AB — FY2025 filed data (primary; §5.2 "What WAS validated", source #22)
+- Stanley Infrastructure — acquisition coverage (source #22 companion)
+- Caterpillar / Sandvik / Komatsu — segment participant disclosures cross-checked in §5
+
+Fetch failures and unverified model-knowledge caveats are recorded in §6 rather than listed as references.

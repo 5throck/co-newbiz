@@ -39,7 +39,7 @@ counterpart: dd-dealbreaker-criteria.md
 - waiver 문서화 원칙(사유·승인자·만료일 필수, 예외 없음)은 covenant waiver의 "1건 한정 명시" 원칙과
   직접 대응 — 만료일이 없으면 "묵시적 상시 waiver"로 변질되는 업계의 실패 사례를 구조적으로 차단한다.
 
-## 출처
+## References (출처)
 
 - Bowery Legal, "12 Due Diligence Red Flags That Kill M&A Deals" — https://bowerylegal.com/articles/due-diligence-red-flags/ (접근일 2026-09-05)
 - Talley LLP, "When to Walk Away: Red Flags in M&A Offers" — https://www.talleyllp.com/post/when-to-walk-away-red-flags-in-m-a-offers (접근일 2026-09-05)

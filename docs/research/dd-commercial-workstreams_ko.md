@@ -23,7 +23,7 @@ counterpart: dd-commercial-workstreams.md
 
 - 1→ S1 시장분석(TAM/SAM/SOM, rag-framework), 2~3→ S9 상업 실사 체크리스트(cdd-01~07), 4→ S8 사업성 분석 시나리오, 5→ S11 IC 패키지
 
-## 출처
+## References (출처)
 
 - Martec Group, "The Five Pillars of Commercial Due Diligence" — https://martecgroup.com/whats-in-traditional-commercial-due-diligence-the-five-pillars/ (접근일 2026-09-05)
 - PE Primer, "More Than You Wanted to Know About Commercial Due Diligence" — https://pe-primer.com/more-than-you-wanted-to-know-about-commercial-due-diligence/ (접근일 2026-09-05)

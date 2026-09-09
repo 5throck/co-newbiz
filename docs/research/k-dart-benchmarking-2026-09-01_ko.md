@@ -64,7 +64,7 @@ counterpart: k-dart-benchmarking-2026-09-01.md
 - 다음 사이클: P2-4~6(재무 고도화), P3-7(공시 프리셋).
 - 검토 필요: P3-8·P4-9는 신규 API 영역이라 절차·게이트 연계 설계 후 착수.
 
-## 출처
+## References (출처)
 - [dart-fss (PyPI)](https://pypi.org/project/dart-fss/) · [dart-fss 문서](https://dart-fss.readthedocs.io/)
 - [chrisryugj/korean-dart-mcp](https://github.com/chrisryugj/korean-dart-mcp/) · [glama.ai 소개](https://glama.ai/mcp/servers/chrisryugj/korean-dart-mcp)
 - [snaiws/DART-mcp-server](https://github.com/snaiws/DART-mcp-server)

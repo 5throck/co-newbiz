@@ -150,3 +150,16 @@ An early screening CHECK (risk-layer flag) at P1/P3 rather than a new automatic 
 Re-fetch after the search quota resets (2026-09-01): BCG synergy articles; McKinsey PMI/synergy tracking; Deloitte/KPMG integration surveys; academic anchors (Krug; Larsson & Finkelstein 1999; Haspeslagh & Jemison); the DoD MRL deskbook PDF; GAO-20-48G full PDF; the 2023 JV Governance Benchmarking Study findings.
 
 Prior committed research this report builds on: `ma-dd-best-practice.md`, `pmi-jv-lifecycle-best-practice.md`, `rbd-partnership-best-practice.md`, `venture-governance-best-practice.md`, `readiness-gap-best-practice.md`.
+
+## References
+
+Consolidated from the URLs already cited inline in §6 (verbatim; nothing added):
+
+- 2023 DOJ/FTC Merger Guidelines — https://www.ftc.gov/system/files/ftc_gov/pdf/2023_merger_guidelines_final_12.18.2023.pdf
+- CRS LSB11138 (structural presumption history) — https://www.congress.gov/crs-product/LSB11138
+- HHI background — https://en.wikipedia.org/wiki/Herfindahl%E2%80%93Hirschman_index
+- Covington, HSR 2026 threshold update (effective 2026-02-17) — https://www.cov.com/en/news-and-insights/insights/2026/01/ftc-announces-2026-update-of-jurisdictional-and-fee-thresholds-for-hsr-premerger-notification-filings
+- EU merger law overview — https://en.wikipedia.org/wiki/European_Union_merger_law
+- Schjødt, competition-law aspects of M&A transactions (early-screen premise) — https://schjodt.com/news/important-competition-law-aspects-of-m-a-transactions
+
+Sources reachable only as search snippets (ABA BLT 2018) or fetch-failed at research time are recorded honestly in §7 — they are carried as limitations, not references.

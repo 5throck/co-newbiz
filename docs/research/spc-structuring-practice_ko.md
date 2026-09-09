@@ -21,7 +21,7 @@ counterpart: spc-structuring-practice.md
 
 - 비히클 enum `spc` + 4축 중 절세 구조·책임 격리 노트의 근거 자료. 확정 구조는 deal_structure_hypothesis에 기록.
 
-## 출처
+## References (출처)
 
 - Investopedia, "Special Purpose Vehicle (SPV)" — https://www.investopedia.com/terms/s/spv.asp (접근일 2026-09-05)
 - PKF O'Connor Davies, "The Special Purpose Vehicle" — https://www.pkfod.com/insights/the-special-purpose-vehicle-facilitating-business-and-investment-across-the-globe/ (접근일 2026-09-05)
