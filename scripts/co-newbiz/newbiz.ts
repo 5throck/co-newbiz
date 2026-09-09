@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.15.0
+// @version 1.16.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -56,10 +56,17 @@
  *                   or proxy-chain conversion with compounded-CI band
  *                   (cross-dimension ad hoc math refused, FR-DATA-03)
  *
- * Remaining commands (policy:sync, policy:impact, fin:project) land in a
- * later PR per docs/planning/product-backlog-roadmap.md — assume,
- * glossary:lint, adr:new, fetch, md:sync, calibrate and convert have
- * landed. glossary ENTRY validation stays
+ *   policy:sync     Scan the policies/ tree into the policy registry
+ *                   (migration 0011) — idempotent by doc_path; an edited
+ *                   policy supersedes the old version row (append-mostly)
+ *   policy:impact   Reference index for one policy: skills/procedures/
+ *                   checklists/docs references + in-flight pinned projects
+ *                   (the mechanical core of policy-change-impact-analysis)
+ *   fin:project     One project's financial rollup as JSON — business-case
+ *                   year-1 nets per scenario, valuation simulation
+ *                   percentiles, charter KPI targets (read-only)
+ *
+ * All documented commands are implemented. glossary ENTRY validation stays
  * at `bun glossary/_validate.ts` (package.json alias glossary:validate).
  * law:sync is served by `fetch --source law`. Unbuilt commands are not
  * stubbed here to avoid a command that silently does nothing.
@@ -630,6 +637,36 @@ switch (command) {
       process.exit(2);
     }
     console.log(JSON.stringify(convertUnits(value, fromUnit, toUnit), null, 2));
+    break;
+  }
+  case "policy:sync": {
+    const { syncPolicies } = await import("./policy-sync.ts");
+    const r = await syncPolicies();
+    console.log(`policy:sync — ${r.inserted} inserted, ${r.superseded} superseded, ${r.unchanged} unchanged.`);
+    for (const d of r.docs) console.log(`  [${d.action}] ${d.path} (${d.policyId})`);
+    break;
+  }
+  case "policy:impact": {
+    const idx = args.indexOf("--policy");
+    const ref = idx >= 0 ? args[idx + 1] : undefined;
+    if (!ref) {
+      console.error("policy:impact: --policy <id-or-doc-path> is required.");
+      process.exit(2);
+    }
+    const { policyImpact } = await import("./policy-sync.ts");
+    const report = policyImpact(ref);
+    console.log(JSON.stringify(report, null, 2));
+    break;
+  }
+  case "fin:project": {
+    const idx = args.indexOf("--project");
+    const projectId = idx >= 0 ? args[idx + 1] : undefined;
+    if (!projectId) {
+      console.error("fin:project: --project <id> is required.");
+      process.exit(2);
+    }
+    const { projectFinancialRollup } = await import("./fin-project.ts");
+    console.log(JSON.stringify(projectFinancialRollup(projectId), null, 2));
     break;
   }
   case "md:sync": {
