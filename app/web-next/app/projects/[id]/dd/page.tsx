@@ -92,6 +92,9 @@ export default function DdPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // ⚖ waiver 연결 대상 항목 — WaiverPanel에서 만든 활성 waiver를 판정에 연결한다.
+  const [waiverPick, setWaiverPick] = useState<{ checklistId: string; itemId: string } | null>(null);
+  const [activeWaivers, setActiveWaivers] = useState<Array<{ id: string; clause_ref: string; governance_doc_id: string; expires_at: string }>>([]);
 
   const load = useCallback(() => {
     api.get<WorkspaceView>(`/api/projects/${encodeURIComponent(projectId)}/dd`)
@@ -167,6 +170,44 @@ export default function DdPage() {
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "판정 기록 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** ⚖ waiver 연결 — 활성 waiver 목록을 열어 항목에 waived 판정을 기록한다. */
+  function openWaiverPick(checklistId: string, itemId: string) {
+    setError(null);
+    api.get<{ waivers: Array<{ id: string; clause_ref: string; governance_doc_id: string; expires_at: string; effective_status: string }> }>(
+      `/api/projects/${encodeURIComponent(projectId)}/waivers`,
+    )
+      .then((r) => {
+        const active = r.data.waivers.filter((w) => w.effective_status === "active");
+        setActiveWaivers(active);
+        if (active.length === 0) {
+          setError("연결 가능한 활성 waiver가 없습니다 — 먼저 WaiverPanel에서 waiver를 요청·승인하세요.");
+          return;
+        }
+        setWaiverPick({ checklistId, itemId });
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "waiver 목록 조회 실패"));
+  }
+
+  async function judgeWaived(waiverId: string) {
+    if (!waiverPick || busy) return;
+    setBusy(true); setError(null);
+    try {
+      await api.put(`/api/projects/${encodeURIComponent(projectId)}/dd-checklist/state`, {
+        checklist_id: waiverPick.checklistId,
+        item_id: waiverPick.itemId,
+        status: "waived",
+        waiver_id: waiverId,
+      });
+      setNotice("waiver가 연결된 판정(waived)이 기록되었습니다.");
+      setWaiverPick(null);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "waived 판정 기록 실패");
     } finally {
       setBusy(false);
     }
@@ -254,6 +295,17 @@ export default function DdPage() {
                             <button type="button" className="btn-ghost btn-sm" disabled={busy} title="충족 판정" onClick={() => void judge(domain.checklistId, item.id, "pass")}>✓ 충족</button>
                             <button type="button" className="btn-danger btn-sm" disabled={busy} title="미충족 판정 (필수 항목은 waiver 없이 S9 완료 불가)" onClick={() => void judge(domain.checklistId, item.id, "fail")}>✕ 미충족</button>
                             <button type="button" className="btn-ghost btn-sm" disabled={busy} title="해당 없음 판정" onClick={() => void judge(domain.checklistId, item.id, "na")}>— 해당없음</button>
+                            {item.waiver_eligible && (
+                              <button
+                                type="button"
+                                className="btn-ghost btn-sm"
+                                disabled={busy}
+                                title="활성 waiver를 연결해 면제 판정 (waived —WaiverPanel에서 사전 승인 필요)"
+                                onClick={() => openWaiverPick(domain.checklistId, item.id)}
+                              >
+                                ⚖ waiver
+                              </button>
+                            )}
                           </span>
                         </td>
                       )}
@@ -346,6 +398,33 @@ export default function DdPage() {
         <div className="mt-4">
           <GateDecisionPanel opportunityId={projectId} gates={["dd"]} entityType="project" />
         </div>
+        {waiverPick && (
+          <div className="modal-backdrop" onClick={() => setWaiverPick(null)}>
+            <div className="modal-panel" role="dialog" aria-modal="true" aria-label="waiver 연결" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-[1rem] font-semibold mb-2">활성 waiver 연결</h3>
+              <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
+                항목 {waiverPick.itemId} 에 연결할 활성 waiver를 선택합니다 — 면제 판정(waived)은 사유와 만료가 기록된 승인 waiver에만 가능합니다 (ADR-0036).
+              </p>
+              <ul className="space-y-2 mb-3">
+                {activeWaivers.map((w) => (
+                  <li key={w.id}>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-sm w-full text-left"
+                      disabled={busy}
+                      onClick={() => void judgeWaived(w.id)}
+                    >
+                      ⚖ {w.governance_doc_id} {w.clause_ref} — 만료 {w.expires_at.slice(0, 10)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex justify-end">
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setWaiverPick(null)}>취소</button>
+              </div>
+            </div>
+          </div>
+        )}
         {confirmDialog}
       </StageFrame>
     </main>
