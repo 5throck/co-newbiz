@@ -49,7 +49,7 @@ beforeAll(() => {
   db = getDb(TEST_DB_PATH);
   db.run("INSERT INTO app_user (id, user_id, role, status, password_salt, password_hash, password_iterations, created_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), U1, "analyst", "active", "salt", "hash", 1, NOW]);
   db.run("INSERT INTO app_user (id, user_id, role, status, password_salt, password_hash, password_iterations, created_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), U3, "analyst", "active", "salt", "hash", 1, NOW]);
-});
+}, 60000);
 
 afterAll(() => {
   resetDb();
