@@ -827,7 +827,7 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
                     <th scope="col" className="col-label">기업</th>
                     <th scope="col" className="col-type">포지션</th>
                     {hasTechType && <th scope="col" className="col-type">기술 유형</th>}
-                    {hasCapacity && <th scope="col" className="col-type">용량 (MWe)</th>}
+                    {hasCapacity && <th scope="col" className="col-num">용량 (MWe)</th>}
                     {hasProjectStatus && <th scope="col" className="col-type">진행 상태</th>}
                     {attrLabels.slice(0, 4).map((label) => <th key={label} scope="col" className="col-type">{label}</th>)}
                     <th scope="col" className="col-text">비고</th>
@@ -836,17 +836,17 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
                 <tbody>
                   {players.map((pl) => (
                     <tr key={pl.name}>
-                      <td className="font-semibold">{pl.name}</td>
-                      <td>
+                      <td className="col-label font-semibold">{pl.name}</td>
+                      <td className="col-type">
                         <span className={`status-chip ${pl.tier === "leader" ? "status-green" : pl.tier === "challenger" ? "status-amber" : "status-not-started"}`}>
                           {pl.tier === "leader" ? "리더" : pl.tier === "challenger" ? "도전자" : "니치"}
                         </span>
                       </td>
-                      {hasTechType && <td>{pl.techType ?? "—"}</td>}
-                      {hasCapacity && <td className="tabular-nums">{pl.capacityMWe !== undefined ? pl.capacityMWe.toLocaleString() : "—"}</td>}
-                      {hasProjectStatus && <td>{pl.projectStatus ? <span className="status-chip status-in-progress">{pl.projectStatus}</span> : "—"}</td>}
-                      {attrLabels.slice(0, 4).map((label) => <td key={label}>{attrOf(pl, label)}</td>)}
-                      <td className="text-[0.8rem] text-[color:var(--muted-fg)]">{pl.note}</td>
+                      {hasTechType && <td className="col-type">{pl.techType ?? "—"}</td>}
+                      {hasCapacity && <td className="col-num tabular-nums">{pl.capacityMWe !== undefined ? pl.capacityMWe.toLocaleString() : "—"}</td>}
+                      {hasProjectStatus && <td className="col-type">{pl.projectStatus ? <span className="status-chip status-in-progress">{pl.projectStatus}</span> : "—"}</td>}
+                      {attrLabels.slice(0, 4).map((label) => <td key={label} className="col-type">{attrOf(pl, label)}</td>)}
+                      <td className="col-text text-[0.8rem] text-[color:var(--muted-fg)]">{pl.note}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1150,15 +1150,15 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
               <tbody>
                 {matrix.regulatoryComparison.map((r, i) => (
                   <tr key={`${r.jurisdiction}-${r.item}-${i}`}>
-                    <td className="font-semibold">{r.jurisdiction}</td>
-                    <td className="whitespace-normal">{r.item}</td>
+                    <td className="col-label font-semibold">{r.jurisdiction}</td>
+                    <td className="col-type whitespace-normal">{r.item}</td>
                     <td className="whitespace-normal text-[0.8rem]">{r.status}</td>
-                    <td>
+                    <td className="col-type">
                       <span className={`status-chip ${r.confirmedDirectly ? "status-green" : "status-not-started"}`}>
                         {r.confirmedDirectly ? "직접 확인" : "간접·추정"}
                       </span>
                     </td>
-                    <td className="whitespace-normal text-[0.75rem]">
+                    <td className="col-text whitespace-normal text-[0.75rem]">
                       {r.sourceUrl ? <a href={r.sourceUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문</a> : "—"}
                       {r.asOf ? ` · ${r.asOf}` : ""}
                     </td>
