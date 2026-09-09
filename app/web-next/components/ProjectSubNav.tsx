@@ -9,6 +9,7 @@ import { api } from "../lib/api.ts";
 const SUB_PAGES = [
   { seg: "", label: "개요" },
   { seg: "/business-case", label: "사업성 분석" },
+  { seg: "/wacc", label: "WACC" },
   { seg: "/financial-analysis", label: "재무분석" },
   { seg: "/dd", label: "실사·검증" },
   { seg: "/proxy-chain", label: "프록시 체인" },

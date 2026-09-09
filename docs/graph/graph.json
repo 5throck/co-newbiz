@@ -2087,7 +2087,7 @@
       "id": "skill:hwp-document-processing",
       "type": "skill",
       "label": "hwp-document-processing",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "active"
     },
     {
@@ -2689,7 +2689,7 @@
       "id": "skill:wacc-input-session",
       "type": "skill",
       "label": "wacc-input-session",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {

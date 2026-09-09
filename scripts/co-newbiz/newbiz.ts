@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.16.2
+// @version 1.17.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -21,6 +21,7 @@
  *                   model engine, scripts/co-newbiz/model.ts)
  *   diff            Variable-level bridge between two runs (model.ts)
  *   report          Render Markdown to docx/pdf/hwpx with glossary appendix
+ *   hwp-extract     Extract text from a legacy binary .hwp file
  *   scorecard:rollup  Portfolio venture-scorecard rollup as JSON (ADR-0059;
  *                   empty DB is a valid zero point, exit 0)
  *   user:create     Create an account (pending) — password via stdin
@@ -81,6 +82,7 @@ import { runSimulation } from "./simulate.ts";
 import { runFullPipeline } from "./fin-pipeline.ts";
 import { computeDriverTree } from "./driver-tree.ts";
 import { renderReport, type ReportFormat } from "./report.ts";
+import { runHwpExtractCommand } from "./hwp-extract.ts";
 import { runScorecardRollup } from "./scorecard-rollup.ts";
 import { runRagAssessment } from "./rag.ts";
 import { runWatchCycle, loadRescenariosDir } from "./watch-run.ts";
@@ -516,6 +518,10 @@ switch (command) {
       process.exit(1);
     }
     runExportCommand(args);
+    break;
+  }
+  case "hwp-extract": {
+    await runHwpExtractCommand(args);
     break;
   }
   case "glossary:lint": {
