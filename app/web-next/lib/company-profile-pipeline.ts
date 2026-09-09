@@ -87,10 +87,16 @@ export function getProfileJobStatus(memberId: string): ProfileJobStatus | null {
   return profileJobs.get(memberId) ?? null;
 }
 
+/** 테스트 시퀀스 — 라우트 응답의 failed 보고를 직접 시딩해 검증한다 (_internalNow 선례). */
+export const _profileJobs = profileJobs;
+
 /** analyze 라우트용 실행기 — running/failed 상태를 기록하고 성공 시 지운다(이후 status는 completed가 version 유무로 판정). */
 export function startCompanyProfilePipeline(db: Db, memberId: string, userId: string): void {
   profileJobs.set(memberId, { status: "running", startedAt: now() });
   void runCompanyProfilePipeline(db, memberId, userId)
+    .then(() => {
+      profileJobs.delete(memberId);
+    })
     .catch((err: unknown) => {
       profileJobs.set(memberId, {
         status: "failed",
