@@ -21,7 +21,7 @@ counterpart: expert-interview-practice.md
 
 - `docs/guidelines/expert-interview-conduct.md`의 절차와 결합. 삼각검증 원칙은 checklist cdd-07과 동일 계열.
 
-## 출처
+## References (출처)
 
 - CleverX, "Expert Calls for Due Diligence: Investor Guide" — https://cleverx.com/blog/expert-calls-for-due-diligence (접근일 2026-09-05)
 - Apex Leaders, "PE Due Diligence: Best Practices" — https://apexleaders.com/blog/clients/everything-you-need-to-know-about-due-diligence-best-practices-and-more/ (접근일 2026-09-05)

@@ -762,6 +762,26 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20260908-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20260908-02",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20260909-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20260909-02",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "decision-record",
       "type": "skill",
       "layer": "L3"
@@ -4198,6 +4218,18 @@
         "field": "relates_to",
         "index": 8
       }
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20260908-01",
+      "to": "project-review",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20260908-02",
+      "to": "waiver-management",
+      "source": "skills_used"
     },
     {
       "type": "references",

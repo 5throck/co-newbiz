@@ -37,7 +37,7 @@ counterpart: dashboard-screen-patterns.md
 - P0 Shell(공통 골격: 헤더·사이드바·StageRail)은 업계 표준 레이아웃(고정 사이드바+상단바)과 구조가
   일치 — 새 화면 설계 시 이 표준 레이아웃 관행을 기준으로 이탈 여부를 점검할 수 있다.
 
-## 출처
+## References (출처)
 
 - Setproduct, "Dashboard UI design: From KPIs to layouts that convert" — https://www.setproduct.com/blog/dashboard-ui-design (접근일 2026-09-05)
 - AdminLTE.IO, "Admin Dashboard Design: Principles, Layouts & Examples (2026)" — https://adminlte.io/blog/admin-dashboard-design/ (접근일 2026-09-05)

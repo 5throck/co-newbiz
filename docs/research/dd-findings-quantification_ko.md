@@ -33,7 +33,7 @@ counterpart: dd-findings-quantification.md
   동일 계열. "환산 불가능 사유 기재"는 예외 처리이지 기본값이 아님을 이 리서치가 뒷받침한다.
 - S8 채택 Business Case 시나리오(하방/base/상방) 반영은 QoE의 pro-forma 조정과 유사한 메커니즘.
 
-## 출처
+## References (출처)
 
 - Anders CPA, "Quality of Earnings (QoE) Report: What It Is (and Why It Matters in M&A)" — https://anderscpa.com/learn/blog/quality-of-earnings-report-analysis-due-diligence-guide/ (접근일 2026-09-05)
 - CT Acquisitions, "Financial Due Diligence: QoE, EBITDA, Working Capital" — https://ctacquisitions.com/financial-due-diligence-business-sale-2026/ (접근일 2026-09-05)

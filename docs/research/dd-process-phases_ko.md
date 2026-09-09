@@ -29,7 +29,7 @@ counterpart: dd-process-phases.md
   S5~S8 산출물(우리 계획)을 검증하는 것으로, 외부 대상 검증이 아닌 내부 가정 검증이 핵심 차이.
 - S10 투자구조 설계는 "딜 조건 협상" 단계, S11 IC 심의는 "pre-closing 최종 확인"에 대응.
 
-## 출처
+## References (출처)
 
 - Dealroom, "Due Diligence Process: 6 Steps + 6-Week Timeline" — https://dealroom.net/faq/due-diligence-process (접근일 2026-09-05)
 - Peony, "M&A Due Diligence: 6-Phase Playbook + 8 Workstreams" — https://www.peony.ink/blog/m-and-a-due-diligence-process-guide (접근일 2026-09-05)

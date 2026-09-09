@@ -30,7 +30,7 @@ counterpart: dd-checklist-tailoring-practice.md
 - 커스텀 항목에 출처 신뢰도 등급(A/B/C)을 강제하는 설계는, 업계가 권고하는 "다학제 전문가 검증"을
   단일 담당자 대신 등급 체계로 대체 보완하는 co-newbiz 고유의 확장.
 
-## 출처
+## References (출처)
 
 - Diligent, "A comprehensive guide to M&A due diligence with a 20-point checklist" — https://www.diligent.com/resources/blog/mergers-acquisitions-due-diligence-checklist (접근일 2026-09-05)
 - Chambers and Partners, "The Ultimate Due Diligence Checklist" — https://chambers.com/articles/the-ultimate-due-diligence-checklist (접근일 2026-09-05)

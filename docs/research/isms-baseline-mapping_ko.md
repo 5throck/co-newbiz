@@ -21,7 +21,7 @@ counterpart: isms-baseline-mapping.md
 
 - security-baseline의 항목별로 Annex A 4주제 태그를 붙이면 인증 준비 시 SoA 초안으로 전환 가능. 역할 최소권한·시크릿 관리 등 기존 규칙은 기술 통제 축에 직접 대응.
 
-## 출처
+## References (출처)
 
 - ISMS.online, "ISO 27001 MSP Checklist: 27 Essential Controls" — https://www.isms.online/managed-service-providers/iso-27001-msp-checklist-27-essential-controls-every-provider-must-implement/ (접근일 2026-09-05)
 - ZipSec, "ISO 27001 Controls: What to Deploy" — https://www.zipsec.com/blog/iso-27001-controls (접근일 2026-09-05)

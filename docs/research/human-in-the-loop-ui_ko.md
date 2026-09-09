@@ -37,7 +37,7 @@ counterpart: human-in-the-loop-ui.md
 - 향후 화면 설계 시 "저위험 항목까지 게이트 결정 카드로 에스컬레이션하지 않는다"는 원칙을
   명시적으로 검토할 필요 — 과도한 에스컬레이션은 검토 품질을 오히려 떨어뜨린다는 연구 결과가 있음.
 
-## 출처
+## References (출처)
 
 - Redis, "AI Human in the Loop: Production Oversight Patterns" — https://redis.io/blog/ai-human-in-the-loop/ (접근일 2026-09-05)
 - Zapier, "Human-in-the-loop in AI workflows: Meaning and patterns" — https://zapier.com/blog/human-in-the-loop/ (접근일 2026-09-05)

@@ -117,7 +117,7 @@ Published models do not waive gates — they shorten or overlap **stages** while
 
 ---
 
-## SOURCES
+## References (SOURCES)
 
 1. Stage-Gate Institute — The Stage-Gate Model: An Overview — https://www.stage-gate.com/blog/the-stage-gate-model-an-overview/
 2. Stage-Gate Institute — Optimizing the Stage-Gate Process (Gate 1 scorecard) — https://www.stage-gate.com/blog/optimizing-the-stage-gate-process-what-best-practice-companies-are-doing/

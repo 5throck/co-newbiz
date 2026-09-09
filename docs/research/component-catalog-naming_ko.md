@@ -36,7 +36,7 @@ counterpart: component-catalog-naming.md
 - 표(data-table) 헤더·셀 정렬 규칙, 목록 복귀 단일 패턴(ListBackButton)은 "컴포넌트당 단일 책임 +
   전역 재사용" 원칙의 구체 사례.
 
-## 출처
+## References (출처)
 
 - CFPB Design System, "Atomic components" — https://cfpb.github.io/design-system/development/atomic-components (접근일 2026-09-05)
 - Namastedev, "Design Systems 101: Tokens, Components, and Documentation" — https://namastedev.com/blog/design-systems-101-tokens-components-and-documentation/ (접근일 2026-09-05)
