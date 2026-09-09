@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.13.1
+// @version 1.14.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -42,13 +42,20 @@
  *   context         Contextual bundle over the derived graph
  *                   (--skill <name> | --gate <Gate>)
  *
- * Remaining commands (fetch, md:sync, law:sync, policy:sync, policy:impact,
- * fin:project, calibrate, convert) land in their later PRs per
- * docs/planning/dev-plan.md — assume, glossary:lint and adr:new landed with the CLI
- * batch wave (scripts/co-newbiz/assume.ts, glossary-lint.ts, adr-new.ts);
- * glossary ENTRY validation stays at `bun glossary/_validate.ts` (package.json
- * alias glossary:validate). Unbuilt commands are not stubbed here to avoid a
- * command that silently does nothing.
+ *   fetch           Source-adapter data collection — k-dart/k-kosis/k-opendata/
+ *                   k-law adapters (source-adapters.ts, design 2026-09-09);
+ *                   observation series go through ensure_fresh (ADR-0004),
+ *                   catalog sources produce natural-key upserts
+ *   md:sync         Master-data catalog sync from the adapters
+ *                   (md_company/md_statute/md_source; idempotent)
+ *
+ * Remaining commands (policy:sync, policy:impact, fin:project, calibrate,
+ * convert) land in their later PRs per docs/planning/dev-plan.md and
+ * docs/planning/product-backlog-roadmap.md — assume, glossary:lint,
+ * adr:new, fetch and md:sync have landed. glossary ENTRY validation stays
+ * at `bun glossary/_validate.ts` (package.json alias glossary:validate).
+ * law:sync is served by `fetch --source law`. Unbuilt commands are not
+ * stubbed here to avoid a command that silently does nothing.
  */
 
 import { resolve } from "node:path";
@@ -70,6 +77,8 @@ import { lintGlossaryUsage, printGlossaryLintReport } from "./glossary-lint.ts";
 import { scaffoldAdr } from "./adr-new.ts";
 import { runExportCommand } from "./db-export.ts";
 import { runGraphCommand, runContextCommand } from "./graph.ts";
+import { ulid } from "../../db/lib/ulid.ts";
+import { KOSIS_UNITS } from "./kosis-units.ts";
 import {
   createUser,
   approveUser,
@@ -78,6 +87,21 @@ import {
 } from "../../db/lib/accounts.ts";
 
 const [command, ...args] = process.argv.slice(2);
+
+/** Upsert md_period for a YYYY-MM key (monthly granularity — A1 KOSIS mapping). */
+function upsertPeriod(db: ReturnType<typeof getDb>, periodKey: string): string {
+  const [y, m] = periodKey.split("-").map(Number);
+  const startDate = `${periodKey}-01`;
+  const endDate = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+  const found = db
+    .query("SELECT id FROM md_period WHERE period_type='month' AND start_date=? AND end_date=?")
+    .get(startDate, endDate) as { id: string } | undefined;
+  if (found) return found.id;
+  const id = ulid();
+  db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
+    [id, "month", startDate, endDate, y, new Date().toISOString()]);
+  return id;
+}
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
@@ -462,6 +486,115 @@ switch (command) {
     });
     break;
   }
+  case "fetch": {
+    const sourceIdx = args.indexOf("--source");
+    const source = sourceIdx >= 0 ? args[sourceIdx + 1] : undefined;
+    if (!source || !["dart", "kosis", "law", "opendata"].includes(source)) {
+      console.error("fetch: --source is required (dart | kosis | law | opendata).");
+      process.exit(2);
+    }
+    const { SOURCE_ADAPTERS, upsertCatalog } = await import("./source-adapters.ts");
+    const { ensureFresh } = await import("../../db/repositories/observation.repository.ts");
+    const adapter = SOURCE_ADAPTERS[source];
+    if (!adapter.isEnabled()) {
+      console.error(`fetch: ${adapter.credentialEnv} is not set — the ${source} adapter (${adapter.kSkill}) is disabled.`);
+      process.exit(2);
+    }
+    const db = getDb();
+    // md_source registration: every used adapter is a known source with a grade.
+    const GRADE: Record<string, string> = { dart: "A", kosis: "A", law: "A", opendata: "B" };
+    if (!db.query("SELECT id FROM md_source WHERE code = ?").get(source)) {
+      db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)",
+        [ulid(), source, GRADE[source] ?? "C", new Date().toISOString()]);
+      console.log(`md_source: registered '${source}' (grade ${GRADE[source] ?? "C"})`);
+    }
+    const seriesIdIdx = args.indexOf("--series");
+    const seriesArg = seriesIdIdx >= 0 ? args[seriesId + 1] : undefined;
+    const all = args.includes("--all");
+    let failures = 0;
+
+    if (adapter.kind === "observations") {
+      const catalog = await adapter.listSeries();
+      const targets = seriesArg
+        ? catalog.filter((s) => s.seriesId === seriesArg || s.tblId === seriesArg)
+        : catalog;
+      if (targets.length === 0) {
+        console.error(`fetch: no series matched '${seriesArg ?? "(all)"}' — fetch --list shows the seeded catalog.`);
+        process.exit(1);
+      }
+      for (const s of targets) {
+        if (!s._verified) console.warn(`⚠ ${s.seriesId}: seed entry UNVERIFIED — confirm orgId/tblId against KOSIS before trusting outputs.`);
+        const mapping = Object.values(KOSIS_UNITS).find((u) => u.unitCode === s.unitCode);
+        if (!mapping) {
+          failures++;
+          console.error(`  isolated failure ${s.seriesId}: unit '${s.unitCode}' has no md_unit mapping (kosis-units.ts).`);
+          continue;
+        }
+        const unitId = (() => {
+          const row = db.query("SELECT id FROM md_unit WHERE code = ?").get(mapping.unitCode) as { id: string } | undefined;
+          if (row) return row.id;
+          const id = ulid();
+          db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)",
+            [id, mapping.unitCode, mapping.dimension, mapping.siCoefficient, new Date().toISOString()]);
+          return id;
+        })();
+        const sourceId = (db.query("SELECT id FROM md_source WHERE code = ?").get(source) as { id: string }).id;
+        // Current year, all months — the KOSIS seed series are monthly.
+        const year = new Date().getUTCFullYear();
+        for (let m = 1; m <= 12; m++) {
+          const periodKey = `${year}-${String(m).padStart(2, "0")}`;
+          try {
+            const periodId = upsertPeriod(db, periodKey);
+            const r = await ensureFresh({
+              seriesId: s.seriesId, periodId, unitId, sourceId,
+              fetcher: adapter.fetcher({ seriesId: s.seriesId, sourceId }),
+            });
+            console.log(`${s.seriesId}@${periodKey}: ${r.changeType ?? "cached"} (rev ${r.revisionNo})`);
+          } catch (err) {
+            failures++;
+            console.error(`  isolated failure ${s.seriesId}@${periodKey}: ${err instanceof Error ? err.message : err}`);
+          }
+        }
+      }
+      if (failures > 0) {
+        console.error(`fetch: ${failures} isolated failure(s).`);
+        process.exit(1);
+      }
+      break;
+    }
+
+    // catalog adapters: md:sync semantics. dart's corpList is a full-market
+    // dump (~100k rows) — require explicit opt-in so a typo'd fetch never
+    // pulls it uninvited (law's whitelist default keeps it small).
+    if (source === "dart" && !args.includes("--all")) {
+      console.error("fetch: dart catalog is the full-market corp list — pass --all explicitly.");
+      process.exit(2);
+    }
+    const upserts = await adapter.listCatalog({ all });
+    const result = upsertCatalog(db, upserts);
+    console.log(`${source}: ${result.inserted} inserted, ${result.existing} already present.`);
+    break;
+  }
+  case "md:sync": {
+    const sourceIdx = args.indexOf("--source");
+    const source = sourceIdx >= 0 ? args[sourceIdx + 1] : undefined;
+    if (!source || !["dart", "law"].includes(source)) {
+      console.error("md:sync: --source is required (dart | law).");
+      process.exit(2);
+    }
+    const { SOURCE_ADAPTERS, upsertCatalog } = await import("./source-adapters.ts");
+    const adapter = SOURCE_ADAPTERS[source];
+    if (!adapter.isEnabled()) {
+      console.error(`md:sync: ${adapter.credentialEnv} is not set — the ${source} adapter (${adapter.kSkill}) is disabled.`);
+      process.exit(2);
+    }
+    const db = getDb();
+    const upserts = await adapter.listCatalog({ all: args.includes("--all") });
+    const result = upsertCatalog(db, upserts);
+    console.log(`md:sync ${source}: ${result.inserted} inserted, ${result.existing} already present.`);
+    break;
+  }
+
   case "adr:new": {
     const titleIdx = args.indexOf("--title");
     const statusIdx = args.indexOf("--status");
