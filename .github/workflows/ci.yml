@@ -113,6 +113,10 @@ jobs:
       # next/server) — their dependencies must be installed for resolution.
       - name: Install web-next dependencies
         run: cd app/web-next && bun install --frozen-lockfile
+      # fin-pipeline tests shell out to python/*.py (validate/normalize import
+      # pandas) — the engine's declared dependency set.
+      - name: Install python dependencies
+        run: pip install -r python/requirements.txt
       - run: bun run test:unit
 
   # test-node:
