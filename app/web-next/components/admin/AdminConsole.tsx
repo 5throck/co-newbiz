@@ -30,14 +30,16 @@ interface AuditStats {
 type Section = "users" | "audit" | "data-sources" | "schedule" | "database" | "notifications" | "glossary" | "governance" | "master-data" | "adr";
 
 interface AdminNotificationRow {
+  id: string;
   user_id: string;
-  project_id: string;
+  project_id: string | null;
   trigger_type: string;
   severity: string;
   payload: string;
   channel: string;
   bundle: string;
   sent_at: string;
+  read_at: string | null;
 }
 
 interface GlossaryTermRow {
@@ -874,17 +876,19 @@ export function AdminConsole({ section }: { section: Section }) {
                 <th scope="col">채널</th>
                 <th scope="col">번들</th>
                 <th scope="col">발송일</th>
+                <th scope="col">읽음</th>
               </tr>
             </thead>
             <tbody>
-              {notifications.map((n, i) => (
-                <tr key={i}>
-                  <td>{n.project_id}</td>
+              {notifications.map((n) => (
+                <tr key={n.id}>
+                  <td>{n.project_id ?? "—"}</td>
                   <td>{n.trigger_type}</td>
                   <td>{n.severity}</td>
                   <td>{n.channel}</td>
                   <td>{n.bundle}</td>
                   <td>{new Date(n.sent_at).toLocaleString("ko-KR")}</td>
+                  <td>{n.read_at ? <span className="status-chip status-green">읽음</span> : <span className="status-chip status-amber">미읽음</span>}</td>
                 </tr>
               ))}
             </tbody>

@@ -416,6 +416,37 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /api/notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      summary: Mark one caller-owned notification as read.
+      tags:
+        - Monitoring
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      summary: Mark all unread notifications for the caller as read.
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/glossary:
     get:
       operationId: listGlossaryKeys

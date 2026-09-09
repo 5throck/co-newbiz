@@ -1,5 +1,6 @@
 # Changelog
 
+- **[2026-09-09]**: feat(wave-d): **UX gaps — notification read state, project-list freshness signal, DD-tailor Tavily provenance.** Added `notification.read_at` plus caller-scoped read/read-all APIs and topbar unread count; project rows now derive `is_stale`/`stale_reasons` from live project-industry facts and `evidence_var.max_age_days` without storing stale state; DD checklist tailoring can run in `CO_NEWBIZ_DD_TAILOR_AGENTS=tavily` mode to attach real source URLs while preserving deterministic unsourced/C fallback and proposed-only boundary #2.
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
