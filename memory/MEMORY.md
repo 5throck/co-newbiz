@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-10](2026-09-10.md) | fix(market): KSIC search falls back to the industry name when the code field is empty |
 | [2026-09-09](2026-09-09.md) | --help |
 | [2026-09-08](2026-09-08.md) | test: make unit tests CWD-independent (PROJECT_ROOT-based reads) |
 | [2026-09-06](2026-09-06.md) | docs: unify documentation surface — retire knowledge-hub/handbook portals, extend /library to 8 categories, restructure docs/ into topic folders (ADR-0108) |
