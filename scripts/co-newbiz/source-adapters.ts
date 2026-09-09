@@ -1,4 +1,4 @@
-// @version 1.0.2
+// @version 1.0.3
 /**
  * source-adapters.ts — the pluggable data-source adapter framework
  * (design: docs/designs/2026-09-09-source-adapter-framework-design.md).
@@ -130,7 +130,13 @@ const dartAdapter: SourceAdapter = {
     // the CLI case — here we produce upserts from the standard list.)
     const url = `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${encodeURIComponent(apiKey)}`;
     const { safeFetch } = await import("../lib/ssrf.ts");
-    const res = await safeFetch(url, { signal: AbortSignal.timeout(60_000) });
+    const res = await safeFetch(url, {
+      signal: AbortSignal.timeout(60_000),
+      headers: {
+        accept: "application/zip, application/octet-stream, application/x-msdownload, */*",
+        "user-agent": "co-newbiz-source-adapter/1.0",
+      },
+    });
     if (!res.ok) throw new Error(`DART corpCode: HTTP ${res.status}`);
     const rows = parseCorpXml(Buffer.from(await res.arrayBuffer()));
     if (rows.length === 0) throw new Error("DART corpCode: ZIP/XML parse yielded no company rows.");

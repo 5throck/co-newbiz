@@ -25,7 +25,7 @@
  * instead (verified empirically: fetch()'s `dns` init option is silently
  * ignored, while http(s).request()'s `lookup` option is honored).
  *
- * @version 1.1.0
+ * @version 1.1.1
  * @security Production hardening — TOCTOU DNS rebinding mitigation
  */
 
@@ -169,7 +169,7 @@ export async function fetchPinned(
   targetUrl: string,
   pinnedAddresses: string[],
   portOverride?: number,
-  init: { signal?: AbortSignal } = {},
+  init: { signal?: AbortSignal; headers?: Record<string, string> } = {},
 ): Promise<Response> {
   const parsed = new URL.URL(targetUrl);
   const isHttps = parsed.protocol === 'https:';
@@ -198,6 +198,7 @@ export async function fetchPinned(
         path: `${parsed.pathname}${parsed.search}`,
         method: 'GET',
         lookup,
+        headers: init.headers,
         // TLS: keep servername/cert validation pinned to the original hostname.
         ...(isHttps ? { servername: parsed.hostname } : {}),
       },
@@ -251,7 +252,7 @@ export async function fetchPinned(
  *
  * @throws {SSRFBlockedError} if validateUrl() rejects the target.
  */
-export async function safeFetch(targetUrl: string, init: { signal?: AbortSignal } = {}): Promise<Response> {
+export async function safeFetch(targetUrl: string, init: { signal?: AbortSignal; headers?: Record<string, string> } = {}): Promise<Response> {
   const check = await validateUrl(targetUrl);
   if (!check.allowed) {
     throw new SSRFBlockedError(check.reason ?? 'blocked', check.hostname);

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.1.1
 /**
  * env-check.ts — ADR-0075 pre-flight gate for pipeline API stages.
  *
@@ -83,12 +83,13 @@ if (problems.length > 0) {
 // silently degraded to synthesis. A cheap 1-request probe per service turns
 // that into explicit evidence (ADR-0075: never conclude without one).
 if (process.argv.includes("--probe")) {
-  const probe = async (label: string, url: string, init: RequestInit): Promise<void> => {
+  const probe = async (label: string, url: string, init: RequestInit, validate?: (res: Response) => Promise<string | null>): Promise<void> => {
     try {
       const res = await fetch(url, { ...init, signal: AbortSignal.timeout(20_000) });
-      const verdict = res.ok ? "valid" : `INVALID (HTTP ${res.status})`;
+      const validationError = res.ok && validate ? await validate(res) : null;
+      const verdict = res.ok && !validationError ? "valid" : `INVALID (HTTP ${res.status}${validationError ? `, ${validationError}` : ""})`;
       console.log(`  ${label}: ${verdict}`);
-      if (!res.ok) problems.push(`${label} credential rejected — ${verdict}`);
+      if (!res.ok || validationError) problems.push(`${label} credential rejected — ${verdict}`);
     } catch (err) {
       console.log(`  ${label}: UNREACHABLE (${err instanceof Error ? err.message : err})`);
       problems.push(`${label} probe failed (network)`);
@@ -104,7 +105,43 @@ if (process.argv.includes("--probe")) {
     });
   } else problems.push("CO_NEWBIZ_LLM_API_KEY missing — LLM pipeline stages will degrade");
   const dartKey = parsed.get("DART_API_KEY");
-  if (dartKey) await probe("DART", `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${dartKey}`, {});
+  if (dartKey) {
+    await probe("DART", `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${dartKey}`, { redirect: "manual" }, async (res) => {
+      const contentType = res.headers.get("content-type") ?? "";
+      if (res.status >= 300 && res.status < 400) return "redirected instead of returning corpCode ZIP";
+      if (!contentType.includes("zip") && !contentType.includes("octet-stream") && !contentType.includes("x-msdownload")) {
+        return `unexpected content-type ${contentType || "(none)"}`;
+      }
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      return bytes[0] === 0x50 && bytes[1] === 0x4b ? null : "response is not a ZIP payload";
+    });
+  }
+  const kosisKey = parsed.get("KOSIS_API_KEY");
+  if (kosisKey) {
+    await probe(
+      "KOSIS",
+      `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${encodeURIComponent(kosisKey)}&orgId=101&tblId=DT_1JH20201&itmId=T1&objL1=0&prdSe=M&startPrdDe=202601&endPrdDe=202601&format=json&jsonVD=Y`,
+      {},
+      async (res) => {
+        const payload = await res.json().catch(() => null);
+        return Array.isArray(payload) && payload.length > 0 ? null : "unexpected statistics response";
+      },
+    );
+  }
+  const lawOc = parsed.get("LAW_API_OC");
+  if (lawOc) {
+    await probe(
+      "LAW",
+      `https://www.law.go.kr/DRF/lawSearch.do?OC=${encodeURIComponent(lawOc)}&target=law&type=JSON&query=${encodeURIComponent("상법")}`,
+      {},
+      async (res) => {
+        const payload = await res.json().catch(() => null) as { LawSearch?: { law?: unknown[] } | unknown[] } | null;
+        const lawSearch = payload?.LawSearch;
+        const rows = Array.isArray(lawSearch) ? lawSearch : lawSearch?.law;
+        return Array.isArray(rows) && rows.length > 0 ? null : "unexpected law-search response";
+      },
+    );
+  }
   const tavilyKey = parsed.get("TAVILY_API_KEY");
   if (tavilyKey) {
     await probe("TAVILY", "https://api.tavily.com/search", {
