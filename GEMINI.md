@@ -293,7 +293,7 @@ Antigravity does not have `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` or `teammateMod
 
 ---
 
-*Last Updated: 2026-08-19 — added §5 Skill Resolution Priority; added §6 CLAUDE.md/GEMINI.md lifecycle row; added lifecycle-manager and auditor sequence to boilerplate; removed obsolete physical pm approval hooks*
+*Last Updated: 2026-09-09 — added §5 Skill Resolution Priority; added §6 CLAUDE.md/GEMINI.md lifecycle row; added lifecycle-manager and auditor sequence to boilerplate; removed obsolete physical pm approval hooks*
 
 
 
@@ -364,6 +364,8 @@ Regulations, gate approvals, investment decisions, the security and privacy mode
 | `region-profiles/**`, `industry-profiles/**` | `source` / `verified_on` / `maintainer` are mandatory on every field; `_validate.ts` rejects unsourced fields |
 | `glossary/**` | Re-run glossary lint; check the four tooling integrations still resolve |
 | DB schema, auth, MCP tool scope | ADR required — see the ADR trigger list in the design doc |
+
+> **Workspace schema-governance baseline**: any DB schema change requires an ADR before merge. The project-specific ADR trigger list (design doc / `adr-governance`) remains authoritative for this project and extends — never replaces — the workspace baseline.
 
 ### Disclaimer
 
