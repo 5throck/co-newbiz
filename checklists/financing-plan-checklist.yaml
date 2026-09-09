@@ -13,7 +13,7 @@ gate: FS
 # is assembled at FS (financing-plan-review at brownfield-dd step 12) and re-tested
 # as a precondition at entity-ic-review.
 #
-# BENCHMARKS ARE ILLUSTRATIVE: the reverse-termination-fee range cited in fin-08
+# BENCHMARKS ARE DEFAULT POLICY (DEC-20260909-05): the reverse-termination-fee range cited in fin-08
 # (4-7% of enterprise value) is a market-practice benchmark from published deal
 # practice, not activated policy — whether it becomes policy is ADR-0051 open
 # question (c) for the thresholds meeting.

@@ -14,7 +14,7 @@ gate: DD
 # comp benchmark) and ma-09 (incentive clawback). Employment-transfer regime
 # determination cross-references chk-entity-formation (ef-08) rather than restating it.
 #
-# BENCHMARKS ARE ILLUSTRATIVE: the stay-bonus coverage window cited in hdd-02
+# BENCHMARKS ARE DEFAULT POLICY (DEC-20260909-05): the stay-bonus coverage window cited in hdd-02
 # (12-24 months post-closing) is a market-practice benchmark, not activated policy —
 # whether it becomes policy is ADR-0051 open question (c) for the thresholds meeting.
 
