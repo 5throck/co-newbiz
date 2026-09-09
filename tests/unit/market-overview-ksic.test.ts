@@ -195,6 +195,63 @@ describe("migration 0079 — stale profile-anchor remap", () => {
   });
 });
 
+describe("migration 0080 — HYD-BRK sentinel retirement", () => {
+  function openWithRows(rows: Array<[string, string | null]>) {
+    const path = `db/data/test-ksic-migration-0080-${rows[0][0]}.sqlite`;
+    for (const s of ["", "-wal", "-shm"]) if (existsSync(path + s)) rmSync(path + s);
+    const raw = new Database(path, { create: true });
+    raw.run(`
+      CREATE TABLE md_industry (
+        id TEXT PRIMARY KEY NOT NULL,
+        ksic_code TEXT,
+        naics_code TEXT,
+        isic_code TEXT,
+        name_ko TEXT NOT NULL,
+        name_en TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE UNIQUE INDEX idx_md_industry_ksic ON md_industry(ksic_code);
+    `);
+    const ins = raw.query(
+      "INSERT INTO md_industry (id, ksic_code, naics_code, isic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?,?,?)",
+    );
+    for (const [id, code] of rows) ins.run([id, code, null, null, `name-${id}`, "x", NOW]);
+    return { raw, path };
+  }
+  const apply0080 = (raw: Database) =>
+    raw.run(readFileSync(
+      join(import.meta.dirname, "..", "..", "db", "migrations", "0080_hyd_brk_sentinel_retirement.sql"),
+      "utf-8",
+    ));
+  const cleanup = (raw: Database, path: string) => {
+    raw.close();
+    for (const s of ["", "-wal", "-shm"]) if (existsSync(path + s)) rmSync(path + s);
+  };
+
+  test("remaps the sentinel to KSIC 29241 when the code is free", () => {
+    const { raw, path } = openWithRows([["h-1", "HYD-BRK"]]);
+    try {
+      apply0080(raw);
+      const code = raw.query("SELECT ksic_code FROM md_industry WHERE id = 'h-1'").get() as { ksic_code: string | null };
+      expect(code.ksic_code).toBe("29241");
+    } finally {
+      cleanup(raw, path);
+    }
+  });
+
+  test("falls back to NULL (미지정) when 29241 is already owned by another row", () => {
+    const { raw, path } = openWithRows([["h-1", "29241"], ["h-2", "HYD-BRK"]]);
+    try {
+      apply0080(raw);
+      const rows = raw.query("SELECT id, ksic_code FROM md_industry ORDER BY id").all() as Array<{ id: string; ksic_code: string | null }>;
+      expect(rows.find((r) => r.id === "h-1")!.ksic_code).toBe("29241");
+      expect(rows.find((r) => r.id === "h-2")!.ksic_code).toBeNull();
+    } finally {
+      cleanup(raw, path);
+    }
+  });
+});
+
 describe("POST /api/market-overview/analyses — KSIC handling", () => {
   test("no code → industry stored with NULL ksic_code, never a NEW- placeholder", async () => {
     const res = await req("/api/market-overview/analyses", {
@@ -275,7 +332,7 @@ describe("PATCH /api/market-overview/industry/:id — KSIC handling", () => {
     expect(body.error.code).toBe("invalid_ksic_code");
   });
 
-  test("HYD-BRK sentinel stays writable; NULL clears the code", async () => {
+  test("retired HYD-BRK sentinel is rejected; NULL clears the code", async () => {
     const row = db.query("SELECT id FROM md_industry WHERE name_ko = ?").get("기존 발전 산업") as { id: string };
     const path = `/api/market-overview/industry/${encodeURIComponent(row.id)}`;
     const setSentinel = await req(path, {
@@ -283,8 +340,9 @@ describe("PATCH /api/market-overview/industry/:id — KSIC handling", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({ name_ko: "기존 발전 산업", ksic_code: "HYD-BRK" }),
     });
-    expect(setSentinel.status).toBe(200);
-    expect(industryCode("기존 발전 산업")).toBe("HYD-BRK");
+    expect(setSentinel.status).toBe(400);
+    const errBody = (await setSentinel.json()) as { error: { code: string } };
+    expect(errBody.error.code).toBe("invalid_ksic_code");
 
     const clear = await req(path, {
       method: "PATCH",

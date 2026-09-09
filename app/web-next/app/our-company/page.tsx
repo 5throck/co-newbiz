@@ -277,7 +277,7 @@ export function OurCompanyView() {
           setError(err instanceof Error ? err.message : "계열사 삭제 실패");
         }
       },
-      { body: "이 계열사와 분석 결과(프로파일 버전 전체)가 함께 삭제됩니다." },
+      { body: "이 계열사와 분석 결과(프로파일 버전 전체)가 함께 삭제됩니다. 시너지 분석이 이 계열사를 참조 중이면 먼저 해당 분석을 삭제해야 합니다." },
     );
   }
 

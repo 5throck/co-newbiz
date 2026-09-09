@@ -7,6 +7,7 @@
 import { authenticate } from "../../../lib/auth.ts";
 import { isAdminDealBlocked } from "../../../lib/project-visibility.ts";
 import { listVisibleProjects } from "../../../../../db/repositories/project.repository.ts";
+import { getDb } from "../../../../../db/client.ts";
 import { ok, forbidden } from "../../../lib/envelope.ts";
 
 export async function GET(request: Request) {
@@ -15,5 +16,18 @@ export async function GET(request: Request) {
   const ctx = auth.auth;
   if (isAdminDealBlocked(ctx)) return forbidden("role_required", "관리자는 딜 내용에 접근할 수 없습니다.");
   const rows = listVisibleProjects(ctx.userId, { excludeMnpi: false });
-  return ok(rows, 200, { count: rows.length });
+  // is_lead — 마감/보관(close)은 project_member.project_role='lead' 전용이므로
+  // 목록 단계에서 함께 알려준다(UI가 버튼 노출을 결정). repository는 그대로 둔다.
+  const leadIds = new Set(
+    (
+      getDb()
+        .query("SELECT project_id FROM project_member WHERE user_id = ? AND project_role = 'lead' AND revoked_at IS NULL")
+        .all(ctx.userId) as Array<{ project_id: string }>
+    ).map((r) => r.project_id),
+  );
+  return ok(
+    rows.map((r) => ({ ...r, is_lead: leadIds.has(r.id) })),
+    200,
+    { count: rows.length },
+  );
 }

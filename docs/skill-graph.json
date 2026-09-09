@@ -577,6 +577,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0112",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent-lifecycle-manager",
       "type": "skill",
       "layer": "L3"

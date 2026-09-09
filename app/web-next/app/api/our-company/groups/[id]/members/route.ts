@@ -2,7 +2,7 @@
 import { getDb } from "../../../../../../../../db/client.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 
 const now = () => new Date().toISOString();
 
@@ -76,7 +76,31 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const memberId = body?.member_id;
   if (!memberId) return badRequest("invalid_request", "member_id는 필수입니다.");
   const db = getDb();
-  db.run("DELETE FROM company_profile_version WHERE member_id = ?", [memberId]);
-  db.run("DELETE FROM company_group_member WHERE id = ? AND group_id = ?", [memberId, id]);
+  const member = db
+    .query("SELECT id FROM company_group_member WHERE id = ? AND group_id = ?")
+    .get(memberId, id) as { id: string } | undefined;
+  if (!member) return notFound();
+  // synergy_analysis.member_id가 이 행을 참조하면 FK(NO ACTION)가 DELETE를
+  // 거부한다 — 서버 500(빈 응답) 대신 판독 가능한 409로 안내한다.
+  const refCount =
+    (db.query("SELECT COUNT(*) AS n FROM synergy_analysis WHERE member_id = ?").get(memberId) as
+      | { n: number }
+      | undefined)?.n ?? 0;
+  if (refCount > 0) {
+    return fail(
+      409,
+      "member_in_use",
+      `이 계열사를 참조하는 시너지 분석 ${refCount}건이 있어 삭제할 수 없습니다. 시너지 분석 화면에서 해당 분석을 먼저 삭제해 주세요.`,
+    );
+  }
+  try {
+    db.transaction(() => {
+      db.run("DELETE FROM company_profile_version WHERE member_id = ?", [memberId]);
+      db.run("DELETE FROM company_group_member WHERE id = ? AND group_id = ?", [memberId, id]);
+    })();
+  } catch {
+    // 미처 파악한 참조가 남아 있던 경우의 방어막 — 원인을 그대로 노출한다.
+    return fail(409, "member_in_use", "이 계열사를 참조하는 데이터가 있어 삭제할 수 없습니다.");
+  }
   return ok({ deleted: memberId }, 200);
 }

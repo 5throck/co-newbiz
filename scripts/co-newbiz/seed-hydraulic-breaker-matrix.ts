@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Ingests the hydraulic-breaker region×segment×scenario demand matrix from
  * docs/research/hydraulic-breaker-market-2026-driver-analysis.md §4 into
@@ -11,7 +11,7 @@
  *
  * Creates, under the given project:
  *   - one industry_driver row (code 'hydraulic-breaker-demand') if absent
- *   - one md_industry row (KSIC placeholder) if absent, to satisfy the
+ *   - one md_industry row (KSIC 29241) if absent, to satisfy the
  *     industry_id FK on both target tables
  *   - one run row (label 'hydraulic-breaker-matrix-seed') to satisfy the
  *     run_id FK on structure_simulation_result
@@ -109,15 +109,19 @@ function main(): void {
       driver = { id };
     }
 
-    // md_industry placeholder for hydraulic breaker
-    let industry = db.query("SELECT id FROM md_industry WHERE ksic_code = ?").get("HYD-BRK") as { id: string } | null;
+    // md_industry row for hydraulic breaker — real KSIC 29241 (건설 및 채광용
+    // 기계장비 제조업, DART-verified via Soosan group affiliates). The legacy
+    // 'HYD-BRK' sentinel was retired in ADR-0112; migrate it if encountered.
+    let industry = db.query("SELECT id FROM md_industry WHERE ksic_code IN (?, ?)").get("29241", "HYD-BRK") as { id: string } | null;
     if (!industry) {
       const id = ulid();
       db.run(
         "INSERT INTO md_industry (id, ksic_code, naics_code, isic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?,?,?)",
-        [id, "HYD-BRK", null, null, "유압브레이커", "Hydraulic Breaker", now],
+        [id, "29241", null, null, "유압브레이커", "Hydraulic Breaker", now],
       );
       industry = { id };
+    } else {
+      db.run("UPDATE md_industry SET ksic_code = '29241' WHERE id = ? AND ksic_code = 'HYD-BRK'", [industry.id]);
     }
 
     // run row to satisfy structure_simulation_result's run_id FK — reused

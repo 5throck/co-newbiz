@@ -5,7 +5,6 @@
 import { getDb } from "../../../../../../db/client.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { ok } from "../../../../lib/envelope.ts";
-import { HYD_BRK_MATRIX } from "../../../../lib/market-sizing.ts";
 
 export async function GET(request: Request) {
   const auth = authenticate(request);
@@ -44,9 +43,7 @@ export async function GET(request: Request) {
       matrix = null;
     }
     const ef = matrix?.externalForecast;
-    // 동결 분석(HYD-BRK)의 seed payload는 matrix를 담지 않는다 — 상수에서 CAGR을 보충.
-    const bottomUp = matrix?.consistency?.bottomUpCagr
-      ?? (r.ksic_code === "HYD-BRK" ? HYD_BRK_MATRIX.consistency.bottomUpCagr : null);
+    const bottomUp = matrix?.consistency?.bottomUpCagr ?? null;
     return {
       analysis_id: r.id,
       industry_id: r.industry_id,

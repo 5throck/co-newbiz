@@ -91,4 +91,20 @@ describe("project lifecycle closure (Wave B1)", () => {
     const rollup = getPortfolioRollup({ reviewCycle: "2026-Q3" }, db);
     expect(rollup.financial.some((r) => r.project_id === projectId)).toBe(false);
   });
+
+  test("project list exposes is_lead so the UI can gate the close/archive action", async () => {
+    const flagId = ulid();
+    db.run("INSERT INTO md_project (id, project_no, created_at, project_name) VALUES (?,?,?,?)", [flagId, "PRJ-LEAD-FLAG", NOW, "Lead flag test"]);
+    db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [flagId, "lead-close", "lead", "test", NOW, "test"]);
+    db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [flagId, "contrib-close", "contributor", "test", NOW, "test"]);
+
+    const asLead = await nextRequest("/api/projects", { headers: { cookie: leadCookie } });
+    expect(asLead.status).toBe(200);
+    const leadBody = (await asLead.json()) as { data: Array<{ id: string; is_lead?: boolean }> };
+    expect(leadBody.data.find((p) => p.id === flagId)?.is_lead).toBe(true);
+
+    const asContrib = await nextRequest("/api/projects", { headers: { cookie: contributorCookie } });
+    const contribBody = (await asContrib.json()) as { data: Array<{ id: string; is_lead?: boolean }> };
+    expect(contribBody.data.find((p) => p.id === flagId)?.is_lead).toBe(false);
+  });
 });
