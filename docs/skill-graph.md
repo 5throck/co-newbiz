@@ -37,7 +37,8 @@
 | `database-operations` | L3 | dba | — | db-migration-governance (composes_with), query-performance-tuning (composes_with) | — | — |
 | `db-migration-governance` | L3 | data-architect, dba | — | adr-governance, data-normalization (composes_with), database-operations (composes_with), master-data-governance (composes_with), query-performance-tuning (composes_with) | — | — |
 | `dd-to-valuation-bridge` | L3 | brownfield-agent, risk-officer, risk-officer | phase4, phase5 | brownfield-feasibility (composes_with), executive-presentation (composes_with), financing-plan-review (follows), insight-synthesis (composes_with), rag-scoring-framework (composes_with), rag-scoring-framework (composes_with), site-visit-protocol (composes_with), stage-gate-governance (composes_with), stage-gate-governance (follows), talent-pipeline-planning (composes_with) | — | — |
-| `deal-execution-playbook` | L3 | — | — | — | — | — |
+| `deal-execution-playbook` | L3 | — | — | deal-pipeline-orchestration (composes_with) | — | — |
+| `deal-pipeline-orchestration` | L3 | — | — | deal-execution-playbook (composes_with), evidence-ledger (composes_with), meeting-facilitation (composes_with), stage-gate-governance (composes_with), two-tier-approval-chain (composes_with) | — | — |
 | `deal-workspace-operations` | L3 | — | — | — | — | — |
 | `debt-and-contingent-liability-simulation` | L3 | valuation-agent, valuation-agent | phase4 | certification-transferability (follows), financing-plan-review (composes_with), investment-feasibility-modeling (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), wacc-input-session (composes_with) | — | — |
 | `decision-record` | L3 | — | — | — | — | — |

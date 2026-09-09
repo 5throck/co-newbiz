@@ -13,6 +13,13 @@ description: >-
 status: active
 owner: docs-writer
 last_reviewed: 2026-08-29
+metadata:
+  type: process
+  triggers:
+    - audit handbook
+    - handbook parity check
+    - handbook sync audit
+    - textbook drift check
 prerequisites: handbook (audits the output of the H-Stage handbook pipeline)
 l2_propagate: true
 ---
