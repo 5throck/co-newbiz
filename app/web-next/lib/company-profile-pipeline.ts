@@ -70,6 +70,38 @@ const now = () => new Date().toISOString();
 
 type Db = ReturnType<typeof getDb>;
 
+// ── In-process 작업 상태 ──
+// 파이프라인은 analyze 라우트에서 fire-and-forget으로 실행된다. 실패를 여기서
+// 기록하지 않으면 라우트의 .catch(console.error)만 남고, profile 폴링은
+// version이 없다는 이유로 영원히 "in_progress"를 돌려 분석이 끝을 알 수 없다.
+export interface ProfileJobStatus {
+  status: "running" | "failed";
+  error?: string;
+  startedAt: string;
+  failedAt?: string;
+}
+
+const profileJobs = new Map<string, ProfileJobStatus>();
+
+export function getProfileJobStatus(memberId: string): ProfileJobStatus | null {
+  return profileJobs.get(memberId) ?? null;
+}
+
+/** analyze 라우트용 실행기 — running/failed 상태를 기록하고 성공 시 지운다(이후 status는 completed가 version 유무로 판정). */
+export function startCompanyProfilePipeline(db: Db, memberId: string, userId: string): void {
+  profileJobs.set(memberId, { status: "running", startedAt: now() });
+  void runCompanyProfilePipeline(db, memberId, userId)
+    .catch((err: unknown) => {
+      profileJobs.set(memberId, {
+        status: "failed",
+        error: err instanceof Error ? err.message.slice(0, 300) : String(err),
+        startedAt: profileJobs.get(memberId)?.startedAt ?? now(),
+        failedAt: now(),
+      });
+      console.error("company profile pipeline failed:", err);
+    });
+}
+
 export async function runCompanyProfilePipeline(db: Db, memberId: string, userId: string): Promise<void> {
   const member = db
     .query(
