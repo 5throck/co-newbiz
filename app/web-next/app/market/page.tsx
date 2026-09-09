@@ -11,15 +11,15 @@ import { StageFrame } from "../../components/StageFrame.tsx";
 import { EChart } from "../../components/EChart.tsx";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
 import {
-  AXES, HYD_BRK_MATRIX, REGISTRY, SIZING_SOURCE_DOC, SEGMENTS, segmentsOf, STEPS,
+  AXES, REGISTRY, SEGMENTS, segmentsOf, STEPS,
   VALIDATION_STATUS_META, bandFor, global2026, projection2030, regionTotal,
   type SizingMatrix, type SegmentCode,
 } from "../../lib/market-sizing.ts";
 
 // S1 시장분석 (/market) — systematic-market-sizing 스킬의 8단계 절차 리포트.
 // 랜딩 = 산업 테이블(신규 분석 생성 포함) → 선택 시 8단계 리치 리포트.
-// 동결 분석(HYD-BRK)은 연구문서 매트릭스, 신규 분석은 파이프라인이 LLM으로
-// 생성한 매트릭스 — 어느 쪽이든 동일한 차트/테이블로 렌더링된다.
+// 파이프라인 산출과 수동 연구 시드 모두 버전 페이로드의 매트릭스로 동일하게
+// 렌더링된다 — 산업별 특수 케이스는 없다 (ADR-0112).
 
 interface AnalysisInfo {
   id: string; status: "in_progress" | "completed" | "failed"; current_step: number; latest_version: number | null;
@@ -533,23 +533,24 @@ export function MarketView() {
   );
 }
 
-/* ── 산업 리포트: 동결 매트릭스(HYD-BRK) 또는 파이프라인 생성 매트릭스 ── */
+/* ── 산업 리포트: 버전 페이로드의 매트릭스를 렌더링한다 (ADR-0112 — 모든 분석 동일 경로) ── */
 
 function MarketReport({ detail, analysisId, analysisDate }: { detail: IndustryDetail; analysisId: string | null; analysisDate: string | null }) {
-  const isFrozen = detail.industry.ksic_code === "HYD-BRK";
   const [analysis, setAnalysis] = useState<AnalysisDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isFrozen || !analysisId) return;
+    if (!analysisId) return;
     api.get<AnalysisDetail>(`/api/market-overview/analyses/${encodeURIComponent(analysisId)}`)
       .then((r) => setAnalysis(r.data))
       .catch((e) => setError(e instanceof Error ? e.message : "분석 결과 불러오기 실패"));
-  }, [isFrozen, analysisId]);
+  }, [analysisId]);
 
-  const matrix: SizingMatrix | null = isFrozen ? HYD_BRK_MATRIX : (analysis?.versions[0]?.payload?.matrix ?? null);
+  const matrix: SizingMatrix | null = analysis?.versions[0]?.payload?.matrix ?? null;
   const stepSummaries = analysis?.versions[0]?.payload?.stepSummaries ?? null;
-  const llmUsed = !isFrozen && (stepSummaries?.every((s) => s.source === "llm") ?? false);
+  // provenance는 데이터가 스스로 말한다: 수동 연구 시드(frozen-research)인지 파이프라인 산출인지.
+  const manualResearch = matrix?.provenance === "frozen-research";
+  const llmUsed = stepSummaries?.every((s) => s.source === "llm") ?? false;
 
   return (
     <>
@@ -560,16 +561,16 @@ function MarketReport({ detail, analysisId, analysisDate }: { detail: IndustryDe
         </h2>
         <p className="text-[color:var(--muted-fg)] text-[0.78rem]">
           방법론: systematic-market-sizing v1.1
-          {isFrozen ? <> · 소스 문서: <code className="text-[0.72rem]">{SIZING_SOURCE_DOC}</code></> : " · 8단계 파이프라인 산출"}
+          {manualResearch ? " · 연구문서 기반 수동 분석(분석가 확정)" : " · 8단계 파이프라인 산출"}
           {analysisDate && <> · 분석일: <strong>{analysisDate}</strong></>}
         </p>
       </div>
       <VersionBar versions={detail.versions} />
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
-      {!isFrozen && !analysis && (
+      {!analysis && (
         <p className="market-section">분석 결과를 불러오는 중...</p>
       )}
-      {!isFrozen && analysis && !matrix && (
+      {analysis && !matrix && (
         <section aria-label="분석 없음" className="market-section sizing-step">
           <p className="text-[color:var(--muted-fg)] italic">
             이 산업의 정식 분석 기록(버전)이 없습니다. 목록에서 "신규 산업 분석"으로 8단계 파이프라인을 실행하세요.
@@ -586,13 +587,7 @@ function MarketReport({ detail, analysisId, analysisDate }: { detail: IndustryDe
               {llmUsed && <> (8단계 전체 LLM 요약 사용)</>}
             </p>
           )}
-          <SizingReport
-            detail={detail}
-            matrix={matrix}
-            analysisId={isFrozen ? detail.sizing?.run_id ?? null : analysisId}
-            isFrozen={isFrozen}
-            stepSummaries={stepSummaries}
-          />
+          <SizingReport detail={detail} matrix={matrix} stepSummaries={stepSummaries} />
         </>
       )}
     </>
@@ -640,11 +635,9 @@ function StepSection({ n, id, title, children }: { n: number; id: string; title:
   );
 }
 
-function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
+function SizingReport({ detail, matrix, stepSummaries }: {
   detail: IndustryDetail;
   matrix: SizingMatrix;
-  analysisId: string | null;
-  isFrozen: boolean;
   stepSummaries: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> | null;
 }) {
   const [tab, setTab] = useState<"overview" | "structure" | "competitive" | "size" | "allocation" | "growth" | "pipeline" | "qualitative" | "regulation" | "risk" | "validate">("overview");
@@ -696,7 +689,7 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
             </div>
           </div>
           <ul className="sizing-note-list mt-3">
-            <li>분석 방법: systematic-market-sizing v1.1 — {isFrozen ? `동결 연구문서 기반(${SIZING_SOURCE_DOC})` : "8단계 파이프라인 산출(LLM 추정 포함, 분석가 확정 전)"}</li>
+            <li>분석 방법: systematic-market-sizing v1.1 — {matrix.provenance === "frozen-research" ? "연구문서 기반 수동 분석(분석가 확정)" : "8단계 파이프라인 산출(LLM 추정 포함, 분석가 확정 전)"}</li>
             <li>세그먼트: {segmentsOf(matrix).map((x) => x.label).join(" / ")} — 권역 {matrix.regions.length}개</li>
             <li>시나리오: 비관/기본/낙관 CAGR 밴드 — 세부는 <strong>성장성</strong> 탭</li>
             <li>경쟁 구조 — 세부는 <strong>경쟁 구조</strong> 탭 · 기회/위험 요인 — <strong>정성 분석</strong> 탭</li>
@@ -1316,8 +1309,7 @@ function SizingReport({ detail, matrix, analysisId, isFrozen, stepSummaries }: {
           등록됩니다. 레지스트리는 append-only — 수정은 새 row로 기록됩니다. 아래는 실제 등록 상태(라이브 조회)입니다.
         </p>
         <RegistryStatus
-          sizing={isFrozen ? detail.sizing : null}
-          isFrozen={isFrozen}
+          sizing={detail.sizing}
           referenceImplementation={REGISTRY.referenceImplementation}
         />
       </StepSection>
@@ -1722,9 +1714,8 @@ function ConsistencyChart({ matrix }: { matrix: SizingMatrix }) {
   return <EChart option={option} ariaLabel="가정 일관성 진단" height={140} />;
 }
 
-function RegistryStatus({ sizing, isFrozen, referenceImplementation }: {
+function RegistryStatus({ sizing, referenceImplementation }: {
   sizing: IndustryDetail["sizing"];
-  isFrozen: boolean;
   referenceImplementation: string;
 }) {
   const counts = useMemo(() => {
@@ -1736,7 +1727,9 @@ function RegistryStatus({ sizing, isFrozen, referenceImplementation }: {
     return { ...byPrefix, total: sizing?.assumptions.length ?? 0 };
   }, [sizing]);
 
-  if (!isFrozen || !sizing) {
+  // 레지스트리 패널은 가정이 실제 등록된 run(현재: 유압브레이커 시드 run)에만
+  // 표시한다 — isFrozen 센티널이 아니라 run_label 데이터로 판별한다 (ADR-0112).
+  if (!sizing || sizing.run_label !== REGISTRY.runLabel) {
     return (
       <p className="text-[color:var(--muted-fg)] italic text-[0.8rem]">
         아직 가정 레지스트리에 등록되지 않았습니다. 분석 확정 후 {referenceImplementation} 패턴으로

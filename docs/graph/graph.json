@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 606,
+    "node_count": 607,
     "edge_count": 1003
   },
   "nodes": [
@@ -561,6 +561,11 @@
       "id": "adr:0111",
       "type": "adr",
       "label": "ADR-0111: `md_industry.ksic_code` becomes nullable — retiring the fabricated `NEW-*` placeholder codes and adding a KSIC code picker"
+    },
+    {
+      "id": "adr:0112",
+      "type": "adr",
+      "label": "ADR-0112: Retire the HYD-BRK freeze sentinel — the hydraulic-breaker report becomes a regular persisted analysis version"
     },
     {
       "id": "agent:antitrust-agent",

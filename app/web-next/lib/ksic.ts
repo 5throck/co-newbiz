@@ -1,19 +1,16 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * KSIC (한국표준산업분류) helpers — shared input validation and curated
  * master-data search for the /market code picker (ADR-0111).
  *
  * Validation contract: a user-supplied KSIC code is 2–6 digits (중분류
- * through 세세분류 levels) or NULL ("미지정"). The seeded 'HYD-BRK' freeze
- * sentinel (insights bottom-up CAGR supplement, /market frozen banner) is
- * the one sanctioned non-numeric value and is accepted explicitly — the
- * seeded row must stay editable. Nothing else passes; in particular the
- * 'NEW-*' placeholders the create route used to fabricate are retired by
- * migration 0078 and rejected by this parser.
+ * through 세세분류 levels) or NULL ("미지정"). The historical 'HYD-BRK'
+ * freeze sentinel was retired in ADR-0112 (migration 0080 remapped the row,
+ * the report matrix is persisted as a regular version) — it is no longer a
+ * valid value, and the 'NEW-*' placeholders the create route used to
+ * fabricate are equally rejected.
  */
 import master from "./ksic-master.json";
-
-export const HYD_BRK_SENTINEL = "HYD-BRK";
 
 const KSIC_CODE_RE = /^\d{2,6}$/;
 
@@ -24,7 +21,6 @@ export type KsicParseResult =
 export function parseKsicInput(value: string | null | undefined): KsicParseResult {
   const code = value?.trim() ?? "";
   if (!code) return { ok: true, code: null };
-  if (code === HYD_BRK_SENTINEL) return { ok: true, code };
   if (!KSIC_CODE_RE.test(code)) {
     return { ok: false, reason: "KSIC 코드는 2~6자리 숫자여야 합니다 (예: 28121)." };
   }
