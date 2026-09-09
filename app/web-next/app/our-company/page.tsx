@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "../../lib/api.ts";
+import { api, ApiError } from "../../lib/api.ts";
 import Link from "next/link";
 import { useConfirm, RowEdit } from "../../components/crud.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
@@ -158,15 +158,19 @@ export function OurCompanyView() {
 
   useEffect(() => { loadGroups(); }, [loadGroups]);
 
-  // 열려있는 계열사 프로파일 폴링 — 분석 완료 시 자동 반영
+  // 열려있는 계열사 프로파일 폴링 — 분석 완료 시 자동 반영, 실패 시 사용자에게 보고
   useEffect(() => {
     if (!selectedGroup || !openMember) return;
     const t = setInterval(async () => {
       try {
-        const r = await api.get<{ profile: Profile | null; status: string }>(`/api/our-company/members/${openMember}/profile`);
+        const r = await api.get<{ profile: Profile | null; status: string; error?: string }>(`/api/our-company/members/${openMember}/profile`);
         if (r.data.status === "completed" && r.data.profile) {
           setProfiles((prev) => ({ ...prev, [openMember]: r.data.profile! }));
           loadGroup(selectedGroup.group.id);
+        } else if (r.data.status === "failed") {
+          // 파이프라인이 죽으면 version이 생기지 않는다 — 실패를 보고하지 않으면 "분석 중..."에 영구 머문다.
+          setError(`분석 실패 — ${r.data.error ?? "알 수 없는 오류"}. 재분석을 실행하세요.`);
+          setProfiles((prev) => { const n = { ...prev }; delete n[openMember]; return n; });
         }
       } catch { /* 다음 폴링에서 재시도 */ }
     }, 4000);
@@ -322,9 +326,21 @@ export function OurCompanyView() {
     setOpenMember(memberId);
     setProfileTab("overview");
     setError(null);
+    // 분석 시작은 멱등적(재호출 시 파이프라인 재실행)이므로, dev 재컴파일 창의
+    // 빈 응답(invalid_response)에 한해 1회 재시도한다 — 그 외 에러는 그대로 보고.
+    const start = () => api.post(`/api/our-company/members/${memberId}/analyze`, {});
     try {
-      await api.post(`/api/our-company/members/${memberId}/analyze`, {});
+      await start();
     } catch (err) {
+      if (err instanceof ApiError && err.code === "invalid_response") {
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          await start();
+          return;
+        } catch (retryErr) {
+          err = retryErr;
+        }
+      }
       setError(err instanceof Error ? err.message : "분석 시작 실패");
       // 시작 실패 시 loading 상태를 지우지 않으면 버튼이 "분석 중..."에 영구 머문다.
       setProfiles((prev) => { const n = { ...prev }; delete n[memberId]; return n; });

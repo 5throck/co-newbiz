@@ -32,6 +32,15 @@ function invalidResponse(res: Response): ApiError {
   return new ApiError(res.status || 0, "invalid_response", "서버 응답이 비어 있거나 손상되었습니다 — 잠시 후 다시 시도하세요.");
 }
 
+/** JSON 본문 파싱 — 빈·손상 본문이면 undefined (호출부가 재시도를 결정한다). */
+async function parseJson<T>(res: Response): Promise<Envelope<T> | undefined> {
+  try {
+    return (await res.json()) as Envelope<T>;
+  } catch {
+    return undefined;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>> {
   const headers: Record<string, string> = { "Content-Type": "application/json", ...(init?.headers as Record<string, string>) };
   // multipart 업로드는 브라우저가 boundary를 설정해야 하므로 Content-Type을 제거한다.
@@ -44,16 +53,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>
   }
   const send = () => fetch(path, { credentials: "include", headers, ...init });
   let res = await send();
-  let body: Envelope<T>;
-  try {
-    body = (await res.json()) as Envelope<T>;
-  } catch {
-    // 빈 본문은 일시적 끊김일 뿐 서버 판정이 아니므로, 멱등한 GET에 한해 1회 재시도한다.
+  let body = await parseJson<T>(res);
+  if (body === undefined) {
+    // 빈 본문은 일시적 끊김일 뿐 서버 판정이 아니므로, 멱등한 GET에 한해 재시도한다.
+    // 재컴파일 창은 수백 ms~수 s에 이르므로 즉시 재시도로는 같은 창에 다시 걸린다 — 백오프를 둔다.
     if (method !== "GET") throw invalidResponse(res);
-    res = await send();
-    body = await res.json().catch(() => {
-      throw invalidResponse(res);
-    });
+    for (const delayMs of [400, 1200]) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      res = await send();
+      body = await parseJson<T>(res);
+      if (body !== undefined) break;
+    }
+    if (body === undefined) throw invalidResponse(res);
   }
   if (!res.ok) {
     throw new ApiError(res.status, body.error?.code ?? "unknown_error", body.error?.message ?? "Request failed.");

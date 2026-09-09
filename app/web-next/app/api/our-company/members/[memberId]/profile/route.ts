@@ -2,7 +2,7 @@
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
-import { loadLatestProfile } from "../../../../../../lib/company-profile-pipeline.ts";
+import { loadLatestProfile, getProfileJobStatus } from "../../../../../../lib/company-profile-pipeline.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ memberId: string }> }) {
   const auth = authenticate(request);
@@ -21,5 +21,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ memb
     .all(memberId) as Array<{ version_no: number; source_ref: string | null; created_by: string; created_at: string }>;
   const profile = loadLatestProfile(db, memberId);
 
-  return ok({ member, profile, versions, status: profile ? "completed" : "in_progress" }, 200);
+  // version 유무만으로는 "실행 중"과 "실패"를 구분할 수 없다 — in-process 작업 상태를 반영한다.
+  const job = getProfileJobStatus(memberId);
+  const status = profile ? "completed" : job?.status === "failed" ? "failed" : "in_progress";
+
+  return ok(
+    {
+      member,
+      profile,
+      versions,
+      status,
+      ...(status === "failed" ? { error: job?.error } : {}),
+    },
+    200,
+  );
 }
