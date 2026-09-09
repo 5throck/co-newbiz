@@ -27,6 +27,7 @@
 
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
+import { resolveProjectWacc, type WaccResolution } from "../../../db/lib/wacc.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef, type CallAgent } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
 
@@ -56,7 +57,6 @@ export const SCENARIO_LABEL: Record<Scenario, string> = {
 
 /** Horizon / discounting constants — deterministic defaults, documented in every persisted note. */
 const HORIZON_YEARS = 5;
-const WACC = 0.1;
 const MC_ITERATIONS = 2000;
 /** Capture rate of the anchored market size, year-1 revenue (deterministic default assumption). */
 const CAPTURE_RATE = 0.005;
@@ -148,8 +148,10 @@ export function irr(cashflows: number[]): number | null {
  * SimulationResult contract (scripts/co-newbiz/simulate.ts). The driver is
  * annual revenue growth ~ Normal(anchorGrowth*deltaGrowth, 0.02*deltaDisp);
  * each draw builds a full 5-year FCF path (revenue → EBITDA-less opex → capex)
- * and discounts at WACC. Pure function of (inputs, scenario): same seed in,
- * same percentiles out — any persisted figure is reproducible.
+ * and discounts at the project WACC resolved from the user assumption session
+ * (falling back to 10% only with explicit default provenance). Pure function
+ * of (inputs, scenario): same seed in, same percentiles out — any persisted
+ * figure is reproducible.
  */
 export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario): SimulationResult {
   const seed = scenarioSeed(inputs.projectId, scenario);
@@ -170,7 +172,7 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario): Sim
         revenue *= 1 + anchorGrowth + disp * z1;
       }
       const fcf = revenue * (1 - OPEX_RATIO) - revenue * CAPEX_RATIO;
-      npv += fcf / Math.pow(1 + WACC, year);
+      npv += fcf / Math.pow(1 + inputs.wacc.value, year);
     }
     npvs.push(npv);
   }
@@ -187,6 +189,7 @@ export interface CaseInputs {
   projectId: string;
   marketSizeKrwM: number;
   anchorGrowth: number;
+  wacc: WaccResolution;
 }
 
 export function caseInputsForProject(projectId: string): CaseInputs {
@@ -205,6 +208,7 @@ export function caseInputsForProject(projectId: string): CaseInputs {
     projectId,
     marketSizeKrwM: row?.market_size_krw_m ?? 50000,
     anchorGrowth: row?.growth_rate ?? 0.05,
+    wacc: resolveProjectWacc(getDb(), projectId),
   };
 }
 
@@ -272,7 +276,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
     if (step === "valuation_model") {
       const modelId = ulid();
       const flows = deterministicCashflows(ctx.inputs, ctx.scenario);
-      const npv = flows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + WACC, i), 0); // flows[0]=year-0
+      const npv = flows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + ctx.inputs.wacc.value, i), 0); // flows[0]=year-0
       db.run(
         `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)`,
         [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${ctx.scenario}`, HORIZON_YEARS, "business-case-generator", nowIso()],
@@ -295,7 +299,8 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       return [
         `### [밸류에이션] valuation-agent — 밸류에이션 모델 (${SCENARIO_LABEL[ctx.scenario]})`,
         "",
-        `확정 WACC ${(WACC * 100).toFixed(1)}%·회수기간 ${HORIZON_YEARS}년 기준 NPV ${npv.toFixed(1)} 억원,`,
+        `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(1)}%·회수기간 ${HORIZON_YEARS}년 기준 NPV ${npv.toFixed(1)} 억원,`,
+        `WACC 출처: ${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? ` (run ${ctx.inputs.wacc.run_id})` : ""}.`,
         `IRR ${((irr(flows) ?? 0) * 100).toFixed(1)}% (greenfield-fs step 3). 모델/라인 3건 영속화 (model ${modelId}).`,
       ].join("\n");
     }
@@ -304,7 +309,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       if (!modelId) throw new Error("distributional_valuation requires valuation_model to have persisted the model");
       const sim = runSeededSimulation(ctx.inputs, ctx.scenario);
       const flows = deterministicCashflows(ctx.inputs, ctx.scenario);
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${(ctx.inputs.anchorGrowth * delta.growth).toFixed(4)}; wacc=${WACC}`;
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${(ctx.inputs.anchorGrowth * delta.growth).toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}`;
       for (const pct of ["p05", "p50", "p95"] as const) {
         db.run(
           `INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at)

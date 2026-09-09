@@ -10,8 +10,8 @@ description: >
 
   Use when: "WACC input", "hurdle IRR confirmation", "CAPM components",
   "discount rate session".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.2.0
+last_reviewed: 2026-09-09
 status: active
 owner: valuation-agent
 prerequisites: none
@@ -76,9 +76,12 @@ The session's output must land in the run's assumption registry under the
 EXACT keys `wacc` and `hurdle_irr` — these two key names are the contract
 `db/lib/snapshot-filler.ts`'s `fin.wacc_source_status` var reads:
 
-- Record via `bun scripts/co-newbiz/newbiz.ts assume --run <run_id> --key wacc
-  --kind user --value <rate> ...` (and again with `--key hurdle_irr`), or via
-  the `set_assumption`✱ MCP tool — both write the same FR-DATA-07 path.
+- Preferred project session: `POST /api/projects/{id}/wacc` (or the WACC
+  page) with `wacc`, optional `hurdle_irr`, `mode`, `rationale`, and `as_of`.
+  The API creates a new versioned run snapshot and writes `kind='user'`
+  assumption rows for the exact keys. CLI fallback: `bun scripts/co-newbiz/newbiz.ts
+  assume --run <run_id> --key wacc --kind user --value <rate> ...` (and again
+  with `--key hurdle_irr`).
 - The var's semantics: ANY `kind='assumed'` row among the two keys ⇒ status
   `'assumed'`; both keys present and none assumed ⇒ `'sourced'`; neither key
   recorded for the run ⇒ `missing` (the criterion evaluates UNASSESSED, never

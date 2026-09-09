@@ -11,9 +11,9 @@
  *
  * Scenario composition convention (the engine's input contract, monte_carlo.py
  * docstring): run_input keys `sim.discount_rate` and `sim.cf1`..`sim.cfN`
- * (contiguous from 1) feed discount_rate / base_cash_flows; every other
- * run_input key (run.wacc etc.) is versioned but ignored here — it belongs
- * to the valuation engine that does not exist yet. contingent_liability
+ * (contiguous from 1) feed base_cash_flows; discount_rate resolves from an
+ * explicit comparison override, then a user-confirmed `wacc` assumption /
+ * run_input, then the legacy `sim.discount_rate` key. contingent_liability
  * columns map 1:1 onto the engine's liability shape (probability,
  * amount_low/expected/high, expected_timing_year -> timing_year).
  *
@@ -46,6 +46,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Database } from "bun:sqlite";
 import { ulid } from "./ulid.ts";
+import { resolveRunWacc } from "./wacc.ts";
 
 /** Caller-fixable input problem — the REST layer maps this to 400. */
 export class SimulationInputError extends Error {}
@@ -180,10 +181,11 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
     .all(runId) as { assumption_key: string; value: number }[]) {
     inputs.set(row.assumption_key, row.value);
   }
-  const discountRate = opts.discountRateOverride ?? inputs.get("sim.discount_rate");
+  const runWacc = resolveRunWacc(db, runId);
+  const discountRate = opts.discountRateOverride ?? runWacc?.value ?? inputs.get("sim.discount_rate");
   if (discountRate === undefined || !Number.isFinite(discountRate) || discountRate <= -1) {
     throw new SimulationInputError(
-      "run_input key 'sim.discount_rate' is required (a finite rate > -1) before a simulation can run.",
+      "a user WACC assumption/run_input key 'wacc' or legacy run_input key 'sim.discount_rate' is required (finite rate > -1) before a simulation can run.",
     );
   }
   const flows = [...inputs.entries()]
