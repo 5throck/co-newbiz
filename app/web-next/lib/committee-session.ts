@@ -21,9 +21,6 @@
 //
 // The chair synthesis always goes through buildSynthesis() (ADR-0096 §6):
 // veto-dissent positions are copied VERBATIM into gate_evaluation.dissent_json.
-import * as yaml from "js-yaml";
-import { existsSync, readFileSync } from "node:fs";
-import { join, dirname } from "node:path";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import {
@@ -36,6 +33,8 @@ import {
   type Recommendation,
 } from "./agent-orchestrator.ts";
 import { getCommitteeCallAgent } from "./committee-agents.ts";
+import { COMMITTEE_REGISTRY } from "./committee-registry.generated.ts";
+import { SPEC_VERSION } from "./spec-activities.generated.ts";
 
 // ── Registry (procedures/_committees.yaml — governance data, ADR-0097 §3) ──
 
@@ -69,32 +68,6 @@ export interface SessionMeta {
   evaluation_id?: string;
 }
 
-interface RawCommitteeDoc {
-  committees?: Record<string, Omit<CommitteeDef, "decision_modes_allowed"> & { decision_modes_allowed: string[] }>;
-}
-
-// Same Turbopack caveat as agent-orchestrator.ts: import.meta.dirname may
-// not survive bundling. Resolution order: (1) import.meta.dirname, (2) walk
-// up from cwd until a directory that actually contains the governance file —
-// a bare cwd-relative guess once resolved to app/web-next/procedures (ENOENT)
-// when the server ran from app/web-next.
-function resolveProjectRoot(): string {
-  // lib → web-next → app → repo root: three levels up from this file.
-  if (typeof import.meta.dirname === "string") {
-    return join(import.meta.dirname, "..", "..", "..");
-  }
-  let dir = process.cwd();
-  for (let i = 0; i < 8; i++) {
-    if (existsSync(join(dir, "procedures", "_committees.yaml"))) return dir;
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return process.cwd();
-}
-const PROJECT_ROOT = resolveProjectRoot();
-const COMMITTEES_FILE = join(PROJECT_ROOT, "procedures", "_committees.yaml");
-
 let cachedRegistry: Record<string, CommitteeDef> | null = null;
 
 /**
@@ -104,9 +77,8 @@ let cachedRegistry: Record<string, CommitteeDef> | null = null;
  */
 export function loadCommitteeRegistry(): Record<string, CommitteeDef> {
   if (cachedRegistry) return cachedRegistry;
-  const raw = yaml.load(readFileSync(COMMITTEES_FILE, "utf-8"), { schema: yaml.JSON_SCHEMA }) as RawCommitteeDoc | null;
   const out: Record<string, CommitteeDef> = {};
-  for (const [key, c] of Object.entries(raw?.committees ?? {})) {
+  for (const [key, c] of Object.entries(COMMITTEE_REGISTRY)) {
     out[key] = {
       ...(c as CommitteeDef),
       decision_modes_allowed: (c.decision_modes_allowed ?? []) as DecisionMode[],
@@ -287,26 +259,8 @@ function createSessionRun(entity: EntityRef, committee: CommitteeDef, opts: Conv
   return runId;
 }
 
-// Same resolution as agent-orchestrator's loadSpecVersion (spec_version
-// provenance), inlined walk kept identical in spirit.
-let cachedSpecVersion: string | null = null;
 function loadSpecVersion(): string {
-  if (cachedSpecVersion) return cachedSpecVersion;
-  const candidates = [
-    join(PROJECT_ROOT, "process", "flow.spec.yaml"),
-    join(PROJECT_ROOT, "..", "process", "flow.spec.yaml"),
-  ];
-  for (const candidate of candidates) {
-    try {
-      const text = readFileSync(candidate, "utf8");
-      const match = text.match(/^version:\s*(\S+)/m);
-      cachedSpecVersion = match?.[1] ?? "unknown";
-      return cachedSpecVersion;
-    } catch {
-      // try next
-    }
-  }
-  return "unknown";
+  return SPEC_VERSION;
 }
 
 /**
