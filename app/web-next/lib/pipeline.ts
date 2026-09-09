@@ -97,6 +97,12 @@ export function startPipeline(opts: {
   if (!db.query(`SELECT id FROM ${tableName} WHERE id = ?`).get(opts.entityId)) {
     throw new PipelineError("not_found", `${opts.entityType} '${opts.entityId}' not found.`);
   }
+  if (opts.entityType === "project") {
+    const status = db.query("SELECT status FROM md_project WHERE id = ?").get(opts.entityId) as { status: string } | undefined;
+    if (status?.status !== "open") {
+      throw new PipelineError("not_found", `project '${opts.entityId}' is not open.`);
+    }
+  }
 
   const ids = relatedEntityIds(opts.entityType, opts.entityId);
 
@@ -619,7 +625,16 @@ export interface PipelineResumeOutcome {
  */
 export async function resumePausedPipelines(opts: { actor?: string } = {}): Promise<PipelineResumeOutcome[]> {
   const db = getDb();
-  const rows = db.query("SELECT * FROM pipeline_run WHERE status = 'paused_for_human' ORDER BY updated_at ASC").all() as PipelineRunRow[];
+  const rows = db
+    .query(
+      `SELECT r.*
+       FROM pipeline_run r
+       LEFT JOIN md_project p ON p.id = r.entity_id AND r.entity_type = 'project'
+       WHERE r.status = 'paused_for_human'
+         AND (r.entity_type != 'project' OR p.status = 'open')
+       ORDER BY r.updated_at ASC`,
+    )
+    .all() as PipelineRunRow[];
   const outcomes: PipelineResumeOutcome[] = [];
   for (const run of rows) {
     const entity: ProcessEntity = { type: run.entity_type, id: run.entity_id };

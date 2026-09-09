@@ -34,6 +34,10 @@ export interface ProjectRow {
   id: string;
   project_no: string;
   created_at: string;
+  /** Wave B1 lifecycle: explicit operator state, distinct from derived KILL gate verdicts. */
+  status?: "open" | "closed" | "archived";
+  closed_at?: string | null;
+  closure_reason?: string | null;
   /** 0013 classification vocabulary — set at promotion (ADR-0095); the definitive value is classified on project_classification. */
   origin?: string | null;
   /** greenfield/brownfield snapshot of the opportunity's route decision at promotion time (ADR-0095). */
@@ -279,6 +283,8 @@ export interface VisibilityOptions {
    * Every MNPI project returned under this flag is audit-logged.
    */
   mnpiScopeOverrideBy?: string;
+  /** Include closed/archived projects. Default false keeps active deal surfaces clean. */
+  includeClosed?: boolean;
 }
 
 interface VisibleProjectRow extends ProjectRow {
@@ -313,7 +319,8 @@ export function listVisibleProjects(callerId: string, opts: VisibilityOptions = 
   const db = getDb();
   const rows = db
     .query(
-      `SELECT p.id, p.project_no, p.project_name, p.created_at, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
+      `SELECT p.id, p.project_no, p.project_name, p.created_at, p.status, p.closed_at, p.closure_reason,
+              p.origin, p.track, p.source_opportunity_id, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
        FROM md_project p
        JOIN project_member m ON m.project_id = p.id
        LEFT JOIN project_classification c ON c.project_id = p.id
@@ -321,9 +328,10 @@ export function listVisibleProjects(callerId: string, opts: VisibilityOptions = 
        WHERE m.user_id = ? AND m.revoked_at IS NULL
          AND (c.wall_group IS NULL OR u.wall_group IS NULL OR c.wall_group != u.wall_group)
          AND (? = 0 OR COALESCE(c.mnpi_flag, 0) = 0)
+         AND (? = 1 OR p.status = 'open')
        ORDER BY p.created_at DESC`
     )
-    .all(callerId, opts.excludeMnpi ? 1 : 0) as VisibleProjectRow[];
+    .all(callerId, opts.excludeMnpi ? 1 : 0, opts.includeClosed ? 1 : 0) as VisibleProjectRow[];
   logMnpiReads(rows, callerId, opts);
   return rows.map(({ mnpi_flag: _mnpi, ...rest }) => rest);
 }
@@ -341,16 +349,18 @@ export function getProjectIfVisible(
   const db = getDb();
   const row = db
     .query(
-      `SELECT p.id, p.project_no, p.created_at, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
+      `SELECT p.id, p.project_no, p.project_name, p.created_at, p.status, p.closed_at, p.closure_reason,
+              p.origin, p.track, p.source_opportunity_id, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
        FROM md_project p
        JOIN project_member m ON m.project_id = p.id
        LEFT JOIN project_classification c ON c.project_id = p.id
        LEFT JOIN app_user u ON u.user_id = m.user_id
        WHERE m.user_id = ? AND m.revoked_at IS NULL AND p.id = ?
          AND (c.wall_group IS NULL OR u.wall_group IS NULL OR c.wall_group != u.wall_group)
-         AND (? = 0 OR COALESCE(c.mnpi_flag, 0) = 0)`
+         AND (? = 0 OR COALESCE(c.mnpi_flag, 0) = 0)
+         AND (? = 1 OR p.status = 'open')`
     )
-    .get(callerId, projectId, opts.excludeMnpi ? 1 : 0) as VisibleProjectRow | undefined;
+    .get(callerId, projectId, opts.excludeMnpi ? 1 : 0, opts.includeClosed ? 1 : 0) as VisibleProjectRow | undefined;
   if (!row) return null;
   logMnpiReads([row], callerId, opts);
   const { mnpi_flag: _mnpi, ...rest } = row;
@@ -359,11 +369,52 @@ export function getProjectIfVisible(
 
 export function createProject(projectNo: string): ProjectRow {
   const db = getDb();
-  const row: ProjectRow = { id: ulid(), project_no: projectNo, created_at: new Date().toISOString() };
+  const row: ProjectRow = { id: ulid(), project_no: projectNo, created_at: new Date().toISOString(), status: "open" };
   db.run(`INSERT INTO md_project (id, project_no, created_at) VALUES (?, ?, ?)`, [
     row.id,
     row.project_no,
     row.created_at,
   ]);
+  return row;
+}
+
+export class ProjectLifecycleError extends Error {
+  constructor(
+    public code: "not_found" | "invalid_status" | "precondition_failed",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export function closeProject(
+  projectId: string,
+  opts: { status?: "closed" | "archived"; closureReason: string; closedBy: string },
+): ProjectRow {
+  const targetStatus = opts.status ?? "closed";
+  if (targetStatus !== "closed" && targetStatus !== "archived") {
+    throw new ProjectLifecycleError("invalid_status", "status must be 'closed' or 'archived'.");
+  }
+  if (!opts.closureReason?.trim()) {
+    throw new ProjectLifecycleError("precondition_failed", "closureReason is required for project closure/archival.");
+  }
+  const db = getDb();
+  const now = new Date().toISOString();
+  const row = db.transaction(() => {
+    const existing = db.query("SELECT id, project_no FROM md_project WHERE id = ?").get(projectId) as
+      | { id: string; project_no: string }
+      | undefined;
+    if (!existing) throw new ProjectLifecycleError("not_found", `project '${projectId}' not found.`);
+    db.run(
+      "UPDATE md_project SET status = ?, closed_at = COALESCE(closed_at, ?), closure_reason = ? WHERE id = ?",
+      [targetStatus, now, opts.closureReason.trim(), projectId],
+    );
+    db.run(
+      "UPDATE pipeline_run SET status = 'completed', current_stage = COALESCE(current_stage, 'closed'), paused_reason = NULL, updated_at = ? WHERE entity_type = 'project' AND entity_id = ? AND status IN ('running','paused_for_human')",
+      [now, projectId],
+    );
+    appendAudit(db, { actor: opts.closedBy, action: `project_${targetStatus}`, target: projectId, now });
+    return db.query("SELECT * FROM md_project WHERE id = ?").get(projectId) as ProjectRow;
+  })();
   return row;
 }

@@ -46,7 +46,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `db-migration-governance` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — ADR-0001/0002 SQLite portability-regime conventions |
 | `dd-to-valuation-bridge` | 1.1.0 | active | valuation-agent | 2026-08-20 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams |
 | `deal-execution-playbook` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — navigates `docs/governance/process-map.md`/`docs/governance/raci.md`'s real per-gate RACI, never restates |
-| `deal-workspace-operations` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — open/membership real and live; closure/archival not yet implemented, gap flagged explicitly |
+| `deal-workspace-operations` | 1.1.0 | active | process-governance-manager | 2026-09-09 | — | Wave B1 — open/membership plus close/archive lifecycle via `PATCH /api/projects/:id/close` and `md_project.status` |
 | `debt-and-contingent-liability-simulation` | 1.1.0 | active | risk-officer | 2026-08-20 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
 | `decision-record` | 1.1.0 | active | pm | — | — | — |
 | `deployment-and-release` | 1.0.0 | active | release-engineer | 2026-08-20 | — | Wave 5.8K (design §9.3 ops/security group — final Wave 5.8 sub-PR) — ADR-0014 rollback-planned-before-migration discipline |
@@ -111,7 +111,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `policy-change-impact-analysis` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — mandatory pre-amendment impact analysis, `project_policy_pin` retroactivity |
 | `portfolio-fit-assessment` | 1.3.0 | active | group-review-agent | 2026-08-20 | — | Wave 5.8C — overlap finding + agenda-ranking formula (meeting M2 D-M2-2) |
 | `procedure-reference-override` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — ADR-0020 shared/entity/region override mechanics, `proc:resolve` |
-| `project-review` | 1.4.0 | active | pm | 2026-07-10 | — | — |
+| `project-review` | 1.6.0 | active | pm | 2026-09-08 | — | Graph-aligned project review runbook refresh |
 | `proxy-industry-chain` | 1.1.0 | active | quant-methodologist | 2026-08-20 | — | Wave 5.8F (design §9.3 market/proxy-chain group) — ADR-0006 statistical-hop-only grading rule |
 | `quality-of-earnings` | 1.1.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G — EBITDA normalization bridge for Brown Field DD |
 | `query-performance-tuning` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — membership-filtering join as the highest-traffic query pattern |

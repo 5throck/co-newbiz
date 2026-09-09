@@ -5,13 +5,13 @@ description: >
   Operates a project's workspace lifecycle: opening (creation + lead
   membership), membership changes, closure, and archiving. Opening and
   membership are real, already-built operations (`POST /api/projects`,
-  `project_member`); closure and archiving are not yet implemented — a
-  real gap flagged explicitly rather than assumed.
+  `project_member`); closure and archiving are real Wave B1 operations backed by
+  `PATCH /api/projects/:id/close` and `md_project.status`.
 
   Use when: "open a new project workspace", "close a project", "archive a
   project", "project membership lifecycle".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.1.0
+last_reviewed: 2026-09-09
 status: active
 owner: process-governance-manager
 prerequisites: none
@@ -26,47 +26,43 @@ metadata:
 
 ## Context
 
-Opening and membership are live, verified capabilities (Wave 5.6A):
-`POST /api/projects` creates the project and automatically grants the
-creator `lead` membership (deny-by-default applies to everyone, including
-the creator — the grant is explicit, not implicit); `POST/DELETE
-/api/projects/:id/members` manages membership with a mandatory
-need-to-know basis on every grant. **Closure and archiving are not yet
-implemented** — no `closed_at`/archival status exists on `md_project` as of
-this skill's authoring; only `simulation_draw`'s unrelated
-`retention_policy`-driven archival exists in the DB today. This is a real
-scope gap, not a described-but-unbuilt convenience.
+Opening and membership are live, verified capabilities. `POST /api/projects`
+creates the project and grants the creator `lead` membership; membership grants
+and revocations stay in the access-control layer with mandatory need-to-know
+basis. Wave B1 adds explicit lifecycle closure/archival: `md_project.status` is
+`open|closed|archived`, with `closed_at` and `closure_reason`. This state is
+operator-controlled and distinct from a derived KILL gate verdict.
 
 ## When to Use
 
-- Opening a new project: today, fully supported
-- Managing membership through the project's active life: today, fully
-  supported (`grantProjectMembership`/`revokeProjectMembership`)
-- Closing or archiving a completed/abandoned project: not yet supported —
-  flag as a scope gap if genuinely needed, rather than working around it
-  with an ad hoc status field
+- Opening a new project workspace
+- Managing project membership through the active lifecycle
+- Closing a completed/abandoned project after decisions, learnings, and reports
+  are captured
+- Archiving a project that should stay queryable only through explicit
+  include-closed/archive views
 
 ## Execution Steps
 
-1. **Open a workspace**: `POST /api/projects` with `project_no` — the
-   creator becomes lead automatically, matching the deny-by-default rule
-   (design §4-9-1(a))
-2. **Manage membership through the project's life**: grant with an
-   explicit `project_role` and mandatory `need_to_know_basis` (never
-   blank); revoke when a member's need-to-know ends — both audited
-3. **On project completion or abandonment (today, without built-in
-   support)**: do not invent an ad hoc closure mechanism (e.g. silently
-   revoking all members) — flag the closure/archival requirement to
-   `platform-lead` as a genuine scope gap rather than working around it
-4. **Once closure/archival lands**: this skill's Execution Steps should be
-   updated to describe the real mechanism, following the same pattern as
-   other Wave 5.8 skills' Adaptation Notes being resolved once their
-   underlying gap closes
+1. **Open a workspace**: create/promote the project and ensure the lead
+   membership is present.
+2. **Manage membership through the project's life**: grant with explicit
+   `project_role` and non-empty `need_to_know_basis`; revoke when need-to-know
+   ends.
+3. **Distinguish KILL from closure**: a KILL gate is a decision outcome in
+   `gate_decision`; closure/archival is a workspace lifecycle state recorded
+   only after closeout work is complete.
+4. **Close/archive**: call `PATCH /api/projects/:id/close` as project lead with
+   `closure_reason` and optional `status` (`closed` default, `archived` for
+   archival). The repository mutation writes audit and completes active project
+   pipeline runs.
+5. **Check aggregates**: closed/archived projects are excluded from default
+   project lists, pipeline funnel/aging, and portfolio scorecard rollups.
 
 ## Output Format
 
 - Project workspace creation record, membership grant/revoke audit trail
-- Closure/archival: not currently producible — flagged, not fabricated
+- Closure/archival audit record (`project_closed` or `project_archived`) plus `md_project.closed_at`/`closure_reason`
 
 ## Related Skills
 
