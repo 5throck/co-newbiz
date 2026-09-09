@@ -3,10 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 
-// Theme-aware ECharts palette. Light is the default; [data-theme="dark"] on
-// <html> flips the axis/tooltip/text colors to the Onyx dark palette.
-// useChartTheme() tracks the attribute via MutationObserver so already-mounted
-// charts re-render on toggle.
+// Theme-aware ECharts palette — resolved from the runtime token SSOT
+// (styles.css) via getComputedStyle, never re-declared here. The categorical
+// series palette lives in the --chart-1..8 tokens (light + dark overrides);
+// text/surface/border values map 1:1 to their semantic tokens, so a theme
+// change flows to charts with zero code edits (ADR-0087: tokens are the only
+// color source outside styles.css).
+//
+// useChartTheme() tracks the html[data-theme] attribute via MutationObserver
+// so already-mounted charts re-render on toggle, and re-resolves once after
+// first paint in case stylesheets finished loading after hydration.
 
 export interface ChartTheme {
   color: string[];
@@ -18,28 +24,46 @@ export interface ChartTheme {
   split: string;
 }
 
-const LIGHT: ChartTheme = {
-  color: ["#3d66f5", "#0c9d6c", "#d97706", "#dc2626", "#7c3aed", "#db2777", "#0284c7", "#ea580c"],
-  text: "#171a21",
-  muted: "#5d6572",
+/** Neutral, theme-agnostic safety net used only before stylesheets resolve. */
+const UNRESOLVED: ChartTheme = {
+  color: ["#808080", "#6b7280", "#9ca3af", "#4b5563", "#6b7280", "#9ca3af", "#4b5563", "#6b7280"],
+  text: "#808080",
+  muted: "#808080",
   tooltipBg: "#ffffff",
-  tooltipBorder: "rgba(16, 22, 34, 0.16)",
-  axis: "rgba(16, 22, 34, 0.24)",
-  split: "rgba(16, 22, 34, 0.08)",
+  tooltipBorder: "#808080",
+  axis: "#808080",
+  split: "#808080",
 };
 
-const DARK: ChartTheme = {
-  color: ["#7c9dff", "#34d399", "#fbbf24", "#f87171", "#a78bfa", "#f472b6", "#38bdf8", "#fb923c"],
-  text: "#eceef2",
-  muted: "#9aa1ad",
-  tooltipBg: "#1a1f2a",
-  tooltipBorder: "#3a4150",
-  axis: "#2b303b",
-  split: "#1a1f2a",
-};
+function readToken(name: string): string | null {
+  if (typeof window === "undefined") return null;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || null;
+}
 
-export function chartTokens(isDark: boolean): ChartTheme {
-  return isDark ? DARK : LIGHT;
+function readTokenList(names: string[]): string[] | null {
+  const values = names.map(readToken);
+  return values.every(Boolean) ? (values as string[]) : null;
+}
+
+/** Resolve the ChartTheme for the CURRENTLY applied theme attribute. */
+function resolveChartTheme(): ChartTheme {
+  const color = readTokenList(["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5", "--chart-6", "--chart-7", "--chart-8"]);
+  const text = readToken("--fg");
+  const muted = readToken("--muted-fg");
+  const tooltipBg = readToken("--surface");
+  const tooltipBorder = readToken("--border");
+  const axis = readToken("--border-bright");
+  const split = readToken("--border-subtle");
+  if (!color || !text || !muted || !tooltipBg || !tooltipBorder || !axis || !split) return UNRESOLVED;
+  return { color, text, muted, tooltipBg, tooltipBorder, axis, split };
+}
+
+export function chartTokens(_isDark: boolean): ChartTheme {
+  // The isDark parameter is retained for API compatibility — resolution is
+  // theme-attribute-driven, so the parameter carries no information.
+  void _isDark;
+  return resolveChartTheme();
 }
 
 export function getChartTheme(isDark: boolean): Required<Pick<EChartsOption, "color">> & Record<string, unknown> {
@@ -81,19 +105,26 @@ export function useChartTheme() {
   const [isDark, setIsDark] = useState(
     () => typeof document !== "undefined" && document.documentElement.dataset.theme === "dark",
   );
+  // Re-resolve once after first paint — if hydration beat stylesheet load,
+  // the first resolution fell back to UNRESOLVED and needs one retry.
+  const [repaint, setRepaint] = useState(0);
   useEffect(() => {
     const observer = new MutationObserver(() => {
       setIsDark(document.documentElement.dataset.theme === "dark");
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    return () => observer.disconnect();
+    const raf = requestAnimationFrame(() => setRepaint((n) => n + 1));
+    const onLoad = () => setRepaint((n) => n + 1);
+    window.addEventListener("load", onLoad);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(raf);
+      window.removeEventListener("load", onLoad);
+    };
   }, []);
   return useMemo(
     () => ({ ...chartTokens(isDark), theme: getChartTheme(isDark), defaults: getChartDefaults(isDark) }),
-    [isDark],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- repaint forces re-resolution after stylesheet load
+    [isDark, repaint],
   );
 }
-
-// Back-compat aliases (light palette) — new code should use useChartTheme().
-export const ONYX_CHART_THEME = chartTokens(false);
-export const ONYX_CHART_DEFAULTS = getChartDefaults(false);

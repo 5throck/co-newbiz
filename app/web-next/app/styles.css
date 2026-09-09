@@ -94,6 +94,19 @@
 
   /* ── Density scaling ── */
   --content-max: 1440px;
+
+  /* ── Chart categorical palette (ECharts series colors) — consumed by
+     lib/echarts-theme.ts via getComputedStyle; the ONLY definition of the
+     chart palette (ADR-0087: new tokens are declared in styles.css + the
+     design-tokens registry, never re-derived in screen/lib code). ── */
+  --chart-1: var(--accent);
+  --chart-2: #0c9d6c;
+  --chart-3: #d97706;
+  --chart-4: #dc2626;
+  --chart-5: #7c3aed;
+  --chart-6: #db2777;
+  --chart-7: #0284c7;
+  --chart-8: #ea580c;
 }
 
 [data-theme="dark"] {
@@ -116,6 +129,16 @@
   /* 밝은 액센트 배경 위 전경은 어두운 값 — 대비 4.5:1 유지 (design-accessibility #6) */
   --accent-fg: #0a0c10;
   --primary-rgb: 124, 157, 255;
+
+  /* Dark-tuned chart categorical palette (lib/echarts-theme.ts) */
+  --chart-1: var(--accent);
+  --chart-2: #34d399;
+  --chart-3: #fbbf24;
+  --chart-4: #f87171;
+  --chart-5: #a78bfa;
+  --chart-6: #f472b6;
+  --chart-7: #38bdf8;
+  --chart-8: #fb923c;
 
   --input-bg: rgba(255, 255, 255, 0.03);
   --hover-bg: rgba(255, 255, 255, 0.04);

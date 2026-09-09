@@ -91,7 +91,14 @@
         "dark": "#212733"
       },
       "border-subtle": "border @ 0.6 alpha",
-      "border-bright": "border @ 1.6x alpha"
+      "border-bright": "border @ 1.6x alpha",
+      "chart-palette": {
+        "note": "ECharts categorical series colors (--chart-1..8), light+dark tuned; consumed via getComputedStyle by lib/echarts-theme.ts — the ONLY definition lives in styles.css",
+        "values": {
+          "--chart-1": "var(--accent)",
+          "--chart-2..8": "categorical hues, dark overrides in [data-theme=dark]"
+        }
+      }
     },
     "statusChips": [
       "success(green)",
