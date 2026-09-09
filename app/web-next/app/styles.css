@@ -2780,7 +2780,10 @@
 .data-table th, .data-table td { word-break: keep-all; overflow-wrap: break-word; }
 .report-table { min-width: 48rem; }
 .report-table th, .report-table td { vertical-align: top; }
-.report-table .col-label { min-width: 12rem; }
+/* width:1% — auto 레이아웃에서 min-width만 선언된 칼럼은 남는 폭 분배 가중치로
+   작동해 첫 칼럼이 표 surplus를 독식한다. 1%로 의도폭을 낮추면 콘텐츠 크기에서
+   min-width(12rem) 하한으로 수렴하고, surplus는 수치·본문 칼럼이 나눠 갖는다. */
+.report-table .col-label { width: 1%; min-width: 12rem; }
 .report-table .col-type { min-width: 6rem; }
 .report-table .col-text { min-width: 16rem; }
 /* col-num 정렬은 일반 data-table에서도 유효 — report-table 전용 스코핑이면
