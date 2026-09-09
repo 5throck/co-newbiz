@@ -129,12 +129,18 @@ function between(s: string, a: string, b: string): string {
 
 function cacheFile(): string {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
-  const { join } = require("node:path") as typeof import("node:path");
+  const { dirname, join } = require("node:path") as typeof import("node:path");
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
   const { existsSync } = require("node:fs") as typeof import("node:fs");
-  const candidates = [join(process.cwd(), "db", "data"), join(process.cwd(), "..", "..", "db", "data")];
-  for (const c of candidates) if (existsSync(c)) return join(c, "dart-corpcode-cache.json");
-  return join(candidates[0], "dart-corpcode-cache.json");
+  let dir = /*turbopackIgnore: true*/ process.cwd();
+  for (let i = 0; i < 5; i++) {
+    const candidate = join(dir, "db", "data");
+    if (existsSync(candidate)) return join(candidate, "dart-corpcode-cache.json");
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return join(/*turbopackIgnore: true*/ process.cwd(), "db", "data", "dart-corpcode-cache.json");
 }
 
 /** P5-11: 캐시 무결성 — 행 수·형식 검증 후 유효한 캐시만 반환. */

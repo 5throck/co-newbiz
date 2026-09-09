@@ -58,7 +58,7 @@ export function loadRootEnvPipelineKeys(): void {
     const { dirname, join } = require("node:path") as typeof import("node:path");
     // cwd is the anchor (next start runs from app/web-next); import.meta.dir
     // is unreliable inside the bundled server chunks.
-    let dir = process.cwd();
+    let dir = /*turbopackIgnore: true*/ process.cwd();
     for (let i = 0; i < 5; i++) {
       const envPath = join(dir, ".env");
       if (existsSync(envPath)) {
