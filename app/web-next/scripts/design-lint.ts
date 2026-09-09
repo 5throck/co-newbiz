@@ -66,6 +66,20 @@ for (const file of [...walkTsxs(APP_DIR), ...walkTsxs(COMPONENT_DIR)]) {
   // 파일 전체를 대상으로 검사한다 (details와 ＋ 토글이 서로 다른 줄에 있어도 탐지).
   const r8 = src.match(/<details[\s\S]{0,400}?<summary[^>]*>[\s\S]{0,200}?\+[^<]*<\/summary>/);
   if (r8) add(file, 1, "R8 details-create", "생성 폼은 details 접기 대신 ＝ 등록 토글 + sizing-new-form 사용");
+
+  // R9 — 테이블 th/td col-* 정합성 (ADR-0088: 헤더 정렬은 셀 정렬과 일치).
+  // col-num/col-label/col-type/col-text는 th와 td 양쪽에 미러링되어야 한다.
+  // 한쪽에만 있으면 열 정렬이 어긋나거나 죽은 클래스가 된다. 조건부 열·map 렌더에도
+  // 동작하도록 열 인덱스 매칭 대신 표 단위 클래스 존재 대칭성으로 검사한다.
+  for (const m of src.matchAll(/<table\b[\s\S]*?<\/table>/g)) {
+    const colCls = (tag: string) =>
+      new Set([...m[0].matchAll(new RegExp(`<${tag}\\b[^>]*>`, "g"))].flatMap((t) => t[0].match(/col-(?:num|label|type|text)/g) ?? []));
+    const thCls = colCls("th");
+    const tdCls = colCls("td");
+    const line = src.slice(0, m.index).split("\n").length;
+    for (const c of thCls) if (!tdCls.has(c)) add(file, line, "R9 table-align", `<th>의 ${c}가 같은 표의 <td>에는 없음 — th/td 양쪽에 미러링 (ADR-0088)`);
+    for (const c of tdCls) if (!thCls.has(c)) add(file, line, "R9 table-align", `<td>의 ${c}가 같은 표의 <th>에는 없음 — th/td 양쪽에 미러링 (ADR-0088)`);
+  }
 }
 
 for (const v of violations) console.log(`${v.rule}  ${v.file}:${v.line}  ${v.message}`);

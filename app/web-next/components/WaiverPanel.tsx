@@ -160,7 +160,7 @@ export function WaiverPanel({ projectId }: { projectId: string }) {
             <caption className="sr-only">프로젝트 waiver 목록 — 실효 상태는 만료일 기준으로 파생</caption>
             <thead>
               <tr>
-                <th>규정·조항</th><th>상태</th><th>사유</th><th>요청·승인</th><th>만료</th>{canAct && <th>작업</th>}
+                <th className="col-label">규정·조항</th><th>상태</th><th className="col-text">사유</th><th>요청·승인</th><th className="col-num">만료</th>{canAct && <th>작업</th>}
               </tr>
             </thead>
             <tbody>

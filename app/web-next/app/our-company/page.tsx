@@ -805,10 +805,10 @@ export function OurCompanyView() {
                           <tbody>
                             {accounts.map((a) => (
                               <tr key={a}>
-                                <td className="font-semibold">{a}</td>
+                                <td className="col-label font-semibold">{a}</td>
                                 {years.map((y) => {
                                   const v = byKey.get(`${y}|${a}`);
-                                  return <td key={y} className="tabular-nums">{v !== undefined ? `${fmtEok(v)} 억원` : "—"}</td>;
+                                  return <td key={y} className="col-num tabular-nums">{v !== undefined ? `${fmtEok(v)} 억원` : "—"}</td>;
                                 })}
                               </tr>
                             ))}
@@ -862,12 +862,12 @@ export function OurCompanyView() {
                               const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${(v * 100).toFixed(1)}%`);
                               return (
                                 <tr key={r.year}>
-                                  <td className="font-semibold tabular-nums">{r.year}</td>
-                                  <td className="tabular-nums">{pct(r.revenueGrowth)}</td>
-                                  <td className="tabular-nums">{pct(r.operatingMargin)}</td>
-                                  <td className="tabular-nums">{pct(r.netMargin)}</td>
-                                  <td className="tabular-nums">{pct(r.debtRatio)}</td>
-                                  <td className="tabular-nums">{pct(r.roe)}</td>
+                                  <td className="col-label font-semibold tabular-nums">{r.year}</td>
+                                  <td className="col-num tabular-nums">{pct(r.revenueGrowth)}</td>
+                                  <td className="col-num tabular-nums">{pct(r.operatingMargin)}</td>
+                                  <td className="col-num tabular-nums">{pct(r.netMargin)}</td>
+                                  <td className="col-num tabular-nums">{pct(r.debtRatio)}</td>
+                                  <td className="col-num tabular-nums">{pct(r.roe)}</td>
                                 </tr>
                               );
                             })}
@@ -943,9 +943,9 @@ export function OurCompanyView() {
                           return (
                           <tr key={`${l.industry}-${i}`}>
                             <td>{l.industry}</td>
-                            <td className="tabular-nums">{l.anchorTotalUsdB != null ? `$${l.anchorTotalUsdB.toFixed(2)}B` : "—"}</td>
-                            <td className="tabular-nums">{l.cagr != null ? `${l.cagr.toFixed(1)}%` : "—"}</td>
-                            <td className="tabular-nums">{l.externalGapPercent != null ? `${l.externalGapPercent > 0 ? "+" : ""}${l.externalGapPercent}%` : "—"}</td>
+                            <td className="col-num tabular-nums">{l.anchorTotalUsdB != null ? `$${l.anchorTotalUsdB.toFixed(2)}B` : "—"}</td>
+                            <td className="col-num tabular-nums">{l.cagr != null ? `${l.cagr.toFixed(1)}%` : "—"}</td>
+                            <td className="col-num tabular-nums">{l.externalGapPercent != null ? `${l.externalGapPercent > 0 ? "+" : ""}${l.externalGapPercent}%` : "—"}</td>
                             <td className="text-[0.78rem]">
                               {l.matrixFound && l.industryId ? (
                                 <Link href={`/market?industry=${encodeURIComponent(l.industryId)}`} className="text-[color:var(--accent)] underline">시장분석 리포트</Link>
@@ -1013,8 +1013,8 @@ export function OurCompanyView() {
                           <tbody>
                             {profile.competitive.competitors.map((c, i) => (
                               <tr key={`${c.name}-${i}`}>
-                                <td className="font-semibold">{c.name}</td>
-                                <td className="text-[0.82rem] text-[color:var(--muted-fg)]">{c.note || "—"}</td>
+                                <td className="col-label font-semibold">{c.name}</td>
+                                <td className="col-text text-[0.82rem] text-[color:var(--muted-fg)]">{c.note || "—"}</td>
                               </tr>
                             ))}
                           </tbody>

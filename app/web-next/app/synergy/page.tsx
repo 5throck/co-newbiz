@@ -517,7 +517,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
               <table className="data-table report-table" aria-label="시너지 영역">
                 <caption className="sr-only">시너지 영역</caption>
                 <thead>
-                  <tr><th scope="col">영역</th><th scope="col">유형</th><th scope="col">근거</th><th scope="col">기회</th><th scope="col">위험</th></tr>
+                  <tr><th scope="col" className="col-label">영역</th><th scope="col" className="col-type">유형</th><th scope="col" className="col-text">근거</th><th scope="col" className="col-text">기회</th><th scope="col" className="col-text">위험</th></tr>
                 </thead>
                 <tbody>
                   {p.marketLinkage.synergyAreas.map((a) => (

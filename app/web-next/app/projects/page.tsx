@@ -64,7 +64,7 @@ export function ProjectsView() {
                 <th className="text-left">트랙</th>
                 <th className="text-left">데이터 상태</th>
                 <th className="text-left">원본 기회</th>
-                <th className="text-left">생성일</th>
+                <th className="col-num">생성일</th>
                 <th className="text-left">바로가기</th>
               </tr>
             </thead>

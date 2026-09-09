@@ -2783,7 +2783,9 @@
 .report-table .col-label { min-width: 12rem; }
 .report-table .col-type { min-width: 6rem; }
 .report-table .col-text { min-width: 16rem; }
-.report-table .col-num { text-align: right; white-space: nowrap; }
+/* col-num 정렬은 일반 data-table에서도 유효 — report-table 전용 스코핑이면
+   th/td에 클래스를 미러링해도 일반 표에서 정렬이 무효가 되는 문제가 생긴다 (ADR-0088). */
+.data-table .col-num, .report-table .col-num { text-align: right; white-space: nowrap; }
 /* 장문 나열은 블릿 목록으로 — 문단 뭉치 대신 항목별 불릿+간격 */
 .report-bullet-list {
   margin: 0.4rem 0;
