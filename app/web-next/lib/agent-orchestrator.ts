@@ -27,8 +27,7 @@
 //     inject fakes and Phases 2–4 supply real implementations.
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
-import { readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { SPEC_VERSION } from "./spec-activities.generated.ts";
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -116,27 +115,8 @@ function insertPosition(
   );
 }
 
-// flow.spec version resolution (spec_version provenance for process_run).
-// Walked up from cwd — import.meta.dirname is unavailable under Turbopack.
-let cachedSpecVersion: string | null = null;
 function loadSpecVersion(): string {
-  if (cachedSpecVersion) return cachedSpecVersion;
-  let dir = process.cwd();
-  for (let i = 0; i < 6; i++) {
-    const candidate = join(dir, "process", "flow.spec.yaml");
-    try {
-      if (statSync(candidate).isFile()) {
-        const text = readFileSync(candidate, "utf8");
-        const match = text.match(/^version:\s*(\S+)/m);
-        cachedSpecVersion = match?.[1] ?? "unknown";
-        return cachedSpecVersion;
-      }
-    } catch {
-      // keep walking
-    }
-    dir = join(dir, "..");
-  }
-  return "unknown";
+  return SPEC_VERSION;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,17 +1,46 @@
 // GET/POST /api/projects/[id]/reports — Wave B2 report history + renderer wrapper.
 // POST persists a report_snapshot and, when formats are requested, invokes the
-// existing python/report renderer facade (scripts/co-newbiz/report.ts).
+// existing python/report renderers without statically importing the CLI facade
+// (that facade performs filesystem discovery which triggers Turbopack NFT
+// trace warnings in production builds).
 import { mkdirSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { getDb } from "../../../../../../../db/client.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import type { ReportFormat } from "../../../../../../../scripts/co-newbiz/report.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
+type ReportFormat = "docx" | "pdf" | "hwpx";
 const FORMATS = new Set(["docx", "pdf", "hwpx"]);
+
+async function renderSnapshotReport(markdownPath: string, formats: ReportFormat[], outDir: string): Promise<unknown[]> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn("bun", ["../../scripts/co-newbiz/report.ts", markdownPath, "--format", formats.join(","), "--out-dir", outDir], {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env },
+      shell: process.platform === "win32",
+    });
+    let stdout = "";
+    let stderr = "";
+    proc.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString()));
+    proc.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+    proc.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`report renderer exited with code ${code}: ${stderr || stdout}`));
+        return;
+      }
+      const jsonLine = stdout.trim().split("\n").filter((l) => l.startsWith("[")).pop();
+      if (!jsonLine) {
+        reject(new Error(`report renderer produced no JSON summary: ${stdout}`));
+        return;
+      }
+      resolve(JSON.parse(jsonLine));
+    });
+  });
+}
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -50,13 +79,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   let renders: unknown[] = [];
   if (formats.length > 0) {
-    const { renderReport } = await import("../../../../../../../scripts/co-newbiz/report.ts");
     const outDir = join("render_out", id, snapshotId);
     mkdirSync(outDir, { recursive: true });
     const mdPath = join(outDir, "snapshot.md");
     writeFileSync(mdPath, contentMd, "utf8");
     try {
-      renders = await renderReport(mdPath, formats, { outDir });
+      renders = await renderSnapshotReport(mdPath, formats, outDir);
     } catch (err) {
       return badRequest("report_render_failed", err instanceof Error ? err.message : "보고서 렌더링 실패");
     }

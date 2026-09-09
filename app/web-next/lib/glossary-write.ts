@@ -9,7 +9,8 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as yaml from "js-yaml";
-import { findGlossaryDir, invalidateGlossaryCache, loadGlossary } from "./glossary.ts";
+import { findGlossaryDir } from "./glossary-fs.ts";
+import { addGlossaryTermToCache, loadGlossary, type GlossaryTerm } from "./glossary.ts";
 
 export class GlossaryWriteError extends Error {
   constructor(
@@ -86,6 +87,6 @@ export function registerTerm(input: RegisterTermInput): { key: string; file: str
     const header = { version: "1.0.0", last_updated: new Date().toISOString().slice(0, 10), terms: { [key]: entry } };
     appendFileSync(path, yaml.dump(header, { lineWidth: 120 }), "utf8");
   }
-  invalidateGlossaryCache();
+  addGlossaryTermToCache({ key, ...(entry as Omit<GlossaryTerm, "key">) });
   return { key, file };
 }

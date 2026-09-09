@@ -3,9 +3,7 @@
 // process/flow.spec.yaml is the SSOT (ADR-0074) — stage activities (agent +
 // skills + procedures) are read from the spec file, never hardcoded at call
 // sites. js-yaml parses the full spec; only stages[].activities[] is exposed.
-import { readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
-import * as yaml from "js-yaml";
+import { SPEC_STAGES, SPEC_VERSION } from "./spec-activities.generated.ts";
 
 export interface SpecActivity {
   id: string;
@@ -14,25 +12,9 @@ export interface SpecActivity {
   procedures: string[];
 }
 
-interface SpecStage {
+export interface SpecStage {
   id: string;
   activities?: Array<{ id: string; agent: string; skills?: string[]; procedure?: string[] }>;
-}
-
-// Walked up from cwd — import.meta.dirname is unavailable under Turbopack
-// (same strategy as loadSpecVersion in agent-orchestrator.ts).
-function findSpecPath(): string {
-  let dir = process.cwd();
-  for (let i = 0; i < 6; i++) {
-    const candidate = join(dir, "process", "flow.spec.yaml");
-    try {
-      if (statSync(candidate).isFile()) return candidate;
-    } catch {
-      // keep walking
-    }
-    dir = join(dir, "..");
-  }
-  throw new Error("process/flow.spec.yaml not found (walked up 6 levels from cwd)");
 }
 
 interface CachedSpec {
@@ -43,13 +25,9 @@ let cached: CachedSpec | null = null;
 
 function loadSpec(): CachedSpec {
   if (cached) return cached;
-  const raw = yaml.load(readFileSync(findSpecPath(), "utf8")) as {
-    meta?: { version?: string };
-    stages?: SpecStage[];
-  };
   const stagesById = new Map<string, SpecStage>();
-  for (const stage of raw.stages ?? []) stagesById.set(stage.id, stage);
-  cached = { version: raw.meta?.version ?? "unknown", stagesById };
+  for (const stage of SPEC_STAGES) stagesById.set(stage.id, stage);
+  cached = { version: SPEC_VERSION, stagesById };
   return cached;
 }
 
