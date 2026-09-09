@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.0.1
 /**
  * policy-sync.ts — policy:sync + policy:impact (Wave A3).
  *
@@ -113,7 +113,7 @@ export async function syncPolicies(): Promise<PolicySyncResult> {
     } else {
       // Append-mostly lifecycle: insert the new version row, then point the
       // old row's superseded_by at it.
-      policyId = insertPolicy(db, doc, existing.id);
+      policyId = insertPolicy(db, doc, null);
       db.run("UPDATE policy SET superseded_by = ? WHERE id = ?", [policyId, existing.id]);
       action = "superseded";
       result.superseded++;
@@ -147,7 +147,13 @@ export interface PolicyImpactReport {
 export function policyImpact(policyIdOrPath: string): PolicyImpactReport {
   const db = getDb();
   const policy = db
-    .query("SELECT id, name, doc_path, version, superseded_by FROM policy WHERE id = ? OR doc_path = ? ORDER BY effective_from DESC LIMIT 1")
+    .query(
+      `SELECT id, name, doc_path, version, superseded_by
+       FROM policy
+       WHERE id = ? OR doc_path = ?
+       ORDER BY CASE WHEN superseded_by IS NULL THEN 0 ELSE 1 END, effective_from DESC
+       LIMIT 1`,
+    )
     .get(policyIdOrPath, policyIdOrPath) as
     | { id: string; name: string; doc_path: string; version: string; superseded_by: string | null }
     | undefined;

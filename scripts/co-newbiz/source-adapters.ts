@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.0.1
 /**
  * source-adapters.ts — the pluggable data-source adapter framework
  * (design: docs/designs/2026-09-09-source-adapter-framework-design.md).
@@ -19,6 +19,7 @@
  */
 
 import { ulid } from "../../db/lib/ulid.ts";
+import { parseCorpXml } from "../../app/web-next/lib/dart-client.ts";
 import type { Fetcher } from "../../db/repositories/observation.repository.ts";
 import { loadPipelineKeys } from "../lib/env-keys.ts";
 import { resolveKosisUnit } from "./kosis-units.ts";
@@ -35,6 +36,8 @@ export interface SeriesDescriptor {
   /** KOSIS orgId + tblId pair for the stats API call */
   orgId?: string;
   tblId?: string;
+  objL1?: string;
+  itmId?: string;
   /** Seed entries ship unverified; flip after a live-API confirmation */
   _verified?: boolean;
 }
@@ -66,7 +69,7 @@ export interface SourceAdapter {
   isEnabled(): boolean;
   /** Series catalog for observation adapters; [] for catalog-only adapters. */
   listSeries(): Promise<SeriesDescriptor[]>;
-  /** Build the ensure_fresh Fetcher for one series (observations adapters). */
+  /** Build the raw observation fetcher for one series (argument is a period key such as YYYY-MM). */
   fetcher(ctx: { seriesId: string; sourceId: string }): Fetcher;
   /** Catalog upserts for catalog adapters; [] otherwise. */
   listCatalog?(opts: { all?: boolean }): Promise<CatalogUpsert[]>;
@@ -122,12 +125,11 @@ const dartAdapter: SourceAdapter = {
     const { safeFetch } = await import("../lib/ssrf.ts");
     const res = await safeFetch(url, { signal: AbortSignal.timeout(60_000) });
     if (!res.ok) throw new Error(`DART corpList: HTTP ${res.status}`);
-    const xml = await res.text();
-    const rows = xml.matchAll(/<list>([\s\S]*?)<\/list>/g);
+    const rows = parseCorpXml(Buffer.from(await res.arrayBuffer()));
+    if (rows.length === 0) throw new Error("DART corpList: ZIP/XML parse yielded no company rows.");
     for (const row of rows) {
-      const corpCode = row[1].match(/<corp_code>([^<]+)<\/corp_code>/)?.[1];
-      const nameKo = row[1].match(/<corp_name>([^<]+)<\/corp_name>/)?.[1];
-      if (!corpCode || !nameKo) continue;
+      const corpCode = row.corp_code;
+      const nameKo = row.corp_name;
       upserts.push({
         table: "md_company",
         naturalKey: { dart_corp_code: corpCode },
@@ -185,22 +187,29 @@ const kosisAdapter: SourceAdapter = {
     if (!series?.orgId || !series?.tblId) {
       throw new Error(`kosis: unknown series '${ctx.seriesId}' — fetch --list shows the seeded catalog.`);
     }
+    if (!series.objL1 || !series.itmId) {
+      throw new Error(
+        `kosis: series '${ctx.seriesId}' is not live-fetchable yet — verify objL1/itmId against KOSIS and update KOSIS_SEED_SERIES before collection.`,
+      );
+    }
     const apiKey = requireKey("KOSIS_API_KEY");
     return async (periodKey: string) => {
       // KOSIS stats API: one call per series returns the full period range;
       // periodKey (YYYY-MM or YYYY) narrows the parsed row.
-      const url = `https://kosis.ru/openapi/StatData.json?orgId=${encodeURIComponent(series.orgId!)}&tblId=${encodeURIComponent(series.tblId!)}&apiKey=${encodeURIComponent(apiKey)}&format=json&jsonVD=JSON&prdSe=M&startPrdDe=${encodeURIComponent(periodKey)}&endPrdDe=${encodeURIComponent(periodKey)}`;
-      const payload = (await getJson(url)) as {
-        errMessage?: string;
-        Data?: Array<{ TBL_NM?: string; UNIT?: string; DT?: string; PERIOD?: string }>;
-      };
-      if (payload.errMessage) throw new Error(`kosis API error: ${payload.errMessage}`);
-      const row = payload.Data?.find((d) => d.PERIOD === periodKey) ?? payload.Data?.[0];
+      const compactPeriod = periodKey.replace("-", "");
+      const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${encodeURIComponent(apiKey)}&orgId=${encodeURIComponent(series.orgId!)}&tblId=${encodeURIComponent(series.tblId!)}&objL1=${encodeURIComponent(series.objL1!)}&itmId=${encodeURIComponent(series.itmId!)}&prdSe=M&startPrdDe=${encodeURIComponent(compactPeriod)}&endPrdDe=${encodeURIComponent(compactPeriod)}&format=json`;
+      const payload = await getJson(url);
+      if (!Array.isArray(payload)) {
+        const err = payload as { err?: string; errMsg?: string; errMessage?: string };
+        throw new Error(`kosis API error${err.err ? ` ${err.err}` : ""}: ${err.errMsg ?? err.errMessage ?? "non-array response"}`);
+      }
+      const rows = payload as Array<{ TBL_NM?: string; UNIT_NM?: string; UNIT?: string; DT?: string; PRD_DE?: string; PERIOD?: string }>;
+      const row = rows.find((d) => d.PRD_DE === compactPeriod || d.PERIOD === periodKey) ?? rows[0];
       if (!row?.DT) throw new Error(`kosis: no data point for ${ctx.seriesId}@${periodKey}`);
       const value = Number(row.DT);
       if (!Number.isFinite(value)) throw new Error(`kosis: non-numeric value '${row.DT}' for ${ctx.seriesId}@${periodKey}`);
-      const unit = resolveKosisUnit(row.UNIT);
-      if (!unit) throw new Error(`kosis: unknown unit '${row.UNIT}' — quarantined per kosis-units.ts (add the mapping to onboard).`);
+      const unit = resolveKosisUnit(row.UNIT_NM ?? row.UNIT);
+      if (!unit) throw new Error(`kosis: unknown unit '${row.UNIT_NM ?? row.UNIT}' — quarantined per kosis-units.ts (add the mapping to onboard).`);
       const raw = JSON.stringify(row);
       return { value, contentHash: await hash(raw), raw };
     };
@@ -212,7 +221,7 @@ async function hash(text: string): Promise<string> {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ── law adapter (k-law, via 법제처 opendata serviceKey) ────────────────────
+// ── law adapter (k-law, via 법제처 OC credential) ─────────────────────────
 
 /** Operating whitelist (design decision 2026-09-09): only deal-review-relevant
  *  statutes sync by default; `law --all` removes the filter. */
@@ -226,11 +235,11 @@ export const LAW_WHITELIST = [
 const lawAdapter: SourceAdapter = {
   code: "law",
   kSkill: "k-law",
-  credentialEnv: "DATA_GO_KR_API_KEY",
+  credentialEnv: "LAW_API_OC",
   kind: "catalog",
   isEnabled: () => {
     loadPipelineKeys();
-    return Boolean(process.env.DATA_GO_KR_API_KEY);
+    return Boolean(process.env.LAW_API_OC);
   },
   async listSeries() {
     return [];
@@ -239,21 +248,22 @@ const lawAdapter: SourceAdapter = {
     throw new Error("law adapter is catalog-kind — no observation series.");
   },
   async listCatalog(opts) {
-    const serviceKey = requireKey("DATA_GO_KR_API_KEY");
+    const serviceKey = requireKey("LAW_API_OC");
     const names = opts.all
       ? null // full sweep — thousands of statutes, slow by design
       : LAW_WHITELIST;
     const upserts: CatalogUpsert[] = [];
     const queries = names ?? [""];
     for (const query of queries) {
-      const url = `https://www.law.go.kr/DR/lawSearchLaw.do?OC=${encodeURIComponent(serviceKey)}&target=law&type=JSON${query ? `&query=${encodeURIComponent(query)}` : ""}`;
+      const url = `https://www.law.go.kr/DRF/lawSearch.do?OC=${encodeURIComponent(serviceKey)}&target=law&type=JSON${query ? `&query=${encodeURIComponent(query)}` : ""}`;
       let payload: unknown;
       try {
         payload = await getJson(url);
       } catch (err) {
         throw new Error(`law search failed for '${query || "(all)"}': ${err instanceof Error ? err.message : String(err)}`);
       }
-      const rows = (payload as { LawSearch?: Array<Record<string, string>> })?.LawSearch ?? [];
+      const lawSearch = (payload as { LawSearch?: Array<Record<string, string>> | { law?: Array<Record<string, string>> } })?.LawSearch;
+      const rows = Array.isArray(lawSearch) ? lawSearch : lawSearch?.law ?? [];
       for (const row of rows) {
         const statuteId = row["법령일련번호"] ?? row["법령ID"];
         const nameKo = row["법령명한글"] ?? row["법령명"];

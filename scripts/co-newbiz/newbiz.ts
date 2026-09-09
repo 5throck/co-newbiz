@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.16.0
+// @version 1.16.1
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -119,7 +119,7 @@ function upsertPeriod(db: ReturnType<typeof getDb>, periodKey: string): string {
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
+  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|kosis|law|opendata> [--series <id>] [--list] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
 }
 
 switch (command) {
@@ -510,25 +510,34 @@ switch (command) {
     const { SOURCE_ADAPTERS, upsertCatalog } = await import("./source-adapters.ts");
     const { ensureFresh } = await import("../../db/repositories/observation.repository.ts");
     const adapter = SOURCE_ADAPTERS[source];
-    if (!adapter.isEnabled()) {
-      console.error(`fetch: ${adapter.credentialEnv} is not set — the ${source} adapter (${adapter.kSkill}) is disabled.`);
-      process.exit(2);
-    }
     const db = getDb();
     // md_source registration: every used adapter is a known source with a grade.
     const GRADE: Record<string, string> = { dart: "A", kosis: "A", law: "A", opendata: "B" };
-    if (!db.query("SELECT id FROM md_source WHERE code = ?").get(source)) {
-      db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)",
-        [ulid(), source, GRADE[source] ?? "C", new Date().toISOString()]);
-      console.log(`md_source: registered '${source}' (grade ${GRADE[source] ?? "C"})`);
-    }
+    const registerSource = () => {
+      if (!db.query("SELECT id FROM md_source WHERE code = ?").get(source)) {
+        db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)",
+          [ulid(), source, GRADE[source] ?? "C", new Date().toISOString()]);
+        console.log(`md_source: registered '${source}' (grade ${GRADE[source] ?? "C"})`);
+      }
+    };
     const seriesIdIdx = args.indexOf("--series");
-    const seriesArg = seriesIdIdx >= 0 ? args[seriesId + 1] : undefined;
+    const seriesArg = seriesIdIdx >= 0 ? args[seriesIdIdx + 1] : undefined;
     const all = args.includes("--all");
     let failures = 0;
 
     if (adapter.kind === "observations") {
       const catalog = await adapter.listSeries();
+      if (args.includes("--list")) {
+        for (const s of catalog) {
+          console.log(`${s.seriesId}\t${s.tblId ?? "-"}\t${s.periodType}\t${s.unitCode}\tverified=${s._verified === true}\t${s.title}`);
+        }
+        break;
+      }
+      if (!adapter.isEnabled()) {
+        console.error(`fetch: ${adapter.credentialEnv} is not set — the ${source} adapter (${adapter.kSkill}) is disabled.`);
+        process.exit(2);
+      }
+      registerSource();
       const targets = seriesArg
         ? catalog.filter((s) => s.seriesId === seriesArg || s.tblId === seriesArg)
         : catalog;
@@ -553,15 +562,24 @@ switch (command) {
           return id;
         })();
         const sourceId = (db.query("SELECT id FROM md_source WHERE code = ?").get(source) as { id: string }).id;
+        let rawFetcher: (periodKey: string) => Promise<{ value: number; contentHash: string; raw: string }>;
+        try {
+          rawFetcher = adapter.fetcher({ seriesId: s.seriesId, sourceId });
+        } catch (err) {
+          failures++;
+          console.error(`  isolated failure ${s.seriesId}: ${err instanceof Error ? err.message : err}`);
+          continue;
+        }
         // Current year, all months — the KOSIS seed series are monthly.
         const year = new Date().getUTCFullYear();
         for (let m = 1; m <= 12; m++) {
           const periodKey = `${year}-${String(m).padStart(2, "0")}`;
           try {
             const periodId = upsertPeriod(db, periodKey);
+            const periodFetcher = async () => rawFetcher(periodKey);
             const r = await ensureFresh({
               seriesId: s.seriesId, periodId, unitId, sourceId,
-              fetcher: adapter.fetcher({ seriesId: s.seriesId, sourceId }),
+              fetcher: periodFetcher,
             });
             console.log(`${s.seriesId}@${periodKey}: ${r.changeType ?? "cached"} (rev ${r.revisionNo})`);
           } catch (err) {
@@ -584,6 +602,7 @@ switch (command) {
       console.error("fetch: dart catalog is the full-market corp list — pass --all explicitly.");
       process.exit(2);
     }
+    registerSource();
     const upserts = await adapter.listCatalog({ all });
     const result = upsertCatalog(db, upserts);
     console.log(`${source}: ${result.inserted} inserted, ${result.existing} already present.`);
@@ -683,6 +702,12 @@ switch (command) {
       process.exit(2);
     }
     const db = getDb();
+    const GRADE: Record<string, string> = { dart: "A", law: "A" };
+    if (!db.query("SELECT id FROM md_source WHERE code = ?").get(source)) {
+      db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)",
+        [ulid(), source, GRADE[source] ?? "C", new Date().toISOString()]);
+      console.log(`md_source: registered '${source}' (grade ${GRADE[source] ?? "C"})`);
+    }
     const upserts = await adapter.listCatalog({ all: args.includes("--all") });
     const result = upsertCatalog(db, upserts);
     console.log(`md:sync ${source}: ${result.inserted} inserted, ${result.existing} already present.`);

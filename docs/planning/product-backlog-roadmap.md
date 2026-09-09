@@ -14,7 +14,7 @@ The data collection engine is a **pluggable source-adapter framework mapped 1:1 
 | `dart` | k-dart | DART OpenAPI / `DART_API_KEY` | company financials & filings (generalizes `dart-collect.ts`) |
 | `kosis` | k-kosis | KOSIS stats API / `KOSIS_API_KEY` | industry/economic time series (S1 workhorse) |
 | `opendata` | k-opendata | data.go.kr / `DATA_GO_KR_API_KEY` | government open data |
-| `law` | k-law | 법제처 법령 OpenAPI (via opendata serviceKey) | `md_statute` sync (`law:sync` foundation) |
+| `law` | k-law | 법제처 법령 OpenAPI / `LAW_API_OC` | `md_statute` sync (`law:sync` foundation) |
 
 Adapters share the already-built revision-preserving ingest core (`ensure_fresh` in
 `db/repositories/observation.repository.ts`), the SSRF guard (`scripts/lib/ssrf.ts`), and
@@ -23,7 +23,7 @@ registry makes adding a source a one-line change.
 
 ## Waves
 
-### Wave A — Data pipeline (in progress)
+### Wave A — Data pipeline (landed; live source breadth expands operationally)
 - **A1. Source-adapter framework + fetch + md:sync** (design doc required) — 4 adapters (dart/kosis/opendata/law), `fetch` CLI case, catalog seeding (`md:sync`: md_industry/md_source/md_period/md_unit/md_company/md_statute). Fixture-Fetcher tests for idempotency/revision preservation/change log.
 - **A2. calibrate + convert** — CLI wrappers: `python/correlation.py` OLS/lead-lag → `proxy_link`/`proxy_chain` upsert (grades A/B/C); unit conversion through `md_unit.si_coefficient` + proxy coefficients with compounded-CI error bands.
 - **A3. policy:sync / policy:impact / fin:project** — policy-doc registry + impact reverse-index (skills/procedures), project financial rollup. (`law:sync` is absorbed by the A1 law adapter; `export` already exists as `db:export`.)

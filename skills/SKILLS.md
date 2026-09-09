@@ -91,7 +91,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `legal-due-diligence` | 1.1.0 | active | legal-counsel | 2026-08-22 | — | ADR-0051 (PR-10 workflow concretization) — DD-grade legal workstream per chk-legal-dd; RAG findings register mapped to SPA protections |
 | `legal-risk-register` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — consolidated per-project legal-risk view |
 | `management-incentive-review` | 1.1.0 | active | incentive-agent | 2026-08-20 | — | Wave 5.8D — CoC-trigger executive compensation, role-based per PII discipline |
-| `market-data-pipeline` | 1.0.0 | active | data-architect | 2026-08-20 | — | Wave 5.8F — ADR-0004 cache-first/revision-preserving policy; `fetch`/`md:sync` CLI not yet implemented, gap flagged explicitly |
+| `market-data-pipeline` | 1.0.0 | active | data-architect | 2026-08-20 | — | Wave A1 — ADR-0004 cache-first/revision-preserving policy implemented via source-adapter framework; `fetch` and `md:sync` CLI live with fail-closed credentials, KOSIS unit quarantine, and natural-key catalog upserts |
 | `master-data-governance` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J (design §9.3 platform group) — real `staging_unmapped` queue resolution |
 | `mcp-server-integration` | 1.0.0 | active | backend-engineer | 2026-08-20 | — | Wave 5.8J — ADR-0011 REST-only, enforced by the real bun:test DB-import scan |
 | `meeting` | 1.4.0 | active | pm | — | — | — |

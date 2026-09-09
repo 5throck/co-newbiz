@@ -32,7 +32,7 @@ k-law), (2) the `fetch` CLI, and (3) master-data catalog seeding via `md:sync`.
 export interface SourceAdapter {
   code: "dart" | "kosis" | "opendata" | "law";
   kSkill: string;                // k-dart | k-kosis | k-opendata | k-law
-  credentialEnv: string;         // DART_API_KEY | KOSIS_API_KEY | DATA_GO_KR_API_KEY
+  credentialEnv: string;         // DART_API_KEY | KOSIS_API_KEY | LAW_API_OC | DATA_GO_KR_API_KEY
   kind: "observations" | "catalog";
   isEnabled(): boolean;          // false when the credential is absent (fail-closed)
   listSeries(): Promise<SeriesDescriptor[]>;
@@ -53,7 +53,7 @@ export const SOURCE_ADAPTERS: Record<string, SourceAdapter>;
 |---|---|---|---|---|
 | `dart` | catalog | DART OpenAPI (generalizes `dart-collect.ts`) | `DART_API_KEY` | `md_company` (dart_corp_code) via corpList.xml |
 | `kosis` | observations | KOSIS stats API | `KOSIS_API_KEY` | `fact_market_observation` series |
-| `law` | catalog | 법제처 법령검색 (`law.go.kr/DR/lawSearchLaw.do`, JSON) | `DATA_GO_KR_API_KEY` | `md_statute` (korea_statute_id) |
+| `law` | catalog | 법제처 법령검색 (`law.go.kr/DRF/lawSearch.do`, JSON) | `LAW_API_OC` | `md_statute` (korea_statute_id) |
 | `opendata` | catalog | data.go.kr (extension point — transport shared with law) | `DATA_GO_KR_API_KEY` | none onboarded yet |
 
 - Grades: kosis=A (official statistics), dart=A (primary filings), law=A (statute
@@ -114,7 +114,7 @@ recorded in the PR body. Limitations recorded otherwise.
 - `newbiz.ts` v1.14.0: `fetch`, `md:sync` cases
 - `tests/unit/source-adapters.test.ts`
 - market-data-pipeline skill v1.1.0 (gap note replaced by the real mechanism),
-  SCRIPTS.md registry entries, `.env.sample` key documentation (KOSIS/DATA_GO_KR
+  SCRIPTS.md registry entries, `.env.sample` key documentation (KOSIS/LAW_API_OC/DATA_GO_KR
   already present)
 
 ## 6. Out of scope
