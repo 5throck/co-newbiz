@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.14.0
+// @version 1.15.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -49,10 +49,17 @@
  *   md:sync         Master-data catalog sync from the adapters
  *                   (md_company/md_statute/md_source; idempotent)
  *
- * Remaining commands (policy:sync, policy:impact, fin:project, calibrate,
- * convert) land in their later PRs per docs/planning/dev-plan.md and
- * docs/planning/product-backlog-roadmap.md — assume, glossary:lint,
- * adr:new, fetch and md:sync have landed. glossary ENTRY validation stays
+ *   calibrate       Statistical proxy-hop calibration — python/correlation.py
+ *                   (OLS + lead-lag + 95% CI) → proxy_link + single-hop
+ *                   proxy_chain (grade B/C per R² eligibility; Wave A2)
+ *   convert         Same-dimension unit conversion via md_unit.si_coefficient,
+ *                   or proxy-chain conversion with compounded-CI band
+ *                   (cross-dimension ad hoc math refused, FR-DATA-03)
+ *
+ * Remaining commands (policy:sync, policy:impact, fin:project) land in a
+ * later PR per docs/planning/product-backlog-roadmap.md — assume,
+ * glossary:lint, adr:new, fetch, md:sync, calibrate and convert have
+ * landed. glossary ENTRY validation stays
  * at `bun glossary/_validate.ts` (package.json alias glossary:validate).
  * law:sync is served by `fetch --source law`. Unbuilt commands are not
  * stubbed here to avoid a command that silently does nothing.
@@ -573,6 +580,56 @@ switch (command) {
     const upserts = await adapter.listCatalog({ all });
     const result = upsertCatalog(db, upserts);
     console.log(`${source}: ${result.inserted} inserted, ${result.existing} already present.`);
+    break;
+  }
+  case "calibrate": {
+    const opt = (name: string): string | undefined => {
+      const i = args.indexOf(name);
+      return i >= 0 ? args[i + 1] : undefined;
+    };
+    const fromIndustryId = opt("--from-industry");
+    const toIndustryId = opt("--to-industry");
+    const fromSeriesId = opt("--from-series");
+    const toSeriesId = opt("--to-series");
+    const periodFrom = opt("--from");
+    const periodTo = opt("--to");
+    if (!fromIndustryId || !toIndustryId || !fromSeriesId || !toSeriesId || !periodFrom || !periodTo) {
+      console.error("calibrate: --from-industry --to-industry --from-series --to-series --from --to are all required.");
+      process.exit(2);
+    }
+    const { runCalibrate } = await import("./calibrate.ts");
+    const r = await runCalibrate({
+      fromIndustryId, toIndustryId, fromSeriesId, toSeriesId, periodFrom, periodTo,
+      maxLagMonths: opt("--max-lag") ? Number(opt("--max-lag")) : undefined,
+      evidenceRef: opt("--evidence-ref"),
+    });
+    console.log(JSON.stringify(r, null, 2));
+    break;
+  }
+  case "convert": {
+    const { convertUnits, convertViaProxyChain } = await import("./convert.ts");
+    const valueIdx = args.indexOf("--value");
+    const value = valueIdx >= 0 ? Number(args[valueIdx + 1]) : NaN;
+    if (!Number.isFinite(value)) {
+      console.error("convert: --value <number> is required.");
+      process.exit(2);
+    }
+    const chainIdx = args.indexOf("--chain");
+    if (chainIdx >= 0) {
+      console.log(JSON.stringify(convertViaProxyChain(value, args[chainIdx + 1]), null, 2));
+      break;
+    }
+    const opt = (name: string): string | undefined => {
+      const i = args.indexOf(name);
+      return i >= 0 ? args[i + 1] : undefined;
+    };
+    const fromUnit = opt("--from-unit");
+    const toUnit = opt("--to-unit");
+    if (!fromUnit || !toUnit) {
+      console.error("convert: --from-unit and --to-unit are required (or --chain <proxy_chain_id>).");
+      process.exit(2);
+    }
+    console.log(JSON.stringify(convertUnits(value, fromUnit, toUnit), null, 2));
     break;
   }
   case "md:sync": {
