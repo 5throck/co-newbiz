@@ -2844,25 +2844,6 @@
               0 0 20px hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.1);
 }
 .sizing-new-input-sm { padding: 0.3rem 0.45rem; font-size: 0.76rem; min-width: 5rem; }
-/* KSIC 코드 선택기 제안 목록 — 생성 폼/인라인 편집 셀 아래에 흐름상 펼쳐진다. */
-.ksic-suggest-list {
-  max-height: 14rem;
-  overflow-y: auto;
-  margin: 0.25rem 0 0;
-  padding: 0.25rem;
-  list-style: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  font-size: 0.76rem;
-}
-.ksic-suggest-list li > button {
-  width: 100%;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .btn-danger {
   background: color-mix(in srgb, var(--red-fg) 12%, var(--surface));
   border: 1px solid var(--red-border);

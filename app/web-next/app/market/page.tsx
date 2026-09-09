@@ -63,6 +63,7 @@ interface AnalysisDetail {
   versions: Array<{ version_no: number; payload: { matrix?: SizingMatrix; stepSummaries?: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> } | null; changelog: string | null; created_by: string; created_at: string }>;
 }
 interface LlmStatus { configured: boolean; provider: string | null; model: string | null }
+interface KsicEntryView { code: string; name_ko: string; detail: string | null; profile: boolean }
 
 const SEGMENT_COLORS = [0, 1, 2, 3, 4];
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
@@ -82,6 +83,8 @@ export function MarketView() {
   const [showNewForm, setShowNewForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCode, setNewCode] = useState("");
+  const [ksicResults, setKsicResults] = useState<KsicEntryView[] | null>(null);
+  const [ksicSearching, setKsicSearching] = useState(false);
   const [creating, setCreating] = useState(false);
   const [llmStatus, setLlmStatus] = useState<LlmStatus | null>(null);
   const [query, setQuery] = useState("");
@@ -123,13 +126,31 @@ export function MarketView() {
       .catch((e) => setError(e instanceof Error ? e.message : "상세 불러오기 실패"));
   }, [selectedIndustry]);
 
+  // KSIC 코드 검색 — DART 검색과 동일한 표준 패턴: 입력 + 명시적 "🔍 검색" 버튼,
+  // 결과는 sizing-note-list 목록으로 제시하고 선택은 클릭(aria-pressed + ✔ 표시).
+  async function searchKsicCodes() {
+    const q = newCode.trim();
+    if (!q || ksicSearching) return;
+    setKsicSearching(true);
+    setError(null);
+    try {
+      const res = await api.get<{ entries: KsicEntryView[] }>(`/api/market-overview/ksic?q=${encodeURIComponent(q)}`);
+      setKsicResults(res.data.entries);
+      if (res.data.entries.length === 0) setError("KSIC 검색 결과가 없습니다 — 코드를 직접 입력하세요.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "KSIC 검색 실패");
+    } finally {
+      setKsicSearching(false);
+    }
+  }
+
   async function createAnalysis(e: React.FormEvent) {
     e.preventDefault();
     if (!newName.trim() || creating) return;
     setCreating(true);
     try {
       await api.post("/api/market-overview/analyses", { name_ko: newName.trim(), ksic_code: newCode.trim() || undefined });
-      setNewName(""); setNewCode(""); setShowNewForm(false);
+      setNewName(""); setNewCode(""); setKsicResults(null); setShowNewForm(false);
       await refreshOverview();
     } catch (err) {
       setError(err instanceof Error ? err.message : "분석 생성 실패");
@@ -310,7 +331,17 @@ export function MarketView() {
               </label>
               <label className="text-[0.78rem]">
                 <span className="block mb-1">KSIC 코드 (선택)</span>
-                <KsicSuggestInput value={newCode} onChange={setNewCode} ariaLabel="KSIC 코드" />
+                <span className="flex items-center gap-1">
+                  <input
+                    value={newCode}
+                    onChange={(e) => { setNewCode(e.target.value); setKsicResults(null); }}
+                    placeholder="예: 28121"
+                    className="sizing-new-input sizing-new-input-sm"
+                  />
+                  <button type="button" className="btn-ghost btn-sm" disabled={ksicSearching || !newCode.trim()} onClick={() => void searchKsicCodes()}>
+                    {ksicSearching ? "검색 중..." : "🔍 KSIC 검색"}
+                  </button>
+                </span>
               </label>
               <button type="submit" className="btn-ghost" disabled={creating || !newName.trim()}>
                 {creating ? "생성 중..." : "분석 시작"}
@@ -319,9 +350,27 @@ export function MarketView() {
                 취소
               </button>
             </div>
+            {ksicResults !== null && ksicResults.length > 0 && (
+              <ul className="sizing-note-list mt-2" role="listbox" aria-label="KSIC 코드 검색 결과">
+                {ksicResults.map((it) => (
+                  <li key={it.code}>
+                    <button
+                      type="button"
+                      aria-pressed={newCode === it.code}
+                      className={`btn-ghost btn-sm w-full text-left ${newCode === it.code ? "font-semibold" : ""}`}
+                      title={it.detail ?? it.name_ko}
+                      onClick={() => setNewCode(it.code)}
+                    >
+                      {newCode === it.code ? "✔ " : ""}{it.name_ko} <code className="dd-item-id">{it.code}</code>
+                      {it.profile && <span className="text-[0.72rem] text-[color:var(--muted-fg)]"> · 업종 프로필</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
-              KSIC 코드는 선택 사항 — 목록에서 선택하거나 직접 입력하세요(미지정 시 "—"로 표시). 산업 프로필이 있는 코드는 "프로필"로 표시됩니다. systematic-market-sizing 8단계
-              파이프라인이 순서대로 실행되며, 완료 전까지는 목록에 "분석 중"으로 표시됩니다.
+              KSIC 코드는 선택 — 🔍 검색으로 코드를 찾아 선택하거나 직접 입력하세요(미지정 시 "—" 표시). 업종 프로필이 있는 코드는 표기됩니다.
+              systematic-market-sizing 8단계 파이프라인이 순서대로 실행되며, 완료 전까지는 목록에 "분석 중"으로 표시됩니다.
               {llmStatus && (llmStatus.configured
                 ? <> LLM 요약 사용: <strong>{llmStatus.provider} / {llmStatus.model}</strong></>
                 : <> LLM 미구성(CO_NEWBIZ_LLM_* 환경변수) — <strong>결정론 합성</strong>으로 분석됩니다.</>)}
@@ -380,10 +429,12 @@ export function MarketView() {
                     </td>
                     <td>
                       {isEditing ? (
-                        <KsicSuggestInput
+                        <input
+                          aria-label="KSIC 코드 수정"
                           value={editing.code}
-                          onChange={(v) => setEditing({ ...editing, code: v })}
-                          ariaLabel="KSIC 코드 수정"
+                          onChange={(e) => setEditing({ ...editing, code: e.target.value })}
+                          placeholder="예: 28121"
+                          className="sizing-new-input sizing-new-input-sm"
                         />
                       ) : (
                         <code className="dd-item-id">{ind.ksic_code ?? "—"}</code>
@@ -476,75 +527,6 @@ export function MarketView() {
         )}
       </section>
     </main>
-  );
-}
-
-/* ── KSIC 코드 검색 입력 — 커스텀 선택기(GET /api/market-overview/ksic, ADR-0111).
-   제안은 mousedown에서 확정(blur보다 먼저)하고, 목록이 열려 있는 동안 Enter는
-   폼 제출 대신 선택을 확정 처리한다. ── */
-interface KsicEntryView { code: string; name_ko: string; detail: string | null; profile: boolean }
-
-function KsicSuggestInput({ value, onChange, ariaLabel }: {
-  value: string;
-  onChange: (v: string) => void;
-  ariaLabel: string;
-}) {
-  const [items, setItems] = useState<KsicEntryView[] | null>(null);
-  const [open, setOpen] = useState(false);
-
-  // 입력 디바운스 검색 — 열려 있는 동안에만 조회(빈 쿼리 = 큐레이션 전체 목록).
-  useEffect(() => {
-    if (!open) return;
-    const t = setTimeout(() => {
-      api.get<{ entries: KsicEntryView[] }>(`/api/market-overview/ksic?q=${encodeURIComponent(value)}`)
-        .then((r) => setItems(r.data.entries))
-        .catch(() => setItems(null));
-    }, 250);
-    return () => clearTimeout(t);
-  }, [value, open]);
-
-  return (
-    <>
-      <input
-        value={value}
-        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") setOpen(false);
-          if (e.key === "Enter" && open && (items?.length ?? 0) > 0) {
-            // 목록이 열려 있으면 Enter로 폼이 제출되지 않게 막는다(선택은 클릭/mousedown).
-            e.preventDefault();
-            setOpen(false);
-          }
-        }}
-        placeholder="예: 28121"
-        aria-label={ariaLabel}
-        role="combobox"
-        aria-expanded={open}
-        aria-autocomplete="list"
-        autoComplete="off"
-        className="sizing-new-input sizing-new-input-sm"
-      />
-      {open && items !== null && items.length > 0 && (
-        <ul className="ksic-suggest-list" role="listbox" aria-label={`${ariaLabel} 검색 결과`}>
-          {items.map((it) => (
-            <li key={it.code}>
-              <button
-                type="button"
-                className="btn-ghost btn-sm"
-                aria-pressed={value === it.code}
-                title={it.detail ?? it.name_ko}
-                onMouseDown={(e) => { e.preventDefault(); onChange(it.code); setOpen(false); }}
-              >
-                <code className="dd-item-id">{it.code}</code> {it.name_ko}
-                {it.profile && <span className="text-[0.68rem] text-[color:var(--muted-fg)]"> · 프로필</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
   );
 }
 
