@@ -24,9 +24,11 @@ metadata:
     - review project
     - audit project
     - quality review
+  procedure_keys:
+    - deal-shape-chain
+    - jv-lifecycle-governance
+    - portfolio-venture-monitoring
   related_skills:
-    - audit-workspace
-    - project-resync
     - meeting-facilitation
 ---
 
