@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { getDb } from "../../../../../../../db/client.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { renderReport, type ReportFormat } from "../../../../../../../scripts/co-newbiz/report.ts";
+import type { ReportFormat } from "../../../../../../../scripts/co-newbiz/report.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
@@ -50,6 +50,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   let renders: unknown[] = [];
   if (formats.length > 0) {
+    const { renderReport } = await import("../../../../../../../scripts/co-newbiz/report.ts");
     const outDir = join("render_out", id, snapshotId);
     mkdirSync(outDir, { recursive: true });
     const mdPath = join(outDir, "snapshot.md");
