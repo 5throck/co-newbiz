@@ -34,16 +34,16 @@ metadata:
 
 ## Context
 
-**Adaptation note**: `scripts/co-newbiz/newbiz.ts`'s own header comment lists
-`fetch` and `md:sync` under "Remaining commands... land in their respective
-Wave 5.6-5.7 PRs... not stubbed here to avoid a command that silently does
-nothing." As of this skill's authoring those commands still do not exist —
-this skill documents the ADR-0004 policy the eventual implementation must
-follow, and the reasoning behind it, so the policy is recorded before the
-code lands (design's own "documents before code" principle, ADR-0032) —
-it is not a description of a working pipeline today.
+**Implementation note**: Wave A1 landed the source-adapter framework in
+`scripts/co-newbiz/source-adapters.ts` and wired it into
+`scripts/co-newbiz/newbiz.ts` as `fetch` and `md:sync`. This skill is now the
+operating manual for the live pipeline: k-* skills define source-specific
+usage discipline, adapters execute collection, and `ensure_fresh()` owns
+cache-first revision preservation. Initial KOSIS monthly index seeds are
+live-verified; future KOSIS series must record `tblId`, `itmId`, and every
+required `objL*` coordinate before `_verified` is set true.
 
-## Policy (ADR-0004, for the eventual implementation)
+## Policy (ADR-0004)
 
 External statistical series get revised after first publication —
 overwriting on refetch would make a three-month-old analysis
@@ -63,10 +63,11 @@ Storage grows monotonically with revisions, offset by the archival policy
 
 ## When to Use
 
-- Once implemented: any time a project needs external market/industry time-series data
-- Today: when scoping what the fetch/md:sync implementation needs to satisfy
+- Any time a project needs external market/industry time-series data
+- When refreshing master-data catalogs from DART or law sources
+- When adding KOSIS series only after live coordinate verification
 
-## Execution Steps (for the eventual implementation)
+## Execution Steps
 
 1. Check cache validity for the requested `series_id` before any network call
 2. If expired, issue a conditional request (ETag/content-hash) — a 304-equivalent means no revision needed
@@ -79,7 +80,7 @@ Storage grows monotonically with revisions, offset by the archival policy
 
 ## Output Format
 
-- Once implemented: fetched/refreshed series data with revision history preserved
+- Fetched/refreshed series data with revision history preserved
 
 ## Related Skills
 

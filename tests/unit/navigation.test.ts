@@ -4,7 +4,7 @@
 // The SSOT is lib/navigation.ts; AppShell must render only from it.
 import { test, expect, describe } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
 
@@ -24,7 +24,7 @@ function* walkPages(dir: string): Generator<string> {
 
 /** File path under app/ → route path ("/", "/market", "/projects/[id]/dd"). */
 function pageToRoute(file: string): string {
-  const rel = file.slice(`${APP_DIR}/`.length, -"/page.tsx".length);
+  const rel = relative(APP_DIR, file.replace(/[/\\]page\.tsx$/, "")).replaceAll("\\", "/");
   return rel.length === 0 ? "/" : `/${rel}`;
 }
 

@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.0.1
 /**
  * env-keys.ts — credential loading for the CLI side of the pipeline.
  *
@@ -6,14 +6,14 @@
  * pipeline keys that are not already in the environment (never overriding
  * explicitly-set values). Same discipline as app/web-next/lib/llm.ts's
  * loadRootEnvPipelineKeys, generalized: the k-* source adapters'
- * credentials (DART_API_KEY / KOSIS_API_KEY / DATA_GO_KR_API_KEY) join the
- * LLM/Tavily keys on one whitelist. Scripts that need a key call
+ * credentials (DART_API_KEY / KOSIS_API_KEY / LAW_API_OC /
+ * DATA_GO_KR_API_KEY) join the LLM/Tavily keys on one whitelist. Scripts that need a key call
  * loadPipelineKeys() first, then read process.env directly — this module
  * never returns secret values, it only populates process.env.
  */
 
 const PIPELINE_ENV_KEYS =
-  /^(DART_API_KEY|KOSIS_API_KEY|DATA_GO_KR_API_KEY|TAVILY_API_KEY|CO_NEWBIZ_LLM_[A-Z_]+)$/;
+  /^(DART_API_KEY|KOSIS_API_KEY|DATA_GO_KR_API_KEY|LAW_API_OC|TAVILY_API_KEY|CO_NEWBIZ_LLM_[A-Z_]+)$/;
 
 let loaded = false;
 

@@ -211,7 +211,14 @@ beforeAll(async () => {
 
 afterAll(() => {
   resetDb();
-  for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
+      return;
+    } catch {
+      Bun.sleepSync(100);
+    }
+  }
 });
 
 /** One minimal-but-valid scorecard cycle through the repository's sole writer. */

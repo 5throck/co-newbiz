@@ -45,6 +45,26 @@ describe("policy:sync (real policies/ tree)", () => {
     expect(r.superseded).toBe(0);
     expect(r.unchanged).toBe(r.docs.length);
   });
+
+  test("edited policy supersedes the old row and leaves one live row", async () => {
+    const docPath = "policies/group/neb-policy.md";
+    const old = db
+      .query("SELECT id FROM policy WHERE doc_path = ? AND superseded_by IS NULL")
+      .get(docPath) as { id: string };
+    db.run("UPDATE policy SET version = ? WHERE id = ?", ["stale-test-version", old.id]);
+
+    const r = await syncPolicies();
+    const changed = r.docs.find((d) => d.path === docPath);
+    expect(changed?.action).toBe("superseded");
+    expect(changed?.policyId).not.toBe(old.id);
+
+    const liveCount = (db
+      .query("SELECT COUNT(*) c FROM policy WHERE doc_path = ? AND superseded_by IS NULL")
+      .get(docPath) as { c: number }).c;
+    expect(liveCount).toBe(1);
+    const oldRow = db.query("SELECT superseded_by FROM policy WHERE id = ?").get(old.id) as { superseded_by: string };
+    expect(oldRow.superseded_by).toBe(changed!.policyId);
+  });
 });
 
 describe("policy:impact (real repo references)", () => {

@@ -13,6 +13,7 @@ process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 delete process.env.DART_API_KEY;
 delete process.env.KOSIS_API_KEY;
 delete process.env.DATA_GO_KR_API_KEY;
+delete process.env.LAW_API_OC;
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 
@@ -47,6 +48,10 @@ describe("source adapter registry", () => {
     expect(SOURCE_ADAPTERS.kosis.isEnabled()).toBe(true);
     delete process.env[kosisKey];
     expect(SOURCE_ADAPTERS.kosis.isEnabled()).toBe(false);
+    process.env.LAW_API_OC = "test-oc";
+    expect(SOURCE_ADAPTERS.law.isEnabled()).toBe(true);
+    delete process.env.LAW_API_OC;
+    expect(SOURCE_ADAPTERS.law.isEnabled()).toBe(false);
   });
 
   test("kosis fetcher refuses an unknown series", async () => {
@@ -63,6 +68,7 @@ describe("kosis unit quarantine", () => {
   test("known units resolve; unknown units are quarantined (never guessed)", () => {
     expect(resolveKosisUnit("억원")?.unitCode).toBe("krw_100m");
     expect(resolveKosisUnit("%")?.dimension).toBe("ratio");
+    expect(resolveKosisUnit(`2020${String.fromCharCode(0xff1d)}100`)?.unitCode).toBe("index");
     expect(resolveKosisUnit("페타줄")).toBeNull(); // quarantine
     expect(resolveKosisUnit(undefined)).toBeNull();
     expect(Object.keys(KOSIS_UNITS).length).toBeGreaterThanOrEqual(8);
