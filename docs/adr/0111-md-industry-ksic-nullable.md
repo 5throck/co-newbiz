@@ -53,11 +53,24 @@ A blanket "NULL out everything non-numeric" would break those two surfaces.
    (`app/web-next/lib/ksic-master.json` — KSIC 11th revision section/division
    entries plus every code anchored by an `industry-profiles/KSIC*.yaml`
    profile) backs a new authenticated `GET /api/market-overview/ksic?q=`
-   search endpoint and a suggestion listbox on the create form and the
-   inline row editor. The dataset is explicitly a curated subset (source and
-   revision recorded in the file); it is extended from KOSTAT's official
-   11th-revision list as new profiles are added — it is not presented as the
-   full ~10k-code master.
+   search endpoint. The picker follows the app's established explicit
+   search-button pattern (the DART picker precedent): input + "검색" button,
+   results presented in a `sizing-note-list` listbox on the create form only —
+   the table's inline row editor keeps its plain ADR-0082 RowEdit-style input.
+   No new CSS component classes are introduced. The dataset is explicitly a
+   curated subset (source and revision recorded in the file); it is extended
+   from KOSTAT's official 11th-revision list as new profiles are added — it
+   is not presented as the full ~10k-code master.
+
+## Revision 2026-09-09 (design-conformance amendment)
+
+The first implementation used a debounced auto-suggest combobox (query per
+keystroke, list on focus) plus a bespoke `.ksic-suggest-list` CSS component.
+Design review against the design guide (§6 Component Standard), the design
+review checklist (no implicit new components/tokens), and the standard screen
+patterns rejected that interaction: it was reworked to the explicit
+search-button pattern above in the same working day. The API, dataset,
+validation, and nullable-migration decisions in this ADR are unchanged.
 
 ## Consequences
 
