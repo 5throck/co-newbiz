@@ -6,13 +6,19 @@ description: >
   revision-preserving policy (ADR-0004): reuse cache within its validity
   window, conditional requests otherwise, and on a genuine change insert a
   new `revision_no` row rather than overwrite — all revisions preserved in
-  `data_change_log`. As of this skill's authoring, the CLI commands this
-  describes (`fetch`, `md:sync`) are not yet implemented — an explicitly
-  named gap, not a claim of working automation.
+  `data_change_log`. Implemented 2026-09-09 (design
+  `docs/designs/2026-09-09-source-adapter-framework-design_ko.md`): the
+  source-adapter framework maps the k-* skills to executable adapters
+  (`scripts/co-newbiz/source-adapters.ts`); `fetch --source
+  <dart|kosis|law|opendata>` runs collection through `ensure_fresh`, and
+  `md:sync --source <dart|law>` performs idempotent natural-key catalog
+  upserts. Fail-closed: a missing credential disables the adapter (exit 2),
+  an unknown KOSIS unit is quarantined (kosis-units.ts), and seed statIds
+  ship `_verified: false` until confirmed against the live API.
 
   Use when: "fetch market data", "series revision policy", "data change
   log", "market data pipeline".
-version: 1.0.0
+version: 1.1.0
 last_reviewed: 2026-08-20
 status: active
 owner: data-architect

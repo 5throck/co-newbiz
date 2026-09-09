@@ -2248,7 +2248,7 @@
       "id": "skill:market-data-pipeline",
       "type": "skill",
       "label": "market-data-pipeline",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "active"
     },
     {
