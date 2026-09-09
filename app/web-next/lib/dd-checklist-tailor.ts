@@ -30,6 +30,7 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
 import { DD_WORKSPACE_CHECKLISTS, getChecklistItems, type ChecklistItemDef } from "./library.ts";
+import { isWebResearchConfigured, tavilySearch, type WebSource } from "./web-research.ts";
 
 // ADR-0104 — DD workspace expanded to 7 domains (financial/hr/market/financing
 // added alongside commercial/technical/legal).
@@ -165,6 +166,38 @@ function persistDrafts(projectId: string, domain: DdDomain, agentKey: string, dr
   }
 }
 
+
+function reliabilityForSource(url: string): "A" | "B" | "C" {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.endsWith(".gov") || host.endsWith(".go.kr") || host.endsWith(".edu") || host.includes("kosis") || host.includes("dart.fss")) return "A";
+    if (host.includes("reuters") || host.includes("bloomberg") || host.includes("ft.com") || host.includes("mckinsey") || host.includes("bcg") || host.includes("pwc") || host.includes("deloitte") || host.includes("kpmg") || host.includes("ey.com")) return "B";
+    return "C";
+  } catch {
+    return "C";
+  }
+}
+
+function pickSource(sources: WebSource[], index: number): WebSource | null {
+  if (sources.length === 0) return null;
+  return sources[index % sources.length] ?? null;
+}
+
+export function makeTavilyDdTailorExecutor(search: typeof tavilySearch = tavilySearch): DdTailorExecutor {
+  return async (domain, ctx) => {
+    const templates = renderTemplates(domain, ctx.industry);
+    const sources = await search(`${ctx.industry} ${domain} due diligence risks regulations market 2026`, { maxResults: 5 });
+    return templates.map((t, index) => {
+      const source = pickSource(sources, index);
+      return {
+        ...t,
+        sourceUrl: source?.url ?? null,
+        sourceReliability: source?.url ? reliabilityForSource(source.url) : "C",
+      };
+    });
+  };
+}
+
 /** Deterministic default — profile-derived drafts, source_url null, grade 'C'. */
 function defaultExecutor(): DdTailorExecutor {
   return async (domain, ctx) =>
@@ -179,6 +212,7 @@ function defaultExecutor(): DdTailorExecutor {
 export function getDdTailorExecutor(): DdTailorExecutor {
   const mode = process.env.CO_NEWBIZ_DD_TAILOR_AGENTS ?? "deterministic";
   if (mode === "llm" && executorFactory !== null) return executorFactory();
+  if (mode === "tavily" && isWebResearchConfigured()) return makeTavilyDdTailorExecutor();
   return defaultExecutor();
 }
 
@@ -220,7 +254,7 @@ export async function tailorDdChecklist(
           `### [${domain}] ${agentKey} — 산업 맞춤 DD 체크리스트 제안`,
           "",
           `${drafts.length}건 제안 (proposed 상태, 상태 행 없음 — 승인 전까지 게이트 불개입).`,
-          `출처 없는 제안 ${unsourced}건 — 출처 없는 제안은 그렇게 표시됩니다 (신뢰도 미기재/최저 등급).`,
+          `Tavily/외부 출처 연결 ${drafts.length - unsourced}건, 출처 없는 제안 ${unsourced}건 — 출처 없는 제안은 그렇게 표시됩니다 (신뢰도 미기재/최저 등급).`,
         ].join("\n");
       },
     };

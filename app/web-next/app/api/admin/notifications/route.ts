@@ -11,7 +11,8 @@ export async function GET(request: Request) {
   if (denied) return denied;
   const limit = Math.min(Number(new URL(request.url).searchParams.get("limit") ?? 200) || 200, 500);
   const notifications = getDb().query(
-    "SELECT * FROM notification ORDER BY created_at DESC LIMIT ?",
-  ).all(limit);
-  return ok(notifications, 200, { count: notifications.length });
+    `SELECT id, user_id, project_id, trigger_type, severity, payload, channel, bundle, sent_at, read_at
+     FROM notification ORDER BY sent_at DESC, id DESC LIMIT ?`,
+  ).all(limit) as Array<{ read_at: string | null }>;
+  return ok(notifications, 200, { count: notifications.length, unread_count: notifications.filter((n) => n.read_at === null).length });
 }

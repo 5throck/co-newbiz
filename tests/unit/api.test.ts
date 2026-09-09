@@ -212,9 +212,61 @@ describe("glossary and procedures", () => {
 });
 
 describe("notifications", () => {
-  test("notifications endpoint responds", async () => {
+  test("notifications endpoint returns unread counts and read mutations are caller-scoped", async () => {
+    const projectId = ulid();
+    db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [projectId, `NOTIF-${projectId.slice(-4)}`, NOW]);
+    const aliceNotif = ulid();
+    const bobNotif = ulid();
+    db.run(
+      "INSERT INTO notification (id, user_id, project_id, trigger_type, severity, payload, channel, bundle, sent_at) VALUES (?,?,?,?,?,?,?,?,?)",
+      [aliceNotif, "alice", projectId, "staleness", "warning", "alice payload", "in_app", "immediate", NOW],
+    );
+    db.run(
+      "INSERT INTO notification (id, user_id, project_id, trigger_type, severity, payload, channel, bundle, sent_at) VALUES (?,?,?,?,?,?,?,?,?)",
+      [bobNotif, "bob", projectId, "staleness", "warning", "bob payload", "in_app", "immediate", NOW],
+    );
+
     const res = await req("/api/notifications", { headers: { cookie: aliceCookie } });
+    const body = await res.json();
     expect(res.status).toBe(200);
+    expect(body.meta.unread_count).toBeGreaterThanOrEqual(1);
+    expect(body.data.find((n: { id: string }) => n.id === aliceNotif)).toMatchObject({ read_at: null });
+
+    const read = await req(`/api/notifications/${aliceNotif}/read`, { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({}) });
+    expect(read.status).toBe(200);
+    expect((await read.json()).data.read_at).toBeTruthy();
+
+    const cross = await req(`/api/notifications/${bobNotif}/read`, { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({}) });
+    expect(cross.status).toBe(404);
+
+    const all = await req("/api/notifications/read-all", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({}) });
+    expect(all.status).toBe(200);
+    expect((await all.json()).meta.unread_count).toBe(0);
+  });
+});
+
+describe("projects", () => {
+  test("project list includes derived market-data stale signal without storing it", async () => {
+    const projectId = ulid();
+    const industryId = ulid();
+    const sourceId = ulid();
+    const unitId = ulid();
+    db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [projectId, `STALE-${projectId.slice(-4)}`, NOW]);
+    db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, "alice", "lead", "root", NOW, "api stale test"]);
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [industryId, `K${projectId.slice(-4)}`, "테스트 산업", "Test Industry", NOW]);
+    db.run("INSERT INTO project_industry (id, project_id, industry_id, bound_by, bound_at, rationale) VALUES (?,?,?,?,?,?)", [ulid(), projectId, industryId, "alice", NOW, "test binding"]);
+    db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, `SRC${projectId.slice(-4)}`, "A", NOW]);
+    db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [unitId, `U${projectId.slice(-4)}`, "currency", 1, NOW]);
+    db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)", [`Y2020-${projectId.slice(-4)}`, "year", "2020-01-01", "2020-12-31", 2020, NOW]);
+    db.run("INSERT INTO fact_industry (id, industry_id, period_id, metric_key, value, revision_no, source_id, created_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), industryId, `Y2020-${projectId.slice(-4)}`, "market_tam_krw", 100, 1, sourceId, NOW]);
+
+    const res = await req("/api/projects", { headers: { cookie: aliceCookie } });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    const row = body.data.find((p: { id: string }) => p.id === projectId);
+    expect(row).toMatchObject({ is_stale: true });
+    expect(row.stale_reasons.some((r: string) => r.includes("TAM"))).toBe(true);
+    expect(db.query("SELECT COUNT(*) AS c FROM pragma_table_info('md_project') WHERE name = 'is_stale'").get()).toMatchObject({ c: 0 });
   });
 });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -33,6 +33,7 @@ import {
   FolderKanban,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
+import { api, type NotificationRow } from "../lib/api.ts";
 import { ADMIN_NAV, NAV_SECTIONS, type NavItem } from "../lib/navigation.ts";
 import { ThemeToggle } from "./ThemeToggle.tsx";
 
@@ -88,6 +89,22 @@ function Topbar({ pathname }: { pathname: string }) {
   const { me, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!me || me.role === "admin") return;
+    let alive = true;
+    api.get<NotificationRow[]>("/api/notifications")
+      .then((r) => { if (alive) setUnreadCount(typeof r.meta.unread_count === "number" ? r.meta.unread_count : r.data.filter((n) => n.read_at === null).length); })
+      .catch(() => { if (alive) setUnreadCount(0); });
+    return () => { alive = false; };
+  }, [me]);
+
+  async function markAllRead() {
+    await api.post<{ marked: number }>("/api/notifications/read-all", {});
+    setUnreadCount(0);
+  }
+
   if (!me) return null;
   // 활성 내비 항목 해석 — 최상위뿐 아니라 서브메뉴 자식(/synergy 등)도 찾는다.
   // 자식이 활성이면 parent를 함께 기록해 목록(부모/자식 href)로 돌아갈 수 있게 한다.
@@ -126,6 +143,12 @@ function Topbar({ pathname }: { pathname: string }) {
       )}
       <div className="topbar-actions">
         <ThemeToggle compact />
+        {me.role !== "admin" && (
+          <button type="button" className="topbar-logout" onClick={() => void markAllRead()} aria-label="알림 모두 읽음 처리" title="알림 모두 읽음 처리">
+            <Bell size={16} />
+            <span>알림 {unreadCount > 0 ? unreadCount : "0"}</span>
+          </button>
+        )}
         <span className="topbar-user">{me.userId}</span>
         {/* 임의 비밀번호 변경 — must_change_password 플로우와 같은 화면을 재사용한다. */}
         <button type="button" onClick={() => router.push("/password-change")} className="topbar-logout" aria-label="비밀번호 변경">

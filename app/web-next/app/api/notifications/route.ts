@@ -8,8 +8,10 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
   const rows = getDb()
     .query(
-      "SELECT project_id, trigger_type, severity, payload, channel, bundle, sent_at FROM notification WHERE user_id = ? ORDER BY sent_at DESC, id DESC LIMIT 200",
+      `SELECT id, project_id, trigger_type, severity, payload, channel, bundle, sent_at, read_at
+       FROM notification WHERE user_id = ? ORDER BY sent_at DESC, id DESC LIMIT 200`,
     )
-    .all(auth.auth.userId);
-  return ok(rows);
+    .all(auth.auth.userId) as Array<{ read_at: string | null }>;
+  const unread = rows.filter((r) => r.read_at === null).length;
+  return ok(rows, 200, { count: rows.length, unread_count: unread });
 }

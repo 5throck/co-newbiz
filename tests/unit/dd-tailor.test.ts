@@ -38,6 +38,7 @@ const { promoteOpportunity } = await import("../../db/repositories/project.repos
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
 const { DD_WORKSPACE_CHECKLISTS, getChecklistItems } = await import("../../app/web-next/lib/library.ts");
+const { makeTavilyDdTailorExecutor, getDdTailorExecutor } = await import("../../app/web-next/lib/dd-checklist-tailor.ts");
 
 const NOW = new Date().toISOString();
 
@@ -104,6 +105,32 @@ function customItems() {
     status: string;
   }>;
 }
+
+describe("Wave D Tavily provenance executor", () => {
+  test("attaches real source URLs from the injected Tavily searcher without approving proposals", async () => {
+    const executor = makeTavilyDdTailorExecutor(async () => [
+      { title: "Regulator", url: "https://example.gov/industry-risk", snippet: "regulatory update" },
+      { title: "Research", url: "https://www.reuters.com/markets/example", snippet: "market update" },
+    ]);
+    const drafts = await executor("commercial", { projectId, industry: "반도체 테스트 산업" });
+    expect(drafts.length).toBeGreaterThanOrEqual(5);
+    expect(drafts[0].sourceUrl).toBe("https://example.gov/industry-risk");
+    expect(drafts[0].sourceReliability).toBe("A");
+    expect(drafts[1].sourceUrl).toBe("https://www.reuters.com/markets/example");
+    expect(drafts[1].sourceReliability).toBe("B");
+  });
+
+  test("tavily mode remains honest deterministic fallback when no Tavily key is configured", async () => {
+    const prevMode = process.env.CO_NEWBIZ_DD_TAILOR_AGENTS;
+    const prevKey = process.env.TAVILY_API_KEY;
+    process.env.CO_NEWBIZ_DD_TAILOR_AGENTS = "tavily";
+    process.env.TAVILY_API_KEY = "";
+    const drafts = await getDdTailorExecutor()("legal", { projectId, industry: "반도체 테스트 산업" });
+    expect(drafts.every((d) => d.sourceUrl === null && d.sourceReliability === "C")).toBe(true);
+    process.env.CO_NEWBIZ_DD_TAILOR_AGENTS = prevMode;
+    if (prevKey === undefined) process.env.TAVILY_API_KEY = ""; else process.env.TAVILY_API_KEY = prevKey;
+  });
+});
 
 describe("S9 tailored DD checklists (ADR-0099)", () => {
   test("(a) default executor proposes honestly: proposed-only, no fabricated sources", async () => {

@@ -48,6 +48,9 @@ export interface ProjectRow {
   project_name?: string | null;
   charter_json?: string | null;
   charter_confirmed_at?: string | null;
+  /** Wave D2: derived market-evidence freshness signal, never stored on md_project. */
+  is_stale?: boolean;
+  stale_reasons?: string[];
 }
 
 /**
@@ -291,6 +294,53 @@ interface VisibleProjectRow extends ProjectRow {
   mnpi_flag: number;
 }
 
+
+// Wave D2 — derived project list freshness. This mirrors snapshot-filler's
+// fact_industry mapping but returns only list-row signal metadata; it never
+// stores stale state on md_project.
+const PROJECT_STALE_METRICS: ReadonlyArray<{ varKey: string; metricKey: string; label: string }> = [
+  { varKey: "market.tam", metricKey: "market_tam_krw", label: "TAM" },
+  { varKey: "market.growth_rate", metricKey: "market_growth_yoy_ratio", label: "성장률" },
+  { varKey: "market.top3_share", metricKey: "market_top3_share_ratio", label: "상위3사 점유율" },
+];
+
+function ageInDaysForProjectList(periodEnd: string, now: Date): number {
+  return (now.getTime() - new Date(periodEnd).getTime()) / 86_400_000;
+}
+
+function marketStaleReasons(projectId: string, now = new Date()): string[] {
+  const db = getDb();
+  const industries = db
+    .query("SELECT industry_id FROM project_industry WHERE project_id = ? AND superseded_by IS NULL ORDER BY industry_id")
+    .all(projectId) as Array<{ industry_id: string }>;
+  if (industries.length === 0) return [];
+  const reasons: string[] = [];
+  for (const { varKey, metricKey, label } of PROJECT_STALE_METRICS) {
+    const maxAgeRow = db.query("SELECT max_age_days FROM evidence_var WHERE var_key = ?").get(varKey) as { max_age_days: number | null } | undefined;
+    if (maxAgeRow?.max_age_days == null) continue;
+    for (const { industry_id } of industries) {
+      const row = db
+        .query(
+          `SELECT p.end_date AS period_end
+           FROM fact_industry fi JOIN md_period p ON p.id = fi.period_id
+           WHERE p.period_type = 'year' AND fi.industry_id = ? AND fi.metric_key = ?
+           ORDER BY p.fiscal_year DESC, p.end_date DESC, p.id DESC, fi.revision_no DESC LIMIT 1`,
+        )
+        .get(industry_id, metricKey) as { period_end: string } | undefined;
+      if (!row) continue;
+      if (ageInDaysForProjectList(row.period_end, now) > maxAgeRow.max_age_days) reasons.push(`${label} ${row.period_end.slice(0, 10)} 기준`);
+    }
+  }
+  return [...new Set(reasons)];
+}
+
+function attachStaleSignals<T extends ProjectRow>(rows: T[]): T[] {
+  return rows.map((row) => {
+    const stale_reasons = marketStaleReasons(row.id);
+    return { ...row, is_stale: stale_reasons.length > 0, stale_reasons };
+  });
+}
+
 function logMnpiReads(rows: VisibleProjectRow[], callerId: string, opts: VisibilityOptions): void {
   const mnpiRows = rows.filter((r) => r.mnpi_flag === 1);
   if (mnpiRows.length === 0) return;
@@ -333,7 +383,7 @@ export function listVisibleProjects(callerId: string, opts: VisibilityOptions = 
     )
     .all(callerId, opts.excludeMnpi ? 1 : 0, opts.includeClosed ? 1 : 0) as VisibleProjectRow[];
   logMnpiReads(rows, callerId, opts);
-  return rows.map(({ mnpi_flag: _mnpi, ...rest }) => rest);
+  return attachStaleSignals(rows.map(({ mnpi_flag: _mnpi, ...rest }) => rest));
 }
 
 /**
@@ -364,7 +414,7 @@ export function getProjectIfVisible(
   if (!row) return null;
   logMnpiReads([row], callerId, opts);
   const { mnpi_flag: _mnpi, ...rest } = row;
-  return rest;
+  return attachStaleSignals([rest])[0];
 }
 
 export function createProject(projectNo: string): ProjectRow {

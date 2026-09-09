@@ -17,6 +17,8 @@ interface ProjectRow {
   origin?: string | null;
   track?: "greenfield" | "brownfield" | null;
   source_opportunity_id?: string | null;
+  is_stale?: boolean;
+  stale_reasons?: string[];
 }
 
 const TRACK_LABEL: Record<string, string> = { greenfield: "그린필드", brownfield: "브라운필드" };
@@ -53,13 +55,14 @@ export function ProjectsView() {
         <p className="text-[color:var(--muted-fg)]">접근 가능한 프로젝트가 없습니다.</p>
       ) : (
         <div className="table-scroll">
-          <table className="data-table" style={{ minWidth: "720px" }}>
+          <table className="data-table" style={{ minWidth: "820px" }}>
             <caption className="sr-only">프로젝트 목록</caption>
             <thead>
               <tr>
                 <th className="text-left">프로젝트 번호</th>
                 <th className="text-left">프로젝트명</th>
                 <th className="text-left">트랙</th>
+                <th className="text-left">데이터 상태</th>
                 <th className="text-left">원본 기회</th>
                 <th className="text-left">생성일</th>
                 <th className="text-left">바로가기</th>
@@ -77,6 +80,13 @@ export function ProjectsView() {
                       </span>
                     ) : (
                       <span className="text-[color:var(--muted-fg)]">—</span>
+                    )}
+                  </td>
+                  <td>
+                    {p.is_stale ? (
+                      <span className="status-chip status-amber" title={(p.stale_reasons ?? []).join(" · ") || "시장 데이터 최신성 확인 필요"}>◐ 갱신 필요</span>
+                    ) : (
+                      <span className="status-chip status-green" title="프로젝트 목록 기준 stale 신호 없음">✓ 최신</span>
                     )}
                   </td>
                   <td>

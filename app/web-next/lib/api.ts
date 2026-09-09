@@ -72,6 +72,7 @@ export interface ProjectSummary {
   rag_assessed_at?: string | null;
   gate_stage?: string | null;
   is_stale?: boolean;
+  stale_reasons?: string[];
   stage_summary?: {
     track: "greenfield" | "brownfield" | null;
     routeDecided: boolean;
@@ -117,17 +118,18 @@ export function provenanceOf(meta: ProvenanceMeta | Record<string, unknown> | un
   return out;
 }
 
-// GET /api/notifications rows (monitoring.ts). The notification table has no
-// read/unread state — sent_at is the only lifecycle timestamp — so any UI
-// count derived from this is a recent-total, never an unread count.
+// GET /api/notifications rows (monitoring.ts). Wave D adds per-recipient
+// read_at, so callers can render a true unread count instead of a recent-total.
 export interface NotificationRow {
-  project_id: string;
+  id: string;
+  project_id: string | null;
   trigger_type: string;
   severity: "opportunity" | "warning" | "urgent" | "info" | "ops";
   payload: string;
   channel: string;
   bundle: "immediate" | "daily";
   sent_at: string;
+  read_at: string | null;
 }
 
 export interface RagDimension {
