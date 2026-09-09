@@ -1,0 +1,19 @@
+{
+  "source": "Curated subset — codes anchored by industry-profiles/KSIC*.yaml (KSIC 11th revision, 통계청). Extend from KOSTAT's official list (kssc.kostat.go.kr) as new profiles are added; not the full ~10k-code master. See ADR-0111.",
+  "revision": 11,
+  "codes": [
+    { "code": "264", "name_ko": "반도체소자 제조업", "detail": "메모리·파운드리·팹리스 설계·패키징 포함", "profile": true },
+    { "code": "282", "name_ko": "일차전지 및 이차전지 제조업", "detail": "리튬이온 셀·팩, 양극/음극/전해액/분리막 소재 생태계 포함", "profile": true },
+    { "code": "29192", "name_ko": "산업용 로봇 제조업", "detail": "휴머노이드·협동로봇·서비스로봇 포함", "profile": true },
+    { "code": "29241", "name_ko": "건설 및 채광용 기계장비 제조업", "detail": "굴삭기·휠로더·덤프트럭·크레인 등 건설기계 전반", "profile": true },
+    { "code": "30111", "name_ko": "선박 건조업", "detail": "강선 건조업 — 군사용 선박·잠수함·LNG선·해양플랜트 포함", "profile": true },
+    { "code": "30303", "name_ko": "우주선 제조업", "detail": "우주발사체·인공위성·위성 부품 포함", "profile": true },
+    { "code": "31312", "name_ko": "무인 항공기 및 무인 비행장치 제조업", "detail": "드론·UAM/eVTOL·군용 무인기 포함", "profile": true },
+    { "code": "35111", "name_ko": "원자력 발전업", "detail": "경수형 대형 원전과 소형모듈 SMR 포함", "profile": true },
+    { "code": "35113", "name_ko": "화력 발전업", "detail": "유연소·무연소 석탄, LNG 복합화력, 암모니아·수소 혼소 전환 포함", "profile": true },
+    { "code": "35114", "name_ko": "신재생에너지 발전업", "detail": "태양광·풍력·연료전지 등 재생에너지 발전 전반 (35114 태양력 + 35115 풍력 대표)", "profile": true },
+    { "code": "35119", "name_ko": "수소 연료전지 발전업", "detail": "기타 발전업 — PAFC/SOFC/PEM 스택 기반 분산 전원, 수소경제 인프라 연계", "profile": true },
+    { "code": "63999", "name_ko": "정보보안 서비스업", "detail": "그 외 기타 정보 서비스업 — 보안관제·컨설팅·모의해킹·취약점 분석", "profile": true },
+    { "code": "74100", "name_ko": "발전소 O&M 서비스업", "detail": "사업시설 유지·관리 서비스업 — 발전소 통합 운영·정비 위탁", "profile": true }
+  ]
+}

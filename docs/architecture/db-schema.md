@@ -16,7 +16,7 @@ v_*           → query-optimized views, derived, never a source of truth
 
 | Table | Code System | Key Fields | Why This Code System |
 |---|---|---|---|
-| `md_industry` | KSIC + NAICS/ISIC mapping | `id`, `ksic_code`, `naics_code`, `isic_code`, `name_ko`, `name_en` | The proxy-chain axis — without a real cross-mapped industry code, chain traversal has nothing to anchor to |
+| `md_industry` | KSIC + NAICS/ISIC mapping | `id`, `ksic_code` (nullable since migration 0078 / ADR-0111 — NULL = unspecified, legacy `NEW-*` placeholders retired; UNIQUE index allows multiple NULLs), `naics_code`, `isic_code`, `name_ko`, `name_en` | The proxy-chain axis — without a real cross-mapped industry code, chain traversal has nothing to anchor to |
 | `md_company` | DART `corp_code` + business registration number + LEI | `id`, `dart_corp_code`, `biz_reg_no`, `lei`, `name_ko`, `name_en` | Peer-group/benchmark and target/competitor identification |
 | `md_unit` | Internal unit code + `dimension` + SI coefficient | `id`, `code`, `dimension`, `si_coefficient` | `dimension` is what forces cross-dimension conversions through `proxy_link` rather than ad hoc math (FR-DATA-03) |
 | `md_currency` | ISO 4217 | `id`, `iso_code` | — |

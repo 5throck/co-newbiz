@@ -687,7 +687,7 @@ model md_entity {
 
 model md_industry {
   id                                                              String                        @id
-  ksic_code                                                       String                        @unique(map: "idx_md_industry_ksic")
+  ksic_code                                                       String?                       @unique(map: "idx_md_industry_ksic")
   naics_code                                                      String?
   isic_code                                                       String?
   name_ko                                                         String

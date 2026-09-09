@@ -5,8 +5,9 @@ import { getDb } from "../../../../../../db/client.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../lib/auth.ts";
-import { forbidden, badRequest, ok } from "../../../../lib/envelope.ts";
+import { forbidden, badRequest, fail, ok } from "../../../../lib/envelope.ts";
 import { runSizingPipeline } from "../../../../lib/market-sizing-pipeline.ts";
+import { parseKsicInput } from "../../../../lib/ksic.ts";
 
 export async function GET(request: Request) {
   const auth = authenticate(request);
@@ -38,22 +39,45 @@ export async function POST(request: Request) {
   }
   const nameKo = body.name_ko?.trim();
   if (!nameKo) return badRequest("name_required", "산업명(name_ko)은 필수입니다.");
-  const ksicCode = body.ksic_code?.trim() || null;
+  const ksic = parseKsicInput(body.ksic_code);
+  if (!ksic.ok) return badRequest("invalid_ksic_code", ksic.reason);
+  const ksicCode = ksic.code;
 
   const db = getDb();
   const now = new Date().toISOString();
 
-  // One active analysis per industry: reuse an in_progress one instead of stacking.
+  // One active analysis per industry: reuse an existing one (name-based dedup)
+  // instead of stacking — a supplied KSIC code is applied to that industry
+  // (fill-or-update), never silently dropped.
   let industry = db
-    .query("SELECT id FROM md_industry WHERE name_ko = ?")
-    .get(nameKo) as { id: string } | null;
+    .query("SELECT id, ksic_code FROM md_industry WHERE name_ko = ?")
+    .get(nameKo) as { id: string; ksic_code: string | null } | null;
   if (!industry) {
     const id = ulid();
-    db.run(
-      "INSERT INTO md_industry (id, ksic_code, naics_code, isic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?,?,?)",
-      [id, ksicCode ?? `NEW-${id.slice(-6)}`, null, null, nameKo, nameKo, now],
-    );
-    industry = { id };
+    try {
+      // ksic_code is nullable (ADR-0111): no code → NULL ("미지정"), never a
+      // fabricated placeholder. The UNIQUE index still guards real collisions.
+      db.run(
+        "INSERT INTO md_industry (id, ksic_code, naics_code, isic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?,?,?)",
+        [id, ksicCode, null, null, nameKo, nameKo, now],
+      );
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("UNIQUE")) {
+        return fail(409, "code_in_use", `KSIC 코드 ${ksicCode}는 이미 다른 산업에 할당되어 있습니다. 인라인 편집으로 기존 산업을 확인하세요.`);
+      }
+      throw err;
+    }
+    industry = { id, ksic_code: ksicCode };
+  } else if (ksicCode && industry.ksic_code !== ksicCode) {
+    try {
+      db.run("UPDATE md_industry SET ksic_code = ? WHERE id = ?", [ksicCode, industry.id]);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("UNIQUE")) {
+        return fail(409, "code_in_use", `KSIC 코드 ${ksicCode}는 이미 다른 산업에 할당되어 있습니다.`);
+      }
+      throw err;
+    }
+    industry = { ...industry, ksic_code: ksicCode };
   }
   const existing = db
     .query("SELECT id FROM market_sizing_analysis WHERE industry_id = ? AND status = 'in_progress'")
