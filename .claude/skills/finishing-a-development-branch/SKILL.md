@@ -6,14 +6,16 @@ scope: common
 version: 1.0.0
 last_reviewed: 2026-06-13
 status: active
-triggers:
-  - "finish branch"
-  - "complete work"
-  - "wrap up"
-  - "finishing a development branch"
-  - "merge branch"
-  - "create PR"
-  - "push and PR"
+metadata:
+  type: process
+  triggers:
+    - "finish branch"
+    - "complete work"
+    - "wrap up"
+    - "finishing a development branch"
+    - "merge branch"
+    - "create PR"
+    - "push and PR"
 ---
 
 # Finishing a Development Branch (Workspace Override)

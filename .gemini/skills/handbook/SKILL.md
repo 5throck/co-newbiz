@@ -1,7 +1,7 @@
 ---
 name: handbook
 scope: common
-version: 0.4.0
+version: 0.4.1
 description: >-
   Document Production Workflow — generates searchable, themed handbooks as
   static sites (GitHub Pages). Three modes: standalone handbook, lecture
@@ -13,6 +13,13 @@ description: >-
 status: active
 owner: pm
 last_reviewed: 2026-08-17
+metadata:
+  type: process
+  triggers:
+    - make handbook
+    - create handbook
+    - build course site
+    - companion handbook
 prerequisites: research (optional — standalone mode has no prerequisites)
 attribution:
   source: https://github.com/beret21/teachme

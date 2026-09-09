@@ -747,6 +747,11 @@
       "layer": "L3"
     },
     {
+      "id": "deal-pipeline-orchestration",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "deal-workspace-operations",
       "type": "skill",
       "layer": "L3"
@@ -3923,6 +3928,24 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "deal-execution-playbook",
+      "to": "deal-pipeline-orchestration",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/deal-execution-playbook/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "references",
+      "from": "deal-execution-playbook",
+      "to": "deal-pipeline-orchestration",
+      "source": "prose"
+    },
+    {
       "type": "references",
       "from": "deal-execution-playbook",
       "to": "group-level-review",
@@ -3949,6 +3972,72 @@
       "from": "deal-execution-playbook",
       "to": "two-tier-approval-chain",
       "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "deal-pipeline-orchestration",
+      "to": "deal-execution-playbook",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/deal-pipeline-orchestration/SKILL.md",
+        "field": "relates_to",
+        "index": 2
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "deal-pipeline-orchestration",
+      "to": "evidence-ledger",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/deal-pipeline-orchestration/SKILL.md",
+        "field": "relates_to",
+        "index": 4
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "deal-pipeline-orchestration",
+      "to": "meeting-facilitation",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/deal-pipeline-orchestration/SKILL.md",
+        "field": "relates_to",
+        "index": 3
+      }
+    },
+    {
+      "type": "composes_with",
+      "from": "deal-pipeline-orchestration",
+      "to": "stage-gate-governance",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/deal-pipeline-orchestration/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
+      "type": "references",
+      "from": "deal-pipeline-orchestration",
+      "to": "stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "composes_with",
+      "from": "deal-pipeline-orchestration",
+      "to": "two-tier-approval-chain",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/deal-pipeline-orchestration/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "references",
@@ -7974,7 +8063,19 @@
     {
       "type": "references",
       "from": "pm",
+      "to": "deal-pipeline-orchestration",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "pm",
       "to": "decision-record",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "pm",
+      "to": "stage-gate-governance",
       "source": "prose"
     },
     {

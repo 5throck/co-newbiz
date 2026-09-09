@@ -1,4 +1,4 @@
-// @version 0.4.0
+// @version 0.4.1
 /**
  * Multi-element skill graph extractor — pilot per
  * docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md.
@@ -417,6 +417,14 @@ function buildGraph(includeConsumes: boolean): Graph {
     if (!nodes.has(node.id)) nodes.set(node.id, node);
   }
 
+  // source_ref must be REPO-RELATIVE POSIX — the committed projection has to
+  // byte-match what any other checkout computes (a machine-specific absolute
+  // path made the graph audit fail on every environment but the author's).
+  function toRel(ref: string): string {
+    const stripped = ref.startsWith(ROOT) ? ref.slice(ROOT.length + 1) : ref;
+    return stripped.replaceAll("\\", "/");
+  }
+
   function addEdge(
     type: EdgeType,
     from: string,
@@ -426,7 +434,7 @@ function buildGraph(includeConsumes: boolean): Graph {
     const key = `${type}|${from}|${to}`;
     if (edgeKeys.has(key)) return;
     edgeKeys.add(key);
-    edges.push({ type, from, to, source_ref: sourceRef });
+    edges.push({ type, from, to, source_ref: toRel(sourceRef) });
   }
 
   // --- skills ---

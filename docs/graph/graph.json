@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 590,
-    "edge_count": 971
+    "node_count": 596,
+    "edge_count": 992
   },
   "nodes": [
     {
@@ -1046,6 +1046,16 @@
       "label": "market_sizing"
     },
     {
+      "id": "artifact:opportunity_insight_synthesis",
+      "type": "artifact",
+      "label": "opportunity_insight_synthesis"
+    },
+    {
+      "id": "artifact:opportunity_registry_entry",
+      "type": "artifact",
+      "label": "opportunity_registry_entry"
+    },
+    {
       "id": "artifact:partner_dd_report",
       "type": "artifact",
       "label": "partner_dd_report"
@@ -1329,6 +1339,11 @@
       "id": "proc:jv-lifecycle-governance",
       "type": "procedure",
       "label": "jv-lifecycle-governance"
+    },
+    {
+      "id": "proc:opportunity-discovery",
+      "type": "procedure",
+      "label": "opportunity-discovery"
     },
     {
       "id": "proc:pmi-integration-execution",
@@ -1877,6 +1892,13 @@
       "id": "skill:deal-execution-playbook",
       "type": "skill",
       "label": "deal-execution-playbook",
+      "version": "1.1.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:deal-pipeline-orchestration",
+      "type": "skill",
+      "label": "deal-pipeline-orchestration",
       "version": "1.0.0",
       "status": "active"
     },
@@ -2024,7 +2046,7 @@
       "id": "skill:handbook",
       "type": "skill",
       "label": "handbook",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "status": "active"
     },
     {
@@ -2346,7 +2368,7 @@
       "id": "skill:project-review",
       "type": "skill",
       "label": "project-review",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "status": "active"
     },
     {
@@ -2500,7 +2522,7 @@
       "id": "skill:stage-gate-governance",
       "type": "skill",
       "label": "stage-gate-governance",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "status": "active"
     },
     {
@@ -2654,7 +2676,7 @@
       "id": "skill:waiver-management",
       "type": "skill",
       "label": "waiver-management",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "active"
     },
     {
@@ -3367,6 +3389,18 @@
       "gate": "post_close"
     },
     {
+      "id": "proc:opportunity-discovery#1",
+      "type": "step",
+      "label": "opportunity-discovery step 1",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:opportunity-discovery#2",
+      "type": "step",
+      "label": "opportunity-discovery step 2",
+      "gate": "Screening"
+    },
+    {
       "id": "proc:pmi-integration-execution#1",
       "type": "step",
       "label": "pmi-integration-execution step 1",
@@ -3536,187 +3570,187 @@
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-dd__any_of_six_ma_validators_missing_at_dd_exit",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-dd__certification_transferability_computed_by_inference_not_confirmation",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-dd__covenant_breach_with_coc_acceleration_under_downside",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-dd__partner_dependency_unconfirmed_and_no_alternative",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-fs__qoe_reveals_material_earnings_quality_gap_unexplained",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-pre-fs__wacc_hurdle_still_assumed",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-screening__no_viable_target_in_longlist",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:brownfield-screening__preliminary_hhi_flags_certain_block",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:deal-shape-chain__no_viable_deal_shape",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:deal-shape-chain__partner_dd_red_financial_distress",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:deal-shape-chain__partner_dd_red_ip_chain",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:entity-establishment-execution__employment_transfer_without_consent_determination",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:entity-establishment-execution__ip_assignment_chain_incomplete_at_establishment",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:entity-establishment-execution__origin_classification_missing_at_entity_ic_exit",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:entity-ic-review__analysis_task_reviewed_by_null_on_required_deliverable",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:entity-ic-review__kill_criteria_condition_triggered",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-dd__wastewater_capacity_insufficient_and_no_mitigation",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-fs__growth_projection_outside_top_decile_without_risk_officer_signoff",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-fs__permit_critical_path_exceeds_incentive_deadline",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-pre-fs__wacc_hurdle_still_assumed",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-screening__partner_dependency_unconfirmed_and_no_alternative",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:greenfield-screening__zero_site_clears_infrastructure_minimums",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:pmi-integration-execution__clean_team_protocol_breach",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:pmi-integration-execution__key_talent_attrition_above_threshold_at_90d",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0060",
       "to": "rule:pmi-integration-execution__synergy_run_rate_uncertified_at_bau_handover",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0060-kill-criteria-executability-classification.md"
+      "source_ref": "docs/adr/0060-kill-criteria-executability-classification.md"
     },
     {
       "type": "activates_reverses",
       "from": "adr:0062",
       "to": "rule:brownfield-screening__preliminary_hhi_flags_certain_block",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/adr/0062-antitrust-premise-reversal-early-screen-var.md"
+      "source_ref": "docs/adr/0062-antitrust-premise-reversal-early-screen-var.md"
     },
     {
       "type": "activates_reverses",
       "from": "dec:2026-08-24-residual-decisions-pack",
       "to": "rule:brownfield-screening__preliminary_hhi_flags_certain_block",
-      "source_ref": "/Users/techcross/git/ai_workspace/Projects/co-newbiz/docs/decisions/2026-08-24-residual-decisions-pack.md"
+      "source_ref": "docs/decisions/2026-08-24-residual-decisions-pack.md"
     },
     {
       "type": "anchored_by",
@@ -5400,6 +5434,18 @@
     },
     {
       "type": "executes_agent",
+      "from": "proc:opportunity-discovery#1",
+      "to": "agent:market-intelligence-agent",
+      "source_ref": "procedures/_shared/opportunity-discovery/schema.yaml#steps[1]"
+    },
+    {
+      "type": "executes_agent",
+      "from": "proc:opportunity-discovery#2",
+      "to": "agent:greenfield-agent",
+      "source_ref": "procedures/_shared/opportunity-discovery/schema.yaml#steps[2]"
+    },
+    {
+      "type": "executes_agent",
       "from": "proc:pmi-integration-execution#1",
       "to": "agent:pmi-agent",
       "source_ref": "procedures/_shared/pmi-integration-execution/schema.yaml#steps[1]"
@@ -6156,6 +6202,18 @@
     },
     {
       "type": "executes_skill",
+      "from": "proc:opportunity-discovery#1",
+      "to": "skill:insight-synthesis",
+      "source_ref": "procedures/_shared/opportunity-discovery/schema.yaml#steps[1]"
+    },
+    {
+      "type": "executes_skill",
+      "from": "proc:opportunity-discovery#2",
+      "to": "skill:scenario-planning",
+      "source_ref": "procedures/_shared/opportunity-discovery/schema.yaml#steps[2]"
+    },
+    {
+      "type": "executes_skill",
       "from": "proc:pmi-integration-execution#1",
       "to": "skill:pmi-planning",
       "source_ref": "procedures/_shared/pmi-integration-execution/schema.yaml#steps[1]"
@@ -6385,6 +6443,18 @@
     {
       "type": "member_of",
       "from": "skill:deal-execution-playbook",
+      "to": "proc:brownfield-target-screening",
+      "source_ref": "skills/deal-execution-playbook/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:deal-execution-playbook",
+      "to": "proc:deal-structuring",
+      "source_ref": "skills/deal-execution-playbook/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:deal-execution-playbook",
       "to": "proc:entity-ic-review",
       "source_ref": "skills/deal-execution-playbook/SKILL.md"
     },
@@ -6393,6 +6463,48 @@
       "from": "skill:deal-execution-playbook",
       "to": "proc:group-investment-review",
       "source_ref": "skills/deal-execution-playbook/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:deal-execution-playbook",
+      "to": "proc:portfolio-venture-monitoring",
+      "source_ref": "skills/deal-execution-playbook/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:deal-pipeline-orchestration",
+      "to": "proc:brownfield-screening",
+      "source_ref": "skills/deal-pipeline-orchestration/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:deal-pipeline-orchestration",
+      "to": "proc:deal-structuring",
+      "source_ref": "skills/deal-pipeline-orchestration/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:deal-pipeline-orchestration",
+      "to": "proc:entity-ic-review",
+      "source_ref": "skills/deal-pipeline-orchestration/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:deal-pipeline-orchestration",
+      "to": "proc:greenfield-screening",
+      "source_ref": "skills/deal-pipeline-orchestration/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:deal-pipeline-orchestration",
+      "to": "proc:group-investment-review",
+      "source_ref": "skills/deal-pipeline-orchestration/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:deal-pipeline-orchestration",
+      "to": "proc:portfolio-venture-monitoring",
+      "source_ref": "skills/deal-pipeline-orchestration/SKILL.md"
     },
     {
       "type": "member_of",
@@ -6512,6 +6624,12 @@
       "type": "member_of",
       "from": "skill:insight-synthesis",
       "to": "proc:entity-ic-review",
+      "source_ref": "skills/insight-synthesis/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:insight-synthesis",
+      "to": "proc:opportunity-discovery",
       "source_ref": "skills/insight-synthesis/SKILL.md"
     },
     {
@@ -6768,6 +6886,12 @@
     },
     {
       "type": "member_of",
+      "from": "skill:scenario-planning",
+      "to": "proc:opportunity-discovery",
+      "source_ref": "skills/scenario-planning/SKILL.md"
+    },
+    {
+      "type": "member_of",
       "from": "skill:site-infrastructure-assessment",
       "to": "proc:greenfield-fs",
       "source_ref": "skills/site-infrastructure-assessment/SKILL.md"
@@ -6866,6 +6990,12 @@
       "type": "member_of",
       "from": "skill:stage-gate-governance",
       "to": "proc:group-investment-review",
+      "source_ref": "skills/stage-gate-governance/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:stage-gate-governance",
+      "to": "proc:opportunity-discovery",
       "source_ref": "skills/stage-gate-governance/SKILL.md"
     },
     {
@@ -7431,6 +7561,12 @@
       "from": "agent:pm",
       "to": "skill:api-documentation",
       "source_ref": "skills/api-documentation/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
+      "to": "skill:deal-pipeline-orchestration",
+      "source_ref": "skills/deal-pipeline-orchestration/SKILL.md"
     },
     {
       "type": "owns",
@@ -8550,6 +8686,18 @@
     },
     {
       "type": "produces",
+      "from": "proc:opportunity-discovery#1",
+      "to": "artifact:opportunity_insight_synthesis",
+      "source_ref": "procedures/_shared/opportunity-discovery/schema.yaml#steps[1]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:opportunity-discovery#2",
+      "to": "artifact:opportunity_registry_entry",
+      "source_ref": "procedures/_shared/opportunity-discovery/schema.yaml#steps[2]"
+    },
+    {
+      "type": "produces",
       "from": "proc:pmi-integration-execution#1",
       "to": "artifact:pmi_integration_plan",
       "source_ref": "procedures/_shared/pmi-integration-execution/schema.yaml#steps[1]"
@@ -9303,6 +9451,18 @@
       "from": "proc:jv-lifecycle-governance#5",
       "to": "proc:jv-lifecycle-governance",
       "source_ref": "procedures/_shared/jv-lifecycle-governance/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:opportunity-discovery#1",
+      "to": "proc:opportunity-discovery",
+      "source_ref": "procedures/_shared/opportunity-discovery/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:opportunity-discovery#2",
+      "to": "proc:opportunity-discovery",
+      "source_ref": "procedures/_shared/opportunity-discovery/schema.yaml"
     },
     {
       "type": "step_of",
