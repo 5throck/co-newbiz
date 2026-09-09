@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 604,
-    "edge_count": 992
+    "node_count": 605,
+    "edge_count": 1003
   },
   "nodes": [
     {
@@ -1269,6 +1269,11 @@
       "id": "dec:DEC-20260909-06",
       "type": "decision",
       "label": "dec:DEC-20260909-06"
+    },
+    {
+      "id": "dec:DEC-20260909-07",
+      "type": "decision",
+      "label": "dec:DEC-20260909-07"
     },
     {
       "id": "dec:market-thresholds",
@@ -3791,6 +3796,72 @@
       "from": "dec:2026-08-24-residual-decisions-pack",
       "to": "rule:brownfield-screening__preliminary_hhi_flags_certain_block",
       "source_ref": "docs/decisions/2026-08-24-residual-decisions-pack.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:brownfield-fs__qoe_reveals_material_earnings_quality_gap_unexplained",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:brownfield-target-identification__minimum_coverage_not_achievable",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:brownfield-target-identification__universe_cannot_be_defined",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:brownfield-target-screening__no_candidate_passes_knock_out",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:brownfield-target-screening__shortlist_quality_below_threshold",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:deal-shape-chain__no_viable_deal_shape",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:deal-shape-chain__partner_dd_red_financial_distress",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:deal-shape-chain__partner_dd_red_ip_chain",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:entity-ic-review__kill_criteria_condition_triggered",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:greenfield-fs__growth_projection_outside_top_decile_without_risk_officer_signoff",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20260909-07",
+      "to": "rule:pmi-integration-execution__clean_team_protocol_breach",
+      "source_ref": "docs/decisions/DEC-20260909-07.md"
     },
     {
       "type": "anchored_by",

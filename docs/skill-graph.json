@@ -802,6 +802,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20260909-07",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "decision-record",
       "type": "skill",
       "layer": "L3"
@@ -4278,6 +4283,18 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20260909-06",
+      "to": "policy-change-impact-analysis",
+      "source": "skills_used"
+    },
+    {
+      "type": "supersedes",
+      "from": "dec:DEC-20260909-07",
+      "to": "dec:DEC-20260909-06",
+      "source": "prose"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20260909-07",
       "to": "policy-change-impact-analysis",
       "source": "skills_used"
     },
