@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// @version 1.0.0
 // runbook-validate — registry hygiene for the operational documentation set
 // (deal-deletion-playbook 관리 체계). Checks docs/runbooks/registry.yaml
 // against the filesystem and the library projection:
