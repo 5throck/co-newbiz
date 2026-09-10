@@ -21,7 +21,12 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.2.2"
+  version: "2.3.0"
+  # v2.3.0 — fs gate gains a decision criterion for the pre-defined business
+  #   target standards (md_business_target master data, ADR-0114): the human
+  #   fs record checks whether the group/affiliate standards are met in the
+  #   base scenario. Evidence display is non-blocking; gate verdicts stay
+  #   human-only (ADR-0053/0094). No stage/track structure change.
   # v2.2.2 — S2 기회 발굴 gets its own procedure (shared-opportunity-discovery,
   #   closing the 2026-08-31 run gap "no shared YAML for S2"); the S2
   #   activities now reference it ahead of the screening procedures.
@@ -81,6 +86,7 @@ gates:
     name: FS
     decisionCriteria:
       - 정량화된 Business Case(NPV/IRR/BEP 또는 밸류에이션 범위)가 존재한다
+      - 사전 정의된 사업목표 기준(그룹/계열사 마스터데이터, ADR-0114) 충족 여부가 기본 시나리오 기준으로 확인되었다
     killCriteria:
       - 기준 수익률 미달이 기본 시나리오에서 확인된다
     fundingDecision: DD 착시 자원 배정
