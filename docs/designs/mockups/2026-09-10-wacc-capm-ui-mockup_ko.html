@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>목업 — WACC 입력 세션 (CAPM 분해) — co-newbiz</title>
+<style>
+  /* ── co-newbiz web-next 디자인 토큰 (app/web-next/app/styles.css 기준) ── */
+  :root {
+    --bg: #f6f7f9;
+    --fg: #171a21;
+    --surface: #ffffff;
+    --muted-bg: #f1f3f6;
+    --muted-fg: #5d6572;
+    --border: rgba(16, 22, 34, 0.10);
+    --border-subtle: rgba(16, 22, 34, 0.06);
+    --border-bright: rgba(16, 22, 34, 0.16);
+    --accent: #3d66f5;
+    --accent-fg: #ffffff;
+    --primary-dim: hsl(217, 91%, 35%);
+    --primary-bg: hsla(217, 91%, 45%, 0.10);
+    --primary-border: hsla(217, 91%, 45%, 0.25);
+    --success: hsl(160, 84%, 30%);
+    --success-bg: hsla(160, 84%, 30%, 0.10);
+    --warning: hsl(35, 90%, 38%);
+    --warning-bg: hsla(35, 90%, 38%, 0.12);
+    --danger: hsl(0, 72%, 45%);
+    --danger-bg: hsla(0, 72%, 45%, 0.10);
+    --input-bg: rgba(16, 22, 34, 0.03);
+    --hover-bg: rgba(16, 22, 34, 0.05);
+    --radius-sm: 6px;
+    --radius-lg: 10px;
+    --radius-xl: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { font-size: 15px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    line-height: 1.55;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+
+  /* ── 상단 앱 바 ── */
+  .appbar { background: var(--surface); border-bottom: 1px solid var(--border); }
+  .appbar-inner { max-width: 1100px; margin: 0 auto; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.6rem; }
+  .appbar-logo { font-weight: 800; font-size: 0.95rem; letter-spacing: -0.01em; }
+  .appbar-logo span { color: var(--accent); }
+  .appbar-crumb { color: var(--muted-fg); font-size: 0.82rem; }
+  .mockup-banner {
+    background: var(--warning-bg); color: var(--warning);
+    font-size: 0.78rem; text-align: center; padding: 0.3rem 1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
+  }
+  .subnav { background: var(--surface); border-bottom: 1px solid var(--border); }
+  .subnav-inner { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem; display: flex; gap: 0.25rem; overflow-x: auto; }
+  .subnav a {
+    padding: 0.5rem 0.7rem; font-size: 0.82rem; color: var(--muted-fg);
+    text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .subnav a:hover { color: var(--fg); background: var(--hover-bg); }
+  .subnav a.active { color: var(--accent); font-weight: 700; border-bottom-color: var(--accent); }
+
+  /* ── StageFrame ── */
+  h1 { font-size: 1.35rem; margin: 1.4rem 0 0.15rem; letter-spacing: -0.01em; }
+  .stage-objective { margin: 0 0 0.9rem; color: var(--muted-fg); font-size: 0.9rem; }
+  .stage-rail {
+    display: flex; flex-wrap: wrap; gap: 0.3rem;
+    padding: 0.5rem; margin-bottom: 1.1rem;
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+  }
+  .stage-rail .step {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.25rem 0.6rem; border-radius: var(--radius-sm);
+    font-size: 0.75rem; color: var(--muted-fg);
+  }
+  .stage-rail .step:hover { background: var(--hover-bg); color: var(--fg); }
+  .stage-rail .step .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.1rem; height: 1.1rem; border-radius: 999px;
+    background: var(--muted-bg); font-size: 0.75rem; font-weight: 700;
+  }
+  .stage-rail .step.current { color: var(--accent); font-weight: 700; background: var(--primary-bg); }
+  .stage-rail .step.current .num { background: var(--accent); color: var(--accent-fg); }
+  .gate-chip {
+    display: inline-block; font-size: 0.6rem; font-weight: 700;
+    padding: 0.05rem 0.3rem; border-radius: 999px;
+    background: var(--warning-bg); color: var(--warning);
+  }
+
+  /* ── 공통 카드/섹션 ── */
+  .section {
+    border: 1px solid var(--border); border-radius: var(--radius-xl);
+    padding: 1rem 1.25rem; background: var(--surface); margin-top: 1.25rem;
+  }
+  .section > h3 {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.95rem; margin: 0 0 0.6rem;
+  }
+  .badge-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 1.4rem; height: 1.4rem; border-radius: 999px;
+    background: var(--accent); color: var(--accent-fg);
+    font-size: 0.78rem; font-weight: 700;
+  }
+  .muted { color: var(--muted-fg); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.82em; }
+
+  /* ── 현재 확정값 dl ── */
+  dl.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.5rem; margin: 0; font-size: 0.88rem; }
+  dl.kv dt { color: var(--muted-fg); font-size: 0.78rem; }
+  dl.kv dd { margin: 0; font-weight: 600; }
+
+  /* ── 폼 요소 ── */
+  .form-input {
+    width: 100%; padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border-bright); border-radius: var(--radius-sm);
+    background: var(--input-bg); color: var(--fg);
+    font: inherit; font-size: 0.85rem;
+  }
+  .form-input:focus { outline: 2px solid var(--primary-border); border-color: var(--accent); }
+  .comp-row .form-input { font-size: 0.9rem; }
+  label.field { display: grid; gap: 0.25rem; font-size: 0.82rem; color: var(--muted-fg); }
+  label.field > b { color: var(--fg); font-weight: 600; }
+  .primary-button {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.5rem 1rem; border: none; border-radius: var(--radius-sm);
+    background: var(--accent); color: var(--accent-fg);
+    font: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer;
+  }
+  .primary-button:hover { filter: brightness(1.06); }
+  .ghost-button {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.4rem 0.85rem; border: 1px solid var(--border-bright); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--fg); font: inherit; font-size: 0.82rem; cursor: pointer;
+  }
+  .ghost-button:hover { background: var(--hover-bg); }
+
+  /* ── 모드 탭 ── */
+  .mode-tabs { display: flex; gap: 0.3rem; margin: 1.25rem 0 0; }
+  .mode-tabs button {
+    padding: 0.45rem 1rem; border: 1px solid var(--border); border-bottom: none;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    background: var(--muted-bg); color: var(--muted-fg);
+    font: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+  }
+  .mode-tabs button.active { background: var(--surface); color: var(--accent); border-color: var(--border); box-shadow: 0 -2px 0 var(--accent) inset; }
+  .tab-panel { border: 1px solid var(--border); border-radius: 0 var(--radius-xl) var(--radius-xl) var(--radius-xl); background: var(--surface); padding: 1rem 1.25rem; }
+  .tab-panel[hidden] { display: none; }
+
+  /* ── 컴포넌트 입력 행 ── */
+  .comp-row {
+    display: grid; grid-template-columns: 9.5rem 7rem 1fr 1fr 7.5rem 4.2rem;
+    gap: 0.5rem; align-items: end;
+    padding: 0.55rem 0; border-top: 1px solid var(--border-subtle);
+  }
+  .comp-row:first-of-type { border-top: none; }
+  .comp-row .name { font-size: 0.85rem; font-weight: 600; align-self: center; }
+  .comp-row .name small { display: block; font-weight: 400; color: var(--muted-fg); font-size: 0.72rem; }
+  .kind-chip {
+    justify-self: start; display: inline-block; font-size: 0.68rem; font-weight: 700;
+    padding: 0.08rem 0.45rem; border-radius: 999px; white-space: nowrap;
+  }
+  .kind-live { background: var(--success-bg); color: var(--success); }
+  .kind-user { background: var(--primary-bg); color: var(--accent); }
+  .kind-derived { background: var(--muted-bg); color: var(--muted-fg); }
+  @media (max-width: 900px) { .comp-row { grid-template-columns: 1fr 1fr; } }
+
+  /* ── 베타 서브탭 ── */
+  .subtabs { display: flex; gap: 0.3rem; margin: 0.35rem 0 0.8rem; }
+  .subtabs button {
+    padding: 0.3rem 0.75rem; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--surface); color: var(--muted-fg);
+    font: inherit; font-size: 0.8rem; cursor: pointer;
+  }
+  .subtabs button.active { background: var(--primary-bg); color: var(--accent); border-color: var(--primary-border); font-weight: 700; }
+  .subpanel[hidden] { display: none; }
+
+  table.data { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  table.data th {
+    text-align: left; font-size: 0.75rem; color: var(--muted-fg); font-weight: 600;
+    padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border-bright); white-space: nowrap;
+  }
+  table.data td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--border-subtle); }
+  table.data tr:last-child td { border-bottom: none; }
+  table.data td.num, table.data th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ── 결과 카드 ── */
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem; margin-top: 0.8rem; }
+  .stat-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.6rem 0.8rem; background: var(--muted-bg); }
+  .stat-card .k { font-size: 0.72rem; color: var(--muted-fg); }
+  .stat-card .v { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat-card .v small { font-size: 0.72rem; font-weight: 400; color: var(--muted-fg); }
+
+  .volbar { display: grid; grid-template-columns: 10rem 1fr 4rem; gap: 0.6rem; align-items: center; font-size: 0.8rem; margin-top: 0.4rem; }
+  .volbar .track { height: 0.7rem; border-radius: 999px; background: var(--muted-bg); overflow: hidden; }
+  .volbar .fill { height: 100%; border-radius: 999px; background: var(--accent); }
+  .volbar .fill.market { background: hsla(217, 30%, 60%, 0.55); }
+  .volbar .val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .hamada-chain {
+    margin-top: 0.9rem; padding: 0.7rem 0.9rem;
+    border: 1px dashed var(--primary-border); border-radius: var(--radius-lg);
+    background: var(--primary-bg); font-size: 0.85rem;
+  }
+  .hamada-chain code { font-family: ui-monospace, Menlo, monospace; font-size: 0.82em; }
+  .formula { font-family: ui-monospace, Menlo, monospace; font-size: 0.84em; background: var(--muted-bg); padding: 0.05rem 0.35rem; border-radius: 4px; }
+
+  /* ── 산식 분해 표 ── */
+  .derive-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .derive-table th {
+    text-align: left; padding: 0.45rem 0.6rem; font-size: 0.75rem; color: var(--muted-fg);
+    border-bottom: 1px solid var(--border-bright);
+  }
+  .derive-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
+  .derive-table td.res { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .derive-table tr.wacc-row td { background: var(--primary-bg); font-weight: 700; }
+  .derive-table tr.wacc-row td.res { color: var(--accent); font-size: 1rem; }
+
+  /* ── 차트 ── */
+  .charts { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-top: 0.9rem; }
+  .chart-box { flex: 1 1 380px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 0.75rem 0.9rem 0.4rem; background: var(--surface); }
+  .chart-box h4 { margin: 0 0 0.3rem; font-size: 0.82rem; color: var(--muted-fg); font-weight: 600; }
+  .chart-box svg { width: 100%; height: auto; display: block; }
+  .wf-bar-delta { fill: var(--accent); }
+  .wf-bar-total { fill: var(--primary-dim); }
+  .wf-bar-sub { fill: hsl(217, 45%, 62%); }
+  .wf-conn { stroke: rgba(16,22,34,0.28); stroke-dasharray: 3 3; stroke-width: 1; }
+  .wf-vlabel { font-size: 11px; font-weight: 700; fill: var(--fg); }
+  .wf-xlabel { font-size: 10.5px; fill: var(--muted-fg); }
+  .wf-gridline { stroke: var(--border-subtle); stroke-width: 1; }
+  .wf-baseline { stroke: var(--border-bright); stroke-width: 1; }
+
+  /* ── 산출 미리보기(출처 표) ── */
+  .prov-chip { font-size: 0.68rem; color: var(--muted-fg); background: var(--muted-bg); border-radius: 4px; padding: 0.05rem 0.35rem; }
+
+  /* ── SourceTooltip ── */
+  .source-figure-wrap { position: relative; display: inline-block; }
+  .source-figure {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 0.95rem; height: 0.95rem; margin-left: 0.25rem;
+    border: 1px solid var(--border-bright); border-radius: 999px;
+    background: var(--surface); color: var(--muted-fg);
+    font-size: 0.68rem; font-weight: 700; cursor: pointer; vertical-align: 0.1em; padding: 0;
+  }
+  .source-figure:hover, .source-figure.open { color: var(--accent); border-color: var(--accent); }
+  .source-pop {
+    position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    z-index: 30; width: 240px; padding: 0.6rem 0.75rem;
+    background: var(--surface); border: 1px solid var(--border-bright); border-radius: var(--radius-lg);
+    box-shadow: 0 6px 18px rgba(16,22,34,0.14); font-size: 0.78rem; text-align: left;
+  }
+  .source-pop .t { font-weight: 700; font-size: 0.75rem; margin-bottom: 0.3rem; }
+  .source-pop .row { display: flex; gap: 0.5rem; }
+  .source-pop .row .k { color: var(--muted-fg); min-width: 3.8rem; flex: none; }
+  .source-pop .row .v { word-break: break-all; }
+
+  /* ── 저장 영역 ── */
+  .save-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+  @media (max-width: 700px) { .save-grid { grid-template-columns: 1fr; } }
+  .match-ok {
+    display: flex; align-items: center; gap: 0.4rem; margin-top: 0.7rem;
+    font-size: 0.8rem; color: var(--success); background: var(--success-bg);
+    border-radius: var(--radius-sm); padding: 0.4rem 0.7rem;
+  }
+  .note-line { font-size: 0.76rem; color: var(--muted-fg); margin-top: 0.7rem; }
+  .note-line .warn { color: var(--warning); font-weight: 700; }
+  .section-desc { font-size: 0.8rem; color: var(--muted-fg); margin: 0 0 0.7rem; }
+</style>
+</head>
+<body>
+
+<div class="mockup-banner">🖥️ 화면 목업 (UI Mockup) — 예시 값이 채워진 정적 프리뷰입니다. 실제 데이터가 아닙니다.</div>
+
+<header class="appbar">
+  <div class="appbar-inner">
+    <div class="appbar-logo">co-<span>newbiz</span></div>
+    <div class="appbar-crumb">프로젝트 · 삼성로보틱스-레인보우 신규사업 검토 (가상 프로젝트)</div>
+  </div>
+</header>
+<nav class="subnav">
+  <div class="subnav-inner">
+    <a href="#">대시보드</a><a href="#">S1 시장분석</a><a href="#">S4 진출방식</a><a href="#">S5 역량평가</a><a href="#">S7 스크리닝</a><a href="#" class="active">WACC 입력</a><a href="#">사업성 분석</a><a href="#">보고서</a>
+  </div>
+</nav>
+
+<main class="container">
+
+  <h1>WACC 입력 세션 — FS 게이트 할인율 확정</h1>
+  <p class="stage-objective">돈이 되는가?</p>
+
+  <nav class="stage-rail" aria-label="프로세스 단계 진행">
+    <span class="step"><span class="num">1</span>시장분석</span>
+    <span class="step"><span class="num">2</span>기회 발굴</span>
+    <span class="step"><span class="num">3</span>시너지·전략적 적합성</span>
+    <span class="step"><span class="num">4</span>진출방식 결정</span>
+    <span class="step"><span class="num">5</span>역량 평가·진출전략</span>
+    <span class="step"><span class="num">6</span>대상 후보 발굴</span>
+    <span class="step"><span class="num">7</span>대상 스크리닝</span>
+    <span class="step current"><span class="num">8</span>사업성 분석 <span class="gate-chip">FS 게이트</span></span>
+    <span class="step"><span class="num">9</span>실사·검증</span>
+    <span class="step"><span class="num">10</span>투자구조 설계</span>
+    <span class="step"><span class="num">11</span>투자심사·실행</span>
+    <span class="step"><span class="num">12</span>사후 관리</span>
+  </nav>
+
+  <!-- 현재 확정값 -->
+  <section class="section">
+    <h3>현재 확정값</h3>
+    <dl class="kv">
+      <div><dt>WACC</dt><dd>9.19% (user)</dd></div>
+      <div><dt>Hurdle IRR</dt><dd>15.00%</dd></div>
+      <div><dt>Run</dt><dd class="mono">01JAZX…8F2K</dd></div>
+      <div><dt>As of</dt><dd>2026-09-10</dd></div>
+    </dl>
+  </section>
+
+  <!-- 모드 탭 -->
+  <div class="mode-tabs" role="tablist">
+    <button role="tab" id="tab-direct" aria-selected="false" onclick="showMode('direct')">직접 입력</button>
+    <button role="tab" id="tab-capm" aria-selected="true" onclick="showMode('capm')">CAPM 분해</button>
+  </div>
+
+  <!-- ─────────── 직접 입력 탭 (기존 화면 유지) ─────────── -->
+  <div class="tab-panel" id="panel-direct" role="tabpanel" hidden>
+    <h3 style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;margin:0 0 0.6rem;">직접 입력</h3>
+    <form class="grid" style="display:grid;gap:0.8rem;max-width:430px;" onsubmit="return false;">
+      <label class="field"><b>WACC (비율)</b><input class="form-input" value="0.0919" placeholder="0.095"></label>
+      <label class="field"><b>Hurdle IRR (선택)</b><input class="form-input" value="0.15" placeholder="0.15"></label>
+      <label class="field"><b>근거/승인 메모</b><textarea class="form-input" rows="3" placeholder="Treasury 확인, IC 가이드라인 등"></textarea></label>
+      <button class="primary-button" style="justify-self:start;">이 값으로 확정</button>
+      <p class="note-line">확정하면 이 값이 <b>사람이 확인한 최종 값</b>(출처 등급 user)으로 기록됩니다. 저장 시 최신 run을 복사한 새 run_input 스냅샷과 assumption(wacc/hurdle_irr) 행이 함께 생성되며, FS 게이트 진입 요건이 이 확정을 근거로 판정됩니다.</p>
+    </form>
+  </div>
+
+  <!-- ─────────── CAPM 분해 탭 (신규) ─────────── -->
+  <div class="tab-panel" id="panel-capm" role="tabpanel">
+
+    <!-- ① 시장 수치 -->
+    <section style="margin-top:0.2rem;">
+      <h3 style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;margin:0 0 0.2rem;">
+        <span class="badge-num">1</span>시장 수치 <span class="muted" style="font-weight:400;font-size:0.8rem;">— 공신력 있는 외부 출처에서 확인한 값을 인용합니다 (AlphaSpread, 한국은행 ECOS 등)</span>
+      </h3>
+      <div class="comp-row">
+        <div class="name">무위험이자율 (Rf)<small>국고채 3년물 기준</small></div>
+        <label class="field"><span>값</span><input class="form-input" value="0.0335"></label>
+        <label class="field"><span>출처명</span><input class="form-input" value="한국은행 ECOS — 국고채(3년) 마감기준금리"></label>
+        <label class="field"><span>출처 URL (근거 참조)</span><input class="form-input" value="https://ecos.bok.or.kr/…"></label>
+        <label class="field"><span>기준일</span><input class="form-input" value="2026-09-10"></label>
+        <span class="kind-chip kind-live">live · 인용</span>
+      </div>
+      <div class="comp-row">
+        <div class="name">주식위험프리미엄 (ERP)<small>시장 위험 프리미엄</small></div>
+        <label class="field"><span>값</span>
+          <span class="source-figure-wrap">
+            <input class="form-input" value="0.0630" style="padding-right:1.6rem;">
+            <button class="source-figure" data-prov='{"assumption_key":"wacc.erp","as_of":"2026-09-10","source":"Damodaran — Korea ERP (성숙시장 4.33% + 국가 프리미엄 1.97%)","anchor_ref":"https://pages.stern.nyu.edu/~adamodar/","run_id":"01JAZX…8F2K"}' aria-label="수치 출처 보기">i</button>
+          </span>
+        </label>
+        <label class="field"><span>출처명</span><input class="form-input" value="Damodaran — 한국 성숙시장+국가 프리미엄"></label>
+        <label class="field"><span>출처 URL (근거 참조)</span><input class="form-input" value="https://pages.stern.nyu.edu/~adamodar/"></label>
+        <label class="field"><span>기준일</span><input class="form-input" value="2026-01"></label>
+        <span class="kind-chip kind-live">live · 인용</span>
+      </div>
+      <div class="comp-row">
+        <div class="name">규모 프리미엄<small>선택 — 중소규모 할증</small></div>
+        <label class="field"><span>값</span><input class="form-input" value="0.0150"></label>
+        <label class="field"><span>출처명</span><input class="form-input" value="사내 IB 가이드라인 v3"></label>
+        <label class="field"><span>출처 URL (근거 참조)</span><input class="form-input" value=""></label>
+        <label class="field"><span>기준일</span><input class="form-input" value="2026-09-10"></label>
+        <span class="kind-chip kind-user">user · 판단</span>
+      </div>
+    </section>
+
+    <!-- ② 베타 추정 -->
+    <section style="margin-top:1.4rem;">
+      <h3 style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;margin:0 0 0.2rem;">
+        <span class="badge-num">2</span>베타 추정 <span class="muted" style="font-weight:400;font-size:0.8rem;">— 시장 평균 대비 변동성까지 함께 산출합니다</span>
+      </h3>
+      <div class="subtabs" role="tablist">
+        <button role="tab" id="tab-peer" aria-selected="false" onclick="showBeta('peer')">(a) 동종사 인용</button>
+        <button role="tab" id="tab-reg" aria-selected="true" onclick="showBeta('reg')">(b) 시계열 회귀</button>
+      </div>
+
+      <!-- (a) 동종사 인용 -->
+      <div class="subpanel" id="beta-peer" hidden>
+        <p class="section-desc">상장 동종사의 공표 베타(AlphaSpread·ValueInvesting.io 등)를 인용해 비레버드 베타(βU)로 환산, 중앙값을 사용합니다.</p>
+        <table class="data">
+          <thead><tr><th>동종사</th><th class="num">공표 β (레버드)</th><th class="num">D/E</th><th class="num">세율</th><th class="num">βU (산출)</th><th>출처</th></tr></thead>
+          <tbody>
+            <tr><td>A사 (반도체 장비)</td><td class="num">1.42</td><td class="num">0.85</td><td class="num">22%</td><td class="num">0.90</td><td><span class="prov-chip">AlphaSpread · 2026-09</span></td></tr>
+            <tr><td>B사 (로보틱스)</td><td class="num">1.21</td><td class="num">0.70</td><td class="num">22%</td><td class="num">0.81</td><td><span class="prov-chip">ValueInvesting.io · 2026-09</span></td></tr>
+            <tr><td>C사 (자동화 SI)</td><td class="num">1.15</td><td class="num">0.55</td><td class="num">22%</td><td class="num">0.84</td><td><span class="prov-chip">AlphaSpread · 2026-09</span></td></tr>
+          </tbody>
+        </table>
+        <div class="result-grid">
+          <div class="stat-card"><div class="k">중앙값 βU (비레버드)</div><div class="v">0.84</div></div>
+          <div class="stat-card"><div class="k">→ 타겟 D/E 0.60 재레버 시 βL</div><div class="v">1.19</div></div>
+        </div>
+      </div>
+
+      <!-- (b) 시계열 회귀 -->
+      <div class="subpanel" id="beta-reg">
+        <p class="section-desc">비교대상(또는 유사 상장사) 종가와 시장지수의 일별 수익률을 붙여넣으면 회귀로 β·R²·변동성을 산출합니다. <span class="mono">date, price, index</span> CSV/TSV 형식.</p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start;">
+          <textarea class="form-input mono" rows="5" style="flex:1 1 320px;">date,price,index
+2026-09-10,68400,3421.8
+2026-09-09,67900,3405.2
+2026-09-08,68200,3398.7
+2026-09-07,67500,3372.4
+2026-09-04,67100,3360.1
+… (250일)</textarea>
+          <button class="ghost-button" type="button">↻ 회귀 실행</button>
+        </div>
+
+        <div class="result-grid">
+          <div class="stat-card"><div class="k">베타 (β, 레버드)</div><div class="v">1.35 <small>KOSPI 대비</small></div></div>
+          <div class="stat-card"><div class="k">결정계수 (R²)</div><div class="v">0.68</div></div>
+          <div class="stat-card"><div class="k">표본</div><div class="v">250일 <small>2025-09-11 ~ 2026-09-10</small></div></div>
+          <div class="stat-card"><div class="k">α (절편, 연율)</div><div class="v">0.9%</div></div>
+        </div>
+
+        <!-- 회귀 대상 종목의 자본구조 — βU 환산의 입력값 -->
+        <div class="comp-row" style="grid-template-columns:9.5rem 7rem 1fr 1fr 7.5rem 4.2rem; margin-top:0.4rem;">
+          <div class="name">관측 D/E<small>회귀 대상 종목의 자본구조 — βU 환산에 사용</small></div>
+          <label class="field"><span>값</span><input class="form-input" value="0.90"></label>
+          <label class="field"><span>출처명</span><input class="form-input" value="최근 결산 기준 부채/자기자본 (DART)"></label>
+          <label class="field"><span>출처 URL (근거 참조)</span><input class="form-input" value=""></label>
+          <label class="field"><span>기준일</span><input class="form-input" value="2026-06-30"></label>
+          <span class="kind-chip kind-live">live · 인용</span>
+        </div>
+
+        <div style="margin-top:0.9rem;">
+          <div style="font-size:0.8rem;color:var(--muted-fg);font-weight:600;margin-bottom:0.15rem;">연율화 변동성 — 시장 평균 대비</div>
+          <div class="volbar"><span>대상 자산</span><div class="track"><div class="fill" style="width:94.7%"></div></div><span class="val">28.4%</span></div>
+          <div class="volbar"><span>시장 (KOSPI)</span><div class="track"><div class="fill market" style="width:57.3%"></div></div><span class="val">17.2%</span></div>
+          <p class="note-line">시장 대비 변동성 비율 1.65× — 베타 1.35와 함께 해석: 시장 변동의 1.35배 움직임, 총변동성은 시장의 1.65배 (고유변동 1−R² = 32% 반영).</p>
+        </div>
+
+        <div style="margin-top:0.9rem;">
+          <div style="font-size:0.8rem;color:var(--muted-fg);font-weight:600;margin-bottom:0.15rem;">회귀 산점도 (일별 수익률)</div>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:stretch;">
+            <div class="chart-box" style="flex:1 1 430px;padding-bottom:0.6rem;">
+              <svg id="scatter" viewBox="0 0 460 190" role="img" aria-label="베타 회귀 산점도" style="max-width:560px;margin:0 auto;"></svg>
+            </div>
+            <div class="chart-box" style="flex:1 1 260px;padding-bottom:0.8rem;">
+              <h4>해석</h4>
+              <p style="font-size:0.82rem;margin:0.2rem 0 0;">
+                <b>β 1.35</b> — 시장이 1% 움직일 때 평균 1.35% 움직임.<br>
+                <b>R² 0.68</b> — 가격 변동의 68%가 시장 요인으로 설명되고, 나머지 32%는 고유(사업) 위험.<br>
+                <b>변동성 28.4% vs 17.2%</b> — 총위험은 시장의 약 1.65배. 베타(체계적 위험)와 R²(시장 설명력)를 함께 봐야 과대·과소 판단을 막을 수 있습니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hamada 체인 -->
+      <div class="hamada-chain">
+        <b>선택된 베타 경로:</b> 시계열 회귀 (βL 1.35, R² 0.68)
+        <br><span class="muted">비레버드 환산</span>
+        <code>βU = βL / (1 + (1−t) × D/E<sub>관측</sub>) = 1.35 / (1 + 0.78 × 0.90) = <b>0.79</b></code>
+        <br><span class="muted">타겟 자본구조로 재레버</span>
+        <code>βL* = βU × (1 + (1−t) × D/E<sub>타겟</sub>) = 0.79 × (1 + 0.78 × 0.60) = <b>1.16</b></code>
+      </div>
+    </section>
+
+    <!-- ③ 타인자본비용 -->
+    <section style="margin-top:1.4rem;">
+      <h3 style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;margin:0 0 0.2rem;">
+        <span class="badge-num">3</span>타인자본비용 (Kd) <span class="muted" style="font-weight:400;font-size:0.8rem;">— 회사 신용등급 기준 대출금리 또는 실제 조달금리</span>
+      </h3>
+      <div class="subtabs" role="tablist">
+        <button role="tab" id="tab-kd-rating" class="active" aria-selected="true" onclick="showKd('rating')">신용등급 + 가산금리</button>
+        <button role="tab" id="tab-kd-direct" aria-selected="false" onclick="showKd('direct')">실제 대출금리 직접 입력</button>
+      </div>
+      <div class="subpanel" id="kd-rating">
+        <div class="comp-row" style="grid-template-columns:9.5rem 7rem 1fr 1fr 7.5rem 4.2rem;">
+          <div class="name">신용등급 가산금리<small>Rf에 가산</small></div>
+          <label class="field"><span>값</span><input class="form-input" value="0.0210"></label>
+          <label class="field"><span>출처명 (등급 포함)</span><input class="form-input" value="한국신용평가 BBB+ 등급 가산금리 (대출 실행 사례 평균)"></label>
+          <label class="field"><span>출처 URL (근거 참조)</span><input class="form-input" value=""></label>
+          <label class="field"><span>기준일</span><input class="form-input" value="2026-09-05"></label>
+          <span class="kind-chip kind-live">live · 인용</span>
+        </div>
+        <div class="result-grid">
+          <div class="stat-card"><div class="k">타인자본비용 Kd = Rf + 가산금리</div><div class="v">3.35% + 2.10% = <b>5.45%</b></div></div>
+        </div>
+      </div>
+      <div class="subpanel" id="kd-direct" hidden>
+        <div class="comp-row" style="grid-template-columns:9.5rem 7rem 1fr 1fr 7.5rem 4.2rem;">
+          <div class="name">조달금리 (실제)<small>실행 대출금리</small></div>
+          <label class="field"><span>값</span><input class="form-input" placeholder="0.0580"></label>
+          <label class="field"><span>출처명</span><input class="form-input" placeholder="거래은행 대출조건서 (2026-08)"></label>
+          <label class="field"><span>출처 URL (근거 참조)</span><input class="form-input" value=""></label>
+          <label class="field"><span>기준일</span><input class="form-input" placeholder="2026-08-20"></label>
+          <span class="kind-chip kind-user">user · 판단</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ 자본구조·세율 -->
+    <section style="margin-top:1.4rem;">
+      <h3 style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;margin:0 0 0.2rem;">
+        <span class="badge-num">4</span>자본구조·세율 <span class="muted" style="font-weight:400;font-size:0.8rem;">— 목표(target) 자본구조 기준</span>
+      </h3>
+      <div class="comp-row" style="grid-template-columns:9.5rem 7rem 1fr 1fr 7.5rem 4.2rem;">
+        <div class="name">목표 D/E<small>부채/자기자본</small></div>
+        <label class="field"><span>값</span><input class="form-input" value="0.60"></label>
+        <label class="field"><span>출처명</span><input class="form-input" value="재무계획 — 인허가 직후 목표 레버리지"></label>
+        <label class="field"><span>출처 URL (근거 참조)</span><input class="form-input" value=""></label>
+        <label class="field"><span>기준일</span><input class="form-input" value="2026-09-10"></label>
+        <span class="kind-chip kind-user">user · 판단</span>
+      </div>
+      <div class="comp-row" style="grid-template-columns:9.5rem 7rem 1fr 1fr 7.5rem 4.2rem;">
+        <div class="name">한계 세율<small>법인세 + 지방세</small></div>
+        <label class="field"><span>값</span><input class="form-input" value="0.22"></label>
+        <label class="field"><span>출처명</span><input class="form-input" value="법인세법 표준세율 22% (2026)"></label>
+        <label class="field"><span>출처 URL (근거 참조)</span><input class="form-input" value=""></label>
+        <label class="field"><span>기준일</span><input class="form-input" value="2026-09-10"></label>
+        <span class="kind-chip kind-user">user · 판단</span>
+      </div>
+      <div class="result-grid">
+        <div class="stat-card"><div class="k">자기자본 가중치 We = 1/(1+D/E)</div><div class="v">62.5%</div></div>
+        <div class="stat-card"><div class="k">타인자본 가중치 Wd = D/E/(1+D/E)</div><div class="v">37.5%</div></div>
+      </div>
+    </section>
+
+    <!-- 산식 분해 -->
+    <section style="margin-top:1.4rem;">
+      <h3 style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;margin:0 0 0.2rem;">
+        ▍산식 분해 <span class="muted" style="font-weight:400;font-size:0.8rem;">— 어떻게 이 값이 나왔는지 한눈에</span>
+      </h3>
+      <table class="derive-table">
+        <thead><tr><th style="width:14rem;">항목</th><th>산식</th><th>대입</th><th style="width:6.5rem;text-align:right;">결과</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>베타 — 비레버드 (βU)</td>
+            <td><span class="formula">βU = βL / (1 + (1−t)·D/E<sub>관측</sub>)</span></td>
+            <td class="mono">1.35 / (1 + 0.78×0.90) <span class="muted">(D/E_관측 0.90)</span></td>
+            <td class="res">0.79</td>
+          </tr>
+          <tr>
+            <td>베타 — 타겟 레버드 (βL*)</td>
+            <td><span class="formula">βL* = βU·(1 + (1−t)·D/E<sub>타겟</sub>)</span></td>
+            <td class="mono">0.79 × (1 + 0.78×0.60) <span class="muted">(D/E_타겟 0.60)</span></td>
+            <td class="res">1.16</td>
+          </tr>
+          <tr>
+            <td>자기자본비용 (CAPM)</td>
+            <td><span class="formula">Ke = Rf + βL*·ERP + 규모프리미엄</span></td>
+            <td class="mono">3.35% + 1.16×6.30% + 1.50%</td>
+            <td class="res">12.16%</td>
+          </tr>
+          <tr>
+            <td>타인자본비용 (Kd)</td>
+            <td><span class="formula">Kd = Rf + 신용 가산금리</span></td>
+            <td class="mono">3.35% + 2.10%</td>
+            <td class="res">5.45%</td>
+          </tr>
+          <tr>
+            <td>자본 가중치</td>
+            <td><span class="formula">We = 1/(1+D/E*) · Wd = D/E*/(1+D/E*)</span></td>
+            <td class="mono">1/1.60 · 0.60/1.60</td>
+            <td class="res">62.5% / 37.5%</td>
+          </tr>
+          <tr class="wacc-row">
+            <td>WACC</td>
+            <td><span class="formula">WACC = We·Ke + Wd·Kd·(1−t)</span></td>
+            <td class="mono">0.625×12.16% + 0.375×5.45%×0.78</td>
+            <td class="res">9.19%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="charts">
+        <div class="chart-box">
+          <h4>자기자본비용 (CAPM) 빌드업</h4>
+          <svg viewBox="0 0 460 230" role="img" aria-label="CAPM 빌드업 워터폴">
+            <line class="wf-gridline" x1="20" y1="20"  x2="440" y2="20"/>
+            <line class="wf-gridline" x1="20" y1="70"  x2="440" y2="70"/>
+            <line class="wf-gridline" x1="20" y1="120" x2="440" y2="120"/>
+            <line class="wf-baseline" x1="20" y1="195" x2="440" y2="195"/>
+            <!-- Rf: 0→3.35 (y: 195→151.4, h=43.6) -->
+            <rect class="wf-bar-delta" x="38" y="151.4" width="64" height="43.6" rx="3"/>
+            <text class="wf-vlabel" x="70" y="145" text-anchor="middle">3.35</text>
+            <line class="wf-conn" x1="102" y1="151.4" x2="140" y2="151.4"/>
+            <!-- +β·ERP: 3.35→10.66 (y: 56.4→151.4, h=95.0) -->
+            <rect class="wf-bar-delta" x="140" y="56.4" width="64" height="95" rx="3"/>
+            <text class="wf-vlabel" x="172" y="50" text-anchor="middle">+7.31</text>
+            <line class="wf-conn" x1="204" y1="56.4" x2="242" y2="56.4"/>
+            <!-- +규모프리미엄: 10.66→12.16 (y: 36.9→56.4, h=19.5) -->
+            <rect class="wf-bar-delta" x="242" y="36.9" width="64" height="19.5" rx="3"/>
+            <text class="wf-vlabel" x="274" y="31" text-anchor="middle">+1.50</text>
+            <line class="wf-conn" x1="306" y1="36.9" x2="344" y2="36.9"/>
+            <!-- = Ke: 0→12.16 (y: 36.9, h=158.1) -->
+            <rect class="wf-bar-total" x="344" y="36.9" width="64" height="158.1" rx="3"/>
+            <text class="wf-vlabel" x="376" y="31" text-anchor="middle">12.16</text>
+            <text class="wf-xlabel" x="70"  y="210" text-anchor="middle">무위험이자율</text>
+            <text class="wf-xlabel" x="172" y="210" text-anchor="middle">β×ERP</text>
+            <text class="wf-xlabel" x="274" y="210" text-anchor="middle">규모프리미엄</text>
+            <text class="wf-xlabel" x="376" y="210" text-anchor="middle">자기자본비용 Ke</text>
+            <text class="wf-xlabel" x="70"  y="224" text-anchor="middle">(%)</text>
+          </svg>
+        </div>
+        <div class="chart-box">
+          <h4>WACC 가중 혼합</h4>
+          <svg viewBox="0 0 460 230" role="img" aria-label="WACC 가중 혼합 워터폴">
+            <line class="wf-gridline" x1="20" y1="20"  x2="440" y2="20"/>
+            <line class="wf-gridline" x1="20" y1="70"  x2="440" y2="70"/>
+            <line class="wf-gridline" x1="20" y1="120" x2="440" y2="120"/>
+            <line class="wf-baseline" x1="20" y1="195" x2="440" y2="195"/>
+            <!-- We×Ke: 0→7.60 (y: 96.2, h=98.8) -->
+            <rect class="wf-bar-sub" x="60" y="96.2" width="70" height="98.8" rx="3"/>
+            <text class="wf-vlabel" x="95" y="90" text-anchor="middle">7.60</text>
+            <line class="wf-conn" x1="130" y1="96.2" x2="196" y2="96.2"/>
+            <!-- +Wd·Kd·(1−t): 7.60→9.19 (y: 75.5→96.2, h=20.7) -->
+            <rect class="wf-bar-delta" x="196" y="75.5" width="70" height="20.7" rx="3"/>
+            <text class="wf-vlabel" x="231" y="70" text-anchor="middle">+1.59</text>
+            <line class="wf-conn" x1="266" y1="75.5" x2="332" y2="75.5"/>
+            <!-- = WACC: 0→9.19 (y: 75.5, h=119.5) -->
+            <rect class="wf-bar-total" x="332" y="75.5" width="70" height="119.5" rx="3"/>
+            <text class="wf-vlabel" x="367" y="70" text-anchor="middle">9.19</text>
+            <text class="wf-xlabel" x="95"  y="210" text-anchor="middle">자기자본 기여 (We·Ke)</text>
+            <text class="wf-xlabel" x="231" y="210" text-anchor="middle">타인자본 기여 (세후)</text>
+            <text class="wf-xlabel" x="367" y="210" text-anchor="middle">WACC</text>
+            <text class="wf-xlabel" x="95"  y="224" text-anchor="middle">(%)</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- 컴포넌트·출처 요약 -->
+    <section style="margin-top:1.4rem;">
+      <h3 style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;margin:0 0 0.2rem;">기록될 컴포넌트·출처 <span class="muted" style="font-weight:400;font-size:0.8rem;">— assumption registry에 <span class="mono">wacc.*</span> 키로 함께 저장됩니다</span></h3>
+      <table class="data">
+        <thead><tr><th>가정 키</th><th class="num">값</th><th>kind</th><th>출처 / 근거</th><th>기준일</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">wacc.risk_free</td><td class="num">3.35%</td><td><span class="kind-chip kind-live">live</span></td><td>한국은행 ECOS — 국고채(3년) <a href="#" class="muted">ecos.bok.or.kr</a></td><td>2026-09-10</td></tr>
+          <tr><td class="mono">wacc.erp</td><td class="num">6.30%</td><td><span class="kind-chip kind-live">live</span></td><td>Damodaran — 성숙시장+국가 프리미엄 <a href="#" class="muted">stern.nyu.edu</a></td><td>2026-01</td></tr>
+          <tr><td class="mono">wacc.beta_levered</td><td class="num">1.35</td><td><span class="kind-chip kind-derived">derived</span></td><td>시계열 회귀 vs KOSPI · R² 0.68 · 250일</td><td>2026-09-10</td></tr>
+          <tr><td class="mono">wacc.beta_r2</td><td class="num">0.68</td><td><span class="kind-chip kind-derived">derived</span></td><td>회귀 스탯</td><td>2026-09-10</td></tr>
+          <tr><td class="mono">wacc.beta_vol_asset</td><td class="num">28.4%</td><td><span class="kind-chip kind-derived">derived</span></td><td>연율화 변동성 (자산)</td><td>2026-09-10</td></tr>
+          <tr><td class="mono">wacc.beta_vol_market</td><td class="num">17.2%</td><td><span class="kind-chip kind-derived">derived</span></td><td>연율화 변동성 (시장)</td><td>2026-09-10</td></tr>
+          <tr><td class="mono">wacc.size_premium</td><td class="num">1.50%</td><td><span class="kind-chip kind-user">user</span></td><td>사내 IB 가이드라인 v3</td><td>2026-09-10</td></tr>
+          <tr><td class="mono">wacc.debt_spread</td><td class="num">2.10%</td><td><span class="kind-chip kind-live">live</span></td><td>한국신용평가 BBB+ 가산금리</td><td>2026-09-05</td></tr>
+          <tr><td class="mono">wacc.target_de</td><td class="num">0.60</td><td><span class="kind-chip kind-user">user</span></td><td>재무계획 목표 레버리지</td><td>2026-09-10</td></tr>
+          <tr><td class="mono">wacc.tax_rate</td><td class="num">22.0%</td><td><span class="kind-chip kind-user">user</span></td><td>법인세법 표준세율</td><td>2026-09-10</td></tr>
+          <tr><td class="mono"><b>wacc</b> (최종 확정)</td><td class="num"><b>9.19%</b></td><td><span class="kind-chip kind-user">user</span></td><td>사람이 최종 확정한 값 — FS 게이트 진입 필수 요건</td><td>2026-09-10</td></tr>
+          <tr><td class="mono"><b>hurdle_irr</b></td><td class="num"><b>15.00%</b></td><td><span class="kind-chip kind-user">user</span></td><td>IC 가이드라인</td><td>2026-09-10</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 확정 저장 -->
+    <section style="margin-top:1.4rem;">
+      <h3 style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;margin:0 0 0.6rem;">확정 저장 <span class="muted" style="font-weight:400;font-size:0.8rem;">— 사람이 최종 값을 확인·확정합니다 (출처 등급: user = 사람 확정)</span></h3>
+      <div class="save-grid">
+        <label class="field"><b>WACC (비율) — CAPM 계산값이 미리 채워짐</b><input class="form-input" value="0.0919"></label>
+        <label class="field"><b>Hurdle IRR (선택)</b><input class="form-input" value="0.15"></label>
+      </div>
+      <label class="field" style="margin-top:0.8rem;"><b>근거/승인 메모</b><textarea class="form-input" rows="2" placeholder="예: ECOS 9/10 마감값, ERP는 Damodaran 2026-01판, 회귀 표본 250일 — 확정"></textarea></label>
+      <div class="match-ok">✓ 확정값 9.19% 가 CAPM 계산값과 일치합니다.</div>
+      <button class="primary-button" style="margin-top:0.8rem;">이 값으로 확정</button>
+      <p class="note-line">확정값이 계산값과 다르면 <span class="warn">⚠ 계산값 ≠ 확정값</span> 경고가 표시되고, 차이 근거를 메모에 기재해야 합니다. 저장 시 컴포넌트·산식 분해 전체가 하나의 run 스냅샷으로 기록되어 FS 게이트 산출물에서 재현됩니다.</p>
+    </section>
+
+  </div><!-- /panel-capm -->
+
+</main>
+
+<script>
+  // ── 모드 탭 ──
+  function showMode(mode) {
+    document.getElementById('tab-direct').classList.toggle('active', mode === 'direct');
+    document.getElementById('tab-capm').classList.toggle('active', mode === 'capm');
+    document.getElementById('tab-direct').setAttribute('aria-selected', mode === 'direct');
+    document.getElementById('tab-capm').setAttribute('aria-selected', mode === 'capm');
+    document.getElementById('panel-direct').hidden = mode !== 'direct';
+    document.getElementById('panel-capm').hidden = mode !== 'capm';
+  }
+  // ── 베타 서브탭 ──
+  function showBeta(which) {
+    document.getElementById('tab-peer').classList.toggle('active', which === 'peer');
+    document.getElementById('tab-reg').classList.toggle('active', which === 'reg');
+    document.getElementById('beta-peer').hidden = which !== 'peer';
+    document.getElementById('beta-reg').hidden = which !== 'reg';
+  }
+  // ── Kd 서브탭 ──
+  function showKd(which) {
+    document.getElementById('tab-kd-rating').classList.toggle('active', which === 'rating');
+    document.getElementById('tab-kd-direct').classList.toggle('active', which === 'direct');
+    document.getElementById('kd-rating').hidden = which !== 'rating';
+    document.getElementById('kd-direct').hidden = which !== 'direct';
+  }
+
+  // ── SourceTooltip (app/web-next/components/SourceTooltip.tsx 패턴) ──
+  document.querySelectorAll('.source-figure').forEach(function (btn) {
+    var pop = null;
+    function open() {
+      if (pop) return;
+      var d = JSON.parse(btn.dataset.prov);
+      pop = document.createElement('span');
+      pop.className = 'source-pop';
+      var rows = [['가정 키', d.assumption_key], ['제공 시점', d.as_of], ['출처', d.source], ['근거 참조', d.anchor_ref], ['분석 실행 ID', d.run_id]];
+      pop.innerHTML = '<div class="t">출처 정보</div>' + rows.filter(function (r) { return r[1]; })
+        .map(function (r) { return '<div class="row"><span class="k">' + r[0] + '</span><span class="v">' + r[1] + '</span></div>'; }).join('');
+      btn.parentElement.appendChild(pop);
+      btn.classList.add('open');
+    }
+    function close() { if (pop) { pop.remove(); pop = null; btn.classList.remove('open'); } }
+    btn.addEventListener('mouseenter', open);
+    btn.addEventListener('mouseleave', close);
+    btn.addEventListener('focus', open);
+    btn.addEventListener('blur', close);
+    btn.addEventListener('click', function () { pop ? close() : open(); });
+  });
+
+  // ── 회귀 산점도 (결정론적 시드 — 항상 같은 그림) ──
+  (function drawScatter() {
+    var svg = document.getElementById('scatter');
+    if (!svg) return;
+    var NS = 'http://www.w3.org/2000/svg';
+    // 좌표계: x = 시장 수익률 -3..+3 (%), y = 자산 수익률 -6..+6 (%)
+    var L = 42, R = 448, T = 14, B = 166;
+    function px(x) { return L + (x + 3) / 6 * (R - L); }
+    function py(y) { return B - (y + 6) / 12 * (B - T); }
+    function el(name, attrs, text) {
+      var e = document.createElementNS(NS, name);
+      for (var k in attrs) e.setAttribute(k, attrs[k]);
+      if (text) e.textContent = text;
+      svg.appendChild(e); return e;
+    }
+    // 격자/축
+    [-3, 0, 3].forEach(function (x) {
+      el('line', { x1: px(x), y1: T, x2: px(x), y2: B, class: 'wf-gridline' });
+      el('text', { x: px(x), y: B + 14, class: 'wf-xlabel', 'text-anchor': 'middle' }, x + '%');
+    });
+    [-6, 0, 6].forEach(function (y) {
+      el('line', { x1: L, y1: py(y), x2: R, y2: py(y), class: 'wf-gridline' });
+      el('text', { x: L - 6, y: py(y) + 3, class: 'wf-xlabel', 'text-anchor': 'end' }, y + '%');
+    });
+    el('text', { x: (L + R) / 2, y: B + 28, class: 'wf-xlabel', 'text-anchor': 'middle' }, '시장 일별 수익률 (%)');
+    // 회귀선: y = 1.35x (+ α 무시)
+    el('line', { x1: px(-3), y1: py(-3 * 1.35), x2: px(3), y2: py(3 * 1.35), stroke: '#3d66f5', 'stroke-width': 2 });
+    // 산점 (결정론적 LCG 시드, β=1.35 + 잡음, R²≈0.68 느낌)
+    var seed = 42;
+    function rnd() { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; }
+    for (var i = 0; i < 46; i++) {
+      var x = (rnd() * 2 - 1) * 2.9;
+      var noise = (rnd() * 2 - 1) * 2.1;
+      var y = 1.35 * x + noise;
+      el('circle', { cx: px(x), cy: py(y), r: 3.1, fill: 'hsla(217,91%,45%,0.45)' });
+    }
+  })();
+</script>
+</body>
+</html>

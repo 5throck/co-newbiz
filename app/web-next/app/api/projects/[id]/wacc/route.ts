@@ -1,15 +1,49 @@
-// GET/POST /api/projects/[id]/wacc — Wave C1 WACC input session.
-// GET exposes project-scoped WACC/hurdle provenance; POST records confirmed
-// kind='user' rows through db/lib/wacc.ts, creating a versioned run snapshot.
+// GET/POST /api/projects/[id]/wacc — Wave C1 WACC input session; ADR-0115
+// adds the CAPM component layer. GET exposes the confirmed WACC/hurdle
+// provenance PLUS the persisted `wacc.*` components and the derivation
+// re-assembled from them. POST records confirmed kind='user' rows through
+// db/lib/wacc.ts, creating a versioned run snapshot; mode="capm" requires a
+// derivable component set and returns the server-computed WACC alongside the
+// human-confirmed one.
 import { getDb } from "../../../../../../../db/client.ts";
-import { recordWaccSession, resolveProjectHurdleIrr, resolveProjectWacc } from "../../../../../../../db/lib/wacc.ts";
+import { loadProjectComponents, recordWaccSession, resolveProjectHurdleIrr, resolveProjectWacc } from "../../../../../../../db/lib/wacc.ts";
+import {
+  assembleDerivation,
+  capmComponentGaps,
+  validateComponentInput,
+  WaccComponentValidationError,
+  type WaccComponentInput,
+  type WaccComponentKey,
+} from "../../../../../../../db/lib/wacc-components.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
+/** Confirmed-vs-computed tolerance: half a basis point. */
+const COMPUTED_TOLERANCE = 0.00005;
+
 function parseRate(value: unknown): number | null {
   const n = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
   return Number.isFinite(n) && n > -1 ? n : null;
+}
+
+function parseComponents(raw: unknown): WaccComponentInput[] {
+  if (!Array.isArray(raw)) throw new WaccComponentValidationError("invalid_request", "components must be an array.");
+  return raw.map((c) => {
+    const item = c as { key?: unknown; value?: unknown; kind?: unknown; source_label?: unknown; anchor_ref?: unknown; as_of?: unknown; rationale?: unknown };
+    if (typeof item.key !== "string" || typeof item.value !== "number" || typeof item.kind !== "string") {
+      throw new WaccComponentValidationError("invalid_request", "each component needs { key, value, kind }.");
+    }
+    return {
+      key: item.key as WaccComponentKey,
+      value: item.value,
+      kind: item.kind as WaccComponentInput["kind"],
+      sourceLabel: typeof item.source_label === "string" ? item.source_label : undefined,
+      anchorRef: typeof item.anchor_ref === "string" ? item.anchor_ref : null,
+      asOf: typeof item.as_of === "string" ? item.as_of : undefined,
+      rationale: typeof item.rationale === "string" ? item.rationale : undefined,
+    };
+  });
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -20,7 +54,13 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   const db = getDb();
   const wacc = resolveProjectWacc(db, id);
   const hurdle = resolveProjectHurdleIrr(db, id);
-  return ok({ wacc, hurdle_irr: hurdle }, 200, { wacc_source: wacc.source, run_id: wacc.run_id ?? undefined });
+  const { runId, components } = loadProjectComponents(db, id);
+  const derivation = components.length > 0 ? assembleDerivation(components) : null;
+  return ok(
+    { wacc, hurdle_irr: hurdle, components, derivation },
+    200,
+    { wacc_source: wacc.source, run_id: wacc.run_id ?? undefined, components_run_id: runId ?? undefined },
+  );
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -36,6 +76,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     rationale?: string;
     anchor_ref?: string;
     as_of?: string;
+    components?: unknown;
   } | null;
   const wacc = parseRate(body?.wacc);
   if (wacc === null) return badRequest("invalid_request", "wacc는 -1보다 큰 유한한 비율이어야 합니다. 예: 0.095");
@@ -44,6 +85,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (hasHurdle && hurdleIrr === null) {
     return badRequest("invalid_request", "hurdle_irr는 -1보다 큰 유한한 비율이어야 합니다.");
   }
+
+  let components: WaccComponentInput[] | undefined;
+  let derivation: ReturnType<typeof assembleDerivation> | null = null;
+  if (body?.components !== undefined) {
+    if (body?.mode !== "capm") {
+      return badRequest("invalid_request", "components는 mode='capm' 세션에서만 허용됩니다.");
+    }
+    try {
+      components = parseComponents(body.components);
+      for (const comp of components) validateComponentInput(comp);
+    } catch (err) {
+      if (err instanceof WaccComponentValidationError) return badRequest(err.code, err.message);
+      throw err;
+    }
+    const gaps = capmComponentGaps(components);
+    if (gaps.length > 0) {
+      return badRequest("invalid_request", `CAPM 컴포넌트가 부족합니다: ${gaps.join(", ")}`);
+    }
+    derivation = assembleDerivation(components);
+  }
+
   try {
     const result = recordWaccSession(getDb(), {
       projectId: id,
@@ -53,10 +115,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       rationale: body?.rationale,
       anchorRef: body?.anchor_ref,
       asOf: body?.as_of,
+      components,
       actor: auth.auth.userId,
     });
-    return ok(result, 201, { run_id: result.run_id, wacc_source: result.wacc.source });
+    const computed = derivation?.computed.wacc ?? null;
+    return ok(
+      {
+        ...result,
+        wacc_computed: computed,
+        computed_mismatch: computed != null && Math.abs(computed - wacc) > COMPUTED_TOLERANCE,
+      },
+      201,
+      { run_id: result.run_id, wacc_source: result.wacc.source },
+    );
   } catch (err) {
+    if (err instanceof WaccComponentValidationError) return badRequest(err.code, err.message);
     return badRequest("wacc_session_failed", err instanceof Error ? err.message : "WACC 입력 세션 저장에 실패했습니다.");
   }
 }

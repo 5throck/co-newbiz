@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>목업 프리뷰 — 사업목표 기준 (그룹/계열사 마스터데이터 + fs 게이트 근거)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+/* ── Onyx 3.0 토큰 (app/web-next/app/styles.css에서 발췌 — 실제 값) ── */
+:root {
+  color-scheme: light;
+  --primary-h: 217; --primary-s: 91%; --primary-l: 45%;
+  --success-h: 160; --success-s: 84%; --success-l: 30%;
+  --warning-h: 35; --warning-s: 90%; --warning-l: 38%;
+  --danger-h: 0; --danger-s: 72%; --danger-l: 45%;
+  --primary: hsl(var(--primary-h), var(--primary-s), var(--primary-l));
+  --primary-dim: hsl(var(--primary-h), var(--primary-s), 35%);
+  --primary-bg: hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.10);
+  --primary-border: hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.25);
+  --success: hsl(var(--success-h), var(--success-s), var(--success-l));
+  --success-bg: hsla(var(--success-h), var(--success-s), var(--success-l), 0.10);
+  --warning: hsl(var(--warning-h), var(--warning-s), var(--warning-l));
+  --warning-bg: hsla(var(--warning-h), var(--warning-s), var(--warning-l), 0.12);
+  --danger: hsl(var(--danger-h), var(--danger-s), var(--danger-l));
+  --danger-bg: hsla(var(--danger-h), var(--danger-s), var(--danger-l), 0.10);
+  --bg: #f6f7f9; --fg: #171a21; --surface: #ffffff; --surface-2: #f1f3f6;
+  --muted-bg: #f1f3f6; --muted-fg: #5d6572;
+  --border: rgba(16, 22, 34, 0.10); --border-subtle: rgba(16, 22, 34, 0.06); --border-bright: rgba(16, 22, 34, 0.16);
+  --accent: #3d66f5; --accent-fg: #ffffff;
+  --input-bg: rgba(16, 22, 34, 0.03); --hover-bg: rgba(16, 22, 34, 0.05); --sidebar-bg: rgba(16, 22, 34, 0.02);
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --green-bg: hsla(152, 63%, 36%, 0.10); --green-fg: #0c7a4b; --green-border: hsla(152, 63%, 36%, 0.28);
+  --amber-bg: hsla(35, 90%, 45%, 0.12); --amber-fg: #935c06; --amber-border: hsla(35, 90%, 45%, 0.30);
+  --red-bg: hsla(0, 72%, 46%, 0.09); --red-fg: #b32318; --red-border: hsla(0, 72%, 46%, 0.26);
+  --radius: 0.75rem; --radius-sm: 0.5rem; --radius-md: 0.625rem; --radius-lg: 1rem; --radius-xl: 1rem; --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06); --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
+  --font-sans: "Pretendard Variable", Pretendard, "Malgun Gothic", system-ui, sans-serif;
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --primary-l: 60%; --primary-dim: hsl(var(--primary-h), var(--primary-s), 45%);
+  --bg: #0a0c10; --fg: #eef0f4; --surface: #171b22; --surface-2: #1e232c;
+  --muted-bg: #1c2029; --muted-fg: #a5adba;
+  --border: rgba(255, 255, 255, 0.07); --border-subtle: rgba(255, 255, 255, 0.04); --border-bright: rgba(255, 255, 255, 0.10);
+  --accent: #7c9dff; --accent-fg: #0a0c10;
+  --input-bg: rgba(255, 255, 255, 0.03); --hover-bg: rgba(255, 255, 255, 0.04); --sidebar-bg: rgba(255, 255, 255, 0.02);
+  --green-bg: hsla(152, 63%, 46%, 0.12); --green-fg: #7fe0a0; --green-border: hsla(152, 63%, 46%, 0.25);
+  --amber-bg: hsla(38, 95%, 52%, 0.12); --amber-fg: #ffcf7a; --amber-border: hsla(38, 95%, 52%, 0.25);
+  --red-bg: hsla(0, 93%, 71%, 0.12); --red-fg: #ff9d97; --red-border: hsla(0, 93%, 71%, 0.25);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3); --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-sans); background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; }
+
+/* ── 앱 스타일 사본 (클래스명·수치 동일) ── */
+.market-section { margin-top: 2rem; margin-bottom: 1.75rem; }
+.market-section h2 { font-size: 1rem; margin: 0 0 0.5rem; }
+.data-table { width: 100%; border-collapse: collapse; margin: 0.5rem 0 1.5rem; }
+.data-table th { border-bottom: 1px solid var(--border); padding: 0.5rem; text-align: left; }
+.data-table td { border-bottom: 1px solid var(--border); padding: 0.5rem; text-align: left; }
+.data-table th, .data-table td { word-break: keep-all; overflow-wrap: break-word; font-size: 0.85rem; }
+.data-table .col-num { text-align: right; white-space: nowrap; }
+.table-scroll { overflow-x: auto; }
+.section-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.section-toolbar > .section-title { display: flex; align-items: baseline; gap: 0.5rem; }
+.section-toolbar > .section-title h2 { margin: 0; font-size: 0.95rem; }
+.section-toolbar > .section-meta { font-size: 0.75rem; color: var(--muted-fg); }
+.section-toolbar > .toolbar-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.section-toolbar > .toolbar-actions { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; margin-right: 0.5rem; }
+.btn-ghost { background: var(--hover-bg); border: 1px solid var(--border); color: var(--fg); border-radius: var(--radius-xl); padding: 0.6rem 1.5rem; font-weight: 500; cursor: pointer; transition: all 0.3s var(--ease-spring); font-family: inherit; }
+.btn-ghost:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+.btn-ghost.btn-sm, .btn-danger.btn-sm { padding: 0.3rem 0.75rem; font-size: 0.75rem; border-radius: var(--radius-md); }
+.btn-danger { background: var(--hover-bg); border: 1px solid var(--border); color: var(--fg); border-radius: var(--radius-xl); padding: 0.6rem 1.5rem; font-weight: 500; cursor: pointer; font-family: inherit; }
+.btn-danger.btn-sm { background: transparent; border-color: color-mix(in srgb, var(--red-fg) 30%, transparent); color: color-mix(in srgb, var(--red-fg) 80%, var(--fg)); }
+.btn-danger.btn-sm:hover { background: color-mix(in srgb, var(--red-fg) 14%, var(--surface)); border-color: color-mix(in srgb, var(--red-fg) 60%, transparent); color: var(--red-fg); }
+.sizing-new-form { padding: 0.75rem 0.9rem; border: 1px dashed var(--border); border-radius: var(--radius-md); background: color-mix(in srgb, var(--surface) 60%, transparent); }
+.sizing-new-input { padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); font-size: 0.82rem; min-width: 8rem; font-family: inherit; }
+.sizing-new-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg); }
+.sizing-new-input-sm { padding: 0.3rem 0.45rem; font-size: 0.76rem; min-width: 5rem; }
+.row-edit-cell { display: inline-flex; align-items: center; gap: 0.25rem; }
+.status-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+.status-green { background: var(--green-bg); color: var(--green-fg); }
+.status-amber { background: var(--amber-bg); color: var(--amber-fg); }
+.status-red { background: var(--red-bg); color: var(--red-fg); }
+.status-not-started { background: var(--muted-bg); color: var(--muted-fg); }
+.sizing-step { border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 1rem 1.25rem; background: var(--surface); }
+.sizing-step-title { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; margin: 0 0 0.6rem; }
+.sizing-actions-cell { white-space: nowrap; }
+.sizing-actions-cell > .actions-row { display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; }
+.stage-stepper { list-style: none; display: flex; gap: 0.4rem; margin: 0 0 0.9rem; padding: 0; flex-wrap: wrap; }
+.stage-step { display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-full); background: var(--surface); font-size: 0.8rem; }
+.stage-step-complete { border-color: var(--green-border); background: var(--green-bg); color: var(--green-fg); }
+.stage-step-current { border-color: var(--primary); background: var(--primary-bg); color: var(--fg); font-weight: 700; }
+.stage-step-locked { color: var(--muted-fg); opacity: 0.7; }
+.stage-step-id { font-weight: 800; font-variant-numeric: tabular-nums; }
+h1 { font-size: 1.35rem; margin: 0 0 0.25rem; }
+.page-subtitle { color: var(--muted-fg); font-size: 0.85rem; margin: 0 0 1rem; }
+
+/* ── 목업 전용 (실제 구현에는 미포함) ── */
+.mock-notice { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.55rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 0.8rem; color: var(--muted-fg); }
+.mock-notice strong { color: var(--fg); }
+.mock-wrap { max-width: 1180px; margin: 0 auto; padding: 1.5rem 1.5rem 4rem; }
+.mock-divider { display: flex; align-items: center; gap: 0.75rem; margin: 3rem 0 0.5rem; font-size: 0.9rem; font-weight: 700; }
+.mock-divider .line { flex: 1; height: 1px; background: var(--border); }
+.badge-new { display: inline-flex; align-items: center; padding: 0.1rem 0.5rem; border-radius: var(--radius-full); background: var(--accent); color: var(--accent-fg); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; }
+.badge-existing { display: inline-flex; align-items: center; padding: 0.1rem 0.5rem; border-radius: var(--radius-full); background: var(--muted-bg); color: var(--muted-fg); font-size: 0.68rem; font-weight: 700; }
+.mock-outline-new { outline: 2px dashed var(--primary-border); outline-offset: 6px; border-radius: var(--radius-lg); }
+.mock-note { font-size: 0.78rem; color: var(--muted-fg); margin: -0.75rem 0 0; line-height: 1.5; }
+.mock-admin { display: grid; grid-template-columns: 180px 1fr; gap: 1.25rem; align-items: start; }
+.mock-admin-nav { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); padding: 0.75rem; font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.1rem; }
+.mock-admin-nav a { color: var(--muted-fg); text-decoration: none; padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); }
+.mock-admin-nav a.active { background: var(--primary-bg); color: var(--fg); font-weight: 700; }
+.mock-subnav { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0 0 1.25rem; padding: 0.35rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.mock-subnav a { padding: 0.3rem 0.7rem; border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--muted-fg); text-decoration: none; }
+.mock-subnav a.active { background: var(--primary-bg); color: var(--fg); font-weight: 700; }
+.mock-summary-row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.25rem; }
+.mock-summary-card { flex: 1 1 160px; padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--glass-bg); box-shadow: var(--shadow-sm); }
+.mock-summary-card .k { font-size: 0.72rem; color: var(--muted-fg); }
+.mock-summary-card .v { font-size: 0.95rem; font-weight: 700; margin-top: 0.15rem; }
+.mock-code-table-hint { display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: var(--muted-fg); margin-bottom: 1rem; }
+</style>
+</head>
+<body>
+
+<div class="mock-notice">
+  <strong>화면 목업 프리뷰</strong>
+  <span>「사업목표 기준」 신규 화면 2종 — 실제 Onyx 3.0 토큰/컴포넌트 스타일로 렌더링한 정적 목업입니다 (예시 데이터, 실제 DB 아님)</span>
+  <span style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+    <span class="badge-new">NEW = 이번에 추가되는 블록</span>
+    <button class="btn-ghost btn-sm" onclick="const h=document.documentElement; h.dataset.theme = h.dataset.theme==='dark'?'light':'dark'; this.textContent = h.dataset.theme==='dark'?'라이트 모드':'다크 모드';">다크 모드</button>
+  </span>
+</div>
+
+<div class="mock-wrap">
+
+  <!-- ════════════════ 화면 A — 관리자 콘솔 › 마스터 데이터 ════════════════ -->
+  <div class="mock-divider">화면 A — 관리자 콘솔 › 마스터 데이터 <span class="line"></span></div>
+  <p class="mock-note">그룹·계열사별 사업목표 기준을 마스터데이터로 등록/수정/삭제하는 관리 화면입니다. 관리자 권한(requireAdmin) 필요.</p>
+
+  <div class="mock-admin" style="margin-top:1rem;">
+    <nav class="mock-admin-nav">
+      <a>대시보드</a><a>사용자</a><a>감사 로그</a><a>데이터 소스</a><a>스케줄 작업</a><a>데이터베이스</a><a>알림</a><a>용어집</a><a>거버넌스</a><a class="active">마스터 데이터</a><a>ADR</a>
+    </nav>
+
+    <div>
+      <h1 style="font-size:1.2rem;">마스터 데이터</h1>
+      <p class="page-subtitle">코드 테이블과 사업목표 기준을 관리합니다.</p>
+
+      <!-- 기존 코드 테이블 블록 (축약 표현) -->
+      <div class="mock-code-table-hint">
+        <span class="badge-existing">기존</span>
+        <span>코드 테이블</span>
+        <select class="sizing-new-input sizing-new-input-sm" aria-label="테이블 선택">
+          <option>md_industry</option><option>md_currency</option><option>md_country</option><option>md_source</option><option>md_unit</option><option>md_company</option>
+        </select>
+        <span>… (기존 화면과 동일 — 축약)</span>
+      </div>
+
+      <!-- ═══ NEW: 사업목표 기준 블록 ═══ -->
+      <section class="market-section mock-outline-new" aria-label="사업목표 기준">
+        <div class="section-toolbar">
+          <div class="section-title"><span class="badge-new">NEW</span><h2>사업목표 기준</h2></div>
+          <span class="section-meta">그룹 공통 · 계열사별 사업목표 — fs 게이트 판정기준으로 사용</span>
+          <div class="toolbar-actions"><button type="button" class="btn-ghost btn-sm">＋ 등록</button></div>
+        </div>
+
+        <!-- 등록 폼 (＋ 등록 클릭 시 열림) -->
+        <form class="sizing-new-form" style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
+          <select class="sizing-new-input sizing-new-input-sm" aria-label="그룹" style="flex:0 1 11rem;">
+            <option>OO그룹</option>
+          </select>
+          <select class="sizing-new-input sizing-new-input-sm" aria-label="적용 범위" style="flex:0 1 12rem;">
+            <option>그룹 공통</option><option>OO중공업</option><option>OO로보틱스</option>
+          </select>
+          <select class="sizing-new-input sizing-new-input-sm" aria-label="지표" style="flex:0 1 15rem;">
+            <option>연매출 (최종 연도)</option><option>영업이익률 (최종 연도)</option><option>사업계획 기간</option><option>NPV (권장 시나리오 p50)</option><option>IRR (권장 시나리오 p50)</option><option>사용자 지정 KPI…</option>
+          </select>
+          <input class="sizing-new-input sizing-new-input-sm" aria-label="사용자 지정 지표명" placeholder="지표명 (사용자 지정 시)" style="flex:1 1 10rem;" />
+          <select class="sizing-new-input sizing-new-input-sm" aria-label="방향" style="flex:0 1 5.5rem;">
+            <option>이상 (≥)</option><option>이하 (≤)</option>
+          </select>
+          <input class="sizing-new-input sizing-new-input-sm" type="number" aria-label="기준값" placeholder="기준값" style="flex:0 1 6.5rem;" />
+          <span class="section-meta" style="min-width:2.2rem;">억원</span>
+          <button type="submit" class="btn-ghost btn-sm">등록</button>
+        </form>
+
+        <div class="table-scroll">
+          <table class="data-table" aria-label="사업목표 기준 목록">
+            <thead>
+              <tr><th>그룹</th><th>적용 범위</th><th>지표</th><th class="col-num">기준</th><th>등록일</th><th style="text-align:right;">액션</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>OO그룹</td><td><span class="status-chip status-not-started">그룹 공통</span></td><td>연매출 (최종 연도)</td>
+                <td class="col-num"><strong>≥ 500.0억원</strong></td><td>2026-09-01</td>
+                <td class="sizing-actions-cell"><div class="actions-row"><button class="btn-ghost btn-sm">수정</button><button class="btn-danger btn-sm">삭제</button></div></td>
+              </tr>
+              <tr style="background: var(--primary-bg);">
+                <td>OO그룹</td><td><span class="status-chip status-not-started">그룹 공통</span></td><td>영업이익률 (최종 연도)</td>
+                <td class="col-num">
+                  <!-- 행 편집 중 예시 (RowEdit) -->
+                  <span class="row-edit-cell">
+                    <strong>≥</strong>
+                    <input class="sizing-new-input sizing-new-input-sm" type="number" value="8.0" aria-label="기준값 수정" style="width:4.5rem; min-width:4.5rem;" />
+                    <strong>%</strong>
+                    <button class="btn-ghost btn-sm">저장</button>
+                    <button class="btn-ghost btn-sm">취소</button>
+                  </span>
+                </td>
+                <td>2026-09-01</td>
+                <td class="sizing-actions-cell"><div class="actions-row"><span class="section-meta">편집 중…</span></div></td>
+              </tr>
+              <tr>
+                <td>OO그룹</td><td><span class="status-chip status-not-started">그룹 공통</span></td><td>사업계획 기간</td>
+                <td class="col-num"><strong>≤ 5.0년</strong></td><td>2026-09-01</td>
+                <td class="sizing-actions-cell"><div class="actions-row"><button class="btn-ghost btn-sm">수정</button><button class="btn-danger btn-sm">삭제</button></div></td>
+              </tr>
+              <tr>
+                <td>OO그룹</td><td><span class="status-chip status-green">OO중공업</span></td><td>영업이익률 (최종 연도)</td>
+                <td class="col-num"><strong>≥ 8.0%</strong> <span class="section-meta">개별 기준</span></td><td>2026-09-08</td>
+                <td class="sizing-actions-cell"><div class="actions-row"><button class="btn-ghost btn-sm">수정</button><button class="btn-danger btn-sm">삭제</button></div></td>
+              </tr>
+              <tr>
+                <td>OO그룹</td><td><span class="status-chip status-green">OO중공업</span></td><td>NPV (권장 시나리오 p50)</td>
+                <td class="col-num"><strong>≥ 300.0억원</strong></td><td>2026-09-08</td>
+                <td class="sizing-actions-cell"><div class="actions-row"><button class="btn-ghost btn-sm">수정</button><button class="btn-danger btn-sm">삭제</button></div></td>
+              </tr>
+              <tr>
+                <td>OO그룹</td><td><span class="status-chip status-not-started">그룹 공통</span></td><td>R&amp;D 투자 비중 <span class="section-meta">사용자 지정</span></td>
+                <td class="col-num"><strong>≤ 15.0%</strong></td><td>2026-09-05</td>
+                <td class="sizing-actions-cell"><div class="actions-row"><button class="btn-ghost btn-sm">수정</button><button class="btn-danger btn-sm">삭제</button></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mock-note">· 지표 프리셋(연매출·영업이익률·기간·NPV·IRR) 외에 <strong>사용자 지정 KPI</strong>를 행으로 추가할 수 있습니다. 사용자 지정 지표는 fs 화면에서 "수동 확인"으로 표시됩니다.<br />
+        · 같은 범위·같은 지표는 1건만 등록됩니다(중복 등록 시 안내). 계열사 기준은 그룹 공통 기준보다 우선 적용됩니다.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- ════════════════ 화면 B — S8 사업성 분석 › Business Case ════════════════ -->
+  <div class="mock-divider">화면 B — S8 사업성 분석 › Business Case <span class="line"></span></div>
+  <p class="mock-note">fs 게이트 기록 화면 위에 "사업목표 기준 대비" 근거 섹션이 추가됩니다. 판정은 참고 정보이며 게이트를 자동 차단하지 않고, 최종 GO/HOLD/KILL은 사람이 기록합니다(기존 원칙 유지).</p>
+
+  <div style="margin-top:1rem;">
+    <!-- StageFrame (기존 크롬 — 축약) -->
+    <span class="badge-existing">기존 크롬 (축약)</span>
+    <h1 style="margin-top:0.5rem;">S8 · 사업성 분석</h1>
+    <p class="page-subtitle">돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다</p>
+
+    <ul class="stage-stepper" aria-label="스테이지 진행">
+      <li class="stage-step stage-step-complete"><span class="stage-step-id">S1</span>발굴</li>
+      <li class="stage-step stage-step-complete"><span class="stage-step-id">S2</span>시장분석</li>
+      <li class="stage-step stage-step-complete"><span class="stage-step-id">S3</span>적합성</li>
+      <li class="stage-step stage-step-complete"><span class="stage-step-id">S4</span>트랙결정</li>
+      <li class="stage-step stage-step-complete"><span class="stage-step-id">S5</span>진출전략</li>
+      <li class="stage-step stage-step-locked"><span class="stage-step-id">S6</span></li>
+      <li class="stage-step stage-step-locked"><span class="stage-step-id">S7</span></li>
+      <li class="stage-step stage-step-current"><span class="stage-step-id">S8</span>사업성 분석 · fs</li>
+      <li class="stage-step stage-step-locked"><span class="stage-step-id">S9</span>DD</li>
+      <li class="stage-step stage-step-locked"><span class="stage-step-id">S10</span></li>
+      <li class="stage-step stage-step-locked"><span class="stage-step-id">S11</span>IC</li>
+      <li class="stage-step stage-step-locked"><span class="stage-step-id">S12</span>사후관리</li>
+    </ul>
+
+    <nav class="mock-subnav" aria-label="프로젝트 하위 메뉴">
+      <a>개요</a><a>재무 분석</a><a class="active">Business Case</a><a>WACC</a><a>DD</a><a>딜 구조</a><a>IC 검토</a><a>포트폴리오</a><a>Charter</a><a>프로세스</a>
+    </nav>
+
+    <!-- 채택 Case 요약 (기존 콘텐츠 — 축약) -->
+    <div class="mock-summary-row">
+      <span class="badge-existing">기존 (축약)</span>
+    </div>
+    <div class="mock-summary-row">
+      <div class="mock-summary-card"><div class="k">채택 Case</div><div class="v">Greenfield · Base (권장)</div></div>
+      <div class="mock-summary-card"><div class="k">계획 기간</div><div class="v">5년</div></div>
+      <div class="mock-summary-card"><div class="k">매출 라인</div><div class="v">3개 · 최종연도 412.5억원</div></div>
+      <div class="mock-summary-card"><div class="k">비용 라인</div><div class="v">labor 2 · opex 4 · capex 2</div></div>
+    </div>
+
+    <!-- ═══ NEW: 사업목표 기준 대비 섹션 ═══ -->
+    <section class="market-section mock-outline-new" aria-label="사업목표 기준 대비">
+      <div class="section-toolbar">
+        <div class="section-title"><span class="badge-new">NEW</span><h2>사업목표 기준 대비</h2></div>
+        <span class="section-meta">적용: OO그룹 공통 + OO중공업 개별 2건 · 프로젝트 계열사: OO중공업</span>
+        <div class="toolbar-actions"><button type="button" class="btn-ghost btn-sm">새로고침</button></div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="data-table" aria-label="목표 대비 판정">
+          <thead>
+            <tr><th style="min-width:11rem;">지표</th><th style="min-width:13rem;">기준 (출처 · 기준 시점)</th><th style="min-width:15rem;">사업계획 (산출 근거)</th><th style="min-width:6rem;">판정</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>연매출 (최종 연도)</strong></td>
+              <td>≥ 500.0억원 <span class="section-meta">· 그룹 공통 · 2026-09-01</span></td>
+              <td><span class="col-num" style="font-weight:700;">412.5억원</span> <span class="section-meta">채택 Case 최종 연도 매출</span></td>
+              <td><span class="status-chip status-red">미달</span></td>
+            </tr>
+            <tr>
+              <td><strong>영업이익률 (최종 연도)</strong></td>
+              <td>≥ 8.0% <span class="section-meta">· OO중공업 개별 (그룹 7.0%보다 우선) · 2026-09-08</span></td>
+              <td><span class="col-num" style="font-weight:700;">8.4%</span> <span class="section-meta">최종 연도 (매출 − 노무·운영비) ÷ 매출</span></td>
+              <td><span class="status-chip status-green">충족</span></td>
+            </tr>
+            <tr>
+              <td><strong>사업계획 기간</strong></td>
+              <td>≤ 5.0년 <span class="section-meta">· 그룹 공통 · 2026-09-01</span></td>
+              <td><span class="col-num" style="font-weight:700;">5년</span> <span class="section-meta">Business Case 계획 기간</span></td>
+              <td><span class="status-chip status-green">충족</span></td>
+            </tr>
+            <tr>
+              <td><strong>NPV (권장 시나리오 p50)</strong></td>
+              <td>≥ 300.0억원 <span class="section-meta">· OO중공업 개별 · 2026-09-08</span></td>
+              <td>— <span class="section-meta">채택 Case의 시뮬레이션 결과 없음</span></td>
+              <td><span class="status-chip status-amber">판정불가</span></td>
+            </tr>
+            <tr>
+              <td><strong>R&amp;D 투자 비중</strong> <span class="section-meta">사용자 지정</span></td>
+              <td>≤ 15.0% <span class="section-meta">· 그룹 공통 · 2026-09-05</span></td>
+              <td>수동 확인 <span class="section-meta">자동 산출 미지원 지표</span></td>
+              <td><span class="status-chip status-not-started">수동 확인</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="mock-note">판정 칩: <span class="status-chip status-green">충족</span> <span class="status-chip status-red">미달</span> <span class="status-chip status-amber">판정불가</span>(채택 Case·시뮬레이션 부재 등으로 산출 불가) <span class="status-chip status-not-started">수동 확인</span>(사용자 지정 KPI).<br />
+      이 표는 fs 게이트 판정의 <strong>참고 근거</strong>이며, 미달이어도 게이트가 자동으로 막히지는 않습니다. 기준 자체는 관리자 콘솔 › 마스터 데이터에서 관리됩니다(화면 A).</p>
+    </section>
+
+    <!-- 기존 GateDecisionPanel (축약 재현) -->
+    <section class="market-section sizing-step" aria-label="게이트 결정">
+      <h3 class="sizing-step-title text-[0.95rem]" style="margin:0;"><span class="badge-existing">기존</span> 게이트 결정 — fs (사업성 분석)</h3>
+      <div class="table-scroll">
+        <table class="data-table" aria-label="게이트별 현재 결정">
+          <thead><tr><th>게이트</th><th>현재 결정</th><th>사유</th><th>결정자 · 시각</th></tr></thead>
+          <tbody>
+            <tr><td><strong>fs</strong></td><td><span class="status-chip status-not-started">미결정</span></td><td class="section-meta">—</td><td class="section-meta">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <form class="sizing-new-form" style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+        <select class="sizing-new-input sizing-new-input-sm" aria-label="게이트" style="flex:0 1 10rem;"><option>fs</option></select>
+        <select class="sizing-new-input sizing-new-input-sm" aria-label="결정" style="flex:0 1 8rem;"><option>GO</option><option>HOLD</option><option>KILL</option></select>
+        <input class="sizing-new-input sizing-new-input-sm" aria-label="사유" placeholder="사유 (필수) — 예: 매출 목표 500억 미달(412.5억)이나 시나리오 상향 여지 검토 후 GO" style="flex:1 1 24rem;" />
+        <button type="submit" class="btn-ghost btn-sm">기록</button>
+      </form>
+    </section>
+  </div>
+
+</div>
+</body>
+</html>
