@@ -48,6 +48,10 @@ export interface ProjectRow {
   project_name?: string | null;
   charter_json?: string | null;
   charter_confirmed_at?: string | null;
+  /** 0081 deletion mark — set when the deal is tombstoned (still fully stored). */
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  delete_reason?: string | null;
   /** Wave D2: derived market-evidence freshness signal, never stored on md_project. */
   is_stale?: boolean;
   stale_reasons?: string[];
@@ -288,6 +292,15 @@ export interface VisibilityOptions {
   mnpiScopeOverrideBy?: string;
   /** Include closed/archived projects. Default false keeps active deal surfaces clean. */
   includeClosed?: boolean;
+  /**
+   * Include delete-marked projects (deleted_at set). Deletion is a tombstone,
+   * never a row removal (deal-deletion-playbook): default false keeps every
+   * active surface clean, while the archive viewer passes true so the full
+   * original data stays inspectable for audit.
+   */
+  includeDeleted?: boolean;
+  /** Restrict to one lifecycle status ('open' | 'closed' | 'archived'). */
+  status?: "open" | "closed" | "archived";
 }
 
 interface VisibleProjectRow extends ProjectRow {
@@ -370,7 +383,7 @@ export function listVisibleProjects(callerId: string, opts: VisibilityOptions = 
   const rows = db
     .query(
       `SELECT p.id, p.project_no, p.project_name, p.created_at, p.status, p.closed_at, p.closure_reason,
-              p.origin, p.track, p.source_opportunity_id, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
+              p.origin, p.track, p.source_opportunity_id, p.deleted_at, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
        FROM md_project p
        JOIN project_member m ON m.project_id = p.id
        LEFT JOIN project_classification c ON c.project_id = p.id
@@ -379,9 +392,18 @@ export function listVisibleProjects(callerId: string, opts: VisibilityOptions = 
          AND (c.wall_group IS NULL OR u.wall_group IS NULL OR c.wall_group != u.wall_group)
          AND (? = 0 OR COALESCE(c.mnpi_flag, 0) = 0)
          AND (? = 1 OR p.status = 'open')
+         AND (p.deleted_at IS NULL OR ? = 1)
+         AND (? IS NULL OR p.status = ?)
        ORDER BY p.created_at DESC`
     )
-    .all(callerId, opts.excludeMnpi ? 1 : 0, opts.includeClosed ? 1 : 0) as VisibleProjectRow[];
+    .all(
+      callerId,
+      opts.excludeMnpi ? 1 : 0,
+      opts.includeClosed ? 1 : 0,
+      opts.includeDeleted ? 1 : 0,
+      opts.status ?? null,
+      opts.status ?? null,
+    ) as VisibleProjectRow[];
   logMnpiReads(rows, callerId, opts);
   return attachStaleSignals(rows.map(({ mnpi_flag: _mnpi, ...rest }) => rest));
 }
@@ -400,7 +422,7 @@ export function getProjectIfVisible(
   const row = db
     .query(
       `SELECT p.id, p.project_no, p.project_name, p.created_at, p.status, p.closed_at, p.closure_reason,
-              p.origin, p.track, p.source_opportunity_id, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
+              p.origin, p.track, p.source_opportunity_id, p.deleted_at, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
        FROM md_project p
        JOIN project_member m ON m.project_id = p.id
        LEFT JOIN project_classification c ON c.project_id = p.id
@@ -408,9 +430,16 @@ export function getProjectIfVisible(
        WHERE m.user_id = ? AND m.revoked_at IS NULL AND p.id = ?
          AND (c.wall_group IS NULL OR u.wall_group IS NULL OR c.wall_group != u.wall_group)
          AND (? = 0 OR COALESCE(c.mnpi_flag, 0) = 0)
-         AND (? = 1 OR p.status = 'open')`
+         AND (? = 1 OR p.status = 'open')
+         AND (p.deleted_at IS NULL OR ? = 1)`
     )
-    .get(callerId, projectId, opts.excludeMnpi ? 1 : 0, opts.includeClosed ? 1 : 0) as VisibleProjectRow | undefined;
+    .get(
+      callerId,
+      projectId,
+      opts.excludeMnpi ? 1 : 0,
+      opts.includeClosed ? 1 : 0,
+      opts.includeDeleted ? 1 : 0,
+    ) as VisibleProjectRow | undefined;
   if (!row) return null;
   logMnpiReads([row], callerId, opts);
   const { mnpi_flag: _mnpi, ...rest } = row;
