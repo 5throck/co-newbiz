@@ -617,11 +617,6 @@
       "layer": "L3"
     },
     {
-      "id": "audit-workspace",
-      "type": "skill",
-      "layer": "L3"
-    },
-    {
       "id": "auth-and-account-management",
       "type": "skill",
       "layer": "L3"
@@ -2169,18 +2164,6 @@
       "type": "references",
       "from": "assumption-audit",
       "to": "wacc-input-session",
-      "source": "prose"
-    },
-    {
-      "type": "references",
-      "from": "audit-workspace",
-      "to": "ci-triage",
-      "source": "prose"
-    },
-    {
-      "type": "references",
-      "from": "audit-workspace",
-      "to": "project-review",
       "source": "prose"
     },
     {

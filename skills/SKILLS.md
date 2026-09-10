@@ -25,7 +25,6 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `antitrust-screening` | 1.1.0 | active | antitrust-agent | 2026-08-23 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
 | `api-documentation` | 1.0.0 | active | pm | 2026-07-19 | — | — |
 | `assumption-audit` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — user/assumed/derived kind-tag correctness audit |
-| `audit-workspace` | 0.1.0 | active | pm | 2026-09-10 | - | - |
 | `auth-and-account-management` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8J — existence-never-leaked auth, dual-credential must-change-password gating |
 | `batch-scheduling-operations` | 1.0.0 | active | infra-automation-engineer | 2026-08-20 | — | Wave 5.8K — ADR-0019 OS-level scheduler, never in-process timer |
 | `brownfield-feasibility` | 1.1.0 | active | brownfield-agent | 2026-08-23 | — | Wave 5.8C — Brown Field Screening/Pre-FS/FS/DD incl. six-validator completeness gate |
