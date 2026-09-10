@@ -812,6 +812,61 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/business-targets:
+    get:
+      operationId: listBusinessTargets
+      summary: List the business-target standards (md_business_target, ADR-0114) with group/member names and the metric presets. Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createBusinessTarget
+      summary: Create a group-common (member_id null) or affiliate-specific standard; stored units (KRW millions, ratios, years). Admin role; audited.
+      tags:
+        - Admin
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      operationId: updateBusinessTarget
+      summary: Edit a standard's value/direction in place (scope and metric are immutable). Admin role; audited.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      operationId: deleteBusinessTarget
+      summary: Tombstone a standard (0081 convention — the row survives with deleted_at). Admin role; audited.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/adr:
     get:
       operationId: listAdrIndex
@@ -2808,6 +2863,25 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/target-check:
+    get:
+      operationId: getProjectTargetCheck
+      summary: fs-gate evidence (ADR-0114) — the project's resolved business-target standards vs the adopted business case. Display only; never blocks a gate.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/business-case/generate:
     post:
       operationId: generateProjectBusinessCases

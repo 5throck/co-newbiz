@@ -27,6 +27,7 @@ v_*           → query-optimized views, derived, never a source of truth
 | `md_account` | IFRS canonical (reused from co-consult `ifrs_general.json`) | `id`, `ifrs_code`, `name_ko`, `name_en` | Financial-statement normalization |
 | `md_entity` | Group internal entity code | `id`, `entity_code`, `name_ko` | Anchor for entity-scoped procedure overrides |
 | `md_project` | Internal project number | `id`, `project_no`, `current_stage_gate` (`screening`\|`pre_fs`\|`fs`\|`dd`\|`entity_ic`\|`group_ic`, nullable pre-backfill — migration 0013, 2026-08-22 design Decision 5c) | Owner of every `run`/`dd_finding`/`document` |
+| `md_business_target` | Metric preset keys (`revenue`\|`operating_margin`\|`period`\|`npv`\|`irr`) + free `custom` rows | `id`, `group_id` (→`company_group`), `member_id` (→`company_group_member`, NULL = group-common), `metric_key`, `label`, `direction` (`gte`\|`lte`), `target_value` (money = KRW millions, ratios for %, years as numbers), tombstone columns (migration 0081 convention) | Group/affiliate business-target standards consumed by the fs-gate evidence panel; one active row per (group, scope, metric) via a partial unique index (migration 0082 / ADR-0114) |
 
 ## 3. Fact and Observation Tables
 
