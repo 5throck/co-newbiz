@@ -15,7 +15,15 @@ interface WfStep {
 // ROIC margin-bridge waterfall (Revenue -> -OpCost -> -Tax -> NOPAT).
 // The pct step (ROIC%) is excluded from the bar chart because it lives on a
 // different scale; it is already surfaced as a KPI above the chart.
-export function RoicWaterfallChart({ steps }: { steps: WfStep[] }) {
+// numberFormat="percent" (ADR-0115 WACC build-up) switches labels/tooltips
+// to rates — values stay raw decimals, axis and tooltip render ×100 + "%".
+export function RoicWaterfallChart({
+  steps,
+  numberFormat = "amount",
+}: {
+  steps: WfStep[];
+  numberFormat?: "amount" | "percent";
+}) {
   const ct = useChartTheme();
   const bars = steps.filter((s) => s.kind !== "pct");
   const base: number[] = [];
@@ -47,7 +55,10 @@ export function RoicWaterfallChart({ steps }: { steps: WfStep[] }) {
       formatter: (params: unknown) => {
         const p = (params as { name: string; value: number; dataIndex: number }[])[0];
         const raw = bars[p.dataIndex];
-        const display = raw.kind === "pct" ? `${raw.value.toFixed(2)}%` : raw.value.toLocaleString("ko-KR");
+        const display =
+          numberFormat === "percent" || raw.kind === "pct"
+            ? `${(raw.value * 100).toFixed(2)}%`
+            : raw.value.toLocaleString("ko-KR");
         return `${p.name}<br/>${display}`;
       },
     },
@@ -59,7 +70,11 @@ export function RoicWaterfallChart({ steps }: { steps: WfStep[] }) {
     },
     yAxis: {
       type: "value",
-      axisLabel: { color: ct.muted, fontSize: 11 },
+      axisLabel: {
+        color: ct.muted,
+        fontSize: 11,
+        formatter: numberFormat === "percent" ? (v: number) => `${(v * 100).toFixed(1)}%` : undefined,
+      },
     },
     series: [
       {

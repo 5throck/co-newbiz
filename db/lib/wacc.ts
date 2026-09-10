@@ -1,6 +1,6 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
- * Project-scoped WACC input session (Wave C1).
+ * Project-scoped WACC input session (Wave C1; components since ADR-0115).
  *
  * The assumption table is run-scoped, so "project WACC" is resolved through
  * the latest run for the project. A confirmed user value is recorded twice:
@@ -9,6 +9,13 @@
  *   2. as assumption rows with kind='user' so FS kill criteria can prove a
  *      human explicitly confirmed the values.
  *
+ * ADR-0115: a session may additionally carry CAPM components, persisted as
+ * assumption rows under the `wacc.<name>` namespace on the SAME run — the
+ * derivation (db/lib/wacc-components.ts) re-derives the build-up from those
+ * rows on read, so the confirmed scalar always has a reproducible "how".
+ * The `wacc` / `hurdle_irr` exact-key contract with snapshot-filler.ts is
+ * deliberately untouched by the namespace.
+ *
  * Missing WACC deliberately degrades to the historical 10% modeling default,
  * but the resolver labels that provenance as `default`, never as user input.
  */
@@ -16,6 +23,10 @@
 import type { Database } from "bun:sqlite";
 import { recordAssumption } from "./assumption.ts";
 import { createRun } from "./versioning.ts";
+import {
+  validateComponentInput,
+  type WaccComponentInput,
+} from "./wacc-components.ts";
 
 export const DEFAULT_WACC = 0.1;
 
@@ -33,6 +44,17 @@ export interface WaccSessionResult {
   run_id: string;
   wacc: WaccResolution;
   hurdle_irr: WaccResolution | null;
+}
+
+/** One persisted CAPM component, read back from the assumption registry. */
+export interface WaccComponentRecord {
+  key: string;
+  kind: string;
+  value: number;
+  rationale: string | null;
+  anchor_ref: string | null;
+  as_of: string;
+  run_id: string;
 }
 
 function assertRate(key: string, value: number): void {
@@ -156,12 +178,15 @@ export function recordWaccSession(
     rationale?: string | null;
     anchorRef?: string | null;
     asOf?: string | null;
+    /** CAPM components (ADR-0115) — persisted on the same run under `wacc.<name>` keys. */
+    components?: WaccComponentInput[];
     actor: string;
     now?: string;
   },
 ): WaccSessionResult {
   assertRate("wacc", opts.wacc);
   if (opts.hurdleIrr !== undefined && opts.hurdleIrr !== null) assertRate("hurdle_irr", opts.hurdleIrr);
+  for (const comp of opts.components ?? []) validateComponentInput(comp);
   const now = opts.now ?? new Date().toISOString();
   const asOf = opts.asOf?.trim() || now.slice(0, 10);
   const overrides: Record<string, number> = { wacc: opts.wacc };
@@ -200,9 +225,46 @@ export function recordWaccSession(
         now,
       })
     : null;
+  for (const comp of opts.components ?? []) {
+    recordAssumption(db, {
+      runId: run.run_id,
+      assumptionKey: comp.key,
+      kind: comp.kind,
+      value: comp.value,
+      asOf: comp.asOf?.trim() || asOf,
+      rationale: [comp.sourceLabel?.trim(), comp.rationale?.trim()].filter(Boolean).join(" — ") || undefined,
+      anchorRef: comp.anchorRef ?? undefined,
+      actor: opts.actor,
+      now,
+    });
+  }
   return {
     run_id: run.run_id,
     wacc: resolveProjectWacc(db, opts.projectId),
     hurdle_irr: hurdle ? resolveProjectHurdleIrr(db, opts.projectId) : null,
   };
+}
+
+/**
+ * Load the CAPM components of the latest session run that recorded any.
+ * A later direct-mode session does not hide them — the component layer and
+ * the confirmed scalar are versioned independently.
+ */
+export function loadProjectComponents(db: Database, projectId: string): { runId: string | null; components: WaccComponentRecord[] } {
+  const rows = db
+    .query(
+      `SELECT a.assumption_key AS key, a.kind, a.value, a.rationale, a.anchor_ref, a.as_of, a.run_id
+       FROM assumption a JOIN run r ON r.id = a.run_id
+       WHERE r.project_id = ?
+         AND a.assumption_key LIKE 'wacc.%'
+         AND a.run_id = (
+           SELECT a2.run_id FROM assumption a2 JOIN run r2 ON r2.id = a2.run_id
+           WHERE r2.project_id = ? AND a2.assumption_key LIKE 'wacc.%'
+           ORDER BY r2.created_at DESC, r2.id DESC
+           LIMIT 1
+         )
+       ORDER BY a.assumption_key`,
+    )
+    .all(projectId, projectId) as WaccComponentRecord[];
+  return { runId: rows[0]?.run_id ?? null, components: rows };
 }

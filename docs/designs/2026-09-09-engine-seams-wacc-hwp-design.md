@@ -37,4 +37,4 @@ The extractor is intentionally text-only. Layout reconstruction and template fid
 - HWP parser regression uses a deterministic unpacked BodyText section fixture so CI does not need a proprietary HWP sample or `olefile` installed for that parser-level check.
 
 ## Out of scope
-CAPM component UI, external market-rate fetching for risk-free rates, hurdle policy decisioning, and binary `.hwp` layout reconstruction are deferred.
+CAPM component UI, external market-rate fetching for risk-free rates, hurdle policy decisioning, and binary `.hwp` layout reconstruction are deferred. (The CAPM component layer — component persistence, citation-based sourcing, beta regression, and the derivation UI — was subsequently implemented as ADR-0115, 2026-09-10; external market-rate *fetching* remains deferred behind the source-adapter seam.)

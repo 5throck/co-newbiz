@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.17.0
+// @version 1.18.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -66,6 +66,10 @@
  *   fin:project     One project's financial rollup as JSON — business-case
  *                   year-1 nets per scenario, valuation simulation
  *                   percentiles, charter KPI targets (read-only)
+ *   wacc:derivation Rebuild the CAPM/WACC derivation — formulas and
+ *                   substituted numbers — from a project's persisted `wacc.*`
+ *                   component rows (ADR-0115) as markdown for S5/S8
+ *                   deliverables (read-only)
  *
  * All documented commands are implemented. glossary ENTRY validation stays
  * at `bun glossary/_validate.ts` (package.json alias glossary:validate).
@@ -151,7 +155,7 @@ function resolveMonthlyPeriods(fromArg: string | undefined, toArg: string | unde
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
+  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], wacc:derivation --project <id> [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
 }
 
 switch (command) {
@@ -505,6 +509,54 @@ switch (command) {
       console.error(`kinds: ${[...ASSUMPTION_KINDS].join("|")}`);
       process.exit(1);
     }
+    break;
+  }
+  case "wacc:derivation": {
+    // ADR-0115 — rebuild the CAPM/WACC build-up from persisted `wacc.*`
+    // component rows as markdown, for pasting into S5/S8 deliverables.
+    // Read-only: a missing component layer prints guidance, never a scalar.
+    const projIdx = args.indexOf("--project");
+    const projectId = projIdx >= 0 ? args[projIdx + 1] : undefined;
+    const dbPathIdx = args.indexOf("--db-path");
+    const dbPath = dbPathIdx >= 0 ? args[dbPathIdx + 1] : undefined;
+    if (!projectId) {
+      console.error("wacc:derivation: --project <id> is required.");
+      process.exit(2);
+    }
+    const { loadProjectComponents, resolveProjectWacc, resolveProjectHurdleIrr } = await import("../../db/lib/wacc.ts");
+    const { assembleDerivation, formatPct } = await import("../../db/lib/wacc-components.ts");
+    const db = getDb(dbPath);
+    const wacc = resolveProjectWacc(db, projectId);
+    const hurdle = resolveProjectHurdleIrr(db, projectId);
+    const { components } = loadProjectComponents(db, projectId);
+    if (components.length === 0) {
+      console.error(`wacc:derivation: no wacc.* components recorded for project '${projectId}'.`);
+      console.error("Run the CAPM 분해 session first (POST /api/projects/{id}/wacc with mode='capm').");
+      process.exit(1);
+    }
+    const derivation = assembleDerivation(components);
+    const lines: string[] = [];
+    lines.push("## WACC 산식 분해");
+    lines.push("");
+    lines.push(`확정 WACC: **${formatPct(wacc.value)}** (${wacc.source}${wacc.run_id ? `, run ${wacc.run_id}` : ""}) · Hurdle IRR: ${hurdle ? formatPct(hurdle.value) : "—"}`);
+    lines.push("");
+    lines.push(`베타 경로: ${derivation.betaPath ?? "—"}`);
+    lines.push("");
+    lines.push("| 항목 | 산식 | 대입 | 결과 |");
+    lines.push("|---|---|---|---|");
+    for (const s of derivation.steps) {
+      lines.push(`| ${s.item} | \`${s.formula}\` | ${s.substitution} | **${s.resultLabel ?? formatPct(s.result)}** |`);
+    }
+    lines.push("");
+    lines.push("| 가정 키 | 값 | kind | 출처 / 근거 | 기준일 |");
+    lines.push("|---|---|---|---|---|");
+    const RAW_KEYS = new Set(["wacc.beta_levered", "wacc.beta_unlevered", "wacc.observed_de", "wacc.target_de", "wacc.beta_r2"]);
+    for (const c of components) {
+      const raw = derivation.components[c.key];
+      const shown = RAW_KEYS.has(c.key) ? String(raw) : formatPct(raw);
+      lines.push(`| \`${c.key}\` | ${shown} | ${c.kind} | ${c.rationale ?? "—"}${c.anchor_ref ? ` (${c.anchor_ref})` : ""} | ${c.as_of} |`);
+    }
+    console.log(lines.join("\n"));
     break;
   }
   case "db:export": {
