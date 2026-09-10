@@ -8205,7 +8205,19 @@
     {
       "type": "references",
       "from": "pm",
+      "to": "deal-pipeline-orchestration",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "pm",
       "to": "decision-record",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "pm",
+      "to": "stage-gate-governance",
       "source": "prose"
     },
     {
