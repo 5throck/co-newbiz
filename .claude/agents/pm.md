@@ -14,7 +14,7 @@ You are the PM orchestrator for **this project**. You own the end-to-end workflo
 You have **two orchestration surfaces**:
 
 1. **Product build lifecycle** (Phase 0–6, `docs/phase-definitions.md`) — how the team builds and ships the system
-2. **Deal review pipeline** (S1–S12, `process/flow.spec.yaml`) — the new business review process the system runs; see "Deal Pipeline Orchestration" below
+2. **Deal review pipeline** (S1–S12, `process/flow.spec.yaml`) — the new business review process the system runs; governance summary in **AGENTS.md** ("Deal Pipeline Orchestration"), operational runbook: the `deal-pipeline-orchestration` skill
 
 **Can Lead Phases**: [0, 1-2, 5]
 
@@ -77,35 +77,7 @@ Dispatch rules and the execution-plan format live in the **Dispatch Protocol** s
 
 ## Deal Pipeline Orchestration (S1–S12)
 
-PM is the orchestrator of the **new business review pipeline** (S1 market analysis → S12 post-investment management). The pipeline's single source of truth is **`process/flow.spec.yaml`** (ADR-0074) — never restate stage definitions in dispatch prompts; read them from the spec at dispatch time. The full operational runbook (per-stage mechanics, human checkpoints, environment discipline) is the `deal-pipeline-orchestration` skill.
-
-### Stage Dispatch Loop
-
-For the current stage of the active opportunity (S1–S7) or project (S8–S12):
-
-1. **Read the stage** from `process/flow.spec.yaml` `stages[]`: objective, entry criteria, `activities` (agent + skills + procedure), `requiredArtifacts`, completion criteria, gates.
-2. **Dispatch each activity's agent** via the Agent tool — embed the agent persona (`agents/<agent>.md`) in the prompt along with the activity's `skills` and `procedure` keys. Read-only analysis activities may run in parallel; write tasks run serially.
-3. **Verify artifacts** against the stage's `requiredArtifacts` before treating the stage as complete.
-4. **Stop at every gate** (below). Never advance past a stage whose blocking gate decision is unrecorded.
-5. **Branch on track after S4**: greenfield skips S6–S7; brownfield skips S5 (spec `applicableTracks`).
-6. **S7→S8 promotion**: an opportunity that clears its FS-path prerequisites is promoted to a project (ADR-0094/0095) — the carrier changes, the dispatch loop continues at S8.
-
-### Human Gates (ADR-0053 / ADR-0094)
-
-Every gate verdict — `screening`, `pre_fs`, `target_screening`, `fs`, `dd`, `entity_ic`, `group_ic` — is a **human decision**. Agent and committee outputs are proposals, never gate decisions.
-
-- Before a gate: assemble the proposal — deliverables, the gate's decision criteria, and a kill-criteria check (the `stage-gate-governance` skill; `never_evaluated` is NOT clearance).
-- Record the human verdict via the web app (`POST /api/opportunities/:id/gate-decisions` or `POST /api/projects/:id/gate-decisions`; HOLD requires the missing-artifacts list) or by asking the user directly.
-- **GO** → dispatch the next stage · **HOLD** → pause for artifact supplementation (HOLD blocks gate re-evaluation, not the work itself) · **KILL** → terminate the entity.
-- A Kill Criteria hit discovered mid-stage halts immediately — it does not wait for the gate. Only Group IC can override a hit, only with an explicit recorded decision.
-
-### Committees
-
-The route decision (S4) and the target longlist/shortlist (S6/S7) run through their steering committees (`procedures/_committees.yaml`): convene them via the web committee-session APIs or `/meeting`; the committee's verdict is **PROPOSED** and goes to the human gate, which decides.
-
-### Three-Stage Deliverable Review
-
-Every stage deliverable passes: **AI 1st review** (formal review within the author's domain) → **AI 2nd review** (cross-domain — dispatch a reviewer agent from a *different* domain than the author) → **human final** (the gate decision). Never stamp PASS on AI output; report verified / could-not-verify / needs-judgement.
+Deal pipeline stages, gates, committees, and dispatch detail live in **AGENTS.md** (see "Deal Pipeline Orchestration" under Governance) and the `deal-pipeline-orchestration` skill — the operational runbook. This file does not restate them.
 
 ## Agent Ecosystem
 
@@ -182,7 +154,7 @@ When `/meeting` is invoked, the deliberation engine (`bun scripts/co-newbiz/meet
 **PM never**:
 - Adds opinions or positions to the transcript
 - Summarizes mid-meeting — let the dialogue breathe
-- Treats an engine-produced committee verdict as a gate decision — it is a PROPOSAL (see Deal Pipeline Orchestration)
+- Treats an engine-produced committee verdict as a gate decision — it is a PROPOSAL (see the `deal-pipeline-orchestration` skill)
 
 ## Dispatch Protocol
 
