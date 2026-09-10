@@ -19,6 +19,7 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { completeOrFallback } from "./llm.ts";
 import { researchSources } from "./web-research.ts";
 import { SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
+import { searchKsic } from "./ksic.ts";
 
 export const PIPELINE_STEPS = [
   { no: 1, title: "축·프록시 구조 정의" },
@@ -91,6 +92,59 @@ async function summarize(industry: string, step: number, title: string, context:
 const num = (v: unknown, fallback: number): number => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" && v.trim() ? v.trim() : fallback);
 
+// ── KSIC 자동 분류 ──
+// 산업에 KSIC 코드가 없으면(ADR-0111 NULL — "미지정") 큐레이션 마스터 후보 중
+// 가장 잘 맞는 코드를 LLM으로 분류해 채운다. 규칙:
+//  - 분석가가 확정한 기존 코드는 절대 덮지 않는다 (ksic_code IS NULL일 때만).
+//  - 마스터에 없는 코드, 다른 산업이 이미 점유한 코드는 적용하지 않는다.
+//  - LLM 미구성/무응답 시 산업명 토큰 vs 마스터 산업명의 키워드 매칭으로
+//    유일 후보일 때만 채운다. 확정 불가면 NULL을 유지하고 pendingInput으로
+//    분석가 확인을 요청한다.
+export async function classifyIndustryKsic(db: Database, industryId: string, industryName: string): Promise<string | null> {
+  const candidates = searchKsic("", 999);
+  if (candidates.length === 0) return null;
+  const candidateList = candidates.map((e) => `${e.code} ${e.name_ko}${e.detail ? ` (${e.detail})` : ""}`).join("\n");
+  const res = await completeOrFallback(
+    [
+      { role: "system", content: "You are a KSIC (한국표준산업분류) classifier. Reply with ONE JSON object only — no prose, no markdown fences." },
+      {
+        role: "user",
+        content: `산업명: ${industryName}\n아래 KSIC 후보 중 이 산업에 가장 잘 맞는 코드를 하나 고르세요.\n${candidateList}\nJSON: {"ksic_code":"코드"} — 어느 후보도 맞지 않으면 {"ksic_code":""}`,
+      },
+    ],
+    () => "NOT_JSON",
+    { temperature: 0.2, maxTokens: 300 },
+  );
+  let code = "";
+  if (res.source === "llm") {
+    const text = res.text.replace(/```json|```/g, "");
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      try {
+        code = str((JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>).ksic_code);
+      } catch {
+        code = "";
+      }
+    }
+  }
+  const known = candidates.some((e) => e.code === code);
+  if (!known) {
+    // LLM 불가/무효 — 키워드 매칭 산출 후보가 유일할 때만 채운다.
+    const tokens = industryName.toLowerCase().split(/\s+/).filter((t) => t.length >= 2);
+    const hits = candidates.filter((e) => {
+      const hay = `${e.name_ko} ${e.detail ?? ""}`.toLowerCase();
+      return tokens.some((t) => hay.includes(t));
+    });
+    if (hits.length !== 1) return null;
+    code = hits[0].code;
+  }
+  const held = db.query("SELECT id FROM md_industry WHERE ksic_code = ? AND id != ?").get(code, industryId);
+  if (held) return null;
+  db.run("UPDATE md_industry SET ksic_code = ? WHERE id = ? AND ksic_code IS NULL", [code, industryId]);
+  return code;
+}
+
 export async function runSizingPipeline(db: Database, analysisId: string): Promise<void> {
   const row = db
     .query(
@@ -107,6 +161,15 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const now = () => new Date().toISOString();
   const advance = (step: number) => db.run("UPDATE market_sizing_analysis SET current_step = ? WHERE id = ?", [step, analysis.id]);
   const stepSummaries: StepSummary[] = [];
+
+  // KSIC 자동 분류 — 미지정(NULL) 산업은 실행 시점에 큐레이션 마스터에서
+  // 분류해 채운다. 기존 코드가 있으면 건드리지 않는다.
+  let ksicUnresolved = false;
+  if (!analysis.ksic_code) {
+    const applied = await classifyIndustryKsic(db, analysis.industry_id, industry);
+    if (applied) analysis.ksic_code = applied;
+    else ksicUnresolved = true;
+  }
 
   try {
     await runSteps();
@@ -174,7 +237,14 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     "시장 구조 정의",
     `가치사슬 위치는 ${POSITION_LABEL[chainDirection.position]} — ${chainDirection.position === "upstream" ? "후방/후후방(공급처)" : "전방/전전방(수요처)"} 산업을 분석 대상으로 삼습니다. 인접 산업 ${chainDirection.relatedIndustries.length}개 식별${competitive ? `, 경쟁 구조 요약·주요 기업 ${competitive.players.length}개 도출` : ""}.`,
   );
-  stepSummaries.push({ step: 1, ...s1, pendingInputs: ["프록시 체인의 통계 hop 수 확정 (체인 등급 산정)"] });
+  stepSummaries.push({
+    step: 1,
+    ...s1,
+    pendingInputs: [
+      ...(ksicUnresolved ? ["KSIC 코드 확정 필요 (시장분석 산업 편집에서 설정)"] : []),
+      "프록시 체인의 통계 hop 수 확정 (체인 등급 산정)",
+    ],
+  });
 
   // ── Step 2: anchor triangulation (LLM proposes source estimates) ──
   advance(2);

@@ -7,6 +7,7 @@ import { api } from "../../lib/api.ts";
 import { useConfirm } from "../../components/crud.tsx";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
+import { SketchCanvas } from "../../components/SketchCanvas.tsx";
 
 // 기회 발굴 (/opportunities) — S2 기회 퍼널.
 // 레이아웃 원칙: 요약(KPI)이 먼저, 상세는 접힘(details) — 산업·기회가 많아져도
@@ -781,16 +782,7 @@ export function OpportunitiesView() {
                                     비즈니스 모델 스케치 ({sk.source === "llm" ? "LLM" : "결정론 합성"})
                                     <button type="button" className="btn-ghost btn-sm ml-2" onClick={(e) => { e.preventDefault(); void showSketch(o.id, true); }}>재생성</button>
                                   </summary>
-                                  <ul className="sizing-note-list mt-1">
-                                    <li><strong>고객</strong> — {sk.sketch.customer ?? "—"}</li>
-                                    <li><strong>가치 제안</strong> — {sk.sketch.valueProposition ?? "—"}</li>
-                                    <li><strong>수익 모델</strong> — {sk.sketch.revenueModel ?? "—"}</li>
-                                    {sk.sketch.requiredCapabilities && <li><strong>필요 역량</strong> — {sk.sketch.requiredCapabilities.join(", ")}</li>}
-                                    {sk.sketch.keyRisks && <li><strong>핵심 리스크</strong> — {sk.sketch.keyRisks.join(", ")}</li>}
-                                    {sk.sketch.scenarios && (
-                                      <li><strong>시나리오 전제</strong> — {sk.sketch.scenarios.map((sc) => `${sc.name}: ${sc.assumption}`).join(" / ")}</li>
-                                    )}
-                                  </ul>
+                                  <SketchCanvas sketch={sk.sketch as unknown as Record<string, unknown>} />
                                 </details>
                               );
                             })()}

@@ -6,7 +6,8 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { normalizeSketchV2, SKETCH_BLOCKS } from "../../../../../lib/sketch-schema.ts";
+import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback } from "../../../../../lib/llm.ts";
 
 const now = () => new Date().toISOString();
@@ -67,20 +68,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       {
         role: "system" as const,
         content:
-          "당신은 신규사업 기획 전문가입니다. 제공된 기회 정보와 시장분석 근거 안에서만 한 페이지 비즈니스 모델 스케치를 작성하세요. 근거가 없는 항목은 '검증 필요'로 명시하세요.",
+          "당신은 신규사업 기획 전문가입니다. 제공된 기회 정보와 시장분석 근거 안에서만 한 페이지 비즈니스 모델 스케치(비즈니스 모델 캔버스 + 블루오션 ERRC)를 작성하세요. 근거가 없는 항목은 '검증 필요'로 명시하세요. JSON만 반환합니다.",
       },
       {
         role: "user" as const,
         content:
-          `아래 기회의 비즈니스 모델 스케치를 작성하세요. JSON: {"customer":"목표 고객 세그먼트","valueProposition":"가치 제안","revenueModel":"수익 모델","requiredCapabilities":["필요 역량", "..."],"keyRisks":["핵심 리스크", "..."],"scenarios":[{"name":"낙관","assumption":"전제 한 문장"},{"name":"기본","assumption":"..."},{"name":"비관","assumption":"..."}]}\n\n${context}`,
+          `아래 기회의 비즈니스 모델 스케치를 작성하세요.\n` +
+          `각 블록은 2~5개의 항목을 가지며, 항목은 "문자열" 또는 {"text":"항목","action":"eliminate|reduce|raise|create","why":"블루오션 관점에서 어떻게 나아갈지 한 문장"} 형태입니다.\n` +
+          `action은 블루오션 4가지 행동 프레임워크(제거/감축/증대/창조) 관점에서 해당 항목이 어떻게 나아가야 하는지를 표시하며, 전략 변화 대상인 항목에만 붙이세요(전체에 붙이지 말 것).\n` +
+          `JSON: {"schema":2,"canvas":{"keyPartners":[...],"keyActivities":[...],"keyResources":[...],"valuePropositions":[...],"customerRelationships":[...],"channels":[...],"customerSegments":[...],"costStructure":[...],"revenueStreams":[...]},"marketEntry":["1단계...","2단계..."],"keyRisks":["..."],"scenarios":[{"name":"낙관","assumption":"..."},{"name":"기본","assumption":"..."},{"name":"비관","assumption":"..."}]}\n\n${context}`,
       },
     ],
     () =>
       JSON.stringify({
-        customer: "검증 필요 — 시장분석 인접 산업(수요처) 기준으로 확정하세요",
-        valueProposition: `${opp.name} — 근거: ${opp.rationale ?? "미기록"}`,
-        revenueModel: "검증 필요",
-        requiredCapabilities: ["분석가 입력 필요"],
+        schema: 2,
+        canvas: Object.fromEntries(
+          SKETCH_BLOCKS.map((k) => [
+            k,
+            [{ text: "검증 필요 — 스케치 미생성(결정론 폴백). LLM 구성 후 재생성 권장", action: "reduce", why: "스케치가 합성 폴백으로 생성되어 분석가 확정이 필요합니다" }],
+          ]),
+        ),
+        marketEntry: ["검증 필요"],
         keyRisks: ["스케치 미생성(결정론 폴백) — LLM 구성 후 재생성 권장"],
         scenarios: [
           { name: "낙관", assumption: "검증 필요" },
@@ -88,24 +96,34 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           { name: "비관", assumption: "검증 필요" },
         ],
       }),
-    { maxTokens: 1600 },
+    { maxTokens: 2400 },
   );
 
   const text = res.text;
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
-  let sketch: Record<string, unknown>;
+  let raw: Record<string, unknown> | null = null;
   try {
-    sketch = JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
+    raw = JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
   } catch {
-    return badRequest("sketch_parse_failed", "스케치 생성 결과를 파싱하지 못했습니다 — 다시 시도하세요.");
+    raw = null;
   }
+  // 파싱 실패 시 400 대신 결정론 폴백 스케치로 저장한다 — 스키마 v2 구조는 항상 유지.
+  const parseFailed = raw === null;
+  const sketch = normalizeSketchV2(raw ?? parseFallback(opp, parseFailed ? "파싱 실패" : "미생성"));
 
   const ts = now();
-  const source = res.source === "llm" ? "llm" : "synthesis";
+  const source = res.source === "llm" && raw !== null ? "llm" : "synthesis";
   db.run("UPDATE opportunity SET sketch_json = ?, sketch_source = ?, sketch_at = ? WHERE id = ?", [
     JSON.stringify(sketch), source, ts, opp.id,
   ]);
   appendAudit(db, { actor: auth.auth.userId, action: "opportunity.sketch", target: `${opp.id}:${source}`, now: ts });
   return ok({ id: opp.id, sketch, source, created_at: ts, cached: false }, 200);
+}
+
+/** LLM 응답 파싱 실패 시의 폴백 원문 — normalizeSketchV2가 v2 골격으로 만든다. */
+function parseFallback(opp: { name: string; rationale: string | null }, why: string): Record<string, unknown> {
+  return {
+    keyRisks: [`스케치 생성 결과 ${why} — ${opp.name} 기준 결정론 폴백. LLM 구성 후 재생성 권장`],
+  };
 }

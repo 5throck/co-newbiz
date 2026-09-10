@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # Deletion & Archive Follow-ups — Implementation Plan
 
 - Date: 2026-09-10

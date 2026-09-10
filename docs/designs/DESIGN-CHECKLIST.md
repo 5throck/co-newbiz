@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # 디자인 리뷰 체크리스트 (Design Review Checklist) — 2026-09-01
 
 **용도**: 신규 화면·기능의 **설계 단계**에서 작성하는 디자인 산출물 검증 표 (ADR-0087 §2).

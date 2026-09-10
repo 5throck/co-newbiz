@@ -42,7 +42,13 @@ interface Profile {
     notes: string[];
   };
   swot?: { opportunities: string[]; threats: string[] };
-  competitive?: { competitors: Array<{ name: string; note: string }>; positioning: string; degraded?: string | null };
+  // schemaVersion 3 — 공시·리서치 원문 대조 (ADR-0113)
+  competitive?: {
+    competitors: Array<{ name: string; note: string }>;
+    positioning: string;
+    degraded?: string | null;
+    crossCheck?: CompetitiveCrossCheck;
+  };
   industryLinkage?: Array<{
     industry: string; industryId: string | null; matrixFound: boolean;
     anchorTotalUsdB?: number | null; cagr?: number | null; externalGapPercent?: number | null;
@@ -71,6 +77,28 @@ const PROFILE_TABS = [
 ] as const;
 
 type ProfileTabKey = (typeof PROFILE_TABS)[number][0];
+
+// ── 경쟁 포지셔닝 공시·리서치 원문 대조 (schemaVersion 3, ADR-0113) ──
+type CrossCheckVerdict = "confirmed" | "directional" | "contradicted" | "unverified";
+interface CompetitiveCrossCheck {
+  status: "cross_checked" | "dart_unavailable" | "research_only";
+  checkedAt: string;
+  dartReport?: { rceptNo: string; reportNm: string; rceptDt: string; reportUrl: string } | null;
+  claims: Array<{ claim: string; verdict: CrossCheckVerdict; source: string; evidence: string; url?: string }>;
+  note?: string;
+}
+
+const CROSSCHECK_STATUS_META: Record<CompetitiveCrossCheck["status"], { label: string; chip: string }> = {
+  cross_checked: { label: "공시 원문 대조 완료", chip: "status-green" },
+  dart_unavailable: { label: "공시 대조 불가", chip: "status-amber" },
+  research_only: { label: "리서치 대조만 (비상장)", chip: "status-in-progress" },
+};
+const CROSSCHECK_VERDICT_META: Record<CrossCheckVerdict, { label: string; chip: string }> = {
+  confirmed: { label: "확인", chip: "status-green" },
+  directional: { label: "방향성 일치", chip: "status-in-progress" },
+  contradicted: { label: "상충", chip: "status-red" },
+  unverified: { label: "검증 불가", chip: "status-amber" },
+};
 
 /** 상세 헤더 요약 칩 — 프로파일 메타 (DART·리서치·폴백 상태). */
 function ProfileChips({ profile }: { profile: Profile | "loading" | undefined }) {
@@ -1025,21 +1053,76 @@ export function OurCompanyView() {
                         <table className="data-table report-table" aria-label="주요 경쟁사">
                           <caption className="sr-only">주요 경쟁사</caption>
                           <thead>
-                            <tr><th scope="col" className="col-label">경쟁사</th><th scope="col" className="col-text">경쟁 관계</th></tr>
+                            <tr><th scope="col" className="col-label">경쟁사</th><th scope="col" className="col-text">경쟁 관계</th><th scope="col" className="w-[6.5rem]">대조</th></tr>
                           </thead>
                           <tbody>
-                            {profile.competitive.competitors.map((c, i) => (
-                              <tr key={`${c.name}-${i}`}>
-                                <td className="col-label font-semibold">{c.name}</td>
-                                <td className="col-text text-[0.82rem] text-[color:var(--muted-fg)]">{c.note || "—"}</td>
-                              </tr>
-                            ))}
+                            {profile.competitive.competitors.map((c, i) => {
+                              const verdict = profile.competitive?.crossCheck?.claims.find((x) => x.claim.startsWith(`경쟁사 ${c.name}:`));
+                              const meta = verdict ? CROSSCHECK_VERDICT_META[verdict.verdict] : null;
+                              return (
+                                <tr key={`${c.name}-${i}`}>
+                                  <td className="col-label font-semibold">{c.name}</td>
+                                  <td className="col-text text-[0.82rem] text-[color:var(--muted-fg)]">{c.note || "—"}</td>
+                                  <td>{meta ? <span className={`status-chip ${meta.chip}`} title={verdict?.evidence}>{meta.label}</span> : <span className="text-[0.78rem] text-[color:var(--muted-fg)]">—</span>}</td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
                     )}
+                    {profile.competitive.crossCheck && (
+                      <div className="mt-3">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <h4 className="text-[0.9rem] font-semibold">공시·리서치 원문 대조</h4>
+                          <span className={`status-chip ${CROSSCHECK_STATUS_META[profile.competitive.crossCheck.status].chip}`}>
+                            {CROSSCHECK_STATUS_META[profile.competitive.crossCheck.status].label}
+                          </span>
+                        </div>
+                        {profile.competitive.crossCheck.dartReport && (
+                          <p className="mb-1 text-[0.78rem] text-[color:var(--muted-fg)]">
+                            출처: DART {profile.competitive.crossCheck.dartReport.reportNm} (접수 {profile.competitive.crossCheck.dartReport.rceptDt.slice(0, 8)}) —{" "}
+                            <a href={profile.competitive.crossCheck.dartReport.reportUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문 보기</a>
+                          </p>
+                        )}
+                        {profile.competitive.crossCheck.claims.length > 0 ? (
+                          <div className="table-scroll">
+                            <table className="data-table" aria-label="경쟁 주장 대조 결과">
+                              <caption className="sr-only">경쟁 주장 대조 결과</caption>
+                              <thead>
+                                <tr><th scope="col" className="col-label w-[34%]">항목</th><th scope="col" className="w-[7rem]">판정</th><th scope="col" className="col-text">근거</th></tr>
+                              </thead>
+                              <tbody>
+                                {profile.competitive.crossCheck.claims.map((cl, i) => (
+                                  <tr key={i}>
+                                    <td className="col-label font-semibold">{cl.claim}</td>
+                                    <td>
+                                      <span className={`status-chip ${CROSSCHECK_VERDICT_META[cl.verdict].chip}`}>{CROSSCHECK_VERDICT_META[cl.verdict].label}</span>
+                                      <span className="ml-1 text-[0.72rem] text-[color:var(--muted-fg)]">{cl.source}</span>
+                                    </td>
+                                    <td className="col-text text-[0.78rem] text-[color:var(--muted-fg)]">
+                                      {cl.evidence}
+                                      {cl.url && <> — <a href={cl.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">출처</a></>}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <p className="text-[0.78rem] text-[color:var(--muted-fg)]">{profile.competitive.crossCheck.note ?? "대조 결과가 없습니다."}</p>
+                        )}
+                        {profile.competitive.crossCheck.note && profile.competitive.crossCheck.claims.length > 0 && (
+                          <p className="mt-1 text-[0.78rem] text-[color:var(--muted-fg)]">비고: {profile.competitive.crossCheck.note}</p>
+                        )}
+                      </div>
+                    )}
                     <p className="sizing-note-list mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">
-                      LLM 추정 (웹 리서치 발췌 기반) — 공시·리서치 원문 대조 전입니다.
+                      {profile.competitive.crossCheck
+                        ? profile.competitive.crossCheck.status === "cross_checked"
+                          ? "공시·리서치 원문 대조 완료 — 판정은 자동 대조 결과이며 분석가 확인 전까지 참고용입니다."
+                          : "웹 리서치 기반 LLM 추정 — DART 원문 대조 불가(위 비고 참조)."
+                        : "LLM 추정 (웹 리서치 발췌 기반) — 공시·리서치 원문 대조 전입니다."}
                     </p>
                   </>
                 ) : (

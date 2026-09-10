@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # co-newbiz — 판단체계 형식화 · 분류 축 재설계 · 워크플로우 공백 보완 설계 문서
 
 **Status**: Stage 0 — 설계 문서(확정), 구현 착수 전 사용자 승인 대기

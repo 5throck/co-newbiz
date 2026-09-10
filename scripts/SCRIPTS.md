@@ -107,22 +107,22 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `co-newbiz/adr-new.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `adr:new` — scaffolds docs/adr/NNNN-<slug>.md from the next free number with the workspace section skeleton; refuses a duplicate title instead of auto-bumping) | —|
 | `co-newbiz/scorecard-rollup.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `scorecard:rollup` — one review cycle's portfolio scorecard rollup as JSON via venture-scorecard.repository getPortfolioRollup: bifurcated financial/strategic sections, venture_class rollup, insufficient_evidence exceptions, run/cycle provenance; ADR-0059 E.4 link 2, group-operator CLI surface, read-only) | —|
 | `agent-delete.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
-| `agent-lifecycle-audit.ts` | L0 | 1.1.5 | active | —| —| L0+L1 | —|
+| `agent-lifecycle-audit.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `agent-list.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `archive-memory.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `audit.ts` | L0 | 2.29.2 | active | —| —| L0+L1 | —|
+| `audit.ts` | L0 | 2.32.0 | active | —| —| L0+L1 | —|
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `dev-sync.ts` | L0 | 1.9.0 | active | —| —| L0+L1 | —|
-| `dispatch-parallel.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `dispatch-serial.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `dispatch.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `dispatch-parallel.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
+| `dispatch-serial.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
+| `dispatch.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `gen-pr-body.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `generate-ide-rules.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `generate-skill-graph.ts` | L0 | 1.8.3 | active | —| —| L0+L1 | —|
+| `generate-skill-graph.ts` | L0 | 1.8.5 | active | —| —| L0+L1 | —|
 | `helpers/extends-validator.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `helpers/merge-frontmatter.ts` | L0 | 1.8.6 | active | —| —| L0+L1 | —|
 | `helpers/security-validator.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
@@ -147,7 +147,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `render-pdf-deck.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `retry-handler.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `setup-github-branch-protection.ts` | L0 | 1.0.1 | active | `--repo`, `--branch`, `--check` (repeatable), `--dry-run` | —| L0+L1 | —|
-| `skill-lifecycle-audit.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
+| `skill-lifecycle-audit.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
 | `sync-agent-status.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `sync-md.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `sync-skill-status.ts` | L0 | 1.0.1 | active | — | — | L0+L1 | — |
@@ -156,23 +156,23 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `test-runner.ts` | L0 | 1.2.0 | active | —| —| L0+L1 (`--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms`) — v1.2.0: unit per-file timeout 30s→120s, python-engine test files legitimately exceed 30s at file level under parallel CPU contention | —|
 | `audit-variant.ts` | co-newbiz | 0.1.0 | active | —| —| L3-only (project-local variant audit — pluggable checks per ADR-0038) | —|
 | `translate-readme.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `validate-agents.ts` | L0 | 1.0.5 | active | —| —| L0+L1 | —|
+| `validate-agents.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `validate-doc-folder.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `validate-docs-links.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `validate-md-language.ts` | L0 | 1.9.0 | active | —| —| L0+L1 | —|
 | `validate-model-registry.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `validate-skills.ts` | L0 | 1.3.1 | active | —| —| L0+L1 | —|
+| `validate-skills.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
 | `verify-agent-deliverables.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
-| `verify-memory.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `verify-memory.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `verify-platform-lifecycle.ts` | L0 | 1.1.2 | active | —| —| L0+L1 | —|
 | `verify-readme-sync.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
 | `verify-skill-graph.ts` | L0 | 1.5.0 | active | —| —| L0+L1 | —|
-| `verify-scripts.ts` | L0 | 1.4.2 | active | —| —| L0+L1 | —|
+| `verify-scripts.ts` | L0 | 1.6.0 | active | —| —| L0+L1 | —|
 | `verify-skills.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `validate-pm-extends.ts` | L0 | 0.3.1 | active | —| —| L0+L1 | —|
 | `validate-decisions.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `validate-procedures.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `helpers/context-sections.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
+| `helpers/context-sections.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `lib/context-md-schema.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `handbook/apply-handbook-theme.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — applies the shared CSS theme to every HTML page under a handbook's docs/ directory) | —|
 | `handbook/build-search-index.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — reads docs/search-manifest.json and generates docs/assets/search-data.js for client-side search) | —|
@@ -200,7 +200,11 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `tests/apply-handbook-theme.test.ts` | co-newbiz | 1.0.1 | active | —| —| L3-only (project-local bun:test unit tests for handbook/apply-handbook-theme.ts) | —|
 | `tests/check-structure.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test regression tests for handbook/check-structure.ts, fixtures mirror real production bugs) | —|
 | `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
-| `upgrade-project.ts` | L0 | 1.18.0 | active | `--variant`, `--platform`, `--dry-run`, `--prune-removed`, `--rollback`, `--yes` | —| L3 | —|
+| `upgrade-project.ts` | L0 | 1.20.0 | active | `--variant`, `--platform`, `--dry-run`, `--prune-removed`, `--rollback`, `--yes` | —| L3 | —|
+| `resolve-variants.ts` | L0 | 1.0.3 | active | —| —| L0+L1 | —|
+| `validate-variant-readiness.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `validate-templates.ts` | L0 | 1.21.3 | active | —| —| L0+L1 | —|
+| `helpers/upgrade-versions.ts` | L0+L1 | 1.0.1 | active | —| —| L0+L1 | —|
 
 ---
 
