@@ -7,7 +7,7 @@ description: >
   process/flow.spec.yaml (the SSOT), stops at the seven human gates, branches
   on the greenfield/brownfield track after S4, runs steering committees, and
   applies the three-stage deliverable review (AI 1st -> AI 2nd cross-domain ->
-  human final). Complements agents/pm.md "Deal Pipeline Orchestration".
+  human final). Complements the AGENTS.md "Deal Pipeline Orchestration" governance section.
   Use when: "run the pipeline", "execute stage S#", "orchestrate the deal
   review", "advance the opportunity/project", "which agent works this stage".
 owner: pm

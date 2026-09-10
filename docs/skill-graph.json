@@ -8215,12 +8215,6 @@
       "source": "prose"
     },
     {
-      "type": "references",
-      "from": "pm",
-      "to": "stage-gate-governance",
-      "source": "prose"
-    },
-    {
       "type": "follows",
       "from": "pmi-planning",
       "to": "compensation-harmonization-analysis",

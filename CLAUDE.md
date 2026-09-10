@@ -213,7 +213,7 @@ Explicit invocation: `/meeting "topic" [--agents a,b] [--rounds N] [--dialogue]`
 
 **MANDATORY PM GATEWAY**: All specialist agent dispatch MUST go through PM.
 
-For the **4-level enforcement model**, **mandatory criteria**, and **phase determination**, see the Dispatch Protocol and Deal Pipeline Orchestration sections of [`agents/pm.md`](agents/pm.md) and [`docs/phase-definitions.md`](docs/phase-definitions.md).
+For the **4-level enforcement model**, **mandatory criteria**, and **phase determination**, see the Dispatch Protocol section of [`agents/pm.md`](agents/pm.md), the Deal Pipeline Orchestration section of [AGENTS.md](AGENTS.md), and [`docs/phase-definitions.md`](docs/phase-definitions.md).
 
 #### Claude Code-Specific Dispatch
 

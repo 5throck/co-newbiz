@@ -101,12 +101,19 @@
 ## Governance
 
 - **PM Gateway**: PM is the only agent users may directly invoke. All 39 specialist agents require PM dispatch.
-- **Three-stage review**: every deliverable passes AI 1st (formal) -> AI 2nd (cross-domain, different domain than the author) -> human final (judgement and approval). See `agents/pm.md` "Deal Pipeline Orchestration" and the `deal-pipeline-orchestration` skill.
+- **Three-stage review**: every deliverable passes AI 1st (formal) -> AI 2nd (cross-domain, different domain than the author) -> human final (judgement and approval). See "Deal Pipeline Orchestration" below and the `deal-pipeline-orchestration` skill.
 - **Process authority layering**: `process/flow.spec.yaml` (ADR-0074) is the SSOT for stages/gates and for **stage-level agent dispatch** (its `activities[].agent` is who PM dispatches for pipeline work); `procedures/_shared/*/schema.yaml` governs **within-procedure step assignments** (`agent_key`) and is authoritative over `skills/*.md`. Where a stage activity and a procedure step name different agents for the same work, the flow.spec activity governs pipeline dispatch and the procedure governs its internal steps — a divergence is a defect to reconcile, not a choice.
 - **Non-negotiable boundaries**: agents inherit caller permissions and hold no accounts of their own; gate approval and investment decisions belong to humans; `procedures/*.yaml` is authoritative over `skills/*.md`; data confidence caps the RAG grade; permits and certifications are tracked separately.
 - Run `bun run agent:verify` after any change to this roster.
 
+### Deal Pipeline Orchestration (S1–S12)
 
+PM is the single orchestrator of the **new business review pipeline** (S1 market analysis → S12 post-investment management). `process/flow.spec.yaml` (ADR-0074) is the SSOT: read stage definitions from the spec at dispatch time — this file and dispatch prompts never restate them. The operational runbook (per-stage mechanics, human checkpoints, environment discipline) is the `deal-pipeline-orchestration` skill.
+
+- **Stage dispatch loop**: read the stage (objective, entry criteria, `activities`, `requiredArtifacts`, gates) → dispatch each activity's agent with its persona from `agents/<agent>.md`, embedding the activity's `skills` and `procedure` keys (read-only analyses in parallel, write tasks serially) → verify `requiredArtifacts` before treating the stage as complete → stop at every gate whose blocking decision is unrecorded.
+- **Track branching & promotion**: after S4, greenfield skips S6–S7 and brownfield skips S5 (spec `applicableTracks`); an opportunity that clears its FS-path prerequisites is promoted to a project at S7→S8 (ADR-0094/0095) — the carrier changes, the loop continues at S8.
+- **Human gates (ADR-0053 / ADR-0094)**: every gate verdict — `screening`, `pre_fs`, `target_screening`, `fs`, `dd`, `entity_ic`, `group_ic` — is a **human decision** (GO / HOLD / KILL). Agent and committee outputs are proposals, never gate decisions; a Kill-Criteria hit halts mid-stage, and only Group IC can override with an explicit recorded decision. Committees (S4 route, S6/S7 longlist/shortlist; `procedures/_committees.yaml`) are PROPOSED-only and go to the human gate.
+- Every stage deliverable passes the **three-stage review** (bullet above) before the gate proposal is assembled.
 
 <!-- COMMON-AGENTS:START -->
 ## Language Policy
