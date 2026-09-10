@@ -1,11 +1,11 @@
-version: 1.0.0
-last_updated: 2026-08-19
+version: 1.1.0
+last_updated: 2026-09-10
 terms:
   WACC:
     ko: 가중평균자본비용
     en: Weighted Average Cost of Capital
     definition_ko: 부채와 자본의 조달비용을 가중평균한 할인율.
-    why_it_matters_ko: 이 시스템에서는 직접 입력(user)과 CAPM 구성요소 입력(무위험이자율=live, ERP·타겟 D/E=user, 베타=derived) 두 모드를 지원하며, 산출물에 어느 값이 어느 종류인지 명시된다.
+    why_it_matters_ko: 직접 입력(user)과 CAPM 구성요소 입력(ADR-0115) 두 모드를 지원한다. CAPM 모드는 시장 통용 수치(AlphaSpread, 한국은행 ECOS 등)를 출처·기준일과 함께 인용(live)하거나, 인용값이 없으면 산식(Rf + β×ERP, 신용등급 가산금리)으로 유도하며 베타는 시장 대비 변동성 추정(회귀 R²·연율화 변동성)을 동반한다. 구성요소는 wacc.* 가정 키로 저장되고 산식 분해(항목·산식·대입·결과)가 산출물에 함께 실린다.
     category: financial
     related: [WACC Input Session, Assumption Kind]
     used_in: [wacc-input-session]

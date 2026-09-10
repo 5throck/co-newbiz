@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "../crud.tsx";
+import { BusinessTargetsSection } from "./BusinessTargetsSection.tsx";
 import { api } from "../../lib/api.ts";
 
 // 관리자 콘솔 — 마스터데이터 관리 섹션. 코드 테이블(허용목록) 조회·추가와
@@ -187,6 +188,8 @@ export function MasterDataSection() {
           코드 추가
         </button>
       </form>
+
+      <BusinessTargetsSection />
 
       <h3 className="mb-2">미매핑 큐 (staging_unmapped)</h3>
       {staging === null ? (

@@ -157,7 +157,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `value-chain-linkage-analysis` | 1.1.0 | active | quant-methodologist | 2026-08-23 | — | Wave 5.8F — ADR-0025 deliberate separation from proxy-chain betas |
 | `value-chain-stage-financials` | 1.0.0 | active | financial-analyst | 2026-08-29 | — | ADR-0066 gap closure — per-chain-node 5-year KPI rollup pipeline into `fact_industry` |
 | `vulnerability-management` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — CVE-check merge gate, mandatory recorded risk-acceptance for unpatched Critical/High |
-| `wacc-input-session` | 1.2.0 | active | valuation-agent | 2026-09-09 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
+| `wacc-input-session` | 1.3.0 | active | valuation-agent | 2026-09-10 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
 | `waiver-management` | 1.0.1 | active | compliance-officer | 2026-09-08 | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle |
 | `zod-contract-gate` | 1.0.0 | active | backend-engineer | 2026-08-06 | — | Defines Zod runtime schema validation patterns and contract safety rules |
 

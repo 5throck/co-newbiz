@@ -6,6 +6,7 @@ import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { GateDecisionPanel } from "../../../../components/GateDecisionPanel.tsx";
+import { TargetCheckPanel } from "../../../../components/TargetCheckPanel.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 
@@ -278,6 +279,7 @@ export default function BusinessCasePage() {
         </section>
       )}
 
+      <TargetCheckPanel projectId={projectId} />
       <div className="mt-4">
         <GateDecisionPanel opportunityId={projectId} gates={["fs"]} entityType="project" />
       </div>
