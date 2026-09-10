@@ -660,7 +660,7 @@ export function OpportunitiesView() {
                                 value={factorDraft[o.id]?.type === "opportunity" ? factorDraft[o.id].text : ""}
                                 onChange={(e) => setFactorDraft((prev) => ({ ...prev, [o.id]: { type: "opportunity", text: e.target.value } }))}
                                 className="sizing-new-input sizing-new-input-sm"
-                                style={{ width: "9rem" }}
+                                style={{ flex: "1 1 12rem" }}
                               />
                               <button type="button" className="btn-ghost btn-sm" onClick={() => addFactor(o.id, "opportunity")}>추가</button>
                               <input
@@ -669,7 +669,7 @@ export function OpportunitiesView() {
                                 value={factorDraft[o.id]?.type === "risk" ? factorDraft[o.id].text : ""}
                                 onChange={(e) => setFactorDraft((prev) => ({ ...prev, [o.id]: { type: "risk", text: e.target.value } }))}
                                 className="sizing-new-input sizing-new-input-sm"
-                                style={{ width: "9rem" }}
+                                style={{ flex: "1 1 12rem" }}
                               />
                               <button type="button" className="btn-ghost btn-sm" onClick={() => addFactor(o.id, "risk")}>추가</button>
                             </div>

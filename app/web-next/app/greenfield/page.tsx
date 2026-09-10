@@ -151,11 +151,13 @@ export function GreenfieldView() {
             {/* 1. 역량 격차 */}
             <h3 className="text-[0.85rem] mb-2">1️⃣ 역량 격차 평가 (필요 역량 vs 보유 역량)</h3>
             {gaps.map((g, i) => (
+              // flex-basis + grow — 값 길이가 제각각인 자유 텍스트라 고정 폭으로 두면
+              // 입력 내용이 잘린다. 행 남은 폭을 균등히 나눠 쓰고, 부족하면 wrap한다.
               <div key={i} className="flex flex-wrap items-center gap-1 mb-1">
-                <input aria-label="역량명" placeholder="역량명 (예: 공장 자동화 SI)" value={g.capability} onChange={(e) => setGap(i, { capability: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "10rem" }} />
-                <input aria-label="필요 수준" placeholder="필요 수준" value={g.required_level} onChange={(e) => setGap(i, { required_level: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "6rem" }} />
-                <input aria-label="보유 수준" placeholder="보유 수준" value={g.current_level} onChange={(e) => setGap(i, { current_level: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "6rem" }} />
-                <input aria-label="격차" placeholder="격차" value={g.gap} onChange={(e) => setGap(i, { gap: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "6rem" }} />
+                <input aria-label="역량명" placeholder="역량명 (예: 공장 자동화 SI)" value={g.capability} onChange={(e) => setGap(i, { capability: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 14rem" }} />
+                <input aria-label="필요 수준" placeholder="필요 수준" value={g.required_level} onChange={(e) => setGap(i, { required_level: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 9rem" }} />
+                <input aria-label="보유 수준" placeholder="보유 수준" value={g.current_level} onChange={(e) => setGap(i, { current_level: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 9rem" }} />
+                <input aria-label="격차" placeholder="격차" value={g.gap} onChange={(e) => setGap(i, { gap: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 9rem" }} />
                 <select aria-label="해소 방식" value={g.resolution} onChange={(e) => setGap(i, { resolution: e.target.value })} className="sizing-new-input sizing-new-input-sm">
                   {RESOLUTIONS.map((r) => <option key={r} value={r}>{r.toUpperCase()}</option>)}
                 </select>
@@ -181,13 +183,13 @@ export function GreenfieldView() {
             <h3 className="text-[0.85rem] mb-2">3️⃣ Business Case 라인 (S8 사업성 분석 입력)</h3>
             {bcLines.map((l, i) => (
               <div key={i} className="flex flex-wrap items-center gap-1 mb-1">
-                <input aria-label="라인명" placeholder="라인명 (예: 설비 투자, 연매출)" value={l.line} onChange={(e) => setBc(i, { line: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "10rem" }} />
+                <input aria-label="라인명" placeholder="라인명 (예: 설비 투자, 연매출)" value={l.line} onChange={(e) => setBc(i, { line: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
                 <select aria-label="비용/수익" value={l.kind} onChange={(e) => setBc(i, { kind: e.target.value as "cost" | "revenue" })} className="sizing-new-input sizing-new-input-sm">
                   <option value="cost">비용</option>
                   <option value="revenue">수익</option>
                 </select>
                 <input aria-label="금액(억원)" type="number" placeholder="금액 (억원)" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "7rem" }} />
-                <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "10rem" }} />
+                <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
                 <button type="button" className="btn-ghost btn-sm" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>
               </div>
             ))}
