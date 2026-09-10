@@ -5,7 +5,6 @@
 // 스트립·시나리오·핵심 리스크를 둔다. 구형(v1, schema 태그 없는 6필드) 스케치는
 // 텍스트 뷰로만 렌더링된다(호환 폴백).
 
-import { useState } from "react";
 import {
   SKETCH_BLOCK_LABELS,
   SKETCH_BLOCKS,
@@ -58,7 +57,6 @@ interface SketchV2Loose {
 
 export function SketchCanvas({ sketch }: { sketch: Record<string, unknown> }) {
   const isV2 = sketchSchema(sketch) === 2;
-  const [view, setView] = useState<"canvas" | "text">(isV2 ? "canvas" : "text");
 
   // ERRC 배지 집계 — 캔버스 항목 + 별도 errc 블록 항목을 합산한다.
   const counts: Record<ErrcAction, number> = { eliminate: 0, reduce: 0, raise: 0, create: 0 };
@@ -90,18 +88,7 @@ export function SketchCanvas({ sketch }: { sketch: Record<string, unknown> }) {
 
   return (
     <div className="bms-root">
-      {isV2 && (
-        <div className="bms-tabs" role="tablist" aria-label="스케치 뷰 전환">
-          <button type="button" role="tab" aria-selected={view === "canvas"} className="bms-tab" onClick={() => setView("canvas")}>
-            🧩 비즈니스 캔버스 (ERRC 통합)
-          </button>
-          <button type="button" role="tab" aria-selected={view === "text"} className="bms-tab" onClick={() => setView("text")}>
-            📝 텍스트
-          </button>
-        </div>
-      )}
-
-      {view === "canvas" && v2 && (
+      {isV2 && v2 && (
         <div>
           <div className="bms-canvas">
             {SKETCH_BLOCKS.map((key) => (
@@ -138,7 +125,7 @@ export function SketchCanvas({ sketch }: { sketch: Record<string, unknown> }) {
         </div>
       )}
 
-      {view === "text" && (
+      {!isV2 && (
         <ul className="bms-text">
           {textItems.map(([label, value]) => (
             <li key={label}>
