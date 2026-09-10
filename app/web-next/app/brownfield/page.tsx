@@ -395,7 +395,7 @@ export function BrownfieldView() {
                                       value={excludeReason[t.id] ?? ""}
                                       onChange={(e) => setExcludeReason((prev) => ({ ...prev, [t.id]: e.target.value }))}
                                       className="sizing-new-input sizing-new-input-sm"
-                                      style={{ width: "12rem" }}
+                                      style={{ flex: "1 1 12rem" }}
                                     />
                                     <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => exclude(t.id)}>제외</button>
                                   </span>
