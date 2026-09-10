@@ -3,8 +3,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 612,
-    "edge_count": 1005
+    "node_count": 611,
+    "edge_count": 1004
   },
   "nodes": [
     {
@@ -1816,13 +1816,6 @@
       "type": "skill",
       "label": "assumption-audit",
       "version": "1.0.0",
-      "status": "active"
-    },
-    {
-      "id": "skill:audit-workspace",
-      "type": "skill",
-      "label": "audit-workspace",
-      "version": "0.1.0",
       "status": "active"
     },
     {
@@ -7711,12 +7704,6 @@
       "from": "agent:pm",
       "to": "skill:api-documentation",
       "source_ref": "skills/api-documentation/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:pm",
-      "to": "skill:audit-workspace",
-      "source_ref": "skills/audit-workspace/SKILL.md"
     },
     {
       "type": "owns",
