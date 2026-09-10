@@ -17,12 +17,14 @@
 | `antitrust-screening` | L3 | antitrust-agent | phase1, phase3, phase4 | brownfield-feasibility (composes_with), certification-transferability (composes_with), commercial-due-diligence (composes_with), competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financial-statement-analysis (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), investment-feasibility-modeling (composes_with), management-incentive-review (follows), monte-carlo-simulation (composes_with), org-readiness-assessment (composes_with), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (follows), stage-gate-governance (composes_with), stage-gate-governance (follows), technical-due-diligence (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `api-documentation` | L3 | — | — | — | — | — |
 | `assumption-audit` | L3 | — | — | — | — | — |
+| `audit-workspace` | L3 | — | — | — | — | — |
 | `auth-and-account-management` | L3 | — | — | — | — | — |
 | `batch-scheduling-operations` | L3 | infra-automation-engineer | — | infrastructure-automation (composes_with) | — | — |
 | `brownfield-feasibility` | L3 | brownfield-agent | phase1, phase2 | certification-roadmap (composes_with), dd-to-valuation-bridge (composes_with), permit-pathway-mapping (follows), stage-gate-governance (composes_with), strategic-fit-screening (follows) | — | — |
 | `certification-roadmap` | L3 | certification-agent, certification-agent | phase2 | greenfield-feasibility (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (follows), wacc-input-session (composes_with) | — | — |
 | `certification-transferability` | L3 | legal-counsel, legal-counsel | phase4, phase5 | commercial-due-diligence (composes_with), competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), financing-plan-review (follows), incentive-clawback-assessment (composes_with), investment-vehicle-structuring (composes_with), jv-structuring (composes_with), legal-due-diligence (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), org-readiness-assessment (follows), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
 | `checklist-authoring` | L3 | — | — | — | — | — |
+| `ci-triage` | L3 | — | — | — | — | — |
 | `commercial-due-diligence` | L3 | commercial-dd-agent | phase4 | competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (follows) | — | — |
 | `community-partnership-planning` | L3 | greenfield-agent | phase4 | dd-to-valuation-bridge (follows), greenfield-feasibility (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), site-visit-protocol (composes_with), stage-gate-governance (composes_with) | — | — |
 | `company-intelligence` | L3 | — | — | — | — | — |
@@ -304,6 +306,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0110` | adr | — | — | — |
 | `adr:0111` | adr | — | — | — |
 | `adr:0112` | adr | — | — | — |
+| `adr:0113` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |

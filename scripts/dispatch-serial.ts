@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Serial Agent Dispatcher
- * @version 1.1.0
+ * @version 1.1.1
  * Automates dispatching subagents that must run sequentially
  *
  * This dispatcher is for tasks with dependencies:
@@ -38,29 +38,25 @@ interface SerialExecutionOptions {
 
 /**
  * Default serial pipeline for workspace development workflow.
- * Roles map to agent definitions in agents/ directory (co-newbiz roster).
- *
- * NOTE: this stub prints a serial plan only — the harness Agent tool cannot
- * be called from a subprocess. For actual multi-agent pipeline execution see
- * the `deal-pipeline-orchestration` skill (S1-S12) and `agents/pm.md`.
+ * Roles map to agent definitions in agents/ directory.
  */
 const defaultPipeline: SerialAgentTask[] = [
   {
     description: "Implement feature",
-    role: "backend-engineer",
+    role: "automation-engineer",
     task: "Implement the new feature following the approved specification",
     verifyOutput: true
   },
   {
     description: "Review implementation",
-    role: "platform-lead",
+    role: "architect",
     task: "Review the implemented feature for correctness and quality",
     dependsOn: "Implement feature",
     verifyOutput: true
   },
   {
     description: "Run quality gate",
-    role: "compliance-officer",
+    role: "auditor",
     task: "Run bun scripts/audit.ts and verify all checks pass",
     dependsOn: "Review implementation",
     verifyOutput: true
@@ -74,7 +70,7 @@ const defaultPipeline: SerialAgentTask[] = [
   },
   {
     description: "Lifecycle update",
-    role: "pm",
+    role: "lifecycle-manager",
     task: "Bump versions and update SCRIPTS.md / AGENTS.md as required",
     dependsOn: "Generate documentation"
   }
@@ -108,43 +104,13 @@ async function executeSerialTask(
       console.log(`   Depends on: ${task.dependsOn}`);
     }
 
-    // TODO: Replace with Agent tool invocation when running inside Claude Code.
-    // The Agent tool cannot be called from a subprocess; this script is intended
-    // to be driven by PM/orchestrator code that substitutes real agent calls.
-    // For CLI use, we invoke dispatch.ts as a subprocess per task.
-    const { $ } = await import('bun');
-    const proc = await $`bun run scripts/dispatch.ts --task ${JSON.stringify(task)}`.nothrow();
-
-    const stdout = proc.stdout.toString().trim();
-    const stderr = proc.stderr.toString().trim();
-    const exitCode = proc.exitCode ?? 1;
-
-    if (options.verbose && stdout) {
-      console.log(`   Output: ${stdout}`);
-    }
-    if (stderr) {
-      console.log(`   Stderr: ${stderr}`);
-    }
-
     const duration = Date.now() - startTime;
-
-    if (exitCode !== 0) {
-      console.log(`   ❌ Failed with exit code ${exitCode} (${duration}ms)\n`);
-      return {
-        task,
-        status: 'failed',
-        error: stderr || `exit code ${exitCode}`,
-        timestamp: new Date(),
-        duration
-      };
-    }
-
-    console.log(`   ✅ Complete (${duration}ms)\n`);
-
+    const errMsg = 'CLI dispatch cannot invoke the host Agent tool. Run with --dry-run, or dispatch this task from the PM/orchestrator session.';
+    console.log(`   ❌ Failed: ${errMsg} (${duration}ms)\n`);
     return {
       task,
-      status: 'completed',
-      output: stdout,
+      status: 'failed',
+      error: errMsg,
       timestamp: new Date(),
       duration
     };
@@ -319,3 +285,4 @@ export async function runDispatcher(options?: SerialExecutionOptions): Promise<S
 }
 
 export { dispatchSerial as default, SerialAgentTask, SerialPipelineResult };
+

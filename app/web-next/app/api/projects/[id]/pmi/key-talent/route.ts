@@ -15,7 +15,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-  if (!visibleProject(auth.auth, id)) return notFound();
+if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const rows = getDb()
     .query(
       `SELECT id, role_ref, status, exit_date, locked_at, created_at

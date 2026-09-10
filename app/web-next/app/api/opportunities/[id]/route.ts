@@ -3,6 +3,7 @@
 // are stamped when the row reaches a terminal-or-selected state.
 import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
+import { recordDealArchive } from "../../../../lib/deal-archive.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../lib/envelope.ts";
 
@@ -13,7 +14,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!auth.ok) return auth.response;
   const { id } = await params;
   const row = getDb()
-    .query("SELECT * FROM opportunity WHERE id = ?")
+    .query("SELECT * FROM opportunity WHERE id = ? AND deleted_at IS NULL")
     .get(id);
   if (!row) return notFound();
   return ok(row, 200);
@@ -85,10 +86,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   return ok({ id, status: body.status ?? existing.status });
 }
 
-// Delete an opportunity — analyst+ only. Intended for cleaning up test/erroneous
-// registrations; blocked when the opportunity has progressed into downstream
-// stages (a linked project, route decision, target list, feasibility assessment,
-// or synergy analysis references it) so S4+ history is never orphaned.
+// Delete an opportunity — analyst+ only. Deletion is a deletion mark, never a
+// row removal (deal-deletion-playbook): the S1–S7 chain stays fully inspectable
+// for audit. Blocked while promoted (delete the project first — its mark covers
+// the source opportunity); a lightweight deal_archive manifest keeps the
+// point-in-time record. Screening/committee chain rows persist untouched.
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
@@ -97,25 +99,56 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const { id } = await params;
   const db = getDb();
   const existing = db
-    .query("SELECT id, name, project_id FROM opportunity WHERE id = ?")
-    .get(id) as { id: string; name: string; project_id: string | null } | null;
+    .query("SELECT id, name, project_id, status, market_scope, deleted_at FROM opportunity WHERE id = ?")
+    .get(id) as
+    | { id: string; name: string; project_id: string | null; status: string; market_scope: string | null; deleted_at: string | null }
+    | null;
   if (!existing) return notFound();
+  if (existing.deleted_at) return badRequest("already_deleted", "이 기회는 이미 삭제 표시되어 있습니다.");
   if (existing.project_id) {
-    return badRequest("opportunity_promoted", "This opportunity is already promoted to a project and cannot be deleted.");
+    return badRequest(
+      "opportunity_promoted",
+      "이 기회는 프로젝트로 승격되어 있습니다. 프로젝트 개요에서 프로젝트를 삭제한 뒤 다시 시도하세요.",
+    );
   }
-  const blockingTables: Array<[string, string]> = [
-    ["route_decision", "진출방식 결정"],
-    ["brownfield_target", "타겟 리스트"],
-    ["greenfield_assessment", "사업성 평가"],
-    ["synergy_analysis", "시너지 분석"],
-  ];
-  for (const [table, label] of blockingTables) {
-    const ref = db.query(`SELECT COUNT(*) c FROM ${table} WHERE opportunity_id = ?`).get(id) as { c: number };
-    if (ref.c > 0) {
-      return badRequest("opportunity_in_use", `연계된 ${label}(${ref.c}건)이 있어 삭제할 수 없습니다.`);
-    }
-  }
-  db.run("DELETE FROM opportunity WHERE id = ?", [id]);
+  const now = new Date().toISOString();
+  // 시장분석 연결 고정 — market_scope가 산업을 가리킨다면 당시 최신 버전을 manifest에 기록
+  const marketFreeze = existing.market_scope
+    ? (() => {
+        const analysis = db
+          .query("SELECT id FROM market_sizing_analysis WHERE industry_id = ? ORDER BY created_at DESC LIMIT 1")
+          .get(existing.market_scope) as { id: string } | undefined;
+        const version = analysis
+          ? db
+              .query("SELECT id, version_no FROM market_sizing_version WHERE analysis_id = ? ORDER BY version_no DESC LIMIT 1")
+              .get(analysis.id) as { id: string; version_no: number } | undefined
+          : undefined;
+        return JSON.stringify([
+          { industryId: existing.market_scope, analysisId: analysis?.id ?? null, versionId: version?.id ?? null, versionNo: version?.version_no ?? null },
+        ]);
+      })()
+    : JSON.stringify([]);
+  const manifest = { marketFreezeJson: marketFreeze, memberUserIdsJson: JSON.stringify([ctx.userId]), mnpiFlag: 0 };
+  db.transaction(() => {
+    db.run("UPDATE opportunity SET deleted_at = ?, deleted_by = ?, delete_reason = ? WHERE id = ?", [
+      now,
+      ctx.userId,
+      `deleted by ${ctx.userId}`,
+      id,
+    ]);
+    recordDealArchive(db, {
+      kind: "deleted",
+      entityType: "opportunity",
+      opportunityId: id,
+      projectName: existing.name,
+      track: null,
+      statusAtArchive: existing.status,
+      actedBy: ctx.userId,
+      actedAt: now,
+      reason: null,
+      manifest,
+    });
+  })();
   appendAudit(db, { actor: ctx.userId, action: "opportunity_delete", target: `${id}:${existing.name}`, now: new Date().toISOString() });
   return ok({ id, deleted: true });
 }

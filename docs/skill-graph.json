@@ -582,6 +582,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0113",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent-lifecycle-manager",
       "type": "skill",
       "layer": "L3"
@@ -608,6 +613,11 @@
     },
     {
       "id": "assumption-audit",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "audit-workspace",
       "type": "skill",
       "layer": "L3"
     },
@@ -653,6 +663,11 @@
     },
     {
       "id": "checklist-authoring",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "ci-triage",
       "type": "skill",
       "layer": "L3"
     },
@@ -2158,6 +2173,18 @@
     },
     {
       "type": "references",
+      "from": "audit-workspace",
+      "to": "ci-triage",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "audit-workspace",
+      "to": "project-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "auth-and-account-management",
       "to": "access-control-review",
       "source": "prose"
@@ -2706,6 +2733,12 @@
       "type": "references",
       "from": "checklist-authoring",
       "to": "waiver-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "ci-triage",
+      "to": "project-review",
       "source": "prose"
     },
     {

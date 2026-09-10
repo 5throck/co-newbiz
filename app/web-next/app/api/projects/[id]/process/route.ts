@@ -5,7 +5,7 @@
 // blocked per ADR-0091 role separation).
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
-import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { isLead, visibleProject } from "../../../../../lib/project-visibility.ts";
 import { evaluateProcess } from "../../../../../lib/process-flow.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 
@@ -13,7 +13,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-  const project = visibleProject(auth.auth, id);
+  // 아카이브(보관/삭제 표시) 프로젝트도 원본 열람이 가능해야 한다.
+  const project = visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();
   const sourceOpportunityId = (getDb()
     .query("SELECT source_opportunity_id FROM md_project WHERE id = ?")
@@ -46,5 +47,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         : null,
     },
     200,
+    // is_lead: 삭제/마감·보관 액션 노출 판단. project_status/deleted: 보관·삭제
+    // 딜에서 UI가 저장/수정 액션을 숨기도록 판단하는 근거(쓰기는 서버에서 차단).
+    { is_lead: isLead(auth.auth, id), project_status: project.status ?? null, deleted: project.deleted_at != null },
   );
 }

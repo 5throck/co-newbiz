@@ -22,7 +22,8 @@ export async function GET(request: Request) {
               growth_rate, attractiveness_score, synergy_score, synergy_rationale, fit_verdict, fit_rationale, status, rationale,
               decided_by, decided_at, created_by, created_at
        FROM opportunity
-       WHERE (? IS NULL OR status = ?)
+       WHERE deleted_at IS NULL
+         AND (? IS NULL OR status = ?)
          AND (? IS NULL OR project_id = ?)
        ORDER BY created_at DESC`,
     )

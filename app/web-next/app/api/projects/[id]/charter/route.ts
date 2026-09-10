@@ -32,7 +32,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-  if (!visibleProject(auth.auth, id)) return notFound();
+  // 아카이브(보관/삭제 표시) 프로젝트도 원본 열람이 가능해야 한다 — 읽기는 허용,
+  // 쓰기(POST)는 open 전용 조회로 차단된다.
+  if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const charter = readCharter(id);
   if (!charter) return notFound();
   return ok(charter, 200);

@@ -15,7 +15,8 @@ export async function GET(request: Request) {
               (SELECT COUNT(*) FROM brownfield_target bt WHERE bt.opportunity_id = o.id) AS target_count,
               (SELECT COUNT(*) FROM brownfield_target bt WHERE bt.opportunity_id = o.id AND bt.status = 'shortlisted') AS shortlist_count
        FROM opportunity o
-       WHERE EXISTS (
+       WHERE o.deleted_at IS NULL
+       AND EXISTS (
          SELECT 1 FROM route_decision rd WHERE rd.opportunity_id = o.id AND rd.track = 'brownfield'
        )
        ORDER BY o.created_at DESC`,

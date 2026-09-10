@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>비즈니스 모델 스케치 v2 — 목업 미리보기 (ERRC 통합)</title>
+<style>
+  /* 앱 다크 테마 토큰 근사 — 실구현 시 styles.css 토큰으로 대체 */
+  :root {
+    --bg: #0b0e14; --panel: #12151d; --panel-2: #171b26; --border: #262c3a;
+    --fg: #e6e9f0; --muted: #8b93a7; --accent: #5b8cff;
+    --green: #34d399; --amber: #fbbf24; --red: #f87171; --violet: #a78bfa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: var(--bg); color: var(--fg);
+    font: 14px/1.55 system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  }
+  .banner {
+    border: 1px dashed var(--accent); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+    color: var(--accent); font-size: 13px;
+  }
+  .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  h1 { font-size: 17px; margin: 0; }
+  .chip {
+    display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11.5px;
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--muted);
+  }
+  .chip.llm { color: var(--green); border-color: color-mix(in srgb, var(--green) 45%, transparent); }
+  .btn {
+    margin-left: auto; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--fg); font-size: 12.5px; cursor: default;
+  }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .tab {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid transparent; background: none;
+    color: var(--muted); font-size: 13.5px; cursor: pointer;
+  }
+  .tab[aria-selected="true"] { color: var(--fg); border-color: var(--border); background: var(--panel-2); }
+  section[hidden] { display: none; }
+
+  /* ── 캔버스 뷰: 표준 BMC 9블록 + ERRC 배지 ── */
+  .canvas {
+    display: grid; gap: 8px;
+    grid-template-columns: repeat(10, 1fr);
+  }
+  .blk {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+    min-height: 118px;
+  }
+  .blk h3 { margin: 0 0 6px; font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; }
+  .blk ul { margin: 0; padding: 0; list-style: none; }
+  .blk li { margin-bottom: 7px; }
+  .blk li:last-child { margin-bottom: 0; }
+  .b-kp  { grid-column: 1 / 3;  grid-row: 1 / 3; }
+  .b-ka  { grid-column: 3 / 5;  grid-row: 1; }
+  .b-kr  { grid-column: 3 / 5;  grid-row: 2; }
+  .b-vp  { grid-column: 5 / 7;  grid-row: 1 / 3; border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  .b-cr  { grid-column: 7 / 9;  grid-row: 1; }
+  .b-ch  { grid-column: 7 / 9;  grid-row: 2; }
+  .b-cs  { grid-column: 9 / 11; grid-row: 1 / 3; }
+  .b-cost { grid-column: 1 / 6; grid-row: 3; min-height: 0; }
+  .b-rev  { grid-column: 6 / 11; grid-row: 3; min-height: 0; background: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
+
+  /* ERRC 배지 — 항목이 어떤 블루오션 액션 대상인지 표시 */
+  .mk {
+    display: inline-block; padding: 0 6px; border-radius: 999px; font-size: 10.5px;
+    margin-right: 5px; vertical-align: 1px; border: 1px solid var(--border); color: var(--muted);
+  }
+  .mk-eliminate { color: var(--red); border-color: color-mix(in srgb, var(--red) 50%, transparent); }
+  .mk-reduce { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 50%, transparent); }
+  .mk-raise { color: var(--green); border-color: color-mix(in srgb, var(--green) 50%, transparent); }
+  .mk-create { color: var(--violet); border-color: color-mix(in srgb, var(--violet) 50%, transparent); }
+  /* 배지가 붙은 항목의 ERRC 근거(어떻게 나아갈지) 한 줄 */
+  .why {
+    margin: 3px 0 0 4px; font-size: 11.5px; color: var(--muted);
+    border-left: 2px solid var(--border); padding-left: 7px;
+  }
+  li.has-mk { border-left: 2px solid color-mix(in srgb, var(--accent) 25%, transparent); padding-left: 8px; }
+
+  .entry {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 13px;
+  }
+  .entry .lbl { color: var(--muted); font-size: 12px; }
+  .entry .step { padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel-2); }
+
+  /* ── ERRC 요약 스트립 ── */
+  .legend {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+  }
+  .legend .lg {
+    flex: 1; min-width: 180px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 12px; font-size: 12.5px;
+  }
+  .legend .lg b { margin-right: 6px; }
+  .lg-eliminate b { color: var(--red); } .lg-reduce b { color: var(--amber); }
+  .lg-raise b { color: var(--green); } .lg-create b { color: var(--violet); }
+  .lg span { color: var(--muted); }
+
+  /* ── 텍스트 뷰(기존) ── */
+  ul.text { list-style: none; padding: 0; margin: 0; }
+  ul.text li { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  ul.text b { display: inline-block; margin-right: 6px; }
+
+  /* ── 하단 보조 행 ── */
+  .aux { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+  .aux .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .aux .name { font-weight: 600; margin-bottom: 2px; }
+  .aux p { margin: 0; font-size: 12.5px; color: var(--muted); }
+  .risks { margin-top: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .risks h4 { margin: 0 0 6px; font-size: 12.5px; }
+  .risks ul { margin: 0; padding-left: 16px; }
+  .risks li { font-size: 12.5px; color: var(--muted); margin-bottom: 3px; }
+  .note { margin-top: 12px; font-size: 12px; color: var(--muted); }
+  h2.sec { font-size: 13px; color: var(--muted); font-weight: 600; margin: 18px 0 8px; }
+</style>
+</head>
+<body>
+  <div class="banner">디자인 목업(미리보기) — 실구현 전 화면 구성 검토용. 데이터는 휴머노이드 로봇 기회의 실제 스케치이며, ERRC 배지·근거는 구조 시연용 샘플입니다.</div>
+
+  <div class="head">
+    <h1>비즈니스 모델 스케치 — 휴머노이드 로봇 사업 진출</h1>
+    <span class="chip llm">LLM</span>
+    <span class="chip">2026-09-04 생성</span>
+    <button class="btn" type="button">재생성</button>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="스케치 뷰 전환">
+    <button class="tab" role="tab" aria-selected="true"  data-view="canvas">🧩 비즈니스 캔버스 (ERRC 통합)</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="text">📝 텍스트 (기존)</button>
+  </div>
+
+  <!-- ── 캔버스 뷰: BMC 9블록 + 항목별 ERRC 배지·근거 ── -->
+  <section id="view-canvas">
+    <div class="canvas">
+      <div class="blk b-kp"><h3>핵심 파트너</h3><ul>
+        <li>감속기·프레임리스 모터 공급사 (후방 시너지)</li>
+        <li>엣지 AI 반도체 파트너</li>
+        <li>정부 민관 프로그램 (3조 원 투자 연계)</li>
+        <li class="has-mk"><span class="mk mk-reduce">감축</span>로보틱스 시스템 SW 외부 업체
+          <div class="why">완제품 SW 자체 개발을 축소 — 핵심 역량(액추에이터)에 집중</div>
+        </li>
+      </ul></div>
+      <div class="blk b-ka"><h3>핵심 활동</h3><ul>
+        <li>자사 라인 파일럿·실증 체계 운영</li>
+        <li>액추에이터 설계·양산</li>
+        <li>시장규모·점유율 가정 검증</li>
+      </ul></div>
+      <div class="blk b-kr"><h3>핵심 자원</h3><ul>
+        <li>정밀 액추에이터 설계·양산 역량</li>
+        <li>엣지 AI 반도체·온디바이스 컴퓨팅</li>
+        <li>이족보행 제어·안전 인증 SW</li>
+        <li>투자 실행 여력 (부채비율 26~40%)</li>
+      </ul></div>
+      <div class="blk b-vp"><h3>가치 제안</h3><ul>
+        <li>고령화·인건비 상승 속 <b>비정형 작업 수행</b> 국산 휴머노이드 솔루션</li>
+        <li>반도체·전장 부품 역량 기반 관절 액추에이터 + 이족보행 플랫폼</li>
+        <li>후방(부품)·전방(자사 라인 최초 채택) 시너지로 초기 검증~양산 리스크 축소</li>
+      </ul></div>
+      <div class="blk b-cr"><h3>고객 관계</h3><ul>
+        <li>내부 실증 기반 레퍼런스 구축</li>
+        <li>유지보수·SW 구독 계약</li>
+        <li>정부 민관 프로그램 협업</li>
+      </ul></div>
+      <div class="blk b-ch"><h3>채널</h3><ul>
+        <li>자사 라인 최초 채택 (내부 실증)</li>
+        <li>B2B 직접 판매</li>
+        <li>핵심 부품 선공급 파트너십</li>
+      </ul></div>
+      <div class="blk b-cs"><h3>고객 세그먼트</h3><ul>
+        <li><b>1차</b>: 자사 제조·물류 라인 (내부 수요)</li>
+        <li class="has-mk"><span class="mk mk-create">창조</span><b>2차</b>: 휴먼캐어 기업 (신규 수요처)
+          <div class="why">고령화 수요 기반 세그먼트 신설 — 업계가 제공하지 않는 서비스 영역</div>
+        </li>
+        <li><b>3차</b>: 국내 제조·물류 기업 (정부 3조 원 투자·100만 대 보급 정책 수요)</li>
+        <li>글로벌 외부 고객 확장은 검증 필요</li>
+      </ul></div>
+      <div class="blk b-cost"><h3>비용 구조</h3><ul>
+        <li class="has-mk"><span class="mk mk-eliminate">제거</span>자체 전용 생산라인 신설
+          <div class="why">기존 라인 개조로 대체 — 초기 투자 규모를 구조적으로 제거</div>
+        </li>
+        <li>R&D·양산 설계, 인증·실증 비용</li>
+        <li class="has-mk"><span class="mk mk-reduce">감축</span>초기 해외 마케팅 비용
+          <div class="why">국내 정책 수요 선점으로 해외 마케팅 최소화</div>
+        </li>
+      </ul></div>
+      <div class="blk b-rev"><h3>수익 스트림</h3><ul>
+        <li>초기: 자사 라인 내부 적용 비용 절감 실증</li>
+        <li class="has-mk"><span class="mk mk-raise">증대</span>중기: 하드웨어 판매 + <b>액추에이터 부품 선공급 비중 확대</b>
+          <div class="why">부품 매출이 초기 수익원·고객 유착력의 원천 — 업계 대비 비중 상향</div>
+        </li>
+        <li class="has-mk"><span class="mk mk-create">창조</span>장기: 유지보수·SW 구독
+          <div class="why">하드웨어 일회성 판매를 넘는 반복 수익 모델 신설</div>
+        </li>
+      </ul></div>
+    </div>
+
+    <div class="entry">
+      <span class="lbl">시장 진입</span>
+      <span class="step">1단계 — 자사 라인 내부 적용 실증</span> →
+      <span class="step">2단계 — 국내 제조·물류 상업 판매</span> →
+      <span class="step">3단계 — 해외 확장 (검증 필요)</span>
+    </div>
+
+    <div class="legend">
+      <div class="lg lg-eliminate"><b>제거 1</b><span>업계가 당연하게 여기는 요소를 버린다</span></div>
+      <div class="lg lg-reduce"><b>감축 2</b><span>업계 표준보다 줄인다</span></div>
+      <div class="lg lg-raise"><b>증대 1</b><span>업계 기준보다 높인다</span></div>
+      <div class="lg lg-create"><b>창조 2</b><span>업계에 없는 것을 만든다</span></div>
+    </div>
+    <p class="note">💡 배지(제거·감축·증대·창조)는 해당 항목이 블루오션 관점에서 어떻게 나아가야 하는지를 표시하며, 그 아래 회색 줄이 근거/방향입니다. 배지 개수는 ERRC 요약 스트립에서 한눈에 집계됩니다.</p>
+  </section>
+
+  <!-- ── 텍스트 뷰 (기존) ── -->
+  <section id="view-text" hidden>
+    <ul class="text">
+      <li><b>고객</b> — 1차: 자사 제조·물류 라인(내부 수요) → 2차: 국내 제조·물류·휴먼캐어 기업(정부 민관 3조 원 투자·100만 대 보급 정책 수요 기반). 글로벌 외부 고객 확장은 검증 필요</li>
+      <li><b>가치 제안</b> — 반도체·전장 부품 역량 기반의 관절 액추에이터·이족보행 플랫폼으로, 고령화·인건비 상승 속 비정형 작업을 수행하는 국산 휴머노이드 솔루션 제공. 후방·전방 시너지로 초기 검증~양산 단계 리스크 축소</li>
+      <li><b>수익 모델</b> — 초기: 자사 라인 내부 적용으로 비용 절감 효과 실증 → 중기: 상업용 대당 $3만~10만 진입대 하드웨어 판매 + 핵심 부품 선공급(B2B 부품 매출) → 장기: 유지보수·소프트웨어 구독</li>
+      <li><b>필요 역량</b> — 관절 감속기·프레임리스 모터 등 정밀 액추에이터 설계·양산 / 엣지 AI 반도체·온디바이스 컴퓨팅 / 이족보행 제어·안전 인증 SW(외부 확보 검토) / 파일럿 실증 체계 / 전략적 투자 실행 여력</li>
+      <li><b>핵심 리스크</b> — 기술 미성숙·양산 지연, 시장 추정 산포($0.4B~$7.8B), 중국 가격 공세, 규제 반발, 미국 대비 기술 격차</li>
+      <li><b>시나리오 전제</b> — 낙관: 국내 표준 플랫폼 선점 / 기본: 2026년 $3.20B 시장 단계적 진입, 부품 매출 초기 수익 / 비관: 양산 지연·가격 공세로 회수 불가</li>
+    </ul>
+    <p class="note">📝 기존 텍스트 뷰도 탭으로 유지합니다 — 원문·근거 열람과 구형 데이터 호환용입니다.</p>
+  </section>
+
+  <h2 class="sec">시나리오 전제 (낙관 / 기본 / 비관)</h2>
+  <div class="aux">
+    <div class="card"><div class="name">낙관</div><p>GS 전망 대비 상향(2035 출하 389% 증가 수준) 성장 + 부품 시너지 단가 선도 + 정부 정책 수요 선점 → 국내 표준 플랫폼</p></div>
+    <div class="card"><div class="name">기본</div><p>2026년 글로벌 $3.20B 시장에서 자사 라인 실증 후 국내 제조·물류 중심 단계적 상업 판매, 부품 매출이 초기 수익원</p></div>
+    <div class="card"><div class="name">비관</div><p>기술 미성숙으로 양산 지연 + 중국 가격 공세·시장 축소(하단 $0.4B대) → 전략적 투자 회수 불가 수준 부진</p></div>
+  </div>
+
+  <div class="risks">
+    <h4>핵심 리스크</h4>
+    <ul>
+      <li>기술 미성숙: 연속 작업시간·손재주·안전 인증 미해결 → 양산 일정 지연 가능</li>
+      <li>시장 변동성: 2025년 시장 규모 추정 산포 극단($0.4B~$7.8B)</li>
+      <li>중국 양산 가격 공세(UBTech/Unitree/AGIBOT)에 의한 글로벌 마진 압축</li>
+      <li>인력 대체에 대한 사회적·규제 반발</li>
+      <li>미국(Tesla/Figure/Apptronik) 대비 기술 등급 격차 — 집중도 낮으나 차별화 큰 초기 경쟁</li>
+    </ul>
+  </div>
+
+<script>
+  const tabs = document.querySelectorAll(".tab");
+  tabs.forEach((t) =>
+    t.addEventListener("click", () => {
+      tabs.forEach((x) => x.setAttribute("aria-selected", x === t ? "true" : "false"));
+      for (const v of ["canvas", "text"]) {
+        document.getElementById("view-" + v).hidden = v !== t.dataset.view;
+      }
+    })
+  );
+</script>
+</body>
+</html>

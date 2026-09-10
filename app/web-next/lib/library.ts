@@ -4,7 +4,7 @@
 // filesystem traversal during `next build` NFT tracing.
 import { LIBRARY_CHECKLIST_ITEMS, LIBRARY_CONTENT, LIBRARY_DOCS } from "./library.generated.ts";
 
-export type LibraryCategory = "checklist" | "manual" | "policy" | "procedure" | "reference" | "template" | "design" | "dd";
+export type LibraryCategory = "checklist" | "manual" | "policy" | "procedure" | "reference" | "template" | "design" | "dd" | "runbook" | "guideline";
 
 export interface LibraryDocSummary {
   id: string;
@@ -24,7 +24,7 @@ export interface LibraryDocContent extends LibraryDocSummary {
   content: string;
 }
 
-const CATEGORIES: LibraryCategory[] = ["checklist", "manual", "policy", "procedure", "reference", "template", "design", "dd"];
+const CATEGORIES: LibraryCategory[] = ["checklist", "manual", "policy", "procedure", "reference", "template", "design", "dd", "runbook", "guideline"];
 
 export function listLibrary(): LibraryDocSummary[] {
   return [...LIBRARY_DOCS];

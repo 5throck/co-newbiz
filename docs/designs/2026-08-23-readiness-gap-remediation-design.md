@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # Design: Readiness-Gap Remediation (audit R1–R6 dispositions)
 
 > Design of record for the remediation slice approved 2026-08-23 (user-approved scope: docs + deliverable-template implementation; E.4 full chain and the procedure-execution orchestrator excluded — audit residuals R8/R9, class D).

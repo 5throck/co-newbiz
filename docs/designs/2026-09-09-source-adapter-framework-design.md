@@ -1,4 +1,6 @@
 ---
+lang: ko
+lang_reason: source-material
 title: "Wave A1 Design — Source-Adapter Framework + fetch + md:sync"
 date: 2026-09-09
 owner: pm

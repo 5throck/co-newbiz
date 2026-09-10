@@ -964,7 +964,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
     delete:
       operationId: deleteOpportunity
-      summary: Drop an opportunity from the funnel (S2). Analyst+; audited.
+      summary: Deletion mark on an unpromoted opportunity (rows kept for audit; deal_archive manifest written). 400 opportunity_promoted while promoted. Analyst+; audited.
       tags:
         - Reference
       parameters:
@@ -2466,6 +2466,28 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: deleteCompanyGroup
+      summary: Deletion mark on the group + its members (rows are kept for audit; no 409 needed). Analyst+; audited.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /api/our-company/groups/{id}/members:
     post:
@@ -2480,7 +2502,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     delete:
       operationId: removeGroupMember
-      summary: Remove an affiliate + its profiles.
+      summary: Deletion mark on an affiliate (rows kept for audit).
       tags:
         - Analysis
       responses:
@@ -2671,6 +2693,29 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/projects/{id}:
+    delete:
+      operationId: deleteProject
+      summary: Lead-only deletion mark on the project + its source opportunity (rows kept for audit; deal_archive manifest written). Audited.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/projects/{id}/business-case:
     get:
@@ -3481,6 +3526,42 @@ paths:
           $ref: '#/components/responses/Created'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/archive/deals:
+    get:
+      operationId: listArchivedDeals
+      summary: Delete-marked deal manifests visible to the caller (member allowlist at mark time). Audited.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/archive/deals/{id}:
+    get:
+      operationId: getArchivedDeal
+      summary: One deal_archive manifest; members-at-mark-time only. Every view is audit-logged.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

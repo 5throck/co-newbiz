@@ -472,12 +472,13 @@ export async function fetchFinancials(corpCode: string, opts: { years?: number }
 /* ── P3-7: 공시 검색 프리셋 — S7 규제 스크리닝·S9 실사 증적 수집 ── */
 
 export interface DisclosurePreset {
-  key: "recent" | "amendment" | "audit" | "capital";
+  key: "recent" | "business" | "amendment" | "audit" | "capital";
   label: string;
 }
 
 export const DISCLOSURE_PRESETS: DisclosurePreset[] = [
   { key: "recent", label: "최근 공시" },
+  { key: "business", label: "사업보고서" },
   { key: "amendment", label: "정정공시" },
   { key: "audit", label: "감사 관련" },
   { key: "capital", label: "자본변동" },
@@ -494,6 +495,7 @@ export interface DisclosureRow {
 /** 공시 제목 키워드 프리셋 — list.json의 report_nm 필터링 (OpenDART bbs_tp 조합 대비 관대함). */
 const PRESET_KEYWORDS: Record<DisclosurePreset["key"], string[]> = {
   recent: [],
+  business: ["사업보고서"],
   amendment: ["정정"],
   audit: ["감사", "부적격", "의견"],
   capital: ["자본금", "유상증자", "감자", "전환사채", "주식매수선택권"],
@@ -535,6 +537,15 @@ export async function searchDisclosures(
   } catch (err) {
     return { found: false, disclosures: [], error: err instanceof Error ? err.message : "공시 검색 실패" };
   }
+}
+
+/** 최신 사업보고서 1건 선택 — 비정정본을 우선하고(정정만 있으면 정정 사용) rcept_dt 내림차순. */
+export function selectBusinessReport(disclosures: DisclosureRow[]): DisclosureRow | null {
+  const reports = disclosures.filter((d) => d.rcept_no && d.report_nm.includes("사업보고서"));
+  if (reports.length === 0) return null;
+  const clean = reports.filter((d) => !d.report_nm.includes("정정"));
+  const pool = clean.length > 0 ? clean : reports;
+  return [...pool].sort((a, b) => (a.rcept_dt < b.rcept_dt ? 1 : a.rcept_dt > b.rcept_dt ? -1 : 0))[0] ?? null;
 }
 
 /* ── P3-8: 지분 안정성 시그널 — 대량보유 상황보고 요약 (S7 스코어카드 입력) ── */

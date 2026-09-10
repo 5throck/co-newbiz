@@ -14,12 +14,16 @@ import type { AuthContext } from "./auth.ts";
 export function visibleProject(
   ctx: AuthContext,
   projectId: string,
-  opts: { allowAdmin?: boolean; includeClosed?: boolean } = {},
+  opts: { allowAdmin?: boolean; includeClosed?: boolean; includeDeleted?: boolean } = {},
 ) {
   // allowAdmin is only for governance WRITE paths that admins legitimately
   // perform on deals (e.g. setting MNPI classification) — never content reads.
   if (ctx.role === "admin" && !opts.allowAdmin) return null;
-  return getProjectIfVisible(ctx.userId, projectId, { excludeMnpi: false, includeClosed: opts.includeClosed });
+  return getProjectIfVisible(ctx.userId, projectId, {
+    excludeMnpi: false,
+    includeClosed: opts.includeClosed,
+    includeDeleted: opts.includeDeleted,
+  });
 }
 
 /** Admins are blocked from the deal flow entirely (role separation). */

@@ -1,16 +1,19 @@
-// 그룹/계열사 분석 파이프라인 — 계열사 프로파일 6단계 (flow.spec S3의 입력).
+// 그룹/계열사 분석 파이프라인 — 계열사 프로파일 7단계 (flow.spec S3의 입력).
 //   1. DART 재무제표·사업보고서 입수 (dart-client 재사용)
 //   2. 외부 리서치 — 증권사 애널리스트 리포트·산업 동향·경쟁사 (web-research 재사용)
 //   3. LLM 강점/약점/기회/위협(SWOT)/사업 평가 (근거 출처 명기, 결정론 폴백)
 //   4. LLM 경쟁 포지셔닝 (실패해도 버전 저장을 막지 않는다)
-//   5. 결정론 합성 — 재무 비율·추세, S1 매트릭스 산업 연계, 섹션별 신뢰도,
+//   5. 공시·리서치 원문 대조 — DART 사업보고서 원문 + 경쟁사별 타겟 리서치로
+//      경쟁 주장 판정 (company-profile-crosscheck, 실패해도 버전 저장을 막지 않는다)
+//   6. 결정론 합성 — 재무 비율·추세, S1 매트릭스 산업 연계, 섹션별 신뢰도,
 //      검증 원장, RAG 상한 (LLM 없음 — ADR-0093)
-//   6. company_profile_version에 버전 누적 (append-only, ADR-0005 패턴)
+//   7. company_profile_version에 버전 누적 (append-only, ADR-0005 패턴)
 import { getDb } from "../../../db/client.ts";
 import { resolveCorpCode, validateCorpCode, fetchFinancials, isDartConfigured, type DartFinancials } from "../lib/dart-client.ts";
 import { completeOrFallback } from "./llm.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "./web-research.ts";
 import { deriveFinancialAnalysis } from "./company-financials.ts";
+import { crossCheckCompetitive, deriveCompetitiveSectionGrade, mapVerdictToLedger, type CompetitiveCrossCheck } from "./company-profile-crosscheck.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 
 /** S1과 동일한 3단 검증 상태 (ADR-0092 decision 6의 검증 원장 표준) */
@@ -40,12 +43,18 @@ export interface CompanyProfilePayload {
   };
   stepSummaries: Array<{ step: number; title: string; summary: string; source: string }>;
   // ── ADR-0093 (schemaVersion 2) 확장 — 전부 optional, 구 v1 payload와 공존 ──
+  // schemaVersion 3: competitive.crossCheck 추가 (공시·리서치 원문 대조)
   /** 결정론 재무 분석 (비율·추세) — lib/company-financials.ts 참조 */
   financialAnalysis?: import("./company-financials.ts").FinancialAnalysis;
   /** SWOT 기회/위협 — strengths/weaknesses는 기존 대표 필드 유지 */
   swot?: { opportunities: string[]; threats: string[] };
-  /** 경쟁 포지셔닝 (LLM, 단계 4) */
-  competitive?: { competitors: Array<{ name: string; note: string }>; positioning: string; degraded?: string | null };
+  /** 경쟁 포지셔닝 (LLM, 단계 4) + 공시·리서치 원문 대조 (단계 5, schemaVersion 3) */
+  competitive?: {
+    competitors: Array<{ name: string; note: string }>;
+    positioning: string;
+    degraded?: string | null;
+    crossCheck?: CompetitiveCrossCheck;
+  };
   /** S1 시장분석 매트릭스와의 산업 연계 (단계 5 결정론) */
   industryLinkage?: Array<{
     industry: string;
@@ -265,7 +274,25 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
       ? `경쟁사 ${competitive.competitors.length}개·포지셔닝 평가 도출.`
       : "경쟁 포지셔닝 미생성 — 재분석 시 재생성됩니다.");
 
-  // ── Step 5: 결정론 합성 (LLM 없음) — 재무 분석·산업 연계·신뢰도·검증 원장·RAG 상한 ──
+  // ── Step 5: 공시·리서치 원문 대조 (LLM 판정 — 실패해도 버전 저장을 막지 않는다) ──
+  let crossCheck: CompetitiveCrossCheck | undefined;
+  if (competitive && !competitive.degraded) {
+    try {
+      crossCheck = await crossCheckCompetitive({ company, corpCode, competitive });
+      competitive = { ...competitive, crossCheck };
+    } catch (err) {
+      console.error("competitive cross-check failed (non-fatal):", err);
+    }
+  }
+  const verdictCount = (v: string) => crossCheck?.claims.filter((c) => c.verdict === v).length ?? 0;
+  await summarize(5, "공시·리서치 원문 대조",
+    !crossCheck
+      ? "대조 생략 — 경쟁 포지셔닝 미생성."
+      : crossCheck.status === "cross_checked"
+        ? `DART 사업보고서(${crossCheck.dartReport?.rceptNo ?? "-"}) 원문 대조 — 확인 ${verdictCount("confirmed")}·방향성 ${verdictCount("directional")}·상충 ${verdictCount("contradicted")}·검증불가 ${verdictCount("unverified")}건.`
+        : crossCheck.note ?? "대조 미실시.");
+
+  // ── Step 6: 결정론 합성 (LLM 없음) — 재무 분석·산업 연계·신뢰도·검증 원장·RAG 상한 ──
   const financialAnalysis = deriveFinancialAnalysis(dart);
   if (coverageNote) financialAnalysis.notes.push(coverageNote.trim());
 
@@ -314,7 +341,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     { section: "재무 (DART)", grade: dart.found ? "B" : "D", note: dart.found ? `공시 원문 기반 (${yearsFound.join("/")}) — 원계정, 비율은 파생 계산` : dart.error ?? "DART 미입수" },
     { section: "강점·약점·사업 평가", grade: research.length >= 3 ? "B-" : "D", note: research.length >= 3 ? `웹 리서치 ${research.length}건 기반 — LLM 요약, 원문 확인 전` : "리서치 부족 — LLM 지식 의존" },
     { section: "기회·위협 (SWOT)", grade: research.length >= 3 ? "C" : "D", note: "LLM 추정 — 분석가 확인 전 (S1 정성요인 연계 참조)" },
-    { section: "경쟁 포지셔닝", grade: competitive && !competitive.degraded ? "C" : "D", note: competitive && !competitive.degraded ? "LLM 추정 — 공시·리서치 대조 전" : "미생성 또는 폴백" },
+    { section: "경쟁 포지셔닝", ...deriveCompetitiveSectionGrade(competitive, crossCheck) },
     { section: "산업 연계 (S1 매트릭스)", grade: industryLinkage.some((l) => l.matrixFound) ? "B" : "C-", note: industryLinkage.some((l) => l.matrixFound) ? "S1 완료 매트릭스의 실측 수치 연결" : "연결된 S1 매트릭스 없음" },
   ];
 
@@ -331,6 +358,28 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     ...strengths.filter((s) => !s.includes("평가 실패")).map((s) => ({ item: `강점: ${s.slice(0, 60)}`, status: "needs_judgement" as const, evidence: "LLM 추정 — 분석가 확인 필요" })),
     ...weaknesses.filter((s) => !s.includes("재분석")).map((s) => ({ item: `약점: ${s.slice(0, 60)}`, status: "needs_judgement" as const, evidence: "LLM 추정 — 분석가 확인 필요" })),
     ...industryLinkage.filter((l) => l.matrixFound).map((l) => ({ item: `S1 매트릭스 연계: ${l.industry}`, status: "confirmed" as const, evidence: "완료된 S1 분석 버전에서 직접 조회" })),
+    // 경쟁 주장 대조 — 단계 5 판정을 원장으로 (상충도 판단필요로: 자동 판정 없음, ADR-0093)
+    ...(competitive && !competitive.degraded
+      ? competitive.competitors.map((c) => {
+          const verdict = crossCheck?.claims.find((cl) => cl.claim.startsWith(`경쟁사 ${c.name}:`));
+          return {
+            item: `경쟁사: ${c.name}`,
+            status: mapVerdictToLedger(verdict?.verdict),
+            evidence: verdict
+              ? `${verdict.source} 근거 — ${verdict.evidence.slice(0, 120)}`
+              : "LLM 추정 — 공시·리서치 대조 미실시 또는 판정 없음",
+          };
+        })
+      : []),
+    ...(competitive && !competitive.degraded && competitive.positioning
+      ? [{
+          item: "경쟁 포지셔닝 서술",
+          status: mapVerdictToLedger(crossCheck?.claims.find((cl) => cl.claim.startsWith("경쟁 포지셔닝:"))?.verdict),
+          evidence: crossCheck?.claims.find((cl) => cl.claim.startsWith("경쟁 포지셔닝:"))
+            ? `${crossCheck.claims.find((cl) => cl.claim.startsWith("경쟁 포지셔닝:"))!.source} 근거 — 판정은 참고용, 분석가 확정 필요`
+            : "LLM 추정 — 공시·리서치 대조 미실시 또는 판정 없음",
+        }]
+      : []),
   ];
 
   // RAG 상한 — 데이터 신뢰도가 전체 등급을 캡핑 (경계 #4). 분석가 서명 없이 green 불가.
@@ -340,10 +389,10 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
       ? { grade: "red", rationale: "DART·웹 리서치 모두 미입수 — 근거 없는 LLM 지식만 사용됨. 재분석 필요." }
       : { grade: "amber", rationale: "DART 공시 기반 + LLM/웹 리서치 혼합 — 분석가 확정 전까지 상한 Amber." };
 
-  await summarize(5, "결정론 합성 — 재무 분석·산업 연계·신뢰도",
+  await summarize(6, "결정론 합성 — 재무 분석·산업 연계·신뢰도",
     `재무 비율·추세 ${financialAnalysis.available ? `${financialAnalysis.years.length}개년` : "미산출(데이터 부족)"}, 산업 연계 ${industryLinkage.filter((l) => l.matrixFound).length}/${industryLinkage.length}건 매칭, RAG 상한 ${ragCapRecommendation.grade.toUpperCase()}.`);
 
-  // ── Step 6: 버전 누적 저장 ──
+  // ── Step 7: 버전 누적 저장 ──
   const payload: CompanyProfilePayload = {
     companyName: company,
     dartCorpCode: corpCode ?? member.dart_corp_code,
@@ -357,7 +406,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     degraded,
     dataSources: { dart: dart.found, dartYear: dart.found ? dart.year ?? null : null, webResearchCount: research.length },
     stepSummaries,
-    // ADR-0093 확장 (schemaVersion 2)
+    // ADR-0093 확장 (schemaVersion 2) + 경쟁 대조 (schemaVersion 3)
     financialAnalysis,
     swot: { opportunities, threats },
     competitive,
@@ -365,19 +414,19 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     sectionConfidence,
     verificationLedger,
     ragCapRecommendation,
-    schemaVersion: 2,
+    schemaVersion: 3,
   };
   const nextVersionNo =
     ((db.query("SELECT MAX(version_no) m FROM company_profile_version WHERE member_id = ?").get(member.id) as { m: number | null }).m ?? 0) + 1;
-  // 6단계 요약은 저장 '이전'에 push해야 이번 버전 payload에 포함된다.
-  await summarize(6, "버전 누적 저장",
+  // 7단계 요약은 저장 '이전'에 push해야 이번 버전 payload에 포함된다.
+  await summarize(7, "버전 누적 저장",
     `company_profile_version v${nextVersionNo} 저장 (append-only — 선행 버전은 의사결정 인용을 위해 보존).`);
   payload.stepSummaries = stepSummaries;
   db.transaction(() => {
     db.run(
       `INSERT INTO company_profile_version (id, member_id, version_no, payload, source_ref, created_by, created_at)
        VALUES (?,?,?,?,?,?,?)`,
-      [ulid(), member.id, nextVersionNo, JSON.stringify({ methodology: "company-profile v2", schemaVersion: 2, profile: payload }), null, userId, now()],
+      [ulid(), member.id, nextVersionNo, JSON.stringify({ methodology: "company-profile v3", schemaVersion: 3, profile: payload }), null, userId, now()],
     );
   })();
 }

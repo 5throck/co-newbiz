@@ -24,6 +24,8 @@ export async function GET(request: Request) {
        LEFT JOIN opportunity o ON o.id = sa.opportunity_id
        LEFT JOIN company_group_member m ON m.id = sa.member_id
        LEFT JOIN company_group g ON g.id = sa.group_id
+       WHERE sa.deleted_at IS NULL
+         AND (sa.opportunity_id IS NULL OR o.deleted_at IS NULL)
        ORDER BY sa.created_at DESC`,
     )
     .all();

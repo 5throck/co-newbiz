@@ -13,7 +13,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-  if (!visibleProject(auth.auth, id)) return notFound();
+if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const rows = getDb()
     .query(
       `SELECT id, run_rate_bp, sustained_quarters, certified_by, baseline_locked_at, signed_at, created_at

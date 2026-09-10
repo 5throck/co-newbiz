@@ -1,0 +1,128 @@
+# Runbook & documentation registry — the managed list of operational docs.
+#
+# SSOT for which playbooks / guidelines / manuals exist, who they are for,
+# and where their language pairs live. The library projection
+# (app/web-next/lib/library.generated.ts) must carry an entry for every file
+# listed here, and scripts/co-newbiz/runbook-validate.ts (bun run
+# runbooks:validate, also enforced by tests/unit/runbook-registry.test.ts)
+# checks this file against the filesystem and the projection.
+#
+# Fields:
+#   id        unique registry id (rb- = runbook, gdl- = guideline, man- = manual)
+#   layer     runbook | guideline | manual
+#   title     display title
+#   audience  who executes/reads it
+#   owner     accountable agent/role
+#   screens   app routes the doc governs (optional)
+#   files     en/ko language pair (paths relative to repo root)
+#   status    active | draft
+#   followups planned work that extends this doc (optional)
+
+entries:
+  # ── Runbooks ─────────────────────────────────────────────────────────────
+  - id: rb-deal-deletion
+    layer: runbook
+    title: "Deal Deletion Playbook — Marking, Archive, and Audit"
+    audience: deal leads, analysts
+    owner: compliance-officer
+    screens: ["/projects", "/projects/archives", "/our-company", "/synergy", "/route-decision", "/opportunities"]
+    files:
+      en: docs/runbooks/deal-deletion-playbook.md
+      ko: docs/runbooks/deal-deletion-playbook_ko.md
+    status: active
+    followups: docs/designs/2026-09-10-deletion-followups-plan.md
+
+  - id: rb-deployment
+    layer: runbook
+    title: "Runbook — Deployment and Release"
+    audience: release-engineer, platform-lead, operators
+    owner: release-engineer
+    files:
+      en: docs/runbooks/deployment.md
+      ko: docs/runbooks/deployment_ko.md
+    status: active
+
+  - id: rb-backup-restore
+    layer: runbook
+    title: "Runbook — Backup & Restore"
+    audience: operators, dba
+    owner: dba
+    files:
+      en: docs/runbooks/backup-restore.md
+      ko: docs/runbooks/backup-restore_ko.md
+    status: active
+
+  # ── Guidelines ───────────────────────────────────────────────────────────
+  - id: gdl-evidence-file-policy
+    layer: guideline
+    title: "Evidence File Upload & Retention"
+    audience: analysts, deal leads, operators
+    owner: compliance-officer
+    screens: ["/our-company"]
+    files:
+      en: docs/guidelines/evidence-file-policy.md
+      ko: docs/guidelines/evidence-file-policy_ko.md
+    status: active
+    followups: docs/designs/2026-09-10-deletion-followups-plan.md (Workstream C/E)
+
+  - id: gdl-expert-interview-conduct
+    layer: guideline
+    title: "Expert Interview Conduct"
+    audience: analysts running expert interviews
+    owner: commercial-dd-agent
+    files:
+      en: docs/guidelines/expert-interview-conduct.md
+      ko: docs/guidelines/expert-interview-conduct_ko.md
+    status: active
+
+  - id: gdl-proxy-chain-hop-classification
+    layer: guideline
+    title: "Proxy Chain Hop Classification"
+    audience: analysts building proxy industry chains
+    owner: quant-methodologist
+    files:
+      en: docs/guidelines/proxy-chain-hop-classification.md
+      ko: docs/guidelines/proxy-chain-hop-classification_ko.md
+    status: active
+
+  # ── Manuals ──────────────────────────────────────────────────────────────
+  - id: man-archive-manual
+    layer: manual
+    title: "Archive Manual — Leads & Analysts"
+    audience: deal leads, analysts
+    owner: compliance-officer
+    screens: ["/projects/archives", "/projects"]
+    files:
+      en: docs/manuals/archive-manual.md
+      ko: docs/manuals/archive-manual_ko.md
+    status: active
+
+  - id: man-admin-manual
+    layer: manual
+    title: "Admin Manual — System Administrators"
+    audience: system administrators
+    owner: platform-lead
+    files:
+      en: docs/manuals/admin-manual.md
+      ko: docs/manuals/admin-manual_ko.md
+    status: active
+
+  - id: man-business-manual
+    layer: manual
+    title: "Business Manual — Analysts & Committee Reviewers"
+    audience: analysts, committee reviewers
+    owner: process-governance-manager
+    files:
+      en: docs/manuals/business-manual.md
+      ko: docs/manuals/business-manual_ko.md
+    status: active
+
+  - id: man-operations-manual
+    layer: manual
+    title: "Operations Manual — System Operators"
+    audience: system operators
+    owner: infra-automation-engineer
+    files:
+      en: docs/manuals/operations-manual.md
+      ko: docs/manuals/operations-manual_ko.md
+    status: active

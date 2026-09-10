@@ -13,7 +13,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-  if (!visibleProject(auth.auth, id)) return notFound();
+if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
   const terms = db
     .query(
