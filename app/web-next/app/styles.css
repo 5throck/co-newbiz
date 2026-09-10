@@ -216,6 +216,9 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     padding: 0.75rem 1rem;
+    /* 폼 컨트롤이 grid/flex 트랙 안에서 수축할 수 있게 — min-width:auto이면
+       고정 폭 트랙(예: WACC 입력 행의 7rem 값 칸)을 벗어나 옆 입력칸과 겹친다. */
+    min-width: 0;
     background: var(--input-bg);
     color: var(--fg);
     transition: all 0.3s var(--ease-spring);

@@ -101,7 +101,7 @@ function CitedRow({
 }) {
   const kind: "live" | "user" = forceKind ?? (field.source.trim() !== "" ? "live" : "user");
   return (
-    <div className="grid md:grid-cols-[9.5rem_7rem_1fr_1fr_7.5rem_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
+    <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_1fr_7.5rem_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
       <div>
         <div className="text-[0.85rem] font-semibold">{name}</div>
         {sub && <div className="text-[color:var(--muted-fg)] text-[0.72rem]">{sub}</div>}
@@ -561,7 +561,7 @@ export default function ProjectWaccPage() {
 
             {/* ④ 자본구조·세율 */}
             <h3 className="sizing-step-title mt-6"><span className="sizing-step-badge">4</span>자본구조·세율 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 목표(target) 자본구조 기준</span></h3>
-            <div className="grid md:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
+            <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
               <div>
                 <div className="text-[0.85rem] font-semibold">목표 D/E</div>
                 <div className="text-[color:var(--muted-fg)] text-[0.72rem]">부채/자기자본</div>
@@ -574,7 +574,7 @@ export default function ProjectWaccPage() {
               </label>
               <div><KindChip kind="user" /></div>
             </div>
-            <div className="grid md:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
+            <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
               <div>
                 <div className="text-[0.85rem] font-semibold">한계 세율</div>
                 <div className="text-[color:var(--muted-fg)] text-[0.72rem]">법인세 + 지방세</div>
