@@ -167,8 +167,11 @@ export function SynergyView() {
         setTargets(out);
       })
       .catch(() => setTargets([]));
-    api.get<{ rows: Array<{ id: string; name: string; status: string }> }>("/api/opportunities")
-      .then((r) => setOpps(r.data.rows.map((o) => ({ id: o.id, name: o.name, status: o.status }))))
+    // GET /api/opportunities returns the rows array directly in `data` (same as
+    // app/page.tsx) — parsing it as { rows } used to throw on undefined and the
+    // .catch silently emptied the 기회 dropdown.
+    api.get<Array<{ id: string; name: string; status: string }>>("/api/opportunities")
+      .then((r) => setOpps(r.data))
       .catch(() => setOpps([]));
   }, []);
 
