@@ -277,7 +277,23 @@ export function OurCompanyView() {
           setError(err instanceof Error ? err.message : "계열사 삭제 실패");
         }
       },
-      { body: "이 계열사와 분석 결과(프로파일 버전 전체)가 함께 삭제됩니다. 시너지 분석이 이 계열사를 참조 중이면 먼저 해당 분석을 삭제해야 합니다." },
+      { body: "삭제 표시로 전환됩니다. 데이터는 보존되어 감사 시 열람할 수 있으며, 목록과 분석 화면에서는 사라집니다." },
+    );
+  }
+
+  function removeGroup(groupId: string, name: string) {
+    confirm(
+      `${name} 삭제`,
+      async () => {
+        try {
+          await api.delete(`/api/our-company/groups/${groupId}`);
+          setSelectedGroup(null);
+          void loadGroups();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "그룹 삭제 실패");
+        }
+      },
+      { body: "이 그룹과 소속 계열사 전체가 삭제 표시로 전환됩니다. 데이터는 보존되어 감사 시 열람할 수 있습니다." },
     );
   }
 
@@ -457,6 +473,7 @@ export function OurCompanyView() {
               ) : (
                 <>
                   <button type="button" className="btn-ghost btn-sm" title="그룹명 수정" onClick={() => { setGroupNameDraft(selectedGroup.group.name); setEditGroupName(true); }}>수정</button>
+                  <button type="button" className="btn-danger btn-sm" title="이 그룹과 소속 계열사 전체를 삭제합니다" onClick={() => removeGroup(selectedGroup.group.id, selectedGroup.group.name)}>삭제</button>
                   <button
                     type="button"
                     className="btn-ghost"

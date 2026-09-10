@@ -10,7 +10,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-  const project = visibleProject(auth.auth, id);
+  const project = visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();
   const db = getDb();
   const p = db.query("SELECT company_id FROM md_project WHERE id = ?").get(id) as { company_id: string | null } | undefined;

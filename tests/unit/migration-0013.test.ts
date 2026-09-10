@@ -273,6 +273,8 @@ describe("shape: four new tables + md_project.current_stage_gate", () => {
       "project_name", "charter_json", "charter_confirmed_at",
       // 0076 (Wave B1): lifecycle columns appended; current_stage_gate stays fourth.
       "status", "closed_at", "closure_reason",
+      // 0081 (deal-deletion-playbook): deletion-mark columns appended.
+      "deleted_at", "deleted_by", "delete_reason",
     ]);
   });
 

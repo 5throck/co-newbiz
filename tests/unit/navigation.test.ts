@@ -88,7 +88,7 @@ describe("navigation SSOT (ADR-0105)", () => {
     // /our-company is both a submenu parent and a child by design — that is
     // the ONLY allowed repetition; anything else is a copy-paste drift.
     const hrefs = menuHrefs();
-    const allowedDup = new Set(["/our-company", "/route-decision"]);
+    const allowedDup = new Set(["/our-company", "/route-decision", "/projects"]);
     const dupes = hrefs.filter((h, i) => hrefs.indexOf(h) !== i && !allowedDup.has(h));
     expect(dupes).toEqual([]);
   });

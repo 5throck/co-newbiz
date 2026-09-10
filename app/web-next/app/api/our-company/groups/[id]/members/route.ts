@@ -1,8 +1,9 @@
 // 그룹에 계열사 등록/수정/제거.
 import { getDb } from "../../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 
 const now = () => new Date().toISOString();
 
@@ -72,35 +73,31 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "계열사 제거는 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
-  const body = (await request.json().catch(() => null)) as { member_id?: string } | null;
+  const body = (await request.json().catch(() => null)) as { member_id?: string; reason?: string } | null;
   const memberId = body?.member_id;
   if (!memberId) return badRequest("invalid_request", "member_id는 필수입니다.");
   const db = getDb();
   const member = db
-    .query("SELECT id FROM company_group_member WHERE id = ? AND group_id = ?")
-    .get(memberId, id) as { id: string } | undefined;
+    .query("SELECT company_name, deleted_at FROM company_group_member WHERE id = ? AND group_id = ?")
+    .get(memberId, id) as { company_name: string; deleted_at: string | null } | undefined;
   if (!member) return notFound();
-  // synergy_analysis.member_id가 이 행을 참조하면 FK(NO ACTION)가 DELETE를
-  // 거부한다 — 서버 500(빈 응답) 대신 판독 가능한 409로 안내한다.
-  const refCount =
-    (db.query("SELECT COUNT(*) AS n FROM synergy_analysis WHERE member_id = ?").get(memberId) as
-      | { n: number }
-      | undefined)?.n ?? 0;
-  if (refCount > 0) {
-    return fail(
-      409,
-      "member_in_use",
-      `이 계열사를 참조하는 시너지 분석 ${refCount}건이 있어 삭제할 수 없습니다. 시너지 분석 화면에서 해당 분석을 먼저 삭제해 주세요.`,
-    );
-  }
-  try {
-    db.transaction(() => {
-      db.run("DELETE FROM company_profile_version WHERE member_id = ?", [memberId]);
-      db.run("DELETE FROM company_group_member WHERE id = ? AND group_id = ?", [memberId, id]);
-    })();
-  } catch {
-    // 미처 파악한 참조가 남아 있던 경우의 방어막 — 원인을 그대로 노출한다.
-    return fail(409, "member_in_use", "이 계열사를 참조하는 데이터가 있어 삭제할 수 없습니다.");
-  }
+  if (member.deleted_at) return badRequest("already_deleted", "이 계열사는 이미 삭제 표시되어 있습니다.");
+  // deletion mark — 행은 남는다(시너지 분석·프로파일 참조와 감사 이력 보존).
+  // 모든 목록/조회가 이 표시를 필터링한다.
+  const now = new Date().toISOString();
+  const reason = body?.reason?.trim() || `deleted by ${auth.auth.userId}`;
+  db.run("UPDATE company_group_member SET deleted_at = ?, deleted_by = ?, delete_reason = ? WHERE id = ? AND group_id = ?", [
+    now,
+    auth.auth.userId,
+    reason,
+    memberId,
+    id,
+  ]);
+  appendAudit(db, {
+    actor: auth.auth.userId,
+    action: "company_member_delete",
+    target: `${memberId}:${member.company_name}`,
+    now,
+  });
   return ok({ deleted: memberId }, 200);
 }

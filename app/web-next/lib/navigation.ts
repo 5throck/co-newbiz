@@ -49,7 +49,14 @@ export const NAV_SECTIONS: NavSection[] = [
           { href: "/brownfield", label: "브라운필드 — 결합·투자" },
         ],
       },
-      { href: "/projects", label: "프로젝트" },
+      {
+        href: "/projects",
+        label: "프로젝트",
+        children: [
+          { href: "/projects", label: "진행 프로젝트" },
+          { href: "/projects/archives", label: "아카이브" },
+        ],
+      },
       { href: "/pipeline", label: "프로젝트 파이프라인" },
     ],
   },

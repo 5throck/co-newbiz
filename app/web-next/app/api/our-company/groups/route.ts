@@ -13,8 +13,8 @@ export async function GET(request: Request) {
   const groups = db
     .query(
       `SELECT g.id, g.name, g.created_at,
-              (SELECT COUNT(*) FROM company_group_member m WHERE m.group_id = g.id) AS member_count
-       FROM company_group g ORDER BY g.created_at DESC`,
+              (SELECT COUNT(*) FROM company_group_member m WHERE m.group_id = g.id AND m.deleted_at IS NULL) AS member_count
+       FROM company_group g WHERE g.deleted_at IS NULL ORDER BY g.created_at DESC`,
     )
     .all() as Array<{ id: string; name: string; created_at: string; member_count: number }>;
   return ok({ groups }, 200, { count: groups.length });
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   const name = body?.name?.trim();
   if (!name) return badRequest("invalid_request", "그룹명(name)은 필수입니다.");
   const db = getDb();
-  const existing = db.query("SELECT id FROM company_group WHERE name = ?").get(name) as { id: string } | undefined;
+  const existing = db.query("SELECT id FROM company_group WHERE name = ? AND deleted_at IS NULL").get(name) as { id: string } | undefined;
   if (existing) return ok({ id: existing.id, name, reused: true }, 200);
   const id = ulid();
   db.run("INSERT INTO company_group (id, name, created_by, created_at) VALUES (?,?,?,?)", [id, name, ctx.userId, now()]);

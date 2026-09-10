@@ -11,7 +11,7 @@ import { SectionToolbar } from "../../components/layout.tsx";
 // 두 표면이 같은 원본을 서로 다른 방식으로 복제해 SSOT가 깨지는 문제가 있어
 // 폐기하고 이 화면 하나로 합쳤다.
 
-type Category = "checklist" | "manual" | "policy" | "procedure" | "reference" | "template" | "design" | "dd";
+type Category = "checklist" | "manual" | "policy" | "procedure" | "reference" | "template" | "design" | "dd" | "runbook" | "guideline";
 
 interface DocSummary {
   id: string;
@@ -133,6 +133,8 @@ const CATEGORY_TABS: Array<{ category: Category; label: string }> = [
   { category: "procedure", label: "업무절차서" },
   { category: "checklist", label: "체크리스트" },
   { category: "manual", label: "업무 매뉴얼" },
+  { category: "runbook", label: "런북/플레이북" },
+  { category: "guideline", label: "가이드라인" },
   { category: "reference", label: "참고문서" },
   { category: "template", label: "산출물 템플릿" },
   { category: "design", label: "디자인" },

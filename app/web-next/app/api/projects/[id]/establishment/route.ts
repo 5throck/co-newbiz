@@ -22,7 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-  const project = visibleProject(auth.auth, id);
+  const project = visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();
   // visibleProject's row carries only id/project_no — origin comes straight
   // from md_project (0063 column, origin∈{internal,joint} applies per ADR-0047).

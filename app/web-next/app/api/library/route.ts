@@ -8,7 +8,7 @@ import { authenticate } from "../../../lib/auth.ts";
 import { listLibrary, type LibraryCategory } from "../../../lib/library.ts";
 import { ok } from "../../../lib/envelope.ts";
 
-const CATEGORIES: LibraryCategory[] = ["checklist", "manual", "policy", "procedure", "reference", "template", "design", "dd"];
+const CATEGORIES: LibraryCategory[] = ["checklist", "manual", "policy", "procedure", "reference", "template", "design", "dd", "runbook", "guideline"];
 
 export async function GET(request: Request) {
   const auth = authenticate(request);

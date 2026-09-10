@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
+import { useConfirm } from "../../components/crud.tsx";
 
 // 프로젝트 (/projects) — S8~S12(사업성 분석·DD·투심·포트폴리오)로 이어지는
 // 프로젝트 키 화면군의 진입점. 승격된 프로젝트는 이전까지 /opportunities의
@@ -129,6 +130,7 @@ export function ProjectsView() {
   const [rows, setRows] = useState<ProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [closing, setClosing] = useState<{ id: string; name: string } | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
 
   function loadProjects() {
     api
@@ -140,6 +142,23 @@ export function ProjectsView() {
   useEffect(() => {
     loadProjects();
   }, []);
+
+  function removeProject(p: ProjectRow) {
+    confirm(
+      `${p.project_name ?? p.project_no} 삭제`,
+      async () => {
+        try {
+          await api.delete(`/api/projects/${encodeURIComponent(p.id)}`);
+          loadProjects();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "프로젝트 삭제 실패");
+        }
+      },
+      {
+        body: "삭제 표시로 전환됩니다. 연결 기회(진출방식 결정·대상 스크리닝·시너지 포함)가 함께 삭제 표시되고, 데이터는 보존되어 아카이브에서 감사용으로 열람할 수 있습니다.",
+      },
+    );
+  }
 
   return (
     <main>
@@ -215,14 +234,24 @@ export function ProjectsView() {
                         포트폴리오(S12)
                       </Link>
                       {p.is_lead && (
-                        <button
-                          type="button"
-                          className="btn-ghost btn-sm"
-                          title="이 프로젝트를 마감 또는 보관 상태로 전환합니다"
-                          onClick={() => setClosing({ id: p.id, name: p.project_name ?? p.project_no })}
-                        >
-                          종료/보관
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="btn-ghost btn-sm"
+                            title="이 프로젝트를 마감 또는 보관 상태로 전환합니다"
+                            onClick={() => setClosing({ id: p.id, name: p.project_name ?? p.project_no })}
+                          >
+                            종료/보관
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-danger btn-sm"
+                            title="이 프로젝트와 S8~S12 전체 데이터를 삭제합니다"
+                            onClick={() => removeProject(p)}
+                          >
+                            삭제
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -242,6 +271,7 @@ export function ProjectsView() {
           }}
         />
       )}
+      {confirmDialog}
     </main>
   );
 }

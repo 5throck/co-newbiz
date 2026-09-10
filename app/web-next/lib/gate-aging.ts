@@ -28,7 +28,7 @@ export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}):
        FROM gate_decision g
        LEFT JOIN md_project p ON p.id = g.entity_id AND g.entity_type = 'project'
        WHERE g.decided_at >= datetime('now', '-90 days')
-         AND (g.entity_type != 'project' OR p.status = 'open')
+         AND (g.entity_type != 'project' OR (p.status = 'open' AND p.deleted_at IS NULL))
        ORDER BY g.decided_at DESC`,
     )
     .all() as Array<{
@@ -78,7 +78,7 @@ export interface PipelineProject {
 
 export function listProjectPipeline(db: Database): PipelineProject[] {
   const projects = db
-    .query("SELECT id, project_no, COALESCE(project_name, project_no) AS pname, track FROM md_project WHERE status = 'open' ORDER BY created_at DESC")
+    .query("SELECT id, project_no, COALESCE(project_name, project_no) AS pname, track FROM md_project WHERE status = 'open' AND deleted_at IS NULL ORDER BY created_at DESC")
     .all() as Array<{ id: string; project_no: string; pname: string; track: string | null }>;
   // evaluateProcess lives in the app lib — imported above (no cycle: the
   // process engine never reads gate aging).

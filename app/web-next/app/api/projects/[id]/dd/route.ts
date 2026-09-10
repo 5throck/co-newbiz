@@ -15,7 +15,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-  if (!visibleProject(auth.auth, id)) return notFound();
+if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const workspace = listDdWorkspace(id);
   return ok(workspace, 200, { domain_count: workspace.domains.length });
 }
