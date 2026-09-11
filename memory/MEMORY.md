@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-12](2026-09-12.md) | feat(web-next): stage-scoped LLM decision support across S1-S12 (ADR-0118) |
 | [2026-09-11](2026-09-11.md) | chore: update |
 | [2026-09-11](2026-09-11.md) | fix(web-next): WACC input rows no longer overlap on md–lg viewports |
 | [2026-09-10](2026-09-10.md) | fix(market): KSIC search falls back to the industry name when the code field is empty |

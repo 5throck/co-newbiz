@@ -93,6 +93,36 @@ export default function BusinessCasePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ modelId: string; text: string } | null>(null);
+  // ADR-0118 — S8 채택 권고(제안). 채택은 사람의 행위다.
+  interface AdoptionReco {
+    source: "llm" | "synthesis";
+    provider: string | null;
+    note: string | null;
+    manifest: string[];
+    recommendation: {
+      recommended_model_id: string | null;
+      rationale_draft: string;
+      what_would_change: string | null;
+      key_evidence: string[];
+      cautions: string[];
+    };
+  }
+  const [reco, setReco] = useState<AdoptionReco | null>(null);
+  const [recoLoading, setRecoLoading] = useState(false);
+  const [recoError, setRecoError] = useState<string | null>(null);
+
+  async function generateAdoptionReco() {
+    if (recoLoading) return;
+    setRecoLoading(true); setRecoError(null);
+    try {
+      const r = await api.post<AdoptionReco>(`/api/projects/${encodeURIComponent(projectId)}/business-case/adoption-recommendation`, {});
+      setReco(r.data);
+    } catch (err) {
+      setRecoError(err instanceof Error ? err.message : "권고 생성 실패");
+    } finally {
+      setRecoLoading(false);
+    }
+  }
 
   const load = useCallback(() => {
     api.get<CasesResponse>(`/api/projects/${encodeURIComponent(projectId)}/business-case`)
@@ -250,6 +280,43 @@ export default function BusinessCasePage() {
             ))}
           </ul>
         </details>
+      )}
+
+      {/* ── LLM 채택 권고 (결정 지원) — ADR-0118: 제안은 LLM, 채택은 사람 ── */}
+      {canAct && (
+        <section className="market-section sizing-step mt-3" aria-label="LLM 채택 권고">
+          <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 채택 권고 (제안)</h3>
+          <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+            원칙 (경계 #2): 채택은 사람이 합니다 — 이 화면의 케이스들과 킬 크라이테리아 상태에서 만든 제안이며, ★ RECOMMENDED(결정론)와 별개 제안입니다.
+          </p>
+          {recoError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+          {!reco && !recoLoading && !recoError && (
+            <div className="flex flex-wrap items-center gap-2 mb-0">
+              <button type="button" className="btn-ghost" onClick={() => void generateAdoptionReco()}>▶ 채택 권고 생성</button>
+              <span className="text-[0.75rem] text-[color:var(--muted-fg)]">권고 케이스와 근거, "무엇이 바뀌면 뒤집히는가" 초안을 작성합니다.</span>
+            </div>
+          )}
+          {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">케이스 수치와 킬 크라이테리아를 근거로 초안을 작성하는 중...</p>}
+          {reco && (
+            <>
+              <p className="mb-1 flex flex-wrap items-center gap-1">
+                <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
+                  {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                </span>
+                {reco.recommendation.recommended_model_id && (
+                  <span className="status-chip status-green">권고: {(data?.cases ?? []).find((c) => c.id === reco.recommendation.recommended_model_id)?.name ?? reco.recommendation.recommended_model_id}</span>
+                )}
+              </p>
+              {reco.note && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
+              {reco.recommendation.rationale_draft && <p className="text-[0.8rem] mb-1"><span className="font-semibold">채택 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
+              {reco.recommendation.what_would_change && <p className="text-[0.8rem] mb-1"><span className="font-semibold">권고가 뒤집히는 조건:</span> {reco.recommendation.what_would_change}</p>}
+              {reco.recommendation.cautions.length > 0 && (
+                <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {reco.recommendation.cautions.join(" / ")}</p>
+              )}
+              <p className="text-[0.7rem] text-[color:var(--muted-fg)] mb-0">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
+            </>
+          )}
+        </section>
       )}
 
       {/* 시나리오별 이중 관점 비교 */}

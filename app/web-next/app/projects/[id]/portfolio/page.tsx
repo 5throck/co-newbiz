@@ -75,6 +75,38 @@ export default function PortfolioPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // ADR-0118 — S12 모니터링 브리프(초안). 전환 결정은 사람(venture-portfolio-IC)이 기록한다.
+  interface MonitoringBrief {
+    source: "llm" | "synthesis";
+    provider: string | null;
+    note: string | null;
+    manifest: string[];
+    brief: {
+      assessment_draft: string;
+      risk_flags: string[];
+      transition_suggestion: string | null;
+      rationale_draft: string;
+      learning_capture_draft: string;
+      key_evidence: string[];
+      cautions: string[];
+    };
+  }
+  const [reco, setReco] = useState<MonitoringBrief | null>(null);
+  const [recoLoading, setRecoLoading] = useState(false);
+  const [recoError, setRecoError] = useState<string | null>(null);
+
+  async function generateBrief() {
+    if (recoLoading) return;
+    setRecoLoading(true); setRecoError(null);
+    try {
+      const r = await api.post<MonitoringBrief>(`/api/projects/${encodeURIComponent(projectId)}/monitoring-brief`, {});
+      setReco(r.data);
+    } catch (err) {
+      setRecoError(err instanceof Error ? err.message : "브리프 생성 실패");
+    } finally {
+      setRecoLoading(false);
+    }
+  }
 
   const load = useCallback(() => {
     api.get<ScorecardView>(`/api/projects/${encodeURIComponent(projectId)}/scorecard`)
@@ -226,6 +258,58 @@ export default function PortfolioPage() {
             </ul>
           )}
         </section>
+
+        {/* ── LLM 모니터링 브리프 (결정 지원) — ADR-0118: 초안은 LLM, 전환 결정은 사람 ── */}
+        {canAct && (
+          <section className="market-section sizing-step mt-3" aria-label="LLM 모니터링 브리프">
+            <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 모니터링 브리프 (초안)</h3>
+            <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+              원칙 (경계 #2): 전환 결정은 사람(venture-portfolio-IC)이 기록합니다 — 스코어카드·시너지 인증·핵심인재·전환 이력에서 만든 <b>초안</b>입니다.
+            </p>
+            {recoError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+            {!reco && !recoLoading && !recoError && (
+              <div className="flex flex-wrap items-center gap-2 mb-0">
+                <button type="button" className="btn-ghost" onClick={() => void generateBrief()}>▶ 모니터링 브리프 생성</button>
+                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">투자 상태 평가·리스크 플래그·전환 제안·근거/학습 정리 초안을 작성해 결정 기록을 돕습니다.</span>
+              </div>
+            )}
+            {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">스코어카드·인증·인재 기록을 근거로 초안을 작성하는 중...</p>}
+            {reco && (
+              <>
+                <p className="mb-1 flex flex-wrap items-center gap-1">
+                  <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
+                    {reco.source === "llm" ? `LLM 초안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                  </span>
+                  {reco.brief.transition_suggestion && (
+                    <span className="status-chip status-amber">전환 제안: {TRANSITION_LABELS[reco.brief.transition_suggestion] ?? reco.brief.transition_suggestion}</span>
+                  )}
+                </p>
+                {reco.note && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
+                {reco.brief.assessment_draft && <p className="text-[0.8rem] mb-1"><span className="font-semibold">상태 평가 초안:</span> {reco.brief.assessment_draft}</p>}
+                {reco.brief.risk_flags.length > 0 && (
+                  <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ 리스크: {reco.brief.risk_flags.join(" / ")}</p>
+                )}
+                {reco.brief.rationale_draft && <p className="text-[0.8rem] mb-1"><span className="font-semibold">전환 근거 초안:</span> {reco.brief.rationale_draft}</p>}
+                {reco.brief.learning_capture_draft && <p className="text-[0.8rem] mb-1"><span className="font-semibold">학습 정리 초안:</span> {reco.brief.learning_capture_draft}</p>}
+                <p className="text-[0.7rem] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm"
+                  onClick={() => confirm("브리프 초안을 결정 폼에 반영할까요?", () => {
+                    setForm((f) => ({
+                      ...f,
+                      decision: reco.brief.transition_suggestion ?? f.decision,
+                      rationale: reco.brief.rationale_draft || f.rationale,
+                      learning_capture: reco.brief.learning_capture_draft || f.learning_capture,
+                    }));
+                  }, { body: "전환 제안(있다면)과 근거·학습 정리 초안을 결정 폼에 채웁니다 — 기록은 사람이 확정합니다.", confirmLabel: "반영" })}
+                >
+                  ▶ 결정 폼에 반영
+                </button>
+              </>
+            )}
+          </section>
+        )}
 
         {/* ── 전환 결정 장부 ─────────────────────────────────────────── */}
         <section className="market-section sizing-step mt-3" aria-label="포트폴리오 전환 결정">
