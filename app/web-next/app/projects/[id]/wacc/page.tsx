@@ -168,6 +168,26 @@ export default function ProjectWaccPage() {
   // ── 모드 ──
   const [mode, setMode] = useState<"direct" | "capm">("direct");
 
+  // ── 참조값 (ADR-0116 Phase 4; 제안일 뿐 — 확정은 사람) ──
+  interface Sugg { key: string; value: number | null; as_of?: string; anchor_ref?: string; source_label?: string; reason?: string }
+  const [sugg, setSugg] = useState<{ subject: { name_ko: string | null } | null; suggestions: Sugg[] } | null>(null);
+  const loadSugg = useCallback(() => {
+    api.get<{ subject: { name_ko: string | null } | null; suggestions: Sugg[] }>(`/api/projects/${encodeURIComponent(projectId)}/wacc/suggestions`)
+      .then((r) => setSugg(r.data))
+      .catch(() => setSugg(null));
+  }, [projectId]);
+  useEffect(() => { loadSugg(); }, [loadSugg]);
+  const applyRef = useCallback((key: string, e: Sugg) => {
+    // ECOS reference values are percent numbers (3.788 = 3.788%); the session
+    // inputs take ratios (0.03788) — convert on apply.
+    const ratio = e.value !== null ? e.value / 100 : null;
+    const cited = { value: ratio !== null ? String(ratio) : "", source: e.source_label ?? "", url: e.anchor_ref ?? "", asOf: e.as_of ?? "" };
+    if (key === "risk_free") setRf(cited);
+    if (key === "credit_spread") setKdSpread(cited);
+    if (key === "observed_de") setObsDe({ value: cited.value, source: cited.source, asOf: cited.asOf });
+  }, []);
+  const APPLY_LABEL: Record<string, string> = { risk_free: "Rf 적용", credit_spread: "가산금리 적용", observed_de: "D/E 적용" };
+
   // ── 직접 입력 ──
   const [directWacc, setDirectWacc] = useState("0.10");
   const [directHurdle, setDirectHurdle] = useState("");
@@ -433,6 +453,48 @@ export default function ProjectWaccPage() {
           )}
         </section>
 
+        {/* WACC 참조값 — 두 모드 모두에서 보이는 가져오기 액션 (ADR-0116 Phase 4).
+            제안일 뿐이며, 적용 후 값·출처를 확인하고 사람이 확정한다 (kind=user). */}
+        {sugg && sugg.suggestions.length > 0 && (
+          <section className="market-section sizing-step mt-3" aria-label="WACC 참조값">
+            <h3 className="sizing-step-title">
+              WACC 참조값
+              <span className="status-chip status-info">{sugg.subject?.name_ko ?? "대상 회사"} 기준 · 제안 — 확정은 사람</span>
+            </h3>
+            <div className="flex flex-wrap gap-5 items-start text-[0.85rem]">
+              {sugg.suggestions.filter((x) => x.value !== null).map((x) => (
+                <div key={x.key}>
+                  <div className="font-bold tabular-nums text-[1.05rem]">{x.key === "observed_de" ? x.value.toFixed(2) : `${x.value.toFixed(2)}%`}</div>
+                  <div className="text-[color:var(--muted-fg)] text-[0.74rem]">
+                    {x.key === "risk_free" ? "Rf (국고채 3년)" : x.key === "credit_spread" ? "가산금리 (AA− − 국고채)" : "관측 D/E"} · {x.as_of}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                onClick={() => {
+                  setMode("capm");
+                  for (const x of sugg.suggestions) {
+                    if (x.value !== null) applyRef(x.key, x);
+                  }
+                }}
+              >
+                CAPM 분해에 모두 적용
+              </button>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => void loadSugg()}>새로고침</button>
+            </div>
+            <p className="note-line">참조값은 제안입니다 — 적용 후 값·출처를 확인하고 사람이 확정합니다 (확정값은 kind=user). 출처: 한국은행 ECOS 시장금리 · DART 연결재무제표.</p>
+          </section>
+        )}
+        {sugg && sugg.suggestions.every((x) => x.value === null) && (
+          <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-3">
+            참조값을 가져올 데이터가 없습니다 — {sugg.missing.join(" · ")}
+          </p>
+        )}
+
         {/* 저장된 CAPM 세션 — 계산 과정은 저장 후에도 레지스트리에서 재현된다 (ADR-0115) */}
         {view && view.derivation && view.components.length > 0 && (
           <section className="market-section sizing-step">
@@ -488,6 +550,24 @@ export default function ProjectWaccPage() {
             onClick={() => setMode("capm")}>CAPM 분해</button>
         </div>
 
+        {mode === "capm" && sugg && sugg.suggestions.some((x) => x.value !== null) && (
+          <section className="market-section sizing-step mt-3" aria-label="WACC 참조값">
+            <h3 className="sizing-step-title">WACC 참조값 <span className="status-chip status-info">{sugg.subject?.name_ko ?? "대상 회사"} 기준 · 제안 — 확정은 사람</span></h3>
+            <table className="data-table">
+              <thead><tr><th scope="col">파라미터</th><th scope="col" className="num">참조값</th><th scope="col">출처 · 기준일</th><th scope="col"></th></tr></thead>
+              <tbody>
+                {sugg.suggestions.map((x) => (
+                  <tr key={x.key}>
+                    <td>{x.key === "risk_free" ? "무위험이자율 (Rf) — 국고채 3년" : x.key === "credit_spread" ? "신용등급 가산금리 (회사채 AA− − 국고채)" : "관측 D/E (부채/자본, 최근 결산)"}</td>
+                    <td className="num mono-num">{x.value === null ? "N/A" : x.key === "observed_de" ? x.value.toFixed(2) : `${x.value.toFixed(2)}%`}</td>
+                    <td className="text-[color:var(--muted-fg)] text-[0.76rem]">{x.value !== null ? `${x.source_label ?? ""} · ${x.as_of ?? ""}` : x.reason ?? ""}</td>
+                    <td>{x.value !== null && <button type="button" className="btn-ghost btn-sm" onClick={() => applyRef(x.key, x)}>{APPLY_LABEL[x.key]}</button>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
         {mode === "direct" ? (
           <form className="sizing-step grid gap-3 mt-0 rounded-tl-none" style={{ maxWidth: 460 }} onSubmit={submitDirect}>
             <h3 className="sizing-step-title">직접 입력</h3>

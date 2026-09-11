@@ -1,4 +1,4 @@
-// @version 1.0.3
+// @version 1.1.0
 /**
  * source-adapters.ts — the pluggable data-source adapter framework
  * (design: docs/designs/2026-09-09-source-adapter-framework-design.md).
@@ -29,7 +29,7 @@ import { resolveKosisUnit } from "./kosis-units.ts";
 export interface SeriesDescriptor {
   /** KOSIS stat_tbl_id (or adapter-equivalent natural series key) */
   seriesId: string;
-  adapter: "dart" | "kosis" | "opendata" | "law";
+  adapter: "dart" | "ecos" | "kosis" | "opendata" | "law";
   title: string;
   unitCode: string;
   periodType: "year" | "quarter" | "month";
@@ -45,6 +45,9 @@ export interface SeriesDescriptor {
   objL7?: string;
   objL8?: string;
   itmId?: string;
+  /** ECOS (k-ecos): BOK statistic table + item code for StatisticSearch */
+  statCode?: string;
+  itemCode?: string;
   /** Seed entries ship unverified; flip after a live-API confirmation */
   _verified?: boolean;
 }
@@ -68,7 +71,7 @@ export interface AdapterFetchSummary {
 }
 
 export interface SourceAdapter {
-  code: "dart" | "kosis" | "opendata" | "law";
+  code: "dart" | "ecos" | "kosis" | "opendata" | "law";
   kSkill: string;
   credentialEnv: string;
   kind: "observations" | "catalog";
@@ -257,6 +260,79 @@ const kosisAdapter: SourceAdapter = {
   },
 };
 
+// ── ecos adapter (k-ecos) ───────────────────────────────────────────────────
+
+/** Seed stat list — 721Y001 (시장금리, 월별). Item codes live-verified against
+ *  StatisticItemList 2026-09-11; a wrong item code surfaces the available
+ *  codes in the fetch error (self-documenting discovery). Monthly grain fits
+ *  the pipeline's resolveMonthlyPeriods — month-end/market-close values. */
+const ECOS_SEED_SERIES: SeriesDescriptor[] = [
+  {
+    seriesId: "ecos:721Y001:5020000",
+    adapter: "ecos",
+    statCode: "721Y001",
+    itemCode: "5020000",
+    title: "국고채(3년) 월별금리 — ECOS 721Y001 live-verified 2026-09-11 (item 5020000)",
+    unitCode: "percent",
+    periodType: "month",
+    _verified: true,
+  },
+  {
+    seriesId: "ecos:721Y001:7020000",
+    adapter: "ecos",
+    statCode: "721Y001",
+    itemCode: "7020000",
+    title: "회사채(3년, AA-) 월별금리 — ECOS 721Y001 live-verified 2026-09-11 (item 7020000)",
+    unitCode: "percent",
+    periodType: "month",
+    _verified: true,
+  },
+];
+
+const ecosAdapter: SourceAdapter = {
+  code: "ecos",
+  kSkill: "k-ecos",
+  credentialEnv: "ECOS_API_KEY",
+  kind: "observations",
+  isEnabled: () => {
+    loadPipelineKeys();
+    return Boolean(process.env.ECOS_API_KEY);
+  },
+  async listSeries() {
+    return ECOS_SEED_SERIES;
+  },
+  fetcher(ctx) {
+    const series = ECOS_SEED_SERIES.find((s) => s.seriesId === ctx.seriesId);
+    if (!series?.statCode || !series?.itemCode) {
+      throw new Error(`ecos: unknown series '${ctx.seriesId}' — fetch --list shows the seeded catalog.`);
+    }
+    const apiKey = requireKey("ECOS_API_KEY");
+    return async (periodKey: string) => {
+      // BOK ECOS Open API — URL template per the k-ecos skill (service name
+      // FIRST, then the key; cycle M; dates YYYYMM). One call per series-month.
+      const compact = periodKey.replace("-", "");
+      const url = `https://ecos.bok.or.kr/api/StatisticSearch/${encodeURIComponent(apiKey)}/json/kr/1/10/${series.statCode}/M/${compact}/${compact}/${series.itemCode}`;
+      // Success envelope: {"StatisticSearch":{"list_total_count":N,"row":[…]}}
+      // Error envelope: a bare {"RESULT":{"CODE","MESSAGE"}} — per the k-ecos
+      // skill's response policy.
+      const payload = await getJson(url) as {
+        StatisticSearch?: { row?: Array<{ ITEM_CODE1?: string; DATA_VALUE?: string; TIME?: string }> };
+        RESULT?: { CODE?: string; MESSAGE?: string };
+      };
+      if (payload.RESULT && !payload.StatisticSearch) {
+        throw new Error(`ecos API error ${payload.RESULT.CODE}: ${payload.RESULT.MESSAGE}`);
+      }
+      const rows = (payload.StatisticSearch?.row ?? []).filter((r) => r.ITEM_CODE1 === series.itemCode);
+      const row = rows.find((r) => r.TIME === compact) ?? rows[rows.length - 1];
+      if (!row?.DATA_VALUE) throw new Error(`ecos: no data point for ${ctx.seriesId}@${periodKey}`);
+      const value = Number(row.DATA_VALUE);
+      if (!Number.isFinite(value)) throw new Error(`ecos: non-numeric value '${row.DATA_VALUE}' for ${ctx.seriesId}@${periodKey}`);
+      const raw = JSON.stringify(row);
+      return { value, contentHash: await hash(raw), raw };
+    };
+  },
+};
+
 async function hash(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -349,6 +425,7 @@ const opendataAdapter: SourceAdapter = {
 
 export const SOURCE_ADAPTERS: Record<string, SourceAdapter> = {
   dart: dartAdapter,
+  ecos: ecosAdapter,
   kosis: kosisAdapter,
   law: lawAdapter,
   opendata: opendataAdapter,

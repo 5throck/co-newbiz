@@ -3849,6 +3849,26 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/projects/{id}/wacc/suggestions:
+    get:
+      operationId: getProjectWaccSuggestions
+      summary: Reference values (Rf, credit spread, observed D/E) for the project's bound subject company. Proposal-only; the confirmed scalar stays human.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/projects/{id}/reports/compose:
     post:
       operationId: composeProjectReport

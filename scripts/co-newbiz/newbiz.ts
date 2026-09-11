@@ -591,8 +591,8 @@ switch (command) {
   case "fetch": {
     const sourceIdx = args.indexOf("--source");
     const source = sourceIdx >= 0 ? args[sourceIdx + 1] : undefined;
-    if (!source || !["dart", "kosis", "law", "opendata"].includes(source)) {
-      console.error("fetch: --source is required (dart | kosis | law | opendata).");
+    if (!source || !["dart", "ecos", "kosis", "law", "opendata"].includes(source)) {
+      console.error("fetch: --source is required (dart | ecos | kosis | law | opendata).");
       process.exit(2);
     }
     const { SOURCE_ADAPTERS, upsertCatalog } = await import("./source-adapters.ts");
@@ -600,7 +600,7 @@ switch (command) {
     const adapter = SOURCE_ADAPTERS[source];
     const db = getDb();
     // md_source registration: every used adapter is a known source with a grade.
-    const GRADE: Record<string, string> = { dart: "A", kosis: "A", law: "A", opendata: "B" };
+    const GRADE: Record<string, string> = { dart: "A", ecos: "A", kosis: "A", law: "A", opendata: "B" };
     const registerSource = () => {
       if (!db.query("SELECT id FROM md_source WHERE code = ?").get(source)) {
         db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)",
