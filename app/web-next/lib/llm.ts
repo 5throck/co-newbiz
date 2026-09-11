@@ -46,7 +46,7 @@ interface ProviderConfig {
 // TAVILY_API_KEY etc. in the repo-root .env. Walk up from cwd and import
 // pipeline keys that are not already in the environment (never overriding
 // explicitly-set values).
-const PIPELINE_ENV_KEYS = /^(CO_NEWBIZ_LLM_[A-Z_]+|DART_API_KEY|ECOS_API_KEY|TAVILY_API_KEY)$/;
+const PIPELINE_ENV_KEYS = /^(CO_NEWBIZ_LLM_[A-Z_]+|DART_API_KEY|ECOS_API_KEY|KRX_API_KEY|TAVILY_API_KEY)$/;
 let rootEnvLoaded = false;
 export function loadRootEnvPipelineKeys(): void {
   if (rootEnvLoaded) return;

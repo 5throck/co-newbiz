@@ -29,7 +29,7 @@ import { resolveKosisUnit } from "./kosis-units.ts";
 export interface SeriesDescriptor {
   /** KOSIS stat_tbl_id (or adapter-equivalent natural series key) */
   seriesId: string;
-  adapter: "dart" | "ecos" | "kosis" | "opendata" | "law";
+  adapter: "dart" | "ecos" | "krx" | "kosis" | "opendata" | "law";
   title: string;
   unitCode: string;
   periodType: "year" | "quarter" | "month";
@@ -48,6 +48,8 @@ export interface SeriesDescriptor {
   /** ECOS (k-ecos): BOK statistic table + item code for StatisticSearch */
   statCode?: string;
   itemCode?: string;
+  /** KRX (k-krx): stock short code for daily trading lookup */
+  ticker?: string;
   /** Seed entries ship unverified; flip after a live-API confirmation */
   _verified?: boolean;
 }
@@ -71,7 +73,7 @@ export interface AdapterFetchSummary {
 }
 
 export interface SourceAdapter {
-  code: "dart" | "ecos" | "kosis" | "opendata" | "law";
+  code: "dart" | "ecos" | "krx" | "kosis" | "opendata" | "law";
   kSkill: string;
   credentialEnv: string;
   kind: "observations" | "catalog";
@@ -333,6 +335,66 @@ const ecosAdapter: SourceAdapter = {
   },
 };
 
+// ── krx adapter (k-krx) ─────────────────────────────────────────────────────
+
+const KRX_BASE = "https://data-dbg.krx.co.kr/svc/apis";
+
+/** Seed series — the market/index series needed for beta regression and
+ *  price-trend analysis. Ticker codes (단축코드 ISIN) are resolved at fetch
+ *  time via the stock master service. Extend freely with new items. */
+const KRX_SEED_SERIES: SeriesDescriptor[] = [];
+
+interface KrxFetchResult { value: number; contentHash: string; raw: string }
+
+async function krxGetJson(url: string, apiKey: string): Promise<unknown> {
+  const res = await fetch(url, {
+    headers: { AUTH_KEY: apiKey, accept: "application/json" },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) throw new Error(`KRX API HTTP ${res.status} from ${new URL(url).host}`);
+  const text = await res.text();
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith("<")) throw new Error(`KRX API non-JSON response: ${trimmed.slice(0, 120)}`);
+  return JSON.parse(text);
+}
+
+const krxAdapter: SourceAdapter = {
+  code: "krx",
+  kSkill: "k-krx",
+  credentialEnv: "KRX_API_KEY",
+  kind: "observations",
+  isEnabled: () => {
+    loadPipelineKeys();
+    return Boolean(process.env.KRX_API_KEY);
+  },
+  async listSeries() {
+    return KRX_SEED_SERIES;
+  },
+  fetcher(ctx) {
+    const series = KRX_SEED_SERIES.find((s) => s.seriesId === ctx.seriesId);
+    if (!series) {
+      throw new Error(`krx: unknown series '${ctx.seriesId}' — fetch --list shows the seeded catalog.`);
+    }
+    const apiKey = requireKey("KRX_API_KEY");
+    return async (periodKey: string) => {
+      // periodKey is YYYY-MM for monthly grain; KRX daily services take YYYYMMDD.
+      const [y, m] = periodKey.split("-").map(Number);
+      const lastDay = new Date(y, m, 0).getDate();
+      const from = `${y}${String(m).padStart(2, "0")}01`;
+      const to = `${y}${String(m).padStart(2, "0")}${String(lastDay).padStart(2, "0")}`;
+      const url = `${KRX_BASE}/sto/stk_bydd_trd.json?bosdd=${from}&basdd=${to}`;
+      const payload = await krxGetJson(url, apiKey) as { OutBlock_1?: Array<{ ISU_SRT_CD?: string; TDD_CLPRC?: string }> };
+      const rows = payload.OutBlock_1 ?? [];
+      const match = rows.find((r) => r.ISU_SRT_CD === series.ticker);
+      if (!match?.TDD_CLPRC) throw new Error(`krx: no close price for ${series.ticker}@${periodKey}`);
+      const value = Number(match.TDD_CLPRC);
+      if (!Number.isFinite(value)) throw new Error(`krx: non-numeric close price '${match.TDD_CLPRC}' for ${series.ticker}@${periodKey}`);
+      const raw = JSON.stringify(match);
+      return { value, contentHash: await hash(raw), raw };
+    };
+  },
+};
+
 async function hash(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -426,6 +488,7 @@ const opendataAdapter: SourceAdapter = {
 export const SOURCE_ADAPTERS: Record<string, SourceAdapter> = {
   dart: dartAdapter,
   ecos: ecosAdapter,
+  krx: krxAdapter,
   kosis: kosisAdapter,
   law: lawAdapter,
   opendata: opendataAdapter,
