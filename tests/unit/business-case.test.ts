@@ -142,8 +142,9 @@ describe("S8 generation (ADR-0098)", () => {
     expect(st.status).toBe("done");
     expect(st.activities.length).toBe(12); // 3 scenarios × 4 procedure steps
     expect(st.activities.filter((a) => a.status === "done").length).toBe(12);
-    expect(st.activities.find((a) => a.activityId === "base:growth_projection")?.agentKey).toBe("financial-analyst");
-    expect(st.activities.find((a) => a.activityId === "downside:distributional_valuation")?.agentKey).toBe("quant-methodologist");
+    // ADR-0117: activity ids are namespaced per variant (gate-primary first).
+    expect(st.activities.find((a) => a.activityId === "base:market_forward:growth_projection")?.agentKey).toBe("financial-analyst");
+    expect(st.activities.find((a) => a.activityId === "downside:market_forward:distributional_valuation")?.agentKey).toBe("quant-methodologist");
     expect(st.cases.length).toBe(3);
 
     // (b) the RECOMMENDED flag is recorded on the run's meta.

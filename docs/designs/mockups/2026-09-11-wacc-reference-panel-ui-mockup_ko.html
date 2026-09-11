@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>목업 — WACC 참조값 패널 (주체별 비교) — co-newbiz</title>
+<style>
+  /* ── co-newbiz web-next 디자인 토큰 ── */
+  :root {
+    --bg: #f6f7f9; --fg: #171a21; --surface: #ffffff;
+    --muted-bg: #f1f3f6; --muted-fg: #5d6572;
+    --border: rgba(16, 22, 34, 0.10); --border-subtle: rgba(16, 22, 34, 0.06); --border-bright: rgba(16, 22, 34, 0.16);
+    --accent: #3d66f5; --accent-fg: #ffffff;
+    --primary-dim: hsl(217, 91%, 35%); --primary-bg: hsla(217, 91%, 45%, 0.10); --primary-border: hsla(217, 91%, 45%, 0.25);
+    --success: hsl(160, 84%, 30%); --success-bg: hsla(160, 84%, 30%, 0.10);
+    --warning: hsl(35, 90%, 38%); --warning-bg: hsla(35, 90%, 38%, 0.12);
+    --danger: hsl(0, 72%, 45%); --danger-bg: hsla(0, 72%, 45%, 0.10);
+    --radius-sm: 6px; --radius-lg: 10px; --radius-xl: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { font-size: 15px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    line-height: 1.55;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  .appbar { background: var(--surface); border-bottom: 1px solid var(--border); }
+  .appbar-inner { max-width: 1100px; margin: 0 auto; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.6rem; }
+  .appbar-logo { font-weight: 800; font-size: 0.95rem; }
+  .appbar-logo span { color: var(--accent); }
+  .appbar-crumb { color: var(--muted-fg); font-size: 0.82rem; }
+  .mockup-banner {
+    background: var(--warning-bg); color: var(--warning); font-size: 0.78rem; text-align: center;
+    padding: 0.3rem 1rem; border-bottom: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
+  }
+  h1 { font-size: 1.35rem; margin: 1.4rem 0 0.15rem; }
+  .page-objective { margin: 0 0 0.9rem; color: var(--muted-fg); font-size: 0.9rem; }
+  .section { border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 1rem 1.25rem; background: var(--surface); margin-top: 1.25rem; }
+  .section > h3 { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; margin: 0 0 0.6rem; flex-wrap: wrap; }
+  .badge-num { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4rem; height: 1.4rem; border-radius: 999px; background: var(--accent); color: var(--accent-fg); font-size: 0.78rem; font-weight: 700; }
+  .muted { color: var(--muted-fg); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.82em; }
+  table.data { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  table.data th { text-align: left; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--border-bright); color: var(--muted-fg); font-weight: 600; white-space: nowrap; }
+  table.data td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border-subtle); vertical-align: middle; }
+  table.data tr:last-child td { border-bottom: none; }
+  table.data td.num, table.data th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .chip { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 0.08rem 0.45rem; border-radius: 999px; white-space: nowrap; }
+  .chip.live { background: var(--success-bg); color: var(--success); }
+  .chip.primary { background: var(--accent); color: var(--accent-fg); }
+  .chip.info { background: var(--primary-bg); color: var(--accent); }
+  .chip.na { background: var(--muted-bg); color: var(--muted-fg); }
+  .apply-btn {
+    background: var(--surface); color: var(--accent); border: 1px solid var(--primary-border);
+    padding: 0.3rem 0.75rem; border-radius: 999px; font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+  }
+  .apply-btn:hover { background: var(--primary-bg); }
+  .callout { border-radius: var(--radius-lg); padding: 0.65rem 0.9rem; font-size: 0.84rem; margin-top: 0.6rem; border: 1px solid transparent; }
+  .callout.info { background: var(--primary-bg); color: var(--primary-dim); border-color: var(--primary-border); }
+  .callout.warn { background: var(--warning-bg); color: var(--warning); border-color: color-mix(in srgb, var(--warning) 25%, transparent); }
+  .callout b { font-weight: 800; }
+  .note-line { font-size: 0.76rem; color: var(--muted-fg); margin-top: 0.7rem; }
+  .ref-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.8rem 1rem; background: var(--surface); }
+  .ref-card .head { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+  .ref-card .subj { font-weight: 800; font-size: 0.92rem; margin-top: 0.3rem; }
+  .ref-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; margin-top: 0.6rem; }
+  .ref-grid .item { background: var(--muted-bg); border-radius: var(--radius-sm); padding: 0.45rem 0.6rem; }
+  .ref-grid .k { color: var(--muted-fg); font-size: 0.72rem; }
+  .ref-grid .v { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 1.02rem; }
+  .ref-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-top: 0.6rem; }
+  @media (max-width: 900px) { .ref-compare { grid-template-columns: 1fr; } }
+  .review-box { border: 1px dashed var(--primary-border); background: var(--primary-bg); border-radius: var(--radius-lg); padding: 0.7rem 0.9rem; font-size: 0.8rem; color: var(--primary-dim); margin-top: 1.25rem; }
+  .review-box b { font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="mockup-banner">🖥️ 화면 목업 (UI Mockup) — WACC 탭(CAPM 분해) 상단에 새로 추가되는 "참조값 패널"입니다. 예시 값입니다.</div>
+
+<header class="appbar">
+  <div class="appbar-inner">
+    <div class="appbar-logo">co-<span>newbiz</span></div>
+    <div class="appbar-crumb">프로젝트 · 휴머노이드 로봇 사업 진출 (가상) · WACC · 브라운필드 트랙</div>
+  </div>
+</header>
+
+<div class="container">
+  <h1>WACC 참조값 패널 — 주체별 비교</h1>
+  <p class="page-objective">시장 데이터와 회사 재무 fact에서 계산한 참조값입니다. 할인율의 주체에 따라 두 관점이 있으며, 트랙에 따라 1차 참조가 달라집니다.</p>
+
+  <!-- 주체 설명 -->
+  <div class="section">
+    <h3><span class="badge-num">i</span>두 참조 주체</h3>
+    <div class="ref-compare">
+      <div class="ref-card">
+        <div class="head"><span class="chip primary">1차 참조 · 브라운필드</span><span class="chip info">투자 허들 관점</span></div>
+        <div class="subj">그룹 계열사 기준 — ㈜에스앤아이홀딩스 (가상)</div>
+        <div class="muted" style="font-size:0.8rem;">"그룹이 요구하는 최소 수익률" — 신규 투자의 기준수익률(허들) 점검용</div>
+        <div class="ref-grid">
+          <div class="item"><div class="k">무위험이자율 Rf</div><div class="v">3.31%</div></div>
+          <div class="item"><div class="k">신용 스프레드</div><div class="v">+0.62%p</div></div>
+          <div class="item"><div class="k">관측 D/E</div><div class="v">0.42</div></div>
+          <div class="item"><div class="k">베타</div><div class="v" style="font-size:0.8rem;color:var(--muted-fg);">N/A</div></div>
+        </div>
+      </div>
+      <div class="ref-card" style="border-color: var(--primary-border);">
+        <div class="head"><span class="chip info">밸류에이션 관점</span></div>
+        <div class="subj">인수 대상 회사 기준 — ㈜케이로보틱스 (가상)</div>
+        <div class="muted" style="font-size:0.8rem;">"대상 회사 현금흐름의 리스크" — 대상 가치 평가용 할인율 근거</div>
+        <div class="ref-grid">
+          <div class="item"><div class="k">무위험이자율 Rf</div><div class="v">3.31%</div></div>
+          <div class="item"><div class="k">신용 스프레드</div><div class="v">+0.85%p</div></div>
+          <div class="item"><div class="k">관측 D/E</div><div class="v">1.18</div></div>
+          <div class="item"><div class="k">베타</div><div class="v" style="font-size:0.8rem;color:var(--muted-fg);">N/A</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="callout info">
+      <b>왜 두 관점인가</b> — 무위험이자율·스프레드 등 시장 파라미터는 동일하지만, <b>자본구조(D/E)와 베타는 주체마다 다릅니다</b>. 대상 회사 현금흐름을 할인할 때는 대상 리스크가, 그룹 투자 판단에는 그룹 자본비용이 기준이 됩니다.
+    </div>
+    <div class="callout warn">
+      <b>베타 N/A 안내</b> — 주체별 베타는 시세 데이터 원천(KRX 연동, 후속 단계) 연결 후 제공됩니다. 그 전에는 베타가 필요한 산식(참조 Ke·참조 WACC)은 표시되지 않고, 세션의 기존 베타 추정(동종사 인용/시계열 회귀)을 그대로 사용합니다.
+    </div>
+  </div>
+
+  <!-- 항목별 적용 -->
+  <div class="section">
+    <h3><span class="badge-num">1</span>항목별 참조값 <span class="muted" style="font-weight:400;font-size:0.8rem;">— "적용"을 누르면 아래 입력칸에 값·출처·기준일이 채워집니다</span></h3>
+    <table class="data">
+      <thead>
+        <tr>
+          <th>파라미터</th>
+          <th class="num">계열사 기준 <span class="muted">(허들)</span></th>
+          <th class="num">대상 회사 기준 <span class="muted">(밸류에이션)</span></th>
+          <th>출처</th>
+          <th style="width:6rem;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>무위험이자율 (Rf)</b><div class="muted" style="font-size:0.74rem;">국고채 3년물</div></td>
+          <td class="num">3.31%</td>
+          <td class="num">3.31%</td>
+          <td><span class="chip live">live</span> 한국은행 ECOS 일별금리 · 2026-09-10</td>
+          <td><button class="apply-btn">대상 기준 적용</button></td>
+        </tr>
+        <tr>
+          <td><b>신용등급 가산금리</b><div class="muted" style="font-size:0.74rem;">회사채 AA− − 국고채 3년</div></td>
+          <td class="num">+0.62%p</td>
+          <td class="num">+0.85%p</td>
+          <td><span class="chip live">live</span> 한국은행 ECOS · 2026-09-10</td>
+          <td><button class="apply-btn">대상 기준 적용</button></td>
+        </tr>
+        <tr>
+          <td><b>관측 D/E</b><div class="muted" style="font-size:0.74rem;">부채총계 / 자본총계</div></td>
+          <td class="num">0.42 <span class="muted">(2025.12)</span></td>
+          <td class="num">1.18 <span class="muted">(2025.12)</span></td>
+          <td><span class="chip live">live</span> DART 연결재무제표 · 2026-09-10</td>
+          <td><button class="apply-btn">대상 기준 적용</button></td>
+        </tr>
+        <tr>
+          <td><b>베타 (레버드)</b></td>
+          <td class="num"><span class="chip na">N/A</span></td>
+          <td class="num"><span class="chip na">N/A</span></td>
+          <td class="muted" style="font-size:0.78rem;">KRX 시세 원천 연결 예정 — 세션 베타 추정 사용</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note-line">스프레드는 등급별 실측이 아닌 <b>회사채(AA−) 평균 기준 근사값</b>입니다 — 개별 회사 신용등급을 정확히 반영하지 않으므로, 필요 시 직접 입력으로 대체하세요.</p>
+  </div>
+
+  <!-- 적용 후 입력칸 상태 -->
+  <div class="section">
+    <h3><span class="badge-num">2</span>적용 후 — CAPM 입력 행 상태</h3>
+    <table class="data">
+      <thead><tr><th style="width:11rem;">항목</th><th style="width:7rem;">값</th><th>출처명</th><th>출처 URL (근거 참조)</th><th style="width:7rem;">기준일</th><th style="width:6rem;">등급</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>무위험이자율 (Rf)</td>
+          <td><span class="mono">0.0331</span></td>
+          <td>한국은행 ECOS — 국고채 3년</td>
+          <td><span class="mono">src:ecos</span></td>
+          <td>2026-09-10</td>
+          <td><span class="chip live">live · 인용</span></td>
+        </tr>
+        <tr>
+          <td>관측 D/E</td>
+          <td><span class="mono">1.18</span></td>
+          <td>DART 연결재무제표 — ㈜케이로보틱스 2025.12</td>
+          <td><span class="mono">src:dart</span></td>
+          <td>2026-09-10</td>
+          <td><span class="chip live">live · 인용</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      <b>확정 경계 유지</b> — 참조값 적용은 <b>입력 보조</b>입니다. 최종 WACC 확정("이 값으로 확정")은 항상 사람의 행위이며, 확정값은 kind=user로 프로젝트에 기록됩니다. 자동 제안값은 kind=live 출처 인용으로만 남습니다.
+    </div>
+  </div>
+
+  <div class="review-box">
+    <b>검토 포인트</b> — ① 두 주체(계열사=허들 / 대상=밸류에이션) 구분이 명확한지 ② 트랙별 1차 참조 규칙(브라운필드=대상, 그린필드=계열사)이 이해되는지 ③ 베타 N/A 표현이 불편하지 않은지 ④ "적용" 버튼의 단위 동작(행별 적용)이 적절한지
+  </div>
+</div>
+</body>
+</html>

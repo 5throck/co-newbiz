@@ -78,3 +78,7 @@ tests/.temp/
 # local databases and archived copies (never commit)
 app/web-next/db/data/**
 !app/web-next/db/data/_archived-duplicate/.gitkeep
+
+# render artifacts (report renderer output)
+render_out/
+.openchrome/

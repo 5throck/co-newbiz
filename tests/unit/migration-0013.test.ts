@@ -275,6 +275,8 @@ describe("shape: four new tables + md_project.current_stage_gate", () => {
       "status", "closed_at", "closure_reason",
       // 0081 (deal-deletion-playbook): deletion-mark columns appended.
       "deleted_at", "deleted_by", "delete_reason",
+      // 0084 (ADR-0116): subject-company connect rationale appended.
+      "subject_company_rationale",
     ]);
   });
 

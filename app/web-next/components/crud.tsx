@@ -60,7 +60,7 @@ export function ConfirmDialog({
               onClose();
             }}
           >
-            {state.confirmLabel ?? "삭제"}
+            {state.confirmLabel ?? "확인"}
           </button>
         </div>
       </div>

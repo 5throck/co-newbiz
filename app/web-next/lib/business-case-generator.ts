@@ -28,6 +28,9 @@
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { resolveProjectWacc, type WaccResolution } from "../../../db/lib/wacc.ts";
+import { getCompanyFinancialFacts, factRowsToDartItems } from "./dart-financial-facts.ts";
+import { deriveFinancialAnalysis } from "./company-financials.ts";
+import { historicalGrowthStats } from "./financial-commentary.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef, type CallAgent } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
 
@@ -54,6 +57,113 @@ export const SCENARIO_LABEL: Record<Scenario, string> = {
   upside: "상승(Upside)",
   downside: "하락(Downside)",
 };
+
+// ── Dual-perspective growth model (ADR-0117) ────────────────────────────────
+// Every scenario case is computed in TWO variants from the same seeded engine:
+//   market_forward (1차) — 시장 성장률 + 미래 변동성 프로파일. Gate, kill
+//     criteria, and the RECOMMENDED flag judge THIS variant only.
+//   historical (비교) — 대상 회사 과거 CAGR + 과거 매출 변동성 ("과거가
+//     지속된다면" evidence). Generated only when company facts exist; the
+//     page shows N/A otherwise — missing data is never fabricated.
+
+export type CaseVariant = "market_forward" | "historical";
+
+export interface GrowthModelVariant {
+  /** Annual growth rate (ratio) — the simulation anchor. */
+  growth: number;
+  /** Annual growth dispersion (ratio) — replaces the legacy hardcoded 2%. */
+  disp: number;
+  growthSource: string;
+  dispSource: string;
+}
+
+export interface GrowthModel {
+  market: GrowthModelVariant;
+  /** null = 대상 회사 데이터 부족 — historical 변형은 생성하지 않는다 (N/A). */
+  historical: GrowthModelVariant | null;
+}
+
+/** Dispersion guardrails — the legacy hardcoded sigma was 2%; extreme input
+ *  volatility must not blow the distribution up, so everything clamps. */
+export const DISP_FLOOR = 0.02;
+export const DISP_CAP = 0.25;
+
+const clampDisp = (v: number | null): number | null =>
+  v === null || !Number.isFinite(v) ? null : Math.min(DISP_CAP, Math.max(DISP_FLOOR, v));
+const pct1 = (v: number): string => `${(v * 100).toFixed(1)}%`;
+
+/** Resolve both variants' growth/dispersion parameters for a project.
+ *  market.growth: S2 opportunity fact (fallback 5% — pre-Phase-2 behavior
+ *  preserved as the last resort, explicitly labeled). market.disp: blend of
+ *  historical revenue volatility and the WACC session's wacc.beta_vol_asset
+ *  when both exist, else whichever exists, else the 2% floor. historical.*:
+ *  DART revenue CAGR + YoY stdev; null when the series is too short. */
+export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: string): GrowthModel {
+  const opp = db
+    .query(
+      "SELECT o.growth_rate FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
+    )
+    .get(projectId) as { growth_rate: number | null } | undefined;
+  const marketGrowth = opp?.growth_rate ?? 0.05;
+  const marketGrowthSource = opp?.growth_rate != null ? "시장 성장률 (opportunity)" : "기본값 5% (기회 미입력)";
+
+  let histCagr: number | null = null;
+  let histVol: number | null = null;
+  let histYears = 0;
+  const p = db.query("SELECT company_id FROM md_project WHERE id = ?").get(projectId) as { company_id: string | null } | undefined;
+  if (p?.company_id) {
+    try {
+      const facts = getCompanyFinancialFacts(db, p.company_id);
+      const analysis = deriveFinancialAnalysis({
+        corpCode: facts.company.dart_corp_code ?? "",
+        found: facts.rows.length > 0,
+        items: factRowsToDartItems(facts.rows),
+        yearly: [],
+      } as Parameters<typeof deriveFinancialAnalysis>[0]);
+      const stats = historicalGrowthStats(analysis);
+      histCagr = stats.cagr;
+      histVol = stats.revenueVol;
+      histYears = analysis.years.length;
+    } catch {
+      // 회사 미연결 또는 fact 부재 — historical는 N/A (임의치 대체 금지).
+    }
+  }
+
+  const betaVolRow = db
+    .query("SELECT value FROM assumption WHERE assumption_key = 'wacc.beta_vol_asset' ORDER BY as_of DESC LIMIT 1")
+    .get() as { value: number } | undefined;
+  const betaVol = betaVolRow && Number.isFinite(betaVolRow.value) && betaVolRow.value > 0 ? betaVolRow.value : null;
+  const clampedHist = clampDisp(histVol);
+
+  let marketDisp: number;
+  let marketDispSource: string;
+  if (clampedHist !== null && betaVol !== null) {
+    marketDisp = clampDisp((clampedHist + betaVol) / 2)!;
+    marketDispSource = `블렌딩 (과거 ${pct1(clampedHist)} + 자산변동성 ${pct1(betaVol)})`;
+  } else if (clampedHist !== null) {
+    marketDisp = clampedHist;
+    marketDispSource = "과거 매출 변동성 (DART)";
+  } else if (betaVol !== null) {
+    marketDisp = clampDisp(betaVol)!;
+    marketDispSource = "WACC 자산 변동성";
+  } else {
+    marketDisp = DISP_FLOOR;
+    marketDispSource = "기본 2% (변동성 원천 없음)";
+  }
+
+  return {
+    market: { growth: marketGrowth, disp: marketDisp, growthSource: marketGrowthSource, dispSource: marketDispSource },
+    historical:
+      histCagr === null
+        ? null
+        : {
+            growth: histCagr,
+            disp: clampedHist ?? DISP_FLOOR,
+            growthSource: `과거 ${histYears}년 매출 CAGR (DART)`,
+            dispSource: histVol !== null ? "과거 매출 증감률 표준편차 (DART)" : "과거 변동성 부족 — 하한 적용",
+          },
+  };
+}
 
 /** Horizon / discounting constants — deterministic defaults, documented in every persisted note. */
 const HORIZON_YEARS = 5;
@@ -153,12 +263,13 @@ export function irr(cashflows: number[]): number | null {
  * of (inputs, scenario): same seed in, same percentiles out — any persisted
  * figure is reproducible.
  */
-export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario): SimulationResult {
+export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): SimulationResult {
   const seed = scenarioSeed(inputs.projectId, scenario);
   const rng = mulberry32(seed);
   const delta = SCENARIO_DELTA[scenario];
-  const anchorGrowth = inputs.anchorGrowth * delta.growth;
-  const disp = 0.02 * delta.disp;
+  const eff = effGrowthDisp(inputs, scenario, variant);
+  const anchorGrowth = eff.growth;
+  const disp = eff.disp;
   const year1Revenue = inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth;
 
   const npvs: number[] = [];
@@ -190,6 +301,26 @@ export interface CaseInputs {
   marketSizeKrwM: number;
   anchorGrowth: number;
   wacc: WaccResolution;
+  /** Dual-perspective parameters (ADR-0117). Optional so legacy callers
+   *  constructing CaseInputs by hand keep working — without it both variants
+   *  fall back to the legacy anchor + 2% dispersion. */
+  growthModel?: GrowthModel;
+}
+
+/** Effective per-(scenario, variant) growth/dispersion. Legacy inputs (no
+ *  growthModel) reproduce the pre-ADR-0117 numbers exactly. */
+export function effGrowthDisp(
+  inputs: CaseInputs,
+  scenario: Scenario,
+  variant: CaseVariant = "market_forward",
+): { growth: number; disp: number; growthSource: string; dispSource: string } {
+  const delta = SCENARIO_DELTA[scenario];
+  const gm = inputs.growthModel;
+  if (gm) {
+    const v = variant === "historical" ? (gm.historical ?? gm.market) : gm.market;
+    return { growth: v.growth * delta.growth, disp: v.disp * delta.disp, growthSource: v.growthSource, dispSource: v.dispSource };
+  }
+  return { growth: inputs.anchorGrowth * delta.growth, disp: 0.02 * delta.disp, growthSource: "기본값", dispSource: "고정 2%" };
 }
 
 export function caseInputsForProject(projectId: string): CaseInputs {
@@ -209,16 +340,18 @@ export function caseInputsForProject(projectId: string): CaseInputs {
     marketSizeKrwM: row?.market_size_krw_m ?? 50000,
     anchorGrowth: row?.growth_rate ?? 0.05,
     wacc: resolveProjectWacc(getDb(), projectId),
+    growthModel: resolveGrowthModel(getDb(), projectId),
   };
 }
 
-function deterministicCashflows(inputs: CaseInputs, scenario: Scenario): number[] {
+function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): number[] {
   const delta = SCENARIO_DELTA[scenario];
+  const eff = effGrowthDisp(inputs, scenario, variant);
   let revenue = inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth;
   const initialInvestment = revenue * INITIAL_INVESTMENT_RATIO;
   const flows: number[] = [-initialInvestment]; // year-0 설립 투자
   for (let year = 1; year <= HORIZON_YEARS; year++) {
-    if (year > 1) revenue *= 1 + inputs.anchorGrowth * delta.growth;
+    if (year > 1) revenue *= 1 + eff.growth;
     flows.push(revenue * (1 - OPEX_RATIO) - revenue * CAPEX_RATIO);
   }
   return flows;
@@ -228,10 +361,15 @@ function deterministicCashflows(inputs: CaseInputs, scenario: Scenario): number[
 
 export interface StepContext {
   scenario: Scenario;
+  /** Which valuation perspective this chain runs (ADR-0117) — default keeps
+   *  hand-built contexts on the gate-primary variant. */
+  variant?: CaseVariant;
   inputs: CaseInputs;
   /** Set once the valuation_model step has persisted the model for this scenario. */
   modelId?: string;
 }
+
+const VARIANT_LABEL: Record<CaseVariant, string> = { market_forward: "시장 기반", historical: "과거 기반" };
 
 /**
  * A step executor produces the activity artifact. The default (deterministic)
@@ -263,23 +401,26 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
   return async (step, ctx) => {
     const db = getDb();
     const delta = SCENARIO_DELTA[ctx.scenario];
+    const variant: CaseVariant = ctx.variant ?? "market_forward";
+    const eff = effGrowthDisp(ctx.inputs, ctx.scenario, variant);
+    const provenance = `variant=${variant}; growth_source=${eff.growthSource}; sigma=${eff.disp.toFixed(4)}; sigma_source=${eff.dispSource}`;
     if (step === "growth_projection") {
       return [
-        `### [재무 분석] financial-analyst — 성장 전망 (${SCENARIO_LABEL[ctx.scenario]})`,
+        `### [재무 분석] financial-analyst — 성장 전망 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
         "",
-        `앵커 시장규모 ${ctx.inputs.marketSizeKrwM} 억원(KRW m), 기준 성장률 ${(ctx.inputs.anchorGrowth * 100).toFixed(2)}%에`,
-        `시나리오 계수 ×${delta.growth}를 적용한 성장 전망: ${(ctx.inputs.anchorGrowth * delta.growth * 100).toFixed(2)}%/년,`,
+        `성장 근거: ${eff.growthSource} ${(eff.growth * 100).toFixed(2)}%/년 (시나리오 계수 ×${delta.growth}),`,
+        `변동성 근거: ${eff.dispSource} (sigma ${pct1(eff.disp)} ×${delta.disp}).`,
         `1차년도 매출은 시장 점유율 ${CAPTURE_RATE * 100}% 가정으로 ${(ctx.inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth).toFixed(1)} 억원.`,
         `베이스레이트 점검: 산업 성장률 대비 ±20% 밴드 내 (greenfield-fs step 1).`,
       ].join("\n");
     }
     if (step === "valuation_model") {
       const modelId = ulid();
-      const flows = deterministicCashflows(ctx.inputs, ctx.scenario);
+      const flows = deterministicCashflows(ctx.inputs, ctx.scenario, variant);
       const npv = flows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + ctx.inputs.wacc.value, i), 0); // flows[0]=year-0
       db.run(
-        `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)`,
-        [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${ctx.scenario}`, HORIZON_YEARS, "business-case-generator", nowIso()],
+        `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, variant) VALUES (?,?,?,?,?,?,?,?)`,
+        [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${ctx.scenario} — ${VARIANT_LABEL[variant]}`, HORIZON_YEARS, "business-case-generator", nowIso(), variant],
       );
       const year1Revenue = ctx.inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth;
       const lines: Array<[string, "revenue" | "opex" | "capex", string, number]> = [
@@ -291,15 +432,16 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         db.run(
           `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note, created_by, created_at)
            VALUES (?,?,?,?,?,?,?,?,?,?)`,
-          [ulid(), modelId, category, name, amount, 1, ctx.inputs.anchorGrowth * delta.growth,
-            `scenario=${ctx.scenario}; delta=${delta.growth}`, "business-case-generator", nowIso()],
+          [ulid(), modelId, category, name, amount, 1, eff.growth,
+            `scenario=${ctx.scenario}; delta=${delta.growth}; ${provenance}`, "business-case-generator", nowIso()],
         );
       }
       ctx.modelId = modelId;
       return [
-        `### [밸류에이션] valuation-agent — 밸류에이션 모델 (${SCENARIO_LABEL[ctx.scenario]})`,
+        `### [밸류에이션] valuation-agent — 밸류에이션 모델 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
         "",
         `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(1)}%·회수기간 ${HORIZON_YEARS}년 기준 NPV ${npv.toFixed(1)} 억원,`,
+        `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
         `WACC 출처: ${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? ` (run ${ctx.inputs.wacc.run_id})` : ""}.`,
         `IRR ${((irr(flows) ?? 0) * 100).toFixed(1)}% (greenfield-fs step 3). 모델/라인 3건 영속화 (model ${modelId}).`,
       ].join("\n");
@@ -307,9 +449,9 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
     if (step === "distributional_valuation") {
       const modelId = ctx.modelId;
       if (!modelId) throw new Error("distributional_valuation requires valuation_model to have persisted the model");
-      const sim = runSeededSimulation(ctx.inputs, ctx.scenario);
-      const flows = deterministicCashflows(ctx.inputs, ctx.scenario);
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${(ctx.inputs.anchorGrowth * delta.growth).toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}`;
+      const sim = runSeededSimulation(ctx.inputs, ctx.scenario, variant);
+      const flows = deterministicCashflows(ctx.inputs, ctx.scenario, variant);
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; ${provenance}`;
       for (const pct of ["p05", "p50", "p95"] as const) {
         db.run(
           `INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at)
@@ -318,9 +460,10 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         );
       }
       return [
-        `### [정량 방법론] quant-methodologist — 분포 밸류에이션 (${SCENARIO_LABEL[ctx.scenario]})`,
+        `### [정량 방법론] quant-methodologist — 분포 밸류에이션 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
         "",
         `시드 ${sim.seed}·${sim.iterations}회 몬테카를로 (ADR-0052 §D.4, 결정론적 재현 가능):`,
+        `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
         `NPV p05 ${sim.p05.toFixed(1)} / p50 ${sim.p50.toFixed(1)} / p95 ${sim.p95.toFixed(1)} 억원,`,
         `분산(표준편차) ${sim.std.toFixed(1)} — 지점 추정+서술 각주 금지, 분위수 영속화 완료 (valuation_simulation 3행).`,
       ].join("\n");
@@ -329,9 +472,9 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
     // this scenario. The CROSS-scenario comparison + RECOMMENDED flag is
     // recorded once after the chain (see generateBusinessCases).
     return [
-      `### [정량 방법론] quant-methodologist — 시나리오 리스크 평가 (${SCENARIO_LABEL[ctx.scenario]})`,
+      `### [정량 방법론] quant-methodologist — 시나리오 리스크 평가 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
       "",
-      `하락 스트레스: p05 NPV ${runSeededSimulation(ctx.inputs, ctx.scenario).p05.toFixed(1)} 억원 기준,`,
+      `하락 스트레스: p05 NPV ${runSeededSimulation(ctx.inputs, ctx.scenario, variant).p05.toFixed(1)} 억원 기준,`,
       ctx.scenario === "downside"
         ? "금리 충격 시 계약(커버넌트) 테스트 관점에서 p05가 0 이하로 내려가는 구간에 대한 완충 확인 필요."
         : "금리 충격 시 계약(커버넌트) 테스트 통과 여향 — 하락 시나리오의 p05 대비 완충 명시 권장.",
@@ -372,17 +515,24 @@ export async function generateBusinessCases(
   const entity: EntityRef = { entityType: "project", entityId: projectId };
   const executor = getBusinessCaseExecutor();
 
+  // ADR-0117: each scenario runs in TWO variants — market_forward (gate
+  // primary) and, when the bound company's DART series supports it,
+  // historical (comparison evidence). Missing historical data is not an
+  // error: the variant is skipped and the page shows N/A instead.
+  const variants: CaseVariant[] = inputs.growthModel?.historical ? ["market_forward", "historical"] : ["market_forward"];
   const activities: ActivitySpec[] = [];
   for (const scenario of SCENARIOS) {
-    const ctx: StepContext = { scenario, inputs };
-    for (const step of ["growth_projection", "valuation_model", "distributional_valuation", "scenario_risk_assessment"] as BusinessCaseStep[]) {
-      const agentKey = businessCaseAgentFor(step);
-      activities.push({
-        activityId: `${scenario}:${step}`,
-        agentKey,
-        prompt: `${step} — ${scenario} scenario for project ${projectId}`,
-        execute: async () => executor(step, ctx),
-      });
+    for (const variant of variants) {
+      const ctx: StepContext = { scenario, variant, inputs };
+      for (const step of ["growth_projection", "valuation_model", "distributional_valuation", "scenario_risk_assessment"] as BusinessCaseStep[]) {
+        const agentKey = businessCaseAgentFor(step);
+        activities.push({
+          activityId: `${scenario}:${variant}:${step}`,
+          agentKey,
+          prompt: `${step} — ${scenario} scenario (${variant}) for project ${projectId}`,
+          execute: async () => executor(step, ctx),
+        });
+      }
     }
   }
 
@@ -411,9 +561,14 @@ export async function generateBusinessCases(
 
 /** The recommendation rule, pure over persisted rows — the page and the engine share it. */
 export function recommendedFromDb(projectId: string): Scenario | null {
+  // ADR-0117: the RECOMMENDED flag judges the market_forward variant only —
+  // the historical variant is comparison evidence, never a gate candidate.
   const rows = getDb()
     .query(
-      `SELECT scenario, npv_krw_m FROM valuation_simulation WHERE project_id = ? AND percentile = 'p05'`,
+      `SELECT v.scenario, v.npv_krw_m FROM valuation_simulation v
+       JOIN business_case_model m ON m.id = v.model_id
+       WHERE v.project_id = ? AND v.percentile = 'p05'
+         AND COALESCE(m.variant, 'market_forward') = 'market_forward'`,
     )
     .all(projectId) as Array<{ scenario: string; npv_krw_m: number }>;
   if (rows.length === 0) return null;

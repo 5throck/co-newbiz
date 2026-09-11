@@ -96,7 +96,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     {
       project: { id: project.id, project_no: project.project_no },
       business_case: adoptedCase
-        ? { adopted: adoptedCase, adoption }
+        ? {
+            adopted: adoptedCase,
+            adoption,
+            // ADR-0117 — the adopted variant next to its sibling perspective
+            // (market_forward vs historical), so the IC sees how much the
+            // growth assumption alone moves the valuation.
+            comparison: cases
+              .filter((c) => c.scenario === adoptedCase.scenario && c.id !== adoptedCase.id)
+              .map((c) => ({
+                variant: c.variant,
+                name: c.name,
+                p50: c.simulations.find((x) => x.percentile === "p50")?.npv_krw_m ?? null,
+                p05: c.simulations.find((x) => x.percentile === "p05")?.npv_krw_m ?? null,
+              })),
+          }
         : { adopted: null, adoption, note: "채택(adopt)된 Business Case가 없습니다 — Entity IC 심사 전 S8 채택이 필요합니다." },
       dd: { completion, findings, finding_count: findings.length },
       rag: {
