@@ -116,9 +116,19 @@ function nextStepActions(
   }
   if (o.status === "selected") {
     return (
-      <button type="button" className="btn-ghost btn-sm" onClick={() => showSketch(o.id)} disabled={sketchOf[o.id] === "loading"}>
-        {sketchOf[o.id] === "loading" ? "..." : "스케치"}
-      </button>
+      <>
+        {/* 선별 직후 다음 단계 — S4 진출방식 결정 화면으로 이어준다 (기회 선택 상태로 진입) */}
+        <Link
+          className="btn-ghost btn-sm"
+          href={`/route-decision?opportunity=${encodeURIComponent(o.id)}`}
+          title="진출방식 결정(S4) 화면으로 이동합니다"
+        >
+          S4 평가 진행
+        </Link>
+        <button type="button" className="btn-ghost btn-sm" onClick={() => showSketch(o.id)} disabled={sketchOf[o.id] === "loading"}>
+          {sketchOf[o.id] === "loading" ? "..." : "스케치"}
+        </button>
+      </>
     );
   }
   return <span className="text-[0.72rem] text-[color:var(--muted-fg)]">—</span>;
@@ -761,6 +771,15 @@ export function OpportunitiesView() {
                                   <button type="button" className="btn-ghost" onClick={() => setStatus(o.id, "selected", o.synergy_score ?? o.attractiveness_score ?? 50)}>선별</button>
                                   <button type="button" className="btn-ghost" onClick={() => setStatus(o.id, "dropped", o.synergy_score ?? o.attractiveness_score ?? 50)}>제외</button>
                                 </>
+                              )}
+                              {o.status === "selected" && (
+                                <Link
+                                  className="btn-ghost"
+                                  href={`/route-decision?opportunity=${encodeURIComponent(o.id)}`}
+                                  title="진출방식 결정(S4) 화면으로 이동합니다"
+                                >
+                                  S4 평가 진행 — 진출방식 결정
+                                </Link>
                               )}
                               {(o.status === "assessed" || o.status === "selected") && (
                                 <button

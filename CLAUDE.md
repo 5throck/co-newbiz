@@ -326,7 +326,7 @@ All shared Git/PR rules are in [docs/context.md](docs/context.md). Claude Code-s
 
 - **PR Language**: Governed by [docs/context.md](docs/context.md). All PR titles, bodies, and review comments must be written in English - no exceptions.
 
-*Last Updated: 2026-09-10 — removed redundant N-1/N boilerplate rows; /sync already covers lifecycle + audit + commit + push + PR; previous: 2026-06-21 inlined N-1/N rows*
+*Last Updated: 2026-09-11 — removed redundant N-1/N boilerplate rows; /sync already covers lifecycle + audit + commit + push + PR; previous: 2026-06-21 inlined N-1/N rows*
 <!-- COMMON-CLAUDE:END -->
 
 
@@ -371,7 +371,7 @@ Distinctive to this domain: many target industries have **no direct market data*
 These are fixed by the design and may not be relaxed for convenience:
 
 1. **Agents inherit the calling user's permissions and have no accounts of their own.** A dedicated agent service account would void the entire project-level need-to-know model.
-2. **Gate approval and the investment decision belong to humans.** Agents produce analysis, evidence, and a *proposed* RAG grade. AI pre-review shortens reading time, never accountability.
+2. **Gate approval and the investment decision belong to humans.** Agents produce analysis, evidence, and a *proposed* RAG grade. LLM-drafted information provision and recommendations are the sanctioned decision-support mode, not a tolerated exception — decision surfaces should actively offer them (advisory summaries, option recommendations, draft rationales, evidence gathering), and every LLM output remains a proposal that only a person can turn into the recorded decision. AI support shortens reading time, never accountability.
 3. **`procedures/*.yaml` is authoritative for what and when; `skills/*.md` for how.** A skill references a procedure key and never restates its steps.
 4. **Data confidence caps the overall RAG grade.** A two-hop proxy estimate cannot reach Green no matter how good the financials look.
 5. **Permits and certifications are managed separately.** A permit lets you operate; a certification lets you sell. Different issuers, procedures, critical paths.
