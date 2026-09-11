@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.18.0
+// @version 1.19.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -591,7 +591,7 @@ switch (command) {
   case "fetch": {
     const sourceIdx = args.indexOf("--source");
     const source = sourceIdx >= 0 ? args[sourceIdx + 1] : undefined;
-    if (!source || !["dart", "ecos", "kosis", "law", "opendata"].includes(source)) {
+    if (!source || !["dart", "ecos", "krx", "kosis", "law", "opendata"].includes(source)) {
       console.error("fetch: --source is required (dart | ecos | kosis | law | opendata).");
       process.exit(2);
     }
