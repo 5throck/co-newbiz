@@ -298,15 +298,15 @@ export function RouteDecisionView() {
                 </button>
               ))}
             </div>
-            {/* 선별 → 평가 진행 CTA — 기회 선택 직후 결정 폼으로 이동한다.
-                실행 버튼이 아니라 이동이므로 경계 #2(사람 결정)와 무충돌. */}
+            {/* 선별 → 평가 진행 CTA — 기회 선택 직후 LLM 추천 단계로 이동한다.
+                (평가 진행 = LLM 추천 생성 → 폼 반영 → 사람 결정 기록) */}
             {selected ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <a href="#route-form" className="btn-ghost">▶ 평가 진행 — {selected.name} 진출방식 결정</a>
-                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">트랙 권고 확인 후 결정 폼(트랙·라우트·5기준 채점·근거)으로 이동합니다.</span>
+                <a href="#llm-reco" className="btn-ghost">▶ 평가 진행 — {selected.name}</a>
+                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">LLM 추천(제안) 생성 → 결정 폼 반영 → 사람 결정 기록 순으로 진행합니다.</span>
               </div>
             ) : (
-              <p className="mt-3 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">기회를 선택하면 결정 근거·트랙 권고 어드바이저·결정 폼이 열립니다.</p>
+              <p className="mt-3 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">기회를 선택하면 결정 근거·트랙 권고 어드바이저·LLM 추천·결정 폼이 열립니다.</p>
             )}
           </>
         )}
@@ -402,14 +402,16 @@ export function RouteDecisionView() {
 
       {/* ── LLM 추천 (결정 지원) — 원칙(경계 #2): 제안은 LLM, 기록은 사람 ── */}
       {selected && (
-        <section id="llm-reco" aria-label="LLM 추천 (결정 지원)" className="market-section">
+        <section id="llm-reco" aria-label="LLM 추천 (결정 지원)" className="market-section" style={{ scrollMarginTop: "6.5rem" }}>
           <SectionToolbar
             title={`${selected.name} — LLM 추천`}
             icon="🤖"
             actions={
-              <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateRecommendation()}>
-                {recoLoading ? "생성 중..." : reco ? "재생성" : "LLM 추천 생성"}
-              </button>
+              reco ? (
+                <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateRecommendation()}>
+                  재생성
+                </button>
+              ) : undefined
             }
           />
           <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
@@ -417,9 +419,12 @@ export function RouteDecisionView() {
           </p>
           {recoError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
           {!reco && !recoLoading && !recoError && (
-            <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">
-              LLM이 권장 트랙·라우트·5기준 채점 초안(점수+근거)과 결정 근거 서술 초안을 작성해 결정 폼 채움을 돕습니다.
-            </p>
+            <div className="flex flex-wrap items-center gap-2 mb-0">
+              <button type="button" className="btn-ghost" onClick={() => void generateRecommendation()}>
+                ▶ LLM 추천 생성
+              </button>
+              <span className="text-[0.75rem] text-[color:var(--muted-fg)]">권장 트랙·라우트·5기준 채점 초안(점수+근거)과 결정 근거 서술 초안을 작성해 결정 폼 채움을 돕습니다.</span>
+            </div>
           )}
           {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">S1~S3 산출물과 어드바이저 신호를 근거로 초안을 작성하는 중...</p>}
           {reco && (
