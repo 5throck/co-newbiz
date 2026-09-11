@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
@@ -10,11 +11,11 @@ import { TargetCheckPanel } from "../../../../components/TargetCheckPanel.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 
-// S8 사업성 분석 — 프로젝트 Business Case 비교·채택 화면 (ADR-0098 §4).
-// 시나리오(base/upside/downside)별 NPV·IRR·민감도 분위수 카드 비교,
-// 정량 방법론(RECOMMENDED) 배지, 그리고 인간만 수행하는 '채택(adopt)' 액션 —
-// 경계 #2: 엔진은 권고할 뿐, 어떤 케이스가 fs 게이트 입력이 될지는 사람이
-// 정한다. 게이트 기록은 GateDecisionPanel(gate=fs)이 담당한다.
+// S8 사업성 분석 — 이중 관점 밸류에이션 비교 (ADR-0117; approved mockup
+// docs/designs/mockups/2026-09-11-dual-view-valuation-ui-mockup_ko.html).
+// 시나리오(base/upside/downside)마다 시장 기반(게이트 1차)과 과거 기반(비교
+// 근거) 두 관점을 나란히 비교하고, 인간만 수행하는 채택(adopt) 액션을 둔다 —
+// 경계 #2: 엔진은 권고할 뿐, 채택과 게이트 기록은 사람의 행위다.
 
 interface SimRow {
   id: string;
@@ -39,6 +40,7 @@ interface CaseView {
   name: string;
   horizon_years: number;
   scenario: "base" | "upside" | "downside" | null;
+  variant: "market_forward" | "historical";
   source: "generated" | "manual";
   recommended: boolean;
   adopted: boolean;
@@ -59,13 +61,25 @@ interface ActivityRow {
   outputMd: string | null;
 }
 
+const SCENARIOS = ["base", "upside", "downside"] as const;
 const SCEN_LABEL: Record<string, string> = { base: "기본(Base)", upside: "상승(Upside)", downside: "하락(Downside)" };
-// Scenario chips are status, NOT verdicts: upside/downside are neutral
-// (status-not-started) — a downside case is not a failure.
-const SCEN_CLASS: Record<string, string> = { base: "status-amber", upside: "status-not-started", downside: "status-not-started" };
+const VARIANT_LABEL: Record<string, string> = { market_forward: "시장 기반", historical: "과거 기반" };
 
 function fmt(n: number): string {
   return Math.round(n).toLocaleString("ko-KR");
+}
+function pct1(v: number): string {
+  return `${(v * 100).toFixed(1)}%`;
+}
+/** simulation/line note의 key=value; 파싱 — 성장률·sigma 출처 표기용. */
+function parseNote(note: string | null | undefined): Record<string, string> {
+  if (!note) return {};
+  const out: Record<string, string> = {};
+  for (const part of note.split("; ")) {
+    const i = part.indexOf("=");
+    if (i > 0) out[part.slice(0, i)] = part.slice(i + 1);
+  }
+  return out;
 }
 
 export default function BusinessCasePage() {
@@ -78,8 +92,6 @@ export default function BusinessCasePage() {
   const [run, setRun] = useState<{ runId: string; status: string; activities: ActivityRow[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Manual edit affordance: edit a case's lines as JSON (consistent with the
-  // existing minimal-editor pattern) — full line replacement on save.
   const [editing, setEditing] = useState<{ modelId: string; text: string } | null>(null);
 
   const load = useCallback(() => {
@@ -107,11 +119,9 @@ export default function BusinessCasePage() {
     }
   }
 
-  function adopt(modelId: string, scenario: string | null) {
-    // The adopt click is the human decision (boundary #2) — confirmed twice:
-    // once in the dialog, once by the explicit 확인 in it.
+  function adopt(modelId: string, scenario: string | null, variant: string) {
     confirm(
-      `사업 케이스 채택${scenario ? ` — ${SCEN_LABEL[scenario] ?? scenario}` : ""}`,
+      `사업 케이스 채택${scenario ? ` — ${SCEN_LABEL[scenario] ?? scenario} · ${VARIANT_LABEL[variant] ?? variant}` : ""}`,
       () => {
         void (async () => {
           setBusy(true); setError(null);
@@ -168,19 +178,59 @@ export default function BusinessCasePage() {
     );
   }
 
+  // Group by scenario; within a scenario, market_forward (1차) first, newest first.
+  const byScenario = useMemo(() => {
+    const map = new Map<string, CaseView[]>();
+    for (const s of SCENARIOS) {
+      const list = (data?.cases ?? [])
+        .filter((c) => c.scenario === s)
+        .sort((a, b) => (a.variant === b.variant ? b.created_at.localeCompare(a.created_at) : a.variant === "market_forward" ? -1 : 1));
+      map.set(s, list);
+    }
+    return map;
+  }, [data]);
+
+  const hasHistorical = (data?.cases ?? []).some((c) => c.variant === "historical");
+
   return (
     <main className="market-page">
       <ProjectSubNav projectId={projectId} />
-      <StageFrame stageId="S8" heading="S8 사업성 분석 — Business Case 비교">
+      <StageFrame stageId="S8" heading="S8 사업성 분석 — 이중 관점 밸류에이션 비교">
       <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">
-        시나리오(base/upside/downside)별 정량 평가입니다. 민감도(NPV 분위수)가 포함된 케이스가 S8 완료 요건입니다.
+        같은 시나리오를 <b>시장 기반(게이트 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.
         <span className="ml-2 status-chip status-not-started">엔진 권고 ≠ 채택 — 채택은 사람의 행위입니다</span>
       </p>
+
+      {/* 두 관점의 의미 */}
+      <section className="market-section sizing-step mb-3" aria-label="두 관점의 의미">
+        <h3 className="sizing-step-title">두 관점의 의미</h3>
+        <table className="data-table">
+          <thead><tr><th scope="col">관점</th><th scope="col">성장률 근거</th><th scope="col">변동성(sigma) 근거</th><th scope="col">쓰임</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span className="status-chip status-green">market_forward · 1차</span> 시장 기반</td>
+              <td>시장 성장률 (opportunity)</td>
+              <td>미래 변동성 프로파일 — 과거 매출 변동성 + WACC 자산 변동성 블렌딩</td>
+              <td>S8 완료·킬 크라이테리아·RECOMMENDED 판정</td>
+            </tr>
+            <tr>
+              <td><span className="status-chip status-amber">historical · 비교</span> 과거 기반</td>
+              <td>대상 회사 매출 CAGR (DART)</td>
+              <td>과거 매출 증감률 표준편차</td>
+              <td>&quot;과거 실적이 지속되면&quot; 관점의 비교 근거</td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="text-[0.76rem] text-[color:var(--muted-fg)] mt-1">
+          <b className="text-[color:var(--warning)]">게이트 판정(채택 요건·킬 크라이테리아·RECOMMENDED)은 시장 기반 값을 사용합니다.</b>{" "}
+          과거 기반은 비교용이며, 둘의 차이가 클수록 성장 가정의 불확실성이 크다는 신호입니다.
+        </p>
+      </section>
 
       {canAct && (
         <div className="mb-3">
           <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void generate()}>
-            {busy ? "생성 중..." : "3-케이스 자동 생성 (재무분석 → 밸류에이션 → 정량 방법론)"}
+            {busy ? "생성 중..." : "이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)"}
           </button>
         </div>
       )}
@@ -193,7 +243,6 @@ export default function BusinessCasePage() {
           <ul className="sizing-note-list mt-1">
             {run.activities.map((a) => (
               <li key={a.activityId}>
-                {/* Status, not verdict: a still-running activity is neutral, not a failure. */}
                 <span className={`status-chip ${a.status === "done" ? "status-green" : a.status === "failed" ? "status-red" : "status-not-started"}`}>{a.status}</span>{" "}
                 <strong>{a.activityId}</strong> <span className="text-[color:var(--muted-fg)]">({a.agentKey})</span>
                 {a.outputMd && <pre className="text-[0.7rem] whitespace-pre-wrap mt-1">{a.outputMd}</pre>}
@@ -203,64 +252,108 @@ export default function BusinessCasePage() {
         </details>
       )}
 
-      <div className="chart-pair grid-3">
-        {(data?.cases ?? []).map((c) => {
-          const sims = Object.fromEntries((c.simulations ?? []).map((s) => [s.percentile, s]));
-          return (
-            <div key={c.id} className="chart-half sizing-grade-card">
-              <h3 className="text-[0.9rem] mb-1">
-                {c.name}
-                {" "}
-                {c.scenario && <span className={`status-chip ${SCEN_CLASS[c.scenario] ?? ""}`}>{SCEN_LABEL[c.scenario] ?? c.scenario}</span>}
-                {c.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(p05) 생존 관점">★ RECOMMENDED</span>}
-                {c.adopted && <span className="status-chip status-green ml-1" title={`채택자 ${data?.adoption?.adoptedBy ?? ""}`}>채택됨 (fs 게이트 입력)</span>}
-              </h3>
-              <table className="data-table" aria-label={`${c.name} 정량 평가`}>
-                <caption className="sr-only">NPV/IRR 요약</caption>
+      {/* 시나리오별 이중 관점 비교 */}
+      {SCENARIOS.map((s) => {
+        const cases = byScenario.get(s) ?? [];
+        const newestMf = cases.find((c) => c.variant === "market_forward");
+        const newestMfP50 = newestMf?.simulations.find((x) => x.percentile === "p50")?.npv_krw_m ?? null;
+        return (
+          <section key={s} className="market-section sizing-step mt-3" aria-label={`${SCEN_LABEL[s]} 이중 관점 비교`}>
+            <h3 className="sizing-step-title">
+              {SCEN_LABEL[s]}
+              {newestMf?.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(p05) 생존 관점 (시장 기반)">★ RECOMMENDED</span>}
+              {newestMf?.adopted && <span className="status-chip status-green ml-1">채택됨 (fs 게이트 입력)</span>}
+            </h3>
+            {cases.length === 0 ? (
+              <p className="text-[0.85rem] text-[color:var(--muted-fg)]">
+                이 시나리오의 케이스가 없습니다 — 자동 생성을 실행하세요.
+              </p>
+            ) : (
+              <table className="data-table">
                 <thead>
-                  <tr><th scope="col">구분</th><th scope="col">NPV (백만 KRW)</th><th scope="col">IRR</th></tr>
+                  <tr>
+                    <th scope="col">관점</th>
+                    <th scope="col">성장률 <span className="text-[color:var(--muted-fg)]">(출처)</span></th>
+                    <th scope="col">변동성 sigma <span className="text-[color:var(--muted-fg)]">(출처)</span></th>
+                    <th scope="col" className="num">NPV p05</th>
+                    <th scope="col" className="num">NPV p50</th>
+                    <th scope="col" className="num">NPV p95</th>
+                    <th scope="col" className="num">IRR</th>
+                    <th scope="col" className="num">p50 차이</th>
+                    <th scope="col"></th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {(["p05", "p50", "p95"] as const).map((p) => (
-                    <tr key={p}>
-                      <td>{p === "p05" ? "하위 5% (p05)" : p === "p50" ? "중위 (p50)" : "상위 5% (p95)"}</td>
-                      <td className="mono-num">{sims[p] ? fmt(sims[p].npv_krw_m) : "—"}</td>
-                      <td className="mono-num">{sims[p]?.irr != null ? `${(sims[p].irr! * 100).toFixed(1)}%` : "—"}</td>
+                  {cases.map((c) => {
+                    const p50 = c.simulations.find((x) => x.percentile === "p50");
+                    const note = parseNote(p50?.note);
+                    const irrV = p50?.irr ?? null;
+                    const deltaP50 = c.variant === "historical" && newestMfP50 !== null && p50 ? p50.npv_krw_m - newestMfP50 : null;
+                    const deltaPct = deltaP50 !== null && newestMfP50 ? deltaP50 / newestMfP50 : null;
+                    return (
+                      <tr key={c.id}>
+                        <td>
+                          {c.variant === "market_forward" ? <span className="status-chip status-green">1차</span> : <span className="status-chip status-amber">비교</span>}{" "}
+                          <b>{VARIANT_LABEL[c.variant]}</b>
+                          {c.adopted && <span className="status-chip status-green ml-1" title={`채택자 ${data?.adoption?.adoptedBy ?? ""}`}>채택됨</span>}
+                        </td>
+                        <td>
+                          {note.growth ? `${(Number(note.growth) * 100).toFixed(1)}%` : "—"}
+                          <span className="text-[color:var(--muted-fg)] text-[0.74rem]"> {note.growth_source ?? ""}</span>
+                        </td>
+                        <td>
+                          {note.sigma ? pct1(Number(note.sigma)) : "—"}
+                          <span className="text-[color:var(--muted-fg)] text-[0.74rem]"> {note.sigma_source ?? ""}</span>
+                        </td>
+                        {(["p05", "p50", "p95"] as const).map((p) => {
+                          const sim = c.simulations.find((x) => x.percentile === p);
+                          return <td key={p} className="num mono-num">{sim ? fmt(sim.npv_krw_m) : "—"}</td>;
+                        })}
+                        <td className="num mono-num">{irrV != null ? `${(irrV * 100).toFixed(1)}%` : "—"}</td>
+                        <td className="num">
+                          {deltaP50 === null ? "—" : (
+                            <span className={deltaP50 >= 0 ? "text-[color:var(--success)] font-bold" : "text-[color:var(--red-fg)] font-bold"}>
+                              {deltaP50 >= 0 ? "+" : ""}{fmt(deltaP50)}{deltaPct !== null ? ` (${deltaPct >= 0 ? "+" : ""}${(deltaPct * 100).toFixed(1)}%)` : ""}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {canAct && (
+                            <div className="flex flex-wrap gap-1">
+                              {!c.adopted && (
+                                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => adopt(c.id, c.scenario, c.variant)}>
+                                  채택
+                                </button>
+                              )}
+                              <button type="button" className="btn-ghost btn-sm" onClick={() => startEdit(c)}>라인</button>
+                              <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => remove(c.id)}>삭제</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {!hasHistorical && (
+                    <tr>
+                      <td colSpan={9} className="text-[color:var(--muted-fg)] text-[0.8rem]">
+                        과거 기반 관점 N/A — 대상 회사 연결 + DART 동기화 후 재생성하면 추가됩니다.{" "}
+                        <Link className="text-[color:var(--accent)] font-bold" href={`/projects/${projectId}/financial-analysis`}>재무분석 탭에서 연결 →</Link>
+                      </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
-              {c.simulations[0]?.note && (
-                <p className="text-[0.7rem] text-[color:var(--muted-fg)] mt-1" title="재현 근거 (ADR-0052 §D.4 seeded determinism)">{c.simulations[0].note}</p>
-              )}
-              {c.lines.length > 0 && (
-                <details className="mt-1">
-                  <summary className="cursor-pointer text-[0.78rem] text-[color:var(--accent)]">라인 상세 ({c.lines.length}건)</summary>
-                  <ul className="sizing-note-list">
-                    {c.lines.map((l) => (
-                      <li key={l.id}>{l.category} · {l.name}: <span className="mono-num">{fmt(l.annual_amount_krw_m)}</span> 백만 KRW (y{l.start_year}, 성장 {(l.growth_rate * 100).toFixed(1)}%)</li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-              {canAct && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {!c.adopted && (
-                    <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => adopt(c.id, c.scenario)}>
-                      fs 게이트 입력으로 채택
-                    </button>
-                  )}
-                  <button type="button" className="btn-ghost btn-sm" onClick={() => startEdit(c)}>라인 편집</button>
-                  <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => remove(c.id)}>삭제</button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {data && data.cases.length === 0 && (
-          <p className="text-[0.85rem] text-[color:var(--muted-fg)]">등록된 Business Case가 없습니다 — 자동 생성을 실행하거나 수동으로 추가하세요.</p>
-        )}
-      </div>
+            )}
+            {(cases[0]?.simulations?.[0]?.note) && (
+              <p className="text-[0.7rem] text-[color:var(--muted-fg)] mt-1" title="재현 근거 (ADR-0052 §D.4 seeded determinism)">{cases[0].simulations[0].note}</p>
+            )}
+          </section>
+        );
+      })}
+
+      {data && data.cases.length === 0 && (
+        <p className="text-[0.85rem] text-[color:var(--muted-fg)]">등록된 Business Case가 없습니다 — 자동 생성을 실행하거나 수동으로 추가하세요.</p>
+      )}
 
       {editing && (
         <section className="market-section sizing-step mt-3" aria-label="라인 편집">

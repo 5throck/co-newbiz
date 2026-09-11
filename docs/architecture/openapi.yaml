@@ -189,6 +189,90 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/companies:
+    get:
+      operationId: listCompanies
+      summary: Company list + search for the company financials screen (ADR-0116).
+      tags:
+        - Analysis
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/companies/{companyId}/financials:
+    get:
+      operationId: getCompanyFinancials
+      summary: Latest-revision DART financial facts, derived analysis, commentary layer, and the subject-company WACC reference card.
+      tags:
+        - Analysis
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/companies/{companyId}/sync:
+    post:
+      operationId: syncCompanyFinancials
+      summary: Pull up to 5 business years of DART financials into fact_financial (append-only revisions). analyst+.
+      tags:
+        - Analysis
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          description: DART API key not configured.
+  /api/projects/{id}/financial-analysis/company:
+    post:
+      operationId: linkProjectSubjectCompany
+      summary: Bind the project's subject company (brownfield target / greenfield baseline) with a mandatory rationale. analyst+.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/tokens:
     post:
       operationId: issueToken
@@ -3530,7 +3614,7 @@ paths:
   /api/projects/{id}/financial-analysis:
     get:
       operationId: getProjectFinancialAnalysis
-      summary: Project financial analysis read model over fact_financial, comp_benchmark, and valuation_simulation.
+      summary: Project subject-company bridge payload — bound company with compact metrics summary (full analysis on /api/companies/{companyId}/financials).
       tags:
         - Analysis
       parameters:
@@ -3607,6 +3691,203 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/industries:
+    get:
+      operationId: listIndustries
+      summary: md_industry list + search for the binding UI (ADR-0116 Phase 5).
+      tags:
+        - Analysis
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/projects/{id}/industries:
+    get:
+      operationId: listProjectIndustryBindings
+      summary: Live project-industry bindings (ADR-0054 judged bindings).
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: bindProjectIndustry
+      summary: Bind an industry to the project with a mandatory rationale. analyst+.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      operationId: retireProjectIndustry
+      summary: Retire a live industry binding (supersede history kept). analyst+.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/projects/{id}/value-chain-links:
+    get:
+      operationId: listValueChainLinks
+      summary: The project's judged value-chain links (elasticity, grades, evidence).
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createValueChainLink
+      summary: Create a judged value-chain link (analyst+; statistical betas are calibrate-only).
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/projects/{id}/value-chain/topology:
+    get:
+      operationId: getValueChainTopology
+      summary: Kahn layering over the project's value-chain links.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/projects/{id}/proxy-chain/calibrate:
+    post:
+      operationId: calibrateProjectProxyChain
+      summary: Run statistical proxy-hop calibration (regression) for the project's industry pairs. analyst+.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/projects/{id}/reports/compose:
+    post:
+      operationId: composeProjectReport
+      summary: Build the IC-report Markdown draft (adopted case, DD summary, RAG proposal, gate history, dual-variant comparison). analyst+.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/reports/{snapshotId}/render/{format}:
+    get:
+      operationId: downloadProjectReportRender
+      summary: Stream a rendered report file (docx/pdf/hwpx) for a snapshot.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: snapshotId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [docx, pdf, hwpx]
+      responses:
+        '200':
+          description: The rendered file as an attachment.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/archive/deals:
     get:
       operationId: listArchivedDeals

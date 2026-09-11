@@ -344,7 +344,7 @@ export default function DdPage() {
             <section className="market-section sizing-step mt-3" aria-label="산업 맞춤 제안">
               <h3 className="sizing-step-title text-[0.9rem]">산업 맞춤 제안 (proposed)</h3>
               {domain.custom.filter((c) => c.status === "proposed").length === 0 && (
-                <p className="text-[0.82rem] text-[color:var(--muted-fg)]">대기 중인 제안이 없습니다.</p>
+                <p className="text-[0.82rem] text-[color:var(--muted-fg)]">대기 중인 제안이 없습니다 — 에이전트 제안은 실사 체크리스트 수행 중 도착합니다.</p>
               )}
               <ul className="sizing-note-list">
                 {domain.custom.filter((c) => c.status === "proposed").map((c) => (
@@ -377,7 +377,7 @@ export default function DdPage() {
             <section className="market-section sizing-step mt-3" aria-label="조사내역 (dd_finding)">
               <h3 className="sizing-step-title text-[0.9rem]">조사내역 (dd_finding)</h3>
               {(data?.findings.length ?? 0) === 0 && (
-                <p className="text-[0.82rem] text-[color:var(--muted-fg)]">등록된 조사내역이 없습니다.</p>
+                <p className="text-[0.82rem] text-[color:var(--muted-fg)]">등록된 조사내역이 없습니다 — 실사 수행 중 발견한 사실을 상단 폼에서 기록하세요.</p>
               )}
               <ul className="sizing-note-list">
                 {(data?.findings ?? []).map((f) => (

@@ -55,7 +55,13 @@ export function TargetCheckPanel({ projectId }: { projectId: string }) {
 
   useEffect(load, [load]);
 
-  if (failed) return null; // 근거 표시는 부가 정보 — 실패가 S8 화면을 막지 않는다
+  if (failed) return (
+    // 근거 표시는 부가 정보 — 실패가 S8 화면을 막지는 않지만, 조용히 사라지면
+    // 패널이 없는 이유를 알 수 없으므로 한 줄 안내는 남긴다.
+    <div className="market-section sizing-step mt-3 text-[0.8rem] text-[color:var(--muted-fg)]">
+      사업목표 기준 대비 정보를 불러오지 못했습니다 — 네트워크 상태를 확인하거나 새로고침하세요.
+    </div>
+  );
 
   const entries = data?.resolvable ? data.entries : [];
   const affiliateCount = entries.filter((e) => e.source === "affiliate").length;

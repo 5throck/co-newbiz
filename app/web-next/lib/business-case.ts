@@ -34,6 +34,9 @@ export interface BusinessCaseView {
   name: string;
   horizon_years: number;
   scenario: Scenario | null;
+  /** ADR-0117 dual-perspective valuation — market_forward (게이트 1차) or
+   *  historical (비교 근거). Legacy rows default to market_forward. */
+  variant: "market_forward" | "historical";
   source: "generated" | "manual";
   recommended: boolean;
   adopted: boolean;
@@ -78,8 +81,8 @@ export function listBusinessCases(projectId: string): {
 } {
   const db = getDb();
   const models = db
-    .query("SELECT id, kind, name, horizon_years, created_by, created_at FROM business_case_model WHERE project_id = ? ORDER BY created_at, id")
-    .all(projectId) as Array<{ id: string; kind: string; name: string; horizon_years: number; created_by: string; created_at: string }>;
+    .query("SELECT id, kind, name, horizon_years, created_by, created_at, COALESCE(variant, 'market_forward') AS variant FROM business_case_model WHERE project_id = ? ORDER BY created_at, id")
+    .all(projectId) as Array<{ id: string; kind: string; name: string; horizon_years: number; created_by: string; created_at: string; variant: "market_forward" | "historical" }>;
   const lines = db
     .query(
       `SELECT id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note
@@ -102,8 +105,10 @@ export function listBusinessCases(projectId: string): {
       name: m.name,
       horizon_years: m.horizon_years,
       scenario,
+      variant: m.variant,
       source: m.created_by === "business-case-generator" || scenario !== null ? "generated" : "manual",
-      recommended: scenario !== null && scenario === recommended,
+      // ADR-0117: the RECOMMENDED badge belongs to the gate-primary variant only.
+      recommended: scenario !== null && scenario === recommended && m.variant === "market_forward",
       adopted: adoption?.modelId === m.id,
       created_by: m.created_by,
       created_at: m.created_at,

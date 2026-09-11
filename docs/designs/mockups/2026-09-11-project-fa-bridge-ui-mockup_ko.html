@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>목업 — 프로젝트 재무분석 브리지 탭 — co-newbiz</title>
+<style>
+  /* ── co-newbiz web-next 디자인 토큰 ── */
+  :root {
+    --bg: #f6f7f9; --fg: #171a21; --surface: #ffffff;
+    --muted-bg: #f1f3f6; --muted-fg: #5d6572;
+    --border: rgba(16, 22, 34, 0.10); --border-subtle: rgba(16, 22, 34, 0.06); --border-bright: rgba(16, 22, 34, 0.16);
+    --accent: #3d66f5; --accent-fg: #ffffff;
+    --primary-dim: hsl(217, 91%, 35%); --primary-bg: hsla(217, 91%, 45%, 0.10); --primary-border: hsla(217, 91%, 45%, 0.25);
+    --success: hsl(160, 84%, 30%); --success-bg: hsla(160, 84%, 30%, 0.10);
+    --warning: hsl(35, 90%, 38%); --warning-bg: hsla(35, 90%, 38%, 0.12);
+    --danger: hsl(0, 72%, 45%); --danger-bg: hsla(0, 72%, 45%, 0.10);
+    --input-bg: rgba(16, 22, 34, 0.03);
+    --radius-sm: 6px; --radius-lg: 10px; --radius-xl: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { font-size: 15px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    line-height: 1.55;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  .appbar { background: var(--surface); border-bottom: 1px solid var(--border); }
+  .appbar-inner { max-width: 1100px; margin: 0 auto; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.6rem; }
+  .appbar-logo { font-weight: 800; font-size: 0.95rem; }
+  .appbar-logo span { color: var(--accent); }
+  .appbar-crumb { color: var(--muted-fg); font-size: 0.82rem; }
+  .mockup-banner {
+    background: var(--warning-bg); color: var(--warning); font-size: 0.78rem; text-align: center;
+    padding: 0.3rem 1rem; border-bottom: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
+  }
+  .subnav { background: var(--surface); border-bottom: 1px solid var(--border); }
+  .subnav-inner { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem; display: flex; gap: 0.25rem; overflow-x: auto; }
+  .subnav a { padding: 0.5rem 0.7rem; font-size: 0.82rem; color: var(--muted-fg); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .subnav a.active { color: var(--accent); font-weight: 700; border-bottom-color: var(--accent); }
+  h1 { font-size: 1.35rem; margin: 1.4rem 0 0.15rem; }
+  .page-objective { margin: 0 0 0.9rem; color: var(--muted-fg); font-size: 0.9rem; }
+  .section { border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 1rem 1.25rem; background: var(--surface); margin-top: 1.25rem; }
+  .section > h3 { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; margin: 0 0 0.6rem; flex-wrap: wrap; }
+  .badge-num { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4rem; height: 1.4rem; border-radius: 999px; background: var(--accent); color: var(--accent-fg); font-size: 0.78rem; font-weight: 700; }
+  .muted { color: var(--muted-fg); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.82em; }
+  .chip { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 0.08rem 0.45rem; border-radius: 999px; white-space: nowrap; }
+  .chip.live { background: var(--success-bg); color: var(--success); }
+  .chip.info { background: var(--primary-bg); color: var(--accent); }
+  .chip.warn { background: var(--warning-bg); color: var(--warning); }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.6rem; margin-top: 0.5rem; }
+  .stat-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.6rem 0.8rem; background: var(--muted-bg); }
+  .stat-card .k { color: var(--muted-fg); font-size: 0.72rem; }
+  .stat-card .v { font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat-card .s { font-size: 0.72rem; color: var(--muted-fg); }
+  .primary-button { background: var(--accent); color: var(--accent-fg); border: none; padding: 0.55rem 1.1rem; border-radius: var(--radius-lg); font: inherit; font-weight: 700; font-size: 0.88rem; cursor: pointer; }
+  .ghost-button { background: var(--surface); color: var(--fg); border: 1px solid var(--border-bright); padding: 0.5rem 1rem; border-radius: var(--radius-lg); font: inherit; font-size: 0.85rem; cursor: pointer; }
+  .link-arrow { color: var(--accent); font-weight: 700; text-decoration: none; font-size: 0.86rem; }
+  .input {
+    width: 100%; padding: 0.55rem 0.8rem; border: 1px solid var(--border-bright);
+    border-radius: var(--radius-lg); background: var(--input-bg); color: var(--fg); font: inherit; font-size: 0.88rem;
+  }
+  .callout { border-radius: var(--radius-lg); padding: 0.65rem 0.9rem; font-size: 0.84rem; margin-top: 0.6rem; border: 1px solid transparent; }
+  .callout.info { background: var(--primary-bg); color: var(--primary-dim); border-color: var(--primary-border); }
+  .callout.warn { background: var(--warning-bg); color: var(--warning); border-color: color-mix(in srgb, var(--warning) 25%, transparent); }
+  .callout b { font-weight: 800; }
+  .note-line { font-size: 0.76rem; color: var(--muted-fg); margin-top: 0.7rem; }
+  .empty-box { border: 1px dashed var(--border-bright); border-radius: var(--radius-lg); padding: 1.2rem 1rem; text-align: center; color: var(--muted-fg); font-size: 0.88rem; margin-top: 0.8rem; }
+  .result-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border-subtle); font-size: 0.86rem; }
+  .result-row:last-child { border-bottom: none; }
+  .result-row .pick { margin-left: auto; }
+  .review-box { border: 1px dashed var(--primary-border); background: var(--primary-bg); border-radius: var(--radius-lg); padding: 0.7rem 0.9rem; font-size: 0.8rem; color: var(--primary-dim); margin-top: 1.25rem; }
+  .review-box b { font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="mockup-banner">🖥️ 화면 목업 (UI Mockup) — 프로젝트 "재무분석" 탭이 상세 분석에서 대상 회사 연결 브리지로 전환됩니다. 예시 값입니다.</div>
+
+<header class="appbar">
+  <div class="appbar-inner">
+    <div class="appbar-logo">co-<span>newbiz</span></div>
+    <div class="appbar-crumb">프로젝트 · 휴머노이드 로봇 사업 진출 (가상)</div>
+  </div>
+</header>
+<nav class="subnav">
+  <div class="subnav-inner">
+    <a href="#">개요</a><a href="#">사업성 분석</a><a href="#">WACC</a><a href="#" class="active">재무분석</a><a href="#">실사·검증</a><a href="#">프록시 체인</a><a href="#">투자구조</a><a href="#">IC 심의</a><a href="#">보고서</a><a href="#">사후관리</a>
+  </div>
+</nav>
+
+<div class="container">
+  <h1>재무분석 — 대상 회사 연결</h1>
+  <p class="page-objective">이 프로젝트가 분석할 대상 회사를 연결합니다. 상세 재무 분석은 회사 화면에서 수행되며, 여기서는 연결 상태와 핵심 지표만 확인합니다.</p>
+
+  <!-- 상태 A: 연결됨 -->
+  <div class="section">
+    <h3><span class="badge-num">1</span>연결된 대상 회사 <span class="chip info">brownfield · 인수 대상</span></h3>
+    <div style="display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap;">
+      <div style="font-size:1.05rem; font-weight:800;">㈜케이로보틱스 <span class="muted mono" style="font-size:0.78rem; font-weight:400;">dart corp code 01234567</span></div>
+      <span class="chip live">동기화됨 · 2026-09-10</span>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="k">매출액 (2025)</div><div class="v">3,940억</div><div class="s">전년 +12.0%</div></div>
+      <div class="stat-card"><div class="k">영업이익률</div><div class="v">8.2%</div><div class="s">전년 +1.4%p</div></div>
+      <div class="stat-card"><div class="k">부채비율</div><div class="v">118%</div><div class="s">3년 연속 상승 ⚠</div></div>
+      <div class="stat-card"><div class="k">ROE</div><div class="v">9.1%</div><div class="s">전년 +0.3%p</div></div>
+    </div>
+    <div style="margin-top:0.9rem; display:flex; gap:0.6rem; flex-wrap:wrap;">
+      <a class="link-arrow" href="#">전체 재무성과 분석 열기 →</a>
+      <span class="muted" style="font-size:0.8rem;">회사 화면에서 실적 테이블·지표 해설·WACC 참조값을 확인할 수 있습니다.</span>
+    </div>
+    <p class="note-line">연결 근거(rationale): "S7 스크리닝 1순위 대상 — 협업로봇 사업 부합" · 연결자 techcross · 2026-09-05</p>
+  </div>
+
+  <!-- 상태 B: 회사 연결 UI -->
+  <div class="section">
+    <h3><span class="badge-num">2</span>대상 회사 연결/변경</h3>
+    <div style="display:grid; grid-template-columns: 1fr auto; gap:0.6rem; align-items:end;">
+      <div>
+        <div class="muted" style="font-size:0.78rem; margin-bottom:0.2rem;">회사명 또는 DART corp code 검색</div>
+        <input class="input" value="케이로보" placeholder="예: 케이로보틱스, 01234567">
+      </div>
+      <button class="ghost-button">검색</button>
+    </div>
+    <div style="border:1px solid var(--border); border-radius:var(--radius-lg); margin-top:0.5rem;">
+      <div class="result-row"><b>㈜케이로보틱스</b><span class="muted mono" style="font-size:0.76rem;">01234567</span><span class="muted" style="font-size:0.78rem;">협업로봇 제조</span><button class="ghost-button pick">이 회사 연결</button></div>
+      <div class="result-row">㈜케이로보틱스홀딩스<span class="muted mono" style="font-size:0.76rem;">01234568</span><span class="muted" style="font-size:0.78rem;">투자지주</span><button class="ghost-button pick">이 회사 연결</button></div>
+    </div>
+    <div style="margin-top:0.7rem;">
+      <div class="muted" style="font-size:0.78rem; margin-bottom:0.2rem;">연결 근거 (rationale) — 필수</div>
+      <input class="input" value="S7 스크리닝 1순위 대상 — 협업로봇 사업 부합">
+    </div>
+    <p class="note-line">역할은 트랙에서 자동 판정됩니다 — <span class="chip info">brownfield → 인수 대상</span> <span class="chip info">greenfield → 분석 기준 회사</span>. 연결·변경은 감사 로그에 기록됩니다.</p>
+  </div>
+
+  <!-- 참고: 미연결 상태 -->
+  <div class="section">
+    <h3><span class="badge-num">참고</span>미연결 상태의 빈 화면</h3>
+    <div class="empty-box">
+      연결된 대상 회사가 없습니다 — 위에서 회사를 검색해 연결하면<br>
+      <b>핵심 지표 요약 · 전체 재무성과 분석 · WACC 참조값</b>을 사용할 수 있습니다.
+    </div>
+    <div class="callout warn">
+      <b>그린필드 안내</b> — 자체 신설 진출은 인수 대상이 없으므로, 벤치마킹할 <b>분석 기준 회사</b>를 연결합니다. 미연결 시 사업성 분석의 "과거 기반" 관점과 WACC 회사 참조값 없이 진행됩니다(시장 기반만).
+    </div>
+  </div>
+
+  <div class="review-box">
+    <b>검토 포인트</b> — ① 기존 탭(재무실적·보상 벤치마크 표)을 브리지로 바꾸는 결정에 동의하는지 ② 요약 카드 4종 선정이 적절한지 ③ 회사 검색→연결→근거 기록 흐름이 자연스러운지 ④ 그린필드 "분석 기준 회사" 안내가 명확한지
+  </div>
+</div>
+</body>
+</html>

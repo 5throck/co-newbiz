@@ -32,12 +32,17 @@ async function renderSnapshotReport(markdownPath: string, formats: ReportFormat[
         reject(new Error(`report renderer exited with code ${code}: ${stderr || stdout}`));
         return;
       }
-      const jsonLine = stdout.trim().split("\n").filter((l) => l.startsWith("[")).pop();
-      if (!jsonLine) {
-        reject(new Error(`report renderer produced no JSON summary: ${stdout}`));
-        return;
+      // report.ts prints the summary as a (possibly pretty-printed) JSON
+      // array as the LAST thing on stdout — parse from the final top-level
+      // "[" to the end. Parsing inside try/catch: a throw in this event
+      // handler would be an uncaughtException and leave the request hanging.
+      try {
+        const start = stdout.lastIndexOf("\n[");
+        const jsonText = start === -1 ? stdout.trim() : stdout.slice(start + 1);
+        resolve(JSON.parse(jsonText));
+      } catch (e) {
+        reject(new Error(`report renderer summary parse failed: ${(e as Error).message} — stdout tail: ${stdout.slice(-200)}`));
       }
-      resolve(JSON.parse(jsonLine));
     });
   });
 }
@@ -48,11 +53,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const project = visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();
-  const rows = getDb().query(
+  const db = getDb();
+  const rows = db.query(
     `SELECT id, project_id, title, content_md, created_by, created_at
      FROM report_snapshot WHERE project_id = ? ORDER BY created_at DESC, id DESC`
-  ).all(id);
-  return ok({ project: { id: project.id, project_no: project.project_no }, reports: rows }, 200, { count: (rows as unknown[]).length });
+  ).all(id) as Array<{ id: string }>;
+  // ADR-0116 Phase 6: rendered files are surfaced next to their snapshot so
+  // the UI can offer downloads without touching the filesystem itself.
+  const renders = db.query(
+    `SELECT r.snapshot_id, r.format, r.created_at FROM report_render r
+     JOIN report_snapshot s ON s.id = r.snapshot_id
+     WHERE s.project_id = ? ORDER BY r.created_at DESC`
+  ).all(id) as Array<{ snapshot_id: string; format: string; created_at: string }>;
+  return ok(
+    { project: { id: project.id, project_no: project.project_no }, reports: rows, renders },
+    200,
+    { count: (rows as unknown[]).length, render_count: renders.length },
+  );
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -77,14 +94,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   );
   appendAudit(db, { actor: auth.auth.userId, action: "report_snapshot_create", target: `${project.project_no}:${snapshotId}`, now });
 
-  let renders: unknown[] = [];
+  let renders: Array<{ format: string; output: string }> = [];
   if (formats.length > 0) {
     const outDir = join("render_out", id, snapshotId);
     mkdirSync(outDir, { recursive: true });
     const mdPath = join(outDir, "snapshot.md");
     writeFileSync(mdPath, contentMd, "utf8");
     try {
-      renders = await renderSnapshotReport(mdPath, formats, outDir);
+      const raw = (await renderSnapshotReport(mdPath, formats, outDir)) as Array<{ format: string; output: string }>;
+      renders = raw;
+      // Persist WHERE each rendered file lives — the download route serves
+      // from these rows (path-containment-guarded), never from raw requests.
+      for (const r of raw) {
+        db.run(
+          "INSERT INTO report_render (id, snapshot_id, format, file_path, created_at) VALUES (?,?,?,?,?)",
+          [ulid(), snapshotId, r.format, r.output, now],
+        );
+      }
     } catch (err) {
       return badRequest("report_render_failed", err instanceof Error ? err.message : "보고서 렌더링 실패");
     }

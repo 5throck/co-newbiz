@@ -3,9 +3,18 @@
 // P0 공통 골격 — 표준 화면 패턴 (ADR-0086, docs/designs/2026-09-01-standard-screen-patterns-design_ko.md).
 // 단계 화면의 유일한 외피: 단계 헤더 + S1~S12 진행 레일(StageRail) + 본문 슬롯.
 // 데이터원은 lib/stage-meta.ts (flow.spec 발췌, 정합 테스트로 강제) — 페이지별 하드코딩 금지.
+//
+// ADR-0116 Phase 7: 프로젝트 단계(S8~S12) 화면에서는 현재 단계의 차단 요건과
+// 필요 산출물을 프레임이 직접 안내한다(process API 재사용 — 페이지별 중복
+// 구현 없이 전 하위 탭에 자동 적용). 데이터가 없거나 조회에 실패하면 조용히
+// 숨는다 — 가이던스는 부가 정보이지 본문을 가리는 것이 아니다.
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useParams } from "next/navigation";
 import { GATE_LABEL, STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
+
+/** 가이던스 스트립이 붙는 프로젝트 전용 단계 — 기회 단계(S1~S7)는 별도 화면이 담당한다. */
+const PROJECT_STAGE_IDS = new Set(["S8", "S9", "S10", "S11", "S12"]);
 
 export function StageFrame({
   stageId,
@@ -24,6 +33,8 @@ export function StageFrame({
   const ids = Array.isArray(stageId) ? stageId : [stageId];
   const primary = ids[0];
   const stage = STAGE_META.find((s) => s.id === primary)!;
+  const params = useParams<{ id?: string }>();
+  const projectId = params?.id;
   return (
     <>
       <h1>
@@ -31,6 +42,7 @@ export function StageFrame({
       </h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">{stage.objective}</p>
       <StageRail current={ids} track={track} />
+      {projectId && PROJECT_STAGE_IDS.has(primary) && <StageGuidance projectId={projectId} stageId={primary} />}
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,
           하단 간격 mb-4). 페이지별 클래스·<strong> 강조 금지(설계서 개정 2026-09-04). */}
       {children && (
@@ -39,6 +51,58 @@ export function StageFrame({
         </div>
       )}
     </>
+  );
+}
+
+interface GuidanceInfo {
+  status: string;
+  blockers: string[];
+  requiredArtifacts: string[];
+}
+
+function StageGuidance({ projectId, stageId }: { projectId: string; stageId: string }) {
+  const [info, setInfo] = useState<GuidanceInfo | null>(null);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/projects/${encodeURIComponent(projectId)}/process`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((j) => {
+        const stage = (j.data?.stages ?? []).find((s: { id: string }) => s.id === stageId) as
+          | { status: string; requiredArtifacts?: string[] }
+          | undefined;
+        if (!alive) return;
+        if (!stage) { setHidden(true); return; }
+        setInfo({
+          status: stage.status,
+          // 차단 요건은 현재 단계 기준으로만 집계된다(process API 계약) —
+          // 미완료 과거 단계의 화면에서는 그 단계의 필요 산출물이라도 보여준다.
+          blockers: stage.status === "current" || stage.status === "blocked" ? (j.data?.blockers ?? []) : [],
+          requiredArtifacts: stage.requiredArtifacts ?? [],
+        });
+      })
+      .catch(() => { if (alive) setHidden(true); });
+    return () => { alive = false; };
+  }, [projectId, stageId]);
+
+  if (hidden || !info) return null;
+  if (info.status === "complete") {
+    return (
+      <div className="mb-3">
+        <span className="status-chip status-green">이 단계 완료 요건 충족 — 다음 단계로 진행할 수 있습니다</span>
+      </div>
+    );
+  }
+  const items = [...new Set([...info.blockers, ...info.requiredArtifacts])];
+  if (items.length === 0) return null;
+  return (
+    <div className="mb-3 border border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] rounded-lg px-3 py-2 text-[0.8rem] text-[color:var(--primary-dim)]">
+      <b>이 단계에서 남은 것</b>
+      <ul className="mt-1 ml-4 list-disc">
+        {items.map((it) => <li key={it}>{it}</li>)}
+      </ul>
+    </div>
   );
 }
 

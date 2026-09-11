@@ -190,7 +190,7 @@ export default function IcReviewPage() {
             </>
           ) : (
             <p className="text-[0.82rem] text-[color:var(--muted-fg)]">
-              {pkg?.business_case.note ?? "채택된 Business Case가 없습니다."}
+              {pkg?.business_case.note ?? "채택된 Business Case가 없습니다 — 사업성 분석 탭에서 케이스를 생성·채택하세요."}
             </p>
           )}
 
@@ -232,7 +232,7 @@ export default function IcReviewPage() {
               )}
             </p>
           ) : (
-            <p className="text-[0.82rem] text-[color:var(--muted-fg)]">RAG 종합 평가 기록이 없습니다.</p>
+            <p className="text-[0.82rem] text-[color:var(--muted-fg)]">RAG 종합 평가 기록이 없습니다 — 실사 데이터가 채워지면 자동 제안됩니다.</p>
           )}
         </section>
 
