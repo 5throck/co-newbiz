@@ -221,7 +221,7 @@ export function BetaPanel({
           )}
 
           {/* 회귀 대상 종목의 자본구조 — βU 환산 입력 */}
-          <div className="grid md:grid-cols-[9.5rem_7rem_1fr_7.5rem] gap-2 items-end mt-4 text-sm border-t border-[color:var(--border-subtle)] pt-3">
+          <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_7.5rem] gap-2 items-end mt-4 text-sm border-t border-[color:var(--border-subtle)] pt-3">
             <div>
               <div className="text-[0.85rem] font-semibold">관측 D/E</div>
               <div className="text-[color:var(--muted-fg)] text-[0.72rem]">회귀 대상 종목의 자본구조 — βU 환산에 사용</div>
