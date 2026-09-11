@@ -1,4 +1,4 @@
-// @version 1.0.1
+// @version 1.0.2
 /**
  * env-keys.ts — credential loading for the CLI side of the pipeline.
  *
@@ -13,7 +13,7 @@
  */
 
 const PIPELINE_ENV_KEYS =
-  /^(DART_API_KEY|KOSIS_API_KEY|DATA_GO_KR_API_KEY|LAW_API_OC|TAVILY_API_KEY|CO_NEWBIZ_LLM_[A-Z_]+)$/;
+  /^(DART_API_KEY|ECOS_API_KEY|KOSIS_API_KEY|DATA_GO_KR_API_KEY|LAW_API_OC|TAVILY_API_KEY|CO_NEWBIZ_LLM_[A-Z_]+)$/;
 
 let loaded = false;
 
