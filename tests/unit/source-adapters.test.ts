@@ -31,7 +31,7 @@ const { resolveKosisUnit, KOSIS_UNITS } = await import("../../scripts/co-newbiz/
 
 describe("source adapter registry", () => {
   test("four adapters, each mapped to its k-* skill", () => {
-    expect(Object.keys(SOURCE_ADAPTERS).sort()).toEqual(["dart", "kosis", "law", "opendata"]);
+    expect(Object.keys(SOURCE_ADAPTERS).sort()).toEqual(["dart", "ecos", "kosis", "law", "opendata"]);
     expect(SOURCE_ADAPTERS.kosis.kSkill).toBe("k-kosis");
     expect(SOURCE_ADAPTERS.law.kSkill).toBe("k-law");
     expect(SOURCE_ADAPTERS.dart.kind).toBe("catalog");
