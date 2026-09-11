@@ -247,6 +247,30 @@ export function OpportunitiesView() {
     }
   }
 
+  // ── 매력도 LLM 초안 (ADR-0118) — 제안이며 기록은 사람(매력도 평가 버튼)이 한다 ──
+  interface AttractivenessReco {
+    source: "llm" | "synthesis";
+    note: string | null;
+    manifest: string[];
+    recommendation: { suggested_score: number | null; rationale_draft: string; key_evidence: string[]; cautions: string[] };
+  }
+  const [attractReco, setAttractReco] = useState<Record<string, AttractivenessReco | "loading">>({});
+
+  async function generateAttractDraft(id: string) {
+    setAttractReco((prev) => ({ ...prev, [id]: "loading" }));
+    try {
+      const r = await api.post<AttractivenessReco>(`/api/opportunities/${encodeURIComponent(id)}/attractiveness-recommendation`, {});
+      setAttractReco((prev) => ({ ...prev, [id]: r.data }));
+      if (r.data.recommendation.suggested_score !== null) {
+        setAttractDraft((prev) => ({ ...prev, [id]: String(r.data.recommendation.suggested_score) }));
+      }
+    } catch (err) {
+      setAttractReco((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      setError(err instanceof Error ? err.message : "매력도 초안 생성 실패");
+    }
+  }
+
+
   // ── 요인: 자동 도출 / 수동 추가 / 삭제 ──
   async function autoDeriveFactors(id: string) {
     setFactorsOf((prev) => ({ ...prev, [id]: "loading" }));
@@ -750,6 +774,20 @@ export function OpportunitiesView() {
                                 <button type="button" className="btn-ghost btn-sm" onClick={() => evaluateAttractiveness(o.id)}>
                                   매력도 평가
                                 </button>
+                                <button
+                                  type="button"
+                                  className="btn-ghost btn-sm"
+                                  title="S1 시장분석·요인을 근거로 점수 초안을 제안합니다 (ADR-0118)"
+                                  disabled={attractReco[o.id] === "loading"}
+                                  onClick={() => void generateAttractDraft(o.id)}
+                                >
+                                  {attractReco[o.id] === "loading" ? "초안 생성 중..." : "LLM 초안"}
+                                </button>
+                                {attractReco[o.id] && attractReco[o.id] !== "loading" && (
+                                  <span className="text-[0.7rem] text-[color:var(--muted-fg)]">
+                                    {(attractReco[o.id] as AttractivenessReco).recommendation.rationale_draft.slice(0, 160) || "초안 없음"}
+                                  </span>
+                                )}
                                 <span className="text-[0.72rem] text-[color:var(--muted-fg)]">평가 후 다음 단계(평가)로 이동할 수 있습니다.</span>
                               </div>
                             )}

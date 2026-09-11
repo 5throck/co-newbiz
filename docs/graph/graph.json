@@ -3,7 +3,7 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.4.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 613,
+    "node_count": 614,
     "edge_count": 1004
   },
   "nodes": [
@@ -591,6 +591,11 @@
       "id": "adr:0117",
       "type": "adr",
       "label": "ADR-0117: Dual-perspective business-case valuation (market_forward vs historical)"
+    },
+    {
+      "id": "adr:0118",
+      "type": "adr",
+      "label": "ADR-0118: Stage-scoped LLM decision support on human-judgment surfaces"
     },
     {
       "id": "agent:antitrust-agent",

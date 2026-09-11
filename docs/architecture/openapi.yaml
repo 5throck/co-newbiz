@@ -2325,6 +2325,46 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}/gate-brief:
+    post:
+      operationId: generateOpportunityGateBrief
+      summary: Draft an LLM gate brief (go/hold/kill recommendation + rationale draft) for screening/pre_fs/target_screening (ADR-0118). Proposal only — the gate decision is recorded by a human via recordOpportunityGateDecision. Deterministic fallback derives a recommendation solely from the published screening criteria.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}/attractiveness-recommendation:
+    post:
+      operationId: recommendOpportunityAttractiveness
+      summary: Draft an LLM attractiveness score (0-100) with an evidence rationale from S1 artifacts + opportunity factors (ADR-0118). Proposal only — the score is recorded by a human. Deterministic fallback returns a null score.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
   /api/opportunities/{id}/promote:
@@ -2831,6 +2871,18 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/greenfield/{oppId}/recommendation:
+    post:
+      operationId: recommendGreenfieldStrategy
+      summary: Draft an LLM capability-gap / Build-Partner-Hire-Invest strategy recommendation (S5 decision support, ADR-0118). Proposal only — the assessment is saved by a human. Deterministic fallback never fabricates capability rows.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/projects:
     get:
       operationId: listProjects
@@ -3051,6 +3103,26 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/business-case/adoption-recommendation:
+    post:
+      operationId: recommendBusinessCaseAdoption
+      summary: Draft an LLM adoption recommendation (which case + why + what would flip it) over this stage's cases and kill-criteria state (ADR-0118). Proposal only — adoption stays human via adoptProjectBusinessCase. Deterministic fallback echoes the RECOMMENDED case.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/opportunities/{id}/route-advisory:
     get:
       operationId: getRouteAdvisory
@@ -3199,6 +3271,44 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/deal-structure-recommendation:
+    post:
+      operationId: recommendDealStructure
+      summary: Draft an LLM deal-structure hypothesis (vehicle/stake/instrument + four-axis notes + rationale) from the adopted BC, DD findings, WACC·hurdle and current stage state (ADR-0118). Proposal only — hypotheses are registered by a human via actProjectDealStructure. Deterministic fallback returns no vehicle.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/monitoring-brief:
+    post:
+      operationId: generateMonitoringBrief
+      summary: Draft an LLM post-investment monitoring brief (assessment, risk flags, 5-vocab transition suggestion, learning capture) from the scorecard, synergy certifications, key-talent state and transition history (ADR-0118). Draft only — the transition decision is recorded by a human. Deterministic fallback offers no transition suggestion.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/portfolio/pipeline:
     get:
       operationId: getPortfolioPipeline
@@ -3229,6 +3339,26 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/gate-brief:
+    post:
+      operationId: generateProjectGateBrief
+      summary: Draft an LLM gate brief (go/hold/kill recommendation + rationale draft) for fs/dd/entity_ic/group_ic from the gate's manifest artifacts (ADR-0118). Proposal only — the gate decision is recorded by a human via recordProjectGateDecision. Deterministic fallback summarizes evidence without fabricating a verdict.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/projects/{id}/gate-decisions:
     get:
       operationId: listProjectGateDecisions

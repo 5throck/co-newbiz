@@ -1,0 +1,325 @@
+// Gate brief — the LLM decision support behind GateDecisionPanel (ADR-0118).
+// Each gate's context is an EXPLICIT manifest: the artifacts flow.spec declares
+// for the gate's stage plus the stage's own state — never a bulk dump. The LLM
+// proposes go/hold/kill + a rationale draft; the human records the gate
+// (boundary #2). Nothing is persisted; every generation is audit-logged by the
+// routes that call into this module.
+import type { Database } from "bun:sqlite";
+import { getDb } from "../../../db/client.ts";
+import { listBusinessCases, latestAdoption } from "./business-case.ts";
+import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
+import { gateRecommendation } from "./opportunity-screening.ts";
+
+export const OPPORTUNITY_GATE_BRIEFS = ["screening", "pre_fs", "target_screening"] as const;
+export const PROJECT_GATE_BRIEFS = ["fs", "dd", "entity_ic", "group_ic"] as const;
+export type OpportunityGateBriefId = (typeof OPPORTUNITY_GATE_BRIEFS)[number];
+export type ProjectGateBriefId = (typeof PROJECT_GATE_BRIEFS)[number];
+export type GateBriefEntity = "opportunity" | "project";
+
+export interface GateBrief {
+  recommendation: "go" | "hold" | "kill" | null;
+  confidence: "high" | "medium" | "low" | null;
+  rationale_draft: string;
+  key_evidence: string[];
+  cautions: string[];
+}
+
+// ADR-0118 manifests — the ONLY artifacts each gate's brief reads. The UI
+// renders this list verbatim ("이 제안이 본 산출물") so the LLM's field of
+// view is auditable.
+const MANIFESTS: Record<string, string[]> = {
+  screening: ["S1 시장 규모·성장 추정", "S2 기회 퍼널(매력도·요인)", "S3 적합성·시너지 초안", "결정론 스크리닝 권고"],
+  pre_fs: [
+    "S1 시장 규모·성장 추정", "S3 적합성·시너지 초안", "S4 트랙 결정·라우트",
+    "S5 역량 격차·진출전략 또는 BF 쇼트리스트",
+  ],
+  target_screening: ["S4 트랙 결정·라우트", "S6 Target Universe·Long List", "S7 대상 스크리닝 판정"],
+  fs: ["S4 트랙 결정", "S8 채택 Business Case·밸류에이션 요약"],
+  dd: ["S8 채택 BC 요약", "체크리스트 판정 집계", "DD 발견사항(dd_finding)", "waiver 연결"],
+  entity_ic: ["채택 BC 요약", "DD 완료 요약", "RAG 제안(승인 아님)", "딜구조 가설(S10)", "선행 게이트 결정(fs·dd)"],
+  group_ic: ["채택 BC 요약", "DD 완료 요약", "RAG 제안(승인 아님)", "딜구조 가설(S10)", "선행 게이트 결정(entity_ic·dd)"],
+};
+
+export function gateManifest(entityType: GateBriefEntity, gate: string): string[] | null {
+  if (entityType === "opportunity" && (OPPORTUNITY_GATE_BRIEFS as readonly string[]).includes(gate)) return MANIFESTS[gate] ?? null;
+  if (entityType === "project" && (PROJECT_GATE_BRIEFS as readonly string[]).includes(gate)) return MANIFESTS[gate] ?? null;
+  return null;
+}
+
+interface OppRow {
+  id: string; name: string; market_scope: string | null; value_chain_node: string | null;
+  rationale: string | null; attractiveness_score: number | null; synergy_score: number | null;
+  fit_verdict: string | null; fit_rationale: string | null; market_size_krw_m: number | null;
+  growth_rate: number | null; target_universe_json: string | null; factors_json: string | null;
+}
+
+function oppRow(db: Database, id: string): OppRow | null {
+  return db
+    .query(
+      `SELECT id, name, market_scope, value_chain_node, rationale, attractiveness_score, synergy_score,
+              fit_verdict, fit_rationale, market_size_krw_m, growth_rate, target_universe_json, factors_json
+       FROM opportunity WHERE id = ?`,
+    )
+    .get(id) as OppRow | null;
+}
+
+// S1 artifact — latest completed sizing for the opportunity's market.
+function s1Summary(db: Database, marketScope: string | null): string {
+  if (!marketScope) return "S1 시장분석: 없음 (market_scope 미지정)";
+  const ind = db.query("SELECT id FROM md_industry WHERE name_ko = ? LIMIT 1").get(marketScope) as { id: string } | undefined;
+  const version = ind
+    ? db.query(
+        `SELECT v.payload FROM market_sizing_version v
+         JOIN market_sizing_analysis a ON a.id = v.analysis_id
+         WHERE a.industry_id = ? AND a.status = 'completed'
+         ORDER BY v.version_no DESC LIMIT 1`,
+      ).get(ind.id) as { payload: string } | undefined
+    : undefined;
+  if (!version) return "S1 시장분석: 없음";
+  try {
+    const m = (JSON.parse(version.payload) as {
+      matrix?: { anchor?: { total?: number }; consistency?: { bottomUpCagr?: number }; qualitative?: { opportunityFactors?: string[]; riskFactors?: string[] } };
+    }).matrix ?? {};
+    return [
+      `기준 규모: ${m.anchor?.total ? `$${m.anchor.total.toFixed(2)}B` : "미상"}`,
+      `CAGR: ${m.consistency?.bottomUpCagr != null ? `${(m.consistency.bottomUpCagr * 100).toFixed(1)}%` : "미상"}`,
+      m.qualitative?.opportunityFactors?.length ? `기회 요인: ${m.qualitative.opportunityFactors.join(" / ")}` : "",
+      m.qualitative?.riskFactors?.length ? `위험 요인: ${m.qualitative.riskFactors.join(" / ")}` : "",
+    ].filter(Boolean).join("\n") || "S1 시장분석: 요약 없음";
+  } catch {
+    return "S1 시장분석: payload 파싱 실패";
+  }
+}
+
+function s2Factors(opp: OppRow): string {
+  if (!opp.factors_json) return "S2 요인: 없음";
+  try {
+    const f = JSON.parse(opp.factors_json) as { opportunity?: string[]; risk?: string[] };
+    return [
+      f.opportunity?.length ? `기회 요인: ${f.opportunity.join(" / ")}` : "",
+      f.risk?.length ? `위험 요인: ${f.risk.join(" / ")}` : "",
+    ].filter(Boolean).join("\n") || "S2 요인: 없음";
+  } catch {
+    return "S2 요인: 파싱 실패";
+  }
+}
+
+function s3Summary(opp: OppRow): string {
+  return [
+    `매력도: ${opp.attractiveness_score ?? "미평가"}`,
+    `시너지 점수: ${opp.synergy_score ?? "미평가"}`,
+    `적합성 판정: ${opp.fit_verdict ?? "없음"}${opp.fit_rationale ? ` — ${opp.fit_rationale}` : ""}`,
+  ].join("\n");
+}
+
+function s4Summary(db: Database, oppId: string): string {
+  const row = db
+    .query("SELECT track, sub_track, intent, total_score, rationale, staging_recommended FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
+    .get(oppId) as { track: string; sub_track: string | null; intent: string | null; total_score: number | null; rationale: string; staging_recommended: string | null } | undefined;
+  if (!row) return "S4 트랙 결정: 없음";
+  return [
+    `트랙: ${row.track}${row.sub_track ? ` / 라우트: ${row.sub_track}` : ""}${row.intent ? ` / 의도: ${row.intent}` : ""}`,
+    row.total_score != null ? `5기준 합산: ${row.total_score}/3.0` : "",
+    row.rationale ? `결정 근거: ${row.rationale.slice(0, 300)}` : "",
+    row.staging_recommended ? `스테이징 권고: ${row.staging_recommended}` : "",
+  ].filter(Boolean).join("\n");
+}
+
+function s5Summary(db: Database, oppId: string): string {
+  const row = db
+    .query("SELECT capability_gaps_json, entry_strategy, alternatives_considered, rationale FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC, id DESC LIMIT 1")
+    .get(oppId) as { capability_gaps_json: string | null; entry_strategy: string | null; alternatives_considered: string | null; rationale: string | null } | undefined;
+  if (!row) return "S5 역량 평가: 없음";
+  let gaps = "";
+  try {
+    const parsed = row.capability_gaps_json ? (JSON.parse(row.capability_gaps_json) as unknown) : null;
+    if (Array.isArray(parsed)) {
+      gaps = `역량 격차 ${parsed.length}건: ` + parsed.slice(0, 6).map((r) => {
+        const row2 = r as Record<string, unknown>;
+        return `${String(row2.name ?? row2.capability ?? "?")}(필요 ${String(row2.required_level ?? "?")}/보유 ${String(row2.current_level ?? "?")}, ${String(row2.approach ?? row2.gap_type ?? "?")})`;
+      }).join(", ");
+    }
+  } catch { gaps = "역량 격차: 파싱 실패"; }
+  return [
+    gaps,
+    row.entry_strategy ? `진출전략: ${row.entry_strategy.slice(0, 300)}` : "",
+    row.rationale ? `평가 근거: ${row.rationale.slice(0, 200)}` : "",
+  ].filter(Boolean).join("\n") || "S5 역량 평가: 요약 없음";
+}
+
+function bfSummary(db: Database, oppId: string): string {
+  const targets = db
+    .query("SELECT company_name, status, exclusion_reason, screening_json FROM brownfield_target WHERE opportunity_id = ? ORDER BY created_at DESC LIMIT 12")
+    .all(oppId) as Array<{ company_name: string; status: string; exclusion_reason: string | null; screening_json: string | null }>;
+  const lines = targets.map((t) => `- ${t.company_name}: ${t.status}${t.exclusion_reason ? ` (제외: ${t.exclusion_reason})` : ""}`);
+  return [
+    `Long/Short List ${targets.length}건`,
+    ...lines,
+  ].join("\n") || "S6/S7 대상: 없음";
+}
+
+// Project-side summaries (import-based — the same data the IC package composes).
+function s8Summary(projectId: string): string {
+  try {
+    const { cases, adoption } = { cases: listBusinessCases(projectId).cases, adoption: latestAdoption(projectId) };
+    if (cases.length === 0) return "S8 Business Case: 없음";
+    const lines = cases.slice(0, 8).map((c) =>
+      `- ${c.name} (${c.kind}${c.scenario ? `, ${c.scenario}` : ""}${c.variant ? `, ${c.variant}` : ""})${c.adopted ? " [채택]" : ""}${c.recommended ? " [결정론 RECOMMENDED]" : ""}`,
+    );
+    return [
+      `채택: ${adoption ? `${adoption.adoptedBy} @ ${adoption.adoptedAt.slice(0, 10)}` : "없음"}`,
+      ...lines,
+    ].join("\n");
+  } catch (err) {
+    return `S8 Business Case: 요약 실패 (${err instanceof Error ? err.message : "unknown"})`;
+  }
+}
+
+function ddSummary(db: Database, projectId: string): string {
+  try {
+    const s = ddCompletionSummary(projectId);
+    const findings = db
+      .query("SELECT category, description, value_impact FROM dd_finding WHERE project_id = ? ORDER BY created_at DESC LIMIT 8")
+      .all(projectId) as Array<{ category: string; description: string; value_impact: string | null }>;
+    const waiverCount = db.query("SELECT COUNT(*) c FROM waiver WHERE project_id = ?").get(projectId) as unknown as { c: number };
+    return [
+      `체크리스트: 전체 ${s.total}건, 미판정 ${s.pending}건, 필수 미충족 ${s.mandatoryUnmet}건`,
+      `waiver ${waiverCount.c}건`,
+      ...findings.map((f) => `- [${f.category}] ${f.description.slice(0, 160)}${f.value_impact ? ` (가치영향: ${f.value_impact})` : ""}`),
+    ].filter(Boolean).join("\n") || "S9 DD: 데이터 없음";
+  } catch (err) {
+    return `S9 DD: 요약 실패 (${err instanceof Error ? err.message : "unknown"})`;
+  }
+}
+
+function dealSummary(db: Database, projectId: string): string {
+  const rows = db
+    .query("SELECT vehicle, stake_type, instrument_mix, tax_structure_note, liability_isolation_note, financing_leverage_note, exit_structure_note, four_axis_review_completed, rationale FROM deal_structure_hypothesis WHERE project_id = ? ORDER BY hypothesized_at DESC, id DESC LIMIT 3")
+    .all(projectId) as Array<Record<string, string | number | null>>;
+  if (rows.length === 0) return "S10 딜구조 가설: 없음";
+  return rows.map((r) =>
+    `- ${r.vehicle ?? "?"} / 지분 ${r.stake_type ?? "?"} / 수단 ${r.instrument_mix ?? "?"}${r.four_axis_review_completed ? " [4축 완료]" : ""}${r.rationale ? ` — ${String(r.rationale).slice(0, 160)}` : ""}`,
+  ).join("\n");
+}
+
+function ragSummary(db: Database, projectId: string): string {
+  const rows = db
+    .query(
+      `SELECT dimension, grade, rationale FROM (
+         SELECT dimension, grade, rationale,
+                ROW_NUMBER() OVER (PARTITION BY dimension ORDER BY assessed_at DESC, id DESC) AS rn
+         FROM rag_assessment WHERE project_id = ?
+       ) WHERE rn = 1`,
+    )
+    .all(projectId) as Array<{ dimension: string; grade: string; rationale: string }>;
+  if (rows.length === 0) return "RAG 제안: 없음";
+  return rows.map((r) => `- ${r.dimension}: ${r.grade}${r.rationale ? ` — ${r.rationale.slice(0, 120)}` : ""}`).join("\n") + " (AI 제안 — 승인 아님)";
+}
+
+function priorGates(db: Database, projectId: string, gates: string[]): string {
+  const rows = db
+    .query(
+      `SELECT gate, decision, rationale FROM (
+         SELECT gate, decision, rationale,
+                ROW_NUMBER() OVER (PARTITION BY gate ORDER BY decided_at DESC, id DESC) AS rn
+         FROM gate_decision WHERE entity_type = 'project' AND entity_id = ? AND gate IN (${gates.map(() => "?").join(",")})
+       ) WHERE rn = 1`,
+    )
+    .all(projectId, ...gates) as Array<{ gate: string; decision: string; rationale: string }>;
+  if (rows.length === 0) return `선행 게이트(${gates.join(", ")}): 미기록`;
+  return rows.map((r) => `- ${r.gate}: ${r.decision.toUpperCase()}${r.rationale ? ` — ${r.rationale.slice(0, 160)}` : ""}`).join("\n");
+}
+
+/** Build the prompt context for one gate — ONLY its manifest artifacts. */
+export function buildGateContext(db: Database, entityType: GateBriefEntity, entityId: string, gate: string): string {
+  if (entityType === "opportunity") {
+    const opp = oppRow(db, entityId);
+    if (!opp) return "기회를 찾을 수 없습니다.";
+    const base = `기회명: ${opp.name}\n시장: ${opp.market_scope ?? "미정"}\n가치사슬: ${opp.value_chain_node ?? "미정"}\n발굴 근거: ${opp.rationale ?? "없음"}`;
+    if (gate === "screening") {
+      return [base, `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`, `\n[S2 기회 퍼널]\n${s2Factors(opp)}`, `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`].join("\n");
+    }
+    if (gate === "pre_fs") {
+      const bf = opp.target_universe_json ? "\n[S5/BF 쇼트리스트 상태]\n" + bfSummary(db, entityId) : "\n[S5 역량 평가]\n" + s5Summary(db, entityId);
+      return [base, `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`, `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`, `\n[S4 트랙 결정·라우트]\n${s4Summary(db, entityId)}`, bf].join("\n");
+    }
+    if (gate === "target_screening") {
+      return [base, `\n[S4 트랙 결정·라우트]\n${s4Summary(db, entityId)}`, `\n[S6/S7 대상 목록·스크리닝]\n${bfSummary(db, entityId)}`].join("\n");
+    }
+    return base;
+  }
+  // project gates
+  const project = db.query("SELECT id, project_name FROM md_project WHERE id = ?").get(entityId) as { id: string; project_name: string } | null;
+  if (!project) return "프로젝트를 찾을 수 없습니다.";
+  const base = `프로젝트: ${project.project_name}`;
+  if (gate === "fs") {
+    return [base, `\n[S8 Business Case]\n${s8Summary(entityId)}`].join("\n");
+  }
+  if (gate === "dd") {
+    return [base, `\n[S8 채택 BC 요약]\n${s8Summary(entityId)}`, `\n[S9 DD]\n${ddSummary(db, entityId)}`].join("\n");
+  }
+  if (gate === "entity_ic" || gate === "group_ic") {
+    const prior = priorGates(db, entityId, gate === "entity_ic" ? ["fs", "dd"] : ["entity_ic", "dd"]);
+    return [base, `\n[S8 채택 BC 요약]\n${s8Summary(entityId)}`, `\n[S9 DD 완료]\n${ddSummary(db, entityId)}`, `\n[RAG 제안]\n${ragSummary(db, entityId)}`, `\n[S10 딜구조 가설]\n${dealSummary(db, entityId)}`, `\n[선행 게이트]\n${prior}`].join("\n");
+  }
+  return base;
+}
+
+/** Whitelist-clamp the LLM's JSON — never trusted raw. */
+export function normalizeGateBrief(raw: unknown): GateBrief {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const rec = String(r.recommendation ?? "").trim().toLowerCase();
+  const conf = String(r.confidence ?? "").trim().toLowerCase();
+  const strList = (arr: unknown, max: number) =>
+    Array.isArray(arr) ? arr.map((s) => String(s ?? "").trim().slice(0, 300)).filter(Boolean).slice(0, max) : [];
+  return {
+    recommendation: ["go", "hold", "kill"].includes(rec) ? (rec as GateBrief["recommendation"]) : null,
+    confidence: ["high", "medium", "low"].includes(conf) ? (conf as GateBrief["confidence"]) : null,
+    rationale_draft: String(r.rationale_draft ?? "").trim().slice(0, 1500),
+    key_evidence: strList(r.key_evidence, 8),
+    cautions: strList(r.cautions, 8),
+  };
+}
+
+/** Deterministic fallback — evidence summary only. A go/hold/kill is derived
+ *  solely for the screening gate (the spec's published criteria); every other
+ *  gate returns recommendation null rather than a fabricated verdict. */
+export function synthesisGateBrief(db: Database, entityType: GateBriefEntity, entityId: string, gate: string, manifest: string[]): GateBrief {
+  const evidence: string[] = [];
+  let recommendation: GateBrief["recommendation"] = null;
+  let confidence: GateBrief["confidence"] = null;
+  if (entityType === "opportunity") {
+    const opp = oppRow(db, entityId);
+    if (opp) {
+      evidence.push(s3Summary(opp));
+      if (gate === "screening" || gate === "pre_fs") evidence.push(s4Summary(db, entityId) === "S4 트랙 결정: 없음" ? "S4 트랙 결정: 없음" : "S4 트랙 결정: 기록됨");
+      if (gate === "screening") {
+        const rec = gateRecommendation(opp);
+        if (rec) {
+          recommendation = rec.recommendation.toLowerCase() as GateBrief["recommendation"];
+          confidence = "medium";
+          evidence.push(rec.rationale);
+        }
+      }
+      if (gate === "target_screening" || gate === "pre_fs") evidence.push(bfSummary(db, entityId));
+    }
+  } else if (entityType === "project") {
+    evidence.push(s8Summary(entityId));
+    if (gate === "dd" || gate === "entity_ic" || gate === "group_ic") evidence.push(ddSummary(db, entityId));
+    if (gate === "entity_ic" || gate === "group_ic") {
+      evidence.push(ragSummary(db, entityId));
+      evidence.push(dealSummary(db, entityId));
+    }
+  }
+  const found = evidence.filter((e) => e && !/없음|미평가|없다/.test(e.split("\n")[0])).length;
+  return {
+    recommendation,
+    confidence,
+    rationale_draft:
+      `결정론 폴백 — 매니페스트 ${manifest.length}건 중 판돈 가능한 근거 ${found}건. ` +
+      `권고는 ${recommendation ? "스펙 공개 기준으로만 산출했습니다" : "데이터만으로 산출할 수 없어 null입니다 (사람이 판단하세요)"}. ` +
+      `LLM 구성 후 '브리프 생성'으로 제안을 받을 수 있습니다.`,
+    key_evidence: evidence.slice(0, 8),
+    cautions: ["LLM 미구성 또는 실패 — 결정론 폴백이며 권고는 스펙 공개 기준으로만 산출됩니다."],
+  };
+}

@@ -30,10 +30,24 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     rationale: "",
     missing: "",
   });
+  // ADR-0118 — LLM 게이트 브리프(제안). 권고·근거 초안만 제공하며 결정 select는
+  // 건드리지 않는다. "근거에 반영"은 rationale 프리필일 뿐, 기록은 사람이다.
+  interface GateBriefData {
+    source: "llm" | "synthesis";
+    provider: string | null;
+    note: string | null;
+    manifest: string[];
+    gate: string;
+    brief: { recommendation: "go" | "hold" | "kill" | null; confidence: string | null; rationale_draft: string; key_evidence: string[]; cautions: string[] };
+  }
+  const [briefData, setBriefData] = useState<GateBriefData | null>(null);
+  const [briefLoading, setBriefLoading] = useState(false);
+  const [briefError, setBriefError] = useState<string | null>(null);
 
   // Project-entity carrier (S8+, ADR-0095/0098) records through the project
   // route; the default stays the S1~S7 opportunity route.
   const basePath = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(opportunityId)}/gate-decisions`;
+  const briefPath = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(opportunityId)}/gate-brief`;
 
   const load = useCallback(() => {
     api.get<{ latest: GateLatest[]; history: GateHistoryRow[] }>(basePath)
@@ -42,6 +56,21 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   }, [basePath]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => { setBriefData(null); setBriefError(null); }, [opportunityId, entityType]);
+
+  async function generateBrief() {
+    if (briefLoading) return;
+    setBriefLoading(true); setBriefError(null);
+    try {
+      const r = await api.post<GateBriefData>(briefPath, { gate: form.gate });
+      setBriefData(r.data);
+    } catch (err) {
+      setBriefError(err instanceof Error ? err.message : "브리프 생성 실패");
+    } finally {
+      setBriefLoading(false);
+    }
+  }
 
   const decisionOf = (gate: string): GateLatest | undefined => latest?.find((g) => g.gate === gate);
 
@@ -106,6 +135,61 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           })}
         </tbody>
       </table>
+
+      {/* ADR-0118 — LLM 게이트 브리프(제안): 권고·근거 초안 제공, 기록은 사람 */}
+      {canRecord && (
+        <div className="mt-3 border border-[color:var(--border)] rounded-lg px-3 py-2" aria-label="LLM 게이트 브리프">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className="btn-ghost btn-sm" disabled={briefLoading} onClick={() => void generateBrief()}>
+              {briefLoading ? "생성 중..." : briefData ? "재생성" : "🤖 LLM 브리프 생성"}
+            </button>
+            <span className="text-[0.72rem] text-[color:var(--muted-fg)]">
+              {form.gate} 게이트 기준 — 제안은 결정 select를 바꾸지 않으며, 기록은 사람이 합니다 (경계 #2)
+            </span>
+          </div>
+          {briefError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mt-1 mb-0">{briefError}</p>}
+          {briefData && (
+            <>
+              {briefData.gate !== form.gate && (
+                <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mt-1 mb-0">브리프는 {briefData.gate} 기준입니다 — 게이트를 바꾸면 재생성하세요.</p>
+              )}
+              <p className="mt-2 mb-1 flex flex-wrap items-center gap-1">
+                <span className={`status-chip ${briefData.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
+                  {briefData.source === "llm" ? `LLM 제안${briefData.provider ? ` · ${briefData.provider}` : ""}` : "결정론 폴백"}
+                </span>
+                {briefData.brief.recommendation && (
+                  <span className={`status-chip ${briefData.brief.recommendation === "go" ? "status-green" : briefData.brief.recommendation === "hold" ? "status-amber" : "status-red"}`}>
+                    권고 {briefData.brief.recommendation.toUpperCase()}
+                  </span>
+                )}
+                {briefData.brief.confidence && <span className="text-[0.72rem] text-[color:var(--muted-fg)]">확신도 {briefData.brief.confidence}</span>}
+              </p>
+              {briefData.note && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-1">{briefData.note}</p>}
+              {briefData.brief.rationale_draft && <p className="text-[0.78rem] mb-1"><span className="font-semibold">근거 초안:</span> {briefData.brief.rationale_draft}</p>}
+              {briefData.brief.key_evidence.length > 0 && (
+                <ul className="sizing-note-list mb-1">
+                  {briefData.brief.key_evidence.map((e, i) => <li key={i}>{e}</li>)}
+                </ul>
+              )}
+              {briefData.brief.cautions.length > 0 && (
+                <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {briefData.brief.cautions.join(" / ")}</p>
+              )}
+              <p className="text-[0.7rem] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {briefData.manifest.join(" · ")}</p>
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                onClick={() => setForm((f) => ({ ...f, rationale: briefData.brief.rationale_draft || f.rationale }))}
+                disabled={!briefData.brief.rationale_draft}
+              >
+                근거에 반영
+              </button>
+            </>
+          )}
+          {!briefData && !briefLoading && !briefError && (
+            <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-1 mb-0">LLM이 게이트 산출물을 근거로 권고와 근거 초안을 작성해 줍니다 — 기록은 사람의 몫입니다.</p>
+          )}
+        </div>
+      )}
 
       {canRecord ? (
         <form

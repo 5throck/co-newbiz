@@ -63,8 +63,9 @@ export function loadScreeningState(id: string): ScreeningState | null {
   return { ...row, gate: gateRecommendation(row) };
 }
 
-/** screening 게이트 권고 — 스펙 판정기준(매력도·knock-out·시너지)을 조합. */
-function gateRecommendation(row: { attractiveness_score: number | null; synergy_score: number | null; fit_verdict: string | null }): ScreeningState["gate"] {
+/** screening 게이트 권고 — 스펙 판정기준(매력도·knock-out·시너지)을 조합.
+ *  gate-brief.ts의 결정론 폴백도 동일 기준을 재사용한다 (ADR-0118). */
+export function gateRecommendation(row: { attractiveness_score: number | null; synergy_score: number | null; fit_verdict: string | null }): ScreeningState["gate"] {
   if (row.synergy_score === null || !row.fit_verdict || row.attractiveness_score === null) return null;
   const attractiveness = row.attractiveness_score;
   const synergy = row.synergy_score;

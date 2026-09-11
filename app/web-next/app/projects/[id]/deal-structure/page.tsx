@@ -72,6 +72,25 @@ export default function DealStructurePage() {
   const [artifactRef, setArtifactRef] = useState<Record<string, string>>({});
   const [newHyp, setNewHyp] = useState({ vehicle: "", asset_or_stock: "", stake_type: "", instrument_mix: "", tax_structure_note: "", liability_isolation_note: "", financing_leverage_note: "", exit_structure_note: "", rationale: "" });
   const [newEntry, setNewEntry] = useState<{ kind: "source" | "use"; name: string; amount_krw_m: string; note: string }>({ kind: "source", name: "", amount_krw_m: "", note: "" });
+  // ADR-0118 — S10 딜구조 LLM 추천(제안). 가설 등록은 사람의 행위다.
+  interface DealStructureReco {
+    source: "llm" | "synthesis";
+    provider: string | null;
+    note: string | null;
+    manifest: string[];
+    recommendation: {
+      vehicle: string | null;
+      stake_type: string | null;
+      instrument_mix: string | null;
+      four_axis: { tax_structure_note: string; liability_isolation_note: string; financing_leverage_note: string; exit_structure_note: string };
+      rationale_draft: string;
+      key_evidence: string[];
+      cautions: string[];
+    };
+  }
+  const [reco, setReco] = useState<DealStructureReco | null>(null);
+  const [recoLoading, setRecoLoading] = useState(false);
+  const [recoError, setRecoError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api.get<View>(`/api/projects/${encodeURIComponent(projectId)}/deal-structure`)
@@ -79,6 +98,35 @@ export default function DealStructurePage() {
       .catch((e) => setError(e instanceof Error ? e.message : "투자구조 데이터를 불러오지 못했습니다."));
   }, [projectId]);
   useEffect(() => { load(); }, [load]);
+
+  async function generateReco() {
+    if (recoLoading) return;
+    setRecoLoading(true); setRecoError(null);
+    try {
+      const r = await api.post<DealStructureReco>(`/api/projects/${encodeURIComponent(projectId)}/deal-structure-recommendation`, {});
+      setReco(r.data);
+    } catch (err) {
+      setRecoError(err instanceof Error ? err.message : "추천 생성 실패");
+    } finally {
+      setRecoLoading(false);
+    }
+  }
+
+  function applyReco() {
+    if (!reco) return;
+    const r = reco.recommendation;
+    setNewHyp((h) => ({
+      ...h,
+      vehicle: r.vehicle ?? h.vehicle,
+      stake_type: r.stake_type ?? h.stake_type,
+      instrument_mix: r.instrument_mix ?? h.instrument_mix,
+      tax_structure_note: r.four_axis.tax_structure_note !== "검증 필요" ? r.four_axis.tax_structure_note : h.tax_structure_note,
+      liability_isolation_note: r.four_axis.liability_isolation_note !== "검증 필요" ? r.four_axis.liability_isolation_note : h.liability_isolation_note,
+      financing_leverage_note: r.four_axis.financing_leverage_note !== "검증 필요" ? r.four_axis.financing_leverage_note : h.financing_leverage_note,
+      exit_structure_note: r.four_axis.exit_structure_note !== "검증 필요" ? r.four_axis.exit_structure_note : h.exit_structure_note,
+      rationale: r.rationale_draft || h.rationale,
+    }));
+  }
 
   async function post(body: Record<string, unknown>, successMsg?: string) {
     setBusy(true); setError(null);
@@ -126,6 +174,63 @@ export default function DealStructurePage() {
         </p>
 
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
+
+        {/* ── LLM 딜구조 추천 (결정 지원) — ADR-0118: 제안은 LLM, 가설 등록은 사람 ── */}
+        {canAct && (
+          <section className="market-section sizing-step mb-3" aria-label="LLM 딜구조 추천">
+            <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 딜구조 추천 (제안)</h3>
+            <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+              원칙 (경계 #2): 가설 등록·4축 확정은 사람이 합니다 — S8 채택 BC·S9 발견사항·WACC·현재 상태에서 만든 제안입니다.
+            </p>
+            {recoError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+            {!reco && !recoLoading && !recoError && (
+              <div className="flex flex-wrap items-center gap-2 mb-0">
+                <button type="button" className="btn-ghost" onClick={() => void generateReco()}>▶ LLM 추천 생성</button>
+                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">비히클·지분·수단과 4축 노트·구조 근거 초안을 작성해 가설 등록을 돕습니다.</span>
+              </div>
+            )}
+            {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">채택 BC·DD 발견사항·WACC를 근거로 초안을 작성하는 중...</p>}
+            {reco && (
+              <>
+                <p className="mb-1 flex flex-wrap items-center gap-1">
+                  <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
+                    {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                  </span>
+                  {reco.recommendation.vehicle && <span className="status-chip status-amber">{VEHICLE_LABEL[reco.recommendation.vehicle] ?? reco.recommendation.vehicle}</span>}
+                  {reco.recommendation.stake_type && <span className="status-chip status-not-started">지분: {reco.recommendation.stake_type}</span>}
+                  {reco.recommendation.instrument_mix && <span className="status-chip status-not-started">수단: {reco.recommendation.instrument_mix}</span>}
+                </p>
+                {reco.note && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
+                {reco.recommendation.rationale_draft && <p className="text-[0.78rem] mb-1"><span className="font-semibold">구조 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
+                <table className="data-table mb-2" aria-label="4축 노트 초안">
+                  <caption className="sr-only">4축 노트 초안</caption>
+                  <tbody>
+                    {(["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const).map((k) => (
+                      <tr key={k}>
+                        <th scope="row" style={{ width: "8rem" }}>{AXIS_LABEL[k]}</th>
+                        <td className="text-[0.78rem]">{reco.recommendation.four_axis[k]}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {reco.recommendation.cautions.length > 0 && (
+                  <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {reco.recommendation.cautions.join(" / ")}</p>
+                )}
+                <p className="text-[0.7rem] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm"
+                  onClick={() => confirm("LLM 추천을 가설 폼에 반영할까요?", applyReco, {
+                    body: "'새 투자구조 가설 기록' 폼에 초안을 채웁니다 — 검토·수정 후 사람이 등록합니다.",
+                    confirmLabel: "반영",
+                  })}
+                >
+                  ▶ 가설 폼에 반영
+                </button>
+              </>
+            )}
+          </section>
+        )}
 
         <section className="market-section sizing-step mb-3" aria-label="투자구조 가설">
           <h3 className="sizing-step-title text-[0.9rem]">투자구조 가설 ({data?.hypotheses.length ?? 0}건)</h3>

@@ -6,6 +6,7 @@ import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
 import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
+import { useConfirm } from "../../components/crud.tsx";
 
 // S5 역량 평가·진출전략 (/greenfield) — flow.spec v2.0.0 그린필드 경로.
 //   Greenfield는 Target Company가 없음 — "우리 스스로 진입 가능한가, 무엇을
@@ -39,6 +40,25 @@ export function GreenfieldView() {
   const [alternatives, setAlternatives] = useState("");
   const [bcLines, setBcLines] = useState<BcLine[]>([]);
   const [rationale, setRationale] = useState("");
+  // ADR-0118 — S5 역량·전략 LLM 추천(제안). 저장은 사람의 행위다.
+  interface GreenfieldReco {
+    source: "llm" | "synthesis";
+    provider: string | null;
+    note: string | null;
+    manifest: string[];
+    recommendation: {
+      capability_rows: Array<{ capability: string; required_level: string; current_level: string; gap: string; resolution: string; note: string }> | null;
+      strategy_draft: string;
+      alternatives_draft: string | null;
+      rationale_draft: string;
+      key_evidence: string[];
+      cautions: string[];
+    };
+  }
+  const [reco, setReco] = useState<GreenfieldReco | null>(null);
+  const [recoLoading, setRecoLoading] = useState(false);
+  const [recoError, setRecoError] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
 
   const selectedId = searchParams.get("opportunity");
 
@@ -70,6 +90,33 @@ export function GreenfieldView() {
     window.history.replaceState(null, "", `/greenfield?opportunity=${encodeURIComponent(o.id)}`);
     loadDetail(o.id);
   }, [loadDetail]);
+
+  // 기회 전환 시 추천 초기화
+  useEffect(() => { setReco(null); setRecoError(null); }, [selectedId]);
+
+  const generateReco = useCallback(async () => {
+    if (!selected || recoLoading) return;
+    setRecoLoading(true); setRecoError(null);
+    try {
+      const r = await api.post<GreenfieldReco>(`/api/greenfield/${encodeURIComponent(selected.opportunity.id)}/recommendation`, {});
+      setReco(r.data);
+    } catch (err) {
+      setRecoError(err instanceof Error ? err.message : "추천 생성 실패");
+    } finally {
+      setRecoLoading(false);
+    }
+  }, [selected, recoLoading]);
+
+  function applyReco() {
+    if (!reco) return;
+    const r = reco.recommendation;
+    if (r.capability_rows) {
+      setGaps(r.capability_rows.map((row) => ({ capability: row.capability, required_level: row.required_level, current_level: row.current_level, gap: row.gap, resolution: row.resolution, note: row.note })));
+    }
+    if (r.strategy_draft) setEntryStrategy(r.strategy_draft);
+    if (r.alternatives_draft) setAlternatives(r.alternatives_draft);
+    if (r.rationale_draft) setRationale(r.rationale_draft);
+  }
 
   const setGap = (i: number, patch: Partial<GapRow>) => setGaps((prev) => prev.map((g, idx) => (idx === i ? { ...g, ...patch } : g)));
   const setBc = (i: number, patch: Partial<BcLine>) => setBcLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -131,6 +178,80 @@ export function GreenfieldView() {
           </div>
         )}
       </section>
+
+      {/* ── LLM 역량·전략 추천 (결정 지원) — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
+      {selected && (
+        <section aria-label="LLM 역량·전략 추천" className="market-section">
+          <SectionToolbar
+            title={`${selected.opportunity.name} — LLM 역량·전략 추천`}
+            icon="🤖"
+            actions={
+              reco ? (
+                <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>재생성</button>
+              ) : undefined
+            }
+          />
+          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+            원칙 (경계 #2): 저장·확정은 사람이 합니다 — <b>제안</b>이며, 폼에 반영한 뒤 자유롭게 수정할 수 있습니다.
+          </p>
+          {recoError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+          {!reco && !recoLoading && !recoError && (
+            <div className="flex flex-wrap items-center gap-2 mb-0">
+              <button type="button" className="btn-ghost" onClick={() => void generateReco()}>▶ LLM 추천 생성</button>
+              <span className="text-[0.75rem] text-[color:var(--muted-fg)]">역량 격차 행(Build/Partner/Hire/Invest 포함)과 진출전략·평가 근거 초안을 작성해 폼 채움을 돕습니다.</span>
+            </div>
+          )}
+          {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">S4 결정·S1 시장 정의·S3 필요 역량을 근거로 초안을 작성하는 중...</p>}
+          {reco && (
+            <>
+              <p className="mb-2 flex flex-wrap items-center gap-1">
+                <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
+                  {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                </span>
+                {reco.recommendation.capability_rows && <span className="status-chip status-not-started">격차 행 제안 {reco.recommendation.capability_rows.length}건</span>}
+              </p>
+              {reco.note && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
+              {reco.recommendation.capability_rows ? (
+                <table className="data-table mb-3" aria-label="역량 격차 초안">
+                  <caption className="sr-only">역량 격차 초안</caption>
+                  <thead><tr><th scope="col">역량</th><th scope="col">필요</th><th scope="col">보유</th><th scope="col">격차</th><th scope="col">해소</th><th scope="col">근거(제안)</th></tr></thead>
+                  <tbody>
+                    {reco.recommendation.capability_rows.map((row, i) => (
+                      <tr key={i}>
+                        <td className="font-semibold text-[0.8rem]">{row.capability}</td>
+                        <td className="text-[0.8rem]">{row.required_level}</td>
+                        <td className="text-[0.8rem]">{row.current_level}</td>
+                        <td className="text-[0.8rem]">{row.gap}</td>
+                        <td><span className="status-chip status-in-progress">{row.resolution.toUpperCase()}</span></td>
+                        <td className="text-[0.75rem]">{row.note}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-3">격차 행 초안 없음 — 직접 작성하세요.</p>
+              )}
+              {reco.recommendation.strategy_draft && <p className="text-[0.8rem] mb-2"><span className="font-semibold">진출전략 초안:</span> {reco.recommendation.strategy_draft}</p>}
+              {reco.recommendation.alternatives_draft && <p className="text-[0.8rem] mb-2"><span className="font-semibold">대안 초안:</span> {reco.recommendation.alternatives_draft}</p>}
+              {reco.recommendation.rationale_draft && <p className="text-[0.8rem] mb-2"><span className="font-semibold">평가 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
+              {reco.recommendation.cautions.length > 0 && (
+                <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-2">⚠ {reco.recommendation.cautions.join(" / ")}</p>
+              )}
+              <p className="text-[0.7rem] text-[color:var(--muted-fg)] mb-2">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => confirm("LLM 추천을 평가 폼에 반영할까요?", applyReco, {
+                  body: "현재 입력한 격차 행·진출전략·근거를 초안으로 덮어씁니다 — 반영 후에도 수정 가능하며, 저장은 사람이 합니다.",
+                  confirmLabel: "반영",
+                })}
+              >
+                ▶ 평가 폼에 반영
+              </button>
+            </>
+          )}
+        </section>
+      )}
 
       {/* ── S5 평가 폼 ── */}
       {selected && (
@@ -225,6 +346,7 @@ export function GreenfieldView() {
         </section>
       )}
       {selected && <GateDecisionPanel opportunityId={selected.opportunity.id} gates={["pre_fs"]} />}
+      {confirmDialog}
     </main>
   );
 }
