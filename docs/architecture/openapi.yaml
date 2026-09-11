@@ -2428,6 +2428,18 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/opportunities/{id}/route-recommendation:
+    post:
+      operationId: createRouteRecommendation
+      summary: Draft an LLM route recommendation (S4 decision support, selected opportunity only). A PROPOSAL from S1~S3 artifacts + the deterministic advisory — the decision itself is recorded by a human via createRouteDecision. Deterministic synthesis fallback carries source="synthesis" and never fabricates scores.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/opportunities/{id}/committee-sessions:
     get:
       operationId: listCommitteeSessions

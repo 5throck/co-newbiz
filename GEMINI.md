@@ -293,7 +293,7 @@ Antigravity does not have `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` or `teammateMod
 
 ---
 
-*Last Updated: 2026-09-09 — added §5 Skill Resolution Priority; added §6 CLAUDE.md/GEMINI.md lifecycle row; added lifecycle-manager and auditor sequence to boilerplate; removed obsolete physical pm approval hooks*
+*Last Updated: 2026-09-11 — added §5 Skill Resolution Priority; added §6 CLAUDE.md/GEMINI.md lifecycle row; added lifecycle-manager and auditor sequence to boilerplate; removed obsolete physical pm approval hooks*
 
 
 
@@ -339,7 +339,7 @@ Distinctive to this domain: many target industries have **no direct market data*
 These are fixed by the design and may not be relaxed for convenience:
 
 1. **Agents inherit the calling user's permissions and have no accounts of their own.** A dedicated agent service account would void the entire project-level need-to-know model.
-2. **Gate approval and the investment decision belong to humans.** Agents produce analysis, evidence, and a *proposed* RAG grade. AI pre-review shortens reading time, never accountability.
+2. **Gate approval and the investment decision belong to humans.** Agents produce analysis, evidence, and a *proposed* RAG grade. LLM-drafted information provision and recommendations are the sanctioned decision-support mode, not a tolerated exception — decision surfaces should actively offer them (advisory summaries, option recommendations, draft rationales, evidence gathering), and every LLM output remains a proposal that only a person can turn into the recorded decision. AI support shortens reading time, never accountability.
 3. **`procedures/*.yaml` is authoritative for what and when; `skills/*.md` for how.** A skill references a procedure key and never restates its steps.
 4. **Data confidence caps the overall RAG grade.** A two-hop proxy estimate cannot reach Green no matter how good the financials look.
 5. **Permits and certifications are managed separately.** A permit lets you operate; a certification lets you sell. Different issuers, procedures, critical paths.

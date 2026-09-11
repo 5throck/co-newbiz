@@ -1,12 +1,14 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
 import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
 import { CommitteePanel } from "../../components/CommitteePanel.tsx";
+import { useConfirm } from "../../components/crud.tsx";
 
 // S4 진출방식 결정 (/route-decision) — selected 기회에 Greenfield/Brownfield 트랙과
 // 라우트 유형을 기록하는 분기점 (flow.spec v2.0.0).
@@ -14,6 +16,9 @@ import { CommitteePanel } from "../../components/CommitteePanel.tsx";
 // 채점: 2단계 프레임워크 (2026-08-24 Class-C 결정 (d) / ADR-0052) —
 // Stage 1 의도 분기(integration | capability_access) → Stage 2 5기준 × 20% × 1–3점,
 // 사전배제(통제 高 + 역량접근 + 라이선스/공동개발 성 라우트 금지), 기본 스테이징 권고.
+// 원칙 (경계 #2, CLAUDE.md 2026-09-11 개정): 최종 결정은 사람이 기록하며, 결정
+// 화면은 LLM 정보·추천을 적극 제공한다 — 아래 "LLM 추천" 섹션이 그 구현이고,
+// 산출물은 제안일 뿐 결정 기록(POST /route-decision)은 사람의 몫이다.
 
 interface OpportunityRow {
   id: string; name: string; market_scope: string | null; value_chain_node: string | null;
@@ -44,6 +49,25 @@ interface RouteDecision {
   intent: string | null; override_flagged: number | null; staging_recommended: string | null;
   total_score: number | null; scores: ScoreRow[];
 }
+// LLM 추천 (결정 지원) — POST /api/opportunities/[id]/route-recommendation 응답.
+// 제안일 뿐이며 source("llm"|"synthesis")로 출처를 화면에 명시한다.
+interface RecoScore { criterion: string; score: number; evidence_note: string }
+interface RouteRecommendation {
+  source: "llm" | "synthesis";
+  provider: string | null;
+  note: string | null;
+  recommendation: {
+    track: "greenfield" | "brownfield";
+    sub_track: string | null;
+    intent: string | null;
+    confidence: string | null;
+    scores: RecoScore[] | null;
+    rationale_draft: string;
+    alternatives_draft: string | null;
+    key_evidence: string[];
+    cautions: string[];
+  };
+}
 
 const GF_SUB: Record<string, string> = {
   existing_business_rbd: "기존 사업 R&BD 확장",
@@ -62,6 +86,9 @@ const INTENT_LABEL: Record<string, string> = {
   integration: "통합 의도 — 대상을 우리 안으로 (M&A 중심)",
   capability_access: "역량접근 의도 — 대상의 역량을 빌려 쓴다 (JV·소수지분·파트너십 등)",
 };
+// LLM 추천 표시용 축약 라벨
+const INTENT_SHORT: Record<string, string> = { integration: "통합 의도", capability_access: "역량접근 의도" };
+const CONFIDENCE_LABEL: Record<string, string> = { high: "확신도 높음", medium: "확신도 중간", low: "확신도 낮음" };
 // Stage 2 채점 기준 (각 20% × 1–3점)
 const CRITERIA: Array<{ key: string; label: string; hint: string }> = [
   { key: "control_need", label: "통제 필요도", hint: "1=성과만 공유돼도 충분 ~ 3=운영 통제 없으면 위험" },
@@ -89,6 +116,11 @@ export function RouteDecisionView() {
   const [advisory, setAdvisory] = useState<TrackAdvisory | null>(null);
   const [sessions, setSessions] = useState<Array<{ sessionId: string; status: string; decisionMode: string | null; createdAt: string }>>([]);
   const [saving, setSaving] = useState(false);
+  // LLM 추천 (결정 지원) — 기회가 바뀌면 초기화한다.
+  const [reco, setReco] = useState<RouteRecommendation | null>(null);
+  const [recoLoading, setRecoLoading] = useState(false);
+  const [recoError, setRecoError] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
 
   const selectedId = searchParams.get("opportunity");
   const rationaleParam = searchParams.get("rationale");
@@ -140,6 +172,40 @@ export function RouteDecisionView() {
     loadDecisions(o.id);
     loadAdvisory(o.id);
   }, [loadDecisions, loadAdvisory]);
+
+  // 기회 전환 시 LLM 추천도 초기화 — 추천은 "선택된 기회" 전용 제안이다.
+  useEffect(() => { setReco(null); setRecoError(null); }, [selected?.id]);
+
+  const generateRecommendation = useCallback(async () => {
+    if (!selected || recoLoading) return;
+    setRecoLoading(true); setRecoError(null);
+    try {
+      const r = await api.post<RouteRecommendation>(`/api/opportunities/${encodeURIComponent(selected.id)}/route-recommendation`, {});
+      setReco(r.data);
+    } catch (err) {
+      setRecoError(err instanceof Error ? err.message : "LLM 추천 생성 실패");
+    } finally {
+      setRecoLoading(false);
+    }
+  }, [selected, recoLoading]);
+
+  // 추천 → 결정 폼 반영. 폼 채움일 뿐이며 기록은 결정 폼의 '결정 저장'(사람)이 한다.
+  // 추천이 값을 내지 않은 필드(채점 초안 부재 등)는 기존 입력을 건드리지 않는다.
+  function applyRecommendation() {
+    if (!reco) return;
+    const r = reco.recommendation;
+    setTrack(r.track);
+    if (r.intent) setIntent(r.intent as "integration" | "capability_access");
+    if (r.sub_track) setSubTrack(r.sub_track);
+    if (r.scores) {
+      const next: Record<string, { score: number | null; note: string }> = {};
+      for (const s of r.scores) next[s.criterion] = { score: s.score, note: s.evidence_note };
+      setScores(next);
+    }
+    if (r.rationale_draft) setRationale(r.rationale_draft);
+    if (r.alternatives_draft) setAlternatives(r.alternatives_draft);
+    document.getElementById("route-form")?.scrollIntoView({ behavior: "smooth" });
+  }
 
   function setScore(key: string, patch: Partial<{ score: number | null; note: string }>) {
     setScores((prev) => ({ ...prev, [key]: { score: prev[key]?.score ?? null, note: prev[key]?.note ?? "", ...patch } }));
@@ -212,31 +278,46 @@ export function RouteDecisionView() {
         {rows === null ? (
           <p>불러오는 중...</p>
         ) : rows.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">선별(selected)된 기회가 없습니다 — 기회 발굴(S2)에서 시너지·적합성 평가(S3)를 거쳐 선별된 기회가 여기 표시됩니다.</p>
+          <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+            선별(selected)된 기회가 없습니다 — <Link href="/opportunities?status=assessed" className="text-[color:var(--accent)] underline not-italic">기회 발굴</Link>에서
+            시너지·적합성 평가(S3)를 마친 기회를 선별하면 여기 표시됩니다.
+          </p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {rows.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                aria-pressed={selected?.id === o.id}
-                className={`sizing-industry-chip ${selected?.id === o.id ? "sizing-industry-chip-active" : ""}`}
-                onClick={() => openOpportunity(o)}
-              >
-                <span className="font-semibold">{o.name}</span>
-                <span className="sizing-chip-meta">매력도 {o.attractiveness_score ?? "—"} · 시너지 {o.synergy_score ?? "—"}</span>
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="flex flex-wrap gap-2">
+              {rows.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  aria-pressed={selected?.id === o.id}
+                  className={`sizing-industry-chip ${selected?.id === o.id ? "sizing-industry-chip-active" : ""}`}
+                  onClick={() => openOpportunity(o)}
+                >
+                  <span className="font-semibold">{o.name}</span>
+                  <span className="sizing-chip-meta">매력도 {o.attractiveness_score ?? "—"} · 시너지 {o.synergy_score ?? "—"}</span>
+                </button>
+              ))}
+            </div>
+            {/* 선별 → 평가 진행 CTA — 기회 선택 직후 결정 폼으로 이동한다.
+                실행 버튼이 아니라 이동이므로 경계 #2(사람 결정)와 무충돌. */}
+            {selected ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <a href="#route-form" className="btn-ghost">▶ 평가 진행 — {selected.name} 진출방식 결정</a>
+                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">트랙 권고 확인 후 결정 폼(트랙·라우트·5기준 채점·근거)으로 이동합니다.</span>
+              </div>
+            ) : (
+              <p className="mt-3 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">기회를 선택하면 결정 근거·트랙 권고 어드바이저·결정 폼이 열립니다.</p>
+            )}
+          </>
         )}
       </section>
 
       {/* ── 결정 플로우 가이드 (ADR-0104) ── */}
       <ol aria-label="결정 플로우" className="market-section text-[0.85rem] space-y-1" style={{ paddingLeft: "1.2rem", listStyle: "decimal" }}>
         <li><a href="#evidence" className="text-[color:var(--accent)] underline">기회·근거 확인</a> — 발굴 근거·적합성 판정·시너지 권고를 검토합니다.</li>
-        <li><a href="#advisory" className="text-[color:var(--accent)] underline">트랙 권고 검토</a> — 결정론적 어드바이저의 신호를 참고합니다.</li>
-        <li><a href="#committee" className="text-[color:var(--accent)] underline">위원회 심의 (선택)</a> — 스티어링 위원회 의견이 필요하면 소집합니다.</li>
-        <li><a href="#decision" className="text-[color:var(--accent)] underline">결정 기록</a> — 트랙·라우트·근거를 기록합니다 (사람 결정).</li>
+        <li><a href="#advisory" className="text-[color:var(--accent)] underline">트랙 권고 검토</a> — 결정론 어드바이저와 <a href="#llm-reco" className="text-[color:var(--accent)] underline">LLM 추천(제안)</a>을 참고합니다.</li>
+        <li><a href="#decision" className="text-[color:var(--accent)] underline">위원회 심의 (선택)</a> — 스티어링 위원회 의견이 필요하면 소집합니다.</li>
+        <li><a href="#route-form" className="text-[color:var(--accent)] underline">결정 기록</a> — 트랙·라우트·근거를 기록합니다 (사람 결정).</li>
       </ol>
 
       {/* ── 결정 근거 (선택된 기회의 S1~S3 산출물 요약) ── */}
@@ -319,9 +400,112 @@ export function RouteDecisionView() {
         </section>
       )}
 
+      {/* ── LLM 추천 (결정 지원) — 원칙(경계 #2): 제안은 LLM, 기록은 사람 ── */}
+      {selected && (
+        <section id="llm-reco" aria-label="LLM 추천 (결정 지원)" className="market-section">
+          <SectionToolbar
+            title={`${selected.name} — LLM 추천`}
+            icon="🤖"
+            actions={
+              <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateRecommendation()}>
+                {recoLoading ? "생성 중..." : reco ? "재생성" : "LLM 추천 생성"}
+              </button>
+            }
+          />
+          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+            원칙 (경계 #2): 최종 결정은 사람이 기록합니다 — 이 섹션은 S1~S3 산출물과 결정론 어드바이저 신호에서 만든 <b>제안</b>이며, 폼에 반영한 뒤 자유롭게 수정할 수 있습니다.
+          </p>
+          {recoError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+          {!reco && !recoLoading && !recoError && (
+            <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">
+              LLM이 권장 트랙·라우트·5기준 채점 초안(점수+근거)과 결정 근거 서술 초안을 작성해 결정 폼 채움을 돕습니다.
+            </p>
+          )}
+          {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">S1~S3 산출물과 어드바이저 신호를 근거로 초안을 작성하는 중...</p>}
+          {reco && (
+            <>
+              <p className="mb-2 flex flex-wrap items-center gap-1">
+                <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
+                  {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                </span>
+                <span className={`status-chip ${reco.recommendation.track === "brownfield" ? "status-amber" : "status-green"}`}>
+                  {reco.recommendation.track === "brownfield" ? "Brownfield" : "Greenfield"}
+                </span>
+                {reco.recommendation.sub_track && (
+                  <span className="status-chip status-not-started">
+                    라우트 제안: {(reco.recommendation.track === "brownfield" ? BF_SUB[reco.recommendation.sub_track] : GF_SUB[reco.recommendation.sub_track]) ?? reco.recommendation.sub_track}
+                  </span>
+                )}
+                {reco.recommendation.intent && (
+                  <span className="status-chip status-not-started">의도 제안: {INTENT_SHORT[reco.recommendation.intent] ?? reco.recommendation.intent}</span>
+                )}
+                {reco.recommendation.confidence && (
+                  <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{CONFIDENCE_LABEL[reco.recommendation.confidence] ?? `확신도 ${reco.recommendation.confidence}`}</span>
+                )}
+              </p>
+              {reco.note && <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
+              {reco.recommendation.key_evidence.length > 0 && (
+                <>
+                  <p className="text-[0.82rem] font-semibold mb-1">핵심 근거</p>
+                  <ul className="sizing-note-list mb-3">
+                    {reco.recommendation.key_evidence.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </>
+              )}
+              {reco.recommendation.scores ? (
+                <table className="data-table mb-3" aria-label="LLM 채점 초안">
+                  <caption className="sr-only">LLM 채점 초안</caption>
+                  <thead>
+                    <tr><th scope="col">기준</th><th scope="col">제안 점수</th><th scope="col">근거 (제안)</th></tr>
+                  </thead>
+                  <tbody>
+                    {reco.recommendation.scores.map((s) => (
+                      <tr key={s.criterion}>
+                        <td className="text-[0.8rem]">{CRITERIA.find((c) => c.key === s.criterion)?.label ?? s.criterion}</td>
+                        <td className="tabular-nums text-[0.8rem]">{s.score} · {SCORE_LABEL[s.score] ?? ""}</td>
+                        <td className="text-[0.75rem]">{s.evidence_note}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-3">채점 초안 없음 — 결정 폼에서 직접 채점하세요.</p>
+              )}
+              {reco.recommendation.rationale_draft && (
+                <p className="text-[0.8rem] mb-2"><span className="font-semibold">근거 초안:</span> {reco.recommendation.rationale_draft}</p>
+              )}
+              {reco.recommendation.alternatives_draft && (
+                <p className="text-[0.8rem] mb-2"><span className="font-semibold">대안 검토 초안:</span> {reco.recommendation.alternatives_draft}</p>
+              )}
+              {reco.recommendation.cautions.length > 0 && (
+                <>
+                  <p className="text-[0.82rem] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">⚠ 유의</p>
+                  <ul className="sizing-note-list mb-3">
+                    {reco.recommendation.cautions.map((c, i) => <li key={i}>{c}</li>)}
+                  </ul>
+                </>
+              )}
+              <div className="flex flex-wrap items-center gap-2 mb-0">
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => confirm("LLM 추천을 결정 폼에 반영할까요?", applyRecommendation, {
+                    body: "현재 폼의 트랙·라우트·채점·근거 입력을 추천 초안으로 덮어씁니다 — 반영 후에도 자유롭게 수정할 수 있고, 결정은 결정 폼의 '결정 저장'을 누른 사람에게 기록됩니다.",
+                    confirmLabel: "반영",
+                  })}
+                >
+                  ▶ 결정 폼에 반영
+                </button>
+                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">반영은 폼 채움일 뿐입니다 — 최종 기록은 결정 폼의 &quot;결정 저장&quot; (사람 클릭).</span>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
       {/* ── 결정 폼 + 이력 ── */}
       {selected && (
-        <section aria-label="진출방식 결정" className="market-section">
+        <section id="route-form" aria-label="진출방식 결정" className="market-section" style={{ scrollMarginTop: "6.5rem" }}>
           <SectionToolbar title={`${selected.name} — 진출방식 결정`} icon="⚖️" />
           <form onSubmit={saveDecision} className="sizing-new-form mb-4">
             <div className="flex flex-wrap items-end gap-3 mb-2">
@@ -527,6 +711,7 @@ export function RouteDecisionView() {
         />
         )}
       </section>
+      {confirmDialog}
     </main>
   );
 }
