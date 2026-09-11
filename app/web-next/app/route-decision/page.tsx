@@ -298,15 +298,12 @@ export function RouteDecisionView() {
                 </button>
               ))}
             </div>
-            {/* 선별 → 평가 진행 CTA — 기회 선택 직후 LLM 추천 단계로 이동한다.
-                (평가 진행 = LLM 추천 생성 → 폼 반영 → 사람 결정 기록) */}
-            {selected ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <a href="#llm-reco" className="btn-ghost">▶ 평가 진행 — {selected.name}</a>
-                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">LLM 추천(제안) 생성 → 결정 폼 반영 → 사람 결정 기록 순으로 진행합니다.</span>
-              </div>
-            ) : (
-              <p className="mt-3 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">기회를 선택하면 결정 근거·트랙 권고 어드바이저·LLM 추천·결정 폼이 열립니다.</p>
+            {/* 칩 클릭 = 선택. 평가의 출발점은 아래 LLM 추천 섹션의 생성 버튼이므로
+                별도의 진행 CTA는 두지 않는다 (선택 전 안내만 제공). */}
+            {!selected && (
+              <p className="mt-3 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">
+                기회를 선택하면 결정 근거·트랙 권고 어드바이저·LLM 추천·결정 폼이 열립니다 — 평가는 LLM 추천 생성부터 시작합니다.
+              </p>
             )}
           </>
         )}
