@@ -13,13 +13,13 @@
 
 ## Roster Overview
 
-**40 agents** across four domains, coordinated by PM as New Business Review Lead. Domain leads are design and review owners, not dispatchers — the workspace flat PM Gateway is preserved in full; see `agents/pm.md` for the coordination loop.
+**41 agents** across four domains, coordinated by PM as New Business Review Lead. Domain leads are design and review owners, not dispatchers — the workspace flat PM Gateway is preserved in full; see `agents/pm.md` for the coordination loop.
 
 | Domain | Count | Lead |
 |---|---|---|
 | `_core` | 1 | `pm` |
 | functional | 25 | `process-governance-manager` |
-| technical | 10 | `platform-lead` |
+| technical | 11 | `platform-lead` |
 | industry | 1 | `industry-lead` |
 | region | 1 | `region-lead` |
 | `_shared` | 2 | — |
@@ -62,7 +62,7 @@
 | ir-agent | [`agents/ir-agent.md`](agents/ir-agent.md) | Medium | governance | Investor relations advisory: equity story, disclosure discipline, investor communications, and market perception risk |
 | ip-agent | [`agents/ip-agent.md`](agents/ip-agent.md) | Medium | governance | Patent and IP advisory: patent landscape, freedom-to-operate, IP valuation, trade secrets, and technology licensing |
 
-## Technical Domain — System Build & Run (10)
+## Technical Domain — System Build & Run (11)
 
 | Agent | File | Tier | Subdomain | Role |
 |---|---|---|---|---|
@@ -76,6 +76,7 @@
 | sre | [`agents/sre.md`](agents/sre.md) | Medium | ops | Monitoring and alerting, log pipeline, and incident response with post-incident analysis |
 | infra-automation-engineer | [`agents/infra-automation-engineer.md`](agents/infra-automation-engineer.md) | Medium | ops | OS configuration, service registration, the scheduled-collection scheduler, and health-check/cleanup automation |
 | security-engineer | [`agents/security-engineer.md`](agents/security-engineer.md) | High | security | Threat modeling, security baseline, vulnerability and secrets management, and implementation of access control, personal-data protection, and MNPI handling |
+| ux-designer-agent | [`agents/ux-designer-agent.md`](agents/ux-designer-agent.md) | Medium | design | Screen design ownership — JTBD-driven mockups, flows, and interaction patterns designed within the Onyx 3.0 doctrine (philosophy → principles → guide → components → standard screens), with CRUD/search coverage, stage-linkage strips, embedded accessibility, and reasoned handoffs |
 
 ## Industry Domain — Profile-Driven (1)
 

@@ -142,8 +142,8 @@
 | `token-usage-lint` | L3 | — | — | ui-ux-design-intelligence (follows) | — | — |
 | `translate` | L3 | docs-writer | — | — | — | — |
 | `two-tier-approval-chain` | L3 | process-governance-manager, process-governance-manager | phase5 | insight-synthesis (composes_with), portfolio-fit-assessment (follows), project-review (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), stage-gate-governance (composes_with), strategic-fit-screening (composes_with) | — | — |
-| `ui-information-architecture` | L3 | frontend-engineer | — | access-control-review (composes_with) | — | — |
-| `ui-ux-design-intelligence` | L3 | — | — | documentation-writing (follows) | — | — |
+| `ui-information-architecture` | L3 | frontend-engineer, ux-designer-agent | — | access-control-review (composes_with) | — | — |
+| `ui-ux-design-intelligence` | L3 | ux-designer-agent | — | documentation-writing (follows) | — | — |
 | `unit-conversion-calibration` | L3 | quant-methodologist | phase3 | stage-gate-governance (follows) | — | — |
 | `update-bun-packages` | L3 | — | — | — | — | — |
 | `validate-docs-links` | L3 | — | — | — | — | — |
@@ -316,6 +316,8 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0119` | adr | — | — | — |
 | `adr:0120` | adr | — | — | — |
 | `adr:0121` | adr | — | — | — |
+| `adr:0122` | adr | — | — | — |
+| `adr:0123` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |

@@ -1,0 +1,2258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>전체 서비스 목업 v5 — co-newbiz 전 화면 (개발 근간 baseline · 3차 리뷰 투명성·학습·외부연계 반영) (PM 주도 설계 · ux-designer-agent 수용 기준 적용)</title>
+<style>
+  /* Onyx 3.0 토큰 발췌 (design-tokens.json v1.2.0) — 목업 전용 */
+  :root {
+    --bg: #f7f8fb; --surface: #ffffff; --border: #e3e7ef; --muted-fg: #5c6675;
+    --fg: #1a2230; --primary: #3d66f5; --primary-fg: #ffffff; --primary-bg: #eef2ff;
+    --green: #1e8e5a; --amber: #b26a00; --red: #c23b3b;
+    --green-bg: #e9f7f0; --amber-bg: #fff6e8; --red-bg: #fdeeee;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif; background: var(--bg); color: var(--fg); font-size: 14px; }
+  a { color: var(--primary); }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  h2 { font-size: 14px; margin: 0 0 10px; }
+  h3 { font-size: 13px; margin: 0 0 8px; }
+  h4 { font-size: 12.5px; margin: 10px 0 6px; }
+  .muted { color: var(--muted-fg); }
+  .note { font-size: 12px; color: var(--muted-fg); }
+  code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; font-size: 12px; }
+
+  /* 화면 전환기 (리뷰용) */
+  .switcher { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #10182a; color: #fff; }
+  .switcher select { flex: 1; max-width: 520px; padding: 6px 10px; border-radius: 8px; border: 1px solid #2a3858; background: #1a2440; color: #fff; font-size: 13px; }
+  .switcher .tag { font-size: 11px; opacity: .75; }
+  .switcher button { background: #1a2440; color: #fff; border: 1px solid #2a3858; border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 12px; }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 45px); }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 14px 10px; }
+  .side-group { margin-bottom: 16px; }
+  .side-title { font-size: 11px; color: var(--muted-fg); letter-spacing: .06em; margin: 0 8px 6px; }
+  .side-item { display: block; padding: 7px 10px; border-radius: 8px; color: var(--fg); text-decoration: none; cursor: pointer; }
+  .side-item:hover { background: var(--bg); }
+  .side-item.active { background: var(--primary-bg); color: var(--primary); font-weight: 600; }
+  .content { padding: 18px 22px 56px; max-width: 1440px; min-width: 0; }
+  .crumb { font-size: 12px; color: var(--muted-fg); margin-bottom: 6px; }
+  .objective { color: var(--muted-fg); margin: 0 0 14px; }
+  section.screen { display: none; }
+  section.screen.active { display: block; }
+
+  /* ── 공용 컴포넌트 ── */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .card.tight { padding: 10px 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 320px; gap: 14px; align-items: start; }
+  .grid2e { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 1100px) { .grid2, .grid2e, .grid3, .grid4 { grid-template-columns: 1fr; } .shell { grid-template-columns: 1fr; } .sidebar { display: none; } }
+
+  .btn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+  .btn:hover { background: var(--bg); }
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .btn-primary:hover { background: #3357d6; }
+  .btn-danger { color: var(--red); border-color: color-mix(in srgb, var(--red) 35%, white); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .next-box { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+  .chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 9px; font-size: 11px; }
+  .chip.green { background: var(--green-bg); color: var(--green); }
+  .chip.amber { background: var(--amber-bg); color: var(--amber); }
+  .chip.red { background: var(--red-bg); color: var(--red); }
+  .chip.gray { background: var(--bg); color: var(--muted-fg); }
+  .control-chip { border: 1px solid var(--border); background: var(--surface); color: var(--muted-fg); border-radius: 999px; padding: 3px 11px; font-size: 12px; cursor: pointer; }
+  .control-chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
+
+  /* 단계 연계 스트립 — 모든 단계 화면 표준 */
+  .handoff { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; background: var(--primary-bg); border: 1px solid color-mix(in srgb, var(--primary) 25%, white); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; font-size: 12px; }
+  .handoff .hl { font-weight: 700; color: var(--muted-fg); }
+  .handoff .chips { display: inline-flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .handoff .cta { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
+
+  .stepper { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; }
+  .step { display: flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 12px; color: var(--muted-fg); cursor: pointer; }
+  .step .n { font-weight: 700; }
+  .step.done { color: var(--green); border-color: color-mix(in srgb, var(--green) 35%, white); background: var(--green-bg); }
+  .step.current { color: var(--primary); border-color: var(--primary); background: var(--primary-bg); font-weight: 600; }
+  .step.skipped { opacity: .4; text-decoration: line-through; }
+  .gate-chip { font-size: 10px; background: var(--amber-bg); color: var(--amber); border-radius: 999px; padding: 0 6px; }
+
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 12px; flex-wrap: wrap; }
+  .tab { padding: 8px 14px; font-size: 13px; color: var(--muted-fg); cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab[aria-current="page"] { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+  table { border-collapse: collapse; width: 100%; background: var(--surface); }
+  th { border-bottom: 2px solid var(--border); padding: 7px 9px; font-size: 12px; text-align: center; color: var(--muted-fg); white-space: nowrap; }
+  td { border-bottom: 1px solid var(--border); padding: 7px 9px; font-size: 13px; text-align: left; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-scroll { overflow-x: auto; }
+  .subhead { background: var(--bg); font-weight: 600; font-size: 12px; }
+
+  .checklist { margin: 10px 0 0; padding-left: 18px; }
+  .checklist li { margin-bottom: 3px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .kpi .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi .l { font-size: 12px; color: var(--muted-fg); }
+
+  .form-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+  .field input, .field select, .field textarea { border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit; background: var(--surface); }
+  .toggle-form { border: 1px dashed color-mix(in srgb, var(--primary) 40%, white); border-radius: 10px; padding: 10px 12px; margin-top: 10px; background: var(--surface); }
+  .subhead { background: var(--bg); font-weight: 600; font-size: 12px; }
+  .step-flow { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .step-flow .flowstep { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 4px 9px; font-size: 12px; }
+  .step-flow .flowstep b { color: var(--primary); }
+  .step-flow .arr { color: var(--muted-fg); align-self: center; }
+  .skeleton { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #eceff5, #f6f8fc, #eceff5); background-size: 200% 100%; animation: shine 1.4s infinite; margin: 8px 0; }
+  @keyframes shine { to { background-position: -200% 0; } }
+  .toast { position: fixed; right: 18px; bottom: 18px; z-index: 60; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--green); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.08); padding: 10px 14px; font-size: 13px; }
+  .progress { height: 8px; border-radius: 999px; background: var(--bg); overflow: hidden; }
+  .progress > i { display: block; height: 100%; background: var(--primary); border-radius: 999px; }
+  .bars { display: flex; align-items: flex-end; gap: 8px; height: 110px; padding: 8px 4px 0; }
+  .bar { flex: 1; background: var(--primary); opacity: .85; border-radius: 4px 4px 0 0; position: relative; }
+  .bar.amber { background: var(--amber); } .bar.green { background: var(--green); }
+  .bar-label { position: absolute; bottom: -18px; left: 0; right: 0; text-align: center; font-size: 10px; color: var(--muted-fg); }
+  .chart-wrap { padding-bottom: 20px; }
+  .funnel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 1100px) { .funnel { grid-template-columns: 1fr 1fr; } }
+  .funnel-col { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 8px; }
+  .funnel-col > h3 { font-size: 12px; color: var(--muted-fg); padding: 2px 4px 8px; }
+  .deal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+  .deal-card:hover { border-color: var(--primary); }
+  .deal-card .name { font-weight: 600; font-size: 13px; }
+  .deal-card .meta { font-size: 11px; color: var(--muted-fg); margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .auth-wrap { max-width: 380px; margin: 40px auto; }
+
+  /* ── v3: lucide 단일 아이콘 (스프라이트) ── */
+  .ic { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; }
+  .btn .ic, .btn-sm .ic { width: 13px; height: 13px; }
+
+  /* ── v3: 전역 '내 할 일' 큐 (모든 화면 상단) ── */
+  .topbar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 16px; font-size: 12px; }
+  .topbar .q-title { font-weight: 700; color: var(--muted-fg); }
+  .topbar .q-item { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--border); border-radius: 999px; padding: 3px 11px; background: var(--surface); cursor: pointer; }
+  .topbar .q-item:hover { border-color: var(--primary); }
+  .topbar .q-item .chip { padding: 0 7px; }
+
+  /* ── v3: 행위자 배지 (인적 기록 감사 표시) ── */
+  .by { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted-fg); }
+  .by::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+  /* ── v3: 스키마 근거 주석 ── */
+  .sch { display: inline-block; font-size: 10px; border-radius: 4px; padding: 0 5px; margin-left: 4px; border: 1px solid var(--border); color: var(--muted-fg); background: var(--bg); }
+  .sch.new { border-color: var(--amber); color: var(--amber); background: var(--amber-bg); }
+  .sch.new::after { content: " · migration 필요"; }
+
+  /* ── v3: 역할 프리뷰 ── */
+  .role-viewer .btn-primary, .role-viewer .hum { opacity: .35; pointer-events: none; }
+  .role-admin .deal-only { display: none; }
+  .role-note { display: none; }
+  body.role-viewer .role-note.viewer, body.role-admin .role-note.admin { display: block; }
+
+  /* ── v3: 다크 테마 샘플 ── */
+  .dark-sample { background: #10182a; border-radius: 12px; padding: 14px 16px; color: #e8ecf5; }
+  .dark-sample .chip.green { background: #123527; color: #4ade9d; }
+  .dark-sample .chip.amber { background: #3a2a10; color: #f5b84d; }
+  .dark-sample table { background: transparent; }
+  .dark-sample td { border-bottom-color: #243050; }
+
+  /* ── v4: 간트(타임라인) ── */
+  .gantt { position: relative; height: 14px; background: var(--bg); border-radius: 7px; overflow: hidden; }
+  .gantt i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--green); opacity: .75; }
+  .gantt em { position: absolute; top: 0; bottom: 0; background: var(--primary); opacity: .3; border-radius: 7px; }
+  .gantt b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--red); }
+
+  /* ── v4: 리스크 히트맵 ── */
+  .hm { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .hm .cell { min-height: 74px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); position: relative; }
+  .hm .cell .axis { position: absolute; right: 5px; bottom: 3px; font-size: 10px; color: var(--muted-fg); }
+  .hm .risk { position: absolute; width: 24px; height: 24px; border-radius: 50%; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: 700; cursor: help; }
+  .hm .r-high { background: var(--red); } .hm .r-mid { background: var(--amber); } .hm .r-low { background: var(--green); }
+
+  /* ── v4: 페이저 ── */
+  .pager { display: flex; gap: 6px; align-items: center; justify-content: flex-end; font-size: 12px; color: var(--muted-fg); margin-top: 8px; }
+  .pager .pg { border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; background: var(--surface); cursor: pointer; }
+  .pager .pg.cur { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+
+  /* ── v4: 협업 주석 스레드 ── */
+  .cmt { border-left: 3px solid color-mix(in srgb, var(--primary) 40%, white); padding: 4px 10px; margin: 6px 0 0; font-size: 12px; }
+  .cmt .who { font-weight: 600; font-size: 11px; }
+
+  /* ── v4: 데이터 신뢰 오버레이 배지 ── */
+  .conf { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; border-radius: 4px; padding: 0 5px; border: 1px solid var(--border); color: var(--muted-fg); }
+  .conf.stale { border-color: var(--amber); color: var(--amber); background: var(--amber-bg); }
+
+  /* ── v4: 시뮬레이터 결과 ── */
+  .impact { border: 1px dashed var(--border); border-radius: 10px; padding: 8px 12px; margin-top: 8px; font-size: 12px; background: var(--bg); }
+
+  /* ── v3: 커맨드 팔레트 ── */
+  .cmdk { position: absolute; inset: 0; background: rgba(16,24,42,.45); border-radius: 12px; display: flex; align-items: flex-start; justify-content: center; padding-top: 40px; }
+  .cmdk .panel { width: min(520px, 90%); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,.18); overflow: hidden; }
+  .cmdk .panel input { width: 100%; border: none; border-bottom: 1px solid var(--border); padding: 12px 16px; font-size: 14px; }
+  .cmdk .panel .row { display: flex; gap: 8px; align-items: center; padding: 9px 16px; font-size: 13px; cursor: pointer; }
+  .cmdk .panel .row:hover, .cmdk .panel .row.sel { background: var(--primary-bg); }
+  .auth-hero { text-align: center; margin-bottom: 18px; }
+</style>
+</head>
+<body>
+
+<!-- lucide 단일 아이콘 스프라이트 (이모지 대체 — design-system-agent 결정) -->
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="12" rx="2"/><path d="M12 8V4M8 4h8M9 13h.01M15 13h.01M9 17h6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M7 15v3M12 11v7M17 7v11"/></symbol>
+  <symbol id="i-gavel" viewBox="0 0 24 24"><path d="m14 13-7.5 7.5a2.1 2.1 0 0 1-3-3L11 10M16 16l6-6M8 8l6-6M9 7l8 8"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 3 3.6 5.2a1 1 0 0 0-.6 1V20a.5.5 0 0 0 .7.5L9 18l6 3 5.4-2.2a1 1 0 0 0 .6-1V4a.5.5 0 0 0-.7-.5L15 6 9 3ZM9 3v15M15 6v15"/></symbol>
+</svg>
+
+<div class="switcher">
+  <span class="tag">MOCKUP v5</span>
+  <select id="screenSelect" aria-label="목업 화면 선택">
+    <optgroup label="공통 (4)">
+      <option value="dashboard">01 대시보드 (/)</option>
+      <option value="ds-gallery">01b 디자인 시스템 갤러리 (상태·다크·역할)</option>
+      <option value="login">02 로그인 (/login)</option>
+      <option value="register">03 계정 등록 (/register)</option>
+      <option value="password-change">04 비밀번호 변경 (/password-change)</option>
+    </optgroup>
+    <optgroup label="딜 — S1~S12 (12)">
+      <option value="deal-board">05 딜 보드 (/deals — 파이프라인·에이징 통합)</option>
+      <option value="deal-list">06 딜 목록 (/deals/list)</option>
+      <option value="deal-overview">07 딜 개요 (/deals/{id})</option>
+      <option value="s1">08 S1 시장분석</option>
+      <option value="s2">09 S2 기회 발굴</option>
+      <option value="s3">10 S3 시너지·적합성</option>
+      <option value="s4">11 S4 진출방식 결정</option>
+      <option value="s5">12 S5 역량 평가 (그린필드)</option>
+      <option value="s6s7">13 S6/S7 대상 발굴·스크리닝 (브라운필드)</option>
+      <option value="s8">14 S8 사업성 분석</option>
+      <option value="s9">15 S9 실사·검증</option>
+      <option value="s10">16 S10 투자구조 설계</option>
+      <option value="s11">17 S11 투자심사·실행</option>
+      <option value="s12">18 S12 사후 관리</option>
+      <option value="committee">18b 위원회 세션 뷰어</option>
+      <option value="t-timeline">18c 프로세스 타임라인·SLA</option>
+    </optgroup>
+    <optgroup label="딜 도구 (7)">
+      <option value="t-wacc">19 WACC 입력 세션</option>
+      <option value="t-financial">20 재무분석 (대상사 브리지)</option>
+      <option value="t-charter">21 추진계획(차터)</option>
+      <option value="t-proxy">22 프록시 체인</option>
+      <option value="t-reports">23 보고서 (스냅샷·렌더)</option>
+      <option value="t-partnership">24 파트너·JV</option>
+      <option value="t-pmi">25 PMI (통합 계획)</option>
+      <option value="t-incentive">25b 인센티브·클로백</option>
+      <option value="t-site">25c 부지·시설 평가</option>
+      <option value="t-permits">25d 인허가·인증 추적</option>
+      <option value="t-debt">25e 부채·커버넌트</option>
+      <option value="t-interviews">25f 전문가 인터뷰·채널</option>
+      <option value="t-coc">25g 고객 집중·CoC</option>
+      <option value="t-comp">25h 경영진 보상·임금 형평</option>
+      <option value="risk-heatmap">25i 딜 리스크 히트맵</option>
+      <option value="agent-runs">25j 에이전트 실행 이력·LLM 신뢰도</option>
+      <option value="backtest">25k 예측-실적 백테스트</option>
+      <option value="share">25l 외부 안전 공유</option>
+    </optgroup>
+    <optgroup label="포트폴리오 (2)">
+      <option value="portfolio-view">포트폴리오 전체 뷰</option>
+      <option value="onboarding">온보딩 마법사 (빈 워크스페이스)</option>
+    </optgroup>
+    <optgroup label="딜 전체 체인 (1)">
+      <option value="t-process">26 프로세스 전체 현황 (S1~S12 체인)</option>
+    </optgroup>
+    <optgroup label="참조 (7)">
+      <option value="r-our-company">27 그룹/계열사 (/our-company)</option>
+      <option value="r-companies">28 기업 (/companies)</option>
+      <option value="r-company-detail">29 기업 상세 (/companies/{id})</option>
+      <option value="r-benchmarks">30 벤치마크 (/benchmarks)</option>
+      <option value="r-library">31 라이브러리 (/library)</option>
+      <option value="r-glossary">32 용어집 (/glossary)</option>
+      <option value="r-strategy">33 전략 (/strategy)</option>
+    </optgroup>
+    <optgroup label="보관 (1)">
+      <option value="archives">34 딜 아카이브 (/projects/archives)</option>
+    </optgroup>
+    <optgroup label="관리 (6)">
+      <option value="a-users">35 사용자 (/admin/users)</option>
+      <option value="a-master">36 마스터데이터 (/admin/master-data)</option>
+      <option value="a-targets">37 사업목표 기준 (/admin/business-targets)</option>
+      <option value="a-schedule">38 스케줄 작업 (/admin/schedule)</option>
+      <option value="a-audit">39 감사 로그 (/admin/audit)</option>
+      <option value="a-notifications">40 알림·기타 운영 (/admin/notifications)</option>
+    </optgroup>
+  </select>
+  <button id="prevBtn">← 이전</button>
+  <button id="nextBtn">다음 →</button>
+  <span class="tag" style="margin-left:auto">역할 프리뷰</span>
+  <select id="roleSelect" aria-label="역할 프리뷰" style="flex:0 0 130px">
+    <option value="">lead/analyst (기본)</option>
+    <option value="role-viewer">viewer (읽기 전용)</option>
+    <option value="role-admin">admin (딜 콘텐츠 차단)</option>
+  </select>
+</div>
+
+<div class="shell">
+  <!-- 전역 작업 큐 — 어느 화면에서든 내 결재에 1클릭 도달 (고도화 1) -->
+  <div class="topbar" role="region" aria-label="내 할 일">
+    <span class="q-title">딜 전환</span>
+    <select aria-label="딜 전환" onchange="go(this.value)" style="border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:12px;background:var(--surface)">
+      <option value="deal-overview">로봇 부품 자회사 설립 (S11)</option>
+      <option value="s9">물류 로봇 인수 (S9)</option>
+      <option value="s4">바이오 소재 신규 진출 (S4)</option>
+    </select>
+    <span class="note">최근: <a href="#" onclick="go('t-wacc')">WACC 세션</a> · <a href="#" onclick="go('t-process')">전체 체인</a></span>
+    <span style="border-left:1px solid var(--border); height:18px"></span>
+    <span class="q-title"><svg class="ic"><use href="#i-check"/></svg> 내 할 일</span>
+    <span class="q-item" onclick="go('s11')"><span class="chip amber">결재</span>Group IC 재심의 <span class="by">D+12</span></span>
+    <span class="q-item" onclick="go('s4')"><span class="chip gray">결정</span>S4 진출방식 저장</span>
+    <span class="q-item" onclick="go('s2')"><span class="chip gray">평가</span>매력도 평가 (초안 있음)</span>
+    <span class="q-item" onclick="go('deal-board')"><span class="chip red">파이프라인</span>일시정지 1건 — 재개</span>
+  </div>
+  <aside class="sidebar">
+    <div class="side-group">
+      <p class="side-title">공통</p>
+      <a class="side-item" data-go="dashboard">대시보드</a>
+    </div>
+    <div class="side-group">
+      <p class="side-title">딜</p>
+      <a class="side-item" data-go="deal-board">딜 보드</a>
+      <a class="side-item" data-go="deal-list">딜 목록</a>
+      <a class="side-item" data-go="s1">S1 시장분석</a>
+      <a class="side-item" data-go="s2">S2 기회 발굴</a>
+      <a class="side-item" data-go="s4">S4 진출방식 결정</a>
+      <a class="side-item" data-go="s6s7">S6/S7 대상 발굴·스크리닝</a>
+      <a class="side-item" data-go="s8">S8 사업성 분석</a>
+      <a class="side-item" data-go="s9">S9 실사·검증</a>
+      <a class="side-item" data-go="s11">S11 투자심사·실행</a>
+      <a class="side-item" data-go="s12">S12 사후 관리</a>
+      <a class="side-item" data-go="risk-heatmap">리스크 히트맵</a>
+      <a class="side-item" data-go="t-timeline">타임라인·SLA</a>
+    </div>
+    <div class="side-group">
+      <p class="side-title">참조</p>
+      <a class="side-item" data-go="r-our-company">그룹/계열사</a>
+      <a class="side-item" data-go="r-companies">기업</a>
+      <a class="side-item" data-go="r-benchmarks">벤치마크</a>
+      <a class="side-item" data-go="r-library">라이브러리</a>
+      <a class="side-item" data-go="r-glossary">용어집</a>
+    </div>
+    <div class="side-group">
+      <p class="side-title">관리</p>
+      <a class="side-item" data-go="a-users">관리 콘솔</a>
+    </div>
+  </aside>
+
+  <main class="content">
+
+  <!-- ═══════ 01 대시보드 ═══════ -->
+  <section class="screen" id="dashboard">
+    <h1>대시보드</h1>
+    <p class="objective">검토 중인 딜과 내가 담당한 할 일, 게이트 상태를 한눈에 봅니다. <code>⌘K</code> 커맨드 팔레트로 딜·단계·화면 즉시 이동 (고도화 5).</p>
+    <div class="card tight" style="position:relative; overflow:hidden">
+      <div class="cmdk" role="presentation">
+        <div class="panel" role="dialog" aria-label="커맨드 팔레트 미리보기">
+          <input placeholder="딜 · 단계 · 화면 검색… (예: S7, 물류 로봇, 게이트)" readonly>
+          <div class="row sel"><svg class="ic"><use href="#i-search"/></svg> 물류 로봇 인수 — S9 실사로 이동</div>
+          <div class="row"><svg class="ic"><use href="#i-gavel"/></svg> Target Screening 게이트 기록 — 2차전지 소재</div>
+          <div class="row"><svg class="ic"><use href="#i-chart"/></svg> 딜 보드 — 퍼널 스냅샷</div>
+          <div class="row"><svg class="ic"><use href="#i-file"/></svg> IC 보고서 v2 다운로드</div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin:6px 0 14px">미리보기용 정적 샘플 — 실제 구현은 ⌘K로 열립니다.</p>
+    <div class="grid4" style="margin-bottom:14px">
+      <div class="kpi"><div class="v">7</div><div class="l">진행 중인 딜</div></div>
+      <div class="kpi"><div class="v">2</div><div class="l">게이트 대기 (내 결재)</div></div>
+      <div class="kpi"><div class="v">1</div><div class="l">일시정지 파이프라인</div></div>
+      <div class="kpi"><div class="v">3</div><div class="l">S8~S12 프로젝트</div></div>
+    </div>
+    <div class="grid2">
+      <div>
+        <div class="card">
+          <h2>내 할 일 <span class="chip amber">2건 대기</span></h2>
+          <table aria-label="내 할 일">
+            <thead><tr><th>할 일</th><th>딜</th><th>단계</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>Group IC 재심의 (HOLD 보완)</td><td>로봇 부품 자회사 설립</td><td><span class="chip amber">S11</span></td><td><a href="#" onclick="go('s11')">열기 →</a></td></tr>
+              <tr><td>진출방식 결정 저장</td><td>바이오 소재 신규 진출</td><td><span class="chip gray">S4</span></td><td><a href="#" onclick="go('s4')">열기 →</a></td></tr>
+              <tr><td>매력도 평가 (LLM 초안 있음)</td><td>humanoid 유지보수</td><td><span class="chip gray">S2</span></td><td><a href="#" onclick="go('s2')">열기 →</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h2>딜 퍼널 추이</h2>
+          <div class="chart-wrap"><div class="bars">
+            <div class="bar" style="height:100%"><span class="bar-label">S1</span></div>
+            <div class="bar" style="height:80%"><span class="bar-label">S2</span></div>
+            <div class="bar" style="height:60%"><span class="bar-label">S3</span></div>
+            <div class="bar" style="height:50%"><span class="bar-label">S4</span></div>
+            <div class="bar amber" style="height:35%"><span class="bar-label">S8</span></div>
+            <div class="bar amber" style="height:25%"><span class="bar-label">S9</span></div>
+            <div class="bar green" style="height:15%"><span class="bar-label">S11</span></div>
+          </div></div>
+        </div>
+      </div>
+      <aside>
+        <div class="card">
+          <h2>게이트 상태</h2>
+          <div class="chip-row" style="margin-bottom:0">
+            <span class="chip green">screening 3 GO</span>
+            <span class="chip amber">pre_fs 1 HOLD</span>
+            <span class="chip green">fs 1 GO</span>
+            <span class="chip amber">group_ic 1 HOLD</span>
+          </div>
+          <p class="note" style="margin-bottom:0">HOLD 경과 12일 — <a href="#" onclick="go('deal-board')">딜 보드에서 에이징 확인</a></p>
+        </div>
+        <div class="card">
+          <h2>알림</h2>
+          <ul class="checklist" style="margin:0">
+            <li>파이프라인 일시정지 — S4 결정 필요 <span class="chip amber">신규</span></li>
+            <li>스코어카드 갱신 분기 도래</li>
+            <li>Waiver 만료 임박 (D+5)</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ═══════ 02 로그인 ═══════ -->
+  <section class="screen" id="login">
+    <div class="auth-wrap">
+      <div class="auth-hero"><h1>co-newbiz</h1><p class="note">신규사업 검토 워크스페이스 — 계정 로그인</p></div>
+      <div class="card">
+        <form aria-label="로그인">
+          <div class="field" style="margin-bottom:10px"><span>아이디</span><input placeholder="user-id"></div>
+          <div class="field" style="margin-bottom:14px"><span>비밀번호</span><input type="password" placeholder="••••••••"></div>
+          <button type="button" class="btn btn-primary" style="width:100%">로그인</button>
+        </form>
+        <p class="note" style="margin-bottom:0">계정 신청은 관리자 승인 후 활성화됩니다. <a href="#" onclick="go('register')">계정 등록 →</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 03 계정 등록 ═══════ -->
+  <section class="screen" id="register">
+    <div class="auth-wrap">
+      <div class="auth-hero"><h1>계정 등록</h1><p class="note">관리자 승인 후 로그인 가능합니다</p></div>
+      <div class="card">
+        <form aria-label="계정 등록">
+          <div class="field" style="margin-bottom:10px"><span>아이디 *</span><input placeholder="user-id"></div>
+          <div class="field" style="margin-bottom:10px"><span>표시 이름 *</span><input placeholder="예: 김성혁"></div>
+          <div class="field" style="margin-bottom:10px"><span>비밀번호 * (10자 이상)</span><input type="password"></div>
+          <div class="field" style="margin-bottom:14px"><span>비밀번호 확인 *</span><input type="password"></div>
+          <button type="button" class="btn btn-primary" style="width:100%">등록 요청</button>
+        </form>
+        <p class="note" style="margin-bottom:0">등록 후 관리자 승인 대기 상태가 됩니다 — <a href="#" onclick="go('login')">로그인으로</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 04 비밀번호 변경 ═══════ -->
+  <section class="screen" id="password-change">
+    <div class="auth-wrap">
+      <div class="auth-hero"><h1>비밀번호 변경</h1><p class="note">초기 비밀번호 사용 중에는 로그인 직후 변경이 요구됩니다</p></div>
+      <div class="card">
+        <form aria-label="비밀번호 변경">
+          <div class="field" style="margin-bottom:10px"><span>현재 비밀번호 *</span><input type="password"></div>
+          <div class="field" style="margin-bottom:10px"><span>새 비밀번호 * (10자 이상)</span><input type="password"></div>
+          <div class="field" style="margin-bottom:14px"><span>새 비밀번호 확인 *</span><input type="password"></div>
+          <button type="button" class="btn btn-primary" style="width:100%">변경</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 05 딜 보드 ═══════ -->
+  <section class="screen active" id="deal-board">
+    <div class="next-box" style="margin-bottom:8px">
+      <h1 style="margin:0">딜 보드</h1>
+      <button class="btn btn-primary btn-sm" onclick="go('s1')">＋ 새 딜 시작 (시장분석부터)</button>
+    </div>
+    <p class="objective">모든 딜을 퍼널 한 장으로 봅니다 — 기회(S1~S7)와 프로젝트(S8~S12), 게이트 에이징까지.</p>
+    <div class="chip-row">
+      <span class="note">필터:</span>
+      <button class="control-chip" aria-pressed="true">전체 7</button>
+      <button class="control-chip" aria-pressed="false">그린필드 3</button>
+      <button class="control-chip" aria-pressed="false">브라운필드 4</button>
+      <button class="control-chip" aria-pressed="false">게이트 대기 2</button>
+      <button class="control-chip" aria-pressed="false">일시정지 1</button>
+      <span class="note" style="margin-left:auto">검색:</span>
+      <input placeholder="딜명·번호" style="border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;width:160px">
+      <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+    </div>
+    <div class="funnel" style="margin-bottom:16px">
+      <div class="funnel-col">
+        <h3>발굴·평가 (S1~S3)</h3>
+        <div class="deal-card" onclick="go('s2')"><div class="name">humanoid robot 유지보수</div><div class="meta"><span class="chip gray">S2</span><span>매력도 82</span></div></div>
+        <div class="deal-card"><div class="name">바이오 소재 신규 진출</div><div class="meta"><span class="chip gray">S3</span><span>시너지 71</span></div></div>
+      </div>
+      <div class="funnel-col">
+        <h3>전략 결정 (S4~S7)</h3>
+        <div class="deal-card" onclick="go('s4')"><div class="name">바이오 소재 신규 진출</div><div class="meta"><span class="chip amber">S4 대기</span><span>결정 필요</span></div>
+          <div class="meta"><svg class="ic"><use href="#i-alert"/></svg> 파이프라인 일시정지 — route_confirmation:S4 <a href="#" onclick="go('s4')">재개 →</a></div></div>
+        <div class="deal-card" onclick="go('s6s7')"><div class="name">2차전지 소재 인수 검토</div><div class="meta"><span class="chip amber">S7</span><span>Short List 2</span></div></div>
+      </div>
+      <div class="funnel-col">
+        <h3>사업성·실사 (S8~S10)</h3>
+        <div class="deal-card" onclick="go('s8')"><div class="name">공장 자동화 SI</div><div class="meta"><span class="chip gray">S8</span><span>NPV p50 +</span></div></div>
+        <div class="deal-card" onclick="go('s9')"><div class="name">물류 로봇 인수</div><div class="meta"><span class="chip gray">S9</span><span>필수 3건 대기</span></div></div>
+      </div>
+      <div class="funnel-col">
+        <h3>심의·사후 (S11~S12)</h3>
+        <div class="deal-card" onclick="go('deal-overview')"><div class="name">로봇 부품 자회사 설립</div><div class="meta"><span class="chip amber">S11 HOLD</span><span>12일</span></div></div>
+        <div class="deal-card" onclick="go('s12')"><div class="name">스마트팜 벤처</div><div class="meta"><span class="chip green">S12</span><span>Q3 갱신됨</span></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>게이트 에이징 — HOLD·KILL 경과</h2>
+      <div class="table-scroll">
+      <table aria-label="게이트 에이징">
+        <thead><tr><th>딜</th><th>게이트</th><th>결정</th><th>결정일</th><th class="num">경과</th></tr></thead>
+        <tbody>
+          <tr><td><a href="#" onclick="go('deal-overview')">로봇 부품 자회사 설립</a></td><td>Group IC</td><td><span class="chip amber">HOLD</span></td><td>2026-08-31</td><td class="num">12일</td></tr>
+          <tr><td>물류 로봇 인수</td><td>Pre-FS</td><td><span class="chip amber">HOLD</span></td><td>2026-09-06</td><td class="num">6일</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 06 딜 목록 ═══════ -->
+  <section class="screen" id="deal-list">
+    <div class="next-box" style="margin-bottom:8px">
+      <h1 style="margin:0">딜 목록</h1>
+      <button class="btn btn-primary btn-sm" onclick="go('s1')">＋ 새 딜 시작</button>
+    </div>
+    <p class="objective">딜 전체를 표로 탐색합니다 — 검색·정렬·상태 필터, 종료/보관·아카이브 진입.</p>
+    <div class="card tight">
+      <div class="form-grid">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="딜명·프로젝트 번호·기회명"></div>
+        <div class="field"><span>상태</span><select><option>전체</option><option>진행 중</option><option>마감</option><option>보관</option></select></div>
+        <div class="field"><span>트랙</span><select><option>전체</option><option>그린필드</option><option>브라운필드</option></select></div>
+        <button class="btn"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="table-scroll">
+      <table aria-label="딜 목록">
+        <thead><tr><th>번호</th><th>딜명</th><th>트랙</th><th>단계</th><th>데이터</th><th>생성일</th><th>액션</th></tr></thead>
+        <tbody>
+          <tr><td><code>PRJ-8f2a1c</code></td><td><a href="#" onclick="go('deal-overview')">로봇 부품 자회사 설립</a></td><td><span class="chip amber">브라운필드</span></td><td><span class="chip amber">S11 HOLD</span></td><td><span class="chip green">✓ 최신</span></td><td class="num">2026-09-01</td><td><button class="btn btn-sm">개요</button> <button class="btn btn-sm">종료/보관</button></td></tr>
+          <tr><td><code>PRJ-3b7e90</code></td><td><a href="#" onclick="go('s9')">물류 로봇 인수</a></td><td><span class="chip amber">브라운필드</span></td><td><span class="chip gray">S9</span></td><td><span class="chip amber">◐ 갱신 필요</span></td><td class="num">2026-09-04</td><td><button class="btn btn-sm">개요</button> <button class="btn btn-sm">종료/보관</button></td></tr>
+          <tr><td>—</td><td><a href="#" onclick="go('s4')">바이오 소재 신규 진출</a></td><td><span class="chip gray">미결정</span></td><td><span class="chip gray">S4</span></td><td><span class="chip green">✓ 최신</span></td><td class="num">2026-09-10</td><td><button class="btn btn-sm">개요</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="note" style="margin-bottom:0">종료/보관 → <a href="#" onclick="go('archives')">딜 아카이브</a>에서 열람 (원본 보존·감사 기록)</p>
+    </div>
+  </section>
+
+  <!-- ═══════ 07 딜 개요 ═══════ -->
+  <section class="screen" id="deal-overview">
+    <p class="crumb">딜 보드 / 로봇 부품 자회사 설립 검토</p>
+    <div class="next-box" style="margin-bottom:8px">
+      <h1 style="margin:0">로봇 부품 자회사 설립 검토</h1>
+      <span class="chip green">GO 진행 중</span><span class="chip amber">Group IC 대기</span>
+    </div>
+    <p class="objective">투자할 것인가? — IC 패키지로 Entity/Group IC 심사를 받는다 (S11)</p>
+    <nav class="stepper" aria-label="프로세스 단계 진행">
+      <span class="step done"><span class="n">1</span>시장분석</span>
+      <span class="step done"><span class="n">2</span>기회 발굴</span>
+      <span class="step done"><span class="n">3</span>시너지·적합성</span>
+      <span class="step done"><span class="n">4</span>진출방식 결정</span>
+      <span class="step skipped"><span class="n">5</span>역량 평가</span>
+      <span class="step done"><span class="n">6</span>대상 후보 발굴</span>
+      <span class="step done"><span class="n">7</span>대상 스크리닝</span>
+      <span class="step done"><span class="n">8</span>사업성 분석</span>
+      <span class="step done"><span class="n">9</span>실사·검증</span>
+      <span class="step done"><span class="n">10</span>투자구조 설계</span>
+      <span class="step current"><span class="n">11</span>투자심사·실행 <span class="gate-chip">Entity IC</span> <span class="gate-chip">Group IC</span></span>
+      <span class="step" onclick="go('s12')"><span class="n">12</span>사후 관리</span>
+    </nav>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S10 구조 가설(4축·균형)</span><span class="chip gray">S9 발견사항</span><span class="chip gray">채택 BC</span><span class="chip gray">차터 KPI</span></span>
+      <span class="hl" style="margin-left:auto">출력 →</span>
+      <span class="chips"><span class="chip green">S12 사후 관리 (IC GO + 설립 완료 후)</span></span>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>지금 할 일 <button class="btn btn-primary btn-sm" style="float:right" onclick="go('s11')">Group IC 결정 기록</button></h2>
+        <ul class="checklist" style="margin-top:0">
+          <li>그룹 로드맵 정합 근거 첨부 <span class="chip amber">보완 필요</span></li>
+          <li>Entity IC 승인 <span class="chip green">GO</span></li>
+          <li>설립 실행 5단계 <span class="chip green">5/5</span></li>
+        </ul>
+        <p class="note" style="margin-bottom:0">딜 도구: <a href="#" onclick="go('t-wacc')">WACC</a> · <a href="#" onclick="go('t-charter')">차터</a> · <a href="#" onclick="go('t-reports')">보고서</a> · <a href="#" onclick="go('t-process')">전체 체인</a></p>
+        <h4>협업 주석 (고도화 3 — 요소에 코멘트 스레드)</h4>
+        <div class="cmt"><span class="who">reviewer.kim · 09-10</span><br>Group IC 보완 근거는 그룹 전략본부 공시 팀 확인 후 첨부하세요.</div>
+        <div class="cmt"><span class="who">sung.hyuk · 09-11</span><br>공시 팀 확인 완료 — 차기 재심의 전 첨부 예정.</div>
+        <div class="form-grid" style="margin-top:6px"><input placeholder="주석 추가…" style="border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;flex:1"><button class="btn btn-sm">등록</button></div>
+      </div>
+      <aside class="card">
+        <h2>딜 정보</h2>
+        <table aria-label="딜 정보">
+          <tbody>
+            <tr><td class="muted">트랙</td><td><span class="chip amber">브라운필드 · 자회사</span></td></tr>
+            <tr><td class="muted">캐리어</td><td>프로젝트 (S8~)</td></tr>
+            <tr><td class="muted">리드</td><td>sung.hyuk</td></tr>
+            <tr><td class="muted">원본 기회</td><td><a href="#" onclick="go('s2')">기회 보기</a></td></tr>
+            <tr><td class="muted">생성</td><td>2026-09-01 (S7 승격)</td></tr>
+          </tbody>
+        </table>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ═══════ 08 S1 시장분석 ═══════ -->
+  <section class="screen" id="s1">
+    <h1>S1 시장분석 <span class="chip green">인간형 로봇 · 완료</span></h1>
+    <p class="objective">어디에 기회가 있는가? — 시장(산업)을 검색해 선택하거나 KSIC 코드로 새로 등록해 분석을 실행한다</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">외부 시장 데이터</span><span class="chip gray">KSIC 코드 마스터</span><span class="chip gray">산업 프로파일</span></span>
+      <span class="cta"><span class="hl">출력 →</span><button class="btn btn-sm" onclick="go('s2')">S2 기회 발굴로</button></span>
+    </div>
+    <div class="grid2">
+      <aside>
+        <div class="card">
+          <h2>시장(산업) 검색 · 선택</h2>
+          <div class="form-grid" style="margin-bottom:10px">
+            <div class="field" style="flex:1"><span>산업명 또는 KSIC 코드</span><input placeholder="예: 로봇, 29280" value="로봇"></div>
+            <button class="btn"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+          </div>
+          <p class="note" style="margin:0 0 8px">분석된 시장과 KSIC 마스터의 미분석 후보를 한 번에 찾아줍니다.</p>
+          <table aria-label="시장 검색 결과">
+            <thead><tr><th>산업</th><th>KSIC</th><th>상태</th><th>액션</th></tr></thead>
+            <tbody>
+              <tr><td colspan="4" class="subhead">분석된 시장 — 행을 열면 결과가 표시됩니다</td></tr>
+              <tr style="outline:2px solid var(--primary); outline-offset:-2px"><td><b>인간형 로봇</b> <span class="chip gray">선택됨</span></td><td><code>29280</code></td><td><span class="chip green">v3 완료</span></td><td><button class="btn btn-sm">열기</button> <button class="btn btn-sm">재분석</button></td></tr>
+              <tr><td>2차전지 소재</td><td><code>26199</code></td><td><span class="chip green">v1 완료</span></td><td><button class="btn btn-sm">열기</button></td></tr>
+              <tr><td>스마트팜</td><td><code>01599</code></td><td><span class="chip amber">진행 중 (5/8)</span></td><td><button class="btn btn-sm">진행 보기</button></td></tr>
+              <tr><td colspan="4" class="subhead">KSIC 신규 후보 — 미분석 코드는 그 자리에서 분석을 시작합니다</td></tr>
+              <tr><td>서비스 로봇 제조</td><td><code>29289</code></td><td><span class="chip gray">미분석</span></td><td><button class="btn btn-primary btn-sm">분석 시작</button></td></tr>
+              <tr><td>로봇 시스템 통합</td><td><code>29299</code></td><td><span class="chip gray">미분석</span></td><td><button class="btn btn-primary btn-sm">분석 시작</button></td></tr>
+            </tbody>
+          </table>
+          <div class="progress" style="margin-top:10px"><i style="width:62%"></i></div>
+          <p class="note" style="margin:4px 0 0">진행 예시 — 드라이버 수집 → 앵커 삼각검증 → 프록시 체인 → 민감도 …</p>
+          <p class="note" style="margin:6px 0 0"><b>데이터 소스 헬스 (ADR-0123):</b> <span class="conf">ECOS 정상</span> <span class="conf">DART 정상</span> <span class="conf stale">웹 검색 — 지연·대체 소스 사용 중</span></p>
+        </div>
+      </aside>
+      <div>
+        <nav class="tabs">
+          <a class="tab" aria-current="page">규모·성장 매트릭스</a>
+          <a class="tab">프록시 체인</a>
+          <a class="tab">경쟁구조</a>
+          <a class="tab">격차 분석</a>
+          <a class="tab">버전 이력</a>
+        </nav>
+        <div class="card">
+          <h2>인간형 로봇 — 시장 규모·성장 <span class="chip green">분석 v3 · 신뢰도 B</span> <span class="conf stale">데이터 기준 3개월 전 — 재수집 권장</span> <button class="btn btn-sm" style="float:right">재분석</button></h2>
+          <div class="chart-wrap"><div class="bars">
+            <div class="bar" style="height:22%"><span class="bar-label">'24</span></div>
+            <div class="bar" style="height:34%"><span class="bar-label">'25</span></div>
+            <div class="bar" style="height:52%"><span class="bar-label">'26</span></div>
+            <div class="bar amber" style="height:74%"><span class="bar-label">'27E</span></div>
+            <div class="bar amber" style="height:100%"><span class="bar-label">'28E</span></div>
+          </div></div>
+          <table aria-label="시장 추정">
+            <thead><tr><th>구분</th><th class="num">2026</th><th class="num">2028E</th><th class="num">CAGR</th></tr></thead>
+            <tbody>
+              <tr><td>Bottom-up 추정 (매트릭스)</td><td class="num">2.1조</td><td class="num">6.4조</td><td class="num">32%</td></tr>
+              <tr><td>외부 전망 대비 격차</td><td class="num">+18%</td><td class="num">+9%</td><td class="num">—</td></tr>
+            </tbody>
+          </table>
+          <p class="note" style="margin-bottom:0">수치마다 출처 툴팁 제공 (P3 원칙). 완료 후 <a href="#" onclick="go('s2')">S2 기회 발굴 →</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 09 S2 기회 발굴 ═══════ -->
+  <section class="screen" id="s2">
+    <h1>S2 기회 발굴</h1>
+    <p class="objective">무엇을 할 것인가? — 가치사슬상 사업 기회를 발굴·등록하고 매력도를 평가한다</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S1 시장 규모·성장</span><span class="chip gray">S1 가치사슬 구조</span></span>
+      <span class="cta"><span class="hl">출력 →</span><button class="btn btn-sm" onclick="go('s3')">S3 시너지·적합성으로</button></span>
+    </div>
+    <div class="card tight">
+      <div class="form-grid">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="기회명·산업·가치사슬 노드"></div>
+        <div class="field"><span>상태</span><select><option>전체</option><option>발굴</option><option>평가</option><option>선별</option><option>제외</option></select></div>
+        <div class="field"><span>산업</span><select><option>전체</option><option>인간형 로봇</option></select></div>
+        <button class="btn"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+        <button class="btn btn-primary">＋ 기회 등록</button>
+      </div>
+    </div>
+    <div class="toggle-form" style="margin-bottom:14px">
+      <h3 style="margin-top:0">기회 등록</h3>
+      <div class="form-grid">
+        <div class="field" style="flex:1"><span>기회명 *</span><input placeholder="예: 로봇 펌웨어 OTA 플랫폼"></div>
+        <div class="field"><span>시장 범위</span><input placeholder="인간형 로봇"></div>
+        <div class="field"><span>가치사슬 노드</span><input placeholder="시스템 통합"></div>
+        <div class="field" style="width:100px"><span>매력도</span><input placeholder="0-100"></div>
+        <button class="btn btn-primary btn-sm">등록</button>
+        <button class="btn btn-sm">취소</button>
+      </div>
+    </div>
+    <div class="grid3" style="margin-bottom:14px">
+      <div class="kpi"><div class="v">4</div><div class="l">발굴 (identified)</div></div>
+      <div class="kpi"><div class="v">2</div><div class="l">평가 (assessed)</div></div>
+      <div class="kpi"><div class="v">1</div><div class="l">선별 (selected)</div></div>
+    </div>
+    <div class="card">
+      <h2>기회 퍼널 <span class="note" style="font-weight:400">— 행당 대표 액션 1개 + 상세 메뉴 (ADR-0119)</span></h2>
+      <table aria-label="기회 퍼널">
+        <thead><tr><th>기회</th><th>상태</th><th class="num">매력도</th><th class="num">시너지</th><th>요인</th><th>다음 단계</th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>humanoid 유지보수 서비스</b><br><span class="note">시스템 통합 · 하류</span></td>
+            <td><span class="chip gray">발굴</span></td>
+            <td class="num">82</td><td class="num">—</td>
+            <td><span class="chip green">기회 4</span> <span class="chip red">위험 2</span></td>
+            <td><button class="btn btn-primary btn-sm">평가로 이동</button></td>
+            <td><button class="btn btn-sm">⋯</button> <button class="btn-danger btn-sm">삭제</button></td>
+          </tr>
+          <tr>
+            <td><b>로봇 펌웨어 OTA 플랫폼</b></td>
+            <td><span class="chip green">선별</span></td>
+            <td class="num">88</td><td class="num">76</td>
+            <td><span class="chip green">기회 5</span> <span class="chip red">위험 1</span></td>
+            <td><button class="btn btn-primary btn-sm" onclick="go('s4')">S4 평가 진행</button></td>
+            <td><button class="btn btn-sm">⋯</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-bottom:0">행 클릭 확대 패널: 기회/위험 요인(자동 도출·수동 추가·삭제), 시너지 분석·적합성 평가 실행(S3), 매력도 LLM 초안, 비즈니스 모델 스케치.</p>
+    </div>
+  </section>
+
+  <!-- ═══════ 10 S3 시너지 ═══════ -->
+  <section class="screen" id="s3">
+    <h1>S3 시너지·전략적 적합성</h1>
+    <p class="objective">우리가 해야 하는가? — 자사 역량과의 시너지를 평가하고 선별을 결정한다</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S2 기회 퍼널 (선별 대상)</span><span class="chip gray">그룹/계열사 프로파일</span></span>
+      <span class="cta"><span class="hl">출력 →</span><button class="btn btn-sm" onclick="go('s4')">S4 진출방식 결정으로</button></span>
+    </div>
+    <div class="card">
+      <h2>평가 실행 <span class="note" style="font-weight:400">— 대상 기회 선택 후 두 평가를 실행합니다</span></h2>
+      <div class="form-grid" style="margin-bottom:12px">
+        <div class="field" style="flex:1"><span>대상 기회 *</span><select style="width:100%"><option>로봇 펌웨어 OTA 플랫폼 (선별됨)</option></select></div>
+        <button class="btn">시너지 분석 실행</button>
+        <button class="btn">적합성 평가 실행</button>
+        <a class="btn" href="#" onclick="go('r-our-company')">그룹/계열사 프로파일 →</a>
+      </div>
+      <div class="grid2e">
+        <div>
+          <p class="note" style="margin-bottom:4px">시너지 점수 (risk-officer 권고)</p>
+          <div class="kpi"><div class="v">76<span style="font-size:12px;color:var(--muted-fg)"> /100</span></div><div class="l">근거: 그룹 부품 채널 재사용 · 펌웨어 역량 보유</div></div>
+        </div>
+        <div>
+          <p class="note" style="margin-bottom:4px">적합성 판정 (거버넌스 권고)</p>
+          <div class="kpi"><div class="v" style="color:var(--green)">Go</div><div class="l">Knock-out 3종 통과 · 로드맵 정합</div></div>
+        </div>
+      </div>
+      <div class="next-box" style="margin-top:12px">
+        <button class="btn btn-primary">Screening GO 기록</button>
+        <span class="note">권고 조합: fit=Go & 시너지≥60 → Go 권고 — 기록은 사람 (경계 #2)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 11 S4 진출방식 결정 ═══════ -->
+  <section class="screen" id="s4">
+    <h1>S4 진출방식 결정 <span class="chip amber">결정 대기</span></h1>
+    <p class="objective">어떻게 들어갈 것인가? — Greenfield vs Brownfield를 결정한다 (Brownfield ≠ M&A)</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S3 시너지 점수·적합성</span><span class="chip gray">S1 시장 불확실성</span></span>
+      <span class="cta"><span class="hl">출력 →</span><button class="btn btn-sm" onclick="go('s5')">S5 (그린필드)</button><button class="btn btn-sm" onclick="go('s6s7')">S6 (브라운필드)</button></span>
+    </div>
+    <nav class="tabs">
+      <a class="tab" aria-current="page">결정 폼</a>
+      <a class="tab">권고 (결정론 + LLM)</a>
+      <a class="tab">채점 (5criteria)</a>
+      <a class="tab">결정 이력</a>
+      <a class="tab">게이트</a>
+    </nav>
+    <div class="card">
+      <h2>바이오 소재 신규 진출 — 트랙·라우트 결정</h2>
+      <div class="form-grid" style="margin-bottom:12px">
+        <div class="field"><span>트랙 *</span><select><option>Greenfield</option><option selected>Brownfield</option></select></div>
+        <div class="field"><span>라우트 (BF) *</span><select><option selected>전략적 투자</option><option>JV</option><option>M&A</option><option>소수점 지분</option></select></div>
+        <div class="field"><span>의도 (Stage 1) *</span><select><option selected>통합</option><option>역량접근</option></select></div>
+      </div>
+      <table aria-label="5criteria 채점" style="margin-bottom:12px">
+        <thead><tr><th>기준 (각 20%)</th><th>채점 1–3</th><th>근거 *</th></tr></thead>
+        <tbody>
+          <tr><td>통제 필요도</td><td><span class="chip-row" style="margin:0"><button class="control-chip" aria-pressed="false">1</button><button class="control-chip" aria-pressed="true">2</button><button class="control-chip" aria-pressed="false">3</button></span></td><td><input value="브랜드·채널 통합 필요" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td></tr>
+          <tr><td>역량 결정성</td><td><span class="chip-row" style="margin:0"><button class="control-chip" aria-pressed="false">1</button><button class="control-chip" aria-pressed="false">2</button><button class="control-chip" aria-pressed="true">3</button></span></td><td><input value="발효 공정 암묵지" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td></tr>
+          <tr><td>시장 불확실성</td><td><span class="chip-row" style="margin:0"><button class="control-chip" aria-pressed="false">1</button><button class="control-chip" aria-pressed="true">2</button><button class="control-chip" aria-pressed="false">3</button></span></td><td><input value="규제 변동 중" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td></tr>
+          <tr><td>통합 역량</td><td><span class="chip-row" style="margin:0"><button class="control-chip" aria-pressed="true">1</button><button class="control-chip" aria-pressed="false">2</button><button class="control-chip" aria-pressed="false">3</button></span></td><td><input value="M&A 경험 제한" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td></tr>
+          <tr><td>역량확보 속도</td><td><span class="chip-row" style="margin:0"><button class="control-chip" aria-pressed="false">1</button><button class="control-chip" aria-pressed="true">2</button><button class="control-chip" aria-pressed="false">3</button></span></td><td><input value="내재 구축 시 3년+" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td></tr>
+        </tbody>
+      </table>
+      <div class="next-box">
+        <button class="btn btn-primary">결정 저장</button>
+        <span class="note">합산 2.4 / 3.0 · 양 트랙 공통 채점 (ADR-0104) · 사전배제 검증 자동</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 12 S5 역량 평가 ═══════ -->
+  <section class="screen" id="s5">
+    <h1>S5 역량 평가·진출전략 <span class="chip gray">그린필드 전용</span></h1>
+    <p class="objective">스스로 진입할 수 있는가? — 격차를 Build/Partner/Hire/Invest로 해소한다</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S4 트랙 (greenfield)</span><span class="chip gray">S3 필요 역량</span><span class="chip gray">자사 역량·조직</span></span>
+      <span class="cta"><span class="hl">출력 →</span><button class="btn btn-sm" onclick="go('s8')">S8 사업성 분석 (승격 후)</button></span>
+    </div>
+    <nav class="tabs">
+      <a class="tab" aria-current="page">격차 평가</a>
+      <a class="tab">진출전략</a>
+      <a class="tab">BC 라인</a>
+      <a class="tab">게이트 · 승격</a>
+    </nav>
+    <div class="card">
+      <h2>공장 자동화 SI — 역량 격차 <span style="float:right"><button class="btn btn-sm"><svg class="ic"><use href="#i-bot"/></svg> LLM 초안 생성</button> <button class="btn btn-sm">＋ 역량 추가</button></span></h2>
+      <table aria-label="역량 격차">
+        <thead><tr><th>역량 *</th><th>필요</th><th>보유</th><th>격차</th><th>해소 *</th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td><input value="로봇 셀 통합 SI" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td>
+            <td><input value="상" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td>
+            <td><input value="중" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td>
+            <td><input value="프로젝트 PM 2명" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td>
+            <td><select style="border:1px solid var(--border);border-radius:6px;padding:3px 8px"><option selected>HIRE</option><option>BUILD</option><option>PARTNER</option><option>INVEST</option></select></td>
+            <td><button class="btn-danger btn-sm">삭제</button></td>
+          </tr>
+          <tr>
+            <td><input value="물류 WMS 연동" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td>
+            <td><input value="중" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td>
+            <td><input value="하" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td>
+            <td><input value="파트너 필요" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 8px"></td>
+            <td><select style="border:1px solid var(--border);border-radius:6px;padding:3px 8px"><option selected>PARTNER</option></select></td>
+            <td><button class="btn-danger btn-sm">삭제</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="next-box" style="margin-top:12px">
+        <button class="btn btn-primary">평가 저장</button>
+        <span class="note">저장 → 완료 시 승격 패널이 열립니다 — 이 딜은 S5 → S8 (S6/S7 스킵)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 13 S6/S7 브라운필드 ═══════ -->
+  <section class="screen" id="s6s7">
+    <h1>S6 대상 후보 발굴 · S7 대상 스크리닝 <span class="chip gray">브라운필드 전용</span></h1>
+    <p class="objective">누구와 결합할 것인가? — Universe 정의 → 후보 발굴(Long List) → 스크리닝·랭킹 → Short List → 위원회·게이트</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S4 트랙·라우트</span><span class="chip gray">S1 시장 정의·가치사슬</span><span class="chip gray">S3 필요 역량·진입 조건</span></span>
+      <span class="cta"><span class="hl">출력 →</span><button class="btn btn-primary btn-sm">프로젝트로 승격 (S8)</button></span>
+    </div>
+    <div class="step-flow" aria-label="Short List 도출 경로">
+      <span class="flowstep"><b>①</b> Universe 정의</span><span class="arr">→</span>
+      <span class="flowstep"><b>②</b> 후보 발굴 (Long List)</span><span class="arr">→</span>
+      <span class="flowstep"><b>③</b> 스크리닝 판정 (t-01~09)</span><span class="arr">→</span>
+      <span class="flowstep"><b>④</b> 랭킹</span><span class="arr">→</span>
+      <span class="flowstep"><b>⑤</b> Short List 승격</span><span class="arr">→</span>
+      <span class="flowstep"><b>⑥</b> 위원회 심의 (제안)</span><span class="arr">→</span>
+      <span class="flowstep"><b>⑦</b> Target Screening 게이트</span>
+    </div>
+    <div class="grid2e">
+      <div class="card">
+        <h2>① Universe 정의 <button class="btn btn-sm" style="float:right">수정</button></h2>
+        <p style="margin:0 0 4px">국내 상장 로봇 부품·시스템 업체 전체</p>
+        <p class="note" style="margin:0 0 4px">선정 기준: 매출 규모 · 기술 보유 · 참여 의지</p>
+        <p class="note" style="margin:0"><span class="chip green">커버리지 충족 (4/3)</span> 최소 Long List 3건</p>
+      </div>
+      <div class="card">
+        <h2>② 후보 발굴 — Long List 채우기</h2>
+        <div class="next-box" style="margin-bottom:8px">
+          <button class="btn">시장·기업 마스터 기반 제안 (KSIC 29280)</button>
+          <button class="btn">웹 검색 제안 <span class="chip gray">LLM 제안 라벨</span></button>
+        </div>
+        <div class="form-grid">
+          <div class="field" style="flex:1"><span>직접 등록 — 회사명 *</span><input placeholder="예: 레인보우로보틱스"></div>
+          <div class="field"><span>DART 코드 (검색)</span><input placeholder="고유번호 8자리"></div>
+          <button class="btn btn-primary btn-sm">＋ 후보 등록</button>
+        </div>
+        <p class="note" style="margin:6px 0 0">발굴 출처가 후보별로 기록됩니다 <span class="sch new">discovery_source 컬럼</span> — 제안 수용/무시도 선택 가능</p>
+      </div>
+    </div>
+    <div class="card">
+      <h2>③④⑤ Long List → 판정 · 랭킹 · Short List <span class="note" style="font-weight:400">— 행 펼침으로 t-01~09 판정, knock-out 통과 시 승격 활성</span></h2>
+      <div class="form-grid" style="margin-bottom:10px">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="후보사명"></div>
+        <div class="field"><span>상태</span><select><option>전체</option><option>대기</option><option>Short List</option><option>제외</option></select></div>
+        <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+      </div>
+      <div class="table-scroll">
+      <table aria-label="Long List">
+        <thead><tr><th>후보 (출처)</th><th>DART</th><th>스크리닝</th><th>랭킹</th><th>상태</th><th>액션</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>소재사 A</b><br><span class="note">시장 마스터 제안 수용</span></td>
+            <td><code>00354XXX</code></td>
+            <td><span class="chip green">knock-out 통과 9/9</span></td>
+            <td class="num">#1 (86)</td>
+            <td><span class="chip green">Short List</span></td>
+            <td><button class="btn btn-sm">행 펼침</button> <button class="btn-danger btn-sm">제외</button></td>
+          </tr>
+          <tr>
+            <td><b>소재사 B</b><br><span class="note">직접 등록</span></td>
+            <td><code>00312XXX</code></td>
+            <td><span class="chip amber">판정 6/9 · 필수 1건 미판정</span></td>
+            <td class="num">—</td>
+            <td><span class="chip gray">대기</span></td>
+            <td><button class="btn btn-sm">행 펼침</button> <button class="btn-danger btn-sm">제외</button></td>
+          </tr>
+          <tr>
+            <td><b>소재사 C</b><br><span class="note">웹 검색 제안 (기각)</span></td>
+            <td><code>00583XXX</code></td>
+            <td><span class="chip red">knock-out 실패 (t-04)</span></td>
+            <td class="num">—</td>
+            <td><span class="chip red">제외</span></td>
+            <td class="note">제외 사유 기록됨</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <div class="grid2e">
+      <div class="card">
+        <h2>⑥ 위원회 심의 — 롱리스트→숏리스트 <span class="chip gray">PROPOSAL</span></h2>
+        <p class="note" style="margin-bottom:8px">좌석별 채점 집계 · 소수 의견 보존 — 확정은 게이트 기록 (경계 #2)</p>
+        <button class="btn btn-sm" onclick="go('committee')">위원회 세션 열기 →</button>
+      </div>
+      <div class="card">
+        <h2>⑥b 소유권·독점규제 스크리닝 (antitrust-agent)</h2>
+        <table aria-label="독점규제 스크리닝">
+          <thead><tr><th>후보</th><th>시장 정의</th><th class="num">HHI (전/후)</th><th>신고 관할</th><th>gun-jumping</th></tr></thead>
+          <tbody>
+            <tr><td>소재사 A</td><td>로봇용 정밀 감속기</td><td class="num">1,420 → 1,610</td><td><span class="chip green">국내 신고 대상 없음</span></td><td><span class="chip green">해당없음</span></td></tr>
+            <tr><td>소재사 B</td><td>2차전지 양극재</td><td class="num">2,300 → 2,850</td><td><span class="chip amber">KFTC 사전심의 검토</span></td><td><span class="chip gray">계약 전 통제 금지</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>⑦ Target Screening 게이트 → 승격</h2>
+        <p class="note" style="margin-top:0"><svg class="ic"><use href="#i-alert"/></svg> <b>KILL 기준 힌트:</b> knock-out 통과 후보 0건이면 Target Screening 게이트 KILL 기준 검토가 필요합니다 (flow.spec S7).</p>
+        <div class="next-box">
+          <button class="btn">Target Screening GO 기록</button>
+          <button class="btn btn-primary">프로젝트로 승격 (S7 → S8)</button>
+        </div>
+        <p class="note" style="margin:8px 0 0">승격 = need-to-know 근거 입력 · 차터 자동 구성 · 승격자가 리드 — 완료 시 S8 사업성 분석에서 계속</p>
+        <p class="by">마지막 승격 기록: sung.hyuk · 2026-09-01 10:22 (감사 로그 연동)</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 14 S8 사업성 분석 ═══════ -->
+  <section class="screen" id="s8">
+    <h1>S8 사업성 분석 <span class="chip gray">fs 게이트 대기</span></h1>
+    <p class="objective">돈이 되는가? — Business Case와 시뮬레이션 NPV를 정량화한다</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S5 진출전략·BC 라인 (GF)</span><span class="chip gray">S7 Short List 재무 (BF)</span><span class="chip gray">WACC (도구)</span></span>
+      <span class="cta"><span class="hl">출력 →</span><button class="btn btn-sm" onclick="go('s9')">S9 실사·검증으로</button></span>
+    </div>
+    <nav class="tabs">
+      <a class="tab" aria-current="page">케이스</a>
+      <a class="tab">시뮬레이션</a>
+      <a class="tab" onclick="go('t-wacc')">WACC</a>
+      <a class="tab">채택</a>
+      <a class="tab">게이트</a>
+    </nav>
+    <div class="grid2">
+      <div class="card">
+        <h2>듀얼 관점 밸류에이션 <span class="chip green">gate 기준: market_forward</span>
+          <span style="float:right"><button class="btn btn-sm">＋ 케이스 생성</button> <button class="btn btn-sm">시뮬레이션 실행</button></span></h2>
+        <table aria-label="밸류에이션 비교">
+          <thead><tr><th>관점</th><th>성장 (출처)</th><th class="num">NPV p05</th><th class="num">NPV p50</th><th class="num">NPV p95</th><th class="num">IRR</th></tr></thead>
+          <tbody>
+            <tr><td><b>market_forward</b> <span class="chip green">권장</span></td><td>18% (기회 성장률)</td><td class="num">310</td><td class="num">520</td><td class="num">890</td><td class="num">21.4%</td></tr>
+            <tr><td>historical (비교)</td><td>9% (DART CAGR)</td><td class="num">180</td><td class="num">340</td><td class="num">610</td><td class="num">16.8%</td></tr>
+          </tbody>
+        </table>
+        <p class="note" style="margin:0">WACC 세션 확정값 자동 반영 · 10,000회 시뮬레이션 (seed 고정, 재현 가능) · 사업목표 기준 충족 여부 패널 표시 (ADR-0114)</p>
+        <h4>시나리오 스냅샷 비교 저장소 (고도화 4)</h4>
+        <table aria-label="시나리오 스냅샷 비교">
+          <thead><tr><th>스냅샷</th><th>가정 세트</th><th class="num">NPV p50</th><th>저장</th></tr></thead>
+          <tbody>
+            <tr><td><b>현재</b></td><td class="note">성장 18% · 마진 11% · WACC 12.8%</td><td class="num">520</td><td><button class="btn btn-sm">스냅샷 저장</button></td></tr>
+            <tr><td>보수안 (09-05)</td><td class="note">성장 12% · 마진 9% · WACC 13.5%</td><td class="num">380</td><td class="note">저장됨 · <a href="#">차이 보기</a></td></tr>
+          </tbody>
+        </table>
+        <p class="note" style="margin:4px 0 0">가정 충돌 감지: 성장↑+마진↓ 병존 시 경고 표시</p>
+      </div>
+      <aside class="card">
+        <h2>채택 · 게이트</h2>
+        <div class="next-box" style="margin-bottom:10px">
+          <button class="btn btn-primary">케이스 채택</button>
+          <span class="note">market_forward 채택 권장 (LLM 근거 요약)</span>
+          <span class="by">채택 기록: sung.hyuk · 2026-09-06 15:40</span>
+        </div>
+        <button class="btn">FS 게이트 기록</button>
+        <p class="note" style="margin-bottom:0">사업목표 기준 충족 판정은 사람 (근거 패널 표시)</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ═══════ 15 S9 실사 ═══════ -->
+  <section class="screen" id="s9">
+    <h1>S9 실사·검증 <span class="chip amber">필수 3건 대기</span></h1>
+    <p class="objective">사실인가? 위험은 무엇인가? — 체크리스트를 수행하고 waiver로 예외를 관리한다</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S8 채택 BC (체크리스트 테일러링)</span><span class="chip gray">게이트 체크리스트</span></span>
+      <span class="cta"><span class="hl">출력 →</span><button class="btn btn-sm" onclick="go('s10')">S10 투자구조 설계로</button></span>
+    </div>
+    <nav class="tabs">
+      <a class="tab" aria-current="page">체크리스트</a>
+      <a class="tab">발견사항 (dd_finding)</a>
+      <a class="tab">Waiver</a>
+      <a class="tab" onclick="go('t-proxy')">프록시 체인</a>
+      <a class="tab" onclick="go('t-interviews')">전문가 인터뷰</a>
+      <a class="tab" onclick="go('t-coc')">고객 집중·CoC</a>
+      <a class="tab">게이트</a>
+    </nav>
+    <div class="card">
+      <h2>물류 로봇 인수 — 맞춤형 DD 체크리스트 <span style="float:right"><button class="btn btn-sm">＋ 발견사항 등록</button> <button class="btn btn-sm">Waiver 요청</button></span></h2>
+      <div class="table-scroll">
+      <table aria-label="DD 체크리스트">
+        <thead><tr><th>항목</th><th>분류</th><th>필수</th><th>판정</th><th>근거</th></tr></thead>
+        <tbody>
+          <tr><td>c-01 핵심 고객 계약 CoC 조항</td><td><span class="chip gray">commercial</span></td><td><span class="chip amber">필수</span></td><td><select style="border:1px solid var(--border);border-radius:6px;padding:3px 8px"><option selected>충족</option><option>미충족</option><option>해당없음</option></select></td><td class="note">계약서 3건 검토</td></tr>
+          <tr><td>t-02 설비 잔존수명 (TRL 8+)</td><td><span class="chip gray">technical</span></td><td><span class="chip amber">필수</span></td><td><span class="chip red">미충족</span></td><td class="note">현장 실사 보고서 #12</td></tr>
+          <tr><td>l-03 인허가 이전 가능성</td><td><span class="chip gray">legal</span></td><td>—</td><td><span class="chip amber">미판정</span></td><td class="note">—</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="toggle-form">
+        <h3 style="margin-top:0">발견사항 등록</h3>
+        <div class="form-grid">
+          <div class="field"><span>분류 *</span><select><option>commercial</option><option>technical</option><option>legal</option></select></div>
+          <div class="field" style="flex:1"><span>내용 *</span><input placeholder="예: 핵심 고객 계약 변경 통제 조항 발견"></div>
+          <div class="field"><span>가치 영향 (억원)</span><input type="number" placeholder="-5"></div>
+          <div class="field" style="flex:1"><span>근거 *</span><input placeholder="계약서·현장실사 등 증적 참조"></div>
+          <button class="btn btn-primary btn-sm">등록</button>
+        </div>
+      </div>
+      <div class="next-box" style="margin-top:12px">
+        <button class="btn btn-primary">체크리스트 저장</button>
+        <span class="note">필수 미충족은 활성 waiver 없이 DD 게이트 통과 불가 · 발견사항은 S10 구조 검토 입력</span>
+        <p class="note" style="width:100%"><svg class="ic"><use href="#i-alert"/></svg> <b>KILL 기준 힌트:</b> waiver 불가능한 필수 미충족이 지속되면 DD 게이트 KILL 기준 검토가 필요합니다 (flow.spec S9).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 16 S10 투자구조 ═══════ -->
+  <section class="screen" id="s10">
+    <h1>S10 투자구조 설계 <span class="chip green">완료</span></h1>
+    <p class="objective">어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — IC 심의의 입력 설계</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S8 채택 BC</span><span class="chip gray">S9 발견사항 (가치 영향)</span><span class="chip gray">WACC·hurdle</span></span>
+      <span class="cta"><span class="hl">출력 →</span><button class="btn btn-sm" onclick="go('s11')">S11 투자심사로</button></span>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>투자구조 가설 — ADR-0045 4대 축 <button class="btn btn-sm" style="float:right">＋ 가설 등록/수정</button></h2>
+        <div class="form-grid" style="margin-bottom:10px">
+          <div class="field"><span>비히클 *</span><select><option selected>SPC</option><option>직접</option><option>holdco</option><option>내부 스핀오프</option><option>JV</option></select></div>
+          <div class="field"><span>자산/주식</span><select><option selected>주식 취득</option><option>자산 양수도</option></select></div>
+          <div class="field"><span>지분</span><input value="100%"></div>
+        </div>
+        <table aria-label="4대 축">
+          <thead><tr><th>축</th><th>검토 요지</th><th>상태</th></tr></thead>
+          <tbody>
+            <tr><td>절세 구조</td><td>SPC 통한 취득세 중과 회피 검토</td><td><span class="chip green">완료</span></td></tr>
+            <tr><td>책임 격리</td><td>SPC 한정자산 — 모회사 연결리스크 차단</td><td><span class="chip green">완료</span></td></tr>
+            <tr><td>재무 레버리지</td><td>프로젝트 파이낸스 D/E 1.5 가정</td><td><span class="chip green">완료</span></td></tr>
+            <tr><td>엑싯 구조</td><td>5년 후 그룹 흡수 or 매각 옵션</td><td><span class="chip green">완료</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="card">
+        <h2>자금조달 (sources & uses) <button class="btn btn-sm" style="float:right">＋ 항목 추가</button></h2>
+        <table aria-label="자금조달">
+          <thead><tr><th>구분</th><th>항목</th><th class="num">금액</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>조달</td><td>출자</td><td class="num">300억</td><td><button class="btn-danger btn-sm">✕</button></td></tr>
+            <tr><td>조달</td><td>차입</td><td class="num">450억</td><td><button class="btn-danger btn-sm">✕</button></td></tr>
+            <tr><td>사용</td><td>주식취득</td><td class="num">600억</td><td><button class="btn-danger btn-sm">✕</button></td></tr>
+            <tr><td>사용</td><td>운영자금</td><td class="num">150억</td><td><button class="btn-danger btn-sm">✕</button></td></tr>
+            <tr><td colspan="2"><b>균형</b></td><td class="num"><span class="chip green">750 = 750</span></td><td></td></tr>
+          </tbody>
+        </table>
+        <div class="next-box" style="margin-top:10px">
+          <button class="btn btn-primary">구조 가설 확정</button>
+          <a class="btn btn-sm" href="#" onclick="go('t-debt')">부채·커버넌트 관리 →</a>
+          <a class="btn btn-sm" href="#" onclick="go('t-incentive')">인센티브·클로백 →</a>
+          <span class="note">균형 + 4축 완료 → S11 IC 패키지 입력 충족</span>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ═══════ 17 S11 IC 심의 ═══════ -->
+  <section class="screen" id="s11">
+    <h1>S11 투자심사·실행 <span class="chip amber">Group IC HOLD</span></h1>
+    <p class="objective">투자할 것인가? — IC 패키지로 Entity/Group IC 심사를 받고 실행한다</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S10 구조 가설·자금</span><span class="chip gray">채택 BC</span><span class="chip gray">차터 기준선</span><span class="chip gray">DD 발견사항</span></span>
+      <span class="cta"><span class="hl">출력 →</span><button class="btn btn-sm" onclick="go('s12')">S12 사후 관리로</button></span>
+    </div>
+    <nav class="tabs">
+      <a class="tab">IC 패키지</a>
+      <a class="tab">설립 실행</a>
+      <a class="tab" aria-current="page">게이트 심의</a>
+      <a class="tab" onclick="go('t-reports')">보고서</a>
+    </nav>
+    <div class="card">
+      <h2>Group IC — 포트폴리오 적합성 <span class="chip amber">HOLD · 보완 1건</span></h2>
+      <p class="note" style="margin-top:0">HOLD 사유: 그룹 로드맵 정합 근거 미첨부 — 보완 후 재기록.</p>
+      <table aria-label="IC 패키지 요약">
+        <thead><tr><th>산출물</th><th>상태</th><th>근거</th></tr></thead>
+        <tbody>
+          <tr><td>채택 Business Case</td><td><span class="chip green">채택됨</span></td><td class="note">market_forward · NPV p50 520</td></tr>
+          <tr><td>차터 기준선</td><td><span class="chip green">확정됨 · 09-08</span></td><td class="note">KPI 선커밋 3건</td></tr>
+          <tr><td>투자구조 (S10)</td><td><span class="chip green">4축 완료 · 균형</span></td><td class="note">SPC · D/E 1.5</td></tr>
+          <tr><td>설립 실행</td><td><span class="chip green">5/5</span></td><td class="note">등기·인허가·인력이전</td></tr>
+        </tbody>
+      </table>
+      <div class="toggle-form" style="margin-top:12px">
+        <h3 style="margin-top:0">최소 근거 구조 (체크형 — 감사 품질 표준, 개선 8)</h3>
+        <div class="chip-row" style="margin-bottom:6px">
+          <button class="control-chip" aria-pressed="true">기준 충족 확인</button>
+          <button class="control-chip" aria-pressed="false">예외( waiver ) 근거</button>
+          <button class="control-chip" aria-pressed="true">보완 조건 명시</button>
+        </div>
+        <div class="form-grid" style="margin-top:8px">
+          <div class="field"><span>전자결재 번호 상호참조 (ADR-0123)</span><input placeholder="그룹 전자결재 문서번호 연결 (예: GW-2026-0912-001)"></div>
+          <span class="note">게이트 기록 ↔ 그룹 전자결재 상태 미러링 — 이중 장부 해소</span>
+        </div>
+        <p class="note" style="margin:0"><svg class="ic"><use href="#i-bot"/></svg> <b>LLM 심의 비서 (제안):</b> 찬성 — 시너지 실현 근거 3건 · <b>반대</b> — 그룹 로드맵 정합 미확인 · <b>확인 질문</b> ① 로드맵 정합 근거의 출처는? ② HOLD 보완 기한은? ③ 실패 시 학습 저장 계획은? — 최종 판단은 사람 (경계 #2, 고도화 6)</p>
+      </div>
+      <div class="next-box" style="margin-top:12px">
+        <button class="btn btn-primary">Group IC 결정 기록</button>
+        <span class="note">경계 #2 — GO/HOLD/KILL 기록은 사람 · 근거 구조 + LLM 브리프가 기록 품질을 표준화</span>
+        <p class="by">최근 기록: entity_ic GO — sung.hyuk · 2026-09-10 14:22 · group_ic HOLD — sung.hyuk · 2026-08-31 09:15</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 18 S12 사후관리 ═══════ -->
+  <section class="screen" id="s12">
+    <h1>S12 사후 관리 <span class="chip green">Q3 갱신됨</span></h1>
+    <p class="objective">투자 후 사업이 궤도에 올랐는가? — 분기 스코어카드와 전환 결정</p>
+    <div class="handoff">
+      <span class="hl">입력 ←</span>
+      <span class="chips"><span class="chip gray">S11 IC 승인</span><span class="chip gray">차터 KPI 선커밋 (목표값 자동 병합)</span><span class="chip gray">PMI 시너지 추적</span></span>
+      <span class="cta"><span class="hl">출력</span><span class="chip gray">포트폴리오 전환 결정 (종료)</span></span>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>벤처 스코어카드 — 2026 Q3 <button class="btn btn-sm" style="float:right">＋ 스코어카드 기록</button></h2>
+        <table aria-label="스코어카드">
+          <thead><tr><th>지표</th><th>목표</th><th class="num">실적</th><th>판정</th><th>근거</th></tr></thead>
+          <tbody>
+            <tr><td>연매출 (재무)</td><td>40억</td><td class="num">36억</td><td><span class="chip amber">편차</span></td><td class="note">매출 리포트 링크</td></tr>
+            <tr><td>고객사 수 (전략)</td><td>8곳</td><td class="num">9곳</td><td><span class="chip green">달성</span></td><td class="note">수주 대장</td></tr>
+            <tr><td>시너지 run-rate</td><td>80%</td><td class="num">—</td><td><span class="chip gray">근거 부족</span></td><td class="note">—</td></tr>
+          </tbody>
+        </table>
+        <div class="toggle-form">
+          <h3 style="margin-top:0">스코어카드 기록 (분기)</h3>
+          <div class="form-grid">
+            <div class="field"><span>주기 *</span><input value="2026-Q4"></div>
+            <div class="field"><span>지표 *</span><select><option>연매출 (재무)</option><option>고객사 수 (전략)</option></select></div>
+            <div class="field"><span>실적 *</span><input placeholder="값"></div>
+            <div class="field" style="flex:1"><span>근거 *</span><input placeholder="증적 참조"></div>
+            <button class="btn btn-primary btn-sm">기록</button>
+          </div>
+        </div>
+      </div>
+      <aside class="card">
+        <h2>포트폴리오 전환 결정 (인적 원장)</h2>
+        <p class="note">어휘 5종 · venture-portfolio-IC 결정 — append-only 기록</p>
+        <div class="field" style="margin-bottom:8px"><span>전환 *</span><select style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;width:100%"><option>held_evidence_incomplete</option><option>next_tranche_released</option><option>graduate_to_core</option><option>reduce_or_divest</option><option>kill_with_learning_captured</option></select></div>
+        <div class="field" style="margin-bottom:8px"><span>사유 *</span><input placeholder="결과 학습 포함 사유"></div>
+        <button class="btn btn-primary">전환 결정 기록</button>
+        <p class="note" style="margin-bottom:0">LLM 모니터링 브리프(리스크 플래그·제안) 사이드 제공</p>
+        <p class="by">직전 전환: held_evidence_incomplete — venture-portfolio-IC · 2026-Q3 (기록자 sung.hyuk)</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ═══════ 19 WACC ═══════ -->
+  <section class="screen" id="t-wacc">
+    <p class="crumb">딜 / 공장 자동화 SI — 도구</p>
+    <h1>WACC 입력 세션 <span class="chip green">CAPM 확정 · 09-08</span></h1>
+    <p class="objective">FS 게이트 할인율을 산식 분해와 함께 확정한다 (ADR-0115) — 제안은 LLM/시장값, 확정은 사람</p>
+    <nav class="tabs">
+      <a class="tab" aria-current="page">확정값·산식</a>
+      <a class="tab">CAPM 구성요소 입력</a>
+      <a class="tab">베타 (회귀·동종사)</a>
+      <a class="tab">세션 이력</a>
+    </nav>
+    <div class="grid2">
+      <div class="card">
+        <h2>산식 분해 <span class="chip green">서버 재계산 — 화면·DB 불일치 없음</span></h2>
+        <table aria-label="산식 분해">
+          <tbody>
+            <tr><td>Rf (국고채 3년, ECOS)</td><td class="num">3.42%</td><td class="note">kind=live · 한국은행 ECOS · 2026-08</td></tr>
+            <tr><td>ERP (Damodaran)</td><td class="num">4.60%</td><td class="note">kind=live · citation</td></tr>
+            <tr><td>βu (동종사 중앙값 → Hamada)</td><td class="num">1.12</td><td class="note">kind=user · 동종사 3사</td></tr>
+            <tr><td>규모 프리미엄</td><td class="num">1.80%</td><td class="note">kind=user</td></tr>
+            <tr><td><b>WACC</b></td><td class="num"><b>12.8%</b></td><td class="note">kind=user 확정 · 산식 일치 ✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="card">
+        <h2>세션 확정</h2>
+        <div class="form-grid" style="margin-bottom:8px">
+          <div class="field"><span>모드</span><select><option selected>CAPM</option><option>직접 입력</option></select></div>
+          <div class="field"><span>확정 WACC *</span><input value="12.8%"></div>
+        </div>
+        <div class="next-box">
+          <button class="btn btn-primary">세션 확정</button>
+          <span class="note">확정값은 S8 시뮬레이션에 자동 반영 · 산식과 불일치 시 플래그</span>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ═══════ 20 재무분석 ═══════ -->
+  <section class="screen" id="t-financial">
+    <p class="crumb">딜 / 물류 로봇 인수 — 도구</p>
+    <h1>재무분석 <span class="chip green">대상사 연결됨</span></h1>
+    <p class="objective">대상 회사의 5개 사업연도 재무를 DART에서 조회하고 S8 밸류에이션에 연결한다</p>
+    <div class="card">
+      <div class="form-grid" style="margin-bottom:12px">
+        <div class="field" style="flex:1"><span>대상 회사</span><select style="width:100%"><option>소재사 A (연결됨)</option></select></div>
+        <button class="btn">DART 동기화</button>
+        <button class="btn">＋ 회사 연결 변경</button>
+      </div>
+      <table aria-label="재무 요약">
+        <thead><tr><th>계정</th><th class="num">2023</th><th class="num">2024</th><th class="num">2025</th><th class="num">CAGR</th></tr></thead>
+        <tbody>
+          <tr><td>매출액</td><td class="num">3,900</td><td class="num">4,300</td><td class="num">4,800</td><td class="num">+10.9%</td></tr>
+          <tr><td>영업이익</td><td class="num">420</td><td class="num">510</td><td class="num">548</td><td class="num">+14.2%</td></tr>
+          <tr><td>부채총계</td><td class="num">2,100</td><td class="num">2,240</td><td class="num">2,380</td><td class="num">+6.5%</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-bottom:0">단위: 억원 · 출처 툴팁 (DART 연결재무제표) · <a href="#" onclick="go('r-company-detail')">기업 상세 전체 보기 →</a></p>
+    </div>
+  </section>
+
+  <!-- ═══════ 21 차터 ═══════ -->
+  <section class="screen" id="t-charter">
+    <p class="crumb">딜 / 로봇 부품 자회사 설립 — 도구</p>
+    <h1>추진계획(차터) <span class="chip green">확정됨 · 09-08</span></h1>
+    <p class="objective">목적·시장 범위·진입 범위·KPI를 게이트 심의 전에 고정한다 — 수정은 append-only 버전 (ADR-0104)</p>
+    <div class="grid2">
+      <div class="card">
+        <h2>최신 추진계획 v2 <button class="btn btn-sm" style="float:right">＋ 수정안 (append-only)</button></h2>
+        <table aria-label="차터">
+          <tbody>
+            <tr><td class="muted">목적</td><td>로봇 부품 자급 체계 구축으로 조달 리스크 해소</td></tr>
+            <tr><td class="muted">트랙</td><td><span class="chip amber">브라운필드 · 자회사</span> · 채점 2.4/3.0</td></tr>
+            <tr><td class="muted">진입 범위</td><td>국내 생산거점 1개 (1차)</td></tr>
+            <tr><td class="muted">KPI 선커밋</td><td>연매출 40억 · 고객사 8곳 · 시너지 run-rate 80%</td></tr>
+          </tbody>
+        </table>
+        <p class="note" style="margin-bottom:0">수정안 반영 후 재확정 필요 — S11 완료 요건과 연동</p>
+      </div>
+      <aside class="card">
+        <h2>버전 이력</h2>
+        <ul class="checklist" style="margin:0">
+          <li><b>v2</b> · 09-08 · Entity IC HOLD 반영 — 진입 범위 1개 국가로 축소</li>
+          <li><b>v1</b> · 09-01 · 승격 시 자동 구성 (S1~S7 산출물)</li>
+        </ul>
+        <div class="next-box" style="margin-top:10px"><button class="btn btn-primary btn-sm">✓ 기준선 확정</button><span class="note">S11 입력 요건</span></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ═══════ 22 프록시 체인 ═══════ -->
+  <section class="screen" id="t-proxy">
+    <p class="crumb">딜 / 물류 로봇 인수 — 도구</p>
+    <h1>프록시 체인 <span class="chip amber">보정 대기 1쌍</span></h1>
+    <p class="objective">가치사슬 링크(상·하류 전환율)와 보정 근거를 판정·등록한다 — 수치는 계량방법론 계약 준수</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <button class="btn btn-primary">＋ 링크 판정 등록</button>
+        <button class="btn">보정 실행 (calibrate)</button>
+        <span class="note">β/R²은 보정 전용 — 판정 등록은 탄성·전환율 등 근거 수치만</span>
+      </div>
+      <table aria-label="가치사슬 링크">
+        <thead><tr><th>경로</th><th>방향</th><th class="num">탄성</th><th class="num">전환율</th><th>근거</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>감속기 → 관절 모듈</td><td><span class="chip gray">상류</span></td><td class="num">0.82 <span class="conf">90% CI ±0.06</span></td><td class="num">91%</td><td class="note">업계 인터뷰 3건</td><td><button class="btn-danger btn-sm">삭제</button></td></tr>
+          <tr><td>관절 모듈 → 로봇 완제</td><td><span class="chip gray">상류</span></td><td class="num">0.71</td><td class="num">—</td><td class="note"><span class="chip amber">보정 대기</span></td><td><button class="btn-danger btn-sm">삭제</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 23 보고서 ═══════ -->
+  <section class="screen" id="t-reports">
+    <p class="crumb">딜 / 로봇 부품 자회사 설립 — 도구</p>
+    <h1>보고서 <span class="chip green">스냅샷 2건</span></h1>
+    <p class="objective">IC 패키지·브리핑 팩에서 보고서 초안을 조립하고 문서로 렌더링한다</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <button class="btn btn-primary">＋ 초안 조립 (IC 패키지 기준)</button>
+        <span class="note">채택 BC · DD 요약 · RAG 제안 · 구조 · 게이트 이력 자동 편성</span>
+      </div>
+      <table aria-label="보고서 스냅샷">
+        <thead><tr><th>스냅샷</th><th>생성</th><th>형식</th><th>다운로드</th></tr></thead>
+        <tbody>
+          <tr><td>IC 보고서 v2 (Group IC용)</td><td>09-10</td><td>docx · hwpx · pdf</td><td><button class="btn btn-sm">docx</button> <button class="btn btn-sm">hwpx</button> <button class="btn btn-sm">pdf</button></td></tr>
+          <tr><td>IC 보고서 v1 (Entity IC용)</td><td>09-06</td><td>docx</td><td><button class="btn btn-sm">docx</button></td></tr>
+        </tbody>
+      </table>
+      <h4>화면 ↔ 문서 매핑 미리보기 (출력 최적화 — 고도화 8)</h4>
+      <table aria-label="출력 매핑">
+        <thead><tr><th>문서 섹션</th><th>데이터 원천 (화면)</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>1. 요약 · 권고</td><td class="note">딜 개요 — 지금 할 일/상태 칩</td><td class="note">자동</td></tr>
+          <tr><td>2. 밸류에이션</td><td class="note">S8 듀얼 관점 표 + WACC 산식</td><td class="note">수치 원본 인용 (재입력 없음)</td></tr>
+          <tr><td>3. DD 요약</td><td class="note">S9 판정 집계 + 발견사항 상위 10건</td><td class="note">필수 미충족 강조</td></tr>
+          <tr><td>4. 구조 · 자금</td><td class="note">S10 4대 축 + sources &amp; uses</td><td class="note">균형 검증 문장 포함</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 24 파트너·JV ═══════ -->
+  <section class="screen" id="t-partnership">
+    <p class="crumb">딜 / 공장 자동화 SI — 도구</p>
+    <h1>파트너·JV <span class="chip green">후보 3건</span></h1>
+    <p class="objective">파트너 발굴·실사(컴플라이언스 스크리닝 포함)와 JV 구조·기간을 관리한다</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="파트너명·유형"></div>
+        <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+        <button class="btn btn-primary btn-sm">＋ 파트너 등록</button>
+        <button class="btn btn-sm">JV 조항 관리</button>
+      </div>
+      <table aria-label="파트너">
+        <thead><tr><th>파트너</th><th>유형</th><th>역량/재무 점수</th><th>컴플라이언스</th><th>상태</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><b>WMS 파트너 K</b></td><td>기술 제휴</td><td class="num">82 / 74</td><td><span class="chip green">통과</span></td><td><span class="chip green">NDA 체결</span></td><td><button class="btn btn-sm">발견사항</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+          <tr><td><b>3PL L</b></td><td>운영 제휴</td><td class="num">71 / 80</td><td><span class="chip amber">검토 중</span></td><td><span class="chip gray">접촉</span></td><td><button class="btn btn-sm">발견사항</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+        </tbody>
+      </table>
+      <h4>파트너 비교 매트릭스 (개선 8)</h4>
+      <div class="table-scroll">
+      <table aria-label="파트너 비교">
+        <thead><tr><th>기준</th><th>WMS 파트너 K</th><th>3PL L</th><th>후보 M</th></tr></thead>
+        <tbody>
+          <tr><td>역량</td><td class="num ctr">82</td><td class="num ctr">71</td><td class="num ctr">68</td></tr>
+          <tr><td>재무 안정성</td><td class="num ctr">74</td><td class="num ctr">80</td><td class="num ctr">65</td></tr>
+          <tr><td>컴플라이언스</td><td class="ctr"><span class="chip green">통과</span></td><td class="ctr"><span class="chip amber">검토</span></td><td class="ctr"><span class="chip red">미실시</span></td></tr>
+          <tr><td>종합</td><td class="ctr"><span class="chip green">1순위</span></td><td class="ctr"><span class="chip amber">2순위</span></td><td class="ctr"><span class="chip gray">보류</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 25 PMI ═══════ -->
+  <section class="screen" id="t-pmi">
+    <p class="crumb">딜 / 물류 로봇 인수 — 도구</p>
+    <h1>PMI 통합 계획 <span class="chip gray">기준선 수립 전</span></h1>
+    <p class="objective">IC 승인 후 통합 계획 기준선을 수립하고 시너지 실현 추적의 초기 스냅샷을 S12로 이관한다</p>
+    <div class="grid2e">
+      <div class="card">
+        <h2>핵심 인력 <button class="btn btn-sm" style="float:right">＋ 인력 등록</button></h2>
+        <table aria-label="핵심 인력">
+          <thead><tr><th>인력</th><th>역할</th><th>잔존 계획</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>대상사 CTO</td><td>기술 통합 리드</td><td>24개월</td><td><button class="btn-danger btn-sm">삭제</button></td></tr>
+            <tr><td>대상사 영업본부장</td><td>채널 통합</td><td>12개월</td><td><button class="btn-danger btn-sm">삭제</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>시너지 인증·자격 이전</h2>
+        <ul class="checklist" style="margin:0">
+          <li>인증 2건 — 이전 가능 분류 확인 <span class="chip amber">진행</span></li>
+          <li>시너지 run-rate 추적 스냅샷 → S12 이관 준비</li>
+        </ul>
+        <div class="next-box" style="margin-top:10px"><button class="btn btn-primary btn-sm">기준선 수립</button><span class="note">S11 승인 후 활성</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 26 프로세스 전체 체인 ═══════ -->
+  <section class="screen" id="t-process">
+    <p class="crumb">딜 / 로봇 부품 자회사 설립</p>
+    <h1>프로세스 전체 현황</h1>
+    <p class="objective">이 딜의 S1~S12 전 단계 상태·차단 요건·게이트 기록을 한 화면에서 추적한다</p>
+    <div class="card">
+      <div class="table-scroll">
+      <table aria-label="전체 체인">
+        <thead><tr><th>단계</th><th>상태</th><th>게이트</th><th>남은 것</th></tr></thead>
+        <tbody>
+          <tr><td>S1 시장분석</td><td><span class="chip green">완료</span></td><td><span class="chip green">screening GO</span></td><td class="note">—</td></tr>
+          <tr><td>S2 기회 발굴</td><td><span class="chip green">완료</span></td><td><span class="chip green">screening GO</span></td><td class="note">—</td></tr>
+          <tr><td>S3 시너지·적합성</td><td><span class="chip green">완료</span></td><td><span class="chip green">screening GO</span></td><td class="note">—</td></tr>
+          <tr><td>S4 진출방식 결정</td><td><span class="chip green">완료</span></td><td><span class="chip green">pre_fs GO</span></td><td class="note">—</td></tr>
+          <tr><td>S5 역량 평가</td><td><span class="chip gray">스킵 (브라운필드)</span></td><td>—</td><td class="note">—</td></tr>
+          <tr><td>S6 대상 후보 발굴</td><td><span class="chip green">완료</span></td><td>—</td><td class="note">—</td></tr>
+          <tr><td>S7 대상 스크리닝</td><td><span class="chip green">완료</span></td><td><span class="chip green">target_screening GO</span></td><td class="note">—</td></tr>
+          <tr><td>S8 사업성 분석</td><td><span class="chip green">완료</span></td><td><span class="chip green">fs GO</span></td><td class="note">—</td></tr>
+          <tr><td>S9 실사·검증</td><td><span class="chip green">완료</span></td><td><span class="chip green">dd GO</span></td><td class="note">—</td></tr>
+          <tr><td>S10 투자구조 설계</td><td><span class="chip green">완료</span></td><td>—</td><td class="note">—</td></tr>
+          <tr style="outline:2px solid var(--primary); outline-offset:-2px"><td><b>S11 투자심사·실행</b></td><td><span class="chip amber">진행</span></td><td><span class="chip green">entity_ic GO</span> <span class="chip amber">group_ic HOLD</span></td><td class="note">그룹 로드맵 정합 근거 첨부</td></tr>
+          <tr><td>S12 사후 관리</td><td><span class="chip gray">대기</span></td><td>—</td><td class="note">—</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="note" style="margin:0 0 4px"><span class="conf stale">flow.spec v2.2 진행 딜</span> — 이 딜은 구 스펙으로 시작되었습니다. v2.3 마이그레이션 안내: S11 완료 요건에 차터 기준선 확정이 추가되었습니다. <a href="#">마이그레이션 상세 →</a></p>
+      <p class="note" style="margin-bottom:0">각 행 클릭 → 해당 단계 화면 · 원본 기회 상태도 백링크로 표시</p>
+    </div>
+  </section>
+
+  <!-- ═══════ 27 그룹/계열사 ═══════ -->
+  <section class="screen" id="r-our-company">
+    <h1>그룹/계열사 <span class="chip gray">S3 입력 — 참조</span></h1>
+    <p class="objective">자사 강점·약점과 산업 노출을 버전 누적으로 관리해 S3 시너지·적합성의 입력으로 씁니다</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="그룹·계열사명"></div>
+        <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+        <button class="btn btn-primary btn-sm">＋ 그룹 등록</button>
+        <button class="btn btn-sm">＋ 계열사 등록</button>
+      </div>
+      <table aria-label="계열사">
+        <thead><tr><th>계열사</th><th>그룹</th><th>핵심 산업</th><th>분석</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><b>테스트중공업</b></td><td>테스트그룹</td><td>중장비 · 로봇</td><td><a href="#" onclick="go('r-company-detail')">프로필 v2 →</a></td><td><button class="btn btn-sm">재분석</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+          <tr><td><b>테스트소재</b></td><td>테스트그룹</td><td>2차전지 소재</td><td><a href="#">프로필 v1 →</a></td><td><button class="btn btn-sm">분석 실행</button></td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-bottom:0">분석 실행 = 재무(DART) + 사업보고서 경쟁포지셔닝 교차검증 (ADR-0113) · 결과는 <a href="#" onclick="go('s3')">S3 평가 입력</a></p>
+    </div>
+  </section>
+
+  <!-- ═══════ 28 기업 목록 ═══════ -->
+  <section class="screen" id="r-companies">
+    <h1>기업 <span class="chip gray">딜 플로우에서 진입</span></h1>
+    <p class="objective">DART 연동 기업 목록과 5개 사업연도 재무 · 코멘터리 레이어</p>
+    <div class="card">
+      <div class="form-grid" style="margin-bottom:12px">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="기업명 · DART 고유번호"></div>
+        <button class="btn"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+        <button class="btn">DART 동기화</button>
+        <button class="btn btn-primary">＋ 기업 등록</button>
+      </div>
+      <table aria-label="기업 목록">
+        <thead><tr><th>기업</th><th>DART</th><th class="num">매출 (2025)</th><th class="num">영업이익률</th><th>코멘터리</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><a href="#" onclick="go('r-company-detail')"><b>테스트중공업</b></a></td><td><code>00354XXX</code></td><td class="num">1.2조</td><td class="num">8.2%</td><td><span class="chip green">성장 · 수주잔고 +</span></td><td><button class="btn btn-sm">동기화</button></td></tr>
+          <tr><td><a href="#"><b>소재사 A</b></a></td><td><code>00312XXX</code></td><td class="num">4,800억</td><td class="num">11.4%</td><td><span class="chip amber">마진 개선 국면</span></td><td><button class="btn btn-sm">동기화</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 29 기업 상세 ═══════ -->
+  <section class="screen" id="r-company-detail">
+    <p class="crumb">기업 / 테스트중공업</p>
+    <h1>테스트중공업 <code>00354XXX</code> <button class="btn btn-sm" style="float:right">DART 동기화</button></h1>
+    <p class="objective">5개 사업연도 재무와 해석 레이어 — 딜 연계(대상사·계열사 바인딩) 상태도 표시</p>
+    <div class="kpi" style="display:inline-block;margin-right:10px"><div class="v">1.2조</div><div class="l">매출 2025 · <span class="chip green">+10.9%</span></div></div>
+    <div class="kpi" style="display:inline-block;margin-right:10px"><div class="v">8.2%</div><div class="l">영업이익률 · 업계 중위 대비 +1.1%p</div></div>
+    <div class="kpi" style="display:inline-block"><div class="v">1.86</div><div class="l">부채/자본 · 안정권</div></div>
+    <div class="card" style="margin-top:14px">
+      <h2>연결재무제표 (5년)</h2>
+      <div class="table-scroll">
+      <table aria-label="재무제표">
+        <thead><tr><th>계정</th><th class="num">2021</th><th class="num">2022</th><th class="num">2023</th><th class="num">2024</th><th class="num">2025</th></tr></thead>
+        <tbody>
+          <tr><td>매출액</td><td class="num">8,900</td><td class="num">9,600</td><td class="num">10,400</td><td class="num">11,100</td><td class="num">12,000</td></tr>
+          <tr><td>영업이익</td><td class="num">710</td><td class="num">760</td><td class="num">840</td><td class="num">910</td><td class="num">985</td></tr>
+          <tr><td>자본총계</td><td class="num">4,800</td><td class="num">5,100</td><td class="num">5,600</td><td class="num">6,100</td><td class="num">6,450</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="note" style="margin-bottom:0">단위: 억원 · 각 수치 출처 툴팁 · <a href="#" onclick="go('t-financial')">딜 재무분석 브리지 →</a></p>
+    </div>
+  </section>
+
+  <!-- ═══════ 30 벤치마크 ═══════ -->
+  <section class="screen" id="r-benchmarks">
+    <h1>벤치마크</h1>
+    <p class="objective">WACC·마진 등 참조값 레지스트리 — WACC 세션 프리필과 연동됩니다</p>
+    <div class="card">
+      <div class="form-grid" style="margin-bottom:10px">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="항목·출처"></div>
+        <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+        <button class="btn btn-primary btn-sm">＋ 참조값 등록</button>
+      </div>
+      <table aria-label="벤치마크">
+        <thead><tr><th>항목</th><th class="num">값</th><th>출처</th><th>기준 시점</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>ERP (성숙시장)</td><td class="num">4.60%</td><td class="note">Damodaran</td><td>2026-01</td><td><button class="btn btn-sm">WACC에 사용</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+          <tr><td>로봇 SI 업계 영업이익률 중위</td><td class="num">7.1%</td><td class="note">동종사 5사 중위</td><td>2025FY</td><td><button class="btn btn-sm">WACC에 사용</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 31 라이브러리 ═══════ -->
+  <section class="screen" id="r-library">
+    <h1>라이브러리</h1>
+    <p class="objective">생성된 산출물의 스냅샷 — 버전·출처와 함께 보존됩니다</p>
+    <div class="card">
+      <div class="form-grid" style="margin-bottom:10px">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="문서명·딜·유형"></div>
+        <div class="field"><span>유형</span><select><option>전체</option><option>시장분석</option><option>보고서</option><option>프로필</option></select></div>
+        <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+      </div>
+      <table aria-label="라이브러리">
+        <thead><tr><th>문서</th><th>유형</th><th>딜</th><th>버전</th><th>생성</th></tr></thead>
+        <tbody>
+          <tr><td><a href="#">인간형 로봇 시장분석 리포트</a></td><td>시장분석</td><td>—</td><td>v3</td><td>09-05</td></tr>
+          <tr><td><a href="#">IC 보고서 v2</a></td><td>보고서</td><td>로봇 부품 자회사</td><td>v2</td><td>09-10</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 32 용어집 ═══════ -->
+  <section class="screen" id="r-glossary">
+    <h1>용어집 <span class="chip gray">146 용어</span></h1>
+    <p class="objective">등록 용어는 전 화면 툴팁(점선 밑줄)으로 연결됩니다 — lint가 미등록 용어를 검사</p>
+    <div class="card">
+      <div class="form-grid" style="margin-bottom:10px">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="국문·영문·별칭"></div>
+        <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+        <button class="btn btn-primary btn-sm">＋ 용어 등록</button>
+      </div>
+      <table aria-label="용어집">
+        <thead><tr><th>용어</th><th>영문</th><th>분류</th><th>정의 요약</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><b>킬 크라테리아</b></td><td>kill criteria</td><td>governance</td><td class="note">도달 시 단계 중단이 원칙인 기준 집합</td><td><button class="btn btn-sm">수정</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+          <tr><td><b>프록시 체인</b></td><td>proxy industry chain</td><td>analysis</td><td class="note">직접 데이터 부재 시 상·하류 대리 지표로 수요 추정</td><td><button class="btn btn-sm">수정</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 33 전략 ═══════ -->
+  <section class="screen" id="r-strategy">
+    <h1>전략</h1>
+    <p class="objective">R&BD·사내벤처 등 진출 전략 모듈 소개 — 딜 플로우에서 라우트 선택 시 참조됩니다</p>
+    <div class="grid3">
+      <div class="card"><h2>R&BD</h2><p class="note">내재 연구개발로 진출 — 통제 높음 · 속도 낮음 · S4 역량결정성 高 + 불확실성 低 조합</p><a href="#" onclick="go('s4')">S4 결정에서 확인 →</a></div>
+      <div class="card"><h2>사내벤처 (CVC)</h2><p class="note">내부 벤처 조직 — 시장 불확실성 高 구간의 단계적 확장 옵션</p><a href="#" onclick="go('s4')">S4 결정에서 확인 →</a></div>
+      <div class="card"><h2>JV·전략적 투자</h2><p class="note">역량접근 의도의 대표 라우트 — 통제는 권리 바닥값, 단계적 step-up</p><a href="#" onclick="go('t-partnership')">파트너·JV 도구 →</a></div>
+    </div>
+  </section>
+
+  <!-- ═══════ 34 아카이브 ═══════ -->
+  <section class="screen" id="archives">
+    <h1>딜 아카이브</h1>
+    <p class="objective">종료·보관·삭제 표시된 딜의 원본 열람 — 감사 기록과 함께 보존됩니다 (tombstone)</p>
+    <div class="card">
+      <div class="form-grid" style="margin-bottom:10px">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="딜명·사유"></div>
+        <div class="field"><span>구분</span><select><option>전체</option><option>종료</option><option>보관</option><option>삭제 표시</option></select></div>
+        <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+      </div>
+      <table aria-label="아카이브">
+        <thead><tr><th>딜</th><th>구분</th><th>저장 계층</th><th>그룹</th><th>일자</th><th>사유</th><th>열람</th></tr></thead>
+        <tbody>
+          <tr><td>해외 증설 검토 (2025)</td><td><span class="chip gray">보관</span></td><td><span class="chip gray">표준 (온라인)</span></td><td>테스트그룹</td><td>2026-06-30</td><td class="note">예산 트랙치 미편성</td><td><button class="btn btn-sm">원본 보기</button> <button class="btn btn-sm">감사 기록</button></td></tr>
+          <tr><td>드론 물류 시범</td><td><span class="chip red">삭제 표시</span></td><td><span class="chip gray">콜드 (5년+ 감사 보존)</span></td><td>테스트그룹</td><td>2026-08-12</td><td class="note">규제 불확실 — 학습 저장</td><td><button class="btn btn-sm">원본 보기</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 35 관리 · 사용자 ═══════ -->
+  <section class="screen" id="a-users">
+    <h1>관리 · 사용자 <span class="chip gray">admin 전용 (ADR-0091)</span></h1>
+    <p class="objective">계정 승인·역할·상태 관리 — admin은 딜 콘텐츠에 접근하지 않습니다</p>
+    <div class="grid2" style="grid-template-columns:200px 1fr">
+      <div class="card tight">
+        <div class="side-group" style="margin-bottom:0">
+          <a class="side-item active">사용자</a>
+          <a class="side-item" onclick="go('a-master')">마스터데이터</a>
+          <a class="side-item" onclick="go('a-targets')">사업목표 기준</a>
+          <a class="side-item" onclick="go('a-schedule')">스케줄 작업</a>
+          <a class="side-item" onclick="go('a-audit')">감사 로그</a>
+          <a class="side-item" onclick="go('a-notifications')">알림·기타</a>
+        </div>
+      </div>
+      <div class="card">
+        <div class="form-grid" style="margin-bottom:10px">
+          <div class="field" style="flex:1"><span>검색</span><input placeholder="아이디·이름"></div>
+          <div class="field"><span>상태</span><select><option>전체</option><option>승인 대기</option><option>활성</option><option>비활성</option></select></div>
+          <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+        </div>
+        <table aria-label="사용자">
+          <thead><tr><th>아이디</th><th>이름</th><th>역할</th><th>상태</th><th>액션</th></tr></thead>
+          <tbody>
+            <tr><td>sung.hyuk</td><td>김성혁</td><td><span class="chip green">analyst</span></td><td><span class="chip green">활성</span></td><td><button class="btn btn-sm">역할 변경</button> <button class="btn-danger btn-sm">비활성</button></td></tr>
+            <tr><td>new.user</td><td>신규 사용자</td><td><span class="chip gray">대기</span></td><td><span class="chip amber">승인 대기</span></td><td><button class="btn btn-primary btn-sm">승인</button> <button class="btn-danger btn-sm">거부</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 36 관리 · 마스터데이터 ═══════ -->
+  <section class="screen" id="a-master">
+    <h1>관리 · 마스터데이터</h1>
+    <p class="objective">산업·기업·계열사 그룹 마스터 — 변경은 staging → 승인, 모든 운영 변경 감사 기록</p>
+    <div class="card">
+      <div class="form-grid" style="margin-bottom:10px">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="코드·이름"></div>
+        <div class="field"><span>구분</span><select><option>전체</option><option>산업</option><option>기업</option><option>계열사 그룹</option></select></div>
+        <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+        <button class="btn btn-primary btn-sm">＋ 마스터 등록</button>
+      </div>
+      <table aria-label="마스터데이터">
+        <thead><tr><th>구분</th><th>코드</th><th>이름</th><th>상태</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>산업</td><td>29280</td><td>산업용 로봇 제조</td><td><span class="chip green">프로필 연결</span></td><td><button class="btn btn-sm">수정</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+          <tr><td>기업</td><td>00354XXX</td><td>테스트중공업</td><td><span class="chip green">DART 연동</span></td><td><button class="btn btn-sm">수정</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+        </tbody>
+      </table>
+      <div class="impact">
+        <b>변경 파급 시뮬레이터</b> (고도화 8) — 수정 저장 전에 영향을 미리 봅니다.
+        예: KSIC 29280 코드 정정 시 → 영향 받는 <b>딜 2건</b>(공장 자동화 SI · 로봇 부품 자회사) · 분석 리포트 v3 갱신 필요 · S1 완료 요건 재확인.
+        <div class="next-box" style="margin-top:6px"><button class="btn btn-sm">영향 미리보기 실행</button><span class="note">저장은 승인 후 — 파급 결과가 함께 기록됩니다</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 37 관리 · 사업목표 기준 ═══════ -->
+  <section class="screen" id="a-targets">
+    <h1>관리 · 사업목표 기준 <span class="chip gray">ADR-0114</span></h1>
+    <p class="objective">그룹 공통·계열사별 사업목표 마스터 — FS 게이트에서 기준 충족 여부 판정의 근거</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <button class="btn btn-primary btn-sm">＋ 기준 등록</button>
+        <span class="note">계열사 행은 그룹 공통 행을 덮어씁니다 (선행 규칙)</span>
+      </div>
+      <table aria-label="사업목표 기준">
+        <thead><tr><th>범위</th><th>지표</th><th>목표값</th><th>기간</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>그룹 공통</td><td>최종연도 매출</td><td class="num">≥ 300억</td><td>5년</td><td><button class="btn btn-sm">수정</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+          <tr><td>테스트중공업</td><td>영업이익률</td><td class="num">≥ 9%</td><td>5년</td><td><button class="btn btn-sm">수정</button> <button class="btn-danger btn-sm">삭제</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 38 관리 · 스케줄 ═══════ -->
+  <section class="screen" id="a-schedule">
+    <h1>관리 · 스케줄 작업</h1>
+    <p class="objective">정기 수집·감시 작업의 cron 등록과 실행 이력</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <button class="btn btn-primary btn-sm">＋ 작업 등록</button>
+        <button class="btn btn-sm">전체 실행 상태</button>
+      </div>
+      <table aria-label="스케줄">
+        <thead><tr><th>작업</th><th>주기 (cron)</th><th>활성</th><th>최근 실행</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>ECOS 금리 수집</td><td><code>0 7 * * 1-5</code></td><td><span class="chip green">ON</span></td><td class="note">09-12 07:00 ✓</td><td><button class="btn btn-sm">실행 이력</button> <button class="btn btn-sm">중지</button></td></tr>
+          <tr><td>시장 데이터 감시</td><td><code>*/30 * * * *</code></td><td><span class="chip green">ON</span></td><td class="note">09-12 18:30 ✓</td><td><button class="btn btn-sm">실행 이력</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 39 관리 · 감사 로그 ═══════ -->
+  <section class="screen" id="a-audit">
+    <h1>관리 · 감사 로그</h1>
+    <p class="objective">모든 인적 행위(게이트·승격·채택·운영 변경)의 감사 기록 — 불변 열람 전용</p>
+    <div class="next-box" style="margin-bottom:10px">
+      <span class="conf"><svg class="ic"><use href="#i-check"/></svg> append-only · 해시 체인 검증 2026-09-12 ✓ (개선 7)</span>
+      <button class="btn btn-sm" style="margin-left:auto">CSV 내보내기</button>
+      <button class="btn btn-sm">감사 리포트 생성</button>
+    </div>
+    <div class="card">
+      <div class="form-grid" style="margin-bottom:10px">
+        <div class="field" style="flex:1"><span>검색</span><input placeholder="행위·대상·사용자"></div>
+        <div class="field"><span>기간</span><input placeholder="2026-09-01 ~"></div>
+        <button class="btn btn-sm"><svg class="ic"><use href="#i-search"/></svg> 검색</button>
+      </div>
+      <table aria-label="감사 로그">
+        <thead><tr><th>시각</th><th>행위자</th><th>행위</th><th>대상</th></tr></thead>
+        <tbody>
+          <tr><td>09-10 14:22</td><td>sung.hyuk</td><td><code>gate_decision.record</code></td><td class="note">entity_ic GO — 로봇 부품 자회사</td></tr>
+          <tr><td>09-08 11:05</td><td>sung.hyuk</td><td><code>project_charter.confirm</code></td><td class="note">차터 기준선 확정</td></tr>
+        </tbody>
+      </table>
+      <div class="pager"><span>1–50 / 12,483건 · 50건씩</span> <button class="pg">이전</button><button class="pg cur">1</button><button class="pg">2</button><button class="pg">3</button><button class="pg">다음</button></div>
+    </div>
+  </section>
+
+  <!-- ═══════ 40 관리 · 알림·기타 ═══════ -->
+  <section class="screen" id="a-notifications">
+    <h1>관리 · 알림·기타 운영</h1>
+    <p class="objective">알림 채널·보존 정책·용어집 검사·데이터 소스 신뢰도 등 운영 표면 (동일 패턴)</p>
+    <div class="grid2e">
+      <div class="card">
+        <h2>알림 채널 <button class="btn btn-sm" style="float:right">＋ 채널 등록</button></h2>
+        <table aria-label="알림 채널">
+          <thead><tr><th>채널</th><th>심각도</th><th>묶음</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>이메일 — 딜 리드</td><td>urgent</td><td>즉시</td><td><button class="btn-danger btn-sm">삭제</button></td></tr>
+            <tr><td>요약 — 운영팀</td><td>ops</td><td>일일</td><td><button class="btn-danger btn-sm">삭제</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>보존 정책 · 데이터 소스</h2>
+        <ul class="checklist" style="margin:0">
+          <li>감사 로그 — 60개월 보존 (불변)</li>
+          <li>시장 관측 — 개정 이력 포함 영구</li>
+          <li>데이터 소스 신뢰도 — ECOS A · DART A · 웹 C <button class="btn btn-sm">관리</button></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 18b 위원회 세션 뷰어 (고도화 2) ═══════ -->
+  <section class="screen" id="committee">
+    <p class="crumb">딜 / 2차전지 소재 인수 검토 — S6/S7</p>
+    <h1>위원회 세션 — 롱리스트→숏리스트 <span class="chip gray">PROPOSAL</span></h1>
+    <p class="objective">좌석별 포지션 → 의장 종합(제안) → 소수 의견 보존 — 확정은 게이트 기록 (경계 #2, ADR-0097)</p>
+    <div class="card">
+      <h2>좌석별 포지션 <span class="note" style="font-weight:400">— 5기준 1–3 채점 집계</span></h2>
+      <table aria-label="위원회 포지션">
+        <thead><tr><th>좌석 (에이전트)</th><th>포지션</th><th>핵심 논거</th><th class="num">종합 점수</th></tr></thead>
+        <tbody>
+          <tr><td>process-governance-manager</td><td><span class="chip green">수용</span></td><td class="note">Universe 커버리지 충족 · 절차 적합</td><td class="num">2.6</td></tr>
+          <tr><td>market-intelligence-agent</td><td><span class="chip green">수용</span></td><td class="note">시장 정의 내 경쟁 강도 적정</td><td class="num">2.4</td></tr>
+          <tr><td>financial-analyst</td><td><span class="chip amber">조건부</span></td><td class="note">소재사 B 재무 미확보 — 보완 조건</td><td class="num">2.2</td></tr>
+          <tr><td>risk-officer</td><td><span class="chip red">이견 (veto)</span></td><td class="note">t-04 knock-out 경계 — 재판정 요청</td><td class="num">1.8</td></tr>
+        </tbody>
+      </table>
+      <div class="next-box" style="margin-top:10px">
+        <button class="btn btn-primary">의장 종합(제안) 생성</button>
+        <span class="note">다수결·동점은 HOLD · veto 이견은 원문 그대로 dissent 보존</span>
+      </div>
+    </div>
+    <div class="grid2e">
+      <div class="card">
+        <h2>의장 종합 (PROPOSAL) <span class="chip green">veto 이견 반영</span></h2>
+        <p style="margin:0 0 4px">Short List 1건(소재사 A) 확정 제안. 소재사 B는 재무 보완 후 재판정 조건부 유지.</p>
+        <p class="note" style="margin:0">근거: 좌석 점수 집계 2.4/3.0 · risk-officer 재판정 요구 수용 — 확정은 사람의 게이트 기록</p>
+      </div>
+      <div class="card">
+        <h2>소수 의견 (dissent — 원문 보존)</h2>
+        <p style="margin:0" class="note">"t-04 판정 근거가 인터뷰 1건에 의존한다. 현장 실사 보고서로 재판정하기 전에는 Short List 승격에 동의할 수 없다." — risk-officer, 2026-09-09</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 25b 인센티브·클로백 ═══════ -->
+  <section class="screen" id="t-incentive">
+    <p class="crumb">딜 / 공장 자동화 SI — 도구</p>
+    <h1>인센티브·클로백 <span class="chip green">수혜 1건 · 노출 0건</span></h1>
+    <p class="objective">지역 인센티브 소싱(지역 프로파일 연동)과 이전 시 클로백 노출을 양방향으로 관리한다 (incentive-agent)</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <button class="btn btn-primary btn-sm">＋ 인센티브 등록</button>
+        <button class="btn btn-sm">지역 프로파일 기반 추천 (region_code)</button>
+      </div>
+      <table aria-label="인센티브">
+        <thead><tr><th>프로그램</th><th>방향</th><th class="num">NPV</th><th>부여기관</th><th>클로백 조건</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>지방 이전 지원금 (충남 A)</td><td><span class="chip green">수혜 (prospective)</span></td><td class="num">38억</td><td class="note">도청 경제국</td><td class="note">5년 내 이전 시 전액 반환</td><td><button class="btn-danger btn-sm">삭제</button></td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-bottom:0">클로백 추정액은 S10 자금조달(uses)과 대조 — 위반 시 NPV 차감 반영</p>
+    </div>
+  </section>
+
+  <!-- ═══════ 25c 부지·시설 평가 ═══════ -->
+  <section class="screen" id="t-site">
+    <p class="crumb">딜 / 공장 자동화 SI — 도구</p>
+    <h1>부지·시설 평가 <span class="chip green">후보 3곳 랭킹</span></h1>
+    <p class="objective">입지 인프라 점수·capex·인허가 리드타임을 비교해 최적 부지를 선정한다 (site-facility-agent)</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <button class="btn btn-primary btn-sm">＋ 부지 등록</button>
+        <span class="note">점수 구성: 인프라 · 물류 · 노동력 · 인허가 리드타임 (가중치 운영 정책)</span>
+      </div>
+      <div class="table-scroll">
+      <table aria-label="부지 비교">
+        <thead><tr><th>부지</th><th>지역</th><th class="num">인프라</th><th class="num">물류</th><th class="num">인허가 (일)</th><th class="num">총점</th><th>순위</th></tr></thead>
+        <tbody>
+          <tr><td><b>A지구 산업단지</b></td><td>충남</td><td class="num">88</td><td class="num">76</td><td class="num">120</td><td class="num">84</td><td><span class="chip green">#1</span></td></tr>
+          <tr><td>B 일반공장지역</td><td>경북</td><td class="num">74</td><td class="num">70</td><td class="num">180</td><td class="num">72</td><td><span class="chip gray">#2</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="note" style="margin-bottom:0">선정 결과는 S5 진출전략·S10 자금조달(capex) 입력 · <a href="#" onclick="go('t-permits')">인허가 추적 →</a></p>
+    </div>
+  </section>
+
+  <!-- ═══════ 25d 인허가·인증 추적 ═══════ -->
+  <section class="screen" id="t-permits">
+    <p class="crumb">딜 / 공장 자동화 SI — 도구</p>
+    <h1>인허가·인증 추적 <span class="chip amber">핵심경로 2건</span></h1>
+    <p class="objective">허가와 인증을 별도 추적하고 DAG로 병행 가능·핵심 경로를 표시한다 (certification-agent)</p>
+    <div class="grid2e">
+      <div class="card">
+        <h2>허가 (permits) <button class="btn btn-sm" style="float:right">＋ 등록</button></h2>
+        <table aria-label="허가">
+          <thead><tr><th>허가</th><th>기관</th><th class="num">법정기간</th><th>상태</th></tr></thead>
+          <tbody>
+            <tr><td>산업단지 입주 승인</td><td class="note">지역 위탁기관</td><td class="num">30</td><td><span class="chip green">접수</span></td></tr>
+            <tr><td>배출허용기준 신고</td><td class="note">환경청</td><td class="num">45</td><td><span class="chip amber">준비</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>인증 (certifications) <button class="btn btn-sm" style="float:right">＋ 등록</button></h2>
+        <table aria-label="인증">
+          <thead><tr><th>인증</th><th>기관</th><th>이전 가능</th><th>상태</th></tr></thead>
+          <tbody>
+            <tr><td>CE (로봇 안전)</td><td class="note">공인시험기관</td><td><span class="chip green">이전 가능</span></td><td><span class="chip gray">검토</span></td></tr>
+            <tr><td>ISO 9001</td><td class="note">인증기관</td><td><span class="chip amber">갱신 필요</span></td><td><span class="chip amber">준비</span></td></tr>
+          </tbody>
+        </table>
+        <p class="note" style="margin-bottom:0">핵심 경로: 입주 승인 → 건축허가 → 조건부 가동 (병행 가능 항목 표시)</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 25e 부채·커버넌트 ═══════ -->
+  <section class="screen" id="t-debt">
+    <p class="crumb">딜 / 물류 로봇 인수 — 도구</p>
+    <h1>부채·커버넌트 <span class="chip green">위반 0건</span></h1>
+    <p class="objective">차입 상품·커버넌트 조건을 관리하고 시나리오 테스트로 위반 여건을 점검한다 (financing/valuation)</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <button class="btn btn-primary btn-sm">＋ 차입 등록</button>
+        <button class="btn btn-sm">커버넌트 시나리오 테스트 (금리 +2%p)</button>
+      </div>
+      <div class="table-scroll">
+      <table aria-label="부채">
+        <thead><tr><th>대출</th><th class="num">원금</th><th>금리</th><th>만기</th><th>커버넌트</th><th>테스트</th></tr></thead>
+        <tbody>
+          <tr><td>PF (지급보증형)</td><td class="num">450억</td><td>금리 + 2.1%</td><td>2031-06</td><td class="note">DSCR ≥ 1.3 · NetLev ≤ 3.5x</td><td><span class="chip green">충족 (여역 +0.4x)</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="note" style="margin-bottom:0">커버넌트 결과는 S10 자금조달 여력과 IC 패키지 첨부</p>
+    </div>
+  </section>
+
+  <!-- ═══════ 25f 전문가 인터뷰·채널 ═══════ -->
+  <section class="screen" id="t-interviews">
+    <p class="crumb">딜 / 물류 로봇 인수 — 도구</p>
+    <h1>전문가 인터뷰·채널 체크 <span class="chip green">삼각검증 4건</span></h1>
+    <p class="objective">CDD 증적(전문가 인터뷰·채널 확인)을 기록하고 내용증명 수준의 출처를 남긴다 (commercial-dd-agent)</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <button class="btn btn-primary btn-sm">＋ 인터뷰 기록</button>
+        <span class="note">인터뷰 주제·응답 요지·비동의 사항·후속 확인 항목까지 기록</span>
+        <span class="chip amber" style="margin-left:auto">주제별 롤업: 합의 2 · 엇갈림 1 (개선 8)</span>
+      </div>
+      <table aria-label="인터뷰">
+        <thead><tr><th>대상</th><th>주제</th><th>응답 요지</th><th>후속 확인</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>SI 업계 PM 3인</td><td>수주 파이프라인</td><td class="note">2027년 물량 전망 상승 (2:1)</td><td class="note">발주처 예산 공개 확인</td><td><button class="btn-danger btn-sm">삭제</button></td></tr>
+          <tr><td>대상사 전 협력사</td><td>납품 안정성</td><td class="note">단일 고객 의존 우려 제기</td><td class="note"><a href="#" onclick="go('t-coc')">고객 집중 분석 →</a></td><td><button class="btn-danger btn-sm">삭제</button></td></tr>
+        </tbody>
+      </table>
+      <h4>주제별 롤업 — 삼각검증 결론</h4>
+      <table aria-label="인터뷰 롤업">
+        <thead><tr><th>주제</th><th>합의</th><th>엇갈림</th><th>결론</th></tr></thead>
+        <tbody>
+          <tr><td>수주 파이프라인</td><td class="note">2/3 상승 전망</td><td class="note">1/3 보수적</td><td><span class="chip green">방향성 합의 — 정량 확인은 S8</span></td></tr>
+          <tr><td>고객 의존</td><td class="note">—</td><td class="note">2/2 지적</td><td><span class="chip amber">리스크 등록 → 히트맵</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 25g 고객 집중·CoC ═══════ -->
+  <section class="screen" id="t-coc">
+    <p class="crumb">딜 / 물류 로봇 인수 — 도구</p>
+    <h1>고객 집중·CoC <span class="chip amber">집중도 높음</span></h1>
+    <p class="objective">고객·공급 계약의 변경 통제(CoC) 조항과 매출 집중도를 점검해 이탈 추정액을 산출한다 (customer-retention-agent)</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <button class="btn btn-primary btn-sm">＋ 계약 CoC 등록</button>
+        <span class="note">집중도 ≥ 30% 고객은 자동 플래그 — 추정 이탈은 가치 영향으로 S10 반영</span>
+      </div>
+      <table aria-label="고객 CoC">
+        <thead><tr><th>계약 상대</th><th>CoC 조항</th><th class="num">매출 비중</th><th class="num">추정 이탈</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>대형 유통 K</td><td><span class="chip red">조항 있음 — 통지 의무</span></td><td class="num">34%</td><td class="num">-120억</td><td class="note">인수 통지 30일 전 협의</td></tr>
+          <tr><td>공공기관 P</td><td><span class="chip green">조항 없음</span></td><td class="num">12%</td><td class="num">—</td><td class="note">계약 승계 절차 확인</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ 25h 경영진 보상·임금 형평 ═══════ -->
+  <section class="screen" id="t-comp">
+    <p class="crumb">딜 / 물류 로봇 인수 — 도구</p>
+    <h1>경영진 보상·임금 형평 <span class="chip amber">비근무 위험 1건</span></h1>
+    <p class="objective">경영진 보상 구조(ChC 트리거·가속 vesting)와 인수사-피인수사 임금 형평을 분석한다 (hr-integration-agent)</p>
+    <div class="grid2e">
+      <div class="card">
+        <h2>경영진 보상 패키지 <button class="btn btn-sm" style="float:right">＋ 등록</button></h2>
+        <table aria-label="보상 패키지">
+          <thead><tr><th>임원</th><th>CoC 트리거</th><th class="num">지급 추정</th><th>비경쟁 (개월)</th><th>리스크</th></tr></thead>
+          <tbody>
+            <tr><td>대표이사</td><td class="note">지배권 변경 2.0x</td><td class="num">28억</td><td>24</td><td><span class="chip amber">잔존 유인 약함</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>임금 형평 (집계 — 개인 노출 없음)</h2>
+        <table aria-label="임금 형평">
+          <thead><tr><th>직군</th><th class="num">중위 (피인수)</th><th class="num">중위 (인수)</th><th class="num">격차</th></tr></thead>
+          <tbody>
+            <tr><td>생산직</td><td class="num">5,200</td><td class="num">5,800</td><td class="num">-10.3%</td></tr>
+            <tr><td>간부직</td><td class="num">8,400</td><td class="num">8,100</td><td class="num">+3.7%</td></tr>
+          </tbody>
+        </table>
+        <p class="note" style="margin-bottom:0">단위: 만원/월 · PMI 보상 정책 입력으로 이관</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 01b 디자인 시스템 갤러리 (고도화 6·7) ═══════ -->
+  <section class="screen" id="ds-gallery">
+    <h1>디자인 시스템 갤러리 <span class="chip gray">ux-designer-agent · design-system-agent 공동 산출</span></h1>
+    <p class="objective">PageState·토스트·다크 테마·역할 뷰·아이콘 어휘의 표준 라이브 데모 — 모든 화면의 상태 표현은 이 갤러리를 따릅니다</p>
+    <div class="grid2e">
+      <div class="card">
+        <h2>PageState — 로딩 / 빈 / 오류 (ADR-0121)</h2>
+        <p class="note" style="margin:0 0 4px">로딩 — 콘텐츠 형상을 따르는 스켈레톤</p>
+        <div class="skeleton" style="width:60%"></div><div class="skeleton" style="width:90%"></div>
+        <p class="note" style="margin:8px 0 4px">빈 — 한 문장 + 다음 행동 1개</p>
+        <p class="note" style="margin:0 0 4px">분석된 시장이 없습니다 — <a href="#" onclick="go('s1')">S1에서 산업을 분석하세요</a></p>
+        <p class="note" style="margin:8px 0 4px">오류 — role=alert + 재시도 1개</p>
+        <p role="alert" style="margin:0 0 4px; color:var(--red)">✕ 데이터를 불러오지 못했습니다</p> <button class="btn btn-sm">다시 시도</button>
+      </div>
+      <div class="card">
+        <h2>다크 테마 (양쪽 테마 WCAG AA)</h2>
+        <div class="dark-sample">
+          <p style="margin:0 0 8px;font-weight:600">딜 카드 — 다크</p>
+          <table><tbody>
+            <tr><td>로봇 부품 자회사 설립</td><td class="ctr"><span class="chip amber">S11 HOLD</span></td></tr>
+            <tr><td>스마트팜 벤처</td><td class="ctr"><span class="chip green">S12</span></td></tr>
+          </tbody></table>
+        </div>
+      </div>
+    </div>
+    <div class="grid2e">
+      <div class="card">
+        <h2>역할 뷰 매트릭스 (보안 — viewer 결정 버튼 차단)</h2>
+        <div class="table-scroll">
+        <table aria-label="역할 뷰 매트릭스">
+          <thead><tr><th>표면</th><th>viewer</th><th>analyst</th><th>lead</th><th>admin</th></tr></thead>
+          <tbody>
+            <tr><td>딜 콘텐츠 열람</td><td class="ctr"><span class="chip green">○</span></td><td class="ctr"><span class="chip green">○</span></td><td class="ctr"><span class="chip green">○</span></td><td class="ctr"><span class="chip red">✕ (ADR-0091)</span></td></tr>
+            <tr><td>게이트 기록·승격·채택</td><td class="ctr"><span class="chip red">차단</span></td><td class="ctr"><span class="chip green">○</span></td><td class="ctr"><span class="chip green">○</span></td><td class="ctr"><span class="chip red">✕</span></td></tr>
+            <tr><td>마스터데이터·사용자</td><td class="ctr"><span class="chip red">✕</span></td><td class="ctr"><span class="chip red">✕</span></td><td class="ctr"><span class="chip red">✕</span></td><td class="ctr"><span class="chip green">○</span></td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="note" style="margin-bottom:0">상단 <b>역할 프리뷰</b> 셀렉터로 viewer/admin 모드를 체험할 수 있습니다 — 결정 버튼이 비활성/딜 콘텐츠가 숨겨집니다.</p>
+      </div>
+      <div class="card">
+        <h2>아이콘 어휘 (lucide 단일화) · 토스트</h2>
+        <p class="note" style="margin:0 0 8px">이모지 장식 제거 — 도메인당 1개 아이콘 (검색·추가·경고·LLM 제안·게이트·문서·차트)</p>
+        <div class="chip-row" style="margin-bottom:10px">
+          <span class="chip gray"><svg class="ic"><use href="#i-search"/></svg> search</span>
+          <span class="chip gray"><svg class="ic"><use href="#i-plus"/></svg> plus</span>
+          <span class="chip gray"><svg class="ic"><use href="#i-alert"/></svg> alert</span>
+          <span class="chip gray"><svg class="ic"><use href="#i-bot"/></svg> LLM proposal</span>
+          <span class="chip gray"><svg class="ic"><use href="#i-gavel"/></svg> gate</span>
+          <span class="chip gray"><svg class="ic"><use href="#i-file"/></svg> document</span>
+          <span class="chip gray"><svg class="ic"><use href="#i-chart"/></svg> chart</span>
+        </div>
+        <p class="note" style="margin:0 0 4px">토스트 — 사람 행위의 결과 확인 (성공 role=status · 실패 role=alert)</p>
+        <div class="toast" style="position:static; display:inline-block">✓ Gate 결정이 기록되었습니다 — group_ic GO (닫기 ×)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 18c 프로세스 타임라인·SLA (개선 3 + 고도화 1) ═══════ -->
+  <section class="screen" id="t-timeline">
+    <p class="crumb">딜 / 로봇 부품 자회사 설립</p>
+    <h1>프로세스 타임라인·SLA</h1>
+    <p class="objective">단계별 목표 리드타임 대비 실제 경과를 타임라인으로 추적하고 병목 단계를 찾아낸다 (process-governance-manager)</p>
+    <div class="card">
+      <div class="chip-row">
+        <span class="note">표시:</span>
+        <button class="control-chip" aria-pressed="true">계획 대비 실제</button>
+        <button class="control-chip" aria-pressed="false">지연만</button>
+        <span class="chip green">예정 내</span><span class="chip amber">지연</span><span class="chip red">병목</span>
+        <span class="note" style="margin-left:auto">회색 바 = 계획 · 파란 바 = 실제 · 빨간 선 = 현재</span>
+      </div>
+      <table aria-label="단계 타임라인">
+        <thead><tr><th>단계</th><th>SLA 목표</th><th style="width:42%">타임라인</th><th class="num">경과/목표</th><th>상태</th></tr></thead>
+        <tbody>
+          <tr><td>S1 시장분석</td><td class="num">10일</td><td><div class="gantt"><i style="width:38%"></i><em style="left:0;width:38%"></em></div></td><td class="num">8/10일</td><td><span class="chip green">완료</span></td></tr>
+          <tr><td>S2 기회 발굴</td><td class="num">7일</td><td><div class="gantt"><i style="width:52%"></i><em style="left:38%;width:20%"></em></div></td><td class="num">7/7일</td><td><span class="chip green">완료</span></td></tr>
+          <tr><td>S3 시너지·적합성</td><td class="num">7일</td><td><div class="gantt"><i style="width:64%"></i><em style="left:58%;width:16%"></em></div></td><td class="num">6/7일</td><td><span class="chip green">완료</span></td></tr>
+          <tr><td>S4 진출방식 결정</td><td class="num">5일</td><td><div class="gantt"><i style="width:72%"></i><em style="left:74%;width:12%"></em></div></td><td class="num">5/5일</td><td><span class="chip green">완료</span></td></tr>
+          <tr><td>S7 대상 스크리닝</td><td class="num">14일</td><td><div class="gantt"><i style="width:80%"></i><em style="left:86%;width:18%"></em></div></td><td class="num">12/14일</td><td><span class="chip green">완료</span></td></tr>
+          <tr style="outline:2px solid var(--primary); outline-offset:-2px"><td><b>S11 투자심사</b></td><td class="num">10일</td><td><div class="gantt"><i style="width:86%"></i><em style="left:86%;width:20%"></em><b style="left:96%"></b></div></td><td class="num">12/10일</td><td><span class="chip red">병목 — HOLD 12일</span></td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin:8px 0 0">SLA 초과 시 담당자에게 자동 경고 · 병목 단계는 <a href="#" onclick="go('risk-heatmap')">리스크 히트맵</a>과 연동 · SLA 기준은 운영 정책으로 관리</p>
+    </div>
+  </section>
+
+  <!-- ═══════ 25i 딜 리스크 히트맵 (개선 2 + 고도화 2) ═══════ -->
+  <section class="screen" id="risk-heatmap">
+    <p class="crumb">딜 / 물류 로봇 인수</p>
+    <h1>딜 리스크 히트맵 <span class="chip red">고위험 1건</span></h1>
+    <p class="objective">DD 발견·커버넌트·클로백·고객 집중을 발생 가능성 × 영향 그리드 하나로 통합해 위험 전망을 본다 (risk-officer)</p>
+    <div class="grid2e">
+      <div class="card">
+        <h2>리스크 그리드</h2>
+        <div class="hm" aria-label="리스크 히트맵">
+          <div class="cell"><span class="risk r-mid" style="left:30%;top:24%" title="R3 인센티브 클로백">3</span><span class="axis">영향 中 × 가능성 低</span></div>
+          <div class="cell"><span class="risk r-mid" style="left:40%;top:30%" title="R4 통합 일정">4</span><span class="axis">영향 中 × 가능성 中</span></div>
+          <div class="cell"><span class="axis">영향 高 × 가능성 低</span></div>
+          <div class="cell"><span class="axis">영향 低 × 가능성 中</span></div>
+          <div class="cell"><span class="risk r-high" style="left:26%;top:26%" title="R1 고객 집중">1</span><span class="risk r-mid" style="left:58%;top:52%" title="R2 필수 미충족">2</span><span class="axis">영향 高 × 가능성 中</span></div>
+          <div class="cell"><span class="axis">영향 高 × 가능성 高</span></div>
+        </div>
+        <p class="note" style="margin:8px 0 0">1 고객 집중(34%) · 2 t-02 필수 미충족 · 3 클로백 38억 · 4 통합 일정</p>
+      </div>
+      <div class="card">
+        <h2>리스크 대장 → 경영 브리핑</h2>
+        <table aria-label="리스크 대장">
+          <thead><tr><th>#</th><th>리스크</th><th>완화</th><th>상태</th></tr></thead>
+          <tbody>
+            <tr><td class="ctr">1</td><td class="note">고객 집중 34% — CoC 통지 의무</td><td class="note">통지 협의 착수</td><td><span class="chip red">열린</span></td></tr>
+            <tr><td class="ctr">2</td><td class="note">t-02 필수 미충족</td><td class="note">waiver 검토 중</td><td><span class="chip amber">보완</span></td></tr>
+            <tr><td class="ctr">3</td><td class="note">클로백 38억 (5년 이전 시)</td><td class="note">이전 시점 계약 조건</td><td><span class="chip green">통제됨</span></td></tr>
+          </tbody>
+        </table>
+        <div class="next-box" style="margin-top:10px">
+          <button class="btn btn-primary">IC 패키지에 자동 편입</button>
+          <span class="note">히트맵 스냅샷이 경영 브리핑·분기 보고서에 편입됩니다 (고도화 2)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 포트폴리오 전체 뷰 (개선 5) ═══════ -->
+  <section class="screen" id="portfolio-view">
+    <h1>포트폴리오 전체 뷰</h1>
+    <p class="objective">딜 간 중복 투자·자원 경합·집중도를 그룹 관점에서 감시한다 (group-review-agent)</p>
+    <div class="grid4" style="margin-bottom:14px">
+      <div class="kpi"><div class="v">7</div><div class="l">진행 딜</div></div>
+      <div class="kpi"><div class="v">2</div><div class="l">중복 후보 (같은 KSIC)</div></div>
+      <div class="kpi"><div class="v">1</div><div class="l">자원 경합 (동일 리드)</div></div>
+      <div class="kpi"><div class="v">640억</div><div class="l">요청 투자액 합계</div></div>
+    </div>
+    <div class="card">
+      <h2>경합·중복 감지</h2>
+      <table aria-label="경합 감지">
+        <thead><tr><th>감지</th><th>대상</th><th>내용</th><th>권고</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip amber">중복</span></td><td>공장 자동화 SI ↔ 로봇 부품 자회사</td><td class="note">동일 KSIC 29280 · 시장 정의 겹침</td><td class="note">시너지 통합 검토 또는 시기 조정</td></tr>
+          <tr><td><span class="chip amber">자원 경합</span></td><td>3건 — sung.hyuk 리드</td><td class="note">S8~S11 병행 리드 · SLA 지연 위험</td><td class="note">공동 리드 지정 권고</td></tr>
+          <tr><td><span class="chip green">집중</span></td><td>투자액 집중도</td><td class="note">최대 1건이 43% — 기준 이내</td><td class="note">—</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-bottom:0">Group IC 심의(S11) 입력으로 연결 — 그룹 관점 판단은 사람</p>
+      <h4>자원 캘린더 — 리드·심의 경합 (시간축, 고도화 10)</h4>
+      <div class="table-scroll">
+      <table aria-label="자원 캘린더">
+        <thead><tr><th>자원</th><th>09-3주</th><th>09-4주</th><th>10-1주</th><th>10-2주</th></tr></thead>
+        <tbody>
+          <tr><td><b>sung.hyuk (리드)</b></td><td class="ctr"><span class="chip amber">S8 케이스 검토</span></td><td class="ctr"><span class="chip red">S11 재심의 + S9 실사 착수 — <b>경합</b></span></td><td class="ctr"><span class="chip gray">—</span></td><td class="ctr"><span class="chip gray">—</span></td></tr>
+          <tr><td>Group IC 일정</td><td class="ctr"><span class="chip gray">—</span></td><td class="ctr"><span class="chip green">로봇 부품 재심의 (확정)</span></td><td class="ctr"><span class="chip gray">—</span></td><td class="ctr"><span class="chip gray">—</span></td></tr>
+          <tr><td>디자인 시스템 검증 (design-system)</td><td class="ctr"><span class="chip green">v5 패리티 검증</span></td><td class="ctr"><span class="chip gray">—</span></td><td class="ctr"><span class="chip gray">—</span></td><td class="ctr"><span class="chip gray">—</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="note" style="margin:4px 0 0">경합 셀 클릭 → 조정 제안(공동 리드·일정 변경) — 배정 결정은 사람</p>
+    </div>
+  </section>
+
+  <!-- ═══════ 온보딩 마법사 (개선 6 + 고도화 5) ═══════ -->
+  <section class="screen" id="onboarding">
+    <h1>시작하기 <span class="chip gray">빈 워크스페이스 가이드</span></h1>
+    <p class="objective">딜이 없는 첫 화면에서 첫 검토 시작까지 — ux-designer-agent 온보딩 표준 (빈 상태는 안내다)</p>
+    <div class="grid2">
+      <div class="card">
+        <h2>첫 신규사업 검토까지 4단계</h2>
+        <div class="step-flow">
+          <span class="flowstep"><b>1</b> 시장 선택·분석 (S1)</span><span class="arr">→</span>
+          <span class="flowstep"><b>2</b> 기회 발굴·평가 (S2)</span><span class="arr">→</span>
+          <span class="flowstep"><b>3</b> 시너지 확인·선별 (S3)</span><span class="arr">→</span>
+          <span class="flowstep"><b>4</b> 진출방식 결정 (S4) — 이후 단계는 화면이 안내합니다</span>
+        </div>
+        <div class="next-box" style="margin-top:12px">
+          <button class="btn btn-primary">1단계부터 시작 — 시장 분석</button>
+          <button class="btn">데일 데이터로 둘러보기</button>
+        </div>
+        <p class="note" style="margin-bottom:0">LLM이 각 단계의 초안을 제안하고, 모든 결정은 사람이 기록합니다 (경계 #2)</p>
+      </div>
+      <aside class="card">
+        <h2>빈 상태 표준 (모든 목록 화면)</h2>
+        <p class="note" style="margin:0 0 4px">예 — 기회가 없을 때:</p>
+        <p style="margin:0 0 6px">등록된 기회가 없습니다 — 분석된 산업에서 기회 발굴을 시작하세요.</p>
+        <button class="btn btn-sm">S1 시장분석으로 이동</button>
+        <p class="note" style="margin:8px 0 0">검색 결과 0건: 조건을 넓히는 제안(상태 필터 해제·철자 확인)을 함께 표시</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ═══════ 25j 에이전트 실행 이력·LLM 신뢰도 (개선1 + 고도화 2) ═══════ -->
+  <section class="screen" id="agent-runs">
+    <p class="crumb">딜 / 물류 로봇 인수</p>
+    <h1>에이전트 실행 이력 <span class="chip gray">투명성 — 누가 무엇을 제안했는가</span></h1>
+    <p class="objective">이 딜에서 에이전트·LLM이 실행한 활동과 제안을 타임라인으로 추적한다 — 백엔드 agent_run·activity_run·gate_evaluation의 표면화 (ADR-0123)</p>
+    <div class="card">
+      <h2>실행 타임라인</h2>
+      <table aria-label="에이전트 실행 이력">
+        <thead><tr><th>시각</th><th>실행 주체</th><th>활동</th><th>산출물 유형</th><th>상태</th></tr></thead>
+        <tbody>
+          <tr><td>09-06 15:12</td><td>backend (generateBusinessCases)</td><td>S8 케이스 3건 생성</td><td><span class="chip gray">산출물</span></td><td><span class="chip green">완료</span></td></tr>
+          <tr><td>09-06 15:12</td><td>valuation-agent</td><td>몬테카를로 시뮬레이션 (10,000회)</td><td><span class="chip gray">산출물</span></td><td><span class="chip green">완료</span></td></tr>
+          <tr><td>09-07 09:30</td><td>route-steering-committee</td><td>S4 트랙 제안 심의</td><td><span class="chip amber">PROPOSAL</span></td><td><span class="chip green">완료</span></td></tr>
+          <tr><td>09-08 10:00</td><td>tailorDdChecklist</td><td>S9 체크리스트 테일러링</td><td><span class="chip gray">산출물</span></td><td><span class="chip green">완료</span></td></tr>
+          <tr><td>09-08 10:01</td><td><svg class="ic"><use href="#i-bot"/></svg> LLM (gate-brief)</td><td>DD 게이트 브리프 초안</td><td><span class="chip amber">제안</span></td><td><span class="chip gray">사람 확인 대기</span></td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-bottom:0">제안(PROPOSAL)은 사람의 기록과 항상 구분 표시 — 파이프라인은 결정을 쓰지 않음 (경계 #2)</p>
+    </div>
+    <div class="card">
+      <h2>LLM 제안 신뢰도 점수 <span class="chip green">누적 일치율 78%</span> (고도화 2)</h2>
+      <div class="table-scroll">
+      <table aria-label="LLM 신뢰도">
+        <thead><tr><th>스테이지 · 제안 유형</th><th class="num">제안 수</th><th class="num">사람 수용</th><th class="num">일치율</th><th>추세</th></tr></thead>
+        <tbody>
+          <tr><td>S2 매력도 초안</td><td class="num">14</td><td class="num">12</td><td class="num">86%</td><td><span class="chip green">↑</span></td></tr>
+          <tr><td>S4 라우트 추천</td><td class="num">6</td><td class="num">4</td><td class="num">67%</td><td><span class="chip gray">→</span></td></tr>
+          <tr><td>S5 격차·전략 초안</td><td class="num">3</td><td class="num">2</td><td class="num">67%</td><td><span class="chip gray">→</span></td></tr>
+          <tr><td>게이트 브리프 (근거 요약)</td><td class="num">9</td><td class="num">7</td><td class="num">78%</td><td><span class="chip green">↑</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="note" style="margin-bottom:0">일치율은 "제안을 그대로 수용한 비율" — 낮은 스테이지는 초안 품질 개선 대상 · 판단은 사람이 유지</p>
+    </div>
+  </section>
+
+  <!-- ═══════ 25k 예측-실적 백테스트 (고도화 1) ═══════ -->
+  <section class="screen" id="backtest">
+    <h1>예측-실적 백테스트 <span class="chip amber">표본 3건</span></h1>
+    <p class="objective">S8의 예측(NPV·IRR)과 S12의 실적을 자동 대조해 조직의 추정 정확도를 증명하고 신뢰도 등급에 반영한다 (valuation·financial-analyst)</p>
+    <div class="card">
+      <h2>딜별 괴리</h2>
+      <div class="table-scroll">
+      <table aria-label="백테스트">
+        <thead><tr><th>딜</th><th>예측 시점</th><th class="num">NPV 예측 (p50)</th><th class="num">실적 환산 NPV</th><th class="num">괴리</th><th>판정</th></tr></thead>
+        <tbody>
+          <tr><td><a href="#" onclick="go('s12')">스마트팜 벤처</a></td><td>2025-03</td><td class="num">210억</td><td class="num">188억</td><td class="num">-10.5%</td><td><span class="chip green">예측권 내</span></td></tr>
+          <tr><td>물류 자동화 (2024)</td><td>2024-09</td><td class="num">150억</td><td class="num">96억</td><td class="num">-36.0%</td><td><span class="chip red">과대 추정 — 원인 분석</span></td></tr>
+          <tr><td>해외 증설 (보관)</td><td>—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="note">실행 취소 — 학습 저장됨</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="note" style="margin:8px 0 0"><b>조직 집계:</b> 예측권(p05~p95) 내 적중 2/3 · 평균 괴리 -23% — <b>과대 편향</b> 감지 → 신규 딜 신뢰도 등급 산정 시 반영. 원인 태그: 시장 성장 과대 · 원가 누락</p>
+      <div class="next-box" style="margin-top:8px">
+        <button class="btn">원인 분석 리포트 생성</button>
+        <span class="note">원인 태그는 다음 S8 생성 시 신뢰도 등급 조정 근거로 누적 (학습 루프)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 25l 외부 안전 공유 (고도화 4) ═══════ -->
+  <section class="screen" id="share">
+    <p class="crumb">딜 / 물류 로봇 인수 — 도구</p>
+    <h1>외부 안전 공유 <span class="chip amber">활성 링크 1건</span></h1>
+    <p class="objective">외부 자문사·전문가에게 MNPI성 자료를 만료·워터마크·열람 기록이 있는 링크로만 공유한다 — security 설계 승인 전제 (security-engineer)</p>
+    <div class="card">
+      <div class="next-box" style="margin-bottom:10px">
+        <button class="btn btn-primary btn-sm">＋ 공유 링크 생성</button>
+        <span class="note">대상 자료 선택 → 만료(최대 30일) → 워터마크(열람자 자동 표기) → 열람 기록 자동</span>
+      </div>
+      <table aria-label="공유 링크">
+        <thead><tr><th>자료</th><th>수신자</th><th>만료</th><th>열람</th><th>상태</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>IC 보고서 v2 (요약본)</td><td class="note">재무 자문사 A</td><td>5일 남음</td><td class="num">3회 · 최근 09-11</td><td><span class="chip green">활성</span></td><td><button class="btn-danger btn-sm">즉시 만료</button></td></tr>
+          <tr><td>DD 체크리스트 요약</td><td class="note">기술 자문 B</td><td>만료됨</td><td class="num">7회</td><td><span class="chip gray">만료</span></td><td class="note">기록 보존</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-bottom:0">공유 문서는 영문 뷰 제공(해외 자문사) · 원본 대신 요약·스냅샷만 허용 · 모든 열람은 감사 로그에 기록</p>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<div class="toast" role="status">✓ Gate 결정이 기록되었습니다 — group_ic GO (닫기 ×)</div>
+
+<script>
+  const screens = [...document.querySelectorAll("section.screen")];
+  const select = document.getElementById("screenSelect");
+  function go(id) {
+    if (!screens.some(s => s.id === id)) return;
+    screens.forEach(s => s.classList.toggle("active", s.id === id));
+    select.value = id;
+    window.scrollTo({ top: 0 });
+  }
+  select.addEventListener("change", e => go(e.target.value));
+  document.querySelectorAll("[data-go]").forEach(el =>
+    el.addEventListener("click", () => {
+      go(el.dataset.go);
+      document.querySelectorAll(".sidebar .side-item").forEach(i => i.classList.toggle("active", i === el));
+    }));
+  document.getElementById("prevBtn").addEventListener("click", () => {
+    const i = screens.findIndex(s => s.classList.contains("active"));
+    go(screens[(i - 1 + screens.length) % screens.length].id);
+  });
+  document.getElementById("nextBtn").addEventListener("click", () => {
+    const i = screens.findIndex(s => s.classList.contains("active"));
+    go(screens[(i + 1) % screens.length].id);
+  });
+  const roleSelect = document.getElementById("roleSelect");
+  roleSelect.addEventListener("change", e => {
+    document.body.classList.remove("role-viewer", "role-admin");
+    if (e.target.value) document.body.classList.add(e.target.value);
+  });
+  const initial = new URLSearchParams(location.search).get("screen");
+  go(screens.some(s => s.id === initial) ? initial : (screens.find(s => s.classList.contains("active"))?.id ?? screens[0].id));
+</script>
+</body>
+</html>
