@@ -1,5 +1,4 @@
 "use client";
-
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -8,6 +7,7 @@ import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
 import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
 import { CommitteePanel } from "../../components/CommitteePanel.tsx";
+import { Tabs } from "../../components/ui.tsx";
 import { useConfirm } from "../../components/crud.tsx";
 
 // S4 진출방식 결정 (/route-decision) — selected 기회에 Greenfield/Brownfield 트랙과
@@ -103,6 +103,9 @@ const OVERRIDDEN_SUBS = ["partnership", "rbd", "corporate_venture"];
 
 export function RouteDecisionView() {
   const searchParams = useSearchParams();
+  // baseline 탭 구조 (ADR-0086 탭 + 목업 08): 결정 폼 / 권고 / 채점 / 이력 / 게이트.
+  // 섹션은 display 토글로 유지(마운트 상태 유지) — 폼 상태가 탭 전환에 영향받지 않는다.
+  const [tab, setTab] = useState<"decision" | "advisory" | "scoring" | "history" | "gate">("decision");
   const [rows, setRows] = useState<OpportunityRow[] | null>(null);
   const [selected, setSelected] = useState<OpportunityRow | null>(null);
   const [decisions, setDecisions] = useState<RouteDecision[]>([]);
@@ -271,6 +274,19 @@ export function RouteDecisionView() {
         S6 대상 후보 발굴로 진행됩니다. Brownfield ≠ M&A — 라우트 유형을 함께 선택합니다.
       </StageFrame>
 
+      <Tabs
+        label="S4 결정 탭"
+        active={tab}
+        onSelect={(k) => setTab(k as typeof tab)}
+        tabs={[
+          { key: "decision", label: "결정 폼" },
+          { key: "advisory", label: "권고 (결정론 + LLM)" },
+          { key: "scoring", label: "채점 (5criteria)" },
+          { key: "history", label: "결정 이력" },
+          { key: "gate", label: "게이트" },
+        ]}
+      />
+
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
       {/* ── 선별된 기회 (칩) ── */}
@@ -311,16 +327,9 @@ export function RouteDecisionView() {
       </section>
 
       {/* ── 결정 플로우 가이드 (ADR-0104) ── */}
-      <ol aria-label="결정 플로우" className="market-section text-[0.85rem] space-y-1" style={{ paddingLeft: "1.2rem", listStyle: "decimal" }}>
-        <li><a href="#evidence" className="text-[color:var(--accent)] underline">기회·근거 확인</a> — 발굴 근거·적합성 판정·시너지 권고를 검토합니다.</li>
-        <li><a href="#advisory" className="text-[color:var(--accent)] underline">트랙 권고 검토</a> — 결정론 어드바이저와 <a href="#llm-reco" className="text-[color:var(--accent)] underline">LLM 추천(제안)</a>을 참고합니다.</li>
-        <li><a href="#decision" className="text-[color:var(--accent)] underline">위원회 심의 (선택)</a> — 스티어링 위원회 의견이 필요하면 소집합니다.</li>
-        <li><a href="#route-form" className="text-[color:var(--accent)] underline">결정 기록</a> — 트랙·라우트·근거를 기록합니다 (사람 결정).</li>
-      </ol>
-
       {/* ── 결정 근거 (선택된 기회의 S1~S3 산출물 요약) ── */}
       {selected && (
-        <section id="evidence" aria-label="결정 근거" className="market-section">
+        <section id="evidence" aria-label="결정 근거" className="market-section" style={{ display: tab === "decision" ? undefined : "none" }}>
           <SectionToolbar title={`${selected.name} — 결정 근거`} icon="" />
           <dl className="text-[0.85rem] space-y-1">
             <div><dt className="inline font-semibold mr-1">시장:</dt><dd className="inline">{selected.market_scope ?? "—"}{selected.market_size_krw_m ? ` (규모 ${selected.market_size_krw_m.toLocaleString()} 백만원)` : ""}{selected.growth_rate !== null ? ` · CAGR ${(selected.growth_rate * 100).toFixed(1)}%` : ""}</dd></div>
@@ -333,7 +342,7 @@ export function RouteDecisionView() {
 
       {/* ── 트랙 권고 어드바이저 (ADR-0104) — 읽기 전용 참고 자료 ── */}
       {selected && advisory && (
-        <section id="advisory" aria-label="트랙 권고 어드바이저" className="market-section">
+        <section id="advisory" aria-label="트랙 권고 어드바이저" className="market-section" style={{ display: tab === "advisory" ? undefined : "none" }}>
           <SectionToolbar title={`${selected.name} — 트랙 권고 어드바이저`} icon="" />
           <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
             S1~S3 산출물에서 계산한 결정론적 권고입니다 — 참고 자료일 뿐이며, 결정은 아래 폼에서 사람이 기록합니다 (경계 #2).
@@ -400,7 +409,7 @@ export function RouteDecisionView() {
 
       {/* ── LLM 추천 (결정 지원) — 원칙(경계 #2): 제안은 LLM, 기록은 사람 ── */}
       {selected && (
-        <section id="llm-reco" aria-label="LLM 추천 (결정 지원)" className="market-section" style={{ scrollMarginTop: "6.5rem" }}>
+        <section id="llm-reco" aria-label="LLM 추천 (결정 지원)" className="market-section" style={{ display: tab === "advisory" ? undefined : "none", scrollMarginTop: "6.5rem" }}>
           <SectionToolbar
             title={`${selected.name} — LLM 추천`}
             icon=""
@@ -508,7 +517,7 @@ export function RouteDecisionView() {
 
       {/* ── 결정 폼 + 이력 ── */}
       {selected && (
-        <section id="route-form" aria-label="진출방식 결정" className="market-section" style={{ scrollMarginTop: "6.5rem" }}>
+        <section id="route-form" aria-label="진출방식 결정" className="market-section" style={{ display: tab === "decision" ? undefined : "none", scrollMarginTop: "6.5rem" }}>
           <SectionToolbar title={`${selected.name} — 진출방식 결정`} icon="" />
           <form onSubmit={saveDecision} className="sizing-new-form mb-4">
             <div className="flex flex-wrap items-end gap-3 mb-2">
@@ -541,6 +550,8 @@ export function RouteDecisionView() {
               )}
             </div>
 
+            {/* ── Stage 1·2: 의도 분기 + 5criteria 채점 — 채점 탭 (마운트 유지) ── */}
+            <div style={{ display: tab === "scoring" ? undefined : "none" }}>
             {/* ── Stage 1: 의도 분기 — 양 트랙 공통 (ADR-0104 비교 가능성) ── */}
             {(
               <fieldset className="mb-3">
@@ -628,6 +639,8 @@ export function RouteDecisionView() {
               </fieldset>
             )}
 
+            </div>
+
             <label className="text-[0.78rem] block mb-2">
               <span className="block mb-1">결정 근거 * (S1 시장분석·S3 적합성 판단을 인용 — 채점을 보완하는 서술)</span>
               <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} rows={3} required className="sizing-new-input" style={{ width: "100%" }} placeholder="예: S3 적합성 평가 Go(시너지 72) — 자사 역량 보유, 시장 성장 지속..." />
@@ -644,6 +657,7 @@ export function RouteDecisionView() {
             )}
           </form>
 
+          <div style={{ display: tab === "history" ? undefined : "none" }}>
           {decisions.length > 0 && (
             <div>
               <SectionToolbar title="결정 이력 (최신순)" count={decisions.length} />
@@ -686,11 +700,13 @@ export function RouteDecisionView() {
 </div>
             </div>
           )}
+          </div>
         </section>
       )}
-      {selected && sessions.length > 0 && (
-        <section id="committee" aria-label="위원회 심의 이력" className="market-section">
-          <SectionToolbar title="위원회 심의 이력" icon="" />
+      <section id="committee" aria-label="위원회 심의 이력" style={{ display: tab === "history" ? undefined : "none" }}>
+        {selected && sessions.length > 0 && (
+        <div className="market-section">
+          <SectionToolbar title="위원회 심의 이력" />
           <ul className="text-[0.85rem] space-y-1">
             {sessions.map((s2) => (
               <li key={s2.sessionId}>
@@ -700,9 +716,10 @@ export function RouteDecisionView() {
               </li>
             ))}
           </ul>
-        </section>
-      )}
-      <section id="decision" aria-label="결정 기록">
+        </div>
+        )}
+      </section>
+      <section id="decision" aria-label="결정 기록" style={{ display: tab === "gate" ? undefined : "none" }}>
         {selected && (
         <GateDecisionPanel opportunityId={selected.id} gates={["screening", "pre_fs"]} />
         )}
