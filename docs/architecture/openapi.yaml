@@ -3251,6 +3251,390 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/antitrust:
+    get:
+      operationId: listProjectAntitrust
+      summary: S7 ownership/antitrust screening rows (member-visible).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectAntitrust
+      summary: Record an antitrust screening entry (analyst+).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '201':
+          $ref: '#/components/responses/Created'
+  /api/projects/{id}/incentives:
+    get:
+      operationId: listProjectIncentives
+      summary: Incentive rows incl. clawback exposure (member-visible).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectIncentive
+      summary: Register an incentive (analyst+).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '201':
+          $ref: '#/components/responses/Created'
+  /api/projects/{id}/sites:
+    get:
+      operationId: listProjectSites
+      summary: Site/facility assessment scores ranked (member-visible).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectSite
+      summary: Register a site with assessment scores (analyst+).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '201':
+          $ref: '#/components/responses/Created'
+  /api/projects/{id}/permits:
+    get:
+      operationId: listProjectPermits
+      summary: Permits and certifications tracked separately (member-visible).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectPermitOrCertification
+      summary: Register a permit or certification (analyst+; kind required).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '201':
+          $ref: '#/components/responses/Created'
+  /api/projects/{id}/debt:
+    get:
+      operationId: listProjectDebt
+      summary: Debt instruments (covenant tests are simulation-keyed, surfaced elsewhere).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectDebtInstrument
+      summary: Register a debt instrument (analyst+).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '201':
+          $ref: '#/components/responses/Created'
+  /api/projects/{id}/interviews:
+    get:
+      operationId: listProjectInterviews
+      summary: Expert interviews / channel checks with evidence refs (member-visible).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectInterview
+      summary: Record an interview (analyst+; evidence_ref mandatory).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '201':
+          $ref: '#/components/responses/Created'
+  /api/projects/{id}/customer-coc:
+    get:
+      operationId: listProjectCustomerCoc
+      summary: Contract CoC + concentration (>=30% auto-flagged, member-visible).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectCustomerCoc
+      summary: Record a contract CoC entry (analyst+).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '201':
+          $ref: '#/components/responses/Created'
+  /api/projects/{id}/comp-parity:
+    get:
+      operationId: getProjectCompParity
+      summary: Aggregate-only pay parity + management packages (exec refs only, SEC-05).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/target-proposals:
+    get:
+      operationId: listProjectTargetProposals
+      summary: Deterministic candidate suggestions minus registered targets (member-visible).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: acceptProjectTargetProposal
+      summary: Accept a proposal or register manually (discovery_source provenance, analyst+).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '201':
+          $ref: '#/components/responses/Created'
+  /api/projects/{id}/agent-runs:
+    get:
+      operationId: listProjectAgentRuns
+      summary: Agent transparency timeline — agent_run/activity_run history + PROPOSAL count (member-visible, read-only).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/share-links:
+    get:
+      operationId: listProjectShareLinks
+      summary: External safe-share links with access counts (member-visible).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectShareLink
+      summary: Create an expiring watermarked share link (analyst+, <=30 days).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '201':
+          $ref: '#/components/responses/Created'
+    delete:
+      operationId: revokeProjectShareLink
+      summary: Revoke a link immediately (analyst+; link_id query).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/share/{token}:
+    get:
+      operationId: accessSharedSnapshot
+      summary: PUBLIC watermarked snapshot access — revoked/expired links return not_found; every grant logs access.
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/portfolio/backtest:
+    get:
+      operationId: getPortfolioBacktest
+      summary: Forecast-actual backtest per adopted business case (insufficient evidence degrades honestly).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/comments:
+    get:
+      operationId: listEntityComments
+      summary: Collaboration annotation threads for an opportunity/project (project entities membership-gated).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createEntityComment
+      summary: Add a comment (authenticated; project entities membership-gated).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '201':
+          $ref: '#/components/responses/Created'
   /api/projects/{id}/deal-structure:
     get:
       operationId: getProjectDealStructure
