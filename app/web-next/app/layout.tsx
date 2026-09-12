@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AuthProvider } from "../lib/auth-client.tsx";
 import { GlossaryProvider } from "../lib/glossary-provider.tsx";
+import { ToastProvider } from "../components/ui.tsx";
 import { AppShell } from "../components/AppShell.tsx";
 import "./styles.css";
 
@@ -22,10 +23,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <AuthProvider>
+      <ToastProvider>
           <GlossaryProvider>
             <AppShell>{children}</AppShell>
           </GlossaryProvider>
-        </AuthProvider>
+        </ToastProvider>
+      </AuthProvider>
       </body>
     </html>
   );
