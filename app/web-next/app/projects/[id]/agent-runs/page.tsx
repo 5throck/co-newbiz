@@ -1,0 +1,80 @@
+"use client";
+
+import { Suspense, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { api } from "../../../../lib/api.ts";
+import { PageState } from "../../../../components/ui.tsx";
+
+// 에이전트 실행 이력 (ADR-0123 #1) — 어떤 에이전트가 언제 무엇을 실행/제안했는지
+// 타임라인으로 추적한다. 읽기 전용 — 제안(PROPOSAL)과 사람 기록은 항상 구분된다.
+interface Run {
+  run_id: string; spec_version: string; stage: string; status: string; started_by: string;
+  started_at: string; activity_id: string | null; activity_status: string | null; proposals: number;
+}
+
+function AgentRunsView() {
+  const { id } = useParams<{ id: string }>();
+  const [data, setData] = useState<{ runs: Run[]; proposals: Array<{ id: string; gate: string; recommendation: string; started_at: string }> } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get<{ runs: Run[]; proposals: Array<{ id: string; gate: string; recommendation: string; started_at: string }> }>(`/api/projects/${encodeURIComponent(id)}/agent-runs`)
+      .then((r) => setData(r.data))
+      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+  }, [id]);
+
+  return (
+    <main>
+      <ProjectSubNav projectId={id} />
+      <h1>에이전트 실행 이력</h1>
+      <p className="objective">이 딜에서 에이전트·LLM이 실행한 활동과 제안을 추적합니다 — 제안과 사람 기록은 항상 구분됩니다 (경계 #2, ADR-0123).</p>
+      {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
+      <section className="market-section" aria-label="실행 타임라인">
+        <h2 className="text-[0.9rem] mb-2">실행 타임라인</h2>
+        {data === null ? <PageState state="loading" /> : data.runs.length === 0 ? (
+          <PageState state="empty" emptyText="실행된 에이전트 활동이 없습니다." emptyAction={<Link href="/deals" className="text-[color:var(--accent)] underline not-italic">파이프라인 시작 →</Link>} />
+        ) : (
+          <div className="table-scroll">
+            <table className="data-table" aria-label="실행 타임라인">
+              <caption className="sr-only">에이전트 실행 타임라인</caption>
+              <thead><tr><th>시각</th><th>단계</th><th>활동</th><th>유형</th><th>상태</th><th>실행자</th></tr></thead>
+              <tbody>{data.runs.map((r, i) => (
+                <tr key={`${r.run_id}-${i}`}>
+                  <td className="text-[0.75rem] tabular-nums">{r.started_at.slice(0, 16).replace("T", " ")}</td>
+                  <td><span className="status-chip status-not-started">{r.stage}</span></td>
+                  <td className="text-[0.78rem]">{r.activity_id ?? "—"}</td>
+                  <td>{r.activity_id ? <span className="status-chip status-gray">산출물</span> : <span className="chip gray">—</span>}</td>
+                  <td>{r.activity_status ? <span className={`status-chip ${r.activity_status === "done" ? "status-green" : r.activity_status === "failed" ? "status-red" : "status-amber"}`}>{r.activity_status}</span> : "—"}</td>
+                  <td className="text-[0.75rem]">{r.started_by}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+      </section>
+      <section className="market-section" aria-label="PROPOSAL 기록">
+        <h2 className="text-[0.9rem] mb-2">위원회 PROPOSAL 기록</h2>
+        {data === null ? <PageState state="loading" /> : data.proposals.length === 0 ? (
+          <PageState state="empty" emptyText="기록된 위원회 제안이 없습니다." />
+        ) : (
+          <table className="data-table" aria-label="PROPOSAL">
+            <thead><tr><th>시각</th><th>게이트</th><th>권고 (제안)</th></tr></thead>
+            <tbody>{data.proposals.map((p) => (
+              <tr key={p.id}>
+                <td className="text-[0.75rem] tabular-nums">{p.started_at.slice(0, 16).replace("T", " ")}</td>
+                <td>{p.gate}</td>
+                <td><span className={`status-chip ${p.recommendation === "go" ? "status-green" : p.recommendation === "kill" ? "status-red" : "status-amber"}`}>{p.recommendation.toUpperCase()}</span></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        )}
+      </section>
+    </main>
+  );
+}
+
+export default function AgentRunsPage() {
+  return <Suspense fallback={null}><AgentRunsView /></Suspense>;
+}

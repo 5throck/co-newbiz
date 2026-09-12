@@ -29,6 +29,10 @@ const SUB_PAGES = [
   { seg: "/interviews", label: "인터뷰" },
   { seg: "/customer-coc", label: "고객 CoC" },
   { seg: "/comp-parity", label: "보상·형평" },
+  // Wave 3 투명성·학습 표면 (ADR-0123)
+  { seg: "/agent-runs", label: "에이전트 이력" },
+  { seg: "/backtest", label: "백테스트" },
+  { seg: "/share", label: "외부 공유" },
 ] as const;
 
 export function ProjectSubNav({ projectId }: { projectId: string }) {
