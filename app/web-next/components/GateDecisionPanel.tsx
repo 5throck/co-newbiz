@@ -242,7 +242,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
               />
             </label>
           )}
-          <button type="submit" className="btn-ghost btn-sm mt-2" disabled={saving || !form.rationale.trim()}>
+          <button type="submit" className="btn-primary btn-sm mt-2" disabled={saving || !form.rationale.trim()}>
             {saving ? "기록 중..." : "결정 기록"}
           </button>
         </form>

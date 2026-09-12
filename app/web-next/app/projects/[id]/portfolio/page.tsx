@@ -392,7 +392,7 @@ export default function PortfolioPage() {
                   />
                 </label>
               )}
-              <button type="submit" className="btn-ghost btn-sm mt-2" disabled={busy}>
+              <button type="submit" className="btn-primary btn-sm mt-2" disabled={busy}>
                 {busy ? "기록 중..." : "결정 기록 (확인 필요)"}
               </button>
             </form>

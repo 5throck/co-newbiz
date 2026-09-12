@@ -388,7 +388,7 @@ export default function BusinessCasePage() {
                           {canAct && (
                             <div className="flex flex-wrap gap-1">
                               {!c.adopted && (
-                                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => adopt(c.id, c.scenario, c.variant)}>
+                                <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => adopt(c.id, c.scenario, c.variant)}>
                                   채택
                                 </button>
                               )}
