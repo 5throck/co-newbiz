@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-13](2026-09-13.md) | feat(restyle): stage linkage strip on every stage screen via StageFrame |
 | [2026-09-12](2026-09-12.md) | feat(web-next): stage-scoped LLM decision support across S1-S12 (ADR-0118) |
 | [2026-09-11](2026-09-11.md) | chore: update |
 | [2026-09-11](2026-09-11.md) | fix(web-next): WACC input rows no longer overlap on md–lg viewports |

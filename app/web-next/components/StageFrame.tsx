@@ -13,6 +13,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { GATE_LABEL, STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
+import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
 
 /** 단계 → 담당 화면 라우트. 프로젝트 단계(S8~S12)는 /projects/[id] 컨텍스트에서만 링크된다. */
 const STAGE_HREF: Record<StageMetaId, (projectId?: string) => string | null> = {
@@ -59,6 +60,7 @@ export function StageFrame({
       </h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">{stage.objective}</p>
       <StageRail current={ids} track={track} />
+      <StageHandoffStrip primary={primary} projectId={projectId} track={track} />
       {projectId && PROJECT_STAGE_IDS.has(primary) && <StageGuidance projectId={projectId} stageId={primary} />}
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,
           하단 간격 mb-4). 페이지별 클래스·<strong> 강조 금지(설계서 개정 2026-09-04). */}
@@ -68,6 +70,31 @@ export function StageFrame({
         </div>
       )}
     </>
+  );
+}
+
+/** 단계 연계 스트립 — 이 단계가 받는 입력과 넘기는 출력을 모든 단계 화면에
+    표시한다 (ADR-0120 단계 연계). 다음 단계 CTA는 트랙·프로젝트 컨텍스트를
+    반영해 STAGE_HREF로 연결된다. */
+function StageHandoffStrip({ primary, projectId, track }: { primary: StageMetaId; projectId?: string; track?: TrackId }) {
+  const handoff = STAGE_HANDOFF[primary];
+  const nextId = STAGE_META.find((s) => s.id === primary)?.onComplete ?? null;
+  const nextHref = nextId && nextId !== "terminal" ? STAGE_HREF[nextId](projectId) : null;
+  return (
+    <div className="handoff" role="note" aria-label="단계 연계">
+      <span className="handoff-hl">입력 ←</span>
+      {handoff.inputs.map((inp) => (
+        <span key={inp} className="handoff-chip">{inp}</span>
+      ))}
+      <span className="handoff-out">
+        <span className="handoff-hl">출력 →</span>
+        {nextHref ? (
+          <Link href={nextHref} className="handoff-cta">{handoff.output} <span aria-hidden="true">→</span></Link>
+        ) : (
+          <span className="handoff-chip">{handoff.output}</span>
+        )}
+      </span>
+    </div>
   );
 }
 

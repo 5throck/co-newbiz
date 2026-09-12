@@ -3,10 +3,11 @@
 // /deals — the deal board (ADR-0120): every deal as one funnel — opportunities
 // (S1–S7) and projects (S8–S12), gate aging, and paused-pipeline widgets.
 // Read-only overview; decisions stay on their stage surfaces (boundary #2).
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
 import { PageState } from "../../components/ui.tsx";
+import { SectionToolbar } from "../../components/layout.tsx";
 
 interface PipelineProject {
   projectId: string;
@@ -38,29 +39,46 @@ interface OpportunityRow {
   attractiveness_score: number | null;
   synergy_score: number | null;
   status: "identified" | "assessed" | "selected" | "dropped";
+  project_id: string | null;
 }
 
-const GATES = ["fs", "dd", "entity_ic", "group_ic"] as const;
-const GATE_CHIP: Record<string, { label: string; cls: string }> = {
-  go: { label: "GO", cls: "status-green" },
-  hold: { label: "HOLD", cls: "status-amber" },
-  kill: { label: "KILL", cls: "status-red" },
+type Track = "greenfield" | "brownfield";
+// Shared label convention with /projects (TRACK_LABEL there).
+const TRACK_LABEL: Record<Track, string> = { greenfield: "그린필드", brownfield: "브라운필드" };
+
+type CardTone = "gray" | "amber" | "green";
+type Card = {
+  kind: "opportunity" | "project";
+  id: string;
+  name: string;
+  queryText: string;
+  stage: string;
+  stageLabel: string;
+  tone: CardTone;
+  hold: boolean;
+  track: Track | null;
+  meta: string;
+  href: string;
 };
+type PausedInfo = { reason: string; link: string | null };
 
-function gateChip(value: string | undefined) {
-  if (!value) return <span className="status-chip status-not-started">미기록</span>;
-  const meta = GATE_CHIP[value] ?? { label: value, cls: "status-not-started" };
-  return <span className={`status-chip ${meta.cls}`}>{meta.label}</span>;
-}
+type FilterKey = "all" | "greenfield" | "brownfield" | "gate" | "paused";
+const FILTERS: Array<[FilterKey, string]> = [
+  ["all", "전체"],
+  ["greenfield", "그린필드"],
+  ["brownfield", "브라운필드"],
+  ["gate", "게이트 대기"],
+  ["paused", "일시정지"],
+];
 
 function DealsBoard() {
   const [data, setData] = useState<PipelineView | null>(null);
   const [opps, setOpps] = useState<OpportunityRow[] | null>(null);
-  const [paused, setPaused] = useState<Record<string, string>>({});
+  const [paused, setPaused] = useState<Record<string, PausedInfo>>({});
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "greenfield" | "brownfield" | "gate" | "paused">("all");
+  const [filter, setFilter] = useState<FilterKey>("all");
   const [query, setQuery] = useState("");
-  const [searching, setSearching] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
     api.get<PipelineView>("/api/portfolio/pipeline").then((r) => setData(r.data)).catch((e) => setError(e instanceof Error ? e.message : "딜 보드를 불러오지 못했습니다."));
@@ -68,16 +86,17 @@ function DealsBoard() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  // Paused-pipeline banners (ADR-0102 deep links): fetched only for selected
-  // opportunities (small N) once the list arrives.
+  // Paused-pipeline banners (ADR-0102 deep links): fetched only for board-size
+  // N once the list arrives. Keyed by the run's current carrier (entity_id) so
+  // a project-segment pause lights up the project card, not the source opp.
   useEffect(() => {
     if (!opps) return;
-    const targets = opps.filter((o) => o.status === "selected" || o.status === "assessed");
+    const targets = opps.filter((o) => o.status !== "dropped");
     for (const o of targets) {
-      api.get<{ status: string; paused_reason: string | null }>(`/api/opportunities/${encodeURIComponent(o.id)}/pipeline/status`)
+      api.get<{ status: string; entity_id: string; paused_reason: string | null; deep_link: string | null }>(`/api/opportunities/${encodeURIComponent(o.id)}/pipeline/status`)
         .then((r) => {
           if (r.data.status === "paused_for_human" && r.data.paused_reason) {
-            setPaused((prev) => ({ ...prev, [o.id]: r.data.paused_reason as string }));
+            setPaused((prev) => ({ ...prev, [r.data.entity_id]: { reason: r.data.paused_reason as string, link: r.data.deep_link } }));
           }
         })
         .catch(() => undefined);
@@ -91,19 +110,65 @@ function DealsBoard() {
     return "—";
   };
   const stageNum = (s: string) => (s.startsWith("S") ? Number(s.slice(1)) : 99);
-  const oppColumn = (n: number) => (n <= 3 ? "발굴·평가 (S1~S3)" : "전략 결정 (S4~S7)");
 
-  type Card = { kind: "opportunity" | "project"; id: string; name: string; stage: string; meta: string; track: string | null };
-  const filtered: Card[] = (opps ?? [])
-    .filter((o) => o.status !== "dropped")
-    .filter((o) => !query || o.name.toLowerCase().includes(query.toLowerCase()))
-    .map((o): Card => ({ kind: "opportunity" as const, id: o.id, name: o.name, stage: stageOf(o), meta: `매력도 ${o.attractiveness_score ?? "—"} · 시너지 ${o.synergy_score ?? "—"}`, track: null }))
-    .concat(
-      (data?.projects ?? []).map((p): Card => ({
-        kind: "project" as const, id: p.projectId, name: p.projectName ?? p.projectNo,
-        stage: p.currentStage ?? "S8", meta: p.track ?? "트랙 미결정", track: p.track,
-      })),
-    );
+  const cards: Card[] = useMemo(() => {
+    // 기회는 S4(진출방식 결정)에서 트랙이 정해지므로 S1~S4 기회 카드는 항상
+    // 트랙 미결정 — 그린필드/브라운필드 필터는 프로젝트(S8+)에만 걸린다.
+    const oppCards: Card[] = (opps ?? [])
+      .filter((o) => o.status !== "dropped")
+      .map((o): Card => {
+        const stage = stageOf(o);
+        return {
+          kind: "opportunity", id: o.id, name: o.name, queryText: o.name, stage,
+          stageLabel: o.status === "selected" ? "S4 대기" : stage,
+          tone: o.status === "selected" ? "amber" : "gray",
+          hold: false, track: null,
+          meta: `매력도 ${o.attractiveness_score ?? "—"} · 시너지 ${o.synergy_score ?? "—"}`,
+          href: `/opportunities?opportunity=${o.id}`,
+        };
+      });
+    const projectCards: Card[] = (data?.projects ?? []).map((p): Card => {
+      const stage = p.currentStage ?? "S8";
+      const hold = Object.values(p.gates).some((v) => v === "hold");
+      const track: Track | null = p.track === "greenfield" || p.track === "brownfield" ? p.track : null;
+      return {
+        kind: "project", id: p.projectId, name: p.projectName ?? p.projectNo, queryText: `${p.projectName ?? ""} ${p.projectNo}`, stage,
+        stageLabel: hold ? `${stage} HOLD` : stage,
+        tone: hold ? "amber" : stage === "S12" ? "green" : "gray",
+        hold, track,
+        meta: p.projectNo,
+        href: `/projects/${p.projectId}/process`,
+      };
+    });
+    return [...oppCards, ...projectCards];
+  }, [opps, data]);
+
+  // 게이트 대기 — 기록된 HOLD 게이트가 있는 딜 (에이징 표와 같은 규거).
+  const opportunityHolds = useMemo(
+    () => new Set((data?.aging ?? []).filter((r) => r.decision === "hold" && r.entityType === "opportunity").map((r) => r.entityId)),
+    [data],
+  );
+  const pausedIds = useMemo(() => new Set(Object.keys(paused)), [paused]);
+
+  const matches = useCallback(
+    (c: Card, f: FilterKey) =>
+      f === "all" ? true
+        : f === "greenfield" ? c.track === "greenfield"
+        : f === "brownfield" ? c.track === "brownfield"
+        : f === "gate" ? c.hold || (c.kind === "opportunity" && opportunityHolds.has(c.id))
+        : pausedIds.has(c.id),
+    [opportunityHolds, pausedIds],
+  );
+
+  const counts = useMemo(() => {
+    const out = {} as Record<FilterKey, number>;
+    for (const [k] of FILTERS) out[k] = cards.filter((c) => matches(c, k)).length;
+    return out;
+  }, [cards, matches]);
+
+  const visible = cards
+    .filter((c) => matches(c, filter))
+    .filter((c) => !query || c.queryText.toLowerCase().includes(query.toLowerCase()));
 
   const columns = [
     { title: "발굴·평가 (S1~S3)", test: (n: number) => n <= 3 },
@@ -111,6 +176,8 @@ function DealsBoard() {
     { title: "사업성·실사 (S8~S10)", test: (n: number) => n >= 8 && n <= 10 },
     { title: "심의·사후 (S11~S12)", test: (n: number) => n >= 11 },
   ];
+
+  const stageTone: Record<CardTone, string> = { gray: "status-not-started", amber: "status-amber", green: "status-green" };
 
   return (
     <main>
@@ -124,21 +191,27 @@ function DealsBoard() {
         모든 딜을 퍼널 한 장으로 봅니다 — 기회(S1~S7)와 프로젝트(S8~S12), 게이트 에이징까지.
       </p>
 
-      <div className="market-section" style={{ marginBottom: 12 }}>
-        <div className="flex flex-wrap items-center gap-1">
-          {([["all", "전체"], ["greenfield", "그린필드"], ["brownfield", "브라운필드"], ["gate", "게이트 대기"], ["paused", "일시정지"]] as const).map(([k, label]) => (
-            <button key={k} type="button" aria-pressed={filter === k} className={`control-chip ${filter === k ? "status-green" : ""}`} onClick={() => setFilter(k)}>
-              {label}
+      <SectionToolbar
+        filters={
+          <span role="group" aria-label="딜 필터" className="flex flex-wrap items-center gap-1">
+            <span className="section-meta">필터:</span>
+            {FILTERS.map(([k, label]) => (
+              <button key={k} type="button" aria-pressed={filter === k} className="control-chip" onClick={() => setFilter(k)}>
+                {label} <span className="tabular-nums">{counts[k]}</span>
+              </button>
+            ))}
+          </span>
+        }
+        actions={
+          <span className="flex items-center gap-1">
+            <input ref={searchRef} aria-label="딜 검색" placeholder="딜명·번호" value={query} onChange={(e) => setQuery(e.target.value)}
+              className="sizing-new-input sizing-new-input-sm" style={{ width: 160 }} />
+            <button type="button" className="btn-ghost btn-sm" onClick={() => searchRef.current?.focus()}>
+              <svg className="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg> 검색
             </button>
-          ))}
-          <span className="note" style={{ flex: 1 }}>검색:</span>
-          <input aria-label="딜 검색" placeholder="딜명·번호" value={query} onChange={(e) => setQuery(e.target.value)}
-            className="sizing-new-input sizing-new-input-sm" style={{ width: 160 }} />
-          <button type="button" className="btn-ghost btn-sm" onClick={() => { setSearching(true); setTimeout(() => setSearching(false), 200); }}>
-            <svg className="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg> 검색
-          </button>
-        </div>
-      </div>
+          </span>
+        }
+      />
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       {!data && !error && <PageState state="loading" rows={4} />}
@@ -157,27 +230,41 @@ function DealsBoard() {
 
       {data && (
         <>
-          <div className="funnel-board" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+          <div className="funnel-board" style={{ marginBottom: 16 }}>
             {columns.map((col) => {
-              const cards = filtered.filter((c) => col.test(stageNum(c.stage)));
+              const colCards = visible.filter((c) => col.test(stageNum(c.stage)));
               return (
-                <div key={col.title} className="market-section" style={{ padding: 8 }}>
-                  <h3 className="text-[0.75rem] text-[color:var(--muted-fg)]" style={{ padding: "2px 4px 8px" }}>{col.title}</h3>
-                  {cards.map((c) => (
-                    <Link key={c.id} href={c.kind === "project" ? `/projects/${c.id}/process` : `/opportunities?opportunity=${c.id}`}
-                      className="market-section" style={{ display: "block", padding: "10px 12px", marginBottom: 8, borderRadius: 10 }}>
-                      <span className="font-semibold text-[0.82rem]">{c.name}</span>
-                      <span className="block text-[0.72rem] text-[color:var(--muted-fg)]" style={{ marginTop: 3 }}>
-                        <span className={`status-chip ${c.stage === "S11" || c.stage === "S9" ? "status-amber" : "status-not-started"}`}>{c.stage}</span> {c.meta}
-                      </span>
-                      {paused[c.id] && (
-                        <span className="block text-[0.7rem] text-[color:var(--amber-fg, var(--amber))]" style={{ marginTop: 3 }}>
-                          일시정지 — {paused[c.id]}
-                        </span>
-                      )}
-                    </Link>
-                  ))}
-                </div>
+                <section key={col.title} className="funnel-col" aria-label={col.title}>
+                  <h3>{col.title} <span className="funnel-count tabular-nums">{colCards.length}</span></h3>
+                  <div className="funnel-cards">
+                    {colCards.map((c) => {
+                      const p = paused[c.id];
+                      return (
+                        <Link key={c.id} href={c.href} className="funnel-card" style={{ color: "inherit", textDecoration: "none" }}>
+                          <span className="funnel-card-name font-semibold">{c.name}</span>
+                          <span className="funnel-card-meta">
+                            <span className={`status-chip ${stageTone[c.tone]}`}>{c.stageLabel}</span>
+                            {c.track ? (
+                              <span className={`status-chip ${c.track === "greenfield" ? "status-green" : "status-amber"}`}>{TRACK_LABEL[c.track]}</span>
+                            ) : c.kind === "project" ? (
+                              <span className="status-chip status-not-started">트랙 미결정</span>
+                            ) : null}
+                            <span>{c.meta}</span>
+                          </span>
+                          {p && (
+                            <span className="funnel-card-meta" style={{ color: "var(--amber-fg)" }}>
+                              ⚠ 파이프라인 일시정지 — {p.reason}
+                              {p.link && (
+                                <> · <span className="font-semibold">재개 →</span></>
+                              )}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                    {colCards.length === 0 && <p className="funnel-empty">해당 단계의 딜이 없습니다</p>}
+                  </div>
+                </section>
               );
             })}
           </div>
@@ -196,7 +283,11 @@ function DealsBoard() {
                   <tbody>
                     {[...data.aging].sort((a, b) => b.ageDays - a.ageDays).map((r) => (
                       <tr key={`${r.entityType}:${r.entityId}:${r.gate}`}>
-                        <td className="text-[0.8rem]">{r.label}</td>
+                        <td className="text-[0.8rem]">
+                          <Link href={r.entityType === "project" ? `/projects/${r.entityId}/process` : `/opportunities?opportunity=${r.entityId}`}>
+                            {r.label}
+                          </Link>
+                        </td>
                         <td className="tabular-nums text-[0.78rem]">{r.gate}</td>
                         <td><span className={`status-chip ${r.decision === "kill" ? "status-red" : "status-amber"}`}>{r.decision.toUpperCase()}</span></td>
                         <td className="text-[0.75rem] tabular-nums">{r.decidedAt.slice(0, 10)}</td>
