@@ -8,150 +8,96 @@
 
 | Skill | Layer | Required-by Agents | Phases | Relates-to | Inputs | Outputs |
 |-------|-------|-------------------|--------|------------|--------|---------|
-| `access-control-review` | L3 | frontend-engineer, security-engineer | — | security-baseline-review (composes_with), security-scan (composes_with), ui-information-architecture (composes_with), vulnerability-management (composes_with) | — | — |
 | `accessibility-audit` | L3 | — | — | — | — | — |
-| `admin-console-operations` | L3 | — | — | — | — | — |
-| `adr-governance` | L3 | — | — | — | — | — |
 | `agent-lifecycle-manager` | L3 | — | — | — | — | — |
-| `agent-output-provenance` | L3 | — | — | — | — | — |
-| `antitrust-screening` | L3 | antitrust-agent | phase1, phase3, phase4 | brownfield-feasibility (composes_with), certification-transferability (composes_with), commercial-due-diligence (composes_with), competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financial-statement-analysis (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), investment-feasibility-modeling (composes_with), management-incentive-review (follows), monte-carlo-simulation (composes_with), org-readiness-assessment (composes_with), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (follows), stage-gate-governance (composes_with), stage-gate-governance (follows), technical-due-diligence (composes_with), unit-conversion-calibration (composes_with) | — | — |
+| `antitrust-screening` | L3 | — | phase1, phase3, phase4 | brownfield-feasibility (composes_with), certification-transferability (composes_with), commercial-due-diligence (composes_with), competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financial-statement-analysis (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), investment-feasibility-modeling (composes_with), management-incentive-review (follows), monte-carlo-simulation (composes_with), org-readiness-assessment (composes_with), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (follows), stage-gate-governance (composes_with), stage-gate-governance (follows), technical-due-diligence (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `api-documentation` | L3 | — | — | — | — | — |
-| `assumption-audit` | L3 | — | — | — | — | — |
-| `auth-and-account-management` | L3 | — | — | — | — | — |
-| `batch-scheduling-operations` | L3 | infra-automation-engineer | — | infrastructure-automation (composes_with) | — | — |
-| `brownfield-feasibility` | L3 | brownfield-agent | phase1, phase2 | certification-roadmap (composes_with), dd-to-valuation-bridge (composes_with), permit-pathway-mapping (follows), stage-gate-governance (composes_with), strategic-fit-screening (follows) | — | — |
-| `certification-roadmap` | L3 | certification-agent, certification-agent | phase2 | greenfield-feasibility (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (follows), wacc-input-session (composes_with) | — | — |
-| `certification-transferability` | L3 | legal-counsel, legal-counsel | phase4, phase5 | commercial-due-diligence (composes_with), competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), financing-plan-review (follows), incentive-clawback-assessment (composes_with), investment-vehicle-structuring (composes_with), jv-structuring (composes_with), legal-due-diligence (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), org-readiness-assessment (follows), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
-| `checklist-authoring` | L3 | — | — | — | — | — |
+| `brownfield-feasibility` | L3 | — | phase1, phase2 | certification-roadmap (composes_with), dd-to-valuation-bridge (composes_with), permit-pathway-mapping (follows), stage-gate-governance (composes_with), strategic-fit-screening (follows) | — | — |
+| `certification-roadmap` | L3 | — | phase2 | greenfield-feasibility (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (follows), wacc-input-session (composes_with) | — | — |
+| `certification-transferability` | L3 | — | phase4, phase5 | commercial-due-diligence (composes_with), competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), financing-plan-review (follows), incentive-clawback-assessment (composes_with), investment-vehicle-structuring (composes_with), jv-structuring (composes_with), legal-due-diligence (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), org-readiness-assessment (follows), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
 | `ci-triage` | L3 | — | — | — | — | — |
-| `commercial-due-diligence` | L3 | commercial-dd-agent | phase4 | competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (follows) | — | — |
-| `community-partnership-planning` | L3 | greenfield-agent | phase4 | dd-to-valuation-bridge (follows), greenfield-feasibility (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), site-visit-protocol (composes_with), stage-gate-governance (composes_with) | — | — |
-| `company-intelligence` | L3 | — | — | — | — | — |
-| `compensation-harmonization-analysis` | L3 | hr-integration-agent, hr-integration-agent | phase6 | management-incentive-review (composes_with), org-readiness-assessment (composes_with), pmi-planning (composes_with), stage-gate-governance (follows) | — | — |
-| `competitive-intelligence` | L3 | market-intelligence-agent, market-intelligence-agent | phase4 | compliance-monitoring (composes_with), customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), legal-due-diligence (follows), management-incentive-review (composes_with), org-readiness-assessment (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), value-chain-linkage-analysis (composes_with) | — | — |
-| `compliance-monitoring` | L3 | compliance-officer | phase4 | customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), stage-gate-governance (follows), technical-due-diligence (composes_with) | — | — |
-| `continuous-monitoring-and-alerting` | L3 | — | — | — | — | — |
-| `customer-attrition-risk` | L3 | customer-retention-agent | phase4 | debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (follows), legal-due-diligence (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
-| `customer-qualification` | L3 | — | — | — | — | — |
-| `data-freshness-and-revision-control` | L3 | — | — | — | — | — |
-| `data-normalization` | L3 | data-architect | — | db-migration-governance (composes_with), master-data-governance (composes_with) | — | — |
-| `database-operations` | L3 | dba | — | db-migration-governance (composes_with), query-performance-tuning (composes_with) | — | — |
-| `db-migration-governance` | L3 | data-architect, dba | — | adr-governance, data-normalization (composes_with), database-operations (composes_with), master-data-governance (composes_with), query-performance-tuning (composes_with) | — | — |
-| `dd-to-valuation-bridge` | L3 | brownfield-agent, risk-officer, risk-officer | phase4, phase5 | brownfield-feasibility (composes_with), executive-presentation (composes_with), financing-plan-review (follows), insight-synthesis (composes_with), rag-scoring-framework (composes_with), rag-scoring-framework (composes_with), site-visit-protocol (composes_with), stage-gate-governance (composes_with), stage-gate-governance (follows), talent-pipeline-planning (composes_with) | — | — |
-| `deal-execution-playbook` | L3 | — | — | deal-pipeline-orchestration (composes_with) | — | — |
-| `deal-pipeline-orchestration` | L3 | — | — | deal-execution-playbook (composes_with), evidence-ledger (composes_with), meeting-facilitation (composes_with), stage-gate-governance (composes_with), two-tier-approval-chain (composes_with) | — | — |
-| `deal-workspace-operations` | L3 | — | — | — | — | — |
-| `debt-and-contingent-liability-simulation` | L3 | valuation-agent, valuation-agent | phase4 | certification-transferability (follows), financing-plan-review (composes_with), investment-feasibility-modeling (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), wacc-input-session (composes_with) | — | — |
+| `commercial-due-diligence` | L3 | — | phase4 | competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (follows) | — | — |
+| `community-partnership-planning` | L3 | — | phase4 | dd-to-valuation-bridge (follows), greenfield-feasibility (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), site-visit-protocol (composes_with), stage-gate-governance (composes_with) | — | — |
+| `compensation-harmonization-analysis` | L3 | — | phase6 | management-incentive-review (composes_with), org-readiness-assessment (composes_with), pmi-planning (composes_with), stage-gate-governance (follows) | — | — |
+| `competitive-intelligence` | L3 | — | phase4 | compliance-monitoring (composes_with), customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), legal-due-diligence (follows), management-incentive-review (composes_with), org-readiness-assessment (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), value-chain-linkage-analysis (composes_with) | — | — |
+| `compliance-monitoring` | L3 | — | phase4 | customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), stage-gate-governance (follows), technical-due-diligence (composes_with) | — | — |
+| `customer-attrition-risk` | L3 | — | phase4 | debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (follows), legal-due-diligence (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
+| `dd-to-valuation-bridge` | L3 | — | phase4, phase5 | brownfield-feasibility (composes_with), executive-presentation (composes_with), financing-plan-review (follows), insight-synthesis (composes_with), rag-scoring-framework (composes_with), rag-scoring-framework (composes_with), site-visit-protocol (composes_with), stage-gate-governance (composes_with), stage-gate-governance (follows), talent-pipeline-planning (composes_with) | — | — |
+| `debt-and-contingent-liability-simulation` | L3 | — | phase4 | certification-transferability (follows), financing-plan-review (composes_with), investment-feasibility-modeling (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), wacc-input-session (composes_with) | — | — |
 | `decision-record` | L3 | — | — | — | — | — |
-| `deployment-and-release` | L3 | release-engineer | — | — | — | — |
-| `design-lint` | L3 | design-system-agent | — | — | — | — |
 | `documentation-writing` | L3 | — | — | — | — | — |
 | `evidence-ledger` | L3 | — | — | — | — | — |
-| `executive-presentation` | L3 | docs-writer | phase5 | financing-plan-review (composes_with), intra-group-transaction-compliance (composes_with), portfolio-fit-assessment (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (follows), two-tier-approval-chain (composes_with) | — | — |
-| `expert-interview` | L3 | — | — | — | — | — |
+| `executive-presentation` | L3 | — | phase5 | financing-plan-review (composes_with), intra-group-transaction-compliance (composes_with), portfolio-fit-assessment (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (follows), two-tier-approval-chain (composes_with) | — | — |
 | `explain-me` | L3 | — | — | — | — | — |
-| `financial-statement-analysis` | L3 | financial-analyst, financial-analyst | phase3 | growth-projection-modeling (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (composes_with), investment-vehicle-structuring (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
-| `financing-plan-review` | L3 | valuation-agent, valuation-agent | phase4, phase5 | incentive-clawback-assessment (composes_with), insight-synthesis (follows), investment-feasibility-modeling (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (follows), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), wacc-input-session (composes_with) | — | — |
+| `financial-statement-analysis` | L3 | — | phase3 | growth-projection-modeling (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (composes_with), investment-vehicle-structuring (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
+| `financing-plan-review` | L3 | — | phase4, phase5 | incentive-clawback-assessment (composes_with), insight-synthesis (follows), investment-feasibility-modeling (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (follows), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), wacc-input-session (composes_with) | — | — |
 | `finishing-a-development-branch` | L3 | — | — | — | — | — |
-| `forward-industry-research` | L3 | market-intelligence-agent | — | company-intelligence (composes_with), scenario-planning (composes_with), value-chain-driver-identification (enables), value-chain-linkage-analysis (enables) | — | — |
 | `gateguard` | L3 | — | — | — | — | — |
-| `glossary-management` | L3 | glossary-curator | — | — | — | — |
-| `governance-document-hierarchy` | L3 | — | — | — | — | — |
-| `greenfield-feasibility` | L3 | greenfield-agent | phase2 | community-partnership-planning (composes_with), permit-pathway-mapping (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), talent-pipeline-planning (composes_with), wacc-input-session (follows) | — | — |
-| `group-level-review` | L3 | — | — | — | — | — |
-| `growth-projection-modeling` | L3 | financial-analyst, financial-analyst | phase3 | financial-statement-analysis (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (follows), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
+| `greenfield-feasibility` | L3 | — | phase2 | community-partnership-planning (composes_with), permit-pathway-mapping (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), talent-pipeline-planning (composes_with), wacc-input-session (follows) | — | — |
+| `growth-projection-modeling` | L3 | — | phase3 | financial-statement-analysis (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (follows), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `handbook` | L3 | — | — | — | — | — |
 | `handbook-sync-audit` | L3 | — | — | — | — | — |
-| `historical-financial-analysis` | L3 | financial-analyst, financial-analyst | phase3 | financial-statement-analysis (composes_with), investment-feasibility-modeling (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
-| `hwp-document-processing` | L3 | — | — | — | — | — |
+| `historical-financial-analysis` | L3 | — | phase3 | financial-statement-analysis (composes_with), investment-feasibility-modeling (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `i18n-audit` | L3 | i18n-specialist | — | — | — | — |
 | `i18n-formatting` | L3 | i18n-specialist | — | — | — | — |
 | `i18n-layout` | L3 | i18n-specialist | — | — | — | — |
 | `i18n-locale-config` | L3 | i18n-specialist | — | — | — | — |
-| `incentive-clawback-assessment` | L3 | incentive-agent | phase4 | debt-and-contingent-liability-simulation (follows), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
-| `incident-response` | L3 | sre | — | observability-and-alerting (composes_with) | — | — |
-| `industry-profile-application` | L3 | industry-lead | — | — | — | — |
-| `infrastructure-automation` | L3 | infra-automation-engineer | — | batch-scheduling-operations (composes_with) | — | — |
-| `insight-synthesis` | L3 | process-governance-manager, process-governance-manager | phase5 | executive-presentation (follows), project-review (composes_with), rag-scoring-framework (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), strategic-fit-screening (composes_with), two-tier-approval-chain (composes_with) | — | — |
-| `interpretation-registry` | L3 | — | — | — | — | — |
-| `intra-group-transaction-compliance` | L3 | group-review-agent | phase5 | portfolio-fit-assessment (follows), stage-gate-governance (composes_with), two-tier-approval-chain (composes_with) | — | — |
-| `investment-feasibility-modeling` | L3 | valuation-agent, valuation-agent | phase3 | debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), investment-vehicle-structuring (composes_with), monte-carlo-simulation (follows), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with), wacc-input-session (composes_with) | — | — |
-| `investment-vehicle-structuring` | L3 | legal-counsel, legal-counsel | phase1, phase3 | antitrust-screening (follows), certification-transferability (composes_with), k-law (composes_with), legal-due-diligence (composes_with), partner-due-diligence (composes_with), partner-sourcing-strategy (composes_with), peer-benchmarking (composes_with), project-review (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
-| `jv-structuring` | L3 | legal-counsel, legal-counsel | phase1, phase6 | certification-transferability (composes_with), investment-vehicle-structuring (follows), k-law (composes_with), legal-due-diligence (composes_with), partner-sourcing-strategy (composes_with), portfolio-fit-assessment (composes_with), project-review (composes_with), project-review (composes_with), project-review (follows) | — | — |
-| `k-dart` | L3 | financial-analyst, technical-dd-agent | phase4, phase5 | — | — | — |
-| `k-kosis` | L3 | financial-analyst, market-intelligence-agent | phase2, phase4 | — | — | — |
-| `k-law` | L3 | legal-counsel, legal-counsel | phase5 | certification-transferability (follows), investment-vehicle-structuring (composes_with), jv-structuring (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with) | — | — |
+| `incentive-clawback-assessment` | L3 | — | phase4 | debt-and-contingent-liability-simulation (follows), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
+| `insight-synthesis` | L3 | — | phase5 | executive-presentation (follows), project-review (composes_with), rag-scoring-framework (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), strategic-fit-screening (composes_with), two-tier-approval-chain (composes_with) | — | — |
+| `intra-group-transaction-compliance` | L3 | — | phase5 | portfolio-fit-assessment (follows), stage-gate-governance (composes_with), two-tier-approval-chain (composes_with) | — | — |
+| `investment-feasibility-modeling` | L3 | — | phase3 | debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), investment-vehicle-structuring (composes_with), monte-carlo-simulation (follows), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with), wacc-input-session (composes_with) | — | — |
+| `investment-vehicle-structuring` | L3 | — | phase1, phase3 | antitrust-screening (follows), certification-transferability (composes_with), k-law (composes_with), legal-due-diligence (composes_with), partner-due-diligence (composes_with), partner-sourcing-strategy (composes_with), peer-benchmarking (composes_with), project-review (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
+| `jv-structuring` | L3 | — | phase1, phase6 | certification-transferability (composes_with), investment-vehicle-structuring (follows), k-law (composes_with), legal-due-diligence (composes_with), partner-sourcing-strategy (composes_with), portfolio-fit-assessment (composes_with), project-review (composes_with), project-review (composes_with), project-review (follows) | — | — |
+| `k-dart` | L3 | — | phase4, phase5 | — | — | — |
+| `k-ecos` | L3 | — | — | k-dart (composes_with), k-kosis (composes_with), k-opendata (composes_with) | — | — |
+| `k-kosis` | L3 | — | phase2, phase4 | — | — | — |
+| `k-krx` | L3 | — | — | k-dart (composes_with), k-ecos (composes_with), k-kosis (composes_with), k-opendata (composes_with) | — | — |
+| `k-law` | L3 | — | phase5 | certification-transferability (follows), investment-vehicle-structuring (composes_with), jv-structuring (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with) | — | — |
 | `k-opendata` | L3 | — | — | k-kosis | — | — |
-| `legal-due-diligence` | L3 | legal-counsel, legal-counsel | phase4, phase5 | antitrust-screening (follows), certification-transferability (composes_with), certification-transferability (composes_with), investment-vehicle-structuring (composes_with), jv-structuring (composes_with), k-law (follows), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
-| `legal-risk-register` | L3 | — | — | — | — | — |
-| `management-incentive-review` | L3 | hr-integration-agent, hr-integration-agent | phase4 | compensation-harmonization-analysis (composes_with), customer-attrition-risk (follows), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
-| `manual-authoring` | L3 | — | — | checklist-authoring (composes_with), documentation-writing (composes_with), governance-document-hierarchy (follows) | — | — |
-| `market-data-pipeline` | L3 | — | — | — | — | — |
-| `master-data-governance` | L3 | data-architect | — | data-normalization (composes_with), db-migration-governance (composes_with) | — | — |
-| `mcp-server-integration` | L3 | backend-engineer, platform-lead | — | rest-api-design, rest-api-design (composes_with), security-scan (composes_with), zod-contract-gate (composes_with) | — | — |
-| `meeting` | L3 | — | — | — | — | — |
+| `legal-due-diligence` | L3 | — | phase4, phase5 | antitrust-screening (follows), certification-transferability (composes_with), certification-transferability (composes_with), investment-vehicle-structuring (composes_with), jv-structuring (composes_with), k-law (follows), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
+| `management-incentive-review` | L3 | — | phase4 | compensation-harmonization-analysis (composes_with), customer-attrition-risk (follows), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
 | `meeting-facilitation` | L3 | — | — | — | — | — |
-| `monte-carlo-simulation` | L3 | quant-methodologist | phase3 | investment-vehicle-structuring (follows), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), scenario-planning (follows), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
-| `notification-channel-management` | L3 | — | — | — | — | — |
-| `observability-and-alerting` | L3 | sre | — | incident-response (composes_with) | — | — |
-| `org-readiness-assessment` | L3 | hr-integration-agent, hr-integration-agent | phase4, phase5 | compensation-harmonization-analysis (composes_with), compliance-monitoring (follows), stage-gate-governance (composes_with), stage-gate-governance (follows), technical-due-diligence (composes_with) | — | — |
-| `partner-due-diligence` | L3 | partnership-agent, partnership-agent | phase1 | jv-structuring (follows), partner-sourcing-strategy (composes_with), partner-sourcing-strategy (composes_with), project-review (composes_with) | — | — |
-| `partner-sourcing-strategy` | L3 | partnership-agent, partnership-agent | phase1 | partner-due-diligence (composes_with), partner-due-diligence (composes_with), partner-due-diligence (follows), project-review (composes_with) | — | — |
-| `peer-benchmarking` | L3 | financial-analyst, financial-analyst | phase3 | proxy-industry-chain (follows), quality-of-earnings (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
-| `permit-pathway-mapping` | L3 | certification-agent, certification-agent | phase2 | certification-roadmap (follows), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), wacc-input-session (composes_with) | — | — |
+| `monte-carlo-simulation` | L3 | — | phase3 | investment-vehicle-structuring (follows), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), scenario-planning (follows), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
+| `org-readiness-assessment` | L3 | — | phase4, phase5 | compensation-harmonization-analysis (composes_with), compliance-monitoring (follows), stage-gate-governance (composes_with), stage-gate-governance (follows), technical-due-diligence (composes_with) | — | — |
+| `partner-due-diligence` | L3 | — | phase1 | jv-structuring (follows), partner-sourcing-strategy (composes_with), partner-sourcing-strategy (composes_with), project-review (composes_with) | — | — |
+| `partner-sourcing-strategy` | L3 | — | phase1 | partner-due-diligence (composes_with), partner-due-diligence (composes_with), partner-due-diligence (follows), project-review (composes_with) | — | — |
+| `peer-benchmarking` | L3 | — | phase3 | proxy-industry-chain (follows), quality-of-earnings (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
+| `permit-pathway-mapping` | L3 | — | phase2 | certification-roadmap (follows), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), wacc-input-session (composes_with) | — | — |
 | `platform-command-lifecycle-manager` | L3 | — | — | — | — | — |
 | `platform-skill-lifecycle-manager` | L3 | — | — | — | — | — |
-| `pmi-planning` | L3 | pmi-agent | phase6 | compensation-harmonization-analysis (follows), stage-gate-governance (composes_with) | — | — |
-| `policy-and-procedure-governance` | L3 | — | — | — | — | — |
-| `policy-change-impact-analysis` | L3 | — | — | — | — | — |
-| `portfolio-fit-assessment` | L3 | group-review-agent | phase5, phase6 | executive-presentation (follows), intra-group-transaction-compliance (follows), jv-structuring (follows), project-review (follows), stage-gate-governance (composes_with) | — | — |
-| `procedure-reference-override` | L3 | — | — | — | — | — |
-| `project-review` | L3 | partnership-agent, partnership-agent, process-governance-manager, process-governance-manager | phase1, phase6 | — | — | — |
-| `proxy-industry-chain` | L3 | quant-methodologist | phase3 | quality-of-earnings (composes_with), scenario-planning (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (follows) | — | — |
-| `quality-of-earnings` | L3 | financial-analyst, financial-analyst | phase3 | financial-statement-analysis (composes_with), financial-statement-analysis (composes_with), growth-projection-modeling (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (follows), peer-benchmarking (composes_with), peer-benchmarking (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
-| `query-performance-tuning` | L3 | dba | — | database-operations (composes_with), db-migration-governance (composes_with) | — | — |
-| `rag-scoring-framework` | L3 | process-governance-manager, process-governance-manager, risk-officer, risk-officer | phase5 | dd-to-valuation-bridge (composes_with), dd-to-valuation-bridge (composes_with), dd-to-valuation-bridge (follows), insight-synthesis (composes_with), insight-synthesis (composes_with), project-review (composes_with), stage-gate-governance (composes_with), strategic-fit-screening (composes_with), two-tier-approval-chain (composes_with) | — | — |
-| `region-profile-application` | L3 | region-lead | — | — | — | — |
-| `regional-incentive-sourcing` | L3 | greenfield-agent | phase1, phase2 | community-partnership-planning (composes_with), permit-pathway-mapping (follows), stage-gate-governance (composes_with), stage-gate-governance (follows), strategic-fit-screening (composes_with), talent-pipeline-planning (composes_with), value-chain-linkage-analysis (composes_with), wacc-input-session (composes_with) | — | — |
-| `regulation-monitoring` | L3 | — | — | — | — | — |
-| `regulatory-change-response` | L3 | — | — | — | — | — |
-| `regulatory-screening` | L3 | — | — | — | — | — |
+| `pmi-planning` | L3 | — | phase6 | compensation-harmonization-analysis (follows), stage-gate-governance (composes_with) | — | — |
+| `portfolio-fit-assessment` | L3 | — | phase5, phase6 | executive-presentation (follows), intra-group-transaction-compliance (follows), jv-structuring (follows), project-review (follows), stage-gate-governance (composes_with) | — | — |
+| `project-review` | L3 | — | phase1, phase6 | — | — | — |
+| `proxy-industry-chain` | L3 | — | phase3 | quality-of-earnings (composes_with), scenario-planning (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (follows) | — | — |
+| `quality-of-earnings` | L3 | — | phase3 | financial-statement-analysis (composes_with), financial-statement-analysis (composes_with), growth-projection-modeling (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (follows), peer-benchmarking (composes_with), peer-benchmarking (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
+| `rag-scoring-framework` | L3 | — | phase5 | dd-to-valuation-bridge (composes_with), dd-to-valuation-bridge (composes_with), dd-to-valuation-bridge (follows), insight-synthesis (composes_with), insight-synthesis (composes_with), project-review (composes_with), stage-gate-governance (composes_with), strategic-fit-screening (composes_with), two-tier-approval-chain (composes_with) | — | — |
+| `regional-incentive-sourcing` | L3 | — | phase1, phase2 | community-partnership-planning (composes_with), permit-pathway-mapping (follows), stage-gate-governance (composes_with), stage-gate-governance (follows), strategic-fit-screening (composes_with), talent-pipeline-planning (composes_with), value-chain-linkage-analysis (composes_with), wacc-input-session (composes_with) | — | — |
 | `research-analysis` | L3 | — | — | documentation-writing (enables) | — | — |
-| `rest-api-design` | L3 | backend-engineer | — | mcp-server-integration (composes_with), zod-contract-gate (composes_with) | — | — |
-| `run-versioning-and-attribution` | L3 | — | — | — | — | — |
-| `sample-driven-report-writing` | L3 | docs-writer | — | translate (composes_with) | — | — |
-| `scenario-planning` | L3 | market-intelligence-agent, market-intelligence-agent, quant-methodologist | phase3 | competitive-intelligence (composes_with), financial-statement-analysis (follows), historical-financial-analysis (follows), proxy-industry-chain (composes_with), proxy-industry-chain (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with), value-chain-linkage-analysis (composes_with) | — | — |
+| `scenario-planning` | L3 | — | phase3 | competitive-intelligence (composes_with), financial-statement-analysis (follows), historical-financial-analysis (follows), proxy-industry-chain (composes_with), proxy-industry-chain (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with), value-chain-linkage-analysis (composes_with) | — | — |
 | `script-lifecycle-manager` | L3 | — | — | — | — | — |
-| `security-baseline-review` | L3 | security-engineer | — | access-control-review (composes_with), security-scan (composes_with), vulnerability-management (composes_with) | — | — |
-| `security-scan` | L3 | platform-lead, security-engineer | — | — | — | — |
-| `site-infrastructure-assessment` | L3 | greenfield-agent | phase1, phase2, phase3 | community-partnership-planning (composes_with), investment-feasibility-modeling (follows), regional-incentive-sourcing (follows), stage-gate-governance (composes_with), strategic-fit-screening (composes_with), talent-pipeline-planning (composes_with), unit-conversion-calibration (composes_with) | — | — |
-| `site-visit-protocol` | L3 | technical-dd-agent | phase4 | stage-gate-governance (composes_with), talent-pipeline-planning (follows), technical-due-diligence (composes_with) | — | — |
+| `security-scan` | L3 | — | — | — | — | — |
+| `site-infrastructure-assessment` | L3 | — | phase1, phase2, phase3 | community-partnership-planning (composes_with), investment-feasibility-modeling (follows), regional-incentive-sourcing (follows), stage-gate-governance (composes_with), strategic-fit-screening (composes_with), talent-pipeline-planning (composes_with), unit-conversion-calibration (composes_with) | — | — |
+| `site-visit-protocol` | L3 | — | phase4 | stage-gate-governance (composes_with), talent-pipeline-planning (follows), technical-due-diligence (composes_with) | — | — |
 | `skill-lifecycle-manager` | L3 | — | — | script-lifecycle-manager (composes_with) | — | — |
 | `source-command-commit-push-pr` | L3 | — | — | — | — | — |
-| `stage-gate-governance` | L3 | process-governance-manager, process-governance-manager | phase1, phase2, phase3, phase4, phase5, phase6 | strategic-fit-screening (composes_with), strategic-fit-screening (composes_with), talent-pipeline-planning (composes_with), technical-due-diligence (composes_with), two-tier-approval-chain (composes_with), two-tier-approval-chain (composes_with), value-chain-linkage-analysis (composes_with), wacc-input-session (composes_with) | — | — |
+| `stage-gate-governance` | L3 | — | phase1, phase2, phase3, phase4, phase5, phase6 | strategic-fit-screening (composes_with), strategic-fit-screening (composes_with), talent-pipeline-planning (composes_with), technical-due-diligence (composes_with), two-tier-approval-chain (composes_with), two-tier-approval-chain (composes_with), value-chain-linkage-analysis (composes_with), wacc-input-session (composes_with) | — | — |
 | `standup-synthesizer` | L3 | — | — | — | — | — |
-| `statute-change-monitoring` | L3 | — | — | — | — | — |
-| `strategic-fit-screening` | L3 | process-governance-manager, process-governance-manager | phase1 | antitrust-screening (follows), insight-synthesis (composes_with), project-review (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), stage-gate-governance (composes_with), two-tier-approval-chain (composes_with), value-chain-linkage-analysis (follows) | — | — |
+| `strategic-fit-screening` | L3 | — | phase1 | antitrust-screening (follows), insight-synthesis (composes_with), project-review (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), stage-gate-governance (composes_with), two-tier-approval-chain (composes_with), value-chain-linkage-analysis (follows) | — | — |
 | `sync` | L3 | — | — | — | — | — |
-| `systematic-market-sizing` | L3 | market-intelligence-agent, quant-methodologist | phase2, phase3 | assumption-audit (enables), evidence-ledger (enables), proxy-industry-chain (follows), scenario-planning (composes_with) | — | — |
-| `talent-pipeline-planning` | L3 | greenfield-agent | phase4 | community-partnership-planning (follows), greenfield-feasibility (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with) | — | — |
+| `systematic-market-sizing` | L3 | — | phase2, phase3 | evidence-ledger (enables), proxy-industry-chain (follows), scenario-planning (composes_with) | — | — |
+| `talent-pipeline-planning` | L3 | — | phase4 | community-partnership-planning (follows), greenfield-feasibility (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with) | — | — |
 | `team-builder` | L3 | — | — | — | — | — |
-| `technical-due-diligence` | L3 | technical-dd-agent | phase4 | competitive-intelligence (follows), site-visit-protocol (composes_with) | — | — |
+| `technical-due-diligence` | L3 | — | phase4 | competitive-intelligence (follows), site-visit-protocol (composes_with) | — | — |
 | `token-usage-lint` | L3 | — | — | ui-ux-design-intelligence (follows) | — | — |
-| `translate` | L3 | docs-writer | — | sample-driven-report-writing (composes_with) | — | — |
-| `two-tier-approval-chain` | L3 | process-governance-manager, process-governance-manager | phase5 | insight-synthesis (composes_with), portfolio-fit-assessment (follows), project-review (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), stage-gate-governance (composes_with), strategic-fit-screening (composes_with) | — | — |
-| `ui-information-architecture` | L3 | frontend-engineer | — | access-control-review (composes_with) | — | — |
+| `translate` | L3 | — | — | — | — | — |
+| `two-tier-approval-chain` | L3 | — | phase5 | insight-synthesis (composes_with), portfolio-fit-assessment (follows), project-review (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), stage-gate-governance (composes_with), strategic-fit-screening (composes_with) | — | — |
 | `ui-ux-design-intelligence` | L3 | — | — | documentation-writing (follows) | — | — |
-| `unit-conversion-calibration` | L3 | quant-methodologist | phase3 | stage-gate-governance (follows) | — | — |
+| `unit-conversion-calibration` | L3 | — | phase3 | stage-gate-governance (follows) | — | — |
 | `update-bun-packages` | L3 | — | — | — | — | — |
 | `validate-docs-links` | L3 | — | — | — | — | — |
-| `value-chain-driver-identification` | L3 | — | — | forward-industry-research (follows), scenario-planning (enables), unit-conversion-calibration (composes_with), value-chain-stage-financials (follows) | — | — |
-| `value-chain-linkage-analysis` | L3 | market-intelligence-agent, market-intelligence-agent | phase1 | competitive-intelligence (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (follows) | — | — |
-| `value-chain-stage-financials` | L3 | financial-analyst | — | historical-financial-analysis (composes_with), k-dart (composes_with), peer-benchmarking (composes_with), value-chain-driver-identification (enables), value-chain-linkage-analysis (follows) | — | — |
-| `vulnerability-management` | L3 | security-engineer | — | access-control-review (composes_with), security-baseline-review (composes_with), security-scan (composes_with) | — | — |
-| `wacc-input-session` | L3 | valuation-agent, valuation-agent | phase2 | brownfield-feasibility (follows), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), investment-feasibility-modeling (composes_with), site-infrastructure-assessment (follows) | — | — |
-| `waiver-management` | L3 | — | — | — | — | — |
-| `zod-contract-gate` | L3 | backend-engineer | — | mcp-server-integration (composes_with), rest-api-design (composes_with) | — | — |
+| `value-chain-linkage-analysis` | L3 | — | phase1 | competitive-intelligence (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (follows) | — | — |
+| `wacc-input-session` | L3 | — | phase2 | brownfield-feasibility (follows), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), investment-feasibility-modeling (composes_with), site-infrastructure-assessment (follows) | — | — |
+| `zod-contract-gate` | L3 | — | — | — | — | — |
 
 ## Lifecycle Phase Grouping
 
@@ -173,7 +119,7 @@ Skills used in specific lifecycle phases (from `variant.json` `skill_manifest`):
 | `used_by` | Agent ↔ skill relation (from `required_skills` or `used_by_agents`) |
 | `phase` | Skill used in a lifecycle phase (from `variant.json` `skill_manifest.phases`) |
 | `supersedes` | Supersession — overrides (manual) or decision-record prose labels |
-| `references` | Backtick reference in SKILL.md/agent/ADR body prose, or DEC `knowledge_refs[]` naming an ADR |
+| `references` | Backtick reference in SKILL.md/agent/ADR body prose, DEC `knowledge_refs[]` naming an ADR, or skill → `term:` node from references/terms-ko.json (ADR-0072) |
 | `cites_skill` | Decision record `skills_used[]` validated against the skill set (ADR-0061 amendment 2026-08-25) |
 | `composes_with` | Typed `relates_to` entry — symmetric, used together in the same phase/workflow (ADR-0060 Amendment 3) |
 | `follows` | Typed `relates_to` entry — sequential/ordering relation, no dependency implication (ADR-0060 Amendment 3) |
@@ -243,8 +189,8 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0048` | adr | — | — | — |
 | `adr:0049` | adr | — | — | — |
 | `adr:0050` | adr | — | — | — |
-| `adr:0051` | adr | — | checklist-authoring, financing-plan-review, legal-due-diligence, strategic-fit-screening | — |
-| `adr:0052` | adr | — | expert-interview, jv-structuring, monte-carlo-simulation, partner-due-diligence, partner-sourcing-strategy, pmi-planning, portfolio-fit-assessment, project-review, proxy-industry-chain, scenario-planning, stage-gate-governance | — |
+| `adr:0051` | adr | — | financing-plan-review, legal-due-diligence, strategic-fit-screening | — |
+| `adr:0052` | adr | — | jv-structuring, monte-carlo-simulation, partner-due-diligence, partner-sourcing-strategy, pmi-planning, portfolio-fit-assessment, project-review, proxy-industry-chain, scenario-planning, stage-gate-governance | — |
 | `adr:0053` | adr | — | — | — |
 | `adr:0054` | adr | — | — | — |
 | `adr:0055` | adr | — | — | — |
@@ -299,7 +245,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0104` | adr | — | — | — |
 | `adr:0105` | adr | — | — | — |
 | `adr:0106` | adr | — | — | — |
-| `adr:0107` | adr | — | manual-authoring | — |
+| `adr:0107` | adr | — | — | — |
 | `adr:0108` | adr | — | — | — |
 | `adr:0109` | adr | — | — | — |
 | `adr:0110` | adr | — | — | — |
@@ -312,11 +258,51 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0117` | adr | — | — | — |
 | `adr:0118` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `project-review` | — | — |
-| `dec:DEC-20260908-02` | decision | `waiver-management` | — | — |
+| `dec:DEC-20260908-02` | decision | — | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
 | `dec:DEC-20260909-02` | decision | — | — | — |
-| `dec:DEC-20260909-03` | decision | `policy-change-impact-analysis`, `strategic-fit-screening` | — | — |
-| `dec:DEC-20260909-04` | decision | `policy-change-impact-analysis` | — | — |
-| `dec:DEC-20260909-05` | decision | `policy-change-impact-analysis` | — | — |
-| `dec:DEC-20260909-06` | decision | `policy-change-impact-analysis` | — | — |
-| `dec:DEC-20260909-07` | decision | `policy-change-impact-analysis` | — | dec:DEC-20260909-06 |
+| `dec:DEC-20260909-03` | decision | `strategic-fit-screening` | — | — |
+| `dec:DEC-20260909-04` | decision | — | — | — |
+| `dec:DEC-20260909-05` | decision | — | — | — |
+| `dec:DEC-20260909-06` | decision | — | — | — |
+| `dec:DEC-20260909-07` | decision | — | — | dec:DEC-20260909-06 |
+
+## Korean Term Vocabulary (terms-ko.json)
+
+> Source-language vocabulary quoted from `references/terms-ko.json` data files
+> (CONSTITUTION §6.7 non-Markdown reference assets). Term ids are namespaced
+> `term:<용어>` in `docs/skill-graph.json`.
+
+| Term | Layer | Referencing skills |
+|------|-------|--------------------|
+| `감사의견` | L3 | `k-dart` |
+| `감자` | L3 | `k-dart` |
+| `당기순이익` | L3 | `k-dart` |
+| `매출액` | L3 | `k-dart` |
+| `무상증자` | L3 | `k-dart` |
+| `미등록키` | L3 | `k-dart` |
+| `반기보고서` | L3 | `k-dart` |
+| `부적정` | L3 | `k-dart` |
+| `부채총계` | L3 | `k-dart` |
+| `분기보고서` | L3 | `k-dart` |
+| `분할` | L3 | `k-dart` |
+| `사업보고서` | L3 | `k-dart` |
+| `사용할수없는키` | L3 | `k-dart` |
+| `소송` | L3 | `k-dart` |
+| `영업이익` | L3 | `k-dart` |
+| `유가증권시장` | L3 | `k-dart` |
+| `유상증자` | L3 | `k-dart` |
+| `의견거절` | L3 | `k-dart` |
+| `자기주식처분` | L3 | `k-dart` |
+| `자기주식취득` | L3 | `k-dart` |
+| `자본총계` | L3 | `k-dart` |
+| `자산총계` | L3 | `k-dart` |
+| `적정` | L3 | `k-dart` |
+| `접근할수없는IP` | L3 | `k-dart` |
+| `정상` | L3 | `k-dart` |
+| `조회된데이터가없음` | L3 | `k-dart` |
+| `주요사항보고서` | L3 | `k-dart` |
+| `코넥스시장` | L3 | `k-dart` |
+| `코스닥시장` | L3 | `k-dart` |
+| `한정` | L3 | `k-dart` |
+| `합병` | L3 | `k-dart` |
