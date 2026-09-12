@@ -593,7 +593,7 @@ export function RouteDecisionView() {
                                 key={v}
                                 type="button"
                                 aria-pressed={c.score === v}
-                                className={`status-chip ${c.score === v ? "status-green" : "status-not-started"}`}
+                                className={`control-chip ${c.score === v ? "status-green" : "status-not-started"}`}
                                 onClick={() => setScore(c.key, { score: v })}
                               >
                                 {v} · {SCORE_LABEL[v]}
@@ -636,7 +636,7 @@ export function RouteDecisionView() {
               <span className="block mb-1">검토한 대안 (선택)</span>
               <textarea value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} className="sizing-new-input" style={{ width: "100%" }} placeholder="고려했지만 선택하지 않은 트랙·라우트와 사유" />
             </label>
-            <button type="submit" className="btn-ghost" disabled={saving || !canSubmit}>
+            <button type="submit" className="btn-primary" disabled={saving || !canSubmit}>
               {saving ? "저장 중..." : "결정 저장"}
             </button>
             {track === "brownfield" && !allScored && (

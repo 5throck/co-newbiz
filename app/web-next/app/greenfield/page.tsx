@@ -319,7 +319,7 @@ export function GreenfieldView() {
 
             <input aria-label="평가 근거" placeholder="평가 근거 (S1 시장분석·S3 적합성 판단 인용, 선택)" value={rationale} onChange={(e) => setRationale(e.target.value)} className="sizing-new-input mb-3" style={{ width: "100%" }} />
 
-            <button type="submit" className="btn-ghost" disabled={busy}>평가 저장</button>
+            <button type="submit" className="btn-primary" disabled={busy}>평가 저장</button>
           </form>
 
           {/* 저장된 요약 */}

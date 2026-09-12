@@ -309,7 +309,7 @@ export function MarketView() {
                   key={key}
                   type="button"
                   aria-pressed={statusFilter === key}
-                  className={`status-chip ${statusFilter === key ? "status-green" : "status-not-started"}`}
+                  className={`control-chip ${statusFilter === key ? "status-green" : "status-not-started"}`}
                   onClick={() => setStatusFilter(key)}
                 >
                   {label} {statusCounts[key]}
@@ -346,7 +346,7 @@ export function MarketView() {
                   </button>
                 </span>
               </label>
-              <button type="submit" className="btn-ghost" disabled={creating || !newName.trim()}>
+              <button type="submit" className="btn-primary" disabled={creating || !newName.trim()}>
                 {creating ? "생성 중..." : "분석 시작"}
               </button>
               <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)}>
