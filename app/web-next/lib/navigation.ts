@@ -65,7 +65,6 @@ export const NAV_SECTIONS: NavSection[] = [
           { href: "/brownfield", label: "브라운필드 — 결합·투자" },
         ],
       },
-      { href: "/pipeline", label: "프로젝트 파이프라인" },
     ],
   },
   {
@@ -123,6 +122,7 @@ export const NON_MENU_ROUTES: string[] = [
   "/projects/[id]/pmi",
   "/projects/[id]/process",
   "/projects/[id]/reports",
+  "/pipeline", // Wave 4: redirect stub → /deals
   "/deals/[id]",
   "/deals/[id]/[stage]",
   "/projects/[id]/incentives",
