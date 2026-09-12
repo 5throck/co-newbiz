@@ -4,7 +4,9 @@
 - **Date**: 2026-09-12
 - **Status**: proposed (implementation gated on mockup approval)
 - **ADRs**: ADR-0119 (primary action + chip separation), ADR-0120 (deal-centric IA), ADR-0121 (PageState/Toast/DataTable/Tabs)
-- **Mockup**: docs/designs/mockups/deal-workspace.html
+- **Mockup (full service)**: docs/designs/mockups/full-service-mockup.html — screen-switchable pack covering every redesigned surface: dashboard, auth, deal board, deal overview, S1–S12 stage tabs (one representative per stage), reference surfaces (our-company, companies, glossary/library/benchmarks), admin console
+- **Data contract**: docs/designs/2026-09-12-mockup-v3-data-contract.md — schema additions + API gaps for the v3 surfaces (P3 of the all-agent review)
+- **Mockup (deal workspace detail)**: docs/designs/mockups/deal-workspace.html — S11-focused detail (stepper, tabs, gate panel, control chips, toast, skeleton)
 - **Method**: ui-information-architecture + ui-ux-design-intelligence checklists; ADR-0087 order (principles → tokens → components → patterns → screens)
 
 ## 1. Problem (evidence)
@@ -69,6 +71,17 @@ PromotionPanel renders at the bottom of S5/S7 tabs and the overview when the
 track-final stage completes.
 
 ### 3.3 Reference pages
+
+**Unified market selector (S1 entry, review feedback 2026-09-12):** the market
+entry is ONE search surface, not separate "select existing" and "create new"
+forms. A single search input (+ explicit search button; Enter also triggers)
+queries both the analyzed industries and the KSIC master (ADR-0111) in one
+result table with two grouped sections — analyzed markets (status chip, row
+action opens the report; in-progress rows show step progress) and KSIC
+un-analyzed candidates (row action "start analysis", rendered in Korean, launches the 8-step pipeline
+inline). This supersedes the current /market split of a list filter plus a
+separate create form.
+
 
 Keep current URLs; adopt the new primitives (DataTable, PageState, Tabs) and
 content-max. `/market` splits industry list (left) from the analysis report

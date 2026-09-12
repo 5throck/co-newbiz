@@ -172,6 +172,24 @@
       "source": "manual",
       "created": "2026-09-12",
       "last_updated": "2026-09-12"
+    },
+    {
+      "id": "2026-09-12-ux-designer-agent-design",
+      "title": "ux designer agent design",
+      "file": "docs/designs/2026-09-12-ux-designer-agent-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-12",
+      "last_updated": "2026-09-12"
+    },
+    {
+      "id": "2026-09-12-website-construction-plan",
+      "title": "website construction plan",
+      "file": "docs/designs/2026-09-12-website-construction-plan.md",
+      "status": "accepted",
+      "source": "manual",
+      "created": "2026-09-12",
+      "last_updated": "2026-09-12"
     }
   ]
 }
