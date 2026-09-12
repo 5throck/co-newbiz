@@ -139,6 +139,7 @@ export const NON_MENU_ROUTES: string[] = [
   "/projects/[id]/risk-heatmap",
   "/portfolio-view",
   "/onboarding",
+  "/admin/business-targets",
 ];
 
 /** 관리자 전용 내비 (ADR-0091 역할-화면 분리) — 역시 본 파일이 SSOT다. */
@@ -153,6 +154,7 @@ export const ADMIN_NAV: Array<{ href: string; label: string }> = [
   { href: "/admin/glossary", label: "용어집 관리" },
   { href: "/admin/governance", label: "거버넌스" },
   { href: "/admin/master-data", label: "마스터 데이터" },
+  { href: "/admin/business-targets", label: "사업목표 기준" },
   { href: "/admin/adr", label: "ADR" },
 ];
 

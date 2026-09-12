@@ -270,7 +270,7 @@ export function SynergyView() {
       <section aria-label="분석 대상 회사" className="market-section">
         <SectionToolbar
           title="시너지 분석 목록"
-          icon="🗂"
+          icon=""
           count={analyses?.length ?? 0}
           actions={
             <button
@@ -371,7 +371,7 @@ export function SynergyView() {
                     className={`sizing-industry-chip ${targetSel?.kind === t.kind && targetSel?.id === t.id ? "sizing-industry-chip-active" : ""} ${!t.hasProfile ? "opacity-40" : ""}`}
                     onClick={() => { if (t.hasProfile) setTargetSel({ kind: t.kind, id: t.id }); }}
                   >
-                    <span className="font-semibold">{t.kind === "group" ? "🏢 전체" : "🏭"} {t.label}</span>
+                    <span className="font-semibold">{t.kind === "group" ? "전체" : ""} {t.label}</span>
                     <span className="sizing-chip-meta">{t.hasProfile ? "프로파일 준비됨" : "프로파일 없음"}</span>
                   </button>
                 ))}
@@ -437,7 +437,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
     <section aria-label="시너지 정합성 리포트" className="market-section sizing-step">
       <SectionToolbar
         title={`${targetLabel(analysis)} 시너지 정합성 분석`}
-        icon="🏢"
+        icon=""
         summary={
           <span className="flex items-center gap-1">
             <span className="section-meta">S3 시너지 영역 선별 · 분석일 {analysisDate} · v{latest?.version_no ?? analysis.latest_version ?? 1}</span>
@@ -480,7 +480,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
               <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">◎</span> 프로파일 요약 — 상세는 그룹/계열사 분석 담당</h3>
               <div className="sizing-grade-card mb-3">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <strong className="text-[0.9rem]">🏢 {p.target?.name ?? p.company.name}</strong>
+                  <strong className="text-[0.9rem]">{p.target?.name ?? p.company.name}</strong>
                   {p.dataSources?.dart && <span className="status-chip status-green">DART {p.dataSources.dartYear ?? ""}</span>}
                   {(p.financialStrengths?.length ?? 0) > 0 && <span className="status-chip status-in-progress">강점 {p.financialStrengths.length}건</span>}
                   {(p.financialWeaknesses?.length ?? 0) > 0 && <span className="status-chip status-not-started">약점 {p.financialWeaknesses.length}건</span>}
@@ -497,7 +497,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
               </div>
               {p.opportunity && (
                 <div className="sizing-grade-card mb-3">
-                  <h4 className="text-[0.85rem] mb-2">🔗 연결 기회 — S2 기회발굴</h4>
+                  <h4 className="text-[0.85rem] mb-2">연결 기회 — S2 기회발굴</h4>
                   <p className="mb-1 text-[0.85rem]"><strong>{p.opportunity.name}</strong></p>
                   {p.synergyScore != null && (
                     <p className="mb-0 text-[0.82rem]">
@@ -585,7 +585,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
             <div className="text-[0.88rem]">
               {p.researchSources.length > 0 && (
                 <details className="market-section" open>
-                  <summary className="cursor-pointer text-[0.85rem]">📚 입수 출처 ({p.researchSources.length}건 — 출처 명기·교차검증)</summary>
+                  <summary className="cursor-pointer text-[0.85rem]">입수 출처 ({p.researchSources.length}건 — 출처 명기·교차검증)</summary>
                   <ul className="sizing-note-list mt-2">
                     {p.researchSources.map((s, i) => (
                       <li key={i}><a href={s.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{s.title}</a><span className="text-[color:var(--muted-fg)]"> — {s.snippet}</span></li>
@@ -594,7 +594,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
                 </details>
               )}
               <details className="market-section" open>
-                <summary className="cursor-pointer text-[0.85rem]">📝 파이프라인 단계별 노트 ({p.stepSummaries.length}단계)</summary>
+                <summary className="cursor-pointer text-[0.85rem]">파이프라인 단계별 노트 ({p.stepSummaries.length}단계)</summary>
                 <ol className="mt-3 space-y-2 text-[0.85rem]">
                   {p.stepSummaries.map((s) => (
                     <li key={s.step}><strong>{s.step}. {s.title}</strong> <span className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"}`}>{s.source === "llm" ? "LLM" : "시스템"}</span><br />{s.summary}</li>

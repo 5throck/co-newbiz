@@ -56,6 +56,7 @@ function gateChip(value: string | undefined) {
 function DealsBoard() {
   const [data, setData] = useState<PipelineView | null>(null);
   const [opps, setOpps] = useState<OpportunityRow[] | null>(null);
+  const [paused, setPaused] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "greenfield" | "brownfield" | "gate" | "paused">("all");
   const [query, setQuery] = useState("");
@@ -66,6 +67,22 @@ function DealsBoard() {
     api.get<OpportunityRow[]>("/api/opportunities").then((r) => setOpps(r.data)).catch(() => setOpps([]));
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  // Paused-pipeline banners (ADR-0102 deep links): fetched only for selected
+  // opportunities (small N) once the list arrives.
+  useEffect(() => {
+    if (!opps) return;
+    const targets = opps.filter((o) => o.status === "selected" || o.status === "assessed");
+    for (const o of targets) {
+      api.get<{ status: string; paused_reason: string | null }>(`/api/opportunities/${encodeURIComponent(o.id)}/pipeline/status`)
+        .then((r) => {
+          if (r.data.status === "paused_for_human" && r.data.paused_reason) {
+            setPaused((prev) => ({ ...prev, [o.id]: r.data.paused_reason as string }));
+          }
+        })
+        .catch(() => undefined);
+    }
+  }, [opps]);
 
   const stageOf = (o: OpportunityRow): string => {
     if (o.status === "identified") return "S2";
@@ -153,6 +170,11 @@ function DealsBoard() {
                       <span className="block text-[0.72rem] text-[color:var(--muted-fg)]" style={{ marginTop: 3 }}>
                         <span className={`status-chip ${c.stage === "S11" || c.stage === "S9" ? "status-amber" : "status-not-started"}`}>{c.stage}</span> {c.meta}
                       </span>
+                      {paused[c.id] && (
+                        <span className="block text-[0.7rem] text-[color:var(--amber-fg, var(--amber))]" style={{ marginTop: 3 }}>
+                          일시정지 — {paused[c.id]}
+                        </span>
+                      )}
                     </Link>
                   ))}
                 </div>
