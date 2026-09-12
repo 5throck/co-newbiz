@@ -21,6 +21,14 @@ const SUB_PAGES = [
   { seg: "/pmi", label: "PMI" },
   { seg: "/charter", label: "추진계획" },
   { seg: "/process", label: "프로세스" },
+  // Wave 2 도구 (round-2/3 리뷰 신설 — data contract B3–B9)
+  { seg: "/incentives", label: "인센티브" },
+  { seg: "/sites", label: "부지·시설" },
+  { seg: "/permits", label: "인허가·인증" },
+  { seg: "/debt", label: "부채" },
+  { seg: "/interviews", label: "인터뷰" },
+  { seg: "/customer-coc", label: "고객 CoC" },
+  { seg: "/comp-parity", label: "보상·형평" },
 ] as const;
 
 export function ProjectSubNav({ projectId }: { projectId: string }) {

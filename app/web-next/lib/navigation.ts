@@ -125,6 +125,13 @@ export const NON_MENU_ROUTES: string[] = [
   "/projects/[id]/reports",
   "/deals/[id]",
   "/deals/[id]/[stage]",
+  "/projects/[id]/incentives",
+  "/projects/[id]/sites",
+  "/projects/[id]/permits",
+  "/projects/[id]/debt",
+  "/projects/[id]/interviews",
+  "/projects/[id]/customer-coc",
+  "/projects/[id]/comp-parity",
 ];
 
 /** 관리자 전용 내비 (ADR-0091 역할-화면 분리) — 역시 본 파일이 SSOT다. */

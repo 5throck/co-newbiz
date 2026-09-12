@@ -1,0 +1,100 @@
+"use client";
+
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { api } from "../../../../lib/api.ts";
+import { PageState, useToast } from "../../../../components/ui.tsx";
+
+// 부지·시설 평가 (site-facility-agent) — Wave 0 REST B4. 점수는 저장값만
+// 렌더링하고 순위로 비교한다 (ADR-0112 — 값 발명 금지).
+interface Row { id: string; name: string; region_code: string | null; infra_score: number | null; logistics_score: number | null; labor_score: number | null; permit_lead_time_days: number | null; total_score: number | null; rank: number | null }
+
+function SitesView() {
+  const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", region_code: "", infra_score: "", logistics_score: "", labor_score: "", permit_lead_time_days: "", total_score: "" });
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(() => {
+    api.get<{ sites: Row[] }>(`/api/projects/${encodeURIComponent(id)}/sites`)
+      .then((r) => setRows(r.data.sites))
+      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+  }, [id]);
+  useEffect(() => { load(); }, [load]);
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim() || busy) return;
+    setBusy(true);
+    try {
+      const n = (k: string) => (form[k as keyof typeof form] ? Number(form[k as keyof typeof form]) : undefined);
+      await api.post(`/api/projects/${encodeURIComponent(id)}/sites`, {
+        name: form.name.trim(), region_code: form.region_code.trim() || undefined,
+        infra_score: n("infra_score"), logistics_score: n("logistics_score"), labor_score: n("labor_score"),
+        permit_lead_time_days: n("permit_lead_time_days"), total_score: n("total_score"),
+      });
+      toast("부지가 등록되었습니다");
+      setForm({ name: "", region_code: "", infra_score: "", logistics_score: "", labor_score: "", permit_lead_time_days: "", total_score: "" });
+      load();
+    } catch (err) { setError(err instanceof Error ? err.message : "등록 실패"); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <main>
+      <ProjectSubNav projectId={id} />
+      <h1>부지·시설 평가</h1>
+      <p className="objective">입지 인프라·물류·노동력 점수와 인허가 리드타임을 비교해 최적 부지를 선정합니다.</p>
+      {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      <section className="market-section" aria-label="부지 비교">
+        {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
+          <PageState state="empty" emptyText="등록된 부지가 없습니다." />
+        ) : (
+          <div className="table-scroll">
+            <table className="data-table" aria-label="부지 비교">
+              <caption className="sr-only">부지 비교</caption>
+              <thead><tr><th>부지</th><th>지역</th><th className="col-num">인프라</th><th className="col-num">물류</th><th className="col-num">노동력</th><th className="col-num">인허가(일)</th><th className="col-num">총점</th><th>순위</th></tr></thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td className="font-semibold">{r.name}</td>
+                    <td>{r.region_code ?? "—"}</td>
+                    <td className="col-num tabular-nums">{r.infra_score ?? "—"}</td>
+                    <td className="col-num tabular-nums">{r.logistics_score ?? "—"}</td>
+                    <td className="col-num tabular-nums">{r.labor_score ?? "—"}</td>
+                    <td className="col-num tabular-nums">{r.permit_lead_time_days ?? "—"}</td>
+                    <td className="col-num tabular-nums font-semibold">{r.total_score ?? "—"}</td>
+                    <td>{r.rank ? <span className="status-chip status-green">#{r.rank}</span> : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+      <section className="market-section" aria-label="부지 등록">
+        <h2 className="text-[0.9rem] mb-2">부지 등록</h2>
+        <form className="sizing-new-form" onSubmit={create}>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-[0.78rem]"><span className="block mb-1">부지명 *</span>
+              <input className="sizing-new-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
+            <label className="text-[0.78rem]"><span className="block mb-1">지역코드</span>
+              <input className="sizing-new-input sizing-new-input-sm" value={form.region_code} onChange={(e) => setForm({ ...form, region_code: e.target.value })} /></label>
+            {(["infra_score", "logistics_score", "labor_score", "permit_lead_time_days", "total_score"] as const).map((k) => (
+              <label key={k} className="text-[0.78rem] w-[6rem]"><span className="block mb-1">{k === "infra_score" ? "인프라" : k === "logistics_score" ? "물류" : k === "labor_score" ? "노동력" : k === "permit_lead_time_days" ? "인허가(일)" : "총점"}</span>
+                <input type="number" className="sizing-new-input sizing-new-input-sm" value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></label>
+            ))}
+            <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  );
+}
+
+export default function SitesPage() {
+  return <Suspense fallback={null}><SitesView /></Suspense>;
+}
