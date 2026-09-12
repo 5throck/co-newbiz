@@ -17,6 +17,10 @@ function DebtView() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ lender: "", principal: "", rate: "", rate_type: "fixed", maturity: "", covenant_json: "" });
   const [busy, setBusy] = useState(false);
+  // 시나리오 계산 입력 — 명시적 가정(사용자 입력)이며 저장되지 않는다.
+  // 산식: 연간 상환액 = 연금공식(원금, 금리, 잔존기간) / DSCR = 현금흐름 ÷ 상환액.
+  const [scenarioCf, setScenarioCf] = useState("");
+  const [stress, setStress] = useState(false);
 
   const load = useCallback(() => {
     api.get<{ instruments: Instrument[] }>(`/api/projects/${encodeURIComponent(id)}/debt`)
@@ -40,6 +44,41 @@ function DebtView() {
       load();
     } catch (err) { setError(err instanceof Error ? err.message : "등록 실패"); }
     finally { setBusy(false); }
+  }
+
+  // covenant_json 파싱 — 표시 형식("DSCR >= 1.3 · NetLev <= 3.5x")과 JSON 형식 모두 수용.
+  function parseThresholds(raw: string | null): Array<{ key: string; op: string; value: number }> {
+    if (!raw?.trim()) return [];
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const out: Array<{ key: string; op: string; value: number }> = [];
+      for (const [k, v] of Object.entries(parsed)) {
+        if (typeof v !== "number") continue;
+        const upper = /max|le|<=|상한|ceiling/i.test(k);
+        out.push({ key: k.replace(/^(wacc\.)?/i, "").replace(/_min$|_max$|_min$|_max$/i, ""), op: upper ? "≤" : "≥", value: v });
+      }
+      return out;
+    } catch {
+      const out: Array<{ key: string; op: string; value: number }> = [];
+      for (const m of raw.matchAll(/([A-Za-z]+)\s*(>=|<=|≥|≤|>|<)\s*([0-9.]+)/g)) {
+        out.push({ key: m[1], op: m[2].replace(">", "≥").replace("<", "≤"), value: Number(m[3]) });
+      }
+      return out;
+    }
+  }
+  // 잔존기간(년) — maturity(YYYY-MM) 기준, 미지정 시 5년 가정(명시 표기).
+  function remainingYears(maturity: string | null): number {
+    if (!maturity) return 5;
+    const end = new Date(maturity).getTime();
+    if (!Number.isFinite(end)) return 5;
+    return Math.max(1, Math.round(((end - Date.now()) / (365.25 * 24 * 3600 * 1000)) * 10) / 10);
+  }
+  // 연금 상환액 — 원금 × r / (1 − (1+r)^−n)
+  function annualDebtService(p: Instrument): number {
+    const r = p.rate_type === "fixed" ? p.rate / 100 : p.rate / 100; // 변동금리는 현재값 기준 시나리오
+    const n = remainingYears(p.maturity);
+    if (r <= 0) return p.principal / n;
+    return Math.round(p.principal * (r / (1 - Math.pow(1 + r, -n))));
   }
 
   return (
@@ -70,6 +109,46 @@ function DebtView() {
           </div>
         )}
       </section>
+      <section className="market-section" aria-label="커버넌트 시나리오 계산" style={{ border: "1px solid var(--border)", borderRadius: 12 }}>
+        <h2 className="text-[0.9rem] mb-2">커버넌트 시나리오 계산 <span className="note">— 산식은 저장 조건 기반, 현금흐름은 명시적 가정 입력</span></h2>
+        <div className="form-grid" style={{ marginBottom: 8 }}>
+          <label className="text-[0.78rem] w-[12rem]"><span className="block mb-1">시나리오 연간 영업현금흐름 (억원)</span>
+            <input type="number" className="sizing-new-input sizing-new-input-sm" value={scenarioCf} onChange={(e) => setScenarioCf(e.target.value)} placeholder="예: 120" /></label>
+          <span className="note">금리 +2%p 스트레스는 체크박스로 적용</span>
+          <label className="text-[0.78rem] flex items-center gap-1" style={{ marginBottom: 4 }}><input type="checkbox" checked={stress} onChange={(e) => setStress(e.target.checked)} /> 금리 +2%p 스트레스</label>
+        </div>
+        {rows && rows.length > 0 && scenarioCf && Number(scenarioCf) > 0 ? (
+          <div className="table-scroll">
+            <table className="data-table" aria-label="커버넌트 시나리오">
+              <caption className="sr-only">커버넌트 시나리오 계산</caption>
+              <thead><tr><th>차입</th><th className="col-num">연간 상환액</th><th className="col-num">DSCR</th><th>임계값</th><th>판정</th></tr></thead>
+              <tbody>{rows.map((r) => {
+                const rate = (stress ? r.rate + 2 : r.rate) / 100;
+                const n = remainingYears(r.maturity);
+                const ds = r.principal > 0 && rate >= 0 ? Math.round(r.principal * (rate / (1 - Math.pow(1 + rate, -n)))) : 0;
+                const dscr = ds > 0 ? Math.round((Number(scenarioCf) / ds) * 100) / 100 : null;
+                const th = parseThresholds(r.covenant_json).find((t) => /dscr/i.test(t.key));
+                const pass = dscr != null && th ? dscr >= th.value : null;
+                return (
+                  <tr key={r.id}>
+                    <td className="font-semibold">{r.lender ?? "차입"}</td>
+                    <td className="col-num tabular-nums">{ds}억</td>
+                    <td className="col-num tabular-nums font-semibold">{dscr ?? "—"}</td>
+                    <td className="text-[0.75rem]">{th ? `DSCR ≥ ${th.value}` : "임계값 미등록"}</td>
+                    <td>{pass == null ? <span className="status-chip status-gray">판정 불가</span> : pass ? <span className="status-chip status-green">충족</span> : <span className="status-chip status-red">위반</span>}</td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="note" style={{ margin: 0 }}>시나리오 현금흐름을 입력하면 각 차입의 연간 상환액(연금공식)과 DSCR을 계산해 임계값과 대조합니다.</p>
+        )}
+        <p className="note" style={{ margin: "6px 0 0" }}>
+          커버넌트 판정 결과는 참고용 시나리오이며 공식 테스트는 시뮬레이션 실행(covenant_test)으로 확정됩니다 — 시뮬레이션 연계는 백로그.
+        </p>
+      </section>
+
       <section className="market-section" aria-label="차입 등록">
         <h2 className="text-[0.9rem] mb-2">차입 등록</h2>
         <form className="sizing-new-form" onSubmit={create}>
