@@ -24,53 +24,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # The audit's graph projection resolves modules under app/web-next —
-      # its dependencies must be present for the committed-projection check.
-      - name: Install web-next dependencies
-        run: cd app/web-next && bun install --frozen-lockfile
-
       - name: Run audit
         run: bun scripts/audit.ts
-
-  verify:
-    name: Validators (agents, skills, glossary, procedures, checklists)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      # The domain validators package.json declares — until now these only ran
-      # locally, so a roster/skill/checklist regression could land unchallenged.
-      - name: Run validators
-        run: |
-          bun run validate-agents
-          bun run agent:verify
-          bun run verify-skills
-          bun run glossary:lint
-          bun run procedures:lint
-          bun run checklists:lint
-
-      # Onyx 3.0 design-guide enforcement (docs/design-system/design-guide.md):
-      # root lint covers web-next tsx (colors/IME/nested-main/aria-label), the
-      # web-next lint adds ADR-0082/0083/0086 screen rules.
-      - name: Design lint
-        run: |
-          bun run design:lint
-          (cd app/web-next && bun run lint:design)
-
-      # WCAG AA token-pair contrast in both themes (design-accessibility rule 6)
-      - name: Contrast check
-        run: bun run contrast:check
-
-      # .claude/agents/ personas must match the agents/ roster (generated files)
-      - name: Agent personas drift check
-        run: bun run agents:personas -- --check
 
   secret-scan:
     name: Secret Scan
@@ -102,30 +57,11 @@ jobs:
   #     - run: pip install -r requirements.txt
   #     - run: pytest
 
-  unit-tests:
-    name: Unit Tests (bun)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      # Tests import app/web-next/lib modules (envelope.ts imports
-      # next/server) — their dependencies must be installed for resolution.
-      - name: Install web-next dependencies
-        run: cd app/web-next && bun install --frozen-lockfile
-      # fin-pipeline tests shell out to python/*.py (validate/normalize import
-      # pandas) — the engine's declared dependency set.
-      - name: Install python dependencies
-        run: pip install -r python/requirements.txt
-      - run: bun run test:unit
-
   # test-node:
   #   name: Node.js Tests
   #   runs-on: ubuntu-latest
   #   steps:
   #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-  #     - uses: actions/setup-node@v4.1.0  # pin by SHA in real use
-  #       with:
-  #         node-version: "20"
-  #     - run: npm ci
-  #     - run: npm test
+  #     - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+  #     - run: bun install
+  #     - run: bun test

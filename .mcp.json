@@ -2,9 +2,21 @@
   "mcpServers": {
     "co-newbiz": {
       "command": "bun",
-      "args": ["run", "--env-file", ".env", "./mcp/co-newbiz/index.ts"],
+      "args": [
+        "run",
+        "--env-file",
+        ".env",
+        "./mcp/co-newbiz/index.ts"
+      ],
       "env": {},
       "timeout": 300000
+    },
+    "graft": {
+      "command": "bunx",
+      "args": [
+        "@nanonets/graft",
+        "mcp"
+      ]
     }
   }
 }

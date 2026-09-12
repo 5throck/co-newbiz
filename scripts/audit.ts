@@ -1,4 +1,4 @@
-// @version 2.34.1
+// @version 2.36.0
 // v2.33.0: Validator-hardening batch (T-20260910-013/016/017/026). New standing
 //           regression check checkVariantAuditHookRegression() — every variant.json
 //           that declares an audit-variant hook (script_manifest) must resolve to a
@@ -151,8 +151,8 @@ if (fs.existsSync('CHANGELOG.md')) {
     Fail('CHANGELOG.md missing');
 }
 
-// 2. context.md must be accessible (workspace root / L1 template context only —
-//    L2 variant templates and L3 projects intentionally omit context.md and use
+// 2. CONSTITUTION.md must be accessible (workspace root / L1 template context only —
+//    L2 variant templates and L3 projects intentionally omit CONSTITUTION.md and use
 //    docs/context.md instead; variant.json, when present, also marks a generated project copy)
 // isWorkspaceRoot is reused below (§6-8) to tell "we ARE the workspace root" apart from
 // "we're a scaffolded project that's simply missing its docs/context.md" — the two cases
@@ -539,7 +539,7 @@ if (!LIFECYCLE_ONLY) {
     // Check: no non-standard .md files at project root (file organization policy)
     const STANDARD_ROOT_MD = new Set([
         'README.md', 'README_ko.md', 'CHANGELOG.md', 'AGENTS.md',
-        'SECURITY.md', 'CONSTITUTION.md', 'CLAUDE.md', 'GEMINI.md',
+        'SECURITY.md', 'CONSTITUTION.md', 'CLAUDE.md', 'GEMINI.md', 'CODEX.md',
         'PROMOTION_CHECKLIST.md', '_ORIGIN.md', '_COMMON_VERSION.md'
     ]);
     const rootMdFiles = fs.readdirSync('.')
@@ -683,7 +683,7 @@ if (hasBun) {
             Fail("Skill audit detected issues (run 'bun scripts/skill-lifecycle-audit.ts' to see details)");
         }
     }
-    // Variant registry validators (scripts/validators/ — the framework context.md §6.6
+    // Variant registry validators (scripts/validators/ — the framework CONSTITUTION.md §6.6
     // documents as audit-enforced). This wiring is L0-only: `scripts/validators/` is a layer-L0
     // directory and is not propagated to templates/common/scripts/, so the existsSync guard
     // makes the L1 copy of this file skip the check rather than crash.
@@ -803,7 +803,7 @@ if (hasBun) {
         else
             Pass("README lifecycle audit: all READMEs healthy");
     }
-    if (fs.existsSync(path.join('scripts', 'verify-memory.ts')) && fs.existsSync('context.md') && !SKIP_MEMORY) {
+    if (fs.existsSync(path.join('scripts', 'verify-memory.ts')) && fs.existsSync('CONSTITUTION.md') && !SKIP_MEMORY) {
         // explicitly skip any files located in memory/archive/
         const memoryFiles = fs.readdirSync('memory')
             .filter(f => f.endsWith('.md') && fs.statSync(path.join('memory', f)).isFile())
@@ -1810,6 +1810,7 @@ function checkProjectDocMarkerDrift() {
 
     const expectedClaude = countMarkers(path.join('templates', 'common', 'CLAUDE.md'), 'COMMON-CLAUDE');
     const expectedGemini = countMarkers(path.join('templates', 'common', 'GEMINI.md'), 'COMMON-GEMINI');
+    const expectedCodex = countMarkers(path.join('templates', 'common', 'CODEX.md'), 'COMMON-CODEX');
 
     let warnCount = 0;
     for (const entry of fs.readdirSync(projectsDir)) {
@@ -1828,6 +1829,13 @@ function checkProjectDocMarkerDrift() {
             const actual = countMarkers(path.join(projectDir, 'GEMINI.md'), 'COMMON-GEMINI');
             if (actual >= 0 && actual < expectedGemini) {
                 Warn(`GEMINI.md drift: Projects/${entry}/GEMINI.md has ${actual}/${expectedGemini} COMMON-GEMINI managed blocks vs templates/common/GEMINI.md — run 'bun scripts/upgrade-project.ts Projects/${entry}' or verify markers were not stripped by a hand rewrite.`);
+                warnCount++;
+            }
+        }
+        if (expectedCodex > 0) {
+            const actual = countMarkers(path.join(projectDir, 'CODEX.md'), 'COMMON-CODEX');
+            if (actual >= 0 && actual < expectedCodex) {
+                Warn(`CODEX.md drift: Projects/${entry}/CODEX.md has ${actual}/${expectedCodex} COMMON-CODEX managed blocks vs templates/common/CODEX.md — run 'bun scripts/upgrade-project.ts Projects/${entry}' or verify markers were not stripped by a hand rewrite.`);
                 warnCount++;
             }
         }
@@ -1988,7 +1996,7 @@ checkVariantJsonSchema();
 checkTemplateDependencyMirror();
 }
 
-// Workspace root detection: presence of context.md (and absence of variant.json)
+// Workspace root detection: presence of CONSTITUTION.md (and absence of variant.json)
 // distinguishes the governance root from generated project copies.
 const IS_WORKSPACE_ROOT = fs.existsSync('CONSTITUTION.md') && !fs.existsSync('variant.json');
 
@@ -2231,7 +2239,7 @@ if (IS_WORKSPACE_ROOT) {
 // Layer 4 of the 2026-08-07 meeting (memory/archive/meeting-2026-08-07-prevent-nul-file-creation.md).
 // The sweep above is remediation; this is prevention. On Windows, `> nul` / `2> nul` in a shell
 // context can materialize a physical file named `nul` that then blocks deleting the whole
-// directory tree from PowerShell. context.md §8 bans the pattern outright: use
+// directory tree from PowerShell. CONSTITUTION.md §8 bans the pattern outright: use
 // `> /dev/null 2>&1` in Bash, or `$null` / `Out-Null` in PowerShell.
 //
 // A full-tree scan on 2026-08-21 found zero violations in workspace source, so this check starts
@@ -2296,10 +2304,10 @@ if (!LIFECYCLE_ONLY) {
     }
 }
 
-// Check: L0 Leakage (context.md references in templates)
+// Check: L0 Leakage (CONSTITUTION.md references in templates)
 if (!LIFECYCLE_ONLY && fs.existsSync('templates')) {
     let leakageErrors = 0;
-    // Matches: context.md (literal), docs/constitution/ or docs\constitution\ path patterns
+    // Matches: CONSTITUTION.md (literal), docs/constitution/ or docs\constitution\ path patterns
     const L0_LEAK_PATTERN = /CONSTITUTION\.md|docs[\/\\]constitution[\/\\]/i;
     const SKIP_DIRS = new Set(['node_modules', '.git', '.bun']);
     const checkLeakage = (dir: string) => {
