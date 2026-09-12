@@ -6,7 +6,7 @@
 // from deal flow contexts (bridge tab, target lists).
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { api } from "../../../lib/api.ts";
+import { api } from "../../lib/api.ts";
 
 interface CompanyRow {
   id: string;

@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 
-export type EnvelopeStatus = 200 | 201 | 400 | 401 | 403 | 404 | 409 | 423 | 429 | 500;
+export type EnvelopeStatus = 200 | 201 | 400 | 401 | 403 | 404 | 409 | 423 | 429 | 500 | 503;
 
 export interface ErrorBody {
   code: string;

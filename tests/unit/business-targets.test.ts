@@ -119,6 +119,10 @@ describe("business-target standards (ADR-0114)", () => {
        VALUES (?,?,?,?,?,?,?,?,?)`,
       [ulid(), opp1, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
     );
+  // Promotion preconditions (2026-09-12): screening + pre_fs must be GO.
+  for (const gate of ["screening", "pre_fs"]) {
+    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", opp1, gate, "go", "test", ANALYST, NOW]);
+  }
     projectId = promoteOpportunity(opp1, { promotedBy: ANALYST, needToKnowBasis: "business-target test" }).project.id;
     // md_project.company_id references md_company (0047) — for brownfield it is
     // the acquisition target; here it matches the registry member by name.
@@ -133,6 +137,9 @@ describe("business-target standards (ADR-0114)", () => {
        VALUES (?,?,?,?,?,?,?,?,?)`,
       [ulid(), opp2, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
     );
+  for (const gate of ["screening", "pre_fs"]) {
+    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", opp2, gate, "go", "test", ANALYST, NOW]);
+  }
     projectIdNoCompany = promoteOpportunity(opp2, { promotedBy: ANALYST, needToKnowBasis: "business-target test" }).project.id;
   });
 

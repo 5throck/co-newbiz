@@ -6,6 +6,7 @@ import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
 import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
+import { PromotionPanel } from "../../components/PromotionPanel.tsx";
 import { useConfirm } from "../../components/crud.tsx";
 
 // S5 역량 평가·진출전략 (/greenfield) — flow.spec v2.0.0 그린필드 경로.
@@ -346,6 +347,12 @@ export function GreenfieldView() {
         </section>
       )}
       {selected && <GateDecisionPanel opportunityId={selected.opportunity.id} gates={["pre_fs"]} />}
+      {selected && (
+        <PromotionPanel
+          opportunityId={selected.opportunity.id}
+          heading={`${selected.opportunity.name} — 프로젝트로 승격 (S5 → S8)`}
+        />
+      )}
       {confirmDialog}
     </main>
   );

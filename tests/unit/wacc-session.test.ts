@@ -227,14 +227,15 @@ describe("ADR-0115 CAPM component session", () => {
   });
 
   test("a later direct-mode session does not hide the component layer", async () => {
-    // No fixed `now`: the HTTP capm tests above record at real time, and a
-    // fixed timestamp that has slipped into the past would flip the
-    // latest-assumption ordering this test depends on.
+    // No fixed `now` OR `asOf`: both feed the latest-assumption ordering
+    // (as_of DESC, created_at DESC) this test depends on — a hardcoded date
+    // slips into the past as the calendar advances and silently flips the
+    // winner. Omitted asOf defaults to the real clock, keeping this session
+    // the latest by construction.
     recordWaccSession(db, {
       projectId,
       wacc: 0.08,
       actor: USER,
-      asOf: "2026-09-11",
     });
     const { loadProjectComponents } = await import("../../db/lib/wacc.ts");
     const { components } = loadProjectComponents(db, projectId);

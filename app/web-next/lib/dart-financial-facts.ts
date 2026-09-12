@@ -15,6 +15,7 @@
 // (name_ko) and fails loudly if an account row is missing rather than
 // inventing an id.
 import { resolveCorpCode, validateCorpCode, fetchFinancials, isDartConfigured } from "./dart-client.ts";
+import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 
 export interface FactRow {
@@ -118,7 +119,7 @@ export async function syncCompanyFinancialFacts(
   }
 
   const fin = await (opts.fetcher ?? fetchFinancials)(corpCode, { years: opts.years ?? 5 });
-  if (!fin.found || fin.yearly.length === 0) {
+  if (!fin.found || (fin.yearly?.length ?? 0) === 0) {
     throw new DartSyncError(`DART 조회 실패 — ${fin.error ?? "재무제표를 찾을 수 없습니다"}`, "dart_retrieval_failed");
   }
 
@@ -126,7 +127,7 @@ export async function syncCompanyFinancialFacts(
   const years: number[] = [];
   let inserted = 0;
   let unchanged = 0;
-  for (const yearBlock of fin.yearly) {
+  for (const yearBlock of fin.yearly ?? []) {
     const fiscalYear = Number(yearBlock.year);
     if (!Number.isFinite(fiscalYear)) continue;
     years.push(fiscalYear);

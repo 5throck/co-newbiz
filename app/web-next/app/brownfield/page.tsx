@@ -7,6 +7,7 @@ import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
 import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
 import { CommitteePanel } from "../../components/CommitteePanel.tsx";
+import { PromotionPanel } from "../../components/PromotionPanel.tsx";
 
 // S6~S7 브라운필드 대상 경로 (/brownfield) — flow.spec v2.0.0.
 //   S6 대상 후보 발굴: Target Universe 정의 → Target Company Long List
@@ -436,6 +437,11 @@ export function BrownfieldView() {
               gates={["screening"]}
             />
           )}
+          {/* ADR-0095 — S7→S8 승격 표면: 완료 요건 충족 시 사람이 승격을 기록한다 */}
+          <PromotionPanel
+            opportunityId={selected.opportunity.id}
+            heading={`${selected.opportunity.name} — 프로젝트로 승격 (S7 → S8)`}
+          />
         </>
       )}
     </main>

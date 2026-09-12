@@ -61,6 +61,21 @@ function completeS5(opportunityId: string): void {
   );
 }
 
+/** Gate decision rows — promotion requires every track-relevant gate GO
+ * (screening + pre_fs both tracks, target_screening brownfield-only). */
+function recordGate(opportunityId: string, gate: string, decision: "go" | "hold" = "go"): void {
+  db.run(
+    "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+    [ulid(), "opportunity", opportunityId, gate, decision, "test gate", U1, NOW],
+  );
+}
+
+function seedGates(opportunityId: string, track: "greenfield" | "brownfield"): void {
+  recordGate(opportunityId, "screening");
+  recordGate(opportunityId, "pre_fs");
+  if (track === "brownfield") recordGate(opportunityId, "target_screening");
+}
+
 /** S7 artifact: one shortlisted brownfield_target. */
 function completeS7(opportunityId: string): void {
   db.run(
@@ -93,6 +108,7 @@ describe("promoteOpportunity (ADR-0095)", () => {
     const oppId = insertOpportunity();
     insertRouteDecision(oppId, "greenfield");
     completeS5(oppId);
+    seedGates(oppId, "greenfield");
 
     const result = promoteOpportunity(oppId, { promotedBy: U1, needToKnowBasis: "promoter of this review", origin: "internal" });
 
@@ -125,6 +141,7 @@ describe("promoteOpportunity (ADR-0095)", () => {
     const oppId = insertOpportunity();
     insertRouteDecision(oppId, "greenfield");
     completeS5(oppId);
+    seedGates(oppId, "greenfield");
     promoteOpportunity(oppId, { promotedBy: U1, needToKnowBasis: "first promotion" });
 
     expect(() => promoteOpportunity(oppId, { promotedBy: U2, needToKnowBasis: "second attempt" })).toThrow(PromotionError);
@@ -152,6 +169,7 @@ describe("promoteOpportunity (ADR-0095)", () => {
   test("greenfield with incomplete S5 → precondition_failed", () => {
     const oppId = insertOpportunity();
     insertRouteDecision(oppId, "greenfield");
+    seedGates(oppId, "greenfield");
     // no greenfield_assessment row at all
     try {
       promoteOpportunity(oppId, { promotedBy: U1, needToKnowBasis: "basis" });
@@ -165,6 +183,7 @@ describe("promoteOpportunity (ADR-0095)", () => {
   test("brownfield without S7 Short List → precondition_failed; with one → success", () => {
     const oppId = insertOpportunity();
     insertRouteDecision(oppId, "brownfield");
+    seedGates(oppId, "brownfield");
     try {
       promoteOpportunity(oppId, { promotedBy: U1, needToKnowBasis: "basis" });
       throw new Error("expected PromotionError");
@@ -174,6 +193,21 @@ describe("promoteOpportunity (ADR-0095)", () => {
     completeS7(oppId);
     const result = promoteOpportunity(oppId, { promotedBy: U1, needToKnowBasis: "basis" });
     expect(result.project.track).toBe("brownfield");
+  });
+
+  test("pending gate (pre_fs HOLD) → precondition_failed — gates align with the pipeline ordering", () => {
+    const oppId = insertOpportunity();
+    insertRouteDecision(oppId, "greenfield");
+    completeS5(oppId);
+    recordGate(oppId, "screening", "go");
+    recordGate(oppId, "pre_fs", "hold");
+    try {
+      promoteOpportunity(oppId, { promotedBy: U1, needToKnowBasis: "basis" });
+      throw new Error("expected PromotionError");
+    } catch (err) {
+      expect((err as PromotionError).code).toBe("precondition_failed");
+    }
+    expect((db.query("SELECT project_id FROM opportunity WHERE id = ?").get(oppId) as { project_id: string | null }).project_id).toBeNull();
   });
 
   test("unknown opportunity → not_found", () => {
@@ -189,6 +223,7 @@ describe("promoteOpportunity (ADR-0095)", () => {
     const oppId = insertOpportunity();
     insertRouteDecision(oppId, "greenfield");
     completeS5(oppId);
+    seedGates(oppId, "greenfield");
     try {
       promoteOpportunity(oppId, { promotedBy: U1, needToKnowBasis: "   " });
       throw new Error("expected PromotionError");

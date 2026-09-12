@@ -123,5 +123,5 @@ export function computeWaccReference(db: Database, subjectCompanyId: string): Wa
     },
   ];
 
-  return { subject: { company_id: company.id, name_ko: company.name_ko }, entries, missing: entries.filter((e) => e.value === null).map((e) => e.key) };
+  return { subject: { company_id: company.id, name_ko: company.name_ko }, entries, spread_pct: spread, missing: entries.filter((e) => e.value === null).map((e) => e.key) };
 }

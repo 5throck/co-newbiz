@@ -1,5 +1,6 @@
-// 단계 메타데이터 (클라이언트 안전 — getDb 비의존). flow.spec v2.0.0의 발췌본이며
-// tests/unit/process-flow.test.ts의 stage-meta 정합 테스트가 스펙과의 일치를 강제한다.
+// 단계 메타데이터 (클라이언트 안전 — getDb 비의존). flow.spec.yaml (v2.3.0 기준)
+// 의 발췌본이며 tests/unit/process-flow.test.ts의 stage-meta 정합 테스트가
+// 스펙과의 일치를 강제한다.
 // 표준 화면 패턴 P0 StageFrame/StageRail의 유일한 데이터원 (ADR-0086).
 
 export type StageMetaId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11" | "S12";

@@ -145,6 +145,33 @@
       "source": "manual",
       "created": "2026-09-12",
       "last_updated": "2026-09-12"
+    },
+    {
+      "id": "2026-09-12-pipeline-linkage-p1-design",
+      "title": "pipeline linkage p1 design",
+      "file": "docs/designs/2026-09-12-pipeline-linkage-p1-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-12",
+      "last_updated": "2026-09-12"
+    },
+    {
+      "id": "2026-09-12-pipeline-alignment-p2-design",
+      "title": "pipeline alignment p2 design",
+      "file": "docs/designs/2026-09-12-pipeline-alignment-p2-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-12",
+      "last_updated": "2026-09-12"
+    },
+    {
+      "id": "2026-09-12-deal-workspace-ui-redesign-design",
+      "title": "deal workspace ui redesign design",
+      "file": "docs/designs/2026-09-12-deal-workspace-ui-redesign-design.md",
+      "status": "proposed",
+      "source": "manual",
+      "created": "2026-09-12",
+      "last_updated": "2026-09-12"
     }
   ]
 }

@@ -213,7 +213,7 @@ export function ProjectsView() {
                   </td>
                   <td>
                     {p.source_opportunity_id ? (
-                      <Link href={`/opportunities?id=${p.source_opportunity_id}`}>기회 보기</Link>
+                      <Link href={`/opportunities?opportunity=${p.source_opportunity_id}`}>기회 보기</Link>
                     ) : (
                       <span className="text-[color:var(--muted-fg)]">—</span>
                     )}

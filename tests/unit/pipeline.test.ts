@@ -177,7 +177,18 @@ describe("(a) full run — boundary #2 is test-enforced", () => {
     const res = await req(`/api/opportunities/${oppId}/route-decision`, {
       method: "POST",
       headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ track: "greenfield", rationale: "트랙 결정 (사람, 테스트)" }),
+      body: JSON.stringify({
+        track: "greenfield",
+        rationale: "트랙 결정 (사람, 테스트)",
+        intent: "integration",
+        scores: [
+          { criterion: "control_need", score: 2, evidence_note: "t" },
+          { criterion: "capability_criticality", score: 3, evidence_note: "t" },
+          { criterion: "market_uncertainty", score: 2, evidence_note: "t" },
+          { criterion: "integration_capacity", score: 2, evidence_note: "t" },
+          { criterion: "speed_to_capability", score: 2, evidence_note: "t" },
+        ],
+      }),
     });
     expect([200, 201]).toContain(res.status);
 
@@ -395,6 +406,10 @@ describe("(e) max-iteration safety cap", () => {
       const capOppId = seedOpportunity("캡 테스트 기회", true);
       seedGreenfieldAssessment(capOppId);
       db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?)", [ulid(), capOppId, "greenfield", "test", ANALYST, NOW]);
+      // Promotion preconditions (2026-09-12 hardening): screening + pre_fs must be GO.
+      for (const gate of ["screening", "pre_fs"]) {
+        db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", capOppId, gate, "go", "test", ANALYST, NOW]);
+      }
       const projectId = promoteOpportunity(capOppId, { promotedBy: ANALYST, needToKnowBasis: "cap test" }).project.id;
 
       const run = startPipeline({

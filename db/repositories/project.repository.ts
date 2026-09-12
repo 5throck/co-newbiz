@@ -109,6 +109,16 @@ interface GreenfieldAssessmentCheck {
  * Both tracks additionally require an S4 route_decision to exist, because the
  * project's `track` snapshot is copied from it — promotion without a track
  * would leave S8–S12 surfaces unable to pick their procedure set.
+ *
+ * Gate alignment (2026-09-12 promotion hardening): the auto-pipeline only
+ * reaches its promotion step after every track-relevant gate is GO
+ * (app/web-next/lib/pipeline.ts firstPendingGate). The direct analyst path now
+ * enforces the same ordering — promoting with a pending HOLD/KILL (or a never
+ * recorded) gate would let the project carrier assert S1–S7 complete
+ * (process-flow project branch) while the opportunity's gate was never cleared.
+ * Required: screening + pre_fs on both tracks, target_screening on brownfield.
+ * Latest-decision-per-gate mirrors latestGateDecisions()'s tie-break
+ * (decided_at DESC, id DESC).
  */
 function assertPromotionPreconditions(db: ReturnType<typeof getDb>, opp: PromotionSourceRow): void {
   if (!opp.track) {
@@ -116,6 +126,31 @@ function assertPromotionPreconditions(db: ReturnType<typeof getDb>, opp: Promoti
       "precondition_failed",
       "No route_decision exists for this opportunity — the S4 track decision (greenfield/brownfield) is required before promotion (S8+ surfaces key off the track).",
     );
+  }
+  const requiredGates = opp.track === "brownfield"
+    ? ["screening", "pre_fs", "target_screening"]
+    : ["screening", "pre_fs"];
+  const verdicts = new Map(
+    (
+      db
+        .query(
+          `SELECT gate, decision FROM (
+             SELECT gate, decision,
+                    ROW_NUMBER() OVER (PARTITION BY gate ORDER BY decided_at DESC, id DESC) AS rn
+             FROM gate_decision WHERE entity_type = 'opportunity' AND entity_id = ?
+           ) WHERE rn = 1`,
+        )
+        .all(opp.id) as Array<{ gate: string; decision: string }>
+    ).map((r) => [r.gate, r.decision]),
+  );
+  for (const gate of requiredGates) {
+    const verdict = verdicts.get(gate);
+    if (verdict !== "go") {
+      throw new PromotionError(
+        "precondition_failed",
+        `Gate "${gate}" is not GO (latest decision: ${verdict ?? "not recorded"}) — every track-relevant gate must be GO before promotion, matching the auto-pipeline's promotion ordering.`,
+      );
+    }
   }
   if (opp.track === "greenfield") {
     const a = db

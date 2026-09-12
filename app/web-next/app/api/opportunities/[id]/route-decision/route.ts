@@ -80,22 +80,20 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     return badRequest("invalid_request", "brownfield sub_track은 m_and_a | jv | strategic_investment | minority_investment | partnership | rbd | corporate_venture 중 하나입니다.");
   }
 
-  // 채점 — Brownfield는 스펙 completionCriteria상 5criteria + 사전배제 점검이 의무.
+  // 채점 — 스펙 v2.2.0+ completionCriteria (ADR-0104 트랙 간 비교 가능성):
+  // 양 트랙 모두 intent(Stage 1) + 5criteria 채점이 의무.
   const intent = body?.intent;
-  let intentValue: string | null = null;
-  if (intent) {
-    if (!INTENTS.includes(intent as typeof INTENTS[number])) {
-      return badRequest("invalid_request", "intent는 integration | capability_access 중 하나입니다.");
-    }
-    intentValue = intent;
+  if (!intent) return badRequest("invalid_request", "결정에는 intent(Stage 1 의도 분기)가 필수입니다.");
+  if (!INTENTS.includes(intent as typeof INTENTS[number])) {
+    return badRequest("invalid_request", "intent는 integration | capability_access 중 하나입니다.");
   }
-  let scoreRows: ScoreInput[] = [];
+  const intentValue: string = intent;
+  const scoreResult = validateScores(body?.scores);
+  if ("error" in scoreResult) return badRequest("invalid_request", scoreResult.error);
+  const scoreRows: ScoreInput[] = scoreResult.scores;
+  // 사전배제 — 통제 필요도=高 + 역량접근 의도 + 라이선스/공동개발 성 라우트
+  // (brownfield 라우트만 존재하는 하위 유형이다)
   if (track === "brownfield") {
-    if (!intentValue) return badRequest("invalid_request", "Brownfield 결정에는 intent(Stage 1 의도 분기)가 필수입니다.");
-    const result = validateScores(body?.scores);
-    if ("error" in result) return badRequest("invalid_request", result.error);
-    scoreRows = result.scores;
-    // 사전배제 — 통제 필요도=高 + 역량접근 의도 + 라이선스/공동개발 성 라우트
     const controlNeed = scoreRows.find((s) => s.criterion === "control_need")!.score;
     if (intentValue === "capability_access" && controlNeed === 3 && subTrack && OVERRIDDEN_SUBS.includes(subTrack as typeof OVERRIDDEN_SUBS[number])) {
       return badRequest(

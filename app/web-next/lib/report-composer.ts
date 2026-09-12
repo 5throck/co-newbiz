@@ -81,7 +81,7 @@ export function composeProjectReport(db: Database, projectId: string, projectNo:
   const dd = ddCompletionSummary(projectId);
   lines.push("## 3. 실사(DD) 완료 요약");
   lines.push("");
-  lines.push(`- 완료 판정: ${dd.complete ? "완료" : "미완료"} · 필수 항목 해소 현황은 실사 탭 참조`);
+  lines.push(`- 완료 판정: ${dd.pending === 0 && dd.mandatoryUnmet === 0 ? "완료" : "미완료"} · 필수 항목 해소 현황은 실사 탭 참조`);
   lines.push("");
 
   sections.push("RAG 제안");

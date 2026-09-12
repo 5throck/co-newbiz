@@ -154,6 +154,44 @@ describe("process flow spec integrity (ADR-0074)", () => {
     }
   });
 
+  test("web process-flow STAGES mirrors the spec verbatim (engine data source)", () => {
+    // app/web-next/lib/process-flow.ts의 STAGES는 완료 술어·프로세스 API의
+    // 데이터원이다. id·순서·이름·목표·게이트·필수산출물이 스펙과 문자열 단위로
+    // 일치하는지 강제한다 (applicableTracks는 엔진 정규화 ["all"] == [gf, bf]).
+    const { STAGES } = require(join(ROOT, "app", "web-next", "lib", "process-flow.ts")) as {
+      STAGES: Array<{ id: string; name: string; sequence: number; objective: string; applicableTracks: string[]; gateIds: string[]; requiredArtifacts: string[] }>;
+    };
+    expect(STAGES.length).toBe(spec.stages.length);
+    for (let i = 0; i < spec.stages.length; i++) {
+      const sp = spec.stages[i];
+      const co = STAGES[i];
+      expect(co.id).toBe(sp.id);
+      expect(co.sequence).toBe(i + 1);
+      expect(co.name).toBe(sp.name);
+      expect(co.objective).toBe(sp.objective);
+      expect(co.gateIds).toEqual(sp.gates);
+      const normalizedTracks = co.applicableTracks.includes("all") ? ["greenfield", "brownfield"] : co.applicableTracks;
+      expect([...normalizedTracks].sort()).toEqual([...sp.applicableTracks].sort());
+      expect(co.requiredArtifacts).toEqual(sp.requiredArtifacts);
+    }
+  });
+
+  test("spec-activities.generated.ts mirrors the spec (loader projection)", () => {
+    // The generated projection is hand-regenerated from the YAML — this gate
+    // makes drift loud. Version string and every stage's activity list
+    // (id·agent·skills·procedure, in order) must match exactly.
+    const gen = require(join(ROOT, "app", "web-next", "lib", "spec-activities.generated.ts")) as {
+      SPEC_VERSION: string;
+      SPEC_STAGES: Array<{ id: string; activities: Array<{ id: string; agent: string; skills: string[]; procedure: string[] }> }>;
+    };
+    expect(gen.SPEC_VERSION).toBe(spec.meta.version);
+    expect(gen.SPEC_STAGES.map((s) => s.id)).toEqual(spec.stages.map((s) => s.id));
+    for (const sp of spec.stages) {
+      const g = gen.SPEC_STAGES.find((s) => s.id === sp.id)!;
+      expect(g.activities).toEqual(sp.activities.map((a) => ({ id: a.id, agent: a.agent, skills: a.skills, procedure: a.procedure })));
+    }
+  });
+
   test("docs/process-flow.md is the up-to-date regeneration of the spec", () => {
     // Regenerate in-memory using the same generator entry and compare.
     const genPath = join(ROOT, "scripts", "co-newbiz", "generate-process-flow.ts");

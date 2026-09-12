@@ -114,6 +114,10 @@ beforeAll(async () => {
      VALUES (?,?,?,?,?,?,?,?,?)`,
     [ulid(), sourceOppId, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
   );
+  // Promotion preconditions (2026-09-12): screening + pre_fs must be GO.
+  for (const gate of ["screening", "pre_fs"]) {
+    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", sourceOppId, gate, "go", "test", ANALYST, NOW]);
+  }
   projectId = promoteOpportunity(sourceOppId, { promotedBy: ANALYST, needToKnowBasis: "S11 test promoter" }).project.id;
   seedS10Complete(projectId);
   // S11 establishment applies to origin∈{internal,joint} (ADR-0047) — pin it.
@@ -124,6 +128,9 @@ beforeAll(async () => {
     "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
     ["bc-ic1", projectId, "greenfield_cost", "IC 패키지 케이스", 5, ANALYST, NOW],
   );
+  // S11 charter baseline JSON exists from promotion (ADR-0104); the human
+  // CONFIRMATION act is exercised through the confirm endpoint in describe (e).
+  db.run("UPDATE md_project SET charter_json = ? WHERE id = ?", [JSON.stringify({ versions: [{ version: 1, purpose: "IC 테스트 목적" }] }), projectId]);
   db.run(
     "INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
     [ulid(), projectId, "bc-ic1", "base", "p50", 12000, 0.14, "seed=42", NOW],
@@ -336,12 +343,18 @@ describe("(e) S11 completion — both gates go AND establishment 5/5", () => {
     expect(before.blockers.join("\n")).toContain("Group IC");
   });
 
-  test("both gates go + 5/5 flips S11 complete (origin internal)", async () => {
+  test("both gates go + charter confirmed + 5/5 flips S11 complete (origin internal)", async () => {
     const res = await req(`/api/projects/${projectId}/gate-decisions`, {
       method: "POST", headers: { cookie: analystCookie },
       body: JSON.stringify({ gate: "group_ic", decision: "go", rationale: "그룹 투자심사 인적 결재" }),
     });
     expect(res.status).toBe(201);
+
+    // Charter baseline confirmation — the human act behind S11's completionCriteria.
+    const confirm = await req(`/api/projects/${projectId}/charter/confirm`, {
+      method: "POST", headers: { cookie: analystCookie }, body: "{}",
+    });
+    expect(confirm.status).toBe(200);
 
     const after = evaluateProcess({ type: "project", id: projectId });
     expect(after.gateStatus).toMatchObject({ entity_ic: "go", group_ic: "go" });

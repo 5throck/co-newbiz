@@ -69,6 +69,10 @@ beforeAll(async () => {
      VALUES (?,?,?,?,?,?,?,?,?)`,
     [ulid(), oppId, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "dual-view test", "dualview", NOW, NOW],
   );
+  // Promotion preconditions (2026-09-12): screening + pre_fs must be GO.
+  for (const gate of ["screening", "pre_fs"]) {
+    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", oppId, gate, "go", "test", "dualview", NOW]);
+  }
   projectId = promoteOpportunity(oppId, { promotedBy: "dualview", needToKnowBasis: "dual-view test" }).project.id;
 
   // Bind a company and seed 5 years of perfectly-geometric revenue growth

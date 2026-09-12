@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { StageFrame } from "../../components/StageFrame.tsx";
 
@@ -48,7 +47,6 @@ function gateChip(value: string | undefined) {
 const GATES = ["fs", "dd", "entity_ic", "group_ic"] as const;
 
 function PipelineViewInner() {
-  const params = useParams<{ id: string }>();
   const [data, setData] = useState<PipelineView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,7 +62,6 @@ function PipelineViewInner() {
 
   return (
     <main>
-      <p className="text-[0.8rem] mb-2"><a className="text-[color:var(--accent)] underline" href={`/projects/${params.id}/process`}>프로세스 현황 →</a></p>
       <StageFrame stageId="S8" heading="프로젝트 파이프라인 — 퍼널 스냅샷 + 게이트 에이징">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
           선발된 모든 프로젝트의 현재 스테이지와 게이트 기록을 한눈에 보고, HOLD·KILL 상태로
