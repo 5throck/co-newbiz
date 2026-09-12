@@ -6,6 +6,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Changed
+- **[2026-09-12]**: feat(restyle): **Stage linkage strip on every stage screen (ADR-0120 restyle pass — the visual upgrade users were missing).** StageFrame now renders an input←output linkage strip on ALL 14+ stage surfaces automatically: the stage's inputs (from flow.spec inputs, presentation strings in `lib/stage-handoff.ts`) as chips, and an output→ next-stage CTA linking via the stage route map (project-context and track aware). This upgrades the legacy working screens (market/opportunities/synergy/route-decision/greenfield/brownfield + all project tabs) without per-page edits. styles.css adds the .handoff strip styles.
 ### Added
 - **[2026-09-12]**: feat(cycle3): **Covenant scenario compute view (final P3 backlog item).** The debt page gains a scenario panel: annual debt service is computed per instrument with the annuity formula from the persisted principal/rate/maturity (remaining term derived; unstated maturity shown as a 5-year assumption), optional +2%p rate stress, and DSCR = scenario operating cash flow / debt service compared against parsed covenant thresholds (both "DSCR >= 1.3" prose and JSON forms accepted). The scenario cash flow is an explicit user assumption — nothing invented; official covenant tests remain simulation-run-confirmed (covenant_test), with simulation integration noted on the backlog. Threshold display now parses both prose and JSON covenant notation.
 ### Added
