@@ -29,5 +29,28 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
      WHERE r.entity_type = 'project' AND r.entity_id = ?
      ORDER BY r.started_at DESC`,
   ).all(id);
-  return ok({ runs, proposals }, 200, { runs: runs.length, proposals: proposals.length });
+  // LLM reliability score (ADR-0123 #2): per gate, does the human's next
+  // recorded decision on the SAME gate match the committee's recommendation?
+  // Display-only learning signal — never gates anything.
+  const reliability: Array<Record<string, unknown>> = [];
+  const byGate = new Map<string, { total: number; accepted: number }>();
+  for (const p of proposals) {
+    const decision = db.query(
+      `SELECT decision FROM gate_decision
+       WHERE entity_type = 'project' AND entity_id = ? AND gate = ? AND decided_at >= ?
+       ORDER BY decided_at ASC LIMIT 1`,
+    ).get(id, p.gate, p.started_at) as { decision: string } | undefined;
+    if (!decision) continue;
+    const rec = byGate.get(p.gate) ?? { total: 0, accepted: 0 };
+    rec.total += 1;
+    if (decision.decision === p.recommendation) rec.accepted += 1;
+    byGate.set(p.gate, rec);
+  }
+  for (const [gate, rec] of byGate) {
+    reliability.push({
+      gate, total: rec.total, accepted: rec.accepted,
+      agreement_pct: Math.round((rec.accepted / rec.total) * 100),
+    });
+  }
+  return ok({ runs, proposals, reliability }, 200, { runs: runs.length, proposals: proposals.length });
 }

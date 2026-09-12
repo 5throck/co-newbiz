@@ -126,6 +126,18 @@ function DealsBoard() {
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       {!data && !error && <PageState state="loading" rows={4} />}
 
+      {data && (opps ?? []).filter((o) => o.status !== "dropped").length === 0 && data.projects.length === 0 && (
+        <div className="market-section mb-4" style={{ border: "1px dashed var(--border)" }}>
+          <h2 className="text-[0.9rem] mb-1">아직 진행 중인 딜이 없습니다</h2>
+          <p className="text-[0.82rem]" style={{ margin: "0 0 8px" }}>
+            첫 신규사업 검토는 시장분석(S1)부터 시작합니다 — 4단계 가이드가 준비되어 있습니다.
+          </p>
+          <Link href="/onboarding" className="btn-primary btn-sm" style={{ textDecoration: "none", display: "inline-block" }}>
+            시작하기 가이드 보기
+          </Link>
+        </div>
+      )}
+
       {data && (
         <>
           <div className="funnel-board" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>

@@ -50,6 +50,27 @@ export function BrownfieldView() {
   const [busy, setBusy] = useState(false);
 
   const selectedId = searchParams.get("opportunity");
+  interface Suggestion { id: string; name_ko: string; dart_corp_code: string | null }
+  const [proposals, setProposals] = useState<Suggestion[] | null>(null);
+
+  const loadProposals = useCallback(() => {
+    if (!selectedId) { setProposals(null); return; }
+    api.get<{ suggestions: Suggestion[] }>(`/api/projects/${encodeURIComponent(selectedId)}/target-proposals`)
+      .then((r) => setProposals(r.data.suggestions))
+      .catch(() => setProposals([]));
+  }, [selectedId]);
+  useEffect(() => { loadProposals(); }, [loadProposals]);
+
+  async function acceptProposal(companyName: string, dartCorpCode: string | null) {
+    try {
+      await api.post(`/api/projects/${encodeURIComponent(selectedId ?? "")}/target-proposals`, {
+        company_name: companyName, dart_corp_code: dartCorpCode || undefined, discovery_source: "master_proposal",
+      });
+      setProposals((prev) => (prev ?? []).filter((c) => c.name_ko !== companyName));
+      loadDetail(selectedId ?? "");
+      loadOpps();
+    } catch (err) { setError(err instanceof Error ? err.message : "수용 실패"); }
+  }
 
   const loadOpps = useCallback(() => {
     api.get<{ opportunities: OppRow[] }>("/api/brownfield").then((r) => setOpps(r.data.opportunities)).catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
@@ -227,6 +248,27 @@ export function BrownfieldView() {
           </div>
         )}
       </section>
+
+      {/* ── S6 ② 후보 발굴 제안 (deterministic master-data 기반, provenance 기록) ── */}
+      {selected && (
+        <section aria-label="후보 제안" className="market-section">
+          <h2 className="text-[0.9rem] mb-2">후보 발굴 제안 <span className="note">— 시장·기업 마스터 기반 (결정론)</span></h2>
+          {proposals === null ? <p className="text-[0.8rem]">불러오는 중...</p> : proposals.length === 0 ? (
+            <p className="note" style={{ marginBottom: 0 }}>제안 가능한 신규 후보가 없습니다 — 아래에서 직접 등록하세요.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {proposals.map((c) => (
+                <button key={c.id} type="button" className="control-chip"
+                  title={c.dart_corp_code ? `DART ${c.dart_corp_code}` : undefined}
+                  onClick={() => acceptProposal(c.name_ko, c.dart_corp_code)}>
+                  ＋ {c.name_ko}
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="note" style={{ marginBottom: 0 }}>수용하면 발굴 출처(discovery_source)가 기록됩니다 — 제안은 결정론 소스이며 웹 검색 제안은 별도 라벨링 예정입니다.</p>
+        </section>
+      )}
 
       {/* ── S6/S7: 후보 등록 + Long List + 스크리닝 ── */}
       {selected && (
