@@ -224,7 +224,7 @@ export function BrownfieldView() {
 
       {/* ── Brownfield 기회 (칩) ── */}
       <section aria-label="브라운필드 기회" className="market-section">
-        <div className="section-toolbar"><span className="section-title"><h2>🎯 Brownfield로 결정된 기회</h2></span></div>
+        <div className="section-toolbar"><span className="section-title"><h2>Brownfield로 결정된 기회</h2></span></div>
         {opps === null ? (
           <p>불러오는 중...</p>
         ) : opps.length === 0 ? (
@@ -275,7 +275,7 @@ export function BrownfieldView() {
         <section aria-label="대상 후보 스크리닝" className="market-section">
           <SectionToolbar
             title={`${selected.opportunity.name} — Long List → Short List`}
-            icon="🏢"
+            icon=""
             summary={
               <span className="section-meta">
                 {selected.targets.filter((t) => t.status === "shortlisted").length} Short List / {selected.targets.length} Long List
@@ -285,7 +285,7 @@ export function BrownfieldView() {
 
           {/* S6 — Target Universe 정의 (완료기준: 정의 + 최소 Long List 커버리지, ADR-0094) */}
           <div className="sizing-grade-card mb-3">
-            <h4 className="text-[0.85rem] mb-2">🎯 Target Universe 정의</h4>
+            <h4 className="text-[0.85rem] mb-2">Target Universe 정의</h4>
             {selected.universe ? (
               <>
                 <p className="mb-1 text-[0.85rem]">{selected.universe.definition}</p>
@@ -390,7 +390,7 @@ export function BrownfieldView() {
                         <tr key={`${t.id}-detail`}>
                           <td colSpan={5}>
                             <div className="text-[0.78rem] py-1">
-                              <h4 className="text-[0.85rem] mb-2">⚖️ S7 스크리닝 — chk-target-screening (t-01~t-09)</h4>
+                              <h4 className="text-[0.85rem] mb-2">S7 스크리닝 — chk-target-screening (t-01~t-09)</h4>
                               <ul className="sizing-note-list">
                                 {selected.checklist.map((item) => {
                                   const key = `${t.id}:${item.id}`;

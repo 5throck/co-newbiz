@@ -428,7 +428,7 @@ export function OpportunitiesView() {
 
       {/* ── 분석된 산업 (S1 연동, 접힘) ── */}
       <section aria-label="분석된 산업" className="market-section">
-        <div className="section-toolbar"><span className="section-title"><h2>🔬 분석된 산업 — 선택해 기회 발굴</h2></span></div>
+        <div className="section-toolbar"><span className="section-title"><h2>분석된 산업 — 선택해 기회 발굴</h2></span></div>
         {insights !== null && insights.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {insights.map((s) => (
@@ -457,7 +457,7 @@ export function OpportunitiesView() {
         {selectedInsight && (
           <div className="sizing-new-form mt-3">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <strong className="text-[0.85rem]">📊 {selectedInsight.industry_name}</strong>
+              <strong className="text-[0.85rem]">{selectedInsight.industry_name}</strong>
               <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
                 CAGR {selectedInsight.bottom_up_cagr_pct !== null ? `${selectedInsight.bottom_up_cagr_pct}%` : "—"}
                 {selectedInsight.external_forecast?.gap_pct != null ? ` · 외부 전망 대비 격차 ${selectedInsight.external_forecast.gap_pct > 0 ? "+" : ""}${selectedInsight.external_forecast.gap_pct}%` : ""}
@@ -470,7 +470,7 @@ export function OpportunitiesView() {
                 title="시장분석 근거(기회 요인·드라이버·격차 분석)에서 기회 후보를 자동 발굴하고, 기회/위험 요인도 함께 도출합니다"
                 onClick={() => discoverOpportunities(selectedInsight.industry_name)}
               >
-                {discovering === selectedInsight.industry_name ? "기회 발굴 중..." : "🔍 기회 발굴 (요인 자동 도출 포함)"}
+                {discovering === selectedInsight.industry_name ? "기회 발굴 중..." : "기회 발굴 (요인 자동 도출 포함)"}
               </button>
             </div>
             <details>
@@ -483,7 +483,7 @@ export function OpportunitiesView() {
                   </ul>
                 </div>
                 <div className="chart-half sizing-grade-card">
-                  <h4 className="text-[0.85rem] mb-2">⚠️ 위험 요인</h4>
+                  <h4 className="text-[0.85rem] mb-2">위험 요인</h4>
                   <ul className="sizing-note-list">
                     {(selectedInsight.risk_factors.length ? selectedInsight.risk_factors : ["분석 보완 필요"]).map((f, i) => <li key={i}>{f}</li>)}
                   </ul>
@@ -501,7 +501,7 @@ export function OpportunitiesView() {
       <section aria-label="기회 퍼널" className="market-section">
         <SectionToolbar
           title="기회 퍼널"
-          icon="🗂"
+          icon=""
           count={sortedRows.length}
           filters={
             <>
@@ -602,7 +602,7 @@ export function OpportunitiesView() {
                       </td>
                       <td className="tabular-nums">{o.attractiveness_score ?? "—"}</td>
                       <td className="tabular-nums">{o.synergy_score ?? "—"}</td>
-                      <td className="tabular-nums">{fs ? `✅${fs.opportunity.length} ⚠️${fs.risk.length}` : "—"}</td>
+                      <td className="tabular-nums">{fs ? `✅${fs.opportunity.length} ${fs.risk.length}` : "—"}</td>
                       <td className="sizing-actions-cell"><span className="actions-row">
                         {nextStepActions(o, setStatus, showSketch, sketchOf)}
                         {!o.project_id && (
@@ -671,7 +671,7 @@ export function OpportunitiesView() {
                                 </ul>
                               </div>
                               <div className="chart-half sizing-grade-card">
-                                <h4 className="text-[0.8rem] mb-1">⚠️ 위험 요인</h4>
+                                <h4 className="text-[0.8rem] mb-1">위험 요인</h4>
                                 <ul className="sizing-note-list">
                                   {(fs?.risk ?? []).map((f, i) => (
                                     <li key={i}>
@@ -691,7 +691,7 @@ export function OpportunitiesView() {
                                 title="산업 시장분석 근거에서 기회/위험 요인을 자동 도출합니다"
                                 onClick={() => autoDeriveFactors(o.id)}
                               >
-                                {factorState === "loading" ? "도출 중..." : "⚡ 요인 자동 도출"}
+                                {factorState === "loading" ? "도출 중..." : "요인 자동 도출"}
                               </button>
                               <input
                                 aria-label="기회 요인 수동 추가"
@@ -719,7 +719,7 @@ export function OpportunitiesView() {
                             {o.status !== "identified" && (
                               <div className="mt-2 p-2 border border-[color:var(--border)] rounded">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <h4 className="text-[0.8rem] !mb-0 font-semibold">⚖️ S3 시너지·전략적 적합성</h4>
+                                  <h4 className="text-[0.8rem] !mb-0 font-semibold">S3 시너지·전략적 적합성</h4>
                                   {o.synergy_score !== null && o.fit_verdict && (
                                     <span className={`status-chip ${o.fit_verdict === "Go" && o.synergy_score >= 60 ? "status-green" : o.fit_verdict === "Kill" || o.synergy_score < 40 ? "status-red" : "status-amber"}`}>
                                       screening 권고: {o.fit_verdict === "Go" && o.synergy_score >= 60 ? "Go" : o.fit_verdict === "Kill" || o.synergy_score < 40 ? "Kill" : "Hold"}
@@ -734,7 +734,7 @@ export function OpportunitiesView() {
                                     title="자사 역량과의 시너지를 0-100 점과 근거로 산출합니다 (risk-officer)"
                                     onClick={() => runScreening(o.id, "synergy")}
                                   >
-                                    {screeningBusy[o.id] === "synergy" ? "분석 중..." : "📊 시너지 분석"}
+                                    {screeningBusy[o.id] === "synergy" ? "분석 중..." : "시너지 분석"}
                                   </button>
                                   <button
                                     type="button"
@@ -743,7 +743,7 @@ export function OpportunitiesView() {
                                     title="전략적 적합성을 Go/Hold/Kill로 권고합니다 (process-governance-manager)"
                                     onClick={() => runScreening(o.id, "fit")}
                                   >
-                                    {screeningBusy[o.id] === "fit" ? "평가 중..." : "⚖️ 적합성 평가"}
+                                    {screeningBusy[o.id] === "fit" ? "평가 중..." : "적합성 평가"}
                                   </button>
                                 </div>
                                 {o.synergy_score !== null && (

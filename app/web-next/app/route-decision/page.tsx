@@ -275,7 +275,7 @@ export function RouteDecisionView() {
 
       {/* ── 선별된 기회 (칩) ── */}
       <section aria-label="선별된 기회" className="market-section">
-        <SectionToolbar title="선별된 기회" icon="🎯" />
+        <SectionToolbar title="선별된 기회" icon="" />
         {rows === null ? (
           <p>불러오는 중...</p>
         ) : rows.length === 0 ? (
@@ -321,7 +321,7 @@ export function RouteDecisionView() {
       {/* ── 결정 근거 (선택된 기회의 S1~S3 산출물 요약) ── */}
       {selected && (
         <section id="evidence" aria-label="결정 근거" className="market-section">
-          <SectionToolbar title={`${selected.name} — 결정 근거`} icon="📋" />
+          <SectionToolbar title={`${selected.name} — 결정 근거`} icon="" />
           <dl className="text-[0.85rem] space-y-1">
             <div><dt className="inline font-semibold mr-1">시장:</dt><dd className="inline">{selected.market_scope ?? "—"}{selected.market_size_krw_m ? ` (규모 ${selected.market_size_krw_m.toLocaleString()} 백만원)` : ""}{selected.growth_rate !== null ? ` · CAGR ${(selected.growth_rate * 100).toFixed(1)}%` : ""}</dd></div>
             <div><dt className="inline font-semibold mr-1">발굴 근거:</dt><dd className="inline">{selected.rationale ?? "—"}</dd></div>
@@ -334,7 +334,7 @@ export function RouteDecisionView() {
       {/* ── 트랙 권고 어드바이저 (ADR-0104) — 읽기 전용 참고 자료 ── */}
       {selected && advisory && (
         <section id="advisory" aria-label="트랙 권고 어드바이저" className="market-section">
-          <SectionToolbar title={`${selected.name} — 트랙 권고 어드바이저`} icon="🧭" />
+          <SectionToolbar title={`${selected.name} — 트랙 권고 어드바이저`} icon="" />
           <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
             S1~S3 산출물에서 계산한 결정론적 권고입니다 — 참고 자료일 뿐이며, 결정은 아래 폼에서 사람이 기록합니다 (경계 #2).
           </p>
@@ -389,7 +389,7 @@ export function RouteDecisionView() {
           </table>
           {advisory.reReviewTriggers.length > 0 && (
             <div role="alert" className="mb-2">
-              <p className="text-[0.82rem] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">⚠ 재검토 트리거</p>
+              <p className="text-[0.82rem] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">재검토 트리거</p>
               <ul className="sizing-note-list">
                 {advisory.reReviewTriggers.map((t, i) => <li key={i}>{t}</li>)}
               </ul>
@@ -403,7 +403,7 @@ export function RouteDecisionView() {
         <section id="llm-reco" aria-label="LLM 추천 (결정 지원)" className="market-section" style={{ scrollMarginTop: "6.5rem" }}>
           <SectionToolbar
             title={`${selected.name} — LLM 추천`}
-            icon="🤖"
+            icon=""
             actions={
               reco ? (
                 <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateRecommendation()}>
@@ -482,7 +482,7 @@ export function RouteDecisionView() {
               )}
               {reco.recommendation.cautions.length > 0 && (
                 <>
-                  <p className="text-[0.82rem] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">⚠ 유의</p>
+                  <p className="text-[0.82rem] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">유의</p>
                   <ul className="sizing-note-list mb-3">
                     {reco.recommendation.cautions.map((c, i) => <li key={i}>{c}</li>)}
                   </ul>
@@ -509,7 +509,7 @@ export function RouteDecisionView() {
       {/* ── 결정 폼 + 이력 ── */}
       {selected && (
         <section id="route-form" aria-label="진출방식 결정" className="market-section" style={{ scrollMarginTop: "6.5rem" }}>
-          <SectionToolbar title={`${selected.name} — 진출방식 결정`} icon="⚖️" />
+          <SectionToolbar title={`${selected.name} — 진출방식 결정`} icon="" />
           <form onSubmit={saveDecision} className="sizing-new-form mb-4">
             <div className="flex flex-wrap items-end gap-3 mb-2">
               <label className="text-[0.78rem]">
@@ -690,7 +690,7 @@ export function RouteDecisionView() {
       )}
       {selected && sessions.length > 0 && (
         <section id="committee" aria-label="위원회 심의 이력" className="market-section">
-          <SectionToolbar title="위원회 심의 이력" icon="🏛" />
+          <SectionToolbar title="위원회 심의 이력" icon="" />
           <ul className="text-[0.85rem] space-y-1">
             {sessions.map((s2) => (
               <li key={s2.sessionId}>

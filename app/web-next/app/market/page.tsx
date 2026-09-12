@@ -287,7 +287,7 @@ export function MarketView() {
       <section aria-label="분석 대상 산업" className="market-section">
         <SectionToolbar
           title="분석 대상 산업"
-          icon="🏭"
+          icon=""
           count={statusCounts.all}
           filters={
             <input
@@ -556,7 +556,7 @@ function MarketReport({ detail, analysisId, analysisDate }: { detail: IndustryDe
     <>
       <div className="sizing-report-header">
         <h2>
-          📊 {detail.industry.name_ko} 시장 분석 리포트
+          {detail.industry.name_ko} 시장 분석 리포트
           {detail.industry.ksic_code && <code className="dd-item-id ml-2">{detail.industry.ksic_code}</code>}
         </h2>
         <p className="text-[color:var(--muted-fg)] text-[0.78rem]">
@@ -582,7 +582,7 @@ function MarketReport({ detail, analysisId, analysisDate }: { detail: IndustryDe
         <>
           {matrix.provenance === "llm-estimate" && (
             <p className="market-section sizing-note-list text-[0.78rem] text-[color:var(--amber-fg)]" role="note">
-              ⚠ 이 매트릭스는 파이프라인 LLM이 생성한 추정치입니다 — 수치는 앵커 삼각검증(2단계)과
+              이 매트릭스는 파이프라인 LLM이 생성한 추정치입니다 — 수치는 앵커 삼각검증(2단계)과
               기업 공시 교차검증(6단계)을 거친 동결 매트릭스가 아니며, 정식 인용 전 분석가 확정이 필요합니다.
               {llmUsed && <> (8단계 전체 LLM 요약 사용)</>}
             </p>
@@ -600,7 +600,7 @@ function VersionBar({ versions }: { versions: VersionInfo[] }) {
   return (
     <details className="market-section sizing-version-bar">
       <summary className="cursor-pointer text-[0.82rem]">
-        🕘 버전 이력 ({versions.length}개 버전) — 최신 v{versions[0].version_no}
+        버전 이력 ({versions.length}개 버전) — 최신 v{versions[0].version_no}
       </summary>
       <table className="data-table mt-2" aria-label="분석 버전 이력">
         <caption className="sr-only">분석 버전 이력</caption>
@@ -668,7 +668,7 @@ function SizingReport({ detail, matrix, stepSummaries }: {
       {tab === "overview" && (
         <section aria-label="개요" className="market-section sizing-step">
           <h3 className="sizing-step-title text-[0.95rem]">
-            <span className="sizing-step-badge">★</span> 핵심 요약
+            <span className="sizing-step-badge"></span> 핵심 요약
           </h3>
           <div className="summary-cards">
             <div className="summary-card glass">
@@ -977,7 +977,7 @@ function SizingReport({ detail, matrix, stepSummaries }: {
         {matrix.externalForecast ? (
           <div className="chart-half sizing-grade-card mt-4">
             <h4 className="text-[0.85rem] mb-2">
-              🔭 외부 미래 전망 대비 격차 분석 ({matrix.externalForecast.targetYear}년) — 과거 성장률 연장 추정 vs 외부 전망
+              외부 미래 전망 대비 격차 분석 ({matrix.externalForecast.targetYear}년) — 과거 성장률 연장 추정 vs 외부 전망
             </h4>
             <table className="data-table" aria-label="외부 전망 대비 격차">
               <caption className="sr-only">외부 전망 대비 격차</caption>
@@ -1039,7 +1039,7 @@ function SizingReport({ detail, matrix, stepSummaries }: {
               </ul>
             </div>
             <div className="chart-half sizing-grade-card">
-              <h4 className="text-[0.9rem] mb-2">⚠️ 위험 요인</h4>
+              <h4 className="text-[0.9rem] mb-2">위험 요인</h4>
               <ul className="sizing-note-list">
                 {matrix.qualitative.riskFactors.map((f, i) => <li key={i}>{f}</li>)}
               </ul>
@@ -1047,7 +1047,7 @@ function SizingReport({ detail, matrix, stepSummaries }: {
           </div>
           {matrix.externalForecast?.newDrivers && matrix.externalForecast.newDrivers.length > 0 && (
             <div className="sizing-grade-card mt-3">
-              <h4 className="text-[0.9rem] mb-2">🚀 외부 전망 대비 신규·강화 드라이버</h4>
+              <h4 className="text-[0.9rem] mb-2">외부 전망 대비 신규·강화 드라이버</h4>
               <div className="flex flex-wrap gap-1 mb-2">
                 {matrix.externalForecast.newDrivers.map((d) => (
                   <span key={d} className="status-chip status-in-progress">{d}</span>
@@ -1060,7 +1060,7 @@ function SizingReport({ detail, matrix, stepSummaries }: {
           )}
           {matrix.qualitative.sources && matrix.qualitative.sources.length > 0 && (
             <details className="mt-3">
-              <summary className="cursor-pointer text-[0.85rem] text-[color:var(--accent)]">📚 입수 출처 ({matrix.qualitative.sources.length}건 — 출처 명기 필수)</summary>
+              <summary className="cursor-pointer text-[0.85rem] text-[color:var(--accent)]">입수 출처 ({matrix.qualitative.sources.length}건 — 출처 명기 필수)</summary>
               <ul className="sizing-note-list mt-2">
                 {matrix.qualitative.sources.map((s, i) => (
                   <li key={i}>
@@ -1179,7 +1179,7 @@ function SizingReport({ detail, matrix, stepSummaries }: {
           </p>
           {matrix.ragCapRecommendation && (
             <div className="sizing-grade-card mt-3">
-              <h4 className="text-[0.9rem] mb-2">🚦 RAG 상한 권고</h4>
+              <h4 className="text-[0.9rem] mb-2">RAG 상한 권고</h4>
               <span className={`status-chip ${matrix.ragCapRecommendation.grade === "green" ? "status-green" : matrix.ragCapRecommendation.grade === "amber" ? "status-amber" : "status-red"}`}>
                 상한 {matrix.ragCapRecommendation.grade.toUpperCase()}
               </span>
@@ -1188,7 +1188,7 @@ function SizingReport({ detail, matrix, stepSummaries }: {
           )}
           {matrix.killCriteriaProposals && matrix.killCriteriaProposals.length > 0 && (
             <div className="mt-3">
-              <h4 className="text-[0.85rem] text-[color:var(--muted-fg)] mb-2">⚠️ Kill Criteria 제안 ({matrix.killCriteriaProposals.length}건 — 분석가 검토 필요)</h4>
+              <h4 className="text-[0.85rem] text-[color:var(--muted-fg)] mb-2">Kill Criteria 제안 ({matrix.killCriteriaProposals.length}건 — 분석가 검토 필요)</h4>
               <div className="grid gap-2">
                 {matrix.killCriteriaProposals.map((k, i) => (
                   <div key={i} className="sizing-grade-card">
@@ -1208,7 +1208,7 @@ function SizingReport({ detail, matrix, stepSummaries }: {
           {matrix.verificationLedger && matrix.verificationLedger.length > 0 && (
             <details className="mt-3">
               <summary className="cursor-pointer text-[0.85rem] text-[color:var(--accent)]">
-                🔍 검증 원장 ({matrix.verificationLedger.length}건 — 확인/확인불가/판단필요)
+                검증 원장 ({matrix.verificationLedger.length}건 — 확인/확인불가/판단필요)
               </summary>
               <table className="data-table mt-2" aria-label="검증 원장">
                 <caption className="sr-only">주장별 검증 상태</caption>
@@ -1316,7 +1316,7 @@ function SizingReport({ detail, matrix, stepSummaries }: {
 
       {stepSummaries && stepSummaries.length > 0 && (
         <details className="market-section sizing-step">
-          <summary className="cursor-pointer text-[0.85rem]">📝 파이프라인 단계별 분석 노트 ({stepSummaries.length}단계)</summary>
+          <summary className="cursor-pointer text-[0.85rem]">파이프라인 단계별 분석 노트 ({stepSummaries.length}단계)</summary>
           <ol className="mt-3 space-y-2 text-[0.85rem]">
             {stepSummaries.map((s) => (
               <li key={s.step}>

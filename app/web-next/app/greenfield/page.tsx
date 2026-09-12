@@ -155,7 +155,7 @@ export function GreenfieldView() {
 
       {/* ── Greenfield 기회 (칩) ── */}
       <section aria-label="그린필드 기회" className="market-section">
-        <div className="section-toolbar"><span className="section-title"><h2>🌱 Greenfield로 결정된 기회</h2></span></div>
+        <div className="section-toolbar"><span className="section-title"><h2>Greenfield로 결정된 기회</h2></span></div>
         {opps === null ? (
           <p>불러오는 중...</p>
         ) : opps.length === 0 ? (
@@ -185,7 +185,7 @@ export function GreenfieldView() {
         <section aria-label="LLM 역량·전략 추천" className="market-section">
           <SectionToolbar
             title={`${selected.opportunity.name} — LLM 역량·전략 추천`}
-            icon="🤖"
+            icon=""
             actions={
               reco ? (
                 <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>재생성</button>
@@ -236,7 +236,7 @@ export function GreenfieldView() {
               {reco.recommendation.alternatives_draft && <p className="text-[0.8rem] mb-2"><span className="font-semibold">대안 초안:</span> {reco.recommendation.alternatives_draft}</p>}
               {reco.recommendation.rationale_draft && <p className="text-[0.8rem] mb-2"><span className="font-semibold">평가 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
               {reco.recommendation.cautions.length > 0 && (
-                <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-2">⚠ {reco.recommendation.cautions.join(" / ")}</p>
+                <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-2">{reco.recommendation.cautions.join(" / ")}</p>
               )}
               <p className="text-[0.7rem] text-[color:var(--muted-fg)] mb-2">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
               <button
@@ -259,7 +259,7 @@ export function GreenfieldView() {
         <section aria-label="역량 평가" className="market-section">
           <SectionToolbar
             title={`${selected.opportunity.name} — 역량 평가·진출전략`}
-            icon="⚙️"
+            icon=""
             summary={
               <span className="flex items-center gap-1">
                 <span className="status-chip status-not-started" title="P4 실행형: 평가 구성요소 진행 — S11 설립실행과 동일 상태 어휘">
@@ -325,7 +325,7 @@ export function GreenfieldView() {
           {/* 저장된 요약 */}
           {selected.assessment && selected.assessment.capability_gaps?.length ? (
             <div className="mt-4">
-              <h3 className="text-[0.85rem] mb-2">📋 저장된 평가 요약</h3>
+              <h3 className="text-[0.85rem] mb-2">저장된 평가 요약</h3>
               <table className="data-table" aria-label="역량 격차 요약">
                 <caption className="sr-only">역량 격차 요약</caption>
                 <thead><tr><th scope="col">역량</th><th scope="col">필요</th><th scope="col">보유</th><th scope="col">격차</th><th scope="col">해소 방식</th></tr></thead>
