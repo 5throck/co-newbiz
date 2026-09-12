@@ -78,7 +78,7 @@ describe("navigation SSOT (ADR-0105)", () => {
     // 단계 화면(기존) group preserves the stage sequence during migration.
     const legacy = NAV_SECTIONS.find((s) => s.label === "단계 화면(기존)")!;
     const legacyHrefs = legacy.items.map((i) => i.href);
-    expect(legacyHrefs).toEqual(["/market", "/opportunities", "/our-company", "/route-decision", "/pipeline"]);
+    expect(legacyHrefs).toEqual(["/market", "/opportunities", "/our-company", "/route-decision"]);
     // stage ordering sanity (sub-menu children): greenfield(S5) → brownfield(S6/S7)
     const gf = legacyHrefs.indexOf("/greenfield");
     const bf = legacyHrefs.indexOf("/brownfield");
