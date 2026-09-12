@@ -145,8 +145,8 @@ See [AGENTS.md - Subagent Roster](AGENTS.md#subagent-roster) for the complete ag
 #### Cost Optimization (3-Tier Model Strategy)
 The High/Medium/Low tier concept and its usage rules are the Single Source of Truth in [AGENTS.md §3.6 3-Tier Strategy](AGENTS.md#36-3-tier-strategy). Gemini/Antigravity's model-ID mapping (overridden per subagent invocation when appropriate):
 - **High-tier** → `gemini-3.1-pro` (Parameter: `thinking_level="medium"`)
-- **Medium-tier** → `gemini-3.7-flash` (no thinking parameter)
-- **Low-tier** → `gemini-3.7-flash` (no thinking parameter)
+- **Medium-tier** → `gemini-3.8-flash` (no thinking parameter)
+- **Low-tier** → `gemini-3.8-flash` (no thinking parameter)
 
 ---
 
