@@ -67,6 +67,23 @@ function CharterViewInner() {
 
   useEffect(() => { load(); }, [load]);
 
+  // 차터 기준선 확정 — S11 완료기준("기준선이 확정되고 append-only 변경 이력이
+  // 시작되었다")의 인적 행위 표면. 승격 시 생성된 차터를 사람이 확정한다;
+  // 수정안 반영 후 재확정하면 최신 버전으로 재기준된다 (idempotent 재기록).
+  async function confirmBaseline() {
+    if (busy) return;
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      await api.post<{ charter_confirmed_at: string }>(`/api/projects/${encodeURIComponent(projectId)}/charter/confirm`, {});
+      setNotice("차터 기준선이 확정되었습니다 — S11 투자심사(IC) 입력 요건이 충족됩니다.");
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "기준선 확정 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function amend(e: React.FormEvent) {
     e.preventDefault();
     if (!data || busy || !form.note.trim()) return;
@@ -112,6 +129,17 @@ function CharterViewInner() {
             </>
           )}
         </p>
+
+        {canAct && data && latest && !data.charter_confirmed_at && (
+          <div className="flex flex-wrap items-center gap-2 mt-2 mb-0">
+            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void confirmBaseline()}>
+              {busy ? "확정 처리 중..." : "✓ 차터 기준선 확정 (S11 입력)"}
+            </button>
+            <span className="text-[0.72rem] text-[color:var(--muted-fg)]">
+              미확정 상태에서는 S11 투자심사 완료 요건이 충족되지 않습니다. 확정 후 수정안을 반영하면 다시 확정해야 합니다.
+            </span>
+          </div>
+        )}
 
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">✕ {error}</p>}
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[0.82rem] mb-2">✓ {notice}</p>}

@@ -10,8 +10,25 @@
 // 숨는다 — 가이던스는 부가 정보이지 본문을 가리는 것이 아니다.
 
 import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { GATE_LABEL, STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
+
+/** 단계 → 담당 화면 라우트. 프로젝트 단계(S8~S12)는 /projects/[id] 컨텍스트에서만 링크된다. */
+const STAGE_HREF: Record<StageMetaId, (projectId?: string) => string | null> = {
+  S1: () => "/market",
+  S2: () => "/opportunities",
+  S3: () => "/synergy",
+  S4: () => "/route-decision",
+  S5: () => "/greenfield",
+  S6: () => "/brownfield",
+  S7: () => "/brownfield",
+  S8: (p) => (p ? `/projects/${p}/business-case` : null),
+  S9: (p) => (p ? `/projects/${p}/dd` : null),
+  S10: (p) => (p ? `/projects/${p}/deal-structure` : null),
+  S11: (p) => (p ? `/projects/${p}/ic-review` : null),
+  S12: (p) => (p ? `/projects/${p}/portfolio` : null),
+};
 
 /** 가이던스 스트립이 붙는 프로젝트 전용 단계 — 기회 단계(S1~S7)는 별도 화면이 담당한다. */
 const PROJECT_STAGE_IDS = new Set(["S8", "S9", "S10", "S11", "S12"]);
@@ -107,25 +124,26 @@ function StageGuidance({ projectId, stageId }: { projectId: string; stageId: str
 }
 
 export function StageRail({ current, track }: { current: StageMetaId[]; track?: TrackId }) {
+  const params = useParams<{ id?: string }>();
+  const projectId = params?.id;
   return (
     <nav aria-label="프로세스 단계 진행" className="sizing-step-rail mb-4">
       {STAGE_META.map((s) => {
         const isCurrent = current.includes(s.id);
         const trackApplicable =
           !track || s.applicableTracks.includes(track) || s.applicableTracks.length === 2;
-        return (
-          <span
-            key={s.id}
-            role="link"
-            aria-current={isCurrent ? "page" : undefined}
-            title={
-              !trackApplicable
-                ? `${s.name} — 현재 트랙 미적용`
-                : `${s.name} — ${s.objective}`
-            }
-            className={`sizing-step-link ${isCurrent ? "stage-rail-current" : ""} ${!trackApplicable ? "stage-rail-skipped" : ""}`}
-            style={!trackApplicable ? { opacity: 0.4, textDecoration: "line-through" } : undefined}
-          >
+        // 트랙 적용 단계만 담당 화면으로 링크된다 — 프로젝트 단계는
+        // /projects/[id] 컨텍스트(하위 라우트의 params.id)에서만 링크를 얻는다.
+        const href = trackApplicable ? STAGE_HREF[s.id](projectId) : null;
+        const cls = `sizing-step-link ${isCurrent ? "stage-rail-current" : ""} ${!trackApplicable ? "stage-rail-skipped" : ""}`;
+        const style = !trackApplicable ? { opacity: 0.4, textDecoration: "line-through" } : undefined;
+        const title = !trackApplicable
+          ? `${s.name} — 현재 트랙 미적용`
+          : href
+            ? `${s.name} — ${s.objective} (화면으로 이동)`
+            : `${s.name} — ${s.objective}`;
+        const body = (
+          <>
             <span className="sizing-step-num">{s.sequence}</span>
             {s.name}
             {isCurrent && (
@@ -137,6 +155,28 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
                 ))}
               </span>
             )}
+          </>
+        );
+        return href ? (
+          <Link
+            key={s.id}
+            href={href}
+            aria-current={isCurrent ? "page" : undefined}
+            title={title}
+            className={cls}
+            style={style}
+          >
+            {body}
+          </Link>
+        ) : (
+          <span
+            key={s.id}
+            aria-current={isCurrent ? "page" : undefined}
+            title={title}
+            className={cls}
+            style={style}
+          >
+            {body}
           </span>
         );
       })}

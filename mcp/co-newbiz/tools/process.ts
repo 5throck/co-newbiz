@@ -57,6 +57,9 @@ export async function recordGateDecision(opportunityId: string, body: {
 export async function createRouteDecision(opportunityId: string, body: {
   track: string; sub_track?: string;
   rationale: string; alternatives_considered?: string;
+  // S4 scoring is mandatory on both tracks (spec v2.2.0+, ADR-0104).
+  intent?: string;
+  scores?: Array<{ criterion: string; score: number; evidence_note: string }>;
 }) {
   return rest.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/route-decision`, body);
 }

@@ -112,6 +112,9 @@ function promoteAnother(name: string): string {
      VALUES (?,?,?,?,?,?,?,?,?)`,
     [ulid(), oppId, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
   );
+  for (const gate of ["screening", "pre_fs"]) {
+    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", oppId, gate, "go", "test", ANALYST, NOW]);
+  }
   return promoteOpportunity(oppId, { promotedBy: ANALYST, needToKnowBasis: `${name} promoter` }).project.id;
 }
 
@@ -144,6 +147,9 @@ beforeAll(async () => {
      VALUES (?,?,?,?,?,?,?,?,?)`,
     [ulid(), sourceOppId, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
   );
+  for (const gate of ["screening", "pre_fs"]) {
+    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", sourceOppId, gate, "go", "test", ANALYST, NOW]);
+  }
   projectId = promoteOpportunity(sourceOppId, { promotedBy: ANALYST, needToKnowBasis: "S12 test promoter" }).project.id;
   seedS10Complete(projectId);
   // The S12 freshness sequence runs on its own project whose scorecard
@@ -175,6 +181,12 @@ beforeAll(async () => {
       "INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?)",
       [ulid(), pid, "custom:commercial", ulid(), "pass", ANALYST, NOW],
     );
+    // S11 prerequisites (2026-09-12 hardening): adopted S8 case + confirmed charter.
+    db.run(
+      "INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, started_by, started_at, meta_json) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      [ulid(), "project", pid, pid, "2.3.0", "s8_case_adopt", "done", ANALYST, NOW, JSON.stringify({ model_id: modelId })],
+    );
+    db.run("UPDATE md_project SET charter_json = ?, charter_confirmed_at = ? WHERE id = ?", [JSON.stringify({ versions: [{ version: 1, purpose: "S12 테스트 목적" }] }), NOW, pid]);
   }
   // S11: 5 establishment steps + both IC gate records.
   const setupOpps: Array<{ oppId: string; pid: string }> = [{ oppId: sourceOppId, pid: projectId }];

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>딜 워크스페이스 목업 — co-newbiz (ADR-0120/0119/0121)</title>
+<style>
+  /* Onyx 3.0 토큰 발췌 (design-tokens.json v1.2.0) — 목업 전용 값 */
+  :root {
+    --bg: #f7f8fb; --surface: #ffffff; --border: #e3e7ef; --muted-fg: #5c6675;
+    --fg: #1a2230; --primary: #3d66f5; --primary-fg: #ffffff; --primary-bg: #eef2ff;
+    --green: #1e8e5a; --amber: #b26a00; --red: #c23b3b; --amber-bg: #fff6e8; --green-bg: #e9f7f0; --red-bg: #fdeeee;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif; background: var(--bg); color: var(--fg); font-size: 14px; }
+  a { color: var(--primary); }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 14px 10px; }
+  .side-group { margin-bottom: 16px; }
+  .side-title { font-size: 11px; color: var(--muted-fg); letter-spacing: .06em; margin: 0 8px 6px; }
+  .side-item { display: block; padding: 7px 10px; border-radius: 8px; color: var(--fg); text-decoration: none; }
+  .side-item:hover { background: var(--bg); }
+  .side-item.active { background: var(--primary-bg); color: var(--primary); font-weight: 600; }
+
+  .content { padding: 18px 22px 48px; max-width: 1440px; }
+  .crumb { font-size: 12px; color: var(--muted-fg); margin-bottom: 6px; }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  .objective { color: var(--muted-fg); margin: 0 0 14px; }
+
+  /* 스테퍼 (StageRail → 딜 워크스페이스) */
+  .stepper { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; }
+  .step { display: flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 12px; color: var(--muted-fg); }
+  .step .n { font-weight: 700; }
+  .step.done { color: var(--green); border-color: color-mix(in srgb, var(--green) 35%, white); background: var(--green-bg); }
+  .step.current { color: var(--primary); border-color: var(--primary); background: var(--primary-bg); font-weight: 600; }
+  .step.skipped { opacity: .4; text-decoration: line-through; }
+  .gate-chip { font-size: 10px; background: var(--amber-bg); color: var(--amber); border-radius: 999px; padding: 0 6px; }
+
+  /* 개요 카드 */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 14px; margin: 0 0 10px; }
+  .next-box { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .btn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+  .btn:hover { background: var(--bg); }
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .btn-primary:hover { background: #3357d6; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  .checklist { margin: 10px 0 0; padding-left: 18px; }
+  .checklist li { margin-bottom: 3px; }
+  .muted { color: var(--muted-fg); }
+
+  /* 탭 */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .tab { padding: 8px 14px; font-size: 13px; color: var(--muted-fg); text-decoration: none; border-bottom: 2px solid transparent; }
+  .tab[aria-current="page"] { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+  /* 상태칩(읽기전용) vs 컨트롤칩 */
+  .chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 9px; font-size: 11px; }
+  .chip.green { background: var(--green-bg); color: var(--green); }
+  .chip.amber { background: var(--amber-bg); color: var(--amber); }
+  .chip.red { background: var(--red-bg); color: var(--red); }
+  .control-chip { border: 1px solid var(--border); background: var(--surface); color: var(--muted-fg); border-radius: 999px; padding: 3px 11px; font-size: 12px; cursor: pointer; }
+  .control-chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
+
+  /* 스코어카드 */
+  table { border-collapse: collapse; width: 100%; background: var(--surface); }
+  th { border-bottom: 2px solid var(--border); padding: 7px 9px; font-size: 12px; text-align: center; color: var(--muted-fg); }
+  td { border-bottom: 1px solid var(--border); padding: 7px 9px; font-size: 13px; text-align: left; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* 토스트 */
+  .toast { position: fixed; right: 18px; bottom: 18px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--green); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.08); padding: 10px 14px; font-size: 13px; }
+
+  /* 스켈레톤 */
+  .skeleton { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #eceff5, #f6f8fc, #eceff5); background-size: 200% 100%; animation: shine 1.4s infinite; margin: 8px 0; }
+  @keyframes shine { to { background-position: -200% 0; } }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 320px; gap: 14px; align-items: start; }
+  @media (max-width: 1100px) { .grid2 { grid-template-columns: 1fr; } .shell { grid-template-columns: 1fr; } .sidebar { display: none; } }
+  .note { font-size: 12px; color: var(--muted-fg); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-group">
+      <p class="side-title">딜</p>
+      <a class="side-item active" href="#">딜 보드</a>
+      <a class="side-item" href="#">딜 목록</a>
+    </div>
+    <div class="side-group">
+      <p class="side-title">참조</p>
+      <a class="side-item" href="#">시장분석</a>
+      <a class="side-item" href="#">그룹/계열사</a>
+      <a class="side-item" href="#">기업</a>
+      <a class="side-item" href="#">벤치마크</a>
+      <a class="side-item" href="#">라이브러리</a>
+      <a class="side-item" href="#">용어집</a>
+    </div>
+    <div class="side-group">
+      <p class="side-title">관리</p>
+      <a class="side-item" href="#">관리 콘솔</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <p class="crumb">딜 보드 / 로봇 부품 자회사 설립 검토</p>
+    <h1>로봇 부품 자회사 설립 검토 <span class="chip green">GO 진행 중</span> <span class="chip amber">Group IC 대기</span></h1>
+    <p class="objective">투자할 것인가? — 투자 구조를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다 (S11)</p>
+
+    <!-- 스테퍼: 트랙=브라운필드 → S5 숨김/취소선 -->
+    <nav class="stepper" aria-label="프로세스 단계 진행">
+      <span class="step done"><span class="n">1</span>시장분석</span>
+      <span class="step done"><span class="n">2</span>기회 발굴</span>
+      <span class="step done"><span class="n">3</span>시너지·적합성</span>
+      <span class="step done"><span class="n">4</span>진출방식 결정</span>
+      <span class="step skipped"><span class="n">5</span>역량 평가</span>
+      <span class="step done"><span class="n">6</span>대상 후보 발굴</span>
+      <span class="step done"><span class="n">7</span>대상 스크리닝</span>
+      <span class="step done"><span class="n">8</span>사업성 분석</span>
+      <span class="step done"><span class="n">9</span>실사·검증</span>
+      <span class="step done"><span class="n">10</span>투자구조 설계</span>
+      <span class="step current"><span class="n">11</span>투자심사·실행 <span class="gate-chip">Entity IC</span> <span class="gate-chip">Group IC</span></span>
+      <span class="step"><span class="n">12</span>사후 관리</span>
+    </nav>
+
+    <div class="grid2">
+      <div>
+        <!-- 단계 탭 -->
+        <nav class="tabs">
+          <a class="tab" href="#">IC 패키지</a>
+          <a class="tab" href="#">설립 실행</a>
+          <a class="tab" aria-current="page" href="#">게이트 심의</a>
+        </nav>
+
+        <!-- Entity IC -->
+        <section class="card">
+          <h2>Entity IC — 승인 기록 <span class="chip green">GO · 2026-09-10</span></h2>
+          <table aria-label="Entity IC 결정">
+            <thead><tr><th>산출물</th><th>상태</th><th class="num">근거 요약</th></tr></thead>
+            <tbody>
+              <tr><td>채택 Business Case</td><td><span class="chip green">채택됨</span></td><td>보수 시나리오 NPV +분위 유지</td></tr>
+              <tr><td>추진계획(차터) 기준선</td><td><span class="chip green">확정됨 · 09-08</span></td><td>KPI 선커밋 3건</td></tr>
+              <tr><td>설립 실행 5단계</td><td><span class="chip green">5/5 완료</span></td><td>법인등기·인허가·인력이전 완료</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Group IC: 이 화면의 주요 액션 -->
+        <section class="card">
+          <h2>Group IC — 포트폴리오 적합성 심의 <span class="chip amber">HOLD · 미완료 산출물 1건</span></h2>
+          <p class="note" style="margin-top:0">HOLD 사유: 그룹 로드맵 정합 근거(그룹 관점 스코어카드 초안) 미첨부 — 보완 후 재기록합니다.</p>
+          <ul class="checklist muted" style="margin:0">
+            <li>그룹 관점 포트폴리오 적합성 검토 — <b>보완 필요</b></li>
+            <li>Entity IC 승인 선행 — <span class="chip green">충족</span></li>
+          </ul>
+          <div class="next-box" style="margin-top:12px">
+            <button class="btn btn-primary">Group IC 결정 기록</button>
+            <span class="note">경계 #2 — GO/HOLD/KILL 기록은 사람의 행위입니다</span>
+          </div>
+        </section>
+      </div>
+
+      <aside>
+        <!-- 다음 할일 사이드 -->
+        <section class="card">
+          <h2>이 단계에서 남은 것</h2>
+          <ul class="checklist" style="margin:0">
+            <li>그룹 로드맵 정합 근거 첨부</li>
+            <li>Group IC 재심의 요청</li>
+          </ul>
+          <div class="chip-row" style="margin-top:10px">
+            <span class="chip green">screening GO</span>
+            <span class="chip green">pre_fs GO</span>
+            <span class="chip green">target_screening GO</span>
+            <span class="chip green">fs GO</span>
+            <span class="chip green">dd GO</span>
+            <span class="chip green">entity_ic GO</span>
+            <span class="chip amber">group_ic HOLD</span>
+          </div>
+        </section>
+
+        <!-- 컨트롤칩 예시: 필터 -->
+        <section class="card">
+          <h2>딜 보드 필터 (컨트롤칩)</h2>
+          <div class="chip-row" style="margin-bottom:0">
+            <button class="control-chip" aria-pressed="true">전체</button>
+            <button class="control-chip" aria-pressed="false">그린필드</button>
+            <button class="control-chip" aria-pressed="false">브라운필드</button>
+            <button class="control-chip" aria-pressed="false">HOLD</button>
+          </div>
+          <p class="note" style="margin-bottom:0">상태칩(읽기전용)과 컨트롤칩(누르는 것)이 분리됩니다 — ADR-0119.</p>
+        </section>
+      </aside>
+    </div>
+
+    <!-- 스켈레톤 예시 -->
+    <section class="card">
+      <h2>로딩 표면 (PageState 예시)</h2>
+      <div class="skeleton" style="width:60%"></div>
+      <div class="skeleton" style="width:90%"></div>
+      <div class="skeleton" style="width:80%"></div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" role="status">✓ Gate 결정이 기록되었습니다 — entity_ic GO (닫기 ×)</div>
+</body>
+</html>

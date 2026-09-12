@@ -141,7 +141,7 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: "create_route_decision",
     description: "Record a route decision (S4) — greenfield/brownfield + sub_track + rationale. Analyst+; audited.",
-    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, track: { type: "string", enum: ["greenfield","brownfield"] }, sub_track: { type: "string", enum: ["existing_business_rbd","intra_venture"] }, rationale: { type: "string" } }, required: ["opportunityId", "track", "rationale"] },
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, track: { type: "string", enum: ["greenfield","brownfield"] }, sub_track: { type: "string", enum: ["existing_business_rbd","intra_venture","m_and_a","jv","strategic_investment","minority_investment","partnership","rbd","corporate_venture"] }, rationale: { type: "string" }, intent: { type: "string", enum: ["integration","capability_access"], description: "Stage 1 intent branch — required on both tracks (ADR-0104)" }, scores: { type: "array", description: "5-criteria scoring, required on both tracks (ADR-0104)", items: { type: "object", properties: { criterion: { type: "string", enum: ["control_need","capability_criticality","market_uncertainty","integration_capacity","speed_to_capability"] }, score: { type: "integer", minimum: 1, maximum: 3 }, evidence_note: { type: "string" } }, required: ["criterion","score","evidence_note"] } } }, required: ["opportunityId", "track", "rationale", "intent", "scores"] },
   },
   {
     name: "list_committee_sessions",
@@ -263,6 +263,8 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
         track: args.track as string, sub_track: args.sub_track as string | undefined,
         rationale: args.rationale as string,
         alternatives_considered: args.alternatives_considered as string | undefined,
+        intent: args.intent as string | undefined,
+        scores: args.scores as Array<{ criterion: string; score: number; evidence_note: string }> | undefined,
       });
     }
     case "list_committee_sessions": {

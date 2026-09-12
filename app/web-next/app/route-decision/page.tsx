@@ -224,11 +224,13 @@ export function RouteDecisionView() {
     track === "brownfield" && allScored &&
     scored.find((s) => s.key === "market_uncertainty")?.score === 3 &&
     (scored.find((s) => s.key === "control_need")?.score ?? 3) <= 2;
-  // Brownfield 채점 의무 — 스펙 completionCriteria 강제 (Greenfield는 선택).
-  const scoresRequired = track === "brownfield";
+  // 채점 의무 — 스펙 v2.2.0+ completionCriteria (ADR-0104 트랙 간 비교 가능성):
+  // 양 트랙 모두 intent + 5criteria 채점이 필수다.
   const canSubmit =
     rationale.trim() !== "" &&
-    (track === "greenfield" || (intent !== "" && allScored && !overrideBlocked)) &&
+    intent !== "" &&
+    allScored &&
+    !overrideBlocked &&
     (track === "brownfield" ? subTrack !== "" : true);
 
   function resetForm() {
@@ -246,8 +248,7 @@ export function RouteDecisionView() {
         rationale,
         alternatives_considered: alternatives || undefined,
         intent: intent || undefined,
-        // 5기준 채점 — Brownfield는 필수(spec completionCriteria), Greenfield는
-        // 완료 시 함께 전송한다 (API는 양 트랙 모두 수용 — ADR-0104).
+        // 5기준 채점 — 양 트랙 모두 필수 (스펙 v2.2.0+ completionCriteria, ADR-0104).
         scores: allScored ? scored.map((s) => ({ criterion: s.key, score: s.score, evidence_note: s.note })) : undefined,
       });
       resetForm();
@@ -540,8 +541,8 @@ export function RouteDecisionView() {
               )}
             </div>
 
-            {/* ── Stage 1: 의도 분기 ── */}
-            {track === "brownfield" && (
+            {/* ── Stage 1: 의도 분기 — 양 트랙 공통 (ADR-0104 비교 가능성) ── */}
+            {(
               <fieldset className="mb-3">
                 <legend className="text-[0.78rem] font-semibold mb-1">Stage 1 — 의도 분기 * (채점에 앞서 결정)</legend>
                 <div className="flex flex-wrap gap-2">
@@ -555,7 +556,9 @@ export function RouteDecisionView() {
                     >
                       <span className="font-semibold">{INTENT_LABEL[k]}</span>
                       <span className="sizing-chip-meta">
-                        {k === "integration" ? "라우트: M&A·전략적 투자 중심 — JV·소수지분은 단계적 옵션" : "라우트: JV·소수지분·파트너십 — 통제는 권리 바닥값으로 제한"}
+                        {k === "integration"
+                          ? "라우트: 통합 중심 — Brownfield는 M&A·전략적 투자, Greenfield는 자체 구축(intra-venture)"
+                          : "라우트: 역량 확보 중심 — Brownfield는 JV·소수지분·파트너십, Greenfield는 R&BD·파트너 활용"}
                       </span>
                     </button>
                   ))}
@@ -563,12 +566,12 @@ export function RouteDecisionView() {
               </fieldset>
             )}
 
-            {/* ── Stage 2: 5criteria × 20% × 1–3점 — Brownfield 필수, Greenfield도
-                동일 스코어러로 채점해 전송한다 (API 양 트랙 수용 — ADR-0104) ── */}
+            {/* ── Stage 2: 5criteria × 20% × 1–3점 — 양 트랙 필수
+                (스펙 v2.2.0+ completionCriteria — ADR-0104 트랙 간 비교 가능성) ── */}
             {(
               <fieldset className="mb-3">
                 <legend className="text-[0.78rem] font-semibold mb-1">
-                  Stage 2 — 5criteria 채점 {scoresRequired ? "* (각 20% × 1–3점, 근거 필수)" : "(각 20% × 1–3점 — Greenfield는 선택, 입력 시 함께 기록)"}
+                  Stage 2 — 5criteria 채점 * (각 20% × 1–3점, 근거 필수)
                   {totalScore !== null && <span className="ml-2 status-chip status-green">합산 {totalScore} / 3.0</span>}
                 </legend>
                 <table className="data-table" aria-label="5criteria 채점">

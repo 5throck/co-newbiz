@@ -14,6 +14,7 @@
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
+import { ulid } from "../../db/lib/ulid.ts";
 
 const TEST_DB_PATH = "db/data/test-deal-structure.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
@@ -64,6 +65,10 @@ beforeAll(async () => {
      VALUES (?,?,?,?,?,?,?,?,?)`,
     [`${oppId}-gf`, oppId, `["생산 역량 격차"]`, "build", "파트너십 검토", "신설 역량 확보", ANALYST, NOW, NOW],
   );
+  // Promotion preconditions (2026-09-12): screening + pre_fs must be GO.
+  for (const gate of ["screening", "pre_fs"]) {
+    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", oppId, gate, "go", "test", ANALYST, NOW]);
+  }
   projectId = promoteOpportunity(oppId, { promotedBy: ANALYST, needToKnowBasis: "deal-structure test promoter" }).project.id;
 });
 

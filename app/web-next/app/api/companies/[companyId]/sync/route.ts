@@ -17,7 +17,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
   const company = db.query("SELECT id FROM md_company WHERE id = ?").get(companyId) as { id: string } | undefined;
   if (!company) return notFound();
   try {
-    const result = await syncCompanyFinancialFacts(db, companyId, { actor: auth.auth.userId });
+    const result = await syncCompanyFinancialFacts(db, companyId);
     appendAudit(db, {
       actor: auth.auth.userId,
       action: "company_financial_sync",

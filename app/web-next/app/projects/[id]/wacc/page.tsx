@@ -170,7 +170,7 @@ export default function ProjectWaccPage() {
 
   // ── 참조값 (ADR-0116 Phase 4; 제안일 뿐 — 확정은 사람) ──
   interface Sugg { key: string; value: number | null; as_of?: string; anchor_ref?: string; source_label?: string; reason?: string }
-  const [sugg, setSugg] = useState<{ subject: { name_ko: string | null } | null; suggestions: Sugg[] } | null>(null);
+  const [sugg, setSugg] = useState<{ subject: { name_ko: string | null } | null; suggestions: Sugg[]; missing?: string[] } | null>(null);
   const loadSugg = useCallback(() => {
     api.get<{ subject: { name_ko: string | null } | null; suggestions: Sugg[] }>(`/api/projects/${encodeURIComponent(projectId)}/wacc/suggestions`)
       .then((r) => setSugg(r.data))
@@ -462,7 +462,7 @@ export default function ProjectWaccPage() {
               <span className="status-chip status-info">{sugg.subject?.name_ko ?? "대상 회사"} 기준 · 제안 — 확정은 사람</span>
             </h3>
             <div className="flex flex-wrap gap-5 items-start text-[0.85rem]">
-              {sugg.suggestions.filter((x) => x.value !== null).map((x) => (
+              {sugg.suggestions.filter((x): x is Sugg & { value: number } => x.value !== null).map((x) => (
                 <div key={x.key}>
                   <div className="font-bold tabular-nums text-[1.05rem]">{x.key === "observed_de" ? x.value.toFixed(2) : `${x.value.toFixed(2)}%`}</div>
                   <div className="text-[color:var(--muted-fg)] text-[0.74rem]">
@@ -491,7 +491,7 @@ export default function ProjectWaccPage() {
         )}
         {sugg && sugg.suggestions.every((x) => x.value === null) && (
           <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-3">
-            참조값을 가져올 데이터가 없습니다 — {sugg.missing.join(" · ")}
+            참조값을 가져올 데이터가 없습니다 — {(sugg.missing ?? []).join(" · ")}
           </p>
         )}
 

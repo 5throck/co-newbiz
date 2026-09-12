@@ -13,7 +13,11 @@ import { latestGateDecisions } from "../../../../../lib/process-flow.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { route } from "../../../../../lib/route.ts";
 
-const GATES = new Set(["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"]);
+// Gate placement (2026-09-12): the opportunity is the S1–S7 carrier, so only
+// the S1–S7 gates are recordable here — fs/dd/entity_ic/group_ic belong to the
+// project carrier (S8–S12) and are rejected before any write. Existing rows
+// are untouched; this validates new recordings only.
+const GATES = new Set(["screening", "pre_fs", "target_screening"]);
 const DECISIONS = new Set(["go", "hold", "kill"]);
 
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
@@ -55,7 +59,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     gate_evaluation_id?: string;
   } | null;
   if (!body?.gate || !GATES.has(body.gate)) {
-    return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")}.`);
+    return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")} — fs/dd/entity_ic/group_ic are project-carrier (S8–S12) gates and belong on /api/projects/[id]/gate-decisions.`);
   }
   if (!body.decision || !DECISIONS.has(body.decision)) {
     return badRequest("invalid_request", `decision must be one of ${[...DECISIONS].join("|")}.`);

@@ -244,6 +244,14 @@ describe("opportunity-keyed process tools (ADR-0094)", () => {
       opportunityId,
       track: "greenfield",
       rationale: "no acquireable incumbent",
+      intent: "integration",
+      scores: [
+        { criterion: "control_need", score: 2, evidence_note: "t" },
+        { criterion: "capability_criticality", score: 3, evidence_note: "t" },
+        { criterion: "market_uncertainty", score: 2, evidence_note: "t" },
+        { criterion: "integration_capacity", score: 2, evidence_note: "t" },
+        { criterion: "speed_to_capability", score: 2, evidence_note: "t" },
+      ],
     })) as { error: { code: string } | null };
     expect(result.error).toBeNull();
   });

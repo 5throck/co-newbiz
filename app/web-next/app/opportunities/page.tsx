@@ -8,6 +8,7 @@ import { useConfirm } from "../../components/crud.tsx";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
 import { SketchCanvas } from "../../components/SketchCanvas.tsx";
+import { PromotionPanel } from "../../components/PromotionPanel.tsx";
 
 // 기회 발굴 (/opportunities) — S2 기회 퍼널.
 // 레이아웃 원칙: 요약(KPI)이 먼저, 상세는 접힘(details) — 산업·기회가 많아져도
@@ -167,10 +168,14 @@ export function OpportunitiesView() {
   }, [statusFilter]);
 
   useEffect(() => {
-    const initial = new URLSearchParams(window.location.search).get("status");
+    const params = new URLSearchParams(window.location.search);
+    const initial = params.get("status");
     if (initial && ["identified", "assessed", "selected", "dropped"].includes(initial)) {
       setStatusFilter(initial as OpportunityRow["status"]);
     }
+    // ?opportunity= 딥링크 — 프로젝트 목록("기회 보기") 등에서 건너올 때 해당 행을 펼친다.
+    const opp = params.get("opportunity");
+    if (opp) setExpanded((prev) => ({ ...prev, [opp]: true }));
   }, []);
 
   useEffect(load, [load]);
@@ -843,6 +848,16 @@ export function OpportunitiesView() {
                                 </details>
                               );
                             })()}
+
+                            {/* S7→S8 승격 표면 (ADR-0095) — 선별된 기회의 행 펼침 패널에서 승격 */}
+                            {o.status === "selected" && !o.project_id && (
+                              <div className="mt-2 -mx-2">
+                                <PromotionPanel
+                                  opportunityId={o.id}
+                                  heading={`${o.name} — 프로젝트로 승격 (S7 → S8)`}
+                                />
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>

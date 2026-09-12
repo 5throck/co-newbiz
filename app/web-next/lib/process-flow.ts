@@ -28,19 +28,23 @@ export interface StageDefinition {
 }
 
 export const STAGES: StageDefinition[] = [
-  { id: "S1", name: "시장분석", sequence: 1, objective: "어디에 기회가 있는가?", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시장 규모·성장 추정", "가치사슬 구조"] },
-  { id: "S2", name: "기회 발굴", sequence: 2, objective: "무엇을 할 것인가?", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["기회 등록(가치사슬 노드·매력도)"] },
-  { id: "S3", name: "시너지·전략적 적합성", sequence: 3, objective: "우리가 해야 하는가?", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시너지 평가", "전략적 적합성 판단"] },
-  { id: "S4", name: "진출방식 결정", sequence: 4, objective: "어떻게 들어갈 것인가?", applicableTracks: ["all"], gateIds: ["screening", "pre_fs"], requiredArtifacts: ["route_decision(트랙)", "brownfield: sub_track + 5-criteria 채점"] },
-  { id: "S5", name: "역량 평가·진출전략", sequence: 5, objective: "스스로 진입할 수 있는가?", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차·해소 방식", "진출전략", "검토한 대안"] },
-  { id: "S6", name: "대상 후보 발굴", sequence: 6, objective: "누구와 결합할 것인가?", applicableTracks: ["brownfield"], gateIds: ["pre_fs"], requiredArtifacts: ["Target Universe 정의", "Long List 최소 커버리지"] },
-  { id: "S7", name: "대상 스크리닝", sequence: 7, objective: "어떤 대상이 유망한가?", applicableTracks: ["brownfield"], gateIds: ["target_screening"], requiredArtifacts: ["후보별 스크리닝 근거", "Short List 또는 제외 사유"] },
-  // S8~S12 (flow.spec v2.2.0, ADR-0074/0095) — project 엔티티 단계.
-  { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다", applicableTracks: ["greenfield", "brownfield"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션)", "시뮬레이션 NPV 분위수"] },
-  { id: "S9", name: "실사·검증", sequence: 9, objective: "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 Short List 대상 DD, greenfield는 실현가능성 검증)", applicableTracks: ["greenfield", "brownfield"], gateIds: ["dd"], requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"] },
-  { id: "S10", name: "투자구조 설계", sequence: 10, objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 비히클(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)", applicableTracks: ["greenfield", "brownfield"], gateIds: [], requiredArtifacts: ["투자구조 가설(4축 검토 완료)", "자금조달 계획(sources & uses 균형)"] },
-  { id: "S11", name: "투자심사·실행", sequence: 11, objective: "투자할 것인가? — S10 투자구조 설계의 산출물을 IC 패키지에 포함해 Entity/Group IC 심의를 받고, 승인되면 실행한다", applicableTracks: ["greenfield", "brownfield"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["IC 패키지", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"] },
-  { id: "S12", name: "사후 관리", sequence: 12, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["greenfield", "brownfield"], gateIds: [], requiredArtifacts: ["벤처 스코어카드"] },
+// Derived verbatim from process/flow.spec.yaml (id·name·sequence·objective·
+// gates·requiredArtifacts). Parity is enforced by
+// tests/unit/process-flow.test.ts — regenerate via that script path, do not
+// hand-edit divergent strings. applicableTracks ["all"] == spec
+// [greenfield, brownfield] (engine normalization for the skip logic).
+  { id: "S1", name: "시장분석", sequence: 1, objective: "어디에 기회가 있는가? — 시장 규모·성장·경쟁구조와 가치사슬을 파악한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시장 규모·성장 추정", "가치사슬 구조"] },
+  { id: "S2", name: "기회 발굴", sequence: 2, objective: "무엇을 할 것인가? — 가치사슬상 사업 기회를 등록·평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["기회 등록(가치사슬 노드·매력도)"] },
+  { id: "S3", name: "시너지·전략적 적합성", sequence: 3, objective: "우리가 해야 하는가? — 자사 역량과의 시너지를 평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시너지 평가", "전략적 적합성 판단"] },
+  { id: "S4", name: "진출방식 결정", sequence: 4, objective: "어떻게 들어갈 것인가? — Greenfield(자체 역량 진출) vs Brownfield(기존 기업·자산 결합)를 결정한다. Brownfield ≠ M&A — M&A·JV·전략적 투자·소수점 지분·파트너십·R&BD·사내벤처(CVC) 중 Route를 고른다", applicableTracks: ["all"], gateIds: ["screening", "pre_fs"], requiredArtifacts: ["트랙 결정(GF/BF)·근거", "Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)", "5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)", "검토한 대안"] },
+  { id: "S5", name: "역량 평가·진출전략", sequence: 5, objective: "스스로 진입할 수 있는가? — 자체 역량을 평가하고 격차를 구축 방안(Build/Partner/Hire/Invest)으로 해소해 진출전략을 세운다 (Greenfield 전용 — Target Company 객체가 존재하지 않는다)", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차 평가", "진출전략(Build/Partner/Hire/Invest 결정·근거)"] },
+  { id: "S6", name: "대상 후보 발굴", sequence: 6, objective: "누구와 결합할 것인가? — Opportunity에 진입 가능한 기존 기업·자산의 Target Universe를 정의하고 Target Company Long List를 작성한다 (Brownfield 전용)", applicableTracks: ["brownfield"], gateIds: ["pre_fs"], requiredArtifacts: ["Target Universe 정의", "Target Company Long List"] },
+  { id: "S7", name: "대상 스크리닝", sequence: 7, objective: "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)", applicableTracks: ["brownfield"], gateIds: ["target_screening"], requiredArtifacts: ["Target Company Short List", "Target Ranking/Score", "Exclusion Reasons"] },
+  { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다", applicableTracks: ["all"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션)", "시뮬레이션 NPV 분위수"] },
+  { id: "S9", name: "실사·검증", sequence: 9, objective: "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 Short List 대상 DD, greenfield는 실현가능성 검증)", applicableTracks: ["all"], gateIds: ["dd"], requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"] },
+  { id: "S10", name: "투자구조 설계", sequence: 10, objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 비히클(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["투자구조 가설(4축 검토 완료)", "자금조달 계획(sources & uses 균형)"] },
+  { id: "S11", name: "투자심사·실행", sequence: 11, objective: "투자할 것인가? — 투자 구조(Deal/Investment Structure: 비히클·자금 조달·지급 구조)를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다", applicableTracks: ["all"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["IC 패키지", "추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"] },
+  { id: "S12", name: "사후 관리", sequence: 12, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["벤처 스코어카드"] },
 ];
 
 /** S12 포트폴리오 전환 결정 어휘 5종 (flow.spec S12, portfolio-venture-monitoring). */
@@ -179,13 +183,15 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     const missing: string[] = [];
     let complete = false;
     // flow.spec S4 completionCriteria: route_decision 존재(트랙 필수).
-    // brownfield는 sub_track(7 라우트 중 1)과 5-criteria 채점까지 요구한다.
+    // brownfield는 sub_track(7 라우트 중 1)을 요구하고, 5-criteria 채점은
+    // 양 트랙 모두 의무다 (스펙 v2.2.0+ "Greenfield인 경우에도 5criteria 채점
+    // 결과를 기록한다" — ADR-0104 트랙 간 비교 가능성).
     const decision = latestRouteDecision(opp.id);
     if (!decision) {
       blockers.push("진출방식 결정(route_decision)이 필요합니다");
       missing.push("route_decision(트랙)");
-    } else if (decision.track === "brownfield") {
-      if (!decision.sub_track) { blockers.push("brownfield 라우트 유형(sub_track) 선택이 필요합니다"); missing.push("brownfield sub_track"); }
+    } else {
+      if (decision.track === "brownfield" && !decision.sub_track) { blockers.push("brownfield 라우트 유형(sub_track) 선택이 필요합니다"); missing.push("brownfield sub_track"); }
       const scoreCount = (getDb().query("SELECT COUNT(*) c FROM route_decision_score WHERE decision_id = ?").get(decision.id) as { c: number }).c;
       if (scoreCount < 5) { blockers.push(`5-criteria 채점 부족 (${scoreCount}/5)`); missing.push("5-criteria 채점"); }
     }
@@ -375,6 +381,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
   S11: ({ project, gateStatus }) => {
     const blockers: string[] = [];
     const missing: string[] = [];
+    const db = getDb();
     // IC 승인은 게이트 기록으로만 판단한다 (사람 최종 승인, ADR-0053).
     if (gateStatus.entity_ic !== "go") {
       blockers.push("Entity IC 승인 기록이 필요합니다");
@@ -383,6 +390,27 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     if (gateStatus.group_ic !== "go") {
       blockers.push("Group IC 승인 기록이 필요합니다");
       missing.push("Group IC 승인");
+    }
+    // 스펙 requiredArtifacts 정합 (flow.spec S11): 채택된 Business Case(IC 패키지의
+    // 정량 축 — latestAdoption과 동일 키: process_run s8_case_adopt/done)와
+    // 추진계획(차터) 기준선 확정 — 0074 charter_json/charter_confirmed_at.
+    const adoption = db
+      .query(
+        `SELECT id FROM process_run
+         WHERE entity_type = 'project' AND entity_id = ? AND stage = 's8_case_adopt' AND status = 'done'
+         ORDER BY started_at DESC, id DESC LIMIT 1`,
+      )
+      .get(project.id) as { id: string } | undefined;
+    if (!adoption) {
+      blockers.push("채택된 Business Case가 필요합니다 (IC 패키지 입력)");
+      missing.push("IC 패키지(채택 Business Case)");
+    }
+    const charter = db
+      .query("SELECT charter_json, charter_confirmed_at FROM md_project WHERE id = ?")
+      .get(project.id) as { charter_json: string | null; charter_confirmed_at: string | null } | undefined;
+    if (!charter?.charter_json || !charter.charter_confirmed_at) {
+      blockers.push("추진계획(차터) 기준선 확정이 필요합니다");
+      missing.push("추진계획(차터) 기준선");
     }
     // 설립 실행 기록은 project_id 키로 직접 조회한다 (0070 백필, ADR-0100 §5);
     // 백필 이전 행만 source_opportunity_id 백링크로 대체 조회한다.
@@ -420,12 +448,14 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
 };
 
 /**
- * Unmapped project stages default to complete (no checks registered) —
- * matches the previous fall-through behavior of the if/else chain.
+ * Unmapped project stages default to NOT-complete (fail-closed) — mirrors the
+ * opportunity branch. A future S8–S12 stage added to STAGES without a predicate
+ * must surface as incomplete, never silently auto-complete (2026-09-12: the
+ * previous default-complete fall-through would have shipped an unguarded gate).
  */
 function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, gateStatus: Partial<Record<GateId, GateVerdict>>): StageEvaluation {
   const predicate = PROJECT_STAGE_COMPLETION[stage.id];
-  return predicate ? predicate({ project, gateStatus }) : { complete: true, blockers: [], missing: [] };
+  return predicate ? predicate({ project, gateStatus }) : { complete: false, blockers: [], missing: [] };
 }
 
 interface OpportunityRow {
