@@ -3051,3 +3051,66 @@
 .bms-risks h4 { margin: 0 0 6px; font-size: 0.75rem; }
 .bms-risks ul { margin: 0; padding-left: 16px; }
 .bms-risks li { font-size: 0.72rem; color: var(--muted-fg); margin-bottom: 3px; }
+
+/* ── v5 construction (ADR-0119/0121): primary action, control chip, page states, toast ── */
+/* btn-primary — the ONE emphasized action per screen/section (ADR-0119). */
+.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-fg, #fff);
+  font-weight: 600;
+}
+.btn-primary:hover { background: var(--primary-strong, #3357d6); border-color: var(--primary-strong, #3357d6); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* control-chip — interactive filter/sort/score control; visually distinct from
+   the read-only status-chip (border + selected primary fill, ADR-0119). */
+.control-chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted-fg);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.control-chip:hover { border-color: var(--accent); color: var(--fg); }
+.control-chip[aria-pressed="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-fg, #fff);
+  font-weight: 600;
+}
+.control-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* skeleton — content-shaped loading block (PageState, ADR-0121) */
+.skeleton {
+  height: 0.75rem;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--surface), var(--hover-bg, var(--bg)), var(--surface));
+  background-size: 200% 100%;
+  animation: skeleton-shine 1.4s infinite;
+}
+@keyframes skeleton-shine { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+/* toast — mutation outcome feedback queue (ADR-0121) */
+.toast-region { position: fixed; right: 1rem; bottom: 1rem; z-index: 80; display: flex; flex-direction: column; gap: 0.5rem; }
+.toast {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--green);
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.82rem;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+.toast[role="alert"] { border-left-color: var(--red); }
+
+/* pager — large-table pagination standard (round-2 #7) */
+.pager { display: flex; gap: 0.4rem; align-items: center; justify-content: flex-end; font-size: 0.75rem; color: var(--muted-fg); margin-top: 0.5rem; }
+.pager .pg { border: 1px solid var(--border); border-radius: 6px; padding: 0.1rem 0.5rem; background: var(--surface); cursor: pointer; }
+.pager .pg.cur { background: var(--primary); color: var(--primary-fg, #fff); border-color: var(--primary); }

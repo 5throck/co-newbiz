@@ -27,6 +27,22 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "탐색",
     items: [
       { href: "/", label: "대시보드" },
+      { href: "/deals", label: "딜 보드" },
+      {
+        href: "/projects",
+        label: "프로젝트",
+        children: [
+          { href: "/projects", label: "진행 프로젝트" },
+          { href: "/projects/archives", label: "아카이브" },
+        ],
+      },
+    ],
+  },
+  {
+    // 단계 화면(기존) — Wave 2에서 /deals/{id}/s1..s12 워크스페이스 탭으로
+    // 통합된다 (ADR-0120). 통합 전까지 기존 화면이 내비에서 사라지지 않는다.
+    label: "단계 화면(기존)",
+    items: [
       { href: "/market", label: "시장분석" },
       { href: "/opportunities", label: "기회 발굴" },
       {
@@ -47,14 +63,6 @@ export const NAV_SECTIONS: NavSection[] = [
           { href: "/route-decision", label: "진출방식 결정" },
           { href: "/greenfield", label: "그린필드 — 자체 신설 진출" },
           { href: "/brownfield", label: "브라운필드 — 결합·투자" },
-        ],
-      },
-      {
-        href: "/projects",
-        label: "프로젝트",
-        children: [
-          { href: "/projects", label: "진행 프로젝트" },
-          { href: "/projects/archives", label: "아카이브" },
         ],
       },
       { href: "/pipeline", label: "프로젝트 파이프라인" },
@@ -115,6 +123,8 @@ export const NON_MENU_ROUTES: string[] = [
   "/projects/[id]/pmi",
   "/projects/[id]/process",
   "/projects/[id]/reports",
+  "/deals/[id]",
+  "/deals/[id]/[stage]",
 ];
 
 /** 관리자 전용 내비 (ADR-0091 역할-화면 분리) — 역시 본 파일이 SSOT다. */
