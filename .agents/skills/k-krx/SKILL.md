@@ -2,7 +2,7 @@
 lang: ko
 lang_reason: proper-noun
 name: k-krx
-scope: co-newbiz
+scope: common
 description: >
   Queries the KRX (Korea Exchange, `한국거래소`) Data Marketplace OPEN API for
   Korean exchange market data — KOSPI/KOSDAQ/KONEX stock daily trading,
@@ -16,7 +16,7 @@ last_reviewed: 2026-09-11
 status: active
 owner: financial-analyst
 prerequisites: KRX_API_KEY environment variable (issued via openapi.krx.co.kr; administrator approval required)
-l1_instance: true
+l2_propagate: true
 relates_to:
   - skill: k-dart
     type: composes_with

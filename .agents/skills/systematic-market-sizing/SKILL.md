@@ -39,8 +39,6 @@ relates_to:
     type: composes_with
   - skill: evidence-ledger
     type: enables
-  - skill: assumption-audit
-    type: enables
 ---
 
 ## Context

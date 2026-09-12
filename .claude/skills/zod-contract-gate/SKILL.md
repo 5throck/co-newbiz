@@ -11,11 +11,6 @@ scope: common
 l2_propagate: true
 owner: backend-engineer
 prerequisites: Bun runtime, Zod library (^3.25 || ^4.0)
-relates_to:
-  - skill: rest-api-design
-    type: composes_with
-  - skill: mcp-server-integration
-    type: composes_with
 metadata:
   type: contract-safety
   triggers:
