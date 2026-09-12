@@ -16,11 +16,11 @@ interface Run {
 
 function AgentRunsView() {
   const { id } = useParams<{ id: string }>();
-  const [data, setData] = useState<{ runs: Run[]; proposals: Array<{ id: string; gate: string; recommendation: string; started_at: string }> } | null>(null);
+  const [data, setData] = useState<{ runs: Run[]; proposals: Array<{ id: string; gate: string; recommendation: string; started_at: string }>; reliability: Array<{ gate: string; total: number; accepted: number; agreement_pct: number }> } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<{ runs: Run[]; proposals: Array<{ id: string; gate: string; recommendation: string; started_at: string }> }>(`/api/projects/${encodeURIComponent(id)}/agent-runs`)
+    api.get<{ runs: Run[]; proposals: Array<{ id: string; gate: string; recommendation: string; started_at: string }>; reliability: Array<{ gate: string; total: number; accepted: number; agreement_pct: number }> }>(`/api/projects/${encodeURIComponent(id)}/agent-runs`)
       .then((r) => setData(r.data))
       .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
   }, [id]);
@@ -53,6 +53,26 @@ function AgentRunsView() {
             </table>
           </div>
         )}
+      </section>
+      <section className="market-section" aria-label="LLM 신뢰도">
+        <h2 className="text-[0.9rem] mb-2">LLM 제안 신뢰도 점수 <span className="note">— 제안 후 사람의 같은 게이트 결정과의 일치율 (표시 전용)</span></h2>
+        {data === null ? <PageState state="loading" /> : data.reliability.length === 0 ? (
+          <PageState state="empty" emptyText="아직 사람 결정과 비교할 제안이 없습니다." />
+        ) : (
+          <table className="data-table" aria-label="LLM 신뢰도">
+            <caption className="sr-only">LLM 제안 신뢰도</caption>
+            <thead><tr><th>게이트</th><th className="col-num">제안</th><th className="col-num">수용</th><th className="col-num">일치율</th></tr></thead>
+            <tbody>{data.reliability.map((r) => (
+              <tr key={r.gate}>
+                <td className="font-semibold">{r.gate}</td>
+                <td className="col-num tabular-nums">{r.total}</td>
+                <td className="col-num tabular-nums">{r.accepted}</td>
+                <td className="col-num tabular-nums"><span className={`status-chip ${r.agreement_pct >= 70 ? "status-green" : "status-amber"}`}>{r.agreement_pct}%</span></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        )}
+        <p className="note" style={{ marginBottom: 0 }}>일치율은 학습 신호일 뿐 게이트 처리에 사용되지 않습니다 — 판단은 사람이 유지합니다.</p>
       </section>
       <section className="market-section" aria-label="PROPOSAL 기록">
         <h2 className="text-[0.9rem] mb-2">위원회 PROPOSAL 기록</h2>
