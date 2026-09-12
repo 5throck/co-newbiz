@@ -315,7 +315,7 @@ export function SynergyView() {
                       </button>
                       {a.opportunity_name && <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">기회: {a.opportunity_name}</span>}
                     </td>
-                    <td>{a.target_type ? <span className="status-chip status-not-started">{a.target_type === "group" ? "그룹" : "계열사"}</span> : <span className="status-chip status-amber" title="기존 별도 등록 분석(legacy)">legacy</span>}</td>
+                    <td>{a.target_type ? <span className="control-chip status-not-started">{a.target_type === "group" ? "그룹" : "계열사"}</span> : <span className="control-chip status-amber" title="기존 별도 등록 분석(legacy)">legacy</span>}</td>
                     <td>
                       {inProgress ? (
                         <span className="status-chip status-amber">분석 중 ({a.current_step}/5단계)</span>

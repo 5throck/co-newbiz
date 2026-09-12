@@ -512,7 +512,7 @@ export function OpportunitiesView() {
                 <button
                   type="button"
                   aria-pressed={industryFilter === ""}
-                  className={`status-chip ${industryFilter === "" ? "status-green" : "status-not-started"}`}
+                  className={`control-chip ${industryFilter === "" ? "status-green" : "status-not-started"}`}
                   onClick={() => setIndustryFilter("")}
                 >
                   전체 산업
@@ -522,7 +522,7 @@ export function OpportunitiesView() {
                     key={ind}
                     type="button"
                     aria-pressed={industryFilter === ind}
-                    className={`status-chip ${industryFilter === ind ? "status-green" : "status-not-started"}`}
+                    className={`control-chip ${industryFilter === ind ? "status-green" : "status-not-started"}`}
                     onClick={() => setIndustryFilter(ind)}
                   >
                     {ind}
@@ -532,6 +532,10 @@ export function OpportunitiesView() {
             </>
           }
           actions={
+            <>
+            <button type="button" className="btn-primary btn-sm whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
+              ＋ 기회 등록
+            </button>
             <span role="group" aria-label="정렬" className="flex gap-1">
               {([
                 ["attractiveness", "매력도순"],
@@ -541,13 +545,14 @@ export function OpportunitiesView() {
                   key={key}
                   type="button"
                   aria-pressed={sortKey === key}
-                  className={`status-chip ${sortKey === key ? "status-green" : "status-not-started"}`}
+                  className={`control-chip ${sortKey === key ? "status-green" : "status-not-started"}`}
                   onClick={() => setSortKey(key)}
                 >
                   {label}
                 </button>
               ))}
             </span>
+            </>
           }
         />
         {rows === null ? (
