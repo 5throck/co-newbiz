@@ -70,17 +70,18 @@ describe("navigation SSOT (ADR-0105)", () => {
     expect(stale).toEqual([]);
   });
 
-  test("탐색 section order follows the flow.spec stage sequence", () => {
-    // S1 market → S2 opportunities → S3 our-company/synergy → S4 route-decision
-    // → S5 greenfield → S6/S7 brownfield → S8+ projects(+pipeline)
+  test("deal-centric order: 딜 first, legacy stage group preserves flow.spec sequence (ADR-0120)", () => {
     const explore = NAV_SECTIONS.find((s) => s.label === "탐색")!;
     const hrefs = explore.items.map((i) => i.href);
-    // 추진 전략(부모) 아래 진출방식 결정/그린필드/브라운필드 자식 — ADR-0105 개정
-    const expected = ["/", "/market", "/opportunities", "/our-company", "/route-decision", "/projects", "/pipeline"];
-    expect(hrefs).toEqual(expected);
+    // ADR-0120: the deal board leads; legacy project list stays until Wave 4.
+    expect(hrefs).toEqual(["/", "/deals", "/projects"]);
+    // 단계 화면(기존) group preserves the stage sequence during migration.
+    const legacy = NAV_SECTIONS.find((s) => s.label === "단계 화면(기존)")!;
+    const legacyHrefs = legacy.items.map((i) => i.href);
+    expect(legacyHrefs).toEqual(["/market", "/opportunities", "/our-company", "/route-decision", "/pipeline"]);
     // stage ordering sanity (sub-menu children): greenfield(S5) → brownfield(S6/S7)
-    const gf = hrefs.indexOf("/greenfield");
-    const bf = hrefs.indexOf("/brownfield");
+    const gf = legacyHrefs.indexOf("/greenfield");
+    const bf = legacyHrefs.indexOf("/brownfield");
     if (gf !== -1 && bf !== -1) expect(bf).toBeGreaterThan(gf);
   });
 
