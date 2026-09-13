@@ -87,7 +87,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       const m = (JSON.parse(version.payload) as { matrix?: { anchor?: { total?: number }; consistency?: { bottomUpCagr?: number }; qualitative?: { opportunityFactors?: string[] } } }).matrix ?? {};
       s1 = [
         `기준 규모: ${m.anchor?.total ? `$${m.anchor.total.toFixed(2)}B` : "미상"}`,
-        `CAGR: ${m.consistency?.bottomUpCagr != null ? `${(m.consistency.bottomUpCagr * 100).toFixed(1)}%` : "미상"}`,
+        `CAGR: ${m.consistency?.bottomUpCagr != null ? `${m.consistency.bottomUpCagr.toFixed(1)}%` : "미상"}`,
         m.qualitative?.opportunityFactors?.length ? `기회 요인: ${m.qualitative.opportunityFactors.join(" / ")}` : "",
       ].filter(Boolean).join("\n");
     } catch { /* keep default */ }

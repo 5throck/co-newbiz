@@ -149,7 +149,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       }).matrix ?? {};
       s1 = [
         `기준 시장규모: ${m.anchor?.total ? `$${m.anchor.total.toFixed(2)}B` : "미상"}`,
-        `CAGR: ${m.consistency?.bottomUpCagr !== undefined && m.consistency.bottomUpCagr !== null ? `${(m.consistency.bottomUpCagr * 100).toFixed(1)}%` : "미상"}`,
+        `CAGR: ${m.consistency?.bottomUpCagr !== undefined && m.consistency.bottomUpCagr !== null ? `${m.consistency.bottomUpCagr.toFixed(1)}%` : "미상"}`,
         m.competitive?.structure ? `경쟁 구조: ${m.competitive.structure}` : "",
         m.qualitative?.opportunityFactors?.length ? `기회 요인: ${m.qualitative.opportunityFactors.join(" / ")}` : "",
         m.qualitative?.riskFactors?.length ? `위험 요인: ${m.qualitative.riskFactors.join(" / ")}` : "",

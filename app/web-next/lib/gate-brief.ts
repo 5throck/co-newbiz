@@ -82,7 +82,7 @@ function s1Summary(db: Database, marketScope: string | null): string {
     }).matrix ?? {};
     return [
       `기준 규모: ${m.anchor?.total ? `$${m.anchor.total.toFixed(2)}B` : "미상"}`,
-      `CAGR: ${m.consistency?.bottomUpCagr != null ? `${(m.consistency.bottomUpCagr * 100).toFixed(1)}%` : "미상"}`,
+      `CAGR: ${m.consistency?.bottomUpCagr != null ? `${m.consistency.bottomUpCagr.toFixed(1)}%` : "미상"}`,
       m.qualitative?.opportunityFactors?.length ? `기회 요인: ${m.qualitative.opportunityFactors.join(" / ")}` : "",
       m.qualitative?.riskFactors?.length ? `위험 요인: ${m.qualitative.riskFactors.join(" / ")}` : "",
     ].filter(Boolean).join("\n") || "S1 시장분석: 요약 없음";
