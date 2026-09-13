@@ -1,7 +1,7 @@
 # Design: S8-S12 project screen readability — nav grouping + in-page tabs
 
 - Date: 2026-09-14
-- Status: implemented (Phase 1+2 of 3)
+- Status: implemented (Phase 1, 2 done; Phase 3 in progress — business-case done, others queued)
 
 ## Problem
 
@@ -24,3 +24,8 @@ Before implementing, the plan was reviewed by ux-designer-agent, design-system-a
 
 - `bunx tsc --noEmit` clean.
 - Live browser check (project `01M2D1NXWKW05PQS4RTVFSWDW1`, visible to the test session): `ProjectSubNav` renders six labeled clusters with correct active-link highlighting; `dd/page.tsx`'s Commercial/Technical/Legal domain tabs switch correctly via the new `TabNav` with no console/parse errors.
+
+## Phase 3 progress
+
+- **`business-case/page.tsx`** (done): split into `설명·생성·권고` (explainer table, generate button, run log, LLM adoption recommendation) and `시나리오 비교` (the three scenario comparison tables, default-active). Error banner and the editing/`TargetCheckPanel`/`GateDecisionPanel` sections stay outside the tab gate since they're triggered from within either tab. Active tab syncs to `?tab=` via `useRouter().replace(..., { scroll: false })`, page wrapped in `Suspense` (App Router requirement for `useSearchParams`). Live-verified: tabs switch, URL updates, no console/parse errors after the dev server's HMR cache settled.
+- Remaining: `deal-structure/page.tsx`, `portfolio/page.tsx`, `ic-review/page.tsx`, `partnership/page.tsx` — queued as follow-up PRs. `wacc/page.tsx` intentionally excluded (see Review section above).
