@@ -17,7 +17,7 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { completeOrFallback } from "./llm.ts";
-import { researchSources } from "./web-research.ts";
+import { isWebResearchConfigured, researchSources } from "./web-research.ts";
 import { SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
 
@@ -63,7 +63,7 @@ async function askJson(industry: string, instruction: string, purpose = "시장�
       { role: "user", content: `산업: ${industry}\n${instruction}` },
     ],
     () => "NOT_JSON",
-    { temperature: 0.2, maxTokens: 2000, agent: { key: "market-intelligence-agent", purpose: `S1 파이프라인 — ${purpose}` } },
+    { temperature: 0.2, maxTokens: 3200, agent: { key: "market-intelligence-agent", purpose: `S1 파이프라인 — ${purpose}` } }, // 표 형태의 넓은 JSON(권역×세그먼트·외부근거 인용) 잘림 방지
   );
   if (res.source !== "llm") return null;
   const text = res.text.replace(/```json|```/g, "");
@@ -146,6 +146,28 @@ export async function classifyIndustryKsic(db: Database, industryId: string, ind
 }
 
 export async function runSizingPipeline(db: Database, analysisId: string): Promise<void> {
+  // ADR-0126/0128 — 재분석 일관성: 직전 완료 버전의 산업 사슬 방향을 앵커로
+  // 주입한다(옵션 2). LLM 샘플링 변동은 그대로 두되(temperature 0 미고정),
+  // 이전 산출을 프롬프트에 함께 주어 버전 간 도출 결과가 무리 없이 이어지게 한다.
+  const prev = db
+    .query(
+      `SELECT v.version_no, v.payload FROM market_sizing_version v
+       JOIN market_sizing_analysis a ON a.id = v.analysis_id
+       WHERE a.industry_id = (SELECT industry_id FROM market_sizing_analysis WHERE id = ?)
+         AND a.status = 'completed'
+       ORDER BY v.version_no DESC LIMIT 1`,
+    )
+    .get(analysisId) as { version_no: number; payload: string } | null;
+  let previousChain: Array<{ relation: string; name: string; note?: string }> = [];
+  if (prev) {
+    try {
+      const parsed = JSON.parse(prev.payload) as {
+        matrix?: { chainDirection?: { relatedIndustries?: Array<{ relation: string; name: string; note?: string }> } };
+      };
+      previousChain = parsed.matrix?.chainDirection?.relatedIndustries ?? [];
+    } catch { /* 파싱 실패 — 앵커 없이 진행 */ }
+  }
+
   const row = db
     .query(
       `SELECT a.id, a.industry_id, i.name_ko, i.ksic_code
@@ -158,6 +180,20 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   if (!row) throw new Error(`analysis ${analysisId} not found`);
   const analysis = row; // non-null alias — narrowing does not reach the nested step functions
   const industry = analysis.name_ko;
+
+  // 사용자 결정 — 1차 근거는 외부 리서치(글로벌·증권 리포트)다. Step 1 도출에
+  // 앞서 대상 산업의 가치사슬 관점 외부 소스를 검색해 프롬프트에 주입한다
+  // (TAVILY 미설정이면 건너뛰고 LLM 선험만으로 진행 — 기존 폴백 원칙 유지).
+  let chainResearch: Array<{ title: string; snippet: string }> = [];
+  if (isWebResearchConfigured()) {
+    try {
+      const sources = await researchSources([
+        `${industry} 가치사슬 상류 하류 공급망 분석`,
+        `${industry} market value chain upstream suppliers downstream customers report`,
+      ], 6);
+      chainResearch = sources.slice(0, 6).map((s) => ({ title: s.title, snippet: s.snippet.slice(0, 400) }));
+    } catch { /* 검색 실패 — LLM 선험으로 진행 */ }
+  }
   const now = () => new Date().toISOString();
   const advance = (step: number) => db.run("UPDATE market_sizing_analysis SET current_step = ? WHERE id = ?", [step, analysis.id]);
   const stepSummaries: StepSummary[] = [];
@@ -190,7 +226,18 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   // 전방/전전방(수요처)을, upstream 산업은 후방/후후방(공급처)을 분석한다.
   const dirJson = await askJson(
     industry,
-    `이 산업이 가치사슬에서 어디에 위치하는지와 인접 산업을 분석하세요. JSON: {"position":"upstream|midstream|downstream","note":"위치 판단 근거 한두 문장","relatedIndustries":[{"relation":"전방|전전방|후방|후후방","name":"산업명","note":"분석 포인트"}]}. position이 downstream/midstream이면 relation은 전방/전전방(수요처) 중심으로, upstream이면 후방/후후방(공급처) 중심으로 3~5개. segments는 이 산업의 최종수요처를 2~4개 나눈 것으로, 산업 특성에 맞게 직접 정의하세요(예: 산업용 로봇이면 제조/물류·창고/분류, 휴머노이드 로봇이면 제조 조립/물류·창고/서비스 등). 무작정 건설·광산·기타를 재사용하지 말 것. code는 short_english_snake, label은 한글.`,
+    `이 산업이 가치사슬에서 어디에 위치하는지와 인접 산업을 분석하세요. JSON: {"position":"upstream|midstream|downstream","note":"위치 판단 근거 한두 문장","relatedIndustries":[{"relation":"전방|전전방|후방|후후방","name":"산업명","note":"분석 포인트"}]}. position이 downstream/midstream이면 relation은 전방/전전방(수요처) 중심으로, upstream이면 후방/후후방(공급처) 중심으로 3~5개. segments는 이 산업의 최종수요처를 2~6개 나눈 것으로, 산업 특성에 맞게 직접 정의하세요(예: 산업용 로봇이면 제조/물류·창고/분류, 휴머노이드 로봇이면 제조 조립/물류·창고/서비스 등). 무작정 건설·광산·기타를 재사용하지 말 것. code는 short_english_snake, label은 한글.` +
+    // ADR-0126/0128 재분석 일관성(옵션 2) — 직전 버전 앵커
+    (previousChain.length > 0
+      ? `\n\n[이전 버전(v${prev!.version_no}) 산업 사슬] — 버전 간 일관성을 위해 유지·보완하세요. 산업 명칭도 가능한 한 같은 표기를 유지하고, 명백히 부적절한 항목만 교체하세요:\n` +
+        previousChain.map((r) => `- [${r.relation}] ${r.name}${r.note ? `: ${r.note ?? ""}` : ""}`).join("\n")
+      : "") +
+    // 사용자 결정 — 외부 리서치(글로벌·증권 리포트) 근거를 선행 주입
+    (chainResearch.length > 0
+      ? `\n\n[외부 리서치 근거 — 글로벌·증권 리포트 요약] 아래 근거에 나타난 산업 관계를 우선 참고하세요. note에 출처 제목을 인용하세요:\n` +
+        chainResearch.map((r, i) => `${i + 1}. ${r.title}: ${r.snippet}`).join("\n")
+      : ""),
+    "시장 구조 정의 — 가치사슬 위치·인접 산업 도출",
   );
   const chainDirection: SizingMatrix["chainDirection"] = {
     position: (["upstream", "midstream", "downstream"].includes(str(dirJson?.position)) ? str(dirJson?.position) : "midstream") as "upstream" | "midstream" | "downstream",
@@ -206,7 +253,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const segDefs = rawSegs
     .map((x) => ({ code: str(x.code).toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 24), label: str(x.label) }))
     .filter((x) => x.code.length > 0 && x.label.length > 0)
-    .slice(0, 4);
+    .slice(0, 6); // 연결 드라이버(권역6×세그먼트) 상한 완화 — 24 고정 문제 해소 (사용자 지적)
   const segs = segDefs.length >= 2 ? segDefs : [...SEGMENTS];
   const POSITION_LABEL: Record<string, string> = { upstream: "상류(원자재·부품)", midstream: "중류(조립·가공)", downstream: "하류(완제품·수요처)" };
   // 경쟁 구조 (S1 competitive-intelligence) — LLM 추정, 공시 대조 전
@@ -246,11 +293,44 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     ],
   });
 
+  // 사용자 결정 — 수요·성장의 근간은 전방/전전방(수요처) 산업이다. 연계 산업 중
+  // 이미 분석이 완료된 하류 산업의 규모·성장률을 수요 참조로 모아 Step 2(앵커)·
+  // Step 4(CAGR) 프롬프트에 주입한다 — 프록시 체인 논리(하류 수요가 상류 매출을
+  // 견인)를 정량 계산에 반영하는 첫 단계.
+  const demandRefs: Array<{ name: string; total: number | null; cagr: number | null }> = [];
+  for (const r of chainDirection.relatedIndustries) {
+    if (!/전방/.test(r.relation)) continue;
+    const m2 = db
+      .query("SELECT id FROM md_industry WHERE name_ko = ? LIMIT 1")
+      .get(r.name) as { id: string } | undefined;
+    if (!m2) continue;
+    const pv = db
+      .query(
+        `SELECT v.payload FROM market_sizing_version v
+         JOIN market_sizing_analysis a ON a.id = v.analysis_id
+         WHERE a.industry_id = ? AND a.status = 'completed'
+         ORDER BY v.version_no DESC LIMIT 1`,
+      )
+      .get(m2.id) as { payload: string } | null;
+    if (!pv) continue;
+    try {
+      const mx = (JSON.parse(pv.payload) as { matrix?: { anchor?: { total?: number }; cagrBase?: Record<string, Record<string, number>> } }).matrix;
+      const total = mx?.anchor?.total ?? null;
+      const cells = mx?.cagrBase ? Object.values(mx.cagrBase).flatMap((o) => Object.values(o)).filter((n) => typeof n === "number" && n > 0) : [];
+      const cagr = cells.length > 0 ? cells.reduce((a, b) => a + b, 0) / cells.length : null;
+      demandRefs.push({ name: r.name, total, cagr });
+    } catch { /* 개별 산업 파싱 실패 — 건너뜀 */ }
+  }
+  const demandLine = demandRefs.length > 0
+    ? `\n\n[수요 측 근거 — 전방/전전방 산업의 완료 분석값] 이 산업들의 수요가 대상 산업 매출을 견인하는 구조로 앵커·성장률을 산정하세요:\n` +
+      demandRefs.map((d) => `- ${d.name}: 시장규모 ${d.total != null ? `$${d.total.toFixed(2)}B` : "미측정"}, 성장률 ${d.cagr != null ? `${(d.cagr * 100).toFixed(1)}%` : "미측정"}`).join("\n")
+    : "";
+
   // ── Step 2: anchor triangulation (LLM proposes source estimates) ──
   advance(2);
   const anchorJson = await askJson(
     industry,
-    `2026년 글로벌 시장 규모(단위: 십억 달러) 추정치를 3개 소스 관점에서 제시하세요. JSON: {"sources":[{"label":"소스 관점 설명(기관·리포트명)","estimate":2.0,"status":"consensus|excluded","methodology":"그 소스가 시장을 어떻게 정의·측정했는지 한 문장","sourceUrl":"알려진 출처 URL(없으면 생략)","note":"비고"}]}. status는 뚜렷이 튀는 추정치 하나만 excluded로. LLM이 제시하는 total은 사용하지 않으므로 포함하지 말 것.`,
+    `2026년 글로벌 시장 규모(단위: 십억 달러) 추정치를 3개 소스 관점에서 제시하세요. JSON: {"sources":[{"label":"소스 관점 설명(기관·리포트명)","estimate":2.0,"status":"consensus|excluded","methodology":"그 소스가 시장을 어떻게 정의·측정했는지 한 문장","sourceUrl":"알려진 출처 URL(없으면 생략)","note":"비고"}]}. status는 뚜렷이 튀는 추정치 하나만 excluded로. LLM이 제시하는 total은 사용하지 않으므로 포함하지 말 것.` + demandLine,
   );
   const rawSources = Array.isArray(anchorJson?.sources) ? (anchorJson!.sources as Array<Record<string, unknown>>) : [];
   const anchorSources = rawSources.slice(0, 4).map((s, i) => ({
@@ -313,7 +393,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   advance(4);
   const cagrJson = await askJson(
     industry,
-    `권역×세그먼트별 2026 기준 시장규모(십억 달러, 합계≈${anchorTotal.toFixed(2)})와 2026→2030 CAGR(소수)을 추정하세요. JSON: {"baseline":{"china":{"${segs[0].code}":0.2,"${segs[1].code}":0.1${segs[2] ? `,"${segs[2].code}":0.05` : ""}, ...}, ...}, "cagr":{"china":{"${segs[0].code}":0.06, ...}}, "overrides":[{"region":"north_america","segment":"${segs[1].code}","down":0.02,"up":0.11,"reason":"..."}]}. 6개 권역 × ${segs.map((x) => x.code).join("|")}. baseline 합계는 앵커 ${anchorTotal.toFixed(2)}와 ±15% 이내로.`,
+    `권역×세그먼트별 2026 기준 시장규모(십억 달러, 합계≈${anchorTotal.toFixed(2)})와 2026→2030 CAGR(소수)을 추정하세요. JSON: {"baseline":{"china":{"${segs[0].code}":0.2,"${segs[1].code}":0.1${segs[2] ? `,"${segs[2].code}":0.05` : ""}, ...}, ...}, "cagr":{"china":{"${segs[0].code}":0.06, ...}}, "overrides":[{"region":"north_america","segment":"${segs[1].code}","down":0.02,"up":0.11,"reason":"..."}]}. 6개 권역 × ${segs.map((x) => x.code).join("|")}. baseline 합계는 앵커 ${anchorTotal.toFixed(2)}와 ±15% 이내로. 성장률은 수요처(전방) 산업의 성장률과 정합되게.` + demandLine,
   );
   const readMatrix = (obj: unknown): Record<string, Record<string, number>> => {
     const out: Record<string, Record<string, number>> = {};

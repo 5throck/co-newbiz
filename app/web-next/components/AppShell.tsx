@@ -153,7 +153,19 @@ function Topbar({ pathname }: { pathname: string }) {
         <button
           type="button"
           className="back-link"
-          onClick={() => router.push(backHref)}
+          onClick={() => {
+            // 같은 경로(pathname)에서 조회 파라미터만 비우는 전환(예: /market?industry=X
+            // → /market)은 Next App Router의 라우터 캐시 재조정이 router.push/replace
+            // 직후 자체적으로 history.replaceState를 다시 호출해 이전 전체 URL(쿼리
+            // 포함)로 되돌리는 내부 동작이 있다 — 클릭이 "먹통"으로 보이는 원인.
+            // pathname이 그대로이고 조회 파라미터가 있던 경우에만 하드 네비게이션으로
+            // 우회한다(소프트 내비게이션이 Next 내부에서 되돌려지는 걸 원천 차단).
+            if (pathname === backHref && searchParams.toString()) {
+              window.location.assign(backHref);
+              return;
+            }
+            router.push(backHref);
+          }}
           aria-label={dealStageMatch || dealOverviewMatch ? `${backLabel}로 돌아가기` : `${backLabel} 목록으로 돌아가기`}
         >
           <ChevronLeft size={14} />

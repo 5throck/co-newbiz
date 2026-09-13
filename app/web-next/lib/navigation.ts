@@ -73,7 +73,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/library", label: "문서 허브" },
       { href: "/glossary", label: "용어집" },
       { href: "/strategy", label: "R&BD 전략" },
-      { href: "/agents", label: "에이전트" },
     ],
   },
 ];
@@ -104,6 +103,7 @@ export const NON_MENU_ROUTES: string[] = [
   "/login",
   "/register",
   "/password-change",
+  "/agents",
   "/opportunities/[id]",
   "/companies",
   "/companies/[companyId]",

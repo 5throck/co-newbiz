@@ -7,6 +7,7 @@ import { getDb } from "../../../../../../db/client.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { badRequest, forbidden, ok } from "../../../../lib/envelope.ts";
 import { completeOrFallback } from "../../../../lib/llm.ts";
+import { isWebResearchConfigured, researchSources } from "../../../../lib/web-research.ts";
 
 interface Candidate { name_ko: string; industry_id: string | null; relation: string; note: string | null; source: "link" | "analysis" | "proxy" }
 const norm = (s: string) => s.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").replace(/\s+/g, "").replace(/산업$/, "");
@@ -106,6 +107,19 @@ export async function POST(request: Request) {
   const industry = db.query("SELECT id, name_ko FROM md_industry WHERE name_ko = ?").get(target) as { id: string; name_ko: string } | null;
   const stored = loadStoredCandidates(industry);
 
+  // 사용자 결정 — 글로벌·증권 리포트를 1차 근거로 검색해 프롬프트에 주입한다
+  // (TAVILY 미설정이면 생략).
+  let research: Array<{ title: string; snippet: string }> = [];
+  if (isWebResearchConfigured()) {
+    try {
+      const sources = await researchSources([
+        `${target} 가치사슬 상류 하류 공급망 분석`,
+        `${target} market value chain upstream suppliers downstream customers report`,
+      ], 6);
+      research = sources.slice(0, 6).map((s) => ({ title: s.title, snippet: s.snippet.slice(0, 400) }));
+    } catch { /* 검색 실패 — LLM 선험으로 진행 */ }
+  }
+
   const res = await completeOrFallback(
     [
       { role: "system" as const, content: "당신은 가치사슬 분석가입니다. 제공된 산업의 상류(원자재·부품 공급)와 하류(수요처) 인접 산업을 제안하세요. 근거 없는 판단은 주석으로 '검증 필요'를 남깁니다. JSON만 반환합니다." },
@@ -114,7 +128,12 @@ export async function POST(request: Request) {
         content:
           `산업 "${target}"의 가치사슬 인접 산업을 3~6개 제안하세요. ` +
           `JSON: {"relatedIndustries":[{"relation":"후방|전방|후후방|전전방","name":"산업명(한국어, 산업으로 등록 가능한 명사형)","note":"연관성 한 문장"}]} ` +
-          `position이 없어도 되니 상류·하류를 고르게 담으세요.\n\n산업명: ${target}`,
+          `position이 없어도 되니 상류·하류를 고르게 담으세요.\n\n산업명: ${target}` +
+          // 사용자 결정 — 외부 리서치(글로벌·증권 리포트)를 1차 근거로 주입
+          (research.length > 0
+            ? `\n\n[외부 리서치 근거 — 글로벌·증권 리포트 요약] 아래 근거에 나타난 산업 관계를 우선 참고하세요. note에 출처 제목을 인용하세요:\n` +
+              research.map((r, i) => `${i + 1}. ${r.title}: ${r.snippet}`).join("\n")
+            : ""),
       },
     ],
     () =>
@@ -126,15 +145,28 @@ export async function POST(request: Request) {
           { relation: "전방", name: `${target} 최종 수요처 산업`, note: "결정론 템플릿(검증 필요) — 최종 수요 산업 가정" },
         ],
       }),
-    { maxTokens: 1200, agent: { key: "market-intelligence-agent", purpose: "1차 프록시 산업 분석 — 가치사슬 인접 산업 제안" } },
+    { temperature: 0.2, maxTokens: 2200, agent: { key: "market-intelligence-agent", purpose: "1차 프록시 산업 분석 — 가치사슬 인접 산업 제안" } },
   );
   let proposals: Array<{ relation?: string; name?: string; note?: string }> = [];
-  try {
-    const parsed = JSON.parse(res.text.slice(res.text.indexOf("{"), res.text.lastIndexOf("}") + 1)) as {
-      relatedIndustries?: Array<{ relation?: string; name?: string; note?: string }>;
-    };
-    proposals = parsed.relatedIndustries ?? [];
-  } catch { /* 폴백 없음 — 저장된 후보만 반환 */ }
+  const text = res.text.replace(/```json|```/g, "");
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start !== -1 && end > start) {
+    try {
+      const parsed = JSON.parse(text.slice(start, end + 1)) as {
+        relatedIndustries?: Array<{ relation?: string; name?: string; note?: string }>;
+      };
+      proposals = parsed.relatedIndustries ?? [];
+    } catch {
+      // 잘림·불완전 JSON 구제 — 완결된 relatedIndustries 객체만 골라 담는다.
+      for (const om of text.matchAll(/\{\s*"relation"\s*:[\s\S]*?"name"\s*:[\s\S]*?"note"\s*:[\s\S]*?\}/g)) {
+        try {
+          const o = JSON.parse(om[0]) as { relation?: string; name?: string; note?: string };
+          if (o.name) proposals.push(o);
+        } catch { /* 부분 객체 폐기 */ }
+      }
+    }
+  }
 
   const seen = new Set<string>([norm(target), ...stored.map((c) => norm(c.name_ko))]);
   const candidates: Candidate[] = [...stored];

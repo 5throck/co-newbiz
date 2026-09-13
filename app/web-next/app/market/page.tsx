@@ -744,7 +744,7 @@ function MarketReport({ detail, analysisId, analysisDate }: { detail: IndustryDe
               {llmUsed && <> (8단계 전체 LLM 요약 사용)</>}
             </p>
           )}
-          <SizingReport detail={detail} matrix={matrix} stepSummaries={stepSummaries} />
+          <SizingReport detail={detail} matrix={matrix} stepSummaries={stepSummaries} analysisId={analysisId} />
         </>
       )}
     </>
@@ -792,12 +792,15 @@ function StepSection({ n, id, title, children }: { n: number; id: string; title:
   );
 }
 
-function SizingReport({ detail, matrix, stepSummaries }: {
+function SizingReport({ detail, matrix, stepSummaries, analysisId }: {
   detail: IndustryDetail;
   matrix: SizingMatrix;
   stepSummaries: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> | null;
+  analysisId: string | null;
 }) {
   const [tab, setTab] = useState<"overview" | "structure" | "competitive" | "size" | "allocation" | "growth" | "pipeline" | "qualitative" | "regulation" | "risk" | "validate">("overview");
+  const [rerunStarted, setRerunStarted] = useState(false);
+  const [rerunError, setRerunError] = useState<string | null>(null);
   // ADR-0126 — 가치사슬 연계 제안 승인 (analyst+). 승인 시 structural hop으로
   // 등록되고 산업 상세를 다시 불러와 링크 테이블·제안 목록을 갱신한다. 부모가
   // detail을 소유하므로 갱신 결과는 로컬 뷰(localDetail)로 겹쳐 쓴다.
@@ -1250,6 +1253,39 @@ function SizingReport({ detail, matrix, stepSummaries }: {
           <div className="chart-half sizing-grade-card mt-4">
             <h4 className="text-[0.85rem] mb-2">
               외부 미래 전망 대비 격차 분석 ({matrix.externalForecast.targetYear}년) — 과거 성장률 연장 추정 vs 외부 전망
+
+              {(() => {
+                const gap = matrix.externalForecast.gapPct;
+                if (gap === undefined || Math.abs(gap) < 20) return null;
+                return (
+                  <div className="sizing-grade-card mt-2" role="note">
+                    <p className="m-0 text-[0.8rem]">
+                      <span className="status-chip status-red mr-1">검토 필요</span>
+                      우리 추정과 외부 전망의 격차가 <strong>{Math.abs(gap).toFixed(1)}%</strong>로 20%를 초과합니다 — 분석 전제(드라이버·세그먼트 정의·앵커 소스)가 현실과 어긋났을 수 있습니다. 재분석으로 최신 외부 전망·연계 산업 근거를 반영하세요.
+                    </p>
+                    {rerunStarted ? (
+                      <p role="status" className="text-[0.78rem] text-[color:var(--green-fg)] mt-1 mb-0">재분석이 시작되었습니다 — 완료되면 목록의 분석일이 갱신됩니다.</p>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm mt-1"
+                        onClick={async () => {
+                          if (!analysisId) { setRerunError("분석 id를 찾을 수 없습니다 — 목록에서 재분석하세요."); return; }
+                          try {
+                            await api.post(`/api/market-overview/analyses/${encodeURIComponent(analysisId)}/rerun`);
+                            setRerunStarted(true);
+                          } catch (e) {
+                            setRerunError(e instanceof Error ? e.message : "재분석 시작 실패");
+                          }
+                        }}
+                      >
+                        지금 재분석 (최신 외부 전망·연계 근거 반영)
+                      </button>
+                    )}
+                    {rerunError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mt-1 mb-0">{rerunError}</p>}
+                  </div>
+                );
+              })()}
             </h4>
             <table className="data-table" aria-label="외부 전망 대비 격차">
               <caption className="sr-only">외부 전망 대비 격차</caption>
