@@ -6,9 +6,9 @@ import { SectionToolbar } from "./layout.tsx";
 import { formatDirectionSymbol, formatTargetValue } from "../lib/business-targets-format.ts";
 import type { TargetUnit } from "../lib/business-targets-format.ts";
 
-// fs 게이트 근거 패널 (ADR-0114) — 프로젝트에 적용되는 사업목표 기준(마스터데이터)
+// fs 진행 근거 패널 (ADR-0114) — 프로젝트에 적용되는 사업목표 기준(마스터데이터)
 // 대비 채택 Business Case의 산출값을 표시한다. 표시 전용: 판정은 사람이 기록하는
-// gate_decision의 참고 근거이며 이 패널은 게이트를 차단하지 않는다.
+// gate_decision의 참고 근거이며 이 패널은 진행을 차단하지 않는다.
 
 interface TargetCheckEntry {
   metric_key: string;
@@ -151,7 +151,7 @@ export function TargetCheckPanel({ projectId }: { projectId: string }) {
             </table>
           </div>
           <p className="section-meta">
-            이 표는 fs 게이트 판정의 참고 근거이며, 미달이어도 게이트가 자동으로 막히지는 않습니다. 기준은 관리자 콘솔 › 마스터 데이터에서 관리됩니다.
+            이 표는 fs 진행 판정의 참고 근거이며, 미달이어도 진행이 자동으로 막히지는 않습니다. 기준은 관리자 콘솔 › 마스터 데이터에서 관리됩니다.
           </p>
         </>
       )}

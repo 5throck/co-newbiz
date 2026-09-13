@@ -1,5 +1,5 @@
 // S3 시너지·전략적 적합성 (screening gate) — 기회별 산출물 조회/생성.
-//   GET  : 시너지 점수·근거, 적합성 판단, screening 게이트 권고
+//   GET  : 시너지 점수·근거, 적합성 판단, screening 진행 권고
 //   POST : { kind: "synergy" | "fit" } — 해당 활동 실행 (analyst+)
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";

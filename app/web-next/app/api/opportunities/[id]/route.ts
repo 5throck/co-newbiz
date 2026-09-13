@@ -9,12 +9,18 @@ import { badRequest, forbidden, notFound, ok } from "../../../../lib/envelope.ts
 
 const STATUSES = new Set(["identified", "assessed", "selected", "dropped"]);
 
+// Fetching by id is "I already know this row, show it to me" — unlike the
+// list endpoint (GET /api/opportunities, which correctly hides deleted rows
+// from active work views), a direct id lookup must still resolve a deleted
+// or promoted-then-archived opportunity so its S1~S7 history (e.g. the S4
+// route decision that led to its promotion) stays viewable. The caller
+// decides how to present deleted_at (read-only banner, etc).
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
   const row = getDb()
-    .query("SELECT * FROM opportunity WHERE id = ? AND deleted_at IS NULL")
+    .query("SELECT * FROM opportunity WHERE id = ?")
     .get(id);
   if (!row) return notFound();
   return ok(row, 200);

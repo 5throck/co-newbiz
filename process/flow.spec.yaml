@@ -15,7 +15,7 @@
 #
 # v2.0.0 — Route Decision (S4) 이후 Greenfield/Brownfield 트랙 분리:
 #   Greenfield: S5 역량 평가·진출전략 → S8 사업성 분석 → ...
-#   Brownfield: S6 대상 후보 발굴(Long List) → S7 대상 스크리닝(Short List) → S8 사업성 분석 → ...
+#   Brownfield: S6 대상 후보 발굴(Long List) → S7 대상 선정(Short List) → S8 사업성 분석 → ...
 #   트랙에 해당 없는 Stage는 applicableTracks로 스킵한다 (단일 선형 체인 유지).
 
 meta:
@@ -332,7 +332,7 @@ stages:
     gates: [pre_fs]
 
   - id: S7
-    name: 대상 스크리닝
+    name: 대상 선정
     objective: 어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)
     inputs:
       - Target Company Long List (S6)

@@ -9,9 +9,9 @@ import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { GateDecisionPanel } from "../../../../components/GateDecisionPanel.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 
-// S11 투자심사·실행 — IC 패키지 열람 + Entity/Group IC 게이트 기록 + 설립 실행
+// S11 투자심사·실행 — IC 패키지 열람 + Entity/Group IC 진행 기록 + 설립 실행
 // 5단계 진행 화면 (ADR-0100 §3). 경계 #2: RAG 등급은 'AI 제안'으로만 표시되고
-// (승인 도장 없음), 게이트 GO/HOLD/KILL 기록과 설립 단계 완료 기록은 사람의
+// (승인 도장 없음), 진행 GO/HOLD/KILL 기록과 설립 단계 완료 기록은 사람의
 // 행위다. 이 화면은 패키지를 읽어오는 GET만 자동화하고, 쓰기는 명시적 P4
 // 확인(useConfirm)을 거친 analyst+ 행위다.
 
@@ -138,7 +138,7 @@ export default function IcReviewPage() {
           Entity IC와 Group IC 승인이 모두 기록되고, origin∈{"{internal,joint}"} 프로젝트는 설립 5단계 완료 기록이
           존재해야 S11이 완료됩니다 (flow.spec v2.0.0).
           <span className={`status-chip ${bothGatesGo ? "status-green" : "status-amber"} ml-2`}>
-            {bothGatesGo ? "● IC 게이트 2/2 GO" : "○ IC 게이트 미승인"}
+            {bothGatesGo ? "● IC 진행 2/2 GO" : "○ IC 진행 미승인"}
           </span>
           {estApplies && (
             <span className={`status-chip ${estComplete ? "status-green" : "status-amber"} ml-1`}>
@@ -311,7 +311,7 @@ export default function IcReviewPage() {
           )}
         </section>
 
-        {/* ── 게이트 결정 ×2 ─────────────────────────────────────────── */}
+        {/* ── 의사결정 ×2 ─────────────────────────────────────────── */}
         <div className="mt-4">
           <GateDecisionPanel
             opportunityId={projectId}

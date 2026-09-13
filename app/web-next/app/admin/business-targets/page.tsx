@@ -10,7 +10,7 @@ export default function AdminBusinessTargetsPage() {
     <main>
       <h1>사업목표 기준</h1>
       <p className="objective">
-        그룹 공통·계열사별 사업목표 마스터 — FS 게이트에서 기준 충족 여부 판정의 근거입니다 (ADR-0114). 계열사 행은 그룹 공통 행을 덮어씁니다.
+        그룹 공통·계열사별 사업목표 마스터 — FS 진행에서 기준 충족 여부 판정의 근거입니다. 계열사 행은 그룹 공통 행을 덮어씁니다.
       </p>
       <BusinessTargetsSection />
     </main>

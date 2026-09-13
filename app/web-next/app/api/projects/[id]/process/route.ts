@@ -48,7 +48,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     },
     200,
     // is_lead: 삭제/마감·보관 액션 노출 판단. project_status/deleted: 보관·삭제
-    // 딜에서 UI가 저장/수정 액션을 숨기도록 판단하는 근거(쓰기는 서버에서 차단).
+    // 검토/안건에서 UI가 저장/수정 액션을 숨기도록 판단하는 근거(쓰기는 서버에서 차단).
     { is_lead: isLead(auth.auth, id), project_status: project.status ?? null, deleted: project.deleted_at != null },
   );
 }

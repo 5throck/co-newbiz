@@ -318,6 +318,8 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0121` | adr | — | — | — |
 | `adr:0122` | adr | — | — | — |
 | `adr:0123` | adr | — | — | — |
+| `adr:0124` | adr | — | — | — |
+| `adr:0125` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
 
-// 벤치마킹 사례 (/benchmarks) — 외부 유사 딜 사례 라이브러리. 모든 로그인
+// 벤치마킹 사례 (/benchmarks) — 외부 유사 검토/안건 사례 라이브러리. 모든 로그인
 // 사용자가 조회·검색할 수 있고 등록·수정은 관리자 콘솔에서 수행한다.
 // 사례 데이터는 benchmark_case 테이블(마이그레이션 0041)에 영속 저장된다.
 
@@ -63,7 +63,7 @@ export function BenchmarksView() {
     <main>
       <h1>벤치마킹 사례</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        공개된 신설·M&A·라이선스·합작 사례를 업종·지역·딜 유형으로 조회합니다. 등록·수정은 관리자 콘솔에서 수행됩니다.
+        공개된 신설·M&A·라이선스·합작 사례를 업종·지역·검토/안건 유형으로 조회합니다. 등록·수정은 관리자 콘솔에서 수행됩니다.
       </p>
       <div className="benchmark-filters">
         <input
@@ -73,7 +73,7 @@ export function BenchmarksView() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select aria-label="딜 유형" value={dealType} onChange={(e) => setDealType(e.target.value)}>
+        <select aria-label="검토/안건 유형" value={dealType} onChange={(e) => setDealType(e.target.value)}>
           <option value="">전체 유형</option>
           {Object.entries(TYPE_LABELS).map(([k, v]) => (
             <option key={k} value={k}>

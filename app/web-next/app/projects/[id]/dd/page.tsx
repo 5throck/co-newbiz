@@ -13,7 +13,7 @@ import { useConfirm } from "../../../../components/crud.tsx";
 // S9 실사·검증 — 표준 DD 체크리스트 판정 + 산업 맞춤 제안 승인 화면 (ADR-0099 §4).
 // 표준 체크리스트 3개(commercial/technical/legal) 탭 + 산업 맞춤 제안 패널
 // + dd_finding 목록 + GateDecisionPanel(gate=dd). 경계 #2: 에이전트는 제안만
-// 하고, 제안의 승인(판정 대상 편입)과 dd 게이트 기록은 사람이 한다. 출처 없는
+// 하고, 제안의 승인(판정 대상 편입)과 dd 진행 기록은 사람이 한다. 출처 없는
 // 제안은 "출처 없음 (C)"로 눈에 보이게 표시된다 — 결코 출처가 있는 것처럼
 // 보이지 않는다 (ADR-0099 §6 정직성 제약).
 
@@ -403,7 +403,7 @@ export default function DdPage() {
             <div className="modal-panel" role="dialog" aria-modal="true" aria-label="waiver 연결" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-[1rem] font-semibold mb-2">활성 waiver 연결</h3>
               <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
-                항목 {waiverPick.itemId} 에 연결할 활성 waiver를 선택합니다 — 면제 판정(waived)은 사유와 만료가 기록된 승인 waiver에만 가능합니다 (ADR-0036).
+                항목 {waiverPick.itemId} 에 연결할 활성 waiver를 선택합니다 — 면제 판정(waived)은 사유와 만료가 기록된 승인 waiver에만 가능합니다.
               </p>
               <ul className="space-y-2 mb-3">
                 {activeWaivers.map((w) => (

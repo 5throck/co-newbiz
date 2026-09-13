@@ -106,6 +106,13 @@ function Topbar({ pathname }: { pathname: string }) {
   }
 
   if (!me) return null;
+  // /deals/{id}/{stage} 와 /deals/{id} — 동적 id 경로라 NAV_SECTIONS의
+  // 정적 href("/deals")로는 표현할 수 없다. prefix 매칭에 맡기면 이 둘 다
+  // "/deals"(검토/안건 보드)의 하위로 잘못 묶여, 스테이지 화면에서 뒤로가기를
+  // 눌러도 보드까지 튕겨나간다 — 딜 개요 한 단계로만 돌아가도록 먼저 처리한다.
+  const dealStageMatch = pathname.match(/^\/deals\/([^/]+)\/([^/]+)$/);
+  const dealOverviewMatch = !dealStageMatch && pathname.match(/^\/deals\/([^/]+)$/);
+
   // 활성 내비 항목 해석 — 최상위뿐 아니라 서브메뉴 자식(/synergy 등)도 찾는다.
   // 자식이 활성이면 parent를 함께 기록해 목록(부모/자식 href)로 돌아갈 수 있게 한다.
   const flat: Array<{ item: NavItem; parent?: NavItem }> = NAV_SECTIONS.flatMap((sec) =>
@@ -114,7 +121,9 @@ function Topbar({ pathname }: { pathname: string }) {
       ...(i.children ?? []).map((c) => ({ item: { ...c }, parent: i })),
     ]),
   );
-  const found = flat.find((e) => pathname === e.item.href || pathname.startsWith(e.item.href + "/"));
+  const found = (dealStageMatch || dealOverviewMatch)
+    ? undefined
+    : flat.find((e) => pathname === e.item.href || pathname.startsWith(e.item.href + "/"));
   const item = found?.item;
   const listHref = found?.parent?.href ?? item?.href;
   // 상세 표현 판정 — 조회 파라미터 기반 상세(company·opportunity·industry)와
@@ -125,20 +134,30 @@ function Topbar({ pathname }: { pathname: string }) {
     (pathname === "/route-decision" && !!searchParams.get("opportunity")) ||
     (pathname === "/brownfield" && !!searchParams.get("opportunity")) ||
     (pathname === "/greenfield" && !!searchParams.get("opportunity"));
-  const isNested = (!!item && (pathname !== item.href || hasDetailParam)) || hasDetailParam;
-  const backHref = found?.parent ? found.item.href : item?.href ?? "/";
-  const backLabel = found?.parent ? found.parent.label : item?.label ?? "목록";
+  const isNested = dealStageMatch || dealOverviewMatch
+    ? true
+    : (!!item && (pathname !== item.href || hasDetailParam)) || hasDetailParam;
+  const backHref = dealStageMatch
+    ? `/deals/${dealStageMatch[1]}`
+    : dealOverviewMatch
+      ? "/deals"
+      : found?.parent ? found.item.href : item?.href ?? "/";
+  const backLabel = dealStageMatch
+    ? "검토/안건 개요"
+    : dealOverviewMatch
+      ? "검토/안건 보드"
+      : found?.parent ? found.parent.label : item?.label ?? "목록";
   return (
     <header className="topbar">
-      {isNested && item && (
+      {isNested && (item || dealStageMatch || dealOverviewMatch) && (
         <button
           type="button"
           className="back-link"
           onClick={() => router.push(backHref)}
-          aria-label={`${backLabel} 목록으로 돌아가기`}
+          aria-label={dealStageMatch || dealOverviewMatch ? `${backLabel}로 돌아가기` : `${backLabel} 목록으로 돌아가기`}
         >
           <ChevronLeft size={14} />
-          {item.label}
+          {dealStageMatch || dealOverviewMatch ? backLabel : item!.label}
         </button>
       )}
       <div className="topbar-actions">
@@ -200,6 +219,26 @@ function Sidebar() {
     );
   }
 
+  // S8~S12는 프로젝트(project id) 없이는 열 수 없는 화면이라 정적 SSOT에는
+  // 넣을 수 없다 — 현재 /projects/{id}/** 안에 있을 때만, 그 id로 실제 열리는
+  // 링크를 사이드바 "프로젝트" 하위 메뉴에 동적으로 끼워 넣는다. 프로젝트
+  // 상세 화면 내부에서만 쓰이던 탭들을 사이드 메뉴에서도 쓸 수 있게 하는
+  // 조치 — 프로젝트 컨텍스트 밖에서는 기존 목록/아카이브 하위 메뉴 그대로.
+  const currentProjectId = pathname.match(/^\/projects\/([^/]+)/)?.[1];
+  // 아카이브는 항상 마지막 — 프로젝트가 열려 있어 S8~S12 링크가 끼어들 때도
+  // 순서 규칙은 동일하게 유지한다.
+  const projectStageChildren = currentProjectId
+    ? [
+        { href: "/projects", label: "진행 프로젝트" },
+        { href: `/projects/${currentProjectId}/business-case`, label: "S8 사업성 분석" },
+        { href: `/projects/${currentProjectId}/dd`, label: "S9 실사·검증" },
+        { href: `/projects/${currentProjectId}/deal-structure`, label: "S10 투자구조 설계" },
+        { href: `/projects/${currentProjectId}/ic-review`, label: "S11 투자심사·실행" },
+        { href: `/projects/${currentProjectId}/portfolio`, label: "S12 사후 관리" },
+        { href: "/projects/archives", label: "아카이브" },
+      ]
+    : null;
+
   return (
     <aside className="app-sidebar">
       <Link href="/" className="sidebar-brand">
@@ -214,18 +253,22 @@ function Sidebar() {
             <div className="sidebar-group-label">{section.label}</div>
             <nav className="sidebar-nav" aria-label={section.label}>
               {items.map((item) => {
-                if (item.children) {
-                  const childActive = item.children.some(
+                const children = item.href === "/projects" && item.children && projectStageChildren ? projectStageChildren : item.children;
+                if (children) {
+                  const childActive = children.some(
                     (c) => pathname === c.href || pathname.startsWith(c.href + "/"),
                   );
                   return (
                     <div key={item.href} className="side-nav-submenu">
-                      <div className={`side-nav-link side-nav-parent ${childActive ? "side-nav-link-active" : ""}`}>
+                      <Link
+                        href={item.href}
+                        className={`side-nav-link side-nav-parent ${childActive ? "side-nav-link-active" : ""}`}
+                      >
                         {ICON_BY_HREF[item.href] ?? CHILD_ICON}
                         <span>{item.label}</span>
-                      </div>
+                      </Link>
                       <div className="side-nav-children">
-                        {item.children.map((c) => {
+                        {children.map((c) => {
                           const active = pathname === c.href || pathname.startsWith(c.href + "/");
                           return (
                             <Link

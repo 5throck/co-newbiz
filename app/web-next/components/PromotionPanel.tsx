@@ -1,10 +1,10 @@
 "use client";
 
-// 프로젝트 승격 표면 (ADR-0095) — S7→S8 캐리어 전환은 게이트가 아니라 장부
+// 프로젝트 승격 표면 (ADR-0095) — S7→S8 캐리어 전환은 진행이 아니라 장부
 // 이전(bookkeeping)이다. 전제조건(트랙·단계 산출물)의 최종 판정은 서버
 // (promoteOpportunity)가 하며, 이 패널은 process API의 단계 상태로 준비
 // 여부를 먼저 보여준다. 승격 기록 자체는 사람의 명시적 행위다 (경계 #2).
-// 역할 분리 (ADR-0091): admin은 딜 콘텐츠 화면에서 승격할 수 없다(패널 숨김 —
+// 역할 분리 (ADR-0091): admin은 검토/안건 콘텐츠 화면에서 승격할 수 없다(패널 숨김 —
 // API도 role_forbidden으로 거부), viewer에게는 권한 안내만 표시한다.
 
 import { useEffect, useState } from "react";
@@ -47,7 +47,7 @@ function describePromoteError(err: unknown): string {
       case "already_promoted":
         return "이미 승격된 기회입니다 — 프로젝트 목록에서 확인하세요.";
       case "precondition_failed":
-        return "승격 전제조건(트랙 결정·단계 산출물·게이트 기록)이 아직 충족되지 않았습니다.";
+        return "승격 전제조건(트랙 결정·단계 산출물·진행 기록)이 아직 충족되지 않았습니다.";
       case "role_required":
       case "role_forbidden":
         return "승격은 analyst 이상 권한의 계정에서만 가능합니다.";
@@ -170,7 +170,7 @@ export function PromotionPanel({
       {proc !== null && proc.track !== null && !ready && (
         <div className="mb-0 text-[0.82rem]">
           <p className="mt-0 mb-1">
-            트랙 최종 단계({proc.track === "brownfield" ? "S7 대상 스크리닝" : "S5 역량 평가"})의 완료
+            트랙 최종 단계({proc.track === "brownfield" ? "S7 대상 선정" : "S5 역량 평가"})의 완료
             요건이 아직 충족되지 않았습니다 — 충족 후 승격할 수 있습니다.
           </p>
           {proc.blockers.length > 0 && (

@@ -150,7 +150,7 @@ describe("DELETE /api/opportunities/[id] — deletion mark", () => {
     expect(body.error?.message).toContain("프로젝트");
   });
 
-  test("unpromoted opportunity gets its own delete mark + manifest; single GET 404s", async () => {
+  test("unpromoted opportunity gets its own delete mark + manifest; excluded from the list but still resolvable by id", async () => {
     const res = await nextRequest(`/api/opportunities/${oppC}`, { method: "DELETE", headers: { cookie: leadCookie } });
     expect(res.status).toBe(200);
     const opp = db.query("SELECT deleted_at FROM opportunity WHERE id = ?").get(oppC) as { deleted_at: string | null } | undefined;
@@ -160,7 +160,13 @@ describe("DELETE /api/opportunities/[id] — deletion mark", () => {
     const list = await nextRequest("/api/opportunities", { headers: { cookie: leadCookie } });
     const body = (await list.json()) as { data: Array<{ id: string }> };
     expect(body.data.some((o) => o.id === oppC)).toBe(false);
+    // Single-id GET stays resolvable even once deleted — a direct-id lookup
+    // is "I already know this row" (e.g. an S4 screen re-opened after its
+    // opportunity was promoted-then-archived), unlike the list endpoint
+    // above which correctly hides it from active work views.
     const single = await nextRequest(`/api/opportunities/${oppC}`, { headers: { cookie: leadCookie } });
-    expect(single.status).toBe(404);
+    expect(single.status).toBe(200);
+    const singleBody = (await single.json()) as { data: { id: string; deleted_at: string | null } };
+    expect(singleBody.data.deleted_at).toBeTruthy();
   });
 });

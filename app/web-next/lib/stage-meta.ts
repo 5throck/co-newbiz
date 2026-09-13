@@ -34,7 +34,7 @@ export const STAGE_META: StageMeta[] = [
   { id: "S4", sequence: 4, name: "진출방식 결정", objective: "어떻게 들어갈 것인가?", applicableTracks: ["greenfield", "brownfield"], gateIds: ["screening", "pre_fs"], onComplete: "S5" },
   { id: "S5", sequence: 5, name: "역량 평가·진출전략", objective: "스스로 진입할 수 있는가?", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], onComplete: "S6" },
   { id: "S6", sequence: 6, name: "대상 후보 발굴", objective: "누구와 결합할 것인가?", applicableTracks: ["brownfield"], gateIds: ["pre_fs"], onComplete: "S7" },
-  { id: "S7", sequence: 7, name: "대상 스크리닝", objective: "어떤 대상이 유망한가?", applicableTracks: ["brownfield"], gateIds: ["target_screening"], onComplete: "S8" },
+  { id: "S7", sequence: 7, name: "대상 선정", objective: "어떤 대상이 유망한가?", applicableTracks: ["brownfield"], gateIds: ["target_screening"], onComplete: "S8" },
   { id: "S8", sequence: 8, name: "사업성 분석", objective: "돈이 되는가?", applicableTracks: ["greenfield", "brownfield"], gateIds: ["fs"], onComplete: "S9" },
   { id: "S9", sequence: 9, name: "실사·검증", objective: "사실인가? 위험은 무엇인가?", applicableTracks: ["greenfield", "brownfield"], gateIds: ["dd"], onComplete: "S10" },
   { id: "S10", sequence: 10, name: "투자구조 설계", objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가?", applicableTracks: ["greenfield", "brownfield"], gateIds: [], onComplete: "S11" },

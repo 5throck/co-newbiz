@@ -6,7 +6,7 @@ import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState } from "../../../../components/ui.tsx";
 
-// 예측-실적 백테스트 (ADR-0123 #3) — 조직 집계(전체 딜)를 보여주고 이 딜의
+// 예측-실적 백테스트 (ADR-0123 #3) — 조직 집계(전체 검토/안건)를 보여주고 이 검토/안건의
 // 행을 강조한다. 증거 부족은 honest degradation (가공 없음).
 interface Row { project_id: string; project_no: string; name: string; forecast_npv_krw_m: number; actual_npv_krw_m?: number; deviation_pct?: number; status: string }
 
@@ -27,7 +27,7 @@ function BacktestView() {
     <main>
       <ProjectSubNav projectId={id} />
       <h1>예측-실적 백테스트 <span className="chip gray">조직 집계</span></h1>
-      <p className="objective">S8의 예측(NPV p50)과 S12 실적을 자동 대조해 추정 정확도를 증명합니다 — 증거 부족은 가공하지 않고 표시합니다 (ADR-0123).</p>
+      <p className="objective">S8의 예측(NPV p50)과 S12 실적을 자동 대조해 추정 정확도를 증명합니다 — 증거 부족은 가공하지 않고 표시합니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <section className="market-section" aria-label="백테스트">
         {outliers.length > 0 && (
@@ -42,7 +42,7 @@ function BacktestView() {
               <thead><tr><th>프로젝트</th><th className="col-num">NPV 예측 (p50)</th><th className="col-num">실적 환산</th><th className="col-num">괴리</th><th>판정</th></tr></thead>
               <tbody>{rows.map((r) => (
                 <tr key={r.project_id} className={r.project_id === id ? "row-selected" : undefined}>
-                  <td className="font-semibold">{r.name} <span className="note">{r.project_id === id ? "· 이 딜" : ""}</span></td>
+                  <td className="font-semibold">{r.name} <span className="note">{r.project_id === id ? "· 이 검토/안건" : ""}</span></td>
                   <td className="col-num tabular-nums">{r.forecast_npv_krw_m}억</td>
                   <td className="col-num tabular-nums">{r.actual_npv_krw_m != null ? `${r.actual_npv_krw_m}억` : "—"}</td>
                   <td className="col-num tabular-nums">{r.deviation_pct != null ? `${r.deviation_pct > 0 ? "+" : ""}${r.deviation_pct}%` : "—"}</td>

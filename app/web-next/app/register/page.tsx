@@ -6,7 +6,7 @@ import { api } from "../../lib/api.ts";
 
 // 계정 신청 (/register) — 로그인 화면의 안내 링크에서 진입. 신규 계정은
 // 'pending' 상태로 생성되며 관리자 승인 후 로그인할 수 있다(security-model
-// 짠4: self-signup → admin approval 게이트).
+// 짠4: self-signup → admin approval 진행).
 export default function RegisterPage() {
   const [userId, setUserId] = useState("");
   const [displayName, setDisplayName] = useState("");

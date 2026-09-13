@@ -73,7 +73,7 @@ export async function GET(request: Request) {
       industries: industries.map((i) => {
         const analysis = analyses.find((a) => a.industry_id === i.id) ?? null;
         const chainCount = sensitivities.find((s) => s.industry_id === i.id)?.driver_count ?? 0;
-        // 딜 미연계 신규 산업은 chain rows 대신 분석 매트릭스의 권역×세그먼트
+        // 검토/안건 미연계 신규 산업은 chain rows 대신 분석 매트릭스의 권역×세그먼트
         // 셀 수(최신 버전 payload에서 실측)를 연결 드라이버로 계산한다.
         const derivedCount = analysis?.status === "completed" ? (cellCount.get(i.id) ?? 0) : 0;
         return {

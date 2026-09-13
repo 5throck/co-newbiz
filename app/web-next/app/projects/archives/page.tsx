@@ -1,7 +1,7 @@
 "use client";
 
 // 아카이브 (/projects/archives) — 보관(마감/보관 상태) 프로젝트와 삭제 표시된
-// 딜을 한 화면에서 열람한다. 삭제는 물리 삭제가 아니라 deletion mark이므로
+// 검토/안건을 한 화면에서 열람한다. 삭제는 물리 삭제가 아니라 deletion mark이므로
 // 원본 데이터는 전부 보존되어 있고, 이 화면이 그 자료의 열람 입구다
 // (deal-deletion-playbook). 열람 권한은 당시 프로젝트 멤버 기준이며
 // 서버가 매열람을 감사 기록한다.
@@ -98,7 +98,7 @@ export function ProjectArchivesView() {
     <main>
       <h1>아카이브</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        마감·보관한 프로젝트와 삭제 표시된 딜의 원본을 열람합니다. 데이터는 물리적으로 삭제되지 않으며, 열람 기록은 감사 로그에 남습니다.
+        마감·보관한 프로젝트와 삭제 표시된 검토/안건의 원본을 열람합니다. 데이터는 물리적으로 삭제되지 않으며, 열람 기록은 감사 로그에 남습니다.
       </p>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
@@ -158,12 +158,12 @@ export function ProjectArchivesView() {
         )}
       </section>
 
-      <section aria-label="삭제된 딜" className="market-section">
-        <h2 className="text-[0.92rem] font-semibold mb-2">삭제된 딜</h2>
+      <section aria-label="삭제된 검토/안건" className="market-section">
+        <h2 className="text-[0.92rem] font-semibold mb-2">삭제된 검토/안건</h2>
         {deleted === null ? (
           <p>불러오는 중...</p>
         ) : deleted.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)]">삭제 표시된 딜이 없습니다.</p>
+          <p className="text-[color:var(--muted-fg)]">삭제 표시된 검토/안건이 없습니다.</p>
         ) : (
           <ul className="space-y-2">
             {deleted.map((d) => (

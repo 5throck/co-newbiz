@@ -150,7 +150,7 @@ export default function PortfolioPage() {
       <ProjectSubNav projectId={projectId} />
       <StageFrame stageId="S12" heading="S12 사후 관리 — 포트폴리오 스코어카드 · 전환 결정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
-          분기별 스코어카드가 갱신되어야 S12 완료 기준이 충족됩니다 (최신 분기 또는 직전 분기 — ADR-0101 §4).
+          분기별 스코어카드가 갱신되어야 S12 완료 기준이 충족됩니다 (최신 분기 또는 직전 분기).
           {view && rollup?.review_cycle && (
             <span className={`status-chip ${rollup.financial.length + rollup.strategic.length > 0 ? "status-green" : "status-amber"} ml-2`}>
               {rollup.financial.length + rollup.strategic.length > 0
@@ -318,7 +318,7 @@ export default function PortfolioPage() {
           </h3>
           <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-1">
             아래 기록은 사람(venture-portfolio-IC)의 결정이며, 이 화면의 사용자는 그 결정을 <strong>기록</strong>하는
-            역할만 수행합니다 (경계 #2, ADR-0053 기록자 패턴). 결정자(decided_by)는 사람 역할 키로 고정되고
+            역할만 수행합니다. 결정자(decided_by)는 사람 역할 키로 고정되고
             기록자(recorded_by)는 세션 사용자로 남습니다.
           </p>
           {(view?.decisions.history.length ?? 0) > 0 ? (
@@ -388,7 +388,7 @@ export default function PortfolioPage() {
                     value={form.learning_capture}
                     onChange={(e) => setForm({ ...form, learning_capture: e.target.value })}
                     className="sizing-new-input w-full"
-                    placeholder="플레이북으로 회수할 학습 내용 — 중단 결정에 필수입니다 (ADR-0101 §2)"
+                    placeholder="플레이북으로 회수할 학습 내용 — 중단 결정에 필수입니다"
                   />
                 </label>
               )}

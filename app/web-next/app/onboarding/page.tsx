@@ -27,7 +27,7 @@ export default function OnboardingPage() {
           </div>
         ))}
       </section>
-      <p className="note">데일 데이터로 먼저 둘러보려면 <Link href="/deals" className="text-[color:var(--accent)] underline">딜 보드</Link>를 참고하세요.</p>
+      <p className="note">데일 데이터로 먼저 둘러보려면 <Link href="/deals" className="text-[color:var(--accent)] underline">검토/안건 보드</Link>를 참고하세요.</p>
     </main>
   );
 }

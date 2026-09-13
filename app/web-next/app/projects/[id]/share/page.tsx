@@ -54,7 +54,7 @@ function ShareView() {
     <main>
       <ProjectSubNav projectId={id} />
       <h1>외부 안전 공유 <span className="status-chip status-amber">security 설계 승인 전제</span></h1>
-      <p className="objective">외부 자문사에게 스냅샷을 만료·워터마크·열람 기록이 있는 링크로만 공유합니다 — 원본 데이터는 노출되지 않습니다 (ADR-0123).</p>
+      <p className="objective">외부 자문사에게 스냅샷을 만료·워터마크·열람 기록이 있는 링크로만 공유합니다 — 원본 데이터는 노출되지 않습니다.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <section className="market-section" aria-label="공유 링크">
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (

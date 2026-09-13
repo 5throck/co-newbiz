@@ -89,7 +89,7 @@ export default function ReportsPage() {
         <button type="button" className="btn-ghost btn-sm" disabled={composing || busy} onClick={() => void compose()}>
           {composing ? "초안 생성 중..." : "🧾 IC 패키지로 초안 생성"}
         </button>
-        <span className="text-[color:var(--muted-fg)] text-[0.78rem]">채택된 사업 케이스(NPV/IRR) · DD 완료 요약 · RAG 제안 · 게이트 이력 · 이중 관점 비교를 자동 구성합니다</span>
+        <span className="text-[color:var(--muted-fg)] text-[0.78rem]">채택된 사업 케이스(NPV/IRR) · DD 완료 요약 · RAG 제안 · 진행 이력 · 이중 관점 비교를 자동 구성합니다</span>
       </div>
       <label className="grid gap-1 mt-3 text-[0.8rem] text-[color:var(--muted-fg)]">제목
         <input className="sizing-new-input" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="보고서 제목" />
@@ -111,7 +111,7 @@ export default function ReportsPage() {
         <button type="button" className="primary-button" disabled={busy} onClick={() => void save()}>{busy ? "저장 중..." : "스냅샷 저장 + 렌더링"}</button>
         <span className="text-[color:var(--muted-fg)] text-[0.8rem] self-center">본문은 저장 후 자유롭게 수정한 뒤 다시 저장(새 스냅샷)할 수 있습니다</span>
       </div>
-      <p className="text-[0.76rem] text-[color:var(--muted-fg)] mt-2"><b>초안 생성의 성격</b> — 자동 구성은 <b>초안</b>이며, 게이트 결정·승인 문구는 사람이 검토·수정해야 합니다. 저장 스냅샷은 불변 이력으로 남습니다.</p>
+      <p className="text-[0.76rem] text-[color:var(--muted-fg)] mt-2"><b>초안 생성의 성격</b> — 자동 구성은 <b>초안</b>이며, 의사결정·승인 문구는 사람이 검토·수정해야 합니다. 저장 스냅샷은 불변 이력으로 남습니다.</p>
     </section>}
 
     <section className="market-section sizing-step mt-3">

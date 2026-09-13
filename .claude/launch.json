@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "co-newbiz-web-next",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["--cwd", "app/web-next", "--bun", "next", "dev", "-p", "8787"],
+      "port": 8787
+    }
+  ]
+}

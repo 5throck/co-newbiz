@@ -4,7 +4,7 @@
 // 채점 프레임워크: 2026-08-24 Class-C 결정 (d) / ADR-0052 — Stage 1 의도 분기
 // (integration | capability_access) → Stage 2 5기준 × 20% × 1–3점 + 사전배제.
 import { getDb } from "../../../../../../../db/client.ts";
-import { listRouteDecisionsWithScores } from "../../../../../../../db/repositories/route-decision.repository.ts";
+import { getDraftRouteDecision, listRouteDecisionsWithScores } from "../../../../../../../db/repositories/route-decision.repository.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
@@ -52,7 +52,8 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
     | null;
   if (!opp) return notFound();
   const decisions = listRouteDecisionsWithScores(id);
-  return ok({ opportunity: opp, decisions }, 200, { count: decisions.length });
+  const draft = getDraftRouteDecision(id);
+  return ok({ opportunity: opp, decisions, draft }, 200, { count: decisions.length });
 });
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
@@ -118,10 +119,9 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const controlNeed = scoreRows.find((s) => s.criterion === "control_need")?.score ?? null;
   let stagingRecommended: string | null = null;
   if (uncertainty === 3 && controlNeed !== null && controlNeed <= 2) {
-    stagingRecommended = "소수지분/공동개발 + 사전 협약된 step-up(call option / ROFR / 전환 트리거 — 다음 게이트에서 행사) 권고";
+    stagingRecommended = "소수지분/공동개발 + 사전 협약된 step-up(call option / ROFR / 전환 트리거 — 다음 진행에서 행사) 권고";
   }
 
-  const decisionId = ulid();
   const now = new Date().toISOString();
   // ADR-0097 back-compat: gate_evaluation_id is optional provenance — when
   // present it must reference an existing gate_evaluation (badRequest, not a
@@ -130,13 +130,33 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
     return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
   }
-  db.run(
-    `INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, alternatives_considered, decided_by, decided_at,
-                                 intent, override_flagged, staging_recommended, total_score, gate_evaluation_id)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [decisionId, id, track, subTrack, rationale, body?.alternatives_considered?.trim() || null, ctx.userId, now,
-     intentValue, 0, stagingRecommended, total, gateEvaluationId],
-  );
+
+  // ADR-0124: "결정"은 열려 있는 초안(status='draft')이 있으면 그 행을
+  // final로 확정한다(같은 id 유지 — 별도 행이 쌓이지 않는다). 초안 없이
+  // 곧장 "결정"을 누른 경우(기존 동작)는 그대로 새 행을 만든다.
+  const draft = db.query("SELECT id FROM route_decision WHERE opportunity_id = ? AND status = 'draft'").get(id) as
+    | { id: string }
+    | undefined;
+  const decisionId = draft?.id ?? ulid();
+
+  if (draft) {
+    db.run(
+      `UPDATE route_decision SET track=?, sub_track=?, rationale=?, alternatives_considered=?, decided_by=?, decided_at=?,
+                                  intent=?, override_flagged=0, staging_recommended=?, total_score=?, gate_evaluation_id=?, status='final', updated_at=?
+       WHERE id=?`,
+      [track, subTrack, rationale, body?.alternatives_considered?.trim() || null, ctx.userId, now,
+       intentValue, stagingRecommended, total, gateEvaluationId, now, decisionId],
+    );
+    db.run("DELETE FROM route_decision_score WHERE decision_id = ?", [decisionId]);
+  } else {
+    db.run(
+      `INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, alternatives_considered, decided_by, decided_at,
+                                   intent, override_flagged, staging_recommended, total_score, gate_evaluation_id, status)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'final')`,
+      [decisionId, id, track, subTrack, rationale, body?.alternatives_considered?.trim() || null, ctx.userId, now,
+       intentValue, 0, stagingRecommended, total, gateEvaluationId],
+    );
+  }
   for (const s of scoreRows) {
     db.run(
       `INSERT INTO route_decision_score (id, decision_id, intent, criterion, score, evidence_note, created_at)

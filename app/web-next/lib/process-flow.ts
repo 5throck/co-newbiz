@@ -39,7 +39,7 @@ export const STAGES: StageDefinition[] = [
   { id: "S4", name: "진출방식 결정", sequence: 4, objective: "어떻게 들어갈 것인가? — Greenfield(자체 역량 진출) vs Brownfield(기존 기업·자산 결합)를 결정한다. Brownfield ≠ M&A — M&A·JV·전략적 투자·소수점 지분·파트너십·R&BD·사내벤처(CVC) 중 Route를 고른다", applicableTracks: ["all"], gateIds: ["screening", "pre_fs"], requiredArtifacts: ["트랙 결정(GF/BF)·근거", "Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)", "5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)", "검토한 대안"] },
   { id: "S5", name: "역량 평가·진출전략", sequence: 5, objective: "스스로 진입할 수 있는가? — 자체 역량을 평가하고 격차를 구축 방안(Build/Partner/Hire/Invest)으로 해소해 진출전략을 세운다 (Greenfield 전용 — Target Company 객체가 존재하지 않는다)", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차 평가", "진출전략(Build/Partner/Hire/Invest 결정·근거)"] },
   { id: "S6", name: "대상 후보 발굴", sequence: 6, objective: "누구와 결합할 것인가? — Opportunity에 진입 가능한 기존 기업·자산의 Target Universe를 정의하고 Target Company Long List를 작성한다 (Brownfield 전용)", applicableTracks: ["brownfield"], gateIds: ["pre_fs"], requiredArtifacts: ["Target Universe 정의", "Target Company Long List"] },
-  { id: "S7", name: "대상 스크리닝", sequence: 7, objective: "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)", applicableTracks: ["brownfield"], gateIds: ["target_screening"], requiredArtifacts: ["Target Company Short List", "Target Ranking/Score", "Exclusion Reasons"] },
+  { id: "S7", name: "대상 선정", sequence: 7, objective: "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)", applicableTracks: ["brownfield"], gateIds: ["target_screening"], requiredArtifacts: ["Target Company Short List", "Target Ranking/Score", "Exclusion Reasons"] },
   { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다", applicableTracks: ["all"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션)", "시뮬레이션 NPV 분위수"] },
   { id: "S9", name: "실사·검증", sequence: 9, objective: "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 Short List 대상 DD, greenfield는 실현가능성 검증)", applicableTracks: ["all"], gateIds: ["dd"], requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"] },
   { id: "S10", name: "투자구조 설계", sequence: 10, objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 비히클(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["투자구조 가설(4축 검토 완료)", "자금조달 계획(sources & uses 균형)"] },
@@ -261,7 +261,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     }
     const koPassed = targets.filter((t) => t.status === "shortlisted" && screeningSummary(t).knockOutsPassed);
     if (koPassed.length === 0) {
-      blockers.push("knock-out 통과 후보 0건 — Target Screening 게이트 KILL 기준 검토가 필요합니다");
+      blockers.push("knock-out 통과 후보 0건 — Target Screening 진행 KILL 기준 검토가 필요합니다");
       missing.push("knock-out 통과 Short List");
     }
     complete = missing.length === 0;
@@ -382,7 +382,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     const blockers: string[] = [];
     const missing: string[] = [];
     const db = getDb();
-    // IC 승인은 게이트 기록으로만 판단한다 (사람 최종 승인, ADR-0053).
+    // IC 승인은 진행 기록으로만 판단한다 (사람 최종 승인, ADR-0053).
     if (gateStatus.entity_ic !== "go") {
       blockers.push("Entity IC 승인 기록이 필요합니다");
       missing.push("Entity IC 승인");
@@ -534,15 +534,15 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
         }
       }
     }
-    // HOLD 게이트는 재평가를 막을 뿐 작업 자체를 막지 않는다 — current 단계의
-    // 모든 게이트(flow.spec S4는 screening+pre_fs 둘 다 보유)에 대해 HOLD 기록이
+    // HOLD 진행은 재평가를 막을 뿐 작업 자체를 막지 않는다 — current 단계의
+    // 모든 진행(flow.spec S4는 screening+pre_fs 둘 다 보유)에 대해 HOLD 기록이
     // 있으면 블로커로 노출한다. S4에서 pre_fs HOLD가 조용히 무시되던 결함 수정.
     if (!terminated && currentStage !== null) {
       const current = STAGES.find((s) => s.id === currentStage);
       for (const g of current?.gateIds ?? []) {
         const verdict = gates.get(g);
         if (verdict?.decision === "hold") {
-          blockers.push(`${g} 게이트 HOLD — 보완 필요: ${(verdict.missing ?? []).join(", ") || "근거 확인"}`);
+          blockers.push(`${g} 진행 HOLD — 보완 필요: ${(verdict.missing ?? []).join(", ") || "근거 확인"}`);
           requiredArtifacts = verdict.missing ?? requiredArtifacts;
         }
       }
@@ -608,14 +608,14 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
         }
       }
     }
-    // HOLD 게이트는 재평가를 막을 뿐 작업 자체를 막지 않는다 — current 단계의
-    // 게이트에 HOLD 기록이 있으면 블로커로 노출한다 (기회 평가와 동일 규칙).
+    // HOLD 진행은 재평가를 막을 뿐 작업 자체를 막지 않는다 — current 단계의
+    // 진행에 HOLD 기록이 있으면 블로커로 노출한다 (기회 평가와 동일 규칙).
     if (!terminated && currentStage !== null) {
       const current = STAGES.find((s) => s.id === currentStage);
       for (const g of current?.gateIds ?? []) {
         const verdict = gates.get(g);
         if (verdict?.decision === "hold") {
-          blockers.push(`${g} 게이트 HOLD — 보완 필요: ${(verdict.missing ?? []).join(", ") || "근거 확인"}`);
+          blockers.push(`${g} 진행 HOLD — 보완 필요: ${(verdict.missing ?? []).join(", ") || "근거 확인"}`);
           requiredArtifacts = verdict.missing ?? requiredArtifacts;
         }
       }

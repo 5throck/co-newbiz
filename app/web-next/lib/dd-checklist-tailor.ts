@@ -253,7 +253,7 @@ export async function tailorDdChecklist(
         return [
           `### [${domain}] ${agentKey} — 산업 맞춤 DD 체크리스트 제안`,
           "",
-          `${drafts.length}건 제안 (proposed 상태, 상태 행 없음 — 승인 전까지 게이트 불개입).`,
+          `${drafts.length}건 제안 (proposed 상태, 상태 행 없음 — 승인 전까지 진행 불개입).`,
           `Tavily/외부 출처 연결 ${drafts.length - unsourced}건, 출처 없는 제안 ${unsourced}건 — 출처 없는 제안은 그렇게 표시됩니다 (신뢰도 미기재/최저 등급).`,
         ].join("\n");
       },

@@ -2215,6 +2215,32 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/synergy/analyses/{id}/linkage-items:
+    post:
+      operationId: addSynergyLinkageItem
+      summary: Add a human-authored 연계 시너지 area (ADR-0125).
+      tags:
+        - Analysis
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/synergy/analyses/{id}/shortlist-items:
+    put:
+      operationId: upsertSynergyShortlistItem
+      summary: Edit a 우선 시너지 영역 verdict/reason or add a new one (ADR-0125).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '201':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/synergy/dart-search:
     get:
       operationId: searchDartCompanies
@@ -2460,6 +2486,18 @@ paths:
     post:
       operationId: createRouteDecision
       summary: Record track (GF/BF) + Brownfield route decision (S4, selected opportunity only).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}/route-decision/draft:
+    put:
+      operationId: saveRouteDecisionDraft
+      summary: Upsert the opportunity's single open route-decision draft (S4 decision support). No completion validation — track/route/intent/scores may be partial. Finalizing (createRouteDecision) flips this same row to status=final instead of inserting a duplicate.
       tags:
         - Analysis
       responses:

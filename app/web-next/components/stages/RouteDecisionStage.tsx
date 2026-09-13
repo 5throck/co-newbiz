@@ -1,0 +1,734 @@
+"use client";
+
+// S4 진출방식 결정 — 목업 v5 baseline(docs/designs/mockups/baseline-v5.html
+// id="s4") 구조로 재작성. /deals/[id]/s4에 마운트되며 opportunityId는 URL의
+// [id]로 고정된다(목업처럼 검토/안건 하나를 바로 보여준다 — 전역 기회 선택 칩 없음).
+//
+// 로직은 기존 /route-decision 화면(flow.spec v2.0.0, ADR-0052/0086/0104/0097)
+// 그대로 유지한다 — 이 재작성은 시각 언어(.card/.control-chip)와 스코프(단일
+// 검토/안건)만 목업에 맞춘다. 원칙(경계 #2, CLAUDE.md 2026-09-11 개정): 최종 결정은
+// 사람이 기록하며, 화면은 LLM 정보·추천을 적극 제공한다 — "LLM 추천" 섹션이
+// 그 구현이고, 산출물은 제안일 뿐 결정 기록(POST /route-decision)은 사람의 몫.
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, ApiError } from "../../lib/api.ts";
+import { SectionToolbar } from "../layout.tsx";
+import { CommitteePanel } from "../CommitteePanel.tsx";
+import { Tabs } from "../ui.tsx";
+import { useConfirm } from "../crud.tsx";
+
+interface OpportunityRow {
+  id: string; name: string; market_scope: string | null; value_chain_node: string | null;
+  attractiveness_score: number | null; synergy_score: number | null;
+  fit_verdict: "Go" | "Hold" | "Kill" | null; fit_rationale: string | null;
+  rationale: string | null; synergy_rationale: string | null;
+  market_size_krw_m: number | null; growth_rate: number | null;
+  status: "identified" | "assessed" | "selected" | "dropped";
+  project_id: string | null;
+  deleted_at: string | null;
+}
+interface ScoreRow { criterion: string; score: number; evidence_note: string }
+interface RouteDecision {
+  id: string; track: "greenfield" | "brownfield"; sub_track: string | null;
+  rationale: string; alternatives_considered: string | null; decided_by: string; decided_at: string;
+  intent: string | null; override_flagged: number | null; staging_recommended: string | null;
+  total_score: number | null; scores: ScoreRow[];
+}
+// ADR-0124 — 열린 초안(status='draft'). 완결성 검증이 없어 필드가 비어있을 수 있다.
+interface RouteDecisionDraft {
+  id: string; track: "greenfield" | "brownfield"; sub_track: string | null;
+  rationale: string | null; alternatives_considered: string | null; intent: string | null;
+  updated_at: string | null; scores: ScoreRow[];
+}
+// LLM 추천 (결정 지원) — POST /api/opportunities/[id]/route-recommendation 응답.
+// 제안일 뿐이며 source("llm"|"synthesis")로 출처를 화면에 명시한다.
+interface RecoScore { criterion: string; score: number; evidence_note: string }
+interface RouteRecommendation {
+  source: "llm" | "synthesis";
+  provider: string | null;
+  note: string | null;
+  recommendation: {
+    track: "greenfield" | "brownfield";
+    sub_track: string | null;
+    intent: string | null;
+    confidence: string | null;
+    scores: RecoScore[] | null;
+    rationale_draft: string;
+    alternatives_draft: string | null;
+    key_evidence: string[];
+    cautions: string[];
+  };
+}
+
+const GF_SUB: Record<string, string> = {
+  existing_business_rbd: "기존 사업 R&BD 확장",
+  intra_venture: "사내벤처(CVC)",
+};
+const BF_SUB: Record<string, string> = {
+  m_and_a: "M&A",
+  jv: "JV(합작)",
+  strategic_investment: "전략적 투자",
+  minority_investment: "소수지분 투자",
+  partnership: "파트너십",
+  rbd: "R&BD(공동연구)",
+  corporate_venture: "사내벤처(CVC)",
+};
+// LLM 추천 표시용 축약 라벨
+const INTENT_SHORT: Record<string, string> = { integration: "통합 의도", capability_access: "역량접근 의도" };
+const CONFIDENCE_LABEL: Record<string, string> = { high: "확신도 높음", medium: "확신도 중간", low: "확신도 낮음" };
+// Stage 2 채점 기준 (각 20% × 1–3점)
+const CRITERIA: Array<{ key: string; label: string; hint: string }> = [
+  { key: "control_need", label: "통제 필요도", hint: "1=성과만 공유돼도 충분 ~ 3=운영 통제 없으면 위험" },
+  { key: "capability_criticality", label: "역량 결정성", hint: "1=대체 가능 ~ 3=암묵적 지식·대체 불가" },
+  { key: "market_uncertainty", label: "시장 불확실성", hint: "1=수요 검증됨 ~ 3=수요·규제 불확실" },
+  { key: "integration_capacity", label: "통합 역량", hint: "1=통합 경험·여력 충분 ~ 3=통합 수용력 부족" },
+  { key: "speed_to_capability", label: "역량확보 속도", hint: "1=천천히 구축 가능 ~ 3=즉시 확보 필요" },
+];
+const SCORE_LABEL: Record<number, string> = { 1: "낮음", 2: "중간", 3: "높음" };
+// 사전배제 대상 라우트 — 통제 필요도=高 + 역량접근 의도에서 선택 불가
+const OVERRIDDEN_SUBS = ["partnership", "rbd", "corporate_venture"];
+
+export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportunityId: string; rationaleParam?: string | null }) {
+  // baseline 탭 구조 (ADR-0086 탭 + 목업 08): 결정 폼 / 권고 / 채점 / 이력 / 진행.
+  // 섹션은 display 토글로 유지(마운트 상태 유지) — 폼 상태가 탭 전환에 영향받지 않는다.
+  const [tab, setTab] = useState<"decision" | "committee" | "scoring" | "history">("decision");
+  const [selected, setSelected] = useState<OpportunityRow | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [decisions, setDecisions] = useState<RouteDecision[]>([]);
+  // 결정 이력 년/월 필터 — 케이스가 쌓이면 한 화면에 다 보여주는 대신
+  // 연도·월 단위로 좁혀 볼 수 있게 한다. 빈 값("")은 전체.
+  const [historyYear, setHistoryYear] = useState("");
+  const [historyMonth, setHistoryMonth] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [track, setTrack] = useState<"greenfield" | "brownfield">("greenfield");
+  const [intent, setIntent] = useState<"" | "integration" | "capability_access">("");
+  const [subTrack, setSubTrack] = useState("");
+  const [rationale, setRationale] = useState("");
+  const [alternatives, setAlternatives] = useState("");
+  const [scores, setScores] = useState<Record<string, { score: number | null; note: string }>>({});
+  const [sessions, setSessions] = useState<Array<{ sessionId: string; status: string; decisionMode: string | null; createdAt: string }>>([]);
+  const [saving, setSaving] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const draftLoadedRef = useRef(false);
+  // LLM 추천 (결정 지원)
+  const [reco, setReco] = useState<RouteRecommendation | null>(null);
+  const [recoLoading, setRecoLoading] = useState(false);
+  const [recoError, setRecoError] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
+
+  const loadDecisions = useCallback((id: string) => {
+    api.get<{ decisions: RouteDecision[]; draft: RouteDecisionDraft | null }>(`/api/opportunities/${encodeURIComponent(id)}/route-decision`)
+      .then((r) => {
+        setDecisions(r.data.decisions);
+        // 폼 초기값 복원 — 열린 초안이 있으면 그것을, 없으면 가장 최근에
+        // 기록된 결정을 반영한다(둘 다 없으면 컴포넌트 기본값인 Greenfield가
+        // 그대로 남는다 — 실제로는 아무것도 결정된 적 없는 상태에서만 맞는
+        // 값이다). 처음 로드될 때 한 번만 반영하고, 이후 사용자 입력을
+        // 재조회 때 덮어쓰지 않는다.
+        const d = r.data.draft;
+        const latestFinal = r.data.decisions[0] ?? null;
+        if (!draftLoadedRef.current) {
+          if (d) {
+            setTrack(d.track);
+            setSubTrack(d.sub_track ?? "");
+            setRationale(d.rationale ?? "");
+            setAlternatives(d.alternatives_considered ?? "");
+            if (d.intent) setIntent(d.intent as "integration" | "capability_access");
+            if (d.scores.length) {
+              const next: Record<string, { score: number | null; note: string }> = {};
+              for (const s of d.scores) next[s.criterion] = { score: s.score, note: s.evidence_note };
+              setScores(next);
+            }
+            setDraftSavedAt(d.updated_at);
+          } else if (latestFinal) {
+            setTrack(latestFinal.track);
+            setSubTrack(latestFinal.sub_track ?? "");
+            if (latestFinal.intent) setIntent(latestFinal.intent as "integration" | "capability_access");
+          }
+        }
+        draftLoadedRef.current = true;
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "결정 이력 불러오기 실패"));
+  }, []);
+  const loadSessions = useCallback((id: string) => {
+    api.get<Array<{ sessionId: string; status: string; decisionMode: string | null; createdAt: string }>>(`/api/opportunities/${encodeURIComponent(id)}/committee-sessions`)
+      .then((r) => setSessions(r.data)).catch(() => setSessions([]));
+  }, []);
+  // 검토/안건은 URL로 고정된다 — 목업처럼 선택 칩 없이 바로 이 기회를 로드한다.
+  // 단건 조회(GET /api/opportunities/{id})는 목록 조회와 달리 삭제 표시된
+  // 행도 그대로 돌려준다 — 프로젝트로 승격된 뒤 원본 기회가 삭제 표시되어도
+  // 그 S4 결정 이력은 계속 열람할 수 있어야 한다.
+  useEffect(() => {
+    let alive = true;
+    api.get<OpportunityRow>(`/api/opportunities/${encodeURIComponent(opportunityId)}`).then((r) => {
+      if (!alive) return;
+      setSelected(r.data);
+      setNotFound(false);
+      loadDecisions(r.data.id);
+      loadSessions(r.data.id);
+    }).catch((e) => {
+      if (!alive) return;
+      if (e instanceof ApiError && e.status === 404) {
+        setNotFound(true);
+      } else {
+        setError(e instanceof Error ? e.message : "불러오기 실패");
+      }
+    });
+    return () => { alive = false; };
+  }, [opportunityId, loadDecisions, loadSessions]);
+
+  // S3 Short List handoff — pre-fill the rationale textarea from ?rationale=
+  // once, as an editable starting point (not a locked value).
+  useEffect(() => {
+    if (!rationaleParam) return;
+    setRationale(rationaleParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rationaleParam]);
+
+  const generateRecommendation = useCallback(async () => {
+    if (!selected || recoLoading) return;
+    setRecoLoading(true); setRecoError(null);
+    try {
+      const r = await api.post<RouteRecommendation>(`/api/opportunities/${encodeURIComponent(selected.id)}/route-recommendation`, {});
+      setReco(r.data);
+    } catch (err) {
+      setRecoError(err instanceof Error ? err.message : "LLM 추천 생성 실패");
+    } finally {
+      setRecoLoading(false);
+    }
+  }, [selected, recoLoading]);
+
+  // 추천 → 결정 폼 반영. 폼 채움일 뿐이며 기록은 결정 폼의 '결정 저장'(사람)이 한다.
+  function applyRecommendation() {
+    if (!reco) return;
+    const r = reco.recommendation;
+    setTrack(r.track);
+    if (r.intent) setIntent(r.intent as "integration" | "capability_access");
+    if (r.sub_track) setSubTrack(r.sub_track);
+    if (r.scores) {
+      const next: Record<string, { score: number | null; note: string }> = {};
+      for (const s of r.scores) next[s.criterion] = { score: s.score, note: s.evidence_note };
+      setScores(next);
+    }
+    if (r.rationale_draft) setRationale(r.rationale_draft);
+    if (r.alternatives_draft) setAlternatives(r.alternatives_draft);
+    setTab("decision");
+    document.getElementById("route-form")?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function setScore(key: string, patch: Partial<{ score: number | null; note: string }>) {
+    setScores((prev) => ({ ...prev, [key]: { score: prev[key]?.score ?? null, note: prev[key]?.note ?? "", ...patch } }));
+  }
+
+  const scored = CRITERIA.map((c) => ({ ...c, ...scores[c.key] ?? { score: null, note: "" } }));
+  const allScored = scored.every((s) => s.score !== null && s.note.trim() !== "");
+  const totalScore = allScored ? Math.round(scored.reduce((sum, s) => sum + (s.score ?? 0) * 0.2, 0) * 100) / 100 : null;
+  // 사전배제: 통제 필요도=高 + 역량접근 + 라이선스/공동개발 성 라우트
+  const overrideBlocked =
+    track === "brownfield" && intent === "capability_access" &&
+    scored.find((s) => s.key === "control_need")?.score === 3 &&
+    subTrack !== "" && OVERRIDDEN_SUBS.includes(subTrack);
+  // 기본 스테이징 권고: 시장 불확실성=高 + 통제 필요도=中 이하
+  const stagingHint =
+    track === "brownfield" && allScored &&
+    scored.find((s) => s.key === "market_uncertainty")?.score === 3 &&
+    (scored.find((s) => s.key === "control_need")?.score ?? 3) <= 2;
+  // 채점 의무 — 스펙 v2.2.0+ completionCriteria (ADR-0104 트랙 간 비교 가능성):
+  // 양 트랙 모두 intent + 5criteria 채점이 필수다.
+  const canSubmit =
+    rationale.trim() !== "" &&
+    intent !== "" &&
+    allScored &&
+    !overrideBlocked &&
+    (track === "brownfield" ? subTrack !== "" : true);
+
+  function resetForm() {
+    setIntent(""); setSubTrack(""); setRationale(""); setAlternatives(""); setScores({});
+    // 결정 확정 시 서버 쪽 초안 행은 final로 바뀌어 사라진다 — 화면의
+    // "초안 저장됨" 표시도 함께 지워야 방금 확정된 것을 초안처럼 보이지 않게 한다.
+    setDraftSavedAt(null);
+  }
+
+  // 저장 로직 본체 — 의사결정 탭의 <form onSubmit>과 채점 탭의 독립 저장
+  // 버튼(폼 밖) 양쪽에서 호출한다. 둘 다 같은 state(track/scores/rationale
+  // 등)를 공유하므로 어느 탭에서 눌러도 결과는 동일하다.
+  async function performSave() {
+    if (!selected || saving) return;
+    setSaving(true); setError(null);
+    try {
+      await api.post(`/api/opportunities/${selected.id}/route-decision`, {
+        track,
+        sub_track: subTrack || undefined,
+        rationale,
+        alternatives_considered: alternatives || undefined,
+        intent: intent || undefined,
+        scores: allScored ? scored.map((s) => ({ criterion: s.key, score: s.score, evidence_note: s.note })) : undefined,
+      });
+      resetForm();
+      loadDecisions(selected.id);
+      loadSessions(selected.id);
+      setTab("history");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "결정 저장 실패");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function saveDecision(e: React.FormEvent) {
+    e.preventDefault();
+    void performSave();
+  }
+
+  // ADR-0124 — "저장"(초안). 완결성 검증이 없다: 트랙만 있어도, 채점이
+  // 하나도 없어도 저장된다. "결정"(performSave)과 별개의 액션이다.
+  async function performSaveDraft() {
+    if (!selected || draftSaving) return;
+    setDraftSaving(true); setError(null);
+    try {
+      const r = await api.put<{ updated_at: string }>(`/api/opportunities/${selected.id}/route-decision/draft`, {
+        track,
+        sub_track: subTrack || undefined,
+        rationale: rationale || undefined,
+        alternatives_considered: alternatives || undefined,
+        intent: intent || undefined,
+        scores: scored.map((s) => ({ criterion: s.key, score: s.score, evidence_note: s.note })),
+      });
+      draftLoadedRef.current = true;
+      setDraftSavedAt(r.data.updated_at);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "초안 저장 실패");
+    } finally {
+      setDraftSaving(false);
+    }
+  }
+
+  if (notFound) {
+    return (
+      <div className="card">
+        <p className="text-[0.85rem] text-[color:var(--muted-fg)]">
+          선별(selected)된 기회를 찾을 수 없습니다 — S3 시너지·적합성 평가를 마친 기회만 여기서 진출방식을 결정할 수 있습니다.
+        </p>
+      </div>
+    );
+  }
+  if (!selected) {
+    return <div className="card"><p>불러오는 중...</p></div>;
+  }
+
+  const subs = track === "greenfield" ? GF_SUB : BF_SUB;
+
+  return (
+    <>
+      {/* 승격(project_id)과 삭제 표시(deleted_at)는 서로 다른 신호다 — 승격은
+          S5/S6·S7을 마치고 프로젝트(S8+)로 넘어갔다는 뜻이고, 삭제 표시는
+          그 뒤 별도로 정리(아카이브)됐다는 뜻이다. 결정 이력은 항상 보이지만,
+          이미 지나간 단계라는 걸 알린다. */}
+      {selected.project_id && (
+        <div className="card" role="note">
+          <p className="text-[0.82rem] mb-0">
+            이 검토/안건은 프로젝트로 승격되었습니다 — 아래 내용은 열람용 이력이며, 새 결정은 권장되지 않습니다.{" "}
+            <a href={`/projects/${selected.project_id}`} className="text-[color:var(--accent)] underline">프로젝트 개요로 이동</a>
+          </p>
+        </div>
+      )}
+      {selected.deleted_at && (
+        <div className="card" role="note">
+          <p className="text-[0.82rem] mb-0">이 검토/안건은 삭제(아카이브) 표시되어 있습니다.</p>
+        </div>
+      )}
+      {/* ── LLM 추천 — 탭 밖 상시 노출. 채점·의사결정 두 탭 모두에 계속 참고할
+          자료라 탭 전환 없이 항상 접근 가능해야 한다 (2026-09-13 UX 조정). ── */}
+      {selected && (
+        <div className="card">
+          <SectionToolbar
+            title="LLM 추천 (결정 지원)"
+            icon=""
+            actions={
+              reco ? (
+                <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateRecommendation()}>
+                  재생성
+                </button>
+              ) : undefined
+            }
+          />
+          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+            원칙 (경계 #2): 최종 결정은 사람이 기록합니다 — 이 섹션은 S1~S3 산출물과 결정론 어드바이저 신호에서 만든 <b>제안</b>이며, 반영한 뒤 자유롭게 수정할 수 있습니다.
+          </p>
+          {recoError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+          {!reco && !recoLoading && !recoError && (
+            <div className="flex flex-wrap items-center gap-2 mb-0">
+              <button type="button" className="btn-ghost" onClick={() => void generateRecommendation()}>
+                ▶ LLM 추천 생성
+              </button>
+              <span className="text-[0.75rem] text-[color:var(--muted-fg)]">권장 트랙·라우트·5기준 채점 초안(점수+근거)과 결정 근거 서술 초안을 작성해 채움을 돕습니다.</span>
+            </div>
+          )}
+          {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">S1~S3 산출물과 어드바이저 신호를 근거로 초안을 작성하는 중...</p>}
+          {reco && (
+            <>
+              <p className="mb-2 flex flex-wrap items-center gap-1">
+                <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
+                  {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                </span>
+                <span className={`status-chip ${reco.recommendation.track === "brownfield" ? "status-amber" : "status-green"}`}>
+                  {reco.recommendation.track === "brownfield" ? "Brownfield" : "Greenfield"}
+                </span>
+                {reco.recommendation.sub_track && (
+                  <span className="status-chip status-not-started">
+                    라우트 제안: {(reco.recommendation.track === "brownfield" ? BF_SUB[reco.recommendation.sub_track] : GF_SUB[reco.recommendation.sub_track]) ?? reco.recommendation.sub_track}
+                  </span>
+                )}
+                {reco.recommendation.intent && (
+                  <span className="status-chip status-not-started">의도 제안: {INTENT_SHORT[reco.recommendation.intent] ?? reco.recommendation.intent}</span>
+                )}
+                {reco.recommendation.confidence && (
+                  <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{CONFIDENCE_LABEL[reco.recommendation.confidence] ?? `확신도 ${reco.recommendation.confidence}`}</span>
+                )}
+              </p>
+              {reco.note && <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
+              {reco.recommendation.key_evidence.length > 0 && (
+                <>
+                  <p className="text-[0.82rem] font-semibold mb-1">핵심 근거</p>
+                  <ul className="sizing-note-list mb-3">
+                    {reco.recommendation.key_evidence.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </>
+              )}
+              {reco.recommendation.scores ? (
+                <table className="data-table mb-3" aria-label="LLM 채점 초안">
+                  <caption className="sr-only">LLM 채점 초안</caption>
+                  <thead>
+                    <tr><th scope="col">기준</th><th scope="col">제안 점수</th><th scope="col">근거 (제안)</th></tr>
+                  </thead>
+                  <tbody>
+                    {reco.recommendation.scores.map((s) => (
+                      <tr key={s.criterion}>
+                        <td className="text-[0.8rem]">{CRITERIA.find((c) => c.key === s.criterion)?.label ?? s.criterion}</td>
+                        <td className="tabular-nums text-[0.8rem]">{s.score} · {SCORE_LABEL[s.score] ?? ""}</td>
+                        <td className="text-[0.75rem]">{s.evidence_note}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-3">채점 초안 없음 — 채점 탭에서 직접 채점하세요.</p>
+              )}
+              {reco.recommendation.rationale_draft && (
+                <p className="text-[0.8rem] mb-2"><span className="font-semibold">근거 초안:</span> {reco.recommendation.rationale_draft}</p>
+              )}
+              {reco.recommendation.alternatives_draft && (
+                <p className="text-[0.8rem] mb-2"><span className="font-semibold">대안 검토 초안:</span> {reco.recommendation.alternatives_draft}</p>
+              )}
+              {reco.recommendation.cautions.length > 0 && (
+                <>
+                  <p className="text-[0.82rem] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">유의</p>
+                  <ul className="sizing-note-list mb-3">
+                    {reco.recommendation.cautions.map((c, i) => <li key={i}>{c}</li>)}
+                  </ul>
+                </>
+              )}
+              <div className="flex flex-wrap items-center gap-2 mb-0">
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => confirm("LLM 추천을 의사결정 탭에 반영할까요?", applyRecommendation, {
+                    body: "현재 입력한 트랙·라우트·채점·근거를 추천 초안으로 덮어씁니다 — 반영 후에도 자유롭게 수정할 수 있고, 결정은 의사결정 탭의 '결정 저장'을 누른 사람에게 기록됩니다.",
+                    confirmLabel: "반영",
+                  })}
+                >
+                  ▶ 반영
+                </button>
+                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">반영은 입력값 채움일 뿐입니다 — 최종 기록은 의사결정 탭의 &quot;결정 저장&quot; (사람 클릭).</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <Tabs
+        label="S4 결정 탭"
+        active={tab}
+        onSelect={(k) => setTab(k as typeof tab)}
+        tabs={[
+          { key: "scoring", label: "채점 (5criteria)" },
+          { key: "committee", label: "위원회 심의" },
+          { key: "decision", label: "의사결정" },
+          { key: "history", label: "결정 이력" },
+        ]}
+      />
+
+      {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+
+      {/* ── 의사결정 탭: 트랙·라우트·의도 선택 + 근거 + 저장 (채점은 별도 탭) ── */}
+      {tab === "decision" && (
+        <div className="card">
+          <h2>
+            {selected.name} — 트랙·라우트 결정{" "}
+            <span className={`status-chip ${decisions.length > 0 ? "status-green" : "status-amber"}`}>
+              {decisions.length > 0 ? "결정 기록됨" : "결정 대기"}
+            </span>
+          </h2>
+          <dl className="text-[0.85rem] space-y-1 mb-3">
+            <div><dt className="inline font-semibold mr-1">시장:</dt><dd className="inline">{selected.market_scope ?? "—"}{selected.market_size_krw_m ? ` (규모 ${selected.market_size_krw_m.toLocaleString()} 백만원)` : ""}{selected.growth_rate !== null ? ` · CAGR ${(selected.growth_rate * 100).toFixed(1)}%` : ""}</dd></div>
+            <div><dt className="inline font-semibold mr-1">발굴 근거:</dt><dd className="inline">{selected.rationale ?? "—"}</dd></div>
+            <div><dt className="inline font-semibold mr-1">적합성 판정:</dt><dd className="inline">{selected.fit_verdict ?? "—"}{selected.fit_rationale ? ` — ${selected.fit_rationale}` : ""}</dd></div>
+            <div><dt className="inline font-semibold mr-1">시너지 권고:</dt><dd className="inline">{selected.synergy_score ?? "—"}점{selected.synergy_rationale ? ` — ${selected.synergy_rationale}` : ""}</dd></div>
+          </dl>
+          <form id="route-form" onSubmit={saveDecision}>
+            <div className="flex flex-wrap items-end gap-3 mb-3">
+              <label className="text-[0.78rem]">
+                <span className="block mb-1">트랙 *</span>
+                <select value={track} onChange={(e) => { setTrack(e.target.value as "greenfield" | "brownfield"); setIntent(""); setSubTrack(""); }} className="sizing-new-input">
+                  <option value="greenfield">Greenfield — 자체 역량으로 진출</option>
+                  <option value="brownfield">Brownfield — 기존 기업·자산과 결합</option>
+                </select>
+              </label>
+              <label className="text-[0.78rem]">
+                <span className="block mb-1">라우트 {track === "brownfield" ? "* (Brownfield)" : "(선택)"}</span>
+                <select value={subTrack} onChange={(e) => setSubTrack(e.target.value)} className="sizing-new-input">
+                  <option value="">선택...</option>
+                  {Object.entries(subs)
+                    .filter(([k]) => !overrideBlocked || !OVERRIDDEN_SUBS.includes(k))
+                    .map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </label>
+              <label className="text-[0.78rem]">
+                <span className="block mb-1">의도 (Stage 1) *</span>
+                <select value={intent} onChange={(e) => setIntent(e.target.value as "" | "integration" | "capability_access")} className="sizing-new-input">
+                  <option value="">선택...</option>
+                  <option value="integration">통합</option>
+                  <option value="capability_access">역량접근</option>
+                </select>
+              </label>
+            </div>
+            {overrideBlocked && (
+              <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">
+                사전배제: 통제 필요도=高 + 역량접근 의도에서는 파트너십·R&BD·CVC 라우트를 선택할 수 없습니다 (합산 점수와 무관).
+              </p>
+            )}
+            {stagingHint && (
+              <p className="text-[0.78rem] text-[color:var(--accent)] mb-2">
+                스테이징 권고: 시장 불확실성이 高이고 통제 필요도가 中 이하 — 소수지분/공동개발 + 사전 협약된 step-up(call option / ROFR / 전환 트리거)을 권고합니다.
+              </p>
+            )}
+            <label className="text-[0.78rem] block mb-2">
+              <span className="block mb-1">결정 근거 * (S1 시장분석·S3 적합성 판단을 인용 — 채점을 보완하는 서술)</span>
+              <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} rows={3} required className="sizing-new-input" style={{ width: "100%" }} placeholder="예: S3 적합성 평가 Go(시너지 72) — 자사 역량 보유, 시장 성장 지속..." />
+            </label>
+            <label className="text-[0.78rem] block mb-3">
+              <span className="block mb-1">검토한 대안 (선택)</span>
+              <textarea value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} className="sizing-new-input" style={{ width: "100%" }} placeholder="고려했지만 선택하지 않은 트랙·라우트와 사유" />
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className="btn-ghost" disabled={draftSaving} onClick={() => void performSaveDraft()}>
+                {draftSaving ? "저장 중..." : "저장"}
+              </button>
+              <button type="submit" className="btn-primary" disabled={saving || !canSubmit}>
+                {saving ? "확정 중..." : "결정"}
+              </button>
+              <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
+                {draftSavedAt && `초안 저장됨 · ${draftSavedAt.slice(0, 16).replace("T", " ")} · `}
+                {totalScore !== null ? `합산 ${totalScore} / 3.0 · ` : ""}양 트랙 공통 채점 · 사전배제 검증 자동
+                {!allScored && (
+                  <>
+                    {" · "}
+                    <button type="button" className="btn-ghost btn-sm" onClick={() => setTab("scoring")}>채점 탭에서 5criteria 완료 →</button>
+                  </>
+                )}
+              </span>
+            </div>
+            <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-1 mb-0">
+              저장 = 초안을 서버에 보관(완결성 검증 없음) · 결정 = 5criteria·근거 완료 후 불변 기록
+            </p>
+          </form>
+        </div>
+      )}
+
+      {/* ── 채점 탭: Stage 2 5criteria × 20% × 1–3점 (의사결정 탭과 별도) ── */}
+      {tab === "scoring" && (
+        <div className="card">
+          <h2>{selected.name} — 5criteria 채점</h2>
+          <table className="data-table mb-2" aria-label="5criteria 채점">
+            <caption className="sr-only">5criteria 채점</caption>
+            <thead>
+              <tr><th scope="col">기준 (각 20%)</th><th scope="col">채점 1–3</th><th scope="col">근거 *</th></tr>
+            </thead>
+            <tbody>
+              {scored.map((c) => (
+                <tr key={c.key}>
+                  <td className="text-[0.8rem]">
+                    {c.label}
+                    <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">{c.hint}</span>
+                  </td>
+                  <td>
+                    <div role="group" aria-label={`${c.label} 점수`} className="flex gap-1">
+                      {[1, 2, 3].map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          aria-pressed={c.score === v}
+                          className={`control-chip ${c.score === v ? "status-green" : ""}`}
+                          onClick={() => setScore(c.key, { score: v })}
+                        >
+                          {v} · {SCORE_LABEL[v]}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <input
+                      value={c.note}
+                      onChange={(e) => setScore(c.key, { note: e.target.value })}
+                      placeholder="점수의 근거 (S1·S3 산출물 인용)"
+                      aria-label={`${c.label} 근거`}
+                      className="sizing-new-input sizing-new-input-sm"
+                      style={{ width: "100%" }}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className="btn-ghost" disabled={draftSaving} onClick={() => void performSaveDraft()}>
+              {draftSaving ? "저장 중..." : "저장"}
+            </button>
+            <button type="button" className="btn-primary" disabled={saving || !canSubmit} onClick={() => void performSave()}>
+              {saving ? "확정 중..." : "결정"}
+            </button>
+            <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
+              {draftSavedAt && `초안 저장됨 · ${draftSavedAt.slice(0, 16).replace("T", " ")} · `}
+              {totalScore !== null ? `합산 ${totalScore} / 3.0 · ` : ""}
+              {!canSubmit && "의사결정 탭에서 트랙·의도·결정 근거를 채워야 결정할 수 있습니다 · "}
+              {totalScore === null && "모든 기준에 점수와 근거를 입력하세요"}
+            </span>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => setTab("decision")}>의사결정 탭으로 →</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── 위원회 심의 탭 (ADR-0097) — 에이전트는 제안, 확정은 인간 ── */}
+      {tab === "committee" && (
+        <div className="card">
+          <CommitteePanel
+            opportunityId={selected.id}
+            committeeKey="route-steering-committee"
+            committeeLabel="S4 진출방식 스티어링 위원회"
+            gates={["pre_fs"]}
+          />
+        </div>
+      )}
+
+      {/* ── 결정 이력 탭 ── */}
+      {tab === "history" && (() => {
+        // 년/월 옵션은 실제 있는 결정 날짜에서만 뽑는다 — 데이터 없는
+        // 년월을 고를 수 있게 만들지 않는다.
+        const years = [...new Set(decisions.map((d) => d.decided_at.slice(0, 4)))].sort().reverse();
+        const months = historyYear
+          ? [...new Set(decisions.filter((d) => d.decided_at.slice(0, 4) === historyYear).map((d) => d.decided_at.slice(5, 7)))].sort()
+          : [];
+        const filtered = decisions.filter((d) =>
+          (!historyYear || d.decided_at.slice(0, 4) === historyYear) &&
+          (!historyMonth || d.decided_at.slice(5, 7) === historyMonth),
+        );
+        return (
+        <div className="card">
+          <SectionToolbar
+            title="결정 이력 (최신순)"
+            count={filtered.length}
+            filters={
+              decisions.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="text-[0.75rem]">
+                    <span className="sr-only">연도</span>
+                    <select
+                      value={historyYear}
+                      onChange={(e) => { setHistoryYear(e.target.value); setHistoryMonth(""); }}
+                      className="sizing-new-input sizing-new-input-sm"
+                    >
+                      <option value="">전체 연도</option>
+                      {years.map((y) => <option key={y} value={y}>{y}년</option>)}
+                    </select>
+                  </label>
+                  <label className="text-[0.75rem]">
+                    <span className="sr-only">월</span>
+                    <select
+                      value={historyMonth}
+                      onChange={(e) => setHistoryMonth(e.target.value)}
+                      disabled={!historyYear}
+                      className="sizing-new-input sizing-new-input-sm"
+                    >
+                      <option value="">전체 월</option>
+                      {months.map((m) => <option key={m} value={m}>{Number(m)}월</option>)}
+                    </select>
+                  </label>
+                </div>
+              ) : undefined
+            }
+          />
+          {decisions.length === 0 ? (
+            <p className="text-[0.85rem] text-[color:var(--muted-fg)]">아직 기록된 결정이 없습니다.</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-[0.85rem] text-[color:var(--muted-fg)]">선택한 기간에 기록된 결정이 없습니다.</p>
+          ) : (
+            <div className="table-scroll">
+              <table className="data-table report-table" aria-label="진출방식 결정 이력">
+                <caption className="sr-only">진출방식 결정 이력</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">트랙</th><th scope="col">라우트</th><th scope="col">의도</th>
+                    <th scope="col">채점</th><th scope="col">근거</th><th scope="col">대안</th><th scope="col">결정자/일시</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((d) => (
+                    <tr key={d.id}>
+                      <td>
+                        <span className={`status-chip ${d.track === "brownfield" ? "status-amber" : "status-green"}`}>
+                          {d.track === "brownfield" ? "Brownfield" : "Greenfield"}
+                        </span>
+                      </td>
+                      <td className="text-[0.8rem]">{d.sub_track ? (d.track === "brownfield" ? BF_SUB[d.sub_track] ?? d.sub_track : GF_SUB[d.sub_track] ?? d.sub_track) : "—"}</td>
+                      <td className="text-[0.75rem]">{d.intent ? (d.intent === "integration" ? "통합" : "역량접근") : "—"}</td>
+                      <td className="text-[0.75rem]">
+                        {d.total_score !== null ? (
+                          <span title={(d.scores ?? []).map((s) => `${s.criterion}: ${s.score} — ${s.evidence_note}`).join("\n")}>
+                            <strong className="tabular-nums">{d.total_score}</strong>/3.0
+                          </span>
+                        ) : "—"}
+                        {d.staging_recommended && (
+                          <span className="block text-[0.68rem] text-[color:var(--accent)]" title={d.staging_recommended}>step-up 권고</span>
+                        )}
+                      </td>
+                      <td className="text-[0.8rem]">{d.rationale}</td>
+                      <td className="text-[0.8rem] text-[color:var(--muted-fg)]">{d.alternatives_considered ?? "—"}</td>
+                      <td className="text-[0.75rem] tabular-nums">{d.decided_by} · {d.decided_at.slice(0, 10)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {sessions.length > 0 && (
+            <>
+              <SectionToolbar title="위원회 심의 이력" />
+              <ul className="text-[0.85rem] space-y-1">
+                {sessions.map((s2) => (
+                  <li key={s2.sessionId}>
+                    <span className={`status-chip ${s2.status === "done" ? "status-green" : "status-in-progress"}`}>{s2.status}</span>{" "}
+                    {s2.decisionMode ?? "—"} · {s2.createdAt.slice(0, 10)} ·{" "}
+                    <a className="text-[color:var(--accent)] underline" href={`/api/opportunities/${encodeURIComponent(selected.id)}/committee-sessions/${s2.sessionId}/minutes`} target="_blank" rel="noreferrer">회의록</a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+        );
+      })()}
+
+      {confirmDialog}
+    </>
+  );
+}

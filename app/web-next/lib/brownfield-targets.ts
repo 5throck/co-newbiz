@@ -37,7 +37,7 @@ export function listTargets(opportunityId: string): TargetRow[] {
     .all(opportunityId) as unknown as TargetRow[];
 }
 
-/** 체크리스트 판정 집계 — Long List 커버리지·knock-out 통과 여부 (S7 게이트 입력). */
+/** 체크리스트 판정 집계 — Long List 커버리지·knock-out 통과 여부 (S7 진행 입력). */
 export function screeningSummary(target: TargetRow): {
   assessed: number;
   total: number;

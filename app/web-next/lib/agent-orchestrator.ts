@@ -49,6 +49,8 @@ export interface AgentCallResult {
   recommendation?: Recommendation;
   /** Member flags this position as a veto dissent (e.g. the risk officer). */
   vetoDissent?: boolean;
+  /** ADR-0104 5criteria × 1-3 scorecard input, when the executor provides one. */
+  criteriaScores?: Record<string, number>;
 }
 export type CallAgent = (agentKey: string, prompt: string) => Promise<AgentCallResult>;
 
@@ -269,9 +271,9 @@ export interface RunDeliberationOpts extends RunOpts {
 /** Round-1 prompt: the topic alone — members deliberate independently. */
 export function deliberationPrompt(member: CommitteeMember, topic: string, priorRounds: DeliberationPosition[][], round: number): string {
   const lines = [
-    `당신은 '${member.memberType === "human" ? member.humanUserId ?? member.agentKey : member.agentKey}' 위원입니다. 아래 안건에 대한 입장을 작성하세요.`,
+    `당신은 '${member.memberType === "human" ? member.humanUserId ?? member.agentKey : member.agentKey}' 위원입니다. 아래 검토/안건에 대한 입장을 작성하세요.`,
     "",
-    `## 안건`,
+    `## 검토/안건`,
     topic,
   ];
   // Rounds 2+: EVERY member receives the FULL prior-round positions of all

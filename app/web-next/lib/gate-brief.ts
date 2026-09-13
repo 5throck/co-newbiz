@@ -33,11 +33,11 @@ const MANIFESTS: Record<string, string[]> = {
     "S1 시장 규모·성장 추정", "S3 적합성·시너지 초안", "S4 트랙 결정·라우트",
     "S5 역량 격차·진출전략 또는 BF 쇼트리스트",
   ],
-  target_screening: ["S4 트랙 결정·라우트", "S6 Target Universe·Long List", "S7 대상 스크리닝 판정"],
+  target_screening: ["S4 트랙 결정·라우트", "S6 Target Universe·Long List", "S7 대상 선정 판정"],
   fs: ["S4 트랙 결정", "S8 채택 Business Case·밸류에이션 요약"],
   dd: ["S8 채택 BC 요약", "체크리스트 판정 집계", "DD 발견사항(dd_finding)", "waiver 연결"],
-  entity_ic: ["채택 BC 요약", "DD 완료 요약", "RAG 제안(승인 아님)", "딜구조 가설(S10)", "선행 게이트 결정(fs·dd)"],
-  group_ic: ["채택 BC 요약", "DD 완료 요약", "RAG 제안(승인 아님)", "딜구조 가설(S10)", "선행 게이트 결정(entity_ic·dd)"],
+  entity_ic: ["채택 BC 요약", "DD 완료 요약", "RAG 제안(승인 아님)", "검토/안건구조 가설(S10)", "선행 의사결정(fs·dd)"],
+  group_ic: ["채택 BC 요약", "DD 완료 요약", "RAG 제안(승인 아님)", "검토/안건구조 가설(S10)", "선행 의사결정(entity_ic·dd)"],
 };
 
 export function gateManifest(entityType: GateBriefEntity, gate: string): string[] | null {
@@ -196,7 +196,7 @@ function dealSummary(db: Database, projectId: string): string {
   const rows = db
     .query("SELECT vehicle, stake_type, instrument_mix, tax_structure_note, liability_isolation_note, financing_leverage_note, exit_structure_note, four_axis_review_completed, rationale FROM deal_structure_hypothesis WHERE project_id = ? ORDER BY hypothesized_at DESC, id DESC LIMIT 3")
     .all(projectId) as Array<Record<string, string | number | null>>;
-  if (rows.length === 0) return "S10 딜구조 가설: 없음";
+  if (rows.length === 0) return "S10 검토/안건구조 가설: 없음";
   return rows.map((r) =>
     `- ${r.vehicle ?? "?"} / 지분 ${r.stake_type ?? "?"} / 수단 ${r.instrument_mix ?? "?"}${r.four_axis_review_completed ? " [4축 완료]" : ""}${r.rationale ? ` — ${String(r.rationale).slice(0, 160)}` : ""}`,
   ).join("\n");
@@ -226,7 +226,7 @@ function priorGates(db: Database, projectId: string, gates: string[]): string {
        ) WHERE rn = 1`,
     )
     .all(projectId, ...gates) as Array<{ gate: string; decision: string; rationale: string }>;
-  if (rows.length === 0) return `선행 게이트(${gates.join(", ")}): 미기록`;
+  if (rows.length === 0) return `선행 진행(${gates.join(", ")}): 미기록`;
   return rows.map((r) => `- ${r.gate}: ${r.decision.toUpperCase()}${r.rationale ? ` — ${r.rationale.slice(0, 160)}` : ""}`).join("\n");
 }
 
@@ -260,7 +260,7 @@ export function buildGateContext(db: Database, entityType: GateBriefEntity, enti
   }
   if (gate === "entity_ic" || gate === "group_ic") {
     const prior = priorGates(db, entityId, gate === "entity_ic" ? ["fs", "dd"] : ["entity_ic", "dd"]);
-    return [base, `\n[S8 채택 BC 요약]\n${s8Summary(entityId)}`, `\n[S9 DD 완료]\n${ddSummary(db, entityId)}`, `\n[RAG 제안]\n${ragSummary(db, entityId)}`, `\n[S10 딜구조 가설]\n${dealSummary(db, entityId)}`, `\n[선행 게이트]\n${prior}`].join("\n");
+    return [base, `\n[S8 채택 BC 요약]\n${s8Summary(entityId)}`, `\n[S9 DD 완료]\n${ddSummary(db, entityId)}`, `\n[RAG 제안]\n${ragSummary(db, entityId)}`, `\n[S10 검토/안건구조 가설]\n${dealSummary(db, entityId)}`, `\n[선행 진행]\n${prior}`].join("\n");
   }
   return base;
 }

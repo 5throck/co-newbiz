@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
     lag_months: number | null; region_code: string | null; segment_code: string | null; evidence_ref: string | null;
   }>;
 
-  // 신규 산업(딜 미연계)은 chain_node_sensitivity rows가 없다 — 완료된 분석의
+  // 신규 산업(검토/안건 미연계)은 chain_node_sensitivity rows가 없다 — 완료된 분석의
   // 매트릭스에서 지역×세그먼트 수요 민감도를 파생해 같은 화면을 제공한다.
   // (민감도 = 셀 CAGR × 10, 시드 스크립트와 동일한 placeholder 척도)
   if (driverSensitivities.length === 0) {
@@ -242,7 +242,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
   return ok(updated, 200);
 }
 
-// 산업 삭제 — market-sizing 분석 레지스트리와 함께 제거한다. 가치사슬·딜 등
+// 산업 삭제 — market-sizing 분석 레지스트리와 함께 제거한다. 가치사슬·검토/안건 등
 // 다른 도메인이 이 산업을 참조하면 FK 제약으로 삭제가 차단된다(409).
 export async function DELETE(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
@@ -263,7 +263,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       `DELETE FROM market_sizing_version WHERE analysis_id IN (SELECT id FROM market_sizing_analysis WHERE industry_id = ?)`,
     ).run(industryId);
     db.query("DELETE FROM market_sizing_analysis WHERE industry_id = ?").run(industryId);
-    // S2 연동 정리 — 이 산업에서 발굴되어 아직 딜로 승격되지 않은 기회는 함께 삭제한다
+    // S2 연동 정리 — 이 산업에서 발굴되어 아직 검토/안건으로 승격되지 않은 기회는 함께 삭제한다
     // (S1 삭제가 S2 파생 데이터를 남기지 않도록). 승격된 기회(project_id 있음)는
     // 이력 보호를 위해 유지하고 market_scope만 해제한다.
     db.run(
@@ -280,7 +280,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     try { db.query("ROLLBACK").run(); } catch { /* no open transaction */ }
     const msg = err instanceof Error ? err.message : String(err);
     if (/FOREIGN KEY|constraint/i.test(msg)) {
-      return fail(409, "industry_in_use", "이 산업은 가치사슬·딜 등 다른 데이터에서 참조 중이어서 삭제할 수 없습니다.");
+      return fail(409, "industry_in_use", "이 산업은 가치사슬·검토/안건 등 다른 데이터에서 참조 중이어서 삭제할 수 없습니다.");
     }
     return fail(500, "delete_failed", `산업 삭제 중 오류가 발생했습니다: ${msg}`);
   }

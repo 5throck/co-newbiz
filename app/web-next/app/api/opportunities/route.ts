@@ -16,18 +16,25 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const status = url.searchParams.get("status");
   const projectId = url.searchParams.get("project_id");
+  // includePromoted=1 — also return opportunities promoted to a project and
+  // later archived (deleted_at set, but project_id present). Default views
+  // (S1~S7 active work) never ask for this; it exists for surfaces that need
+  // to let a reviewer navigate to a case's S1~S4 history even after
+  // promotion (e.g. the S4 "검토/안건 선택" picker) — genuinely deleted
+  // opportunities (no project_id) still never resurface anywhere.
+  const includePromoted = url.searchParams.get("includePromoted") === "1";
   const rows = getDb()
     .query(
       `SELECT id, project_id, name, market_scope, value_chain_node, market_size_krw_m,
               growth_rate, attractiveness_score, synergy_score, synergy_rationale, fit_verdict, fit_rationale, status, rationale,
-              decided_by, decided_at, created_by, created_at
+              decided_by, decided_at, created_by, created_at, deleted_at
        FROM opportunity
-       WHERE deleted_at IS NULL
+       WHERE (deleted_at IS NULL OR (? = 1 AND project_id IS NOT NULL))
          AND (? IS NULL OR status = ?)
          AND (? IS NULL OR project_id = ?)
        ORDER BY created_at DESC`,
     )
-    .all(status, status, projectId, projectId);
+    .all(includePromoted ? 1 : 0, status, status, projectId, projectId);
   return ok(rows, 200, { count: (rows as unknown[]).length });
 }
 

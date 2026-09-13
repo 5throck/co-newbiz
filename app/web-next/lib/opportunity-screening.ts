@@ -11,7 +11,7 @@ export interface ScreeningState {
   synergy_rationale: string | null;
   fit_verdict: "Go" | "Hold" | "Kill" | null;
   fit_rationale: string | null;
-  /** screening 게이트 권고 — synergy+fit 산출물이 있을 때만 산출 */
+  /** screening 진행 권고 — synergy+fit 산출물이 있을 때만 산출 */
   gate: { recommendation: "Go" | "Hold" | "Kill"; rationale: string } | null;
 }
 
@@ -63,7 +63,7 @@ export function loadScreeningState(id: string): ScreeningState | null {
   return { ...row, gate: gateRecommendation(row) };
 }
 
-/** screening 게이트 권고 — 스펙 판정기준(매력도·knock-out·시너지)을 조합.
+/** screening 진행 권고 — 스펙 판정기준(매력도·knock-out·시너지)을 조합.
  *  gate-brief.ts의 결정론 폴백도 동일 기준을 재사용한다 (ADR-0118). */
 export function gateRecommendation(row: { attractiveness_score: number | null; synergy_score: number | null; fit_verdict: string | null }): ScreeningState["gate"] {
   if (row.synergy_score === null || !row.fit_verdict || row.attractiveness_score === null) return null;
@@ -74,7 +74,7 @@ export function gateRecommendation(row: { attractiveness_score: number | null; s
     : "Hold";
   return {
     recommendation,
-    rationale: `시장 매력도 ${attractiveness}점 + 전략적 적합성 ${row.fit_verdict} + 시너지 ${synergy}점 → screening 게이트 권고 ${recommendation} (합의 기준: 매력도 ≥ 60 AND 적합성 Go AND 시너지 ≥ 60 → Go, 그 외 Hold, 매력도 < 60 OR 적합성 Kill OR 시너지 < 40 → Kill)`,
+    rationale: `시장 매력도 ${attractiveness}점 + 전략적 적합성 ${row.fit_verdict} + 시너지 ${synergy}점 → screening 진행 권고 ${recommendation} (합의 기준: 매력도 ≥ 60 AND 적합성 Go AND 시너지 ≥ 60 → Go, 그 외 Hold, 매력도 < 60 OR 적합성 Kill OR 시너지 < 40 → Kill)`,
   };
 }
 

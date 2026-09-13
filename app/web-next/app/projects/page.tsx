@@ -113,7 +113,7 @@ function CloseDialog({
           </div>
         </form>
         <p className="text-[0.78rem] text-[color:var(--muted-fg)] mt-2 mb-0">
-          종료/보관된 프로젝트는 기본 목록에서 제외됩니다. 게이트 판정(KILL)과는 별개의 운영자 상태입니다.
+          종료/보관된 프로젝트는 기본 목록에서 제외됩니다. 진행 판정(KILL)과는 별개의 운영자 상태입니다.
         </p>
         {error && (
           <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mt-2 mb-0">
@@ -155,7 +155,7 @@ export function ProjectsView() {
         }
       },
       {
-        body: "삭제 표시로 전환됩니다. 연결 기회(진출방식 결정·대상 스크리닝·시너지 포함)가 함께 삭제 표시되고, 데이터는 보존되어 아카이브에서 감사용으로 열람할 수 있습니다.",
+        body: "삭제 표시로 전환됩니다. 연결 기회(진출방식 결정·대상 선정·시너지 포함)가 함께 삭제 표시되고, 데이터는 보존되어 아카이브에서 감사용으로 열람할 수 있습니다.",
       },
     );
   }

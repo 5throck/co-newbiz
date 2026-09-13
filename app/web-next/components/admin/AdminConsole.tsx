@@ -50,7 +50,7 @@ interface GlossaryTermRow {
 }
 
 // glossary-lint 미정의어 큐 (ADR-0022) — scripts/co-newbiz/glossary-lint.ts의
-// report-only 스캐너 결과. 큐는 큐레이터 심사 대상이지 자동 게이트가 아니다.
+// report-only 스캐너 결과. 큐는 큐레이터 심사 대상이지 자동 진행이 아니다.
 interface GlossaryLintFinding {
   token: string;
   file: string;
@@ -937,7 +937,7 @@ export function AdminConsole({ section }: { section: Section }) {
           ) : (
             <>
               <p className="helper-note">
-                {lintQueue.scanned_files}개 파일 스캔 · 등록 용어 {lintQueue.known_count}개 사용 · 미정의 후보 {lintQueue.undefined.length}건 — 큐레이터 심사 대상이며 자동 게이트가 아닙니다.
+                {lintQueue.scanned_files}개 파일 스캔 · 등록 용어 {lintQueue.known_count}개 사용 · 미정의 후보 {lintQueue.undefined.length}건 — 큐레이터 심사 대상이며 자동 진행이 아닙니다.
               </p>
               <table className="data-table">
                 <caption className="sr-only">미정의어 큐</caption>

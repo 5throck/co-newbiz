@@ -15,7 +15,7 @@ import { PromotionPanel } from "../../components/PromotionPanel.tsx";
 // 스크롤 과부하 없이 주요 항목을 인지할 수 있다.
 // 기회/위험 요인은 자동 도출(insight-synthesis) + 수동 등록 모두 지원하며,
 // 매력도 평가는 요인 근거 위에서 이루어진다.
-// S4 이후(트랙 결정·딜 승격)는 flow.spec v2.0.0 재설계에 따라 재구축 예정.
+// S4 이후(트랙 결정·검토/안건 승격)는 flow.spec v2.0.0 재설계에 따라 재구축 예정.
 
 interface OpportunityRow {
   id: string;
@@ -318,7 +318,7 @@ export function OpportunitiesView() {
     );
   }
 
-  // 기회 삭제 — 테스트·오등록 정리용. 딜로 승격된 기회(project_id 연계)는
+  // 기회 삭제 — 테스트·오등록 정리용. 검토/안건으로 승격된 기회(project_id 연계)는
   // 서버에서도 차단되며, S4+ 단계 연계가 있으면 삭제가 거부된다.
   function deleteOpportunity(o: OpportunityRow) {
     confirm(
@@ -456,12 +456,10 @@ export function OpportunitiesView() {
         {/* 선택 산업: 발굴 버튼 + 요약 인사이트 (접힘) */}
         {selectedInsight && (
           <div className="sizing-new-form mt-3">
+            {/* CAGR·격차는 위 칩에 이미 표시된다 — 선택된 산업명만 다시
+                밝혀 어느 칩을 눌렀는지 스크롤 후에도 알 수 있게 한다. */}
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <strong className="text-[0.85rem]">{selectedInsight.industry_name}</strong>
-              <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
-                CAGR {selectedInsight.bottom_up_cagr_pct !== null ? `${selectedInsight.bottom_up_cagr_pct}%` : "—"}
-                {selectedInsight.external_forecast?.gap_pct != null ? ` · 외부 전망 대비 격차 ${selectedInsight.external_forecast.gap_pct > 0 ? "+" : ""}${selectedInsight.external_forecast.gap_pct}%` : ""}
-              </span>
               <button
                 type="button"
                 className="btn-ghost btn-sm"
@@ -614,7 +612,7 @@ export function OpportunitiesView() {
                           <button
                             type="button"
                             className="btn-danger btn-sm"
-                            title="이 기회를 삭제합니다 (딜로 승격된 기회는 삭제할 수 없습니다)"
+                            title="이 기회를 삭제합니다 (검토/안건으로 승격된 기회는 삭제할 수 없습니다)"
                             onClick={() => deleteOpportunity(o)}
                           >
                             삭제
@@ -787,7 +785,7 @@ export function OpportunitiesView() {
                                 <button
                                   type="button"
                                   className="btn-ghost btn-sm"
-                                  title="S1 시장분석·요인을 근거로 점수 초안을 제안합니다 (ADR-0118)"
+                                  title="S1 시장분석·요인을 근거로 점수 초안을 제안합니다"
                                   disabled={attractReco[o.id] === "loading"}
                                   onClick={() => void generateAttractDraft(o.id)}
                                 >

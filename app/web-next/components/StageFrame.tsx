@@ -20,7 +20,7 @@ const STAGE_HREF: Record<StageMetaId, (projectId?: string) => string | null> = {
   S1: () => "/market",
   S2: () => "/opportunities",
   S3: () => "/synergy",
-  S4: () => "/route-decision",
+  S4: (p) => (p ? `/deals/${p}/s4` : "/route-decision"),
   S5: () => "/greenfield",
   S6: () => "/brownfield",
   S7: () => "/brownfield",

@@ -13,9 +13,9 @@ import { useConfirm } from "../../../../components/crud.tsx";
 
 // S8 사업성 분석 — 이중 관점 밸류에이션 비교 (ADR-0117; approved mockup
 // docs/designs/mockups/2026-09-11-dual-view-valuation-ui-mockup_ko.html).
-// 시나리오(base/upside/downside)마다 시장 기반(게이트 1차)과 과거 기반(비교
+// 시나리오(base/upside/downside)마다 시장 기반(진행 1차)과 과거 기반(비교
 // 근거) 두 관점을 나란히 비교하고, 인간만 수행하는 채택(adopt) 액션을 둔다 —
-// 경계 #2: 엔진은 권고할 뿐, 채택과 게이트 기록은 사람의 행위다.
+// 경계 #2: 엔진은 권고할 뿐, 채택과 진행 기록은 사람의 행위다.
 
 interface SimRow {
   id: string;
@@ -165,7 +165,7 @@ export default function BusinessCasePage() {
           }
         })();
       },
-      { body: "이 케이스를 FS 게이트 입력으로 채택합니다. 채택은 인간 결정이며 감사 기록으로 남습니다." },
+      { body: "이 케이스를 FS 진행 입력으로 채택합니다. 채택은 인간 결정이며 감사 기록으로 남습니다." },
     );
   }
 
@@ -227,7 +227,7 @@ export default function BusinessCasePage() {
       <ProjectSubNav projectId={projectId} />
       <StageFrame stageId="S8" heading="S8 사업성 분석 — 이중 관점 밸류에이션 비교">
       <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">
-        같은 시나리오를 <b>시장 기반(게이트 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.
+        같은 시나리오를 <b>시장 기반(진행 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.
         <span className="ml-2 status-chip status-not-started">엔진 권고 ≠ 채택 — 채택은 사람의 행위입니다</span>
       </p>
 
@@ -252,7 +252,7 @@ export default function BusinessCasePage() {
           </tbody>
         </table>
         <p className="text-[0.76rem] text-[color:var(--muted-fg)] mt-1">
-          <b className="text-[color:var(--warning)]">게이트 판정(채택 요건·킬 크라이테리아·RECOMMENDED)은 시장 기반 값을 사용합니다.</b>{" "}
+          <b className="text-[color:var(--warning)]">진행 판정(채택 요건·킬 크라이테리아·RECOMMENDED)은 시장 기반 값을 사용합니다.</b>{" "}
           과거 기반은 비교용이며, 둘의 차이가 클수록 성장 가정의 불확실성이 크다는 신호입니다.
         </p>
       </section>
@@ -329,7 +329,7 @@ export default function BusinessCasePage() {
             <h3 className="sizing-step-title">
               {SCEN_LABEL[s]}
               {newestMf?.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(p05) 생존 관점 (시장 기반)">★ RECOMMENDED</span>}
-              {newestMf?.adopted && <span className="status-chip status-green ml-1">채택됨 (fs 게이트 입력)</span>}
+              {newestMf?.adopted && <span className="status-chip status-green ml-1">채택됨 (fs 진행 입력)</span>}
             </h3>
             {cases.length === 0 ? (
               <p className="text-[0.85rem] text-[color:var(--muted-fg)]">
@@ -412,7 +412,7 @@ export default function BusinessCasePage() {
               </table>
             )}
             {(cases[0]?.simulations?.[0]?.note) && (
-              <p className="text-[0.7rem] text-[color:var(--muted-fg)] mt-1" title="재현 근거 (ADR-0052 §D.4 seeded determinism)">{cases[0].simulations[0].note}</p>
+              <p className="text-[0.7rem] text-[color:var(--muted-fg)] mt-1" title="재현 근거 (동일 시드로 재계산해도 같은 결과)">{cases[0].simulations[0].note}</p>
             )}
           </section>
         );

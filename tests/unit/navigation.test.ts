@@ -70,15 +70,20 @@ describe("navigation SSOT (ADR-0105)", () => {
     expect(stale).toEqual([]);
   });
 
-  test("deal-centric order: 딜 first, legacy stage group preserves flow.spec sequence (ADR-0120)", () => {
+  test("stage group order: legacy stage group preserves flow.spec sequence, S8~S12 project group follows 추진 전략 (ADR-0120)", () => {
     const explore = NAV_SECTIONS.find((s) => s.label === "탐색")!;
     const hrefs = explore.items.map((i) => i.href);
-    // ADR-0120: the deal board leads; legacy project list stays until Wave 4.
-    expect(hrefs).toEqual(["/", "/deals", "/projects"]);
+    expect(hrefs).toEqual(["/", "/deals"]);
     // 단계 화면(기존) group preserves the stage sequence during migration.
+    // /our-company (그룹/계열사 분석, S3 input) sits between 기회 발굴(S2) and
+    // 추진 전략(S4) as its own item. S8~S12 project access ("/projects", a
+    // submenu like 추진 전략) sits right after 추진 전략, in flow.spec order —
+    // moved out of "탐색" so the whole S1~S12 sequence lives in one section.
     const legacy = NAV_SECTIONS.find((s) => s.label === "단계 화면(기존)")!;
     const legacyHrefs = legacy.items.map((i) => i.href);
-    expect(legacyHrefs).toEqual(["/market", "/opportunities", "/our-company", "/route-decision"]);
+    expect(legacyHrefs).toEqual([
+      "/market", "/opportunities", "/our-company", "/synergy", "/route-decision", "/projects",
+    ]);
     // stage ordering sanity (sub-menu children): greenfield(S5) → brownfield(S6/S7)
     const gf = legacyHrefs.indexOf("/greenfield");
     const bf = legacyHrefs.indexOf("/brownfield");
@@ -86,10 +91,11 @@ describe("navigation SSOT (ADR-0105)", () => {
   });
 
   test("no unintended duplicate menu hrefs", () => {
-    // /our-company is both a submenu parent and a child by design — that is
-    // the ONLY allowed repetition; anything else is a copy-paste drift.
+    // /route-decision and /projects are each both a submenu parent and one of
+    // their own children by design — the ONLY allowed repetition; anything
+    // else is a copy-paste drift.
     const hrefs = menuHrefs();
-    const allowedDup = new Set(["/our-company", "/route-decision", "/projects"]);
+    const allowedDup = new Set(["/route-decision", "/projects"]);
     const dupes = hrefs.filter((h, i) => hrefs.indexOf(h) !== i && !allowedDup.has(h));
     expect(dupes).toEqual([]);
   });
