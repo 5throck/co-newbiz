@@ -6,6 +6,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Added
+- **[2026-09-14]**: feat(web-next): **S1 industry list groups linked industries under their anchor.** With 21+ industries in the list, `전방`/`전전방`/`후방`/`후후방` (forward/2nd-forward/backward/2nd-backward) linked industries were indistinguishable from independently-registered ones — all rendered as flat, equal rows. The list now nests each linked industry directly under its anchor (indented, with a colored relation badge — blue for demand-side `전방`/`전전방`, amber for supply-side `후방`/`후후방`), sorted forward-before-backward within the group. No schema change — this reuses `market_sizing_analysis.after_analysis_id`/`linked_relation`, already recorded when an industry is registered via the linked-industry queue (ADR-0130); purely a rendering change in `market/page.tsx`.
 ### Fixed
 - **[2026-09-14]**: fix(web-next): **Dev-server restarts left S1 market-sizing analyses stuck at `분석 중` forever.** `runSizingPipeline` runs as an in-process fire-and-forget promise; killing/restarting the dev server mid-run abandons it with no process left to finish it, and the existing recovery mechanism (`recoverQueuePass`) only runs via an OS-scheduled `watch:run` cycle that local dev never runs — so the row stayed `in_progress` indefinitely with no automatic path to `실패`. `instrumentation.ts` now calls `recoverQueuePass` once on every server boot, so a restart-orphaned analysis surfaces as `분석 실패` (with a retry path) instead of hanging forever. Root-caused live: 4 analyses orphaned by a dev-server restart mid-session were confirmed via `llm_call_log` (all activity stopped at the exact restart timestamp) and manually recovered the same way this fix now automates.
 ### Added
