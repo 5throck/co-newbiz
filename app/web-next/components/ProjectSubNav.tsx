@@ -43,6 +43,10 @@ const SUB_PAGES: ReadonlyArray<{ seg: string; label: string; group: Group }> = [
   { seg: "/agent-runs", label: "에이전트 이력", group: "tools" },
   { seg: "/backtest", label: "백테스트", group: "tools" },
   { seg: "/share", label: "외부 공유", group: "tools" },
+  // ADR-0122 — 단계 횡단 리스크/타임라인 표면. 화면은 이미 있었으나 이
+  // 목록에 등록되지 않아 직접 링크로만 도달 가능했다.
+  { seg: "/timeline", label: "타임라인·SLA", group: "tools" },
+  { seg: "/risk-heatmap", label: "리스크 히트맵", group: "tools" },
 ] as const;
 
 const GROUP_ORDER: Group[] = ["S8", "S9", "S10", "S11", "S12", "tools"];
