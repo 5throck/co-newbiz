@@ -32,6 +32,8 @@ tags:
     description: RAG, approvals, compliance, waivers, interpretations, procedures (api-spec.md §5).
   - name: Analysis
     description: Market observations, change log, assumptions, run-based versioning, and Monte Carlo simulations (api-spec.md §4/§7; Waves 5.7B/engine-1/engine-2).
+  - name: Agents
+    description: Runtime PM-routed agent queries and the roster projection (ADR-0128).
   - name: Deal Review
     description: DD findings, antitrust, incentives, liabilities, sites, partners, permits, value chain (api-spec.md §6; Wave 5.7B).
   - name: Monitoring
@@ -2241,6 +2243,64 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/agents/registry:
+    get:
+      operationId: listAgentRegistry
+      summary: Runtime agent roster projection (ADR-0128).
+      tags:
+        - Agents
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/agents/query:
+    post:
+      operationId: submitAgentQuery
+      summary: PM-routed agent query — single agent or evaluation chain, proposal-only (ADR-0128).
+      tags:
+        - Agents
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/related-candidates:
+    get:
+      operationId: getRelatedIndustryCandidates
+      summary: Stored value-chain linkage candidates for the S1 analysis-scope modal (ADR-0126).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: runProxyIndustryAnalysis
+      summary: First-pass proxy analysis proposing related industries (proposal only, analyst+) (ADR-0126).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/industry/{industryId}/chain-links:
+    post:
+      operationId: createIndustryChainLink
+      summary: Approve an S1 value-chain linkage proposal as a structural proxy_link hop (ADR-0126).
+      tags:
+        - Analysis
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/synergy/dart-search:
     get:
       operationId: searchDartCompanies
@@ -2619,9 +2679,19 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   /api/opportunities/{id}/sketch:
+    get:
+      operationId: getOpportunitySketch
+      summary: Current business-model review + version history (?version=N for one) (ADR-0127).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       operationId: createBusinessModelSketch
-      summary: Generate/persist a business-model sketch (analyst+).
+      summary: Generate/persist a business-model sketch, appending a history version (analyst+) (ADR-0127).
       tags:
         - Analysis
       responses:

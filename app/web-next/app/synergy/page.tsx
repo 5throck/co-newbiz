@@ -46,12 +46,18 @@ interface SynergyPayload {
 }
 interface SynergyAnalysis {
   id: string; status: "in_progress" | "completed"; current_step: number;
+  company_id?: string | null; member_id?: string | null; group_id?: string | null;
   company_name: string; dart_corp_code: string | null; source_ref?: string | null;
   created_at: string; completed_at: string | null; latest_version: number | null;
   target_type?: "affiliate" | "group" | null;
   member_name?: string | null; group_name?: string | null;
   opportunity_id?: string | null; opportunity_name?: string | null;
   versions?: Array<{ version_no: number; payload: SynergyPayload | null; changelog: string | null; created_by: string; created_at: string }>;
+}
+
+/** 회사 묶음 키 — 같은 대상(계열사/그룹/legacy 회사)의 분석을 한 묶음으로 나열한다. */
+function analysisGroupKey(a: SynergyAnalysis): string {
+  return `${a.target_type ?? "legacy"}:${a.member_id ?? a.group_id ?? a.company_id ?? a.company_name}`;
 }
 /** 분석 대상 표기 — 신규(레지스트리)는 계열사/그룹명, legacy는 md_company 회사명 */
 function targetLabel(a: Pick<SynergyAnalysis, "target_type" | "member_name" | "group_name" | "company_name">): string {
@@ -302,26 +308,65 @@ export function SynergyView() {
             <thead>
               <tr>
                 <th scope="col">회사명</th>
-                <th scope="col">DART 고유번호</th>
+                <th scope="col">연결 기회</th>
+                <th scope="col">구분</th>
                 <th scope="col">분석 상태</th>
                 <th scope="col">분석일</th>
               </tr>
             </thead>
             <tbody>
-              {analyses.map((a) => {
+              {(() => {
+                // 회사별 묶음 — 회사 셀은 그룹 첫 행에만 표시(rowSpan)하고
+                // 기회는 행마다 나열된다 (가독성: 회사가 하나의 묶음으로 보임).
+                const groups = new Map<string, SynergyAnalysis[]>();
+                for (const a of analyses) {
+                  const key = analysisGroupKey(a);
+                  const list = groups.get(key) ?? [];
+                  list.push(a);
+                  groups.set(key, list);
+                }
+                const flat: Array<{ a: SynergyAnalysis; companyCell: SynergyAnalysis | null }> = [];
+                for (const list of groups.values()) {
+                  list.forEach((a, i) => flat.push({ a, companyCell: i === 0 ? a : null }));
+                }
+                return flat.map(({ a, companyCell }) => {
                 const inProgress = a.status === "in_progress";
                 return (
                   <tr key={a.id} className={selectedId === a.id ? "row-selected" : undefined}>
-                    <td className="cell-primary">
-                      <button
-                        type="button"
-                        className="font-semibold text-left underline-offset-2 hover:underline"
-                        title="시너지 정합성 리포트 열기"
-                        onClick={() => openDetail(a)}
-                      >
-                        {targetLabel(a)}
-                      </button>
-                      {a.opportunity_name && <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">기회: {a.opportunity_name}</span>}
+                    {companyCell !== null && (() => {
+                      const groupLen = groups.get(analysisGroupKey(companyCell))!.length;
+                      // 상세 진입은 연결 기회(행) 클릭이 담당 — 회사 셀은 묶음
+                      // 헤더이며, 분석이 하나뿐인 경우에만 클릭으로 열린다.
+                      return (
+                        <td className="cell-primary align-top" rowSpan={groupLen}>
+                          {groupLen === 1 ? (
+                            <button
+                              type="button"
+                              className="font-semibold text-left underline-offset-2 hover:underline"
+                              title="시너지 정합성 리포트 열기"
+                              onClick={() => openDetail(companyCell)}
+                            >
+                              {targetLabel(companyCell)}
+                            </button>
+                          ) : (
+                            <span className="font-semibold">{targetLabel(companyCell)}</span>
+                          )}
+                        </td>
+                      );
+                    })()}
+                    <td>
+                      {a.opportunity_name ? (
+                        <button
+                          type="button"
+                          className="text-[0.8rem] text-left underline-offset-2 hover:underline"
+                          title="시너지 정합성 리포트 열기"
+                          onClick={() => openDetail(a)}
+                        >
+                          {a.opportunity_name}
+                        </button>
+                      ) : (
+                        <span className="text-[0.75rem] text-[color:var(--muted-fg)]">— (시장 연계만)</span>
+                      )}
                     </td>
                     <td>{a.target_type ? <span className="control-chip status-not-started">{a.target_type === "group" ? "그룹" : "계열사"}</span> : <span className="control-chip status-amber" title="기존 별도 등록 분석(legacy)">legacy</span>}</td>
                     <td>
@@ -353,7 +398,8 @@ export function SynergyView() {
                     </span></td>
                   </tr>
                 );
-              })}
+                });
+              })()}
             </tbody>
           </table>
         )}

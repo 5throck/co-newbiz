@@ -89,7 +89,7 @@ export async function deriveAndSaveFactors(db: ReturnType<typeof getDb>, opp: Op
         opportunity: ["시장분석 기회 요인 기반 — 자동 도출 실패, 수동 등록 필요"],
         risk: ["자동 도출 실패 — LLM 구성 또는 수동 등록 필요"],
       }),
-    { maxTokens: 1200 },
+    { maxTokens: 1200, agent: { key: "market-intelligence-agent", purpose: "S2 기회/위험 요인 자동 도출" } },
   );
 
   const text = res.text;

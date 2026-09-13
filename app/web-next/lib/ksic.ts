@@ -39,25 +39,32 @@ const ENTRIES: KsicEntry[] = (master.codes as KsicEntry[])
   .sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
 
 /**
- * Search the curated KSIC master. Digit queries match by code prefix
- * (shorter codes first, exact match first); non-digit queries match by
- * 산업명·보조설명 substring. Empty query returns the full curated list —
- * the picker shows it on focus so the subset is discoverable.
+ * Search the KSIC master (정식 10차 전체 2,000코드 + 프로젝트 프로필 산업).
+ * Digit queries match by code prefix (exact match first, then profile
+ * entries, shorter codes first); non-digit queries match by 산업명·보조설명
+ * substring. Empty query returns the profile (curated) entries only —
+ * the picker shows them on focus so the subset stays discoverable.
  */
 export function searchKsic(query: string, limit = 20): KsicEntry[] {
   const q = query.trim();
-  if (!q) return ENTRIES.slice(0, limit);
+  const profileFirst = (a: KsicEntry, b: KsicEntry) =>
+    Number(b.profile) - Number(a.profile) ||
+    (a.code === b.code ? 0 : a.code < b.code ? -1 : 1);
+  if (!q) return ENTRIES.filter((e) => e.profile).slice(0, limit);
   if (/^\d+$/.test(q)) {
     return ENTRIES.filter((e) => e.code.startsWith(q))
       .sort((a, b) => {
         if (a.code === q) return -1;
         if (b.code === q) return 1;
-        return a.code.length - b.code.length || (a.code < b.code ? -1 : 1);
+        if (a.profile !== b.profile) return Number(b.profile) - Number(a.profile);
+        return a.code.length - b.code.length || profileFirst(a, b);
       })
       .slice(0, limit);
   }
   const needle = q.toLowerCase();
   return ENTRIES.filter(
     (e) => e.name_ko.toLowerCase().includes(needle) || (e.detail ?? "").toLowerCase().includes(needle),
-  ).slice(0, limit);
+  )
+    .sort(profileFirst)
+    .slice(0, limit);
 }

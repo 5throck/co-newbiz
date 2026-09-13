@@ -56,14 +56,14 @@ interface StepResult {
 }
 
 /** Ask the LLM for a JSON object; returns null when it cannot produce parseable JSON. */
-async function askJson(industry: string, instruction: string): Promise<Record<string, unknown> | null> {
+async function askJson(industry: string, instruction: string, purpose = "시장분석 단계 산출"): Promise<Record<string, unknown> | null> {
   const res = await completeOrFallback(
     [
       { role: "system", content: "You are a market-sizing analyst. Reply with ONE JSON object only — no prose, no markdown fences." },
       { role: "user", content: `산업: ${industry}\n${instruction}` },
     ],
     () => "NOT_JSON",
-    { temperature: 0.2, maxTokens: 2000 },
+    { temperature: 0.2, maxTokens: 2000, agent: { key: "market-intelligence-agent", purpose: `S1 파이프라인 — ${purpose}` } },
   );
   if (res.source !== "llm") return null;
   const text = res.text.replace(/```json|```/g, "");
@@ -242,7 +242,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     ...s1,
     pendingInputs: [
       ...(ksicUnresolved ? ["KSIC 코드 확정 필요 (시장분석 산업 편집에서 설정)"] : []),
-      "프록시 체인의 통계 hop 수 확정 (체인 등급 산정)",
+      "가치사슬 연계의 통계 hop 수 확정 (체인 등급 산정)",
     ],
   });
 
@@ -612,7 +612,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     chainGrade: {
       grade: "C",
       statisticalHops: 0,
-      note: "LLM 추정 매트릭스 — 통계 hop 미확정으로 잠정 C. 분석가가 프록시 체인을 확정하면 재평가합니다.",
+      note: "LLM 추정 매트릭스 — 통계 hop 미확정으로 잠정 C. 분석가가 가치사슬 연계를 확정하면 재평가합니다.",
     },
     chainDirection,
     competitive,

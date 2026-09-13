@@ -203,7 +203,7 @@ export async function crossCheckCompetitive(input: CrossCheckInput): Promise<Com
       },
     ],
     () => JSON.stringify({}),
-    { maxTokens: 1500 },
+    { maxTokens: 1500, agent: { key: "market-intelligence-agent", purpose: "프로파일 공시 대조 검증" } },
   );
 
   const fallbackNote =

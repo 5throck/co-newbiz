@@ -14,8 +14,8 @@
 | 6 | `deal-list` | previews/deal-list.png | /deals/list (new; from /projects) | planned | |
 | 7 | `deal-overview` | previews/deal-overview.png | /deals/{id} (new) | implemented (wave1 /deals/[id]) | |
 | 8 | `s1` | previews/s1.png | /deals/{id}/s1 (from /market) | implemented (legacy /market) | |
-| 9 | `s2` | previews/s2.png | /deals/{id}/s2 (from /opportunities) | implemented (legacy /opportunities) | |
-| 10 | `s3` | previews/s3.png | /deals/{id}/s3 (from /synergy) | implemented (legacy /synergy) | |
+| 9 | `s2` | previews/s2.png | /deals/{id}/s2 (from /opportunities) | implemented (legacy /opportunities) | 2026-09-13: ADR-0127 — opportunity detail screen /opportunities/{id} (factors, attractiveness score, business-model review history, promotion panel), minimal row actions, funnel KPI stage filters |
+| 10 | `s3` | previews/s3.png | /deals/{id}/s3 (from /synergy) | implemented (legacy /synergy) | 2026-09-13: ADR-0125 human curation layer (linkage add, shortlist verdict editing, origin badges); ADR-0126/0128 company-grouped list, /agents PM query surface |
 | 11 | `s4` | previews/s4.png | /deals/{id}/s4 (from /route-decision) | implemented (/deals/{id}/s4) | 2026-09-13: rewritten to baseline card/tab structure in `components/stages/RouteDecisionStage.tsx`; `/route-decision` now redirects |
 | 12 | `s5` | previews/s5.png | /deals/{id}/s5 (from /greenfield) | implemented (legacy /greenfield) | |
 | 13 | `s6s7` | previews/s6s7.png | /deals/{id}/s6+s7 (from /brownfield) | implemented (legacy /brownfield) | |

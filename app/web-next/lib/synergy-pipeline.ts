@@ -75,14 +75,14 @@ export interface SynergyPayload {
 const num = (v: unknown, fallback = 0): number => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" && v.trim() ? v.trim() : fallback);
 
-async function askJson(system: string, user: string, maxTokens = 2500): Promise<Record<string, unknown> | null> {
+async function askJson(system: string, user: string, maxTokens = 2500, purpose = "시너지 단계 산출"): Promise<Record<string, unknown> | null> {
   const res = await completeOrFallback(
     [
       { role: "system", content: system },
       { role: "user", content: user },
     ],
     () => "NOT_JSON",
-    { temperature: 0.2, maxTokens },
+    { temperature: 0.2, maxTokens, agent: { key: "risk-officer", purpose: `S3 파이프라인 — ${purpose}` } },
   );
   if (res.source !== "llm") return null;
   const text = res.text.replace(/```json|```/g, "");

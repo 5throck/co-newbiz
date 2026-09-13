@@ -104,7 +104,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 2000 },
+      { maxTokens: 2000, agent: { key: "financing-agent", purpose: "딜 구조 추천 초안" } },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

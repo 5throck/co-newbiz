@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Search } from "lucide-react";
 import { api } from "../../lib/api.ts";
+import { useAuth } from "../../lib/auth-client.tsx";
 import { useConfirm } from "../../components/crud.tsx";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
@@ -41,7 +42,7 @@ interface AssumptionRow {
 }
 interface VersionInfo { version_no: number; changelog: string | null; created_by: string; created_at: string }
 interface ChainLink {
-  hop_type: "engineering" | "statistical";
+  hop_type: "engineering" | "statistical" | "structural";
   coefficient: number | null;
   beta: number | null;
   r2: number | null;
@@ -51,9 +52,14 @@ interface ChainLink {
   name_ko: string;
   direction: "upstream" | "downstream";
 }
+interface ChainProposal { industry_id: string; name_ko: string; relation: string; note: string | null }
+interface LinkableIndustry { id: string; name_ko: string }
 interface IndustryDetail {
   industry: { id: string; name_ko: string; name_en: string | null; ksic_code: string | null };
   chain: { links: ChainLink[]; grade: { reliability_grade: string; grade_rationale: string } | null };
+  proposals?: ChainProposal[];
+  unmatchedProposals?: Array<{ name: string; relation: string; note: string | null }>;
+  linkableIndustries?: LinkableIndustry[];
   driver_sensitivities: DriverSensitivity[];
   sizing: { run_id: string; run_label: string; assumptions: AssumptionRow[] } | null;
   versions: VersionInfo[];
@@ -85,8 +91,8 @@ export function MarketView() {
   const [newCode, setNewCode] = useState("");
   const [ksicResults, setKsicResults] = useState<KsicEntryView[] | null>(null);
   const [ksicSearching, setKsicSearching] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [llmStatus, setLlmStatus] = useState<LlmStatus | null>(null);
+  const [linkNotice, setLinkNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed" | "stale" | "pending" | "failed">("all");
   const [editing, setEditing] = useState<{ id: string; name: string; code: string } | null>(null);
@@ -124,7 +130,7 @@ export function MarketView() {
     api.get<IndustryDetail>(`/api/market-overview/industry/${encodeURIComponent(selectedIndustry)}`)
       .then((r) => setDetail(r.data))
       .catch((e) => setError(e instanceof Error ? e.message : "상세 불러오기 실패"));
-  }, [selectedIndustry]);
+  }, [selectedIndustry]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // KSIC 코드 검색 — DART 검색과 동일한 표준 패턴(이름으로 검색 → 결과 선택 시 코드 채움):
   // 명시적 검색 버튼(lucide Search 아이콘 — 아이콘 어휘표 검색/조회), 검색어는 KSIC
@@ -146,18 +152,93 @@ export function MarketView() {
     }
   }
 
-  async function createAnalysis(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newName.trim() || creating) return;
-    setCreating(true);
+  // ── 가치사슬 연계 후보 모달 (S1 분석·재분석 범위 선택) ──
+  // 분석(또는 재분석) 대상 산업과 연관된 산업 후보를 보여주고, 사용자가
+  // 선택한 산업을 함께 분석한다. 마스터에 없는 산업은 분석 생성 시
+  // 자동 등록된다(서버 name 기반 dedup) — 선택 자체가 승인 행위다(경계 #2).
+  interface RelatedCandidate { name_ko: string; industry_id: string | null; relation: string; note: string | null; source: "link" | "analysis" | "proxy" }
+  const [linkModal, setLinkModal] = useState<{
+    open: boolean;
+    primaryName: string;          // 이번에 분석(또는 재분석)할 대상
+    rerunAnalysisId: string | null; // 재분석 모드일 때 대상 분석 id
+    candidates: RelatedCandidate[];
+    industryKnown: boolean;       // 대상이 산업 마스터에 등록되어 있는지
+    selected: Set<string>;
+    loading: boolean;
+    running: boolean;
+  }>({ open: false, primaryName: "", rerunAnalysisId: null, candidates: [], industryKnown: false, selected: new Set(), loading: false, running: false });
+
+  async function openLinkModal(primaryName: string, rerunAnalysisId: string | null = null) {
+    setLinkModal({ open: true, primaryName, rerunAnalysisId, candidates: [], industryKnown: false, selected: new Set(), loading: true, running: false });
     try {
-      await api.post("/api/market-overview/analyses", { name_ko: newName.trim(), ksic_code: newCode.trim() || undefined });
-      setNewName(""); setNewCode(""); setKsicResults(null); setShowNewForm(false);
+      const r = await api.get<{ industry: { id: string } | null; candidates: RelatedCandidate[] }>(
+        `/api/market-overview/related-candidates?name=${encodeURIComponent(primaryName)}`,
+      );
+      if (r.data.candidates.length > 0) {
+        setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: r.data.industry !== null, candidates: r.data.candidates }));
+        return;
+      }
+      // 저장된 후보(연계 링크·과거 분석)가 없으면 1차 프록시 산업 분석을
+      // 자동 실행해 관련 산업과 연관성을 먼저 보여준다 (사용자 결정 사항).
+      setLinkModal((prev) => ({ ...prev, loading: true, industryKnown: r.data.industry !== null }));
+      const p = await api.post<{ industry: { id: string } | null; candidates: RelatedCandidate[] }>(
+        "/api/market-overview/related-candidates",
+        { name: primaryName },
+      );
+      setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: p.data.industry !== null, candidates: p.data.candidates }));
+    } catch {
+      setLinkModal((prev) => ({ ...prev, loading: false }));
+    }
+  }
+
+  // 1차 프록시 분석 재실행 — 모달 안에서 수동으로 다시 돌릴 수 있다.
+  async function rerunProxyAnalysis() {
+    if (linkModal.loading || linkModal.running) return;
+    setLinkModal((prev) => ({ ...prev, loading: true }));
+    try {
+      const p = await api.post<{ industry: { id: string } | null; candidates: RelatedCandidate[] }>(
+        "/api/market-overview/related-candidates",
+        { name: linkModal.primaryName },
+      );
+      setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: p.data.industry !== null, candidates: p.data.candidates }));
+    } catch {
+      setLinkModal((prev) => ({ ...prev, loading: false }));
+    }
+  }
+
+  function toggleCandidate(name: string) {
+    setLinkModal((prev) => {
+      const selected = new Set(prev.selected);
+      if (selected.has(name)) selected.delete(name); else selected.add(name);
+      return { ...prev, selected };
+    });
+  }
+
+  async function runWithSelections() {
+    if (linkModal.running) return;
+    setLinkModal((prev) => ({ ...prev, running: true }));
+    setError(null);
+    try {
+      // 대상 분석: 재분석 모드면 rerun, 신규 모드면 생성(마스터 자동 등록 포함)
+      if (linkModal.rerunAnalysisId) {
+        await api.post(`/api/market-overview/analyses/${encodeURIComponent(linkModal.rerunAnalysisId)}/rerun`);
+      } else {
+        await api.post("/api/market-overview/analyses", { name_ko: linkModal.primaryName, ksic_code: newCode.trim() || undefined });
+        setNewName(""); setNewCode(""); setKsicResults(null); setShowNewForm(false);
+      }
+      // 함께 분석할 연관 산업 — 서버가 name 기반으로 마스터를 자동 등록·재사용한다
+      let extraCount = 0;
+      for (const name of linkModal.selected) {
+        if (name === linkModal.primaryName) continue;
+        await api.post("/api/market-overview/analyses", { name_ko: name });
+        extraCount++;
+      }
       await refreshOverview();
+      setLinkModal({ open: false, primaryName: "", rerunAnalysisId: null, candidates: [], industryKnown: false, selected: new Set(), loading: false, running: false });
+      if (extraCount > 0) setLinkNotice(`연관 산업 ${extraCount}건(마스터 미등록 산업은 자동 등록)도 함께 분석을 시작했습니다.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "분석 생성 실패");
-    } finally {
-      setCreating(false);
+      setError(err instanceof Error ? err.message : "분석 시작 실패");
+      setLinkModal((prev) => ({ ...prev, running: false }));
     }
   }
 
@@ -176,13 +257,10 @@ export function MarketView() {
     if (days < 365) return `${Math.floor(days / 30)}개월 전`;
     return `${Math.floor(days / 365)}년 전`;
   };
-  async function rerunAnalysis(analysisId: string) {
-    try {
-      await api.post(`/api/market-overview/analyses/${encodeURIComponent(analysisId)}/rerun`);
-      await refreshOverview();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "재분석 시작 실패");
-    }
+  async function rerunAnalysis(analysisId: string, industryName: string) {
+    // 재분석도 연관 산업 선택 모달을 거친다 — 같은 분석 행을 재실행하며
+    // 선택된 연관 산업은 새로(또는 이어서) 분석을 시작한다.
+    await openLinkModal(industryName, analysisId);
   }
 
   // 산업 삭제 — market-sizing 분석(버전 행 포함)과 함께 삭제한다.
@@ -277,6 +355,7 @@ export function MarketView() {
   return (
     <main>
       {confirmDialog}
+      {linkNotice && <p role="status" className="text-[color:var(--green-fg)] text-[0.85rem] mb-2">{linkNotice}</p>}
       <StageFrame stageId="S1">
         산업을 선택하면 체계적 시장 규모 추정 8단계 절차로 분석된 리포트가 차트로 표시됩니다.
       </StageFrame>
@@ -325,7 +404,8 @@ export function MarketView() {
         />
 
         {showNewForm && (
-          <form onSubmit={createAnalysis} aria-label="신규 산업 분석 생성" className="sizing-new-form mb-3">
+          <form onSubmit={(e) => { e.preventDefault(); if (newName.trim()) void openLinkModal(newName.trim()); }} aria-label="신규 산업 분석 생성" className="sizing-new-form mb-3">
+            {/* 제출 시 바로 생성하지 않고 가치사슬 연계 후보 모달로 범위를 확정한다 */}
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[0.78rem]">
                 <span className="block mb-1">산업명 *</span>
@@ -346,10 +426,14 @@ export function MarketView() {
                   </button>
                 </span>
               </label>
-              <button type="submit" className="btn-primary" disabled={creating || !newName.trim()}>
-                {creating ? "생성 중..." : "분석 시작"}
+              <button type="submit" className="btn-primary" disabled={!newName.trim()}>
+                분석 범위 선택 →
               </button>
-              <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => { setShowNewForm(false); setNewName(""); setNewCode(""); setKsicResults(null); }}
+              >
                 취소
               </button>
             </div>
@@ -362,7 +446,11 @@ export function MarketView() {
                       aria-pressed={newCode === it.code}
                       className={`btn-ghost btn-sm w-full text-left ${newCode === it.code ? "font-semibold" : ""}`}
                       title={it.detail ?? it.name_ko}
-                      onClick={() => setNewCode(it.code)}
+                      onClick={() => {
+                        setNewCode(it.code);
+                        setKsicResults(null); // 선택 후 목록을 닫는다 — 다른 산업 선택 시 다시 검색
+                        if (!newName.trim()) setNewName(it.name_ko);
+                      }}
                     >
                       {newCode === it.code ? "✔ " : ""}{it.name_ko} <code className="dd-item-id">{it.code}</code>
                       {it.profile && <span className="text-[0.72rem] text-[color:var(--muted-fg)]"> · 업종 프로필</span>}
@@ -489,7 +577,7 @@ export function MarketView() {
                               type="button"
                               className="btn-ghost btn-sm sizing-rerun-btn"
                               title={stale ? "분석일이 90일 지났습니다" : "분석 실패 또는 갱신 필요 시 새 버전으로 재실행"}
-                              onClick={() => rerunAnalysis(a.id)}
+                              onClick={() => rerunAnalysis(a.id, ind.name_ko)}
                             >
                               재분석
                             </button>
@@ -529,6 +617,75 @@ export function MarketView() {
           </p>
         )}
       </section>
+
+      {/* ── 가치사슬 연계 후보 모달 (분석·재분석 범위 선택, ADR-0126 확장) ── */}
+      {linkModal.open && (
+        <div className="modal-backdrop" onClick={() => { if (!linkModal.running) setLinkModal((prev) => ({ ...prev, open: false })); }}>
+          <div
+            className="modal-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="가치사슬 연계 산업 선택"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-[0.95rem] mb-1">
+              가치사슬 연계 산업 선택 — <span className="font-semibold">{linkModal.primaryName}</span>
+            </h2>
+            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+              {linkModal.rerunAnalysisId ? "재분석" : "신규 분석"} 대상 산업과 연관성이 있는 산업 후보입니다. 선택한 산업을 함께 분석하며, 마스터에 없는 산업은 자동 등록 후 분석됩니다.
+            </p>
+            {linkModal.loading ? (
+              <p className="text-[0.85rem]" role="status">1차 프록시 산업 분석 실행 중 — 관련 산업과 연관성을 도출하고 있습니다...</p>
+            ) : linkModal.candidates.length === 0 ? (
+              <p className="text-[0.8rem] text-[color:var(--muted-fg)]">
+                연관 산업 후보를 도출하지 못했습니다 — 이 산업만 분석을 진행할 수 있습니다.
+              </p>
+            ) : (
+              <>
+                <ul className="sizing-note-list mb-2" aria-label="연관 산업 후보">
+                  {linkModal.candidates.map((c) => (
+                    <li key={c.name_ko}>
+                      <label className="flex items-start gap-2 text-[0.82rem] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={linkModal.selected.has(c.name_ko)}
+                          onChange={() => toggleCandidate(c.name_ko)}
+                          className="mt-1"
+                        />
+                        <span>
+                          <span className="font-semibold">{c.relation}</span> · {c.name_ko}{" "}
+                          <span className={`status-chip ${c.industry_id ? "status-green" : "status-amber"}`}>
+                            {c.industry_id ? "분석 가능" : "미등록 — 자동 등록"}
+                          </span>
+                          {c.source === "proxy" && <span className="status-chip status-not-started">1차 분석 제안</span>}
+                          {c.source === "link" && <span className="status-chip status-green">연계 근거</span>}
+                          {c.source === "analysis" && <span className="status-chip status-not-started">과거 분석</span>}
+                          {c.note && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{c.note}</span>}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <button type="button" className="btn-ghost btn-sm" disabled={linkModal.loading || linkModal.running} onClick={() => void rerunProxyAnalysis()}>
+                  1차 프록시 분석 다시 실행
+                </button>
+              </>
+            )}
+            <div className="flex justify-end gap-2 mt-3">
+              <button type="button" className="btn-ghost" disabled={linkModal.running} onClick={() => setLinkModal((prev) => ({ ...prev, open: false }))}>
+                취소
+              </button>
+              <button type="button" className="btn-primary" disabled={linkModal.running} onClick={() => void runWithSelections()}>
+                {linkModal.running
+                  ? "분석 시작 중..."
+                  : linkModal.selected.size > 0
+                    ? `분석 시작 (연관 ${linkModal.selected.size}건 포함)`
+                    : linkModal.rerunAnalysisId ? "재분석 시작" : "이 산업만 분석"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -641,6 +798,59 @@ function SizingReport({ detail, matrix, stepSummaries }: {
   stepSummaries: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> | null;
 }) {
   const [tab, setTab] = useState<"overview" | "structure" | "competitive" | "size" | "allocation" | "growth" | "pipeline" | "qualitative" | "regulation" | "risk" | "validate">("overview");
+  // ADR-0126 — 가치사슬 연계 제안 승인 (analyst+). 승인 시 structural hop으로
+  // 등록되고 산업 상세를 다시 불러와 링크 테이블·제안 목록을 갱신한다. 부모가
+  // detail을 소유하므로 갱신 결과는 로컬 뷰(localDetail)로 겹쳐 쓴다.
+  const { me } = useAuth();
+  const canCurate = me?.role === "admin" || me?.role === "analyst";
+  const [localDetail, setLocalDetail] = useState<IndustryDetail | null>(null);
+  const [approving, setApproving] = useState<string | null>(null);
+  const [chainLinkError, setChainLinkError] = useState<string | null>(null);
+  const [manualLink, setManualLink] = useState({ industry_id: "", direction: "downstream", evidence_ref: "" });
+  const [linkSaving, setLinkSaving] = useState(false);
+  const [linkSaved, setLinkSaved] = useState(false);
+  const view = localDetail ?? detail;
+
+  async function approveProposal(p: ChainProposal) {
+    if (approving || !detail) return;
+    setApproving(p.industry_id);
+    setChainLinkError(null);
+    try {
+      await api.post(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}/chain-links`, {
+        direction: p.relation.includes("후방") ? "upstream" : "downstream",
+        industry_id: p.industry_id,
+        evidence_ref: `S1 시장 구조 정의 제안 승인 — ${p.relation} ${p.name_ko}${p.note ? ` (${p.note})` : ""}`,
+      });
+      const r = await api.get<IndustryDetail>(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}`);
+      setLocalDetail(r.data);
+    } catch (e) {
+      setChainLinkError(e instanceof Error ? e.message : "링크 등록 실패");
+    } finally {
+      setApproving(null);
+    }
+  }
+
+  async function submitManualLink() {
+    if (!detail || linkSaving || !manualLink.industry_id || !manualLink.evidence_ref.trim()) return;
+    setLinkSaving(true);
+    setChainLinkError(null);
+    setLinkSaved(false);
+    try {
+      await api.post(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}/chain-links`, {
+        direction: manualLink.direction,
+        industry_id: manualLink.industry_id,
+        evidence_ref: manualLink.evidence_ref.trim(),
+      });
+      setManualLink({ industry_id: "", direction: manualLink.direction, evidence_ref: "" });
+      setLinkSaved(true);
+      const r = await api.get<IndustryDetail>(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}`);
+      setLocalDetail(r.data);
+    } catch (e) {
+      setChainLinkError(e instanceof Error ? e.message : "링크 등록에 실패했습니다.");
+    } finally {
+      setLinkSaving(false);
+    }
+  }
   const proj2030Total = matrix.regions.reduce((sum, r) => sum + regionTotal(matrix, r.code, 4), 0);
   const TABS = [
     ["overview", "개요"],
@@ -745,25 +955,25 @@ function SizingReport({ detail, matrix, stepSummaries }: {
         </table>
         <p className="sizing-note-list mt-2 text-[0.8rem] text-[color:var(--muted-fg)]">{matrix.chainDirection.note}</p>
 
-        {/* 가치사슬 구조 — 프록시 체인 링크 + 등급 (S1 산출물) */}
-        <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">가치사슬 구조 — 프록시 체인 링크</h4>
-        {detail.chain.links.length === 0 ? (
+        {/* 가치사슬 연계 — 링크 + 승인 대기 제안 + 등급 (S1 산출물, ADR-0126) */}
+        <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">가치사슬 연계</h4>
+        {view.chain.links.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
-            이 산업에 연결된 프록시 체인 링크가 없습니다. 신규 분석 산업은 드라이버 민감도가 구조 증거를 대신합니다.
+            이 산업에 등록된 가치사슬 연계 링크가 없습니다 — 아래 승인 대기 제안에서 등록하거나, 신규 분석 산업은 드라이버 민감도가 구조 증거를 대신합니다.
           </p>
         ) : (
           <div className="table-scroll">
-          <table className="data-table report-table" aria-label="가치사슬 프록시 체인 링크">
-            <caption className="sr-only">가치사슬 프록시 체인 링크</caption>
+          <table className="data-table report-table" aria-label="가치사슬 연계 링크">
+            <caption className="sr-only">가치사슬 연계 링크</caption>
             <thead>
               <tr><th scope="col" className="w-[8rem]">방향</th><th scope="col">산업</th><th scope="col">hop</th><th scope="col">계수/β</th><th scope="col">시차(월)</th><th scope="col">근거</th></tr>
             </thead>
             <tbody>
-              {detail.chain.links.map((l, i) => (
+              {view.chain.links.map((l, i) => (
                 <tr key={`${l.industry_id}-${l.direction}-${i}`}>
                   <td className="font-semibold">{l.direction === "upstream" ? "후방 (공급처)" : "전방 (수요처)"}</td>
                   <td>{l.name_ko}</td>
-                  <td>{l.hop_type === "engineering" ? "engineering" : "statistical"}</td>
+                  <td>{l.hop_type === "engineering" ? "engineering" : l.hop_type === "statistical" ? "statistical" : "구조 (승인)"}</td>
                   <td className="tabular-nums">{l.hop_type === "engineering" ? l.coefficient : l.beta !== null ? `β ${l.beta} (R² ${l.r2})` : "—"}</td>
                   <td className="tabular-nums">{l.lag_months ?? "—"}</td>
                   <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{l.evidence_ref}</td>
@@ -773,10 +983,72 @@ function SizingReport({ detail, matrix, stepSummaries }: {
           </table>
           </div>
         )}
-        {detail.chain.grade && (
+        {/* ADR-0126 — S1 시장 구조 정의가 도출한 인접 산업 중 산업 마스터와
+            매칭된 것을 승인 대기 제안으로 제시한다. 등록은 사람의 행위다. */}
+        {canCurate && (view.proposals?.length ?? 0) > 0 && (
+          <div className="sizing-grade-card mt-2">
+            <p className="text-[0.8rem] mb-1"><span className="font-semibold">승인 대기 제안</span> — 시장 구조 정의(Step 1)에서 도출된 인접 산업입니다. 승인하면 구조(structural) 링크로 등록됩니다 (변환 계수는 통계 보정 후 부여).</p>
+            <div className="flex flex-wrap gap-2">
+              {view.proposals!.map((p) => (
+                <span key={p.industry_id} className="control-chip">
+                  <span className="font-semibold">{p.relation}</span> · {p.name_ko}
+                  <button type="button" className="btn-ghost btn-sm ml-1" disabled={approving === p.industry_id} onClick={() => void approveProposal(p)}>
+                    {approving === p.industry_id ? "등록 중..." : "승인"}
+                  </button>
+                </span>
+              ))}
+            </div>
+            {chainLinkError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mt-1 mb-0">{chainLinkError}</p>}
+          </div>
+        )}
+        {(view.unmatchedProposals?.length ?? 0) > 0 && (
+          <p className="mt-1 text-[0.75rem] text-[color:var(--muted-fg)]">
+            미매칭 후보 (산업 마스터에 없어 등록 불가 — 시장분석 산업 편집에서 먼저 등록하세요): {view.unmatchedProposals!.map((u) => `${u.relation} ${u.name}`).join(", ")}
+          </p>
+        )}
+        {/* ADR-0126 — 제안이 없어도 사람이 직접 연계를 등록할 수 있다 (같은 승인 행위). */}
+        {canCurate && (
+          <details className="mt-2">
+            <summary className="cursor-pointer text-[0.8rem] text-[color:var(--accent)]">＋ 직접 등록 (산업 마스터에서 선택)</summary>
+            <div className="sizing-new-form mt-2">
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="text-[0.78rem]">
+                  <span className="block mb-1">대상 산업 *</span>
+                  <select
+                    value={manualLink.industry_id}
+                    onChange={(e) => setManualLink({ ...manualLink, industry_id: e.target.value })}
+                    className="sizing-new-input sizing-new-input-sm"
+                    style={{ minWidth: "12rem" }}
+                  >
+                    <option value="">선택...</option>
+                    {(view.linkableIndustries ?? []).map((i) => (
+                      <option key={i.id} value={i.id}>{i.name_ko}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-[0.78rem]">
+                  <span className="block mb-1">방향 *</span>
+                  <select value={manualLink.direction} onChange={(e) => setManualLink({ ...manualLink, direction: e.target.value })} className="sizing-new-input sizing-new-input-sm">
+                    <option value="downstream">전방 (수요처)</option>
+                    <option value="upstream">후방 (공급처)</option>
+                  </select>
+                </label>
+                <label className="text-[0.78rem]">
+                  <span className="block mb-1">근거 *</span>
+                  <input value={manualLink.evidence_ref} onChange={(e) => setManualLink({ ...manualLink, evidence_ref: e.target.value })} className="sizing-new-input" style={{ flex: "1 1 12rem" }} />
+                </label>
+                <button type="button" className="btn-primary btn-sm" disabled={linkSaving || !manualLink.industry_id || !manualLink.evidence_ref.trim()} onClick={() => void submitManualLink()}>
+                  {linkSaving ? "등록 중..." : "등록"}
+                </button>
+              </div>
+              {linkSaved && <p role="status" className="text-[0.78rem] text-[color:var(--green-fg)] mt-1 mb-0">링크가 등록되었습니다.</p>}
+            </div>
+          </details>
+        )}
+        {view.chain.grade && (
           <p className="mt-1 text-[0.8rem] text-[color:var(--muted-fg)]">
-            <span className="status-chip status-green mr-1">체인 등급 {detail.chain.grade.reliability_grade}</span>
-            {detail.chain.grade.grade_rationale}
+            <span className="status-chip status-green mr-1">체인 등급 {view.chain.grade.reliability_grade}</span>
+            {view.chain.grade.grade_rationale}
           </p>
         )}
 

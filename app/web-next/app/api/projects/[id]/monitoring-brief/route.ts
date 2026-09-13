@@ -101,7 +101,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 2000 },
+      { maxTokens: 2000, agent: { key: "risk-officer", purpose: "모니터링 브리프 — 관찰 요약 제안" } },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");
