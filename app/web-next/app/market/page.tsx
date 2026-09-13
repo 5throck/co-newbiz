@@ -206,9 +206,11 @@ export function MarketView() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed" | "stale" | "pending" | "failed">("all");
   // 핵심 산업만 보기 — 연계 자동 등록(전방/전전방/후방/후후방)으로 목록이
-  // 길어져도 사용자가 직접 고정(pin)한 산업만 최상위로 보이게 한다. 고정된
-  // 산업의 연계 그룹은 하위에 그대로 딸려 온다 — 그룹 안 개별 산업의 고정
-  // 여부와 무관하다. 기본값은 false(전체 보기) — 아직 아무것도 고정하지
+  // 길어져도 사용자가 직접 고정(pin)한 산업만 최상위로 보이게 한다.
+  // 본 산업을 고정하면 연계 그룹이 하위에 그대로 딸려 온다. 연계 산업도
+  // 개별 고정할 수 있고(2026-09-14 사용자 리포트 — 유압식 브레이커),
+  // 앵커가 고정되지 않았으면 '핵심만 보기'에서 개별 최상위 행으로
+  // 끌어올린다. 기본값은 false(전체 보기) — 아직 아무것도 고정하지
   // 않은 상태에서 목록이 비어 보이는 걸 막는다.
   const [pinnedOnly, setPinnedOnly] = useState(false);
   const [pinBusyId, setPinBusyId] = useState<string | null>(null);
@@ -458,7 +460,7 @@ export function MarketView() {
           setError(err instanceof Error ? err.message : "산업 삭제 실패");
         }
       },
-      { body: "이 산업의 시장분석 기록(버전 전체)도 함께 삭제되며 되돌릴 수 없습니다." },
+      { body: "이 산업의 시장분석 기록(버전 전체)과 참조 중인 가치사슬 연계·프로젝트 산업 바인딩·분석 산출물도 함께 삭제되며 되돌릴 수 없습니다. 승격된 투자 안건은 이력이 유지됩니다." },
     );
   }
 
@@ -578,10 +580,24 @@ export function MarketView() {
       return next;
     });
   };
-  const displayedGroups = useMemo(
-    () => (pinnedOnly ? industryGroups.filter((g) => Boolean(g.ind.pinned)) : industryGroups),
-    [industryGroups, pinnedOnly],
-  );
+  const displayedGroups = useMemo(() => {
+    if (!pinnedOnly) return industryGroups;
+    // 고정한 본 산업은 그룹째로 남기고, 고정한 연계 산업은 앵커가 미고정이면
+    // 개별 최상위 행으로 승격한다 — 핀 버튼 title의 "'핵심만 보기'에서 최상위로
+    // 표시됩니다" 약속을 연계 산업에도 지키기 위함(단일 부모 가정, 중복 승격 방지).
+    const promoted = new Set<string>();
+    const out: typeof industryGroups = [];
+    for (const g of industryGroups) {
+      if (g.ind.pinned) { out.push(g); continue; }
+      for (const c of g.children) {
+        if (c.ind.pinned && !promoted.has(c.ind.id)) {
+          promoted.add(c.ind.id);
+          out.push({ ind: c.ind, children: [] });
+        }
+      }
+    }
+    return out;
+  }, [industryGroups, pinnedOnly]);
   const flatRows = useMemo(() => {
     const rows: Array<{ ind: IndustryRow; relation: string | null; childCount: number; expanded: boolean; onToggle: (() => void) | null }> = [];
     for (const g of displayedGroups) {
@@ -675,7 +691,7 @@ export function MarketView() {
               <button
                 type="button"
                 aria-pressed={pinnedOnly}
-                title="고정(★)한 산업만 최상위로 보여줍니다 — 연계 산업은 그룹 안에 그대로 딸려 옵니다."
+                title="고정(★)한 산업만 최상위로 보여줍니다 — 고정한 본 산업은 연계 그룹째로, 고정한 연계 산업은 개별 최상위 행으로 표시됩니다."
                 className={`control-chip ${pinnedOnly ? "status-amber" : "status-not-started"}`}
                 onClick={() => setPinnedOnly((v) => !v)}
               >
@@ -805,19 +821,20 @@ export function MarketView() {
                           autoFocus
                         />
                       ) : (
-                        <span className="flex items-center gap-1.5" style={relation ? { paddingLeft: "1rem" } : undefined}>
-                          {!relation && (
-                            <button
-                              type="button"
-                              disabled={pinBusyId === ind.id}
-                              className={ind.pinned ? "text-[color:var(--amber-fg)]" : "text-[color:var(--muted-fg)] hover:text-[color:var(--amber-fg)]"}
-                              title={ind.pinned ? "핵심 산업 고정 해제" : "핵심 산업으로 고정 — '핵심만 보기'에서 최상위로 표시됩니다"}
-                              aria-pressed={Boolean(ind.pinned)}
-                              onClick={() => void togglePin(ind)}
-                            >
-                              {ind.pinned ? "★" : "☆"}
-                            </button>
-                          )}
+                        <span className="flex items-center gap-1.5" style={relation ? { paddingLeft: "2rem" } : undefined}>
+                          {/* 핀(★)은 본 산업·연계 산업 모두에 렌더링한다 — 연계 산업도
+                              개별 고정 대상(2026-09-14 사용자 리포트: 유압식 브레이커).
+                              연계 행은 들여쓰기 + ↳ + 관계 칩으로 위계를 표현한다. */}
+                          <button
+                            type="button"
+                            disabled={pinBusyId === ind.id}
+                            className={ind.pinned ? "text-[color:var(--amber-fg)]" : "text-[color:var(--muted-fg)] hover:text-[color:var(--amber-fg)]"}
+                            title={ind.pinned ? "핵심 산업 고정 해제" : "핵심 산업으로 고정 — '핵심만 보기'에서 최상위로 표시됩니다"}
+                            aria-pressed={Boolean(ind.pinned)}
+                            onClick={() => void togglePin(ind)}
+                          >
+                            {ind.pinned ? "★" : "☆"}
+                          </button>
                           {relation && (
                             <>
                               <span aria-hidden="true" className="text-[color:var(--muted-fg)]">↳</span>
