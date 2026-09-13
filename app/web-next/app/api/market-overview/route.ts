@@ -60,13 +60,13 @@ export async function GET(request: Request) {
   // Per-industry latest sizing analysis — status drives the "분석 중" UI state.
   const analyses = db
     .query(
-      `SELECT a.id, a.industry_id, a.status, a.current_step, a.created_at, a.completed_at, a.error_message, a.after_analysis_id, a.linked_relation,
+      `SELECT a.id, a.industry_id, a.status, a.current_step, a.created_at, a.completed_at, a.error_message, a.after_analysis_id, a.linked_relation, a.rerun_in_progress,
               (SELECT MAX(v.version_no) FROM market_sizing_version v WHERE v.analysis_id = a.id) AS latest_version
        FROM market_sizing_analysis a
        JOIN (SELECT industry_id, MAX(created_at) AS max_created FROM market_sizing_analysis GROUP BY industry_id) m
          ON m.industry_id = a.industry_id AND m.max_created = a.created_at`,
     )
-    .all() as Array<{ id: string; industry_id: string; status: string; current_step: number; latest_version: number | null; created_at: string; completed_at: string | null; error_message: string | null; after_analysis_id: string | null; linked_relation: string | null }>;
+    .all() as Array<{ id: string; industry_id: string; status: string; current_step: number; latest_version: number | null; created_at: string; completed_at: string | null; error_message: string | null; after_analysis_id: string | null; linked_relation: string | null; rerun_in_progress: number }>;
 
   return ok(
     {

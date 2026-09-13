@@ -26,6 +26,10 @@ interface AnalysisInfo {
   id: string; status: "in_progress" | "completed" | "failed" | "pending"; current_step: number; latest_version: number | null;
   created_at: string; completed_at: string | null; error_message?: string | null;
   after_analysis_id?: string | null; linked_relation?: string | null;
+  // ADR-0131 — 완료된 분석의 재분석이 진행 중이면 status는 여전히 'completed'로
+  // 이전 버전을 가리킨 채 이 플래그만 1이 된다(재분석 성공 시에만 status/
+  // completed_at이 새 버전으로 "교체"된다 — 조용한 데이터 훼손 방지).
+  rerun_in_progress?: number;
 }
 interface IndustryRow {
   id: string; name_ko: string; name_en: string | null;
@@ -218,7 +222,7 @@ export function MarketView() {
   }, [refreshOverview]);
 
   // 분석 중인 산업이 있으면 3초 간격으로 상태 폴링 → 완료 시 목록이 자동 갱신
-  const hasInProgress = overview?.industries.some((i) => i.analysis?.status === "in_progress" || i.analysis?.status === "pending") ?? false;
+  const hasInProgress = overview?.industries.some((i) => i.analysis?.status === "in_progress" || i.analysis?.status === "pending" || !!i.analysis?.rerun_in_progress) ?? false;
   useEffect(() => {
     if (!hasInProgress) return;
     const t = setInterval(() => { void refreshOverview(); }, 3000);
@@ -714,6 +718,14 @@ export function MarketView() {
                         <span className="status-chip status-not-started" title="선행 산업 분석이 완료되면 자동으로 시작됩니다. 시작 전에는 언제든 재분석 모달에서 제외할 수 있습니다.">{queueLabel}</span>
                       ) : inProgress ? (
                         <span className="status-chip status-amber">분석 중 ({a?.current_step ?? 0}/8단계)</span>
+                      ) : a?.status === "completed" && a.rerun_in_progress ? (
+                        // ADR-0131 — 재분석 진행 중에도 status는 여전히 이전(완료) 버전을 가리킨다.
+                        // 새 버전은 성공해야만 "교체"되므로, 지금 화면에 보이는 건 이전 버전 그대로다.
+                        <span className="status-chip status-amber" title="이전 완료 버전은 그대로 표시되며, 재분석이 성공해야만 새 버전으로 교체됩니다.">재분석 중 (이전 v{a.latest_version ?? 1} 유지)</span>
+                      ) : a?.status === "completed" && a.error_message ? (
+                        // 보호 모드 재분석이 LLM 장애로 실패한 직후 — status/completed_at은 그대로,
+                        // error_message만 이번 시도 실패 사유로 남는다(날짜·버전 변경 없음).
+                        <span className="status-chip status-red" title={`${a.error_message} — 표시 중인 버전은 이전 완료 버전입니다.`}>재분석 실패 (v{a.latest_version ?? 1} 유지)</span>
                       ) : stale ? (
                         <span className="status-chip status-amber" title="분석일이 90일을 지났습니다 — 재분석로 최신화하세요.">업데이트 권장 (v{a?.latest_version ?? 1})</span>
                       ) : a?.status === "completed" ? (
@@ -968,6 +980,17 @@ function MarketReport({ detail, analysisId, analysisDate, onAddLinked }: { detai
       )}
       {matrix && (
         <>
+          {/* ADR-0131 — LLM이 미구성이거나 실패해 일부/전체 단계가 결정론 합성
+              폴백으로 채워진 버전은 시장 규모·CAGR 등 핵심 수치가 자리표시자
+              (0, 1 등)일 수 있다. 기존의 일반 "추정치" 안내와 별개로, 이 버전이
+              실제로 그런 상태인지 명시적으로 경고한다(2026-09-13 휴머노이드
+              로봇 리포트 사고 — 경고 없이 $1B/-10000%가 실제 값처럼 보였음). */}
+          {stepSummaries && !llmUsed && (
+            <p className="market-section text-[0.82rem] text-[color:var(--red-fg)] font-semibold" role="alert" style={{ border: "1px solid var(--red-border, currentColor)", borderRadius: "0.5rem", padding: "0.6rem 0.8rem" }}>
+              ⚠️ 이 버전은 {stepSummaries.every((s) => s.source !== "llm") ? "전체" : "일부"} 단계가 LLM 미구성/실패로 결정론 합성(더미) 값으로 채워졌습니다 —
+              시장 규모·성장률 등 수치를 신뢰하지 마세요. LLM 구성을 확인한 뒤 재분석하세요.
+            </p>
+          )}
           {matrix.provenance === "llm-estimate" && (
             <p className="market-section sizing-note-list text-[0.78rem] text-[color:var(--amber-fg)]" role="note">
               이 매트릭스는 파이프라인 LLM이 생성한 추정치입니다 — 수치는 앵커 삼각검증(2단계)과
