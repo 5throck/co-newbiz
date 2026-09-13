@@ -2679,6 +2679,7 @@ a.funnel-card:hover { border-color: var(--primary); }
 /* ── Market page sections ── */
 .market-section { margin-top: 2rem; margin-bottom: 1.75rem; }
 .market-section h2 { font-size: 1rem; margin: 0 0 0.5rem; }
+
 .market-industry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.6rem; }
 .market-industry-card {
   padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-radius: var(--radius-lg);
@@ -2967,6 +2968,47 @@ a.funnel-card:hover { border-color: var(--primary); }
 .sizing-axes-table td:first-child { white-space: nowrap; min-width: 11rem; }
 .sizing-actions-cell { white-space: nowrap; }
 .status-chip { white-space: nowrap; }
+
+/* 단계 연계(핸드오프) 스트립 — StageFrame이 모든 S1~S12 화면에 렌더링하는
+   "입력 ←/출력 →" 표시. 지금까지 이 4개 클래스에 스타일이 전혀 없어 화면마다
+   텍스트가 줄바꿈 없이 붙어 나왔다(ADR-0120). 목업(baseline-v5.html)의 핸드오프
+   바 디자인을 실제 디자인 토큰으로 옮겨온다. */
+.handoff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.5rem;
+  background: var(--primary-bg);
+  border: 1px solid var(--primary-border, var(--border));
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+}
+.handoff-hl { font-weight: 700; color: var(--muted-fg); white-space: nowrap; }
+.handoff-chip {
+  display: inline-block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 0.1rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--fg);
+}
+.handoff-out { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; }
+.handoff-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--accent);
+  color: var(--accent-fg, #fff);
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.handoff-cta:hover { opacity: 0.9; }
 
 .sizing-rerun-btn { margin-left: 0.4rem; color: var(--amber-fg); }
 .wf-longlist { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.5rem 0.6rem; margin-bottom: 0.5rem; border: 1px dashed var(--border); border-radius: var(--radius-md); }

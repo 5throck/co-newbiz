@@ -129,7 +129,12 @@ export default function DashboardPage() {
 
   return (
     <main className="dashboard-page">
-      <PageHeader title="대시보드" />
+      <div className="flex items-center justify-between">
+        <PageHeader title="대시보드" />
+        <Link href="/portfolio-view" className="btn-ghost btn-sm" style={{ textDecoration: "none" }}>
+          포트폴리오 전체 뷰
+        </Link>
+      </div>
 
       {/* KPI 카드 */}
       <div className="summary-cards">

@@ -78,7 +78,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { id } = await params;
   const db = getDb();
-  const analysis = db.query("SELECT id FROM market_sizing_analysis WHERE id = ?").get(id) as { id: string } | null;
+  const analysis = db.query("SELECT id, industry_id FROM market_sizing_analysis WHERE id = ?").get(id) as
+    | { id: string; industry_id: string }
+    | null;
   if (!analysis) return notFound("분석을 찾을 수 없습니다.");
 
   let body: unknown;
@@ -91,6 +93,44 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const validated = validateMatrix(body);
   if (!validated.ok) return badRequest("invalid_matrix", validated.message);
   const matrix = validated.matrix;
+
+  // ADR-0129 — reconcile against already-curated proxy_link demand-industry
+  // edges so a seeded matrix's chainDirection.relatedIndustries doesn't
+  // silently diverge from what a human already registered. Read-only: this
+  // route never writes proxy_link rows, it only merges curated rows missing
+  // from the incoming payload into relatedIndustries. Same query shape as
+  // runSizingPipeline's curatedDemandIndustries (market-sizing-pipeline.ts).
+  const curatedDemandIndustries = db
+    .query(
+      `SELECT p.id, p.relation, p.hop_distance,
+              CASE WHEN p.from_industry_id = ? THEN p.to_industry_id ELSE p.from_industry_id END AS related_industry_id,
+              i.name_ko AS related_industry_name
+       FROM proxy_link p
+       JOIN md_industry i
+         ON i.id = (CASE WHEN p.from_industry_id = ? THEN p.to_industry_id ELSE p.from_industry_id END)
+       WHERE (p.from_industry_id = ? OR p.to_industry_id = ?)
+         AND p.status = 'active' AND p.relation IS NOT NULL`,
+    )
+    .all(analysis.industry_id, analysis.industry_id, analysis.industry_id, analysis.industry_id) as Array<{
+      id: string;
+      relation: string;
+      hop_distance: number | null;
+      related_industry_id: string;
+      related_industry_name: string;
+    }>;
+
+  if (curatedDemandIndustries.length > 0) {
+    const existingNames = new Set(matrix.chainDirection.relatedIndustries.map((r) => r.name));
+    for (const c of curatedDemandIndustries) {
+      if (existingNames.has(c.related_industry_name)) continue;
+      matrix.chainDirection.relatedIndustries.push({
+        relation: c.relation,
+        name: c.related_industry_name,
+        note: "이미 등록된 수요 산업",
+      });
+      existingNames.add(c.related_industry_name);
+    }
+  }
 
   const now = new Date().toISOString();
   const payload = JSON.stringify({ methodology: "s1-agent-research v1", matrix, stepSummaries: [] });

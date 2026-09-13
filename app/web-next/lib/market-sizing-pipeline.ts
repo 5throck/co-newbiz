@@ -181,6 +181,29 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const analysis = row; // non-null alias — narrowing does not reach the nested step functions
   const industry = analysis.name_ko;
 
+  // ADR-0129 — 큐레이션된(사람이 승인/등록한) 수요산업 엣지를 proxy_link에서
+  // 직접 조회한다. 전방/전전방(수요처)뿐 아니라 후방/후후방(공급처)도 함께
+  // 가져오되, "수요" 목적으로는 전방/전전방만 사용한다(design 경계 유지).
+  const curatedDemandIndustries = db
+    .query(
+      `SELECT p.id, p.relation, p.hop_distance,
+              CASE WHEN p.from_industry_id = ? THEN p.to_industry_id ELSE p.from_industry_id END AS related_industry_id,
+              i.name_ko AS related_industry_name
+       FROM proxy_link p
+       JOIN md_industry i
+         ON i.id = (CASE WHEN p.from_industry_id = ? THEN p.to_industry_id ELSE p.from_industry_id END)
+       WHERE (p.from_industry_id = ? OR p.to_industry_id = ?)
+         AND p.status = 'active' AND p.relation IS NOT NULL`,
+    )
+    .all(analysis.industry_id, analysis.industry_id, analysis.industry_id, analysis.industry_id) as Array<{
+      id: string;
+      relation: string;
+      hop_distance: number | null;
+      related_industry_id: string;
+      related_industry_name: string;
+    }>;
+  const curatedForwardDemand = curatedDemandIndustries.filter((c) => /전방/.test(c.relation));
+
   // 사용자 결정 — 1차 근거는 외부 리서치(글로벌·증권 리포트)다. Step 1 도출에
   // 앞서 대상 산업의 가치사슬 관점 외부 소스를 검색해 프롬프트에 주입한다
   // (TAVILY 미설정이면 건너뛰고 LLM 선험만으로 진행 — 기존 폴백 원칙 유지).
@@ -224,13 +247,26 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   advance(1);
   // 산업의 가치사슬 위치에 따라 분석 방향이 갈린다: downstream 산업은
   // 전방/전전방(수요처)을, upstream 산업은 후방/후후방(공급처)을 분석한다.
+  // ADR-0129 — 큐레이션된 전방/전전방(수요) 산업이 2개 이상 있으면 segments를
+  // 자유 발명하지 말고 이 큐레이션 집합을 그룹핑/명명해서 도출하도록 지시한다
+  // (신규 산업으로 큐레이션이 아직 없으면 기존 자유 발명 폴백을 그대로 둔다).
+  const hasCuratedSegments = curatedForwardDemand.length >= 2;
+  const segmentsInstruction = hasCuratedSegments
+    ? `segments는 아래 [큐레이션된 수요 산업] 목록을 근거로, 이 산업들을 2~6개의 최종수요 버킷으로 그룹핑·명명해 도출하세요 — 큐레이션 목록에 없는 산업을 임의로 지어내지 말고, 각 세그먼트가 그 목록의 하나 이상의 항목으로 소급 추적 가능해야 합니다. code는 short_english_snake, label은 한글.`
+    : `segments는 이 산업의 최종수요처를 2~6개 나눈 것으로, 산업 특성에 맞게 직접 정의하세요(예: 산업용 로봇이면 제조/물류·창고/분류, 휴머노이드 로봇이면 제조 조립/물류·창고/서비스 등). 무작정 건설·광산·기타를 재사용하지 말 것. code는 short_english_snake, label은 한글.`;
   const dirJson = await askJson(
     industry,
-    `이 산업이 가치사슬에서 어디에 위치하는지와 인접 산업을 분석하세요. JSON: {"position":"upstream|midstream|downstream","note":"위치 판단 근거 한두 문장","relatedIndustries":[{"relation":"전방|전전방|후방|후후방","name":"산업명","note":"분석 포인트"}]}. position이 downstream/midstream이면 relation은 전방/전전방(수요처) 중심으로, upstream이면 후방/후후방(공급처) 중심으로 3~5개. segments는 이 산업의 최종수요처를 2~6개 나눈 것으로, 산업 특성에 맞게 직접 정의하세요(예: 산업용 로봇이면 제조/물류·창고/분류, 휴머노이드 로봇이면 제조 조립/물류·창고/서비스 등). 무작정 건설·광산·기타를 재사용하지 말 것. code는 short_english_snake, label은 한글.` +
+    `이 산업이 가치사슬에서 어디에 위치하는지와 인접 산업을 분석하세요. JSON: {"position":"upstream|midstream|downstream","note":"위치 판단 근거 한두 문장","relatedIndustries":[{"relation":"전방|전전방|후방|후후방","name":"산업명","note":"분석 포인트"}]}. position이 downstream/midstream이면 relation은 전방/전전방(수요처) 중심으로, upstream이면 후방/후후방(공급처) 중심으로 3~5개. ${segmentsInstruction}` +
     // ADR-0126/0128 재분석 일관성(옵션 2) — 직전 버전 앵커
     (previousChain.length > 0
       ? `\n\n[이전 버전(v${prev!.version_no}) 산업 사슬] — 버전 간 일관성을 위해 유지·보완하세요. 산업 명칭도 가능한 한 같은 표기를 유지하고, 명백히 부적절한 항목만 교체하세요:\n` +
         previousChain.map((r) => `- [${r.relation}] ${r.name}${r.note ? `: ${r.note ?? ""}` : ""}`).join("\n")
+      : "") +
+    // ADR-0129 — 큐레이션된(사람이 승인/등록한) 수요 산업은 직전 버전 텍스트보다
+    // 신뢰도가 높으므로 우선순위로 함께 주입한다(둘 다 유지, 큐레이션이 우선).
+    (curatedDemandIndustries.length > 0
+      ? `\n\n[큐레이션된 수요 산업 — 사람이 확정한 데이터] 아래는 이미 검토·승인된 인접 산업 관계입니다. relatedIndustries 제안 시 이 목록과 배치되지 않게 하고,${hasCuratedSegments ? " segments는 이 중 전방/전전방 항목을 근거로 도출하세요:" : ""}\n` +
+        curatedDemandIndustries.map((c) => `- [${c.relation}] ${c.related_industry_name}${c.hop_distance ? ` (hop ${c.hop_distance})` : ""}`).join("\n")
       : "") +
     // 사용자 결정 — 외부 리서치(글로벌·증권 리포트) 근거를 선행 주입
     (chainResearch.length > 0
@@ -297,13 +333,13 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   // 이미 분석이 완료된 하류 산업의 규모·성장률을 수요 참조로 모아 Step 2(앵커)·
   // Step 4(CAGR) 프롬프트에 주입한다 — 프록시 체인 논리(하류 수요가 상류 매출을
   // 견인)를 정량 계산에 반영하는 첫 단계.
+  // ADR-0129 — 이름 문자열 매칭(LLM이 생성한 relatedIndustries 텍스트를
+  // name_ko와 대조)은 오탐/누락에 취약했다. 큐레이션된 전방/전전방 엣지는
+  // related_industry_id라는 실제 FK를 갖고 있으므로 industry_id로 직접
+  // 조회한다 — chainDirection의 LLM 제안(relatedIndustries)은 신규 큐레이션
+  // 후보를 사람에게 보여주는 용도로만 남기고, 정량 앵커 산출에는 쓰지 않는다.
   const demandRefs: Array<{ name: string; total: number | null; cagr: number | null }> = [];
-  for (const r of chainDirection.relatedIndustries) {
-    if (!/전방/.test(r.relation)) continue;
-    const m2 = db
-      .query("SELECT id FROM md_industry WHERE name_ko = ? LIMIT 1")
-      .get(r.name) as { id: string } | undefined;
-    if (!m2) continue;
+  for (const c of curatedForwardDemand) {
     const pv = db
       .query(
         `SELECT v.payload FROM market_sizing_version v
@@ -311,14 +347,14 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
          WHERE a.industry_id = ? AND a.status = 'completed'
          ORDER BY v.version_no DESC LIMIT 1`,
       )
-      .get(m2.id) as { payload: string } | null;
+      .get(c.related_industry_id) as { payload: string } | null;
     if (!pv) continue;
     try {
       const mx = (JSON.parse(pv.payload) as { matrix?: { anchor?: { total?: number }; cagrBase?: Record<string, Record<string, number>> } }).matrix;
       const total = mx?.anchor?.total ?? null;
       const cells = mx?.cagrBase ? Object.values(mx.cagrBase).flatMap((o) => Object.values(o)).filter((n) => typeof n === "number" && n > 0) : [];
       const cagr = cells.length > 0 ? cells.reduce((a, b) => a + b, 0) / cells.length : null;
-      demandRefs.push({ name: r.name, total, cagr });
+      demandRefs.push({ name: c.related_industry_name, total, cagr });
     } catch { /* 개별 산업 파싱 실패 — 건너뜀 */ }
   }
   const demandLine = demandRefs.length > 0
@@ -545,9 +581,15 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const researchContext = research.length
     ? research.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet}`).join("\n\n")
     : "(웹 리서치 미구성 — LLM 지식 기반)";
+  // ADR-0129 — 큐레이션된 전방/전전방 수요 산업이 있으면 프롬프트 컨텍스트로
+  // 주입해, 최소 1개 요인이 실제 수요 산업의 성장/리스크에 근거하도록 유도한다.
+  const curatedDemandContext = curatedDemandIndustries.length > 0
+    ? `\n\n[큐레이션된 수요 산업 — 사람이 확정한 데이터]\n` +
+      curatedDemandIndustries.map((c) => `- [${c.relation}] ${c.related_industry_name}`).join("\n")
+    : "";
   const qualJson = await askJson(
     industry,
-    `아래 리서치 발췌를 근거로 이 시장의 정성 분석을 수행하세요. JSON: {"opportunityFactors":["기회 요인", ...],"riskFactors":["위험 요인", ...]}. 각 3~5개 한 문장씩, 발췌에 근거가 있으면 그 출처 번호([n])를 문장 끝에 붙이세요.\n\n리서치 발췌:\n${researchContext}`,
+    `아래 리서치 발췌를 근거로 이 시장의 정성 분석을 수행하세요. JSON: {"opportunityFactors":["기회 요인", ...],"riskFactors":["위험 요인", ...]}. 각 3~5개 한 문장씩, 발췌에 근거가 있으면 그 출처 번호([n])를 문장 끝에 붙이세요.${curatedForwardDemand.length > 0 ? " 기회 요인 또는 위험 요인 중 최소 1개는 아래 [큐레이션된 수요 산업] 목록에 있는 실제 산업명을 명시하며 그 산업의 성장/위축이 이 시장에 미치는 영향으로 서술하세요." : ""}\n\n리서치 발췌:\n${researchContext}${curatedDemandContext}`,
   );
   const listOf = (v: unknown, fallback: string[]): string[] => {
     const arr = Array.isArray(v) ? v : [];
@@ -573,7 +615,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     : "(웹 리서치 미구성 — LLM 지식 기반)";
   const dpJson = await askJson(
     industry,
-    `아래 리서치 발췌를 근거로 이 산업의 수요 파이프라인(향후 착공·발주·도입이 예정된 개별 프로젝트/수주)을 조사하세요. JSON: {"projects":[{"project":"프로젝트명(발주처 포함)","tier":1,"status":"현재 상태 한 문장","codTarget":"완료/도입 목표 연도(있으면)","sourceUrl":"발췌의 URL"}]}. tier는 신뢰도: 1=실착공·계약 확정, 2=최종 승인·선계약, 3=입찰·제안 단계, 4=비구속 MOU·초기 검토. 4~10개, tier 내림차순(확실한 것부터). 리서치 발췌에 없는 프로젝트는 LLM 지식으로 넣되 sourceUrl은 생략.\n\n리서치 발췌:\n${pipelineContext}`,
+    `아래 리서치 발췌를 근거로 이 산업의 수요 파이프라인(향후 착공·발주·도입이 예정된 개별 프로젝트/수주)을 조사하세요. JSON: {"projects":[{"project":"프로젝트명(발주처 포함)","tier":1,"status":"현재 상태 한 문장","codTarget":"완료/도입 목표 연도(있으면)","sourceUrl":"발췌의 URL","relatedDemandIndustry":"이 프로젝트가 속한 수요 산업명(아래 큐레이션 목록에 있으면 그 명칭 그대로, 없거나 불명확하면 생략)"}]}. tier는 신뢰도: 1=실착공·계약 확정, 2=최종 승인·선계약, 3=입찰·제안 단계, 4=비구속 MOU·초기 검토. 4~10개, tier 내림차순(확실한 것부터). 리서치 발췌에 없는 프로젝트는 LLM 지식으로 넣되 sourceUrl은 생략.\n\n리서치 발췌:\n${pipelineContext}${curatedDemandContext}`,
   );
   const demandPipeline: SizingMatrix["demandPipeline"] | undefined = dpJson?.projects && Array.isArray(dpJson.projects) && dpJson.projects.length
     ? (dpJson.projects as Array<Record<string, unknown>>).slice(0, 12).map((p) => ({
@@ -582,6 +624,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
         status: str(p.status, "상태 미확인 — 검증 전"),
         codTarget: str(p.codTarget) || undefined,
         sourceUrl: str(p.sourceUrl) || undefined,
+        relatedDemandIndustry: str(p.relatedDemandIndustry) || undefined,
       }))
     : undefined;
 
@@ -595,7 +638,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     : "(웹 리서치 미구성 — LLM 지식 기반)";
   const regJson = await askJson(
     industry,
-    `아래 리서치 발췌를 근거로 이 산업의 주요 관할권별(예: 한국/미국/EU/일본/중국 중 해당하는 곳) 규제·인허가 상태를 비교하세요. JSON: {"items":[{"jurisdiction":"국가/권역","item":"규제·인허가 항목","status":"현황 한 문장","confirmedDirectly":false,"sourceUrl":"리서치 발췌의 URL(있으면)"}]}. 4~8개. confirmedDirectly는 법령·공식 문서 원문을 직접 확인한 경우에만 true(리서치 발췌 기반이면 대부분 false로 두고, 법령 문서 URL이면 true).\n\n리서치 발췌:\n${regContext}`,
+    `아래 리서치 발췌를 근거로 이 산업의 주요 관할권별(예: 한국/미국/EU/일본/중국 중 해당하는 곳) 규제·인허가 상태를 비교하세요. JSON: {"items":[{"jurisdiction":"국가/권역","item":"규제·인허가 항목","status":"현황 한 문장","confirmedDirectly":false,"sourceUrl":"리서치 발췌의 URL(있으면)"}]}. 4~8개. confirmedDirectly는 법령·공식 문서 원문을 직접 확인한 경우에만 true(리서치 발췌 기반이면 대부분 false로 두고, 법령 문서 URL이면 true).${curatedForwardDemand.length > 0 ? " 가능하면 최소 1개 항목은 아래 [큐레이션된 수요 산업] 목록의 산업에 영향을 미치는 규제 변화가 그 산업의 활동을 통해 이 시장의 파생 수요(derived demand)에 간접적으로 영향을 줄 가능성을 status에 언급하세요." : ""}\n\n리서치 발췌:\n${regContext}${curatedDemandContext}`,
   );
   const regulatoryComparison: SizingMatrix["regulatoryComparison"] | undefined =
     regJson?.items && Array.isArray(regJson.items) && regJson.items.length

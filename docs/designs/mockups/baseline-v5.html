@@ -99,6 +99,47 @@
   .kpi .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .kpi .l { font-size: 12px; color: var(--muted-fg); }
 
+  /* 기회 퍼널 보드 — 단계별 칸반 (S2 재설계) */
+  .view-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-left: auto; }
+  .view-toggle button { border: none; background: var(--surface); padding: 5px 12px; font-size: 12px; cursor: pointer; color: var(--muted-fg); }
+  .view-toggle button.active { background: var(--primary-bg); color: var(--primary); font-weight: 600; }
+  .view-toggle button:not(:last-child) { border-right: 1px solid var(--border); }
+  /* S2 기회 퍼널 보드 전용 — 딜 보드 화면의 .funnel-col/.funnel-card와
+     이름이 겹치지 않도록 s2- 접두사로 분리한다 (다른 화면 오염 방지). */
+  .s2-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: start; }
+  .s2-col { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; min-height: 60px; display: flex; flex-direction: column; max-height: 560px; }
+  .s2-col-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding: 0 2px; flex: 0 0 auto; }
+  .s2-col-head .name { font-size: 12.5px; font-weight: 700; }
+  .s2-col-head .count { font-size: 11px; color: var(--muted-fg); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; font-variant-numeric: tabular-nums; }
+  .s2-col-sort { flex: 0 0 auto; margin-bottom: 8px; }
+  .s2-col-sort select { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; font-size: 11px; background: var(--surface); color: var(--muted-fg); }
+  .s2-col.excluded { opacity: .82; }
+  .s2-col-cards { overflow-y: auto; flex: 1 1 auto; margin: 0 -4px; padding: 0 4px; }
+  .s2-col-cards::-webkit-scrollbar { width: 6px; }
+  .s2-col-cards::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .s2-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 11px; margin-bottom: 8px; cursor: pointer; transition: box-shadow .12s, border-color .12s; }
+  .s2-card:last-child { margin-bottom: 0; }
+  .s2-card:hover { box-shadow: 0 2px 8px rgba(20,30,60,.08); border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); }
+  .s2-card .name { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+  .s2-card .sub { font-size: 11px; color: var(--muted-fg); margin-bottom: 8px; }
+  .s2-card .metrics { display: flex; gap: 12px; margin-bottom: 8px; }
+  .s2-card .metric .v { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .s2-card .metric .l { font-size: 10px; color: var(--muted-fg); }
+  .s2-card .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .s2-card .actions { display: flex; gap: 6px; }
+  .s2-card .actions .btn { flex: 1; text-align: center; }
+  .s2-empty { font-size: 12px; color: var(--muted-fg); text-align: center; padding: 14px 4px; border: 1px dashed var(--border); border-radius: 8px; }
+  .s2-col-more { flex: 0 0 auto; width: 100%; margin-top: 4px; }
+  /* 압축 보기 — 안건이 많을 때 카드를 한 줄 행으로 축소 (밀도 토글) */
+  .s2-board.compact .s2-card { padding: 7px 9px; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+  .s2-board.compact .s2-card .name { font-size: 12px; margin-bottom: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .s2-board.compact .s2-card .sub, .s2-board.compact .s2-card .chips { display: none; }
+  .s2-board.compact .s2-card .metrics { margin-bottom: 0; gap: 8px; flex: 0 0 auto; }
+  .s2-board.compact .s2-card .metric { display: flex; align-items: baseline; gap: 3px; }
+  .s2-board.compact .s2-card .metric .l { display: none; }
+  .s2-board.compact .s2-card .actions { flex: 0 0 auto; }
+  .s2-board.compact .s2-card .actions .btn { flex: 0 0 auto; }
+
   .form-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
   .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
   .field input, .field select, .field textarea { border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit; background: var(--surface); }
@@ -714,8 +755,165 @@
       <div class="kpi"><div class="v">1</div><div class="l">선별 (selected)</div></div>
     </div>
     <div class="card">
-      <h2>기회 퍼널 <span class="note" style="font-weight:400">— 행당 대표 액션 1개 + 상세 메뉴 (ADR-0119)</span></h2>
-      <table aria-label="기회 퍼널">
+      <h2 style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">기회 퍼널 <span class="note" style="font-weight:400">— 단계별 칸반, 열마다 높이 고정 + 내부 스크롤 (안건 수와 무관하게 4열 정렬 유지, ADR-0119)</span>
+        <span style="display:flex;gap:8px;margin-left:auto">
+          <span class="view-toggle">
+            <button class="active" onclick="s2Density('normal', this)">기본</button>
+            <button onclick="s2Density('compact', this)">압축</button>
+          </span>
+          <span class="view-toggle">
+            <button class="active" onclick="s2View('board', this)">퍼널 보드</button>
+            <button onclick="s2View('list', this)">목록</button>
+          </span>
+        </span>
+      </h2>
+
+      <!-- 기본 뷰: 단계별 칸반 보드 — 각 열이 상태 1개, 카드가 기회 1건. 열 높이를
+           고정하고 내부 스크롤을 둬서 안건이 수십 건으로 늘어도 4열 레이아웃이
+           무너지지 않는다. 열마다 정렬 기준을 따로 둬 스크롤 없이도 우선순위가
+           높은 안건이 먼저 보이게 한다 (발굴 열에 12건을 넣어 시뮬레이션). -->
+      <div class="s2-board" id="s2-board-view">
+        <div class="s2-col">
+          <div class="s2-col-head"><span class="name">발굴 identified</span><span class="count">12</span></div>
+          <div class="s2-col-sort"><select><option>매력도 높은순</option><option>등록 최신순</option><option>위험 요인 많은순</option></select></div>
+          <div class="s2-col-cards">
+            <div class="s2-card">
+              <div class="name">humanoid 유지보수 서비스</div>
+              <div class="sub">시스템 통합 · 하류</div>
+              <div class="metrics"><div class="metric"><div class="v">82</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip green">기회 4</span><span class="chip red">위험 2</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">로봇 관절 액추에이터 유지보수</div>
+              <div class="sub">구동계 · 하류</div>
+              <div class="metrics"><div class="metric"><div class="v">74</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip green">기회 2</span><span class="chip red">위험 1</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">엣지 AI 비전 모듈 공급</div>
+              <div class="sub">센서·인식 · 중류</div>
+              <div class="metrics"><div class="metric"><div class="v">69</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip green">기회 3</span><span class="chip red">위험 3</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">배터리 팩 재제조 서비스</div>
+              <div class="sub">전원계 · 하류</div>
+              <div class="metrics"><div class="metric"><div class="v">61</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip amber">기회 1</span><span class="chip red">위험 2</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">감속기 정밀 가공 위탁</div>
+              <div class="sub">구동계 · 상류</div>
+              <div class="metrics"><div class="metric"><div class="v">58</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip amber">기회 1</span><span class="chip red">위험 1</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">촉각 센서 모듈 라이선싱</div>
+              <div class="sub">센서·인식 · 상류</div>
+              <div class="metrics"><div class="metric"><div class="v">55</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip amber">기회 2</span><span class="chip red">위험 2</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">협동로봇 임대(RaaS) 서비스</div>
+              <div class="sub">시스템 통합 · 하류</div>
+              <div class="metrics"><div class="metric"><div class="v">53</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip amber">기회 1</span><span class="chip red">위험 3</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">배선·하네스 자동화 부품</div>
+              <div class="sub">전장 · 상류</div>
+              <div class="metrics"><div class="metric"><div class="v">49</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip gray">기회 0</span><span class="chip red">위험 2</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">클라우드 원격 진단 플랫폼</div>
+              <div class="sub">시스템 통합 · 중류</div>
+              <div class="metrics"><div class="metric"><div class="v">47</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip gray">기회 1</span><span class="chip red">위험 1</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">경량 소재 부품 대체 공급</div>
+              <div class="sub">전원계 · 상류</div>
+              <div class="metrics"><div class="metric"><div class="v">44</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip gray">기회 1</span><span class="chip red">위험 2</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">중고 로봇 인증·리퍼브</div>
+              <div class="sub">시스템 통합 · 하류</div>
+              <div class="metrics"><div class="metric"><div class="v">41</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip gray">기회 1</span><span class="chip red">위험 3</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">필드 데이터 라벨링 아웃소싱</div>
+              <div class="sub">센서·인식 · 중류</div>
+              <div class="metrics"><div class="metric"><div class="v">36</div><div class="l">매력도</div></div><div class="metric"><div class="v">—</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip gray">기회 0</span><span class="chip red">위험 1</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm">평가로 이동</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="s2-col">
+          <div class="s2-col-head"><span class="name">평가 assessed</span><span class="count">2</span></div>
+          <div class="s2-col-sort"><select><option>매력도 높은순</option><option>등록 최신순</option><option>위험 요인 많은순</option></select></div>
+          <div class="s2-col-cards">
+            <div class="s2-card">
+              <div class="name">동력전달계 정밀부품 공급</div>
+              <div class="sub">구동계 · 상류</div>
+              <div class="metrics"><div class="metric"><div class="v">71</div><div class="l">매력도</div></div><div class="metric"><div class="v">58</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip green">기회 3</span><span class="chip red">위험 2</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm" onclick="go('s3')">S3 적합성 평가</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+            <div class="s2-card">
+              <div class="name">협동로봇 안전인증 대행</div>
+              <div class="sub">인증·규제 · 중류</div>
+              <div class="metrics"><div class="metric"><div class="v">65</div><div class="l">매력도</div></div><div class="metric"><div class="v">44</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip amber">기회 2</span><span class="chip red">위험 2</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm" onclick="go('s3')">S3 적합성 평가</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="s2-col">
+          <div class="s2-col-head"><span class="name">선별 selected</span><span class="count">1</span></div>
+          <div class="s2-col-sort"><select><option>매력도 높은순</option><option>등록 최신순</option></select></div>
+          <div class="s2-col-cards">
+            <div class="s2-card">
+              <div class="name">로봇 펌웨어 OTA 플랫폼</div>
+              <div class="sub">시스템 통합 · 중류</div>
+              <div class="metrics"><div class="metric"><div class="v">88</div><div class="l">매력도</div></div><div class="metric"><div class="v">76</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip green">기회 5</span><span class="chip red">위험 1</span></div>
+              <div class="actions"><button class="btn btn-primary btn-sm" onclick="go('s4')">S4 평가 진행</button><button class="btn btn-sm" style="flex:0">⋯</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="s2-col excluded">
+          <div class="s2-col-head"><span class="name">제외 excluded</span><span class="count">1</span></div>
+          <div class="s2-col-sort"><select><option>최근 제외순</option></select></div>
+          <div class="s2-col-cards">
+            <div class="s2-card" style="opacity:.7">
+              <div class="name">범용 서보모터 유통</div>
+              <div class="sub">구동계 · 상류</div>
+              <div class="metrics"><div class="metric"><div class="v">38</div><div class="l">매력도</div></div><div class="metric"><div class="v">21</div><div class="l">시너지</div></div></div>
+              <div class="chips"><span class="chip gray">시너지 부족</span></div>
+              <div class="actions"><button class="btn btn-sm" style="flex:1">사유 보기</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note" style="margin:8px 0 0">발굴 열처럼 12건 이상 쌓여도 열 높이는 고정되고(최대 560px) 내부 스크롤만 늘어난다 — 다른 열과 나란히 비교 가능. 열 상단 정렬 기준으로 우선순위 높은 안건을 스크롤 없이 먼저 노출. "압축" 보기는 카드를 한 줄 행으로 줄여 화면당 노출 건수를 3~4배로 늘린다.</p>
+
+      <!-- 대안 뷰: 기존 플랫 테이블 (비교용으로 유지, 확정 전까지 토글로 남겨둠) -->
+      <table aria-label="기회 퍼널 (목록)" id="s2-list-view" style="display:none">
         <thead><tr><th>기회</th><th>상태</th><th class="num">매력도</th><th class="num">시너지</th><th>요인</th><th>다음 단계</th><th></th></tr></thead>
         <tbody>
           <tr>
@@ -736,9 +934,22 @@
           </tr>
         </tbody>
       </table>
-      <p class="note" style="margin-bottom:0">행 클릭 확대 패널: 기회/위험 요인(자동 도출·수동 추가·삭제), 시너지 분석·적합성 평가 실행(S3), 매력도 LLM 초안, 비즈니스 모델 스케치.</p>
+      <p class="note" style="margin-bottom:0">카드/행 클릭 확대 패널: 기회/위험 요인(자동 도출·수동 추가·삭제), 시너지 분석·적합성 평가 실행(S3), 매력도 LLM 초안, 비즈니스 모델 스케치.</p>
     </div>
   </section>
+  <script>
+    function s2View(view, btn) {
+      document.getElementById('s2-board-view').style.display = view === 'board' ? 'grid' : 'none';
+      document.getElementById('s2-list-view').style.display = view === 'list' ? 'table' : 'none';
+      btn.parentElement.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    }
+    function s2Density(mode, btn) {
+      document.getElementById('s2-board-view').classList.toggle('compact', mode === 'compact');
+      btn.parentElement.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    }
+  </script>
 
   <!-- ═══════ 10 S3 시너지 ═══════ -->
   <section class="screen" id="s3">

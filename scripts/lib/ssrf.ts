@@ -25,7 +25,7 @@
  * instead (verified empirically: fetch()'s `dns` init option is silently
  * ignored, while http(s).request()'s `lookup` option is honored).
  *
- * @version 1.1.1
+ * @version 1.1.2
  * @security Production hardening — TOCTOU DNS rebinding mitigation
  */
 
@@ -181,10 +181,8 @@ export async function fetchPinned(
       family: net.isIPv6(address) ? 6 : 4,
     }));
     if ((options as dns.LookupOneOptions)?.all) {
-      // @ts-expect-error — Node's LookupFunction overload for all:true
       callback(null, results);
     } else {
-      // @ts-expect-error — Node's LookupFunction overload for all:false (default)
       callback(null, results[0].address, results[0].family);
     }
   };

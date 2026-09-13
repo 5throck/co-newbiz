@@ -9,7 +9,15 @@ import { badRequest, forbidden, ok } from "../../../../lib/envelope.ts";
 import { completeOrFallback } from "../../../../lib/llm.ts";
 import { isWebResearchConfigured, researchSources } from "../../../../lib/web-research.ts";
 
-interface Candidate { name_ko: string; industry_id: string | null; relation: string; note: string | null; source: "link" | "analysis" | "proxy" }
+interface Candidate {
+  name_ko: string; industry_id: string | null; relation: string; note: string | null; source: "link" | "analysis" | "proxy";
+  // ADR-0129 — source:"link" 후보에 한해 채워진다. proxy_link.source(사람이
+  // 등록했는지/승인했는지)와 proxy_link.status(활성/은퇴)를 UI가 구분할 수
+  // 있게 한다. 기존 discriminator(candidate.source: link/analysis/proxy)와
+  // 이름 충돌을 피하기 위해 별도 필드명을 쓴다.
+  linkSource?: string;
+  linkStatus?: string;
+}
 const norm = (s: string) => s.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").replace(/\s+/g, "").replace(/산업$/, "");
 
 function loadStoredCandidates(industry: { id: string; name_ko: string } | null): Candidate[] {
@@ -18,17 +26,22 @@ function loadStoredCandidates(industry: { id: string; name_ko: string } | null):
   const candidates: Candidate[] = [];
   const seen = new Set<string>([norm(industry.name_ko)]);
 
-  // (1) 가치사슬 연계 — 이미 승인된 링크의 상대 산업
+  // (1) 가치사슬 연계 — 이미 승인·태깅된 링크의 상대 산업만. relation이
+  // NULL인 레거시 미태깅 행(ADR-0126 시절 등록, ADR-0129 검토 큐 대상)은
+  // 사람이 아직 전방/전전방/후방/후후방 중 하나로 확인하지 않은 상태이므로
+  // 여기 포함시키면 안 된다 — 포함시키면 재분석 모달이 이를 "이미 등록된
+  // 연계"로 오인해 강제 잠금(locked) 처리해버린다(레거시 검토 전 자동 확정
+  // 방지, 산업 상세 화면의 레거시 검토 큐에서만 다뤄야 한다).
   const links = db
     .query(
-      `SELECT i.name_ko,
-              CASE WHEN pl.to_industry_id = ? THEN 'upstream' ELSE 'downstream' END AS direction,
-              pl.evidence_ref
+      `SELECT i.name_ko, pl.evidence_ref, pl.relation, pl.source AS link_source, pl.status AS link_status
        FROM proxy_link pl
        JOIN md_industry i ON i.id = CASE WHEN pl.to_industry_id = ? THEN pl.from_industry_id ELSE pl.to_industry_id END
-       WHERE pl.from_industry_id = ? OR pl.to_industry_id = ?`,
+       WHERE (pl.from_industry_id = ? OR pl.to_industry_id = ?) AND pl.status = 'active' AND pl.relation IS NOT NULL`,
     )
-    .all(industry.id, industry.id, industry.id, industry.id) as Array<{ name_ko: string; direction: "upstream" | "downstream"; evidence_ref: string }>;
+    .all(industry.id, industry.id, industry.id) as Array<{
+    name_ko: string; evidence_ref: string; relation: string; link_source: string; link_status: string;
+  }>;
   for (const l of links) {
     const key = norm(l.name_ko);
     if (!key || seen.has(key)) continue;
@@ -36,9 +49,11 @@ function loadStoredCandidates(industry: { id: string; name_ko: string } | null):
     candidates.push({
       name_ko: l.name_ko,
       industry_id: (db.query("SELECT id FROM md_industry WHERE name_ko = ?").get(l.name_ko) as { id: string } | null)?.id ?? null,
-      relation: l.direction === "upstream" ? "후방" : "전방",
+      relation: l.relation,
       note: l.evidence_ref,
       source: "link",
+      linkSource: l.link_source,
+      linkStatus: l.link_status,
     });
   }
 
