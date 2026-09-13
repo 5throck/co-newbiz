@@ -41,8 +41,9 @@ interface IndustryRow {
   ksic_code: string | null; driver_count: number; analysis: AnalysisInfo | null;
 }
 interface DriverRow { id: string; code: string; label_ko: string; description: string; }
+interface IndustryLink { from_industry_id: string; to_industry_id: string; relation: string }
 interface MarketOverview {
-  industries: IndustryRow[]; drivers: DriverRow[];
+  industries: IndustryRow[]; drivers: DriverRow[]; industryLinks?: IndustryLink[];
   stats: { value_chain_links: number; proxy_links: number; series_count: number; observation_count: number };
 }
 interface DriverSensitivity { driver_label: string; sensitivity: number; lag_months: number | null; region_code: string | null; segment_code: string | null }
@@ -494,39 +495,82 @@ export function MarketView() {
   }, [overview, query, statusFilter, buckets]);
 
   // 관계별 그룹핑 — 본 산업(anchor) 아래에 전전방/전방/후방/후후방으로 딸린
-  // 산업을 들여쓰기해 묶어 보여준다. 데이터는 이미 있던 것(연계 큐 등록 시
-  // 기록되는 analysis.after_analysis_id/linked_relation, ADR-0130)을 그대로
-  // 쓴다 — 새 스키마 없이 렌더링만 바꾼다. 상태 우선순위 정렬(실패→진행중→
-  // 갱신필요→완료→대기)은 "본 산업"(그룹의 대표 행) 기준으로는 그대로 유지되고,
-  // 딸린 산업은 자신의 개별 상태와 무관하게 본 산업 바로 아래 묶여서 표시된다.
+  // 산업을 묶어 보여준다. 두 가지 서로 다른 등록 경로 모두를 근거로 쓴다:
+  //   (1) 연계 큐 등록 시 기록되는 analysis.after_analysis_id/linked_relation
+  //       (ADR-0130 — "연계 산업 이어서 분석"으로 등록된 경우)
+  //   (2) "가치사슬 연계" 화면에서 사람이 직접 등록한 proxy_link.relation
+  //       (ADR-0129 — 이미 각자 분석이 끝난 산업을 사후에 연결한 경우.
+  //       2026-09-14 사용자 리포트 — 연료전지↔수소 충전소 구축 서비스업을
+  //       이 경로로 연결했는데 (1)만 보던 그룹핑에 반영되지 않았음)
+  // relation은 항상 "전방/전전방이면 from이 앵커, 후방/후후방이면 to가 앵커"
+  // 규약으로 저장된다(chain-links/route.ts). 새 스키마 없이 렌더링만 바꾼다.
   const RELATION_ORDER: Record<string, number> = { "전전방": 0, "전방": 1, "후방": 2, "후후방": 3 };
-  const flatRows = useMemo(() => {
+  const industryGroups = useMemo(() => {
     const byAnalysisId = new Map<string, IndustryRow>();
-    for (const ind of visibleIndustries) if (ind.analysis) byAnalysisId.set(ind.analysis.id, ind);
+    const byIndustryId = new Map<string, IndustryRow>();
+    for (const ind of visibleIndustries) {
+      byIndustryId.set(ind.id, ind);
+      if (ind.analysis) byAnalysisId.set(ind.analysis.id, ind);
+    }
     const childIds = new Set<string>();
     const childrenByRootId = new Map<string, Array<{ ind: IndustryRow; relation: string }>>();
+    const addChild = (rootId: string, childInd: IndustryRow, relation: string) => {
+      if (rootId === childInd.id) return;
+      childIds.add(childInd.id);
+      const list = childrenByRootId.get(rootId) ?? [];
+      if (!list.some((c) => c.ind.id === childInd.id)) list.push({ ind: childInd, relation });
+      childrenByRootId.set(rootId, list);
+    };
+    // (1) 연계 큐 경로
     for (const ind of visibleIndustries) {
       const rel = ind.analysis?.linked_relation;
       const afterId = ind.analysis?.after_analysis_id;
       if (!rel || !afterId) continue;
       const root = byAnalysisId.get(afterId);
-      if (!root || root.id === ind.id) continue;
-      childIds.add(ind.id);
-      const list = childrenByRootId.get(root.id) ?? [];
-      list.push({ ind, relation: rel });
-      childrenByRootId.set(root.id, list);
+      if (root) addChild(root.id, ind, rel);
+    }
+    // (2) 가치사슬 연계(proxy_link) 경로 — 전방/전전방은 from이 앵커, 후방/후후방은 to가 앵커.
+    for (const link of overview?.industryLinks ?? []) {
+      const isDownstream = link.relation === "전방" || link.relation === "전전방";
+      const rootId = isDownstream ? link.from_industry_id : link.to_industry_id;
+      const childId = isDownstream ? link.to_industry_id : link.from_industry_id;
+      const root = byIndustryId.get(rootId);
+      const child = byIndustryId.get(childId);
+      if (root && child) addChild(root.id, child, link.relation);
     }
     for (const list of childrenByRootId.values()) {
       list.sort((a, b) => (RELATION_ORDER[a.relation] ?? 9) - (RELATION_ORDER[b.relation] ?? 9));
     }
-    const rows: Array<{ ind: IndustryRow; relation: string | null }> = [];
+    const groups: Array<{ ind: IndustryRow; children: Array<{ ind: IndustryRow; relation: string }> }> = [];
     for (const ind of visibleIndustries) {
       if (childIds.has(ind.id)) continue;
-      rows.push({ ind, relation: null });
-      for (const child of childrenByRootId.get(ind.id) ?? []) rows.push({ ind: child.ind, relation: child.relation });
+      groups.push({ ind, children: childrenByRootId.get(ind.id) ?? [] });
+    }
+    return groups;
+  }, [visibleIndustries, overview?.industryLinks]);
+
+  // 스케폴드(접기/펼치기) — 연계 산업이 있는 본 산업은 기본 접힘 상태로
+  // 시작해, 목록이 길어져도 한눈에 훑어볼 수 있게 한다.
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = (rootId: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(rootId)) next.delete(rootId); else next.add(rootId);
+      return next;
+    });
+  };
+  const flatRows = useMemo(() => {
+    const rows: Array<{ ind: IndustryRow; relation: string | null; childCount: number; expanded: boolean; onToggle: (() => void) | null }> = [];
+    for (const g of industryGroups) {
+      const hasChildren = g.children.length > 0;
+      const expanded = hasChildren && expandedGroups.has(g.ind.id);
+      rows.push({ ind: g.ind, relation: null, childCount: g.children.length, expanded, onToggle: hasChildren ? () => toggleGroup(g.ind.id) : null });
+      if (expanded) {
+        for (const child of g.children) rows.push({ ind: child.ind, relation: child.relation, childCount: 0, expanded: false, onToggle: null });
+      }
     }
     return rows;
-  }, [visibleIndustries]);
+  }, [industryGroups, expandedGroups]);
 
   const statusCounts = useMemo(() => {
     const counts = { all: 0, in_progress: 0, completed: 0, stale: 0, pending: 0, failed: 0 };
@@ -699,7 +743,7 @@ export function MarketView() {
               </tr>
             </thead>
             <tbody>
-              {flatRows.map(({ ind, relation }) => {
+              {flatRows.map(({ ind, relation, childCount, expanded, onToggle }) => {
                 const a = ind.analysis;
                 const inProgress = a?.status === "in_progress";
                 // 큐 위치 표기(UX-4) — 같은 앵커의 대기열에서 몇 번째인지 칩 본문에 노출.
@@ -736,6 +780,17 @@ export function MarketView() {
                               <span className={`status-chip ${relation === "전방" || relation === "전전방" ? "status-in-progress" : "status-amber"}`}>{relation}</span>
                             </>
                           )}
+                          {onToggle && (
+                            <button
+                              type="button"
+                              className="text-[color:var(--muted-fg)] hover:text-[color:var(--fg)]"
+                              title={expanded ? "연계 산업 접기" : "연계 산업 펼치기"}
+                              aria-expanded={expanded}
+                              onClick={onToggle}
+                            >
+                              {expanded ? "▾" : "▸"}
+                            </button>
+                          )}
                           <button
                             type="button"
                             className={relation ? "text-left underline-offset-2 hover:underline" : "font-semibold text-left underline-offset-2 hover:underline"}
@@ -744,6 +799,16 @@ export function MarketView() {
                           >
                             {ind.name_ko}
                           </button>
+                          {childCount > 0 && (
+                            <button
+                              type="button"
+                              className="status-chip status-not-started"
+                              title={expanded ? "연계 산업 접기" : "연계 산업 펼치기"}
+                              onClick={onToggle ?? undefined}
+                            >
+                              연계 {childCount}건
+                            </button>
+                          )}
                         </span>
                       )}
                     </td>
