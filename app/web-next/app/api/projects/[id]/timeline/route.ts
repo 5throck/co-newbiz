@@ -33,14 +33,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   };
   const m: Record<string, string | null> = {
     S2: opp ? milestone("SELECT MIN(created_at) AS d FROM opportunity WHERE id = ?", opp) : null,
-    S3: opp ? milestone("SELECT MAX(updated_at) AS d FROM opportunity WHERE id = ? AND synergy_score IS NOT NULL", opp) : null,
+    S3: opp ? milestone("SELECT MAX(completed_at) AS d FROM synergy_analysis WHERE opportunity_id = ? AND status = 'completed'", opp) : null,
     S4: opp ? milestone("SELECT MIN(decided_at) AS d FROM route_decision WHERE opportunity_id = ?", opp) : null,
     S5: opp ? milestone("SELECT MIN(created_at) AS d FROM greenfield_assessment WHERE opportunity_id = ?", opp) : null,
     S6: opp ? milestone("SELECT MIN(created_at) AS d FROM brownfield_target WHERE opportunity_id = ?", opp) : null,
     S7: opp ? milestone("SELECT MIN(updated_at) AS d FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'", opp) : null,
     S8: milestone("SELECT MIN(created_at) AS d FROM business_case_model WHERE project_id = ?", id),
     S9: milestone("SELECT MIN(assessed_at) AS d FROM project_checklist_item_state WHERE project_id = ? AND status != 'pending'", id),
-    S10: milestone("SELECT MIN(created_at) AS d FROM deal_structure_hypothesis WHERE project_id = ?", id),
+    S10: milestone("SELECT MIN(hypothesized_at) AS d FROM deal_structure_hypothesis WHERE project_id = ?", id),
     S11: milestone("SELECT MIN(decided_at) AS d FROM gate_decision WHERE entity_type = 'project' AND entity_id = ?", id),
     S12: milestone("SELECT MAX(observed_at) AS d FROM venture_scorecard WHERE project_id = ?", id),
   };
