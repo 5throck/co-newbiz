@@ -667,6 +667,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0130",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent-lifecycle-manager",
       "type": "skill",
       "layer": "L3"
@@ -753,6 +758,11 @@
     },
     {
       "id": "commercial-due-diligence",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "committee-deliberation",
       "type": "skill",
       "layer": "L3"
     },
@@ -3134,6 +3144,12 @@
         "field": "relates_to",
         "index": 0
       }
+    },
+    {
+      "type": "references",
+      "from": "committee-deliberation",
+      "to": "stage-gate-governance",
+      "source": "prose"
     },
     {
       "type": "follows",
@@ -8120,7 +8136,19 @@
     {
       "type": "references",
       "from": "meeting",
+      "to": "committee-deliberation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "meeting",
       "to": "meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "meeting-facilitation",
+      "to": "committee-deliberation",
       "source": "prose"
     },
     {

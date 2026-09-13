@@ -18,6 +18,7 @@ import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { forbidden, badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import type { SizingMatrix } from "../../../../../../lib/market-sizing.ts";
+import { releaseQueueNext } from "../../../../../../lib/market-sizing-pipeline.ts";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -151,6 +152,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   })();
 
   appendAudit(db, { actor: ctx.userId, action: "market_sizing_analysis.seed", target: `${id}:v${nextVersionNo}`, now });
+
+  // 완료 훅 — 이 분석을 앵커로 대기 중인 연계 분석이 있으면 직렬 큐에서 시작.
+  releaseQueueNext(db, id);
 
   return ok({ analysis_id: id, version_no: nextVersionNo, version_id: versionId }, 201, { seeded: true });
 }

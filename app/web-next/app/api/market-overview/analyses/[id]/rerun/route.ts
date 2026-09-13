@@ -5,7 +5,7 @@ import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
-import { runSizingPipeline } from "../../../../../../lib/market-sizing-pipeline.ts";
+import { runSizingPipeline, cancelPendingDependents } from "../../../../../../lib/market-sizing-pipeline.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -16,17 +16,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const db = getDb();
 
   const analysis = db
-    .query("SELECT id, status, industry_id FROM market_sizing_analysis WHERE id = ?")
-    .get(id) as { id: string; status: string; industry_id: string } | null;
+    .query("SELECT id, status, industry_id, after_analysis_id FROM market_sizing_analysis WHERE id = ?")
+    .get(id) as { id: string; status: string; industry_id: string; after_analysis_id: string | null } | null;
   if (!analysis) return notFound();
   if (analysis.status === "in_progress") {
     return ok({ analysis_id: id, status: "in_progress", reused: true }, 200, { alreadyRunning: true });
   }
+  if (analysis.status === "pending") {
+    // 대기 중인 연계 분석을 rerun으로 띄워넘을 수 없다 — 앵커 완료 후 직렬 시작이 계약이다.
+    return ok({ analysis_id: id, status: "pending", reused: true }, 200, { alreadyQueued: true });
+  }
 
   const now = new Date().toISOString();
+  // 루트 재분석 시작 시 이전 세대의 대기 연계는 모두 취소한다(백엔드 패널 P1-4 —
+  // 좀비 대기 방지). 재분석 완료 후 사용자가 모달에서 다시 선택한다.
+  cancelPendingDependents(db, id, "루트 재분석으로 대기 취소 — 재분석 완료 후 다시 선택하세요.");
   db.run(
-    "UPDATE market_sizing_analysis SET status = 'in_progress', current_step = 0, completed_at = NULL WHERE id = ?",
-    [id],
+    "UPDATE market_sizing_analysis SET status = 'in_progress', current_step = 0, completed_at = NULL, started_at = ? WHERE id = ?",
+    [now, id],
   );
   appendAudit(db, { actor: ctx.userId, action: "market_sizing_analysis.rerun", target: id, now });
 

@@ -35,7 +35,7 @@ const MODULES = [
     pricingNote: "검토/안건 규모 연동 success-fee 대비 저렴한 flat 모듈 구독",
   },
   {
-    name: "프록시 산업연쇄 추정",
+    name: "가치사슬 연계 산업 추정",
     desc: "직접 시장데이터 부재 산업의 수요 추정 체인 (신뢰등급 A/B/C). 공공 통계·업스트림 연동 자동화.",
     market: "Medium",
     license: "오픈소스 코어 + 엔터프라이즈 확장",

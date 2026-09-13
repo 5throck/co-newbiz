@@ -190,6 +190,24 @@
       "source": "manual",
       "created": "2026-09-12",
       "last_updated": "2026-09-12"
+    },
+    {
+      "id": "2026-09-13-value-chain-linkage-industry-rename-design",
+      "title": "value chain linkage industry rename design",
+      "file": "docs/designs/2026-09-13-value-chain-linkage-industry-rename-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-13",
+      "last_updated": "2026-09-13"
+    },
+    {
+      "id": "2026-09-13-value-chain-linkage-queue-design",
+      "title": "value chain linkage queue design",
+      "file": "docs/designs/2026-09-13-value-chain-linkage-queue-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-13",
+      "last_updated": "2026-09-13"
     }
   ]
 }

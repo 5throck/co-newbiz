@@ -163,9 +163,9 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `market-data-pipeline` | 1.1.0 | active | data-architect | 2026-08-20 | — | Wave A1 — ADR-0004 cache-first/revision-preserving policy implemented via source-adapter framework; `fetch` and `md:sync` CLI live with fail-closed credentials, KOSIS unit quarantine, and natural-key catalog upserts |
 | `master-data-governance` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J (design §9.3 platform group) — real `staging_unmapped` queue resolution |
 | `mcp-server-integration` | 1.0.0 | active | backend-engineer | 2026-08-20 | — | Wave 5.8J — ADR-0011 REST-only, enforced by the real bun:test DB-import scan |
-| `meeting` | 1.4.0 | active | pm | 2026-07-05 | — | — |
-| `meeting-facilitation` | 1.5.0 | active | pm | 2026-09-03 | — | — |
-| `meeting-facilitation` | 1.5.0 | active | pm | 2026-09-03 | — | — |
+| `meeting` | 1.4.1 | active | pm | 2026-09-13 | — | — |
+| `committee-deliberation` | 1.6.0 | active | pm | 2026-09-13 | — | renamed from meeting-facilitation 1.5.0 — engine-run committee deliberation (ADR-0096/0097), distinct from the common meeting-facilitation flow |
+| `meeting-facilitation` | 1.4.1 | active | pm | 2026-09-05 | — | adopted from templates/common 1.4.1 — common collaborative meeting flow; /meeting command |
 | `monte-carlo-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8G — ADR-0026 seeded, deterministic `python/monte_carlo.py` P50/P95 NPV |
 | `monte-carlo-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8G — ADR-0026 seeded, deterministic `python/monte_carlo.py` P50/P95 NPV |
 | `notification-channel-management` | 1.0.0 | active | sre | 2026-08-20 | — | Wave 5.8J — real watch_rule/notification schema, channel/bundle/severity discipline |

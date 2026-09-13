@@ -1,18 +1,16 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
- * meeting.ts — ad-hoc multi-agent deliberation (ADR-0097 §7).
+ * committee-deliberation.ts — ad-hoc committee-style deliberation CLI
+ * (ADR-0097 §7), the executable behind the committee-deliberation skill.
  *
- * The real implementation behind the /meeting command: it calls the ONE
- * deliberation engine (app/web-next/lib/agent-orchestrator.ts
- * runDeliberationRounds) with the pluggable member executor from
- * app/web-next/lib/committee-agents.ts — the same engine the steering
- * committee uses; only membership and output destination differ. The
- * transcript is written to memory/meeting-YYYY-MM-DD-[slug].md exactly as
- * the old stub always promised.
+ * It calls the dedicated deliberation engine (app/web-next/lib/deliberation.ts,
+ * runDeliberationRounds — split out of agent-orchestrator.ts) with the
+ * pluggable member executor from app/web-next/lib/committee-agents.ts.
+ * The transcript is written to memory/committee-YYYY-MM-DD-[slug].md.
  *
  * Usage:
- *   bun scripts/co-newbiz/meeting.ts "topic" [--agents a,b] [--rounds N] [--dialogue]
+ *   bun scripts/co-newbiz/committee-deliberation.ts "topic" [--agents a,b] [--rounds N] [--dialogue]
  *
  *   --agents   comma-separated member keys (default: industry-lead,region-lead,
  *              market-intelligence-agent,risk-officer — the 5-seat skeleton
@@ -28,7 +26,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getDb, resetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
-import { runDeliberationRounds, type CommitteeMember } from "../../app/web-next/lib/agent-orchestrator.ts";
+import { runDeliberationRounds, type CommitteeMember } from "../../app/web-next/lib/deliberation.ts";
 import { getCommitteeCallAgent } from "../../app/web-next/lib/committee-agents.ts";
 
 const DEFAULT_AGENTS = ["industry-lead", "region-lead", "market-intelligence-agent", "risk-officer"];
@@ -64,7 +62,7 @@ function parseArgs(argv: string[]): MeetingArgs {
   }
   const topic = positional.join(" ").trim();
   if (!topic) {
-    console.error("Usage: bun scripts/co-newbiz/meeting.ts \"topic\" [--agents a,b] [--rounds N] [--dialogue]");
+    console.error("Usage: bun scripts/co-newbiz/committee-deliberation.ts \"topic\" [--agents a,b] [--rounds N] [--dialogue]");
     process.exit(1);
   }
   return { topic, agents, rounds, dialogue };
@@ -77,13 +75,13 @@ async function main(): Promise<void> {
 
   // Scratch-local DB: the meeting record is the transcript file; the process
   // run still lands in the DB for auditability (ADR-0096 engine contract).
-  const dbPath = `db/data/meeting-${dateStr}-${slug(args.topic)}.sqlite`;
+  const dbPath = `db/data/committee-${dateStr}-${slug(args.topic)}.sqlite`;
   process.env.CO_NEWBIZ_DB_PATH = dbPath;
   resetDb();
   runMigrations(dbPath);
   // The engine addresses runs via {entityType, entityId}; a project row is
   // the cheapest legal anchor for an ad-hoc meeting (project_id FK, 0064).
-  const anchorId = `meeting-${dateStr}-${slug(args.topic)}`;
+  const anchorId = `committee-${dateStr}-${slug(args.topic)}`;
   getDb().run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [anchorId, "MEETING", now.toISOString()]);
 
   const members: CommitteeMember[] = args.agents.map((key) => ({ agentKey: key }));
@@ -137,7 +135,7 @@ async function main(): Promise<void> {
 
   const memoryDir = join(process.cwd(), "memory");
   mkdirSync(memoryDir, { recursive: true });
-  const outFile = join(memoryDir, `meeting-${dateStr}-${slug(args.topic)}.md`);
+  const outFile = join(memoryDir, `committee-${dateStr}-${slug(args.topic)}.md`);
   writeFileSync(outFile, lines.join("\n"));
   console.log(`Meeting transcript written: ${outFile}`);
   console.log(`Proposal: ${result.evaluation?.recommendation.toUpperCase() ?? "n/a"} (process_run ${result.processRunId})`);

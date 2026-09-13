@@ -8,6 +8,7 @@ import { authenticate } from "../../../../lib/auth.ts";
 import { badRequest, forbidden, ok } from "../../../../lib/envelope.ts";
 import { completeOrFallback } from "../../../../lib/llm.ts";
 import { isWebResearchConfigured, researchSources } from "../../../../lib/web-research.ts";
+import { sanitizeRelatedProposals } from "../../../../lib/value-chain-proposals.ts";
 
 interface Candidate {
   name_ko: string; industry_id: string | null; relation: string; note: string | null; source: "link" | "analysis" | "proxy";
@@ -108,13 +109,13 @@ export async function GET(request: Request) {
   return ok({ industry, candidates }, 200, { count: candidates.length });
 }
 
-// POST — 1차 프록시 산업 분석: 저장된 후보가 없을 때 LLM이 대상 산업의
+// POST — 1차 가치사슬 연계 산업 분석: 저장된 후보가 없을 때 LLM이 대상 산업의
 // 가치사슬 인접 산업을 즉석 제안한다(analysis/proxy 출처 구분). 제안일 뿐
 // 선택(모달 체크) 전까지는 산업 등록·분석이 일어나지 않는다(경계 #2).
 export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "1차 프록시 분석은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "1차 가치사슬 연계 산업 분석은 analyst 역할 이상이어야 합니다.");
   const body = (await request.json().catch(() => null)) as { name?: string } | null;
   const target = body?.name?.trim();
   if (!target) return badRequest("name_required", "산업명(name)은 필수입니다.");
@@ -135,15 +136,30 @@ export async function POST(request: Request) {
     } catch { /* 검색 실패 — LLM 선험으로 진행 */ }
   }
 
+  // 방법론 패널(2026-09-13) — 판정 관점을 프롬프트에 명시한다: 분석 대상은
+  // "이 산업에서 사업을 운영·수행하는 사업자"이며, 사업자가 조달(지불)하는
+  // 산업이 후방, 사업자의 산출물에 지불하는 수요처가 전방이다. 산업명에 행위자
+  // 유형(운용/제조/유통 등)이 있으면 그 관점을 따른다. 대체재·보완재(예: 유압식
+  // 브레이커에 대한 전기식 브레이커)는 사슬 후보가 아니라 relation:"대체"로
+  // 별도 표기한다 — 6축 연관성 분석의 대체 위협 영역(ADR-0025 경계).
+  const actorSuffix = /운용|운영/.test(target) ? "장비·설비 운용" : /제조|제작/.test(target) ? "제조" : /유통|임대|렌탈/.test(target) ? "유통·임대" : null;
+  const perspectiveRule =
+    "판정 규칙(사업자 관점): 대상 산업에서 사업을 운영하는 사업자가 조달하기 위해 지불하는 산업(원자재·부품·장비·부착 작업기·정비 서비스 등)은 relation=\"후방\", " +
+    "사업자의 산출물·서비스에 대해 지불하는 수요처는 relation=\"전방\", 그 각각의 2홉 상·하류는 후후방·전전방이다. " +
+    (actorSuffix ? `이 대상은 '${actorSuffix}' 관점의 산업이다 — 반드시 그 관점에서 판정한다. ` : "") +
+    "대체재·보완재(같은 수요를 대체하거나 함께 쓰이는 별도 장비·기술)는 relation=\"대체\"로 표기하고 사슬 후보에서 제외한다. " +
+    "note에는 누가 무엇을 조달/공급하는지 거래 방향이 드러나게 한 문장 적고, 근거 없는 판단은 '검증 필요' 주석을 남긴다. ";
+
   const res = await completeOrFallback(
     [
-      { role: "system" as const, content: "당신은 가치사슬 분석가입니다. 제공된 산업의 상류(원자재·부품 공급)와 하류(수요처) 인접 산업을 제안하세요. 근거 없는 판단은 주석으로 '검증 필요'를 남깁니다. JSON만 반환합니다." },
+      { role: "system" as const, content: "당신은 가치사슬 분석가입니다. 제공된 산업을 '사업을 운영하는 사업자' 관점에서 보고 상류(조달)와 하류(수요처) 인접 산업을 제안하세요. relation은 후방|전방|후후방|전전방|대체 중 하나입니다. JSON만 반환합니다." },
       {
         role: "user" as const,
         content:
           `산업 "${target}"의 가치사슬 인접 산업을 3~6개 제안하세요. ` +
-          `JSON: {"relatedIndustries":[{"relation":"후방|전방|후후방|전전방","name":"산업명(한국어, 산업으로 등록 가능한 명사형)","note":"연관성 한 문장"}]} ` +
-          `position이 없어도 되니 상류·하류를 고르게 담으세요.\n\n산업명: ${target}` +
+          `JSON: {"relatedIndustries":[{"relation":"후방|전방|후후방|전전방|대체","name":"산업명(한국어, 산업으로 등록 가능한 명사형, 대상 산업 자신 제외)","note":"거래 방향이 드러나는 연관성 한 문장"}]} ` +
+          perspectiveRule +
+          `\n\n산업명: ${target}` +
           // 사용자 결정 — 외부 리서치(글로벌·증권 리포트)를 1차 근거로 주입
           (research.length > 0
             ? `\n\n[외부 리서치 근거 — 글로벌·증권 리포트 요약] 아래 근거에 나타난 산업 관계를 우선 참고하세요. note에 출처 제목을 인용하세요:\n` +
@@ -160,7 +176,7 @@ export async function POST(request: Request) {
           { relation: "전방", name: `${target} 최종 수요처 산업`, note: "결정론 템플릿(검증 필요) — 최종 수요 산업 가정" },
         ],
       }),
-    { temperature: 0.2, maxTokens: 2200, agent: { key: "market-intelligence-agent", purpose: "1차 프록시 산업 분석 — 가치사슬 인접 산업 제안" } },
+    { temperature: 0.2, maxTokens: 2200, agent: { key: "market-intelligence-agent", purpose: "1차 가치사슬 연계 산업 분석 — 가치사슬 인접 산업 제안" } },
   );
   let proposals: Array<{ relation?: string; name?: string; note?: string }> = [];
   const text = res.text.replace(/```json|```/g, "");
@@ -183,10 +199,14 @@ export async function POST(request: Request) {
     }
   }
 
+  // Sanitizer(방법론 패널 P0) — 무음 drop 금지: 화이트리스트 관계는 사슬 후보,
+  // 대체/보완은 substitutes로 분리 표출(6축 대체 위협 검토 대상), 그 외만 폐기.
+  const sanitized = sanitizeRelatedProposals(proposals, target);
+
   const seen = new Set<string>([norm(target), ...stored.map((c) => norm(c.name_ko))]);
   const candidates: Candidate[] = [...stored];
-  for (const r of proposals) {
-    const n = (r.name ?? "").trim();
+  for (const r of sanitized.accepted) {
+    const n = r.name;
     const key = norm(n);
     if (!n || !key || seen.has(key)) continue;
     seen.add(key);
@@ -194,10 +214,13 @@ export async function POST(request: Request) {
     candidates.push({
       name_ko: n,
       industry_id: master?.id ?? null,
-      relation: r.relation ?? "연관",
+      relation: r.relation,
       note: (r.note ?? "") + (res.source === "llm" ? "" : " — 결정론 폴백"),
       source: "proxy",
     });
   }
-  return ok({ industry, candidates }, 200, { count: candidates.length });
+  const substitutes = sanitized.substitutes
+    .filter((s) => !seen.has(norm(s.name)))
+    .map((s) => ({ name_ko: s.name, relation: s.relation, note: s.note ?? null }));
+  return ok({ industry, candidates, substitutes }, 200, { count: candidates.length });
 }

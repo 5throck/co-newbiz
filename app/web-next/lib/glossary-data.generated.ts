@@ -954,7 +954,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "why_it_matters_ko": "크랭크축 → 선박엔진(BHP) → 선박(CGT)처럼 두 단계를 건너뛰는 게 예외가 아니라 표준인 산업이 있다. 체인 신뢰도 등급이 RAG 데이터 신뢰도 캡으로 직결된다.",
     "category": "technical",
     "aliases": [
-      "프록시 산업 체인"
+      "가치사슬 연계 산업"
     ],
     "related": [
       "Value Chain Linkage",

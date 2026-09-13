@@ -64,7 +64,8 @@ agent 메타 옵션을 통해 `llm_call_log`(migration 0092) 런 장부에 기�
 |---|---|---|---|---|
 | `/api/agents/registry` | GET | Runtime agent roster — `agents/*.md`의 정적 투영(`agent-registry.generated.ts`, 재생성: `bun scripts/co-newbiz/generate-agent-registry.ts`) | Authenticated | as-built (ADR-0128) |
 | `/api/agents/query` | POST | PM 라우터 질의 — `lib/pm-router.ts`가 질의를 분류(LLM, 실패 시 결정론 규칙)해 단일 에이전트 응답 또는 `opportunity_evaluation` 체인(`lib/agent-chains.ts`: 요인→매력도→적합성→PM 종합)을 반환. 응답에 배정 에이전트·분류 방식·단계별 provenance 포함. 기회 체인은 `opportunityId` 컨텍스트 필수 | `analyst`+ role, audit-logged (`agent_query`/`agent_chain_run`) | as-built (ADR-0128) |
-| `/api/market-overview/related-candidates` | GET/POST | S1 분석 범위 모달 — GET: 저장된 가치사슬 연계 후보(승인 링크 + 과거 payload 산업 사슬), POST: 1차 프록시 산업 분석(LLM 즉석 제안, 결정론 템플릿 폴백). 제안일 뿐 선택 전까지 등록·분석 없음 | GET Authenticated / POST `analyst`+ | as-built (ADR-0126/0128) |
+| `/api/market-overview/related-candidates` | GET/POST | S1 분석 범위 모달 — GET: 저장된 가치사슬 연계 후보(승인 링크 + 과거 payload 산업 사슬), POST: 1차 가치사슬 연계 산업 분석(사업자(운영) 관점 판정 규칙 명시, relation 화이트리스트 검증, 대체/보완은 candidates에서 분리해 substitutes로 표출, 결정론 템플릿 폴백). 제안일 뿐 선택 전까지 등록·분석 없음 | GET Authenticated / POST `analyst`+ | as-built (ADR-0126/0128/0130) |
+| `/api/market-overview/analyses` | GET/POST | S1 산업 분석 목록·생성 — POST는 `after_analysis_id`(재분석 중인 앵커)와 `linked_relation`을 수용: 앵커 in_progress면 `pending` 대기 행 생성 후 202 deferred(파이프라인 미기동), completed면 즉시 실행, failed/pending 앵커는 409. 앵커 완료 훅과 watch:run 회수 패스가 대기 행을 한 건씩 직렬 시작(동시성 1, 전방 우선). 루트 실패 시 그룹 취소, 연계 개별 실패는 큐 지속; `queue_claim`/`queue_cancel`/`queue_recover` 감사. rerun은 pending 행에 alreadyQueued 응답, 루트 rerun 시작 시 기존 대기 전량 취소 | GET Authenticated / POST `analyst`+ | as-built (ADR-0130) |
 
 ## 5. RAG and Governance
 

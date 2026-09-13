@@ -1,14 +1,14 @@
 ---
 name: meeting-facilitation
 status: active
-scope: co-newbiz
+scope: common
 description: >
   Facilitates structured multi-agent meetings using the /meeting command for collaborative
   decision-making and problem resolution. Use when: running agent meetings, coordinating
   multi-agent discussions, or facilitating collaborative problem-solving sessions.
 owner: pm
-version: 1.5.0
-last_reviewed: 2026-09-03
+version: 1.4.1
+last_reviewed: 2026-09-05
 prerequisites: []
 metadata:
   type: process
@@ -22,44 +22,39 @@ metadata:
 
 ## Context
 
-Structured multi-agent deliberation runs on the ONE deliberation engine:
-`runDeliberationRounds()` in `app/web-next/lib/agent-orchestrator.ts`
-(ADR-0096), with the pluggable member executor
-`app/web-next/lib/committee-agents.ts`. The steering committee (ADR-0097)
-and this skill are two consumers of the same engine — they differ only in
-committee membership and output destination. Procedure authority is
-unchanged: this skill references the engine; it does not restate any
-procedure's gate steps.
+This skill is a registration stub for the meeting-facilitation capability. The actual implementation resides in `.claude/commands/meeting.md` and `.gemini/commands/meeting.md`. This file exists to make the skill discoverable via `.agents/skills.json` at Priority 1.
 
 ## When to Use
 
 Invoke this skill when the user requests:
-- `/meeting "topic"` — structured multi-agent deliberation
+- `/meeting "topic"` — structured multi-agent discussion
 - Facilitating collaborative decision-making across specialist agents
 - Coordinating agent discussions for design reviews, problem-solving, or planning
 
-## Execution
+## Execution Steps
 
-The `/meeting` command (`.claude/commands/meeting.md`, mirrored at
-`.gemini/commands/meeting.md`) drives:
-
-```bash
-bun scripts/co-newbiz/meeting.ts "<topic>" [--agents a,b] [--rounds N] [--dialogue]
-```
-
-Ad-hoc meetings must include `risk-officer` — the mandatory red-team seat
-(ADR-0097 §2). Round 2+ members receive every other member's prior-round
-position verbatim (the engine's rebuttal rule).
+This skill delegates entirely to the platform-specific command files:
+1. **Claude Code**: `.claude/commands/meeting.md` handles the full facilitation flow
+2. **Gemini CLI**: `.gemini/commands/meeting.md` handles the full facilitation flow
+3. Both implementations support: agenda setting, round-robin dialogue, outcome synthesis, and transcript logging to `memory/meeting-YYYY-MM-DD-[slug].md`
 
 ## Output Format
 
 Meeting transcript written to `memory/meeting-YYYY-MM-DD-[slug].md` containing:
 - Agenda and objectives
 - Per-agent contributions (round-by-round)
-- Synthesized outcome — a PROPOSAL, never a decision (design boundary #2)
-- Dissent preserved verbatim (never summarized or averaged)
+- Synthesized outcomes and decisions
+- Action items with owner assignments
+
+## Governance Rules
+
+All meetings facilitated through this skill MUST uphold three invariants:
+1. **Dissent seat**: at least one participant is designated as a red-team / dissenting role whose duty is to challenge the emerging consensus.
+2. **PROPOSAL, never decision**: the synthesized outcome is a proposal for the user's approval — the meeting itself does not decide.
+3. **Dissent preserved verbatim**: recorded disagreements are transcribed as stated — never summarized away or averaged into consensus.
 
 ## Related Skills
 
+- `committee-deliberation` — engine-run committee deliberation with DB-recorded positions (gate reviews)
 - `project-review` — uses meeting-facilitation for Gemini CLI parallel dispatch
 - `team-builder` — may invoke meetings during team assembly (Phase 0)
