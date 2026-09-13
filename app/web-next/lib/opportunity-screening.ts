@@ -78,38 +78,6 @@ export function gateRecommendation(row: { attractiveness_score: number | null; s
   };
 }
 
-export async function runSynergyAnalysis(opp: { id: string; name: string; market_scope: string | null; attractiveness_score: number | null; rationale: string | null }): Promise<{ score: number; rationale: string; source: string }> {
-  const context = industryContext(opp.market_scope, opp.rationale);
-  const res = await completeOrFallback(
-    [
-      { role: "system" as const, content: "당신은 시너지 분석가(risk-officer)입니다. 제공된 근거 안에서만 자사와 이 기업(기회)의 시너지를 평가하세요. 근거가 없으면 낮은 점수와 '검증 필요'를 명시하세요." },
-      {
-        role: "user" as const,
-        content:
-          `이 기회와 자사 역량·포트폴리오 간의 시너지를 0-100 점으로 평가하세요. JSON: {"score":정수,"rationale":"근거 2~3문장 — 근거 요인(시장·경쟁·드라이버)을 인용하고 자사 보유 역량 가정을 명시"}. 기준: 60 이상 유의미한 시너지, 40 미만 시너지 부족.\n\n${context}`,
-      },
-    ],
-    () =>
-      JSON.stringify({
-        score: Math.min(70, Math.max(30, (opp.attractiveness_score ?? 50) - 10)),
-        rationale: `결정론 합성(저신뢰) — 매력도 ${opp.attractiveness_score ?? 50}점 기준 보수 추정. 산업 매트릭스 요인 대조 후 분석가 확정 필요.`,
-      }),
-    { maxTokens: 1000 },
-  );
-  const text = res.text;
-  let score = Math.min(100, Math.max(0, (opp.attractiveness_score ?? 50) - 10));
-  let rationale = `결정론 합성(저신뢰) — 분석가 확정 필요. ${opp.rationale ?? ""}`;
-  try {
-    const parsed = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)) as { score?: unknown; rationale?: unknown };
-    if (typeof parsed.score === "number") score = Math.min(100, Math.max(0, Math.round(parsed.score)));
-    if (typeof parsed.rationale === "string" && parsed.rationale.trim()) rationale = parsed.rationale.trim();
-  } catch { /* 폴백 값 유지 */ }
-  const source = res.source === "llm" ? "llm" : "synthesis";
-  if (source === "synthesis") rationale = `[결정론 합성 — 검증 필요] ${rationale}`;
-  getDb().run("UPDATE opportunity SET synergy_score = ?, synergy_rationale = ? WHERE id = ?", [score, rationale, opp.id]);
-  return { score, rationale, source };
-}
-
 export async function runFitAnalysis(opp: { id: string; name: string; market_scope: string | null; synergy_score: number | null; rationale: string | null }): Promise<{ verdict: "Go" | "Hold" | "Kill"; rationale: string; source: string }> {
   const context = industryContext(opp.market_scope, opp.rationale);
   const res = await completeOrFallback(

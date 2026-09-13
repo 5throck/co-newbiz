@@ -40,13 +40,13 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/our-company", label: "S3 그룹/계열사 분석" },
       { href: "/synergy", label: "S3 시너지·전략적 적합성" },
       {
-        // 추진 전략 — S4 라우트 결정으로 그린필드/브라운필드가 갈리는 구간
-        // (S4 → S5 그린필드 / S6·S7 브라운필드). 부모 href는 첫 자식과 동일한
-        // /our-company 패턴을 따른다.
+        // S4 진출방식 결정 — S4 라우트 결정으로 그린필드/브라운필드가 갈리는
+        // 구간 (S4 → S5 그린필드 / S6·S7 브라운필드). 부모 링크 자체가 S4
+        // 화면(/route-decision)이므로 같은 대상의 자식 항목은 두지 않는다 —
+        // 부모·자식 라벨이 완전히 같은 중복 행을 만들지 않기 위함.
         href: "/route-decision",
-        label: "추진 전략",
+        label: "S4 진출방식 결정",
         children: [
-          { href: "/route-decision", label: "S4 진출방식 결정" },
           { href: "/greenfield", label: "S5 자체 진출" },
           { href: "/brownfield", label: "S6/S7 대상발굴·선정" },
         ],
@@ -73,6 +73,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/library", label: "문서 허브" },
       { href: "/glossary", label: "용어집" },
       { href: "/strategy", label: "R&BD 전략" },
+      { href: "/agents", label: "에이전트" },
     ],
   },
 ];
@@ -103,6 +104,7 @@ export const NON_MENU_ROUTES: string[] = [
   "/login",
   "/register",
   "/password-change",
+  "/opportunities/[id]",
   "/companies",
   "/companies/[companyId]",
   "/process/[stage]",

@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   ];
 
   let proposals: DiscoverRow[];
-  const llmRes: LlmOrFallback = await completeOrFallback(messages, () => "", { maxTokens: 1600 });
+  const llmRes: LlmOrFallback = await completeOrFallback(messages, () => "", { maxTokens: 1600, agent: { key: "market-intelligence-agent", purpose: "S2 기회 발굴 — 산업 근거 기반 기회 후보 도출" } });
   if (llmRes.source === "llm") {
     const parsed = parseJson(llmRes.text);
     proposals = (Array.isArray(parsed?.opportunities) ? parsed!.opportunities as Array<Record<string, unknown>> : [])

@@ -5,12 +5,48 @@
 // show it; regenerating overwrites with a new provenance-stamped version.
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
+import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { normalizeSketchV2, SKETCH_BLOCKS } from "../../../../../lib/sketch-schema.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback } from "../../../../../lib/llm.ts";
 
 const now = () => new Date().toISOString();
+
+// GET — 현재 비즈니스 모델 검토 + 버전 이력 (ADR-0127). ?version=N으로 과거
+// 버전 하나의 전체 내용을 열람할 수 있다. 생성은 POST(사람의 행위)다.
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  const { id } = await params;
+  const db = getDb();
+  const opp = db
+    .query("SELECT id, sketch_json, sketch_source, sketch_at FROM opportunity WHERE id = ?")
+    .get(id) as { id: string; sketch_json: string | null; sketch_source: string | null; sketch_at: string | null } | null;
+  if (!opp) return notFound();
+
+  const url = new URL(request.url);
+  const versionParam = url.searchParams.get("version");
+  if (versionParam) {
+    const row = db
+      .query("SELECT version_no, sketch_json, source, created_at FROM opportunity_sketch_version WHERE opportunity_id = ? AND version_no = ?")
+      .get(id, Number(versionParam)) as { version_no: number; sketch_json: string; source: string | null; created_at: string } | undefined;
+    if (!row) return notFound();
+    return ok({ id, version_no: row.version_no, sketch: JSON.parse(row.sketch_json), source: row.source, created_at: row.created_at, cached: true });
+  }
+
+  const versions = db
+    .query("SELECT version_no, source, created_at FROM opportunity_sketch_version WHERE opportunity_id = ? ORDER BY version_no DESC")
+    .all(id) as Array<{ version_no: number; source: string | null; created_at: string }>;
+  return ok({
+    id,
+    sketch: opp.sketch_json ? JSON.parse(opp.sketch_json) : null,
+    source: opp.sketch_source,
+    created_at: opp.sketch_at,
+    versions,
+    cached: true,
+  });
+}
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -96,7 +132,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           { name: "비관", assumption: "검증 필요" },
         ],
       }),
-    { maxTokens: 2400 },
+    { maxTokens: 2400, agent: { key: "greenfield-agent", purpose: "비즈니스 모델 검토 초안" } },
   );
 
   const text = res.text;
@@ -114,11 +150,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const ts = now();
   const source = res.source === "llm" && raw !== null ? "llm" : "synthesis";
+  // ADR-0127 — 버전 이력 append. opportunity.sketch_json은 "현재 버전"이고
+  // 과거 검토는 이 테이블에서 열람한다.
+  const maxNo = db
+    .query("SELECT MAX(version_no) m FROM opportunity_sketch_version WHERE opportunity_id = ?")
+    .get(opp.id) as { m: number | null };
+  const nextNo = (maxNo.m ?? 0) + 1;
+  db.run(
+    `INSERT INTO opportunity_sketch_version (id, opportunity_id, version_no, sketch_json, source, created_by, created_at)
+     VALUES (?,?,?,?,?,?,?)`,
+    [ulid(), opp.id, nextNo, JSON.stringify(sketch), source, auth.auth.userId, ts],
+  );
   db.run("UPDATE opportunity SET sketch_json = ?, sketch_source = ?, sketch_at = ? WHERE id = ?", [
     JSON.stringify(sketch), source, ts, opp.id,
   ]);
   appendAudit(db, { actor: auth.auth.userId, action: "opportunity.sketch", target: `${opp.id}:${source}`, now: ts });
-  return ok({ id: opp.id, sketch, source, created_at: ts, cached: false }, 200);
+  return ok({ id: opp.id, sketch, source, created_at: ts, version_no: nextNo, cached: false }, 200);
 }
 
 /** LLM 응답 파싱 실패 시의 폴백 원문 — normalizeSketchV2가 v2 골격으로 만든다. */

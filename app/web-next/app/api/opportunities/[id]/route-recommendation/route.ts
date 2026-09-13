@@ -222,7 +222,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   let provider: string | null = null;
   let note: string;
   if (isLlmConfigured()) {
-    const res = await completeOrFallback(messages, () => "", { maxTokens: 2200 });
+    const res = await completeOrFallback(messages, () => "", { maxTokens: 2200, agent: { key: "process-governance-manager", purpose: "S4 트랙·라우트·5기준 채점 초안" } });
     if (res.source === "llm") {
       const start = res.text.indexOf("{");
       const end = res.text.lastIndexOf("}");

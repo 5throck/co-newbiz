@@ -165,6 +165,15 @@ Scenario inputs ride run-versioning as exact `drv.rate_bp` / `drv.fx_pct` / `drv
 | `watch` / `watch_rule` | User monitoring subscription | `watch.id`, `watch.project_id`, `watch.user_id`; `watch_rule.watch_id`, `watch_rule.trigger_type`, `watch_rule.threshold`, `watch_rule.cooldown_hours`, `watch_rule.adr_ref` (migration 0036 — linked ADR reference; the admin console hard-blocks threshold edits without one, ui-spec §5) |
 | `notification` | Delivered/pending alert | `id`, `user_id`, `project_id`, `trigger_type`, `payload`, `channel`, `sent_at` |
 
+## 10.1 Application Tables from Recent Migrations (0089-0092)
+
+| Table | Purpose | Key Fields |
+|---|---|---|
+| `synergy_linkage_item` | S3 연계 시너지 — 사람이 추가한 영역 (ADR-0125; origin은 항상 human, payload는 append-only라 직접 수정 불가) | `analysis_id`, `area`, `synergy_type`, `rationale`, `opportunity`, `risk`, `sources_json`, `created_by` |
+| `synergy_shortlist_curation` | S3 우선 시너지 영역 — 사람의 판정·사유 오버라이드 + 신규 영역 (ADR-0125; `origin`='llm'\|'human'이 제안 출처와 사람 편집을 동시에 보존) | `analysis_id`, `area` (UNIQUE), `origin`, `verdict`, `reason`, `updated_by/at` |
+| `opportunity_sketch_version` | 비즈니스 모델 검토 버전 이력 (ADR-0127; append-only — `opportunity.sketch_json`은 "현재 버전" 포인터) | `opportunity_id`, `version_no` (UNIQUE), `sketch_json`, `source`, `created_by` |
+| `llm_call_log` | 런타임 LLM 호출 런 장부 (ADR-0128; append-only — 모든 completeOrFallback 호출이 에이전트 키·목적·출처·latency와 함께 기록됨) | `agent_key`, `purpose`, `context_type/id`, `source` ('llm'\|'synthesis'), `provider`, `model`, `ok`, `latency_ms` |
+
 ## 11. Index Rationale
 
 | Index | Table | Reason |

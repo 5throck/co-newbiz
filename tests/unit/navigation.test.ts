@@ -70,15 +70,16 @@ describe("navigation SSOT (ADR-0105)", () => {
     expect(stale).toEqual([]);
   });
 
-  test("stage group order: legacy stage group preserves flow.spec sequence, S8~S12 project group follows 추진 전략 (ADR-0120)", () => {
+  test("stage group order: legacy stage group preserves flow.spec sequence, S8~S12 project group follows S4 진출방식 결정 (ADR-0120)", () => {
     const explore = NAV_SECTIONS.find((s) => s.label === "탐색")!;
     const hrefs = explore.items.map((i) => i.href);
     expect(hrefs).toEqual(["/", "/deals"]);
     // 단계 화면(기존) group preserves the stage sequence during migration.
     // /our-company (그룹/계열사 분석, S3 input) sits between 기회 발굴(S2) and
-    // 추진 전략(S4) as its own item. S8~S12 project access ("/projects", a
-    // submenu like 추진 전략) sits right after 추진 전략, in flow.spec order —
-    // moved out of "탐색" so the whole S1~S12 sequence lives in one section.
+    // S4 진출방식 결정 as its own item. S8~S12 project access ("/projects", a
+    // submenu like S4 진출방식 결정) sits right after S4 진출방식 결정, in
+    // flow.spec order — moved out of "탐색" so the whole S1~S12 sequence
+    // lives in one section.
     const legacy = NAV_SECTIONS.find((s) => s.label === "단계 화면(기존)")!;
     const legacyHrefs = legacy.items.map((i) => i.href);
     expect(legacyHrefs).toEqual([

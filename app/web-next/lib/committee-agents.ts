@@ -55,7 +55,7 @@ const ROLE_TEMPLATES: Record<string, RoleTemplate> = {
   },
   "industry-lead": {
     domain: "산업 도메인 (cross-validation — 저자와 다른 도메인의 2차 검토)",
-    stance: "산업 구조·경쟁 강도·프록시 체인 신뢰도 관점에서 시장 전제를 재검증한다.",
+    stance: "산업 구조·경쟁 강도·가치사슬 연계 신뢰도 관점에서 시장 전제를 재검증한다.",
     recommendation: "go",
     confidence: 72,
     criteriaScores: NEUTRAL_SCORES,
@@ -69,7 +69,7 @@ const ROLE_TEMPLATES: Record<string, RoleTemplate> = {
   },
   "market-intelligence-agent": {
     domain: "정량 엄밀성 (S4 라우트·시장)",
-    stance: "프록시 산업 체인 기반 수요 추정의 신뢰도 상한과 단위 환산을 점검한다.",
+    stance: "가치사슬 연계 기반 수요 추정의 신뢰도 상한과 단위 환산을 점검한다.",
     recommendation: "go",
     confidence: 70,
     criteriaScores: NEUTRAL_SCORES,

@@ -206,7 +206,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
         businessAssessment: "리서치 입수 결과가 없어 평가 미생성 — 재분석 또는 수동 작성 필요.",
         industryExposure: [],
       }),
-    { maxTokens: 2000 },
+    { maxTokens: 2000, agent: { key: "market-intelligence-agent", purpose: "S3 그룹/계열사 프로파일 산출" } },
   );
   let strengths: string[] = [];
   let weaknesses: string[] = [];
@@ -251,7 +251,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
       },
     ],
     () => JSON.stringify({ competitors: [], positioning: "" }),
-    { maxTokens: 1200 },
+    { maxTokens: 1200, agent: { key: "market-intelligence-agent", purpose: "S3 프로파일 보정" } },
   );
   let competitive: CompanyProfilePayload["competitive"] | undefined;
   try {

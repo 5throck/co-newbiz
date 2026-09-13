@@ -52,6 +52,20 @@
 | `/api/portfolio-scorecard` | GET | Cross-project rollup over projects where the caller holds membership; meta self-discloses the subset when `mnpi_flag` projects are excluded | Authenticated, membership-filtered | as-built |
 | `/api/projects/:id/scorecard` | GET | Per-project dimension scores for the venture scorecard | Membership + elevated role | as-built |
 
+### 4.1 Runtime Agent Queries (as-built — ADR-0128)
+
+하네스의 PM 게이트웨이 원칙을 런타임으로 이식한 표면. 모든 LLM 호출은 `lib/llm.ts`의
+agent 메타 옵션을 통해 `llm_call_log`(migration 0092) 런 장부에 기록된다 — 에이전트 키,
+목적, LLM/결정론 출처, provider·model·latency. 산출물은 **제안 전용**이며 결정·기록은
+기존 인간 게이트 UI를 통해서만 가능하다(ADR-0094 경계 #2). 이 표면은 MCP로 노출되지
+않는다(ADR-0011 확장이 필요한 별도 결정).
+
+| Endpoint | Method | Purpose | Access Control | Implementation |
+|---|---|---|---|---|
+| `/api/agents/registry` | GET | Runtime agent roster — `agents/*.md`의 정적 투영(`agent-registry.generated.ts`, 재생성: `bun scripts/co-newbiz/generate-agent-registry.ts`) | Authenticated | as-built (ADR-0128) |
+| `/api/agents/query` | POST | PM 라우터 질의 — `lib/pm-router.ts`가 질의를 분류(LLM, 실패 시 결정론 규칙)해 단일 에이전트 응답 또는 `opportunity_evaluation` 체인(`lib/agent-chains.ts`: 요인→매력도→적합성→PM 종합)을 반환. 응답에 배정 에이전트·분류 방식·단계별 provenance 포함. 기회 체인은 `opportunityId` 컨텍스트 필수 | `analyst`+ role, audit-logged (`agent_query`/`agent_chain_run`) | as-built (ADR-0128) |
+| `/api/market-overview/related-candidates` | GET/POST | S1 분석 범위 모달 — GET: 저장된 가치사슬 연계 후보(승인 링크 + 과거 payload 산업 사슬), POST: 1차 프록시 산업 분석(LLM 즉석 제안, 결정론 템플릿 폴백). 제안일 뿐 선택 전까지 등록·분석 없음 | GET Authenticated / POST `analyst`+ | as-built (ADR-0126/0128) |
+
 ## 5. RAG and Governance
 
 | Endpoint | Method | Purpose | Access Control |

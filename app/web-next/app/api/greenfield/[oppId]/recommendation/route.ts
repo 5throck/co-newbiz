@@ -126,7 +126,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 2200 },
+      { maxTokens: 2200, agent: { key: "greenfield-agent", purpose: "S5 역량 평가 추천 초안" } },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

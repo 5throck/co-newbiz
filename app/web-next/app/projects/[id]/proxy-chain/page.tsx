@@ -6,7 +6,7 @@ import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { api } from "../../../../lib/api.ts";
 
-// 프록시 체인 탭 — 가치사슬 링크와 보정 근거 (ADR-0116 Phase 5; approved
+// 가치사슬 연계 탭 — 링크와 보정 근거 (구칭: 프록시 체인) (ADR-0116 Phase 5; approved
 // mockup docs/designs/mockups/2026-09-11-proxy-chain-ui-mockup_ko.html).
 // 역할 분리: 링크·바인딩 = 분석가 판정(근거 필수) / β·R² 등 통계 수치 =
 // calibrate 회귀 산출(수동 입력 불가) / 체인 등급 = 자동 산출.
@@ -42,7 +42,7 @@ export default function ProxyChainPage() {
       .catch(() => setBindings([]));
     api.get<{ links: LinkRow[]; proxyLinks: ProxyRow[]; chains: ChainRow[] }>(`/api/projects/${encodeURIComponent(projectId)}/proxy-chain`)
       .then((r) => setView(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "프록시 체인 데이터를 불러오지 못했습니다."));
+      .catch((e) => setError(e instanceof Error ? e.message : "가치사슬 연계 데이터를 불러오지 못했습니다."));
   }, [projectId]);
   useEffect(() => { load(); }, [load]);
 
@@ -119,7 +119,7 @@ export default function ProxyChainPage() {
     }
   }
 
-  return <main className="market-page"><ProjectSubNav projectId={projectId} /><StageFrame stageId="S9" heading="프록시 체인 — 가치사슬 링크와 보정 근거">
+  return <main className="market-page"><ProjectSubNav projectId={projectId} /><StageFrame stageId="S9" heading="가치사슬 연계 — 링크와 보정 근거">
     <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">사실인가? 위험은 무엇인가? — 분석가 판단(링크·바인딩)과 통계 보정(회귀)을 분리해 관리합니다. 통계 수치(β·R²)는 수동 입력이 불가합니다.</p>
 
     {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">✕ {error}</p>}
@@ -129,7 +129,7 @@ export default function ProxyChainPage() {
     <section className="market-section sizing-step">
       <h3 className="sizing-step-title">프로젝트 산업 바인딩 <span className="status-chip status-amber">판정 기록 행위 — 근거 필수</span></h3>
       {bindings.length === 0 ? (
-        <p className="text-[0.85rem] text-[color:var(--muted-fg)]">바인딩된 산업이 없습니다 — 아래에서 산업을 검색해 바인딩하면 프록시 보정 대상이 됩니다.</p>
+        <p className="text-[0.85rem] text-[color:var(--muted-fg)]">바인딩된 산업이 없습니다 — 아래에서 산업을 검색해 바인딩하면 통계 보정 대상이 됩니다.</p>
       ) : (
         <table className="data-table">
           <thead><tr><th scope="col">산업</th><th scope="col">바인딩 근거</th><th scope="col">바인딩자</th><th scope="col">상태</th><th scope="col"></th></tr></thead>

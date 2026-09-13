@@ -83,7 +83,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 1800 },
+      { maxTokens: 1800, agent: { key: "valuation-agent", purpose: "채택 추천 초안" } },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

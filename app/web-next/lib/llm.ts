@@ -204,19 +204,61 @@ function extractText(provider: string, json: Record<string, unknown>): string {
 /** Result envelope for orchestrator features: LLM text when configured, deterministic synthesis otherwise. */
 export type LlmOrFallback = { source: LlmSource; provider: string; text: string };
 
+/** ADR-0128 — 에이전트 런 장부 기록용 메타데이터. agent_key는 agents/ 로스터의
+ * 역할명(예: risk-officer, pm)을 따르고, purpose는 무엇을 만들었는지 한 줄이다. */
+export interface AgentCallMeta {
+  key: string;
+  purpose: string;
+  contextType?: string;
+  contextId?: string;
+}
+
+function logAgentCall(
+  agent: AgentCallMeta | undefined,
+  outcome: { source: "llm" | "synthesis"; provider: string; model: string },
+  ok: boolean,
+  error: string | null,
+  latencyMs: number,
+): void {
+  if (!agent) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
+    const { getDb } = require("../../../db/client.ts") as typeof import("../../../db/client.ts");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
+    const { ulid } = require("../../../db/lib/ulid.ts") as typeof import("../../../db/lib/ulid.ts");
+    getDb().run(
+      `INSERT INTO llm_call_log (id, agent_key, purpose, context_type, context_id, source, provider, model, ok, error, latency_ms, created_by, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [ulid(), agent.key, agent.purpose, agent.contextType ?? null, agent.contextId ?? null,
+        outcome.source, outcome.provider, outcome.model, ok ? 1 : 0, error, latencyMs, "system", new Date().toISOString()],
+    );
+  } catch (err) {
+    // 런 장부 기록 실패는 본 기능을 막지 않는다 — 관찰 가능성 손실만 남긴다.
+    console.error("llm_call_log write failed:", err instanceof Error ? err.message : err);
+  }
+}
+
 export async function completeOrFallback(
   messages: LlmMessage[],
   fallback: () => string,
-  opts: { temperature?: number; maxTokens?: number } = {},
+  opts: { temperature?: number; maxTokens?: number; agent?: AgentCallMeta } = {},
 ): Promise<LlmOrFallback> {
   const cfg = getProviderConfig();
-  if (!cfg) return { source: "synthesis", provider: "deterministic", text: fallback() };
+  if (!cfg) {
+    logAgentCall(opts.agent, { source: "synthesis", provider: "deterministic", model: "template" }, true, null, 0);
+    return { source: "synthesis", provider: "deterministic", text: fallback() };
+  }
+  const started = Date.now();
   try {
-    return { source: "llm", provider: cfg.provider, text: await complete(messages, opts) };
+    const text = await complete(messages, opts);
+    logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model: cfg.model ?? "unknown" }, true, null, Date.now() - started);
+    return { source: "llm", provider: cfg.provider, text };
   } catch (err) {
     // 폴백 자체는 설계된 동작이지만 사유가 로그에 없으면 현장에서 진단 불가 —
     // 실제 원인(HTTP 상태·타임아웃·빈 응답)을 남긴다.
-    console.error(`llm fallback (${cfg.provider}/${cfg.model}):`, err instanceof Error ? err.message : err);
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error(`llm fallback (${cfg.provider}/${cfg.model}):`, reason);
+    logAgentCall(opts.agent, { source: "synthesis", provider: "deterministic", model: "template" }, false, reason, Date.now() - started);
     return { source: "synthesis", provider: "deterministic", text: fallback() };
   }
 }

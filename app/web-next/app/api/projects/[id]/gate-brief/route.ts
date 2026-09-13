@@ -56,7 +56,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 1600 },
+      { maxTokens: 1600, agent: { key: "risk-officer", purpose: "진행 브리프 — 권고·근거 초안 작성" } },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

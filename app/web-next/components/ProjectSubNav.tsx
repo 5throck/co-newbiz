@@ -12,7 +12,7 @@ const SUB_PAGES = [
   { seg: "/wacc", label: "WACC" },
   { seg: "/financial-analysis", label: "재무분석" },
   { seg: "/dd", label: "실사·검증" },
-  { seg: "/proxy-chain", label: "프록시 체인" },
+  { seg: "/proxy-chain", label: "가치사슬 연계" },
   { seg: "/deal-structure", label: "투자구조" },
   { seg: "/ic-review", label: "IC 심의" },
   { seg: "/reports", label: "보고서" },

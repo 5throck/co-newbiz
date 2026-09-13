@@ -150,7 +150,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
       }>
     : [];
 
-  // 가치사슬 구조 — 프록시 체인 링크(후방=공급처, 전방=수요처)와 체인 등급.
+  // 가치사슬 연계 — 링크(후방=공급처, 전방=수요처)와 체인 등급 (구칭: 프록시 체인).
   // S1 "가치사슬 구조" 산출물의 산업 단위 조회 surface가 된다.
   const chainLinks = db
     .query(
@@ -172,6 +172,66 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
     )
     .get(industryId) as { reliability_grade: string; grade_rationale: string } | null;
 
+  // ADR-0126 — S1 시장 구조 정의가 LLM으로 도출한 인접 산업을 md_industry와
+  // 매칭해 승인 대기 제안으로 내려준다. 제안은 payload에서 매번 파생한다 —
+  // 승인(POST chain-links) 전까지는 데이터가 아니다. 이미 등록된 링크는 제외.
+  interface RelatedIndustry { relation: string; name: string; note?: string }
+  const latestSizing = db
+    .query(
+      `SELECT v.payload FROM market_sizing_version v
+       JOIN market_sizing_analysis a ON a.id = v.analysis_id
+       WHERE a.industry_id = ? AND a.status = 'completed'
+       ORDER BY v.version_no DESC LIMIT 1`,
+    )
+    .get(industryId) as { payload: string } | null;
+  let related: RelatedIndustry[] = [];
+  if (latestSizing) {
+    try {
+      // payload는 { methodology, matrix, stepSummaries } 구조 — chainDirection은
+      // matrix 안에 있다(구형 payload는 최상위 폴백).
+      const parsed = JSON.parse(latestSizing.payload) as {
+        matrix?: { chainDirection?: { relatedIndustries?: RelatedIndustry[] } };
+        chainDirection?: { relatedIndustries?: RelatedIndustry[] };
+      };
+      related = parsed.matrix?.chainDirection?.relatedIndustries ?? parsed.chainDirection?.relatedIndustries ?? [];
+    } catch { /* unparseable payload = no proposals */ }
+  }
+  const existingLinkedIds = new Set(
+    (
+      db
+        .query(
+          `SELECT CASE WHEN from_industry_id = ? THEN to_industry_id ELSE from_industry_id END AS other
+           FROM proxy_link WHERE from_industry_id = ? OR to_industry_id = ?`,
+        )
+        .all(industryId, industryId, industryId) as Array<{ other: string }>
+    ).map((r) => r.other),
+  );
+  const proposals: Array<{ industry_id: string; name_ko: string; relation: string; note: string | null }> = [];
+  const unmatchedProposals: Array<{ name: string; relation: string; note: string | null }> = [];
+  // 이름 정규화 — 괄호 보충설명 제거 + 공백 제거 + 말미 "산업" 제거. LLM이
+  // "수소 생산·저장·운송 산업"처럼 꾸민 이름도 마스터 이름과 비교 가능하게.
+  const norm = (s: string) => s.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").replace(/\s+/g, "").replace(/산업$/, "");
+  const allIndustries = db
+    .query("SELECT id, name_ko FROM md_industry")
+    .all() as Array<{ id: string; name_ko: string }>;
+  for (const r of related) {
+    const name = (r.name ?? "").trim();
+    if (!name || name === "—") continue;
+    const nName = norm(name);
+    // 정규화 일치 또는 양방향 포함 — 단, 짧은 조각(3자 미만) 오매칭은 방지.
+    const match = allIndustries.find((m) => {
+      const nMaster = norm(m.name_ko);
+      if (!nMaster || !nName) return false;
+      if (m.id === industryId) return false;
+      return nName === nMaster ||
+        (nMaster.length >= 3 && nName.includes(nMaster)) ||
+        (nName.length >= 3 && nMaster.includes(nName));
+    });
+    if (!match) { unmatchedProposals.push({ name, relation: r.relation, note: r.note ?? null }); continue; }
+    if (existingLinkedIds.has(match.id)) continue;
+    proposals.push({ industry_id: match.id, name_ko: match.name_ko, relation: r.relation, note: r.note ?? null });
+  }
+
   return ok(
     {
       industry,
@@ -179,6 +239,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
         links: chainLinks,
         grade: chainGradeRow,
       },
+      proposals,
+      unmatchedProposals,
+      linkableIndustries: allIndustries
+        .filter((m) => m.id !== industryId && !existingLinkedIds.has(m.id))
+        .map((m) => ({ id: m.id, name_ko: m.name_ko })),
       driver_sensitivities: driverSensitivities,
       regions,
       simulations,

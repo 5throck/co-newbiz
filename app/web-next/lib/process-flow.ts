@@ -117,7 +117,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     let blockers: string[] = [];
     const missing: string[] = [];
     let complete = false;
-    // S1 산출물은 산업 단위 시장분석(market-sizing 매트릭스·프록시 체인)이다.
+    // S1 산출물은 산업 단위 시장분석(market-sizing 매트릭스·가치사슬 연계)이다.
     // 기회가 분석된 산업(market_scope)에서 파생된 경우 산업 산출물로
     // 완료기준을 대체 충족한다 — 개별 기회 필드는 S2 평가 입력으로 보완된다.
     const industry = opp.market_scope
