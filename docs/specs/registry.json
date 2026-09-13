@@ -226,6 +226,15 @@
       "source": "manual",
       "created": "2026-09-13",
       "last_updated": "2026-09-13"
+    },
+    {
+      "id": "2026-09-14-s8-s12-six-nav-data-fixes-design",
+      "title": "s8 s12 six nav data fixes design",
+      "file": "docs/designs/2026-09-14-s8-s12-six-nav-data-fixes-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-13",
+      "last_updated": "2026-09-13"
     }
   ]
 }

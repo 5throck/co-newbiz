@@ -14,13 +14,14 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
 import { getStageMeta, type StageMetaId } from "../lib/stage-meta.ts";
 
-type Group = StageMetaId | "tools";
+type Group = StageMetaId | "site" | "tools";
 
 const SUB_PAGES: ReadonlyArray<{ seg: string; label: string; group: Group }> = [
   { seg: "", label: "개요", group: "S8" },
+  // WACC·재무분석은 S8 사업성 분석 화면의 탭으로 통합됐다 (?tab=wacc /
+  // ?tab=financial-analysis) — 여기서는 더 이상 별도 항목으로 노출하지
+  // 않는다. 기존 URL은 계속 동작한다(business-case로의 얇은 래퍼).
   { seg: "/business-case", label: "사업성 분석", group: "S8" },
-  { seg: "/wacc", label: "WACC", group: "S8" },
-  { seg: "/financial-analysis", label: "재무분석", group: "S8" },
   { seg: "/dd", label: "실사·검증", group: "S9" },
   { seg: "/proxy-chain", label: "가치사슬 연계", group: "S9" },
   { seg: "/deal-structure", label: "투자구조", group: "S10" },
@@ -32,10 +33,12 @@ const SUB_PAGES: ReadonlyArray<{ seg: string; label: string; group: Group }> = [
   { seg: "/pmi", label: "PMI", group: "S12" },
   { seg: "/charter", label: "추진계획", group: "S12" },
   { seg: "/process", label: "프로세스", group: "S12" },
+  // 입지·인허가 — 부지 선정 시 필요한 사안들이 특정 단계에 속하지 않아
+  // 이전에는 "도구" 잡동사니 그룹에 섞여 있었다. 별도 그룹으로 분리.
+  { seg: "/incentives", label: "인센티브", group: "site" },
+  { seg: "/sites", label: "부지·시설", group: "site" },
+  { seg: "/permits", label: "인허가·인증", group: "site" },
   // Wave 2 도구 (round-2/3 리뷰 신설 — data contract B3–B9)
-  { seg: "/incentives", label: "인센티브", group: "tools" },
-  { seg: "/sites", label: "부지·시설", group: "tools" },
-  { seg: "/permits", label: "인허가·인증", group: "tools" },
   { seg: "/interviews", label: "인터뷰", group: "tools" },
   { seg: "/customer-coc", label: "고객 CoC", group: "tools" },
   { seg: "/comp-parity", label: "보상·형평", group: "tools" },
@@ -49,10 +52,11 @@ const SUB_PAGES: ReadonlyArray<{ seg: string; label: string; group: Group }> = [
   { seg: "/risk-heatmap", label: "리스크 히트맵", group: "tools" },
 ] as const;
 
-const GROUP_ORDER: Group[] = ["S8", "S9", "S10", "S11", "S12", "tools"];
+const GROUP_ORDER: Group[] = ["S8", "S9", "S10", "S11", "S12", "site", "tools"];
 
 function groupHeading(g: Group): string {
   if (g === "tools") return "도구";
+  if (g === "site") return "입지·인허가";
   const meta = getStageMeta(g);
   return `${meta.id} · ${meta.name}`;
 }
