@@ -47,6 +47,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!opp) return notFound();
 
   const r = await runFitAnalysis(opp);
-  appendAudit(getDb(), { actor: auth.auth.userId, action: "screening_run", target: `${id}:fit:${r.source}`, now: new Date().toISOString() });
+  appendAudit(getDb(), { actor: auth.auth.userId, action: r.failed ? "screening_run_failed" : "screening_run", target: `${id}:fit:${r.source}`, now: new Date().toISOString() });
   return ok({ kind: "fit", ...r }, 200);
 }

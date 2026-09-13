@@ -2,7 +2,7 @@
 // 과 수동 등록을 함께 지원한다. 저장은 opportunity.factors_json (0051).
 // 매력도 평가가 요인 근거 위에서 이루어지도록 하는 것이 목적이다.
 import { getDb } from "../../../db/client.ts";
-import { completeOrFallback } from "../lib/llm.ts";
+import { completeOrFallback, isLlmConfigured } from "../lib/llm.ts";
 
 export interface OppFactors {
   opportunity: string[];
@@ -36,8 +36,15 @@ interface OppRow {
   rationale: string | null;
 }
 
-/** 산업 S1 매트릭스 근거를 모아 LLM(없으면 결정론)으로 요인을 도출해 저장한다. */
-export async function deriveAndSaveFactors(db: ReturnType<typeof getDb>, opp: OppRow): Promise<{ factors: OppFactors; source: string }> {
+/** 산업 S1 매트릭스 근거를 모아 LLM(없으면 결정론)으로 요인을 도출해 저장한다.
+ *  ADR-0132 — 이미 LLM으로 도출된 요인이 있는 상태에서 재도출이 LLM 장애로
+ *  합성 폴백에 그치면, 그 결과로 기존 값을 덮어쓰지 않고 실패를 알린다. */
+export async function deriveAndSaveFactors(db: ReturnType<typeof getDb>, opp: OppRow): Promise<{ factors: OppFactors; source: string; failed?: boolean; error?: string }> {
+  const prior = db.query("SELECT factors_json, factors_source FROM opportunity WHERE id = ?").get(opp.id) as
+    | { factors_json: string | null; factors_source: string | null }
+    | undefined;
+  const hadGoodPrior = prior?.factors_source === "llm" && !!prior.factors_json;
+  const llmConfiguredAtStart = isLlmConfigured();
   let context = `기회명: ${opp.name}\n가치사슬 노드: ${opp.value_chain_node ?? "미정"}\n근거: ${opp.rationale ?? "없음"}`;
   const ind = opp.market_scope
     ? db.query("SELECT id FROM md_industry WHERE name_ko = ? LIMIT 1").get(opp.market_scope) as { id: string } | undefined
@@ -112,6 +119,14 @@ export async function deriveAndSaveFactors(db: ReturnType<typeof getDb>, opp: Op
     };
   }
   const source = res.source === "llm" ? "llm" : "synthesis";
+  if (hadGoodPrior && llmConfiguredAtStart && source !== "llm") {
+    return {
+      factors: readFactors(prior!),
+      source: prior!.factors_source!,
+      failed: true,
+      error: "LLM 호출 실패 — 이전에 도출된 요인을 유지합니다. 잠시 후 다시 시도하세요.",
+    };
+  }
   saveFactors(db, opp.id, factors, source);
   return { factors, source };
 }

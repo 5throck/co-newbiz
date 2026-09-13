@@ -10,7 +10,7 @@
 //   7. company_profile_version에 버전 누적 (append-only, ADR-0005 패턴)
 import { getDb } from "../../../db/client.ts";
 import { resolveCorpCode, validateCorpCode, fetchFinancials, isDartConfigured, type DartFinancials } from "../lib/dart-client.ts";
-import { completeOrFallback } from "./llm.ts";
+import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "./web-research.ts";
 import { deriveFinancialAnalysis } from "./company-financials.ts";
 import { crossCheckCompetitive, deriveCompetitiveSectionGrade, mapVerdictToLedger, type CompetitiveCrossCheck } from "./company-profile-crosscheck.ts";
@@ -416,6 +416,16 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     ragCapRecommendation,
     schemaVersion: 3,
   };
+  const priorVersion = db.query("SELECT payload FROM company_profile_version WHERE member_id = ? ORDER BY version_no DESC LIMIT 1").get(member.id) as { payload: string } | undefined;
+  const priorDegraded = priorVersion
+    ? (() => { try { return (JSON.parse(priorVersion.payload) as { profile?: { degraded?: string | null } }).profile?.degraded ?? null; } catch { return "unparseable"; } })()
+    : undefined;
+  // ADR-0132 — 이전 버전이 정상(degraded=null)이었는데 이번 재분석이 LLM
+  // 미구성이 아닌 실제 호출 실패로 저하됐다면, 저하된 버전을 새로 쌓지 않고
+  // 이전 버전을 그대로 유지한다(ADR-0131과 동일 원칙).
+  if (priorVersion !== undefined && priorDegraded === null && degraded && isLlmConfigured()) {
+    throw new Error(`LLM 호출 실패 — 이전 프로파일을 유지합니다 (${degraded}). 잠시 후 다시 시도하세요.`);
+  }
   const nextVersionNo =
     ((db.query("SELECT MAX(version_no) m FROM company_profile_version WHERE member_id = ?").get(member.id) as { m: number | null }).m ?? 0) + 1;
   // 7단계 요약은 저장 '이전'에 push해야 이번 버전 payload에 포함된다.

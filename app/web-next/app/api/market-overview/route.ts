@@ -27,12 +27,30 @@ export async function GET(request: Request) {
     )
     .all() as Array<{ industry_id: string; payload: string }>;
   const cellCount = new Map<string, number>();
+  // ADR-0131 후속 — 리포트 화면에만 있던 "합성 폴백 경고"를 목록 화면에도
+  // 노출한다. LLM 미구성/장애로 일부 또는 전체 단계가 결정론 합성으로
+  // 채워진 최신 완료 버전은 목록에서도 "분석 완료"로만 보이면 안 된다
+  // (2026-09-13 건설·광산 중장비 제조 산업 리포트 — 부분 오염이 목록에서
+  // 전혀 드러나지 않았던 사고).
+  const dataQuality = new Map<string, "all_synthesis" | "partial_synthesis">();
   for (const p of latestPayloads) {
     try {
-      const matrix = (JSON.parse(p.payload) as { matrix?: { baseline2026?: Record<string, Record<string, number>> } }).matrix;
+      const parsed = JSON.parse(p.payload) as {
+        matrix?: { baseline2026?: Record<string, Record<string, number>> };
+        stepSummaries?: Array<{ source?: string }>;
+      };
+      const matrix = parsed.matrix;
       const first = matrix?.baseline2026 ? Object.values(matrix.baseline2026)[0] : undefined;
       const regions = matrix?.baseline2026 ? Object.keys(matrix.baseline2026).length : 0;
       if (regions > 0 && first) cellCount.set(p.industry_id, regions * Object.keys(first).length);
+
+      const steps = parsed.stepSummaries ?? [];
+      if (steps.length > 0) {
+        const allSynthesis = steps.every((s) => s.source !== "llm");
+        const anySynthesis = steps.some((s) => s.source !== "llm");
+        if (allSynthesis) dataQuality.set(p.industry_id, "all_synthesis");
+        else if (anySynthesis) dataQuality.set(p.industry_id, "partial_synthesis");
+      }
     } catch {
       // unparseable payload — leave unset, falls back to 0
     }
@@ -79,7 +97,9 @@ export async function GET(request: Request) {
         return {
           ...i,
           driver_count: Math.max(chainCount, derivedCount),
-          analysis,
+          analysis: analysis && analysis.status === "completed"
+            ? { ...analysis, data_quality: dataQuality.get(i.id) ?? null }
+            : analysis,
         };
       }),
       drivers,
