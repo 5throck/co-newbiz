@@ -8,7 +8,7 @@
 
 ## 프로세스 흐름 요약
 
-S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S4 진출방식 결정 → S5 역량 평가·진출전략 (greenfield 전용) → S6 대상 후보 발굴 (brownfield 전용) → S7 대상 스크리닝 (brownfield 전용) → S8 사업성 분석 → S9 실사·검증 → S10 투자구조 설계 → S11 투자심사·실행 → S12 사후 관리
+S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S4 진출방식 결정 → S5 역량 평가·진출전략 (greenfield 전용) → S6 대상 후보 발굴 (brownfield 전용) → S7 대상 선정 (brownfield 전용) → S8 사업성 분석 → S9 실사·검증 → S10 투자구조 설계 → S11 투자심사·실행 → S12 사후 관리
 
 엔티티 라이프사이클:
 - opportunity: S1 → S2 → S3 → S4 → S5 → S6 → S7
@@ -102,7 +102,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - S4 진출방식 결정: `pm`, `brownfield-agent`
 - S5 역량 평가·진출전략: `greenfield-agent`, `financial-analyst`
 - S6 대상 후보 발굴: `brownfield-agent`, `market-intelligence-agent`
-- S7 대상 스크리닝: `brownfield-agent`, `antitrust-agent`
+- S7 대상 선정: `brownfield-agent`, `antitrust-agent`
 - S8 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`
 - S9 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`, `compliance-officer`
 - S10 투자구조 설계: `brownfield-agent`, `valuation-agent`
@@ -348,7 +348,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **자원 결정**: FS 본격 검토 자원 배정
 
-## S7 — 대상 스크리닝 (brownfield 전용)
+## S7 — 대상 선정 (brownfield 전용)
 
 **목표**: 어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)
 

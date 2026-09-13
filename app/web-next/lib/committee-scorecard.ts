@@ -99,7 +99,7 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
   const lines: string[] = [];
   lines.push(`# 위원회 회의록 — ${t.sessionId}`);
   lines.push("");
-  lines.push(`- 게이트: ${t.meta.gate ?? "—"} · 모드: ${t.meta.decision_mode ?? "—"} · 상태: ${t.status}`);
+  lines.push(`- 진행: ${t.meta.gate ?? "—"} · 모드: ${t.meta.decision_mode ?? "—"} · 상태: ${t.status}`);
   if (t.meta.track) lines.push(`- 트랙: ${t.meta.track}`);
   if (t.committee) lines.push(`- 위원회: ${t.committee.chair ? `chair ${t.committee.chair}, ` : ""}라운드 ${t.committee.rounds}`);
   lines.push("");
@@ -135,7 +135,7 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
   if (t.evaluation) {
     lines.push("## Chair 종합 판정 (gate_evaluation)");
     lines.push("");
-    lines.push(`- 권고: **${t.evaluation.recommendation}** · 게이트: ${t.evaluation.gate} · 평가자: ${t.evaluation.evaluatedBy}`);
+    lines.push(`- 권고: **${t.evaluation.recommendation}** · 진행: ${t.evaluation.gate} · 평가자: ${t.evaluation.evaluatedBy}`);
     if (t.evaluation.dissentJson) lines.push(`- 이의 기록: ${t.evaluation.dissentJson}`);
     lines.push("");
   }

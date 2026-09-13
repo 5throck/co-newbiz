@@ -34,7 +34,7 @@ export interface BusinessCaseView {
   name: string;
   horizon_years: number;
   scenario: Scenario | null;
-  /** ADR-0117 dual-perspective valuation — market_forward (게이트 1차) or
+  /** ADR-0117 dual-perspective valuation — market_forward (진행 1차) or
    *  historical (비교 근거). Legacy rows default to market_forward. */
   variant: "market_forward" | "historical";
   source: "generated" | "manual";

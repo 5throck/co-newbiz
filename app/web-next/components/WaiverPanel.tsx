@@ -105,7 +105,7 @@ export function WaiverPanel({ projectId }: { projectId: string }) {
         )}
       </div>
       <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
-        필수 항목 미충족은 활성 waiver 없이는 DD 게이트를 통과할 수 없다. 만료일이 권위(ADR-0036) — 경과 시 상태와 무관하게 만료로 표시된다.
+        필수 항목 미충족은 활성 waiver 없이는 DD 진행을 통과할 수 없다. 만료일이 권위이며, 경과 시 상태와 무관하게 만료로 표시된다.
       </p>
       {error && <p className="text-[0.82rem] mb-2" style={{ color: "var(--red-fg)" }}>{error}</p>}
 

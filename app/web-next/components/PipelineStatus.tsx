@@ -16,7 +16,7 @@ interface PipelineStatusData {
 
 /** paused_reason 기계 키 → 사람이 읽는 확인 항목 (UI 라벨, 한국어 관례). */
 function reasonLabel(reason: string): string {
-  if (reason.startsWith("gate_decision:")) return `${(reason.split(":")[1] ?? "").toUpperCase()} 게이트 결정`;
+  if (reason.startsWith("gate_decision:")) return `${(reason.split(":")[1] ?? "").toUpperCase()} 의사결정`;
   if (reason.startsWith("route_confirmation")) return "진출방식(트랙) 결정";
   if (reason.startsWith("case_adoption")) return "Business Case 채택";
   if (reason.startsWith("checklist_approval")) return "체크리스트 승인";

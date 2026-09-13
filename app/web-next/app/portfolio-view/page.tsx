@@ -1,6 +1,6 @@
 "use client";
 
-// 포트폴리오 전체 뷰 (ADR-0122 #4) — 딜 간 중복 노출(같은 시장 범위)과
+// 포트폴리오 전체 뷰 (ADR-0122 #4) — 검토/안건 간 중복 노출(같은 시장 범위)과
 // 집중도를 그룹 관점에서 감시한다. 개별 판단은 Group IC가 한다 (경계 #2).
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -46,7 +46,7 @@ function PortfolioView() {
   return (
     <main>
       <h1>포트폴리오 전체 뷰</h1>
-      <p className="objective">딜 간 중복 노출과 집중도를 그룹 관점에서 감시합니다 (group-review-agent) — 개별 판단은 Group IC가 합니다.</p>
+      <p className="objective">검토/안건 간 중복 노출과 집중도를 그룹 관점에서 감시합니다 (group-review-agent) — 개별 판단은 Group IC가 합니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <div className="summary-cards mb-4">
         <div className="summary-card glass text-left"><span className="summary-value mono-num">{active}</span><span className="text-label">활성 기회</span></div>

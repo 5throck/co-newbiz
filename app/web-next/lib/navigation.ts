@@ -27,15 +27,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "탐색",
     items: [
       { href: "/", label: "대시보드" },
-      { href: "/deals", label: "딜 보드" },
-      {
-        href: "/projects",
-        label: "프로젝트",
-        children: [
-          { href: "/projects", label: "진행 프로젝트" },
-          { href: "/projects/archives", label: "아카이브" },
-        ],
-      },
+      { href: "/deals", label: "검토/안건 보드" },
     ],
   },
   {
@@ -43,16 +35,10 @@ export const NAV_SECTIONS: NavSection[] = [
     // 통합된다 (ADR-0120). 통합 전까지 기존 화면이 내비에서 사라지지 않는다.
     label: "단계 화면(기존)",
     items: [
-      { href: "/market", label: "시장분석" },
-      { href: "/opportunities", label: "기회 발굴" },
-      {
-        href: "/our-company",
-        label: "시너지 정합성",
-        children: [
-          { href: "/our-company", label: "그룹/계열사 분석" },
-          { href: "/synergy", label: "시너지·전략적 적합성" },
-        ],
-      },
+      { href: "/market", label: "S1 시장분석" },
+      { href: "/opportunities", label: "S2 기회 발굴" },
+      { href: "/our-company", label: "S3 그룹/계열사 분석" },
+      { href: "/synergy", label: "S3 시너지·전략적 적합성" },
       {
         // 추진 전략 — S4 라우트 결정으로 그린필드/브라운필드가 갈리는 구간
         // (S4 → S5 그린필드 / S6·S7 브라운필드). 부모 href는 첫 자식과 동일한
@@ -60,9 +46,22 @@ export const NAV_SECTIONS: NavSection[] = [
         href: "/route-decision",
         label: "추진 전략",
         children: [
-          { href: "/route-decision", label: "진출방식 결정" },
-          { href: "/greenfield", label: "그린필드 — 자체 신설 진출" },
-          { href: "/brownfield", label: "브라운필드 — 결합·투자" },
+          { href: "/route-decision", label: "S4 진출방식 결정" },
+          { href: "/greenfield", label: "S5 자체 진출" },
+          { href: "/brownfield", label: "S6/S7 대상발굴·선정" },
+        ],
+      },
+      // S8~S12 — 프로젝트(project id)로 승격된 뒤에만 실제로 열리는 화면이라
+      // 정적 자식 링크는 /projects(선택 목록)로 보낸다. 프로젝트를 이미 열어
+      // 둔 상태라면 이 하위 메뉴가 그 프로젝트 id로 바로 열리는 S8~S12
+      // 링크로 동적 전환된다 (AppShell.tsx Sidebar 참고) — 그래서 여기서는
+      // 프로젝트 미지정 상태의 항목만 정의한다("진행 프로젝트"/"아카이브").
+      {
+        href: "/projects",
+        label: "프로젝트",
+        children: [
+          { href: "/projects", label: "진행 프로젝트" },
+          { href: "/projects/archives", label: "아카이브" },
         ],
       },
     ],

@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (isAdminDealBlocked(ctx)) return forbidden("role_required", "관리자는 딜 내용에 접근할 수 없습니다.");
+  if (isAdminDealBlocked(ctx)) return forbidden("role_required", "관리자는 검토/안건 내용에 접근할 수 없습니다.");
   const rows = listDeletedDealArchives(ctx.userId);
   appendAudit(getDb(), {
     actor: ctx.userId,

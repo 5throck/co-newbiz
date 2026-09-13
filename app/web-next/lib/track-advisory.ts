@@ -71,7 +71,7 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
     signals.push({
       key: "shortlist", label: `브라운필드 쇼트리스트 ${shortlist.c}건`,
       leans: "brownfield", weight: 3,
-      note: `S6/S7 대상 스크리닝이 완료돼 결합 후보가 존재${koPass.c ? ` (knock-out 검토 ${koPass.c}건)` : ""}`,
+      note: `S6/S7 대상 선정이 완료돼 결합 후보가 존재${koPass.c ? ` (knock-out 검토 ${koPass.c}건)` : ""}`,
     });
   } else {
     signals.push({

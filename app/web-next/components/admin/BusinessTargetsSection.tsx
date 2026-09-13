@@ -190,7 +190,7 @@ export function BusinessTargetsSection() {
           setError(err instanceof Error ? err.message : "삭제 실패");
         }
       },
-      { body: "삭제는 기록이 남는 툼스톤 방식이며, fs 게이트 근거 표에서 즉시 사라집니다." },
+      { body: "삭제는 기록이 남는 툼스톤 방식이며, fs 진행 근거 표에서 즉시 사라집니다." },
     );
   }
 
@@ -201,7 +201,7 @@ export function BusinessTargetsSection() {
         <SectionToolbar
           title="사업목표 기준"
           count={targets?.length ?? 0}
-          summary={<span className="section-meta">그룹 공통 · 계열사별 사업목표 — fs 게이트 판정기준으로 사용</span>}
+          summary={<span className="section-meta">그룹 공통 · 계열사별 사업목표 — fs 진행 판정기준으로 사용</span>}
           actions={
             <button type="button" className="btn-ghost btn-sm" onClick={() => setCreateOpen((v) => !v)}>
               {createOpen ? "닫기" : "＋ 등록"}

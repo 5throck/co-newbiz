@@ -72,7 +72,7 @@ export default function DealStructurePage() {
   const [artifactRef, setArtifactRef] = useState<Record<string, string>>({});
   const [newHyp, setNewHyp] = useState({ vehicle: "", asset_or_stock: "", stake_type: "", instrument_mix: "", tax_structure_note: "", liability_isolation_note: "", financing_leverage_note: "", exit_structure_note: "", rationale: "" });
   const [newEntry, setNewEntry] = useState<{ kind: "source" | "use"; name: string; amount_krw_m: string; note: string }>({ kind: "source", name: "", amount_krw_m: "", note: "" });
-  // ADR-0118 — S10 딜구조 LLM 추천(제안). 가설 등록은 사람의 행위다.
+  // ADR-0118 — S10 검토/안건구조 LLM 추천(제안). 가설 등록은 사람의 행위다.
   interface DealStructureReco {
     source: "llm" | "synthesis";
     provider: string | null;
@@ -169,16 +169,16 @@ export default function DealStructurePage() {
       <ProjectSubNav projectId={projectId} />
       <StageFrame stageId="S10" heading="S10 투자구조 설계 — 비히클·4축 검토·자금조달">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">
-          비히클(SPC 포함)과 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축(ADR-0045)을 검토하고,
+          비히클(SPC 포함)과 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
           자금조달 sources &amp; uses를 균형시킵니다. 이 산출물이 S11 IC 패키지의 입력입니다.
         </p>
 
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
 
-        {/* ── LLM 딜구조 추천 (결정 지원) — ADR-0118: 제안은 LLM, 가설 등록은 사람 ── */}
+        {/* ── LLM 검토/안건구조 추천 (결정 지원) — ADR-0118: 제안은 LLM, 가설 등록은 사람 ── */}
         {canAct && (
-          <section className="market-section sizing-step mb-3" aria-label="LLM 딜구조 추천">
-            <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 딜구조 추천 (제안)</h3>
+          <section className="market-section sizing-step mb-3" aria-label="LLM 검토/안건구조 추천">
+            <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 검토/안건구조 추천 (제안)</h3>
             <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 가설 등록·4축 확정은 사람이 합니다 — S8 채택 BC·S9 발견사항·WACC·현재 상태에서 만든 제안입니다.
             </p>
@@ -247,7 +247,7 @@ export default function DealStructurePage() {
                 <span className="text-[0.7rem] text-[color:var(--muted-fg)]">{h.hypothesized_at.slice(0, 10)} · {h.hypothesized_by}</span>
               </div>
               <table className="data-table" aria-label="4축 검토 노트">
-                <caption className="sr-only">ADR-0045 4대 축 검토 내용</caption>
+                <caption className="sr-only">4대 축 검토 내용</caption>
                 <tbody>
                   {(["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const).map((k) => (
                     <tr key={k}>

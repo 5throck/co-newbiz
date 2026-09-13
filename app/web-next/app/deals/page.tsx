@@ -67,7 +67,7 @@ const FILTERS: Array<[FilterKey, string]> = [
   ["all", "전체"],
   ["greenfield", "그린필드"],
   ["brownfield", "브라운필드"],
-  ["gate", "게이트 대기"],
+  ["gate", "진행 대기"],
   ["paused", "일시정지"],
 ];
 
@@ -81,7 +81,7 @@ function DealsBoard() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
-    api.get<PipelineView>("/api/portfolio/pipeline").then((r) => setData(r.data)).catch((e) => setError(e instanceof Error ? e.message : "딜 보드를 불러오지 못했습니다."));
+    api.get<PipelineView>("/api/portfolio/pipeline").then((r) => setData(r.data)).catch((e) => setError(e instanceof Error ? e.message : "검토/안건 보드를 불러오지 못했습니다."));
     api.get<OpportunityRow[]>("/api/opportunities").then((r) => setOpps(r.data)).catch(() => setOpps([]));
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -143,7 +143,7 @@ function DealsBoard() {
     return [...oppCards, ...projectCards];
   }, [opps, data]);
 
-  // 게이트 대기 — 기록된 HOLD 게이트가 있는 딜 (에이징 표와 같은 규거).
+  // 진행 대기 — 기록된 HOLD 진행이 있는 검토/안건 (에이징 표와 같은 규거).
   const opportunityHolds = useMemo(
     () => new Set((data?.aging ?? []).filter((r) => r.decision === "hold" && r.entityType === "opportunity").map((r) => r.entityId)),
     [data],
@@ -182,18 +182,18 @@ function DealsBoard() {
   return (
     <main>
       <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 8 }}>
-        <h1>딜 보드</h1>
+        <h1>검토/안건 보드</h1>
         <Link href="/market" className="btn-primary btn-sm" style={{ textDecoration: "none", display: "inline-block" }}>
-          ＋ 새 딜 시작 (시장분석부터)
+          ＋ 새 검토/안건 시작 (시장분석부터)
         </Link>
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        모든 딜을 퍼널 한 장으로 봅니다 — 기회(S1~S7)와 프로젝트(S8~S12), 게이트 에이징까지.
+        모든 검토/안건을 퍼널 한 장으로 봅니다 — 기회(S1~S7)와 프로젝트(S8~S12), 진행 에이징까지.
       </p>
 
       <SectionToolbar
         filters={
-          <span role="group" aria-label="딜 필터" className="flex flex-wrap items-center gap-1">
+          <span role="group" aria-label="검토/안건 필터" className="flex flex-wrap items-center gap-1">
             <span className="section-meta">필터:</span>
             {FILTERS.map(([k, label]) => (
               <button key={k} type="button" aria-pressed={filter === k} className="control-chip" onClick={() => setFilter(k)}>
@@ -204,7 +204,7 @@ function DealsBoard() {
         }
         actions={
           <span className="flex items-center gap-1">
-            <input ref={searchRef} aria-label="딜 검색" placeholder="딜명·번호" value={query} onChange={(e) => setQuery(e.target.value)}
+            <input ref={searchRef} aria-label="검토/안건 검색" placeholder="검토/안건명·번호" value={query} onChange={(e) => setQuery(e.target.value)}
               className="sizing-new-input sizing-new-input-sm" style={{ width: 160 }} />
             <button type="button" className="btn-ghost btn-sm" onClick={() => searchRef.current?.focus()}>
               <svg className="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg> 검색
@@ -218,7 +218,7 @@ function DealsBoard() {
 
       {data && (opps ?? []).filter((o) => o.status !== "dropped").length === 0 && data.projects.length === 0 && (
         <div className="market-section mb-4" style={{ border: "1px dashed var(--border)" }}>
-          <h2 className="text-[0.9rem] mb-1">아직 진행 중인 딜이 없습니다</h2>
+          <h2 className="text-[0.9rem] mb-1">아직 진행 중인 검토/안건이 없습니다</h2>
           <p className="text-[0.82rem]" style={{ margin: "0 0 8px" }}>
             첫 신규사업 검토는 시장분석(S1)부터 시작합니다 — 4단계 가이드가 준비되어 있습니다.
           </p>
@@ -262,23 +262,23 @@ function DealsBoard() {
                         </Link>
                       );
                     })}
-                    {colCards.length === 0 && <p className="funnel-empty">해당 단계의 딜이 없습니다</p>}
+                    {colCards.length === 0 && <p className="funnel-empty">해당 단계의 검토/안건이 없습니다</p>}
                   </div>
                 </section>
               );
             })}
           </div>
 
-          <section className="market-section" aria-label="게이트 에이징">
-            <h3 className="sizing-step-title text-[0.9rem]">게이트 에이징 — HOLD·KILL 경과</h3>
+          <section className="market-section" aria-label="진행 에이징">
+            <h3 className="sizing-step-title text-[0.9rem]">진행 에이징 — HOLD·KILL 경과</h3>
             {data.aging.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] text-[0.82rem]">에이징 중인 HOLD·KILL 게이트가 없습니다.</p>
+              <p className="text-[color:var(--muted-fg)] text-[0.82rem]">에이징 중인 HOLD·KILL 진행이 없습니다.</p>
             ) : (
               <div className="table-scroll">
-                <table className="data-table" aria-label="게이트 에이징">
-                  <caption className="sr-only">게이트 에이징 — 경과일 내림차순</caption>
+                <table className="data-table" aria-label="진행 에이징">
+                  <caption className="sr-only">진행 에이징 — 경과일 내림차순</caption>
                   <thead>
-                    <tr><th scope="col">딜</th><th scope="col">게이트</th><th scope="col">결정</th><th scope="col">결정일</th><th scope="col" className="col-num">경과</th></tr>
+                    <tr><th scope="col">검토/안건</th><th scope="col">진행</th><th scope="col">결정</th><th scope="col">결정일</th><th scope="col" className="col-num">경과</th></tr>
                   </thead>
                   <tbody>
                     {[...data.aging].sort((a, b) => b.ageDays - a.ageDays).map((r) => (

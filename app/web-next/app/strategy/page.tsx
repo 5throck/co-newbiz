@@ -14,8 +14,8 @@ import {
 
 const MODULES = [
   {
-    name: "스테이지 게이트 오케스트레이션",
-    desc: "Screening → Pre-FS → FS → DD → Entity IC → Group IC 6단계 게이트와 Kill Criteria 강제 모델. 타 신규사업 평가 프로세스에 직접 이식 가능.",
+    name: "스테이지 진행 오케스트레이션",
+    desc: "Screening → Pre-FS → FS → DD → Entity IC → Group IC 6단계 진행과 Kill Criteria 강제 모델. 타 신규사업 평가 프로세스에 직접 이식 가능.",
     market: "High",
     license: "Platform Core (자체 개발)",
     pricingNote: "SaaS 라이선스 또는 온프레미 임베디드 형태로 외부 계열사/PEF에 제공",
@@ -32,7 +32,7 @@ const MODULES = [
     desc: "안티트러스트 HHI, 인증 양도성, 인센티브 클로백, 부채 우발채무 시뮬레이션 — 6개 필수 밸리데이터 패키지.",
     market: "Medium-High",
     license: "전문 도메인 애드온",
-    pricingNote: "딜 규모 연동 success-fee 대비 저렴한 flat 모듈 구독",
+    pricingNote: "검토/안건 규모 연동 success-fee 대비 저렴한 flat 모듈 구독",
   },
   {
     name: "프록시 산업연쇄 추정",
@@ -62,8 +62,8 @@ const STRATEGY_PILLARS = [
     icon: <Layers size={22} />,
     title: "플랫폼화 아키텍처",
     points: [
-      "34개 에이전트 + MCP REST-only 계층을 독립 모듈로 분리 (ADR-0011 준수)",
-      "코어(게이트·RAG) vs 애드온(산업·리전 프로파일) 이원 구조로 확장성 확보",
+      "34개 에이전트 + MCP REST-only 계층을 독립 모듈로 분리",
+      "코어(진행·RAG) vs 애드온(산업·리전 프로파일) 이원 구조로 확장성 확보",
       "멀티테넌트 격리: 프로젝트별 멤버십·MNPI·감사로그는 플랫폼 공통 인프라",
       "외부 계열사/PEF 제공 시 화이트라벨 배포 가능한 패키징 경계 설계",
     ],
@@ -72,8 +72,8 @@ const STRATEGY_PILLARS = [
     icon: <TrendingUp size={22} />,
     title: "모듈별 시장성 분석",
     points: [
-      "게이트 오케스트레이션·RAG 엔진: 신규사업 평가 수요 최대 (High)",
-      "M&A 실사·몬테카를로: 딜 Advisory 시장 타깃 (Medium-High)",
+      "진행 오케스트레이션·RAG 엔진: 신규사업 평가 수요 최대 (High)",
+      "M&A 실사·몬테카를로: 검토/안건 Advisory 시장 타깃 (Medium-High)",
       "프록시 체인·용어집: 생태계 락인 효과 (Medium / Low)",
       "시장성 등급별 우선 투자 순위: 코어 2종 → 애드온 3종 → 자산 1종",
     ],
@@ -94,7 +94,7 @@ const STRATEGY_PILLARS = [
     points: [
       "자체 개발 원가: 인건비 + 인프라 + 규제 데이터 구독 기준 산정",
       "외주 소싱 기준선: 동등 기능 외주 견적의 70% 미만이면 자체 개발 유지",
-      "모듈 단가: 딜 규모/평가 건수 연동 usage 과금 vs 연간 flat 라이선스 혼합",
+      "모듈 단가: 검토/안건 규모/평가 건수 연동 usage 과금 vs 연간 flat 라이선스 혼합",
       "침투 가격: 초기 계열사 무상 → 외부 PEF 유료 전환의 단계적 monetization",
     ],
   },
@@ -102,7 +102,7 @@ const STRATEGY_PILLARS = [
     icon: <Code2 size={22} />,
     title: "자체개발 vs 외주 소싱",
     points: [
-      "핵심 차별화(게이트·RAG·M&A 밸리데이터): 자체 개발 고정 (모방 불가 영역)",
+      "핵심 차별화(진행·RAG·M&A 밸리데이터): 자체 개발 고정 (모방 불가 영역)",
       "비차별 UI/차트/리포팅: 조건부 외주 또는 오픈소스 활용",
       "규제 데이터 연동(DART/k-Law): 외부 API 구독이 자체 크롤링 대비 리스크 ↓",
       "QA·보안 스캔: 자동화 도구로 자체 커버, 인력 외주 최소화",
@@ -112,9 +112,9 @@ const STRATEGY_PILLARS = [
     icon: <ShieldCheck size={22} />,
     title: "거버넌스·리스크",
     points: [
-      "라이선스화 시에도 PM 게이트웨이·3단계 리뷰는 플랫폼 invariant 유지",
+      "라이선스화 시에도 PM 진행웨이·3단계 리뷰는 플랫폼 invariant 유지",
       "외주 소싱 시 코드 소유권·MNPI 처리책임 명문화 (FR-SEC 계열)",
-      "오픈소스 방출 모듈은 내부 기밀(딜 데이터) 누출 차단 경계 검증",
+      "오픈소스 방출 모듈은 내부 기밀(검토/안건 데이터) 누출 차단 경계 검증",
       "상용화 전 ADR 트리거(설계 §7) 재점검: 라이선스 모델 변경은 ADR 대상",
     ],
   },
@@ -217,7 +217,7 @@ export default function StrategyPage() {
       >
         <Lightbulb size={20} className="text-[color:var(--primary)] mt-0.5" />
         <p className="text-sm leading-relaxed">
-          <strong>핵심 권고:</strong> 게이트 오케스트레이션과 RAG 스코어링 엔진을
+          <strong>핵심 권고:</strong> 진행 오케스트레이션과 RAG 스코어링 엔진을
           플랫폼 코어로 자체 개발 고정하고, 프록시 체인 코어는 오픈소스로 생태계를
           선점하되 데이터 커넥터를 유료화하는 하이브리드 라이선스 전략을 우선한다.
           외주 소싱은 비차별 영역(UI/차트/리포팅)에 한정하고 규제 데이터 연동은

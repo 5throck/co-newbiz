@@ -1,4 +1,4 @@
-// S7 대상 스크리닝 — 후보 수정(PATCH) / 체크리스트 판정 저장(POST).
+// S7 대상 선정 — 후보 수정(PATCH) / 체크리스트 판정 저장(POST).
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";

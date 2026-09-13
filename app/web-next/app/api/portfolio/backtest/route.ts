@@ -9,7 +9,7 @@ import { latestAdoption } from "../../../../lib/business-case.ts";
 import { ok } from "../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../lib/project-visibility.ts";
 
-// 품평회 P1 수정 (2026-09-12): 딜별 상세 행은 멤버에게만 — 비멤버에게는
+// 품평회 P1 수정 (2026-09-12): 검토/안건별 상세 행은 멤버에게만 — 비멤버에게는
 // 프로젝트명 없는 조직 집계(건수·편향 %)만 반환한다 (k≥3 억제 준용).
 export async function GET(request: Request) {
   const auth = authenticate(request);

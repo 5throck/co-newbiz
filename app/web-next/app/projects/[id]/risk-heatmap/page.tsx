@@ -6,7 +6,7 @@ import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState } from "../../../../components/ui.tsx";
 
-// 딜 리스크 히트맵 (ADR-0122 #2) — DD 발견사항·고객 집중·인센티브 클로백을
+// 검토/안건 리스크 히트맵 (ADR-0122 #2) — DD 발견사항·고객 집중·인센티브 클로백을
 // 하나의 발생가능성 × 영향 그리드로 통합한다. 기존 테이블의 실재 데이터만
 // 플로팅한다 (값 발명 금지).
 interface Finding { description: string; value_impact: number | null }
@@ -65,8 +65,8 @@ function HeatmapView() {
   return (
     <main>
       <ProjectSubNav projectId={id} />
-      <h1>딜 리스크 히트맵</h1>
-      <p className="objective">DD 발견사항·고객 집중·클로백을 하나의 그리드로 통합해 위험 전망을 봅니다 — 실재 기록만 플로팅합니다 (ADR-0122).</p>
+      <h1>검토/안건 리스크 히트맵</h1>
+      <p className="objective">DD 발견사항·고객 집중·클로백을 하나의 그리드로 통합해 위험 전망을 봅니다 — 실재 기록만 플로팅합니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <div className="grid2e">
         <section className="market-section" aria-label="리스크 그리드">

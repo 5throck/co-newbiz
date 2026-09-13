@@ -29,7 +29,7 @@ function AgentRunsView() {
     <main>
       <ProjectSubNav projectId={id} />
       <h1>에이전트 실행 이력</h1>
-      <p className="objective">이 딜에서 에이전트·LLM이 실행한 활동과 제안을 추적합니다 — 제안과 사람 기록은 항상 구분됩니다 (경계 #2, ADR-0123).</p>
+      <p className="objective">이 검토/안건에서 에이전트·LLM이 실행한 활동과 제안을 추적합니다 — 제안과 사람 기록은 항상 구분됩니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <section className="market-section" aria-label="실행 타임라인">
         <h2 className="text-[0.9rem] mb-2">실행 타임라인</h2>
@@ -55,13 +55,13 @@ function AgentRunsView() {
         )}
       </section>
       <section className="market-section" aria-label="LLM 신뢰도">
-        <h2 className="text-[0.9rem] mb-2">LLM 제안 신뢰도 점수 <span className="note">— 제안 후 사람의 같은 게이트 결정과의 일치율 (표시 전용)</span></h2>
+        <h2 className="text-[0.9rem] mb-2">LLM 제안 신뢰도 점수 <span className="note">— 제안 후 사람의 같은 의사결정과의 일치율 (표시 전용)</span></h2>
         {data === null ? <PageState state="loading" /> : data.reliability.length === 0 ? (
           <PageState state="empty" emptyText="아직 사람 결정과 비교할 제안이 없습니다." />
         ) : (
           <table className="data-table" aria-label="LLM 신뢰도">
             <caption className="sr-only">LLM 제안 신뢰도</caption>
-            <thead><tr><th>게이트</th><th className="col-num">제안</th><th className="col-num">수용</th><th className="col-num">일치율</th></tr></thead>
+            <thead><tr><th>진행</th><th className="col-num">제안</th><th className="col-num">수용</th><th className="col-num">일치율</th></tr></thead>
             <tbody>{data.reliability.map((r) => (
               <tr key={r.gate}>
                 <td className="font-semibold">{r.gate}</td>
@@ -72,7 +72,7 @@ function AgentRunsView() {
             ))}</tbody>
           </table>
         )}
-        <p className="note" style={{ marginBottom: 0 }}>일치율은 학습 신호일 뿐 게이트 처리에 사용되지 않습니다 — 판단은 사람이 유지합니다.</p>
+        <p className="note" style={{ marginBottom: 0 }}>일치율은 학습 신호일 뿐 진행 처리에 사용되지 않습니다 — 판단은 사람이 유지합니다.</p>
       </section>
       <section className="market-section" aria-label="PROPOSAL 기록">
         <h2 className="text-[0.9rem] mb-2">위원회 PROPOSAL 기록</h2>
@@ -80,7 +80,7 @@ function AgentRunsView() {
           <PageState state="empty" emptyText="기록된 위원회 제안이 없습니다." />
         ) : (
           <table className="data-table" aria-label="PROPOSAL">
-            <thead><tr><th>시각</th><th>게이트</th><th>권고 (제안)</th></tr></thead>
+            <thead><tr><th>시각</th><th>진행</th><th>권고 (제안)</th></tr></thead>
             <tbody>{data.proposals.map((p) => (
               <tr key={p.id}>
                 <td className="text-[0.75rem] tabular-nums">{p.started_at.slice(0, 16).replace("T", " ")}</td>

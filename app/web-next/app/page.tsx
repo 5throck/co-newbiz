@@ -62,7 +62,7 @@ export default function DashboardPage() {
     count: projects.filter((p) => p.currentStage === s).length,
   }));
 
-  // 게이트 상태 집계
+  // 진행 상태 집계
   const gateSummary: Record<string, { go: number; hold: number; kill: number }> = {};
   for (const p of projects) {
     for (const [g, v] of Object.entries(p.gates)) {
@@ -147,7 +147,7 @@ export default function DashboardPage() {
         </div>
         <div className="summary-card glass" style={holdCount > 0 ? { borderColor: "var(--amber-fg)" } : undefined}>
           <span className="summary-value mono-num">{holdCount}</span>
-          <span className="text-label">HOLD 게이트</span>
+          <span className="text-label">HOLD 진행</span>
         </div>
       </div>
 
@@ -163,10 +163,10 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      {/* 게이트 상태 요약 */}
+      {/* 진행 상태 요약 */}
       {Object.keys(gateSummary).length > 0 && (
-        <section className="glass p-4 mt-4" aria-label="게이트 상태 요약">
-          <h3 className="text-label mb-2">게이트 상태 요약</h3>
+        <section className="glass p-4 mt-4" aria-label="진행 상태 요약">
+          <h3 className="text-label mb-2">진행 상태 요약</h3>
           <div className="flex flex-wrap gap-2">
             {Object.entries(gateSummary).map(([gate, counts]) => (
               <div key={gate} className="flex gap-1 items-center">

@@ -15,7 +15,7 @@ export function buildBriefingPack(db: Database, entity: ProcessEntity): string {
   lines.push("");
   lines.push(`- 트랙: ${evaluation.track ?? "미결정"}${evaluation.subTrack ? ` / ${evaluation.subTrack}` : ""}`);
   lines.push(`- 현재 단계: ${evaluation.currentStage ?? "—"} (${label}) · 다음: ${evaluation.nextStage ?? "—"}${evaluation.terminated ? " · KILL 종료" : ""}`);
-  lines.push("- 게이트: " + Object.entries(evaluation.gateStatus).map(([g, v]) => `${g}=${v}`).join(", "));
+  lines.push("- 진행: " + Object.entries(evaluation.gateStatus).map(([g, v]) => `${g}=${v}`).join(", "));
   lines.push("");
 
   if (evaluation.blockers.length) {

@@ -11,7 +11,7 @@ import { PromotionPanel } from "../../components/PromotionPanel.tsx";
 
 // S6~S7 브라운필드 대상 경로 (/brownfield) — flow.spec v2.0.0.
 //   S6 대상 후보 발굴: Target Universe 정의 → Target Company Long List
-//   S7 대상 스크리닝: Long List → chk-target-screening 판정 → Short List 승격/제외
+//   S7 대상 선정: Long List → chk-target-screening 판정 → Short List 승격/제외
 // S1 시장분석 패턴: 기회 칩 → 후보 테이블 → 행 펼침 스크리닝 패널.
 
 interface OppRow {
@@ -466,7 +466,7 @@ export function BrownfieldView() {
             gates={["target_screening"]}
             killHint={
               selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded" && (t.screening_summary?.knockOutsPassed ?? false))
-                ? "knock-out 통과 후보 0건 — Target Screening 게이트 KILL 기준 검토가 필요합니다 (flow.spec S7 kill criteria)."
+                ? "knock-out 통과 후보 0건 — Target Screening 진행 KILL 기준 검토가 필요합니다 (flow.spec S7 kill criteria)."
                 : null
             }
           />

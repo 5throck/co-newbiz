@@ -54,9 +54,9 @@ function DealOverview() {
 
   return (
     <main>
-      <p className="crumb">딜 보드</p>
-      <h1>딜 개요</h1>
-      <p className="objective">현재 단계·다음 할 일·완료 조건·게이트 상태를 한 장으로 봅니다.</p>
+      <p className="crumb">검토/안건 보드</p>
+      <h1>검토/안건 개요</h1>
+      <p className="objective">현재 단계·다음 할 일·완료 조건·진행 상태를 한 장으로 봅니다.</p>
 
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       {!proc && !error && <PageState state="loading" rows={4} />}
@@ -98,7 +98,7 @@ function DealOverview() {
               </ul>
             )}
             <p className="note" style={{ marginTop: 8 }}>
-              트랙: {proc.track ?? "미결정"}{proc.subTrack ? ` · ${proc.subTrack}` : ""} · 게이트:{" "}
+              트랙: {proc.track ?? "미결정"}{proc.subTrack ? ` · ${proc.subTrack}` : ""} · 진행:{" "}
               {Object.entries(proc.gateStatus).map(([g, v]) => (
                 <span key={g} className={`status-chip ${v === "go" ? "status-green" : v === "kill" ? "status-red" : "status-amber"}`} style={{ marginRight: 4 }}>
                   {g} {v.toUpperCase()}

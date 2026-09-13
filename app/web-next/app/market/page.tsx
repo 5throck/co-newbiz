@@ -278,7 +278,7 @@ export function MarketView() {
     <main>
       {confirmDialog}
       <StageFrame stageId="S1">
-        산업을 선택하면 systematic-market-sizing 8단계 절차로 분석된 리포트가 차트로 표시됩니다 (ADR-0075).
+        산업을 선택하면 체계적 시장 규모 추정 8단계 절차로 분석된 리포트가 차트로 표시됩니다.
       </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

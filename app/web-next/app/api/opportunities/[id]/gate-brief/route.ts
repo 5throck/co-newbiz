@@ -20,7 +20,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "게이트 브리프 생성은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "진행 브리프 생성은 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { gate?: string } | null;
   const gate = body?.gate?.trim() ?? "";
@@ -43,13 +43,13 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         {
           role: "system" as const,
           content:
-            "당신은 신규사업 검토 리드 PM입니다. 이 게이트에 대해 GO/HOLD/KILL 권고와 근거 초안을 작성합니다. 최종 기록은 사람이 하며 당신 산출물은 제안입니다. " +
+            "당신은 신규사업 검토 리드 PM입니다. 이 진행에 대해 GO/HOLD/KILL 권고와 근거 초안을 작성합니다. 최종 기록은 사람이 하며 당신 산출물은 제안입니다. " +
             "제공된 매니페스트 산출물 안에서만 판단하고 근거 없는 사실을 만들지 마세요. 근거가 부족하면 HOLD와 '검증 필요'를 제안하세요. JSON만 반환합니다.",
         },
         {
           role: "user" as const,
           content:
-            `아래 산출물을 근거로 ${gate} 게이트 브리프를 작성하세요.\n` +
+            `아래 산출물을 근거로 ${gate} 진행 브리프를 작성하세요.\n` +
             `JSON: {"recommendation":"go|hold|kill","confidence":"high|medium|low","rationale_draft":"근거 초안 2~4문장(산출물 인용)","key_evidence":["..."],"cautions":["..."]}\n\n${context}`,
         },
       ],
@@ -67,7 +67,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         brief = normalizeGateBrief(raw);
         source = "llm";
         provider = res.provider;
-        note = "LLM 제안 — 근거에 반영해 검토한 뒤 사람이 게이트를 기록합니다 (경계 #2).";
+        note = "LLM 제안 — 근거에 반영해 검토한 뒤 사람이 진행을 기록합니다 (경계 #2).";
       } else {
         brief = synthesisGateBrief(db, "opportunity", id, gate, manifest);
         note = "LLM 응답 파싱 실패 — 결정론 폴백으로 대체했습니다.";

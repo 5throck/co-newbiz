@@ -54,7 +54,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const partner = db
     .query("SELECT id FROM partner_candidate WHERE id = ? AND project_id = ?")
     .get(partnerId, id) as { id: string } | undefined;
-  if (!partner) return badRequest("invalid_request", "이 딜에 등록된 파트너 후보가 아닙니다.");
+  if (!partner) return badRequest("invalid_request", "이 검토/안건에 등록된 파트너 후보가 아닙니다.");
   const dup = db.query("SELECT id FROM jv_term WHERE project_id = ? AND partner_id = ?").get(id, partnerId);
   if (dup) return badRequest("duplicate_jv_term", "이 파트너에 대한 JV 조건이 이미 등록되어 있습니다.");
   const now = new Date().toISOString();

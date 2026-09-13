@@ -50,7 +50,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "게이트 결정 기록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "의사결정 기록은 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     gate?: string; decision?: string; rationale?: string; missing_artifacts?: string[];

@@ -173,7 +173,7 @@ export default function ProxyChainPage() {
       <label className="grid gap-1 mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">바인딩 근거 (rationale) — 필수
         <input className="sizing-new-input" value={bindRationale} onChange={(e) => setBindRationale(e.target.value)} placeholder="예: S6 유니버스 정의 — 수요 전파 검증용" />
       </label>
-      <p className="note-line">바인딩·회수는 감사 로그에 기록되며, 이력은 유지됩니다 (ADR-0054/0056 판정 기록 행위).</p>
+      <p className="note-line">바인딩·회수는 감사 로그에 기록되며, 이력은 유지됩니다.</p>
     </section>
 
     {/* ② 가치사슬 링크 */}

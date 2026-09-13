@@ -233,7 +233,7 @@ export class CommitteeError extends Error {
 }
 
 function sessionTopic(committee: CommitteeDef, opts: ConveneOpts): string {
-  const scope = opts.targetRef ? `대상 ${opts.targetRef}` : opts.gate ? `게이트 ${opts.gate}` : committee.applies_to;
+  const scope = opts.targetRef ? `대상 ${opts.targetRef}` : opts.gate ? `진행 ${opts.gate}` : committee.applies_to;
   return `${committee.applies_to} 심의 (${scope})`;
 }
 

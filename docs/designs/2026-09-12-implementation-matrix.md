@@ -16,7 +16,7 @@
 | 8 | `s1` | previews/s1.png | /deals/{id}/s1 (from /market) | implemented (legacy /market) | |
 | 9 | `s2` | previews/s2.png | /deals/{id}/s2 (from /opportunities) | implemented (legacy /opportunities) | |
 | 10 | `s3` | previews/s3.png | /deals/{id}/s3 (from /synergy) | implemented (legacy /synergy) | |
-| 11 | `s4` | previews/s4.png | /deals/{id}/s4 (from /route-decision) | implemented (legacy /route-decision) | |
+| 11 | `s4` | previews/s4.png | /deals/{id}/s4 (from /route-decision) | implemented (/deals/{id}/s4) | 2026-09-13: rewritten to baseline card/tab structure in `components/stages/RouteDecisionStage.tsx`; `/route-decision` now redirects |
 | 12 | `s5` | previews/s5.png | /deals/{id}/s5 (from /greenfield) | implemented (legacy /greenfield) | |
 | 13 | `s6s7` | previews/s6s7.png | /deals/{id}/s6+s7 (from /brownfield) | implemented (legacy /brownfield) | |
 | 14 | `s8` | previews/s8.png | /deals/{id}/s8 (from business-case) | implemented (legacy business-case) | |

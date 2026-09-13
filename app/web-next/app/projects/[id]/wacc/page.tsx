@@ -1,6 +1,6 @@
 "use client";
 
-// S8 WACC 입력 세션 — FS 게이트 할인율 확정 (ADR-0115).
+// S8 WACC 입력 세션 — FS 진행 할인율 확정 (ADR-0115).
 // 직접 입력(기존) + CAPM 분해 모드: 시장 수치는 외부 출처(AlphaSpread,
 // 한국은행 ECOS 등)에서 인용해 값·출처·기준일을 남기고, 인용값이 없으면
 // CAPM(자기자본비용)과 신용등급 기반 타인자본비용으로 WACC를 산출한다.
@@ -429,7 +429,7 @@ export default function ProjectWaccPage() {
   return (
     <main className="market-page">
       <ProjectSubNav projectId={projectId} />
-      <StageFrame stageId="S8" heading="WACC 입력 세션 — FS 게이트 할인율 확정">
+      <StageFrame stageId="S8" heading="WACC 입력 세션 — FS 진행 할인율 확정">
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem]">✕ {error}</p>}
         {message && <p className="text-[color:var(--green-fg)] text-[0.82rem]">✓ {message}</p>}
 
@@ -733,7 +733,7 @@ export default function ProjectWaccPage() {
                         <td className="py-1.5 px-1.5 font-mono text-[0.8em]">wacc (최종 확정)</td>
                         <td className="py-1.5 px-1.5 text-right tabular-nums">{pct(nOr(waccFinal))}</td>
                         <td className="py-1.5 px-1.5"><KindChip kind="user" /></td>
-                        <td className="py-1.5 px-1.5 text-[0.8rem] text-[color:var(--muted-fg)]">사람이 최종 확정한 값 — FS 게이트 진입 필수 요건</td>
+                        <td className="py-1.5 px-1.5 text-[0.8rem] text-[color:var(--muted-fg)]">사람이 최종 확정한 값 — FS 진행 진입 필수 요건</td>
                         <td className="py-1.5 px-1.5 text-[0.8rem]">—</td>
                       </tr>
                     </tbody>
@@ -767,7 +767,7 @@ export default function ProjectWaccPage() {
               )
             )}
             <button className="primary-button justify-self-start mt-2" type="submit">이 값으로 확정</button>
-            <p className="text-[color:var(--muted-fg)] text-[0.78rem]">확정값이 계산값과 다르면 ⚠ 경고가 표시되고, 차이 근거를 메모에 기재해야 합니다. 저장 시 컴포넌트·산식 분해 전체가 하나의 run 스냅샷으로 기록되어 FS 게이트 산출물에서 재현됩니다.</p>
+            <p className="text-[color:var(--muted-fg)] text-[0.78rem]">확정값이 계산값과 다르면 ⚠ 경고가 표시되고, 차이 근거를 메모에 기재해야 합니다. 저장 시 컴포넌트·산식 분해 전체가 하나의 run 스냅샷으로 기록되어 FS 진행 산출물에서 재현됩니다.</p>
           </form>
         )}
       </StageFrame>

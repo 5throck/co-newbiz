@@ -28,7 +28,7 @@ function TimelineView() {
     <main>
       <ProjectSubNav projectId={id} />
       <h1>프로세스 타임라인·SLA</h1>
-      <p className="objective">단계별 목표 리드타임(SLA 정책) 대비 실제 경과를 추적하고 병목을 찾아냅니다 — 경과는 계산값이며 저장되지 않습니다 (ADR-0122).</p>
+      <p className="objective">단계별 목표 리드타임(SLA 정책) 대비 실제 경과를 추적하고 병목을 찾아냅니다 — 경과는 계산값이며 저장되지 않습니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <section className="market-section" aria-label="타임라인">
         {stages === null ? <PageState state="loading" /> : (

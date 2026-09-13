@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (isAdminDealBlocked(ctx)) return forbidden("role_required", "관리자는 딜 내용에 접근할 수 없습니다.");
+  if (isAdminDealBlocked(ctx)) return forbidden("role_required", "관리자는 검토/안건 내용에 접근할 수 없습니다.");
   const url = new URL(request.url);
   const statusParam = url.searchParams.get("status");
   const status = statusParam === "open" || statusParam === "closed" || statusParam === "archived" ? statusParam : undefined;
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     excludeMnpi: false,
     includeClosed,
     status,
-    // 삭제 표시 딜은 이 목록에 나오지 않는다 — 아카이브 화면(/api/archive/deals) 전용.
+    // 삭제 표시 검토/안건은 이 목록에 나오지 않는다 — 아카이브 화면(/api/archive/deals) 전용.
   });
   // is_lead — 마감/보관(close)은 project_member.project_role='lead' 전용이므로
   // 목록 단계에서 함께 알려준다(UI가 버튼 노출을 결정). repository는 그대로 둔다.

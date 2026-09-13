@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
+import { useAuth } from "../../lib/auth-client.tsx";
 import { useConfirm } from "../../components/crud.tsx";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
@@ -32,9 +33,9 @@ interface SynergyPayload {
   businessAssessment: string;
   marketLinkage: {
     marketSummaries: Array<{ industry: string; cagrPct: number | null; gapPct: number | null; newDrivers: string[] }>;
-    synergyAreas: Array<{ area: string; synergyType: string; rationale: string; opportunity: string; risk: string; sources: string[] }>;
+    synergyAreas: Array<{ area: string; synergyType: string; rationale: string; opportunity: string; risk: string; sources: string[]; origin?: "llm" | "human" }>;
   };
-  shortList: Array<{ rank: number; area: string; verdict: string; reason: string }>;
+  shortList: Array<{ rank: number; area: string; verdict: string; reason: string; origin?: "llm" | "human"; editedBy?: string | null; editedAt?: string | null }>;
   stepSummaries: SynergyStepSummary[];
   target?: { type: "affiliate" | "group"; name: string };
   opportunity?: { id: string; name: string } | null;
@@ -141,6 +142,12 @@ export function SynergyView() {
     }, 4000);
     return () => clearInterval(t);
   }, [selectedId, selected?.status]);
+
+  const refreshDetail = useCallback((analysisId: string) => {
+    return api.get<SynergyAnalysis>(`/api/synergy/analyses/${encodeURIComponent(analysisId)}`)
+      .then((r) => setDetail(r.data))
+      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+  }, []);
 
   const openDetail = useCallback((a: SynergyAnalysis) => {
     router.replace(`/synergy?company=${encodeURIComponent(a.id)}`);
@@ -249,6 +256,7 @@ export function SynergyView() {
           onTab={(k) => setTab(k)}
           onBack={backToList}
           onRerun={() => rerun(selected)}
+          onRefresh={() => refreshDetail(selectedAnalysis.id)}
         />
       </main>
     );
@@ -262,7 +270,7 @@ export function SynergyView() {
       <StageFrame stageId="S3">
         그룹/계열사 분석에서 만든 자사 프로파일(특정 계열사 또는 그룹 전체)을 S1 시장분석·S2 기회발굴
         결과와 연결해 시너지 영역 후보를 도출하고 우선 시너지 영역으로 좁힙니다. 기회를 연결하면 완료 시 해당 기회에
-        synergy_score 권고가 기록됩니다 (ADR-0090).
+        synergy_score 권고가 기록됩니다.
       </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
@@ -399,12 +407,13 @@ export function SynergyView() {
   );
 }
 
-function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
+function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
   analysis: SynergyAnalysis;
   tab: TabKey;
   onTab: (k: TabKey) => void;
   onBack: () => void;
   onRerun: () => void;
+  onRefresh: () => void;
 }) {
   const latest = analysis.versions?.[0] ?? null;
   const p = latest?.payload ?? null;
@@ -412,8 +421,58 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
   const ct = useChartTheme(); // 리포트 차트 테마 — 훅은 컴포넌트 최상위에서 1회
   const analysisDate = latest?.created_at?.slice(0, 10) ?? analysis.created_at.slice(0, 10);
   const router = useRouter();
+  const { me } = useAuth();
+  const canCurate = me?.role === "admin" || me?.role === "analyst";
   const [advancing, setAdvancing] = useState(false);
   const [advanceError, setAdvanceError] = useState<string | null>(null);
+
+  // ADR-0125 — 연계 시너지 사람 추가 폼.
+  const [showLinkageForm, setShowLinkageForm] = useState(false);
+  const [linkageForm, setLinkageForm] = useState({ area: "", synergyType: "", rationale: "", opportunity: "", risk: "" });
+  const [linkageSaving, setLinkageSaving] = useState(false);
+  const [linkageError, setLinkageError] = useState<string | null>(null);
+
+  async function addLinkageItem() {
+    if (linkageSaving || !linkageForm.area.trim() || !linkageForm.synergyType.trim() || !linkageForm.rationale.trim()) return;
+    setLinkageSaving(true); setLinkageError(null);
+    try {
+      await api.post(`/api/synergy/analyses/${encodeURIComponent(analysis.id)}/linkage-items`, {
+        area: linkageForm.area.trim(), synergyType: linkageForm.synergyType.trim(), rationale: linkageForm.rationale.trim(),
+        opportunity: linkageForm.opportunity.trim() || undefined, risk: linkageForm.risk.trim() || undefined,
+      });
+      setLinkageForm({ area: "", synergyType: "", rationale: "", opportunity: "", risk: "" });
+      setShowLinkageForm(false);
+      onRefresh();
+    } catch (err) {
+      setLinkageError(err instanceof Error ? err.message : "영역 추가 실패");
+    } finally {
+      setLinkageSaving(false);
+    }
+  }
+
+  // ADR-0125 — 우선 시너지 영역 판정/사유 사람 편집 + 새 영역 추가.
+  const [editingArea, setEditingArea] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ verdict: "Short List", reason: "" });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [showShortlistForm, setShowShortlistForm] = useState(false);
+  const [shortlistForm, setShortlistForm] = useState({ area: "", verdict: "Short List", reason: "" });
+
+  async function saveShortlistItem(area: string, verdict: string, reason: string) {
+    if (editSaving || !reason.trim()) return;
+    setEditSaving(true); setEditError(null);
+    try {
+      await api.put(`/api/synergy/analyses/${encodeURIComponent(analysis.id)}/shortlist-items`, { area, verdict, reason: reason.trim() });
+      setEditingArea(null);
+      setShowShortlistForm(false);
+      setShortlistForm({ area: "", verdict: "Short List", reason: "" });
+      onRefresh();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "판정 저장 실패");
+    } finally {
+      setEditSaving(false);
+    }
+  }
 
   // S3 우선 시너지 영역 -> S4 route-decision handoff: mark the linked opportunity
   // "selected" and hand the synergy rationale to /route-decision as a
@@ -520,7 +579,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
               <table className="data-table report-table" aria-label="시너지 영역">
                 <caption className="sr-only">시너지 영역</caption>
                 <thead>
-                  <tr><th scope="col" className="col-label">영역</th><th scope="col" className="col-type">유형</th><th scope="col" className="col-text">근거</th><th scope="col" className="col-text">기회</th><th scope="col" className="col-text">위험</th></tr>
+                  <tr><th scope="col" className="col-label">영역</th><th scope="col" className="col-type">유형</th><th scope="col" className="col-text">근거</th><th scope="col" className="col-text">기회</th><th scope="col" className="col-text">위험</th><th scope="col" className="col-type">출처</th></tr>
                 </thead>
                 <tbody>
                   {p.marketLinkage.synergyAreas.map((a) => (
@@ -530,11 +589,42 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
                       <td className="text-[0.85rem] col-text">{a.rationale}{a.sources.length > 0 && <span className="text-[color:var(--muted-fg)]"> (출처: {a.sources.join(", ")})</span>}</td>
                       <td className="text-[0.85rem] col-text">{a.opportunity}</td>
                       <td className="text-[0.85rem] col-text">{a.risk}</td>
+                      <td className="col-type">
+                        <span className={`status-chip ${a.origin === "human" ? "status-in-progress" : "status-not-started"}`}>
+                          {a.origin === "human" ? "사람 추가" : "LLM 추천"}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               </div>
+              {canCurate && (
+                <div className="mt-3">
+                  {!showLinkageForm ? (
+                    <button type="button" className="btn-ghost btn-sm" onClick={() => setShowLinkageForm(true)}>＋ 새 영역 추가</button>
+                  ) : (
+                    <div className="sizing-grade-card">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <input className="sizing-new-input" style={{ flex: "1 1 12rem" }} placeholder="영역명 *" value={linkageForm.area} onChange={(e) => setLinkageForm({ ...linkageForm, area: e.target.value })} />
+                        <input className="sizing-new-input" style={{ flex: "1 1 10rem" }} placeholder="유형 * (예: 매출 시너지)" value={linkageForm.synergyType} onChange={(e) => setLinkageForm({ ...linkageForm, synergyType: e.target.value })} />
+                      </div>
+                      <textarea className="sizing-new-input w-full mb-2" rows={2} placeholder="근거 *" value={linkageForm.rationale} onChange={(e) => setLinkageForm({ ...linkageForm, rationale: e.target.value })} />
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <input className="sizing-new-input" style={{ flex: "1 1 12rem" }} placeholder="기회 (선택)" value={linkageForm.opportunity} onChange={(e) => setLinkageForm({ ...linkageForm, opportunity: e.target.value })} />
+                        <input className="sizing-new-input" style={{ flex: "1 1 12rem" }} placeholder="위험 (선택)" value={linkageForm.risk} onChange={(e) => setLinkageForm({ ...linkageForm, risk: e.target.value })} />
+                      </div>
+                      {linkageError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{linkageError}</p>}
+                      <div className="flex justify-end gap-2">
+                        <button type="button" className="btn-ghost btn-sm" onClick={() => { setShowLinkageForm(false); setLinkageError(null); }}>취소</button>
+                        <button type="button" className="btn-primary btn-sm" disabled={linkageSaving || !linkageForm.area.trim() || !linkageForm.synergyType.trim() || !linkageForm.rationale.trim()} onClick={() => void addLinkageItem()}>
+                          {linkageSaving ? "추가 중..." : "추가"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -543,38 +633,111 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun }: {
               <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge sizing-step-badge-deep">4</span> 우선 시너지 영역 — 선별 결과</h3>
               <table className="data-table" aria-label="우선 시너지 영역">
                 <caption className="sr-only">우선 시너지 영역</caption>
-                <thead><tr><th scope="col">순위</th><th scope="col">영역</th><th scope="col">판정</th><th scope="col">사유</th></tr></thead>
+                <thead><tr><th scope="col">순위</th><th scope="col">영역</th><th scope="col">판정</th><th scope="col">사유</th><th scope="col">출처</th>{canCurate && <th scope="col"></th>}</tr></thead>
                 <tbody>
-                  {p.shortList.map((s) => (
-                    <tr key={s.rank}>
-                      <td className="tabular-nums font-semibold">{s.rank}</td>
-                      <td className="font-semibold">{s.area}</td>
-                      <td><span className={`status-chip ${s.verdict.includes("Short") ? "status-green" : "status-not-started"}`}>{s.verdict.includes("Short") ? "선별" : s.verdict}</span></td>
-                      <td className="text-[0.85rem]">{s.reason}</td>
-                    </tr>
-                  ))}
+                  {p.shortList.map((s) => {
+                    const isEditing = editingArea === s.area;
+                    return (
+                      <tr key={s.area}>
+                        <td className="tabular-nums font-semibold">{s.rank}</td>
+                        <td className="font-semibold">{s.area}</td>
+                        {isEditing ? (
+                          <>
+                            <td>
+                              <select className="sizing-new-input sizing-new-input-sm" value={editForm.verdict} onChange={(e) => setEditForm({ ...editForm, verdict: e.target.value })}>
+                                <option value="Short List">선별</option>
+                                <option value="보류">보류</option>
+                              </select>
+                            </td>
+                            <td>
+                              <input className="sizing-new-input w-full" value={editForm.reason} onChange={(e) => setEditForm({ ...editForm, reason: e.target.value })} />
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td><span className={`status-chip ${s.verdict.includes("Short") ? "status-green" : "status-not-started"}`}>{s.verdict.includes("Short") ? "선별" : s.verdict}</span></td>
+                            <td className="text-[0.85rem]">{s.reason}</td>
+                          </>
+                        )}
+                        <td>
+                          <span className={`status-chip ${s.origin === "human" ? "status-in-progress" : "status-not-started"}`} title={s.editedBy ? `${s.editedBy}가 수정 (${s.editedAt?.slice(0, 10) ?? ""})` : undefined}>
+                            {s.origin === "human" ? "사람 추가" : s.editedBy ? "LLM 제안 · 사람 수정" : "LLM 추천"}
+                          </span>
+                        </td>
+                        {canCurate && (
+                          <td className="sizing-actions-cell">
+                            {isEditing ? (
+                              <span className="actions-row">
+                                <button type="button" className="btn-ghost btn-sm" disabled={editSaving} onClick={() => setEditingArea(null)}>취소</button>
+                                <button type="button" className="btn-primary btn-sm" disabled={editSaving || !editForm.reason.trim()} onClick={() => void saveShortlistItem(s.area, editForm.verdict, editForm.reason)}>
+                                  {editSaving ? "저장 중..." : "저장"}
+                                </button>
+                              </span>
+                            ) : (
+                              <button type="button" className="btn-ghost btn-sm" onClick={() => { setEditingArea(s.area); setEditForm({ verdict: s.verdict, reason: s.reason }); }}>수정</button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-              {/* 우선 시너지 영역 -> S4 route-decision handoff (opportunity.status -> selected,
-                  rationale carried over as an editable starting point). */}
-              {opportunityId ? (
-                <div className="flex items-center gap-2 mt-2">
-                  <button type="button" className="btn-ghost" disabled={advancing} onClick={() => void advanceToRouteDecision()}>
-                    {advancing ? "S4로 진행 중..." : "S4로 진행"}
-                  </button>
-                  <span className="text-[0.78rem] text-[color:var(--muted-fg)]">연결 기회를 &quot;selected&quot;로 표시하고 트랙 결정(/route-decision)으로 이동합니다.</span>
+              {editError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mt-1">{editError}</p>}
+              {canCurate && (
+                <div className="mt-3">
+                  {!showShortlistForm ? (
+                    <button type="button" className="btn-ghost btn-sm" onClick={() => setShowShortlistForm(true)}>＋ 새 영역 추가</button>
+                  ) : (
+                    <div className="sizing-grade-card">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <input className="sizing-new-input" style={{ flex: "1 1 12rem" }} placeholder="영역명 *" value={shortlistForm.area} onChange={(e) => setShortlistForm({ ...shortlistForm, area: e.target.value })} />
+                        <select className="sizing-new-input sizing-new-input-sm" value={shortlistForm.verdict} onChange={(e) => setShortlistForm({ ...shortlistForm, verdict: e.target.value })}>
+                          <option value="Short List">선별</option>
+                          <option value="보류">보류</option>
+                        </select>
+                      </div>
+                      <input className="sizing-new-input w-full mb-2" placeholder="사유 *" value={shortlistForm.reason} onChange={(e) => setShortlistForm({ ...shortlistForm, reason: e.target.value })} />
+                      <div className="flex justify-end gap-2">
+                        <button type="button" className="btn-ghost btn-sm" onClick={() => setShowShortlistForm(false)}>취소</button>
+                        <button
+                          type="button"
+                          className="btn-primary btn-sm"
+                          disabled={editSaving || !shortlistForm.area.trim() || !shortlistForm.reason.trim()}
+                          onClick={() => void saveShortlistItem(shortlistForm.area.trim(), shortlistForm.verdict, shortlistForm.reason)}
+                        >
+                          {editSaving ? "추가 중..." : "추가"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ) : (
+              )}
+              {!opportunityId && (
                 <p className="mt-2 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">
                   S4로 진행하려면 이 분석에 연결된 기회(S2)가 필요합니다 — 새 분석 시 "연결 기회"를 선택하세요.
                 </p>
               )}
               {/* Screening gate — flow.spec S1~S3 gates: [screening]. S3 산출물이
                   모이는 이 화면에서 GO/HOLD/KILL을 기록한다 (ADR-0094 경계 #2:
-                  기록 버튼은 사람의 몫). */}
+                  기록 버튼은 사람의 몫). GO 기록이 곧 S4 진행 결정이므로, 별도
+                  "S4로 진행" 버튼 없이 GO 기록 시 바로 opportunity를 selected로
+                  표시하고 /route-decision으로 이동한다. */}
               {opportunityId && (
                 <div className="mt-4">
-                  <GateDecisionPanel opportunityId={opportunityId} gates={["screening"]} />
+                  <GateDecisionPanel
+                    opportunityId={opportunityId}
+                    gates={["screening"]}
+                    onRecorded={(decision, gate) => {
+                      if (decision === "go" && gate === "screening") void advanceToRouteDecision();
+                    }}
+                  />
+                  <p className="mt-1 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+                    GO로 기록하면 이 검토/안건이 "selected"로 표시되고 S4 진출방식 결정으로 자동 이동합니다.{" "}
+                    <a href={`/deals/${encodeURIComponent(opportunityId)}/s4`} className="text-[color:var(--accent)] underline">
+                      지금 바로 S4로 이동 →
+                    </a>
+                  </p>
                 </div>
               )}
               {advanceError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mt-1">{advanceError}</p>}

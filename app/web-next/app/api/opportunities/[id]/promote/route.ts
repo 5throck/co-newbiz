@@ -15,11 +15,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const ctx = auth.auth;
   if (ctx.role === "viewer") return forbidden("role_required", "프로젝트 승격은 analyst 역할 이상이어야 합니다.");
   if (ctx.role === "admin") {
-    // ADR-0091 역할-화면 분리: admin은 시스템 운영자로 딜 콘텐츠에 접근하지
+    // ADR-0091 역할-화면 분리: admin은 시스템 운영자로 검토/안건 콘텐츠에 접근하지
     // 않는다(visibleProject도 admin을 차단). admin이 승격하면 본인이 lead가
-    // 되면서 모든 딜 라우트에서 404로 막히는 모순이 생기므로 진입 단계에서
+    // 되면서 모든 검토/안건 라우트에서 404로 막히는 모순이 생기므로 진입 단계에서
     // 차단하고 analyst 계정으로 수행하도록 안내한다.
-    return forbidden("role_forbidden", "admin 계정은 딜 콘텐츠에서 분리되어 있습니다(ADR-0091) — analyst 계정으로 승격하세요.");
+    return forbidden("role_forbidden", "admin 계정은 검토/안건 콘텐츠에서 분리되어 있습니다(ADR-0091) — analyst 계정으로 승격하세요.");
   }
 
   const { id } = await params;

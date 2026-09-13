@@ -1,6 +1,6 @@
 // S8 채택 권고 (ADR-0118) — 자기 단계(6개 case + 킬크라이어리아)만 컨텍스트로
 // 읽는다. 채택할 case와 "무엇이 바꾸면 뒤집히는가" 초안을 제안하며, 채택
-// (adopt API)은 사람의 행위다. 폴백은 결정론 RECOMMENDED(market_forward 게이트
+// (adopt API)은 사람의 행위다. 폴백은 결정론 RECOMMENDED(market_forward 진행
 // 1차 기준)를 그대로 echo한다 — 위조가 아니라 기존 산출물의 인용.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
@@ -73,7 +73,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
           role: "system" as const,
           content:
             "당신은 사업성 분석 심사관입니다. 최종 채택은 사람이 하며 당신 산출물은 제안입니다. " +
-            "제공된 case 수치와 킬크라이어리아 안에서만 판단하세요. market_forward가 게이트 1차 기준임을 고려하세요. JSON만 반환합니다.",
+            "제공된 case 수치와 킬크라이어리아 안에서만 판단하세요. market_forward가 진행 1차 기준임을 고려하세요. JSON만 반환합니다.",
         },
         {
           role: "user" as const,
@@ -107,7 +107,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     }
   } else {
     payload = echoRecommended(recommendedCase, adoptionRow);
-    note = "LLM 미구성 — 결정론 RECOMMENDED(market_forward 게이트 1차 기준)를 권고합니다.";
+    note = "LLM 미구성 — 결정론 RECOMMENDED(market_forward 진행 1차 기준)를 권고합니다.";
   }
 
   appendAudit(db, { actor: ctx.userId, action: "adoption_recommendation.generate", target: `${id}:${source}`, now: new Date().toISOString() });
@@ -118,7 +118,7 @@ function echoRecommended(recommendedCase: { id: string; name: string; scenario: 
   return {
     recommended_model_id: recommendedCase?.id ?? null,
     rationale_draft: recommendedCase
-      ? `결정론 폴백 — market_forward 게이트 1차 기준 RECOMMENDED 케이스(${recommendedCase.name}${recommendedCase.scenario ? `, ${recommendedCase.scenario}` : ""})를 권고합니다. 채택 판단은 사람이 수치를 직접 검토해 수행하세요.`
+      ? `결정론 폴백 — market_forward 진행 1차 기준 RECOMMENDED 케이스(${recommendedCase.name}${recommendedCase.scenario ? `, ${recommendedCase.scenario}` : ""})를 권고합니다. 채택 판단은 사람이 수치를 직접 검토해 수행하세요.`
       : "결정론 폴백 — RECOMMENDED 케이스가 없습니다 (수치 부족 또는 미생성).",
     what_would_change: null,
     key_evidence: [adoptionRow ? `이미 채택됨: ${adoptionRow.modelId} (채택자 ${adoptionRow.adoptedBy})` : "미채택"],

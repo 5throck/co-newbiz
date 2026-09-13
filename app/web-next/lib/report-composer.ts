@@ -121,13 +121,13 @@ export function composeProjectReport(db: Database, projectId: string, projectNo:
   }
   lines.push("");
 
-  sections.push("게이트 이력");
+  sections.push("진행 이력");
   const gates = latestGateDecisions("project", projectId);
-  lines.push("## 6. 게이트 결정 이력");
+  lines.push("## 6. 의사결정 이력");
   lines.push("");
   const gateEntries = [...gates.entries()] as Array<[GateId, { decision: string; rationale: string }]>;
   if (gateEntries.length === 0) {
-    lines.push("- 기록된 게이트 결정 없음");
+    lines.push("- 기록된 의사결정 없음");
   } else {
     for (const [gate, v] of gateEntries) lines.push(`- ${gate}: ${v.decision} — ${v.rationale}`);
   }
