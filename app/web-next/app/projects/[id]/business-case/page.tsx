@@ -10,6 +10,8 @@ import { GateDecisionPanel } from "../../../../components/GateDecisionPanel.tsx"
 import { TargetCheckPanel } from "../../../../components/TargetCheckPanel.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { TabNav } from "../../../../components/TabNav.tsx";
+import { WaccPanel } from "../../../../components/wacc/WaccPanel.tsx";
+import { FinancialAnalysisPanel } from "../../../../components/FinancialAnalysisPanel.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 
 // S8 사업성 분석 — 이중 관점 밸류에이션 비교 (ADR-0117; approved mockup
@@ -88,7 +90,8 @@ function BusinessCasePage() {
   const projectId = params.id;
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tab = searchParams.get("tab") === "overview" ? "overview" : "scenarios";
+  const tabParam = searchParams.get("tab");
+  const tab = tabParam === "overview" || tabParam === "wacc" || tabParam === "financial-analysis" ? tabParam : "scenarios";
   const setTab = (key: string) => router.replace(`/projects/${projectId}/business-case?tab=${key}`, { scroll: false });
   const { me } = useAuth();
   const canAct = me?.role === "admin" || me?.role === "analyst";
@@ -244,10 +247,15 @@ function BusinessCasePage() {
         tabs={[
           { key: "overview", label: "설명·생성·권고" },
           { key: "scenarios", label: "시나리오 비교" },
+          { key: "wacc", label: "WACC" },
+          { key: "financial-analysis", label: "재무분석" },
         ]}
       />
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
+
+      {tab === "wacc" && <WaccPanel projectId={projectId} />}
+      {tab === "financial-analysis" && <FinancialAnalysisPanel projectId={projectId} />}
 
       {tab === "overview" && (
       <>
@@ -424,7 +432,7 @@ function BusinessCasePage() {
                     <tr>
                       <td colSpan={9} className="text-[color:var(--muted-fg)] text-[0.8rem]">
                         과거 기반 관점 N/A — 대상 회사 연결 + DART 동기화 후 재생성하면 추가됩니다.{" "}
-                        <Link className="text-[color:var(--accent)] font-bold" href={`/projects/${projectId}/financial-analysis`}>재무분석 탭에서 연결 →</Link>
+                        <Link className="text-[color:var(--accent)] font-bold" href={`/projects/${projectId}/business-case?tab=financial-analysis`}>재무분석 탭에서 연결 →</Link>
                       </td>
                     </tr>
                   )}

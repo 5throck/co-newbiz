@@ -194,7 +194,11 @@ export function ProjectsView() {
               {rows.map((p) => (
                 <tr key={p.id}>
                   <td className="font-semibold">{p.project_no}</td>
-                  <td>{p.project_name ?? "—"}</td>
+                  <td>
+                    {p.project_name ? (
+                      <Link href={`/projects/${p.id}`} className="text-[color:var(--accent)] font-semibold">{p.project_name}</Link>
+                    ) : "—"}
+                  </td>
                   <td>
                     {p.track ? (
                       <span className={`status-chip ${p.track === "greenfield" ? "status-green" : "status-amber"}`}>

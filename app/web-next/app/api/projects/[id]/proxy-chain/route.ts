@@ -12,6 +12,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const project = visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();
   const db = getDb();
+
+  // ADR-0126/0129 — inherit the S1-curated proxy_link/proxy_chain rows for
+  // this project's origin industry (md_project -> opportunity.market_scope
+  // -> md_industry). Previously this route only ever looked at value_chain_link
+  // rows the analyst re-created from scratch inside S9 itself, so nothing
+  // S1 already curated for the project's own industry was ever inherited.
+  const origin = db.query(
+    `SELECT mi.id FROM md_project p
+     JOIN opportunity o ON o.id = p.source_opportunity_id
+     JOIN md_industry mi ON mi.name_ko = o.market_scope
+     WHERE p.id = ?`,
+  ).get(id) as { id: string } | undefined;
+  const originIndustryId = origin?.id ?? null;
+
   const links = db.query(
     `SELECT v.*, fi.name_ko AS from_industry_ko, fi.name_en AS from_industry_en,
             ti.name_ko AS to_industry_ko, ti.name_en AS to_industry_en
@@ -31,16 +45,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
        SELECT 1 FROM value_chain_link v
        WHERE v.project_id = ? AND ((v.from_industry_id = pl.from_industry_id AND v.to_industry_id = pl.to_industry_id)
                                 OR (v.from_industry_id = pl.to_industry_id AND v.to_industry_id = pl.from_industry_id))
-     ) ORDER BY pl.calibrated_at DESC, pl.id`
-  ).all(id);
+     )
+     OR (? IS NOT NULL AND pl.status = 'active' AND (pl.from_industry_id = ? OR pl.to_industry_id = ?))
+     ORDER BY pl.calibrated_at DESC, pl.id`
+  ).all(id, originIndustryId, originIndustryId, originIndustryId);
   const chains = db.query(
     `SELECT pc.* FROM proxy_chain pc
      WHERE pc.target_industry_id IN (
        SELECT from_industry_id FROM value_chain_link WHERE project_id = ?
        UNION SELECT to_industry_id FROM value_chain_link WHERE project_id = ?
        UNION SELECT industry_id FROM project_industry WHERE project_id = ? AND superseded_by IS NULL
+       UNION SELECT ? WHERE ? IS NOT NULL
      ) ORDER BY pc.reliability_grade, pc.calibrated_at DESC`
-  ).all(id, id, id);
+  ).all(id, id, id, originIndustryId, originIndustryId);
   return ok({ project: { id: project.id, project_no: project.project_no }, links, proxyLinks, chains }, 200, {
     link_count: (links as unknown[]).length,
     proxy_link_count: (proxyLinks as unknown[]).length,

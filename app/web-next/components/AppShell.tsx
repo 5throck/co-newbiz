@@ -247,6 +247,8 @@ function Sidebar() {
         { href: `/projects/${currentProjectId}/deal-structure`, label: "S10 투자구조 설계" },
         { href: `/projects/${currentProjectId}/ic-review`, label: "S11 투자심사·실행" },
         { href: `/projects/${currentProjectId}/portfolio`, label: "S12 사후 관리" },
+        { href: `/projects/${currentProjectId}/timeline`, label: "타임라인·SLA" },
+        { href: `/projects/${currentProjectId}/risk-heatmap`, label: "리스크 히트맵" },
         { href: "/projects/archives", label: "아카이브" },
       ]
     : null;
