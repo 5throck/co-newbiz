@@ -53,7 +53,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "스케치 생성은 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
-  const body = (await request.json().catch(() => null)) as { force?: boolean } | null;
+  // regenerateScenarios — 사용자 결정: 시나리오 전제(낙관/기본/비관)는 캔버스
+  // 재생성과 성격이 다른 별도 행위다(캔버스는 자유롭게 다시 다듬는 초안,
+  // 시나리오는 확정 후 유지되어야 하는 시장 가정). 기본 재생성(force만 true)은
+  // 기존 시나리오를 그대로 보존하고 캔버스/시장진입/핵심리스크만 새로 만든다 —
+  // 이 플래그가 true일 때만 시나리오도 함께 새로 만든다.
+  const body = (await request.json().catch(() => null)) as { force?: boolean; regenerateScenarios?: boolean } | null;
   const db = getDb();
 
   const opp = db
@@ -147,6 +152,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // 파싱 실패 시 400 대신 결정론 폴백 스케치로 저장한다 — 스키마 v2 구조는 항상 유지.
   const parseFailed = raw === null;
   const sketch = normalizeSketchV2(raw ?? parseFallback(opp, parseFailed ? "파싱 실패" : "미생성"));
+
+  // 사용자 결정 — 캔버스 재생성과 시나리오 재생성은 서로 다른 행위이므로 한쪽만
+  // 명시적으로 요청해도 다른 쪽은 조용히 덮어써지지 않는다:
+  //   · 기본 재생성(force만 true) — 캔버스/시장진입/핵심리스크만 새로 만들고
+  //     기존 시나리오는 그대로 유지한다.
+  //   · 시나리오 재생성(regenerateScenarios=true) — 시나리오만 새로 만들고
+  //     캔버스/시장진입/핵심리스크는 기존 값을 그대로 유지한다.
+  // 최초 생성(기존 sketch 없음)은 전부 새로 만든다.
+  if (opp.sketch_json) {
+    try {
+      const prev = JSON.parse(opp.sketch_json) as Partial<typeof sketch>;
+      if (body?.regenerateScenarios) {
+        if (prev.canvas) sketch.canvas = prev.canvas;
+        if (prev.errc) sketch.errc = prev.errc;
+        if (Array.isArray(prev.marketEntry)) sketch.marketEntry = prev.marketEntry;
+        if (Array.isArray(prev.keyRisks)) sketch.keyRisks = prev.keyRisks;
+      } else if (Array.isArray(prev.scenarios)) {
+        sketch.scenarios = prev.scenarios;
+      }
+    } catch { /* 기존 payload 파싱 실패 — 새로 생성된 내용을 그대로 둔다 */ }
+  }
 
   const ts = now();
   const source = res.source === "llm" && raw !== null ? "llm" : "synthesis";

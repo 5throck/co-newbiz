@@ -5,6 +5,7 @@
 // 스트립·시나리오·핵심 리스크를 둔다. 구형(v1, schema 태그 없는 6필드) 스케치는
 // 텍스트 뷰로만 렌더링된다(호환 폴백).
 
+import type { ReactNode } from "react";
 import {
   SKETCH_BLOCK_LABELS,
   SKETCH_BLOCKS,
@@ -53,6 +54,32 @@ interface SketchV2Loose {
   marketEntry?: string[];
   scenarios?: Array<{ name: string; assumption: string }>;
   keyRisks?: string[];
+}
+
+/** 시나리오 전제(낙관/기본/비관) — 비즈니스 모델 검토(sketch)의 일부지만, 화면
+    배치상 "기회·위험 요인" 탭 아래에 노출된다(사용자 요청) — 별도 컴포넌트로
+    분리해 두 화면에서 같은 데이터를 재사용한다. */
+export function ScenarioPremises({ sketch, actions }: { sketch: Record<string, unknown> | null; actions?: ReactNode }) {
+  const scenarios = sketch && sketchSchema(sketch) === 2
+    ? (sketch as SketchV2Loose).scenarios ?? []
+    : [];
+  if (scenarios.length === 0) return null;
+  return (
+    <>
+      <h2 className="bms-sec flex items-center justify-between gap-2">
+        <span>시나리오 전제 (낙관 / 기본 / 비관)</span>
+        {actions}
+      </h2>
+      <div className="bms-aux">
+        {scenarios.map((sc, i) => (
+          <div key={i} className="bms-card">
+            <div className="bms-card-name">{sc.name}</div>
+            <p>{sc.assumption}</p>
+          </div>
+        ))}
+      </div>
+    </>
+  );
 }
 
 export function SketchCanvas({ sketch }: { sketch: Record<string, unknown> }) {
@@ -133,20 +160,6 @@ export function SketchCanvas({ sketch }: { sketch: Record<string, unknown> }) {
             </li>
           ))}
         </ul>
-      )}
-
-      {(v2?.scenarios?.length ?? 0) > 0 && (
-        <>
-          <h2 className="bms-sec">시나리오 전제 (낙관 / 기본 / 비관)</h2>
-          <div className="bms-aux">
-            {v2!.scenarios!.map((sc, i) => (
-              <div key={i} className="bms-card">
-                <div className="bms-card-name">{sc.name}</div>
-                <p>{sc.assumption}</p>
-              </div>
-            ))}
-          </div>
-        </>
       )}
 
       {(v2?.keyRisks?.length ?? 0) > 0 && (

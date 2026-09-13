@@ -10,7 +10,7 @@ import { useParams } from "next/navigation";
 import { api } from "../../../lib/api.ts";
 import { useConfirm } from "../../../components/crud.tsx";
 import { SectionToolbar } from "../../../components/layout.tsx";
-import { SketchCanvas } from "../../../components/SketchCanvas.tsx";
+import { ScenarioPremises, SketchCanvas } from "../../../components/SketchCanvas.tsx";
 import { PromotionPanel } from "../../../components/PromotionPanel.tsx";
 
 interface OpportunityRow {
@@ -51,6 +51,7 @@ export function OpportunityDetail() {
   const [viewingVersion, setViewingVersion] = useState<number | null>(null);
   const [versionSketch, setVersionSketch] = useState<Sketch | null>(null);
   const { confirm, confirmDialog } = useConfirm();
+  const [tab, setTab] = useState<"factors" | "sketch">("factors");
 
   const load = useCallback(() => {
     api.get<OpportunityRow>(`/api/opportunities/${encodeURIComponent(id)}`)
@@ -135,6 +136,21 @@ export function OpportunityDetail() {
     } catch (err) { setError(err instanceof Error ? err.message : "비즈니스 모델 검토 생성 실패"); }
     finally { setSketchBusy(false); }
   }
+
+  // 시나리오 전제만 재생성 — 캔버스/시장진입/핵심리스크는 건드리지 않는다
+  // (사용자 결정: 재생성 행위를 서로 분리해 조용한 덮어쓰기를 막는다).
+  const [scenarioBusy, setScenarioBusy] = useState(false);
+  const [scenarioNotice, setScenarioNotice] = useState<string | null>(null);
+  async function regenerateScenarios() {
+    setScenarioBusy(true); setError(null); setScenarioNotice(null);
+    try {
+      await api.post(`/api/opportunities/${encodeURIComponent(id)}/sketch`, { force: true, regenerateScenarios: true });
+      const r = await api.get<SketchView>(`/api/opportunities/${encodeURIComponent(id)}/sketch`);
+      setSketchView(r.data);
+      setScenarioNotice("시나리오 전제를 다시 생성했습니다 — 기회·위험 요인도 최신 상태인지 함께 확인하세요.");
+    } catch (err) { setError(err instanceof Error ? err.message : "시나리오 재생성 실패"); }
+    finally { setScenarioBusy(false); }
+  }
   async function openVersion(n: number) {
     setError(null);
     try {
@@ -207,7 +223,20 @@ export function OpportunityDetail() {
         )}
       </section>
 
-      {/* 기회/위험 요인 */}
+      {/* 기회·위험 요인 / 비즈니스 모델 검토 — 탭으로 분리 (한 화면에 두 섹션이
+          모두 펼쳐져 있으면 스크롤이 길어져 각 섹션을 찾기 어렵다는 피드백). */}
+      <div className="library-tabs" role="tablist" aria-label="기회 상세 섹션">
+        <button type="button" role="tab" aria-selected={tab === "factors"} className={`library-tab ${tab === "factors" ? "library-tab-active" : ""}`} onClick={() => setTab("factors")}>
+          기회·위험 요인
+          <span className="library-tab-count">{(factors?.opportunity.length ?? 0) + (factors?.risk.length ?? 0)}</span>
+        </button>
+        <button type="button" role="tab" aria-selected={tab === "sketch"} className={`library-tab ${tab === "sketch" ? "library-tab-active" : ""}`} onClick={() => setTab("sketch")}>
+          비즈니스 모델 검토
+          {(sketchView?.versions.length ?? 0) > 0 && <span className="library-tab-count">{sketchView!.versions.length}</span>}
+        </button>
+      </div>
+
+      {tab === "factors" && (
       <section aria-label="기회·위험 요인" className="market-section">
         <SectionToolbar title="기회·위험 요인" icon="" count={(factors?.opportunity.length ?? 0) + (factors?.risk.length ?? 0)} />
         <div className="chart-pair">
@@ -249,9 +278,28 @@ export function OpportunityDetail() {
             className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
           <button type="button" className="btn-ghost btn-sm" onClick={() => void addFactor(factorDraft.type)}>추가</button>
         </div>
+        {/* 시나리오 전제(낙관/기본/비관) — 비즈니스 모델 검토(sketch)에서 산출되는
+            데이터지만, 요인과 함께 보는 편이 자연스러워 이 탭에 배치한다.
+            위 요인 등록 폼과 바로 붙어 보여 여백을 둔다. 재생성은 비즈니스 모델
+            캔버스 재생성과 분리된 별도 버튼이다(서로 조용히 덮어쓰지 않음). */}
+        {(sketchView?.sketch as { scenarios?: unknown[] } | null)?.scenarios != null && (
+          <div className="mt-4">
+            {scenarioNotice && <p role="status" className="text-[0.78rem] text-[color:var(--green-fg)] mb-1">{scenarioNotice}</p>}
+            <ScenarioPremises
+              sketch={sketchView?.sketch as unknown as Record<string, unknown> | null}
+              actions={
+                <button type="button" className="btn-ghost btn-sm" disabled={scenarioBusy} onClick={() => void regenerateScenarios()}>
+                  {scenarioBusy ? "재생성 중..." : "시나리오 재생성"}
+                </button>
+              }
+            />
+          </div>
+        )}
       </section>
+      )}
 
       {/* 비즈니스 모델 검토 (구: 비즈니스 모델 스케치) + 버전 이력 */}
+      {tab === "sketch" && (
       <section aria-label="비즈니스 모델 검토" className="market-section">
         <SectionToolbar
           title="비즈니스 모델 검토"
@@ -300,6 +348,7 @@ export function OpportunityDetail() {
           </details>
         )}
       </section>
+      )}
 
       {/* 승격 — 선별 상태이며 미승격일 때 (ADR-0095) */}
       {opp.status === "selected" && !opp.project_id && (

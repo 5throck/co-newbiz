@@ -34,55 +34,118 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
     lag_months: number | null; region_code: string | null; segment_code: string | null; evidence_ref: string | null;
   }>;
 
-  // 신규 산업(검토/안건 미연계)은 chain_node_sensitivity rows가 없다 — 완료된 분석의
-  // 매트릭스에서 지역×세그먼트 수요 민감도를 파생해 같은 화면을 제공한다.
-  // (민감도 = 셀 CAGR × 10, 시드 스크립트와 동일한 placeholder 척도)
+  // 신규 산업(검토/안건 미연계)은 chain_node_sensitivity rows가 없다 — 우선 ADR-0129
+  // 큐레이션된 수요산업(전방/전전방)의 CAGR에서 민감도를 파생하고, 아직 큐레이션이
+  // 없는 산업은 기존 자기 매트릭스 세그먼트×CAGR 파생(폴백의 폴백)으로 같은 화면을 제공한다.
+  // (민감도 = CAGR × 10, 시드 스크립트와 동일한 placeholder 척도)
   if (driverSensitivities.length === 0) {
-    const latest = db
-      .query(
-        `SELECT v.payload FROM market_sizing_version v
-         JOIN market_sizing_analysis a ON a.id = v.analysis_id
-         WHERE a.industry_id = ? AND a.status = 'completed'
-         ORDER BY v.version_no DESC LIMIT 1`,
-      )
-      .get(industryId) as { payload: string } | null;
-    if (latest) {
-      try {
-        const matrix = (JSON.parse(latest.payload) as {
-          matrix?: {
-            segments?: Array<{ code: string; label: string }>;
-            regions?: Array<{ code: string; label: string }>;
-            baseline2026?: Record<string, Record<string, number>>;
-            cagrBase?: Record<string, Record<string, number>>;
-          };
-        }).matrix;
-        // 세그먼트 단위로 집계해 표시한다 — 권역별 조합은 3단계(권역·세그먼트 배분)의 역할이고,
-        // 1단계 축 정의에서는 산업의 세그먼트 구조만 보면 충분하다.
-        const segs = matrix?.segments
-          ?? [{ code: "construction", label: "건설" }, { code: "mining", label: "광산" }, { code: "other", label: "기타" }];
-        const regions = matrix?.regions ?? [];
-        for (const seg of segs) {
-          let wSum = 0;
-          let cagrSum = 0;
-          for (const r of regions) {
-            const base = matrix?.cagrBase?.[r.code]?.[seg.code] ?? 0;
-            const w = matrix?.baseline2026?.[r.code]?.[seg.code] ?? 0;
-            cagrSum += base * w;
-            wSum += w;
-          }
-          const wCagr = wSum > 0 ? cagrSum / wSum : 0;
-          driverSensitivities.push({
-            driver_id: `derived-${seg.code}`,
-            driver_label: `수요 규모 (${seg.label})`,
-            sensitivity: Math.round(wCagr * 10 * 100) / 100,
-            lag_months: 0,
-            region_code: null,
-            segment_code: seg.code,
-            evidence_ref: "market-sizing-pipeline — 세그먼트 통합 CAGR 기반 파생 민감도 (권역 가중 평균)",
-          });
+    type SizingMatrixShape = {
+      segments?: Array<{ code: string; label: string }>;
+      regions?: Array<{ code: string; label: string }>;
+      baseline2026?: Record<string, Record<string, number>>;
+      cagrBase?: Record<string, Record<string, number>>;
+    };
+    const weightedCagr = (matrix: SizingMatrixShape | undefined): number => {
+      const segs = matrix?.segments ?? [];
+      const regions = matrix?.regions ?? [];
+      let wSum = 0;
+      let cagrSum = 0;
+      for (const seg of segs) {
+        for (const r of regions) {
+          const base = matrix?.cagrBase?.[r.code]?.[seg.code] ?? 0;
+          const w = matrix?.baseline2026?.[r.code]?.[seg.code] ?? 0;
+          cagrSum += base * w;
+          wSum += w;
         }
+      }
+      return wSum > 0 ? cagrSum / wSum : 0;
+    };
+
+    // 1) ADR-0129 큐레이션된 수요산업(전방/전전방) 기반 파생.
+    const demandIndustries = db
+      .query(
+        `SELECT p.relation, p.hop_distance,
+                CASE WHEN p.from_industry_id = ? THEN p.to_industry_id ELSE p.from_industry_id END AS related_industry_id
+         FROM proxy_link p
+         WHERE (p.from_industry_id = ? OR p.to_industry_id = ?)
+           AND p.status = 'active' AND p.relation IN ('전방','전전방')`,
+      )
+      .all(industryId, industryId, industryId) as Array<{
+      relation: string; hop_distance: number | null; related_industry_id: string;
+    }>;
+
+    for (const d of demandIndustries) {
+      const relatedIndustry = db
+        .query("SELECT id, name_ko FROM md_industry WHERE id = ?")
+        .get(d.related_industry_id) as { id: string; name_ko: string } | null;
+      if (!relatedIndustry) continue;
+      const relatedLatest = db
+        .query(
+          `SELECT v.payload FROM market_sizing_version v
+           JOIN market_sizing_analysis a ON a.id = v.analysis_id
+           WHERE a.industry_id = ? AND a.status = 'completed'
+           ORDER BY v.version_no DESC LIMIT 1`,
+        )
+        .get(relatedIndustry.id) as { payload: string } | null;
+      if (!relatedLatest) continue;
+      try {
+        const matrix = (JSON.parse(relatedLatest.payload) as { matrix?: SizingMatrixShape }).matrix;
+        const wCagr = weightedCagr(matrix);
+        driverSensitivities.push({
+          driver_id: `demand-${relatedIndustry.id}`,
+          driver_label: `수요산업: ${relatedIndustry.name_ko}`,
+          sensitivity: Math.round(wCagr * 10 * 100) / 100,
+          lag_months: 0,
+          region_code: null,
+          segment_code: null,
+          evidence_ref: `proxy_link 전방/전전방 큐레이션 — ${d.relation} ${relatedIndustry.name_ko}`,
+        });
       } catch {
-        // payload 파싱 실패 시 빈 배열 유지
+        // payload 파싱 실패 시 이 수요산업은 건너뜀
+      }
+    }
+
+    // 2) 큐레이션된 수요산업이 없으면 기존 자기 매트릭스 세그먼트×CAGR 파생으로 폴백.
+    if (driverSensitivities.length === 0) {
+      const latest = db
+        .query(
+          `SELECT v.payload FROM market_sizing_version v
+           JOIN market_sizing_analysis a ON a.id = v.analysis_id
+           WHERE a.industry_id = ? AND a.status = 'completed'
+           ORDER BY v.version_no DESC LIMIT 1`,
+        )
+        .get(industryId) as { payload: string } | null;
+      if (latest) {
+        try {
+          const matrix = (JSON.parse(latest.payload) as { matrix?: SizingMatrixShape }).matrix;
+          // 세그먼트 단위로 집계해 표시한다 — 권역별 조합은 3단계(권역·세그먼트 배분)의 역할이고,
+          // 1단계 축 정의에서는 산업의 세그먼트 구조만 보면 충분하다.
+          const segs = matrix?.segments
+            ?? [{ code: "construction", label: "건설" }, { code: "mining", label: "광산" }, { code: "other", label: "기타" }];
+          const regions = matrix?.regions ?? [];
+          for (const seg of segs) {
+            let wSum = 0;
+            let cagrSum = 0;
+            for (const r of regions) {
+              const base = matrix?.cagrBase?.[r.code]?.[seg.code] ?? 0;
+              const w = matrix?.baseline2026?.[r.code]?.[seg.code] ?? 0;
+              cagrSum += base * w;
+              wSum += w;
+            }
+            const wCagr = wSum > 0 ? cagrSum / wSum : 0;
+            driverSensitivities.push({
+              driver_id: `derived-${seg.code}`,
+              driver_label: `수요 규모 (${seg.label})`,
+              sensitivity: Math.round(wCagr * 10 * 100) / 100,
+              lag_months: 0,
+              region_code: null,
+              segment_code: seg.code,
+              evidence_ref: "market-sizing-pipeline — 세그먼트 통합 CAGR 기반 파생 민감도 (권역 가중 평균)",
+            });
+          }
+        } catch {
+          // payload 파싱 실패 시 빈 배열 유지
+        }
       }
     }
   }
@@ -152,20 +215,27 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
 
   // 가치사슬 연계 — 링크(후방=공급처, 전방=수요처)와 체인 등급 (구칭: 프록시 체인).
   // S1 "가치사슬 구조" 산출물의 산업 단위 조회 surface가 된다.
-  const chainLinks = db
+  // ADR-0129 — id·relation/hop_distance/source/status를 함께 내려준다. 활성
+  // 링크만 기본 chain.links에 포함하고(은퇴 링크는 제외), relation 미태깅
+  // 레거시 행은 별도로 chain.legacyUntagged에 담아 검토 큐 UI가 소비하게 한다.
+  const chainLinkRows = db
     .query(
-      `SELECT pl.hop_type, pl.coefficient, pl.beta, pl.r2, pl.lag_months, pl.evidence_ref,
+      `SELECT pl.id, pl.hop_type, pl.coefficient, pl.beta, pl.r2, pl.lag_months, pl.evidence_ref,
+              pl.relation, pl.hop_distance, pl.source, pl.status,
               i.id AS industry_id, i.name_ko,
               CASE WHEN pl.to_industry_id = ? THEN 'upstream' ELSE 'downstream' END AS direction
        FROM proxy_link pl
        JOIN md_industry i ON i.id = CASE WHEN pl.to_industry_id = ? THEN pl.from_industry_id ELSE pl.to_industry_id END
-       WHERE pl.from_industry_id = ? OR pl.to_industry_id = ?
+       WHERE (pl.from_industry_id = ? OR pl.to_industry_id = ?) AND pl.status = 'active'
        ORDER BY direction, i.name_ko`,
     )
     .all(industryId, industryId, industryId, industryId) as Array<{
-    hop_type: "engineering" | "statistical"; coefficient: number | null; beta: number | null; r2: number | null;
-    lag_months: number | null; evidence_ref: string; industry_id: string; name_ko: string; direction: "upstream" | "downstream";
+    id: string; hop_type: "engineering" | "statistical" | "structural"; coefficient: number | null; beta: number | null; r2: number | null;
+    lag_months: number | null; evidence_ref: string; relation: string | null; hop_distance: number | null;
+    source: string; status: string; industry_id: string; name_ko: string; direction: "upstream" | "downstream";
   }>;
+  const chainLinks = chainLinkRows.filter((r) => r.relation !== null);
+  const legacyUntagged = chainLinkRows.filter((r) => r.relation === null);
   const chainGradeRow = db
     .query(
       "SELECT reliability_grade, grade_rationale FROM proxy_chain WHERE target_industry_id = ? LIMIT 1",
@@ -237,6 +307,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
       industry,
       chain: {
         links: chainLinks,
+        legacyUntagged,
         grade: chainGradeRow,
       },
       proposals,

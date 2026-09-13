@@ -42,6 +42,7 @@ interface AssumptionRow {
 }
 interface VersionInfo { version_no: number; changelog: string | null; created_by: string; created_at: string }
 interface ChainLink {
+  id: string;
   hop_type: "engineering" | "statistical" | "structural";
   coefficient: number | null;
   beta: number | null;
@@ -51,12 +52,16 @@ interface ChainLink {
   industry_id: string;
   name_ko: string;
   direction: "upstream" | "downstream";
+  relation: string | null;
+  hop_distance: number | null;
+  source: string;
+  status: string;
 }
 interface ChainProposal { industry_id: string; name_ko: string; relation: string; note: string | null }
 interface LinkableIndustry { id: string; name_ko: string }
 interface IndustryDetail {
   industry: { id: string; name_ko: string; name_en: string | null; ksic_code: string | null };
-  chain: { links: ChainLink[]; grade: { reliability_grade: string; grade_rationale: string } | null };
+  chain: { links: ChainLink[]; legacyUntagged: ChainLink[]; grade: { reliability_grade: string; grade_rationale: string } | null };
   proposals?: ChainProposal[];
   unmatchedProposals?: Array<{ name: string; relation: string; note: string | null }>;
   linkableIndustries?: LinkableIndustry[];
@@ -79,6 +84,99 @@ const POSITION_LABELS: Record<string, string> = {
   downstream: "하류(완제품·수요처)",
 };
 
+// 산업 간 가치사슬 관계도 — 큐레이션된 수요 산업 연계(전방/전전방/후방/후후방,
+// ADR-0129)를 SVG로 시각화한다. 레이어(서버가 Kahn 레이어링으로 계산)를
+// 가로축, 같은 레이어 안에서는 세로로 노드를 배치하고 화살표로 방향을 그린다.
+interface ChainGraphNode { id: string; name_ko: string; analyzed: boolean; layer: number }
+interface ChainGraphEdge { from: string; to: string; relation: string; hopDistance: number | null }
+
+function IndustryChainGraph({ nodes, edges }: { nodes: ChainGraphNode[]; edges: ChainGraphEdge[] }) {
+  const ct = useChartTheme();
+  if (nodes.length === 0) return null;
+
+  const COL_W = 200;
+  const ROW_H = 56;
+  const NODE_W = 168;
+  const NODE_H = 36;
+  const PAD = 20;
+
+  const byLayer = new Map<number, ChainGraphNode[]>();
+  for (const n of nodes) {
+    if (!byLayer.has(n.layer)) byLayer.set(n.layer, []);
+    byLayer.get(n.layer)!.push(n);
+  }
+  for (const list of byLayer.values()) list.sort((a, b) => a.name_ko.localeCompare(b.name_ko));
+
+  const pos = new Map<string, { x: number; y: number }>();
+  const layerKeys = [...byLayer.keys()].sort((a, b) => a - b);
+  let maxRows = 1;
+  for (const layer of layerKeys) {
+    const list = byLayer.get(layer)!;
+    maxRows = Math.max(maxRows, list.length);
+    list.forEach((n, i) => {
+      pos.set(n.id, { x: PAD + layer * COL_W, y: PAD + i * ROW_H });
+    });
+  }
+  const width = PAD * 2 + (layerKeys.length - 1) * COL_W + NODE_W;
+  const height = PAD * 2 + maxRows * ROW_H;
+
+  return (
+    <div className="table-scroll" style={{ overflowX: "auto" }}>
+      <svg width={width} height={height} role="img" aria-label="산업 간 가치사슬 관계도" style={{ minWidth: "100%" }}>
+        <defs>
+          <marker id="chain-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill={ct.muted} />
+          </marker>
+        </defs>
+        {edges.map((e, i) => {
+          const a = pos.get(e.from);
+          const b = pos.get(e.to);
+          if (!a || !b) return null;
+          const x1 = a.x + NODE_W;
+          const y1 = a.y + NODE_H / 2;
+          const x2 = b.x;
+          const y2 = b.y + NODE_H / 2;
+          const midX = (x1 + x2) / 2;
+          return (
+            <path
+              key={i}
+              d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`}
+              fill="none"
+              stroke={ct.muted}
+              strokeWidth={1.2}
+              markerEnd="url(#chain-arrow)"
+              opacity={0.6}
+            >
+              <title>{`${e.relation}${e.hopDistance ? ` (hop ${e.hopDistance})` : ""}`}</title>
+            </path>
+          );
+        })}
+        {nodes.map((n) => {
+          const p = pos.get(n.id)!;
+          return (
+            <g key={n.id} transform={`translate(${p.x}, ${p.y})`}>
+              <rect
+                width={NODE_W}
+                height={NODE_H}
+                rx={8}
+                fill={n.analyzed ? ct.color[0] : ct.split}
+                fillOpacity={n.analyzed ? 0.16 : 1}
+                stroke={n.analyzed ? ct.color[0] : ct.muted}
+                strokeWidth={1}
+              >
+                <title>{n.name_ko}{n.analyzed ? " — 분석 완료" : " — 미분석"}</title>
+              </rect>
+              <text x={NODE_W / 2} y={NODE_H / 2 + 4} textAnchor="middle" fontSize={11} fill={ct.text ?? ct.muted}>
+                {n.name_ko.length > 14 ? `${n.name_ko.slice(0, 13)}…` : n.name_ko}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export function MarketView() {
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [detail, setDetail] = useState<IndustryDetail | null>(null);
@@ -98,6 +196,14 @@ export function MarketView() {
   const [editing, setEditing] = useState<{ id: string; name: string; code: string } | null>(null);
   const { confirm, confirmDialog } = useConfirm();
   const [savingEdit, setSavingEdit] = useState(false);
+  const [chainGraph, setChainGraph] = useState<{ nodes: ChainGraphNode[]; edges: ChainGraphEdge[] } | null>(null);
+  const [chainGraphOpen, setChainGraphOpen] = useState(false);
+
+  useEffect(() => {
+    api.get<{ nodes: ChainGraphNode[]; edges: ChainGraphEdge[] }>("/api/market-overview/value-chain-graph")
+      .then((r) => setChainGraph(r.data))
+      .catch(() => setChainGraph({ nodes: [], edges: [] }));
+  }, []);
 
   const refreshOverview = useCallback(() => {
     return api.get<MarketOverview>("/api/market-overview")
@@ -156,7 +262,14 @@ export function MarketView() {
   // 분석(또는 재분석) 대상 산업과 연관된 산업 후보를 보여주고, 사용자가
   // 선택한 산업을 함께 분석한다. 마스터에 없는 산업은 분석 생성 시
   // 자동 등록된다(서버 name 기반 dedup) — 선택 자체가 승인 행위다(경계 #2).
-  interface RelatedCandidate { name_ko: string; industry_id: string | null; relation: string; note: string | null; source: "link" | "analysis" | "proxy" }
+  interface RelatedCandidate {
+    name_ko: string; industry_id: string | null; relation: string; note: string | null; source: "link" | "analysis" | "proxy";
+    linkSource?: string;
+    linkStatus?: string;
+    // ADR-0129 — 이미 등록된 활성 proxy_link 행에서 온 후보인지. locked 후보는
+    // 재분석 시 자동 반영되므로 해제할 수 없고(선택 해제 불가), 기본 선택됨.
+    locked: boolean;
+  }
   const [linkModal, setLinkModal] = useState<{
     open: boolean;
     primaryName: string;          // 이번에 분석(또는 재분석)할 대상
@@ -168,6 +281,15 @@ export function MarketView() {
     running: boolean;
   }>({ open: false, primaryName: "", rerunAnalysisId: null, candidates: [], industryKnown: false, selected: new Set(), loading: false, running: false });
 
+  // ADR-0129 — 서버가 붙여준 linkSource/linkStatus로 "이미 등록된 활성 연계"
+  // 여부를 판정하고, locked 후보는 기본 선택 상태로 미리 채운다.
+  function markLocked(candidates: RelatedCandidate[]): RelatedCandidate[] {
+    return candidates.map((c) => ({ ...c, locked: c.linkSource !== undefined && c.linkStatus === "active" }));
+  }
+  function preselectLocked(candidates: RelatedCandidate[]): Set<string> {
+    return new Set(candidates.filter((c) => c.locked).map((c) => c.name_ko));
+  }
+
   async function openLinkModal(primaryName: string, rerunAnalysisId: string | null = null) {
     setLinkModal({ open: true, primaryName, rerunAnalysisId, candidates: [], industryKnown: false, selected: new Set(), loading: true, running: false });
     try {
@@ -175,7 +297,8 @@ export function MarketView() {
         `/api/market-overview/related-candidates?name=${encodeURIComponent(primaryName)}`,
       );
       if (r.data.candidates.length > 0) {
-        setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: r.data.industry !== null, candidates: r.data.candidates }));
+        const candidates = markLocked(r.data.candidates);
+        setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: r.data.industry !== null, candidates, selected: preselectLocked(candidates) }));
         return;
       }
       // 저장된 후보(연계 링크·과거 분석)가 없으면 1차 프록시 산업 분석을
@@ -185,7 +308,8 @@ export function MarketView() {
         "/api/market-overview/related-candidates",
         { name: primaryName },
       );
-      setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: p.data.industry !== null, candidates: p.data.candidates }));
+      const candidates = markLocked(p.data.candidates);
+      setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: p.data.industry !== null, candidates, selected: preselectLocked(candidates) }));
     } catch {
       setLinkModal((prev) => ({ ...prev, loading: false }));
     }
@@ -200,13 +324,23 @@ export function MarketView() {
         "/api/market-overview/related-candidates",
         { name: linkModal.primaryName },
       );
-      setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: p.data.industry !== null, candidates: p.data.candidates }));
+      const candidates = markLocked(p.data.candidates);
+      setLinkModal((prev) => ({
+        ...prev,
+        loading: false,
+        industryKnown: p.data.industry !== null,
+        candidates,
+        // 재실행으로 새로 온 locked 후보도 선택 목록에 포함시키되, 사용자가
+        // 이미 직접 고른(비-locked) 선택은 유지한다.
+        selected: new Set([...prev.selected, ...preselectLocked(candidates)]),
+      }));
     } catch {
       setLinkModal((prev) => ({ ...prev, loading: false }));
     }
   }
 
-  function toggleCandidate(name: string) {
+  function toggleCandidate(name: string, locked: boolean) {
+    if (locked) return; // 등록된 연계 후보는 재분석에 자동 반영되어 해제할 수 없다.
     setLinkModal((prev) => {
       const selected = new Set(prev.selected);
       if (selected.has(name)) selected.delete(name); else selected.add(name);
@@ -226,10 +360,13 @@ export function MarketView() {
         await api.post("/api/market-overview/analyses", { name_ko: linkModal.primaryName, ksic_code: newCode.trim() || undefined });
         setNewName(""); setNewCode(""); setKsicResults(null); setShowNewForm(false);
       }
-      // 함께 분석할 연관 산업 — 서버가 name 기반으로 마스터를 자동 등록·재사용한다
+      // 함께 분석할 연관 산업 — 서버가 name 기반으로 마스터를 자동 등록·재사용한다.
+      // locked(이미 등록된 proxy_link) 후보는 대상 산업의 파이프라인이 DB에서
+      // 직접 재도출하므로 별도 분석을 스폰하지 않는다 — 선택 표시는 정보성일 뿐이다.
+      const lockedNames = new Set(linkModal.candidates.filter((c) => c.locked).map((c) => c.name_ko));
       let extraCount = 0;
       for (const name of linkModal.selected) {
-        if (name === linkModal.primaryName) continue;
+        if (name === linkModal.primaryName || lockedNames.has(name)) continue;
         await api.post("/api/market-overview/analyses", { name_ko: name });
         extraCount++;
       }
@@ -357,7 +494,17 @@ export function MarketView() {
       {confirmDialog}
       {linkNotice && <p role="status" className="text-[color:var(--green-fg)] text-[0.85rem] mb-2">{linkNotice}</p>}
       <StageFrame stageId="S1">
-        산업을 선택하면 체계적 시장 규모 추정 8단계 절차로 분석된 리포트가 차트로 표시됩니다.
+        <span className="flex flex-wrap items-center justify-between gap-2">
+          <span>산업을 선택하면 체계적 시장 규모 추정 8단계 절차로 분석된 리포트가 차트로 표시됩니다.</span>
+          {/* 산업 간 가치사슬 관계도 — 인라인 배치는 목록 화면 공간을 너무 많이
+              차지해 버튼 + 모달로 뺐다. 큐레이션된 수요 산업 연계가 하나도
+              없으면(신규 워크스페이스) 버튼 자체를 숨긴다. */}
+          {chainGraph && chainGraph.nodes.length > 0 && (
+            <button type="button" className="btn-ghost btn-sm whitespace-nowrap" onClick={() => setChainGraphOpen(true)}>
+              🔗 산업 간 가치사슬 관계도 보기 ({chainGraph.nodes.length}개 산업)
+            </button>
+          )}
+        </span>
       </StageFrame>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
@@ -645,11 +792,12 @@ export function MarketView() {
                 <ul className="sizing-note-list mb-2" aria-label="연관 산업 후보">
                   {linkModal.candidates.map((c) => (
                     <li key={c.name_ko}>
-                      <label className="flex items-start gap-2 text-[0.82rem] cursor-pointer">
+                      <label className={`flex items-start gap-2 text-[0.82rem] ${c.locked ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}>
                         <input
                           type="checkbox"
                           checked={linkModal.selected.has(c.name_ko)}
-                          onChange={() => toggleCandidate(c.name_ko)}
+                          disabled={c.locked}
+                          onChange={() => toggleCandidate(c.name_ko, c.locked)}
                           className="mt-1"
                         />
                         <span>
@@ -657,6 +805,7 @@ export function MarketView() {
                           <span className={`status-chip ${c.industry_id ? "status-green" : "status-amber"}`}>
                             {c.industry_id ? "분석 가능" : "미등록 — 자동 등록"}
                           </span>
+                          {c.locked && <span className="control-chip status-green" title="이미 등록된 연계 산업 — 재분석 시 자동 반영, 해제 불가">등록됨 · 고정</span>}
                           {c.source === "proxy" && <span className="status-chip status-not-started">1차 분석 제안</span>}
                           {c.source === "link" && <span className="status-chip status-green">연계 근거</span>}
                           {c.source === "analysis" && <span className="status-chip status-not-started">과거 분석</span>}
@@ -666,6 +815,9 @@ export function MarketView() {
                     </li>
                   ))}
                 </ul>
+                <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-2">
+                  이미 등록된 수요 산업은 재분석에 자동으로 반영됩니다 — 위 목록에서 제외할 수 없습니다.
+                </p>
                 <button type="button" className="btn-ghost btn-sm" disabled={linkModal.loading || linkModal.running} onClick={() => void rerunProxyAnalysis()}>
                   1차 프록시 분석 다시 실행
                 </button>
@@ -682,6 +834,29 @@ export function MarketView() {
                     ? `분석 시작 (연관 ${linkModal.selected.size}건 포함)`
                     : linkModal.rerunAnalysisId ? "재분석 시작" : "이 산업만 분석"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 산업 간 가치사슬 관계도 모달 ── */}
+      {chainGraphOpen && chainGraph && (
+        <div className="modal-backdrop" onClick={() => setChainGraphOpen(false)}>
+          <div
+            className="modal-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="산업 간 가치사슬 관계도"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "min(90vw, 960px)" }}
+          >
+            <h2 className="text-[0.95rem] mb-1">산업 간 가치사슬 관계도</h2>
+            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+              사람이 확정한 전방/전전방/후방/후후방 연계만 표시합니다 — 색이 채워진 노드는 분석 완료된 산업입니다.
+            </p>
+            <IndustryChainGraph nodes={chainGraph.nodes} edges={chainGraph.edges} />
+            <div className="flex justify-end mt-3">
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setChainGraphOpen(false)}>닫기</button>
             </div>
           </div>
         </div>
@@ -809,10 +984,18 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId }: {
   const [localDetail, setLocalDetail] = useState<IndustryDetail | null>(null);
   const [approving, setApproving] = useState<string | null>(null);
   const [chainLinkError, setChainLinkError] = useState<string | null>(null);
-  const [manualLink, setManualLink] = useState({ industry_id: "", direction: "downstream", evidence_ref: "" });
+  const [manualLink, setManualLink] = useState({ industry_id: "", relation: "전방", evidence_ref: "" });
   const [linkSaving, setLinkSaving] = useState(false);
   const [linkSaved, setLinkSaved] = useState(false);
+  const [retiringLinkId, setRetiringLinkId] = useState<string | null>(null);
+  const [legacyRelation, setLegacyRelation] = useState<Record<string, string>>({});
+  const [legacyAssigning, setLegacyAssigning] = useState<string | null>(null);
   const view = localDetail ?? detail;
+
+  async function reload() {
+    const r = await api.get<IndustryDetail>(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}`);
+    setLocalDetail(r.data);
+  }
 
   async function approveProposal(p: ChainProposal) {
     if (approving || !detail) return;
@@ -820,12 +1003,12 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId }: {
     setChainLinkError(null);
     try {
       await api.post(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}/chain-links`, {
-        direction: p.relation.includes("후방") ? "upstream" : "downstream",
+        relation: p.relation,
         industry_id: p.industry_id,
         evidence_ref: `S1 시장 구조 정의 제안 승인 — ${p.relation} ${p.name_ko}${p.note ? ` (${p.note})` : ""}`,
+        approved_proposal: true,
       });
-      const r = await api.get<IndustryDetail>(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}`);
-      setLocalDetail(r.data);
+      await reload();
     } catch (e) {
       setChainLinkError(e instanceof Error ? e.message : "링크 등록 실패");
     } finally {
@@ -840,18 +1023,53 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId }: {
     setLinkSaved(false);
     try {
       await api.post(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}/chain-links`, {
-        direction: manualLink.direction,
+        relation: manualLink.relation,
         industry_id: manualLink.industry_id,
         evidence_ref: manualLink.evidence_ref.trim(),
       });
-      setManualLink({ industry_id: "", direction: manualLink.direction, evidence_ref: "" });
+      setManualLink({ industry_id: "", relation: manualLink.relation, evidence_ref: "" });
       setLinkSaved(true);
-      const r = await api.get<IndustryDetail>(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}`);
-      setLocalDetail(r.data);
+      await reload();
     } catch (e) {
       setChainLinkError(e instanceof Error ? e.message : "링크 등록에 실패했습니다.");
     } finally {
       setLinkSaving(false);
+    }
+  }
+
+  async function retireLink(linkId: string) {
+    if (!detail) return;
+    const rationale = window.prompt("회수 근거(rationale)를 입력하세요:");
+    if (!rationale?.trim()) return;
+    setRetiringLinkId(linkId);
+    setChainLinkError(null);
+    try {
+      await api.patch(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}/chain-links/${encodeURIComponent(linkId)}`, {
+        status: "retired",
+        rationale: rationale.trim(),
+      });
+      await reload();
+    } catch (e) {
+      setChainLinkError(e instanceof Error ? e.message : "회수에 실패했습니다.");
+    } finally {
+      setRetiringLinkId(null);
+    }
+  }
+
+  async function assignLegacyRelation(linkId: string) {
+    if (!detail) return;
+    const relation = legacyRelation[linkId] ?? "전방";
+    setLegacyAssigning(linkId);
+    setChainLinkError(null);
+    try {
+      await api.patch(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}/chain-links/${encodeURIComponent(linkId)}`, {
+        relation,
+      });
+      await reload();
+    } catch (e) {
+      setChainLinkError(e instanceof Error ? e.message : "relation 지정에 실패했습니다.");
+    } finally {
+      setLegacyAssigning(null);
     }
   }
   const proj2030Total = matrix.regions.reduce((sum, r) => sum + regionTotal(matrix, r.code, 4), 0);
@@ -969,17 +1187,29 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId }: {
           <table className="data-table report-table" aria-label="가치사슬 연계 링크">
             <caption className="sr-only">가치사슬 연계 링크</caption>
             <thead>
-              <tr><th scope="col" className="w-[8rem]">방향</th><th scope="col">산업</th><th scope="col">hop</th><th scope="col">계수/β</th><th scope="col">시차(월)</th><th scope="col">근거</th></tr>
+              <tr><th scope="col" className="w-[8rem]">관계</th><th scope="col">산업</th><th scope="col">hop</th><th scope="col">계수/β</th><th scope="col">시차(월)</th><th scope="col">근거</th>{canCurate && <th scope="col">관리</th>}</tr>
             </thead>
             <tbody>
               {view.chain.links.map((l, i) => (
                 <tr key={`${l.industry_id}-${l.direction}-${i}`}>
-                  <td className="font-semibold">{l.direction === "upstream" ? "후방 (공급처)" : "전방 (수요처)"}</td>
+                  <td className="font-semibold">{l.relation ?? (l.direction === "upstream" ? "후방 (공급처)" : "전방 (수요처)")}</td>
                   <td>{l.name_ko}</td>
                   <td>{l.hop_type === "engineering" ? "engineering" : l.hop_type === "statistical" ? "statistical" : "구조 (승인)"}</td>
                   <td className="tabular-nums">{l.hop_type === "engineering" ? l.coefficient : l.beta !== null ? `β ${l.beta} (R² ${l.r2})` : "—"}</td>
                   <td className="tabular-nums">{l.lag_months ?? "—"}</td>
                   <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{l.evidence_ref}</td>
+                  {canCurate && (
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm"
+                        disabled={retiringLinkId === l.id}
+                        onClick={() => void retireLink(l.id)}
+                      >
+                        {retiringLinkId === l.id ? "회수 중..." : "회수"}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -1030,10 +1260,12 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId }: {
                   </select>
                 </label>
                 <label className="text-[0.78rem]">
-                  <span className="block mb-1">방향 *</span>
-                  <select value={manualLink.direction} onChange={(e) => setManualLink({ ...manualLink, direction: e.target.value })} className="sizing-new-input sizing-new-input-sm">
-                    <option value="downstream">전방 (수요처)</option>
-                    <option value="upstream">후방 (공급처)</option>
+                  <span className="block mb-1">관계 *</span>
+                  <select value={manualLink.relation} onChange={(e) => setManualLink({ ...manualLink, relation: e.target.value })} className="sizing-new-input sizing-new-input-sm">
+                    <option value="전방">전방 (수요처)</option>
+                    <option value="전전방">전전방 (수요처, 2hop)</option>
+                    <option value="후방">후방 (공급처)</option>
+                    <option value="후후방">후후방 (공급처, 2hop)</option>
                   </select>
                 </label>
                 <label className="text-[0.78rem]">
@@ -1053,6 +1285,41 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId }: {
             <span className="status-chip status-green mr-1">체인 등급 {view.chain.grade.reliability_grade}</span>
             {view.chain.grade.grade_rationale}
           </p>
+        )}
+
+        {/* ADR-0129 — relation 미태깅 레거시 구조 링크(ADR-0126 시절 등록) 검토 큐.
+            은퇴하지 않고 relation만 지정하면 되므로 별도 섹션으로 분리한다. */}
+        {canCurate && view.chain.legacyUntagged.length > 0 && (
+          <div className="sizing-grade-card mt-2">
+            <p className="text-[0.8rem] mb-1">
+              <span className="font-semibold">레거시 검토</span> — relation이 태깅되지 않은 구(ADR-0126) 구조 링크입니다. 관계를 지정하세요.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {view.chain.legacyUntagged.map((l) => (
+                <span key={l.id} className="control-chip">
+                  <span className="font-semibold">{l.direction === "upstream" ? "후방 (공급처)" : "전방 (수요처)"}</span> · {l.name_ko}
+                  <select
+                    value={legacyRelation[l.id] ?? "전방"}
+                    onChange={(e) => setLegacyRelation({ ...legacyRelation, [l.id]: e.target.value })}
+                    className="sizing-new-input sizing-new-input-sm ml-1"
+                  >
+                    <option value="전방">전방</option>
+                    <option value="전전방">전전방</option>
+                    <option value="후방">후방</option>
+                    <option value="후후방">후후방</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm ml-1"
+                    disabled={legacyAssigning === l.id}
+                    onClick={() => void assignLegacyRelation(l.id)}
+                  >
+                    {legacyAssigning === l.id ? "지정 중..." : "지정"}
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
         )}
 
         <StepSensitivityChart sensitivities={detail.driver_sensitivities} />
@@ -1407,7 +1674,12 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId }: {
                         Tier {p.tier}
                       </span>
                     </td>
-                    <td className="font-semibold">{p.project}</td>
+                    <td className="font-semibold">
+                      {p.project}
+                      {p.relatedDemandIndustry ? (
+                        <span className="block font-normal text-[0.72rem] text-[color:var(--muted-fg)]">{p.relatedDemandIndustry}</span>
+                      ) : null}
+                    </td>
                     <td className="text-[0.8rem]">{p.status}</td>
                     <td className="tabular-nums">{p.codTarget ?? "—"}</td>
                     <td className="text-[0.75rem]">

@@ -139,7 +139,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `lib/git-status.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/pipeline-state.ts` | L0 | 1.1.2 | active | —| —| L0+L1 | —|
 | `lib/platform-context.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `lib/ssrf.ts` | L0 | 1.1.1 | active | —| —| L0+L1 (SSRF-safe pinned fetch with caller-supplied request headers) | —|
+| `lib/ssrf.ts` | L0 | 1.1.2 | active | —| —| L0+L1 (SSRF-safe pinned fetch with caller-supplied request headers); v1.1.2 removes two stale `@ts-expect-error` directives on the `LookupFunction` overloads that current Node types no longer need (was failing `tsc`/`next build`) | —|
 | `lib/env-keys.ts` | L0 | 1.0.2 | active | 2026-09-11 | — | L0+L1 (pipeline credential loader — walks up to the root .env and imports only whitelisted pipeline keys, never overriding set values; shared by the k-* source adapters; includes LAW_API_OC for k-law and ECOS_API_KEY for k-ecos) | —|
 | `lifecycle-sync-audit.ts` | L0 | 1.7.1 | active | —| —| L0+L1 | —|
 | `md-to-ooxml.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|

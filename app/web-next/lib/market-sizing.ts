@@ -36,6 +36,8 @@ export interface DemandPipelineEntry {
   /** 상업운전(가동) 목표 시점 (선택) */
   codTarget?: string;
   sourceUrl?: string;
+  /** ADR-0129 — 큐레이션된 전방/전전방 수요 산업 중 이 프로젝트와 관련된 산업명 (선택, 매칭 불명확하면 생략) */
+  relatedDemandIndustry?: string;
 }
 
 /** 규제 환경 비교 항목 — 국가/관할권별 규제 상태 (선택). */
