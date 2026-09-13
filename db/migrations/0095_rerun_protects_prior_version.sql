@@ -1,0 +1,13 @@
+-- @reversible: true (additive-in-effect — new column only, default 0, no data
+-- rewritten; manual rollback: `ALTER TABLE market_sizing_analysis DROP COLUMN
+-- rerun_in_progress;` — SQLite supports DROP COLUMN natively since 3.35, or
+-- restore from pre-migration backup, ADR-0014.)
+-- ADR-0131 — a re-analysis of an industry that already has a completed
+-- version must not disturb that version's visibility (status/completed_at)
+-- while the background run is in flight, and must not overwrite it with a
+-- run that suffered a genuine LLM failure mid-pipeline (as opposed to a
+-- deliberately-unconfigured LLM, which is an accepted, labeled synthesis
+-- mode elsewhere in this app). rerun_in_progress tracks "a background rerun
+-- is executing" independently of the user-facing status/completed_at, which
+-- only move forward on a verified-reliable completion (market-sizing-pipeline.ts).
+ALTER TABLE market_sizing_analysis ADD COLUMN rerun_in_progress INTEGER NOT NULL DEFAULT 0 CHECK (rerun_in_progress IN (0, 1));

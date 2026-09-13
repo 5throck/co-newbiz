@@ -31,24 +31,48 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // 루트 재분석 시작 시 이전 세대의 대기 연계는 모두 취소한다(백엔드 패널 P1-4 —
   // 좀비 대기 방지). 재분석 완료 후 사용자가 모달에서 다시 선택한다.
   cancelPendingDependents(db, id, "루트 재분석으로 대기 취소 — 재분석 완료 후 다시 선택하세요.");
-  db.run(
-    "UPDATE market_sizing_analysis SET status = 'in_progress', current_step = 0, completed_at = NULL, started_at = ? WHERE id = ?",
-    [now, id],
-  );
+
+  // ADR-0131 — 이미 완료된 분석을 재분석할 때는 status/completed_at을 건드리지
+  // 않는다. 재분석 도중이나 실패 시에도 "최신 완료 버전" 조회 쿼리(전부
+  // status='completed' 기준)가 계속 기존(좋은) 버전을 가리키게 하기 위함이다.
+  // 진행 상태는 별도의 rerun_in_progress 플래그로만 추적한다 — 파이프라인이
+  // 신뢰할 수 있는 결과를 낼 때만(market-sizing-pipeline.ts) status/completed_at을
+  // 새 버전으로 "교체"한다. 완료된 적 없는(failed, 버전 없음) 분석은 보호할
+  // 기존 데이터가 없으므로 기존 방식(즉시 in_progress 전환)을 유지한다.
+  const protectPriorVersion = analysis.status === "completed";
+  if (protectPriorVersion) {
+    db.run(
+      "UPDATE market_sizing_analysis SET rerun_in_progress = 1, error_message = NULL, started_at = ? WHERE id = ?",
+      [now, id],
+    );
+  } else {
+    db.run(
+      "UPDATE market_sizing_analysis SET status = 'in_progress', current_step = 0, completed_at = NULL, started_at = ? WHERE id = ?",
+      [now, id],
+    );
+  }
   appendAudit(db, { actor: ctx.userId, action: "market_sizing_analysis.rerun", target: id, now });
 
   void runSizingPipeline(db, id).catch((err) => {
     console.error("market-sizing pipeline rerun failed:", err);
     // Defense in depth: see analyses/route.ts POST for rationale.
     try {
-      db.run(
-        "UPDATE market_sizing_analysis SET status = 'failed', error_message = ? WHERE id = ? AND status = 'in_progress'",
-        [(err instanceof Error ? err.message : String(err)).slice(0, 2000), id],
-      );
+      if (protectPriorVersion) {
+        // status/completed_at은 손대지 않는다 — 이전 완료 버전이 계속 "최신"으로 보인다.
+        db.run(
+          "UPDATE market_sizing_analysis SET rerun_in_progress = 0, error_message = ? WHERE id = ?",
+          [(err instanceof Error ? err.message : String(err)).slice(0, 2000), id],
+        );
+      } else {
+        db.run(
+          "UPDATE market_sizing_analysis SET status = 'failed', error_message = ? WHERE id = ? AND status = 'in_progress'",
+          [(err instanceof Error ? err.message : String(err)).slice(0, 2000), id],
+        );
+      }
     } catch (dbErr) {
       console.error("market-sizing pipeline: failed to mark analysis failed:", dbErr);
     }
   });
 
-  return ok({ analysis_id: id, status: "in_progress" }, 200, { rerun: true });
+  return ok({ analysis_id: id, status: protectPriorVersion ? "completed" : "in_progress" }, 200, { rerun: true, rerunInProgress: protectPriorVersion });
 }

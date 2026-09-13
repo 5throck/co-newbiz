@@ -17,7 +17,7 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
-import { completeOrFallback } from "./llm.ts";
+import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { isWebResearchConfigured, researchSources } from "./web-research.ts";
 import { SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
@@ -370,6 +370,19 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const advance = (step: number) => db.run("UPDATE market_sizing_analysis SET current_step = ? WHERE id = ?", [step, analysis.id]);
   const stepSummaries: StepSummary[] = [];
 
+  // ADR-0131 — LLM이 구성돼 있었는데도 askJson이 null을 반환했다면(파싱 실패
+  // 또는 실제 API 오류) "의도된 미구성 합성 모드"가 아니라 진짜 장애다. 이
+  // 실행에서 그런 일이 한 번이라도 있었는지 추적해, 완료 시점에 신뢰할 수
+  // 있는 결과인지 판단한다(기존 완료 버전을 조용히 나쁜 데이터로 덮어쓰지
+  // 않기 위함 — 2026-09-13 휴머노이드 로봇 리포트 사고 원인 분석).
+  const llmConfiguredAtStart = isLlmConfigured();
+  let hadLlmFailure = false;
+  const askJsonTracked: typeof askJson = async (...args) => {
+    const result = await askJson(...args);
+    if (llmConfiguredAtStart && result === null) hadLlmFailure = true;
+    return result;
+  };
+
   // KSIC 자동 분류 — 미지정(NULL) 산업은 실행 시점에 큐레이션 마스터에서
   // 분류해 채운다. 기존 코드가 있으면 건드리지 않는다.
   let ksicUnresolved = false;
@@ -409,7 +422,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const segmentsInstruction = hasCuratedSegments
     ? `segments는 아래 [큐레이션된 수요 산업] 목록을 근거로, 이 산업들을 2~6개의 최종수요 버킷으로 그룹핑·명명해 도출하세요 — 큐레이션 목록에 없는 산업을 임의로 지어내지 말고, 각 세그먼트가 그 목록의 하나 이상의 항목으로 소급 추적 가능해야 합니다. code는 short_english_snake, label은 한글.`
     : `segments는 이 산업의 최종수요처를 2~6개 나눈 것으로, 산업 특성에 맞게 직접 정의하세요(예: 산업용 로봇이면 제조/물류·창고/분류, 휴머노이드 로봇이면 제조 조립/물류·창고/서비스 등). 무작정 건설·광산·기타를 재사용하지 말 것. code는 short_english_snake, label은 한글.`;
-  const dirJson = await askJson(
+  const dirJson = await askJsonTracked(
     industry,
     `이 산업이 가치사슬에서 어디에 위치하는지와 인접 산업을 분석하세요. JSON: {"position":"upstream|midstream|downstream","note":"위치 판단 근거 한두 문장","relatedIndustries":[{"relation":"전방|전전방|후방|후후방","name":"산업명","note":"분석 포인트"}]}. position이 downstream/midstream이면 relation은 전방/전전방(수요처) 중심으로, upstream이면 후방/후후방(공급처) 중심으로 3~5개. ${segmentsInstruction}` +
     // ADR-0126/0128 재분석 일관성(옵션 2) — 직전 버전 앵커
@@ -448,7 +461,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const segs = segDefs.length >= 2 ? segDefs : [...SEGMENTS];
   const POSITION_LABEL: Record<string, string> = { upstream: "상류(원자재·부품)", midstream: "중류(조립·가공)", downstream: "하류(완제품·수요처)" };
   // 경쟁 구조 (S1 competitive-intelligence) — LLM 추정, 공시 대조 전
-  const compJson = await askJson(
+  const compJson = await askJsonTracked(
     industry,
     `이 시장의 경쟁 구조를 분석하세요. JSON: {"structure":"시장 구조 요약(독점/과점/독과점/경쟁 정도와 집중도 정성 코멘트) 한두 문장","players":[{"name":"기업명","tier":"leader|challenger|niche","note":"포지션·점유율 추정 한 문장","attributes":[{"label":"속성명","value":"값"}]}]}. players는 글로벌 주요 기업 3~6개. attributes는 이 산업의 특성을 가장 잘 보여주는 비교 속성 1~3개로, 라벨을 산업에 맞게 직접 정의하세요(예: 원자로는 "기술 유형"/"용량(MWe)"/"인허가 상태", 로봇은 "상용화 단계"/"주력 형태", 소재는 "제품 등급"/"공정"). 모든 player가 같은 라벨 집합을 공유하도록 하고, 값은 짧게.`,
   );
@@ -519,7 +532,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
 
   // ── Step 2: anchor triangulation (LLM proposes source estimates) ──
   advance(2);
-  const anchorJson = await askJson(
+  const anchorJson = await askJsonTracked(
     industry,
     `2026년 글로벌 시장 규모(단위: 십억 달러) 추정치를 3개 소스 관점에서 제시하세요. JSON: {"sources":[{"label":"소스 관점 설명(기관·리포트명)","estimate":2.0,"status":"consensus|excluded","methodology":"그 소스가 시장을 어떻게 정의·측정했는지 한 문장","sourceUrl":"알려진 출처 URL(없으면 생략)","note":"비고"}]}. status는 뚜렷이 튀는 추정치 하나만 excluded로. LLM이 제시하는 total은 사용하지 않으므로 포함하지 말 것.` + demandLine,
   );
@@ -558,7 +571,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
 
   // ── Step 3: region weights + segment mixes ──
   advance(3);
-  const allocJson = await askJson(
+  const allocJson = await askJsonTracked(
     industry,
     `권역별 가중치와 세그먼트 믹스를 추정하세요. JSON: {"regions":[{"code":"china|apac_ex_china|north_america|europe|mea|latam_row","weight":26,"mix":{"${segs[0].code}":40,"${segs[1].code}":35${segs[2] ? `,"${segs[2].code}":25` : ""},"adjustment":"조정 근거 한 문장"}]}. 6개 권역 모두 포함, weight 합계 100, 각 권역의 mix 키는 ${segs.map((x) => x.code).join("|")} 전체이고 합계 100.`,
   );
@@ -582,7 +595,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
 
   // ── Step 4: per-cell baselines + CAGRs + band overrides ──
   advance(4);
-  const cagrJson = await askJson(
+  const cagrJson = await askJsonTracked(
     industry,
     `권역×세그먼트별 2026 기준 시장규모(십억 달러, 합계≈${anchorTotal.toFixed(2)})와 2026→2030 CAGR(소수)을 추정하세요. JSON: {"baseline":{"china":{"${segs[0].code}":0.2,"${segs[1].code}":0.1${segs[2] ? `,"${segs[2].code}":0.05` : ""}, ...}, ...}, "cagr":{"china":{"${segs[0].code}":0.06, ...}}, "overrides":[{"region":"north_america","segment":"${segs[1].code}","down":0.02,"up":0.11,"reason":"..."}]}. 6개 권역 × ${segs.map((x) => x.code).join("|")}. baseline 합계는 앵커 ${anchorTotal.toFixed(2)}와 ±15% 이내로. 성장률은 수요처(전방) 산업의 성장률과 정합되게.` + demandLine,
   );
@@ -645,7 +658,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   // 탑다운 컨센서스 CAGR — LLM 지식의 공개 컨센서스(벤더 리포트 평균 관점)를 입수해
   // 정합성 비교가 실제 두 값 사이의 비교가 되도록 한다. 입수 실패 시 0 유지(UI에
   // '미입력'으로 표시됨)하며 절대 날조하지 않는다.
-  const tdJson = await askJson(
+  const tdJson = await askJsonTracked(
     industry,
     `이 산업의 공개된 시장 성장률 컨센서스(주요 시장조사기관 전망의 대표값, 연평균, 소수)를 제시하세요. JSON: {"cagr":0.08,"sourceLabel":"출처 관점(예: 글로벌 리서치 기관 전망 평균)","note":"전제 한 문장"}. 신뢰할 공개 컨센서스를 모르면 {"cagr":null}.`,
   );
@@ -665,7 +678,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   // 분석한다. 입수되지 않으면 externalForecast 없이 기존 방식(CAGR 외삽)을
   // 그대로 사용한다.
   let externalForecast: SizingMatrix["externalForecast"] | undefined;
-  const efJson = await askJson(
+  const efJson = await askJsonTracked(
     industry,
     `이 산업의 공개된 미래 시장 전망치(특정 연도의 시장규모, 십억 달러)를 알고 있는가? JSON: {"available":true,"sourceLabel":"전망 출처(기관/리포트명)","targetYear":2030,"marketSize":3.5,"cagr":0.07,"note":"전망의 전제"}. 알려진 공개 전망이 없으면 {"available":false}만.`,
   );
@@ -676,7 +689,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       const yearIndex = Math.max(1, targetYear - 2026);
       const ourSize = REGIONS.reduce((a, r) => a + segs.reduce((b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], yearIndex), 0), 0);
       const gapPct = Math.round((externalSize / ourSize - 1) * 1000) / 10;
-      const gapJson = await askJson(
+      const gapJson = await askJsonTracked(
         industry,
         `우리 추정(과거 성장률 연장)(${ourSize.toFixed(2)}B @${targetYear}, CAGR ${(bottomUpCagr * 100).toFixed(1)}%)과 외부 전망(${externalSize.toFixed(2)}B @${targetYear}, 출처: ${str(efJson.sourceLabel, "외부")})이 ${gapPct >= 0 ? "+" : ""}${gapPct}% 차이가 난다. JSON: {"gapAnalysis":"과거 드라이버 외에 어떤 요인이 이 격차를 만드는지 3~5문장","newDrivers":["신규/강화 드라이버", "..."]}. 격차 방향(외부가 높음/낮음)을 명시하고, 수요 촉발 요인·규제·기술 전환·대체재 관점에서 설명하세요.`,
       );
@@ -708,7 +721,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
 
   // ── Step 6: filing cross-validation candidates ──
   advance(6);
-  const cvJson = await askJson(
+  const cvJson = await askJsonTracked(
     industry,
     `이 산업의 주요 상장사 관점에서 확인 가능한 매트릭스 주장 3~5개를 제시하세요. JSON: {"claims":[{"claim":"주장","status":"confirmed|directional|impossible","evidence":"근거(공시에서 확인해야 할 구체 항목)"}]}. evidence는 아직 검증 전이므로 '어디를 봐야 하는지'를 적어야 합니다.`,
   );
@@ -742,7 +755,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     ? `\n\n[큐레이션된 수요 산업 — 사람이 확정한 데이터]\n` +
       curatedDemandIndustries.map((c) => `- [${c.relation}] ${c.related_industry_name}`).join("\n")
     : "";
-  const qualJson = await askJson(
+  const qualJson = await askJsonTracked(
     industry,
     `아래 리서치 발췌를 근거로 이 시장의 정성 분석을 수행하세요. JSON: {"opportunityFactors":["기회 요인", ...],"riskFactors":["위험 요인", ...]}. 각 3~5개 한 문장씩, 발췌에 근거가 있으면 그 출처 번호([n])를 문장 끝에 붙이세요.${curatedForwardDemand.length > 0 ? " 기회 요인 또는 위험 요인 중 최소 1개는 아래 [큐레이션된 수요 산업] 목록에 있는 실제 산업명을 명시하며 그 산업의 성장/위축이 이 시장에 미치는 영향으로 서술하세요." : ""}\n\n리서치 발췌:\n${researchContext}${curatedDemandContext}`,
   );
@@ -768,7 +781,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const pipelineContext = pipelineResearch.length
     ? pipelineResearch.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet}`).join("\n\n")
     : "(웹 리서치 미구성 — LLM 지식 기반)";
-  const dpJson = await askJson(
+  const dpJson = await askJsonTracked(
     industry,
     `아래 리서치 발췌를 근거로 이 산업의 수요 파이프라인(향후 착공·발주·도입이 예정된 개별 프로젝트/수주)을 조사하세요. JSON: {"projects":[{"project":"프로젝트명(발주처 포함)","tier":1,"status":"현재 상태 한 문장","codTarget":"완료/도입 목표 연도(있으면)","sourceUrl":"발췌의 URL","relatedDemandIndustry":"이 프로젝트가 속한 수요 산업명(아래 큐레이션 목록에 있으면 그 명칭 그대로, 없거나 불명확하면 생략)"}]}. tier는 신뢰도: 1=실착공·계약 확정, 2=최종 승인·선계약, 3=입찰·제안 단계, 4=비구속 MOU·초기 검토. 4~10개, tier 내림차순(확실한 것부터). 리서치 발췌에 없는 프로젝트는 LLM 지식으로 넣되 sourceUrl은 생략.\n\n리서치 발췌:\n${pipelineContext}${curatedDemandContext}`,
   );
@@ -791,7 +804,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const regContext = regResearch.length
     ? regResearch.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet}`).join("\n\n")
     : "(웹 리서치 미구성 — LLM 지식 기반)";
-  const regJson = await askJson(
+  const regJson = await askJsonTracked(
     industry,
     `아래 리서치 발췌를 근거로 이 산업의 주요 관할권별(예: 한국/미국/EU/일본/중국 중 해당하는 곳) 규제·인허가 상태를 비교하세요. JSON: {"items":[{"jurisdiction":"국가/권역","item":"규제·인허가 항목","status":"현황 한 문장","confirmedDirectly":false,"sourceUrl":"리서치 발췌의 URL(있으면)"}]}. 4~8개. confirmedDirectly는 법령·공식 문서 원문을 직접 확인한 경우에만 true(리서치 발췌 기반이면 대부분 false로 두고, 법령 문서 URL이면 true).${curatedForwardDemand.length > 0 ? " 가능하면 최소 1개 항목은 아래 [큐레이션된 수요 산업] 목록의 산업에 영향을 미치는 규제 변화가 그 산업의 활동을 통해 이 시장의 파생 수요(derived demand)에 간접적으로 영향을 줄 가능성을 status에 언급하세요." : ""}\n\n리서치 발췌:\n${regContext}${curatedDemandContext}`,
   );
@@ -809,7 +822,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
 
   // ── Step 7: limitations ──
   advance(7);
-  const limJson = await askJson(
+  const limJson = await askJsonTracked(
     industry,
     `이 매트릭스의 분석 한계를 4~6개 나열하세요. JSON: {"limitations":["...", "..."]}. 각 항목은 한 문장, 판단적 보정/소스 불일치/외삽 위험을 구체적으로.`,
   );
@@ -835,7 +848,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     status: VERDICT_MAP[c.status] ?? "needs_judgement",
     note: c.evidence,
   }));
-  const kcJson = await askJson(
+  const kcJson = await askJsonTracked(
     industry,
     `이 매트릭스의 주장이 무너지면 전체 분석이 무효가 되는 Kill Criteria(치명적 가정)를 제시하세요. JSON: {"criteria":[{"name":"기준명","thresholdText":"무효 판정 임계(수치로)","rationale":"왜 치명적인가","severity":"high|medium|low"}]}. 3~5개. 예: 핵심 수요 드라이버의 성장 전환, 규제 지연, 앵커 소스 간 발산 임계 등.`,
   );
@@ -913,6 +926,23 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     limitations: finalLimitations,
   };
 
+  // ADR-0131 — 이 실행이 "보호 모드"(재분석 시작 시 status/completed_at을
+  // 건드리지 않은 경우, rerun/route.ts 참고)였는지는 지금 시점의 status로
+  // 판별한다: 보호 모드였다면 지금도 여전히 'completed'다(신규 분석이나
+  // 실패했던 분석의 비보호 재분석은 진작 'in_progress'로 바뀌어 있다). 보호
+  // 모드에서 실제 LLM 장애가 있었다면 새 버전을 만들지 않고 기존 완료
+  // 버전·날짜를 그대로 둔 채 이번 시도만 실패로 기록한다 — 조용한 데이터
+  // 훼손을 막기 위함이다(2026-09-13 휴머노이드 로봇 리포트 사고).
+  const statusNow = (db.query("SELECT status FROM market_sizing_analysis WHERE id = ?").get(analysis.id) as { status: string }).status;
+  const wasProtectedRerun = statusNow === "completed";
+  if (hadLlmFailure && wasProtectedRerun) {
+    db.run(
+      "UPDATE market_sizing_analysis SET rerun_in_progress = 0, error_message = ? WHERE id = ?",
+      ["LLM 호출 중 일부 실패 — 이전 분석 결과를 유지합니다. 재시도하세요.", analysis.id],
+    );
+    return;
+  }
+
   const payload = JSON.stringify({ methodology: "systematic-market-sizing v1.1.0", matrix, stepSummaries });
   const nextVersionNo =
     ((db.query("SELECT MAX(version_no) m FROM market_sizing_version WHERE analysis_id = ?").get(analysis.id) as { m: number | null }).m ?? 0) + 1;
@@ -927,7 +957,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       [ulid(), analysis.id, nextVersionNo, payload, changelog, "market-sizing-pipeline", now()],
     );
     db.run(
-      `UPDATE market_sizing_analysis SET status = 'completed', current_step = 8, completed_at = ? WHERE id = ?`,
+      `UPDATE market_sizing_analysis SET status = 'completed', current_step = 8, completed_at = ?, rerun_in_progress = 0, error_message = NULL WHERE id = ?`,
       [now(), analysis.id],
     );
   })();
