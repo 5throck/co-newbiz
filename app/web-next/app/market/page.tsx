@@ -39,6 +39,7 @@ interface AnalysisInfo {
 interface IndustryRow {
   id: string; name_ko: string; name_en: string | null;
   ksic_code: string | null; driver_count: number; analysis: AnalysisInfo | null;
+  pinned?: number;
 }
 interface DriverRow { id: string; code: string; label_ko: string; description: string; }
 interface IndustryLink { from_industry_id: string; to_industry_id: string; relation: string }
@@ -204,6 +205,24 @@ export function MarketView() {
   const [linkNotice, setLinkNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed" | "stale" | "pending" | "failed">("all");
+  // 핵심 산업만 보기 — 연계 자동 등록(전방/전전방/후방/후후방)으로 목록이
+  // 길어져도 사용자가 직접 고정(pin)한 산업만 최상위로 보이게 한다. 고정된
+  // 산업의 연계 그룹은 하위에 그대로 딸려 온다 — 그룹 안 개별 산업의 고정
+  // 여부와 무관하다. 기본값은 false(전체 보기) — 아직 아무것도 고정하지
+  // 않은 상태에서 목록이 비어 보이는 걸 막는다.
+  const [pinnedOnly, setPinnedOnly] = useState(false);
+  const [pinBusyId, setPinBusyId] = useState<string | null>(null);
+  async function togglePin(ind: IndustryRow) {
+    setPinBusyId(ind.id);
+    try {
+      await api.patch(`/api/market-overview/industry/${encodeURIComponent(ind.id)}`, { pinned: !ind.pinned });
+      await refreshOverview();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "고정 상태 변경 실패");
+    } finally {
+      setPinBusyId(null);
+    }
+  }
   const [editing, setEditing] = useState<{ id: string; name: string; code: string } | null>(null);
   const { confirm, confirmDialog } = useConfirm();
   const [savingEdit, setSavingEdit] = useState(false);
@@ -559,9 +578,13 @@ export function MarketView() {
       return next;
     });
   };
+  const displayedGroups = useMemo(
+    () => (pinnedOnly ? industryGroups.filter((g) => Boolean(g.ind.pinned)) : industryGroups),
+    [industryGroups, pinnedOnly],
+  );
   const flatRows = useMemo(() => {
     const rows: Array<{ ind: IndustryRow; relation: string | null; childCount: number; expanded: boolean; onToggle: (() => void) | null }> = [];
-    for (const g of industryGroups) {
+    for (const g of displayedGroups) {
       const hasChildren = g.children.length > 0;
       const expanded = hasChildren && expandedGroups.has(g.ind.id);
       rows.push({ ind: g.ind, relation: null, childCount: g.children.length, expanded, onToggle: hasChildren ? () => toggleGroup(g.ind.id) : null });
@@ -570,7 +593,7 @@ export function MarketView() {
       }
     }
     return rows;
-  }, [industryGroups, expandedGroups]);
+  }, [displayedGroups, expandedGroups]);
 
   const statusCounts = useMemo(() => {
     const counts = { all: 0, in_progress: 0, completed: 0, stale: 0, pending: 0, failed: 0 };
@@ -635,7 +658,7 @@ export function MarketView() {
             />
           }
           summary={
-            <span role="group" aria-label="상태 필터" className="flex items-center gap-1">
+            <span role="group" aria-label="상태 필터" className="flex items-center gap-1 flex-wrap">
               {([
                 ["all", "전체"], ["in_progress", "분석 중"], ["completed", "완료"], ["stale", "업데이트 권장"], ["pending", "대기"], ["failed", "실패"],
               ] as const).map(([key, label]) => (
@@ -649,6 +672,15 @@ export function MarketView() {
                   {label} {statusCounts[key]}
                 </button>
               ))}
+              <button
+                type="button"
+                aria-pressed={pinnedOnly}
+                title="고정(★)한 산업만 최상위로 보여줍니다 — 연계 산업은 그룹 안에 그대로 딸려 옵니다."
+                className={`control-chip ${pinnedOnly ? "status-amber" : "status-not-started"}`}
+                onClick={() => setPinnedOnly((v) => !v)}
+              >
+                {pinnedOnly ? "★ 핵심만 보기" : "전체 보기"}
+              </button>
             </span>
           }
           actions={
@@ -774,6 +806,18 @@ export function MarketView() {
                         />
                       ) : (
                         <span className="flex items-center gap-1.5" style={relation ? { paddingLeft: "1rem" } : undefined}>
+                          {!relation && (
+                            <button
+                              type="button"
+                              disabled={pinBusyId === ind.id}
+                              className={ind.pinned ? "text-[color:var(--amber-fg)]" : "text-[color:var(--muted-fg)] hover:text-[color:var(--amber-fg)]"}
+                              title={ind.pinned ? "핵심 산업 고정 해제" : "핵심 산업으로 고정 — '핵심만 보기'에서 최상위로 표시됩니다"}
+                              aria-pressed={Boolean(ind.pinned)}
+                              onClick={() => void togglePin(ind)}
+                            >
+                              {ind.pinned ? "★" : "☆"}
+                            </button>
+                          )}
                           {relation && (
                             <>
                               <span aria-hidden="true" className="text-[color:var(--muted-fg)]">↳</span>

@@ -12,8 +12,8 @@ export async function GET(request: Request) {
   const db = getDb();
 
   const industries = db
-    .query("SELECT id, name_ko, name_en, ksic_code, naics_code FROM md_industry ORDER BY name_ko")
-    .all() as Array<{ id: string; name_ko: string; name_en: string | null; ksic_code: string | null; naics_code: string | null }>;
+    .query("SELECT id, name_ko, name_en, ksic_code, naics_code, pinned FROM md_industry ORDER BY name_ko")
+    .all() as Array<{ id: string; name_ko: string; name_en: string | null; ksic_code: string | null; naics_code: string | null; pinned: number }>;
 
   // 완료된 분석의 최신 매트릭스 셀 수(권역 × 세그먼트) — 연결 드라이버 파생 카운트용.
   // 세그먼트는 ADR-0077 이후 산업별 동적 개수이므로 상수가 아니라 payload에서 센다.
