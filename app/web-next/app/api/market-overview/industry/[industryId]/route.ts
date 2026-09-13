@@ -356,7 +356,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "Industry update requires the analyst role.");
   const { industryId } = await params;
-  const body = (await request.json().catch(() => null)) as { name_ko?: string; ksic_code?: string | null } | null;
+  const body = (await request.json().catch(() => null)) as { name_ko?: string; ksic_code?: string | null; pinned?: boolean } | null;
+
+  // 고정(pin) 토글 — S1 목록 큐레이션(전체 보기/핵심만 보기). name_ko 없이
+  // pinned만 오면 이 경로로 처리하고, 아래 이름·KSIC 코드 수정 경로는 건드리지 않는다.
+  if (body?.name_ko === undefined && typeof body?.pinned === "boolean") {
+    const db = getDb();
+    const industry = db.query("SELECT id FROM md_industry WHERE id = ?").get(industryId) as { id: string } | null;
+    if (!industry) return notFound();
+    db.query("UPDATE md_industry SET pinned = ? WHERE id = ?").run(body.pinned ? 1 : 0, industryId);
+    const updated = db.query("SELECT id, name_ko, name_en, ksic_code, naics_code, pinned FROM md_industry WHERE id = ?").get(industryId);
+    return ok(updated, 200);
+  }
+
   const name = body?.name_ko?.trim();
   if (!name) return badRequest("invalid_request", "산업명은 필수입니다.");
   const ksic = parseKsicInput(body?.ksic_code);
