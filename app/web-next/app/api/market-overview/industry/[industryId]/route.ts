@@ -266,12 +266,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
       related = parsed.matrix?.chainDirection?.relatedIndustries ?? parsed.chainDirection?.relatedIndustries ?? [];
     } catch { /* unparseable payload = no proposals */ }
   }
+  // 활성(active) 링크만 "이미 연계됨"으로 취급한다 — 은퇴(retired)된 행은
+  // 그 특정 관계 주장이 철회됐다는 뜻일 뿐, 같은 산업 쌍을 다시(예: 관계를
+  // 교정해) 등록하는 길까지 영구히 막아서는 안 된다. status 조건이 없으면
+  // 은퇴된 행이 있다는 이유만으로 제안 목록과 "직접 등록" 드롭다운 양쪽에서
+  // 그 산업이 사라져 재등록할 방법이 없어진다(2026-09-13 사용자 리포트).
   const existingLinkedIds = new Set(
     (
       db
         .query(
           `SELECT CASE WHEN from_industry_id = ? THEN to_industry_id ELSE from_industry_id END AS other
-           FROM proxy_link WHERE from_industry_id = ? OR to_industry_id = ?`,
+           FROM proxy_link WHERE (from_industry_id = ? OR to_industry_id = ?) AND status = 'active'`,
         )
         .all(industryId, industryId, industryId) as Array<{ other: string }>
     ).map((r) => r.other),

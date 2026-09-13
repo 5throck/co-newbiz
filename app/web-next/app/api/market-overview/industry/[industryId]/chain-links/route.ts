@@ -65,8 +65,11 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const from = direction === "upstream" ? otherId : industryId;
   const to = direction === "upstream" ? industryId : otherId;
 
+  // status='active' 조건 필수 — 은퇴된 행은 그 관계 주장이 철회됐다는 뜻일
+  // 뿐이므로, 은퇴된 행이 있다는 이유로 (교정된 관계로) 재등록을 막으면 안
+  // 된다(2026-09-13 사용자 리포트 — 은퇴 후 재등록이 막혀 있었음).
   const dup = db
-    .query("SELECT id FROM proxy_link WHERE from_industry_id = ? AND to_industry_id = ?")
+    .query("SELECT id FROM proxy_link WHERE from_industry_id = ? AND to_industry_id = ? AND status = 'active'")
     .get(from, to) as { id: string } | null;
   if (dup) return badRequest("already_linked", "이미 등록된 링크입니다.");
 
