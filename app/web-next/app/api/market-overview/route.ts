@@ -60,6 +60,21 @@ export async function GET(request: Request) {
     .query("SELECT id, code, label_ko, description FROM industry_driver ORDER BY created_at")
     .all() as Array<{ id: string; code: string; label_ko: string; description: string }>;
 
+  // 산업 간 관계(전방/전전방/후방/후후방) — 큐(after_analysis_id/linked_relation)
+  // 경유로 등록된 것만이 아니라, "가치사슬 연계" 화면에서 사람이 직접 등록한
+  // proxy_link도 목록 그룹핑의 근거가 된다 (2026-09-14 사용자 리포트 — 연료전지
+  // ↔ 수소 충전소 구축 서비스업을 직접 등록으로 연결했는데 목록에 반영 안 됨).
+  // relation은 항상 "to_industry_id 쪽의, from_industry_id 기준 관계"로 저장되므로
+  // (전방/전전방→from이 앵커, 후방/후후방→to가 앵커) 그대로 내려보내고 프런트가
+  // 앵커/자식을 가른다.
+  const industryLinks = db
+    .query(
+      `SELECT from_industry_id, to_industry_id, relation
+       FROM proxy_link
+       WHERE status = 'active' AND relation IS NOT NULL`,
+    )
+    .all() as Array<{ from_industry_id: string; to_industry_id: string; relation: string }>;
+
   const valueChainCount = db.query("SELECT COUNT(*) c FROM value_chain_link").get() as { c: number };
   const proxyChainCount = db.query("SELECT COUNT(*) c FROM proxy_link").get() as { c: number };
   const seriesCount = db.query("SELECT COUNT(DISTINCT series_id) c FROM fact_market_observation").get() as { c: number };
@@ -103,6 +118,7 @@ export async function GET(request: Request) {
         };
       }),
       drivers,
+      industryLinks,
       stats: {
         value_chain_links: valueChainCount.c,
         proxy_links: proxyChainCount.c,
