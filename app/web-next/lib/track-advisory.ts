@@ -43,9 +43,9 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
     try {
       const cagr = ((JSON.parse(market.payload) as { matrix?: { consistency?: { bottomUpCagr?: number } } }).matrix?.consistency?.bottomUpCagr) ?? null;
       if (cagr !== null) {
-        const high = cagr >= 0.15;
+        const high = cagr >= 15;
         signals.push({
-          key: "market_growth", label: `시장 성장률 ${(cagr * 100).toFixed(0)}%`,
+          key: "market_growth", label: `시장 성장률 ${cagr.toFixed(0)}%`,
           leans: high ? "greenfield" : "brownfield", weight: high ? 3 : 2,
           note: high
             ? "고성장 초기 시장 — 신규 진입(내부 벤처)도 수요 성장에 편승 가능"

@@ -28,13 +28,16 @@ beforeAll(() => {
   db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
     [oppHighGrowth, "휴머노이드 진출", "휴머노이드 로봇", "selected", "t", NOW]);
 
-  // completed S1 matrix with 36% CAGR + related industries
+  // completed S1 matrix with 36% CAGR + related industries. bottomUpCagr is
+  // persisted already scaled to a percent number (e.g. 36 means 36%), not a
+  // fraction — matches market-sizing-pipeline.ts's `Math.round(cagr * 1000) / 10`
+  // storage convention (2026-09-13 CAGR display bug fix).
   const industry = ulid();
   db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [industry, "28990", "휴머노이드 로봇", "Humanoid robots", NOW]);
   const analysis = ulid();
   db.run("INSERT INTO market_sizing_analysis (id, industry_id, status, created_by, created_at) VALUES (?,?,?,?,?)",
     [analysis, industry, "completed", "t", NOW]);
-  const matrix = JSON.stringify({ matrix: { consistency: { bottomUpCagr: 0.36 }, chainDirection: { relatedIndustries: [{ name: "정밀 감속기" }, { name: "AI 반도체" }] } } });
+  const matrix = JSON.stringify({ matrix: { consistency: { bottomUpCagr: 36 }, chainDirection: { relatedIndustries: [{ name: "정밀 감속기" }, { name: "AI 반도체" }] } } });
   db.run("INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, changelog, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
     [ulid(), analysis, 1, matrix, "v1", "t", NOW]);
 

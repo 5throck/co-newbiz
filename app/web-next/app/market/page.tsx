@@ -1164,7 +1164,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
               <span className="text-label">기준 시장규모 (2026)</span>
             </div>
             <div className="summary-card glass">
-              <span className="summary-value mono-num">{(matrix.consistency.bottomUpCagr * 100).toFixed(1)}%</span>
+              <span className="summary-value mono-num">{matrix.consistency.bottomUpCagr.toFixed(1)}%</span>
               <span className="text-label">성장률 (연평균, 2026→2030)</span>
             </div>
             <div className="summary-card glass">
