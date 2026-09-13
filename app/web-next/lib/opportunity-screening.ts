@@ -4,7 +4,7 @@
 // 둘 다 산업 S1 매트릭스(기회/위험 요인·격차 분석·경쟁 구조)를 근거로 하며,
 // LLM 미구성 시 결정론 폴백(정직한 저신뢰 표기)으로 동작한다.
 import { getDb } from "../../../db/client.ts";
-import { completeOrFallback } from "./llm.ts";
+import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 
 export interface ScreeningState {
   synergy_score: number | null;
@@ -78,7 +78,12 @@ export function gateRecommendation(row: { attractiveness_score: number | null; s
   };
 }
 
-export async function runFitAnalysis(opp: { id: string; name: string; market_scope: string | null; synergy_score: number | null; rationale: string | null }): Promise<{ verdict: "Go" | "Hold" | "Kill"; rationale: string; source: string }> {
+export async function runFitAnalysis(opp: { id: string; name: string; market_scope: string | null; synergy_score: number | null; rationale: string | null }): Promise<{ verdict: "Go" | "Hold" | "Kill"; rationale: string; source: string; failed?: boolean; error?: string }> {
+  const prior = getDb().query("SELECT fit_verdict, fit_rationale, fit_source FROM opportunity WHERE id = ?").get(opp.id) as
+    | { fit_verdict: "Go" | "Hold" | "Kill" | null; fit_rationale: string | null; fit_source: string | null }
+    | undefined;
+  const hadGoodPrior = prior?.fit_source === "llm" && !!prior.fit_verdict;
+  const llmConfiguredAtStart = isLlmConfigured();
   const context = industryContext(opp.market_scope, opp.rationale);
   const res = await completeOrFallback(
     [
@@ -105,8 +110,17 @@ export async function runFitAnalysis(opp: { id: string; name: string; market_sco
     if (typeof parsed.rationale === "string" && parsed.rationale.trim()) rationale = parsed.rationale.trim();
   } catch { /* 폴백 유지 */ }
   const source = res.source === "llm" ? "llm" : "synthesis";
+  if (hadGoodPrior && llmConfiguredAtStart && source !== "llm") {
+    return {
+      verdict: prior!.fit_verdict!,
+      rationale: prior!.fit_rationale ?? "",
+      source: prior!.fit_source!,
+      failed: true,
+      error: "LLM 호출 실패 — 이전 판정을 유지합니다. 잠시 후 다시 시도하세요.",
+    };
+  }
   if (source === "synthesis") rationale = `[결정론 합성 — 검증 필요] ${rationale}`;
-  getDb().run("UPDATE opportunity SET fit_verdict = ?, fit_rationale = ? WHERE id = ?", [verdict, rationale, opp.id]);
+  getDb().run("UPDATE opportunity SET fit_verdict = ?, fit_rationale = ?, fit_source = ? WHERE id = ?", [verdict, rationale, source, opp.id]);
   return { verdict, rationale, source };
 }
 

@@ -49,6 +49,8 @@ interface SynergyAnalysis {
   company_id?: string | null; member_id?: string | null; group_id?: string | null;
   company_name: string; dart_corp_code: string | null; source_ref?: string | null;
   created_at: string; completed_at: string | null; latest_version: number | null;
+  rerun_in_progress?: number;
+  error_message?: string | null;
   target_type?: "affiliate" | "group" | null;
   member_name?: string | null; group_name?: string | null;
   opportunity_id?: string | null; opportunity_name?: string | null;
@@ -130,7 +132,7 @@ export function SynergyView() {
     }
   }, [selectedId, analyses]);
 
-  const hasInProgress = analyses?.some((a) => a.status === "in_progress") ?? false;
+  const hasInProgress = analyses?.some((a) => a.status === "in_progress" || !!a.rerun_in_progress) ?? false;
   useEffect(() => {
     if (!hasInProgress) return;
     const t = setInterval(() => { void refresh(); }, 4000);
@@ -372,6 +374,11 @@ export function SynergyView() {
                     <td>
                       {inProgress ? (
                         <span className="status-chip status-amber">분석 중 ({a.current_step}/5단계)</span>
+                      ) : a.status === "completed" && a.rerun_in_progress ? (
+                        // ADR-0132 — 재분석 진행 중에도 이전 완료 버전이 그대로 표시된다.
+                        <span className="status-chip status-amber" title="이전 완료 버전은 그대로 표시되며, 재분석이 성공해야만 새 버전으로 교체됩니다.">재분석 중 (이전 v{a.latest_version ?? 1} 유지)</span>
+                      ) : a.status === "completed" && a.error_message ? (
+                        <span className="status-chip status-red" title={`${a.error_message} — 표시 중인 버전은 이전 완료 버전입니다.`}>재분석 실패 (v{a.latest_version ?? 1} 유지)</span>
                       ) : (
                         <span className="status-chip status-green">분석 완료 (v{a.latest_version ?? 1})</span>
                       )}

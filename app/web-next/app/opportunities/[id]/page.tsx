@@ -73,8 +73,9 @@ export function OpportunityDetail() {
   async function autoDeriveFactors() {
     setFactorBusy(true); setError(null);
     try {
-      const res = await api.post<{ factors: OppFactors }>(`/api/opportunities/${encodeURIComponent(id)}/factors`, {});
+      const res = await api.post<{ factors: OppFactors; failed?: boolean; error?: string }>(`/api/opportunities/${encodeURIComponent(id)}/factors`, {});
       setFactors(res.data.factors);
+      if (res.data.failed) setError(res.data.error ?? "LLM 호출 실패 — 이전 요인을 유지합니다.");
     } catch (err) { setError(err instanceof Error ? err.message : "요인 자동 도출 실패"); }
     finally { setFactorBusy(false); }
   }
@@ -126,8 +127,9 @@ export function OpportunityDetail() {
   async function createSketch(force: boolean) {
     setSketchBusy(true); setError(null);
     try {
-      const res = await api.post<SketchView & { version_no?: number }>(`/api/opportunities/${encodeURIComponent(id)}/sketch`, force ? { force: true } : {});
+      const res = await api.post<SketchView & { version_no?: number; failed?: boolean; error?: string }>(`/api/opportunities/${encodeURIComponent(id)}/sketch`, force ? { force: true } : {});
       setSketchView({ sketch: res.data.sketch, source: res.data.source, created_at: res.data.created_at, versions: [] });
+      if (res.data.failed) setError(res.data.error ?? "LLM 호출 실패 — 이전 스케치를 유지합니다.");
       // 버전 목록 재조회 — 새 버전이 이력에 반영되도록
       const r = await api.get<SketchView>(`/api/opportunities/${encodeURIComponent(id)}/sketch`);
       setSketchView(r.data);

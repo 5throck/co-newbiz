@@ -16,8 +16,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const db = getDb();
   const row = db
-    .query("SELECT id, target_type, member_id, group_id FROM synergy_analysis WHERE id = ?")
-    .get(id) as { id: string; target_type: "affiliate" | "group" | null; member_id: string | null; group_id: string | null } | null;
+    .query("SELECT id, status, target_type, member_id, group_id FROM synergy_analysis WHERE id = ?")
+    .get(id) as { id: string; status: string; target_type: "affiliate" | "group" | null; member_id: string | null; group_id: string | null } | null;
   if (!row) return notFound();
   if (!row.target_type) {
     return badRequest("legacy_target", "레거시(회사 직접 등록) 분석은 재분석할 수 없습니다 — 그룹/계열사 레지스트리 대상으로 새 분석을 생성하세요.");
@@ -30,12 +30,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!hasProfile) return badRequest("profile_required", "프로파일이 없습니다 — 그룹/계열사 분석 화면에서 먼저 분석하세요.");
 
   const now = new Date().toISOString();
-  db.run("UPDATE synergy_analysis SET status = 'in_progress', current_step = 0, completed_at = NULL WHERE id = ?", [id]);
+  // ADR-0132 — 이미 완료된 분석의 재분석은 status/completed_at을 건드리지
+  // 않는다(ADR-0131과 동일 패턴). 진행 중에도 이전 완료 버전이 그대로
+  // 조회되고, LLM 장애로 저하되면 파이프라인이 새 버전을 만들지 않는다.
+  const protectPriorVersion = row.status === "completed";
+  if (protectPriorVersion) {
+    db.run("UPDATE synergy_analysis SET rerun_in_progress = 1, error_message = NULL WHERE id = ?", [id]);
+  } else {
+    db.run("UPDATE synergy_analysis SET status = 'in_progress', current_step = 0, completed_at = NULL WHERE id = ?", [id]);
+  }
   appendAudit(db, { actor: ctx.userId, action: "synergy_analysis.rerun", target: id, now });
 
   const { runSynergyPipeline } = await import("../../../../../../lib/synergy-pipeline.ts");
-  // failure는 콘솔 로그만 남긴다 — synergy_analysis.status CHECK에 'failed'가 없어
-  // 터미널 실패 상태를 기록할 수 없다 (S1의 0061 선례가 필요하면 별도 마이그레이션).
-  void runSynergyPipeline(db, id).catch((err) => console.error(`synergy rerun ${id} failed:`, err));
-  return ok({ analysis_id: id, reused: true }, 200, { status: "in_progress" });
+  void runSynergyPipeline(db, id).catch((err) => {
+    console.error(`synergy rerun ${id} failed:`, err);
+    if (protectPriorVersion) {
+      db.run("UPDATE synergy_analysis SET rerun_in_progress = 0, error_message = ? WHERE id = ?", [err instanceof Error ? err.message.slice(0, 300) : String(err), id]);
+    }
+  });
+  return ok({ analysis_id: id, reused: true, rerunInProgress: protectPriorVersion }, 200, { status: protectPriorVersion ? "completed" : "in_progress" });
 }

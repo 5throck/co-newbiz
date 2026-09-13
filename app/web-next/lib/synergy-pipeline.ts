@@ -10,7 +10,7 @@
 
 import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
-import { completeOrFallback } from "./llm.ts";
+import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "./web-research.ts";
 import { fetchFinancials, findCorpCode, isDartConfigured, type DartFinancials } from "./dart-client.ts";
 
@@ -134,6 +134,16 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   const now = () => new Date().toISOString();
   const advance = (step: number) => db.run("UPDATE synergy_analysis SET current_step = ? WHERE id = ?", [step, analysisId]);
   const stepSummaries: SynergyStepSummary[] = [];
+  // ADR-0132 — market-sizing-pipeline.ts와 동일한 패턴(ADR-0131). LLM이
+  // 구성되어 있었는데도 호출이 실패한 경우만 "장애"로 취급한다(미구성으로
+  // 인한 합성 폴백은 오늘날의 정상 동작이므로 구분한다).
+  const llmConfiguredAtStart = isLlmConfigured();
+  let hadLlmFailure = false;
+  const askJsonTracked: typeof askJson = async (...args) => {
+    const result = await askJson(...args);
+    if (llmConfiguredAtStart && result === null) hadLlmFailure = true;
+    return result;
+  };
   // ADR-0094 — 재사용된 프로파일의 딥링크 (affiliate/group 경로에서 채워짐)
   let profileRef: SynergyPayload["profileRef"];
   // ADR-0102 — 재사용 경로에서도 스코어링 입력(산업노출·재무비율)을 쓰기 위해 보관
@@ -254,7 +264,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   const researchContext = research.length
     ? research.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet}`).join("\n\n")
     : "(웹 리서치 없음)";
-  const faJson = await askJson(
+  const faJson = await askJsonTracked(
     "You are an M&A financial analyst. Reply with ONE JSON object only.",
     `회사: ${company}\nDART 재무: ${dartContext}${creditText ? `\n\n신용평가자료 발췌:\n${creditText.slice(0, 4000)}` : ""}\n\n외부 리서치 발췌:\n${researchContext}\n\nJSON: {"strengths":["재무·사업 강점", ...],"weaknesses":["재무·사업 약점", ...],"businessAssessment":"종합 평가 3~5문장 — 리서치 발췌와 교차검증하고 상충 시 명시"}. 강점·약점 각 3~5개, 리서치 출처 번호([n])를 문장 끝에 붙이세요.`,
   );
@@ -272,6 +282,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     { maxTokens: 300 },
   );
   stepSummaries.push({ step: 3, title: "재무 강/약점 분석", summary: faSummary.text, source: faSummary.source });
+  if (llmConfiguredAtStart && faSummary.source !== "llm") hadLlmFailure = true;
   }
 
   // 리서치 보강 — 프로파일 재사용 경로(ADR-0090)는 Tavily 리서치를 실행하지
@@ -335,7 +346,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       oppContext = `\n\n연결 기회 (이 분석은 아래 기회를 위한 시너지 검증입니다):\n- 기회명: ${oppRow.name}\n- 시장 범위: ${oppRow.market_scope ?? "—"}\n- 발굴 근거: ${oppRow.rationale ?? "—"}`;
     }
   }
-  const synJson = await askJson(
+  const synJson = await askJsonTracked(
     "You are a corporate development analyst. Reply with ONE JSON object only.",
     `역할 구분 — 인수 주체: ${acquirer ?? (row.target_type ? `자사 (${company})` : "미지정")}, 검증 대상: ${company}\n대상 기업 재무/사업 평가: ${businessAssessment}\n대상 기업 강점: ${financialStrengths.join(" / ")}\n\nS1·S2 완료 시장 분석(Long List):\n${marketsContext}${oppContext}\n\nJSON: {"synergyAreas":[{"area":"시너지 영역명","synergyType":"매출 시너지|원가 절감|기술·역량|유통·채널 등","rationale":"대상 기업의 역량·자산이 인수 주체와 연결되어 시너지가 나는 근거 2~3문장","opportunity":"구체 기회","risk":"리스크","sources":["관련 출처 번호/명"]}]} — 3~6개 영역. 인수 주체의 역량과 대상 기업 강점, 시장 격차·드라이버를 연결해 Long List를 Short List로 좁히세요.`,
     3000,
@@ -357,7 +368,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
 
   // ── Step 5: Short List 정리 + 시너지 점수 (하이브리드 — ADR-0102) ──
   advance(5);
-  const slJson = await askJson(
+  const slJson = await askJsonTracked(
     "You are an IC advisor. Reply with ONE JSON object only.",
     `시너지 영역 후보: ${JSON.stringify(synergyAreas.map((a, i) => ({ no: i + 1, area: a.area, opportunity: a.opportunity, risk: a.risk })))}${oppRow ? `\n\n연결 기회: ${oppRow.name} (${oppRow.market_scope ?? "—"})` : ""}\n\nJSON: {"shortList":[{"rank":1,"area":"영역명","verdict":"Short List|보류","reason":"한두 문장"}]} — 전체 순위 매기고 상위 2~3개를 Short List로.`,
   );
@@ -380,7 +391,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     : null;
   let scoringMethod: "hybrid" | "rule-based" | "unavailable" = rule.score !== null ? "rule-based" : "unavailable";
   if (oppRow) {
-    const adj = await askJson(
+    const adj = await askJsonTracked(
       "You are an IC advisor. Reply with ONE JSON object only.",
       `규칙 기반 시너지 점수: ${rule.score ?? "산출 불가"} (인자: ${JSON.stringify(rule.factors)})\n대상: ${company}, 연결 기회: ${oppRow.name}\n강점: ${financialStrengths.join(" / ")}\n시너지 영역: ${synergyAreas.map((a) => a.area).join(", ") || "없도"}\n\nJSON: {"adjustment": <-10..10 정수>, "reason": "<보정 사유 1~2문장, 정성 근거 명시>"} — 데이터가 부족하면 adjustment 0.`,
     );
@@ -403,6 +414,18 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   });
 
   // ── Persist ──
+  // ADR-0132 — 이미 완료된 분석의 재분석이 LLM 장애로 저하되면, status가
+  // 여전히 'completed'인지(요청 시점에 손대지 않았는지)로 "보호 대상
+  // 재분석"임을 판별해 새 버전을 만들지 않고 이전 버전을 그대로 둔다.
+  const statusNow = (db.query("SELECT status FROM synergy_analysis WHERE id = ?").get(analysisId) as { status: string }).status;
+  const wasProtectedRerun = statusNow === "completed";
+  if (hadLlmFailure && wasProtectedRerun) {
+    db.run(
+      "UPDATE synergy_analysis SET rerun_in_progress = 0, error_message = ? WHERE id = ?",
+      ["LLM 호출 중 일부 실패 — 이전 분석 결과를 유지합니다. 재시도하세요.", analysisId],
+    );
+    return;
+  }
   const payload: SynergyPayload = {
     company: { name: company, dartCorpCode: corpCode },
     acquirer: acquirer,
@@ -450,7 +473,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
         [Math.max(0, Math.min(100, Math.round(payload.synergyScore))), payload.synergyRationale ?? null, oppRow.id]);
     }
     db.run(
-      "UPDATE synergy_analysis SET status = 'completed', current_step = 5, completed_at = ? WHERE id = ?",
+      "UPDATE synergy_analysis SET status = 'completed', current_step = 5, completed_at = ?, rerun_in_progress = 0, error_message = NULL WHERE id = ?",
       [now(), analysisId],
     );
   })();

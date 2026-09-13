@@ -6,6 +6,7 @@ import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
+import { TabNav } from "../../../../components/TabNav.tsx";
 import { GateDecisionPanel } from "../../../../components/GateDecisionPanel.tsx";
 import { WaiverPanel } from "../../../../components/WaiverPanel.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
@@ -249,20 +250,13 @@ export default function DdPage() {
 
         {domain && (
           <>
-            <div className="tab-nav mb-0" role="tablist" aria-label="DD 체크리스트 도메인">
-              {(data?.domains ?? []).map((d, i) => (
-                <button
-                  key={d.domain}
-                  type="button"
-                  role="tab"
-                  aria-current={i === tab}
-                  aria-selected={i === tab}
-                  onClick={() => setTab(i)}
-                >
-                  {DOMAIN_LABEL[d.domain] ?? d.title}
-                </button>
-              ))}
-            </div>
+            <TabNav
+              className="mb-0"
+              label="DD 체크리스트 도메인"
+              active={String(tab)}
+              onSelect={(key) => setTab(Number(key))}
+              tabs={(data?.domains ?? []).map((d, i) => ({ key: String(i), label: DOMAIN_LABEL[d.domain] ?? d.title }))}
+            />
 
             <div className="table-scroll">
             <table className="data-table" aria-label={`${domain.title} 체크리스트`}>

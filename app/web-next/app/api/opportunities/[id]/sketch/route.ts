@@ -9,7 +9,7 @@ import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { normalizeSketchV2, SKETCH_BLOCKS } from "../../../../../lib/sketch-schema.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
-import { completeOrFallback } from "../../../../../lib/llm.ts";
+import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 
 const now = () => new Date().toISOString();
 
@@ -176,6 +176,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const ts = now();
   const source = res.source === "llm" && raw !== null ? "llm" : "synthesis";
+  // ADR-0132 — 이미 LLM으로 생성된 스케치가 있는 상태에서 재생성이 LLM 장애로
+  // 합성 폴백에 그치면, 기존 버전을 덮어쓰지 않고 실패를 알린다.
+  if (opp.sketch_json && opp.sketch_source === "llm" && isLlmConfigured() && source !== "llm") {
+    return ok({
+      id: opp.id,
+      sketch: JSON.parse(opp.sketch_json),
+      source: opp.sketch_source,
+      created_at: opp.sketch_at,
+      cached: true,
+      failed: true,
+      error: "LLM 호출 실패 — 이전 스케치를 유지합니다. 잠시 후 다시 시도하세요.",
+    }, 200);
+  }
   // ADR-0127 — 버전 이력 append. opportunity.sketch_json은 "현재 버전"이고
   // 과거 검토는 이 테이블에서 열람한다.
   const maxNo = db

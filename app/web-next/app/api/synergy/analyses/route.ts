@@ -15,6 +15,7 @@ export async function GET(request: Request) {
   const analyses = db
     .query(
       `SELECT sa.id, sa.status, sa.current_step, sa.created_at, sa.completed_at,
+              sa.rerun_in_progress, sa.error_message,
               c.id AS company_id, c.name_ko AS company_name, c.dart_corp_code,
               sa.target_type, sa.opportunity_id, o.name AS opportunity_name,
               sa.member_id, sa.group_id,

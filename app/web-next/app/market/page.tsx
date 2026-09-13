@@ -30,6 +30,11 @@ interface AnalysisInfo {
   // 이전 버전을 가리킨 채 이 플래그만 1이 된다(재분석 성공 시에만 status/
   // completed_at이 새 버전으로 "교체"된다 — 조용한 데이터 훼손 방지).
   rerun_in_progress?: number;
+  // ADR-0131 후속 — 최신 완료 버전의 stepSummaries 소스를 서버가 미리 집계한
+  // 값. all_synthesis: 전 단계 결정론 합성(수치 신뢰 불가) — partial_synthesis:
+  // 일부 단계만 합성(대개 정성/규제 등 텍스트 섹션, 수치는 대부분 정상일 수
+  // 있으나 확인 필요) — null: 완전히 LLM 산출이거나 완료 버전 없음.
+  data_quality?: "all_synthesis" | "partial_synthesis" | null;
 }
 interface IndustryRow {
   id: string; name_ko: string; name_en: string | null;
@@ -728,6 +733,13 @@ export function MarketView() {
                         <span className="status-chip status-red" title={`${a.error_message} — 표시 중인 버전은 이전 완료 버전입니다.`}>재분석 실패 (v{a.latest_version ?? 1} 유지)</span>
                       ) : stale ? (
                         <span className="status-chip status-amber" title="분석일이 90일을 지났습니다 — 재분석로 최신화하세요.">업데이트 권장 (v{a?.latest_version ?? 1})</span>
+                      ) : a?.status === "completed" && a.data_quality === "all_synthesis" ? (
+                        // ADR-0131 후속 — 최신 완료 버전의 모든 단계가 LLM 미구성/실패로
+                        // 결정론 합성값으로 채워졌다. 수치를 전혀 신뢰할 수 없으므로
+                        // "분석 완료"와 시각적으로 구별되는 경고 상태로 표시한다.
+                        <span className="status-chip status-red" title="이 버전은 전체 단계가 LLM 미구성/실패로 합성(더미) 값입니다 — 수치를 신뢰하지 말고 재분석하세요.">분석 완료 (v{a.latest_version ?? 1}) — 합성 데이터</span>
+                      ) : a?.status === "completed" && a.data_quality === "partial_synthesis" ? (
+                        <span className="status-chip status-amber" title="이 버전은 일부 단계가 LLM 미구성/실패로 합성(더미) 값입니다 — 리포트에서 어느 단계인지 확인 후 필요시 재분석하세요.">분석 완료 (v{a.latest_version ?? 1}) — 일부 합성</span>
                       ) : a?.status === "completed" ? (
                         <span className="status-chip status-green">분석 완료 (v{a.latest_version ?? 1})</span>
                       ) : a?.status === "failed" && a.error_message && (a.error_message.startsWith("선행 분석 실패") || a.error_message.startsWith("루트 재분석") || a.error_message.startsWith("선행 분석 장기")) ? (
