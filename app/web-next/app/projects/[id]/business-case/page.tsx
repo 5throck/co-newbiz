@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { GateDecisionPanel } from "../../../../components/GateDecisionPanel.tsx";
 import { TargetCheckPanel } from "../../../../components/TargetCheckPanel.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
+import { TabNav } from "../../../../components/TabNav.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 
 // S8 사업성 분석 — 이중 관점 밸류에이션 비교 (ADR-0117; approved mockup
@@ -82,9 +83,13 @@ function parseNote(note: string | null | undefined): Record<string, string> {
   return out;
 }
 
-export default function BusinessCasePage() {
+function BusinessCasePage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab") === "overview" ? "overview" : "scenarios";
+  const setTab = (key: string) => router.replace(`/projects/${projectId}/business-case?tab=${key}`, { scroll: false });
   const { me } = useAuth();
   const canAct = me?.role === "admin" || me?.role === "analyst";
   const { confirm, confirmDialog } = useConfirm();
@@ -231,6 +236,21 @@ export default function BusinessCasePage() {
         <span className="ml-2 status-chip status-not-started">엔진 권고 ≠ 채택 — 채택은 사람의 행위입니다</span>
       </p>
 
+      <TabNav
+        className="mb-3"
+        label="S8 사업성 분석 화면"
+        active={tab}
+        onSelect={setTab}
+        tabs={[
+          { key: "overview", label: "설명·생성·권고" },
+          { key: "scenarios", label: "시나리오 비교" },
+        ]}
+      />
+
+      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
+
+      {tab === "overview" && (
+      <>
       {/* 두 관점의 의미 */}
       <section className="market-section sizing-step mb-3" aria-label="두 관점의 의미">
         <h3 className="sizing-step-title">두 관점의 의미</h3>
@@ -264,8 +284,6 @@ export default function BusinessCasePage() {
           </button>
         </div>
       )}
-
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
 
       {run && (
         <details className="mb-3" open>
@@ -318,9 +336,11 @@ export default function BusinessCasePage() {
           )}
         </section>
       )}
+      </>
+      )}
 
       {/* 시나리오별 이중 관점 비교 */}
-      {SCENARIOS.map((s) => {
+      {tab === "scenarios" && SCENARIOS.map((s) => {
         const cases = byScenario.get(s) ?? [];
         const newestMf = cases.find((c) => c.variant === "market_forward");
         const newestMfP50 = newestMf?.simulations.find((x) => x.percentile === "p50")?.npv_krw_m ?? null;
@@ -446,5 +466,13 @@ export default function BusinessCasePage() {
       </StageFrame>
       {confirmDialog}
     </main>
+  );
+}
+
+export default function BusinessCasePageRoute() {
+  return (
+    <Suspense fallback={null}>
+      <BusinessCasePage />
+    </Suspense>
   );
 }
