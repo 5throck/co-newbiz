@@ -27,8 +27,10 @@ import {
   buildSynthesis,
   deliberationPrompt,
   runDeliberationRounds,
-  type CallAgent,
   type DeliberationPosition,
+} from "./deliberation.ts";
+import {
+  type CallAgent,
   type EntityRef,
   type Recommendation,
 } from "./agent-orchestrator.ts";

@@ -2301,6 +2301,34 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/market-overview/industry/{industryId}/chain-links/{linkId}:
+    patch:
+      operationId: updateIndustryChainLink
+      summary: Retire a proxy_link (soft-delete with rationale) or tag a legacy NULL-relation row — relation overwrite is forbidden (ADR-0129).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/market-overview/value-chain-graph:
+    get:
+      operationId: getMarketValueChainGraph
+      summary: Workspace-wide relation-tagged proxy_link edges, Kahn-layered for the S1 SVG diagram (ADR-0129).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/synergy/dart-search:
     get:
       operationId: searchDartCompanies

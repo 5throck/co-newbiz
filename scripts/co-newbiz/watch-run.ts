@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * watch:run — the OS-scheduler-driven monitoring cycle (design v1.0 §4-3,
  * ADR-0019, FR-MON-01, Wave 5.4). NEVER run from an in-process timer (an
@@ -47,6 +47,7 @@ import { ulid } from "../../db/lib/ulid.ts";
 import { assessScenario, type RagScenario, type RagCliResult } from "./rag.ts";
 import { evaluateTransitionNotifications, evaluateKillCriteriaNotifications } from "../../db/lib/watch-engine.ts";
 import { resumePausedPipelines, type PipelineResumeOutcome } from "../../app/web-next/lib/pipeline.ts";
+import { recoverQueuePass } from "../../app/web-next/lib/market-sizing-pipeline.ts";
 import type { RagGrade } from "../../db/lib/rag-engine.ts";
 
 const JOB_KEY = "watch:run";
@@ -225,6 +226,27 @@ export async function runPipelineResumePass(db: Database, options: { now: string
   }
 }
 
+// Market-sizing serial-queue recovery (design 2026-09-13): heals stuck
+// in_progress runs past the staleness timeout and claims pendings whose root
+// completed — the queue's liveness does not depend on anyone opening the UI.
+export interface MarketSizingQueuePassResult {
+  jobRunId: string;
+  healed: string[];
+  started: string[];
+}
+
+export async function runMarketSizingQueuePass(db: Database, options: { now: string }): Promise<MarketSizingQueuePassResult> {
+  const jobRunId = jobRunStart(db, options.now);
+  try {
+    const result = recoverQueuePass(db);
+    jobRunFinish(db, jobRunId, options.now, "success");
+    return { jobRunId, ...result };
+  } catch (err) {
+    jobRunFinish(db, jobRunId, options.now, "failed", (err as Error).message);
+    throw err;
+  }
+}
+
 if (import.meta.main) {
   const argv = process.argv.slice(2);
   const dirIdx = argv.indexOf("--rescenarios-dir");
@@ -236,7 +258,8 @@ if (import.meta.main) {
     const now = new Date().toISOString();
     const result = runWatchCycle(db, { now, rescenarios });
     const pipelinePass = await runPipelineResumePass(db, { now });
-    console.log(JSON.stringify({ ...result, pipelineResume: pipelinePass.outcomes }, null, 2));
+    const queuePass = await runMarketSizingQueuePass(db, { now });
+    console.log(JSON.stringify({ ...result, pipelineResume: pipelinePass.outcomes, marketSizingQueue: { healed: queuePass.healed, started: queuePass.started } }, null, 2));
   } catch (err) {
     console.error(`watch:run failed: ${(err as Error).message}`);
     process.exit(1);

@@ -16,10 +16,159 @@
 
 import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
+import { appendAudit } from "../../../db/lib/access-control.ts";
 import { completeOrFallback } from "./llm.ts";
 import { isWebResearchConfigured, researchSources } from "./web-research.ts";
 import { SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
+
+// ---------------------------------------------------------------------------
+// Serial linked-analysis queue (design 2026-09-13, meeting panel-reviewed).
+// Linked industry analyses are created as 'pending' rows anchored to their
+// root via after_analysis_id; once the root completes, they start ONE AT A
+// TIME (concurrency 1 per root group), demand-side (전방/전전방) first. The
+// claim is a single conditional UPDATE — root-completed + no other in_progress
+// in the group + oldest-demand-first tie-break — so concurrent kicks can never
+// double-start (the UPDATE simply matches nothing the second time).
+// ---------------------------------------------------------------------------
+
+const QUEUE_CLAIM_SQL = `
+  UPDATE market_sizing_analysis SET status = 'in_progress', started_at = ?
+  WHERE status = 'pending' AND after_analysis_id = ?
+    AND (SELECT status FROM market_sizing_analysis WHERE id = ?) = 'completed'
+    AND NOT EXISTS (
+      SELECT 1 FROM market_sizing_analysis
+      WHERE after_analysis_id = ? AND status = 'in_progress'
+    )
+    AND id = (
+      SELECT id FROM market_sizing_analysis
+      WHERE status = 'pending' AND after_analysis_id = ?
+      ORDER BY CASE WHEN linked_relation IN ('전방', '전전방') THEN 0 ELSE 1 END, created_at, id
+      LIMIT 1
+    )
+  RETURNING id`;
+
+/** Atomically claim the next pending dependent of a completed root (or null). */
+export function claimNextPendingDependent(db: Database, rootId: string): string | null {
+  const now = new Date().toISOString();
+  const claimed = db
+    .query(QUEUE_CLAIM_SQL)
+    .get(now, rootId, rootId, rootId, rootId) as { id: string } | null;
+  return claimed?.id ?? null;
+}
+
+/** Fire-and-forget the pipeline for a claimed row (route-style defense-in-depth). */
+function startClaimed(db: Database, analysisId: string): void {
+  // Test seam: queue state-transition tests set this to observe claim/cancel
+  // bookkeeping without spawning a real (LLM-bound) pipeline run that would
+  // race the test DB teardown.
+  if (process.env.CO_NEWBIZ_QUEUE_NO_SPAWN === "1") return;
+  void runSizingPipeline(db, analysisId).catch(() => {
+    // runSizingPipeline's own catch already recorded the failure and advanced
+    // the queue; this only guards against a throw before that path ran.
+    db.run(
+      "UPDATE market_sizing_analysis SET status = 'failed', error_message = ? WHERE id = ? AND status = 'in_progress'",
+      ["파이프라인 기동 실패", analysisId],
+    );
+  });
+}
+
+/**
+ * Advance the serial queue after a terminal state change of `analysisId`.
+ * Resolves the queue root (the analysis itself, or the root it is chained to)
+ * and starts the next pending dependent, if the root is completed.
+ */
+export function releaseQueueNext(db: Database, analysisId: string): void {
+  const row = db
+    .query("SELECT after_analysis_id FROM market_sizing_analysis WHERE id = ?")
+    .get(analysisId) as { after_analysis_id: string | null } | null;
+  if (!row) return;
+  const rootId = row.after_analysis_id ?? analysisId;
+  const claimed = claimNextPendingDependent(db, rootId);
+  if (!claimed) return;
+  appendAudit(db, {
+    actor: "market-sizing-queue",
+    action: "market_sizing_analysis.queue_claim",
+    target: claimed,
+    now: new Date().toISOString(),
+  });
+  startClaimed(db, claimed);
+}
+
+/** Cancel every still-pending dependent of a failed root (system-actor audit). */
+export function cancelPendingDependents(db: Database, rootId: string, reason: string): void {
+  const rows = db
+    .query("SELECT id FROM market_sizing_analysis WHERE after_analysis_id = ? AND status = 'pending'")
+    .all(rootId) as Array<{ id: string }>;
+  if (rows.length === 0) return;
+  db.run(
+    "UPDATE market_sizing_analysis SET status = 'failed', error_message = ? WHERE after_analysis_id = ? AND status = 'pending'",
+    [reason, rootId],
+  );
+  const now = new Date().toISOString();
+  for (const r of rows) {
+    appendAudit(db, {
+      actor: "market-sizing-queue",
+      action: "market_sizing_analysis.queue_cancel",
+      target: r.id,
+      now,
+    });
+  }
+}
+
+/**
+ * Recovery pass for the serial queue — invoked by the watch:run OS-scheduler
+ * cycle (never an in-process timer), and safe to call repeatedly:
+ *  1. heals stuck rows: an in_progress run older than the staleness timeout is
+ *     marked failed (a dead root's pending group is cancelled, a dead
+ *     dependent just lets the queue continue);
+ *  2. claims any pending whose root is completed — covers crash windows
+ *     between a completion transaction and its claim hook.
+ */
+export function recoverQueuePass(
+  db: Database,
+  opts: { staleMinutes?: number } = {},
+): { healed: string[]; started: string[] } {
+  const healed: string[] = [];
+  const started: string[] = [];
+  const cutoff = new Date(Date.now() - (opts.staleMinutes ?? 30) * 60000).toISOString();
+  const stale = db
+    .query(
+      "SELECT id, after_analysis_id FROM market_sizing_analysis WHERE status = 'in_progress' AND COALESCE(started_at, created_at) < ?",
+    )
+    .all(cutoff) as Array<{ id: string; after_analysis_id: string | null }>;
+  for (const row of stale) {
+    db.run(
+      "UPDATE market_sizing_analysis SET status = 'failed', error_message = ? WHERE id = ? AND status = 'in_progress'",
+      ["분석 장기 실행(30분 초과) — watch:run 회수 패스가 실패 처리", row.id],
+    );
+    appendAudit(db, {
+      actor: "market-sizing-queue",
+      action: "market_sizing_analysis.queue_recover",
+      target: row.id,
+      now: new Date().toISOString(),
+    });
+    healed.push(row.id);
+    if (row.after_analysis_id) releaseQueueNext(db, row.id);
+    else cancelPendingDependents(db, row.id, "선행 분석 장기 실행으로 취소 — 선행 산업 재분석 완료 후 다시 선택하세요.");
+  }
+  const roots = db
+    .query("SELECT DISTINCT after_analysis_id AS rid FROM market_sizing_analysis WHERE status = 'pending' AND after_analysis_id IS NOT NULL")
+    .all() as Array<{ rid: string }>;
+  for (const { rid } of roots) {
+    const claimed = claimNextPendingDependent(db, rid);
+    if (!claimed) continue;
+    appendAudit(db, {
+      actor: "market-sizing-queue",
+      action: "market_sizing_analysis.queue_claim",
+      target: claimed,
+      now: new Date().toISOString(),
+    });
+    started.push(claimed);
+    startClaimed(db, claimed);
+  }
+  return { healed, started };
+}
 
 export const PIPELINE_STEPS = [
   { no: 1, title: "축·프록시 구조 정의" },
@@ -170,12 +319,12 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
 
   const row = db
     .query(
-      `SELECT a.id, a.industry_id, i.name_ko, i.ksic_code
+      `SELECT a.id, a.industry_id, a.after_analysis_id, i.name_ko, i.ksic_code
        FROM market_sizing_analysis a JOIN md_industry i ON i.id = a.industry_id
        WHERE a.id = ?`,
     )
     .get(analysisId) as
-    | { id: string; industry_id: string; name_ko: string; ksic_code: string | null }
+    | { id: string; industry_id: string; after_analysis_id: string | null; name_ko: string; ksic_code: string | null }
     | null;
   if (!row) throw new Error(`analysis ${analysisId} not found`);
   const analysis = row; // non-null alias — narrowing does not reach the nested step functions
@@ -232,12 +381,18 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
 
   try {
     await runSteps();
+    // Completion hook — start this analysis's next queued dependent, if any.
+    releaseQueueNext(db, analysis.id);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     db.run(
       "UPDATE market_sizing_analysis SET status = 'failed', error_message = ? WHERE id = ?",
       [message.slice(0, 2000), analysis.id],
     );
+    // Serial-queue bookkeeping: a failed ROOT cancels its whole pending group;
+    // a failed DEPENDENT just lets the next one start (queue continues).
+    if (analysis.after_analysis_id) releaseQueueNext(db, analysis.id);
+    else cancelPendingDependents(db, analysis.id, "선행 분석 실패로 시작 취소 — 선행 산업 재분석 완료 후 다시 선택하세요.");
     throw err;
   }
 

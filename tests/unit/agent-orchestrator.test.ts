@@ -17,14 +17,8 @@ import { join } from "node:path";
 import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
-import {
-  runActivityChain,
-  runDeliberationRounds,
-  deliberationPrompt,
-  buildSynthesis,
-  type CallAgent,
-  type AgentCallResult,
-} from "../../app/web-next/lib/agent-orchestrator.ts";
+import { runActivityChain, type CallAgent, type AgentCallResult } from "../../app/web-next/lib/agent-orchestrator.ts";
+import { runDeliberationRounds, deliberationPrompt, buildSynthesis } from "../../app/web-next/lib/deliberation.ts";
 
 const TEST_DB_PATH = "db/data/test-agent-orchestrator.sqlite";
 const SURVIVAL_DB_PATH = "db/data/test-agent-orchestrator-survival.sqlite";

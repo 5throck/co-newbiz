@@ -150,8 +150,9 @@
 | market-data-pipeline | 1.1.0 | active | .claude/skills/market-data-pipeline/SKILL.md | both | fetch market data, series revision policy, data change log, market data pipeline | data-architect |
 | master-data-governance | 1.0.0 | active | .claude/skills/master-data-governance/SKILL.md | both | staging unmapped queue, master data resolution, unmapped raw value, master data code assignment | dba |
 | mcp-server-integration | 1.0.0 | active | .claude/skills/mcp-server-integration/SKILL.md | both | add an MCP tool, MCP server integration, MCP-REST parity, no direct DB access from MCP | backend-engineer |
-| meeting | 1.4.0 | active | .claude/skills/meeting/SKILL.md | both | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
-| meeting-facilitation | 1.5.0 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
+| meeting | 1.4.1 | active | .claude/skills/meeting/SKILL.md | both | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
+| committee-deliberation | 1.6.0 | active | skills/committee-deliberation/SKILL.md | workspace | committee, committee-deliberation, steering committee, gate deliberation, red-team review | pm |
+| meeting-facilitation | 1.4.1 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
 | monte-carlo-simulation | 1.1.0 | active | skills/monte-carlo-simulation/SKILL.md | workspace | Monte Carlo simulation, seeded simulation, P50 P95 NPV, contingent liability integration | risk-officer |
 | notification-channel-management | 1.0.0 | active | .claude/skills/notification-channel-management/SKILL.md | both | notification channel, notification bundling, watch_rule configuration, notification severity | sre |
 | observability-and-alerting | 1.0.0 | active | .claude/skills/observability-and-alerting/SKILL.md | both | system health monitoring, error rate alerting, job run status, platform observability | sre |
@@ -303,7 +304,7 @@
 | lifecycle-sync-audit.ts | 1.7.1 | scripts/lifecycle-sync-audit.ts | N/A |
 | lint-server-boundary.ts | 1.0.0 | scripts/co-newbiz/lint-server-boundary.ts | N/A |
 | md-to-ooxml.ts | 1.2.0 | scripts/md-to-ooxml.ts | fs, path |
-| meeting.ts | 1.0.0 | scripts/co-newbiz/meeting.ts | N/A |
+| meeting.ts | 1.0.0 | scripts/co-newbiz/committee-deliberation.ts | N/A |
 | model.ts | 1.0.0 | scripts/co-newbiz/model.ts | N/A |
 | nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | N/A |
 | newbiz.ts | 1.19.0 | scripts/co-newbiz/newbiz.ts | N/A |

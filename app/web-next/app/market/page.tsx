@@ -23,8 +23,9 @@ import {
 // 렌더링된다 — 산업별 특수 케이스는 없다 (ADR-0112).
 
 interface AnalysisInfo {
-  id: string; status: "in_progress" | "completed" | "failed"; current_step: number; latest_version: number | null;
+  id: string; status: "in_progress" | "completed" | "failed" | "pending"; current_step: number; latest_version: number | null;
   created_at: string; completed_at: string | null; error_message?: string | null;
+  after_analysis_id?: string | null; linked_relation?: string | null;
 }
 interface IndustryRow {
   id: string; name_ko: string; name_en: string | null;
@@ -217,7 +218,7 @@ export function MarketView() {
   }, [refreshOverview]);
 
   // 분석 중인 산업이 있으면 3초 간격으로 상태 폴링 → 완료 시 목록이 자동 갱신
-  const hasInProgress = overview?.industries.some((i) => i.analysis?.status === "in_progress") ?? false;
+  const hasInProgress = overview?.industries.some((i) => i.analysis?.status === "in_progress" || i.analysis?.status === "pending") ?? false;
   useEffect(() => {
     if (!hasInProgress) return;
     const t = setInterval(() => { void refreshOverview(); }, 3000);
@@ -279,7 +280,9 @@ export function MarketView() {
     selected: Set<string>;
     loading: boolean;
     running: boolean;
-  }>({ open: false, primaryName: "", rerunAnalysisId: null, candidates: [], industryKnown: false, selected: new Set(), loading: false, running: false });
+    // 방법론 패널 P0 — 대체/보완 관계는 사슬 후보에서 분리해 "대체 위협"으로 표출한다.
+    substitutes: Array<{ name_ko: string; relation: string; note: string | null }>;
+  }>({ open: false, primaryName: "", rerunAnalysisId: null, candidates: [], industryKnown: false, selected: new Set(), loading: false, running: false, substitutes: [] });
 
   // ADR-0129 — 서버가 붙여준 linkSource/linkStatus로 "이미 등록된 활성 연계"
   // 여부를 판정하고, locked 후보는 기본 선택 상태로 미리 채운다.
@@ -291,36 +294,36 @@ export function MarketView() {
   }
 
   async function openLinkModal(primaryName: string, rerunAnalysisId: string | null = null) {
-    setLinkModal({ open: true, primaryName, rerunAnalysisId, candidates: [], industryKnown: false, selected: new Set(), loading: true, running: false });
+    setLinkModal({ open: true, primaryName, rerunAnalysisId, candidates: [], industryKnown: false, selected: new Set(), loading: true, running: false, substitutes: [] });
     try {
-      const r = await api.get<{ industry: { id: string } | null; candidates: RelatedCandidate[] }>(
+      const r = await api.get<{ industry: { id: string } | null; candidates: RelatedCandidate[]; substitutes?: Array<{ name_ko: string; relation: string; note: string | null }> }>(
         `/api/market-overview/related-candidates?name=${encodeURIComponent(primaryName)}`,
       );
-      if (r.data.candidates.length > 0) {
+      if (r.data.candidates.length > 0 || (r.data.substitutes?.length ?? 0) > 0) {
         const candidates = markLocked(r.data.candidates);
-        setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: r.data.industry !== null, candidates, selected: preselectLocked(candidates) }));
+        setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: r.data.industry !== null, candidates, selected: preselectLocked(candidates), substitutes: r.data.substitutes ?? [] }));
         return;
       }
-      // 저장된 후보(연계 링크·과거 분석)가 없으면 1차 프록시 산업 분석을
+      // 저장된 후보(연계 링크·과거 분석)가 없으면 1차 가치사슬 연계 산업 분석을
       // 자동 실행해 관련 산업과 연관성을 먼저 보여준다 (사용자 결정 사항).
       setLinkModal((prev) => ({ ...prev, loading: true, industryKnown: r.data.industry !== null }));
-      const p = await api.post<{ industry: { id: string } | null; candidates: RelatedCandidate[] }>(
+      const p = await api.post<{ industry: { id: string } | null; candidates: RelatedCandidate[]; substitutes?: Array<{ name_ko: string; relation: string; note: string | null }> }>(
         "/api/market-overview/related-candidates",
         { name: primaryName },
       );
       const candidates = markLocked(p.data.candidates);
-      setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: p.data.industry !== null, candidates, selected: preselectLocked(candidates) }));
+      setLinkModal((prev) => ({ ...prev, loading: false, industryKnown: p.data.industry !== null, candidates, selected: preselectLocked(candidates), substitutes: p.data.substitutes ?? [] }));
     } catch {
       setLinkModal((prev) => ({ ...prev, loading: false }));
     }
   }
 
-  // 1차 프록시 분석 재실행 — 모달 안에서 수동으로 다시 돌릴 수 있다.
+  // 1차 가치사슬 연계 산업 분석 재실행 — 모달 안에서 수동으로 다시 돌릴 수 있다.
   async function rerunProxyAnalysis() {
     if (linkModal.loading || linkModal.running) return;
     setLinkModal((prev) => ({ ...prev, loading: true }));
     try {
-      const p = await api.post<{ industry: { id: string } | null; candidates: RelatedCandidate[] }>(
+      const p = await api.post<{ industry: { id: string } | null; candidates: RelatedCandidate[]; substitutes?: Array<{ name_ko: string; relation: string; note: string | null }> }>(
         "/api/market-overview/related-candidates",
         { name: linkModal.primaryName },
       );
@@ -330,6 +333,7 @@ export function MarketView() {
         loading: false,
         industryKnown: p.data.industry !== null,
         candidates,
+        substitutes: p.data.substitutes ?? [],
         // 재실행으로 새로 온 locked 후보도 선택 목록에 포함시키되, 사용자가
         // 이미 직접 고른(비-locked) 선택은 유지한다.
         selected: new Set([...prev.selected, ...preselectLocked(candidates)]),
@@ -339,11 +343,17 @@ export function MarketView() {
     }
   }
 
+  // 레드팀 가드레일 — 대기 큐 상한: 무제한 큐는 비용·시간 폭탄이 된다.
+  const MAX_QUEUE_SELECTIONS = 5;
   function toggleCandidate(name: string, locked: boolean) {
     if (locked) return; // 등록된 연계 후보는 재분석에 자동 반영되어 해제할 수 없다.
     setLinkModal((prev) => {
       const selected = new Set(prev.selected);
-      if (selected.has(name)) selected.delete(name); else selected.add(name);
+      if (selected.has(name)) selected.delete(name);
+      else {
+        if (selected.size >= MAX_QUEUE_SELECTIONS) return prev;
+        selected.add(name);
+      }
       return { ...prev, selected };
     });
   }
@@ -360,19 +370,24 @@ export function MarketView() {
         await api.post("/api/market-overview/analyses", { name_ko: linkModal.primaryName, ksic_code: newCode.trim() || undefined });
         setNewName(""); setNewCode(""); setKsicResults(null); setShowNewForm(false);
       }
-      // 함께 분석할 연관 산업 — 서버가 name 기반으로 마스터를 자동 등록·재사용한다.
-      // locked(이미 등록된 proxy_link) 후보는 대상 산업의 파이프라인이 DB에서
-      // 직접 재도출하므로 별도 분석을 스폰하지 않는다 — 선택 표시는 정보성일 뿐이다.
+      // 연계 산업(재분석 모드만) — after_analysis_id 앵커로 '연계 대기' 등록.
+      // 서버가 대상 분석 완료 후 한 건씩 자동 시작한다(직렬 큐 — 설계 2026-09-13).
+      // 신규 모드는 첫 분석 = 대상 산업만: 모달이 애초에 선택 UI를 노출하지 않는다.
+      // locked(이미 등록된 proxy_link) 후보는 대상 파이프라인이 DB에서 직접
+      // 재도출하므로 별도 분석을 스폰하지 않는다 — 선택 표시는 정보성일 뿐이다.
       const lockedNames = new Set(linkModal.candidates.filter((c) => c.locked).map((c) => c.name_ko));
+      const relationByName = new Map(linkModal.candidates.map((c) => [c.name_ko, c.relation]));
       let extraCount = 0;
-      for (const name of linkModal.selected) {
-        if (name === linkModal.primaryName || lockedNames.has(name)) continue;
-        await api.post("/api/market-overview/analyses", { name_ko: name });
-        extraCount++;
+      if (linkModal.rerunAnalysisId) {
+        for (const name of linkModal.selected) {
+          if (name === linkModal.primaryName || lockedNames.has(name)) continue;
+          await api.post("/api/market-overview/analyses", { name_ko: name, after_analysis_id: linkModal.rerunAnalysisId, linked_relation: relationByName.get(name) });
+          extraCount++;
+        }
       }
       await refreshOverview();
-      setLinkModal({ open: false, primaryName: "", rerunAnalysisId: null, candidates: [], industryKnown: false, selected: new Set(), loading: false, running: false });
-      if (extraCount > 0) setLinkNotice(`연관 산업 ${extraCount}건(마스터 미등록 산업은 자동 등록)도 함께 분석을 시작했습니다.`);
+      setLinkModal({ open: false, primaryName: "", rerunAnalysisId: null, candidates: [], industryKnown: false, selected: new Set(), loading: false, running: false, substitutes: [] });
+      if (extraCount > 0) setLinkNotice(`연계 산업 ${extraCount}건이 대기열에 등록되었습니다 (마스터 미등록 산업은 시작 시 자동 등록). '${linkModal.primaryName}' 분석 완료 후 한 건씩 자동 시작됩니다 — 진행 상황은 '대기' 필터에서 확인하세요.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "분석 시작 실패");
       setLinkModal((prev) => ({ ...prev, running: false }));
@@ -445,7 +460,7 @@ export function MarketView() {
       if (!a) return null;
       const d = (a.completed_at ?? a.created_at).slice(0, 10);
       const stale = a.status === "completed" && d && (Date.now() - new Date(d).getTime()) / 86400000 > STALE_DAYS;
-      return { ...a, bucket: a.status === "in_progress" ? "in_progress" : a.status === "failed" ? "failed" : stale ? "stale" : "completed" };
+      return { ...a, bucket: a.status === "in_progress" ? "in_progress" : a.status === "pending" ? "pending" : a.status === "failed" ? "failed" : stale ? "stale" : "completed" };
     };
     return { of };
   }, []);
@@ -484,7 +499,12 @@ export function MarketView() {
     const analysisDate = row?.analysis ? (row.analysis.completed_at ?? row.analysis.created_at).slice(0, 10) : null;
     return (
       <main>
-        <MarketReport detail={detail} analysisId={analysisId} analysisDate={analysisDate} />
+        <MarketReport
+          detail={detail}
+          analysisId={analysisId}
+          analysisDate={analysisDate}
+          onAddLinked={analysisId ? () => openLinkModal(detail.industry.name_ko, analysisId) : undefined}
+        />
       </main>
     );
   }
@@ -638,6 +658,16 @@ export function MarketView() {
               {visibleIndustries.map((ind) => {
                 const a = ind.analysis;
                 const inProgress = a?.status === "in_progress";
+                // 큐 위치 표기(UX-4) — 같은 앵커의 대기열에서 몇 번째인지 칩 본문에 노출.
+                const queueLabel = (() => {
+                  if (a?.status !== "pending") return "연계 대기";
+                  const sibs = (overview?.industries ?? [])
+                    .map((i2) => i2.analysis)
+                    .filter((x): x is AnalysisInfo => Boolean(x) && x!.status === "pending" && x!.after_analysis_id === a.after_analysis_id)
+                    .sort((x, y) => x.created_at.localeCompare(y.created_at));
+                  const idx = sibs.findIndex((x) => x.id === a.id);
+                  return idx >= 0 ? `연계 대기 · ${idx + 1}번째` : "연계 대기";
+                })();
                 const analysisDate = a ? (a.completed_at ?? a.created_at).slice(0, 10) : null;
                 const stale = a?.status === "completed" && analysisDate
                   ? (Date.now() - new Date(analysisDate).getTime()) / 86400000 > STALE_DAYS
@@ -680,12 +710,16 @@ export function MarketView() {
                     </td>
                     <td className="tabular-nums">{ind.driver_count}건</td>
                     <td>
-                      {inProgress ? (
+                      {a?.status === "pending" ? (
+                        <span className="status-chip status-not-started" title="선행 산업 분석이 완료되면 자동으로 시작됩니다. 시작 전에는 언제든 재분석 모달에서 제외할 수 있습니다.">{queueLabel}</span>
+                      ) : inProgress ? (
                         <span className="status-chip status-amber">분석 중 ({a?.current_step ?? 0}/8단계)</span>
                       ) : stale ? (
                         <span className="status-chip status-amber" title="분석일이 90일을 지났습니다 — 재분석로 최신화하세요.">업데이트 권장 (v{a?.latest_version ?? 1})</span>
                       ) : a?.status === "completed" ? (
                         <span className="status-chip status-green">분석 완료 (v{a.latest_version ?? 1})</span>
+                      ) : a?.status === "failed" && a.error_message && (a.error_message.startsWith("선행 분석 실패") || a.error_message.startsWith("루트 재분석") || a.error_message.startsWith("선행 분석 장기")) ? (
+                        <span className="status-chip status-not-started" title={`${a.error_message} — 재분석 완료 후 모달에서 다시 선택하거나, 해당 산업을 직접 분석할 수 있습니다.`}>시작 취소</span>
                       ) : a?.status === "failed" ? (
                         <span className="status-chip status-red" title={a.error_message ?? "파이프라인 실행 중 오류가 발생했습니다."}>분석 실패</span>
                       ) : (
@@ -776,14 +810,16 @@ export function MarketView() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-[0.95rem] mb-1">
-              가치사슬 연계 산업 선택 — <span className="font-semibold">{linkModal.primaryName}</span>
+              {linkModal.rerunAnalysisId ? "가치사슬 연계 산업 선택" : "가치사슬 연계 산업 미리보기"} — <span className="font-semibold">{linkModal.primaryName}</span>
             </h2>
             <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
-              {linkModal.rerunAnalysisId ? "재분석" : "신규 분석"} 대상 산업과 연관성이 있는 산업 후보입니다. 선택한 산업을 함께 분석하며, 마스터에 없는 산업은 자동 등록 후 분석됩니다.
+              {linkModal.rerunAnalysisId
+                ? "재분석 대상 산업과 연관성이 있는 산업 후보입니다. 선택한 산업은 '연계 대기'로 등록되며, 재분석이 완료된 뒤 한 건씩 자동으로 시작됩니다. 마스터에 없는 산업은 시작 시 자동 등록됩니다."
+                : `첫 분석은 '${linkModal.primaryName}'만 진행됩니다. 아래는 함께 볼 만한 연계 산업 제안이며, 분석이 완료되면 리포트에서 '연계 산업 이어서 분석'으로 선택·추가할 수 있습니다.`}
             </p>
             {linkModal.loading ? (
-              <p className="text-[0.85rem]" role="status">1차 프록시 산업 분석 실행 중 — 관련 산업과 연관성을 도출하고 있습니다...</p>
-            ) : linkModal.candidates.length === 0 ? (
+              <p className="text-[0.85rem]" role="status">연계 산업 후보를 도출하는 중입니다 (수 초 소요) — 아직 분석은 시작되지 않았습니다.</p>
+            ) : linkModal.candidates.length === 0 && linkModal.substitutes.length === 0 ? (
               <p className="text-[0.8rem] text-[color:var(--muted-fg)]">
                 연관 산업 후보를 도출하지 못했습니다 — 이 산업만 분석을 진행할 수 있습니다.
               </p>
@@ -792,21 +828,25 @@ export function MarketView() {
                 <ul className="sizing-note-list mb-2" aria-label="연관 산업 후보">
                   {linkModal.candidates.map((c) => (
                     <li key={c.name_ko}>
-                      <label className={`flex items-start gap-2 text-[0.82rem] ${c.locked ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}>
-                        <input
-                          type="checkbox"
-                          checked={linkModal.selected.has(c.name_ko)}
-                          disabled={c.locked}
-                          onChange={() => toggleCandidate(c.name_ko, c.locked)}
-                          className="mt-1"
-                        />
+                      <label className={`flex items-start gap-2 text-[0.82rem] ${linkModal.rerunAnalysisId && !c.locked ? "cursor-pointer" : ""}`}>
+                        {linkModal.rerunAnalysisId ? (
+                          <input
+                            type="checkbox"
+                            checked={linkModal.selected.has(c.name_ko)}
+                            disabled={c.locked}
+                            onChange={() => toggleCandidate(c.name_ko, c.locked)}
+                            className="mt-1"
+                          />
+                        ) : (
+                          <span className="mt-1 inline-block w-3.5" aria-hidden="true" />
+                        )}
                         <span>
                           <span className="font-semibold">{c.relation}</span> · {c.name_ko}{" "}
                           <span className={`status-chip ${c.industry_id ? "status-green" : "status-amber"}`}>
                             {c.industry_id ? "분석 가능" : "미등록 — 자동 등록"}
                           </span>
                           {c.locked && <span className="control-chip status-green" title="이미 등록된 연계 산업 — 재분석 시 자동 반영, 해제 불가">등록됨 · 고정</span>}
-                          {c.source === "proxy" && <span className="status-chip status-not-started">1차 분석 제안</span>}
+                          {c.source === "proxy" && <span className="status-chip status-not-started" title="LLM 1차 제안 — 검증 전 가설입니다.">제안 (검증 전)</span>}
                           {c.source === "link" && <span className="status-chip status-green">연계 근거</span>}
                           {c.source === "analysis" && <span className="status-chip status-not-started">과거 분석</span>}
                           {c.note && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{c.note}</span>}
@@ -815,11 +855,27 @@ export function MarketView() {
                     </li>
                   ))}
                 </ul>
-                <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-2">
-                  이미 등록된 수요 산업은 재분석에 자동으로 반영됩니다 — 위 목록에서 제외할 수 없습니다.
-                </p>
+                {linkModal.substitutes.length > 0 && (
+                  <div className="mb-2">
+                    <p className="text-[0.78rem] font-semibold">대체 위협 (검토 필요) — 6축 연관성 분석 영역</p>
+                    <ul className="sizing-note-list" aria-label="대체 위협 후보">
+                      {linkModal.substitutes.map((sub) => (
+                        <li key={sub.name_ko} className="text-[0.82rem]">
+                          {sub.name_ko}
+                          {sub.note && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{sub.note}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {linkModal.rerunAnalysisId && (
+                  <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-2">
+                    이미 등록된 수요 산업은 재분석에 자동으로 반영됩니다 — 위 목록에서 제외할 수 없습니다.
+                    {linkModal.selected.size >= 5 && " 대기 큐는 최대 5건까지 선택할 수 있습니다."}
+                  </p>
+                )}
                 <button type="button" className="btn-ghost btn-sm" disabled={linkModal.loading || linkModal.running} onClick={() => void rerunProxyAnalysis()}>
-                  1차 프록시 분석 다시 실행
+                  후보 다시 도출
                 </button>
               </>
             )}
@@ -830,9 +886,9 @@ export function MarketView() {
               <button type="button" className="btn-primary" disabled={linkModal.running} onClick={() => void runWithSelections()}>
                 {linkModal.running
                   ? "분석 시작 중..."
-                  : linkModal.selected.size > 0
-                    ? `분석 시작 (연관 ${linkModal.selected.size}건 포함)`
-                    : linkModal.rerunAnalysisId ? "재분석 시작" : "이 산업만 분석"}
+                  : linkModal.rerunAnalysisId
+                    ? linkModal.selected.size > 0 ? `재분석 시작 (연계 ${linkModal.selected.size}건은 완료 후 자동 시작)` : "재분석 시작"
+                    : "이 산업만 분석"}
               </button>
             </div>
           </div>
@@ -867,7 +923,7 @@ export function MarketView() {
 
 /* ── 산업 리포트: 버전 페이로드의 매트릭스를 렌더링한다 (ADR-0112 — 모든 분석 동일 경로) ── */
 
-function MarketReport({ detail, analysisId, analysisDate }: { detail: IndustryDetail; analysisId: string | null; analysisDate: string | null }) {
+function MarketReport({ detail, analysisId, analysisDate, onAddLinked }: { detail: IndustryDetail; analysisId: string | null; analysisDate: string | null; onAddLinked?: () => void }) {
   const [analysis, setAnalysis] = useState<AnalysisDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -919,7 +975,7 @@ function MarketReport({ detail, analysisId, analysisDate }: { detail: IndustryDe
               {llmUsed && <> (8단계 전체 LLM 요약 사용)</>}
             </p>
           )}
-          <SizingReport detail={detail} matrix={matrix} stepSummaries={stepSummaries} analysisId={analysisId} />
+          <SizingReport detail={detail} matrix={matrix} stepSummaries={stepSummaries} analysisId={analysisId} onAddLinked={onAddLinked} />
         </>
       )}
     </>
@@ -967,11 +1023,12 @@ function StepSection({ n, id, title, children }: { n: number; id: string; title:
   );
 }
 
-function SizingReport({ detail, matrix, stepSummaries, analysisId }: {
+function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }: {
   detail: IndustryDetail;
   matrix: SizingMatrix;
   stepSummaries: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> | null;
   analysisId: string | null;
+  onAddLinked?: () => void;
 }) {
   const [tab, setTab] = useState<"overview" | "structure" | "competitive" | "size" | "allocation" | "growth" | "pipeline" | "qualitative" | "regulation" | "risk" | "validate">("overview");
   const [rerunStarted, setRerunStarted] = useState(false);
@@ -1177,7 +1234,14 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId }: {
         <p className="sizing-note-list mt-2 text-[0.8rem] text-[color:var(--muted-fg)]">{matrix.chainDirection.note}</p>
 
         {/* 가치사슬 연계 — 링크 + 승인 대기 제안 + 등급 (S1 산출물, ADR-0126) */}
-        <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">가치사슬 연계</h4>
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-4 mb-1">
+          <h4 className="text-[0.82rem] text-[color:var(--muted-fg)]">가치사슬 연계</h4>
+          {onAddLinked && (
+            <button type="button" className="btn-ghost btn-sm" onClick={onAddLinked} title="이 리포트의 가치사슬 인접 산업 중 추가로 분석할 산업을 고릅니다.">
+              연계 산업 이어서 분석
+            </button>
+          )}
+        </div>
         {view.chain.links.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
             이 산업에 등록된 가치사슬 연계 링크가 없습니다 — 아래 승인 대기 제안에서 등록하거나, 신규 분석 산업은 드라이버 민감도가 구조 증거를 대신합니다.

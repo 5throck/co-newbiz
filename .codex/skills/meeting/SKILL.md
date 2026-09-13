@@ -7,8 +7,8 @@ description: >
   decision-making and problem resolution. Use when: running agent meetings, coordinating
   multi-agent discussions, or facilitating collaborative problem-solving sessions.
 owner: pm
-version: 1.4.0
-last_reviewed: 2026-07-05
+version: 1.4.1
+last_reviewed: 2026-09-13
 metadata:
   type: process
   triggers:
@@ -19,11 +19,13 @@ metadata:
     - facilitate meeting
 ---
 
-This is a shortcut alias for the `meeting-facilitation` skill. The full documentation resides in `.claude/commands/meeting.md` and `.gemini/commands/meeting.md`; the deliberation engine itself runs via `bun scripts/co-newbiz/meeting.ts`.
+This is a shortcut alias for the `meeting-facilitation` skill. The full documentation resides in `.claude/commands/meeting.md` and `.gemini/commands/meeting.md`.
 
 ## When to Use
 
 Use `/meeting "topic"` to run a structured multi-agent meeting for collaborative decision-making and problem resolution.
+
+For engine-run committee deliberation with DB-recorded positions (gate reviews, red-team design vetting), use the `committee-deliberation` skill instead.
 
 ## Usage
 

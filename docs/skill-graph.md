@@ -25,6 +25,7 @@
 | `checklist-authoring` | L3 | — | — | — | — | — |
 | `ci-triage` | L3 | — | — | — | — | — |
 | `commercial-due-diligence` | L3 | commercial-dd-agent | phase4 | competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (follows) | — | — |
+| `committee-deliberation` | L3 | — | — | — | — | — |
 | `community-partnership-planning` | L3 | greenfield-agent | phase4 | dd-to-valuation-bridge (follows), greenfield-feasibility (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), site-visit-protocol (composes_with), stage-gate-governance (composes_with) | — | — |
 | `company-intelligence` | L3 | — | — | — | — | — |
 | `compensation-harmonization-analysis` | L3 | hr-integration-agent, hr-integration-agent | phase6 | management-incentive-review (composes_with), org-readiness-assessment (composes_with), pmi-planning (composes_with), stage-gate-governance (follows) | — | — |
@@ -324,6 +325,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0127` | adr | — | — | — |
 | `adr:0128` | adr | — | — | — |
 | `adr:0129` | adr | — | — | — |
+| `adr:0130` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
