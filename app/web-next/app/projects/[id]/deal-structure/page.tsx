@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
+import { TabNav } from "../../../../components/TabNav.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 
 // S10 투자구조 설계 (flow.spec v2.2.0) — 비히클(direct/SPC/holdco/내부 스핀오프/JV)
@@ -60,9 +61,14 @@ function fmt(n: number): string {
   return n.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
 }
 
-export default function DealStructurePage() {
+function DealStructurePage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab = tabParam === "reco" || tabParam === "financing" ? tabParam : "hypotheses";
+  const setTab = (key: string) => router.replace(`/projects/${projectId}/deal-structure?tab=${key}`, { scroll: false });
   const { me } = useAuth();
   const canAct = me?.role === "admin" || me?.role === "analyst";
   const { confirm, confirmDialog } = useConfirm();
@@ -175,8 +181,20 @@ export default function DealStructurePage() {
 
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
 
+        <TabNav
+          className="mb-3"
+          label="S10 투자구조 설계 화면"
+          active={tab}
+          onSelect={setTab}
+          tabs={[
+            ...(canAct ? [{ key: "reco", label: "LLM 추천" }] : []),
+            { key: "hypotheses", label: "투자구조 가설", count: data?.hypotheses.length },
+            { key: "financing", label: "자금조달 계획" },
+          ]}
+        />
+
         {/* ── LLM 검토/안건구조 추천 (결정 지원) — ADR-0118: 제안은 LLM, 가설 등록은 사람 ── */}
-        {canAct && (
+        {tab === "reco" && canAct && (
           <section className="market-section sizing-step mb-3" aria-label="LLM 검토/안건구조 추천">
             <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 검토/안건구조 추천 (제안)</h3>
             <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
@@ -232,6 +250,7 @@ export default function DealStructurePage() {
           </section>
         )}
 
+        {tab === "hypotheses" && (
         <section className="market-section sizing-step mb-3" aria-label="투자구조 가설">
           <h3 className="sizing-step-title text-[0.9rem]">투자구조 가설 ({data?.hypotheses.length ?? 0}건)</h3>
           {(data?.hypotheses ?? []).map((h) => (
@@ -338,7 +357,9 @@ export default function DealStructurePage() {
             </details>
           )}
         </section>
+        )}
 
+        {tab === "financing" && (
         <section className="market-section sizing-step" aria-label="자금조달 계획">
           <h3 className="sizing-step-title text-[0.9rem]">자금조달 계획 (sources &amp; uses)</h3>
           {totals && (
@@ -398,8 +419,17 @@ export default function DealStructurePage() {
             </div>
           )}
         </section>
+        )}
       </StageFrame>
       {confirmDialog}
     </main>
+  );
+}
+
+export default function DealStructurePageRoute() {
+  return (
+    <Suspense fallback={null}>
+      <DealStructurePage />
+    </Suspense>
   );
 }

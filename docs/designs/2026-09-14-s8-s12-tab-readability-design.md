@@ -28,4 +28,5 @@ Before implementing, the plan was reviewed by ux-designer-agent, design-system-a
 ## Phase 3 progress
 
 - **`business-case/page.tsx`** (done): split into `설명·생성·권고` (explainer table, generate button, run log, LLM adoption recommendation) and `시나리오 비교` (the three scenario comparison tables, default-active). Error banner and the editing/`TargetCheckPanel`/`GateDecisionPanel` sections stay outside the tab gate since they're triggered from within either tab. Active tab syncs to `?tab=` via `useRouter().replace(..., { scroll: false })`, page wrapped in `Suspense` (App Router requirement for `useSearchParams`). Live-verified: tabs switch, URL updates, no console/parse errors after the dev server's HMR cache settled.
-- Remaining: `deal-structure/page.tsx`, `portfolio/page.tsx`, `ic-review/page.tsx`, `partnership/page.tsx` — queued as follow-up PRs. `wacc/page.tsx` intentionally excluded (see Review section above).
+- **`deal-structure/page.tsx`** (done): split into `LLM 추천` (viewer-hidden, matching its existing `canAct` gate), `투자구조 가설` (count-badged, default-active), `자금조달 계획`. Live-verified: all three tabs render and switch correctly, `?tab=` sync confirmed.
+- Remaining: `portfolio/page.tsx`, `ic-review/page.tsx`, `partnership/page.tsx` — queued as follow-up PRs. `wacc/page.tsx` intentionally excluded (see Review section above).
