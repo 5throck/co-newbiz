@@ -493,6 +493,41 @@ export function MarketView() {
     });
   }, [overview, query, statusFilter, buckets]);
 
+  // 관계별 그룹핑 — 본 산업(anchor) 아래에 전전방/전방/후방/후후방으로 딸린
+  // 산업을 들여쓰기해 묶어 보여준다. 데이터는 이미 있던 것(연계 큐 등록 시
+  // 기록되는 analysis.after_analysis_id/linked_relation, ADR-0130)을 그대로
+  // 쓴다 — 새 스키마 없이 렌더링만 바꾼다. 상태 우선순위 정렬(실패→진행중→
+  // 갱신필요→완료→대기)은 "본 산업"(그룹의 대표 행) 기준으로는 그대로 유지되고,
+  // 딸린 산업은 자신의 개별 상태와 무관하게 본 산업 바로 아래 묶여서 표시된다.
+  const RELATION_ORDER: Record<string, number> = { "전전방": 0, "전방": 1, "후방": 2, "후후방": 3 };
+  const flatRows = useMemo(() => {
+    const byAnalysisId = new Map<string, IndustryRow>();
+    for (const ind of visibleIndustries) if (ind.analysis) byAnalysisId.set(ind.analysis.id, ind);
+    const childIds = new Set<string>();
+    const childrenByRootId = new Map<string, Array<{ ind: IndustryRow; relation: string }>>();
+    for (const ind of visibleIndustries) {
+      const rel = ind.analysis?.linked_relation;
+      const afterId = ind.analysis?.after_analysis_id;
+      if (!rel || !afterId) continue;
+      const root = byAnalysisId.get(afterId);
+      if (!root || root.id === ind.id) continue;
+      childIds.add(ind.id);
+      const list = childrenByRootId.get(root.id) ?? [];
+      list.push({ ind, relation: rel });
+      childrenByRootId.set(root.id, list);
+    }
+    for (const list of childrenByRootId.values()) {
+      list.sort((a, b) => (RELATION_ORDER[a.relation] ?? 9) - (RELATION_ORDER[b.relation] ?? 9));
+    }
+    const rows: Array<{ ind: IndustryRow; relation: string | null }> = [];
+    for (const ind of visibleIndustries) {
+      if (childIds.has(ind.id)) continue;
+      rows.push({ ind, relation: null });
+      for (const child of childrenByRootId.get(ind.id) ?? []) rows.push({ ind: child.ind, relation: child.relation });
+    }
+    return rows;
+  }, [visibleIndustries]);
+
   const statusCounts = useMemo(() => {
     const counts = { all: 0, in_progress: 0, completed: 0, stale: 0, pending: 0, failed: 0 };
     for (const ind of overview?.industries ?? []) {
@@ -664,7 +699,7 @@ export function MarketView() {
               </tr>
             </thead>
             <tbody>
-              {visibleIndustries.map((ind) => {
+              {flatRows.map(({ ind, relation }) => {
                 const a = ind.analysis;
                 const inProgress = a?.status === "in_progress";
                 // 큐 위치 표기(UX-4) — 같은 앵커의 대기열에서 몇 번째인지 칩 본문에 노출.
@@ -694,14 +729,22 @@ export function MarketView() {
                           autoFocus
                         />
                       ) : (
-                        <button
-                          type="button"
-                          className="font-semibold text-left underline-offset-2 hover:underline"
-                          title="분석 리포트 열기"
-                          onClick={() => loadDetail(ind.id)}
-                        >
-                          {ind.name_ko}
-                        </button>
+                        <span className="flex items-center gap-1.5" style={relation ? { paddingLeft: "1rem" } : undefined}>
+                          {relation && (
+                            <>
+                              <span aria-hidden="true" className="text-[color:var(--muted-fg)]">↳</span>
+                              <span className={`status-chip ${relation === "전방" || relation === "전전방" ? "status-in-progress" : "status-amber"}`}>{relation}</span>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            className={relation ? "text-left underline-offset-2 hover:underline" : "font-semibold text-left underline-offset-2 hover:underline"}
+                            title="분석 리포트 열기"
+                            onClick={() => loadDetail(ind.id)}
+                          >
+                            {ind.name_ko}
+                          </button>
+                        </span>
                       )}
                     </td>
                     <td>
