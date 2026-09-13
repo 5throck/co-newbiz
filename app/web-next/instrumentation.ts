@@ -62,6 +62,23 @@ export async function register() {
     const { applied } = runMigrations();
     const db = getDb();
 
+    // S1 market-sizing queue recovery — recoverQueuePass is normally driven by
+    // the OS-scheduled watch:run cycle (never an in-process timer), but local
+    // dev has no such scheduler running. Every dev-server restart abandons any
+    // in-process pipeline run mid-flight, leaving its row stuck at
+    // status='in_progress' forever with nothing to ever mark it failed. Run
+    // one pass on every boot so a restart-orphaned analysis surfaces as
+    // "분석 실패" (with a retry path) instead of hanging at "분석 중" indefinitely.
+    try {
+      const { recoverQueuePass } = await import("./lib/market-sizing-pipeline.ts");
+      const result = recoverQueuePass(db);
+      if (result.healed.length > 0 || result.started.length > 0) {
+        console.log(`[bootstrap] market-sizing queue recovery — healed ${result.healed.length}, started ${result.started.length}.`);
+      }
+    } catch (err) {
+      console.warn("[bootstrap] market-sizing queue recovery skipped:", err instanceof Error ? err.message : err);
+    }
+
     if (listUsers(db).length > 0) {
       if (applied.length > 0) console.log(`[bootstrap] applied ${applied.length} pending migration(s).`);
       return;
