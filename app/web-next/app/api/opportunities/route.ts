@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const rows = getDb()
     .query(
       `SELECT id, project_id, name, market_scope, value_chain_node, market_size_krw_m,
-              growth_rate, attractiveness_score, synergy_score, synergy_rationale, fit_verdict, fit_rationale, status, rationale,
+              growth_rate, attractiveness_score, synergy_score, synergy_rationale, synergy_score_confirmed_at, fit_verdict, fit_rationale, status, rationale,
               decided_by, decided_at, created_by, created_at, deleted_at
        FROM opportunity
        WHERE (deleted_at IS NULL OR (? = 1 AND project_id IS NOT NULL))

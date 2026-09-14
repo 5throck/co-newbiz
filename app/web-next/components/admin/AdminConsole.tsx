@@ -488,15 +488,15 @@ export function AdminConsole({ section }: { section: Section }) {
         (users === null ? (
           <p>불러오는 중...</p>
         ) : (
-          <table className="data-table">
+          <table className="data-table list-table">
             <caption className="sr-only">사용자 목록</caption>
             <thead>
               <tr>
                 <th scope="col">아이디</th>
-                <th scope="col">역할</th>
-                <th scope="col">상태</th>
-                <th scope="col">가입일</th>
-                <th scope="col">작업</th>
+                <th scope="col" className="w-[6rem]">역할</th>
+                <th scope="col" className="w-[8rem]">상태</th>
+                <th scope="col" className="col-date">가입일</th>
+                <th scope="col" className="w-[13rem]"><span className="sr-only">작업</span></th>
               </tr>
             </thead>
             <tbody>
@@ -516,7 +516,7 @@ export function AdminConsole({ section }: { section: Section }) {
                     )}
                   </td>
                   <td>{u.status === "disabled" ? <span className="status-chip status-not-started">disabled</span> : u.status}</td>
-                  <td>{new Date(u.created_at).toLocaleDateString("ko-KR")}</td>
+                  <td className="col-date">{new Date(u.created_at).toLocaleDateString("ko-KR")}</td>
                   <td className="sizing-actions-cell"><span className="actions-row">
                     {u.status === "pending" && (
                       <button type="button" className="btn-ghost btn-sm" onClick={() => approve(u.user_id)}>
@@ -571,7 +571,7 @@ export function AdminConsole({ section }: { section: Section }) {
                         ) : (
                           <table className="data-table" aria-label={`${u.user_id} API 토큰`}>
                             <caption className="sr-only">{u.user_id} API 토큰</caption>
-                            <thead><tr><th scope="col">라벨</th><th scope="col">스코프</th><th scope="col">생성일</th><th scope="col">마지막 사용</th><th scope="col">상태</th><th scope="col">작업</th></tr></thead>
+                            <thead><tr><th scope="col">라벨</th><th scope="col">스코프</th><th scope="col">생성일</th><th scope="col">마지막 사용</th><th scope="col">상태</th><th scope="col"><span className="sr-only">작업</span></th></tr></thead>
                             <tbody>
                               {(userTokens[u.user_id] ?? []).map((t) => (
                                 <tr key={t.id}>
@@ -739,7 +739,7 @@ export function AdminConsole({ section }: { section: Section }) {
                 <th scope="col">스케줄 (cron)</th>
                 <th scope="col">상태</th>
                 <th scope="col">최근 실행</th>
-                <th scope="col">작업</th>
+                <th scope="col"><span className="sr-only">작업</span></th>
               </tr>
             </thead>
             <tbody>

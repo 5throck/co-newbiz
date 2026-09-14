@@ -34,6 +34,7 @@ User requirement: the greenfield/brownfield decision (S4) must be made AFTER —
 
 - `competitive_structure` (same payload as the growth signal, no extra query): `독점/과점/독과점` keyword or leader-ratio ≥ 0.5 with ≥ 2 players → brownfield ×2; fragmented → neutral info; recorded-but-unclassified → neutral info; missing → neutral info. Deliberately one-sided: fragmentation must not cancel growth the way concentration can.
 - `capability_coverage`: coverage ≥ 70% → greenfield ×2 (`요구 역량 대부분 그룹 보유`); ≤ 40% → brownfield ×2 (`보유자 결합 유리`); middle → neutral; register absent or all-unevaluated → neutral info. All notes state the group/affiliate basis and the pending internal assessment.
+- `shortlist` signal retired (2026-09-14 follow-up): the S6/S7 shortlist is downstream state of the very track S4 decides — at first-pass S4 it is structurally always empty, so the absence branch (`결합 후보 없음` → greenfield ×2) was an unconditional pro-greenfield vote on every opportunity, and the presence branch leaked post-S4 state into the gate. Removed from the vote; the count is still read for the brownfield next-step re-review trigger (B3), which is forward-looking handoff guidance, not evidence. Rules-explainer table on the S4 surface updated to match; `adr-0104.test.ts` asserts the key never appears in signals.
 - Re-review trigger: completed S1 analysis without a competitive record.
 - `adr-0104.test.ts` fixtures unaffected (neutral signals add no weighted votes) — full unit suite green.
 

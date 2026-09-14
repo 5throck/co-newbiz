@@ -15,6 +15,7 @@ const NOW = "2026-09-04T00:00:00Z";
 type Db = ReturnType<typeof GetDb>;
 let db: Db;
 let oppHighGrowth: string;
+let oppSynergy: string;
 let projectId: string;
 let sessionId: string;
 
@@ -27,6 +28,13 @@ beforeAll(() => {
   oppHighGrowth = ulid();
   db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
     [oppHighGrowth, "휴머노이드 진출", "휴머노이드 로봇", "selected", "t", NOW]);
+
+  // pipeline-recorded (unconfirmed) synergy recommendation — migration 0099
+  // confirmation semantics: NULL confirmed_at = 권고 상태.
+  oppSynergy = ulid();
+  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
+    [oppSynergy, "시너지 확정 테스트", "휴머노이드 로봇", "selected", "t", NOW]);
+  db.run("UPDATE opportunity SET synergy_score = 67, synergy_rationale = '권고 근거' WHERE id = ?", [oppSynergy]);
 
   // completed S1 matrix with 36% CAGR + related industries. bottomUpCagr is
   // persisted already scaled to a percent number (e.g. 36 means 36%), not a
@@ -67,18 +75,59 @@ afterAll(() => {
 });
 
 describe("computeTrackAdvisory", () => {
-  test("high-growth market without shortlist leans greenfield with signals", () => {
+  test("high-growth market leans greenfield on S1-S3 evidence; shortlist never votes", () => {
     const { computeTrackAdvisory } = require("../../app/web-next/lib/track-advisory.ts");
     const r = computeTrackAdvisory(db, oppHighGrowth);
     expect(r.signals.length).toBeGreaterThan(0);
     const mkt = r.signals.find((s: { key: string }) => s.key === "market_growth");
     expect(mkt.leans).toBe("greenfield");
     expect(r.greenfieldScore).toBeGreaterThan(r.brownfieldScore);
+    // Regression (2026-09-14): the S6/S7 shortlist is downstream of S4, so it
+    // must not appear as a voting signal — its absence branch was an
+    // unconditional greenfield +2 for every opportunity.
+    expect(r.signals.find((s: { key: string }) => s.key === "shortlist")).toBeUndefined();
   });
 
   test("base rates array present", () => {
     const { computeTrackAdvisory } = require("../../app/web-next/lib/track-advisory.ts");
     expect(Array.isArray(computeTrackAdvisory(db, oppHighGrowth).baseRates)).toBe(true);
+  });
+
+  test("unconfirmed synergy recommendation stays a neutral info signal (경계 #2)", () => {
+    const { computeTrackAdvisory } = require("../../app/web-next/lib/track-advisory.ts");
+    const syn = computeTrackAdvisory(db, oppSynergy).signals.find((s: { key: string }) => s.key === "synergy");
+    expect(syn).toBeDefined();
+    expect(syn.leans).toBe("neutral");
+    expect(syn.weight).toBe(1);
+    expect(syn.note).toContain("사람 확정 전 권고값");
+  });
+
+  test("human-confirmed synergy score votes brownfield when strong, neutral when weak", () => {
+    const { computeTrackAdvisory } = require("../../app/web-next/lib/track-advisory.ts");
+    db.run("UPDATE opportunity SET synergy_score = 67, synergy_score_confirmed_at = ?, synergy_score_confirmed_by = 'human' WHERE id = ?", [NOW, oppSynergy]);
+    const strong = computeTrackAdvisory(db, oppSynergy).signals.find((s: { key: string }) => s.key === "synergy");
+    expect(strong.leans).toBe("brownfield");
+    expect(strong.weight).toBe(2);
+    expect(strong.label).toContain("시너지 확정");
+
+    db.run("UPDATE opportunity SET synergy_score = 40 WHERE id = ?", [oppSynergy]);
+    const weak = computeTrackAdvisory(db, oppSynergy).signals.find((s: { key: string }) => s.key === "synergy");
+    expect(weak.leans).toBe("neutral");
+    expect(weak.weight).toBe(2);
+  });
+
+  test("pipeline re-record keeps confirmation on same value, clears on change", () => {
+    const { recordSynergyRecommendation } = require("../../app/web-next/lib/synergy-pipeline.ts");
+    db.run("UPDATE opportunity SET synergy_score = 67, synergy_score_confirmed_at = ?, synergy_score_confirmed_by = 'human' WHERE id = ?", [NOW, oppSynergy]);
+
+    recordSynergyRecommendation(db, oppSynergy, 67, "재분석 — 같은 점수");
+    const kept = db.query("SELECT synergy_score_confirmed_at c FROM opportunity WHERE id = ?").get(oppSynergy) as { c: string | null };
+    expect(kept.c).not.toBeNull();
+
+    recordSynergyRecommendation(db, oppSynergy, 71, "재분석 — 점수 변경");
+    const cleared = db.query("SELECT synergy_score_confirmed_at c, synergy_score s FROM opportunity WHERE id = ?").get(oppSynergy) as { c: string | null; s: number };
+    expect(cleared.c).toBeNull();
+    expect(cleared.s).toBe(71);
   });
 });
 

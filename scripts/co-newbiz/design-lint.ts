@@ -1,10 +1,12 @@
-// @version 1.1.0
+// @version 1.2.0
 // design-lint (skills/design-lint) — mechanical enforcement of the Onyx 3.0
 // design guide (docs/design-system/design-guide.md). Fails on:
 //   1. hardcoded hex/rgba/hsl colors in components/app tsx (outside styles.css)
 //   2. onInput= handlers (Korean IME composition breaks mid-typing)
 //   3. a file declaring <main> more than once (AppShell provides the pane)
 //   4. icon-only buttons (svg child, no text) without aria-label
+//   5. row-action tables (.data-table + .sizing-actions-cell) without the
+//      .list-table standard or with an unheaded actions column
 // Usage: bun scripts/co-newbiz/design-lint.ts
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -57,6 +59,21 @@ for (const file of targets) {
     if (hasIcon && text === "") {
       violations.push(`${rel}: icon-only button without aria-label`);
     }
+  }
+
+  // 5. list-table standard (docs/design-system/design-components.md): a
+  //    .data-table that renders per-row actions (.sizing-actions-cell) is a
+  //    LIST table and must (a) opt into .list-table — fixed column layout +
+  //    width cap so the label column cannot absorb all leftover width — and
+  //    (b) head its actions column (작업). A headerless actions column drifts
+  //    past the header row on wide screens (2026-09-14 S1/S2 user report).
+  const tableRe = /<table\b[^>]*>[\s\S]*?<\/table>/g;
+  for (const m of src.matchAll(tableRe)) {
+    const t = m[0];
+    if (!/data-table/.test(t) || !/sizing-actions-cell/.test(t)) continue;
+    if (!/list-table/.test(t)) violations.push(`${rel}: row-action table without .list-table — apply the list-table standard (design-components.md)`);
+    const head = t.match(/<thead[\s\S]*?<\/thead>/)?.[0] ?? "";
+    if (!/작업/.test(head)) violations.push(`${rel}: actions column without 작업 header — every list-table column must be headed`);
   }
 
   // 1. hardcoded colors in tsx — 3/4/6/8-digit hex, rgba(), hsl()

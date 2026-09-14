@@ -100,46 +100,37 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
     signals.push({ key: "market_growth", label: "S1 시장분석 부재", leans: "neutral", weight: 1, note: "완료된 시장분석 없음 — 트랙 판단 근거가 약함" });
   }
 
-  // 2) Brownfield signal — a screened shortlist exists (S6/S7 done).
+  // Shortlist state — S6/S7 output, downstream of S4 (it exists only after the
+  // brownfield track reaches target selection), so it never votes on the track.
+  // Read solely for the brownfield next-step re-review trigger below.
   const shortlist = db
     .query("SELECT COUNT(*) c FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'")
     .get(opportunityId) as unknown as { c: number };
-  const koPass = db
-    .query(
-      `SELECT COUNT(*) c FROM brownfield_target
-       WHERE opportunity_id = ? AND status = 'shortlisted' AND screening_json LIKE '%"pass"%'`,
-    )
-    .get(opportunityId) as unknown as { c: number };
-  if (shortlist.c > 0) {
-    signals.push({
-      key: "shortlist", label: `브라운필드 쇼트리스트 ${shortlist.c}건`,
-      leans: "brownfield", weight: 3,
-      note: `S6/S7 대상 선정이 완료돼 결합 후보가 존재${koPass.c ? ` (knock-out 검토 ${koPass.c}건)` : ""}`,
-    });
-  } else {
-    signals.push({
-      key: "shortlist", label: "결합 후보 없음",
-      leans: "greenfield", weight: 2,
-      note: "쇼트리스트가 없으면 brownfield 실행 전제가 없다 — 자체 역량 기반 진출이 기본값",
-    });
-  }
 
-  // 3) Synergy signal — opportunity synergy score (S3 recommendation).
-  const opp = db.query("SELECT attractiveness_score, synergy_score, capability_gap_json FROM opportunity WHERE id = ?").get(opportunityId) as
-    | { attractiveness_score: number | null; synergy_score: number | null; capability_gap_json: string | null }
+  // 2) Synergy signal — opportunity synergy score (S3). The pipeline records a
+  // RECOMMENDATION (ADR-0090); only a human-confirmed score (migration 0099)
+  // votes on the track — an unconfirmed recommendation stays a neutral info
+  // signal so an LLM draft never carries gate evidence on its own (경계 #2).
+  const opp = db.query("SELECT attractiveness_score, synergy_score, synergy_score_confirmed_at, capability_gap_json FROM opportunity WHERE id = ?").get(opportunityId) as
+    | { attractiveness_score: number | null; synergy_score: number | null; synergy_score_confirmed_at: string | null; capability_gap_json: string | null }
     | undefined;
   if (opp?.synergy_score !== null && opp?.synergy_score !== undefined) {
+    const confirmed = opp.synergy_score_confirmed_at !== null;
     const strong = opp.synergy_score >= 60;
     signals.push({
-      key: "synergy", label: `시너지 권고 ${opp.synergy_score}`,
-      leans: strong ? "brownfield" : "neutral", weight: 2,
-      note: strong
-        ? "그룹/계열사와의 결합 시너지가 구조화돼 있어 대상 결합 경로의 근거가 됨"
-        : "결합 시너지 권고가 약해 자체 역량 진출과 충돌하지 않음",
+      key: "synergy",
+      label: `${confirmed ? "시너지 확정" : "시너지 권고(미확정)"} ${opp.synergy_score}`,
+      leans: confirmed && strong ? "brownfield" : "neutral",
+      weight: confirmed ? 2 : 1,
+      note: !confirmed
+        ? "사람 확정 전 권고값 — S3 시너지 화면에서 확정하면 트랙 판단 근거로 인정됩니다"
+        : strong
+          ? "사람이 확정한 결합 시너지가 구조화돼 있어 대상 결합 경로의 근거가 됨"
+          : "확정된 결합 시너지가 약해 자체 역량 진출과 충돌하지 않음",
     });
   }
 
-  // 4) Capability coverage signal (flow.spec v2.4.0) — S3 역량 갭 레지스터.
+  // 3) Capability coverage signal (flow.spec v2.4.0) — S3 역량 갭 레지스터.
   // The "held" side is group/affiliate profiles only (internal standalone
   // assessment is a documented follow-up). High coverage leaves room to build
   // (greenfield); low coverage favors combining with a holder (brownfield);

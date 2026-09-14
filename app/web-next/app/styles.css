@@ -2223,6 +2223,13 @@
 }
 
 /* ── Opportunity funnel board ── */
+/* 목록 테이블 표준(2026-09-14, docs/design-system/design-components.md) —
+   행 작업(.sizing-actions-cell)이 있는 .data-table은 .list-table을 함께 써야
+   한다. 고정 레이아웃 + 최대 폭 제한으로 "라벨 열이 남은 화면 폭을 전부 흡수해
+   지표·작업 열이 오른쪽 끝으로 밀려나는" 문제를 막고, 모든 열이 헤더(th)를
+   갖도록 design-lint가 강제한다. 긴 칩은 열 안에서 줄바꿈된다(nowrap 해제). */
+.list-table { table-layout: fixed; max-width: 64rem; }
+.list-table .status-chip { white-space: normal; }
 .opportunity-create { margin-bottom: 1.25rem; }
 .opportunity-create summary { display: inline-flex; cursor: pointer; list-style: none; }
 .opportunity-form { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; align-items: center; }
@@ -2825,6 +2832,10 @@ a.funnel-card:hover { border-color: var(--primary); }
 /* col-num 정렬은 일반 data-table에서도 유효 — report-table 전용 스코핑이면
    th/td에 클래스를 미러링해도 일반 표에서 정렬이 무효가 되는 문제가 생긴다 (ADR-0088). */
 .data-table .col-num, .report-table .col-num { text-align: right; white-space: nowrap; }
+/* col-date — 날짜(YYYY-MM-DD) 표기 열의 목록 표준폭. 고정 레이아웃 목록 표에서
+   6rem으로 좁히면 "2026-09-14"가 두 줄로 접힌다(2026-09-15 사용자 리포트) —
+   7rem 표준폭 + 줄바꿈 금지. th(폭)와 td(nowrap)에 함께 쓴다. */
+.data-table .col-date, .report-table .col-date { width: 7rem; white-space: nowrap; }
 /* 장문 나열은 블릿 목록으로 — 문단 뭉치 대신 항목별 불릿+간격 */
 .report-bullet-list {
   margin: 0.4rem 0;

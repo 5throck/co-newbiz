@@ -21,6 +21,7 @@ interface OpportunityRow {
   id: string; project_id: string | null; name: string; market_scope: string | null; value_chain_node: string | null;
   market_size_krw_m: number | null; growth_rate: number | null;
   attractiveness_score: number | null; synergy_score: number | null; synergy_rationale: string | null;
+  synergy_score_confirmed_at: string | null;
   fit_verdict: "Go" | "Hold" | "Kill" | null; fit_rationale: string | null;
   status: "identified" | "assessed" | "selected" | "dropped";
   rationale: string | null; created_by: string; created_at: string;
@@ -262,7 +263,12 @@ export function OpportunityDetail() {
       <section aria-label="기회 개요" className="market-section">
         <div className="flex flex-wrap items-center gap-2 mb-2">
           <span className="text-[0.85rem]">매력도 <strong className="mono-num">{opp.attractiveness_score ?? "—"}</strong> / 100</span>
-          {opp.synergy_score !== null && <span className="text-[0.85rem]">시너지 <strong className="mono-num">{opp.synergy_score}</strong></span>}
+          {opp.synergy_score !== null && (
+            <span className="text-[0.85rem]" title={opp.synergy_score_confirmed_at ? "사람이 확정한 시너지 점수" : "사람 확정 전 권고값 — S3 화면에서 확정할 수 있습니다"}>
+              시너지 <strong className="mono-num">{opp.synergy_score}</strong>
+              <span className="text-[0.7rem] text-[color:var(--muted-fg)] ml-1">{opp.synergy_score_confirmed_at ? "확정" : "권고(미확정)"}</span>
+            </span>
+          )}
           {opp.fit_verdict && <span className={`status-chip ${opp.fit_verdict === "Go" ? "status-green" : opp.fit_verdict === "Kill" ? "status-red" : "status-amber"}`}>적합성 {opp.fit_verdict}</span>}
         </div>
         {opp.rationale && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-2">{opp.rationale}</p>}
@@ -289,7 +295,13 @@ export function OpportunityDetail() {
             ) : (
               <span className="status-chip status-not-started">미실시</span>
             )}
-            {opp.synergy_score !== null && <span className="block mt-1 text-[0.75rem]"><strong>시너지 {opp.synergy_score}점</strong> — {opp.synergy_rationale ?? "근거 미기록"}</span>}
+            {opp.synergy_score !== null && (
+              <span className="block mt-1 text-[0.75rem]">
+                <strong>시너지 {opp.synergy_score}점</strong>
+                <span className={opp.synergy_score_confirmed_at ? "" : "text-[color:var(--muted-fg)]"}>{opp.synergy_score_confirmed_at ? " (사람 확정)" : " (권고·사람 미확정)"}</span>
+                {" — "}{opp.synergy_rationale ?? "근거 미기록"}
+              </span>
+            )}
             {opp.fit_verdict && <span className="block mt-1 text-[0.75rem]"><strong>적합성 {opp.fit_verdict}</strong> — {opp.fit_rationale ?? "근거 미기록"}</span>}
             <div className="mt-2">
               <Link href="/synergy" className="btn-ghost btn-sm" title="S3 시너지·전략적 적합성 화면에서 분석합니다">S3 화면으로 이동 →</Link>

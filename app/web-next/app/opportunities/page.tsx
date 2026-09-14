@@ -25,6 +25,7 @@ interface OpportunityRow {
   attractiveness_score: number | null;
   synergy_score: number | null;
   synergy_rationale: string | null;
+  synergy_score_confirmed_at: string | null;
   fit_verdict: "Go" | "Hold" | "Kill" | null;
   fit_rationale: string | null;
   status: "identified" | "assessed" | "selected" | "dropped";
@@ -364,15 +365,17 @@ export function OpportunitiesView() {
             {statusFilter ? "필터 조건에 맞는 기회가 없습니다." : "등록된 기회가 없습니다 — 분석된 산업에서 기회 발굴을 시작하세요."}
           </p>
         ) : (
-          <table className="data-table" aria-label="기회 퍼널 목록">
+          <table className="data-table list-table" aria-label="기회 퍼널 목록">
             <caption className="sr-only">기회 퍼널 목록</caption>
             <thead>
               <tr>
-                <th scope="col" className="w-[5rem]">상태</th>
+                <th scope="col" className="w-[6rem]">상태</th>
+                {/* 기회명은 유일한 무제한 열 — .list-table 고정 레이아웃에서 나머지
+                    폭을 흡수하지만 테이블 최대 폭(64rem) 안에서 유지된다. */}
                 <th scope="col">기회명</th>
-                <th scope="col" className="w-[5rem]">매력도</th>
-                <th scope="col" className="w-[5rem]">시너지</th>
-                <th scope="col" className="w-[13rem]">작업</th>
+                <th scope="col" className="w-[6rem]">매력도</th>
+                <th scope="col" className="w-[7rem]">시너지</th>
+                <th scope="col" className="w-[13rem]"><span className="sr-only">작업</span></th>
               </tr>
             </thead>
             <tbody>
@@ -403,7 +406,15 @@ export function OpportunitiesView() {
                       <span className="block text-[0.65rem] text-[color:var(--muted-fg)]">제안</span>
                     )}
                   </td>
-                  <td className="tabular-nums">{o.synergy_score ?? "—"}</td>
+                  <td className="tabular-nums">
+                    {o.synergy_score ?? "—"}
+                    {/* 경계 #2 — 파이프라인 권고와 사람 확정을 구분해 표시한다. */}
+                    {o.synergy_score !== null && (
+                      o.synergy_score_confirmed_at
+                        ? <span className="block text-[0.65rem] text-[color:var(--muted-fg)]">확정</span>
+                        : <span className="block text-[0.65rem] text-[color:var(--muted-fg)]">권고(미확정)</span>
+                    )}
+                  </td>
                   <td className="sizing-actions-cell"><span className="actions-row">
                     {nextStepActions(o)}
                     {!o.project_id && (

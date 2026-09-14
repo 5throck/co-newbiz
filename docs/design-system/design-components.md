@@ -21,11 +21,13 @@ Like LEGO blocks, once the pieces that make up a screen are built well, they can
 | CommitteePanel | Panel showing committee member seating, score sheets, and meeting minutes | S4 and S11 committee review screens |
 | ListBackButton | Button for returning to the list screen (behaves identically on every screen) | Any screen entered from a list into a detail view |
 | data-table + .table-scroll | Table for showing list and summary data (scrolls horizontally when wider than the screen) | All screens |
+| list-table (data-table modifier) | Standard for LIST tables — tables that render per-row actions. Fixed column layout, width-capped at 64rem, every column headed | All list screens (S1 산업 목록, S2 기회 퍼널, 계열사 목록, 시너지 분석 목록, admin users/business targets) |
 
 ## Rules to follow when building screens
 
 - Every new detail screen must include ProjectSubNav. A screen built without these tabs becomes an "orphan screen" cut off from the other sub-screens, leaving users with no way to get back to other menus from there.
 - Table headers and their data cells must use the same alignment (left/center/right) within each column. If the header is centered while the cells are left-aligned, the table looks visually misaligned.
+- **List-table standard**: any `.data-table` that renders per-row actions (`sizing-actions-cell`) must also carry the `list-table` class. The standard fixes the failure mode where the label column (기회명·산업명) — the only unconstrained column in an auto-layout table — absorbs all leftover screen width and pushes the score/action columns to the far right edge, detaching them from the names they describe. Rules: (1) `.list-table` applies a fixed column layout capped at 64rem; (2) every column except the primary label column carries an explicit width class; (3) every column is headed in the accessibility tree — the actions column header is a visually hidden (`sr-only`) `작업`: sighted readers need no label for self-evident row buttons, screen readers still announce the column (2026-09-15 readability report); (4) long status chips wrap inside their column instead of overflowing. (5) date columns (YYYY-MM-DD) carry the `col-date` class — 7rem standard width, no wrap — so the date never folds onto two lines. design-lint fails row-action tables that omit the class or the actions header.
 - All reference documents, including this one, are read on the `/library` screen (a list + detail two-pane view), where each document is rendered in full on one screen without separate chapter splitting or page-navigation buttons.
 
 ## 🌐 External Reference — How component catalogs are managed in the industry

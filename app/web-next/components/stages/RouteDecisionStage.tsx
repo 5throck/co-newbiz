@@ -870,10 +870,9 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                   <tr><td className="cell-primary">시장 성장률 (S1)</td><td>CAGR 15% 미만 — 성숙 시장</td><td>Brownfield</td><td>2</td></tr>
                   <tr><td className="cell-primary">경쟁 구조 (S1)</td><td>독과점·집중 시장</td><td>Brownfield</td><td>2</td></tr>
                   <tr><td className="cell-primary">경쟁 구조 (S1)</td><td>분산·불명확</td><td>중립</td><td>1</td></tr>
-                  <tr><td className="cell-primary">브라운필드 쇼트리스트 (S6/S7)</td><td>결합 후보 존재</td><td>Brownfield</td><td>3</td></tr>
-                  <tr><td className="cell-primary">브라운필드 쇼트리스트 (S6/S7)</td><td>결합 후보 없음</td><td>Greenfield</td><td>2</td></tr>
-                  <tr><td className="cell-primary">시너지 권고 (S3)</td><td>시너지 점수 60 이상</td><td>Brownfield</td><td>2</td></tr>
-                  <tr><td className="cell-primary">시너지 권고 (S3)</td><td>시너지 점수 60 미만</td><td>중립</td><td>2</td></tr>
+                  <tr><td className="cell-primary">시너지 확정 (S3)</td><td>사람이 확정한 점수 60 이상</td><td>Brownfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">시너지 확정 (S3)</td><td>사람이 확정한 점수 60 미만</td><td>중립</td><td>2</td></tr>
+                  <tr><td className="cell-primary">시너지 권고 (S3)</td><td>사람 확정 전 권고값</td><td>중립</td><td>1</td></tr>
                   <tr><td className="cell-primary">역량 충족률 (S3 역량 갭)</td><td>보유 역량 70% 이상</td><td>Greenfield</td><td>2</td></tr>
                   <tr><td className="cell-primary">역량 충족률 (S3 역량 갭)</td><td>보유 역량 40% 이하</td><td>Brownfield</td><td>2</td></tr>
                   <tr><td className="cell-primary">역량 충족률 (S3 역량 갭)</td><td>40~70% (중간)</td><td>중립</td><td>1</td></tr>

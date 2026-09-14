@@ -50,6 +50,7 @@ export function gateManifest(entityType: GateBriefEntity, gate: string): string[
 interface OppRow {
   id: string; name: string; market_scope: string | null; value_chain_node: string | null;
   rationale: string | null; attractiveness_score: number | null; synergy_score: number | null;
+  synergy_score_confirmed_at: string | null;
   fit_verdict: string | null; fit_rationale: string | null; market_size_krw_m: number | null;
   growth_rate: number | null; target_universe_json: string | null; factors_json: string | null;
 }
@@ -58,6 +59,7 @@ function oppRow(db: Database, id: string): OppRow | null {
   return db
     .query(
       `SELECT id, name, market_scope, value_chain_node, rationale, attractiveness_score, synergy_score,
+              synergy_score_confirmed_at,
               fit_verdict, fit_rationale, market_size_krw_m, growth_rate, target_universe_json, factors_json
        FROM opportunity WHERE id = ?`,
     )
@@ -134,7 +136,8 @@ function s2Factors(opp: OppRow): string {
 function s3Summary(opp: OppRow): string {
   return [
     `매력도: ${opp.attractiveness_score ?? "미평가"}`,
-    `시너지 점수: ${opp.synergy_score ?? "미평가"}`,
+    // 경계 #2 — 파이프라인 기록값은 권고이며, 사람 확정 여부를 브리프가 그대로 노출한다.
+    `시너지 점수: ${opp.synergy_score ?? "미평가"}${opp.synergy_score !== null ? (opp.synergy_score_confirmed_at ? " (사람 확정)" : " (권고·사람 미확정)") : ""}`,
     `적합성 판정: ${opp.fit_verdict ?? "없음"}${opp.fit_rationale ? ` — ${opp.fit_rationale}` : ""}`,
   ].join("\n");
 }
