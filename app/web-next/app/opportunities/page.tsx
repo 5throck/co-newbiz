@@ -26,8 +26,6 @@ interface OpportunityRow {
   synergy_score: number | null;
   synergy_rationale: string | null;
   synergy_score_confirmed_at: string | null;
-  fit_verdict: "Go" | "Hold" | "Kill" | null;
-  fit_rationale: string | null;
   status: "identified" | "assessed" | "selected" | "dropped";
   rationale: string | null;
   created_by: string;

@@ -20,6 +20,11 @@ resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 const NOW = "2026-09-10T00:00:00Z";
+// ADR-0133 — production mode (the fail-closed default) blocks DELETE; these
+// tests exercise the deletion-mark mechanism itself, so opt this test DB into
+// development mode up front.
+const { setSystemMode } = await import("../../db/lib/system-mode.ts");
+setSystemMode(db, "development", "test", NOW);
 let projId = "";
 let oppA = ""; // promoted, delete-marked with the project
 let oppB = ""; // stays promoted — refusal test

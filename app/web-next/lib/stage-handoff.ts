@@ -11,8 +11,8 @@ export interface StageHandoff {
 export const STAGE_HANDOFF: Record<StageMetaId, StageHandoff> = {
   S1: { inputs: ["외부 시장 데이터", "KSIC 코드 마스터", "산업 프로파일"], output: "S2 기회 발굴" },
   S2: { inputs: ["S1 시장 규모·성장", "S1 가치사슬 구조"], output: "S3 시너지·적합성" },
-  S3: { inputs: ["S2 기회 퍼널", "그룹/계열사 프로파일"], output: "S4 진출방식 결정 (필요 역량 목록·역량 갭 포함)" },
-  S4: { inputs: ["S3 시너지 점수·적합성", "S3 역량 갭 분석", "S1 시장 규모·성장", "S1 경쟁 구조", "S1 가치사슬"], output: "S5 (그린필드) / S6 (브라운필드)" },
+  S3: { inputs: ["S2 기회 퍼널", "그룹/계열사 프로파일"], output: "S4 진출방식 결정 (필요 역량 목록·필요 역량 수준 포함)" },
+  S4: { inputs: ["S3 시너지 점수·적합성", "S3 필요 역량 수준 분석", "S1 시장 규모·성장", "S1 경쟁 구조", "S1 가치사슬"], output: "S5 (그린필드) / S6 (브라운필드)" },
   S5: { inputs: ["S4 트랙 (greenfield)", "S3 필요 역량", "자사 역량·조직"], output: "S8 사업성 분석 (승격 후)" },
   S6: { inputs: ["S4 트랙·라우트", "S1 시장 정의·가치사슬", "S3 필요 역량·진입 조건"], output: "S7 대상 선정" },
   S7: { inputs: ["S6 Universe 정의", "S6 Long List"], output: "S8 사업성 분석 (승격)" },

@@ -9,6 +9,7 @@
 // audit_log records the delete itself (FR-SEC-07).
 import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
+import { getSystemMode } from "../../../../../../db/lib/system-mode.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { isLead, visibleProject } from "../../../../lib/project-visibility.ts";
 import { buildDealManifest, recordDealArchive } from "../../../../lib/deal-archive.ts";
@@ -19,6 +20,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
   if (ctx.role === "viewer") return forbidden("role_required", "프로젝트 삭제는 analyst 역할 이상이어야 합니다.");
+  // ADR-0133 — production 모드에서는 딜 데이터 삭제(톰스톤 포함)를 전면 차단한다.
+  // 관리자가 /admin/system-mode에서 development로 전환해야 다시 허용된다.
+  if (getSystemMode(getDb()) === "production") {
+    return forbidden("production_mode_delete_blocked", "운영(production) 모드에서는 프로젝트 삭제가 차단됩니다 — 관리자가 시스템 모드를 development로 전환해야 합니다.");
+  }
   const { id } = await params;
   const project = visibleProject(ctx, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();

@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     r.entityType === "opportunity" || projects.some((p) => p.projectId === r.entityId);
   // currentHolds: every recorded HOLD/KILL right now, any age. One list feeds
   // everything that needs "is this on hold" — the board's card badges and
-  // 진행 대기 filter, the dashboard's HOLD KPI, and the 진행 에이징 table
+  // HOLD filter, the dashboard's HOLD KPI, and the 진행 에이징 table
   // (sorted by ageDays, elapsed shown per row down to 0). A previous version
   // pre-filtered a separate `aging` list to >=1 day old for that table, which
   // made the table say "no HOLD/KILL in progress" on the very page showing a

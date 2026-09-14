@@ -82,11 +82,14 @@ function RouteDecisionRedirect() {
                 <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
                   진출방식을 결정할 검토/안건을 선택하세요 — 결정 화면은 검토/안건별로 열립니다.
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="deal-pick-grid">
                   {active.map((o) => (
-                    <Link key={o.id} href={`/deals/${encodeURIComponent(o.id)}/s4`} className="sizing-industry-chip">
-                      <span className="font-semibold">{o.name}</span>
-                      <span className="sizing-chip-meta">매력도 {o.attractiveness_score ?? "—"} · 시너지 {o.synergy_score ?? "—"}</span>
+                    <Link key={o.id} href={`/deals/${encodeURIComponent(o.id)}/s4`} className="deal-pick-card">
+                      <span className="deal-pick-card-title">{o.name}</span>
+                      <span className="deal-pick-card-stats">
+                        <span className="status-chip status-not-started">매력도 <strong className="ml-1">{o.attractiveness_score ?? "—"}</strong></span>
+                        <span className="status-chip status-not-started">시너지 <strong className="ml-1">{o.synergy_score ?? "—"}</strong></span>
+                      </span>
                     </Link>
                   ))}
                 </div>
@@ -105,7 +108,7 @@ function RouteDecisionRedirect() {
                 (!promotedMonth || (o.decided_at ?? "").slice(5, 7) === promotedMonth),
               );
               return (
-                <div className="card">
+                <div className="card mt-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                     <h2 className="mb-0">승격 <span className="text-[0.72rem] font-normal text-[color:var(--muted-fg)]">— 결정 이력만 열람 · {filteredPromoted.length}건</span></h2>
                     <div className="flex flex-wrap items-center gap-2">
@@ -140,11 +143,15 @@ function RouteDecisionRedirect() {
                   {filteredPromoted.length === 0 ? (
                     <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">선택한 기간에 승격된 검토/안건이 없습니다.</p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="deal-pick-grid">
                       {filteredPromoted.map((o) => (
-                        <Link key={o.id} href={`/deals/${encodeURIComponent(o.id)}/s4`} className="sizing-industry-chip">
-                          <span className="font-semibold">{o.name}</span>
-                          <span className="sizing-chip-meta">매력도 {o.attractiveness_score ?? "—"} · 시너지 {o.synergy_score ?? "—"}</span>
+                        <Link key={o.id} href={`/deals/${encodeURIComponent(o.id)}/s4`} className="deal-pick-card">
+                          <span className="deal-pick-card-title">{o.name}</span>
+                          <span className="deal-pick-card-stats">
+                            <span className="status-chip status-green">승격됨</span>
+                            <span className="status-chip status-not-started">매력도 <strong className="ml-1">{o.attractiveness_score ?? "—"}</strong></span>
+                            <span className="status-chip status-not-started">시너지 <strong className="ml-1">{o.synergy_score ?? "—"}</strong></span>
+                          </span>
                         </Link>
                       ))}
                     </div>

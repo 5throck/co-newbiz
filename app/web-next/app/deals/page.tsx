@@ -8,6 +8,7 @@ import Link from "next/link";
 import { api } from "../../lib/api.ts";
 import { PageState } from "../../components/ui.tsx";
 import { SectionToolbar } from "../../components/layout.tsx";
+import { GATE_LABEL, type GateMetaId } from "../../lib/stage-meta.ts";
 
 interface PipelineProject {
   projectId: string;
@@ -67,7 +68,7 @@ const FILTERS: Array<[FilterKey, string]> = [
   ["all", "전체"],
   ["greenfield", "그린필드"],
   ["brownfield", "브라운필드"],
-  ["gate", "진행 대기"],
+  ["gate", "HOLD"],
   ["paused", "일시정지"],
 ];
 
@@ -111,8 +112,10 @@ function DealsBoard() {
   };
   const stageNum = (s: string) => (s.startsWith("S") ? Number(s.slice(1)) : 99);
 
-  // 검토/안건(기회) 단위 HOLD — /deals의 "진행 대기" 필터와 같은 출처
-  // (currentHolds, 나이 무관). 카드 자체의 HOLD 표시에도 그대로 쓴다.
+  // 검토/안건(기회) 단위 HOLD — /deals의 "HOLD" 필터와 같은 출처
+  // (currentHolds, 나이 무관). 카드 자체의 HOLD 표시에도 그대로 쓴다. 단순히
+  // 다음 단계를 기다리는 "대기" 상태(예: "S4 대기")와는 다른 개념이다 —
+  // 필터 이름을 "진행 대기"로 두면 이 둘이 혼동된다(2026-09-15 사용자 리포트).
   const opportunityHolds = useMemo(
     () => new Set((data?.currentHolds ?? []).filter((r) => r.decision === "hold" && r.entityType === "opportunity").map((r) => r.entityId)),
     [data],
@@ -134,8 +137,12 @@ function DealsBoard() {
         const hold = opportunityHolds.has(o.id);
         return {
           kind: "opportunity", id: o.id, name: o.name, queryText: o.name, stage,
+          // "대기"(자연스러운 다음 단계 대기)와 "HOLD"(게이트에서 명시적으로
+          // 내린 보류 결정)는 서로 다른 개념이다 — 둘 다 amber로 칠하면
+          // 구분이 안 된다(2026-09-15 사용자 리포트). HOLD만 amber, 단순
+          // 대기는 gray.
           stageLabel: hold ? `${stage} HOLD` : o.status === "selected" ? "S4 대기" : stage,
-          tone: hold || o.status === "selected" ? "amber" : "gray",
+          tone: hold ? "amber" : "gray",
           hold, track: null,
           meta: `매력도 ${o.attractiveness_score ?? "—"} · 시너지 ${o.synergy_score ?? "—"}`,
           href: `/opportunities?opportunity=${o.id}`,
@@ -279,7 +286,10 @@ function DealsBoard() {
           </div>
 
           <section className="market-section" aria-label="진행 에이징">
-            <h3 className="sizing-step-title text-[0.9rem]">진행 에이징 — HOLD·KILL 경과</h3>
+            <h3 className="sizing-step-title text-[0.9rem] mb-1">진행 에이징 — HOLD·KILL 경과</h3>
+            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+              위 퍼널(S1~S7, S8~S12) 어느 한쪽에 속한 목록이 아니라, 전체 단계의 게이트({Object.values(GATE_LABEL).join("·")}) HOLD·KILL 결정을 모두 모은 목록입니다 — &quot;진행&quot; 열이 각 행이 어느 게이트에서 나온 결정인지 나타냅니다.
+            </p>
             {data.currentHolds.length === 0 ? (
               <p className="text-[color:var(--muted-fg)] text-[0.82rem]">HOLD·KILL 진행이 없습니다.</p>
             ) : (
@@ -287,7 +297,7 @@ function DealsBoard() {
                 <table className="data-table" aria-label="진행 에이징">
                   <caption className="sr-only">진행 에이징 — 경과일 내림차순</caption>
                   <thead>
-                    <tr><th scope="col">검토/안건</th><th scope="col">진행</th><th scope="col">결정</th><th scope="col">결정일</th><th scope="col" className="col-num">경과</th></tr>
+                    <tr><th scope="col">검토/안건</th><th scope="col">게이트</th><th scope="col">결정</th><th scope="col">결정일</th><th scope="col" className="col-num">경과</th></tr>
                   </thead>
                   <tbody>
                     {[...data.currentHolds].sort((a, b) => b.ageDays - a.ageDays).map((r) => (
@@ -297,7 +307,7 @@ function DealsBoard() {
                             {r.label}
                           </Link>
                         </td>
-                        <td className="tabular-nums text-[0.78rem]">{r.gate}</td>
+                        <td className="tabular-nums text-[0.78rem]">{GATE_LABEL[r.gate as GateMetaId] ?? r.gate}</td>
                         <td><span className={`status-chip ${r.decision === "kill" ? "status-red" : "status-amber"}`}>{r.decision.toUpperCase()}</span></td>
                         <td className="text-[0.75rem] tabular-nums">{r.decidedAt.slice(0, 10)}</td>
                         <td className="col-num tabular-nums text-[0.8rem]">{r.ageDays}일</td>

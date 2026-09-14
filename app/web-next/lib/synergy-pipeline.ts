@@ -11,6 +11,7 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
+import { parseGapRegister } from "./capability-gap.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "./web-research.ts";
 import { fetchFinancials, findCorpCode, isDartConfigured, type DartFinancials } from "./dart-client.ts";
 
@@ -401,8 +402,13 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     markets: marketSummaries.map((m) => ({ industry: m.industry, cagr: m.cagrPct === null ? null : m.cagrPct > 1 ? m.cagrPct / 100 : m.cagrPct, relatedIndustries: m.relatedIndustries })),
   });
   let synergyScore: number | null = rule.score;
+  // 사람이 읽는 근거는 산식(값×가중치)이 아니라 서술이어야 한다 — 계산
+  // 과정을 그대로 노출하면 "확정 근거"를 사람이 검토·작성한 것처럼 보여줄 때
+  // 어색해진다(2026-09-15 사용자 리포트). 반영된 요소 이름만 나열하고, 실제
+  // 판단 내용은 LLM 정성 근거(adj.reason) 또는 아래 fallback 문장이 담당한다.
+  const consideredFactors = rule.factors.filter((f) => f.value !== null).map((f) => f.label);
   let synergyRationale: string | null = rule.score !== null
-    ? `규칙 기반 산출(${rule.factors.filter((f) => f.value !== null).map((f) => `${f.label} ${(f.value as number).toFixed(0)}×${f.weight.toFixed(2)}`).join(" + ")}). ${rule.missing.length ? `미반영: ${rule.missing.join("; ")}` : "전 팩터 반영"}`
+    ? `규칙 기반 종합 판단 — 반영 요소: ${consideredFactors.join(", ") || "—"}.${rule.missing.length ? ` 미반영: ${rule.missing.join("; ")}.` : ""}`
     : null;
   let scoringMethod: "hybrid" | "rule-based" | "unavailable" = rule.score !== null ? "rule-based" : "unavailable";
   if (oppRow) {
@@ -415,9 +421,9 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       if (delta !== 0) {
         synergyScore = Math.max(0, Math.min(100, rule.score + delta));
         scoringMethod = "hybrid";
-        synergyRationale = `${synergyRationale} LLM 보정 ${delta > 0 ? "+" : ""}${delta}p: ${String(adj.reason ?? "")}`;
+        synergyRationale = String(adj.reason ?? synergyRationale);
       } else if (adj.reason) {
-        synergyRationale = `${synergyRationale} LLM 보정 없음: ${String(adj.reason)}`;
+        synergyRationale = String(adj.reason);
       }
     }
   }
@@ -427,6 +433,30 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     summary: `Short List ${shortList.filter((s) => s.verdict.includes("Short")).length}개 선별 (전체 ${shortList.length}영역 평가). 시너지 점수: ${synergyScore ?? "산출 불가"} (${scoringMethod}).`,
     source: slJson || scoringMethod === "hybrid" ? "llm" : "synthesis",
   });
+
+  // ── 필요 역량 수준 자동 도출 (2026-09-15 사용자 설계) — 시너지 분석이
+  // 도출한 영역(선별 우선)을 채우는 데 필요한 역량을 제안한다. 연결 기회
+  // 레지스터에 병합하되 기존 행은 건드리지 않는다(중복 역량명 제외, 미판정
+  // 행으로만 추가) — 보유 판정은 사람의 몫(경계 #2). LLM 불가·실패 시에는
+  // 건너뛴다(수준 값을 위조하지 않는다). ──
+  let derivedGapRows: Array<{ capability: string; requiredNote: string }> = [];
+  if (oppRow) {
+    const areaInputs = [
+      ...shortList.map((s) => ({ area: s.area, shortlisted: s.verdict.includes("Short"), opportunity: undefined as string | undefined, risk: undefined as string | undefined })),
+      ...synergyAreas
+        .filter((a) => !shortList.some((s) => s.area === a.area))
+        .map((a) => ({ area: a.area, shortlisted: false, opportunity: a.opportunity, risk: a.risk })),
+    ].slice(0, 8);
+    const capJson = await askJsonTracked(
+      "You are an IC advisor. Reply with ONE JSON object only.",
+      `시너지 영역: ${JSON.stringify(areaInputs)}\n대상: ${company}, 연결 기회: ${oppRow.name}\n강점: ${financialStrengths.join(" / ") || "없음"}\n\nJSON: {"rows":[{"capability":"필요 역량명","requiredNote":"시너지 영역 X에서 도출 — 사유"}]} — 위 영역을 실제로 채우는 데 필요한 역량만 제안하고(최대 6개), 이미 같은 역량이면 중복 제안하지 않는다. requiredNote에는 출처 영역명을 인용한다.`,
+    );
+    const rawRows = Array.isArray(capJson?.rows) ? capJson!.rows : [];
+    derivedGapRows = rawRows
+      .map((r) => ({ capability: String(r?.capability ?? "").trim().slice(0, 200), requiredNote: String(r?.requiredNote ?? "").trim().slice(0, 300) }))
+      .filter((r) => r.capability)
+      .slice(0, 6);
+  }
 
   // ── Persist ──
   // ADR-0132 — 이미 완료된 분석의 재분석이 LLM 장애로 저하되면, status가
@@ -485,6 +515,31 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       // 경계 #2 — 사람 확정 전 권고값: opportunity.synergy_score에 권고를 기록하고
       // 근거(synergy_rationale)를 남긴다. 최종 판단은 사람이 한다.
       recordSynergyRecommendation(db, oppRow.id, Math.max(0, Math.min(100, Math.round(payload.synergyScore))), payload.synergyRationale ?? null);
+    }
+    // 시너지 영역에서 도출한 필요 역량 제안 병합 — 기존 행 보존, 중복 역량명
+    // 제외, 미판정 행으로만 추가. 사람이 화면에서 확인·판정한다(경계 #2).
+    if (oppRow && derivedGapRows.length > 0) {
+      const existing = parseGapRegister(
+        (db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(oppRow.id) as { capability_gap_json: string | null } | undefined)?.capability_gap_json,
+      );
+      const caps = new Set(existing.rows.map((r) => r.capability.toLowerCase()));
+      const additions = derivedGapRows
+        .filter((r) => !caps.has(r.capability.toLowerCase()))
+        .map((r) => ({
+          id: `gap-synarea-${ulid()}`,
+          capability: r.capability,
+          source: "synergy_area" as const,
+          requiredNote: r.requiredNote,
+          held: { status: "unevaluated" as const, holders: [] as string[], evidence: "" },
+          resolution: null,
+          note: "LLM 시너지 영역 도출 초안 — 사람이 확인해 확정하세요.",
+        }));
+      if (additions.length > 0) {
+        db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+          JSON.stringify({ rows: [...existing.rows, ...additions], updatedAt: now() }),
+          oppRow.id,
+        ]);
+      }
     }
     db.run(
       "UPDATE synergy_analysis SET status = 'completed', current_step = 5, completed_at = ?, rerun_in_progress = 0, error_message = NULL WHERE id = ?",

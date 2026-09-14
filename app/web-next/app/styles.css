@@ -2757,6 +2757,20 @@ a.funnel-card:hover { border-color: var(--primary); }
 }
 .sizing-chip-meta { font-size: 0.75rem; color: var(--muted-fg); }
 
+/* S4 검토/안건 선택 화면(route-decision 랜딩) — 얇은 인라인 칩 대신 카드 그리드로
+   스캔하기 쉽게. market-industry-card와 같은 카드 언어를 재사용. */
+.deal-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; }
+.deal-pick-card {
+  display: flex; flex-direction: column; gap: 0.5rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface); color: var(--fg);
+  text-align: left;
+}
+.deal-pick-card:hover { border-color: var(--accent); }
+.deal-pick-card-title { font-size: 0.9rem; font-weight: 600; line-height: 1.35; }
+.deal-pick-card-stats { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
 /* ── 통합 CRUD 프리미티브 (ADR-0082) ── */
 
 /* 버튼 크기 변형 — 컨트롤 크기는 이 두 가지뿐이다.
@@ -2968,6 +2982,49 @@ a.funnel-card:hover { border-color: var(--primary); }
 }
 .sizing-step-deep { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 .sizing-step-badge-deep { background: color-mix(in srgb, var(--accent) 75%, var(--fg)); }
+
+/* S4 진출방식 추천 — Greenfield/Brownfield 2분할 점수 막대 (dd-progress-bar와
+   동일한 트랙/라운딩 언어를 재사용, 채움만 두 구간으로 나눈다). */
+.route-score-bar {
+  display: flex;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--muted-bg);
+  overflow: hidden;
+  margin: 0.5rem 0 0.35rem;
+}
+.route-score-bar-seg { height: 100%; transition: width 0.4s var(--ease-spring); }
+.route-score-bar-seg.gf { background: var(--green-fg); }
+.route-score-bar-seg.bf { background: var(--amber-fg); }
+.route-score-legend {
+  display: flex; justify-content: space-between; gap: 0.5rem;
+  font-size: 0.75rem; color: var(--muted-fg);
+}
+
+/* S4 결정 탭 상단 — 기회 요약 사실을 dl 대신 스캔하기 쉬운 카드 그리드로.
+   발굴 근거가 시장 메타보다 텍스트가 길어 1:3 배분(2026-09-15 사용자 요구). */
+.route-fact-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(0, 3fr);
+  gap: 0.6rem;
+  margin-bottom: 1.1rem;
+}
+.route-fact-card {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.route-fact-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--muted-fg);
+  margin-bottom: 0.25rem;
+}
+.route-fact-value { font-size: 0.85rem; }
 
 .sizing-verdict-cell { white-space: nowrap; min-width: 6.5rem; }
 

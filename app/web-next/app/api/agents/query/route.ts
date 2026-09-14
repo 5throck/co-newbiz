@@ -10,7 +10,7 @@ import { runOpportunityEvaluationChain, chainAsk } from "../../../../lib/agent-c
 import { completeOrFallback } from "../../../../lib/llm.ts";
 import { AGENT_REGISTRY } from "../../../../lib/agent-registry.generated.ts";
 
-interface OppLite { id: string; name: string; market_scope: string | null; rationale: string | null; attractiveness_score: number | null; synergy_score: number | null; fit_verdict: string | null }
+interface OppLite { id: string; name: string; market_scope: string | null; rationale: string | null; attractiveness_score: number | null; synergy_score: number | null }
 
 export async function POST(request: Request) {
   const auth = authenticate(request);
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const oppId = routeCtx.opportunityId;
     if (!oppId) return badRequest("context_required", "기회 종합 평가 체인은 opportunityId 컨텍스트가 필요합니다.");
     const opp = db
-      .query("SELECT id, name, market_scope, rationale, attractiveness_score, synergy_score, fit_verdict FROM opportunity WHERE id = ? AND deleted_at IS NULL")
+      .query("SELECT id, name, market_scope, rationale, attractiveness_score, synergy_score FROM opportunity WHERE id = ? AND deleted_at IS NULL")
       .get(oppId) as OppLite | undefined;
     if (!opp) return badRequest("context_invalid", "기회를 찾을 수 없습니다.");
 
@@ -83,9 +83,9 @@ export async function POST(request: Request) {
   const contextLines = [
     routeCtx.opportunityId ? (() => {
       const opp = db
-        .query("SELECT id, name, market_scope, status, attractiveness_score, synergy_score, fit_verdict, rationale FROM opportunity WHERE id = ? AND deleted_at IS NULL")
+        .query("SELECT id, name, market_scope, status, attractiveness_score, synergy_score, rationale FROM opportunity WHERE id = ? AND deleted_at IS NULL")
         .get(routeCtx.opportunityId) as OppLite & { status: string } | undefined;
-      return opp ? `연결 기회: ${opp.name} (상태 ${opp.status}, 매력도 ${opp.attractiveness_score ?? "—"}, 시너지 ${opp.synergy_score ?? "—"}, 적합성 ${opp.fit_verdict ?? "—"})\n근거: ${opp.rationale ?? "없음"}` : null;
+      return opp ? `연결 기회: ${opp.name} (상태 ${opp.status}, 매력도 ${opp.attractiveness_score ?? "—"}, 시너지 ${opp.synergy_score ?? "—"})\n근거: ${opp.rationale ?? "없음"}` : null;
     })() : null,
     routeCtx.industryName ? `연결 산업: ${routeCtx.industryName}` : null,
   ].filter(Boolean).join("\n");

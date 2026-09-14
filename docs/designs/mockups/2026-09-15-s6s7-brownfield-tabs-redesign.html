@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S6/S7 브라운필드 대상 발굴·선정 — 탭 재설계안 (mockup · 2026-09-15 · ux-designer-agent)</title>
+<style>
+  /*
+    재설계 근거 요약:
+    - app/web-next/app/brownfield/page.tsx는 기회 칩 → Universe 정의 카드 →
+      결정론 후보 제안 → 후보 등록 폼 → Long List 표(행 펼침 스크리닝) →
+      S7 선정 퍼널 → GateDecisionPanel → CommitteePanel → PromotionPanel이
+      한 화면에 세로로 전부 나열되어 있다. 사용자가 "읽을 수 없다"고 지적.
+    - 이 목업은 (1) app/web-next/components/TabNav.tsx의 기존 관례
+      (.tab-nav / role="tablist")를 그대로 따라 화면을 3개 탭
+      — 유니버스 정의(S6) / Long List / Short List — 으로 분리하고,
+      (2) ADR-0118 §5에서 "라이브 검색 근거(Tavily 어댑터) 없이는
+      허위 회사명을 만들어낼 위험이 있어 보류"라고 명시했던 S6 후보
+      웹검색 제안 기능을 신규로 추가한다. 그 결정을 반영해 모든 후보
+      카드는 최소 1개의 출처 URL + 신뢰도 태그(A/B/C, dd 페이지의
+      source_reliability 관례 재사용)를 갖고, 근거 없는 이름은 만들지
+      않는다. 검색이 설정되지 않은 경우의 축소 상태(폴백: 기존 결정론
+      제안)도 함께 보여준다.
+    - Short List 탭은 현재 페이지 맨 아래 묻혀 있던 S7 선정 퍼널 +
+      GateDecisionPanel + CommitteePanel + PromotionPanel을 그대로
+      끌어올린 것 — 세 컴포넌트 모두 실제 소스(components/*.tsx)의
+      카피·구조를 그대로 옮겼고, 신규 UI가 아니다.
+    - 토큰/클래스는 docs/designs/mockups/2026-09-14-s4-route-decision-redesign.html의
+      관례를 그대로 재사용한다 — 새 토큰을 만들지 않는다.
+  */
+  :root {
+    --bg: #f7f8fb; --surface: #ffffff; --border: #e3e7ef; --muted-fg: #5c6675;
+    --fg: #1a2230; --primary: #3d66f5; --primary-fg: #ffffff; --primary-bg: #eef2ff;
+    --green: #1e8e5a; --amber: #b26a00; --red: #c23b3b;
+    --green-bg: #e9f7f0; --amber-bg: #fff6e8; --red-bg: #fdeeee;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif; background: var(--bg); color: var(--fg); font-size: 14px; }
+  a { color: var(--primary); }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  h2 { font-size: 14px; margin: 0 0 10px; }
+  h3 { font-size: 13px; margin: 0 0 8px; }
+  h4 { font-size: 12.5px; margin: 10px 0 6px; }
+  .muted { color: var(--muted-fg); }
+  .note { font-size: 12px; color: var(--muted-fg); }
+
+  .mockup-tag { position: sticky; top: 0; z-index: 5; background: #10182a; color: #fff; font-size: 11px; padding: 6px 16px; }
+
+  .content { padding: 18px 22px 56px; max-width: 1180px; margin: 0 auto; }
+  .crumb { font-size: 12px; color: var(--muted-fg); margin-bottom: 6px; }
+  .objective { color: var(--muted-fg); margin: 0 0 14px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .card.subtle { background: var(--bg); border-style: dashed; }
+  .card.reco { border-color: color-mix(in srgb, var(--primary) 30%, var(--border)); }
+
+  .btn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+  .btn:hover { background: var(--bg); }
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .btn-primary:hover { background: #3357d6; }
+  .btn-ghost { border-color: transparent; background: transparent; color: var(--primary); }
+  .btn-ghost:hover { background: var(--primary-bg); }
+  .btn-danger { border-color: color-mix(in srgb, var(--red) 40%, var(--border)); background: transparent; color: var(--red); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .next-box { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+  .chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 9px; font-size: 11px; }
+  .chip.green { background: var(--green-bg); color: var(--green); }
+  .chip.amber { background: var(--amber-bg); color: var(--amber); }
+  .chip.red { background: var(--red-bg); color: var(--red); }
+  .chip.gray { background: var(--bg); color: var(--muted-fg); border: 1px solid var(--border); }
+  .chip.proposal { background: var(--primary-bg); color: var(--primary); font-weight: 700; }
+  .control-chip { border: 1px solid var(--border); background: var(--surface); color: var(--muted-fg); border-radius: 999px; padding: 3px 11px; font-size: 12px; cursor: pointer; }
+  .control-chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+  .handoff { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; background: var(--primary-bg); border: 1px solid color-mix(in srgb, var(--primary) 25%, white); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; font-size: 12px; }
+  .handoff .hl { font-weight: 700; color: var(--muted-fg); }
+  .handoff .chips { display: inline-flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .handoff .cta { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
+
+  /* 기회 칩 셀렉터 */
+  .opp-chip { border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 7px 12px; font-size: 12.5px; cursor: pointer; text-align: left; }
+  .opp-chip[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-bg); }
+  .opp-chip .meta { display: block; color: var(--muted-fg); font-size: 11px; margin-top: 2px; }
+
+  /* 탭바 — TabNav.tsx (.tab-nav / role=tablist) 관례 재현 */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 14px; flex-wrap: wrap; }
+  .tab { padding: 9px 16px; font-size: 13.5px; color: var(--muted-fg); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+  .tab[aria-current="page"] { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .tab .tab-count { background: var(--bg); border: 1px solid var(--border); color: var(--muted-fg); border-radius: 999px; padding: 0 7px; font-size: 11px; }
+  .tab[aria-current="page"] .tab-count { background: var(--primary-bg); border-color: transparent; color: var(--primary); }
+  .tabpanel { display: none; }
+  .tabpanel.active { display: block; }
+
+  table { border-collapse: collapse; width: 100%; background: var(--surface); }
+  th { border-bottom: 2px solid var(--border); padding: 7px 9px; font-size: 12px; text-align: left; color: var(--muted-fg); white-space: nowrap; }
+  td { border-bottom: 1px solid var(--border); padding: 7px 9px; font-size: 13px; text-align: left; vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-scroll { overflow-x: auto; }
+  tr.row-selected { background: var(--primary-bg); }
+
+  .checklist { margin: 10px 0 0; padding-left: 18px; }
+  .checklist li { margin-bottom: 5px; }
+
+  .form-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+  .field input, .field select, .field textarea { border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit; background: var(--surface); }
+
+  dl.factdl { font-size: 13px; margin: 0 0 12px; }
+  dl.factdl div { margin-bottom: 4px; }
+  dl.factdl dt { display: inline; font-weight: 600; margin-right: 4px; }
+  dl.factdl dd { display: inline; margin: 0; }
+
+  details.hist { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; margin-top: 14px; background: var(--surface); }
+  details.hist summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+  details.hist[open] summary { margin-bottom: 8px; }
+  details.editaff summary { cursor: pointer; font-size: 12.5px; color: var(--primary); }
+
+  .stat-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 8px; }
+  .stat { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; background: var(--bg); }
+  .stat b { font-size: 14px; font-variant-numeric: tabular-nums; }
+
+  /* S7 판정 스트립 — 표 안 작은 사각 글리프 */
+  .strip { display: inline-flex; gap: 2px; }
+  .glyph { min-width: 20px; height: 18px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 10px; }
+  .glyph.pass { background: var(--green-bg); color: var(--green); }
+  .glyph.fail { background: var(--red-bg); color: var(--red); }
+  .glyph.waived { background: var(--amber-bg); color: var(--amber); }
+  .glyph.na { background: var(--bg); color: var(--muted-fg); border: 1px solid var(--border); }
+  .glyph.pending { background: var(--bg); color: var(--muted-fg); border: 1px dashed var(--border); }
+
+  /* 웹검색 후보 제안 카드 */
+  .proposal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin: 10px 0; }
+  .proposal-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); display: flex; flex-direction: column; gap: 6px; }
+  .proposal-card .src { font-size: 11.5px; display: flex; align-items: flex-start; gap: 5px; flex-wrap: wrap; }
+  .proposal-card .src a { color: var(--primary); word-break: break-all; }
+
+  /* 상태 토글(정적 목업 전용 — 두 상태를 나란히 보여주기 위한 세그먼트) */
+  .state-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 10px; }
+  .state-toggle button { border: none; background: var(--surface); color: var(--muted-fg); font-size: 12px; padding: 6px 12px; cursor: pointer; font-family: inherit; }
+  .state-toggle button[aria-pressed="true"] { background: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .state-panel { display: none; }
+  .state-panel.active { display: block; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+
+  /* LLM 판정/기준 초안 — 공통 태그·근거 스니펫 (ADR-0118 계약: 제안 배지 + 근거 + 사람 확정 전까지 미반영) */
+  .llm-tag { display: inline-block; background: var(--primary-bg); color: var(--primary); font-size: 9.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+  .evidence-note { font-size: 11px; color: var(--muted-fg); margin: 2px 0 0 2.6rem; max-width: 34rem; }
+  .evidence-note.missing { color: var(--amber); }
+  .evidence-note a { color: var(--primary); word-break: break-all; }
+  .t-row { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+  .t-row-main { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="mockup-tag">MOCKUP — S6/S7 브라운필드 대상 발굴·선정 탭 재설계안 · 2026-09-15 · <strong>이제 S6→S7 상태가 실제로 연동됩니다</strong>(단순 in-memory JS 상태 + 재렌더 — 실제 API/DB 아님): Long List에서 후보를 등록·심사·승격하면 S7 퍼널 수치와 Short List 탭 내용이 즉시 함께 갱신됩니다 · 신규: 유니버스 정의 탭에 &quot;선정 기준 초안 생성&quot;(ADR-0118 계약), Long List 행 펼침에 &quot;LLM 판정 초안 생성&quot;(9개 항목 근거 사전 채움, t-01~t-09 콤보박스는 여전히 사람이 수정 가능) · 예시 딜: 로봇 부품 사업 브라운필드 진출 · 웹검색 후보 카드·LLM 판정 근거의 출처 URL은 검토용 예시이며 실제 기사가 아닙니다</div>
+
+<main class="content">
+
+  <p class="crumb">Brownfield 경로 / 로봇 부품 사업 브라운필드 진출</p>
+  <h1>브라운필드 대상 발굴·선정 <span class="chip amber">S6/S7 진행 중</span></h1>
+  <p class="objective">Brownfield 경로로 결정된 기회의 대상 후보를 발굴하고(S6 Long List), <code>chk-target-screening</code> 체크리스트로 스크리닝해 Short List로 좁힙니다(S7). CDD/TDD는 Short List 확정 후 S9에서 수행합니다.</p>
+
+  <div class="handoff">
+    <span class="hl">입력 ←</span>
+    <span class="chips">
+      <span class="chip gray">S4 트랙 결정 Brownfield</span>
+      <span class="chip gray">S1/S3 필요 역량 목록</span>
+    </span>
+    <span class="cta">
+      <span class="hl">출력 →</span>
+      <button class="btn btn-sm">S8 프로젝트로 승격</button>
+    </span>
+  </div>
+
+  <!-- ════ 브라운필드 기회 (칩) — 기존 그대로 ════ -->
+  <div class="card">
+    <h2>Brownfield로 결정된 기회</h2>
+    <div class="chip-row">
+      <button class="opp-chip" aria-pressed="true" type="button">
+        <span style="font-weight:600">로봇 부품 사업 브라운필드 진출</span>
+        <span class="meta">Long List <span id="chip-longlist-count">6</span> · Short List <span id="chip-shortlist-count">2</span></span>
+      </button>
+      <button class="opp-chip" aria-pressed="false" type="button">
+        <span style="font-weight:600">특수 발효 소재 결합 검토</span>
+        <span class="meta">Long List 2 · Short List 0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════ 3개 탭 — TabNav.tsx (.tab-nav / role=tablist) 관례 ════ -->
+  <nav class="tabs" role="tablist" aria-label="S6/S7 대상 발굴·선정 탭">
+    <button class="tab" id="tab-btn-universe" aria-current="page" role="tab" onclick="showTab('universe')">유니버스 정의 (S6)</button>
+    <button class="tab" id="tab-btn-longlist" role="tab" onclick="showTab('longlist')">Long List <span class="tab-count" id="tab-count-longlist">6</span></button>
+    <button class="tab" id="tab-btn-shortlist" role="tab" onclick="showTab('shortlist')">Short List <span class="tab-count" id="tab-count-shortlist">2</span></button>
+  </nav>
+
+  <!-- ══════════════════════ 탭 1 — 유니버스 정의 (S6) ══════════════════════ -->
+  <div class="tabpanel active" id="tab-universe" role="tabpanel">
+    <div class="card">
+      <h2>Target Universe 정의 <span class="chip green">Long List <span id="universe-longlist-count">6</span> / 최소 3</span></h2>
+      <p style="margin:0 0 6px">국내 상장 로봇 부품·시스템 업체 전체</p>
+      <p class="note" style="margin:0 0 4px">선정 기준: 매출 규모 · 기술 보유 · 참여 의지</p>
+      <p class="note" style="margin:0 0 10px">완료기준(ADR-0094): 정의 + 최소 Long List 커버리지 — 현재 6건으로 최소 3건을 충족했습니다.</p>
+
+      <details class="editaff" id="universe-editaff">
+        <summary>정의 수정</summary>
+        <form class="form-grid" style="margin-top:10px" onsubmit="return false">
+          <label class="field" style="flex:2;min-width:16rem">
+            <span>유니버스 정의 * (후보 풀의 범위)</span>
+            <input value="국내 상장 로봇 부품·시스템 업체 전체">
+          </label>
+          <label class="field" style="flex:1;min-width:12rem">
+            <span>선정 기준 (쉼표 구분)</span>
+            <input id="universe-criteria-input" value="매출 규모, 기술 보유, 참여 의지">
+          </label>
+          <label class="field" style="width:7rem">
+            <span>최소 후보 수</span>
+            <input type="number" value="3">
+          </label>
+          <button type="submit" class="btn btn-ghost btn-sm">Universe 저장</button>
+        </form>
+      </details>
+    </div>
+
+    <!-- ════ 신규: 선정 기준 초안 생성 (LLM 제안, ADR-0118 계약 재사용) ════ -->
+    <div class="card reco">
+      <h2 style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        선정 기준 초안 생성 <span class="chip proposal">제안 · LLM</span>
+      </h2>
+      <p class="note" style="margin:0 0 10px">
+        S1 시장분석 + S3 필요 역량 산출물을 근거로 산업/지역/규모 기준 초안을 작성합니다. 실제 저장되는 Universe 정의와는 별도의 제안 카드로 표시되며, &quot;적용&quot;을 눌러야 위 정의 수정 폼에 채워지고 &quot;Universe 저장&quot;을 눌러야 실제로 반영됩니다(경계 #2) — 이 카드만으로는 아무 것도 저장되지 않습니다.
+      </p>
+
+      <div class="next-box" style="margin-bottom:12px">
+        <button class="btn btn-primary btn-sm" onclick="generateUniverseCriteria()">선정 기준 초안 생성</button>
+        <span class="note">S1 시장분석 · S3 필요 역량 목록을 질의 근거로 사용합니다.</span>
+      </div>
+
+      <div class="state-toggle" role="group" aria-label="목업 상태 전환 (제안 생성 성공 여부)">
+        <button type="button" aria-pressed="true" onclick="showUniverseState('ready')">상태 A · 결과 있음</button>
+        <button type="button" aria-pressed="false" onclick="showUniverseState('failed')">상태 B · 제안 실패/미설정</button>
+      </div>
+
+      <!-- 상태 A: 초안 생성 완료 (버튼 클릭 전에는 숨김) -->
+      <div class="state-panel active" id="universe-state-ready">
+        <div class="card subtle" id="universe-criteria-proposal" style="margin-bottom:0;display:none">
+          <div class="chip-row" style="margin-bottom:6px">
+            <button class="btn btn-ghost btn-sm" onclick="generateUniverseCriteria()">재생성</button>
+            <span class="note">Universe 선정 기준 초안 — 정의를 대체하지 않으며, 적용 전까지 폼은 그대로입니다</span>
+          </div>
+          <dl class="factdl" style="margin:0 0 8px">
+            <div><dt>산업:</dt><dd>로봇 부품·시스템 제조 (KSIC 292 인접 코드 포함)</dd></div>
+            <div><dt>지역:</dt><dd>국내 상장 법인 우선, 비상장은 매출 300억 이상만 포함</dd></div>
+            <div><dt>규모:</dt><dd>매출 100억~2,000억 구간 — 자사 통합 역량 범위 내</dd></div>
+          </dl>
+          <p style="margin:0 0 6px;font-size:12.8px"><strong>근거 초안:</strong> S1 시장분석에서 확인된 상위 3사 집중 구조(62% 점유) 아래 위치한 2~3티어 기업군이 결합 시너지가 가장 크고, S3 필요 역량 목록의 미충족 항목(정밀 감속기·서보모터 제어) 보유 기업으로 범위를 좁히면 발굴 효율이 높아집니다.</p>
+          <p class="note" style="margin:0 0 6px">이 제안이 본 산출물: S1 시장분석 경쟁 구조 · S3 필요 역량 목록 · 현재 Long List 등록 현황</p>
+          <div class="next-box">
+            <button class="btn btn-ghost btn-sm" onclick="applyUniverseCriteria()">적용 (정의 수정 폼에 반영)</button>
+            <button class="btn btn-ghost btn-sm" onclick="dismissUniverseCriteria()">무시</button>
+            <span class="note" id="universe-criteria-applied-note"></span>
+          </div>
+        </div>
+        <p class="note" id="universe-criteria-empty-note" style="margin:0">아직 초안을 생성하지 않았습니다 — 위 버튼을 눌러 생성하세요.</p>
+      </div>
+
+      <!-- 상태 B: 근거 부족/미설정 — 빈 화면 대신 사유 표시 -->
+      <div class="state-panel" id="universe-state-failed">
+        <div class="card subtle" style="margin-bottom:0">
+          <p style="margin:0 0 6px"><strong>선정 기준 초안을 생성하지 못했습니다.</strong></p>
+          <p class="note" style="margin:0">S1 시장분석 또는 S3 필요 역량 산출물이 아직 충분히 채워지지 않아 근거 있는 기준을 제안할 수 없습니다 — 두 산출물을 먼저 보강하거나, 아래 &quot;정의 수정&quot;에서 기준을 직접 입력하세요. 근거 없는 기준은 만들지 않습니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card subtle">
+      <h4 style="margin-top:0">S6 → S7 흐름 안내</h4>
+      <p class="note" style="margin:0">유니버스 정의가 후보 등록·발굴 제안의 범위를 결정합니다. 정의를 넓히면 <a href="#" onclick="showTab('longlist');return false">Long List 탭</a>에서 새 후보를 등록하거나 웹검색 제안을 다시 생성하세요.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ 탭 2 — Long List ══════════════════════ -->
+  <div class="tabpanel" id="tab-longlist" role="tabpanel">
+
+    <!-- 기존 결정론 후보 발굴 제안 — 실제 기능, 유지 -->
+    <div class="card">
+      <h2>후보 발굴 제안 <span class="note" style="font-weight:400">— 시장·기업 마스터 기반 (결정론)</span></h2>
+      <div class="chip-row" style="margin-bottom:8px" id="deterministic-chip-row">
+        <button class="control-chip" type="button" onclick="registerDeterministic(this,'스카이엔지니어링')">＋ 스카이엔지니어링</button>
+        <button class="control-chip" type="button" onclick="registerDeterministic(this,'케이로보틱스')">＋ 케이로보틱스</button>
+        <button class="control-chip" type="button" onclick="registerDeterministic(this,'대한모션컨트롤')">＋ 대한모션컨트롤</button>
+      </div>
+      <p class="note" style="margin:0">수용하면 발굴 출처(discovery_source)가 기록됩니다 — 결정론 소스이며, 아래 웹 검색 제안과 라벨링이 분리되어 있습니다.</p>
+    </div>
+
+    <!-- ════ 신규: Long List 웹검색 후보 제안 (LLM + 실시간 웹 검색) ════ -->
+    <div class="card reco">
+      <h2 style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        Long List 웹검색 후보 제안 <span class="chip proposal">제안 · 신규</span>
+      </h2>
+      <p class="note" style="margin:0 0 10px">
+        ADR-0118 §5 — 라이브 검색 근거 없이는 허위 회사명을 만들 위험이 있어 보류되었던 기능입니다. 모든 후보는 최소 1개의 출처 URL과 신뢰도(A/B/C)를 함께 제시하며, 근거 없는 이름은 제안하지 않습니다. 등록은 사람이 &quot;Long List에 등록&quot;을 눌러야만 반영됩니다(경계 #2).
+      </p>
+
+      <div class="next-box" style="margin-bottom:12px">
+        <button class="btn btn-primary btn-sm">웹 검색 후보 제안 생성</button>
+        <span class="note">현재 Universe 정의(국내 상장 로봇 부품·시스템 업체)를 검색 질의로 사용합니다.</span>
+      </div>
+
+      <!-- 정적 목업 전용 상태 토글: 실제로는 검색 설정 여부에 따라 서버가 결정 -->
+      <div class="state-toggle" role="group" aria-label="목업 상태 전환 (검색 설정 여부)">
+        <button type="button" aria-pressed="true" onclick="showState('found')">상태 A · 결과 있음</button>
+        <button type="button" aria-pressed="false" onclick="showState('degraded')">상태 B · 검색 미설정</button>
+      </div>
+
+      <!-- 상태 A: 웹검색 결과 있음 -->
+      <div class="state-panel active" id="state-found">
+        <div class="proposal-grid" id="proposal-grid">
+          <div class="proposal-card" id="proposal-card-smartrobonics">
+            <div class="chip-row" style="justify-content:space-between">
+              <strong>스마트로보닉스</strong>
+              <span class="chip green">신뢰도 A</span>
+            </div>
+            <p style="margin:0;font-size:12.5px">국내 협동로봇용 정밀 감속기 생산 능력 보유. 최근 기업공개(IPO) 준비 보도와 함께 재무적 투자자(FI) 지분 일부 매각 가능성이 함께 언급됨 — Universe 정의(상장 로봇 부품·시스템)와 기술 보유 기준에 부합.</p>
+            <div class="src">📎 출처:
+              <a href="https://example-news.kr/article/2026-0912-smart-robonics-ipo" target="_blank" rel="noreferrer">example-news.kr/.../smart-robonics-ipo (예시)</a>
+            </div>
+            <div class="next-box" style="margin-top:2px">
+              <button class="btn btn-ghost btn-sm" onclick="registerFromWeb(this,'proposal-card-smartrobonics','스마트로보닉스')">Long List에 등록</button>
+            </div>
+          </div>
+
+          <div class="proposal-card" id="proposal-card-jeongil">
+            <div class="chip-row" style="justify-content:space-between">
+              <strong>정일메카트로닉스</strong>
+              <span class="chip amber">신뢰도 B</span>
+            </div>
+            <p style="margin:0;font-size:12.5px">산업용 로봇 그리퍼·서보모터 전문 제조사, 2025년 매출 약 320억원. 2026년 상반기 시리즈 D 투자 유치 기사에서 기존 주주 지분 일부 희석 가능성이 부수적으로 언급됨 — 직접적인 매각 의향 보도는 아니어서 2차 신뢰도로 표기.</p>
+            <div class="src">📎 출처:
+              <a href="https://example-finance.kr/deals/2026-0830-jeongil-mechatronics-seriesD" target="_blank" rel="noreferrer">example-finance.kr/.../jeongil-mechatronics-seriesD (예시)</a>
+            </div>
+            <div class="next-box" style="margin-top:2px">
+              <button class="btn btn-ghost btn-sm" onclick="registerFromWeb(this,'proposal-card-jeongil','정일메카트로닉스')">Long List에 등록</button>
+            </div>
+          </div>
+
+          <div class="proposal-card" id="proposal-card-woojin">
+            <div class="chip-row" style="justify-content:space-between">
+              <strong>우진프리시전</strong>
+              <span class="chip gray">신뢰도 C</span>
+            </div>
+            <p style="margin:0;font-size:12.5px">로봇 부품 유통·정밀가공업체. 업계 커뮤니티 게시글에서 M&amp;A설이 언급되었으나 1차 보도로 확인되지 않음 — 등록 시 별도 검증 필요.</p>
+            <div class="src">📎 출처:
+              <a href="https://example-forum.kr/thread/2026-0905-woojin-precision-rumor" target="_blank" rel="noreferrer">example-forum.kr/.../woojin-precision-rumor (예시)</a>
+            </div>
+            <div class="next-box" style="margin-top:2px">
+              <button class="btn btn-ghost btn-sm" onclick="registerFromWeb(this,'proposal-card-woojin','우진프리시전')">Long List에 등록</button>
+            </div>
+          </div>
+        </div>
+        <p class="note" style="margin:0">검색 제공자: 예시 어댑터(Tavily 유형) · 질의 3건 · 신뢰도는 출처 성격(1차 보도/2차 보도/미확인 커뮤니티)에 따라 자동 태깅되며 사람이 등록 전 재확인합니다.</p>
+      </div>
+
+      <!-- 상태 B: 검색 미설정 — 결정론 제안으로 폴백, 빈 화면이 아님 -->
+      <div class="state-panel" id="state-degraded">
+        <div class="card subtle" style="margin-bottom:10px">
+          <p style="margin:0 0 6px"><strong>실시간 웹 검색이 설정되지 않았습니다.</strong></p>
+          <p class="note" style="margin:0">이 배포 환경에 검색 API 키가 연결되어 있지 않습니다 — 관리자에게 문의하거나, 아래의 결정론 후보 제안(위 &quot;후보 발굴 제안&quot; 섹션)을 계속 사용할 수 있습니다. 화면이 비어 있지 않도록 항상 폴백 경로를 제공합니다.</p>
+        </div>
+        <div class="chip-row">
+          <button class="control-chip" type="button">＋ 스카이엔지니어링 <span class="note">(결정론 폴백)</span></button>
+          <button class="control-chip" type="button">＋ 케이로보틱스 <span class="note">(결정론 폴백)</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 후보 등록 — 기존 폼 -->
+    <div class="card">
+      <h2>후보 등록 <span class="note" style="font-weight:400">— S6 대상 후보 발굴</span></h2>
+      <form class="form-grid" onsubmit="return registerManual(event)">
+        <label class="field">
+          <span>후보 회사명 * (Long List)</span>
+          <input id="manual-name" placeholder="예: 하나테크로보틱스">
+        </label>
+        <label class="field">
+          <span>DART 고유번호 (선택, 8자리)</span>
+          <input id="manual-dart" placeholder="8자리 고유번호" style="width:9rem">
+        </label>
+        <label class="field" style="flex:1;min-width:12rem">
+          <span>Universe 근거 (선택)</span>
+          <input id="manual-rationale" placeholder="선정 기준·가치사슬 위치 등">
+        </label>
+        <button type="submit" class="btn btn-ghost btn-sm">후보 등록</button>
+      </form>
+      <p class="note" style="margin:10px 0 0">S6 대상 후보 발굴 — Target Universe 정의(선정 기준·커버리지)를 기반으로 후보를 등록합니다. 각 후보는 S7에서 <code>chk-target-screening</code>(t-01~t-09)로 스크리닝됩니다.</p>
+    </div>
+
+    <!-- 상태 필터 칩 -->
+    <div class="chip-row" style="margin-bottom:10px" role="group" aria-label="후보 상태 필터">
+      <button class="control-chip" aria-pressed="true" type="button">전체 <span id="filter-total">6</span></button>
+      <button class="control-chip" aria-pressed="false" type="button">심사 중 <span id="filter-screening">3</span></button>
+      <button class="control-chip" aria-pressed="false" type="button">Short List <span id="filter-shortlisted">2</span></button>
+      <button class="control-chip" aria-pressed="false" type="button">제외 <span id="filter-excluded">1</span></button>
+    </div>
+
+    <!-- Long List 표 (동적 렌더링 — state.longList 기반) -->
+    <div class="card" style="padding:0">
+      <div class="table-scroll">
+        <table aria-label="Long List">
+          <thead>
+            <tr>
+              <th>후보</th><th>DART</th>
+              <th title="chk-target-screening t-01~t-09 판정 현황 — 충: 충족, 미: 미충족, 예: 예외, N: 해당없음">S7 판정</th>
+              <th title="선정 점수 — 예외 가능 항목(t-03~t-09) 충족·해당없음 1점, 예외 0.5점, 미충족 0점">점수</th>
+              <th>상태</th>
+              <th>제외 사유</th>
+            </tr>
+          </thead>
+          <tbody id="longlist-tbody"><!-- JS renderLongListTable()가 채움 --></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="chip-row" style="margin-top:8px">
+      <span class="note">S7 완료까지 — 판정 또는 제외가 남은 후보: <span id="pending-screening-names">레인보우로보틱스, 에스비비테크</span></span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ 탭 3 — Short List ══════════════════════ -->
+  <div class="tabpanel" id="tab-shortlist" role="tabpanel">
+
+    <!-- S7 선정 퍼널 -->
+    <div class="card">
+      <h2>S7 선정 퍼널</h2>
+      <div class="chip-row" role="group" aria-label="S7 선정 퍼널">
+        <span class="control-chip" aria-pressed="false">Long List <span id="funnel-longlist">6</span></span>
+        <span class="note" aria-hidden="true">→</span>
+        <span class="control-chip" aria-pressed="false" title="t-01~t-09 9개 항목을 모두 판정한 후보">판정 완료 <span id="funnel-judged">3</span></span>
+        <span class="note" aria-hidden="true">→</span>
+        <span class="control-chip" aria-pressed="false" title="knock-out 통과 — Short List 승격 가능">승격 가능 <span id="funnel-promotable">1</span></span>
+        <span class="note" aria-hidden="true">→</span>
+        <span class="control-chip" aria-pressed="true" style="background:var(--green-bg);border-color:transparent;color:var(--green);font-weight:600">Short List <span id="funnel-shortlisted">2</span></span>
+        <span class="control-chip" aria-pressed="false" title="제외 사유가 기록된 후보">제외 <span id="funnel-excluded">1</span></span>
+      </div>
+      <p class="note" style="margin:8px 0 0">S7 완료까지 — 판정 또는 제외가 남은 후보: <span id="pending-screening-names-2">레인보우로보틱스, 에스비비테크</span></p>
+    </div>
+
+    <!-- ════ Short List 후보 목록 (S6 Long List 승격 결과가 여기 반영됨) ════ -->
+    <div class="card" id="shortlist-rank-card">
+      <h2>Short List <span class="note" style="font-weight:400">— 순위</span></h2>
+      <ul class="checklist" id="shortlist-rank-list" style="padding-left:0;list-style:none;margin:0"><!-- JS renderShortList()가 채움 --></ul>
+    </div>
+
+    <!-- ════ GateDecisionPanel — 실제 컴포넌트 카피 재현 ════ -->
+    <section class="card" aria-label="의사결정">
+      <h3 style="display:flex;align-items:center;gap:6px">🚦 의사결정 — 승인 기록 (경계 #2)</h3>
+      <p class="note" style="margin:0 0 8px">에이전트 권고와 무관하게 GO·HOLD·KILL은 검토자가 기록합니다. HOLD는 미완료 산출물 목록 없이 기록할 수 없습니다.</p>
+
+      <p style="margin:0 0 10px;font-size:12.8px" class="chip-row">
+        <span style="font-weight:600">Target Screening 현재 결정:</span>
+        <span class="chip gray">미결정</span>
+      </p>
+
+      <!-- ADR-0118 LLM 진행 브리프 -->
+      <div class="card subtle" aria-label="LLM 진행 브리프" style="margin-bottom:12px">
+        <div class="chip-row" style="margin-bottom:6px">
+          <button class="btn btn-ghost btn-sm">재생성</button>
+          <span class="note">target_screening 진행 기준 — 제안은 결정 select를 바꾸지 않으며, 기록은 사람이 합니다 (경계 #2)</span>
+        </div>
+        <p class="chip-row" style="margin:0 0 6px">
+          <span class="chip proposal">LLM 제안</span>
+          <span class="chip amber">권고 HOLD</span>
+          <span class="note">확신도 중</span>
+        </p>
+        <p style="margin:0 0 6px;font-size:12.8px"><strong>근거 초안:</strong> Long List 6건 중 3건 판정이 완료되었고, knock-out 통과 1건(대한서보테크)이 Short List 승격 대기 중입니다. 나머지 2건(레인보우로보틱스, 에스비비테크)은 t-01~t-09 판정이 남아 있어 전체 스크리닝이 끝나지 않았습니다.</p>
+        <ul class="checklist" style="margin:0 0 6px">
+          <li>승격 완료 2건 — 뉴로메카(#1), 한빛모션시스템(#2, 웹검색 제안에서 등록)</li>
+          <li>승격 가능 1건 — 대한서보테크(knock-out 통과, 승격 대기)</li>
+          <li>제외 확정 1건 — 코스모프리시전(t-02 규제 스크린 미충족)</li>
+        </ul>
+        <p class="note" style="margin:0 0 6px">⚠ 판정 미완료 2건이 남아 있어, 전원 판정 또는 제외 전 GO 기록은 이르다고 판단됩니다.</p>
+        <p class="note" style="margin:0 0 6px">이 제안이 본 산출물: S6 Universe 정의 · Long List 상태 · t-01~t-09 판정 · S1/S3 필요 역량 목록</p>
+        <button class="btn btn-ghost btn-sm">근거에 반영</button>
+      </div>
+
+      <form class="form-grid" onsubmit="return false">
+        <label class="field">
+          <span>결정</span>
+          <select><option>GO</option><option selected>HOLD</option><option>KILL</option></select>
+        </label>
+        <label class="field" style="flex:1;min-width:16rem">
+          <span>근거 *</span>
+          <input value="Long List 6건 중 2건 판정 미완료 — 전원 판정 후 재검토">
+        </label>
+      </form>
+      <label class="field" style="margin-top:8px">
+        <span>미완료 산출물 (HOLD 필수 — 쉼표·줄바꿈 구분)</span>
+        <textarea rows="2" style="width:100%">레인보우로보틱스 t-05~t-09 판정, 에스비비테크 t-02~t-09 판정</textarea>
+      </label>
+      <div class="next-box" style="margin-top:8px">
+        <button class="btn btn-primary btn-sm">결정</button>
+      </div>
+
+      <details class="hist" style="margin-top:12px">
+        <summary>결정 이력 (1건 — append-only) 보기</summary>
+        <div class="table-scroll">
+          <table aria-label="의사결정 이력">
+            <thead><tr><th>진행</th><th>결정</th><th>근거</th><th>기록자</th><th>일시</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Target Screening</td>
+                <td><span class="chip amber">HOLD</span></td>
+                <td class="note">초기 Long List 등록 직후 — 스크리닝 착수 전 잠정 HOLD</td>
+                <td class="note">sung.hyuk</td>
+                <td class="note">2026-09-05</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <!-- ════ CommitteePanel — 실제 컴포넌트 카피 재현 ════ -->
+    <section class="card" aria-label="위원회 심의">
+      <h3 style="display:flex;align-items:center;gap:6px">⚖️ S6/S7 대상 롱리스트→숏리스트 위원회 — 위원회 심의</h3>
+      <p class="note" style="margin:0 0 10px">에이전트 위원회는 심의하여 <strong>제안(PROPOSED)</strong>만 남깁니다. GO·HOLD·KILL 기록은 검토자의 클릭으로만 이루어집니다 (경계 #2).</p>
+
+      <div class="form-grid" style="margin-bottom:12px">
+        <label class="field">
+          <span>의사결정 모드</span>
+          <select><option selected>agent_team — 위원회 심의 후 제안</option><option>hybrid — 라운드별 인간 입장 포함</option><option>human_only — 인간 심의만</option></select>
+        </label>
+        <label class="field">
+          <span>진행</span>
+          <select><option selected>screening</option></select>
+        </label>
+        <button class="btn btn-ghost btn-sm">위원회 소집</button>
+      </div>
+
+      <p style="font-size:12.8px;font-weight:600;margin:0 0 4px">좌석별 포지션 <span class="note" style="font-weight:400">— 5기준 1–3 채점 집계 · 라운드 2 (최신)</span></p>
+      <div class="table-scroll" style="margin-bottom:12px">
+        <table aria-label="좌석별 포지션">
+          <thead><tr><th>좌석 (에이전트)</th><th>포지션</th><th>핵심 논거</th><th class="num">종합 점수</th></tr></thead>
+          <tbody>
+            <tr><td>brownfield-agent</td><td><span class="chip green">수용</span></td><td class="note">knock-out 통과 후보 1건 확보 · Short List 2건 확정</td><td class="num">2.4</td></tr>
+            <tr><td>antitrust-agent</td><td><span class="chip green">수용</span></td><td class="note">현재 후보군 HHI 델타 미미 — 결합 심사 저촉 없음</td><td class="num">2.6</td></tr>
+            <tr><td>risk-officer</td><td><span class="chip amber">조건부</span></td><td class="note">판정 미완료 2건 잔존 — 전원 판정 전 승격 확대는 시기상조</td><td class="num">1.8</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="next-box" style="margin-bottom:14px">
+        <button class="btn btn-primary btn-sm">의장 종합(제안) 생성</button>
+        <span class="note">다수결·동점은 HOLD · veto 이견은 원문 그대로 dissent 보존</span>
+      </div>
+
+      <div class="grid2" style="margin-bottom:12px">
+        <div class="card" style="margin-bottom:0">
+          <h4 style="margin-top:0">의장 종합 (PROPOSAL) <span class="chip amber">HOLD</span></h4>
+          <p style="margin:0 0 6px;font-size:12.8px">S6/S7 대상 롱리스트→숏리스트 위원회 — HOLD 제안 (진행 target_screening, chair-agent)</p>
+          <p class="note" style="margin:0">근거: 좌석 점수 집계 2.3/3.0 · 0건 이견 반영 없음 — 확정은 사람의 진행 기록</p>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h4 style="margin-top:0">소수 의견 (dissent — 원문 보존)</h4>
+          <p class="note" style="margin:0">이견 없음</p>
+        </div>
+      </div>
+
+      <div class="next-box" style="margin-bottom:12px">
+        <button class="btn btn-ghost btn-sm">회의록 보기</button>
+        <button class="btn btn-ghost btn-sm">다운로드 (.md)</button>
+        <button class="btn btn-ghost btn-sm">회의록 확정</button>
+      </div>
+
+      <p class="note" style="margin:0 0 8px">제안 확정은 인간만 수행합니다 — 의사결정 기록(위원회 제안이 기본값, 변경 가능)과 동일한 경로입니다.</p>
+      <form class="form-grid" onsubmit="return false">
+        <label class="field">
+          <span>결정</span>
+          <select><option>GO</option><option selected>HOLD</option><option>KILL</option></select>
+        </label>
+        <label class="field" style="flex:1;min-width:16rem">
+          <span>근거 (비우면 제안 인용)</span>
+          <input placeholder="위원회 심의(target-longlist-shortlist-committee) PROPOSAL HOLD 인용">
+        </label>
+        <button class="btn btn-ghost btn-sm">결정 기록 (인간 확정)</button>
+      </form>
+    </section>
+
+    <!-- ════ PromotionPanel — 실제 컴포넌트 카피 재현 (미충족 상태) ════ -->
+    <section class="card" aria-label="프로젝트로 승격">
+      <div class="chip-row" style="justify-content:space-between;margin-bottom:8px">
+        <h3 style="margin:0">🚀 로봇 부품 사업 브라운필드 진출 — 프로젝트로 승격 (S7 → S8)</h3>
+        <span class="chip amber">S7 완료 요건 미충족</span>
+      </div>
+      <p style="margin:0 0 6px;font-size:12.8px">트랙 최종 단계(S7 대상 선정)의 완료 요건이 아직 충족되지 않았습니다 — 충족 후 승격할 수 있습니다.</p>
+      <ul class="checklist" style="margin:0">
+        <li>판정 또는 제외가 필요한 후보: <span id="pending-screening-names-3">레인보우로보틱스, 에스비비테크</span></li>
+        <li>target_screening 게이트 결정 필요 (현재 미결정)</li>
+      </ul>
+    </section>
+  </div>
+
+</main>
+
+<script>
+  /* ════════════════════════════════════════════════════════════════
+     S6 → S7 공유 상태 모델 (in-memory only, 실제 API/DB 아님)
+     Long List에서 일어나는 모든 액션(등록/심사/승격/제외)이 이 한 곳의
+     state.longList를 갱신하고, render()가 화면 전체(칩·탭뱃지·퍼널·
+     Short List 목록·표)를 다시 그립니다. DOM은 el.innerHTML 대신
+     createElement/textContent로만 구성합니다(신뢰할 수 없는 문자열을
+     마크업으로 파싱시키지 않기 위함) — 모든 텍스트는 브라우저가
+     자동으로 이스케이프합니다.
+     ════════════════════════════════════════════════════════════════ */
+
+  var T_LABELS = [
+    "소유권/가용성", "규제 스크린", "지리적 적합성", "구조적 시장 위축 없음",
+    "역량 관련성", "전략적 가치", "역량 보완성", "재무 매력도", "통합/파트너십 복잡도"
+  ];
+
+  function blankJudgments() { return new Array(9).fill(null); } // null = 미판정
+  function blankFlags() { return new Array(9).fill(false); } // llmFilled — 사람이 아직 확정하지 않은 LLM 채움 표시
+  function blankEvidence() { return new Array(9).fill(null); } // 항목별 근거 스니펫(+ 출처 URL) 또는 null
+
+  var state = {
+    expandedId: null,
+    longList: [
+      { id: "neuromeka", name: "뉴로메카", dart: "10874521", source: "deterministic",
+        status: "shortlisted", rank: 1, score: 94,
+        judgments: ["충족","충족","충족","충족","충족","충족","충족","예외","충족"], reason: null,
+        llmFilled: blankFlags(), evidence: blankEvidence() },
+      { id: "hanbit", name: "한빛모션시스템", dart: null, source: "web_search",
+        status: "shortlisted", rank: 2, score: 91,
+        judgments: ["충족","충족","충족","충족","충족","예외","충족","충족","해당없음"], reason: null,
+        llmFilled: blankFlags(), evidence: blankEvidence() },
+      { id: "daehan", name: "대한서보테크", dart: null, source: "web_search",
+        status: "promotable", rank: null, score: 89,
+        judgments: ["충족","충족","충족","충족","충족","충족","충족","예외","충족"], reason: null,
+        llmFilled: blankFlags(), evidence: blankEvidence() },
+      { id: "rainbow", name: "레인보우로보틱스", dart: "12345678", source: "deterministic",
+        status: "screening", rank: null, score: null,
+        judgments: ["충족","충족","충족","충족",null,null,null,null,null], reason: null,
+        llmFilled: blankFlags(), evidence: blankEvidence() },
+      { id: "sbb", name: "에스비비테크", dart: null, source: "deterministic",
+        status: "screening", rank: null, score: null,
+        judgments: ["미충족",null,null,null,null,null,null,null,null], reason: null,
+        llmFilled: blankFlags(), evidence: blankEvidence() },
+      { id: "cosmo", name: "코스모프리시전", dart: null, source: "deterministic",
+        status: "excluded", rank: null, score: 0,
+        judgments: ["미충족","해당없음","해당없음","해당없음","해당없음","해당없음","해당없음","해당없음","해당없음"],
+        reason: "t-02 규제 스크린 미충족 — 외국인투자 제한 업종 해당",
+        llmFilled: blankFlags(), evidence: blankEvidence() }
+    ]
+  };
+
+  /* ── DOM 생성 헬퍼 (innerHTML 미사용) ─────────────────────────── */
+  function el(tag, opts, children) {
+    var node = document.createElement(tag);
+    opts = opts || {};
+    if (opts.className) node.className = opts.className;
+    if (opts.id) node.id = opts.id;
+    if (opts.text !== undefined) node.textContent = opts.text;
+    if (opts.title) node.title = opts.title;
+    if (opts.onclick) node.onclick = opts.onclick;
+    if (opts.attrs) Object.keys(opts.attrs).forEach(function (k) { node.setAttribute(k, opts.attrs[k]); });
+    if (opts.style) node.setAttribute("style", opts.style);
+    if (opts.disabled) node.disabled = true;
+    (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+    return node;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+  function isJudged(item) { return item.judgments.every(function (v) { return v !== null; }); }
+  function judgedCount(item) { return item.judgments.filter(function (v) { return v !== null; }).length; }
+
+  function glyphFor(v) {
+    if (v === "충족") return el("span", { className: "glyph pass", text: "충" });
+    if (v === "미충족") return el("span", { className: "glyph fail", text: "미" });
+    if (v === "해당없음") return el("span", { className: "glyph na", text: "N" });
+    if (v === "예외") return el("span", { className: "glyph waived", text: "예" });
+    return el("span", { className: "glyph pending", text: "·" });
+  }
+
+  function nextRank() {
+    var max = 0;
+    state.longList.forEach(function (it) { if (it.status === "shortlisted" && it.rank > max) max = it.rank; });
+    return max + 1;
+  }
+
+  function slugify(name) {
+    return "cand-" + name.replace(/[^a-zA-Z0-9가-힣]/g, "").slice(0, 10) + "-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+  }
+
+  /* ── 액션: 웹검색 제안 카드에서 등록 ───────────────────────────── */
+  function registerFromWeb(btn, cardId, name) {
+    state.longList.push({
+      id: slugify(name), name: name, dart: null, source: "web_search",
+      status: "screening", rank: null, score: null,
+      judgments: blankJudgments(), reason: null,
+      llmFilled: blankFlags(), evidence: blankEvidence()
+    });
+    var card = document.getElementById(cardId);
+    if (card) {
+      card.style.opacity = "0.55";
+      btn.textContent = "등록됨";
+      btn.disabled = true;
+    }
+    render();
+  }
+
+  /* ── 액션: 결정론 후보 발굴 제안 칩에서 등록 ─────────────────────── */
+  function registerDeterministic(btn, name) {
+    state.longList.push({
+      id: slugify(name), name: name, dart: null, source: "deterministic",
+      status: "screening", rank: null, score: null,
+      judgments: blankJudgments(), reason: null,
+      llmFilled: blankFlags(), evidence: blankEvidence()
+    });
+    btn.textContent = "등록됨 · " + name;
+    btn.disabled = true;
+    btn.setAttribute("aria-pressed", "true");
+    render();
+  }
+
+  /* ── 액션: 후보 등록 폼(수동) ─────────────────────────────────── */
+  function registerManual(ev) {
+    ev.preventDefault();
+    var nameInput = document.getElementById("manual-name");
+    var name = nameInput.value.trim();
+    if (!name) { nameInput.focus(); return false; }
+    var dart = document.getElementById("manual-dart").value.trim() || null;
+    state.longList.push({
+      id: slugify(name), name: name, dart: dart, source: "manual",
+      status: "screening", rank: null, score: null,
+      judgments: blankJudgments(), reason: null,
+      llmFilled: blankFlags(), evidence: blankEvidence()
+    });
+    nameInput.value = "";
+    document.getElementById("manual-dart").value = "";
+    document.getElementById("manual-rationale").value = "";
+    render();
+    return false;
+  }
+
+  /* ── 액션: 행 펼침/접힘 ──────────────────────────────────────── */
+  function toggleExpand(id) {
+    state.expandedId = state.expandedId === id ? null : id;
+    render();
+  }
+
+  /* ── 액션: 판정 저장 ─────────────────────────────────────────── */
+  function saveJudgment(id) {
+    var item = state.longList.find(function (it) { return it.id === id; });
+    if (!item) return;
+    var newJudgments = [];
+    var failedIdx = -1;
+    for (var i = 0; i < 9; i++) {
+      var sel = document.getElementById("t-select-" + id + "-" + i);
+      var v = sel ? sel.value : item.judgments[i];
+      if (v === "미판정") v = null;
+      newJudgments.push(v);
+      if (v === "미충족" && failedIdx === -1) failedIdx = i;
+    }
+    item.judgments = newJudgments;
+    if (failedIdx !== -1) {
+      item.status = "excluded";
+      item.reason = "t-0" + (failedIdx + 1) + " " + T_LABELS[failedIdx] + " 미충족";
+      item.score = 0;
+    } else if (isJudged(item)) {
+      item.status = "promotable";
+      var passLike = newJudgments.filter(function (v) { return v === "충족" || v === "해당없음"; }).length;
+      var waived = newJudgments.filter(function (v) { return v === "예외"; }).length;
+      item.score = Math.round(((passLike + waived * 0.5) / 9) * 100);
+    }
+    render();
+  }
+
+  /* ── 액션: Short List 승격 ───────────────────────────────────── */
+  function promote(id) {
+    var item = state.longList.find(function (it) { return it.id === id; });
+    if (!item || item.status !== "promotable") return;
+    item.status = "shortlisted";
+    item.rank = nextRank();
+    state.expandedId = null;
+    render();
+  }
+
+  /* ── 액션: 제외 ─────────────────────────────────────────────── */
+  function excludeItem(id) {
+    var item = state.longList.find(function (it) { return it.id === id; });
+    if (!item) return;
+    var reasonInput = document.getElementById("exclude-reason-" + id);
+    var reason = (reasonInput && reasonInput.value.trim()) || "심사 중 제외 (사유 미기재)";
+    item.status = "excluded";
+    item.reason = reason;
+    item.score = 0;
+    state.expandedId = null;
+    render();
+  }
+
+  /* ── LLM 판정 초안 데이터 (후보별 하드코딩 · 없으면 일반 패턴 생성) ──
+     각 항목은 null(이미 판정됨 — 건드리지 않음) 또는
+     { verdict, evidence, url } — verdict가 null이면 근거 부족으로
+     콤보박스는 채우지 않고 사유 메모만 남긴다(허위 판정 금지). ── */
+  function draftDataFor(item) {
+    var hardcoded = {
+      rainbow: [null, null, null, null,
+        { verdict: "충족", evidence: "AI/로봇 제어 SW 인력 채용 공고 및 특허 출원 이력에서 확인 — 자사 필요 역량과 관련성 높음.", url: "https://example-news.kr/patent/2026-0810-rainbow-robotics-sw" },
+        { verdict: "충족", evidence: "2026년 사업보고서에서 로봇 부품 사업 확장을 전략 과제로 명시.", url: "https://example-dart.kr/report/2026-rainbow-robotics-biz-plan" },
+        { verdict: "예외", evidence: "일부 자동화 라인 기술은 보완적이나 전면 대체 역량은 아님 — 예외 처리 권고.", url: null },
+        { verdict: null, evidence: "근거 부족 — 재무 매력도 관련 공개 자료가 충분하지 않아 사람이 직접 판단 필요.", url: null },
+        { verdict: "해당없음", evidence: "결합 방식 미정 단계로 통합/파트너십 복잡도는 해당없음.", url: null }
+      ],
+      sbb: [null,
+        { verdict: null, evidence: "근거 부족 — 규제 스크린 관련 공개 자료가 확인되지 않아 사람이 직접 판단 필요.", url: null },
+        { verdict: null, evidence: "근거 부족 — 지리적 적합성 판단 근거 부족.", url: null },
+        { verdict: "충족", evidence: "수도권 소재 — 구조적 시장 위축 신호 없음(업계 기사 기준).", url: "https://example-news.kr/industry/2026-0820-sbb-tech-outlook" },
+        { verdict: null, evidence: "근거 부족 — 역량 관련성 판단할 공개 자료 부족.", url: null },
+        { verdict: null, evidence: "근거 부족 — 전략적 가치 판단할 공개 자료 부족.", url: null },
+        { verdict: null, evidence: "근거 부족 — 역량 보완성 판단할 공개 자료 부족.", url: null },
+        { verdict: null, evidence: "근거 부족 — 재무 매력도 판단할 공개 자료 부족.", url: null },
+        { verdict: null, evidence: "근거 부족 — 통합 복잡도 판단할 공개 자료 부족.", url: null }
+      ]
+    };
+    if (hardcoded[item.id]) return hardcoded[item.id];
+    return T_LABELS.map(function (label, i) {
+      if (i % 3 === 2) {
+        return { verdict: null, evidence: "근거 부족 — " + label + " 관련 공개 자료가 충분하지 않아 사람이 직접 판단 필요.", url: null };
+      }
+      return { verdict: "충족", evidence: item.name + " 관련 공개 자료(사업보고서·업계 기사)에서 " + label + " 기준 충족 신호 확인.", url: "https://example-news.kr/search/" + encodeURIComponent(item.name) };
+    });
+  }
+
+  /* ── 액션: LLM 판정 초안 생성 — 이미 판정된 항목은 건드리지 않음 ──── */
+  function generateLlmDraft(id) {
+    var item = state.longList.find(function (it) { return it.id === id; });
+    if (!item) return;
+    var draft = draftDataFor(item);
+    draft.forEach(function (d, i) {
+      if (!d || item.judgments[i] !== null) return;
+      if (d.verdict) {
+        item.judgments[i] = d.verdict;
+        item.llmFilled[i] = true;
+      }
+      item.evidence[i] = d;
+    });
+    render();
+  }
+
+  /* ── 스크리닝 패널 렌더 ──────────────────────────────────────── */
+  function renderScreeningPanel(item) {
+    var draftBtnRow = el("div", { className: "next-box", style: "margin-bottom:10px" }, [
+      el("button", { className: "btn btn-primary btn-sm", text: "LLM 판정 초안 생성", onclick: function () { generateLlmDraft(item.id); } }),
+      el("span", { className: "note", text: "웹 검색 근거 기반 — Long List 웹검색 제안과 동일한 방식으로 이 후보명 + t-01~t-09 기준을 검색합니다. 근거를 찾지 못한 항목은 채우지 않고 \"근거 부족\" 메모만 남깁니다(허위 판정 금지). 채워진 값은 모두 그대로 수정 가능한 콤보박스이며, 저장 전 언제든 바꿀 수 있습니다." })
+    ]);
+
+    var ul = el("ul", { className: "checklist", style: "padding-left:0;list-style:none;margin:0 0 10px" });
+    T_LABELS.forEach(function (label, i) {
+      var current = item.judgments[i] || "미판정";
+      var select = document.createElement("select");
+      select.id = "t-select-" + item.id + "-" + i;
+      select.setAttribute("style", "border:1px solid var(--border);border-radius:6px;font-size:12px;padding:3px 6px");
+      ["미판정", "충족", "미충족", "해당없음", "예외"].forEach(function (opt) {
+        var o = document.createElement("option");
+        o.textContent = opt;
+        if (opt === current) o.selected = true;
+        select.appendChild(o);
+      });
+
+      var tag = item.llmFilled[i] ? el("span", { className: "llm-tag", text: "LLM 제안 · 미확정", id: "t-tag-" + item.id + "-" + i }) : null;
+      select.onchange = (function (idx) {
+        return function () {
+          item.llmFilled[idx] = false;
+          var t = document.getElementById("t-tag-" + item.id + "-" + idx);
+          if (t) t.remove();
+        };
+      })(i);
+
+      var mainRow = el("div", { className: "t-row-main" }, [
+        el("code", { text: "t-0" + (i + 1), style: "min-width:2.6rem" }),
+        el("span", { text: label, style: "flex:1;min-width:18rem" }),
+        el("span", { className: "chip amber", text: "필수", style: "font-size:10px" }),
+        select,
+        tag
+      ]);
+
+      var evNode = null;
+      var ev = item.evidence[i];
+      if (ev) {
+        if (ev.verdict === null) {
+          evNode = el("p", { className: "evidence-note missing", text: "⚠ " + ev.evidence });
+        } else {
+          var pieces = [document.createTextNode(ev.evidence + " ")];
+          if (ev.url) {
+            var a = document.createElement("a");
+            a.href = ev.url; a.target = "_blank"; a.rel = "noreferrer"; a.textContent = "근거 링크 (예시)";
+            pieces.push(a);
+          }
+          evNode = el("p", { className: "evidence-note" }, pieces);
+        }
+      }
+
+      var li = el("li", { className: "t-row" }, [mainRow, evNode]);
+      ul.appendChild(li);
+    });
+
+    var pendingIdx = [];
+    item.judgments.forEach(function (v, i) { if (v === null) pendingIdx.push(i); });
+    var pendingNote = el("p", {
+      className: "note", style: "margin:8px 0 0",
+      text: pendingIdx.length ? "필수 미판정: " + pendingIdx.map(function (i) { return "t-0" + (i + 1); }).join(", ") : "전 항목 판정 완료"
+    });
+
+    var exReasonInput = document.createElement("input");
+    exReasonInput.id = "exclude-reason-" + item.id;
+    exReasonInput.placeholder = "제외 사유";
+    exReasonInput.setAttribute("style", "border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;flex:1;min-width:12rem");
+
+    var actions = el("div", { className: "next-box" }, [
+      el("button", { className: "btn btn-ghost btn-sm", text: "판정 저장", onclick: function () { saveJudgment(item.id); } }),
+      el("button", {
+        className: "btn btn-ghost btn-sm", text: "Short List 승격",
+        title: "knock-out 통과 + 필수 항목 판정 후 승격 가능합니다",
+        disabled: item.status !== "promotable",
+        onclick: function () { promote(item.id); }
+      }),
+      exReasonInput,
+      el("button", { className: "btn btn-ghost btn-sm", text: "제외", onclick: function () { excludeItem(item.id); } })
+    ]);
+
+    var wrap = el("div", { style: "padding:8px 4px" }, [
+      el("h4", { text: "S7 스크리닝 — chk-target-screening (t-01~t-09) · " + item.name, style: "margin-top:0" }),
+      draftBtnRow, ul, actions, pendingNote
+    ]);
+    var td = el("td", { attrs: { colspan: "6" }, style: "background:var(--bg)" }, [wrap]);
+    var tr = document.createElement("tr");
+    tr.appendChild(td);
+    return tr;
+  }
+
+  /* ── Long List 표 렌더 ───────────────────────────────────────── */
+  function renderLongListTable() {
+    var tbody = document.getElementById("longlist-tbody");
+    clear(tbody);
+    state.longList.forEach(function (item) {
+      var strip = el("span", { className: "strip" }, item.judgments.map(glyphFor));
+      var scoreText = item.score === null ? judgedCount(item) + "/9" : item.score + "%";
+
+      var sourceNote = null;
+      if (item.source === "web_search") sourceNote = el("span", { className: "note", style: "display:block", text: "웹검색 제안에서 등록 (discovery_source: web_search)" });
+      else if (item.source === "manual") sourceNote = el("span", { className: "note", style: "display:block", text: "수동 등록 (discovery_source: manual)" });
+
+      var nameCell = document.createElement("td");
+      if (item.status === "screening") {
+        var toggleBtn = el("button", {
+          text: item.name + (state.expandedId === item.id ? " ▴" : " ▾"),
+          title: "행을 펼쳐 스크리닝 판정",
+          style: "background:none;border:none;padding:0;font-weight:600;color:var(--fg);text-decoration:underline;cursor:pointer",
+          onclick: function () { toggleExpand(item.id); }
+        });
+        toggleBtn.setAttribute("type", "button");
+        nameCell.appendChild(toggleBtn);
+      } else {
+        nameCell.appendChild(el("strong", { text: item.name }));
+      }
+      if (sourceNote) nameCell.appendChild(sourceNote);
+
+      var dartCell = el("td", {}, [
+        item.dart ? el("code", { text: item.dart }) : el("span", { className: "note", text: "—" })
+      ]);
+
+      var statusCell = document.createElement("td");
+      if (item.status === "shortlisted") {
+        statusCell.appendChild(el("span", { className: "chip green", text: "Short List #" + item.rank }));
+      } else if (item.status === "promotable") {
+        statusCell.appendChild(el("span", { className: "chip gray", text: "심사 중" }));
+        statusCell.appendChild(document.createTextNode(" "));
+        statusCell.appendChild(el("button", {
+          className: "btn btn-ghost btn-sm", text: "승격", title: "knock-out 통과 — Short List로 승격",
+          onclick: function () { promote(item.id); }
+        }));
+      } else if (item.status === "excluded") {
+        statusCell.appendChild(el("span", { className: "chip red", text: "제외" }));
+      } else {
+        statusCell.appendChild(el("span", { className: "chip gray", text: "심사 중" }));
+      }
+
+      var tr = document.createElement("tr");
+      if (state.expandedId === item.id) tr.className = "row-selected";
+      tr.appendChild(nameCell);
+      tr.appendChild(dartCell);
+      tr.appendChild(el("td", {}, [strip]));
+      tr.appendChild(el("td", { text: scoreText }));
+      tr.appendChild(statusCell);
+      tr.appendChild(el("td", { className: "note", text: item.reason || "—" }));
+      tbody.appendChild(tr);
+
+      if (state.expandedId === item.id) tbody.appendChild(renderScreeningPanel(item));
+    });
+  }
+
+  /* ── Short List 목록 렌더 ────────────────────────────────────── */
+  function renderShortList() {
+    var list = state.longList.filter(function (it) { return it.status === "shortlisted"; })
+      .sort(function (a, b) { return a.rank - b.rank; });
+    var elList = document.getElementById("shortlist-rank-list");
+    clear(elList);
+    if (!list.length) {
+      elList.appendChild(el("li", { className: "note", text: "아직 승격된 후보가 없습니다 — Long List 탭에서 심사 완료 후 승격하세요." }));
+      return;
+    }
+    list.forEach(function (it) {
+      var srcLabel = it.source === "web_search" ? " · 웹검색 제안에서 등록" : (it.source === "manual" ? " · 수동 등록" : "");
+      var li = el("li", {}, [
+        document.createTextNode("#" + it.rank + " "),
+        el("strong", { text: it.name }),
+        document.createTextNode(" "),
+        el("span", { className: "note", text: "— 선정 점수 " + it.score + "%" + srcLabel })
+      ]);
+      elList.appendChild(li);
+    });
+  }
+
+  /* ── 전체 재렌더: 모든 화면의 숫자가 이 함수 하나에서 나옵니다 ──── */
+  function render() {
+    var longListCount = state.longList.length;
+    var shortlisted = state.longList.filter(function (it) { return it.status === "shortlisted"; });
+    var promotable = state.longList.filter(function (it) { return it.status === "promotable"; });
+    var excluded = state.longList.filter(function (it) { return it.status === "excluded"; });
+    var screening = state.longList.filter(function (it) { return it.status === "screening"; });
+    var judged = state.longList.filter(isJudged);
+
+    document.getElementById("chip-longlist-count").textContent = longListCount;
+    document.getElementById("chip-shortlist-count").textContent = shortlisted.length;
+    document.getElementById("tab-count-longlist").textContent = longListCount;
+    document.getElementById("tab-count-shortlist").textContent = shortlisted.length;
+    document.getElementById("universe-longlist-count").textContent = longListCount;
+    document.getElementById("filter-total").textContent = longListCount;
+    document.getElementById("filter-screening").textContent = screening.length;
+    document.getElementById("filter-shortlisted").textContent = shortlisted.length;
+    document.getElementById("filter-excluded").textContent = excluded.length;
+    document.getElementById("funnel-longlist").textContent = longListCount;
+    document.getElementById("funnel-judged").textContent = judged.length;
+    document.getElementById("funnel-promotable").textContent = promotable.length;
+    document.getElementById("funnel-shortlisted").textContent = shortlisted.length;
+    document.getElementById("funnel-excluded").textContent = excluded.length;
+
+    var pendingNames = screening.map(function (it) { return it.name; });
+    var pendingText = pendingNames.length ? pendingNames.join(", ") : "없음 — S7 전 항목 판정 완료";
+    ["pending-screening-names", "pending-screening-names-2", "pending-screening-names-3"].forEach(function (id) {
+      var node = document.getElementById(id);
+      if (node) node.textContent = pendingText;
+    });
+
+    renderLongListTable();
+    renderShortList();
+  }
+
+  /* ── 유니버스 선정 기준 LLM 초안 — 독립 제안 카드, 저장된 Universe
+       정의와 분리. "적용"은 정의 수정 폼의 입력값만 채우고, 실제 반영은
+       사람이 "Universe 저장"을 눌러야 한다(경계 #2) ─────────────── */
+  function generateUniverseCriteria() {
+    document.getElementById("universe-criteria-empty-note").style.display = "none";
+    document.getElementById("universe-criteria-applied-note").textContent = "";
+    document.getElementById("universe-criteria-proposal").style.display = "block";
+  }
+  function applyUniverseCriteria() {
+    var input = document.getElementById("universe-criteria-input");
+    input.value = "산업: 로봇 부품·시스템 제조(KSIC 292 인접), 지역: 국내 상장 우선(비상장은 매출 300억+), 규모: 매출 100억~2,000억";
+    var details = document.getElementById("universe-editaff");
+    if (details) details.open = true;
+    document.getElementById("universe-criteria-applied-note").textContent = "정의 수정 폼에 반영했습니다 — 아래 \"Universe 저장\"을 눌러야 실제로 확정됩니다.";
+  }
+  function dismissUniverseCriteria() {
+    document.getElementById("universe-criteria-proposal").style.display = "none";
+    document.getElementById("universe-criteria-empty-note").style.display = "block";
+  }
+  function showUniverseState(name) {
+    ["ready", "failed"].forEach(function (k) {
+      document.getElementById("universe-state-" + k).classList.toggle("active", k === name);
+    });
+    var btns = document.querySelectorAll('[aria-label="목업 상태 전환 (제안 생성 성공 여부)"] button');
+    btns[0].setAttribute("aria-pressed", name === "ready" ? "true" : "false");
+    btns[1].setAttribute("aria-pressed", name === "failed" ? "true" : "false");
+  }
+
+  function showTab(name) {
+    ["universe", "longlist", "shortlist"].forEach(function (k) {
+      document.getElementById("tab-" + k).classList.toggle("active", k === name);
+      document.getElementById("tab-btn-" + k).setAttribute("aria-current", k === name ? "page" : "false");
+    });
+  }
+  function showState(name) {
+    ["found", "degraded"].forEach(function (k) {
+      document.getElementById("state-" + k).classList.toggle("active", k === name);
+    });
+    var btns = document.querySelectorAll(".state-toggle button");
+    btns[0].setAttribute("aria-pressed", name === "found" ? "true" : "false");
+    btns[1].setAttribute("aria-pressed", name === "degraded" ? "true" : "false");
+  }
+
+  render();
+</script>
+</body>
+</html>
