@@ -128,10 +128,12 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **필수 산출물**
 - 시장 규모·성장 추정
+- 경쟁 구조
 - 가치사슬 구조
 
 **완료 기준**
 - 최소 1개의 정량화된 수요 추정(직접 또는 프록시 체인)이 존재한다
+- 최신 완료 버전의 매트릭스에 경쟁 구조(집중도 요약·주요 플레이어)가 기록되었다
 - 데이터 신뢰도 등급이 기록되었다
 
 **적용 트랙**: greenfield, brownfield
@@ -231,6 +233,10 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **입력**
 - 시너지·적합성 평가
+- 역량 갭 분석 (S3 — 시장 요구사항 대비 그룹/계열사 보유 역량)
+- 시장 규모·성장 추정 (S1)
+- 경쟁 구조 (S1)
+- 가치사슬 구조 (S1)
 
 **Activities**
 - route-strategy · agent: `pm` · skills: `deal-execution-playbook`, `jv-structuring`, `partner-sourcing-strategy` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`, `deal-shape-chain`

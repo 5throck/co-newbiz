@@ -21,7 +21,16 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.3.0"
+  version: "2.4.0"
+  # v2.4.0 — S4 결정이 시장·경쟁·역량 근거 위에서 이루어지도록 입력 사슬을
+  #   선언·강제한다 (2026-09-14 사용자 리포트: 트랙 결정이 시장·경쟁 현황을
+  #   근거로 해야 한다). S1 gains 경쟁 구조 as a required artifact (the S1
+  #   competitive-intelligence activity already produces it, but the gate
+  #   never required it); S3 gains 필요 역량 목록·역량 갭 분석 outputs
+  #   (the "S1/S3 도출 필요 역량 목록" referenced by S5/S6 inputs and
+  #   chk-target-screening t-05 existed nowhere as data); S4 inputs now
+  #   declare the S1 outputs + S3 역량 갭 분석 it implicitly consumed.
+  #   No stage/gate structure change.
   # v2.3.0 — fs gate gains a decision criterion for the pre-defined business
   #   target standards (md_business_target master data, ADR-0114): the human
   #   fs record checks whether the group/affiliate standards are met in the
@@ -124,6 +133,7 @@ stages:
       - 산업 드라이버 레지스트리
     outputs:
       - 시장 규모·성장 추정 (systematic-market-sizing 매트릭스 — 버전 관리)
+      - 경쟁 구조 (시장 집중도·주요 플레이어 — competitive-intelligence 액티비티 산출)
       - 외부 미래 전망 대비 격차 분석 (입수 시 — 신규·강화 드라이버 요인 포함, S2 인사이트로 연동)
       - 가치사슬 구조
     entryCriteria: []
@@ -142,9 +152,11 @@ stages:
         procedure: [greenfield-screening, brownfield-screening]
     requiredArtifacts:
       - 시장 규모·성장 추정
+      - 경쟁 구조
       - 가치사슬 구조
     completionCriteria:
       - 최소 1개의 정량화된 수요 추정(직접 또는 프록시 체인)이 존재한다
+      - 최신 완료 버전의 매트릭스에 경쟁 구조(집중도 요약·주요 플레이어)가 기록되었다
       - 데이터 신뢰도 등급이 기록되었다
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S2, onHold: S1, onKill: terminal }
@@ -186,6 +198,8 @@ stages:
     outputs:
       - 시너지 점수
       - 전략적 적합성 평가
+      - 필요 역량 목록 (시장 요구사항 — S2 스케치 requiredCapabilities·S1 요인에서 도출)
+      - 역량 갭 분석 (그룹/계열사 보유 역량 대비; 내부(자사 단독) 역량 평가는 후속 보강)
     entryCriteria:
       - S2 완료 (selected 기회 존재)
     activities:
@@ -223,6 +237,10 @@ stages:
     objective: "어떻게 들어갈 것인가? — Greenfield(자체 역량 진출) vs Brownfield(기존 기업·자산 결합)를 결정한다. Brownfield ≠ M&A — M&A·JV·전략적 투자·소수점 지분·파트너십·R&BD·사내벤처(CVC) 중 Route를 고른다"
     inputs:
       - 시너지·적합성 평가
+      - 역량 갭 분석 (S3 — 시장 요구사항 대비 그룹/계열사 보유 역량)
+      - 시장 규모·성장 추정 (S1)
+      - 경쟁 구조 (S1)
+      - 가치사슬 구조 (S1)
     outputs:
       - 라우트 결정 기록
     entryCriteria:

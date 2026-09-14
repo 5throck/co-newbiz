@@ -33,7 +33,7 @@ export const STAGES: StageDefinition[] = [
 // tests/unit/process-flow.test.ts — regenerate via that script path, do not
 // hand-edit divergent strings. applicableTracks ["all"] == spec
 // [greenfield, brownfield] (engine normalization for the skip logic).
-  { id: "S1", name: "시장분석", sequence: 1, objective: "어디에 기회가 있는가? — 시장 규모·성장·경쟁구조와 가치사슬을 파악한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시장 규모·성장 추정", "가치사슬 구조"] },
+  { id: "S1", name: "시장분석", sequence: 1, objective: "어디에 기회가 있는가? — 시장 규모·성장·경쟁구조와 가치사슬을 파악한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시장 규모·성장 추정", "경쟁 구조", "가치사슬 구조"] },
   { id: "S2", name: "기회 발굴", sequence: 2, objective: "무엇을 할 것인가? — 가치사슬상 사업 기회를 등록·평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["기회 등록(가치사슬 노드·매력도)"] },
   { id: "S3", name: "시너지·전략적 적합성", sequence: 3, objective: "우리가 해야 하는가? — 자사 역량과의 시너지를 평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시너지 평가", "전략적 적합성 판단"] },
   { id: "S4", name: "진출방식 결정", sequence: 4, objective: "어떻게 들어갈 것인가? — Greenfield(자체 역량 진출) vs Brownfield(기존 기업·자산 결합)를 결정한다. Brownfield ≠ M&A — M&A·JV·전략적 투자·소수점 지분·파트너십·R&BD·사내벤처(CVC) 중 Route를 고른다", applicableTracks: ["all"], gateIds: ["screening", "pre_fs"], requiredArtifacts: ["트랙 결정(GF/BF)·근거", "Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)", "5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)", "검토한 대안"] },
@@ -148,6 +148,23 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
         blockers.push("가치사슬 노드가 필요합니다");
         missing.push("가치사슬 구조");
       }
+    }
+    // v2.4.0 완료기준 — 최신 완료 버전 매트릭스에 경쟁 구조(집중도 요약·주요
+    // 플레이어)가 기록되어야 한다. 기존 완료 분석 다수가 경쟁 구조 이전 버전이라
+    // 소프트 권고로 유지한다: 완료 처리는 바꾸지 않고 재분석 보강을 유도한다.
+    if (hasMatrix && industry) {
+      const latest = getDb()
+        .query(
+          `SELECT v.payload FROM market_sizing_version v
+           JOIN market_sizing_analysis a ON a.id = v.analysis_id
+           WHERE a.industry_id = ? AND a.status = 'completed'
+           ORDER BY v.version_no DESC LIMIT 1`,
+        )
+        .get(industry.id) as { payload: string } | undefined;
+      const hasCompetitive = !!latest && (() => {
+        try { return Boolean((JSON.parse(latest.payload) as { matrix?: { competitive?: unknown } }).matrix?.competitive); } catch { return false; }
+      })();
+      if (!hasCompetitive) blockers.push("S1 경쟁 구조 미기록 — 재분석으로 집중도·주요 플레이어 보강 권장");
     }
     complete = !missing.length; // blockers에 권고 문구가 있어도 산출물이 있으면 완료
     return { complete, blockers, missing };

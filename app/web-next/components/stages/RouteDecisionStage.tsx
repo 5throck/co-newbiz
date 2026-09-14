@@ -10,11 +10,34 @@
 // 사람이 기록하며, 화면은 LLM 정보·추천을 적극 제공한다 — "LLM 추천" 섹션이
 // 그 구현이고, 산출물은 제안일 뿐 결정 기록(POST /route-decision)은 사람의 몫.
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { api, ApiError } from "../../lib/api.ts";
 import { SectionToolbar } from "../layout.tsx";
 import { CommitteePanel } from "../CommitteePanel.tsx";
 import { Tabs } from "../ui.tsx";
 import { useConfirm } from "../crud.tsx";
+
+// flow.spec v2.4.0 — 결정론 어드바이저(ADR-0104) + S1 시장·경쟁·역량 근거.
+// GET /api/opportunities/{id}/route-advisory 응답. 권고·신호는 제안이며 결정
+// 기록은 사람의 행위다(경계 #2).
+interface AdvisorySignalView { key: string; label: string; leans: "greenfield" | "brownfield" | "neutral"; weight: number; note: string }
+interface AdvisoryResponse {
+  recommendedTrack: "greenfield" | "brownfield" | "neutral";
+  greenfieldScore: number;
+  brownfieldScore: number;
+  signals: AdvisorySignalView[];
+  reReviewTriggers: string[];
+  s1Evidence: {
+    industryName: string; versionNo: number | null;
+    marketSizeUsdB: number | null; cagr: number | null;
+    competitive: { structure: string; players: Array<{ name: string; tier: string; note: string }> } | null;
+  } | null;
+  capabilityGap: {
+    total: number; evaluated: number; met: number; partial: number; unmet: number;
+    coveragePct: number | null;
+    unmetRows: Array<{ capability: string; resolution: string | null }>;
+  } | null;
+}
 
 interface OpportunityRow {
   id: string; name: string; market_scope: string | null; value_chain_node: string | null;
@@ -108,6 +131,8 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
   const [sessions, setSessions] = useState<Array<{ sessionId: string; status: string; decisionMode: string | null; createdAt: string }>>([]);
   const [saving, setSaving] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
+  // S1 시장·경쟁·역량 근거 + 결정론 어드바이저 (flow.spec v2.4.0, ADR-0104).
+  const [advisory, setAdvisory] = useState<AdvisoryResponse | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const draftLoadedRef = useRef(false);
   // LLM 추천 (결정 지원)
@@ -176,6 +201,15 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
     });
     return () => { alive = false; };
   }, [opportunityId, loadDecisions, loadSessions]);
+
+  // S1 근거 + 결정론 어드바이저 — 마운트 1회. 실패해도 결정 폼은 동작한다.
+  useEffect(() => {
+    let alive = true;
+    api.get<AdvisoryResponse>(`/api/opportunities/${encodeURIComponent(opportunityId)}/route-advisory`)
+      .then((r) => { if (alive) setAdvisory(r.data); })
+      .catch(() => { if (alive) setAdvisory(null); });
+    return () => { alive = false; };
+  }, [opportunityId]);
 
   // S3 Short List handoff — pre-fill the rationale textarea from ?rationale=
   // once, as an editable starting point (not a locked value).
@@ -475,6 +509,94 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
             <div><dt className="inline font-semibold mr-1">적합성 판정:</dt><dd className="inline">{selected.fit_verdict ?? "—"}{selected.fit_rationale ? ` — ${selected.fit_rationale}` : ""}</dd></div>
             <div><dt className="inline font-semibold mr-1">시너지 권고:</dt><dd className="inline">{selected.synergy_score ?? "—"}점{selected.synergy_rationale ? ` — ${selected.synergy_rationale}` : ""}</dd></div>
           </dl>
+
+          {/* ── S1 시장·경쟁·역량 근거 (flow.spec v2.4.0) — 결정론 어드바이저
+              신호 + 경쟁 구조 + 역량 갭 요약. 권고는 제안이며 결정은 아래 폼의
+              사람 기록이다 (경계 #2). ── */}
+          <div className="sizing-grade-card mb-3" aria-label="S1 시장·경쟁·역량 근거">
+            <h4 className="text-[0.85rem] mb-2">시장·경쟁·역량 근거 — 결정론 어드바이저 (ADR-0104)</h4>
+            {advisory === null ? (
+              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
+                근거를 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 역량 갭을 먼저 완료하세요.
+              </p>
+            ) : (
+              <>
+                <p className="text-[0.8rem] mb-2">
+                  결정론 권고: <strong>{advisory.recommendedTrack === "neutral" ? "중립 (신호 부족)" : advisory.recommendedTrack === "greenfield" ? "Greenfield" : "Brownfield"}</strong>
+                  {" "}· Greenfield {advisory.greenfieldScore} : Brownfield {advisory.brownfieldScore}
+                  <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">권고는 제안이며 결정은 사람이 기록합니다 (경계 #2)</span>
+                </p>
+                <ul className="sizing-note-list mb-2">
+                  {advisory.signals.map((s) => (
+                    <li key={s.key}>
+                      <span className={`status-chip ${s.leans === "greenfield" ? "status-green" : s.leans === "brownfield" ? "status-amber" : "status-not-started"}`}>
+                        {s.leans === "greenfield" ? "그린필드" : s.leans === "brownfield" ? "브라운필드" : "중립"}{s.leans !== "neutral" ? ` ×${s.weight}` : ""}
+                      </span>{" "}
+                      <strong>{s.label}</strong> — {s.note}
+                    </li>
+                  ))}
+                </ul>
+                {advisory.reReviewTriggers.length > 0 && (
+                  <p className="text-[0.75rem] text-[color:var(--amber-fg)] mb-2">점검: {advisory.reReviewTriggers.join(" / ")}</p>
+                )}
+                {advisory.s1Evidence?.competitive ? (
+                  <details className="mb-1">
+                    <summary className="cursor-pointer text-[0.78rem] text-[color:var(--accent)]">
+                      경쟁 구조 보기 (S1 v{advisory.s1Evidence.versionNo ?? "?"} — {advisory.s1Evidence.industryName})
+                    </summary>
+                    <p className="text-[0.8rem] mt-1 mb-1">{advisory.s1Evidence.competitive.structure}</p>
+                    {advisory.s1Evidence.competitive.players.length > 0 && (
+                      <div className="table-scroll">
+                        <table className="data-table" aria-label="경쟁 구조 — 주요 기업">
+                          <caption className="sr-only">경쟁 구조 — 주요 기업</caption>
+                          <thead>
+                            <tr><th scope="col">기업</th><th scope="col">티어</th><th scope="col">비고</th></tr>
+                          </thead>
+                          <tbody>
+                            {advisory.s1Evidence.competitive.players.map((p) => (
+                              <tr key={p.name}>
+                                <td className="cell-primary">{p.name}</td>
+                                <td>
+                                  <span className={`status-chip ${p.tier === "leader" ? "status-green" : p.tier === "challenger" ? "status-amber" : "status-not-started"}`}>
+                                    {p.tier === "leader" ? "리더" : p.tier === "challenger" ? "도전자" : "니치"}
+                                  </span>
+                                </td>
+                                <td className="text-[0.75rem]">{p.note}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </details>
+                ) : (
+                  <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-1">
+                    경쟁 구조 미기록 —{" "}
+                    {selected.market_scope ? (
+                      <Link href={`/market?industry=${encodeURIComponent(selected.market_scope)}`} className="text-[color:var(--accent)] underline">S1 리포트</Link>
+                    ) : (
+                      <span>S1 리포트</span>
+                    )}
+                    {" "}에서 재분석으로 집중도·주요 플레이어를 보강하세요.
+                  </p>
+                )}
+                {advisory.capabilityGap ? (
+                  <p className="text-[0.78rem] mb-0">
+                    역량 갭: 필요 {advisory.capabilityGap.total}건
+                    {advisory.capabilityGap.coveragePct !== null ? ` · 충족률 ${advisory.capabilityGap.coveragePct}%` : " · 보유 판정 전"}
+                    {advisory.capabilityGap.unmetRows.length > 0 && ` · 미보유: ${advisory.capabilityGap.unmetRows.map((r) => r.capability).join(", ")}`}
+                    <span className="text-[color:var(--muted-fg)]"> — 그룹/계열사 프로필 기준, 내부(자사 단독) 역량 평가는 추후 보강</span>
+                  </p>
+                ) : (
+                  <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">
+                    역량 갭 미작성 —{" "}
+                    <Link href={`/opportunities/${encodeURIComponent(selected.id)}`} className="text-[color:var(--accent)] underline">기회 상세의 역량 갭 탭</Link>
+                    {" "}에서 필요 역량과 보유 판정을 기록하세요.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
           <form id="route-form" onSubmit={saveDecision}>
             <div className="flex flex-wrap items-end gap-3 mb-3">
               <label className="text-[0.78rem]">
