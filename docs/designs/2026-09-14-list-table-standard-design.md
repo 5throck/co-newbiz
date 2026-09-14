@@ -76,6 +76,11 @@ Out of scope: report/summary tables without row actions (S4 `근거`, synergy
 `리포트` etc.) — full-width text tables are legitimate; only row-action lists
 follow this standard.
 
+2026-09-15 follow-up #3 (user report: the market table's `분석 상태` folded —
+`재분석 중 (4/8단계, 이전 v7 유지)` is the longest status chip in the app at
+~13.6rem): that column widened 13rem → 15rem so the longest chip fits on one
+line. Other tables' status chips are shorter and keep their widths.
+
 ## Verification
 
 - `bun run design:lint` (with new check #5) — no violations; the check alone

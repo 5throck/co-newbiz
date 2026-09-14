@@ -786,7 +786,7 @@ export function MarketView() {
                 <th scope="col">산업명</th>
                 <th scope="col" className="w-[6rem]">KSIC 코드</th>
                 <th scope="col" className="w-[7rem]">연결 드라이버</th>
-                <th scope="col" className="w-[13rem]">분석 상태</th>
+                <th scope="col" className="w-[15rem]">분석 상태</th>
                 <th scope="col" className="col-date">분석일</th>
                 <th scope="col" className="w-[13rem]"><span className="sr-only">작업</span></th>
               </tr>
