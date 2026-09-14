@@ -2,7 +2,7 @@
 // Do not edit by hand; update process/flow.spec.yaml and regenerate this projection.
 import type { SpecStage } from "./spec-activities.ts";
 
-export const SPEC_VERSION = "2.3.0";
+export const SPEC_VERSION = "2.4.0";
 export const SPEC_STAGES: SpecStage[] = [
   {
     "id": "S1",

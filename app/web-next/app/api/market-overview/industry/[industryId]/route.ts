@@ -2,6 +2,7 @@
 // for one industry (S1 drill-down). Aggregates from chain_node_sensitivity,
 // structure_simulation_result, and md_industry.
 import { getDb } from "../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { fail, forbidden, notFound, ok, badRequest } from "../../../../../lib/envelope.ts";
 import { parseKsicInput } from "../../../../../lib/ksic.ts";
@@ -395,12 +396,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
   return ok(updated, 200);
 }
 
-// 산업 삭제 — market-sizing 분석 레지스트리와 함께 제거한다. 가치사슬·검토/안건 등
-// 다른 도메인이 이 산업을 참조하면 FK 제약으로 삭제가 차단된다(409).
+// 산업 삭제 — market-sizing 분석 레지스트리와 함께 제거한다. 산업을 참조하는
+// 모든 행(proxy_link·value_chain_link·project_industry·분석 산출물)도 같은
+// 트랜잭션에서 연쇄 삭제한다 — 은퇴(soft-retire)한 링크 행이나 제거 경로가
+// 없는 프로젝트 도메인 행을 참조로 남겨두면 산업 삭제가 영구 막다른 길에
+// 빠진다(2026-09-14 사용자 리포트 — 유압식 브레이커).
 export async function DELETE(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "Industry deletion requires the analyst role.");
+  const ctx = auth.auth;
   const { industryId } = await params;
   const db = getDb();
 
@@ -408,6 +413,17 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     .query("SELECT id, name_ko FROM md_industry WHERE id = ?")
     .get(industryId) as { id: string; name_ko: string } | null;
   if (!industry) return notFound();
+
+  // 분석(또는 보호 모드 재분석)이 실행 중이면 삭제를 막는다 — 백그라운드
+  // 파이프라인이 삭제 뒤에도 이 industry_id의 market_sizing_analysis 행에
+  // current_step을 계속 쓰려 하고, 완료 시점엔 사라진 analysis_id로 새
+  // market_sizing_version을 넣으려다 FK 위반으로 실패한다.
+  const running = db
+    .query("SELECT 1 FROM market_sizing_analysis WHERE industry_id = ? AND (status = 'in_progress' OR rerun_in_progress = 1) LIMIT 1")
+    .get(industryId);
+  if (running) {
+    return fail(409, "analysis_running", "이 산업은 분석(또는 재분석)이 진행 중이어서 삭제할 수 없습니다 — 완료 후 다시 시도하세요.");
+  }
 
   try {
     db.query("BEGIN").run();
@@ -427,8 +443,33 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       "UPDATE opportunity SET market_scope = NULL WHERE market_scope = ? AND project_id IS NOT NULL",
       [industry.name_ko],
     );
+    // 산업을 참조하는 나머지 행을 모두 정리한다. 링크 "제거"는 평소 은퇴
+    // (status='retired', ADR-0129)지만 산업 마스터가 사라지면 은퇴 행도 남을
+    // 수 없다. relation IS NULL인 레거시 무태깅 행(ADR-0126 시절)도 마찬가지.
+    // project_industry·value_chain_link·fact_industry 등 프로젝트/분석 도메인
+    // 행은 개별 제거 경로가 없어 참조만으로는 삭제가 영구 차단된다. 감사
+    // 추적은 감사로그(action=industry_delete)로 대신한다.
+    const cascaded: Record<string, number> = {};
+    const cascade = (label: string, sql: string, params: string[]) => {
+      cascaded[label] = Number(db.run(sql, params).changes);
+    };
+    cascade("project_industry_superseded", "UPDATE project_industry SET superseded_by = NULL WHERE superseded_by IN (SELECT id FROM project_industry WHERE industry_id = ?)", [industryId]);
+    cascade("project_industry", "DELETE FROM project_industry WHERE industry_id = ?", [industryId]);
+    cascade("value_chain_link", "DELETE FROM value_chain_link WHERE from_industry_id = ? OR to_industry_id = ?", [industryId, industryId]);
+    cascade("proxy_link", "DELETE FROM proxy_link WHERE from_industry_id = ? OR to_industry_id = ?", [industryId, industryId]);
+    cascade("proxy_chain", "DELETE FROM proxy_chain WHERE target_industry_id = ?", [industryId]);
+    cascade("fact_industry", "DELETE FROM fact_industry WHERE industry_id = ?", [industryId]);
+    cascade("chain_node_sensitivity", "DELETE FROM chain_node_sensitivity WHERE industry_id = ?", [industryId]);
+    cascade("structure_simulation_result", "DELETE FROM structure_simulation_result WHERE industry_id = ?", [industryId]);
+    cascade("pipeline_run", "DELETE FROM pipeline_run WHERE industry_id = ?", [industryId]);
     db.query("DELETE FROM md_industry WHERE id = ?").run(industryId);
     db.query("COMMIT").run();
+    appendAudit(db, {
+      actor: ctx.userId,
+      action: "industry_delete",
+      target: `${industry.name_ko} (${industry.id}) — cascade=${JSON.stringify(cascaded)}`,
+      now: new Date().toISOString(),
+    });
   } catch (err) {
     try { db.query("ROLLBACK").run(); } catch { /* no open transaction */ }
     const msg = err instanceof Error ? err.message : String(err);

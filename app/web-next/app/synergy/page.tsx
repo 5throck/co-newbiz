@@ -333,42 +333,30 @@ export function SynergyView() {
                 }
                 return flat.map(({ a, companyCell }) => {
                 const inProgress = a.status === "in_progress";
+                // 보호 모드 재분석 중엔 status가 여전히 'completed'라 inProgress로는
+                // 안 잡힌다 — 재분석/삭제를 막으려면 이 플래그도 함께 봐야 한다.
+                const busy = inProgress || !!a.rerun_in_progress;
                 return (
                   <tr key={a.id} className={selectedId === a.id ? "row-selected" : undefined}>
                     {companyCell !== null && (() => {
                       const groupLen = groups.get(analysisGroupKey(companyCell))!.length;
-                      // 상세 진입은 연결 기회(행) 클릭이 담당 — 회사 셀은 묶음
-                      // 헤더이며, 분석이 하나뿐인 경우에만 클릭으로 열린다.
+                      // 회사 셀은 항상 묶음 헤더(레이블)일 뿐이다 — 상세 진입은
+                      // 그룹 크기와 무관하게 연결 기회 셀 클릭이 일관되게 담당한다.
                       return (
                         <td className="cell-primary align-top" rowSpan={groupLen}>
-                          {groupLen === 1 ? (
-                            <button
-                              type="button"
-                              className="font-semibold text-left underline-offset-2 hover:underline"
-                              title="시너지 정합성 리포트 열기"
-                              onClick={() => openDetail(companyCell)}
-                            >
-                              {targetLabel(companyCell)}
-                            </button>
-                          ) : (
-                            <span className="font-semibold">{targetLabel(companyCell)}</span>
-                          )}
+                          <span className="font-semibold">{targetLabel(companyCell)}</span>
                         </td>
                       );
                     })()}
                     <td>
-                      {a.opportunity_name ? (
-                        <button
-                          type="button"
-                          className="text-[0.8rem] text-left underline-offset-2 hover:underline"
-                          title="시너지 정합성 리포트 열기"
-                          onClick={() => openDetail(a)}
-                        >
-                          {a.opportunity_name}
-                        </button>
-                      ) : (
-                        <span className="text-[0.75rem] text-[color:var(--muted-fg)]">— (시장 연계만)</span>
-                      )}
+                      <button
+                        type="button"
+                        className={a.opportunity_name ? "text-[0.8rem] text-left underline-offset-2 hover:underline" : "text-[0.75rem] text-[color:var(--muted-fg)] text-left underline-offset-2 hover:underline"}
+                        title="시너지 정합성 리포트 열기"
+                        onClick={() => openDetail(a)}
+                      >
+                        {a.opportunity_name ?? "— (시장 연계만)"}
+                      </button>
                     </td>
                     <td>{a.target_type ? <span className="control-chip status-not-started">{a.target_type === "group" ? "그룹" : "계열사"}</span> : <span className="control-chip status-amber" title="기존 별도 등록 분석(legacy)">legacy</span>}</td>
                     <td>
@@ -376,7 +364,7 @@ export function SynergyView() {
                         <span className="status-chip status-amber">분석 중 ({a.current_step}/5단계)</span>
                       ) : a.status === "completed" && a.rerun_in_progress ? (
                         // ADR-0132 — 재분석 진행 중에도 이전 완료 버전이 그대로 표시된다.
-                        <span className="status-chip status-amber" title="이전 완료 버전은 그대로 표시되며, 재분석이 성공해야만 새 버전으로 교체됩니다.">재분석 중 (이전 v{a.latest_version ?? 1} 유지)</span>
+                        <span className="status-chip status-amber" title="이전 완료 버전은 그대로 표시되며, 재분석이 성공해야만 새 버전으로 교체됩니다.">재분석 중 ({a.current_step ?? 0}/5단계, 이전 v{a.latest_version ?? 1} 유지)</span>
                       ) : a.status === "completed" && a.error_message ? (
                         <span className="status-chip status-red" title={`${a.error_message} — 표시 중인 버전은 이전 완료 버전입니다.`}>재분석 실패 (v{a.latest_version ?? 1} 유지)</span>
                       ) : (
@@ -385,10 +373,7 @@ export function SynergyView() {
                     </td>
                     <td className="tabular-nums">{(a.completed_at ?? a.created_at).slice(0, 10)}</td>
                     <td className="sizing-actions-cell"><span className="actions-row">
-                      <button type="button" className="btn-ghost btn-sm" disabled={inProgress} onClick={() => openDetail(a)}>
-                        {inProgress ? "분석 중" : "열기"}
-                      </button>
-                      {!inProgress && (
+                      {!busy && (
                         <button
                           type="button"
                           className="btn-ghost btn-sm"
@@ -399,9 +384,11 @@ export function SynergyView() {
                           재분석
                         </button>
                       )}
-                      <button type="button" className="btn-danger btn-sm" title="이 시너지 분석을 삭제합니다" onClick={() => removeAnalysis(a)}>
-                        삭제
-                      </button>
+                      {!busy && (
+                        <button type="button" className="btn-danger btn-sm" title="이 시너지 분석을 삭제합니다" onClick={() => removeAnalysis(a)}>
+                          삭제
+                        </button>
+                      )}
                     </span></td>
                   </tr>
                 );

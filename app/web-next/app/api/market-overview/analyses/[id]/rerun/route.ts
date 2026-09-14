@@ -16,8 +16,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const db = getDb();
 
   const analysis = db
-    .query("SELECT id, status, industry_id, after_analysis_id FROM market_sizing_analysis WHERE id = ?")
-    .get(id) as { id: string; status: string; industry_id: string; after_analysis_id: string | null } | null;
+    .query("SELECT id, status, industry_id, after_analysis_id, rerun_in_progress FROM market_sizing_analysis WHERE id = ?")
+    .get(id) as { id: string; status: string; industry_id: string; after_analysis_id: string | null; rerun_in_progress: number } | null;
   if (!analysis) return notFound();
   if (analysis.status === "in_progress") {
     return ok({ analysis_id: id, status: "in_progress", reused: true }, 200, { alreadyRunning: true });
@@ -25,6 +25,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (analysis.status === "pending") {
     // 대기 중인 연계 분석을 rerun으로 띄워넘을 수 없다 — 앵커 완료 후 직렬 시작이 계약이다.
     return ok({ analysis_id: id, status: "pending", reused: true }, 200, { alreadyQueued: true });
+  }
+  if (analysis.rerun_in_progress) {
+    // 보호 모드 재분석 도중엔 status가 'completed'로 그대로 남아 위 in_progress
+    // 체크를 통과한다 — 이 플래그를 따로 안 보면 같은 분석에 두 번째 파이프라인
+    // 실행이 겹쳐 붙어(current_step 경쟁, 버전 중복) 돌아갈 수 있다.
+    return ok({ analysis_id: id, status: "completed", reused: true }, 200, { alreadyRunning: true });
   }
 
   const now = new Date().toISOString();
@@ -41,8 +47,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // 기존 데이터가 없으므로 기존 방식(즉시 in_progress 전환)을 유지한다.
   const protectPriorVersion = analysis.status === "completed";
   if (protectPriorVersion) {
+    // current_step도 0으로 되돌린다 — 안 그러면 지난 실행에서 8(완료)로 남아있던
+    // 값이 이번 재분석 진행률로 잘못 읽힌다(1단계가 실제로 advance()를 부를
+    // 때까지 "8/8"로 보이는 구간이 생김). status/completed_at과 달리
+    // current_step은 진행률 표시에만 쓰여 보호할 이유가 없다.
     db.run(
-      "UPDATE market_sizing_analysis SET rerun_in_progress = 1, error_message = NULL, started_at = ? WHERE id = ?",
+      "UPDATE market_sizing_analysis SET rerun_in_progress = 1, error_message = NULL, started_at = ?, current_step = 0 WHERE id = ?",
       [now, id],
     );
   } else {

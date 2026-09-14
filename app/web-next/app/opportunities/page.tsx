@@ -59,37 +59,20 @@ interface SizingInsight {
   risk_factors: string[];
 }
 
-type SetStatusFn = (id: string, status: OpportunityRow["status"], synergy?: number) => void;
-
-/** 행 액션 — 평가(발굴→평가 진행)·선별·제외·비즈니스 모델 검토 (삭제는 별도 셀, ADR-0127). */
-function nextStepActions(o: OpportunityRow, setStatus: SetStatusFn) {
-  if (o.status === "identified") {
-    // 매력도가 있으면 바로 평가 단계로 진행하고, 없으면 상세 화면의
-    // 매력도 평가로 안내한다 — 발굴 단계가 퍼널 막힘 없이 흐르게 한다.
-    return o.attractiveness_score !== null ? (
-      <button type="button" className="btn-ghost btn-sm" onClick={() => setStatus(o.id, "assessed")}>매력도 평가</button>
-    ) : (
-      <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}`} title="상세 화면에서 매력도를 평가하면 평가 단계로 진행됩니다">매력도 평가 (미평가)</Link>
-    );
-  }
-  if (o.status === "assessed") {
-    // S3 경방 — 시너지 공식 + 적합성 판단이 있어야 선별/제외 가능
-    const s3Ready = o.synergy_score !== null && o.fit_verdict !== null;
-    const hint = !s3Ready ? "상세 화면에서 S3 시너지·적합성 평가를 먼저 진행하세요" : undefined;
-    return (
-      <>
-        <button type="button" className="btn-ghost btn-sm" disabled={!s3Ready} title={hint} onClick={() => setStatus(o.id, "selected", o.synergy_score ?? o.attractiveness_score ?? 50)}>선별</button>
-        <button type="button" className="btn-ghost btn-sm" disabled={!s3Ready} title={hint} onClick={() => setStatus(o.id, "dropped", o.synergy_score ?? o.attractiveness_score ?? 50)}>제외</button>
-        <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}`} title="상세 화면에서 비즈니스 모델 검토를 봅니다">비즈니스 모델 검토</Link>
-      </>
-    );
-  }
-  if (o.status === "selected") {
-    return (
-      <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}`} title="상세 화면에서 비즈니스 모델 검토를 봅니다">비즈니스 모델 검토</Link>
-    );
-  }
-  return <span className="text-[0.72rem] text-[color:var(--muted-fg)]">—</span>;
+/**
+ * 행 액션 — 매력도 평가(입력 있는 실제 평가 UI)·S3 시너지·적합성 평가·선별
+ * 승격·비즈니스 모델 검토는 모두 상세 화면(/opportunities/{id})과 그 안에서
+ * 이어지는 /synergy(S4로 진행 버튼, 시너지 근거 포함 승격)에서만 이루어진다.
+ * 목록의 상태 전환 단축 버튼(구 "매력도 평가"/"선별"/"제외")은 실제 평가
+ * 없이 상태만 바꾸는 중복 경로였다 — 제거하고 상세 화면 링크 하나로 통일
+ * (삭제는 별도 셀, ADR-0127).
+ */
+function nextStepActions(o: OpportunityRow) {
+  return (
+    <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}?tab=sketch`} title="상세 화면의 비즈니스 모델 검토 탭으로 이동합니다">
+      비즈니스 모델 검토
+    </Link>
+  );
 }
 
 export function OpportunitiesView() {
@@ -153,19 +136,6 @@ export function OpportunitiesView() {
       setError(err instanceof Error ? err.message : "등록 실패");
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function setStatus(id: string, status: OpportunityRow["status"], synergy?: number) {
-    setError(null);
-    try {
-      await api.put(`/api/opportunities/${id}`, {
-        status,
-        ...(synergy !== undefined ? { synergy_score: synergy } : {}),
-      });
-      load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "상태 변경 실패");
     }
   }
 
@@ -296,13 +266,13 @@ export function OpportunitiesView() {
               <strong className="text-[0.85rem]">{selectedInsight.industry_name}</strong>
               <button
                 type="button"
-                className="btn-ghost btn-sm"
+                className="btn-primary btn-sm"
                 style={{ marginLeft: "auto" }} /* lint-exempt: 폼 내부 헤더(SectionToolbar 외부 컨텍스트) */
                 disabled={discovering !== null}
                 title="시장분석 근거(기회 요인·드라이버·격차 분석)에서 기회 후보를 자동 발굴하고, 기회/위험 요인도 함께 도출합니다"
                 onClick={() => discoverOpportunities(selectedInsight.industry_name)}
               >
-                {discovering === selectedInsight.industry_name ? "기회 발굴 중..." : "기회 발굴 (요인 자동 도출 포함)"}
+                {discovering === selectedInsight.industry_name ? "기회 발굴 중..." : "기회 발굴 (요인 자동 도출)"}
               </button>
             </div>
             <details>
@@ -402,7 +372,7 @@ export function OpportunitiesView() {
                 <th scope="col">기회명</th>
                 <th scope="col" className="w-[5rem]">매력도</th>
                 <th scope="col" className="w-[5rem]">시너지</th>
-                <th scope="col" className="w-[13rem]">다음 단계</th>
+                <th scope="col" className="w-[13rem]">작업</th>
               </tr>
             </thead>
             <tbody>
@@ -427,10 +397,15 @@ export function OpportunitiesView() {
                       {!o.market_scope && !o.value_chain_node && "—"}
                     </span>
                   </td>
-                  <td className="tabular-nums">{o.attractiveness_score ?? "—"}</td>
+                  <td className="tabular-nums">
+                    {o.attractiveness_score ?? "—"}
+                    {o.attractiveness_score !== null && o.status === "identified" && (
+                      <span className="block text-[0.65rem] text-[color:var(--muted-fg)]">제안</span>
+                    )}
+                  </td>
                   <td className="tabular-nums">{o.synergy_score ?? "—"}</td>
                   <td className="sizing-actions-cell"><span className="actions-row">
-                    {nextStepActions(o, setStatus)}
+                    {nextStepActions(o)}
                     {!o.project_id && (
                       <button
                         type="button"

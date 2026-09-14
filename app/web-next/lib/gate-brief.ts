@@ -7,6 +7,7 @@
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
 import { listBusinessCases, latestAdoption } from "./business-case.ts";
+import { parseGapRegister, summarizeGap } from "./capability-gap.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { gateRecommendation } from "./opportunity-screening.ts";
 
@@ -28,9 +29,9 @@ export interface GateBrief {
 // renders this list verbatim ("이 제안이 본 산출물") so the LLM's field of
 // view is auditable.
 const MANIFESTS: Record<string, string[]> = {
-  screening: ["S1 시장 규모·성장 추정", "S2 기회 퍼널(매력도·요인)", "S3 적합성·시너지 초안", "결정론 스크리닝 권고"],
+  screening: ["S1 시장 규모·성장 추정", "S1 경쟁 구조", "S2 기회 퍼널(매력도·요인)", "S3 적합성·시너지 초안", "S3 역량 갭 요약", "결정론 스크리닝 권고"],
   pre_fs: [
-    "S1 시장 규모·성장 추정", "S3 적합성·시너지 초안", "S4 트랙 결정·라우트",
+    "S1 시장 규모·성장 추정", "S1 경쟁 구조", "S3 적합성·시너지 초안", "S3 역량 갭 요약", "S4 트랙 결정·라우트",
     "S5 역량 격차·진출전략 또는 BF 쇼트리스트",
   ],
   target_screening: ["S4 트랙 결정·라우트", "S6 Target Universe·Long List", "S7 대상 선정 판정"],
@@ -63,6 +64,31 @@ function oppRow(db: Database, id: string): OppRow | null {
     .get(id) as OppRow | null;
 }
 
+// v2.4.0 — 경쟁 구조 라인 (flow.spec S1 requiredArtifacts "경쟁 구조"). 요약
+// 문장 + 리더 플레이어 수만 노출한다 — 플레이어 명단은 S1 리포트의 경쟁 구조
+// 탭이 1차 근거다.
+function s1CompetitiveLine(comp?: { structure?: string; players?: Array<{ tier?: string }> }): string {
+  if (!comp?.structure) return "경쟁 구조: 미기록 (재분석으로 집중도·주요 플레이어 보강 권장)";
+  const players = comp.players ?? [];
+  const leaders = players.filter((p) => p.tier === "leader").length;
+  return `경쟁 구조: ${comp.structure}${leaders > 0 ? ` (리더 ${leaders}/${players.length})` : ""}`;
+}
+
+// S3 역량 갭 요약 (flow.spec v2.4.0) — 그룹/계열사 프로필 기준 보유 판정
+// 요약. 내부(자사 단독) 역량 평가는 후속 보강 사항임을 브리프에 명시한다.
+function s3GapSummary(db: Database, oppId: string): string {
+  const row = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(oppId) as { capability_gap_json: string | null } | undefined;
+  const reg = parseGapRegister(row?.capability_gap_json ?? null);
+  if (reg.rows.length === 0) return "S3 역량 갭: 미작성 (기회 상세의 역량 갭에서 필요 역량과 보유 판정을 기록하세요)";
+  const s = summarizeGap(reg.rows);
+  const unmet = reg.rows.filter((r) => r.held.status === "unmet").map((r) => r.capability).slice(0, 5);
+  return [
+    `필요 역량 ${s.total}건 — 충족 ${s.met}·부분 ${s.partial}·미보유 ${s.unmet}·미판정 ${s.unevaluated}${s.coveragePct !== null ? ` (충족률 ${s.coveragePct}%)` : ""}`,
+    unmet.length > 0 ? `미보유: ${unmet.join(" / ")}` : "",
+    "근거: 그룹/계열사 프로필 기준 — 내부(자사 단독) 역량 평가는 후속 보강",
+  ].filter(Boolean).join("\n");
+}
+
 // S1 artifact — latest completed sizing for the opportunity's market.
 function s1Summary(db: Database, marketScope: string | null): string {
   if (!marketScope) return "S1 시장분석: 없음 (market_scope 미지정)";
@@ -78,11 +104,12 @@ function s1Summary(db: Database, marketScope: string | null): string {
   if (!version) return "S1 시장분석: 없음";
   try {
     const m = (JSON.parse(version.payload) as {
-      matrix?: { anchor?: { total?: number }; consistency?: { bottomUpCagr?: number }; qualitative?: { opportunityFactors?: string[]; riskFactors?: string[] } };
+      matrix?: { anchor?: { total?: number }; consistency?: { bottomUpCagr?: number }; competitive?: { structure?: string; players?: Array<{ tier?: string }> }; qualitative?: { opportunityFactors?: string[]; riskFactors?: string[] } };
     }).matrix ?? {};
     return [
       `기준 규모: ${m.anchor?.total ? `$${m.anchor.total.toFixed(2)}B` : "미상"}`,
       `CAGR: ${m.consistency?.bottomUpCagr != null ? `${m.consistency.bottomUpCagr.toFixed(1)}%` : "미상"}`,
+      s1CompetitiveLine(m.competitive),
       m.qualitative?.opportunityFactors?.length ? `기회 요인: ${m.qualitative.opportunityFactors.join(" / ")}` : "",
       m.qualitative?.riskFactors?.length ? `위험 요인: ${m.qualitative.riskFactors.join(" / ")}` : "",
     ].filter(Boolean).join("\n") || "S1 시장분석: 요약 없음";
@@ -237,11 +264,11 @@ export function buildGateContext(db: Database, entityType: GateBriefEntity, enti
     if (!opp) return "기회를 찾을 수 없습니다.";
     const base = `기회명: ${opp.name}\n시장: ${opp.market_scope ?? "미정"}\n가치사슬: ${opp.value_chain_node ?? "미정"}\n발굴 근거: ${opp.rationale ?? "없음"}`;
     if (gate === "screening") {
-      return [base, `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`, `\n[S2 기회 퍼널]\n${s2Factors(opp)}`, `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`].join("\n");
+      return [base, `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`, `\n[S3 역량 갭 요약]\n${s3GapSummary(db, entityId)}`, `\n[S2 기회 퍼널]\n${s2Factors(opp)}`, `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`].join("\n");
     }
     if (gate === "pre_fs") {
       const bf = opp.target_universe_json ? "\n[S5/BF 쇼트리스트 상태]\n" + bfSummary(db, entityId) : "\n[S5 역량 평가]\n" + s5Summary(db, entityId);
-      return [base, `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`, `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`, `\n[S4 트랙 결정·라우트]\n${s4Summary(db, entityId)}`, bf].join("\n");
+      return [base, `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`, `\n[S3 역량 갭 요약]\n${s3GapSummary(db, entityId)}`, `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`, `\n[S4 트랙 결정·라우트]\n${s4Summary(db, entityId)}`, bf].join("\n");
     }
     if (gate === "target_screening") {
       return [base, `\n[S4 트랙 결정·라우트]\n${s4Summary(db, entityId)}`, `\n[S6/S7 대상 목록·스크리닝]\n${bfSummary(db, entityId)}`].join("\n");

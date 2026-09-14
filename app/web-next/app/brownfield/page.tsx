@@ -13,6 +13,9 @@ import { PromotionPanel } from "../../components/PromotionPanel.tsx";
 //   S6 대상 후보 발굴: Target Universe 정의 → Target Company Long List
 //   S7 대상 선정: Long List → chk-target-screening 판정 → Short List 승격/제외
 // S1 시장분석 패턴: 기회 칩 → 후보 테이블 → 행 펼침 스크리닝 패널.
+// S7 추려내기 가시화(2026-09-14 사용자 리포트): 선정 퍼널(Long List → 판정
+// 완료 → 승격 가능 → Short List), 후보별 t-01~t-09 판정 스트립, 결정론 선정
+// 점수(flow.spec S7 산출물 Target Ranking/Score), Short List 순위 조정.
 
 interface OppRow {
   id: string; name: string; market_scope: string | null; synergy_score: number | null;
@@ -32,8 +35,26 @@ interface OppDetail {
   targets: TargetRow[];
 }
 
-const STATUS_LABEL: Record<TargetRow["status"], string> = { pending: "대기", shortlisted: "Short List", excluded: "제외" };
+const STATUS_LABEL: Record<TargetRow["status"], string> = { pending: "심사 중", shortlisted: "Short List", excluded: "제외" };
 const VERDICTS = ["pass", "fail", "na", "waived"] as const;
+const VERDICT_KO: Record<string, string> = { pass: "충족", fail: "미충족", na: "해당없음", waived: "예외", pending: "미판정" };
+
+// S7 선정 점수 — 판정값에서 결정론 산출한다(flow.spec S7 산출물 "Target
+// Ranking/Score"의 증거). 게이트(t-01~02, 예외 불가)는 통과 조건일 뿐 점수에서
+// 제외하고, 예외 가능 항목(충족·해당없음 1점 / 예외 0.5점 / 미충족 0점)을
+// 백분율로 환산한다. 전 항목 판정 완료 시에만 점수를 확정 표시한다.
+function targetScore(states: Record<string, string>, checklist: ChecklistItem[]): { pct: number | null; judged: number; total: number } {
+  const scored = checklist.filter((c) => c.waiver_eligible);
+  let sum = 0;
+  let judged = 0;
+  for (const it of scored) {
+    const st = states[it.id];
+    if (!st || st === "pending") continue;
+    judged++;
+    sum += st === "pass" || st === "na" ? 1 : st === "waived" ? 0.5 : 0;
+  }
+  return { pct: scored.length > 0 && judged === scored.length ? Math.round((sum / scored.length) * 100) : null, judged, total: scored.length };
+}
 
 export function BrownfieldView() {
   const searchParams = useSearchParams();
@@ -48,6 +69,8 @@ export function BrownfieldView() {
   const [universeDraft, setUniverseDraft] = useState({ definition: "", criteria: "", min_long_list: "3" });
   const [savingUniverse, setSavingUniverse] = useState(false);
   const [busy, setBusy] = useState(false);
+  // 상태 필터 — Long List(심사 중)/Short List/제외로 좁혀 훑어본다(S1 필터 칩 패턴).
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "shortlisted" | "excluded">("all");
 
   const selectedId = searchParams.get("opportunity");
   interface Suggestion { id: string; name_ko: string; dart_corp_code: string | null }
@@ -212,6 +235,37 @@ export function BrownfieldView() {
     }
   }
 
+  // Short List 순위 조정 — 이웃 행과 rank를 교환한다(사람이 확정하는 순위).
+  async function rerank(targetId: string, direction: "up" | "down") {
+    if (!selected) return;
+    setBusy(true); setError(null);
+    try {
+      await api.post(`/api/brownfield/${selected.opportunity.id}/targets/${targetId}/rerank`, { direction });
+      loadDetail(selected.opportunity.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "순위 변경 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // ── S7 선정 퍼널 집계 — Long List에서 Short List로 좁히는 과정의 스냅샷 ──
+  const targets = selected?.targets ?? [];
+  const shortlistedTargets = targets.filter((t) => t.status === "shortlisted");
+  const excludedTargets = targets.filter((t) => t.status === "excluded");
+  const fullyAssessed = targets.filter((t) => t.screening_summary && t.screening_summary.assessed === t.screening_summary.total);
+  const promotionReady = targets.filter((t) => t.status === "pending" && t.screening_summary?.knockOutsPassed);
+  // S7 완료기준(모든 후보가 랭킹 점수 또는 제외 사유)의 남은 작업 목록.
+  const openTargets = targets.filter((t) => t.status === "pending" && !t.screening_summary?.knockOutsPassed);
+  const displayedTargets = statusFilter === "all" ? targets : targets.filter((t) => t.status === statusFilter);
+  const statusCounts: Record<typeof statusFilter, number> = {
+    all: targets.length,
+    pending: targets.length - shortlistedTargets.length - excludedTargets.length,
+    shortlisted: shortlistedTargets.length,
+    excluded: excludedTargets.length,
+  };
+  const shortlistOrder = shortlistedTargets.map((t) => t.id);
+
   return (
     <main>
       <StageFrame stageId={["S6", "S7"]} track="brownfield">
@@ -276,9 +330,24 @@ export function BrownfieldView() {
           <SectionToolbar
             title={`${selected.opportunity.name} — Long List → Short List`}
             icon=""
+            filters={
+              <span role="group" aria-label="후보 상태 필터" className="flex items-center gap-1 flex-wrap">
+                {([["all", "전체"], ["pending", "심사 중"], ["shortlisted", "Short List"], ["excluded", "제외"]] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={statusFilter === key}
+                    className={`control-chip ${statusFilter === key ? "status-green" : "status-not-started"}`}
+                    onClick={() => setStatusFilter(key)}
+                  >
+                    {label} {statusCounts[key]}
+                  </button>
+                ))}
+              </span>
+            }
             summary={
               <span className="section-meta">
-                {selected.targets.filter((t) => t.status === "shortlisted").length} Short List / {selected.targets.length} Long List
+                {shortlistedTargets.length} Short List / {targets.length} Long List
               </span>
             }
           />
@@ -337,25 +406,59 @@ export function BrownfieldView() {
             </p>
           </form>
 
+          {/* S7 선정 퍼널 — Long List에서 Short List로 좁히는 과정을 한눈에
+              보여준다. 완료기준(flow.spec S7): 모든 후보가 랭킹 점수 또는 제외
+              사유를 갖는다. */}
+          {targets.length > 0 && (
+            <div className="mb-3">
+              <div role="group" aria-label="S7 선정 퍼널" className="flex flex-wrap items-center gap-1">
+                <span className="control-chip status-not-started">Long List {targets.length}</span>
+                <span aria-hidden="true" className="text-[color:var(--muted-fg)]">→</span>
+                <span className="control-chip status-amber" title="t-01~t-09 9개 항목을 모두 판정한 후보">판정 완료 {fullyAssessed.length}</span>
+                <span aria-hidden="true" className="text-[color:var(--muted-fg)]">→</span>
+                <span className="control-chip status-amber" title="knock-out 통과 — Short List 승격 가능">승격 가능 {promotionReady.length}</span>
+                <span aria-hidden="true" className="text-[color:var(--muted-fg)]">→</span>
+                <span className="control-chip status-green">Short List {shortlistedTargets.length}</span>
+                <span className="control-chip status-not-started" title="제외 사유가 기록된 후보">제외 {excludedTargets.length}</span>
+              </div>
+              {openTargets.length > 0 ? (
+                <p className="note mt-1 mb-0">S7 완료까지 — 판정 또는 제외가 남은 후보: {openTargets.map((t) => t.company_name).join(", ")}</p>
+              ) : (
+                <p className="note mt-1 mb-0">
+                  모든 후보의 판정이 완료되었습니다 — 아래 위원회 심의(제안)와 target_screening 게이트 결정(사람)으로 Short List를 확정하세요.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Long List 테이블 */}
-          {selected.targets.length === 0 ? (
+          {targets.length === 0 ? (
             <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">Long List 후보가 없습니다 — 위에서 후보를 등록하세요.</p>
+          ) : displayedTargets.length === 0 ? (
+            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">해당 상태의 후보가 없습니다.</p>
           ) : (
             <table className="data-table" aria-label="Long List">
-              <caption className="sr-only">Long List 후보</caption>
+              <caption className="sr-only">Long List 후보 — S7 스크리닝 현황</caption>
               <thead>
                 <tr>
-                  <th scope="col">후보</th><th scope="col">DART</th><th scope="col">상태</th>
-                  <th scope="col">스크리닝</th><th scope="col">제외 사유</th>
+                  <th scope="col">후보</th><th scope="col">DART</th>
+                  <th scope="col" title="chk-target-screening t-01~t-09 판정 현황 — 충: 충족, 미: 미충족, 예: 예외, N: 해당없음">S7 판정</th>
+                  <th scope="col" title="선정 점수 — 예외 가능 항목(t-03~t-09) 충족·해당없음 1점, 예외 0.5점, 미충족 0점">점수</th>
+                  <th scope="col">상태</th>
+                  <th scope="col">제외 사유</th>
                 </tr>
               </thead>
               <tbody>
-                {selected.targets.map((t) => {
+                {displayedTargets.map((t) => {
                   const sm = t.screening_summary;
                   const isOpen = openTarget === t.id;
+                  const states = t.screening_json ? (JSON.parse(t.screening_json) as Record<string, string>) : {};
+                  const score = targetScore(states, selected.checklist);
+                  const orderIdx = shortlistOrder.indexOf(t.id);
+                  const canPromote = t.status === "pending" && Boolean(sm?.knockOutsPassed);
                   return (
                     <Fragment key={t.id}>
-                      <tr key={t.id} className={isOpen ? "row-selected" : undefined}>
+                      <tr className={isOpen ? "row-selected" : undefined}>
                         <td className="cell-primary">
                           <button
                             type="button"
@@ -369,26 +472,42 @@ export function BrownfieldView() {
                         </td>
                         <td><code className="dd-item-id">{t.dart_corp_code ?? "—"}</code></td>
                         <td>
-                          <span className={`status-chip ${t.status === "shortlisted" ? "status-green" : t.status === "excluded" ? "status-red" : "status-not-started"}`}>
-                            {STATUS_LABEL[t.status]}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
+                          <span className="flex items-center gap-0.5" aria-label={`S7 판정 ${sm ? `${sm.assessed}/${sm.total}` : `0/${selected.checklist.length}`}`}>
+                            {selected.checklist.map((it) => {
+                              const st = states[it.id] ?? "pending";
+                              const [glyph, cls] = st === "pass" ? ["충", "status-green"] : st === "fail" ? ["미", "status-red"] : st === "waived" ? ["예", "status-amber"] : st === "na" ? ["N", "status-not-started"] : ["·", "status-not-started"];
+                              return (
+                                <span key={it.id} className={`status-chip ${cls}`} style={{ minWidth: "1.5rem", padding: "0 0.2rem", textAlign: "center" }} title={`${it.id} — ${VERDICT_KO[st]}`}>
+                                  {glyph}
+                                </span>
+                              );
+                            })}
                           </span>
                         </td>
-                        <td className="tabular-nums">
-                          {sm ? (
-                            sm.knockOutsPassed && t.status === "pending" ? (
-                              <span className="status-chip status-amber" title="knock-out 통과 — 승격 가능">판정 {sm.assessed}/{sm.total}</span>
-                            ) : sm.anyKnockOutFail ? (
-                              <span className="status-chip status-red" title="knock-out fail — 제외 권장">knock-out 실패</span>
-                            ) : (
-                              <span className={`status-chip ${sm.mandatoryOpen.length ? "status-amber" : "status-green"}`}>판정 {sm.assessed}/{sm.total}</span>
-                            )
-                          ) : "—"}
+                        <td className="tabular-nums" title="선정 점수 — 예외 가능 항목(t-03~t-09) 충족·해당없음 1점, 예외 0.5점, 미충족 0점. 판정 완료 시 확정 표시.">
+                          {score.pct !== null ? `${score.pct}%` : <span className="text-[color:var(--muted-fg)]">{score.judged}/{score.total}</span>}
+                        </td>
+                        <td>
+                          <span className="flex items-center gap-1">
+                            <span className={`status-chip ${t.status === "shortlisted" ? "status-green" : t.status === "excluded" ? "status-red" : "status-not-started"}`}>
+                              {STATUS_LABEL[t.status]}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
+                            </span>
+                            {canPromote && (
+                              <button type="button" className="btn-ghost btn-sm" disabled={busy} title="knock-out 통과 — Short List로 승격" onClick={() => shortlist(t.id)}>승격</button>
+                            )}
+                            {t.status === "shortlisted" && (
+                              <span role="group" aria-label="Short List 순위 조정" className="flex items-center gap-0.5">
+                                <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx <= 0} aria-label={`${t.company_name} 순위 올리기`} onClick={() => rerank(t.id, "up")}>↑</button>
+                                <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx < 0 || orderIdx >= shortlistOrder.length - 1} aria-label={`${t.company_name} 순위 내리기`} onClick={() => rerank(t.id, "down")}>↓</button>
+                              </span>
+                            )}
+                          </span>
                         </td>
                         <td className="text-[0.75rem] text-[color:var(--muted-fg)]">{t.exclusion_reason ?? "—"}</td>
                       </tr>
                       {isOpen && (
                         <tr key={`${t.id}-detail`}>
-                          <td colSpan={5}>
+                          <td colSpan={6}>
                             <div className="text-[0.78rem] py-1">
                               <h4 className="text-[0.85rem] mb-2">S7 스크리닝 — chk-target-screening (t-01~t-09)</h4>
                               <ul className="sizing-note-list">

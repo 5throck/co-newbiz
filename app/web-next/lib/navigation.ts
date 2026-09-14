@@ -24,9 +24,12 @@ export interface NavSection {
 
 export const NAV_SECTIONS: NavSection[] = [
   {
+    // 2026-09-14 — 별도 대시보드(추상적인 집계 막대그래프)를 걷어내고 검토/안건
+    // 보드(실제 클릭 가능한 딜 카드 + HOLD·에이징 상세)를 단일 랜딩 화면으로
+    // 통합했다. "/"는 이제 /deals로 가는 리다이렉트 스텁(app/page.tsx)이라
+    // 메뉴 항목이 필요 없다 — NON_MENU_ROUTES에만 등록한다.
     label: "탐색",
     items: [
-      { href: "/", label: "대시보드" },
       { href: "/deals", label: "검토/안건 보드" },
     ],
   },
@@ -39,18 +42,12 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/opportunities", label: "S2 기회 발굴" },
       { href: "/our-company", label: "S3 그룹/계열사 분석" },
       { href: "/synergy", label: "S3 시너지·전략적 적합성" },
-      {
-        // S4 진출방식 결정 — S4 라우트 결정으로 그린필드/브라운필드가 갈리는
-        // 구간 (S4 → S5 그린필드 / S6·S7 브라운필드). 부모 링크 자체가 S4
-        // 화면(/route-decision)이므로 같은 대상의 자식 항목은 두지 않는다 —
-        // 부모·자식 라벨이 완전히 같은 중복 행을 만들지 않기 위함.
-        href: "/route-decision",
-        label: "S4 진출방식 결정",
-        children: [
-          { href: "/greenfield", label: "S5 자체 진출" },
-          { href: "/brownfield", label: "S6/S7 대상발굴·선정" },
-        ],
-      },
+      // S4 진출방식 결정 — S4 라우트 결정으로 그린필드/브라운필드가 갈리는
+      // 구간 (S4 → S5 그린필드 / S6·S7 브라운필드). S5/S6은 더 이상 S4의
+      // 하위 메뉴가 아니라 동등한 레벨의 항목으로 노출한다.
+      { href: "/route-decision", label: "S4 진출방식 결정" },
+      { href: "/greenfield", label: "S5 자체 진출" },
+      { href: "/brownfield", label: "S6/S7 대상발굴·선정" },
       // S8~S12 — 프로젝트(project id)로 승격된 뒤에만 실제로 열리는 화면이라
       // 정적 자식 링크는 /projects(선택 목록)로 보낸다. 프로젝트를 이미 열어
       // 둔 상태라면 이 하위 메뉴가 그 프로젝트 id로 바로 열리는 S8~S12
@@ -124,6 +121,7 @@ export const NON_MENU_ROUTES: string[] = [
   "/projects/[id]/process",
   "/projects/[id]/reports",
   "/pipeline", // Wave 4: redirect stub → /deals
+  "/", // 2026-09-14: redirect stub → /deals (구 대시보드 정리)
   "/deals/[id]",
   "/deals/[id]/[stage]",
   "/projects/[id]/incentives",

@@ -16,9 +16,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const db = getDb();
   const row = db
-    .query("SELECT id, status, target_type, member_id, group_id FROM synergy_analysis WHERE id = ?")
-    .get(id) as { id: string; status: string; target_type: "affiliate" | "group" | null; member_id: string | null; group_id: string | null } | null;
+    .query("SELECT id, status, target_type, member_id, group_id, rerun_in_progress FROM synergy_analysis WHERE id = ?")
+    .get(id) as { id: string; status: string; target_type: "affiliate" | "group" | null; member_id: string | null; group_id: string | null; rerun_in_progress: number } | null;
   if (!row) return notFound();
+  if (row.status === "in_progress" || row.rerun_in_progress) {
+    // 보호 모드 재분석 중엔 status가 'completed'로 남아 있어 in_progress
+    // 체크만으로는 안 잡힌다 — 이 가드가 없으면 같은 분석에 파이프라인
+    // 실행이 두 번 겹쳐 붙을 수 있다(시장분석 재분석과 같은 클래스의 버그).
+    return ok({ analysis_id: id, reused: true }, 200, { alreadyRunning: true, status: row.status });
+  }
   if (!row.target_type) {
     return badRequest("legacy_target", "레거시(회사 직접 등록) 분석은 재분석할 수 없습니다 — 그룹/계열사 레지스트리 대상으로 새 분석을 생성하세요.");
   }
@@ -35,7 +41,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // 조회되고, LLM 장애로 저하되면 파이프라인이 새 버전을 만들지 않는다.
   const protectPriorVersion = row.status === "completed";
   if (protectPriorVersion) {
-    db.run("UPDATE synergy_analysis SET rerun_in_progress = 1, error_message = NULL WHERE id = ?", [id]);
+    // current_step도 리셋 — 시장분석 재분석과 같은 이유(지난 완료 실행의
+    // 값이 이번 진행률로 잘못 읽히는 것 방지).
+    db.run("UPDATE synergy_analysis SET rerun_in_progress = 1, error_message = NULL, current_step = 0 WHERE id = ?", [id]);
   } else {
     db.run("UPDATE synergy_analysis SET status = 'in_progress', current_step = 0, completed_at = NULL WHERE id = ?", [id]);
   }

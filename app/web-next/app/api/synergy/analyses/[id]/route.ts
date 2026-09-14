@@ -114,16 +114,19 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const db = getDb();
   const analysis = db
     .query(
-      `SELECT sa.id, sa.deleted_at, o.status AS opp_status, o.project_id, o.deleted_at AS opp_deleted_at
+      `SELECT sa.id, sa.deleted_at, sa.status, sa.rerun_in_progress, o.status AS opp_status, o.project_id, o.deleted_at AS opp_deleted_at
        FROM synergy_analysis sa
        LEFT JOIN opportunity o ON o.id = sa.opportunity_id
        WHERE sa.id = ?`,
     )
     .get(id) as
-    | { id: string; deleted_at: string | null; opp_status: string | null; project_id: string | null; opp_deleted_at: string | null }
+    | { id: string; deleted_at: string | null; status: string; rerun_in_progress: number; opp_status: string | null; project_id: string | null; opp_deleted_at: string | null }
     | null;
   if (!analysis) return notFound();
   if (analysis.deleted_at) return badRequest("already_deleted", "이 시너지 분석은 이미 삭제 표시되어 있습니다.");
+  if (analysis.status === "in_progress" || analysis.rerun_in_progress) {
+    return fail(409, "analysis_running", "이 시너지 분석은 분석(또는 재분석)이 진행 중이어서 삭제할 수 없습니다 — 완료 후 다시 시도하세요.");
+  }
   if (!analysis.opp_deleted_at && (analysis.opp_status === "selected" || analysis.project_id)) {
     return fail(
       409,

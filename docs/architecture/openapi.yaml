@@ -2560,6 +2560,92 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/brownfield/{oppId}/targets/{targetId}/rerank:
+    post:
+      operationId: rerankBrownfieldTarget
+      summary: Swap a shortlisted target with its ranked neighbor (up/down) and re-normalize Short List ranks 1..N (audited brownfield_target.rerank).
+      tags:
+        - Analysis
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/capability-gap:
+    get:
+      operationId: getCapabilityGap
+      summary: S3 capability-gap register (flow.spec v2.4.0) — market requirements vs group/affiliate held capabilities; returns in-memory seed rows from the S2 sketch when nothing is stored.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: saveCapabilityGap
+      summary: Save the capability-gap register (analyst+; human action, audited capability_gap.save).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/capability-gap/llm-draft:
+    post:
+      operationId: draftCapabilityGap
+      summary: LLM draft of held-status per capability row from group/affiliate profile evidence — proposal only; saving stays a human action (boundary #2).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/opportunities/{id}/route-decision:
     get:
       operationId: getRouteDecision
@@ -3262,7 +3348,7 @@ paths:
   /api/opportunities/{id}/route-advisory:
     get:
       operationId: getRouteAdvisory
-      summary: Deterministic greenfield/brownfield track advisory with per-signal rationale, base rates, and re-review triggers (read-only).
+      summary: Deterministic greenfield/brownfield track advisory with per-signal rationale, base rates, re-review triggers, and S1 evidence (market size, CAGR, competitive structure, capability-gap summary) for the S4 decision surface (read-only).
       tags:
         - Reference
       parameters:

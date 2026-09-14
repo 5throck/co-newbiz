@@ -97,7 +97,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   return (
     <section aria-label="의사결정" className="market-section sizing-step">
       <h3 className="sizing-step-title text-[0.95rem]">
-        <span className="sizing-step-badge">🚦</span> 의사결정 — 인간 승인 기록 (경계 #2)
+        <span className="sizing-step-badge">🚦</span> 의사결정 — 승인 기록 (경계 #2)
       </h3>
       <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
         에이전트 권고와 무관하게 GO·HOLD·KILL은 검토자가 기록합니다. HOLD는 미완료 산출물 목록 없이 기록할 수 없습니다.
