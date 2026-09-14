@@ -414,6 +414,17 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     .get(industryId) as { id: string; name_ko: string } | null;
   if (!industry) return notFound();
 
+  // 분석(또는 보호 모드 재분석)이 실행 중이면 삭제를 막는다 — 백그라운드
+  // 파이프라인이 삭제 뒤에도 이 industry_id의 market_sizing_analysis 행에
+  // current_step을 계속 쓰려 하고, 완료 시점엔 사라진 analysis_id로 새
+  // market_sizing_version을 넣으려다 FK 위반으로 실패한다.
+  const running = db
+    .query("SELECT 1 FROM market_sizing_analysis WHERE industry_id = ? AND (status = 'in_progress' OR rerun_in_progress = 1) LIMIT 1")
+    .get(industryId);
+  if (running) {
+    return fail(409, "analysis_running", "이 산업은 분석(또는 재분석)이 진행 중이어서 삭제할 수 없습니다 — 완료 후 다시 시도하세요.");
+  }
+
   try {
     db.query("BEGIN").run();
     // 시장분석 버전·분석 레지스트리부터 정리한다 (append-only 버전 행 포함).

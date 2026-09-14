@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -49,7 +49,7 @@ interface AdminNavItem {
 // 순서 드리프트는 tests/unit/navigation.test.ts가 잡는다. 이 파일은 아이콘만
 // 입힌다.
 const ICON_BY_HREF: Record<string, ReactNode> = {
-  "/": <LayoutDashboard size={18} />,
+  "/deals": <LayoutDashboard size={18} />,
   "/market": <LineChart size={18} />,
   "/opportunities": <Lightbulb size={18} />,
   "/our-company": <Landmark size={18} />,
@@ -85,7 +85,7 @@ const CHILD_ICON: ReactNode = <Landmark size={14} />;
 // 우측 상단 바 — 맨 왼쪽에 상세 화면용 뒤로 가기, 오른쪽에 테마 전환·로그아웃·
 // 사용자 표시. 위치 표시는 페이지 제목(h1)과 중복되지 않도록 목록 페이지에서는
 // 숨기고, 하위 상세 경로에서만 뒤로 가기 필로 제공한다.
-function Topbar({ pathname }: { pathname: string }) {
+function Topbar({ pathname, hasAppHistory }: { pathname: string; hasAppHistory: boolean }) {
   const { me, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -142,8 +142,14 @@ function Topbar({ pathname }: { pathname: string }) {
     : dealOverviewMatch
       ? "/deals"
       : found?.parent ? found.item.href : item?.href ?? "/";
+  // 스테이지 탭(/deals/{id}/s4 등)은 딜 개요·검토/안건 목록·알림 등 여러
+  // 경로에서 진입할 수 있어, 고정된 상위 경로("검토/안건 개요")보다 실제로
+  // 온 화면으로 돌아가는 게 더 정확하다 — 앱 내에서 이동해 온 경우(
+  // hasAppHistory)에는 브라우저 히스토리로 돌아가고, 새로고침·직접 URL
+  // 진입처럼 되돌아갈 앱 내 이력이 없을 때만 기존 고정 경로로 폴백한다.
+  const stageBackToHistory = !!dealStageMatch && hasAppHistory;
   const backLabel = dealStageMatch
-    ? "검토/안건 개요"
+    ? (stageBackToHistory ? "이전" : "검토/안건 개요")
     : dealOverviewMatch
       ? "검토/안건 보드"
       : found?.parent ? found.parent.label : item?.label ?? "목록";
@@ -162,6 +168,10 @@ function Topbar({ pathname }: { pathname: string }) {
             // 우회한다(소프트 내비게이션이 Next 내부에서 되돌려지는 걸 원천 차단).
             if (pathname === backHref && searchParams.toString()) {
               window.location.assign(backHref);
+              return;
+            }
+            if (stageBackToHistory) {
+              router.back();
               return;
             }
             router.push(backHref);
@@ -255,7 +265,7 @@ function Sidebar() {
 
   return (
     <aside className="app-sidebar">
-      <Link href="/" className="sidebar-brand">
+      <Link href="/deals" className="sidebar-brand">
         <span className="sidebar-brand-icon">CN</span>
         <span>co-newbiz</span>
       </Link>
@@ -325,6 +335,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  // 스테이지 탭 뒤로가기 버튼(Topbar)이 "실제로 온 화면으로" 돌아갈 수
+  // 있는지 판단하기 위한 앱 내 이동 이력 — AppShell은 로그인 후 리마운트
+  // 없이 유지되므로, 이 탭에서 처음 본 경로 이후로 경로가 바뀐 적이
+  // 있으면 브라우저 히스토리로 되돌아가도 안전하다.
+  const navMetaRef = useRef<{ lastPathname: string | null; hasTransitioned: boolean }>({
+    lastPathname: null,
+    hasTransitioned: false,
+  });
+  if (navMetaRef.current.lastPathname !== pathname) {
+    if (navMetaRef.current.lastPathname !== null) navMetaRef.current.hasTransitioned = true;
+    navMetaRef.current.lastPathname = pathname;
+  }
+  const hasAppHistory = navMetaRef.current.hasTransitioned;
+
   useEffect(() => {
     if (loading) return;
     if (!me && pathname !== "/login" && pathname !== "/register") {
@@ -352,7 +376,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="app-main-col">
         <Suspense fallback={null}>
-          <Topbar pathname={pathname} />
+          <Topbar pathname={pathname} hasAppHistory={hasAppHistory} />
         </Suspense>
         <div className="app-content">{children}</div>
       </div>

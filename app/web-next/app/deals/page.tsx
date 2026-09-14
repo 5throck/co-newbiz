@@ -30,7 +30,7 @@ interface AgingRow {
 }
 interface PipelineView {
   projects: PipelineProject[];
-  aging: AgingRow[];
+  currentHolds: AgingRow[];
 }
 interface OpportunityRow {
   id: string;
@@ -111,18 +111,32 @@ function DealsBoard() {
   };
   const stageNum = (s: string) => (s.startsWith("S") ? Number(s.slice(1)) : 99);
 
+  // 검토/안건(기회) 단위 HOLD — /deals의 "진행 대기" 필터와 같은 출처
+  // (currentHolds, 나이 무관). 카드 자체의 HOLD 표시에도 그대로 쓴다.
+  const opportunityHolds = useMemo(
+    () => new Set((data?.currentHolds ?? []).filter((r) => r.decision === "hold" && r.entityType === "opportunity").map((r) => r.entityId)),
+    [data],
+  );
+
   const cards: Card[] = useMemo(() => {
+    // 승격(project_id)됐지만 그 프로젝트가 실제로 보이는(열려있고 삭제 안 된)
+    // 경우에만 기회 카드를 뺀다 — 프로젝트가 나중에 삭제돼 project_id가
+    // 허상으로 남은 기회는 계속 기회 카드로 보여야, 카드가 통째로 사라지지
+    // 않는다.
+    const visibleProjectIds = new Set((data?.projects ?? []).map((p) => p.projectId));
     // 기회는 S4(진출방식 결정)에서 트랙이 정해지므로 S1~S4 기회 카드는 항상
     // 트랙 미결정 — 그린필드/브라운필드 필터는 프로젝트(S8+)에만 걸린다.
     const oppCards: Card[] = (opps ?? [])
       .filter((o) => o.status !== "dropped")
+      .filter((o) => !(o.project_id && visibleProjectIds.has(o.project_id)))
       .map((o): Card => {
         const stage = stageOf(o);
+        const hold = opportunityHolds.has(o.id);
         return {
           kind: "opportunity", id: o.id, name: o.name, queryText: o.name, stage,
-          stageLabel: o.status === "selected" ? "S4 대기" : stage,
-          tone: o.status === "selected" ? "amber" : "gray",
-          hold: false, track: null,
+          stageLabel: hold ? `${stage} HOLD` : o.status === "selected" ? "S4 대기" : stage,
+          tone: hold || o.status === "selected" ? "amber" : "gray",
+          hold, track: null,
           meta: `매력도 ${o.attractiveness_score ?? "—"} · 시너지 ${o.synergy_score ?? "—"}`,
           href: `/opportunities?opportunity=${o.id}`,
         };
@@ -141,13 +155,8 @@ function DealsBoard() {
       };
     });
     return [...oppCards, ...projectCards];
-  }, [opps, data]);
+  }, [opps, data, opportunityHolds]);
 
-  // 진행 대기 — 기록된 HOLD 진행이 있는 검토/안건 (에이징 표와 같은 규거).
-  const opportunityHolds = useMemo(
-    () => new Set((data?.aging ?? []).filter((r) => r.decision === "hold" && r.entityType === "opportunity").map((r) => r.entityId)),
-    [data],
-  );
   const pausedIds = useMemo(() => new Set(Object.keys(paused)), [paused]);
 
   const matches = useCallback(
@@ -155,9 +164,9 @@ function DealsBoard() {
       f === "all" ? true
         : f === "greenfield" ? c.track === "greenfield"
         : f === "brownfield" ? c.track === "brownfield"
-        : f === "gate" ? c.hold || (c.kind === "opportunity" && opportunityHolds.has(c.id))
+        : f === "gate" ? c.hold
         : pausedIds.has(c.id),
-    [opportunityHolds, pausedIds],
+    [pausedIds],
   );
 
   const counts = useMemo(() => {
@@ -271,8 +280,8 @@ function DealsBoard() {
 
           <section className="market-section" aria-label="진행 에이징">
             <h3 className="sizing-step-title text-[0.9rem]">진행 에이징 — HOLD·KILL 경과</h3>
-            {data.aging.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] text-[0.82rem]">에이징 중인 HOLD·KILL 진행이 없습니다.</p>
+            {data.currentHolds.length === 0 ? (
+              <p className="text-[color:var(--muted-fg)] text-[0.82rem]">HOLD·KILL 진행이 없습니다.</p>
             ) : (
               <div className="table-scroll">
                 <table className="data-table" aria-label="진행 에이징">
@@ -281,7 +290,7 @@ function DealsBoard() {
                     <tr><th scope="col">검토/안건</th><th scope="col">진행</th><th scope="col">결정</th><th scope="col">결정일</th><th scope="col" className="col-num">경과</th></tr>
                   </thead>
                   <tbody>
-                    {[...data.aging].sort((a, b) => b.ageDays - a.ageDays).map((r) => (
+                    {[...data.currentHolds].sort((a, b) => b.ageDays - a.ageDays).map((r) => (
                       <tr key={`${r.entityType}:${r.entityId}:${r.gate}`}>
                         <td className="text-[0.8rem]">
                           <Link href={r.entityType === "project" ? `/projects/${r.entityId}/process` : `/opportunities?opportunity=${r.entityId}`}>

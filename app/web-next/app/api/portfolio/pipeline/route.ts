@@ -13,8 +13,23 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
   const db = getDb();
   const projects = listProjectPipeline(db).filter((p) => visibleProject(auth.auth, p.projectId) !== null);
-  const aging = listGateAging(db, { minAgeDays: 1 }).filter((r) =>
-    projects.some((p) => p.projectId === r.entityId),
-  );
-  return ok({ projects, aging }, 200, { count: projects.length });
+  // Opportunities are visible to every authenticated user (pre-project
+  // intelligence, see api/opportunities/route.ts) — only project-type rows
+  // need the per-project visibility filter. A prior version filtered every
+  // row by `projects.some(p => p.projectId === r.entityId)`, which silently
+  // dropped every opportunity-type row (an opportunity id never matches a
+  // project id) — opportunity-level HOLD/KILL never reached the board or
+  // dashboard, regardless of age.
+  const visible = (r: { entityType: "opportunity" | "project"; entityId: string }) =>
+    r.entityType === "opportunity" || projects.some((p) => p.projectId === r.entityId);
+  // currentHolds: every recorded HOLD/KILL right now, any age. One list feeds
+  // everything that needs "is this on hold" — the board's card badges and
+  // 진행 대기 filter, the dashboard's HOLD KPI, and the 진행 에이징 table
+  // (sorted by ageDays, elapsed shown per row down to 0). A previous version
+  // pre-filtered a separate `aging` list to >=1 day old for that table, which
+  // made the table say "no HOLD/KILL in progress" on the very page showing a
+  // HOLD badge for something decided today — same data, two contradictory
+  // answers depending on which endpoint field you read.
+  const currentHolds = listGateAging(db, { minAgeDays: 0 }).filter(visible);
+  return ok({ projects, currentHolds }, 200, { count: projects.length });
 }

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S4 진출방식 결정 — 재설계안 (mockup · 2026-09-14 · ux-designer-agent)</title>
+<style>
+  /*
+    재설계 근거 요약 (전체 설명은 세션 답변 참조):
+    - RouteDecisionStage.tsx는 다섯 차례 소규모 반복 편집을 거쳤고, 사용자는
+      매번 결과에 만족하지 못했다. 문제는 개별 편집이 아니라 정보 구조 자체
+      — "결정론 신호 카드"와 "LLM 추천 카드"라는 두 개의 경쟁하는 추천 표면이
+      동시에 떠 있고, 4개 탭에 결정/채점/이력/위원회가 흩어져 있어 "지금 뭘
+      봐야 하는가"가 불명확했다.
+    - 이 목업은: (1) 두 추천 표면을 신호→서술 확장 구조의 카드 하나로 합치고
+      "제안" 배지로 항상 표시하며, (2) 탭을 4개→3개로 줄이고 "결정"을
+      기본 탭으로 올려 화면의 목적(결정 기록)을 최우선에 두고,
+      (3) 신호별 근거·경쟁 구조·역량 갭은 삭제하지 않고 "평가 근거" 탭에
+      감사 가능한 형태 그대로 유지한다.
+    - 토큰/클래스는 docs/designs/mockups/baseline-v5.html의 관례를 그대로
+      재사용한다 — 새 토큰을 만들지 않는다 (.chip.proposal은 기존
+      --primary/--primary-bg 조합만 사용).
+  */
+  :root {
+    --bg: #f7f8fb; --surface: #ffffff; --border: #e3e7ef; --muted-fg: #5c6675;
+    --fg: #1a2230; --primary: #3d66f5; --primary-fg: #ffffff; --primary-bg: #eef2ff;
+    --green: #1e8e5a; --amber: #b26a00; --red: #c23b3b;
+    --green-bg: #e9f7f0; --amber-bg: #fff6e8; --red-bg: #fdeeee;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif; background: var(--bg); color: var(--fg); font-size: 14px; }
+  a { color: var(--primary); }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  h2 { font-size: 14px; margin: 0 0 10px; }
+  h3 { font-size: 13px; margin: 0 0 8px; }
+  h4 { font-size: 12.5px; margin: 10px 0 6px; }
+  .muted { color: var(--muted-fg); }
+  .note { font-size: 12px; color: var(--muted-fg); }
+
+  .mockup-tag { position: sticky; top: 0; z-index: 5; background: #10182a; color: #fff; font-size: 11px; padding: 6px 16px; }
+
+  .content { padding: 18px 22px 56px; max-width: 1120px; margin: 0 auto; }
+  .crumb { font-size: 12px; color: var(--muted-fg); margin-bottom: 6px; }
+  .objective { color: var(--muted-fg); margin: 0 0 14px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .card.reco { border-color: color-mix(in srgb, var(--primary) 30%, var(--border)); }
+
+  .btn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+  .btn:hover { background: var(--bg); }
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .btn-primary:hover { background: #3357d6; }
+  .btn-ghost { border-color: transparent; background: transparent; color: var(--primary); }
+  .btn-ghost:hover { background: var(--primary-bg); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .next-box { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+  .chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 9px; font-size: 11px; }
+  .chip.green { background: var(--green-bg); color: var(--green); }
+  .chip.amber { background: var(--amber-bg); color: var(--amber); }
+  .chip.red { background: var(--red-bg); color: var(--red); }
+  .chip.gray { background: var(--bg); color: var(--muted-fg); }
+  /* "제안" 배지 — 기존 --primary/--primary-bg 재사용, 새 토큰 없음.
+     경계 #2: 사람이 아직 기록하지 않은 산출물은 화면 어디서든 이 배지로
+     구분한다 (rule 신호든 LLM 서술이든 동일하게). */
+  .chip.proposal { background: var(--primary-bg); color: var(--primary); font-weight: 700; }
+  .control-chip { border: 1px solid var(--border); background: var(--surface); color: var(--muted-fg); border-radius: 999px; padding: 3px 11px; font-size: 12px; cursor: pointer; }
+  .control-chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+  .handoff { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; background: var(--primary-bg); border: 1px solid color-mix(in srgb, var(--primary) 25%, white); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; font-size: 12px; }
+  .handoff .hl { font-weight: 700; color: var(--muted-fg); }
+  .handoff .chips { display: inline-flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .handoff .cta { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
+
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 14px; flex-wrap: wrap; }
+  .tab { padding: 8px 14px; font-size: 13px; color: var(--muted-fg); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; font-family: inherit; }
+  .tab[aria-current="page"] { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .tabpanel { display: none; }
+  .tabpanel.active { display: block; }
+
+  table { border-collapse: collapse; width: 100%; background: var(--surface); }
+  th { border-bottom: 2px solid var(--border); padding: 7px 9px; font-size: 12px; text-align: left; color: var(--muted-fg); white-space: nowrap; }
+  td { border-bottom: 1px solid var(--border); padding: 7px 9px; font-size: 13px; text-align: left; vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-scroll { overflow-x: auto; }
+
+  .checklist { margin: 10px 0 0; padding-left: 18px; }
+  .checklist li { margin-bottom: 5px; }
+
+  .form-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+  .field input, .field select, .field textarea { border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit; background: var(--surface); }
+
+  dl.factdl { font-size: 13px; margin: 0 0 12px; }
+  dl.factdl div { margin-bottom: 4px; }
+  dl.factdl dt { display: inline; font-weight: 600; margin-right: 4px; }
+  dl.factdl dd { display: inline; margin: 0; }
+
+  details.hist { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; margin-top: 14px; background: var(--surface); }
+  details.hist summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+  details.hist[open] summary { margin-bottom: 8px; }
+
+  .stat-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 8px; }
+  .stat { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; background: var(--bg); }
+  .stat b { font-size: 14px; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="mockup-tag">MOCKUP — S4 진출방식 결정 재설계안 · 2026-09-14 · 정적 목업(상호작용은 탭 전환만 동작) · 예시 딜: 바이오 소재 신규 진출</div>
+
+<main class="content">
+
+  <p class="crumb">딜 / 바이오 소재 신규 진출 — S4</p>
+  <h1>S4 진출방식 결정 <span class="chip amber">결정 대기</span></h1>
+  <p class="objective">어떻게 들어갈 것인가? — Greenfield vs Brownfield를 결정한다 (Brownfield ≠ M&A)</p>
+
+  <div class="handoff">
+    <span class="hl">입력 ←</span>
+    <span class="chips">
+      <span class="chip gray">S3 시너지 71 (Go)</span>
+      <span class="chip gray">S1 시장 CAGR 9.2% · 집중형 경쟁구조</span>
+    </span>
+    <span class="cta">
+      <span class="hl">출력 →</span>
+      <button class="btn btn-sm">S5 역량 평가 (그린필드)</button>
+      <button class="btn btn-sm">S6/S7 대상 발굴 (브라운필드)</button>
+    </span>
+  </div>
+
+  <!-- ════ 통합 추천 카드 — rule 신호 + LLM 서술을 하나의 표면으로 합친다.
+       "제안" 배지는 카드 헤더에 고정되어 탭을 넘나들어도 항상 보인다.
+       이전에는 이 카드가 둘(결정론 카드 + LLM 카드)이었고 내용이 겹쳐
+       보였다 — 이제는 "신호(항상 있음) → 서술(선택, 신호를 풀어씀)"
+       하나의 위계로 표현한다. ════ -->
+  <div class="card reco">
+    <h2 style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      진출방식 추천 <span class="chip proposal">제안</span>
+    </h2>
+    <p class="note" style="margin:0 0 10px">
+      원칙 (경계 #2): 최종 결정은 사람이 기록합니다 — 이 카드는 S1~S3 산출물에서 자동으로 만든 <b>제안</b>이며, 아래 &quot;결정&quot; 탭에 반영한 뒤 자유롭게 수정할 수 있습니다.
+    </p>
+    <p style="margin:0 0 6px">
+      추천: <strong>Brownfield</strong> · Greenfield 18 : Brownfield 82
+      <span class="note"> — 신호 5건 중 4건이 Brownfield, 1건 중립 (근거 전체는 <a href="#eval" onclick="showTab('eval');return false;">평가 근거 탭</a>)</span>
+    </p>
+    <ul class="checklist" style="margin:0 0 10px">
+      <li>경쟁 구조 집중형 (상위 3사 62% 점유) — 신규 단독 진입보다 결합이 유리</li>
+      <li>S6/S7 숏리스트 2건 확보 — 결합 후보가 이미 존재</li>
+      <li>역량 충족률 37.5% — 자체 구축 시 발효 공정 스케일업·인허가 역량 부족</li>
+    </ul>
+
+    <div class="card" style="background:var(--bg);border-style:dashed;margin-bottom:10px">
+      <h4 style="display:flex;align-items:center;gap:8px;margin-top:0">
+        AI 서술 초안 <span class="chip proposal" style="font-size:10px">제안 · LLM</span>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto">재생성</button>
+      </h4>
+      <p style="margin:0 0 6px"><b>근거 초안:</b> S3 적합성 평가 Go(시너지 71) — 경쟁 구조가 상위 3사 중심으로 집중되어 있고 S6/S7에서 결합 후보 2건이 이미 확보된 상태입니다. 자체 발효 공정을 처음부터 구축하면 스케일업·규제 인허가 역량 확보에 3년 이상 소요될 것으로 추정되어, 검증된 공정을 보유한 파트너에 대한 전략적 투자로 신속히 접근하는 편이 유리합니다.</p>
+      <p style="margin:0 0 6px"><b>대안 검토 초안:</b> 그린필드 자체 구축을 검토했으나, 규제 인허가 대응 역량과 스케일업 경험이 자사 내부에 없어 기각.</p>
+      <p style="margin:0" class="note"><b>유의:</b> 역량 갭 중 &quot;원료 공급망&quot;은 파트너십으로 해소 가능성이 있으나 아직 미확정 — 결정 근거에 조건부로 명시 권장.</p>
+    </div>
+
+    <div class="next-box">
+      <button class="btn btn-primary" onclick="showTab('decision');return false;">결정 탭에 반영</button>
+      <span class="note">반영은 입력값 채움일 뿐입니다 — 최종 기록은 &quot;결정&quot; 탭의 &apos;결정&apos; 버튼 (사람 클릭).</span>
+    </div>
+  </div>
+
+  <!-- ════ 탭 3개 (기존 4개에서 축소): 결정을 기본 탭으로 — 이 화면의
+       목적은 채점 연습이 아니라 결정 기록이다. 평가 근거는 필요할 때
+       감사용으로 펼쳐 본다. 위원회 심의는 개념적으로 그대로 유지. ════ -->
+  <nav class="tabs" role="tablist" aria-label="S4 결정 탭">
+    <button class="tab" id="tab-btn-decision" aria-current="page" role="tab" onclick="showTab('decision')">결정</button>
+    <button class="tab" id="tab-btn-eval" role="tab" onclick="showTab('eval')">평가 근거</button>
+    <button class="tab" id="tab-btn-committee" role="tab" onclick="showTab('committee')">위원회 심의</button>
+  </nav>
+
+  <!-- ── 결정 탭 (기본) ── -->
+  <div class="tabpanel active" id="tab-decision" role="tabpanel">
+    <div class="card">
+      <h2>바이오 소재 신규 진출 — 트랙·라우트 결정 <span class="chip amber">결정 대기</span></h2>
+      <dl class="factdl">
+        <div><dt>시장:</dt><dd>특수 발효 소재 (규모 3.4B USD · CAGR 9.2%)</dd></div>
+        <div><dt>발굴 근거:</dt><dd>상위 3사 집중 시장 — 그룹 정밀화학 계열사와 원료 공급 연계 가능</dd></div>
+        <div><dt>적합성 판정:</dt><dd>Go — 자사 정밀화학 역량과 인접, 규제 대응 경험 보완 필요</dd></div>
+        <div><dt>시너지 권고:</dt><dd>71점 — 원료·유통 채널 공유 시너지 큼</dd></div>
+      </dl>
+
+      <form>
+        <div class="form-grid" style="margin-bottom:12px">
+          <label class="field">
+            <span>트랙 *</span>
+            <select>
+              <option>Greenfield — 자체 역량으로 진출</option>
+              <option selected>Brownfield — 기존 기업·자산과 결합</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>라우트 * (Brownfield)</span>
+            <select>
+              <option>선택...</option>
+              <option selected>전략적 투자</option>
+              <option>JV(합작)</option>
+              <option>M&A</option>
+              <option>소수지분 투자</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>의도 (Stage 1) *</span>
+            <select>
+              <option>선택...</option>
+              <option selected>통합</option>
+              <option>역량접근</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field" style="margin-bottom:10px">
+          <span>결정 근거 * (S1 시장분석·S3 적합성 판단을 인용)</span>
+          <textarea rows="3" style="width:100%">S3 적합성 평가 Go(시너지 71) — 경쟁 구조 집중형 + S6/S7 숏리스트 2건 확보. 자체 발효 공정 구축은 3년 이상 소요되어, 검증된 공정을 보유한 파트너에 대한 전략적 투자로 신속히 접근한다.</textarea>
+        </label>
+        <label class="field" style="margin-bottom:12px">
+          <span>검토한 대안 (선택)</span>
+          <textarea rows="2" style="width:100%">그린필드 자체 구축 — 규제 인허가·스케일업 역량 부족으로 기각</textarea>
+        </label>
+
+        <div class="next-box">
+          <button type="button" class="btn btn-ghost">저장 (초안)</button>
+          <button type="button" class="btn btn-primary">결정</button>
+          <span class="note">채점 완료 5/5 · 합산 2.4 / 3.0 — <a href="#eval" onclick="showTab('eval');return false;">평가 근거 탭에서 확인</a> · 사전배제 검증 자동</span>
+        </div>
+        <p class="note" style="margin-top:8px;margin-bottom:0">저장 = 초안을 서버에 보관(완결성 검증 없음) · 결정 = 5기준·근거 완료 후 불변 기록</p>
+      </form>
+    </div>
+
+    <!-- 결정 이력 — 기본 접힘. 오늘의 결정에 필요한 정보가 아니라
+         과거 기록의 열람이므로, 항상 펼쳐 보여야 하는 평가 근거와
+         달리 details로 감춰도 감사성이 훼손되지 않는다. -->
+    <details class="hist">
+      <summary>결정 이력 (2건) 보기</summary>
+      <div class="table-scroll">
+        <table aria-label="진출방식 결정 이력">
+          <thead>
+            <tr><th>트랙</th><th>라우트</th><th>의도</th><th>채점</th><th>근거</th><th>결정자/일시</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="chip amber">Brownfield</span></td>
+              <td>전략적 투자</td>
+              <td>통합</td>
+              <td>2.1/3.0</td>
+              <td>초기 검토 — 경쟁 구조 파악 전 잠정 결정</td>
+              <td>sung.hyuk · 2026-08-20</td>
+            </tr>
+            <tr>
+              <td><span class="chip green">Greenfield</span></td>
+              <td>—</td>
+              <td>역량접근</td>
+              <td>1.6/3.0</td>
+              <td>최초 가설 — 자체 구축 검토, 이후 역량 갭 확인 후 폐기</td>
+              <td>sung.hyuk · 2026-08-05</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  <!-- ── 평가 근거 탭 — 신호·경쟁 구조·역량 갭·5기준 채점을 감사 가능한
+       원 형태 그대로 유지한다 (삭제하지 않음). 위 추천 카드는 이 근거를
+       요약한 것이고, 이 탭은 "왜 이 딜이 이 점수를 받았는가"의 전체
+       근거다. ── -->
+  <div class="tabpanel" id="tab-eval" role="tabpanel">
+    <div class="card">
+      <h2>바이오 소재 신규 진출 — 진출방식 적합도 평가 근거</h2>
+
+      <h4>신호별 근거 (S1~S3)</h4>
+      <div class="table-scroll">
+        <table aria-label="신호별 근거" style="margin-bottom:14px">
+          <thead><tr><th>신호</th><th>방향</th><th class="num">가중치</th><th>근거</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>시장 성장률 (S1)</td>
+              <td><span class="chip gray">중립</span></td>
+              <td class="num">1</td>
+              <td>CAGR 9.2% — 고성장(15%+) 기준 미달, 완만한 성장</td>
+            </tr>
+            <tr>
+              <td>경쟁 구조 (S1)</td>
+              <td><span class="chip amber">브라운필드</span></td>
+              <td class="num">2</td>
+              <td>상위 3사 62% 점유 — 집중 시장, 단독 진입보다 결합이 유리</td>
+            </tr>
+            <tr>
+              <td>브라운필드 숏리스트 (S6/S7)</td>
+              <td><span class="chip amber">브라운필드</span></td>
+              <td class="num">3</td>
+              <td>결합 후보 2건 확보됨 (소재사 A·B)</td>
+            </tr>
+            <tr>
+              <td>시너지 권고 (S3)</td>
+              <td><span class="chip amber">브라운필드</span></td>
+              <td class="num">2</td>
+              <td>시너지 점수 71 — 60 이상, 결합 시너지 큼</td>
+            </tr>
+            <tr>
+              <td>역량 충족률 (S3 역량 갭)</td>
+              <td><span class="chip amber">브라운필드</span></td>
+              <td class="num">2</td>
+              <td>충족률 37.5% — 40% 이하, 자체 구축 리스크 큼</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>경쟁 구조 (S1 v3 — 특수 발효 소재)</h4>
+      <p style="margin:0 0 8px">상위 3사가 시장의 62%를 점유하는 집중형 구조. 신규 단독 진입 시 유통·인증 채널 확보에 시간이 걸릴 것으로 판단.</p>
+      <div class="table-scroll">
+        <table aria-label="경쟁 구조 — 주요 기업" style="margin-bottom:14px">
+          <thead><tr><th>기업</th><th>티어</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td>특수소재케미칼</td><td><span class="chip green">리더</span></td><td>시장점유율 34% · 발효 공정 특허 다수 보유</td></tr>
+            <tr><td>바이오솔루션즈</td><td><span class="chip amber">도전자</span></td><td>점유율 18% · S6/S7 숏리스트 후보(소재사 A)</td></tr>
+            <tr><td>그린퍼먼트</td><td><span class="chip gray">니치</span></td><td>점유율 10% · 특수 등급 제품 특화</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>역량 갭</h4>
+      <div class="stat-chip-row">
+        <span class="stat">필요 역량 <b>8건</b></span>
+        <span class="stat">충족 <b>3건</b></span>
+        <span class="stat">부분 충족 <b>2건</b></span>
+        <span class="stat">미충족 <b>3건</b></span>
+        <span class="stat">충족률 <b>37.5%</b></span>
+      </div>
+      <p style="margin:0 0 14px">미충족: 발효 공정 스케일업, 규제 인허가 대응, 원료 공급망(파트너십 검토 중) <span class="note">— 그룹/계열사 프로필 기준, 내부(자사 단독) 역량 평가는 추후 보강</span></p>
+
+      <h4>5기준 채점 (Stage 2, 각 20%)</h4>
+      <div class="table-scroll">
+        <table aria-label="5기준 채점">
+          <thead><tr><th>기준</th><th>채점 1–3</th><th>근거 *</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>통제 필요도<span class="note" style="display:block">1=성과만 공유돼도 충분 ~ 3=운영 통제 없으면 위험</span></td>
+              <td><span class="chip-row"><button class="control-chip" aria-pressed="false">1</button><button class="control-chip" aria-pressed="false">2</button><button class="control-chip" aria-pressed="true">3</button></span></td>
+              <td><input value="브랜드·채널 통합 필요"></td>
+            </tr>
+            <tr>
+              <td>역량 결정성<span class="note" style="display:block">1=대체 가능 ~ 3=암묵적 지식·대체 불가</span></td>
+              <td><span class="chip-row"><button class="control-chip" aria-pressed="false">1</button><button class="control-chip" aria-pressed="false">2</button><button class="control-chip" aria-pressed="true">3</button></span></td>
+              <td><input value="발효 공정 암묵지"></td>
+            </tr>
+            <tr>
+              <td>시장 불확실성<span class="note" style="display:block">1=수요 검증됨 ~ 3=수요·규제 불확실</span></td>
+              <td><span class="chip-row"><button class="control-chip" aria-pressed="false">1</button><button class="control-chip" aria-pressed="true">2</button><button class="control-chip" aria-pressed="false">3</button></span></td>
+              <td><input value="규제 변동 중"></td>
+            </tr>
+            <tr>
+              <td>통합 역량<span class="note" style="display:block">1=통합 경험·여력 충분 ~ 3=통합 수용력 부족</span></td>
+              <td><span class="chip-row"><button class="control-chip" aria-pressed="false">1</button><button class="control-chip" aria-pressed="true">2</button><button class="control-chip" aria-pressed="false">3</button></span></td>
+              <td><input value="M&A 경험 제한적, 소수 협상은 가능"></td>
+            </tr>
+            <tr>
+              <td>역량확보 속도<span class="note" style="display:block">1=천천히 구축 가능 ~ 3=즉시 확보 필요</span></td>
+              <td><span class="chip-row"><button class="control-chip" aria-pressed="false">1</button><button class="control-chip" aria-pressed="true">2</button><button class="control-chip" aria-pressed="false">3</button></span></td>
+              <td><input value="내재 구축 시 3년+"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="next-box" style="margin-top:10px">
+        <button class="btn btn-ghost">저장 (초안)</button>
+        <span class="note">합산 2.4 / 3.0 · 양 트랙 공통 채점 (ADR-0104) · 사전배제 검증 자동</span>
+        <button class="btn btn-ghost btn-sm" onclick="showTab('decision');return false;" style="margin-left:auto">결정 탭으로 →</button>
+      </div>
+
+      <details style="margin-top:14px">
+        <summary style="cursor:pointer;font-size:12px;color:var(--primary)">판정 규칙 보기 (참고용 — 이 딜과 무관한 고정 규칙)</summary>
+        <p class="note" style="margin:8px 0 0">LLM이 아니라 이미 시스템에 기록된 S1~S3 데이터를 고정 규칙으로 채점합니다. 신호별로 방향과 가중치(1~3)를 매기고, 트랙별 가중치 합을 100점 만점 비율로 환산해 한쪽이 60점 이상이면 그 트랙을 추천하며, 그렇지 않으면 &quot;중립(신호 부족)&quot;으로 표시합니다. 위 &quot;신호별 근거&quot; 표가 바로 이 규칙을 이 딜에 적용한 결과입니다.</p>
+      </details>
+    </div>
+  </div>
+
+  <!-- ── 위원회 심의 탭 — 이번 재설계 범위 밖. 기존 CommitteePanel을
+       그대로 사용한다는 것을 보여주기 위한 대표 콘텐츠만 배치. ── -->
+  <div class="tabpanel" id="tab-committee" role="tabpanel">
+    <p class="note" style="margin:0 0 10px">위원회 심의는 이번 재설계 범위 밖입니다 — 기존 <code>CommitteePanel</code> 컴포넌트를 그대로 사용합니다 (아래는 그 구조를 보여주기 위한 대표 콘텐츠).</p>
+    <div class="card">
+      <h2>좌석별 포지션 <span class="note" style="font-weight:400">— S4 진출방식 스티어링 위원회</span></h2>
+      <div class="table-scroll">
+        <table aria-label="위원회 포지션">
+          <thead><tr><th>좌석 (에이전트)</th><th>포지션</th><th>핵심 논거</th><th class="num">종합 점수</th></tr></thead>
+          <tbody>
+            <tr><td>process-governance-manager</td><td><span class="chip green">수용</span></td><td class="note">S1~S3 근거 충분 · 절차 적합</td><td class="num">2.5</td></tr>
+            <tr><td>market-intelligence-agent</td><td><span class="chip green">수용</span></td><td class="note">경쟁 구조 집중형 판단 타당</td><td class="num">2.4</td></tr>
+            <tr><td>risk-officer</td><td><span class="chip amber">조건부</span></td><td class="note">원료 공급망 파트너십 미확정 — 조건부 수용</td><td class="num">2.0</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="next-box" style="margin-top:10px">
+        <button class="btn btn-primary btn-sm">의장 종합(제안) 생성</button>
+        <span class="note">확정은 사람의 게이트 기록 (경계 #2, ADR-0097)</span>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  function showTab(name) {
+    ["decision", "eval", "committee"].forEach(function (k) {
+      document.getElementById("tab-" + k).classList.toggle("active", k === name);
+      document.getElementById("tab-btn-" + k).setAttribute("aria-current", k === name ? "page" : "false");
+    });
+  }
+</script>
+</body>
+</html>

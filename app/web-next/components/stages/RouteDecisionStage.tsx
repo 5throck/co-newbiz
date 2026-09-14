@@ -95,9 +95,6 @@ const BF_SUB: Record<string, string> = {
   rbd: "R&BD(공동연구)",
   corporate_venture: "사내벤처(CVC)",
 };
-// LLM 추천 표시용 축약 라벨
-const INTENT_SHORT: Record<string, string> = { integration: "통합 의도", capability_access: "역량접근 의도" };
-const CONFIDENCE_LABEL: Record<string, string> = { high: "확신도 높음", medium: "확신도 중간", low: "확신도 낮음" };
 // Stage 2 채점 기준 (각 20% × 1–3점)
 const CRITERIA: Array<{ key: string; label: string; hint: string }> = [
   { key: "control_need", label: "통제 필요도", hint: "1=성과만 공유돼도 충분 ~ 3=운영 통제 없으면 위험" },
@@ -111,9 +108,13 @@ const SCORE_LABEL: Record<number, string> = { 1: "낮음", 2: "중간", 3: "높�
 const OVERRIDDEN_SUBS = ["partnership", "rbd", "corporate_venture"];
 
 export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportunityId: string; rationaleParam?: string | null }) {
-  // baseline 탭 구조 (ADR-0086 탭 + 목업 08): 결정 폼 / 권고 / 채점 / 이력 / 진행.
-  // 섹션은 display 토글로 유지(마운트 상태 유지) — 폼 상태가 탭 전환에 영향받지 않는다.
-  const [tab, setTab] = useState<"decision" | "committee" | "scoring" | "history">("decision");
+  // 2026-09-14 전체 재설계 (docs/designs/mockups/2026-09-14-s4-route-decision-redesign.html
+  // 승인 목업) — 탭 3개: 결정(기본) / 평가 근거 / 위원회 심의. 결정 이력은 별도 탭이
+  // 아니라 결정 탭 안의 접힘 섹션으로 이동했다. 섹션은 display 토글로 유지(마운트
+  // 상태 유지) — 폼 상태가 탭 전환에 영향받지 않는다.
+  const [tab, setTab] = useState<"decision" | "competitive" | "eval" | "committee">("decision");
+  // 결정 이력 접힘 섹션 — 결정을 막 저장했을 때만 자동으로 펼쳐 결과를 바로 보여준다.
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [selected, setSelected] = useState<OpportunityRow | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [decisions, setDecisions] = useState<RouteDecision[]>([]);
@@ -301,7 +302,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
       resetForm();
       loadDecisions(selected.id);
       loadSessions(selected.id);
-      setTab("history");
+      setHistoryOpen(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "결정 저장 실패");
     } finally {
@@ -354,129 +355,115 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
 
   return (
     <>
-      {/* 승격(project_id)과 삭제 표시(deleted_at)는 서로 다른 신호다 — 승격은
-          S5/S6·S7을 마치고 프로젝트(S8+)로 넘어갔다는 뜻이고, 삭제 표시는
-          그 뒤 별도로 정리(아카이브)됐다는 뜻이다. 결정 이력은 항상 보이지만,
-          이미 지나간 단계라는 걸 알린다. */}
-      {selected.project_id && (
-        <div className="card" role="note">
-          <p className="text-[0.82rem] mb-0">
-            이 검토/안건은 프로젝트로 승격되었습니다 — 아래 내용은 열람용 이력이며, 새 결정은 권장되지 않습니다.{" "}
-            <a href={`/projects/${selected.project_id}`} className="text-[color:var(--accent)] underline">프로젝트 개요로 이동</a>
-          </p>
-        </div>
-      )}
-      {selected.deleted_at && (
-        <div className="card" role="note">
-          <p className="text-[0.82rem] mb-0">이 검토/안건은 삭제(아카이브) 표시되어 있습니다.</p>
-        </div>
-      )}
-      {/* ── LLM 추천 — 탭 밖 상시 노출. 채점·의사결정 두 탭 모두에 계속 참고할
-          자료라 탭 전환 없이 항상 접근 가능해야 한다 (2026-09-13 UX 조정). ── */}
-      {selected && (
-        <div className="card">
-          <SectionToolbar
-            title="LLM 추천 (결정 지원)"
-            icon=""
-            actions={
-              reco ? (
-                <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateRecommendation()}>
-                  재생성
-                </button>
-              ) : undefined
-            }
-          />
-          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
-            원칙 (경계 #2): 최종 결정은 사람이 기록합니다 — 이 섹션은 S1~S3 산출물과 결정론 어드바이저 신호에서 만든 <b>제안</b>이며, 반영한 뒤 자유롭게 수정할 수 있습니다.
-          </p>
-          {recoError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
-          {!reco && !recoLoading && !recoError && (
-            <div className="flex flex-wrap items-center gap-2 mb-0">
-              <button type="button" className="btn-ghost" onClick={() => void generateRecommendation()}>
-                ▶ LLM 추천 생성
-              </button>
-              <span className="text-[0.75rem] text-[color:var(--muted-fg)]">권장 트랙·라우트·5기준 채점 초안(점수+근거)과 결정 근거 서술 초안을 작성해 채움을 돕습니다.</span>
-            </div>
-          )}
-          {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">S1~S3 산출물과 어드바이저 신호를 근거로 초안을 작성하는 중...</p>}
-          {reco && (
-            <>
-              <p className="mb-2 flex flex-wrap items-center gap-1">
-                <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
-                  {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+      {/* ── 진출방식 추천 — 탭 밖 상시 노출 (2026-09-14 재설계). 예전엔 이 카드와
+          "의사결정" 탭 안의 룰 기반 추천이 서로 다른 표면에서 겹치는 얘기를 했다.
+          이제 신호(항상 있음) → AI 서술(선택, 신호를 풀어씀) 하나의 위계로 통합한다.
+          "제안" 칩은 기존 status-chip 클래스만 재사용 — 새 CSS 없음. ── */}
+      {selected && advisory !== null && (() => {
+        const trackLabel = advisory.recommendedTrack === "neutral" ? "중립 (신호 부족)" : advisory.recommendedTrack === "greenfield" ? "Greenfield" : "Brownfield";
+        const supporting = advisory.signals
+          .filter((s) => s.leans === advisory.recommendedTrack)
+          .sort((a, b) => b.weight - a.weight);
+        const neutralCount = advisory.signals.filter((s) => s.leans === "neutral").length;
+        return (
+          <div className="card" id="reco-card">
+            <h2 className="flex items-center gap-2">
+              진출방식 추천 <span className="status-chip status-not-started">제안</span>
+            </h2>
+            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+              원칙 (경계 #2): 최종 결정은 사람이 기록합니다 — 이 카드는 S1~S3 산출물에서 자동으로 만든 <b>제안</b>이며, 아래 &quot;결정&quot; 탭에 반영한 뒤 자유롭게 수정할 수 있습니다.
+            </p>
+            <p className="text-[0.85rem] mb-1">
+              추천: <strong>{trackLabel}</strong>
+              {" "}· Greenfield {advisory.greenfieldScore} : Brownfield {advisory.brownfieldScore}
+              {advisory.recommendedTrack !== "neutral" && (
+                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
+                  {" "}— 신호 {advisory.signals.length}건 중 {supporting.length}건이 {trackLabel}, {neutralCount}건 중립 (근거 전체는{" "}
+                  <button type="button" className="text-[color:var(--accent)] underline" onClick={() => setTab("eval")}>평가 근거 탭</button>)
                 </span>
-                <span className={`status-chip ${reco.recommendation.track === "brownfield" ? "status-amber" : "status-green"}`}>
-                  {reco.recommendation.track === "brownfield" ? "Brownfield" : "Greenfield"}
-                </span>
-                {reco.recommendation.sub_track && (
+              )}
+            </p>
+            {advisory.reReviewTriggers.length > 0 && (
+              <p className="text-[0.75rem] text-[color:var(--amber-fg)] mb-2">점검: {advisory.reReviewTriggers.join(" / ")}</p>
+            )}
+            {supporting.length > 0 ? (
+              <ul className="sizing-note-list mb-2">
+                {supporting.map((s) => <li key={s.key}>{s.label} — {s.note}</li>)}
+              </ul>
+            ) : (
+              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">신호가 뚜렷한 방향을 가리키지 않습니다.</p>
+            )}
+
+            {/* AI 서술 초안 — 신호 요약을 문장으로 확장한 LLM 초안. 기존 reco 상태 그대로. */}
+            <div className="sizing-grade-card mb-3">
+              <h4 className="text-[0.85rem] mb-2 flex items-center gap-2">
+                AI 서술 초안
+                {reco && (
                   <span className="status-chip status-not-started">
-                    라우트 제안: {(reco.recommendation.track === "brownfield" ? BF_SUB[reco.recommendation.sub_track] : GF_SUB[reco.recommendation.sub_track]) ?? reco.recommendation.sub_track}
+                    {reco.source === "llm" ? `제안 · LLM${reco.provider ? ` · ${reco.provider}` : ""}` : "제안 · 결정론 폴백"}
                   </span>
                 )}
-                {reco.recommendation.intent && (
-                  <span className="status-chip status-not-started">의도 제안: {INTENT_SHORT[reco.recommendation.intent] ?? reco.recommendation.intent}</span>
+                {reco && (
+                  <button type="button" className="btn-ghost btn-sm ml-auto" disabled={recoLoading} onClick={() => void generateRecommendation()}>
+                    재생성
+                  </button>
                 )}
-                {reco.recommendation.confidence && (
-                  <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{CONFIDENCE_LABEL[reco.recommendation.confidence] ?? `확신도 ${reco.recommendation.confidence}`}</span>
-                )}
-              </p>
-              {reco.note && <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
-              {reco.recommendation.key_evidence.length > 0 && (
+              </h4>
+              {recoError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+              {!reco && !recoLoading && !recoError && (
+                <div className="flex flex-wrap items-center gap-2 mb-0">
+                  <button type="button" className="btn-ghost" onClick={() => void generateRecommendation()}>
+                    ▶ LLM 추천 생성
+                  </button>
+                  <span className="text-[0.75rem] text-[color:var(--muted-fg)]">권장 트랙·라우트·5기준 채점 초안(점수+근거)과 결정 근거 서술 초안을 작성해 채움을 돕습니다.</span>
+                </div>
+              )}
+              {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">S1~S3 산출물과 어드바이저 신호를 근거로 초안을 작성하는 중...</p>}
+              {reco && (
                 <>
-                  <p className="text-[0.82rem] font-semibold mb-1">핵심 근거</p>
-                  <ul className="sizing-note-list mb-3">
-                    {reco.recommendation.key_evidence.map((e, i) => <li key={i}>{e}</li>)}
-                  </ul>
+                  {reco.note && <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
+                  {reco.recommendation.rationale_draft && (
+                    <p className="text-[0.8rem] mb-2"><span className="font-semibold">근거 초안:</span> {reco.recommendation.rationale_draft}</p>
+                  )}
+                  {reco.recommendation.alternatives_draft && (
+                    <p className="text-[0.8rem] mb-2"><span className="font-semibold">대안 검토 초안:</span> {reco.recommendation.alternatives_draft}</p>
+                  )}
+                  {reco.recommendation.cautions.length > 0 && (
+                    <>
+                      <p className="text-[0.82rem] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">유의</p>
+                      <ul className="sizing-note-list mb-0">
+                        {reco.recommendation.cautions.map((c, i) => <li key={i}>{c}</li>)}
+                      </ul>
+                    </>
+                  )}
                 </>
               )}
-              {reco.recommendation.scores ? (
-                <table className="data-table mb-3" aria-label="LLM 채점 초안">
-                  <caption className="sr-only">LLM 채점 초안</caption>
-                  <thead>
-                    <tr><th scope="col">기준</th><th scope="col">제안 점수</th><th scope="col">근거 (제안)</th></tr>
-                  </thead>
-                  <tbody>
-                    {reco.recommendation.scores.map((s) => (
-                      <tr key={s.criterion}>
-                        <td className="text-[0.8rem]">{CRITERIA.find((c) => c.key === s.criterion)?.label ?? s.criterion}</td>
-                        <td className="tabular-nums text-[0.8rem]">{s.score} · {SCORE_LABEL[s.score] ?? ""}</td>
-                        <td className="text-[0.75rem]">{s.evidence_note}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-3">채점 초안 없음 — 채점 탭에서 직접 채점하세요.</p>
-              )}
-              {reco.recommendation.rationale_draft && (
-                <p className="text-[0.8rem] mb-2"><span className="font-semibold">근거 초안:</span> {reco.recommendation.rationale_draft}</p>
-              )}
-              {reco.recommendation.alternatives_draft && (
-                <p className="text-[0.8rem] mb-2"><span className="font-semibold">대안 검토 초안:</span> {reco.recommendation.alternatives_draft}</p>
-              )}
-              {reco.recommendation.cautions.length > 0 && (
-                <>
-                  <p className="text-[0.82rem] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">유의</p>
-                  <ul className="sizing-note-list mb-3">
-                    {reco.recommendation.cautions.map((c, i) => <li key={i}>{c}</li>)}
-                  </ul>
-                </>
-              )}
+            </div>
+
+            {reco && (
               <div className="flex flex-wrap items-center gap-2 mb-0">
                 <button
                   type="button"
-                  className="btn-ghost"
-                  onClick={() => confirm("LLM 추천을 의사결정 탭에 반영할까요?", applyRecommendation, {
-                    body: "현재 입력한 트랙·라우트·채점·근거를 추천 초안으로 덮어씁니다 — 반영 후에도 자유롭게 수정할 수 있고, 결정은 의사결정 탭의 '결정 저장'을 누른 사람에게 기록됩니다.",
+                  className="btn-primary"
+                  onClick={() => confirm("추천을 결정 탭에 반영할까요?", applyRecommendation, {
+                    body: "현재 입력한 트랙·라우트·채점·근거를 추천 초안으로 덮어씁니다 — 반영 후에도 자유롭게 수정할 수 있고, 결정은 결정 탭의 '결정' 버튼을 누른 사람에게 기록됩니다.",
                     confirmLabel: "반영",
                   })}
                 >
-                  ▶ 반영
+                  결정 탭에 반영
                 </button>
-                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">반영은 입력값 채움일 뿐입니다 — 최종 기록은 의사결정 탭의 &quot;결정 저장&quot; (사람 클릭).</span>
+                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">반영은 입력값 채움일 뿐입니다 — 최종 기록은 &quot;결정&quot; 탭의 &apos;결정&apos; 버튼 (사람 클릭).</span>
               </div>
-            </>
-          )}
+            )}
+          </div>
+        );
+      })()}
+      {selected && advisory === null && (
+        <div className="card" id="reco-card">
+          <h2>진출방식 추천</h2>
+          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
+            추천을 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 역량 갭을 먼저 완료하세요.
+          </p>
         </div>
       )}
 
@@ -485,10 +472,10 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
         active={tab}
         onSelect={(k) => setTab(k as typeof tab)}
         tabs={[
-          { key: "scoring", label: "채점 (5criteria)" },
+          { key: "decision", label: "결정" },
+          { key: "competitive", label: "경쟁 구조" },
+          { key: "eval", label: "평가 근거" },
           { key: "committee", label: "위원회 심의" },
-          { key: "decision", label: "의사결정" },
-          { key: "history", label: "결정 이력" },
         ]}
       />
 
@@ -510,93 +497,6 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
             <div><dt className="inline font-semibold mr-1">시너지 권고:</dt><dd className="inline">{selected.synergy_score ?? "—"}점{selected.synergy_rationale ? ` — ${selected.synergy_rationale}` : ""}</dd></div>
           </dl>
 
-          {/* ── S1 시장·경쟁·역량 근거 (flow.spec v2.4.0) — 결정론 어드바이저
-              신호 + 경쟁 구조 + 역량 갭 요약. 권고는 제안이며 결정은 아래 폼의
-              사람 기록이다 (경계 #2). ── */}
-          <div className="sizing-grade-card mb-3" aria-label="S1 시장·경쟁·역량 근거">
-            <h4 className="text-[0.85rem] mb-2">시장·경쟁·역량 근거 — 결정론 어드바이저 (ADR-0104)</h4>
-            {advisory === null ? (
-              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
-                근거를 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 역량 갭을 먼저 완료하세요.
-              </p>
-            ) : (
-              <>
-                <p className="text-[0.8rem] mb-2">
-                  결정론 권고: <strong>{advisory.recommendedTrack === "neutral" ? "중립 (신호 부족)" : advisory.recommendedTrack === "greenfield" ? "Greenfield" : "Brownfield"}</strong>
-                  {" "}· Greenfield {advisory.greenfieldScore} : Brownfield {advisory.brownfieldScore}
-                  <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">권고는 제안이며 결정은 사람이 기록합니다 (경계 #2)</span>
-                </p>
-                <ul className="sizing-note-list mb-2">
-                  {advisory.signals.map((s) => (
-                    <li key={s.key}>
-                      <span className={`status-chip ${s.leans === "greenfield" ? "status-green" : s.leans === "brownfield" ? "status-amber" : "status-not-started"}`}>
-                        {s.leans === "greenfield" ? "그린필드" : s.leans === "brownfield" ? "브라운필드" : "중립"}{s.leans !== "neutral" ? ` ×${s.weight}` : ""}
-                      </span>{" "}
-                      <strong>{s.label}</strong> — {s.note}
-                    </li>
-                  ))}
-                </ul>
-                {advisory.reReviewTriggers.length > 0 && (
-                  <p className="text-[0.75rem] text-[color:var(--amber-fg)] mb-2">점검: {advisory.reReviewTriggers.join(" / ")}</p>
-                )}
-                {advisory.s1Evidence?.competitive ? (
-                  <details className="mb-1">
-                    <summary className="cursor-pointer text-[0.78rem] text-[color:var(--accent)]">
-                      경쟁 구조 보기 (S1 v{advisory.s1Evidence.versionNo ?? "?"} — {advisory.s1Evidence.industryName})
-                    </summary>
-                    <p className="text-[0.8rem] mt-1 mb-1">{advisory.s1Evidence.competitive.structure}</p>
-                    {advisory.s1Evidence.competitive.players.length > 0 && (
-                      <div className="table-scroll">
-                        <table className="data-table" aria-label="경쟁 구조 — 주요 기업">
-                          <caption className="sr-only">경쟁 구조 — 주요 기업</caption>
-                          <thead>
-                            <tr><th scope="col">기업</th><th scope="col">티어</th><th scope="col">비고</th></tr>
-                          </thead>
-                          <tbody>
-                            {advisory.s1Evidence.competitive.players.map((p) => (
-                              <tr key={p.name}>
-                                <td className="cell-primary">{p.name}</td>
-                                <td>
-                                  <span className={`status-chip ${p.tier === "leader" ? "status-green" : p.tier === "challenger" ? "status-amber" : "status-not-started"}`}>
-                                    {p.tier === "leader" ? "리더" : p.tier === "challenger" ? "도전자" : "니치"}
-                                  </span>
-                                </td>
-                                <td className="text-[0.75rem]">{p.note}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </details>
-                ) : (
-                  <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-1">
-                    경쟁 구조 미기록 —{" "}
-                    {selected.market_scope ? (
-                      <Link href={`/market?industry=${encodeURIComponent(selected.market_scope)}`} className="text-[color:var(--accent)] underline">S1 리포트</Link>
-                    ) : (
-                      <span>S1 리포트</span>
-                    )}
-                    {" "}에서 재분석으로 집중도·주요 플레이어를 보강하세요.
-                  </p>
-                )}
-                {advisory.capabilityGap ? (
-                  <p className="text-[0.78rem] mb-0">
-                    역량 갭: 필요 {advisory.capabilityGap.total}건
-                    {advisory.capabilityGap.coveragePct !== null ? ` · 충족률 ${advisory.capabilityGap.coveragePct}%` : " · 보유 판정 전"}
-                    {advisory.capabilityGap.unmetRows.length > 0 && ` · 미보유: ${advisory.capabilityGap.unmetRows.map((r) => r.capability).join(", ")}`}
-                    <span className="text-[color:var(--muted-fg)]"> — 그룹/계열사 프로필 기준, 내부(자사 단독) 역량 평가는 추후 보강</span>
-                  </p>
-                ) : (
-                  <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">
-                    역량 갭 미작성 —{" "}
-                    <Link href={`/opportunities/${encodeURIComponent(selected.id)}`} className="text-[color:var(--accent)] underline">기회 상세의 역량 갭 탭</Link>
-                    {" "}에서 필요 역량과 보유 판정을 기록하세요.
-                  </p>
-                )}
-              </>
-            )}
-          </div>
           <form id="route-form" onSubmit={saveDecision}>
             <div className="flex flex-wrap items-end gap-3 mb-3">
               <label className="text-[0.78rem]">
@@ -655,24 +555,250 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                 {!allScored && (
                   <>
                     {" · "}
-                    <button type="button" className="btn-ghost btn-sm" onClick={() => setTab("scoring")}>채점 탭에서 5criteria 완료 →</button>
+                    <button type="button" className="btn-ghost btn-sm" onClick={() => setTab("eval")}>평가 근거 탭에서 5기준 완료 →</button>
                   </>
                 )}
               </span>
             </div>
             <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-1 mb-0">
-              저장 = 초안을 서버에 보관(완결성 검증 없음) · 결정 = 5criteria·근거 완료 후 불변 기록
+              저장 = 초안을 서버에 보관(완결성 검증 없음) · 결정 = 5기준·근거 완료 후 불변 기록
             </p>
           </form>
+
+          {/* ── 결정 이력 — 과거 기록 열람용 참고자료라 기본 접힘(2026-09-14
+              재설계). 오늘 결정에 필요한 평가 근거와 달리, 접혀 있어도
+              감사성이 훼손되지 않는다. ── */}
+          {(() => {
+            const years = [...new Set(decisions.map((d) => d.decided_at.slice(0, 4)))].sort().reverse();
+            const months = historyYear
+              ? [...new Set(decisions.filter((d) => d.decided_at.slice(0, 4) === historyYear).map((d) => d.decided_at.slice(5, 7)))].sort()
+              : [];
+            const filtered = decisions.filter((d) =>
+              (!historyYear || d.decided_at.slice(0, 4) === historyYear) &&
+              (!historyMonth || d.decided_at.slice(5, 7) === historyMonth),
+            );
+            return (
+              <details className="sizing-grade-card mt-3" open={historyOpen} onToggle={(e) => setHistoryOpen(e.currentTarget.open)}>
+                <summary className="cursor-pointer text-[0.85rem] font-semibold">결정 이력 ({decisions.length}건) 보기</summary>
+                <div className="mt-2">
+                  {decisions.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <label className="text-[0.75rem]">
+                        <span className="sr-only">연도</span>
+                        <select
+                          value={historyYear}
+                          onChange={(e) => { setHistoryYear(e.target.value); setHistoryMonth(""); }}
+                          className="sizing-new-input sizing-new-input-sm"
+                        >
+                          <option value="">전체 연도</option>
+                          {years.map((y) => <option key={y} value={y}>{y}년</option>)}
+                        </select>
+                      </label>
+                      <label className="text-[0.75rem]">
+                        <span className="sr-only">월</span>
+                        <select
+                          value={historyMonth}
+                          onChange={(e) => setHistoryMonth(e.target.value)}
+                          disabled={!historyYear}
+                          className="sizing-new-input sizing-new-input-sm"
+                        >
+                          <option value="">전체 월</option>
+                          {months.map((m) => <option key={m} value={m}>{Number(m)}월</option>)}
+                        </select>
+                      </label>
+                    </div>
+                  )}
+                  {decisions.length === 0 ? (
+                    <p className="text-[0.85rem] text-[color:var(--muted-fg)]">아직 기록된 결정이 없습니다.</p>
+                  ) : filtered.length === 0 ? (
+                    <p className="text-[0.85rem] text-[color:var(--muted-fg)]">선택한 기간에 기록된 결정이 없습니다.</p>
+                  ) : (
+                    <div className="table-scroll">
+                      <table className="data-table report-table" aria-label="진출방식 결정 이력">
+                        <caption className="sr-only">진출방식 결정 이력</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col">트랙</th><th scope="col">라우트</th><th scope="col">의도</th>
+                            <th scope="col">채점</th><th scope="col">근거</th><th scope="col">대안</th><th scope="col">결정자/일시</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filtered.map((d) => (
+                            <tr key={d.id}>
+                              <td>
+                                <span className={`status-chip ${d.track === "brownfield" ? "status-amber" : "status-green"}`}>
+                                  {d.track === "brownfield" ? "Brownfield" : "Greenfield"}
+                                </span>
+                              </td>
+                              <td className="text-[0.8rem]">{d.sub_track ? (d.track === "brownfield" ? BF_SUB[d.sub_track] ?? d.sub_track : GF_SUB[d.sub_track] ?? d.sub_track) : "—"}</td>
+                              <td className="text-[0.75rem]">{d.intent ? (d.intent === "integration" ? "통합" : "역량접근") : "—"}</td>
+                              <td className="text-[0.75rem]">
+                                {d.total_score !== null ? (
+                                  <span title={(d.scores ?? []).map((s) => `${s.criterion}: ${s.score} — ${s.evidence_note}`).join("\n")}>
+                                    <strong className="tabular-nums">{d.total_score}</strong>/3.0
+                                  </span>
+                                ) : "—"}
+                                {d.staging_recommended && (
+                                  <span className="block text-[0.68rem] text-[color:var(--accent)]" title={d.staging_recommended}>step-up 권고</span>
+                                )}
+                              </td>
+                              <td className="text-[0.8rem]">{d.rationale}</td>
+                              <td className="text-[0.8rem] text-[color:var(--muted-fg)]">{d.alternatives_considered ?? "—"}</td>
+                              <td className="text-[0.75rem] tabular-nums">{d.decided_by} · {d.decided_at.slice(0, 10)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {sessions.length > 0 && (
+                    <>
+                      <SectionToolbar title="위원회 심의 이력" />
+                      <ul className="text-[0.85rem] space-y-1">
+                        {sessions.map((s2) => (
+                          <li key={s2.sessionId}>
+                            <span className={`status-chip ${s2.status === "done" ? "status-green" : "status-in-progress"}`}>{s2.status}</span>{" "}
+                            {s2.decisionMode ?? "—"} · {s2.createdAt.slice(0, 10)} ·{" "}
+                            <a className="text-[color:var(--accent)] underline" href={`/api/opportunities/${encodeURIComponent(selected.id)}/committee-sessions/${s2.sessionId}/minutes`} target="_blank" rel="noreferrer">회의록</a>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              </details>
+            );
+          })()}
         </div>
       )}
 
-      {/* ── 채점 탭: Stage 2 5criteria × 20% × 1–3점 (의사결정 탭과 별도) ── */}
-      {tab === "scoring" && (
+      {/* ── 경쟁 구조 탭 (2026-09-14, 평가 근거에서 분리): S1 경쟁 구조 근거만
+          단독으로 — 신호별 근거·역량 갭·채점과 섞이지 않게 별도 탭으로 둔다. ── */}
+      {tab === "competitive" && (
         <div className="card">
-          <h2>{selected.name} — 5criteria 채점</h2>
-          <table className="data-table mb-2" aria-label="5criteria 채점">
-            <caption className="sr-only">5criteria 채점</caption>
+          <h2>{selected.name} — 경쟁 구조</h2>
+          {advisory === null ? (
+            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
+              근거를 불러오지 못했습니다 — 새로고침하거나 S1 시장분석을 먼저 완료하세요.
+            </p>
+          ) : advisory.s1Evidence?.competitive ? (
+            <>
+              <h4 className="text-[0.85rem] mb-1">
+                경쟁 구조 (S1 v{advisory.s1Evidence.versionNo ?? "?"} — {advisory.s1Evidence.industryName})
+              </h4>
+              <p className="text-[0.8rem] mb-1">{advisory.s1Evidence.competitive.structure}</p>
+              {advisory.s1Evidence.competitive.players.length > 0 && (
+                <div className="table-scroll">
+                  <table className="data-table mb-0" aria-label="경쟁 구조 — 주요 기업">
+                    <caption className="sr-only">경쟁 구조 — 주요 기업</caption>
+                    <thead>
+                      <tr><th scope="col">기업</th><th scope="col">티어</th><th scope="col">비고</th></tr>
+                    </thead>
+                    <tbody>
+                      {advisory.s1Evidence.competitive.players.map((p) => (
+                        <tr key={p.name}>
+                          <td className="cell-primary">{p.name}</td>
+                          <td>
+                            <span className={`status-chip ${p.tier === "leader" ? "status-green" : p.tier === "challenger" ? "status-amber" : "status-not-started"}`}>
+                              {p.tier === "leader" ? "리더" : p.tier === "challenger" ? "도전자" : "니치"}
+                            </span>
+                          </td>
+                          <td className="text-[0.75rem]">{p.note}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">
+              경쟁 구조 미기록 —{" "}
+              {selected.market_scope ? (
+                <Link href={`/market?industry=${encodeURIComponent(selected.market_scope)}`} className="text-[color:var(--accent)] underline">S1 리포트</Link>
+              ) : (
+                <span>S1 리포트</span>
+              )}
+              {" "}에서 재분석으로 집중도·주요 플레이어를 보강하세요.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── 평가 근거 탭 (2026-09-14 재설계): 신호별 근거·역량 갭·5기준 채점 —
+          감사 가능한 형태 그대로 유지한다(삭제하지 않음). 경쟁 구조는 별도
+          탭으로 분리했다. 위 "진출방식 추천" 카드는 이 근거를 요약한 것이고,
+          이 탭은 "왜 이 딜이 이 점수를 받았는가"의 전체 근거다. 역량 결정성·
+          시장 불확실성 두 5기준이 바로 이 근거를 인용해 채점하므로 근거와
+          채점을 한 탭에 둔다. ── */}
+      {tab === "eval" && (
+        <div className="card">
+          <h2>{selected.name} — 진출방식 적합도 평가 근거</h2>
+
+          <div className="sizing-grade-card mb-3" aria-label="S1 시장·경쟁·역량 평가">
+            {advisory === null ? (
+              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
+                근거를 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 역량 갭을 먼저 완료하세요.
+              </p>
+            ) : (
+              <>
+                <h4 className="text-[0.85rem] mb-2">신호별 근거 (S1~S3)</h4>
+                <div className="table-scroll">
+                  <table className="data-table mb-3" aria-label="신호별 근거">
+                    <caption className="sr-only">신호별 근거</caption>
+                    <thead>
+                      <tr><th scope="col">신호</th><th scope="col">방향</th><th scope="col">가중치</th><th scope="col">근거</th></tr>
+                    </thead>
+                    <tbody>
+                      {advisory.signals.map((s) => (
+                        <tr key={s.key}>
+                          <td className="text-[0.8rem]">{s.label}</td>
+                          <td>
+                            <span className={`status-chip ${s.leans === "greenfield" ? "status-green" : s.leans === "brownfield" ? "status-amber" : "status-not-started"}`}>
+                              {s.leans === "greenfield" ? "그린필드" : s.leans === "brownfield" ? "브라운필드" : "중립"}
+                            </span>
+                          </td>
+                          <td className="tabular-nums text-[0.8rem]">{s.weight}</td>
+                          <td className="text-[0.75rem]">{s.note}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <h4 className="text-[0.85rem] mb-1">역량 갭</h4>
+                {advisory.capabilityGap ? (
+                  <>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <span className="status-chip status-not-started">필요 역량 <strong className="ml-1">{advisory.capabilityGap.total}건</strong></span>
+                      <span className="status-chip status-green">충족 <strong className="ml-1">{advisory.capabilityGap.met}건</strong></span>
+                      <span className="status-chip status-amber">부분 충족 <strong className="ml-1">{advisory.capabilityGap.partial}건</strong></span>
+                      <span className="status-chip status-not-started">미충족 <strong className="ml-1">{advisory.capabilityGap.unmet}건</strong></span>
+                      {advisory.capabilityGap.coveragePct !== null && (
+                        <span className="status-chip status-not-started">충족률 <strong className="ml-1">{advisory.capabilityGap.coveragePct}%</strong></span>
+                      )}
+                    </div>
+                    {advisory.capabilityGap.unmetRows.length > 0 && (
+                      <p className="text-[0.78rem] mb-0">
+                        미충족: {advisory.capabilityGap.unmetRows.map((r) => r.capability).join(", ")}
+                        <span className="text-[color:var(--muted-fg)]"> — 그룹/계열사 프로필 기준, 내부(자사 단독) 역량 평가는 추후 보강</span>
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">
+                    역량 갭 미작성 —{" "}
+                    <Link href={`/opportunities/${encodeURIComponent(selected.id)}`} className="text-[color:var(--accent)] underline">기회 상세의 역량 갭 탭</Link>
+                    {" "}에서 필요 역량과 보유 판정을 기록하세요.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          <h4 className="text-[0.85rem] mb-1">5기준 채점 (Stage 2, 각 20%)</h4>
+          <table className="data-table mb-2" aria-label="5기준 채점">
+            <caption className="sr-only">5기준 채점</caption>
             <thead>
               <tr><th scope="col">기준 (각 20%)</th><th scope="col">채점 1–3</th><th scope="col">근거 *</th></tr>
             </thead>
@@ -712,21 +838,59 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               ))}
             </tbody>
           </table>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             <button type="button" className="btn-ghost" disabled={draftSaving} onClick={() => void performSaveDraft()}>
               {draftSaving ? "저장 중..." : "저장"}
             </button>
-            <button type="button" className="btn-primary" disabled={saving || !canSubmit} onClick={() => void performSave()}>
-              {saving ? "확정 중..." : "결정"}
-            </button>
             <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
               {draftSavedAt && `초안 저장됨 · ${draftSavedAt.slice(0, 16).replace("T", " ")} · `}
-              {totalScore !== null ? `합산 ${totalScore} / 3.0 · ` : ""}
-              {!canSubmit && "의사결정 탭에서 트랙·의도·결정 근거를 채워야 결정할 수 있습니다 · "}
-              {totalScore === null && "모든 기준에 점수와 근거를 입력하세요"}
+              {totalScore !== null ? `합산 ${totalScore} / 3.0 · ` : ""}양 트랙 공통 채점 · 사전배제 검증 자동
             </span>
-            <button type="button" className="btn-ghost btn-sm" onClick={() => setTab("decision")}>의사결정 탭으로 →</button>
+            <button type="button" className="btn-ghost btn-sm ml-auto" onClick={() => setTab("decision")}>결정 탭으로 →</button>
           </div>
+
+          {/* ── 판정 규칙 — 이 딜과 무관한 고정 규칙 참고용. 예전엔 모달이었으나
+              탭 안 접힘으로 단순화(2026-09-14). ── */}
+          <details>
+            <summary className="cursor-pointer text-[0.78rem] text-[color:var(--accent)]">판정 규칙 보기 (참고용 — 이 딜과 무관한 고정 규칙)</summary>
+            <div className="mt-2">
+              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+                LLM이 아니라 이미 시스템에 기록된 S1~S3 데이터를 아래 고정 규칙으로 채점하는 방식입니다.
+                신호별로 Greenfield/Brownfield 방향과 가중치(1~3)를 매기고, 트랙별 가중치 합을 100점 만점 비율로 환산해
+                한쪽이 60점 이상이면 그 트랙을 추천하며, 그렇지 않으면 &quot;중립(신호 부족)&quot;으로 표시합니다. 위 &quot;신호별
+                근거&quot; 표가 바로 이 규칙을 이 딜에 적용한 결과입니다.
+              </p>
+              <table className="data-table" aria-label="판정 규칙">
+                <caption className="sr-only">판정 규칙</caption>
+                <thead>
+                  <tr><th scope="col">신호</th><th scope="col">판정 기준</th><th scope="col">방향</th><th scope="col">가중치</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td className="cell-primary">시장 성장률 (S1)</td><td>CAGR 15% 이상 — 고성장</td><td>Greenfield</td><td>3</td></tr>
+                  <tr><td className="cell-primary">시장 성장률 (S1)</td><td>CAGR 15% 미만 — 성숙 시장</td><td>Brownfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">경쟁 구조 (S1)</td><td>독과점·집중 시장</td><td>Brownfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">경쟁 구조 (S1)</td><td>분산·불명확</td><td>중립</td><td>1</td></tr>
+                  <tr><td className="cell-primary">브라운필드 쇼트리스트 (S6/S7)</td><td>결합 후보 존재</td><td>Brownfield</td><td>3</td></tr>
+                  <tr><td className="cell-primary">브라운필드 쇼트리스트 (S6/S7)</td><td>결합 후보 없음</td><td>Greenfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">시너지 권고 (S3)</td><td>시너지 점수 60 이상</td><td>Brownfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">시너지 권고 (S3)</td><td>시너지 점수 60 미만</td><td>중립</td><td>2</td></tr>
+                  <tr><td className="cell-primary">역량 충족률 (S3 역량 갭)</td><td>보유 역량 70% 이상</td><td>Greenfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">역량 충족률 (S3 역량 갭)</td><td>보유 역량 40% 이하</td><td>Brownfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">역량 충족률 (S3 역량 갭)</td><td>40~70% (중간)</td><td>중립</td><td>1</td></tr>
+                </tbody>
+              </table>
+              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mt-3 mb-1">
+                함께 제공되는 정보 — 해당 근거가 아직 없을 때(예: S1 미완료, 역량 갭 미작성)는 그 신호가 중립·약한 가중치로 처리됩니다.
+              </p>
+              <ul className="sizing-note-list mb-2">
+                <li><b>기저율</b> — 과거 트랙별 결정 건수와 그중 Entity IC를 통과한 건수를 함께 보여줍니다.</li>
+                <li><b>재점검 트리거</b> — 추천과 실제 데이터가 모순될 때(예: Brownfield 추천인데 쇼트리스트가 비어 있음) 경고합니다.</li>
+              </ul>
+              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
+                원칙 (경계 #2): 이 추천은 제안일 뿐이며, 최종 트랙 결정은 결정 탭의 결정 폼에 사람이 직접 기록합니다.
+              </p>
+            </div>
+          </details>
         </div>
       )}
 
@@ -741,114 +905,6 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
           />
         </div>
       )}
-
-      {/* ── 결정 이력 탭 ── */}
-      {tab === "history" && (() => {
-        // 년/월 옵션은 실제 있는 결정 날짜에서만 뽑는다 — 데이터 없는
-        // 년월을 고를 수 있게 만들지 않는다.
-        const years = [...new Set(decisions.map((d) => d.decided_at.slice(0, 4)))].sort().reverse();
-        const months = historyYear
-          ? [...new Set(decisions.filter((d) => d.decided_at.slice(0, 4) === historyYear).map((d) => d.decided_at.slice(5, 7)))].sort()
-          : [];
-        const filtered = decisions.filter((d) =>
-          (!historyYear || d.decided_at.slice(0, 4) === historyYear) &&
-          (!historyMonth || d.decided_at.slice(5, 7) === historyMonth),
-        );
-        return (
-        <div className="card">
-          <SectionToolbar
-            title="결정 이력 (최신순)"
-            count={filtered.length}
-            filters={
-              decisions.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="text-[0.75rem]">
-                    <span className="sr-only">연도</span>
-                    <select
-                      value={historyYear}
-                      onChange={(e) => { setHistoryYear(e.target.value); setHistoryMonth(""); }}
-                      className="sizing-new-input sizing-new-input-sm"
-                    >
-                      <option value="">전체 연도</option>
-                      {years.map((y) => <option key={y} value={y}>{y}년</option>)}
-                    </select>
-                  </label>
-                  <label className="text-[0.75rem]">
-                    <span className="sr-only">월</span>
-                    <select
-                      value={historyMonth}
-                      onChange={(e) => setHistoryMonth(e.target.value)}
-                      disabled={!historyYear}
-                      className="sizing-new-input sizing-new-input-sm"
-                    >
-                      <option value="">전체 월</option>
-                      {months.map((m) => <option key={m} value={m}>{Number(m)}월</option>)}
-                    </select>
-                  </label>
-                </div>
-              ) : undefined
-            }
-          />
-          {decisions.length === 0 ? (
-            <p className="text-[0.85rem] text-[color:var(--muted-fg)]">아직 기록된 결정이 없습니다.</p>
-          ) : filtered.length === 0 ? (
-            <p className="text-[0.85rem] text-[color:var(--muted-fg)]">선택한 기간에 기록된 결정이 없습니다.</p>
-          ) : (
-            <div className="table-scroll">
-              <table className="data-table report-table" aria-label="진출방식 결정 이력">
-                <caption className="sr-only">진출방식 결정 이력</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">트랙</th><th scope="col">라우트</th><th scope="col">의도</th>
-                    <th scope="col">채점</th><th scope="col">근거</th><th scope="col">대안</th><th scope="col">결정자/일시</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((d) => (
-                    <tr key={d.id}>
-                      <td>
-                        <span className={`status-chip ${d.track === "brownfield" ? "status-amber" : "status-green"}`}>
-                          {d.track === "brownfield" ? "Brownfield" : "Greenfield"}
-                        </span>
-                      </td>
-                      <td className="text-[0.8rem]">{d.sub_track ? (d.track === "brownfield" ? BF_SUB[d.sub_track] ?? d.sub_track : GF_SUB[d.sub_track] ?? d.sub_track) : "—"}</td>
-                      <td className="text-[0.75rem]">{d.intent ? (d.intent === "integration" ? "통합" : "역량접근") : "—"}</td>
-                      <td className="text-[0.75rem]">
-                        {d.total_score !== null ? (
-                          <span title={(d.scores ?? []).map((s) => `${s.criterion}: ${s.score} — ${s.evidence_note}`).join("\n")}>
-                            <strong className="tabular-nums">{d.total_score}</strong>/3.0
-                          </span>
-                        ) : "—"}
-                        {d.staging_recommended && (
-                          <span className="block text-[0.68rem] text-[color:var(--accent)]" title={d.staging_recommended}>step-up 권고</span>
-                        )}
-                      </td>
-                      <td className="text-[0.8rem]">{d.rationale}</td>
-                      <td className="text-[0.8rem] text-[color:var(--muted-fg)]">{d.alternatives_considered ?? "—"}</td>
-                      <td className="text-[0.75rem] tabular-nums">{d.decided_by} · {d.decided_at.slice(0, 10)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {sessions.length > 0 && (
-            <>
-              <SectionToolbar title="위원회 심의 이력" />
-              <ul className="text-[0.85rem] space-y-1">
-                {sessions.map((s2) => (
-                  <li key={s2.sessionId}>
-                    <span className={`status-chip ${s2.status === "done" ? "status-green" : "status-in-progress"}`}>{s2.status}</span>{" "}
-                    {s2.decisionMode ?? "—"} · {s2.createdAt.slice(0, 10)} ·{" "}
-                    <a className="text-[color:var(--accent)] underline" href={`/api/opportunities/${encodeURIComponent(selected.id)}/committee-sessions/${s2.sessionId}/minutes`} target="_blank" rel="noreferrer">회의록</a>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-        );
-      })()}
 
       {confirmDialog}
     </>

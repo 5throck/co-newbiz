@@ -794,6 +794,9 @@ export function MarketView() {
               {flatRows.map(({ ind, relation, childCount, expanded, onToggle }) => {
                 const a = ind.analysis;
                 const inProgress = a?.status === "in_progress";
+                // 보호 모드 재분석 중엔 status가 여전히 'completed'라 inProgress로는
+                // 안 잡힌다 — 재분석/수정/삭제를 막으려면 이 플래그도 함께 봐야 한다.
+                const busy = inProgress || !!a?.rerun_in_progress;
                 // 큐 위치 표기(UX-4) — 같은 앵커의 대기열에서 몇 번째인지 칩 본문에 노출.
                 const queueLabel = (() => {
                   if (a?.status !== "pending") return "연계 대기";
@@ -895,7 +898,7 @@ export function MarketView() {
                       ) : a?.status === "completed" && a.rerun_in_progress ? (
                         // ADR-0131 — 재분석 진행 중에도 status는 여전히 이전(완료) 버전을 가리킨다.
                         // 새 버전은 성공해야만 "교체"되므로, 지금 화면에 보이는 건 이전 버전 그대로다.
-                        <span className="status-chip status-amber" title="이전 완료 버전은 그대로 표시되며, 재분석이 성공해야만 새 버전으로 교체됩니다.">재분석 중 (이전 v{a.latest_version ?? 1} 유지)</span>
+                        <span className="status-chip status-amber" title="이전 완료 버전은 그대로 표시되며, 재분석이 성공해야만 새 버전으로 교체됩니다.">재분석 중 ({a.current_step ?? 0}/8단계, 이전 v{a.latest_version ?? 1} 유지)</span>
                       ) : a?.status === "completed" && a.error_message ? (
                         // 보호 모드 재분석이 LLM 장애로 실패한 직후 — status/completed_at은 그대로,
                         // error_message만 이번 시도 실패 사유로 남는다(날짜·버전 변경 없음).
@@ -938,15 +941,7 @@ export function MarketView() {
                         </>
                       ) : (
                         <>
-                          <button
-                            type="button"
-                            className="btn-ghost btn-sm"
-                            disabled={inProgress}
-                            onClick={() => loadDetail(ind.id)}
-                          >
-                            {inProgress ? "분석 중" : "열기"}
-                          </button>
-                          {a && !inProgress && (
+                          {a && !busy && (
                             <button
                               type="button"
                               className="btn-ghost btn-sm sizing-rerun-btn"
@@ -956,7 +951,7 @@ export function MarketView() {
                               재분석
                             </button>
                           )}
-                          {!inProgress && (
+                          {!busy && (
                             <button
                               type="button"
                               className="btn-ghost btn-sm"
@@ -966,7 +961,7 @@ export function MarketView() {
                               수정
                             </button>
                           )}
-                          {!inProgress && (
+                          {!busy && (
                             <button
                               type="button"
                               className="btn-danger btn-sm"

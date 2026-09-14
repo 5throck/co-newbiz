@@ -6,7 +6,7 @@
 // 이동하는 링크를 제공한다 — 시너지 분석의 원래 장소는 S3 담당 화면이므로.
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { api } from "../../../lib/api.ts";
 import { useConfirm } from "../../../components/crud.tsx";
 import { SectionToolbar } from "../../../components/layout.tsx";
@@ -42,6 +42,7 @@ const STATUS_LABEL: Record<OpportunityRow["status"], string> = { identified: "�
 
 export function OpportunityDetail() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const [opp, setOpp] = useState<OpportunityRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [factors, setFactors] = useState<OppFactors | null>(null);
@@ -55,7 +56,10 @@ export function OpportunityDetail() {
   const [viewingVersion, setViewingVersion] = useState<number | null>(null);
   const [versionSketch, setVersionSketch] = useState<Sketch | null>(null);
   const { confirm, confirmDialog } = useConfirm();
-  const [tab, setTab] = useState<"factors" | "sketch" | "gap">("factors");
+  const initialTab = searchParams.get("tab");
+  const [tab, setTab] = useState<"factors" | "sketch" | "gap">(
+    initialTab === "sketch" || initialTab === "gap" ? initialTab : "factors",
+  );
 
   // S3 역량 갭 레지스터 (flow.spec v2.4.0) — 시장 요구사항 × 그룹/계열사 보유
   // 역량. 내부(자사 단독) 역량 평가는 추후 보강 예정이며 모든 화면에 그 한계를
