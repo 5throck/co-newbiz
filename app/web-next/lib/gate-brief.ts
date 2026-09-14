@@ -29,9 +29,9 @@ export interface GateBrief {
 // renders this list verbatim ("이 제안이 본 산출물") so the LLM's field of
 // view is auditable.
 const MANIFESTS: Record<string, string[]> = {
-  screening: ["S1 시장 규모·성장 추정", "S1 경쟁 구조", "S2 기회 퍼널(매력도·요인)", "S3 적합성·시너지 초안", "S3 역량 갭 요약", "결정론 스크리닝 권고"],
+  screening: ["S1 시장 규모·성장 추정", "S1 경쟁 구조", "S2 기회 퍼널(매력도·요인)", "S3 적합성·시너지 초안", "S3 필요 역량 수준 요약", "결정론 스크리닝 권고"],
   pre_fs: [
-    "S1 시장 규모·성장 추정", "S1 경쟁 구조", "S3 적합성·시너지 초안", "S3 역량 갭 요약", "S4 트랙 결정·라우트",
+    "S1 시장 규모·성장 추정", "S1 경쟁 구조", "S3 적합성·시너지 초안", "S3 필요 역량 수준 요약", "S4 트랙 결정·라우트",
     "S5 역량 격차·진출전략 또는 BF 쇼트리스트",
   ],
   target_screening: ["S4 트랙 결정·라우트", "S6 Target Universe·Long List", "S7 대상 선정 판정"],
@@ -51,7 +51,7 @@ interface OppRow {
   id: string; name: string; market_scope: string | null; value_chain_node: string | null;
   rationale: string | null; attractiveness_score: number | null; synergy_score: number | null;
   synergy_score_confirmed_at: string | null;
-  fit_verdict: string | null; fit_rationale: string | null; market_size_krw_m: number | null;
+  market_size_krw_m: number | null;
   growth_rate: number | null; target_universe_json: string | null; factors_json: string | null;
 }
 
@@ -60,7 +60,7 @@ function oppRow(db: Database, id: string): OppRow | null {
     .query(
       `SELECT id, name, market_scope, value_chain_node, rationale, attractiveness_score, synergy_score,
               synergy_score_confirmed_at,
-              fit_verdict, fit_rationale, market_size_krw_m, growth_rate, target_universe_json, factors_json
+              market_size_krw_m, growth_rate, target_universe_json, factors_json
        FROM opportunity WHERE id = ?`,
     )
     .get(id) as OppRow | null;
@@ -81,7 +81,7 @@ function s1CompetitiveLine(comp?: { structure?: string; players?: Array<{ tier?:
 function s3GapSummary(db: Database, oppId: string): string {
   const row = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(oppId) as { capability_gap_json: string | null } | undefined;
   const reg = parseGapRegister(row?.capability_gap_json ?? null);
-  if (reg.rows.length === 0) return "S3 역량 갭: 미작성 (기회 상세의 역량 갭에서 필요 역량과 보유 판정을 기록하세요)";
+  if (reg.rows.length === 0) return "S3 필요 역량 수준: 미작성 (S3 시너지 화면 연계 시너지 탭에서 필요 역량과 보유 판정을 기록하세요)";
   const s = summarizeGap(reg.rows);
   const unmet = reg.rows.filter((r) => r.held.status === "unmet").map((r) => r.capability).slice(0, 5);
   return [
@@ -138,7 +138,6 @@ function s3Summary(opp: OppRow): string {
     `매력도: ${opp.attractiveness_score ?? "미평가"}`,
     // 경계 #2 — 파이프라인 기록값은 권고이며, 사람 확정 여부를 브리프가 그대로 노출한다.
     `시너지 점수: ${opp.synergy_score ?? "미평가"}${opp.synergy_score !== null ? (opp.synergy_score_confirmed_at ? " (사람 확정)" : " (권고·사람 미확정)") : ""}`,
-    `적합성 판정: ${opp.fit_verdict ?? "없음"}${opp.fit_rationale ? ` — ${opp.fit_rationale}` : ""}`,
   ].join("\n");
 }
 
@@ -267,11 +266,11 @@ export function buildGateContext(db: Database, entityType: GateBriefEntity, enti
     if (!opp) return "기회를 찾을 수 없습니다.";
     const base = `기회명: ${opp.name}\n시장: ${opp.market_scope ?? "미정"}\n가치사슬: ${opp.value_chain_node ?? "미정"}\n발굴 근거: ${opp.rationale ?? "없음"}`;
     if (gate === "screening") {
-      return [base, `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`, `\n[S3 역량 갭 요약]\n${s3GapSummary(db, entityId)}`, `\n[S2 기회 퍼널]\n${s2Factors(opp)}`, `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`].join("\n");
+      return [base, `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`, `\n[S3 필요 역량 수준 요약]\n${s3GapSummary(db, entityId)}`, `\n[S2 기회 퍼널]\n${s2Factors(opp)}`, `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`].join("\n");
     }
     if (gate === "pre_fs") {
       const bf = opp.target_universe_json ? "\n[S5/BF 쇼트리스트 상태]\n" + bfSummary(db, entityId) : "\n[S5 역량 평가]\n" + s5Summary(db, entityId);
-      return [base, `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`, `\n[S3 역량 갭 요약]\n${s3GapSummary(db, entityId)}`, `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`, `\n[S4 트랙 결정·라우트]\n${s4Summary(db, entityId)}`, bf].join("\n");
+      return [base, `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`, `\n[S3 필요 역량 수준 요약]\n${s3GapSummary(db, entityId)}`, `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`, `\n[S4 트랙 결정·라우트]\n${s4Summary(db, entityId)}`, bf].join("\n");
     }
     if (gate === "target_screening") {
       return [base, `\n[S4 트랙 결정·라우트]\n${s4Summary(db, entityId)}`, `\n[S6/S7 대상 목록·스크리닝]\n${bfSummary(db, entityId)}`].join("\n");

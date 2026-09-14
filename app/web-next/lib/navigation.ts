@@ -155,6 +155,7 @@ export const ADMIN_NAV: Array<{ href: string; label: string }> = [
   { href: "/admin/master-data", label: "마스터 데이터" },
   { href: "/admin/business-targets", label: "사업목표 기준" },
   { href: "/admin/adr", label: "ADR" },
+  { href: "/admin/system-mode", label: "시스템 모드" },
 ];
 
 export function adminNavHrefs(): string[] {

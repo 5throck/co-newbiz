@@ -1926,6 +1926,48 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/admin/system-mode:
+    get:
+      operationId: getSystemMode
+      summary: Current production|development mode (ADR-0133). Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: setSystemMode
+      summary: Switch production|development mode (ADR-0133). Admin role; audited. Production blocks project/opportunity DELETE.
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mode
+              properties:
+                mode:
+                  type: string
+                  enum:
+                    - production
+                    - development
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
 
 
   /api/market-overview:
@@ -2880,17 +2922,7 @@ paths:
   /api/opportunities/{id}/screening:
     get:
       operationId: getOpportunityScreening
-      summary: S3 screening state (synergy, fit, gate recommendation).
-      tags:
-        - Analysis
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-    post:
-      operationId: runOpportunityScreening
-      summary: Run synergy analysis or strategic-fit verdict (S3).
+      summary: S3 screening state (synergy score/rationale, gate recommendation from attractiveness+synergy).
       tags:
         - Analysis
       responses:

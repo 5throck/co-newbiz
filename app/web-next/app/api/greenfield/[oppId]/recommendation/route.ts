@@ -61,9 +61,9 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const { oppId } = await params;
   const db = getDb();
   const opp = db
-    .query("SELECT id, name, market_scope, value_chain_node, rationale, attractiveness_score, synergy_score, fit_verdict, fit_rationale FROM opportunity WHERE id = ?")
+    .query("SELECT id, name, market_scope, value_chain_node, rationale, attractiveness_score, synergy_score FROM opportunity WHERE id = ?")
     .get(oppId) as
-    | { id: string; name: string; market_scope: string | null; value_chain_node: string | null; rationale: string | null; attractiveness_score: number | null; synergy_score: number | null; fit_verdict: string | null; fit_rationale: string | null }
+    | { id: string; name: string; market_scope: string | null; value_chain_node: string | null; rationale: string | null; attractiveness_score: number | null; synergy_score: number | null }
     | null;
   if (!opp) return notFound();
 
@@ -93,7 +93,6 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     } catch { /* keep default */ }
   }
   const s3 = [
-    `적합성 판정: ${opp.fit_verdict ?? "없음"}${opp.fit_rationale ? ` — ${opp.fit_rationale}` : ""}`,
     `시너지 점수: ${opp.synergy_score ?? "미평가"}`,
     `매력도: ${opp.attractiveness_score ?? "미평가"}`,
   ].join("\n");

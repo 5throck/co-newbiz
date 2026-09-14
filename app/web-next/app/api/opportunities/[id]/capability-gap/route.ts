@@ -62,10 +62,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "역량 갭 레지스터 저장은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "필요 역량 수준 레지스터 저장은 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { rows?: unknown } | null;
-  if (!body || !Array.isArray(body.rows)) return badRequest("invalid_request", "rows(역량 갭 행 배열)는 필수입니다.");
+  if (!body || !Array.isArray(body.rows)) return badRequest("invalid_request", "rows(필요 역량 수준 행 배열)는 필수입니다.");
   const rows = normalizeGapRows(body.rows);
   if (rows.length === 0) return badRequest("invalid_request", "저장할 유효한 행이 없습니다 — capability는 필수입니다.");
   const db = getDb();

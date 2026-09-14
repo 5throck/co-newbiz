@@ -1,0 +1,302 @@
+- generic [ref=f5e1]:
+  - generic [ref=f5e2]:
+    - complementary [ref=f5e13]:
+      - link "CN co-newbiz" [ref=f5e14] [cursor=pointer]:
+        - /url: /deals
+        - generic [ref=f5e15]: CN
+        - generic [ref=f5e16]: co-newbiz
+      - generic [ref=f5e17]:
+        - generic [ref=f5e18]: 탐색
+        - navigation "탐색" [ref=f5e19]:
+          - link "검토/안건 보드" [ref=f5e20] [cursor=pointer]:
+            - /url: /deals
+      - generic [ref=f5e27]:
+        - generic [ref=f5e28]: 단계 화면(기존)
+        - navigation "단계 화면(기존)" [ref=f5e29]:
+          - link "S1 시장분석" [ref=f5e30] [cursor=pointer]:
+            - /url: /market
+          - link "S2 기회 발굴" [ref=f5e35] [cursor=pointer]:
+            - /url: /opportunities
+          - link "S3 그룹/계열사 분석" [ref=f5e39] [cursor=pointer]:
+            - /url: /our-company
+          - link "S3 시너지·전략적 적합성" [ref=f5e43] [cursor=pointer]:
+            - /url: /synergy
+          - link "S4 진출방식 결정" [ref=f5e50] [cursor=pointer]:
+            - /url: /route-decision
+          - link "S5 자체 진출" [ref=f5e56] [cursor=pointer]:
+            - /url: /greenfield
+          - link "S6/S7 대상발굴·선정" [ref=f5e61] [cursor=pointer]:
+            - /url: /brownfield
+          - generic [ref=f5e67]:
+            - link "프로젝트" [ref=f5e68]:
+              - /url: /projects
+            - generic [ref=f5e72]:
+              - link "진행 프로젝트" [ref=f5e73] [cursor=pointer]:
+                - /url: /projects
+              - link "아카이브" [ref=f5e75] [cursor=pointer]:
+                - /url: /projects/archives
+      - generic [ref=f5e77]:
+        - generic [ref=f5e78]: 분석·참조
+        - navigation "분석·참조" [ref=f5e79]:
+          - link "벤치마킹 사례" [ref=f5e80] [cursor=pointer]:
+            - /url: /benchmarks
+          - link "문서 허브" [ref=f5e86] [cursor=pointer]:
+            - /url: /library
+          - link "용어집" [ref=f5e91] [cursor=pointer]:
+            - /url: /glossary
+          - link "R&BD 전략" [ref=f5e95] [cursor=pointer]:
+            - /url: /strategy
+    - generic [ref=f5e100]:
+      - banner [ref=f5e101]:
+        - button "검토/안건 개요로 돌아가기" [ref=f5e102] [cursor=pointer]: 검토/안건 개요
+        - generic [ref=f5e105]:
+          - button "다크 모드로 전환" [ref=f5e106] [cursor=pointer]:
+            - generic [ref=f5e109]: 다크 모드
+            - generic [ref=f5e110]: 전환
+          - button "알림 모두 읽음 처리" [ref=f5e111] [cursor=pointer]:
+            - generic [ref=f5e115]: 알림 0
+          - generic [ref=f5e116]: techcross
+          - button "비밀번호 변경" [ref=f5e117] [cursor=pointer]
+          - button "로그아웃" [ref=f5e122] [cursor=pointer]
+      - main [ref=f5e128]:
+        - heading "S4 진출방식 결정" [level=1] [ref=f5e129]
+        - paragraph [ref=f5e130]: 어떻게 들어갈 것인가?
+        - navigation "프로세스 단계 진행" [ref=f5e131]:
+          - link "1 시장분석" [ref=f5e132] [cursor=pointer]:
+            - /url: /market
+            - generic [ref=f5e133]: "1"
+            - text: 시장분석
+          - link "2 기회 발굴" [ref=f5e134] [cursor=pointer]:
+            - /url: /opportunities
+            - generic [ref=f5e135]: "2"
+            - text: 기회 발굴
+          - link "3 시너지·전략적 적합성" [ref=f5e136] [cursor=pointer]:
+            - /url: /synergy
+            - generic [ref=f5e137]: "3"
+            - text: 시너지·전략적 적합성
+          - link "4 진출방식 결정 Screening Pre-FS" [ref=f5e138] [cursor=pointer]:
+            - /url: /deals/01M2FYGNTDXNAZSQGQ7RXD0RES/s4
+            - generic [ref=f5e139]: "4"
+            - text: 진출방식 결정
+            - generic [ref=f5e140]:
+              - generic "Screening 게이트 — S1~S4처럼 여러 단계가 같은 게이트 심사를 공유합니다. 이 단계만의 별도 심사가 아니라, 이 단계가 최종적으로 어느 게이트 판정(Go/Hold/Kill)에 속하는지 보여주는 표시입니다." [ref=f5e141]: Screening
+              - generic "Pre-FS 게이트 — S1~S4처럼 여러 단계가 같은 게이트 심사를 공유합니다. 이 단계만의 별도 심사가 아니라, 이 단계가 최종적으로 어느 게이트 판정(Go/Hold/Kill)에 속하는지 보여주는 표시입니다." [ref=f5e142]: Pre-FS
+          - link "5 역량 평가·진출전략" [ref=f5e143] [cursor=pointer]:
+            - /url: /greenfield
+            - generic [ref=f5e144]: "5"
+            - text: 역량 평가·진출전략
+          - link "6 대상 후보 발굴" [ref=f5e145] [cursor=pointer]:
+            - /url: /brownfield
+            - generic [ref=f5e146]: "6"
+            - text: 대상 후보 발굴
+          - link "7 대상 선정" [ref=f5e147] [cursor=pointer]:
+            - /url: /brownfield
+            - generic [ref=f5e148]: "7"
+            - text: 대상 선정
+          - link "8 사업성 분석" [ref=f5e149] [cursor=pointer]:
+            - /url: /projects/01M2FYGNTDXNAZSQGQ7RXD0RES/business-case
+            - generic [ref=f5e150]: "8"
+            - text: 사업성 분석
+          - link "9 실사·검증" [ref=f5e151] [cursor=pointer]:
+            - /url: /projects/01M2FYGNTDXNAZSQGQ7RXD0RES/dd
+            - generic [ref=f5e152]: "9"
+            - text: 실사·검증
+          - link "10 투자구조 설계" [ref=f5e153] [cursor=pointer]:
+            - /url: /projects/01M2FYGNTDXNAZSQGQ7RXD0RES/deal-structure
+            - generic [ref=f5e154]: "10"
+            - text: 투자구조 설계
+          - link "11 투자심사·실행" [ref=f5e155] [cursor=pointer]:
+            - /url: /projects/01M2FYGNTDXNAZSQGQ7RXD0RES/ic-review
+            - generic [ref=f5e156]: "11"
+            - text: 투자심사·실행
+          - link "12 사후 관리" [ref=f5e157] [cursor=pointer]:
+            - /url: /projects/01M2FYGNTDXNAZSQGQ7RXD0RES/portfolio
+            - generic [ref=f5e158]: "12"
+            - text: 사후 관리
+        - note "단계 연계" [ref=f5e159]:
+          - generic [ref=f5e160]: 입력 ←
+          - generic [ref=f5e161]: S3 시너지 점수·적합성
+          - generic [ref=f5e162]: S3 필요 역량 수준 분석
+          - generic [ref=f5e163]: S1 시장 규모·성장
+          - generic [ref=f5e164]: S1 경쟁 구조
+          - generic [ref=f5e165]: S1 가치사슬
+          - generic [ref=f5e166]:
+            - generic [ref=f5e167]: 출력 →
+            - link "S5 (그린필드) / S6 (브라운필드)" [ref=f5e168] [cursor=pointer]:
+              - /url: /greenfield
+              - text: S5 (그린필드) / S6 (브라운필드)
+              - generic [aria-hidden] [ref=f5e169]: →
+        - generic [ref=f5e170]: 선별된 기회의 진출방식을 결정하는 분기점입니다. Greenfield(자체 역량 진출)는 S5 역량 평가로, Brownfield(기존 기업·자산 결합)는 S6 대상 후보 발굴로 진행됩니다. Brownfield ≠ M&A — 라우트 유형을 함께 선택합니다.
+        - generic [ref=f5e171]:
+          - heading "진출방식 추천 제안" [level=2] [ref=f5e172]:
+            - text: 진출방식 추천
+            - generic [ref=f5e173]: 제안
+          - paragraph [ref=f5e174]: "원칙 (경계 #2): 최종 결정은 사람이 기록합니다 — 이 카드는 S1~S3 산출물에서 자동으로 만든 제안이며, 아래 \"결정\" 탭에 반영한 뒤 자유롭게 수정할 수 있습니다."
+          - paragraph [ref=f5e175]:
+            - text: "추천:"
+            - strong [ref=f5e176]: Greenfield
+          - img "Greenfield 60점, Brownfield 40점" [ref=f5e177]
+          - generic [ref=f5e180]:
+            - generic [ref=f5e181]:
+              - text: Greenfield
+              - strong [ref=f5e182]: "60"
+            - generic [ref=f5e183]:
+              - text: Brownfield
+              - strong [ref=f5e184]: "40"
+          - paragraph [ref=f5e185]:
+            - text: 신호 4건 중 1건이 Greenfield, 2건 중립 (근거 전체는
+            - button "평가 근거 탭" [ref=f5e186] [cursor=pointer]
+            - text: )
+          - paragraph [ref=f5e187]: "점검: greenfield 권고이나 역량 평가(S5)가 없습니다 — 진출전략을 먼저 확정하세요"
+          - list [ref=f5e188]:
+            - listitem [ref=f5e189]: 시장 성장률 18% — 고성장 초기 시장 — 신규 진입(내부 벤처)도 수요 성장에 편승 가능
+          - generic [ref=f5e190]:
+            - heading "AI 서술 초안" [level=4] [ref=f5e191]
+            - generic [ref=f5e192]:
+              - button "▶ LLM 추천 생성" [ref=f5e193] [cursor=pointer]
+              - generic [ref=f5e194]: 권장 트랙·라우트·5기준 채점 초안(점수+근거)과 결정 근거 서술 초안을 작성해 채움을 돕습니다.
+        - tablist "S4 결정 탭" [ref=f5e195]:
+          - tab "경쟁 구조" [ref=f5e196] [cursor=pointer]
+          - tab "평가 근거" [active] [ref=f5e197] [cursor=pointer]
+          - tab "위원회 심의" [ref=f5e198] [cursor=pointer]
+          - tab "결정" [ref=f5e199] [cursor=pointer]
+        - generic [ref=f5e275]:
+          - heading "서비스·요양·접객 영역 휴머노이드 특화 솔루션 사업 — 진출방식 적합도 평가 근거" [level=2] [ref=f5e276]
+          - generic "S1 시장·경쟁·역량 평가" [ref=f5e277]:
+            - heading "신호별 근거 (S1~S3)" [level=4] [ref=f5e278]
+            - table "신호별 근거" [ref=f5e280]:
+              - caption [ref=f5e281]: 신호별 근거
+              - rowgroup [ref=f5e282]:
+                - row [ref=f5e283]:
+                  - columnheader "신호" [ref=f5e284]
+                  - columnheader "방향" [ref=f5e285]
+                  - columnheader "가중치" [ref=f5e286]
+                  - columnheader "근거" [ref=f5e287]
+              - rowgroup [ref=f5e288]:
+                - row [ref=f5e289]:
+                  - cell "시장 성장률 18%" [ref=f5e290]
+                  - cell "그린필드" [ref=f5e291]
+                  - cell "3" [ref=f5e293]
+                  - cell "고성장 초기 시장 — 신규 진입(내부 벤처)도 수요 성장에 편승 가능" [ref=f5e294]
+                - row [ref=f5e295]:
+                  - cell "경쟁 구조 집중 (플레이어 6건)" [ref=f5e296]
+                  - cell "브라운필드" [ref=f5e297]
+                  - cell "2" [ref=f5e299]
+                  - cell "집중 시장 — 신규 구축보다 기존 포지션 결합이 진입의 현실적 경로" [ref=f5e300]
+                - row [ref=f5e301]:
+                  - cell "시너지 권고(미확정) 69" [ref=f5e302]
+                  - cell "중립" [ref=f5e303]
+                  - cell "1" [ref=f5e305]
+                  - cell "사람 확정 전 권고값 — S3 시너지 화면에서 확정하면 트랙 판단 근거로 인정됩니다" [ref=f5e306]
+                - row [ref=f5e307]:
+                  - cell "필요 역량 수준 7건 미판정" [ref=f5e308]
+                  - cell "중립" [ref=f5e309]
+                  - cell "1" [ref=f5e311]
+                  - cell "행은 있으나 보유 판정이 없습니다 — S3 시너지 화면 연계 시너지 탭에서 판정하세요" [ref=f5e312]
+            - heading "필요 역량 수준" [level=4] [ref=f5e313]
+            - generic [ref=f5e314]:
+              - generic [ref=f5e315]:
+                - text: 필요 역량
+                - strong [ref=f5e316]: 7건
+              - generic [ref=f5e317]:
+                - text: 충족
+                - strong [ref=f5e318]: 0건
+              - generic [ref=f5e319]:
+                - text: 부분 충족
+                - strong [ref=f5e320]: 0건
+              - generic [ref=f5e321]:
+                - text: 미충족
+                - strong [ref=f5e322]: 0건
+            - group [ref=f5e323]:
+              - generic "필요 역량 수준 상세 (7건) 보기" [ref=f5e324] [cursor=pointer]
+          - heading "5기준 채점 (Stage 2, 각 20%)" [level=4] [ref=f5e325]
+          - generic [ref=f5e327]:
+            - generic [ref=f5e328]: 의도 (Stage 1) *
+            - combobox "의도 (Stage 1) *" [ref=f5e329]:
+              - option "선택..."
+              - option "통합"
+              - option "역량접근" [selected]
+          - table "5기준 채점" [ref=f5e330]:
+            - caption [ref=f5e331]: 5기준 채점
+            - rowgroup [ref=f5e332]:
+              - row [ref=f5e333]:
+                - columnheader "기준 (각 20%)" [ref=f5e334]
+                - columnheader "채점 1–3" [ref=f5e335]
+                - columnheader "근거 *" [ref=f5e336]
+            - rowgroup [ref=f5e337]:
+              - row [ref=f5e338]:
+                - cell "통제 필요도 1=성과만 공유돼도 충분 ~ 3=운영 통제 없으면 위험" [ref=f5e339]:
+                  - text: 통제 필요도
+                  - generic [ref=f5e340]: 1=성과만 공유돼도 충분 ~ 3=운영 통제 없으면 위험
+                - cell [ref=f5e341]:
+                  - group "통제 필요도 점수" [ref=f5e342]:
+                    - button "1 · 낮음" [ref=f5e343] [cursor=pointer]
+                    - button "2 · 중간" [ref=f5e344] [cursor=pointer]
+                    - button "3 · 높음" [pressed] [ref=f5e345] [cursor=pointer]
+                - cell [ref=f5e346]:
+                  - textbox "통제 필요도 근거" [ref=f5e347]:
+                    - /placeholder: 점수의 근거 (S1·S3 산출물 인용)
+                    - text: "S1에서 상용화 단계 기업이 극소수인 초고집중 구조와 안전 규제·책임 소재 등 규제 장벽을 지적하여, 도메인 특화 솔루션의 품질·안전 통제 필요도가 높음(검증 필요: 자체 통제 수준 요구치)."
+              - row [ref=f5e348]:
+                - 'cell "역량 결정성 1=대체 가능 ~ 3=암묵적 지식·대체 불가 역량 참고: 7건 중 충족 0·부분 0·미보유 0" [ref=f5e349]':
+                  - text: 역량 결정성
+                  - generic [ref=f5e350]: 1=대체 가능 ~ 3=암묵적 지식·대체 불가
+                  - generic [ref=f5e351]: "역량 참고: 7건 중 충족 0·부분 0·미보유 0"
+                - cell [ref=f5e352]:
+                  - group "역량 결정성 점수" [ref=f5e353]:
+                    - button "1 · 낮음" [ref=f5e354] [cursor=pointer]
+                    - button "2 · 중간" [ref=f5e355] [cursor=pointer]
+                    - button "3 · 높음" [pressed] [ref=f5e356] [cursor=pointer]
+                - cell [ref=f5e357]:
+                  - textbox "역량 결정성 근거" [ref=f5e358]:
+                    - /placeholder: 점수의 근거 (S1·S3 산출물 인용)
+                    - text: S1에서 '범용 작업 수준의 AI·모터 제어 기술 성숙도가 초기 단계'라고 명시하고, S3도 요양·케어 도메인 특화 소프트웨어·운영 솔루션을 우선 시너지 영역으로 지정해 핵심 역량이 사업 성패를 결정함.
+              - row [ref=f5e359]:
+                - cell "시장 불확실성 1=수요 검증됨 ~ 3=수요·규제 불확실" [ref=f5e360]:
+                  - text: 시장 불확실성
+                  - generic [ref=f5e361]: 1=수요 검증됨 ~ 3=수요·규제 불확실
+                - cell [ref=f5e362]:
+                  - group "시장 불확실성 점수" [ref=f5e363]:
+                    - button "1 · 낮음" [ref=f5e364] [cursor=pointer]
+                    - button "2 · 중간" [ref=f5e365] [cursor=pointer]
+                    - button "3 · 높음" [pressed] [ref=f5e366] [cursor=pointer]
+                - cell [ref=f5e367]:
+                  - textbox "시장 불확실성 근거" [ref=f5e368]:
+                    - /placeholder: 점수의 근거 (S1·S3 산출물 인용)
+                    - text: S1의 위험 요인(상용화 시점 불확실, 거품 논란·밸류에이션 조정 위험, 점유율 변동성이 큰 초기 시장)이 서비스·요양 영역 상용화의 높은 불확실성을 보여줌.
+              - row [ref=f5e369]:
+                - 'cell "통합 역량 1=통합 경험·여력 충분 ~ 3=통합 수용력 부족 역량 참고: 7건 중 충족 0·부분 0·미보유 0" [ref=f5e370]':
+                  - text: 통합 역량
+                  - generic [ref=f5e371]: 1=통합 경험·여력 충분 ~ 3=통합 수용력 부족
+                  - generic [ref=f5e372]: "역량 참고: 7건 중 충족 0·부분 0·미보유 0"
+                - cell [ref=f5e373]:
+                  - group "통합 역량 점수" [ref=f5e374]:
+                    - button "1 · 낮음" [ref=f5e375] [cursor=pointer]
+                    - button "2 · 중간" [pressed] [ref=f5e376] [cursor=pointer]
+                    - button "3 · 높음" [ref=f5e377] [cursor=pointer]
+                - cell [ref=f5e378]:
+                  - textbox "통합 역량 근거" [ref=f5e379]:
+                    - /placeholder: 점수의 근거 (S1·S3 산출물 인용)
+                    - text: S3에서 재무 여력 93·30년 R&D 축적·다층 포트폴리오가 양산과 엣지 컴퓨팅 내재화에 실질 시너지를 제공한다고 보정(+3p)하나, 서비스·요양 도메인 검증 실적 부족이 하방 리스크로 명시됨.
+              - row [ref=f5e380]:
+                - 'cell "역량확보 속도 1=천천히 구축 가능 ~ 3=즉시 확보 필요 역량 참고: 7건 중 충족 0·부분 0·미보유 0" [ref=f5e381]':
+                  - text: 역량확보 속도
+                  - generic [ref=f5e382]: 1=천천히 구축 가능 ~ 3=즉시 확보 필요
+                  - generic [ref=f5e383]: "역량 참고: 7건 중 충족 0·부분 0·미보유 0"
+                - cell [ref=f5e384]:
+                  - group "역량확보 속도 점수" [ref=f5e385]:
+                    - button "1 · 낮음" [ref=f5e386] [cursor=pointer]
+                    - button "2 · 중간" [pressed] [ref=f5e387] [cursor=pointer]
+                    - button "3 · 높음" [ref=f5e388] [cursor=pointer]
+                - cell [ref=f5e389]:
+                  - textbox "역량확보 속도 근거" [ref=f5e390]:
+                    - /placeholder: 점수의 근거 (S1·S3 산출물 인용)
+                    - text: "S3의 압도적 재무 여력과 R&D 축적은 역량 확보를 가속할 수 있으나, S1상 케어 도메인 소프트웨어·운영 노하우는 기존 보유 역량과 간격이 있어 단기 확보는 어려움(검증 필요: 역량 갭 분석 미작성)."
+          - generic [ref=f5e391]:
+            - button "저장" [ref=f5e392] [cursor=pointer]
+            - generic [ref=f5e393]: 초안 저장됨 · 2026-09-14 17:38 · 합산 2.6 / 3.0 · 양 트랙 공통 채점 · 사전배제 검증 자동
+            - button "결정 탭으로 →" [ref=f5e394] [cursor=pointer]
+          - group [ref=f5e395]:
+            - generic "판정 규칙 보기 (참고용 — 이 딜과 무관한 고정 규칙)" [ref=f5e396] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=f5e8] [cursor=pointer]
+  - alert [ref=f5e12]

@@ -113,9 +113,9 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const { id } = await params;
   const db = getDb();
   const opp = db
-    .query("SELECT id, name, market_scope, value_chain_node, rationale, attractiveness_score, synergy_score, fit_verdict, fit_rationale, market_size_krw_m, growth_rate FROM opportunity WHERE id = ?")
+    .query("SELECT id, name, market_scope, value_chain_node, rationale, attractiveness_score, synergy_score, market_size_krw_m, growth_rate FROM opportunity WHERE id = ?")
     .get(id) as
-    | { id: string; name: string; market_scope: string | null; value_chain_node: string | null; rationale: string | null; attractiveness_score: number | null; synergy_score: number | null; fit_verdict: string | null; fit_rationale: string | null; market_size_krw_m: number | null; growth_rate: number | null }
+    | { id: string; name: string; market_scope: string | null; value_chain_node: string | null; rationale: string | null; attractiveness_score: number | null; synergy_score: number | null; market_size_krw_m: number | null; growth_rate: number | null }
     | null;
   if (!opp) return notFound();
   // S4 화면과 동일한 전제 — 선별(selected)된 기회만 결정 작업의 대상이다.
@@ -188,7 +188,6 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     `가치사슬 노드: ${opp.value_chain_node ?? "미정"}`,
     `발굴 근거: ${opp.rationale ?? "없음"}`,
     `매력도: ${opp.attractiveness_score ?? "미평가"} · 시너지 점수(기회 행): ${opp.synergy_score ?? "미평가"}`,
-    `적합성 판정: ${opp.fit_verdict ?? "없음"}${opp.fit_rationale ? ` — ${opp.fit_rationale}` : ""}`,
     ``,
     `[S1 시장분석]\n${s1}`,
     ``,

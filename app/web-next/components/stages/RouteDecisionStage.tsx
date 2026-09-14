@@ -36,13 +36,19 @@ interface AdvisoryResponse {
     total: number; evaluated: number; met: number; partial: number; unmet: number;
     coveragePct: number | null;
     unmetRows: Array<{ capability: string; resolution: string | null }>;
+    // S3에서 확정한 필요 역량 수준 전체 행 (역량 관련 5기준 채점 근거)
+    rows?: Array<{
+      capability: string;
+      source: string;
+      held: { status: string; holders: string[]; evidence: string };
+      resolution: string | null;
+    }>;
   } | null;
 }
 
 interface OpportunityRow {
   id: string; name: string; market_scope: string | null; value_chain_node: string | null;
   attractiveness_score: number | null; synergy_score: number | null;
-  fit_verdict: "Go" | "Hold" | "Kill" | null; fit_rationale: string | null;
   rationale: string | null; synergy_rationale: string | null;
   market_size_krw_m: number | null; growth_rate: number | null;
   status: "identified" | "assessed" | "selected" | "dropped";
@@ -112,7 +118,9 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
   // 승인 목업) — 탭 3개: 결정(기본) / 평가 근거 / 위원회 심의. 결정 이력은 별도 탭이
   // 아니라 결정 탭 안의 접힘 섹션으로 이동했다. 섹션은 display 토글로 유지(마운트
   // 상태 유지) — 폼 상태가 탭 전환에 영향받지 않는다.
-  const [tab, setTab] = useState<"decision" | "competitive" | "eval" | "committee">("decision");
+  // 탭 순서 — 근거(경쟁 구조·평가 근거·위원회 심의)를 먼저 보고 결정은 마지막에
+  // 한다(2026-09-15 사용자 요구). 기본 탭도 첫 번째(경쟁 구조).
+  const [tab, setTab] = useState<"decision" | "competitive" | "eval" | "committee">("competitive");
   // 결정 이력 접힘 섹션 — 결정을 막 저장했을 때만 자동으로 펼쳐 결과를 바로 보여준다.
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selected, setSelected] = useState<OpportunityRow | null>(null);
@@ -365,6 +373,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
           .filter((s) => s.leans === advisory.recommendedTrack)
           .sort((a, b) => b.weight - a.weight);
         const neutralCount = advisory.signals.filter((s) => s.leans === "neutral").length;
+        const gfPct = Math.round((advisory.greenfieldScore / Math.max(1, advisory.greenfieldScore + advisory.brownfieldScore)) * 100);
         return (
           <div className="card" id="reco-card">
             <h2 className="flex items-center gap-2">
@@ -373,16 +382,23 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
             <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 최종 결정은 사람이 기록합니다 — 이 카드는 S1~S3 산출물에서 자동으로 만든 <b>제안</b>이며, 아래 &quot;결정&quot; 탭에 반영한 뒤 자유롭게 수정할 수 있습니다.
             </p>
-            <p className="text-[0.85rem] mb-1">
-              추천: <strong>{trackLabel}</strong>
-              {" "}· Greenfield {advisory.greenfieldScore} : Brownfield {advisory.brownfieldScore}
-              {advisory.recommendedTrack !== "neutral" && (
-                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
-                  {" "}— 신호 {advisory.signals.length}건 중 {supporting.length}건이 {trackLabel}, {neutralCount}건 중립 (근거 전체는{" "}
-                  <button type="button" className="text-[color:var(--accent)] underline" onClick={() => setTab("eval")}>평가 근거 탭</button>)
-                </span>
-              )}
+            <p className="text-[0.95rem] mb-0">
+              추천: <strong className={advisory.recommendedTrack === "greenfield" ? "text-[color:var(--green-fg)]" : advisory.recommendedTrack === "brownfield" ? "text-[color:var(--amber-fg)]" : undefined}>{trackLabel}</strong>
             </p>
+            <div className="route-score-bar" role="img" aria-label={`Greenfield ${advisory.greenfieldScore}점, Brownfield ${advisory.brownfieldScore}점`}>
+              <div className="route-score-bar-seg gf" style={{ width: `${gfPct}%` }} />
+              <div className="route-score-bar-seg bf" style={{ width: `${100 - gfPct}%` }} />
+            </div>
+            <div className="route-score-legend mb-2">
+              <span>Greenfield <strong className="tabular-nums">{advisory.greenfieldScore}</strong></span>
+              <span>Brownfield <strong className="tabular-nums">{advisory.brownfieldScore}</strong></span>
+            </div>
+            {advisory.recommendedTrack !== "neutral" && (
+              <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-1">
+                신호 {advisory.signals.length}건 중 {supporting.length}건이 {trackLabel}, {neutralCount}건 중립 (근거 전체는{" "}
+                <button type="button" className="text-[color:var(--accent)] underline" onClick={() => setTab("eval")}>평가 근거 탭</button>)
+              </p>
+            )}
             {advisory.reReviewTriggers.length > 0 && (
               <p className="text-[0.75rem] text-[color:var(--amber-fg)] mb-2">점검: {advisory.reReviewTriggers.join(" / ")}</p>
             )}
@@ -462,7 +478,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
         <div className="card" id="reco-card">
           <h2>진출방식 추천</h2>
           <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
-            추천을 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 역량 갭을 먼저 완료하세요.
+            추천을 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 필요 역량 수준을 먼저 완료하세요.
           </p>
         </div>
       )}
@@ -472,10 +488,10 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
         active={tab}
         onSelect={(k) => setTab(k as typeof tab)}
         tabs={[
-          { key: "decision", label: "결정" },
           { key: "competitive", label: "경쟁 구조" },
           { key: "eval", label: "평가 근거" },
           { key: "committee", label: "위원회 심의" },
+          { key: "decision", label: "결정" },
         ]}
       />
 
@@ -490,24 +506,32 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               {decisions.length > 0 ? "결정 기록됨" : "결정 대기"}
             </span>
           </h2>
-          <dl className="text-[0.85rem] space-y-1 mb-3">
-            <div><dt className="inline font-semibold mr-1">시장:</dt><dd className="inline">{selected.market_scope ?? "—"}{selected.market_size_krw_m ? ` (규모 ${selected.market_size_krw_m.toLocaleString()} 백만원)` : ""}{selected.growth_rate !== null ? ` · CAGR ${(selected.growth_rate * 100).toFixed(1)}%` : ""}</dd></div>
-            <div><dt className="inline font-semibold mr-1">발굴 근거:</dt><dd className="inline">{selected.rationale ?? "—"}</dd></div>
-            <div><dt className="inline font-semibold mr-1">적합성 판정:</dt><dd className="inline">{selected.fit_verdict ?? "—"}{selected.fit_rationale ? ` — ${selected.fit_rationale}` : ""}</dd></div>
-            <div><dt className="inline font-semibold mr-1">시너지 권고:</dt><dd className="inline">{selected.synergy_score ?? "—"}점{selected.synergy_rationale ? ` — ${selected.synergy_rationale}` : ""}</dd></div>
-          </dl>
+          <div className="route-fact-grid">
+            <div className="route-fact-card">
+              <span className="route-fact-label">시장</span>
+              <span className="route-fact-value">
+                {selected.market_scope ?? "—"}
+                {selected.market_size_krw_m ? ` (규모 ${selected.market_size_krw_m.toLocaleString()} 백만원)` : ""}
+                {selected.growth_rate !== null ? ` · CAGR ${(selected.growth_rate * 100).toFixed(1)}%` : ""}
+              </span>
+            </div>
+            <div className="route-fact-card">
+              <span className="route-fact-label">발굴 근거</span>
+              <span className="route-fact-value">{selected.rationale ?? "—"}</span>
+            </div>
+          </div>
 
           <form id="route-form" onSubmit={saveDecision}>
-            <div className="flex flex-wrap items-end gap-3 mb-3">
-              <label className="text-[0.78rem]">
-                <span className="block mb-1">트랙 *</span>
+            <div className="flex flex-wrap items-end gap-4 mb-3">
+              <label className="text-[0.8rem]">
+                <span className="block mb-1 font-medium">트랙 <span className="text-[color:var(--red-fg)]">*</span></span>
                 <select value={track} onChange={(e) => { setTrack(e.target.value as "greenfield" | "brownfield"); setIntent(""); setSubTrack(""); }} className="sizing-new-input">
                   <option value="greenfield">Greenfield — 자체 역량으로 진출</option>
                   <option value="brownfield">Brownfield — 기존 기업·자산과 결합</option>
                 </select>
               </label>
-              <label className="text-[0.78rem]">
-                <span className="block mb-1">라우트 {track === "brownfield" ? "* (Brownfield)" : "(선택)"}</span>
+              <label className="text-[0.8rem]">
+                <span className="block mb-1 font-medium">라우트 {track === "brownfield" ? <><span className="text-[color:var(--red-fg)]">*</span> (Brownfield)</> : "(선택)"}</span>
                 <select value={subTrack} onChange={(e) => setSubTrack(e.target.value)} className="sizing-new-input">
                   <option value="">선택...</option>
                   {Object.entries(subs)
@@ -515,8 +539,8 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                     .map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </label>
-              <label className="text-[0.78rem]">
-                <span className="block mb-1">의도 (Stage 1) *</span>
+              <label className="text-[0.8rem]">
+                <span className="block mb-1 font-medium">의도 (Stage 1) <span className="text-[color:var(--red-fg)]">*</span></span>
                 <select value={intent} onChange={(e) => setIntent(e.target.value as "" | "integration" | "capability_access")} className="sizing-new-input">
                   <option value="">선택...</option>
                   <option value="integration">통합</option>
@@ -673,7 +697,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
       )}
 
       {/* ── 경쟁 구조 탭 (2026-09-14, 평가 근거에서 분리): S1 경쟁 구조 근거만
-          단독으로 — 신호별 근거·역량 갭·채점과 섞이지 않게 별도 탭으로 둔다. ── */}
+          단독으로 — 신호별 근거·필요 역량 수준·채점과 섞이지 않게 별도 탭으로 둔다. ── */}
       {tab === "competitive" && (
         <div className="card">
           <h2>{selected.name} — 경쟁 구조</h2>
@@ -725,7 +749,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
         </div>
       )}
 
-      {/* ── 평가 근거 탭 (2026-09-14 재설계): 신호별 근거·역량 갭·5기준 채점 —
+      {/* ── 평가 근거 탭 (2026-09-14 재설계): 신호별 근거·필요 역량 수준·5기준 채점 —
           감사 가능한 형태 그대로 유지한다(삭제하지 않음). 경쟁 구조는 별도
           탭으로 분리했다. 위 "진출방식 추천" 카드는 이 근거를 요약한 것이고,
           이 탭은 "왜 이 딜이 이 점수를 받았는가"의 전체 근거다. 역량 결정성·
@@ -738,7 +762,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
           <div className="sizing-grade-card mb-3" aria-label="S1 시장·경쟁·역량 평가">
             {advisory === null ? (
               <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
-                근거를 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 역량 갭을 먼저 완료하세요.
+                근거를 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 필요 역량 수준을 먼저 완료하세요.
               </p>
             ) : (
               <>
@@ -766,10 +790,11 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                   </table>
                 </div>
 
-                <h4 className="text-[0.85rem] mb-1">역량 갭</h4>
                 {advisory.capabilityGap ? (
                   <>
-                    <div className="flex flex-wrap gap-2 mb-2">
+                    {/* 제목과 요약 칩을 한 줄에 나란히 배치 (2026-09-15 사용자 요구) */}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h4 className="text-[0.85rem] m-0">필요 역량 수준</h4>
                       <span className="status-chip status-not-started">필요 역량 <strong className="ml-1">{advisory.capabilityGap.total}건</strong></span>
                       <span className="status-chip status-green">충족 <strong className="ml-1">{advisory.capabilityGap.met}건</strong></span>
                       <span className="status-chip status-amber">부분 충족 <strong className="ml-1">{advisory.capabilityGap.partial}건</strong></span>
@@ -784,11 +809,61 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                         <span className="text-[color:var(--muted-fg)]"> — 그룹/계열사 프로필 기준, 내부(자사 단독) 역량 평가는 추후 보강</span>
                       </p>
                     )}
+                    {/* S3에서 확정한 필요 역량 수준 전체 행 — 역량 관련 5기준
+                        (역량 결정성·통합 역량·역량확보 속도) 채점의 직접 근거
+                        (2026-09-15 사용자 요구). 행이 많아 접힘 스캐폴드로 제공 —
+                        기본 닫힘, 요약(요약: 충족 X·부분 Y·미보유 Z·미판정 W)만
+                        표시하고 열면 전체 레지스터가 나온다. 읽기 전용. */}
+                    {advisory.capabilityGap.rows && advisory.capabilityGap.rows.length > 0 && (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-[0.78rem] text-[color:var(--accent)]">
+                          필요 역량 수준 상세 ({advisory.capabilityGap.rows.length}건
+                          {advisory.capabilityGap.coveragePct !== null ? ` · 충족률 ${advisory.capabilityGap.coveragePct}%` : ""}) 보기
+                        </summary>
+                        <div className="table-scroll mt-2">
+                          <table className="data-table mb-0" aria-label="필요 역량 수준 레지스터 (S3 연계)">
+                            <caption className="sr-only">필요 역량 수준 레지스터 — S3 연계, 읽기 전용</caption>
+                            <thead>
+                              <tr>
+                                <th scope="col">필요 역량</th><th scope="col">보유 판정</th>
+                                <th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {advisory.capabilityGap.rows.map((r) => (
+                                <tr key={r.capability}>
+                                  <td className="cell-primary">
+                                    <span className="font-semibold text-[0.8rem]">{r.capability}</span>
+                                    <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">
+                                      출처: {r.source === "s2_sketch" ? "S2 스케치" : r.source === "s1_factors" ? "S1 요인" : r.source === "synergy_area" ? "S3 시너지 영역" : "수동"}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className={`status-chip ${r.held.status === "met" ? "status-green" : r.held.status === "partial" ? "status-amber" : r.held.status === "unmet" ? "status-red" : "status-not-started"}`}>
+                                      {r.held.status === "met" ? "충족" : r.held.status === "partial" ? "부분 충족" : r.held.status === "unmet" ? "미보유" : "미판정"}
+                                    </span>
+                                  </td>
+                                  <td className="text-[0.75rem]">
+                                    {r.held.status !== "unevaluated" && (r.held.holders.length > 0 || r.held.evidence) ? (
+                                      <>
+                                        {r.held.holders.length > 0 && <span className="block">{r.held.holders.join(", ")}</span>}
+                                        {r.held.evidence && <span className="block text-[color:var(--muted-fg)]">{r.held.evidence}</span>}
+                                      </>
+                                    ) : "—"}
+                                  </td>
+                                  <td className="text-[0.75rem]">{r.resolution ? (r.resolution === "build" ? "구축" : r.resolution === "partner" ? "파트너" : r.resolution === "hire" ? "영입" : "투자") : "—"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    )}
                   </>
                 ) : (
                   <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">
-                    역량 갭 미작성 —{" "}
-                    <Link href={`/opportunities/${encodeURIComponent(selected.id)}`} className="text-[color:var(--accent)] underline">기회 상세의 역량 갭 탭</Link>
+                    필요 역량 수준 미작성 —{" "}
+                    <Link href="/synergy" className="text-[color:var(--accent)] underline">S3 시너지 화면 연계 시너지 탭</Link>
                     {" "}에서 필요 역량과 보유 판정을 기록하세요.
                   </p>
                 )}
@@ -797,6 +872,26 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
           </div>
 
           <h4 className="text-[0.85rem] mb-1">5기준 채점 (Stage 2, 각 20%)</h4>
+          {/* route_decision_score.intent는 NOT NULL이라 의도가 없으면 서버가 채점 행을
+              통째로 버린다(draft/route.ts) — 원래 의도 선택은 "결정" 탭에만 있어서, 이
+              탭에서 채점만 채우고 저장하면 "초안 저장됨"은 뜨지만 채점은 저장되지
+              않고 되돌아왔을 때 빈 화면으로 보이는 혼란이 있었다. 이 탭에서도 바로
+              고칠 수 있게 같은 상태를 공유하는 선택자를 둔다. */}
+          <div className="flex flex-wrap items-center gap-3 mb-2">
+            <label className="text-[0.8rem]">
+              <span className="block mb-1 font-medium">의도 (Stage 1) <span className="text-[color:var(--red-fg)]">*</span></span>
+              <select value={intent} onChange={(e) => setIntent(e.target.value as "" | "integration" | "capability_access")} className="sizing-new-input">
+                <option value="">선택...</option>
+                <option value="integration">통합</option>
+                <option value="capability_access">역량접근</option>
+              </select>
+            </label>
+            {intent === "" && (
+              <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-0">
+                의도를 선택하지 않으면 아래 채점·근거는 저장되지 않습니다 (서버가 의도 없는 채점을 저장하지 않음).
+              </p>
+            )}
+          </div>
           <table className="data-table mb-2" aria-label="5기준 채점">
             <caption className="sr-only">5기준 채점</caption>
             <thead>
@@ -808,6 +903,15 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                   <td className="text-[0.8rem]">
                     {c.label}
                     <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">{c.hint}</span>
+                    {/* 역량 관련 3기준 — S3 필요 역량 수준 레지스터를 채점 참고로
+                        직접 인용한다(2026-09-15 사용자 요구). */}
+                    {["capability_criticality", "integration_capacity", "speed_to_capability"].includes(c.key) && advisory?.capabilityGap && (
+                      <span className="block text-[0.7rem] mt-0.5" style={{ color: "var(--accent)" }}>
+                        역량 참고: {advisory.capabilityGap.total}건 중 충족 {advisory.capabilityGap.met}·부분 {advisory.capabilityGap.partial}·미보유 {advisory.capabilityGap.unmet}
+                        {advisory.capabilityGap.coveragePct !== null ? ` (충족률 ${advisory.capabilityGap.coveragePct}%)` : ""}
+                        {advisory.capabilityGap.unmetRows.length > 0 ? ` · 미보유: ${advisory.capabilityGap.unmetRows.slice(0, 2).map((r) => r.capability).join(", ")}${advisory.capabilityGap.unmetRows.length > 2 ? " 외" : ""}` : ""}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <div role="group" aria-label={`${c.label} 점수`} className="flex gap-1">
@@ -873,13 +977,13 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                   <tr><td className="cell-primary">시너지 확정 (S3)</td><td>사람이 확정한 점수 60 이상</td><td>Brownfield</td><td>2</td></tr>
                   <tr><td className="cell-primary">시너지 확정 (S3)</td><td>사람이 확정한 점수 60 미만</td><td>중립</td><td>2</td></tr>
                   <tr><td className="cell-primary">시너지 권고 (S3)</td><td>사람 확정 전 권고값</td><td>중립</td><td>1</td></tr>
-                  <tr><td className="cell-primary">역량 충족률 (S3 역량 갭)</td><td>보유 역량 70% 이상</td><td>Greenfield</td><td>2</td></tr>
-                  <tr><td className="cell-primary">역량 충족률 (S3 역량 갭)</td><td>보유 역량 40% 이하</td><td>Brownfield</td><td>2</td></tr>
-                  <tr><td className="cell-primary">역량 충족률 (S3 역량 갭)</td><td>40~70% (중간)</td><td>중립</td><td>1</td></tr>
+                  <tr><td className="cell-primary">역량 충족률 (S3 필요 역량 수준)</td><td>보유 역량 70% 이상</td><td>Greenfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">역량 충족률 (S3 필요 역량 수준)</td><td>보유 역량 40% 이하</td><td>Brownfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">역량 충족률 (S3 필요 역량 수준)</td><td>40~70% (중간)</td><td>중립</td><td>1</td></tr>
                 </tbody>
               </table>
               <p className="text-[0.78rem] text-[color:var(--muted-fg)] mt-3 mb-1">
-                함께 제공되는 정보 — 해당 근거가 아직 없을 때(예: S1 미완료, 역량 갭 미작성)는 그 신호가 중립·약한 가중치로 처리됩니다.
+                함께 제공되는 정보 — 해당 근거가 아직 없을 때(예: S1 미완료, 필요 역량 수준 미작성)는 그 신호가 중립·약한 가중치로 처리됩니다.
               </p>
               <ul className="sizing-note-list mb-2">
                 <li><b>기저율</b> — 과거 트랙별 결정 건수와 그중 Entity IC를 통과한 건수를 함께 보여줍니다.</li>

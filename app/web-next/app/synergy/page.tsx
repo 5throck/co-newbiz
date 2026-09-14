@@ -11,6 +11,10 @@ import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
 import { ListBackButton } from "../../components/ListBackButton.tsx";
 import dynamic from "next/dynamic";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
+import {
+  HELD_STATUS_CHIP, HELD_STATUS_LABEL, RESOLUTION_LABEL, summarizeGap,
+  type CapabilityGapRow, type GapHeldStatus, type GapResolution,
+} from "../../lib/capability-gap.ts";
 
 const EChartsCore = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -240,12 +244,18 @@ export function SynergyView() {
 
 
 
-  async function rerun(a: SynergyAnalysis) {
+  async function rerun(a: SynergyAnalysis, opts: { stayOnList?: boolean } = {}) {
     setError(null);
     try {
       // ADR-0094 — 동일 분석 행을 재실행하고 파이프라인이 새 버전을 append한다.
+      // 목록에서 누른 재분석은 목록에 머문다 — 진행 상태는 행의 "재분석 중
+      // (N/5단계)" 칩으로 추적하고(진행 중에는 목록이 4초 폴링된다), 상세
+      // 화면 이동은 사람이 연결 기회를 클릭했을 때만 일어난다(2026-09-15
+      // 사용자 리포트). 상세 화면 안의 재분석은 그 화면에 머물며 진행 칩과
+      // 완료 시 리포트 갱신을 위해 in_progress로 전환한다.
       await api.post<{ analysis_id: string; reused: boolean }>(`/api/synergy/analyses/${encodeURIComponent(a.id)}/rerun`, {});
-      openDetail({ ...a, status: "in_progress", latest_version: a.latest_version });
+      if (opts.stayOnList) void refresh();
+      else openDetail({ ...a, status: "in_progress", latest_version: a.latest_version });
       void refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "재분석 시작 실패");
@@ -309,10 +319,10 @@ export function SynergyView() {
             <caption className="sr-only">분석 대상 회사 목록</caption>
             <thead>
               <tr>
-                <th scope="col">회사명</th>
-                <th scope="col" className="w-[14rem]">연결 기회</th>
+                <th scope="col" className="w-[10rem]">회사명</th>
+                <th scope="col" className="w-[22rem]">연결 기회</th>
                 <th scope="col" className="w-[5rem]">구분</th>
-                <th scope="col" className="w-[12rem]">분석 상태</th>
+                <th scope="col" className="w-[17rem]">분석 상태</th>
                 <th scope="col" className="col-date">분석일</th>
                 <th scope="col" className="w-[13rem]"><span className="sr-only">작업</span></th>
               </tr>
@@ -380,7 +390,7 @@ export function SynergyView() {
                           className="btn-ghost btn-sm"
                           disabled={!a.target_type}
                           title={a.target_type ? "같은 분석 행을 재사용해 새 버전으로 재실행합니다" : "기존 별도 등록(legacy) 분석은 재실행할 수 없습니다 — 레지스트리 대상 새 분석을 생성하세요"}
-                          onClick={() => rerun(a)}
+                          onClick={() => void rerun(a, { stayOnList: true })}
                         >
                           재분석
                         </button>
@@ -539,12 +549,108 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
 
   useEffect(() => { void refreshSynState(); setConfirmError(null); }, [refreshSynState]);
 
-  // 편집기 프리필 — 기록값(권고·확정)이 바뀌면 입력란이 따라간다.
+  // 필요 역량 수준 (S3, flow.spec v2.4.0 — 기존 "역량 갭"의 표시 명칭 변경,
+  // 2026-09-15 S2 기회 상세 탭에서 이곳 연계 시너지 탭으로 이전) — 시너지
+  // 영역 도출 다음에 필요 역량·보유 수준을 같은 흐름에서 기록한다. 데이터와
+  // API(/api/opportunities/{id}/capability-gap)는 그대로 — 기회 단위 레지스터.
+  interface GapGetResponse {
+    opportunity: { id: string; name: string };
+    rows: CapabilityGapRow[];
+    stored: boolean;
+    sketchCapabilities: string[];
+    internalAssessmentPending: boolean;
+    internalAssessmentNote: string;
+  }
+  const [gap, setGap] = useState<GapGetResponse | null>(null);
+  const [gapRows, setGapRows] = useState<CapabilityGapRow[]>([]);
+  const [gapBusy, setGapBusy] = useState(false);
+  const [gapNote, setGapNote] = useState<string | null>(null);
+  const [gapError, setGapError] = useState<string | null>(null);
+  const [newGapCap, setNewGapCap] = useState("");
+
+  const loadGap = useCallback(() => {
+    if (!opportunityId) return;
+    api.get<GapGetResponse>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap`)
+      .then((r) => { setGap(r.data); setGapRows(r.data.rows); })
+      .catch(() => setGap(null));
+  }, [opportunityId]);
+  useEffect(() => { loadGap(); setGapError(null); setGapNote(null); }, [loadGap]);
+
+  function updateGapRow(idx: number, patch: Partial<CapabilityGapRow>) {
+    setGapRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  }
+  function updateGapHeld(idx: number, patch: Partial<CapabilityGapRow["held"]>) {
+    setGapRows((prev) => prev.map((r, i) => (i === idx ? { ...r, held: { ...r.held, ...patch } } : r)));
+  }
+  async function persistGap(): Promise<boolean> {
+    if (!opportunityId || gapRows.length === 0) return false;
+    try {
+      const res = await api.put<GapGetResponse>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap`, { rows: gapRows });
+      setGap((prev) => ({
+        opportunity: prev?.opportunity ?? { id: opportunityId, name: p?.opportunity?.name ?? "" },
+        rows: res.data.rows,
+        stored: true,
+        sketchCapabilities: prev?.sketchCapabilities ?? [],
+        internalAssessmentPending: true,
+        internalAssessmentNote: res.data.internalAssessmentNote,
+      }));
+      setGapRows(res.data.rows);
+      return true;
+    } catch (err) {
+      setGapError(err instanceof Error ? err.message : "필요 역량 수준 저장 실패");
+      return false;
+    }
+  }
+  async function saveGap() {
+    if (!opportunityId || gapBusy || gapRows.length === 0) return;
+    setGapBusy(true); setGapError(null);
+    const okSaved = await persistGap();
+    if (okSaved) setGapNote("필요 역량 수준 레지스터를 저장했습니다 — S4 화면·게이트 브리프에 반영됩니다.");
+    setGapBusy(false);
+  }
+  async function draftGap() {
+    if (!opportunityId || gapBusy) return;
+    if (gapRows.length === 0) { setGapError("먼저 필요 역량 행을 추가하세요."); return; }
+    setGapBusy(true); setGapError(null);
+    try {
+      // 초안 엔드포인트는 저장된 레지스터를 읽는다 — 화면에만 있는 행(미저장
+      // 시드·수동 추가)으로 누르면 "행이 없다"는 400이 나므로, 미저장 상태면
+      // 먼저 현재 행을 저장한 뒤 초안을 요청한다(행 추가 자체는 사람의 입력이며
+      // 보유 판정 기록과는 무게가 다르다).
+      if (!gap?.stored) await persistGap();
+      const res = await api.post<{ rows: CapabilityGapRow[]; source: string; note: string }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap/llm-draft`, {});
+      setGapRows(res.data.rows);
+      setGapNote(res.data.note);
+    } catch (err) { setGapError(err instanceof Error ? err.message : "LLM 초안 생성 실패"); }
+    finally { setGapBusy(false); }
+  }
+  function addGapRow() {
+    const capability = newGapCap.trim();
+    if (!capability) return;
+    setGapRows((prev) => [
+      ...prev,
+      { id: `gap-manual-${Date.now().toString(36)}`, capability, source: "manual", requiredNote: "",
+        held: { status: "unevaluated", holders: [], evidence: "" }, resolution: null, note: "" },
+    ]);
+    setNewGapCap("");
+  }
+
+  // 편집기 프리필 — 점수는 항상 기록값을 따라간다. 근거는 다르다: 미확정
+  // 상태의 currentRationale은 파이프라인이 계산 과정을 그대로 서술한 AI
+  // 초안("규칙 기반 산출(...) LLM 보정 +3p: ...")이다 — 이걸 입력란에 자동으로
+  // 채워두면 사람이 아무것도 고치지 않고 "확정 저장"만 눌러도 그 계산 로그가
+  // "사람이 확정한 근거"로 그대로 기록돼버린다(경계 #2 위반처럼 보임, 2026-09-15
+  // 사용자 리포트). 이미 사람이 확정해 기록된 근거(synState.confirmed)만
+  // 프리필하고, 미확정 권고는 입력란을 비워 사람이 직접 쓰게 한다 — AI 초안은
+  // 아래 "AI 초안 근거" 버튼으로 필요할 때만 불러온다.
   const currentScore = synState ? synState.synergyScore : (typeof p?.synergyScore === "number" ? p.synergyScore : null);
   const currentRationale = synState ? synState.synergyRationale : (p?.synergyRationale ?? null);
   useEffect(() => {
-    setConfirmForm({ score: currentScore != null ? String(currentScore) : "", rationale: currentRationale ?? "" });
-  }, [currentScore, currentRationale]);
+    setConfirmForm({
+      score: currentScore != null ? String(currentScore) : "",
+      rationale: synState?.confirmed ? (currentRationale ?? "") : "",
+    });
+  }, [currentScore, currentRationale, synState?.confirmed]);
 
   async function confirmSynergyScore() {
     if (!opportunityId || confirmSaving || confirmForm.score === "") return;
@@ -676,11 +782,19 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                             <span className="block mt-1 text-[color:var(--muted-fg)]">확정 전 권고는 S4 진출방식 결정의 트랙 근거에 반영되지 않습니다.</span>
                           </>
                         )}
-                        {currentRationale && <span className="block mt-1 text-[color:var(--muted-fg)]">{currentRationale}</span>}
+                        {currentRationale && (
+                          <span className="block mt-1 text-[color:var(--muted-fg)]">
+                            {synState?.confirmed ? currentRationale : <>AI 산출 근거 (초안 — 계산 과정 그대로): {currentRationale}</>}
+                          </span>
+                        )}
                       </p>
                       {canCurate && opportunityId && (
                         /* 확정 편집기 — 항상 열려 있다. 접힌 토글 뒤에 두면 확정
-                           행위 자체가 인지되지 않는다(2026-09-14 사용자 리포트). */
+                           행위 자체가 인지되지 않는다(2026-09-14 사용자 리포트).
+                           근거 입력란은 미확정 상태에서 비워둔다 — AI 계산 로그를
+                           그대로 "사람이 확정한 근거"로 자동 제출하지 않도록
+                           (2026-09-15 사용자 리포트), 필요하면 아래 버튼으로 AI
+                           초안을 명시적으로 불러와 검토·수정한다. */
                         <div className="p-2 border border-[color:var(--border)] rounded">
                           <p className="text-[0.8rem] font-semibold mb-2">시너지 점수 확정 — 점수를 직접 수정하고 기록합니다 (경계 #2)</p>
                           <div className="flex flex-wrap items-end gap-2">
@@ -690,11 +804,20 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                                 onChange={(e) => setConfirmForm({ ...confirmForm, score: e.target.value })} />
                             </label>
                             <label className="text-[0.78rem] flex-1 min-w-[16rem]">
-                              <span className="text-label block mb-1">확정 근거</span>
+                              <span className="text-label block mb-1">확정 근거 — 직접 작성 (사람의 판단)</span>
                               <input type="text" className="sizing-new-input sizing-new-input-sm w-full" value={confirmForm.rationale}
-                                placeholder="이 점수를 확정하는 근거를 기록하세요"
+                                placeholder="이 점수를 확정하는 근거를 직접 기록하세요 — AI 초안을 참고하려면 오른쪽 버튼"
                                 onChange={(e) => setConfirmForm({ ...confirmForm, rationale: e.target.value })} />
                             </label>
+                            {!synState?.confirmed && currentRationale && (
+                              <button
+                                type="button"
+                                className="btn-ghost btn-sm"
+                                onClick={() => setConfirmForm({ ...confirmForm, rationale: currentRationale })}
+                              >
+                                AI 초안 불러오기
+                              </button>
+                            )}
                             <button type="button" className="btn-primary btn-sm" disabled={confirmSaving || confirmForm.score === ""} onClick={confirmSynergyScore}>
                               {confirmSaving ? "저장 중..." : "확정 저장"}
                             </button>
@@ -770,6 +893,128 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* 필요 역량 수준 (S3, flow.spec v2.4.0) — 연결 기회 단위 레지스터.
+                  시너지 분석(신규·재분석) 시 파이프라인이 시너지 영역에서 필요
+                  역량을 자동 도출해 병합하고(2026-09-15 사용자 설계), 이 탭에서
+                  사람이 보유 판정한다. "필요 역량 추가 제안" 버튼은 이후에도
+                  행이 더 필요할 때 쓴다. */}
+              {opportunityId ? (
+                <div className="mt-4 pt-3 border-t border-[color:var(--border)]">
+                  <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">2.5</span> 필요 역량 수준 — 시너지 영역을 채울 자사 역량은 있는가</h3>
+                  <SectionToolbar
+                    title="필요 역량 수준"
+                    icon=""
+                    count={gapRows.length}
+                    actions={
+                      <span className="flex items-center gap-1">
+                        <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || gapRows.length === 0} title="시너지 영역 근거로 필요 역량을 추가로 제안하고 프로필 근거로 보유 판정 초안을 생성 (제안 전용 — 저장은 사람)" onClick={() => void draftGap()}>
+                          {gapBusy ? "제안 생성 중..." : "필요 역량 추가 제안"}
+                        </button>
+                        <button type="button" className="btn-primary btn-sm" disabled={gapBusy || gapRows.length === 0} onClick={() => void saveGap()}>
+                          {gapBusy ? "저장 중..." : "저장"}
+                        </button>
+                      </span>
+                    }
+                  />
+                  <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+                    시너지 분석(신규·재분석) 시 위 시너지 영역에서 필요 역량이 자동 도출·병합됩니다.{" "}
+                    {gap?.internalAssessmentNote ?? "내부(자사 단독) 역량 평가는 추후 보강 예정 — 현재 보유 판정 근거는 그룹/계열사 프로필 기준입니다."}
+                    {gap && !gap.stored && gapRows.length > 0 ? " — 아직 저장되지 않은 시드 초안입니다." : ""}
+                  </p>
+                  {gapNote && <p role="status" className="text-[0.78rem] text-[color:var(--green-fg)] mb-2">{gapNote}</p>}
+                  {gapError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{gapError}</p>}
+                  {gapRows.length === 0 ? (
+                    <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mb-0">
+                      필요 역량 행이 없습니다 — 분석(재분석)을 실행하면 시너지 영역에서 자동 도출되고, 아래 입력이나 &quot;필요 역량 추가 제안&quot;으로도 추가할 수 있습니다. 비즈니스 모델 검토에 필요 역량(requiredCapabilities)이 있으면 이 섹션에서 시드됩니다.
+                    </p>
+                  ) : (
+                    <div className="table-scroll">
+                      <table className="data-table" aria-label="필요 역량 수준 레지스터">
+                        <caption className="sr-only">필요 역량 수준 레지스터 — 보유 판정은 그룹/계열사 프로필 기준</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col">필요 역량</th><th scope="col">보유 판정</th>
+                            <th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th><th scope="col"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {gapRows.map((r, idx) => (
+                            <tr key={r.id}>
+                              <td className="cell-primary">
+                                <span className="font-semibold text-[0.8rem]">{r.capability}</span>
+                                <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">
+                                  출처: {r.source === "s2_sketch" ? "S2 스케치" : r.source === "s1_factors" ? "S1 요인" : r.source === "synergy_area" ? "S3 시너지 영역" : "수동"}{r.requiredNote ? ` — ${r.requiredNote}` : ""}
+                                </span>
+                              </td>
+                              <td>
+                                <select aria-label={`${r.capability} 보유 판정`} value={r.held.status}
+                                  onChange={(e) => updateGapHeld(idx, { status: e.target.value as GapHeldStatus })}
+                                  className={`sizing-new-input sizing-new-input-sm ${HELD_STATUS_CHIP[r.held.status]}`}>
+                                  {(Object.keys(HELD_STATUS_LABEL) as GapHeldStatus[]).map((s) => (
+                                    <option key={s} value={s}>{HELD_STATUS_LABEL[s]}</option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                {r.held.status !== "unevaluated" ? (
+                                  <>
+                                    <input aria-label={`${r.capability} 보유 주체`} placeholder="보유 회사(쉼표 구분)" value={r.held.holders.join(", ")}
+                                      onChange={(e) => updateGapHeld(idx, { holders: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })}
+                                      className="sizing-new-input sizing-new-input-sm mb-1" style={{ width: "100%" }} />
+                                    <input aria-label={`${r.capability} 보유 근거`} placeholder="근거(프로필 인용)" value={r.held.evidence}
+                                      onChange={(e) => updateGapHeld(idx, { evidence: e.target.value })}
+                                      className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
+                                  </>
+                                ) : (
+                                  <span className="text-[color:var(--muted-fg)] text-[0.75rem]">미판정</span>
+                                )}
+                              </td>
+                              <td>
+                                <select aria-label={`${r.capability} 해소 힌트`} value={r.resolution ?? ""}
+                                  onChange={(e) => updateGapRow(idx, { resolution: (e.target.value || null) as GapResolution | null })}
+                                  className="sizing-new-input sizing-new-input-sm">
+                                  <option value="">—</option>
+                                  {(Object.keys(RESOLUTION_LABEL) as GapResolution[]).map((k) => (
+                                    <option key={k} value={k}>{RESOLUTION_LABEL[k]}</option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                <button type="button" className="btn-danger btn-sm" aria-label={`${r.capability} 행 삭제`}
+                                  onClick={() => setGapRows((prev) => prev.filter((_, i) => i !== idx))}>삭제</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {(() => {
+                    const s = summarizeGap(gapRows);
+                    if (s.total === 0) return null;
+                    return (
+                      <p className="text-[0.78rem] mt-2 mb-0">
+                        요약: 필요 역량 {s.total}건 — 충족 {s.met}·부분 {s.partial}·미보유 {s.unmet}·미판정 {s.unevaluated}
+                        {s.coveragePct !== null ? ` · 충족률 ${s.coveragePct}%` : ""}
+                      </p>
+                    );
+                  })()}
+                  <div className="flex flex-wrap items-center gap-1 mt-2">
+                    <input aria-label="필요 역량 추가" placeholder="필요 역량 추가" value={newGapCap}
+                      onChange={(e) => setNewGapCap(e.target.value)}
+                      className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 14rem" }} />
+                    <button type="button" className="btn-ghost btn-sm" onClick={addGapRow}>추가</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 pt-3 border-t border-[color:var(--border)]">
+                  <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">2.5</span> 필요 역량 수준</h3>
+                  <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">
+                    이 분석에 연결된 기회가 없어 필요 역량 수준 레지스터를 사용할 수 없습니다 — 분석 등록 시 기회를 연결하세요.
+                  </p>
                 </div>
               )}
             </div>

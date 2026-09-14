@@ -10,7 +10,7 @@
 
 export type GapHeldStatus = "met" | "partial" | "unmet" | "unevaluated";
 export type GapResolution = "build" | "partner" | "hire" | "invest";
-export type GapSource = "s2_sketch" | "s1_factors" | "manual";
+export type GapSource = "s2_sketch" | "s1_factors" | "synergy_area" | "manual";
 
 export interface CapabilityGapRow {
   id: string;
@@ -50,7 +50,7 @@ export const HELD_STATUS_CHIP: Record<GapHeldStatus, string> = {
 
 const HELD_STATUSES: GapHeldStatus[] = ["met", "partial", "unmet", "unevaluated"];
 const RESOLUTIONS: GapResolution[] = ["build", "partner", "hire", "invest"];
-const SOURCES: GapSource[] = ["s2_sketch", "s1_factors", "manual"];
+const SOURCES: GapSource[] = ["s2_sketch", "s1_factors", "synergy_area", "manual"];
 
 const str = (v: unknown, cap: number): string => (typeof v === "string" ? v.trim().slice(0, cap) : "");
 const strArr = (v: unknown, max: number, cap: number): string[] =>

@@ -3,6 +3,7 @@
 // are stamped when the row reaches a terminal-or-selected state.
 import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
+import { getSystemMode } from "../../../../../../db/lib/system-mode.ts";
 import { recordDealArchive } from "../../../../lib/deal-archive.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../lib/envelope.ts";
@@ -102,8 +103,13 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
   if (ctx.role === "viewer") return forbidden("role_required", "Opportunity deletion requires the analyst role.");
-  const { id } = await params;
   const db = getDb();
+  // ADR-0133 — production 모드에서는 딜 데이터 삭제(톰스톤 포함)를 전면 차단한다.
+  // 관리자가 /admin/system-mode에서 development로 전환해야 다시 허용된다.
+  if (getSystemMode(db) === "production") {
+    return forbidden("production_mode_delete_blocked", "운영(production) 모드에서는 검토/안건 삭제가 차단됩니다 — 관리자가 시스템 모드를 development로 전환해야 합니다.");
+  }
+  const { id } = await params;
   const existing = db
     .query("SELECT id, name, project_id, status, market_scope, deleted_at FROM opportunity WHERE id = ?")
     .get(id) as

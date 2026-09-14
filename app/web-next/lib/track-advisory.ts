@@ -100,13 +100,6 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
     signals.push({ key: "market_growth", label: "S1 시장분석 부재", leans: "neutral", weight: 1, note: "완료된 시장분석 없음 — 트랙 판단 근거가 약함" });
   }
 
-  // Shortlist state — S6/S7 output, downstream of S4 (it exists only after the
-  // brownfield track reaches target selection), so it never votes on the track.
-  // Read solely for the brownfield next-step re-review trigger below.
-  const shortlist = db
-    .query("SELECT COUNT(*) c FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'")
-    .get(opportunityId) as unknown as { c: number };
-
   // 2) Synergy signal — opportunity synergy score (S3). The pipeline records a
   // RECOMMENDATION (ADR-0090); only a human-confirmed score (migration 0099)
   // votes on the track — an unconfirmed recommendation stays a neutral info
@@ -162,16 +155,16 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
         }
       } else {
         signals.push({
-          key: "capability_coverage", label: `역량 갭 ${s.total}건 미판정`,
+          key: "capability_coverage", label: `필요 역량 수준 ${s.total}건 미판정`,
           leans: "neutral", weight: 1,
-          note: "갭 행은 있으나 보유 판정이 없습니다 — 기회 상세의 역량 갭에서 판정하세요",
+          note: "행은 있으나 보유 판정이 없습니다 — S3 시너지 화면 연계 시너지 탭에서 판정하세요",
         });
       }
     } else {
       signals.push({
-        key: "capability_coverage", label: "역량 갭 미작성",
+        key: "capability_coverage", label: "필요 역량 수준 미작성",
         leans: "neutral", weight: 1,
-        note: "필요 역량 대비 보유 역량 갭 분석이 없습니다 — 기회 상세의 역량 갭을 작성하면 근거가 추가됩니다",
+        note: "필요 역량 대비 보유 역량 수준 분석이 없습니다 — S3 시너지 화면 연계 시너지 탭에서 작성하면 근거가 추가됩니다",
       });
     }
   }
@@ -204,9 +197,6 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
   const reReviewTriggers: string[] = [];
   if (s1HasAnalysis && !s1HasCompetitive) {
     reReviewTriggers.push("S1 경쟁 구조가 미기록입니다 — 경쟁 근거 없이 권고가 제한됩니다 (재분석으로 보강 권장)");
-  }
-  if (recommendedTrack === "brownfield" && shortlist.c === 0) {
-    reReviewTriggers.push("brownfield 권고이나 쇼트리스트가 비어 있습니다 — S6/S7을 먼저 완료하세요");
   }
   if (recommendedTrack === "greenfield") {
     const gfOk = db

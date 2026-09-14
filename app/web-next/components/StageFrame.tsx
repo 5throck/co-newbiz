@@ -176,7 +176,12 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
             {isCurrent && (
               <span className="flex flex-wrap gap-0.5 ml-1">
                 {s.gateIds.map((g) => (
-                  <span key={g} className="status-chip status-amber" style={{ fontSize: "0.6rem", padding: "0.05rem 0.3rem" }}>
+                  <span
+                    key={g}
+                    className="status-chip status-amber"
+                    style={{ fontSize: "0.6rem", padding: "0.05rem 0.3rem" }}
+                    title={`${GATE_LABEL[g]} 게이트 — S1~S4처럼 여러 단계가 같은 게이트 심사를 공유합니다. 이 단계만의 별도 심사가 아니라, 이 단계가 최종적으로 어느 게이트 판정(Go/Hold/Kill)에 속하는지 보여주는 표시입니다.`}
+                  >
                     {GATE_LABEL[g]}
                   </span>
                 ))}
