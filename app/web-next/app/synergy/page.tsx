@@ -305,15 +305,16 @@ export function SynergyView() {
         ) : analyses.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">등록된 시너지 분석이 없습니다. "회사 등록"으로 시작하세요.</p>
         ) : (
-          <table className="data-table" aria-label="분석 대상 회사 목록">
+          <table className="data-table list-table" aria-label="분석 대상 회사 목록">
             <caption className="sr-only">분석 대상 회사 목록</caption>
             <thead>
               <tr>
                 <th scope="col">회사명</th>
-                <th scope="col">연결 기회</th>
-                <th scope="col">구분</th>
-                <th scope="col">분석 상태</th>
-                <th scope="col">분석일</th>
+                <th scope="col" className="w-[14rem]">연결 기회</th>
+                <th scope="col" className="w-[5rem]">구분</th>
+                <th scope="col" className="w-[12rem]">분석 상태</th>
+                <th scope="col" className="col-date">분석일</th>
+                <th scope="col" className="w-[13rem]"><span className="sr-only">작업</span></th>
               </tr>
             </thead>
             <tbody>
@@ -371,7 +372,7 @@ export function SynergyView() {
                         <span className="status-chip status-green">분석 완료 (v{a.latest_version ?? 1})</span>
                       )}
                     </td>
-                    <td className="tabular-nums">{(a.completed_at ?? a.created_at).slice(0, 10)}</td>
+                    <td className="col-date tabular-nums">{(a.completed_at ?? a.created_at).slice(0, 10)}</td>
                     <td className="sizing-actions-cell"><span className="actions-row">
                       {!busy && (
                         <button
@@ -518,6 +519,64 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
   // "selected" and hand the synergy rationale to /route-decision as a
   // pre-fill starting point (editable, not locked).
   const opportunityId = p?.opportunity?.id ?? analysis.opportunity_id ?? null;
+
+  // 시너지 점수 사람 확정 (경계 #2) — 파이프라인 권고를 사람이 직접 수정·확정/
+  // 철회한다. 편집기는 접혀 있지 않고 항상 보인다 — 확정이 안 보이면 하지 않은
+  // 것과 같다(2026-09-14 사용자 리포트). 확정 전 권고는 S4 트랙 어드바이저에서
+  // 투표에 쓰이지 않는다(중립 정보).
+  const [synState, setSynState] = useState<{ synergyScore: number | null; synergyRationale: string | null; confirmed: boolean; confirmedAt: string | null; confirmedBy: string | null } | null>(null);
+  const [confirmForm, setConfirmForm] = useState({ score: "", rationale: "" });
+  const [confirmSaving, setConfirmSaving] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  const refreshSynState = useCallback(async () => {
+    if (!opportunityId) return;
+    try {
+      const r = await api.get<{ synergyScore: number | null; synergyRationale: string | null; confirmed: boolean; confirmedAt: string | null; confirmedBy: string | null }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/synergy-confirm`);
+      setSynState(r.data);
+    } catch { /* 기회 조회 실패 — 권고 표시로 폴백 */ }
+  }, [opportunityId]);
+
+  useEffect(() => { void refreshSynState(); setConfirmError(null); }, [refreshSynState]);
+
+  // 편집기 프리필 — 기록값(권고·확정)이 바뀌면 입력란이 따라간다.
+  const currentScore = synState ? synState.synergyScore : (typeof p?.synergyScore === "number" ? p.synergyScore : null);
+  const currentRationale = synState ? synState.synergyRationale : (p?.synergyRationale ?? null);
+  useEffect(() => {
+    setConfirmForm({ score: currentScore != null ? String(currentScore) : "", rationale: currentRationale ?? "" });
+  }, [currentScore, currentRationale]);
+
+  async function confirmSynergyScore() {
+    if (!opportunityId || confirmSaving || confirmForm.score === "") return;
+    setConfirmSaving(true); setConfirmError(null);
+    try {
+      await api.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/synergy-confirm`, {
+        score: Number(confirmForm.score),
+        rationale: confirmForm.rationale.trim() || undefined,
+      });
+      await refreshSynState();
+      onRefresh();
+    } catch (err) {
+      setConfirmError(err instanceof Error ? err.message : "점수 확정 실패");
+    } finally {
+      setConfirmSaving(false);
+    }
+  }
+
+  async function retractSynergyScore() {
+    if (!opportunityId || confirmSaving) return;
+    setConfirmSaving(true); setConfirmError(null);
+    try {
+      await api.delete(`/api/opportunities/${encodeURIComponent(opportunityId)}/synergy-confirm`);
+      await refreshSynState();
+      onRefresh();
+    } catch (err) {
+      setConfirmError(err instanceof Error ? err.message : "확정 철회 실패");
+    } finally {
+      setConfirmSaving(false);
+    }
+  }
+
   const advanceToRouteDecision = useCallback(async () => {
     if (!opportunityId || advancing) return;
     setAdvancing(true);
@@ -542,8 +601,12 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
             <span className="section-meta">S3 시너지 영역 선별 · 분석일 {analysisDate} · v{latest?.version_no ?? analysis.latest_version ?? 1}</span>
             {analysis.opportunity_name && <span className="status-chip status-in-progress" title={`연결 기회: ${analysis.opportunity_name}`}>기회: {analysis.opportunity_name}</span>}
             {(() => {
-              const score = latest?.payload?.synergyScore;
-              return typeof score === "number" ? <span className="status-chip status-green">synergy 권고 {score}</span> : null;
+              const score = synState?.synergyScore ?? (typeof latest?.payload?.synergyScore === "number" ? latest.payload.synergyScore : null);
+              if (typeof score !== "number") return null;
+              // 경계 #2 — 권고(미확정)와 사람 확정을 같은 스타일로 보이지 않는다.
+              return synState?.confirmed
+                ? <span className="status-chip status-green" title={`사람 확정${synState.confirmedAt ? ` — ${synState.confirmedAt.slice(0, 10)}` : ""}`}>synergy 확정 {score}</span>
+                : <span className="status-chip status-amber" title="사람 확정 전 권고값 — 확정해야 S4 트랙 근거로 인정됩니다">synergy 권고(미확정) {score}</span>;
             })()}
           </span>
         }
@@ -597,12 +660,56 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
               {p.opportunity && (
                 <div className="sizing-grade-card mb-3">
                   <h4 className="text-[0.85rem] mb-2">연결 기회 — S2 기회발굴</h4>
-                  <p className="mb-1 text-[0.85rem]"><strong>{p.opportunity.name}</strong></p>
-                  {p.synergyScore != null && (
-                    <p className="mb-0 text-[0.82rem]">
-                      시너지 점수 권고: <span className="status-chip status-amber">{p.synergyScore}점 (사람 확정 전 권고값)</span>
-                      {p.synergyRationale && <span className="block mt-1 text-[color:var(--muted-fg)]">{p.synergyRationale}</span>}
-                    </p>
+                  <p className="mb-2 text-[0.85rem]"><strong>{p.opportunity.name}</strong></p>
+                  {confirmError && <p className="mb-2 text-[0.8rem] text-red-400" role="alert">{confirmError}</p>}
+                  {currentScore != null ? (
+                    <>
+                      <p className="mb-2 text-[0.82rem]">
+                        {synState?.confirmed ? (
+                          <>
+                            현재 기록: <span className="status-chip status-green">확정 {synState.synergyScore}점 (사람 확정)</span>
+                            {synState.confirmedAt && <span className="text-[color:var(--muted-fg)]"> — {synState.confirmedAt.slice(0, 10)}{synState.confirmedBy ? ` · ${synState.confirmedBy}` : ""}</span>}
+                          </>
+                        ) : (
+                          <>
+                            현재 기록: <span className="status-chip status-amber">권고 {currentScore}점 (사람 확정 전)</span>
+                            <span className="block mt-1 text-[color:var(--muted-fg)]">확정 전 권고는 S4 진출방식 결정의 트랙 근거에 반영되지 않습니다.</span>
+                          </>
+                        )}
+                        {currentRationale && <span className="block mt-1 text-[color:var(--muted-fg)]">{currentRationale}</span>}
+                      </p>
+                      {canCurate && opportunityId && (
+                        /* 확정 편집기 — 항상 열려 있다. 접힌 토글 뒤에 두면 확정
+                           행위 자체가 인지되지 않는다(2026-09-14 사용자 리포트). */
+                        <div className="p-2 border border-[color:var(--border)] rounded">
+                          <p className="text-[0.8rem] font-semibold mb-2">시너지 점수 확정 — 점수를 직접 수정하고 기록합니다 (경계 #2)</p>
+                          <div className="flex flex-wrap items-end gap-2">
+                            <label className="text-[0.78rem]">
+                              <span className="text-label block mb-1">점수 (0~100)</span>
+                              <input type="number" min={0} max={100} className="sizing-new-input sizing-new-input-sm w-[7rem]" value={confirmForm.score}
+                                onChange={(e) => setConfirmForm({ ...confirmForm, score: e.target.value })} />
+                            </label>
+                            <label className="text-[0.78rem] flex-1 min-w-[16rem]">
+                              <span className="text-label block mb-1">확정 근거</span>
+                              <input type="text" className="sizing-new-input sizing-new-input-sm w-full" value={confirmForm.rationale}
+                                placeholder="이 점수를 확정하는 근거를 기록하세요"
+                                onChange={(e) => setConfirmForm({ ...confirmForm, rationale: e.target.value })} />
+                            </label>
+                            <button type="button" className="btn-primary btn-sm" disabled={confirmSaving || confirmForm.score === ""} onClick={confirmSynergyScore}>
+                              {confirmSaving ? "저장 중..." : "확정 저장"}
+                            </button>
+                            {synState?.confirmed && (
+                              <button type="button" className="btn-ghost btn-sm" disabled={confirmSaving} onClick={retractSynergyScore}>확정 철회</button>
+                            )}
+                          </div>
+                          <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-1 mb-0">
+                            확정된 점수만 S4 진출방식 결정의 트랙 판단 근거로 반영됩니다. 재분석이 다른 점수를 기록하면 확정은 자동으로 무효화됩니다.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="mb-0 text-[0.82rem] text-[color:var(--muted-fg)]">연결된 분석에 시너지 점수 권고가 아직 없습니다 — 분석 완료 후 권고가 기록됩니다.</p>
                   )}
                 </div>
               )}
@@ -671,9 +778,9 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
           {tab === "shortlist" && (
             <div className="text-[0.88rem]">
               <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge sizing-step-badge-deep">4</span> 우선 시너지 영역 — 선별 결과</h3>
-              <table className="data-table" aria-label="우선 시너지 영역">
+              <table className="data-table list-table" aria-label="우선 시너지 영역">
                 <caption className="sr-only">우선 시너지 영역</caption>
-                <thead><tr><th scope="col">순위</th><th scope="col">영역</th><th scope="col">판정</th><th scope="col">사유</th><th scope="col">출처</th>{canCurate && <th scope="col"></th>}</tr></thead>
+                <thead><tr><th scope="col" className="w-[3.5rem]">순위</th><th scope="col" className="w-[12rem]">영역</th><th scope="col" className="w-[8rem]">판정</th><th scope="col">사유</th><th scope="col" className="w-[6rem]">출처</th>{canCurate && <th scope="col" className="w-[10rem]"><span className="sr-only">작업</span></th>}</tr></thead>
                 <tbody>
                   {p.shortList.map((s) => {
                     const isEditing = editingArea === s.area;

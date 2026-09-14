@@ -779,15 +779,16 @@ export function MarketView() {
         ) : visibleIndustries.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">검색·필터 조건에 맞는 산업이 없습니다.</p>
         ) : (
-          <table className="data-table" aria-label="분석 대상 산업 목록">
+          <table className="data-table list-table" aria-label="분석 대상 산업 목록">
             <caption className="sr-only">분석 대상 산업 목록</caption>
             <thead>
               <tr>
                 <th scope="col">산업명</th>
-                <th scope="col">KSIC 코드</th>
-                <th scope="col">연결 드라이버</th>
-                <th scope="col">분석 상태</th>
-                <th scope="col">분석일</th>
+                <th scope="col" className="w-[6rem]">KSIC 코드</th>
+                <th scope="col" className="w-[7rem]">연결 드라이버</th>
+                <th scope="col" className="w-[13rem]">분석 상태</th>
+                <th scope="col" className="col-date">분석일</th>
+                <th scope="col" className="w-[13rem]"><span className="sr-only">작업</span></th>
               </tr>
             </thead>
             <tbody>
@@ -922,7 +923,7 @@ export function MarketView() {
                         <span className="status-chip status-not-started">분석 대기</span>
                       )}
                     </td>
-                    <td>
+                    <td className="col-date">
                       {a ? (
                         <span className="tabular-nums" title={analysisDate ?? ""}>{relDate(analysisDate)}</span>
                       ) : (
@@ -2539,9 +2540,15 @@ function YearlyShareTable({ matrix }: { matrix: SizingMatrix }) {
 
 function ConsistencyChart({ matrix }: { matrix: SizingMatrix }) {
   const ct = useChartTheme();
+  // 축 상한은 데이터에서 뽑는다 — 8 고정이면 CAGR이 8%를 넘는 딜에서 막대가 축을
+  // 넘어 잘려 꽉 찬 형태로 렌더링됐다(2026-09-15 사용자 리포트). 유효 CAGR 최댓값의
+  // 1.1배를 5% 단위로 올림해 라벨 여유를 확보하고, 작은 값에서는 기존처럼 8을 하한으로.
+  const cagrs = [matrix.consistency.bottomUpCagr, matrix.consistency.topDownCagr]
+    .filter((v) => Number.isFinite(v) && v > 0);
+  const axisMax = cagrs.length > 0 ? Math.max(8, Math.ceil((Math.max(...cagrs) * 1.1) / 5) * 5) : 8;
   const option = {
     grid: { left: 130, right: 60, top: 16, bottom: 32 },
-    xAxis: { type: "value" as const, min: 0, max: 8, axisLabel: { formatter: "{value}%", color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
+    xAxis: { type: "value" as const, min: 0, max: axisMax, axisLabel: { formatter: "{value}%", color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
     yAxis: { type: "category" as const, data: ["매트릭스 롤업 (바텀업)", matrix.consistency.topDownCagr > 0 ? "컨센서스 (탑다운)" : "컨센서스 (미입력)"], axisLabel: { color: ct.muted, fontSize: 10 } },
     series: [{
       type: "bar" as const,

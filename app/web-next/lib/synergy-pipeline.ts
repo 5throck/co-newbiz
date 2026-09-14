@@ -75,6 +75,21 @@ export interface SynergyPayload {
 const num = (v: unknown, fallback = 0): number => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" && v.trim() ? v.trim() : fallback);
 
+/**
+ * 경계 #2 — 파이프라인이 기록하는 것은 사람 확정 전 권고값이다(ADR-0090).
+ * 사람이 확정한 점수(migration 0099)는 이 재기록이 '다른 값'을 쓸 때만 무효화된다
+ * — 같은 값이면 확정(확정자·확정 시각)은 유효하게 남는다.
+ */
+export function recordSynergyRecommendation(db: Database, opportunityId: string, score: number, rationale: string | null): void {
+  db.run(
+    `UPDATE opportunity SET synergy_score = ?, synergy_rationale = ?,
+       synergy_score_confirmed_at = CASE WHEN synergy_score IS NOT NULL AND synergy_score = ? THEN synergy_score_confirmed_at ELSE NULL END,
+       synergy_score_confirmed_by = CASE WHEN synergy_score IS NOT NULL AND synergy_score = ? THEN synergy_score_confirmed_by ELSE NULL END
+     WHERE id = ?`,
+    [score, rationale, score, score, opportunityId],
+  );
+}
+
 async function askJson(system: string, user: string, maxTokens = 2500, purpose = "시너지 단계 산출"): Promise<Record<string, unknown> | null> {
   const res = await completeOrFallback(
     [
@@ -469,8 +484,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     if (oppRow && payload.synergyScore !== null && payload.synergyScore !== undefined) {
       // 경계 #2 — 사람 확정 전 권고값: opportunity.synergy_score에 권고를 기록하고
       // 근거(synergy_rationale)를 남긴다. 최종 판단은 사람이 한다.
-      db.run("UPDATE opportunity SET synergy_score = ?, synergy_rationale = ? WHERE id = ?",
-        [Math.max(0, Math.min(100, Math.round(payload.synergyScore))), payload.synergyRationale ?? null, oppRow.id]);
+      recordSynergyRecommendation(db, oppRow.id, Math.max(0, Math.min(100, Math.round(payload.synergyScore))), payload.synergyRationale ?? null);
     }
     db.run(
       "UPDATE synergy_analysis SET status = 'completed', current_step = 5, completed_at = ?, rerun_in_progress = 0, error_message = NULL WHERE id = ?",

@@ -2646,6 +2646,69 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/synergy-confirm:
+    get:
+      operationId: getSynergyScoreState
+      summary: Synergy score state for the opportunity — recorded score/rationale plus human-confirmation status (migration 0099). Unconfirmed values are pipeline recommendations only (ADR-0090, boundary #2).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: confirmSynergyScore
+      summary: Human confirmation of the synergy score (analyst+; audited synergy_score.confirm). Body may override score (0-100) and rationale; without a recorded recommendation an explicit score is required. Only a confirmed score votes in the S4 track advisory.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: retractSynergyScoreConfirmation
+      summary: Retract the human confirmation — the recorded score reverts to an unconfirmed recommendation (analyst+; audited synergy_score.retract).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/opportunities/{id}/route-decision:
     get:
       operationId: getRouteDecision

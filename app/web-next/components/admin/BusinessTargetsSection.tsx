@@ -302,15 +302,15 @@ export function BusinessTargetsSection() {
               <p className="text-[color:var(--muted-fg)] italic">등록된 사업목표 기준이 없습니다.</p>
             ) : (
               <div className="table-scroll">
-                <table className="data-table" aria-label="사업목표 기준 목록">
+                <table className="data-table list-table" aria-label="사업목표 기준 목록">
                   <thead>
                     <tr>
                       <th scope="col">그룹</th>
-                      <th scope="col">적용 범위</th>
-                      <th scope="col">지표</th>
-                      <th scope="col" className="col-num">기준</th>
-                      <th scope="col">등록일</th>
-                      <th scope="col" style={{ textAlign: "right" }}>액션</th>
+                      <th scope="col" className="w-[8rem]">적용 범위</th>
+                      <th scope="col" className="w-[8rem]">지표</th>
+                      <th scope="col" className="col-num w-[7rem]">기준</th>
+                      <th scope="col" className="col-date">등록일</th>
+                      <th scope="col" className="w-[10rem]"><span className="sr-only">작업</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -368,7 +368,7 @@ export function BusinessTargetsSection() {
                               </strong>
                             )}
                           </td>
-                          <td className="cell-sub">{(row.updated_at ?? row.created_at).slice(0, 10)}</td>
+                          <td className="cell-sub col-date">{(row.updated_at ?? row.created_at).slice(0, 10)}</td>
                           <td className="sizing-actions-cell">
                             <div className="actions-row">
                               <button

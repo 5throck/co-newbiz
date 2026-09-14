@@ -569,13 +569,13 @@ export function OurCompanyView() {
           {selectedGroup.members.length === 0 ? (
             <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">계열사가 없습니다. "＋ 계열사 등록"으로 추가하세요.</p>
           ) : (
-            <table className="data-table" aria-label="계열사 목록">
+            <table className="data-table list-table" aria-label="계열사 목록">
               <caption className="sr-only">계열사 목록</caption>
               <thead>
                 <tr>
-                  <th scope="col">회사명</th><th scope="col">역할</th><th scope="col">DART 고유번호</th>
-                  <th scope="col">분석 상태</th><th scope="col">분석일</th>
-                  <th scope="col"><span className="sr-only">관리</span></th>
+                  <th scope="col">회사명</th><th scope="col" className="w-[5rem]">역할</th><th scope="col" className="w-[8rem]">DART 고유번호</th>
+                  <th scope="col" className="w-[11rem]">분석 상태</th><th scope="col" className="col-date">분석일</th>
+                  <th scope="col" className="w-[13rem]"><span className="sr-only">작업</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -634,7 +634,7 @@ export function OurCompanyView() {
                           <span className="status-chip status-not-started">분석 대기</span>
                         )}
                       </td>
-                      <td className="tabular-nums">{m.analyzed_at ? m.analyzed_at.slice(0, 10) : "—"}</td>
+                      <td className="col-date tabular-nums">{m.analyzed_at ? m.analyzed_at.slice(0, 10) : "—"}</td>
                       <td className="sizing-actions-cell"><span className="actions-row">
                         {/* 행 액션 표준 순서: 열기 → 재분석 → 수정(저장/취소) → 삭제 */}
                         {analyzed && (
