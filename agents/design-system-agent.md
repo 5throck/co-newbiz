@@ -21,7 +21,7 @@ last_reviewed: "2026-08-30"
 lifecycle:
   phase: production
   created: 2026-08-30
-  last_updated: 2026-08-30
+  last_updated: 2026-09-12
   governance: docs/lifecycle/agents/design-system-agent.md
 required_skills:
   - design-lint

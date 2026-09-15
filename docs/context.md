@@ -1,4 +1,4 @@
-# [Project Name] — Project Context
+# co-newbiz — Project Context
 
 > Shared reference for all AI tools (Claude Code, Gemini CLI, Antigravity).
 > Tool-specific behaviors: CLAUDE.md (Claude Code), GEMINI.md (Gemini/Antigravity).
@@ -12,7 +12,7 @@
 
 ## Project Overview
 
-[One-sentence description of what this project does and who it's for.]
+co-newbiz is an AI-agent team and system that owns and operates the policies, procedures, guidelines, and checklists for new-business review — Green Field (new establishment) and Brown Field (M&A) — and implements that governance as a working review system.
 
 **Type**: web | cli | api | mcp
 **Status**: Active development
@@ -216,9 +216,9 @@ For files where Korean is legally or academically mandatory (such as statutory t
 lang: ko
 lang_reason: legal # legal | source-material | proper-noun
 ```
-*(This exception is NOT available for operational files like agents, skills, and context files)*
+*(This exception is NOT available for context files: `context.md`, `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`. It IS available for `agents/*.md` and `skills/*.md` with `lang_reason` declared — see the COMMON-CONSTITUTION Language Policy block below for the authoritative wording.)*
 
-**Skills needing non-English reference data**: since `skills/*.md` can never carry the `lang: ko` exception, store terminology glossaries or source-language excerpts in a non-Markdown file under `skills/<name>/references/` (e.g. `references/terms-ko.json`) instead — language validation scans `.md` and `.yaml`/`.yml` files, so use another format (`.json`, `.csv`, ...) to stay outside the policy. `SKILL.md` stays English-only and links to it.
+**Skills needing non-English reference data**: when a skill's guidance or reference excerpts qualify under a declared `lang_reason` (e.g. `source-material`), it may carry the `lang: ko` exception; otherwise store terminology glossaries or source-language excerpts in a non-Markdown file under `skills/<name>/references/` (e.g. `references/terms-ko.json`) — language validation scans `.md` and `.yaml`/`.yml` files, so use another format (`.json`, `.csv`, ...) to stay outside the policy. `SKILL.md` stays English-only and links to it unless the exception is declared.
 
 ### File Encoding
 

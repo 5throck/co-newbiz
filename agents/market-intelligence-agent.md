@@ -18,7 +18,7 @@ last_reviewed: "2026-08-29"
 lifecycle:
   phase: production
   created: 2026-08-19
-  last_updated: 2026-08-29
+  last_updated: 2026-09-12
   governance: docs/lifecycle/agents/market-intelligence-agent.md
 required_skills:
   - competitive-intelligence

@@ -34,7 +34,7 @@
     }
   },
   "agent_tiers": {
-    "pm": "high",
+    "pm": "medium",
     "architect": "high",
     "auditor": "medium",
     "docs-writer": "medium",

@@ -4,13 +4,14 @@ name: pm
 formal_name: Project Manager (PM) Agent
 status: active
 version: "1.2.0"
-last_updated: "2026-09-08"
+last_updated: "2026-09-15"
 tier:
   claude: medium
   gemini: medium
   antigravity: medium
   gemini-cli: medium
 model: inherit
+role: New Business Review Lead — coordinates four domain leads, enforces stage gates, approves ADRs
 color: yellow
 description: 'Orchestrates multi-agent workflows. Enforces quality gates. Use when: "Managing workflow", "Coordinating multi-phase tasks", "PM orchestration needed"'
 examples:

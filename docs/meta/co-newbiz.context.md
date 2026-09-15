@@ -15,16 +15,16 @@ Distinctive to the domain: many target industries have no direct market data, so
 
 ## Agents
 
-**40 agents** across four co-equal domains plus `_core` and `_shared`, coordinated by PM acting as New Business Review Lead. Domain leads are design/review owners, not dispatchers — the workspace flat PM Gateway is preserved in full (PM is the only agent users invoke directly; all 39 specialists require PM dispatch).
+**41 agents** across four co-equal domains plus `_core` and `_shared`, coordinated by PM acting as New Business Review Lead. Domain leads are design/review owners, not dispatchers — the workspace flat PM Gateway is preserved in full (PM is the only agent users invoke directly; all 40 specialists require PM dispatch).
 
 | Domain | Count | Lead | Concern |
 |---|---|---|---|
 | `_core` | 1 | `pm` | Coordinates the four domain leads, enforces stage gates, approves ADRs |
-| functional | 21 | `process-governance-manager` | Regulations, procedures, operation; review methodology; deal review (governance, analysis, greenfield, brownfield, dd, certification, partnership, group subdomains) |
-| technical | 9 | `platform-lead` | System build and run — DB, API, UI, deploy, ops, security |
+| functional | 25 | `process-governance-manager` | Regulations, procedures, operation; review methodology; deal review (governance, analysis, greenfield, brownfield, dd, certification, partnership, group subdomains) |
+| technical | 11 | `platform-lead` | System build and run — DB, API, UI, design system, deploy, ops, security |
 | industry | 1 | `industry-lead` | Industry-specific characteristics, owned via `industry-profiles/*.yaml` |
 | region | 1 | `region-lead` | Regional characteristics incl. domestic, owned via `region-profiles/*.yaml` |
-| `_shared` | 1 | — (`docs-writer`) | Document formatting / language policy, spans all four domains |
+| `_shared` | 2 | — (`docs-writer`, `i18n-specialist`) | Document formatting / language policy and i18n, span all four domains |
 
 Full roster with per-agent tier and role: `AGENTS.md`. Full definitions: `agents/*.md`.
 
