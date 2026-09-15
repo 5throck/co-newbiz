@@ -6,6 +6,7 @@
 // routes that call into this module.
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
+import { getCurrentRouteDecision } from "../../../db/repositories/route-decision.repository.ts";
 import { listBusinessCases, latestAdoption } from "./business-case.ts";
 import { parseGapRegister, summarizeGap } from "./capability-gap.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
@@ -142,9 +143,8 @@ function s3Summary(opp: OppRow): string {
 }
 
 function s4Summary(db: Database, oppId: string): string {
-  const row = db
-    .query("SELECT track, sub_track, intent, total_score, rationale, staging_recommended FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
-    .get(oppId) as { track: string; sub_track: string | null; intent: string | null; total_score: number | null; rationale: string; staging_recommended: string | null } | undefined;
+  // ADR-0135: 권위 행은 is_current=1로 읽는다 — getCurrentRouteDecision 재사용.
+  const row = getCurrentRouteDecision(oppId, db);
   if (!row) return "S4 트랙 결정: 없음";
   return [
     `트랙: ${row.track}${row.sub_track ? ` / 라우트: ${row.sub_track}` : ""}${row.intent ? ` / 의도: ${row.intent}` : ""}`,
@@ -156,23 +156,22 @@ function s4Summary(db: Database, oppId: string): string {
 
 function s5Summary(db: Database, oppId: string): string {
   const row = db
-    .query("SELECT capability_gaps_json, entry_strategy, alternatives_considered, rationale FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC, id DESC LIMIT 1")
-    .get(oppId) as { capability_gaps_json: string | null; entry_strategy: string | null; alternatives_considered: string | null; rationale: string | null } | undefined;
-  if (!row) return "S5 역량 평가: 없음";
-  let gaps = "";
-  try {
-    const parsed = row.capability_gaps_json ? (JSON.parse(row.capability_gaps_json) as unknown) : null;
-    if (Array.isArray(parsed)) {
-      gaps = `역량 격차 ${parsed.length}건: ` + parsed.slice(0, 6).map((r) => {
-        const row2 = r as Record<string, unknown>;
-        return `${String(row2.name ?? row2.capability ?? "?")}(필요 ${String(row2.required_level ?? "?")}/보유 ${String(row2.current_level ?? "?")}, ${String(row2.approach ?? row2.gap_type ?? "?")})`;
-      }).join(", ");
-    }
-  } catch { gaps = "역량 격차: 파싱 실패"; }
+    .query("SELECT entry_strategy, alternatives_considered, rationale FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC, id DESC LIMIT 1")
+    .get(oppId) as { entry_strategy: string | null; alternatives_considered: string | null; rationale: string | null } | undefined;
+  // ADR-0136: 역량 격차는 S3 레지스터(opportunity.capability_gap_json)가 유일한
+  // 출처다 — greenfield_assessment.capability_gaps_json은 더 이상 채워지지 않는다.
+  const oppRow = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(oppId) as { capability_gap_json: string | null } | undefined;
+  const register = parseGapRegister(oppRow?.capability_gap_json ?? null);
+  const gaps = register.rows.length > 0
+    ? `역량 격차 ${register.rows.length}건: ` + register.rows.slice(0, 6).map((r) =>
+        `${r.capability}(필요 ${r.requiredLevel || "?"}/보유 ${r.currentLevel || "?"}, ${r.resolution ?? "미정"})`,
+      ).join(", ")
+    : "";
+  if (!row && !gaps) return "S5 역량 평가: 없음";
   return [
     gaps,
-    row.entry_strategy ? `진출전략: ${row.entry_strategy.slice(0, 300)}` : "",
-    row.rationale ? `평가 근거: ${row.rationale.slice(0, 200)}` : "",
+    row?.entry_strategy ? `진출전략: ${row.entry_strategy.slice(0, 300)}` : "",
+    row?.rationale ? `평가 근거: ${row.rationale.slice(0, 200)}` : "",
   ].filter(Boolean).join("\n") || "S5 역량 평가: 요약 없음";
 }
 

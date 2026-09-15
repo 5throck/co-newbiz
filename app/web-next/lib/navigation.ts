@@ -97,11 +97,15 @@ export function menuHrefs(): string[] {
  *                                         sub-navigation
  */
 export const NON_MENU_ROUTES: string[] = [
+  // 검토용 정적 목업 — 실제 기능이 아니라 UX 재설계 검토안(직접 URL로만
+  // 접근). 승인/폐기가 정해지면 라우트 자체를 제거한다.
+  "/brownfield-mockup",
   "/login",
   "/register",
   "/password-change",
   "/agents",
   "/opportunities/[id]",
+  "/brownfield/targets/[targetId]",
   "/companies",
   "/companies/[companyId]",
   "/process/[stage]",

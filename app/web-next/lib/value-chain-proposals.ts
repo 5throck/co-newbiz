@@ -28,6 +28,14 @@ function norm(name: string): string {
   return name.replace(/\s+/g, "").toLowerCase();
 }
 
+// LLM 응답이 산업명 안에 출처 인용 표기([2], [11] 등)를 그대로 남기는 경우가
+// 있다 — 산업명은 저장·표시용 식별자이므로 인용 표기가 섞이면 안 된다
+// (사용자 리포트, 2026-09-16 — "산업명에 [X]와 같은 표기가 나타나지 않는게
+// 바람직할 듯"). 이름 어디에 붙어 있든 제거한다.
+export function stripCitationMarkers(name: string): string {
+  return name.replace(/\s*\[\d+\]/g, "").trim();
+}
+
 export function sanitizeRelatedProposals(
   items: Array<{ relation?: string; name?: string; note?: string }>,
   targetName: string,
@@ -37,7 +45,7 @@ export function sanitizeRelatedProposals(
   let dropped = 0;
   const targetNorm = norm(targetName);
   for (const item of items) {
-    const name = item.name?.trim() ?? "";
+    const name = stripCitationMarkers(item.name?.trim() ?? "");
     const relation = item.relation?.trim() ?? "";
     if (!name || norm(name) === targetNorm) {
       dropped += 1;

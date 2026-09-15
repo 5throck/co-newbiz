@@ -19,10 +19,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ memb
       "SELECT version_no, source_ref, created_by, created_at FROM company_profile_version WHERE member_id = ? ORDER BY version_no DESC",
     )
     .all(memberId) as Array<{ version_no: number; source_ref: string | null; created_by: string; created_at: string }>;
-  const profile = loadLatestProfile(db, memberId);
+  const profile = loadLatestProfile(db, { kind: "member", id: memberId });
 
   // version 유무만으로는 "실행 중"과 "실패"를 구분할 수 없다 — in-process 작업 상태를 반영한다.
-  const job = getProfileJobStatus(memberId);
+  const job = getProfileJobStatus({ kind: "member", id: memberId });
   const status = profile ? "completed" : job?.status === "failed" ? "failed" : "in_progress";
 
   return ok(

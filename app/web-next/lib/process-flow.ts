@@ -37,7 +37,7 @@ export const STAGES: StageDefinition[] = [
   { id: "S2", name: "기회 발굴", sequence: 2, objective: "무엇을 할 것인가? — 가치사슬상 사업 기회를 등록·평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["기회 등록(가치사슬 노드·매력도)"] },
   { id: "S3", name: "시너지·전략적 적합성", sequence: 3, objective: "우리가 해야 하는가? — 자사 역량과의 시너지를 평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시너지 평가", "전략적 적합성 판단"] },
   { id: "S4", name: "진출방식 결정", sequence: 4, objective: "어떻게 들어갈 것인가? — Greenfield(자체 역량 진출) vs Brownfield(기존 기업·자산 결합)를 결정한다. Brownfield ≠ M&A — M&A·JV·전략적 투자·소수점 지분·파트너십·R&BD·사내벤처(CVC) 중 Route를 고른다", applicableTracks: ["all"], gateIds: ["screening", "pre_fs"], requiredArtifacts: ["트랙 결정(GF/BF)·근거", "Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)", "5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)", "검토한 대안"] },
-  { id: "S5", name: "역량 평가·진출전략", sequence: 5, objective: "스스로 진입할 수 있는가? — 자체 역량을 평가하고 격차를 구축 방안(Build/Partner/Hire/Invest)으로 해소해 진출전략을 세운다 (Greenfield 전용 — Target Company 객체가 존재하지 않는다)", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차 평가", "진출전략(Build/Partner/Hire/Invest 결정·근거)"] },
+  { id: "S5", name: "자체 진출", sequence: 5, objective: "스스로 진입할 수 있는가? — 자체 역량을 평가하고 격차를 구축 방안(Build/Partner/Hire/Invest)으로 해소해 진출전략을 세운다 (Greenfield 전용 — Target Company 객체가 존재하지 않는다)", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차 평가", "진출전략(Build/Partner/Hire/Invest 결정·근거)"] },
   { id: "S6", name: "대상 후보 발굴", sequence: 6, objective: "누구와 결합할 것인가? — Opportunity에 진입 가능한 기존 기업·자산의 Target Universe를 정의하고 Target Company Long List를 작성한다 (Brownfield 전용)", applicableTracks: ["brownfield"], gateIds: ["pre_fs"], requiredArtifacts: ["Target Universe 정의", "Target Company Long List"] },
   { id: "S7", name: "대상 선정", sequence: 7, objective: "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)", applicableTracks: ["brownfield"], gateIds: ["target_screening"], requiredArtifacts: ["Target Company Short List", "Target Ranking/Score", "Exclusion Reasons"] },
   { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다", applicableTracks: ["all"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션)", "시뮬레이션 NPV 분위수"] },
@@ -73,6 +73,9 @@ export interface ProcessEvaluation {
   subTrack: string | null;
   terminated: boolean; // KILL recorded — process ends
   stages: Array<StageDefinition & { status: "complete" | "current" | "blocked" | "locked" | "skipped" | "terminated" }>;
+  /** opportunity 전용 — 이미 프로젝트로 추진(승격)됐다면 그 project id. 승격
+   * 후에는 팀 배정 등 세부 내용을 다시 노출하지 않고 이 값만으로 판단한다. */
+  projectId: string | null;
 }
 
 export function latestGateDecisions(entityType: "opportunity" | "project", entityId: string): Map<GateId, { decision: GateVerdict; missing: string[] | null; rationale: string }> {
@@ -220,14 +223,16 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     const missing: string[] = [];
     let complete = false;
     // flow.spec S5 (greenfield only): 역량 격차+해소 방식, 진출전략, 검토한 대안.
+    // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서
+    // 센다 — greenfield_assessment.capability_gaps_json은 더 이상 채워지지 않는다.
+    let gapCount = 0;
+    try { gapCount = opp.capability_gap_json ? ((JSON.parse(opp.capability_gap_json) as { rows?: unknown[] }).rows ?? []).length : 0; } catch { /* unparseable = empty */ }
     const a = getDb()
-      .query("SELECT capability_gaps_json, entry_strategy, alternatives_considered FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
-      .get(opp.id) as { capability_gaps_json: string | null; entry_strategy: string | null; alternatives_considered: string | null } | undefined;
+      .query("SELECT entry_strategy, alternatives_considered FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
+      .get(opp.id) as { entry_strategy: string | null; alternatives_considered: string | null } | undefined;
+    if (gapCount === 0) { blockers.push("역량 격차 항목이 필요합니다(S3에서 필요 역량 정의)"); missing.push("역량 격차·해소 방식"); }
     if (!a) { blockers.push("역량 평가가 필요합니다"); missing.push("역량 격차 평가"); }
     else {
-      let gapCount = 0;
-      try { gapCount = a.capability_gaps_json ? (JSON.parse(a.capability_gaps_json) as unknown[]).length : 0; } catch { /* unparseable = empty */ }
-      if (gapCount === 0) { blockers.push("역량 격차 항목이 필요합니다"); missing.push("역량 격차·해소 방식"); }
       if (!a.entry_strategy) { blockers.push("진출전략이 필요합니다"); missing.push("진출전략"); }
       if (!a.alternatives_considered) { blockers.push("검토한 대안 기록이 필요합니다"); missing.push("검토한 대안"); }
     }
@@ -487,6 +492,8 @@ interface OpportunityRow {
   rationale: string | null;
   status: string;
   target_universe_json: string | null;
+  capability_gap_json: string | null;
+  project_id: string | null;
 }
 
 export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
@@ -501,12 +508,15 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
   let gateStatus: Partial<Record<GateId, GateVerdict>> = {};
   let track: "greenfield" | "brownfield" | null = null;
   let subTrack: string | null = null;
+  let projectId: string | null = null;
 
   if (entity.type === "opportunity") {
     const opp = db
       .query("SELECT * FROM opportunity WHERE id = ?")
       .get(entity.id) as OpportunityRow | undefined;
-    if (!opp) throw new Error(`opportunity ${entity.id} not found`);    const gates = latestGateDecisions("opportunity", entity.id);
+    if (!opp) throw new Error(`opportunity ${entity.id} not found`);
+    projectId = opp.project_id;
+    const gates = latestGateDecisions("opportunity", entity.id);
     gateStatus = Object.fromEntries([...gates.entries()].map(([g, v]) => [g, v.decision]));
     terminated = [...gates.values()].some((g) => g.decision === "kill");
 
@@ -664,5 +674,6 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     subTrack,
     terminated,
     stages,
+    projectId,
   };
 }

@@ -82,9 +82,14 @@ function seedOpportunity(name: string, completeS1S3: boolean): string {
 /** Seed the greenfield S5 artifacts (human work, pre-existing — not pipeline output). */
 function seedGreenfieldAssessment(opportunityId: string): void {
   db.run(
-    `INSERT INTO greenfield_assessment (id, opportunity_id, capability_gaps_json, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?)`,
-    [ulid(), opportunityId, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
+    `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [ulid(), opportunityId, "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
+  );
+  // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서 센다.
+  db.run(
+    "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
+    [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }), opportunityId],
   );
 }
 
@@ -405,7 +410,7 @@ describe("(e) max-iteration safety cap", () => {
       const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
       const capOppId = seedOpportunity("캡 테스트 기회", true);
       seedGreenfieldAssessment(capOppId);
-      db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?)", [ulid(), capOppId, "greenfield", "test", ANALYST, NOW]);
+      db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)", [ulid(), capOppId, "greenfield", "test", ANALYST, NOW]);
       // Promotion preconditions (2026-09-12 hardening): screening + pre_fs must be GO.
       for (const gate of ["screening", "pre_fs"]) {
         db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", capOppId, gate, "go", "test", ANALYST, NOW]);

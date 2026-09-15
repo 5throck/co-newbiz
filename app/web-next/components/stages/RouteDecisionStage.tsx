@@ -61,6 +61,8 @@ interface RouteDecision {
   rationale: string; alternatives_considered: string | null; decided_by: string; decided_at: string;
   intent: string | null; override_flagged: number | null; staging_recommended: string | null;
   total_score: number | null; scores: ScoreRow[];
+  // ADR-0135 — 권위 행 표시. 대체된 결정은 이력에 남되 is_current=0이다.
+  is_current: number; superseded_by: string | null;
 }
 // ADR-0124 — 열린 초안(status='draft'). 완결성 검증이 없어 필드가 비어있을 수 있다.
 interface RouteDecisionDraft {
@@ -160,7 +162,8 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
         // 값이다). 처음 로드될 때 한 번만 반영하고, 이후 사용자 입력을
         // 재조회 때 덮어쓰지 않는다.
         const d = r.data.draft;
-        const latestFinal = r.data.decisions[0] ?? null;
+        // ADR-0135: "가장 최근" 결정이 아니라 권위 행(is_current=1)을 복원한다.
+        const latestFinal = r.data.decisions.find((x) => x.is_current === 1) ?? null;
         if (!draftLoadedRef.current) {
           if (d) {
             setTrack(d.track);

@@ -80,6 +80,37 @@ const now = () => new Date().toISOString();
 
 type Db = ReturnType<typeof getDb>;
 
+/**
+ * 파이프라인 실행 대상 — 그룹/계열사(company_group_member) 또는 일반 회사
+ * (md_company, 브라운필드 후보 등). 일반화(2026-09-15, 사용자 요청 "일반화하는게
+ * 바람직할 듯 해") 이전에는 memberId만 받았다 — company_profile_version은
+ * member_id/company_id 중 subject.kind에 맞는 컬럼에 저장된다(마이그레이션 0105).
+ */
+export type ProfileSubject =
+  | { kind: "member"; id: string; companyName: string; dartCorpCode: string | null; groupName: string }
+  | { kind: "company"; id: string; companyName: string; dartCorpCode: string | null; groupName?: undefined };
+
+export function resolveMemberSubject(db: Db, memberId: string): ProfileSubject {
+  const member = db
+    .query(
+      `SELECT m.id, m.company_name, m.dart_corp_code, g.name AS group_name
+       FROM company_group_member m JOIN company_group g ON g.id = m.group_id WHERE m.id = ?`,
+    )
+    .get(memberId) as { id: string; company_name: string; dart_corp_code: string | null; group_name: string } | null;
+  if (!member) throw new Error(`company_group_member ${memberId} not found`);
+  return { kind: "member", id: member.id, companyName: member.company_name, dartCorpCode: member.dart_corp_code, groupName: member.group_name };
+}
+
+export function resolveCompanySubject(db: Db, companyId: string): ProfileSubject {
+  const company = db.query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE id = ?").get(companyId) as
+    | { id: string; name_ko: string; dart_corp_code: string | null }
+    | null;
+  if (!company) throw new Error(`md_company ${companyId} not found`);
+  return { kind: "company", id: company.id, companyName: company.name_ko, dartCorpCode: company.dart_corp_code };
+}
+
+const jobKey = (subject: Pick<ProfileSubject, "kind" | "id">) => `${subject.kind}:${subject.id}`;
+
 // ── In-process 작업 상태 ──
 // 파이프라인은 analyze 라우트에서 fire-and-forget으로 실행된다. 실패를 여기서
 // 기록하지 않으면 라우트의 .catch(console.error)만 남고, profile 폴링은
@@ -93,42 +124,34 @@ export interface ProfileJobStatus {
 
 const profileJobs = new Map<string, ProfileJobStatus>();
 
-export function getProfileJobStatus(memberId: string): ProfileJobStatus | null {
-  return profileJobs.get(memberId) ?? null;
+export function getProfileJobStatus(subject: Pick<ProfileSubject, "kind" | "id">): ProfileJobStatus | null {
+  return profileJobs.get(jobKey(subject)) ?? null;
 }
 
 /** 테스트 시퀀스 — 라우트 응답의 failed 보고를 직접 시딩해 검증한다 (_internalNow 선례). */
 export const _profileJobs = profileJobs;
 
 /** analyze 라우트용 실행기 — running/failed 상태를 기록하고 성공 시 지운다(이후 status는 completed가 version 유무로 판정). */
-export function startCompanyProfilePipeline(db: Db, memberId: string, userId: string): void {
-  profileJobs.set(memberId, { status: "running", startedAt: now() });
-  void runCompanyProfilePipeline(db, memberId, userId)
+export function startCompanyProfilePipeline(db: Db, subject: ProfileSubject, userId: string): void {
+  const key = jobKey(subject);
+  profileJobs.set(key, { status: "running", startedAt: now() });
+  void runCompanyProfilePipeline(db, subject, userId)
     .then(() => {
-      profileJobs.delete(memberId);
+      profileJobs.delete(key);
     })
     .catch((err: unknown) => {
-      profileJobs.set(memberId, {
+      profileJobs.set(key, {
         status: "failed",
         error: err instanceof Error ? err.message.slice(0, 300) : String(err),
-        startedAt: profileJobs.get(memberId)?.startedAt ?? now(),
+        startedAt: profileJobs.get(key)?.startedAt ?? now(),
         failedAt: now(),
       });
       console.error("company profile pipeline failed:", err);
     });
 }
 
-export async function runCompanyProfilePipeline(db: Db, memberId: string, userId: string): Promise<void> {
-  const member = db
-    .query(
-      `SELECT m.id, m.group_id, m.company_name, m.dart_corp_code, g.name AS group_name
-       FROM company_group_member m JOIN company_group g ON g.id = m.group_id WHERE m.id = ?`,
-    )
-    .get(memberId) as
-    | { id: string; group_id: string; company_name: string; dart_corp_code: string | null; group_name: string }
-    | null;
-  if (!member) throw new Error(`company_group_member ${memberId} not found`);
-  const company = member.company_name;
+export async function runCompanyProfilePipeline(db: Db, subject: ProfileSubject, userId: string): Promise<void> {
+  const company = subject.companyName;
   const stepSummaries: CompanyProfilePayload["stepSummaries"] = [];
   const summarize = async (step: number, title: string, summary: string) => {
     const source = isWebResearchConfigured() || isDartConfigured() ? "llm" : "synthesis";
@@ -136,7 +159,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
   };
 
   // ── Step 1: DART 재무 입수 (corp_code는 교차검증 통과 코드만 사용·저장) ──
-  let corpCode = member.dart_corp_code ?? null;
+  let corpCode = subject.dartCorpCode ?? null;
   let codeNote: string | null = null;
   if (corpCode) {
     const v = await validateCorpCode(corpCode, company);
@@ -156,8 +179,9 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
   }
   const dart: DartFinancials = corpCode ? await fetchFinancials(corpCode, { years: 5 }) : { corpCode: "", found: false, items: [], error: isDartConfigured() ? codeNote ?? "corp code 미확인 — 비상장 또는 검색 실패" : "DART_API_KEY 미구성" };
   // 교차검증 통과 코드만 영속화 — 잘못된 코드가 DB에 남지 않는다.
-  if (corpCode && corpCode !== member.dart_corp_code && dart.found) {
-    db.run("UPDATE company_group_member SET dart_corp_code = ? WHERE id = ?", [corpCode, member.id]);
+  if (corpCode && corpCode !== subject.dartCorpCode && dart.found) {
+    if (subject.kind === "member") db.run("UPDATE company_group_member SET dart_corp_code = ? WHERE id = ?", [corpCode, subject.id]);
+    else db.run("UPDATE md_company SET dart_corp_code = ? WHERE id = ?", [corpCode, subject.id]);
   }
   // 연도 커버리지 — 최신 사업보고서가 어느 해인지/이후 미제출임을 명시한다
   const yearsFound = [...new Set((dart.items ?? []).map((i) => i.year ?? ""))].filter(Boolean).sort().reverse();
@@ -178,7 +202,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     research = await researchSources([
       `${company} 애널리스트 리포트 리서치`,
       `${company} analyst report competitive position`,
-      `${member.group_name} 그룹 산업 동향`,
+      ...(subject.groupName ? [`${subject.groupName} 그룹 산업 동향`] : []),
       `${company} 사업 부문 경쟁력 실적`,
       `${company} 경쟁사 비교 주요 경쟁자`,
     ], 12);
@@ -195,7 +219,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
       {
         role: "user" as const,
         content:
-          `${company}(${member.group_name} 그룹 계열사)의 프로파일을 작성하세요. JSON: {"strengths":["강점 2~4개"],"weaknesses":["약점 2~4개"],"opportunities":["기회 요인 2~3개(시장·산업·기술 관점)"],"threats":["위협 요인 2~3개(경쟁·규제·대체재 관점)"],"businessAssessment":"사업 평가 2~3문장","industryExposure":["노출 산업/부문", "..."]}. 기회/위협은 이 회사에 특정한 것으로 쓰고 일반론을 나열하지 말 것. 각 항목은 발췌 근거가 있으면 출처 번호([n])를 문장 끝에 붙이세요.\n\nDART 재무: ${dart.found ? `${dart.year}년 재무 ${dart.items.length}개 계정` : "미입수"}\n\n리서치 발췌:\n${researchContext}`,
+          `${company}${subject.groupName ? `(${subject.groupName} 그룹 계열사)` : ""}의 프로파일을 작성하세요. JSON: {"strengths":["강점 2~4개"],"weaknesses":["약점 2~4개"],"opportunities":["기회 요인 2~3개(시장·산업·기술 관점)"],"threats":["위협 요인 2~3개(경쟁·규제·대체재 관점)"],"businessAssessment":"사업 평가 2~3문장","industryExposure":["노출 산업/부문", "..."]}. 기회/위협은 이 회사에 특정한 것으로 쓰고 일반론을 나열하지 말 것. 각 항목은 발췌 근거가 있으면 출처 번호([n])를 문장 끝에 붙이세요.\n\nDART 재무: ${dart.found ? `${dart.year}년 재무 ${dart.items.length}개 계정` : "미입수"}\n\n리서치 발췌:\n${researchContext}`,
       },
     ],
     () =>
@@ -233,7 +257,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     degraded = research.length > 0
       ? `LLM 평가 실패 — 리서치 ${research.length}건 수집됐으나 평가 생성 실패 (재분석 권장)`
       : "LLM 미구성 및 리서치 미구성 — 수동 등록 필요";
-    strengths = [`(평가 실패 — ${research.length}건의 리서치 출처는 '출처·노트' 탭 참조)`];
+    strengths = [`(평가 실패 — ${research.length}건의 리서치 출처는 '출처' 탭 참조)`];
     weaknesses = [`(평가 실패 — 재분석을 실행하세요)`];
     if (!businessAssessment) businessAssessment = "LLM 평가 실패 — 재분석 시 재생성됩니다.";
   }
@@ -348,9 +372,11 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
 
   // 검증 원장 — 침묵은 승인으로 읽지 않는다 (S1 표준)
   // 업로드 파일(신용평가서 등)은 company_profile_version.source_ref에 기록된다.
+  // subject.kind에 맞는 컬럼(member_id/company_id, 마이그레이션 0105)만 조회한다.
+  const subjectColumn = subject.kind === "member" ? "member_id" : "company_id";
   const uploadedRef = (db.query(
-    "SELECT source_ref FROM company_profile_version WHERE member_id = ? AND source_ref IS NOT NULL ORDER BY version_no DESC LIMIT 1",
-  ).get(member.id) as { source_ref: string } | undefined)?.source_ref ?? null;
+    `SELECT source_ref FROM company_profile_version WHERE ${subjectColumn} = ? AND source_ref IS NOT NULL ORDER BY version_no DESC LIMIT 1`,
+  ).get(subject.id) as { source_ref: string } | undefined)?.source_ref ?? null;
   const verificationLedger: CompanyProfilePayload["verificationLedger"] = [
     dart.found
       ? { item: `DART 재무제표 입수 (${yearsFound.join("/")}, ${dart.items.length}계정)`, status: "confirmed", evidence: dart.reportUrl ?? `corp_code ${corpCode}` }
@@ -396,7 +422,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
   // ── Step 7: 버전 누적 저장 ──
   const payload: CompanyProfilePayload = {
     companyName: company,
-    dartCorpCode: corpCode ?? member.dart_corp_code,
+    dartCorpCode: corpCode ?? subject.dartCorpCode,
     // available 키 필수 — UI가 이 키로 DART 입수 여부를 판정한다 (synergy-pipeline과 동일 계약)
     dartFinancials: { ...dart, available: dart.found },
     strengths,
@@ -417,7 +443,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     ragCapRecommendation,
     schemaVersion: 3,
   };
-  const priorVersion = db.query("SELECT payload FROM company_profile_version WHERE member_id = ? ORDER BY version_no DESC LIMIT 1").get(member.id) as { payload: string } | undefined;
+  const priorVersion = db.query(`SELECT payload FROM company_profile_version WHERE ${subjectColumn} = ? ORDER BY version_no DESC LIMIT 1`).get(subject.id) as { payload: string } | undefined;
   const priorDegraded = priorVersion
     ? (() => { try { return (JSON.parse(priorVersion.payload) as { profile?: { degraded?: string | null } }).profile?.degraded ?? null; } catch { return "unparseable"; } })()
     : undefined;
@@ -428,24 +454,25 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
     throw new Error(`LLM 호출 실패 — 이전 프로파일을 유지합니다 (${degraded}). 잠시 후 다시 시도하세요.`);
   }
   const nextVersionNo =
-    ((db.query("SELECT MAX(version_no) m FROM company_profile_version WHERE member_id = ?").get(member.id) as { m: number | null }).m ?? 0) + 1;
+    ((db.query(`SELECT MAX(version_no) m FROM company_profile_version WHERE ${subjectColumn} = ?`).get(subject.id) as { m: number | null }).m ?? 0) + 1;
   // 7단계 요약은 저장 '이전'에 push해야 이번 버전 payload에 포함된다.
   await summarize(7, "버전 누적 저장",
     `company_profile_version v${nextVersionNo} 저장 (append-only — 선행 버전은 의사결정 인용을 위해 보존).`);
   payload.stepSummaries = stepSummaries;
   db.transaction(() => {
     db.run(
-      `INSERT INTO company_profile_version (id, member_id, version_no, payload, source_ref, created_by, created_at)
+      `INSERT INTO company_profile_version (id, ${subjectColumn}, version_no, payload, source_ref, created_by, created_at)
        VALUES (?,?,?,?,?,?,?)`,
-      [ulid(), member.id, nextVersionNo, JSON.stringify({ methodology: "company-profile v3", schemaVersion: 3, profile: payload }), null, userId, now()],
+      [ulid(), subject.id, nextVersionNo, JSON.stringify({ methodology: "company-profile v3", schemaVersion: 3, profile: payload }), null, userId, now()],
     );
   })();
 }
 
-export function loadLatestProfile(db: Db, memberId: string): CompanyProfilePayload | null {
+export function loadLatestProfile(db: Db, subject: Pick<ProfileSubject, "kind" | "id">): CompanyProfilePayload | null {
+  const column = subject.kind === "member" ? "member_id" : "company_id";
   const row = db
-    .query("SELECT payload FROM company_profile_version WHERE member_id = ? ORDER BY version_no DESC LIMIT 1")
-    .get(memberId) as { payload: string } | undefined;
+    .query(`SELECT payload FROM company_profile_version WHERE ${column} = ? ORDER BY version_no DESC LIMIT 1`)
+    .get(subject.id) as { payload: string } | undefined;
   if (!row) return null;
   try {
     return (JSON.parse(row.payload) as { profile?: CompanyProfilePayload }).profile ?? null;

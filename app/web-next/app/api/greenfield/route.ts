@@ -1,4 +1,4 @@
-// S5 역량 평가·진출전략 — Greenfield 기회 목록 / 평가 저장 (greenfield-capability-assessment).
+// S5 자체 진출 — Greenfield 기회 목록 / 평가 저장 (greenfield-capability-assessment).
 import { getDb } from "../../../../../db/client.ts";
 import { ulid } from "../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../lib/auth.ts";
@@ -13,12 +13,12 @@ export async function GET(request: Request) {
   const opps = db
     .query(
       `SELECT o.id, o.name, o.market_scope, o.synergy_score,
-              (SELECT rd.sub_track FROM route_decision rd WHERE rd.opportunity_id = o.id ORDER BY rd.decided_at DESC, rd.id DESC LIMIT 1) AS sub_track,
+              (SELECT rd.sub_track FROM route_decision rd WHERE rd.opportunity_id = o.id AND rd.is_current = 1) AS sub_track,
               (SELECT g.updated_at FROM greenfield_assessment g WHERE g.opportunity_id = o.id ORDER BY g.updated_at DESC LIMIT 1) AS assessed_at
        FROM opportunity o
        WHERE o.deleted_at IS NULL
          AND EXISTS (
-           SELECT 1 FROM route_decision rd WHERE rd.opportunity_id = o.id AND rd.track = 'greenfield'
+           SELECT 1 FROM route_decision rd WHERE rd.opportunity_id = o.id AND rd.track = 'greenfield' AND rd.is_current = 1
          )
        ORDER BY o.created_at DESC`,
     )

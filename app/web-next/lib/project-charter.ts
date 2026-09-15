@@ -41,8 +41,9 @@ export function buildProjectCharter(
     .get(opts.opportunityId) as { name: string; market_scope: string | null; value_chain_node: string | null } | undefined;
   const route = db
     .query(
+      // ADR-0135: 권위 행은 is_current=1 (기회당 최대 1건, 부분 유니크 인덱스).
       `SELECT sub_track, rationale, intent, total_score FROM route_decision
-       WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1`,
+       WHERE opportunity_id = ? AND is_current = 1`,
     )
     .get(opts.opportunityId) as
     | { sub_track: string | null; rationale: string | null; intent: string | null; total_score: number | null }

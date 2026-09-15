@@ -373,7 +373,7 @@ export function OpportunityDetail() {
 
       {/* 승격 — 선별 상태이며 미승격일 때 (ADR-0095) */}
       {opp.status === "selected" && !opp.project_id && (
-        <PromotionPanel opportunityId={opp.id} heading={`${opp.name} — 프로젝트로 승격 (S7 → S8)`} />
+        <PromotionPanel opportunityId={opp.id} heading={`${opp.name} — 프로젝트로 추진 (S7 → S8)`} />
       )}
     </main>
   );

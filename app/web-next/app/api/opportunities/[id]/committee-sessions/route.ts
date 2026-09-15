@@ -26,7 +26,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (ctx.role === "viewer") return forbidden("role_required", "위원회 소집은 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
-    committeeKey?: string; decisionMode?: string; gate?: string; targetRef?: string; track?: string;
+    committeeKey?: string; decisionMode?: string; gate?: string; targetRef?: string; track?: string; briefMd?: string;
   } | null;
   if (!body?.committeeKey || typeof body.committeeKey !== "string") {
     return badRequest("invalid_request", "committeeKey는 필수입니다.");
@@ -49,6 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         gate: body.gate as ConveneGate | undefined,
         targetRef: body.targetRef?.trim() || undefined,
         track: body.track?.trim() || undefined,
+        briefMd: body.briefMd?.trim() || undefined,
         actor: ctx.userId,
         source: "web",
       },

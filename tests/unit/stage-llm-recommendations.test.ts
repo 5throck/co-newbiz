@@ -108,13 +108,12 @@ describe("POST /api/projects/[id]/gate-brief", () => {
 });
 
 describe("POST /api/greenfield/[oppId]/recommendation", () => {
-  test("synthesis fallback — no fabricated capability rows", async () => {
+  test("synthesis fallback — no fabricated investment items", async () => {
     const res = await nextRequest(`/api/greenfield/${oppId}/recommendation`, { method: "POST", body: JSON.stringify({}), headers: { cookie } });
     expect(res.status).toBe(200);
     const { data } = await res.json();
     expect(data.source).toBe("synthesis");
-    expect(data.recommendation.capability_rows).toBeNull();
-    expect(data.recommendation.strategy_draft.length).toBeGreaterThan(0);
+    expect(data.recommendation.investment_items).toBeNull();
     expect(data.manifest).toContain("S4 트랙 결정(greenfield)");
   });
 });

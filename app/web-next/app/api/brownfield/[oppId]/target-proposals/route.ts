@@ -1,8 +1,8 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { createTarget } from "../../../../../lib/brownfield-targets.ts";
 
 // GET/POST /api/brownfield/[oppId]/target-proposals — S6 candidate discovery.
 // Keyed by OPPORTUNITY id: the /brownfield screen works pre-promotion (a
@@ -76,13 +76,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     .get(oppId, body.company_name.trim()) as { id: string } | undefined;
   if (dup) return badRequest("duplicate_target", `'${body.company_name.trim()}'은(는) 이미 Long List에 있습니다.`);
   const now = new Date().toISOString();
-  const rid = ulid();
-  db.run(
-    `INSERT INTO brownfield_target (id, opportunity_id, company_name, dart_corp_code, universe_note, discovery_source, proposal_accepted_at, status, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?, 'pending', ?, ?)`,
-    [rid, oppId, body.company_name.trim(), body.dart_corp_code?.trim() || null,
-     body.universe_note?.trim() || null, source, now, now, now],
-  );
-  appendAudit(db, { actor: auth.auth.userId, action: "target_proposal.accept", target: `${oppId}:${rid}`, now });
-  return ok({ id: rid, discovery_source: source }, 201);
+  const target = createTarget(oppId, body.company_name.trim(), body.dart_corp_code?.trim() || null, body.universe_note?.trim() || null, {
+    discoverySource: source as "manual" | "master_proposal" | "web_proposal",
+    proposalAcceptedAt: now,
+    actorUserId: auth.auth.userId,
+  });
+  appendAudit(db, { actor: auth.auth.userId, action: "target_proposal.accept", target: `${oppId}:${target.id}`, now });
+  return ok({ id: target.id, discovery_source: source }, 201);
 }

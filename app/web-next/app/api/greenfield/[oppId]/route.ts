@@ -1,4 +1,4 @@
-// S5 역량 평가·진출전략 — 기회별 평가 상태 조회/저장.
+// S5 자체 진출 — 기회별 평가 상태 조회/저장.
 import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
@@ -32,8 +32,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const ctx = auth.auth;
   if (ctx.role === "viewer") return forbidden("role_required", "역량 평가 저장은 analyst 역할 이상이어야 합니다.");
   const { oppId } = await params;
+  // ADR-0136: capability_gaps는 더 이상 이 라우트에서 받지 않는다 — 필요 역량은
+  // 오직 S3 레지스터(/api/opportunities/[id]/capability-gap)에만 기록된다.
   const body = (await request.json().catch(() => null)) as {
-    capability_gaps?: Array<{ capability: string; required_level: string; current_level: string; gap: string; resolution: string; note?: string }>;
     entry_strategy?: string;
     alternatives_considered?: string;
     business_case_lines?: Array<{ line: string; kind: "cost" | "revenue"; amount: number; note?: string }>;
@@ -47,14 +48,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   if (existing) {
     db.run(
       `UPDATE greenfield_assessment SET
-         capability_gaps_json = COALESCE(?, capability_gaps_json),
          entry_strategy = COALESCE(?, entry_strategy),
          alternatives_considered = COALESCE(?, alternatives_considered),
          business_case_lines_json = COALESCE(?, business_case_lines_json),
          rationale = COALESCE(?, rationale),
          updated_at = ? WHERE id = ?`,
       [
-        body?.capability_gaps ? JSON.stringify(body.capability_gaps) : null,
         body?.entry_strategy?.trim() || null,
         body?.alternatives_considered?.trim() || null,
         body?.business_case_lines ? JSON.stringify(body.business_case_lines) : null,
@@ -64,11 +63,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     );
   } else {
     db.run(
-      `INSERT INTO greenfield_assessment (id, opportunity_id, capability_gaps_json, entry_strategy, alternatives_considered, business_case_lines_json, rationale, created_by, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, business_case_lines_json, rationale, created_by, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
       [
         id, oppId,
-        body?.capability_gaps ? JSON.stringify(body.capability_gaps) : null,
         body?.entry_strategy?.trim() || null,
         body?.alternatives_considered?.trim() || null,
         body?.business_case_lines ? JSON.stringify(body.business_case_lines) : null,

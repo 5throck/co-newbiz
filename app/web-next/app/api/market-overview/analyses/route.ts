@@ -8,6 +8,7 @@ import { authenticate } from "../../../../lib/auth.ts";
 import { forbidden, badRequest, fail, ok } from "../../../../lib/envelope.ts";
 import { runSizingPipeline, releaseQueueNext } from "../../../../lib/market-sizing-pipeline.ts";
 import { parseKsicInput } from "../../../../lib/ksic.ts";
+import { stripCitationMarkers } from "../../../../lib/value-chain-proposals.ts";
 
 const LINKED_RELATIONS = ["전방", "전전방", "후방", "후후방"];
 
@@ -40,7 +41,9 @@ export async function POST(request: Request) {
   } catch {
     return badRequest("invalid_json", "Request body must be JSON.");
   }
-  const nameKo = body.name_ko?.trim();
+  // 산업명은 저장·표시용 식별자 — LLM 제안 등에서 붙은 인용 표기([2] 등)가
+  // 섞여 들어오지 않도록 저장 전에 제거한다(사용자 리포트, 2026-09-16).
+  const nameKo = body.name_ko?.trim() ? stripCitationMarkers(body.name_ko.trim()) : undefined;
   if (!nameKo) return badRequest("name_required", "산업명(name_ko)은 필수입니다.");
   const ksic = parseKsicInput(body.ksic_code);
   if (!ksic.ok) return badRequest("invalid_ksic_code", ksic.reason);

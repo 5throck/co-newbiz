@@ -113,11 +113,16 @@ describe("business-target standards (ADR-0114)", () => {
 
     const opp1 = ulid();
     db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [opp1, "타깃 테스트 기회", "테스트 산업", "selected", ANALYST, NOW]);
-    db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?)", [ulid(), opp1, "greenfield", "test route", ANALYST, NOW]);
+    db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)", [ulid(), opp1, "greenfield", "test route", ANALYST, NOW]);
     db.run(
-      `INSERT INTO greenfield_assessment (id, opportunity_id, capability_gaps_json, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-      [ulid(), opp1, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
+      `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
+         VALUES (?,?,?,?,?,?,?,?)`,
+        [ulid(), opp1, "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
+    );
+    // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서 센다.
+    db.run(
+      "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
+      [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }), opp1],
     );
   // Promotion preconditions (2026-09-12): screening + pre_fs must be GO.
   for (const gate of ["screening", "pre_fs"]) {
@@ -131,11 +136,16 @@ describe("business-target standards (ADR-0114)", () => {
 
     const opp2 = ulid();
     db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [opp2, "회사 미지정 기회", "테스트 산업", "selected", ANALYST, NOW]);
-    db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?)", [ulid(), opp2, "greenfield", "test route", ANALYST, NOW]);
+    db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)", [ulid(), opp2, "greenfield", "test route", ANALYST, NOW]);
     db.run(
-      `INSERT INTO greenfield_assessment (id, opportunity_id, capability_gaps_json, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-      [ulid(), opp2, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
+      `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
+         VALUES (?,?,?,?,?,?,?,?)`,
+        [ulid(), opp2, "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
+    );
+    // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서 센다.
+    db.run(
+      "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
+      [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }), opp2],
     );
   for (const gate of ["screening", "pre_fs"]) {
     db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", opp2, gate, "go", "test", ANALYST, NOW]);

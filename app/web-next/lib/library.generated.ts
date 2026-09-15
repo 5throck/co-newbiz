@@ -205,7 +205,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "version": "1.0.0",
     "owner_agent": "brownfield-agent",
     "item_count": 9,
-    "lang": "en"
+    "lang": "ko"
   },
   {
     "id": "chk-technical-dd-checklist",
@@ -1188,8 +1188,8 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "version": "1.0.0",
     "owner_agent": "brownfield-agent",
     "item_count": 9,
-    "lang": "en",
-    "content": "governance_doc_id: chk-target-screening\nlayer: checklist\ntitle: \"Target Screening Checklist (Long List → Short List)\"\nscope: shared\nenforceability: mixed\nowner_agent: brownfield-agent\nversion: \"1.0.0\"\neffective_from: \"2026-08-31\"\ngate: Target Screening\n\n# S7 대상 스크리닝 (flow.spec v2.0.0) — Long List를 Short List로 좁히는 스크리닝.\n# 두 부분 구조 (strategic-fit 체크리스트의 Cooper Gate 1 관례를 계승):\n#   Part 1 (t1..t5) = must-meet knock-outs (Pass/Fail — any Fail = 해당 후보 제외,\n#   사유 기록). Part 2 (t6..t9) = should-meet rated criteria (0-10, 가시적 스코어카드).\n# 근거: S6 대상 후보 발굴의 Long List·Universe 정의, S1/S3 필요 역량 목록 —\n# desk research만 허용, commissioned 분석 금지 (Short List 확정 후 DD에서 수행).\n#\n# THRESHOLDS ARE ILLUSTRATIVE: t6..t9 가중치·진입 임계치는 관행 예시이며 활성 정책이\n# 아니다. 임계치 활성화는 문서화된 결정 기록이 선행되어야 한다 (ADR-0051 open (b)와 동일 규율).\n\nitems:\n  # Part 1 — must-meet knock-outs (any Fail = 후보 제외, Exclusion Reasons에 기록)\n  - id: t-01\n    text: \"Ownership/availability — the stake is plausibly available: a seller/partner exists, the stake is not subject to an undisclosed lock-up or pre-emption right that blocks the route, and an approach channel is identified (recorded per candidate)\"\n    mandatory: true\n    waiver_eligible: false   # 가용성은 완결 사실(completeness fact), 판단이 아님\n  - id: t-02\n    text: \"Regulatory screen — no known fatal foreign-investment limit, licensing/permitting transfer barrier, or concentration (merger-control pre-screen) that blocks the selected Brownfield route; blocking exposure escalates to the antitrust-agent\"\n    mandatory: true\n    waiver_eligible: false\n  - id: t-03\n    text: \"Geographic fit — the candidate's operating footprint aligns with the universe definition's geography criteria, or a recorded exception with justification exists\"\n    mandatory: true\n    waiver_eligible: true\n  - id: t-04\n    text: \"No structural market contraction + commoditization — the candidate's served market is not in terminal decline with price-only competition (the standing kill axis from Screening)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: t-05\n    text: \"Capability relevance — the candidate materially contributes the required capability list derived in S1/S3 (no capability gap is left unaddressed with no mitigation plan recorded)\"\n    mandatory: true\n    waiver_eligible: true\n  # Part 2 — should-meet rated criteria (0-10, weighted; scored and recorded)\n  - id: t-06\n    text: \"Strategic value — the candidate's position in the opportunity's value chain and its strategic contribution to the declared intent (core/adjacent/transformational)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: t-07\n    text: \"Capability complementarity — degree to which the candidate fills the capability gap vs. overlap with existing internal capabilities\"\n    mandatory: true\n    waiver_eligible: true\n  - id: t-08\n    text: \"Financial attractiveness — revenue/EBITDA scale, growth profile, margin quality, and balance-sheet health vs. the financial criteria in the universe definition (desk research only)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: t-09\n    text: \"Integration/partnership complexity — estimated complexity of the selected route (M&A integration, JV governance, or partnership operational coupling) and the sponsor's capacity to absorb it\"\n    mandatory: true\n    waiver_eligible: true\n\n# 출력: Target Company Short List + Target Ranking/Score + Screening Evidence +\n# Exclusion Reasons (모든 Long List 후보에 랭킹 또는 제외 사유 기록 — target_screening 게이트 판정기준).\n"
+    "lang": "ko",
+    "content": "governance_doc_id: chk-target-screening\nlayer: checklist\ntitle: \"Target Screening Checklist (Long List → Short List)\"\nscope: shared\nenforceability: mixed\nowner_agent: brownfield-agent\nversion: \"1.0.0\"\neffective_from: \"2026-08-31\"\ngate: Target Screening\n\n# S7 대상 스크리닝 (flow.spec v2.0.0) — Long List를 Short List로 좁히는 스크리닝.\n# 두 부분 구조 (strategic-fit 체크리스트의 Cooper Gate 1 관례를 계승):\n#   Part 1 (t1..t5) = 필수 통과 knock-out(충족/미충족 — 하나라도 미충족이면 해당 후보 제외,\n#   사유 기록). Part 2 (t6..t9) = 권장 평가 기준(0-10, 가시적 스코어카드).\n# 근거: S6 대상 후보 발굴의 Long List·Universe 정의, S1/S3 필요 역량 목록 —\n# desk research만 허용, commissioned 분석 금지 (Short List 확정 후 DD에서 수행).\n#\n# THRESHOLDS ARE ILLUSTRATIVE: t6..t9 가중치·진입 임계치는 관행 예시이며 활성 정책이\n# 아니다. 임계치 활성화는 문서화된 결정 기록이 선행되어야 한다 (ADR-0051 open (b)와 동일 규율).\n\nitems:\n  # Part 1 — 필수 통과 knock-out(하나라도 미충족이면 후보 제외, Exclusion Reasons에 기록)\n  - id: t-01\n    text: \"지분 인수 가능성 — 매도자·파트너가 존재하고, 경로를 막는 미공개 락업이나 우선매수권 등 제약이 없으며, 접촉 채널이 식별되어 있다(후보별로 기록)\"\n    mandatory: true\n    waiver_eligible: false   # 가용성은 완결 사실(completeness fact), 판단이 아님\n  - id: t-02\n    text: \"규제 스크리닝 — 선택한 Brownfield 경로를 저지할 치명적 외국인투자 제한, 인허가 이전 장벽, 기업결합(합병규제) 우려가 알려진 바 없다. 저지 가능성이 있으면 antitrust-agent로 에스컬레이션한다\"\n    mandatory: true\n    waiver_eligible: false\n  - id: t-03\n    text: \"지역 적합성 — 후보의 사업 거점이 유니버스 정의의 지역 기준에 부합하거나, 사유가 기록된 예외가 존재한다\"\n    mandatory: true\n    waiver_eligible: true\n  - id: t-04\n    text: \"구조적 시장 위축·상품화 배제 — 후보가 속한 시장이 가격 경쟁만 남은 구조적 쇠퇴기가 아니다(Screening 단계의 상시 킬 기준)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: t-05\n    text: \"역량 적합성 — 후보가 S1/S3에서 도출된 필요 역량 목록에 실질적으로 기여한다(대응 계획 없이 방치된 역량 갭이 없다)\"\n    mandatory: true\n    waiver_eligible: true\n  # Part 2 — 권장 평가 기준(0-10, 가중치 반영, 스코어카드로 기록)\n  - id: t-06\n    text: \"전략적 가치 — 후보가 이 기회의 가치사슬에서 차지하는 위치와, 선언된 전략 의도(핵심/인접/전환)에 대한 전략적 기여도\"\n    mandatory: true\n    waiver_eligible: true\n  - id: t-07\n    text: \"역량 보완성 — 후보가 역량 갭을 얼마나 채워주는지, 기존 내부 역량과의 중복 정도\"\n    mandatory: true\n    waiver_eligible: true\n  - id: t-08\n    text: \"재무적 매력도 — 매출·EBITDA 규모, 성장 프로필, 마진 품질, 재무건전성을 유니버스 정의의 재무 기준과 비교(데스크 리서치 한정)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: t-09\n    text: \"인수·파트너십 복잡도 — 선택한 경로(M&A 통합, JV 거버넌스, 파트너십 운영 결합)의 예상 복잡도와 스폰서의 소화 역량\"\n    mandatory: true\n    waiver_eligible: true\n\n# 출력: Target Company Short List + Target Ranking/Score + Screening Evidence +\n# Exclusion Reasons (모든 Long List 후보에 랭킹 또는 제외 사유 기록 — target_screening 게이트 판정기준).\n"
   },
   "chk-technical-dd-checklist": {
     "id": "chk-technical-dd-checklist",
@@ -3312,55 +3312,55 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-target-screening-checklist": [
     {
       "id": "t-01",
-      "text": "Ownership/availability — the stake is plausibly available: a seller/partner exists, the stake is not subject to an undisclosed lock-up or pre-emption right that blocks the route, and an approach channel is identified (recorded per candidate)",
+      "text": "지분 인수 가능성 — 매도자·파트너가 존재하고, 경로를 막는 미공개 락업이나 우선매수권 등 제약이 없으며, 접촉 채널이 식별되어 있다(후보별로 기록)",
       "mandatory": true,
       "waiver_eligible": false
     },
     {
       "id": "t-02",
-      "text": "Regulatory screen — no known fatal foreign-investment limit, licensing/permitting transfer barrier, or concentration (merger-control pre-screen) that blocks the selected Brownfield route; blocking exposure escalates to the antitrust-agent",
+      "text": "규제 스크리닝 — 선택한 Brownfield 경로를 저지할 치명적 외국인투자 제한, 인허가 이전 장벽, 기업결합(합병규제) 우려가 알려진 바 없다. 저지 가능성이 있으면 antitrust-agent로 에스컬레이션한다",
       "mandatory": true,
       "waiver_eligible": false
     },
     {
       "id": "t-03",
-      "text": "Geographic fit — the candidate's operating footprint aligns with the universe definition's geography criteria, or a recorded exception with justification exists",
+      "text": "지역 적합성 — 후보의 사업 거점이 유니버스 정의의 지역 기준에 부합하거나, 사유가 기록된 예외가 존재한다",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "t-04",
-      "text": "No structural market contraction + commoditization — the candidate's served market is not in terminal decline with price-only competition (the standing kill axis from Screening)",
+      "text": "구조적 시장 위축·상품화 배제 — 후보가 속한 시장이 가격 경쟁만 남은 구조적 쇠퇴기가 아니다(Screening 단계의 상시 킬 기준)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "t-05",
-      "text": "Capability relevance — the candidate materially contributes the required capability list derived in S1/S3 (no capability gap is left unaddressed with no mitigation plan recorded)",
+      "text": "역량 적합성 — 후보가 S1/S3에서 도출된 필요 역량 목록에 실질적으로 기여한다(대응 계획 없이 방치된 역량 갭이 없다)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "t-06",
-      "text": "Strategic value — the candidate's position in the opportunity's value chain and its strategic contribution to the declared intent (core/adjacent/transformational)",
+      "text": "전략적 가치 — 후보가 이 기회의 가치사슬에서 차지하는 위치와, 선언된 전략 의도(핵심/인접/전환)에 대한 전략적 기여도",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "t-07",
-      "text": "Capability complementarity — degree to which the candidate fills the capability gap vs. overlap with existing internal capabilities",
+      "text": "역량 보완성 — 후보가 역량 갭을 얼마나 채워주는지, 기존 내부 역량과의 중복 정도",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "t-08",
-      "text": "Financial attractiveness — revenue/EBITDA scale, growth profile, margin quality, and balance-sheet health vs. the financial criteria in the universe definition (desk research only)",
+      "text": "재무적 매력도 — 매출·EBITDA 규모, 성장 프로필, 마진 품질, 재무건전성을 유니버스 정의의 재무 기준과 비교(데스크 리서치 한정)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "t-09",
-      "text": "Integration/partnership complexity — estimated complexity of the selected route (M&A integration, JV governance, or partnership operational coupling) and the sponsor's capacity to absorb it",
+      "text": "인수·파트너십 복잡도 — 선택한 경로(M&A 통합, JV 거버넌스, 파트너십 운영 결합)의 예상 복잡도와 스폰서의 소화 역량",
       "mandatory": true,
       "waiver_eligible": true
     }

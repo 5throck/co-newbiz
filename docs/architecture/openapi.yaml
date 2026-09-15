@@ -252,6 +252,65 @@ paths:
           $ref: '#/components/responses/Conflict'
         '503':
           description: DART API key not configured.
+  /api/companies/{companyId}/disclosures:
+    get:
+      operationId: getCompanyDisclosures
+      summary: DART disclosure list (preset-filtered) for a company, with viewer links (ADR-0116 follow-up, 2026-09-15).
+      tags:
+        - Analysis
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/companies/{companyId}/profile:
+    get:
+      operationId: getCompanyProfile
+      summary: Latest LLM company-research profile (generalized company-profile-pipeline, 2026-09-15) — strengths/weaknesses/SWOT/competitive/RAG cap + version history.
+      tags:
+        - Analysis
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/companies/{companyId}/analyze:
+    post:
+      operationId: analyzeCompanyProfile
+      summary: Run the LLM company-research pipeline for a company (fire-and-forget; poll /profile for status). analyst+.
+      tags:
+        - Analysis
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/financial-analysis/company:
     post:
       operationId: linkProjectSubjectCompany
@@ -612,6 +671,19 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/users/lookup:
+    get:
+      operationId: lookupUsers
+      summary: Search active users by id/display name — minimal fields (user_id, display_name, role) for team-assignment pickers. Analyst+ role, not admin-gated.
+      tags:
+        - Users
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/users:
     get:
       operationId: listUsers
@@ -3130,6 +3202,68 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/brownfield/targets/{targetId}:
+    get:
+      operationId: getBrownfieldTarget
+      summary: Single-candidate detail (target row + opportunity + eval items + 100-point scores) for the dedicated candidate detail screen (2026-09-15).
+      tags:
+        - Analysis
+      parameters:
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateBrownfieldTargetDetail
+      summary: Update candidate company name/DART corp code/universe note (editable after registration, per user request). analyst+.
+      tags:
+        - Analysis
+      parameters:
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteBrownfieldTargetDetail
+      summary: Delete a candidate and its evaluation verdicts (full removal, distinct from exclude). analyst+, audited.
+      tags:
+        - Analysis
+      parameters:
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/brownfield/{oppId}/targets/{targetId}/shortlist:
     post:
       operationId: shortlistTarget
@@ -3153,6 +3287,98 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/eval-criteria:
+    get:
+      operationId: listBrownfieldEvalCriteria
+      summary: S7 financial/technical evaluation catalog (ADR-0139) — lazy-seeds builtin financial items and S3 gap-derived technical items on first call.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: addBrownfieldEvalCriterion
+      summary: Add a custom financial or technical evaluation criterion.
+      tags:
+        - Analysis
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/brownfield/{oppId}/eval-criteria/{criterionId}:
+    patch:
+      operationId: updateBrownfieldEvalCriterionWeight
+      summary: Update a criterion's relative weight (ADR-0139 weighted 100-point scoring).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteBrownfieldEvalCriterion
+      summary: Soft-delete a custom evaluation criterion (rejects builtin/seeded, or any criterion with a recorded verdict).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/brownfield/{oppId}/targets/{targetId}/eval-state:
+    get:
+      operationId: listBrownfieldTargetEvalState
+      summary: One target's financial/technical verdicts, defaulted to pending for any catalog item missing a state row.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/brownfield/{oppId}/targets/{targetId}/eval-state/{criterionId}:
+    put:
+      operationId: upsertBrownfieldTargetEvalState
+      summary: Upsert one target's verdict for one evaluation criterion (pass/fail/na/waived) — verdict is always human-entered, DART figures are reference-only.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/greenfield:
     get:

@@ -85,3 +85,8 @@ app/web-next/db/data/**
 # render artifacts (report renderer output)
 render_out/
 .openchrome/
+
+# Playwright MCP debug snapshots/screenshots — ephemeral, not deliverables
+.playwright-mcp/
+/detail-dart.png
+/detail-standard.png

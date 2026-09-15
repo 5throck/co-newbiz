@@ -34,7 +34,7 @@ const CARD_SETS: Partial<Record<StageMetaId, () => Array<Card>>> = {
     { title: "트랙별 후속 검토 입력", desc: "greenfield: 역량 평가, brownfield: Target Universe 정의.", href: "/route-decision" },
   ],
   S5: () => [
-    { title: "역량 평가·진출전략 (greenfield)", desc: "역량 격차 평가와 Build/Partner/Hire/Invest 진출전략을 수립합니다.", href: "/greenfield" },
+    { title: "자체 진출 (greenfield)", desc: "역량 격차 평가와 Build/Partner/Hire/Invest 진출전략을 수립합니다.", href: "/greenfield" },
   ],
   S6: () => [
     { title: "대상 후보 발굴 (brownfield)", desc: "Target Universe를 정의하고 Long List를 구성합니다.", href: "/brownfield" },
@@ -43,7 +43,7 @@ const CARD_SETS: Partial<Record<StageMetaId, () => Array<Card>>> = {
     { title: "대상 선정 (brownfield)", desc: "knock-out 스크리닝으로 Long List를 Short List로 축소합니다.", href: "/brownfield" },
   ],
   S8: () => [
-    { title: "프로젝트 목록", desc: "승격된 검토/안건의 사업성 분석(Business Case·밸류에이션)을 진행합니다.", href: "/projects" },
+    { title: "프로젝트 목록", desc: "추진된 검토/안건의 사업성 분석(Business Case·밸류에이션)을 진행합니다.", href: "/projects" },
     { title: "파이프라인 현황", desc: "S8~S12 퍼널과 진행 보류 현황을 봅니다.", href: "/pipeline" },
   ],
   S9: () => [
