@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0090: Synergy alignment refactor — targets from the affiliate registry, opportunities wired in
 
 **Status**: Accepted — implemented in the same change (migration 0060, pipeline, API, UI)

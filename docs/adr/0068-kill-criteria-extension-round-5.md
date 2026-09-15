@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0068: Kill-criteria extension round 5 — site infrastructure and analysis_task review plane
 
 **Status**: Accepted (2026-08-25)

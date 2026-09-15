@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0129: 수요산업(demand industry) 큐레이션 — `proxy_link` 확장
 
 - Status: Accepted

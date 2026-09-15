@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0117: Dual-perspective business-case valuation (market_forward vs historical)
 
 - Status: Accepted

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0003: Master data scope and code systems
 
 **Status**: Accepted

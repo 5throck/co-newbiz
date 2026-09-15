@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0121: Shared surface primitives — PageState, Toast, DataTable, Tabs
 
 - Status: Accepted

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0104: Committee minutes & scorecard, project charter, and track advisory
 
 - Status: Accepted

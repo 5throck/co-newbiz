@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0114: Business-target standards as group/affiliate master data, with a non-blocking fs-gate evidence panel
 
 - Status: Accepted

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0098: S8 feasibility analysis — automatic multi-business-case generation from the FS scenario contract
 
 - Status: Accepted

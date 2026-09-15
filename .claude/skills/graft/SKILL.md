@@ -1,6 +1,5 @@
 ---
 name: graft
-version: 1.0.0
 description: This repo is indexed by graft/. For ANY task here, whether
   understanding how something works, finding where code lives, tracing what
   calls a symbol or what a change breaks, or scoping an edit, get your context

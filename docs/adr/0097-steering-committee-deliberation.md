@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0097: Steering-committee deliberation — registered committees, three decision modes, and the agent_team proposal surface
 
 - Status: Accepted

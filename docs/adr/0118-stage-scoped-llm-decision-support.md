@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0118: Stage-scoped LLM decision support on human-judgment surfaces
 
 - Status: Accepted

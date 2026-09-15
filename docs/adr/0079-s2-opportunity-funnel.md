@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0079: S2 opportunity funnel — agentic discovery, factor-based evaluation, list registry
 
 **Status**: Accepted — implemented in the same change (pipeline, APIs, UI, migrations 0050–0051)

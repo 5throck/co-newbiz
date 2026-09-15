@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0126: S1 산업 사슬 방향 → 가치사슬 연계(proxy_link) 브릿지
 
 - Status: Accepted

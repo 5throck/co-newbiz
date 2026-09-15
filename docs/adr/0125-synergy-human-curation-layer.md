@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0125: S3 시너지 화면 — 사람이 편집할 수 있는 큐레이션 레이어 추가
 
 - Status: Accepted

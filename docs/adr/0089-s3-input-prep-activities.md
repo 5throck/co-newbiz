@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0089: Codify the S3 input-prep activities (company profile + synergy screen) — without stage promotion
 
 **Status**: Accepted — flow.spec S3 activity, procedure, output-type registry, and skill wiring in the same change

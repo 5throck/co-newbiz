@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0081: S7 target-screening checklist (chk-target-screening)
 
 **Status**: Accepted — implemented in the same change (checklist + procedure wiring)

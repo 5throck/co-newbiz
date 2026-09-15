@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0128: 런타임 LLM 호출의 에이전트팀 통합 (PM 라우터 + 런 장부 + 체인)
 
 - Status: Accepted

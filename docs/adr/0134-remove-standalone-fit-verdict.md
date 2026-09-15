@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0134 — Remove standalone strategic-fit verdict (fit_verdict)
 
 - Date: 2026-09-15

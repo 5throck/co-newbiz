@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0091: Admin console split — role-separated navigation, per-section routes, system dashboard
 
 **Status**: Accepted — implemented in the same change (layout, route split, system-stats API, dashboard)

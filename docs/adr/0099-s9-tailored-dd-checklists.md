@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0099: S9 due diligence — external-search tailored checklist proposals on top of the standard checklists
 
 - Status: Accepted

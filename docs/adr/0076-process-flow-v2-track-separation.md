@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0076: Process Flow v2.0.0 — post-route-decision track separation (Greenfield capability path, Brownfield target identification/screening stages)
 
 **Status**: Accepted — spec, procedures, generated doc, and interim web surface shipped in the same change

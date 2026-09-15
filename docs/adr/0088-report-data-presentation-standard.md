@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0088: Report data-presentation standard — charts, bullets, wide-table handling
 
 **Status**: Accepted — implemented in the same change (styles.css primitives, synergy report rework)

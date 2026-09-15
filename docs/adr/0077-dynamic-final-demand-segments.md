@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0077: Dynamic final-demand segments in systematic-market-sizing
 
 **Status**: Accepted — implemented in the pipeline and report UI in the same change

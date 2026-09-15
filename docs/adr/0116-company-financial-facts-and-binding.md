@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0116: Company financial facts ingestion and project–company binding
 
 - Status: Accepted

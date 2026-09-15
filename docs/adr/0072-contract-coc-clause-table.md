@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0072: Contract change-of-control clause table for the customer-attrition validator
 
 **Status**: Proposed — implementation landed in the same change (precedent: ADR-0069/0070 landed Proposed, accepted after verification)
