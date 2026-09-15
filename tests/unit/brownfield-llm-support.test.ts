@@ -81,23 +81,35 @@ describe("B — 웹검색 후보 제안 (route boundary)", () => {
     expect(res.status).toBe(404);
   });
 
-  test("검색 미설정 → synthesis 폴백, 근거 없는 LLM 이름 없음 + 감사 기록", async () => {
-    const before = (db.query("SELECT COUNT(*) c FROM audit_log WHERE action = 'target_proposal.web_search'").get() as { c: number }).c;
+  test("검색 미설정 → LLM 자체 지식 폴백(미검증), 실패 시 synthesis로 재폴백 + 감사 기록", async () => {
+    // llm_knowledge 경로는 별도 액션명(target_proposal.web_search_llm_knowledge)으로
+    // 감사 기록을 남긴다 — synthesis 재폴백 시에는 기존 target_proposal.web_search.
+    const before = (db.query(
+      "SELECT COUNT(*) c FROM audit_log WHERE action IN ('target_proposal.web_search', 'target_proposal.web_search_llm_knowledge')",
+    ).get() as { c: number }).c;
     const res = await req(`/api/brownfield/${oppId}/target-proposals/web-search`, {
       method: "POST", headers: { cookie: analystCookie },
     });
     expect(res.status).toBe(200);
-    const data = (await res.json()).data as { source: string; note: string | null; suggestions: unknown[] };
-    expect(data.source).toBe("synthesis");
+    const data = (await res.json()).data as { source: string; note: string | null; suggestions: Array<{ sources: unknown[]; rationale: string }> };
+    // TAVILY_API_KEY 미설정이면 llmKnowledgeFallback으로 간다 — 그 LLM 호출이
+    // (테스트 환경의 실제 프로바이더 설정에 따라) 실패하면 synthesis로 재폴백한다.
+    // 어느 쪽이든 "실시간 웹 검색이 설정되지 않았습니다" 사유가 note에 남는다.
+    expect(["llm_knowledge", "synthesis"]).toContain(data.source);
     expect(data.note).toContain("실시간 웹 검색이 설정되지 않았습니다");
     expect(Array.isArray(data.suggestions)).toBe(true);
-    // 폴백 제안은 기업 마스터에서 온다 — 근거 URL을 꾸며내지 않는다.
-    for (const s of data.suggestions as Array<{ sources: unknown[] }>) {
-      expect(s.sources.length).toBe(0);
+    if (data.source === "synthesis") {
+      // 결정론 폴백 제안은 기업 마스터에서 온다 — 근거 URL을 꾸며내지 않는다.
+      for (const s of data.suggestions) expect(s.sources.length).toBe(0);
+    } else {
+      // llm_knowledge 제안은 항상 미검증 라벨을 rationale에 명시한다.
+      for (const s of data.suggestions) expect(s.rationale).toContain("미검증");
     }
-    const after = (db.query("SELECT COUNT(*) c FROM audit_log WHERE action = 'target_proposal.web_search'").get() as { c: number }).c;
+    const after = (db.query(
+      "SELECT COUNT(*) c FROM audit_log WHERE action IN ('target_proposal.web_search', 'target_proposal.web_search_llm_knowledge')",
+    ).get() as { c: number }).c;
     expect(after).toBe(before + 1);
-  });
+  }, 20000);
 });
 
 describe("B — normalizeLlmSuggestions (화이트리스트 정규화, 순수)", () => {

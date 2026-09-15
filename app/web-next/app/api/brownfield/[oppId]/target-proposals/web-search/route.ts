@@ -1,8 +1,11 @@
 // POST /api/brownfield/[oppId]/target-proposals/web-search — S6 Long List 후보
 // 웹검색 제안 (ADR-0118 계약). ADR-0118 §5가 "실검색 근거 필요"로 미뤄뒀던 기능:
 // lib/web-research.ts(Tavily)로 실제 검색 근거를 먼저 확보한 뒤 LLM이 그
-// 근거에 등장하는 회사만 후보로 제안한다. 근거 없는 회사명은 절대 반환하지 않는다
-// — 검색 미설정·결과 0건이면 결정론 md_company 후보로 폴백(source: synthesis).
+// 근거에 등장하는 회사만 후보로 제안한다. 근거 없는 회사명은 절대 반환하지 않는다.
+// 실검색을 아예 쓸 수 없을 때(TAVILY_API_KEY 미설정 또는 쿼터 초과 HTTP 432)는
+// llmKnowledgeFallback으로 LLM 자체 지식 제안(source: llm_knowledge, 항상
+// "미검증" 라벨 부착)으로 대체하고, 그 LLM 호출마저 실패하거나 검색은 됐지만
+// 근거가 0건이면 결정론 md_company 후보로 폴백(source: synthesis).
 // 저장은 없다 — 사람이 "Long List에 등록"을 눌러야 brownfield_target 행이
 // 생긴다(기존 POST .../target-proposals 경로 재사용, discovery_source=
 // web_proposal로 기록).
@@ -11,10 +14,11 @@ import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../../lib/llm.ts";
-import { isWebResearchConfigured, researchSources, type WebSource } from "../../../../../../lib/web-research.ts";
+import { isWebResearchConfigured, researchSourcesDetailed, type WebSource } from "../../../../../../lib/web-research.ts";
 import { isSimilar } from "../../../../../../lib/name-similarity.ts";
 import { reliabilityForSource } from "../../../../../../lib/dd-checklist-tailor.ts";
 import { systemMessage } from "../../../../../../lib/prompts.ts";
+import { parseGapRegister } from "../../../../../../lib/capability-gap.ts";
 
 interface UniverseShape {
   definition?: string;
@@ -70,6 +74,105 @@ function synthesisFallback(
   );
 }
 
+/** 폴백 — 실검색을 쓸 수 없을 때(TAVILY_API_KEY 미설정, 또는 Tavily 쿼터 초과
+ * HTTP 432) 공용으로 쓴다. 실검색 근거가 없으므로 ADR-0118의 "근거 인용 필수"
+ * 원칙은 적용할 수 없다 — 대신 LLM 자체 지식으로 제안하되 source_indices 없이
+ * "미검증" 라벨을 강제로 붙여 결정론 폴백과 구분한다. 사람이 Long List 등록
+ * 전 반드시 별도 검증해야 함을 note로 명시한다. */
+async function llmKnowledgeFallback(
+  db: ReturnType<typeof getDb>,
+  actor: string,
+  opp: { id: string; name: string; market_scope: string | null },
+  universe: UniverseShape,
+  requiredCapabilities: string[],
+  existingNames: string[],
+  oppId: string,
+  reason: string,
+) {
+  const llmRes: LlmOrFallback = await completeOrFallback(
+    [
+      systemMessage("s6.target_proposal_web_search"),
+      { role: "user" as const, content: buildKnowledgePrompt(opp, universe, requiredCapabilities, existingNames) },
+    ],
+    () => "",
+    {
+      maxTokens: 1200,
+      agent: {
+        key: "market-intelligence-agent",
+        purpose: `S6 대상 후보 웹검색 제안 — ${reason}, LLM 자체 지식 폴백(미검증)`,
+        contextType: "opportunity",
+        contextId: oppId,
+      },
+    },
+  );
+  if (llmRes.source !== "llm") {
+    return synthesisFallback(
+      db, actor, opp, existingNames,
+      `${reason} — LLM 호출도 실패해 기업 마스터 기반 결정론 제안으로 대체합니다.`,
+    );
+  }
+  const suggestions = normalizeLlmKnowledgeSuggestions(llmRes, existingNames);
+  appendAudit(db, { actor, action: "target_proposal.web_search_llm_knowledge", target: opp.id, now: new Date().toISOString() });
+  return ok(
+    {
+      source: "llm_knowledge",
+      provider: llmRes.provider,
+      note: `${reason} — 실시간 검색 근거 없이 LLM 자체 지식으로 제안했습니다. 사실 여부를 반드시 별도로 검증한 뒤 등록하세요.`,
+      query_count: 0,
+      suggestions,
+    },
+    200,
+    { proposals: suggestions.length },
+  );
+}
+
+function buildKnowledgePrompt(
+  opp: { name: string; market_scope: string | null },
+  universe: UniverseShape,
+  requiredCapabilities: string[],
+  existingNames: string[],
+): string {
+  const lines = [
+    `검토/안건(Brownfield로 결정된 기회): ${opp.name}`,
+    opp.market_scope ? `산업: ${opp.market_scope}` : "",
+    universe.definition ? `Target Universe 정의: ${universe.definition}` : "",
+    requiredCapabilities.length ? `필요 역량(S3, 미보유·부분 충족): ${requiredCapabilities.join(" · ")}` : "",
+    universe.criteria?.length ? `선정 기준: ${universe.criteria.join(" · ")}` : "",
+    "",
+    "이미 Long List에 등록된 후보(중복 제안 금지):",
+    existingNames.length ? existingNames.map((n) => `- ${n}`).join("\n") : "(없음)",
+    "",
+    "실시간 웹 검색을 쓸 수 없습니다 — 당신의 사전 학습 지식만으로, 위 검토/안건·목표 시장" +
+      (requiredCapabilities.length ? "·필요 역량" : "") +
+      "에 부합한다고 확신하는 실제 존재하는 기업을 최대 3개까지만 제안하세요. 존재를 확신할 수 없는 기업명은 절대 지어내지 말고, " +
+      "확신이 없으면 후보를 줄여도 됩니다(0개도 가능). rationale에는 왜 적합하다고 판단했는지와 함께, 이 정보가 실시간 검색 근거 없이 " +
+      "학습 지식에만 기반한 것임을 명시하세요.",
+    'JSON만 반환: {"candidates":[{"company_name":"회사명(한글, 간결)","rationale":"판단 근거 + 미검증 명시"}]}',
+  ];
+  return lines.filter((l) => l !== "").join("\n");
+}
+
+/** 테스트 가능성을 위해 export — llmKnowledgeFallback의 LLM 응답 정규화(순수 함수).
+ * 실검색 근거가 없으므로 sources는 항상 빈 배열, reliability는 항상 "C"(미검증) —
+ * normalizeLlmSuggestions와 달리 source_indices를 요구하지 않는다. */
+export function normalizeLlmKnowledgeSuggestions(llmRes: LlmOrFallback, existingNames: string[]): Suggestion[] {
+  if (llmRes.source !== "llm") return [];
+  const parsed = parseJson(llmRes.text);
+  const raw = Array.isArray(parsed?.candidates) ? (parsed!.candidates as Array<Record<string, unknown>>) : [];
+  const out: Suggestion[] = [];
+  const seen = [...existingNames];
+  for (const c of raw) {
+    const name = typeof c.company_name === "string" ? c.company_name.trim().slice(0, 120) : "";
+    if (!name || isSimilar(name, seen)) continue;
+    const rationaleRaw = typeof c.rationale === "string" ? c.rationale.trim().slice(0, 560) : "";
+    const rationale = `[미검증 — LLM 자체 지식, 실시간 검색 근거 없음] ${rationaleRaw}`.slice(0, 600);
+    out.push({ company_name: name, rationale, sources: [], reliability: "C" });
+    seen.push(name);
+    if (out.length >= 3) break;
+  }
+  return out;
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
@@ -77,8 +180,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const { oppId } = await params;
   const db = getDb();
   const opp = db
-    .query("SELECT id, name, market_scope, target_universe_json FROM opportunity WHERE id = ?")
-    .get(oppId) as { id: string; name: string; market_scope: string | null; target_universe_json: string | null } | undefined;
+    .query("SELECT id, name, market_scope, target_universe_json, capability_gap_json FROM opportunity WHERE id = ?")
+    .get(oppId) as {
+      id: string; name: string; market_scope: string | null; target_universe_json: string | null; capability_gap_json: string | null;
+    } | undefined;
   if (!opp) return notFound();
 
   let universe: UniverseShape = {};
@@ -87,17 +192,34 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   } catch {
     // 미정의 유니버스로도 제안은 가능 — 근거가 얇아질 뿐이다.
   }
+  // S3 필요 역량(capability_gap_json) — 미보유/부분 충족 역량을 우선 반영해
+  // "결정된 기회가 실제로 필요로 하는 역량"을 갖춘 후보를 찾도록 한다.
+  const requiredCapabilities = parseGapRegister(opp.capability_gap_json).rows
+    .filter((r) => r.held.status !== "met")
+    .map((r) => r.capability);
   const existingNames = (
     db.query("SELECT company_name FROM brownfield_target WHERE opportunity_id = ?").all(oppId) as Array<{ company_name: string }>
   ).map((e) => e.company_name);
 
-  // 1) 실검색 근거 확보 — 검색 미설정이면 즉시 결정론 폴백.
+  // 1) 실검색 근거 확보 — 검색 미설정이면 LLM 자체 지식 폴백(미검증 라벨).
   if (!isWebResearchConfigured()) {
-    return synthesisFallback(db, auth.auth.userId, opp, existingNames, "실시간 웹 검색이 설정되지 않았습니다 — 기업 마스터 기반 결정론 제안으로 대체합니다.");
+    return llmKnowledgeFallback(
+      db, auth.auth.userId, opp, universe, requiredCapabilities, existingNames, oppId,
+      "실시간 웹 검색이 설정되지 않았습니다",
+    );
   }
-  const queries = buildQueries(opp.market_scope, universe);
-  const sources = await researchSources(queries, 10);
+  const queries = buildQueries(opp, universe, requiredCapabilities);
+  const { sources, quotaExceeded } = await researchSourcesDetailed(queries, 10);
   if (sources.length === 0) {
+    // 검색 자체가 실패(쿼터 초과)한 경우와 검색은 됐지만 근거가 0건인 경우를
+    // 구분한다 — 쿼터 초과일 때만 LLM 자체 지식 폴백으로 간다(근거 0건은
+    // ADR-0118 원칙대로 날조 방지를 위해 결정론 폴백을 유지).
+    if (quotaExceeded) {
+      return llmKnowledgeFallback(
+        db, auth.auth.userId, opp, universe, requiredCapabilities, existingNames, oppId,
+        "웹 검색 쿼터가 초과되었습니다",
+      );
+    }
     return synthesisFallback(db, auth.auth.userId, opp, existingNames, "웹 검색에서 근거를 찾지 못했습니다 — 기업 마스터 기반 결정론 제안으로 대체합니다.");
   }
 
@@ -105,7 +227,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const llmRes: LlmOrFallback = await completeOrFallback(
     [
       systemMessage("s6.target_proposal_web_search"),
-      { role: "user" as const, content: buildPrompt(opp, universe, existingNames, sources) },
+      { role: "user" as const, content: buildPrompt(opp, universe, requiredCapabilities, existingNames, sources) },
     ],
     () => "",
     {
@@ -139,32 +261,46 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   );
 }
 
-/** 테스트 가능성을 위해 export — 순수 함수(네트워크·DB 없음). */
-export function buildQueries(marketScope: string | null, universe: UniverseShape): string[] {
-  const base = marketScope?.trim();
+/** 테스트 가능성을 위해 export — 순수 함수(네트워크·DB 없음).
+ * opp.name(Brownfield로 결정된 구체 기회)을 검색 앵커로 쓰고, market_scope는
+ * 보조 앵커로만 더한다 — market_scope 단독은 산업 전체로 검색이 흐려진다.
+ * requiredCapabilities(S3 필요 역량, 미보유/부분 충족)를 반영해 그 역량을
+ * 실제로 갖춘 후보를 우선 찾도록 한다. */
+export function buildQueries(
+  opp: { name: string; market_scope: string | null },
+  universe: UniverseShape,
+  requiredCapabilities: string[],
+): string[] {
+  const base = opp.name?.trim() || opp.market_scope?.trim();
   if (!base) return [];
-  const q: string[] = [`${base} 시장 주요 기업 점유율`];
+  const q: string[] = [`${base} 사업 주요 기업`];
+  if (opp.market_scope && opp.market_scope.trim() !== base) q.push(`${opp.market_scope.trim()} 시장 주요 기업 점유율`);
   if (universe.definition) q.push(`${base} ${universe.definition.slice(0, 40)} 대표 기업`);
   if (universe.criteria?.length) q.push(`${base} ${universe.criteria.slice(0, 3).join(" ")} 기업`);
-  return q.slice(0, 4);
+  if (requiredCapabilities.length) q.push(`${base} ${requiredCapabilities.slice(0, 3).join(" ")} 보유 기업`);
+  return q.slice(0, 5);
 }
 
 function buildPrompt(
   opp: { name: string; market_scope: string | null },
   universe: UniverseShape,
+  requiredCapabilities: string[],
   existingNames: string[],
   sources: WebSource[],
 ): string {
   const lines = [
-    `검토/안건: ${opp.name}`,
+    `검토/안건(Brownfield로 결정된 기회): ${opp.name}`,
     opp.market_scope ? `산업: ${opp.market_scope}` : "",
     universe.definition ? `Target Universe 정의: ${universe.definition}` : "",
+    requiredCapabilities.length ? `필요 역량(S3, 미보유·부분 충족): ${requiredCapabilities.join(" · ")}` : "",
     universe.criteria?.length ? `선정 기준: ${universe.criteria.join(" · ")}` : "",
     "",
     "이미 Long List에 등록된 후보(중복 제안 금지):",
     existingNames.length ? existingNames.map((n) => `- ${n}`).join("\n") : "(없음)",
     "",
-    "아래 번호 매기기된 검색 근거만 사용해, 이 산업·유니버스에 해당하는 대상 후보 기업을 3~5개 제안하세요.",
+    requiredCapabilities.length
+      ? "아래 번호 매기기된 검색 근거만 사용해, 위 검토/안건과 목표 시장에 해당하면서 특히 필요 역량(S3)을 실제로 보유했다고 확인되는 대상 후보 기업을 3~5개 제안하세요. 근거에 역량 보유 여부가 나타나지 않는 후보는 rationale에 그 한계를 명시하세요."
+      : "아래 번호 매기기된 검색 근거만 사용해, 이 산업·목표 시장에 해당하는 대상 후보 기업을 3~5개 제안하세요.",
     'JSON만 반환: {"candidates":[{"company_name":"회사명(한글, 간결)","rationale":"근거 요약 2~3문장 — 어떤 검색 근거에서 확인했는지 인용","source_indices":[근거 번호 배열]}]}',
     "",
     ...sources.map((s, i) => `[${i + 1}] ${s.title}\nURL: ${s.url}\n${s.snippet.slice(0, 300)}`),

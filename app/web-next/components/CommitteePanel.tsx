@@ -99,12 +99,16 @@ export function CommitteePanel({
   committeeLabel,
   gates,
   targetRef,
+  briefMd,
 }: {
   opportunityId: string;
   committeeKey: string;
   committeeLabel: string;
   gates: Array<"screening" | "pre_fs" | "fs" | "dd" | "entity_ic" | "group_ic">;
   targetRef?: string;
+  /** Extra judgement-basis text appended to the convene topic (e.g. S6/S7's
+   * t-01~t-09 verdict brief) — every committee member's prompt includes it. */
+  briefMd?: string;
 }) {
   const { me } = useAuth();
   const canAct = me?.role === "admin" || me?.role === "analyst";
@@ -144,6 +148,7 @@ export function CommitteePanel({
         decisionMode,
         gate,
         ...(targetRef ? { targetRef } : {}),
+        ...(briefMd ? { briefMd } : {}),
       });
       setNotice(`위원회 세션이 소집되었습니다 (${r.data.sessionId.slice(-6)}).`);
       loadSessions();

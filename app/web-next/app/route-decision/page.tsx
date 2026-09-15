@@ -138,7 +138,7 @@ function RouteDecisionRedirect() {
                     </div>
                   </div>
                   <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
-                    이미 프로젝트로 승격된 검토/안건입니다 — 새로 결정할 수는 없지만 S4 결정 이력은 계속 열람할 수 있습니다.
+                    이미 프로젝트로 추진된 검토/안건입니다 — 새로 결정할 수는 없지만 S4 결정 이력은 계속 열람할 수 있습니다.
                   </p>
                   {filteredPromoted.length === 0 ? (
                     <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">선택한 기간에 승격된 검토/안건이 없습니다.</p>

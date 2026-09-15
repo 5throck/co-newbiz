@@ -46,6 +46,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       held: { status: "unevaluated" as const, holders: [], evidence: "" },
       resolution: null,
       note: "",
+      requiredLevel: "",
+      currentLevel: "",
     }));
 
   return ok({

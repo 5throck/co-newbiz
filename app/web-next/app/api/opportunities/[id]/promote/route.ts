@@ -13,7 +13,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "프로젝트 승격은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "프로젝트 추진은 analyst 역할 이상이어야 합니다.");
   if (ctx.role === "admin") {
     // ADR-0091 역할-화면 분리: admin은 시스템 운영자로 검토/안건 콘텐츠에 접근하지
     // 않는다(visibleProject도 admin을 차단). admin이 승격하면 본인이 lead가
@@ -23,17 +23,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params;
+  const ROLES = new Set(["lead", "contributor", "reviewer", "observer"]);
   const body = (await request.json().catch(() => null)) as {
     needToKnowBasis?: string;
     origin?: string;
     /** ADR-0104 — override the auto-built charter name (charter is auto-built from S1~S7 artifacts). */
     project_name?: string;
+    members?: Array<{ userId?: string; projectRole?: string }>;
   } | null;
   const basis = body?.needToKnowBasis?.trim();
-  if (!basis) return badRequest("invalid_request", "needToKnowBasis는 필수입니다 — 승격자의 멤버십 근거가 기록되지 않으면 승격할 수 없습니다.");
+  if (!basis) return badRequest("invalid_request", "needToKnowBasis는 필수입니다 — 추진자의 멤버십 근거가 기록되지 않으면 추진할 수 없습니다.");
   const origin = body?.origin;
   if (origin && !["internal", "external", "hybrid", "joint"].includes(origin)) {
     return badRequest("invalid_request", "origin은 internal | external | hybrid | joint 중 하나입니다 (ADR-0013).");
+  }
+  const members: Array<{ userId: string; projectRole: "lead" | "contributor" | "reviewer" | "observer" }> = [];
+  for (const m of body?.members ?? []) {
+    const userId = m?.userId?.trim();
+    if (!userId) continue;
+    if (!m?.projectRole || !ROLES.has(m.projectRole)) {
+      return badRequest("invalid_request", "members[].projectRole은 lead | contributor | reviewer | observer 중 하나입니다.");
+    }
+    members.push({ userId, projectRole: m.projectRole as "lead" | "contributor" | "reviewer" | "observer" });
   }
 
   const db = getDb();
@@ -62,6 +73,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       origin: origin as "internal" | "external" | "hybrid" | "joint" | undefined,
       projectName,
       charterJson,
+      members,
     });
     return ok(
       {

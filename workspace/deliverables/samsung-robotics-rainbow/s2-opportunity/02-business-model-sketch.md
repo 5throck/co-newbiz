@@ -1,7 +1,7 @@
 ---
 stage: S2
 gate: Screening
-owner_agent: greenfield-agent
+owner_agent: brownfield-agent
 date: 2026-08-31
 track: brownfield
 ---

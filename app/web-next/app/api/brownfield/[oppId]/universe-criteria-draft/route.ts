@@ -35,7 +35,7 @@ const str = (v: unknown, max: number): string => (typeof v === "string" ? v.trim
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "선정 기준 초안 생성은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "평가 기준 초안 생성은 analyst 역할 이상이어야 합니다.");
   const { oppId } = await params;
   const db = getDb();
   const opp = db

@@ -1,10 +1,9 @@
 // S7 — Short List 승격 (knock-out 통과 + 필수 항목 판정 완료가 조건).
-import { ulid } from "../../../../../../../../../db/lib/ulid.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
-import { screeningSummary, type TargetRow } from "../../../../../../../lib/brownfield-targets.ts";
+import { screeningSummary, resolveOrCreateCompany, type TargetRow } from "../../../../../../../lib/brownfield-targets.ts";
 
 const now = () => new Date().toISOString();
 
@@ -34,15 +33,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
 
   // S7 → 시너지 정합성 자동 연결 — 대상 회사를 md_company에 등록/재사용하고
   // synergy_analysis를 in_progress로 준비해 시너지 정합성 화면에서 바로 심층 분석이 가능하게 한다.
-  let company_id: string | null = null;
-  const mc = db.query("SELECT id FROM md_company WHERE name_ko = ?").get(target.company_name) as { id: string } | undefined;
-  if (mc) {
-    company_id = mc.id;
-    if (target.dart_corp_code) db.run("UPDATE md_company SET dart_corp_code = ? WHERE id = ?", [target.dart_corp_code, mc.id]);
-  } else {
-    company_id = ulid();
-    db.run("INSERT INTO md_company (id, dart_corp_code, name_ko, created_at) VALUES (?,?,?,?)", [company_id, target.dart_corp_code, target.company_name, now()]);
-  }
+  // (Long List 등록 시점에 이미 createTarget()이 md_company를 확보해 두므로,
+  // 여기서는 재사용만 함 — 멱등.)
+  const company_id = resolveOrCreateCompany(db, target.company_name, target.dart_corp_code);
   let synergyLinked = false;
   const syn = db
     .query("SELECT id FROM synergy_analysis WHERE company_id = ? ORDER BY created_at DESC LIMIT 1")

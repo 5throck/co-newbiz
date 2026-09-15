@@ -4,7 +4,7 @@
 // 채점 프레임워크: 2026-08-24 Class-C 결정 (d) / ADR-0052 — Stage 1 의도 분기
 // (integration | capability_access) → Stage 2 5기준 × 20% × 1–3점 + 사전배제.
 import { getDb } from "../../../../../../../db/client.ts";
-import { getDraftRouteDecision, listRouteDecisionsWithScores } from "../../../../../../../db/repositories/route-decision.repository.ts";
+import { finalizeRouteDecisionCurrency, getDraftRouteDecision, listRouteDecisionsWithScores } from "../../../../../../../db/repositories/route-decision.repository.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
@@ -157,6 +157,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
        intentValue, 0, stagingRecommended, total, gateEvaluationId],
     );
   }
+  // ADR-0135: 이 결정이 기회의 권위 행이 된다 — 직전 권위 행은 삭제되지 않고
+  // is_current=0 + superseded_by로 대체 처리된다(결정 이력 보존). 인서트/업데이트
+  // 직후 같은 쓰기 경로에서 호출해야 self-FK와 부분 유니크 인덱스가 성립한다.
+  finalizeRouteDecisionCurrency(id, decisionId, db);
   for (const s of scoreRows) {
     db.run(
       `INSERT INTO route_decision_score (id, decision_id, intent, criterion, score, evidence_note, created_at)

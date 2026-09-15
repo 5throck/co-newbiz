@@ -612,6 +612,19 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/users/lookup:
+    get:
+      operationId: lookupUsers
+      summary: Search active users by id/display name — minimal fields (user_id, display_name, role) for team-assignment pickers. Analyst+ role, not admin-gated.
+      tags:
+        - Users
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/users:
     get:
       operationId: listUsers
@@ -3153,6 +3166,82 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/eval-criteria:
+    get:
+      operationId: listBrownfieldEvalCriteria
+      summary: S7 financial/technical evaluation catalog (ADR-0139) — lazy-seeds builtin financial items and S3 gap-derived technical items on first call.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: addBrownfieldEvalCriterion
+      summary: Add a custom financial or technical evaluation criterion.
+      tags:
+        - Analysis
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/brownfield/{oppId}/eval-criteria/{criterionId}:
+    delete:
+      operationId: deleteBrownfieldEvalCriterion
+      summary: Soft-delete a custom evaluation criterion (rejects builtin/seeded, or any criterion with a recorded verdict).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/brownfield/{oppId}/targets/{targetId}/eval-state:
+    get:
+      operationId: listBrownfieldTargetEvalState
+      summary: One target's financial/technical verdicts, defaulted to pending for any catalog item missing a state row.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/brownfield/{oppId}/targets/{targetId}/eval-state/{criterionId}:
+    put:
+      operationId: upsertBrownfieldTargetEvalState
+      summary: Upsert one target's verdict for one evaluation criterion (pass/fail/na/waived) — verdict is always human-entered, DART figures are reference-only.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/greenfield:
     get:

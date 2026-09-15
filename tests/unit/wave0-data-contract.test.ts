@@ -61,13 +61,18 @@ beforeAll(async () => {
     [opportunityId, "Wave0 기회", "로봇 산업", "시스템 통합", 5000, 8.0, 80, 70, "근거", "selected", ANALYST, NOW],
   );
   db.run(
-    "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?)",
+    "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)",
     [ulid(), opportunityId, "greenfield", "test", ANALYST, NOW],
   );
   db.run(
-    `INSERT INTO greenfield_assessment (id, opportunity_id, capability_gaps_json, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?)`,
-    [ulid(), opportunityId, JSON.stringify([{ gap: "g1", resolution: "hire" }]), "직접 진출", "M&A 대안", "test", ANALYST, NOW, NOW],
+    `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [ulid(), opportunityId, "직접 진출", "M&A 대안", "test", ANALYST, NOW, NOW],
+  );
+  // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서 센다.
+  db.run(
+    "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
+    [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }), opportunityId],
   );
   for (const gate of ["screening", "pre_fs"]) {
     db.run(
@@ -214,6 +219,22 @@ describe("Wave 0 — target proposals (provenance A1/A2, opportunity-keyed)", ()
     })).status).toBe(400);
   });
 
+  // Regression (2라운드 회의): accept-proposal POST used to do its own inline
+  // INSERT and never called createTarget() — so md_company/평가 기준 시딩,
+  // which now lives inside createTarget(), would have silently never run on
+  // this path even though it's the one the Universe-tab "확정" button uses.
+  test("accept-proposal path also resolves md_company + seeds eval criteria (createTarget consolidation)", async () => {
+    const res = await req(`/api/brownfield/${opportunityId}/target-proposals`, {
+      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      body: JSON.stringify({ company_name: "웹검색확정테스트", discovery_source: "web_proposal" }),
+    });
+    expect(res.status).toBe(201);
+    const mc = db.query("SELECT id FROM md_company WHERE name_ko = ?").get("웹검색확정테스트") as { id: string } | undefined;
+    expect(mc).toBeTruthy();
+    const criteria = db.query("SELECT COUNT(*) c FROM brownfield_eval_criterion WHERE opportunity_id = ? AND category = 'financial' AND source = 'builtin'").get(opportunityId) as { c: number };
+    expect(criteria.c).toBe(3);
+  });
+
   test("viewer POST is 403 (analyst+ floor)", async () => {
     const res = await req(`/api/brownfield/${opportunityId}/target-proposals`, {
       method: "POST", headers: { cookie: viewerCookie, "content-type": "application/json" },
@@ -236,7 +257,7 @@ describe("Wave 0 — target proposals (provenance A1/A2, opportunity-keyed)", ()
       [preId, "브라운필드 사전검증", "로봇 산업", "시스템 통합", 5000, 8.0, 80, 70, "근거", "selected", ANALYST, NOW],
     );
     db.run(
-      "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?)",
+      "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)",
       [ulid(), preId, "brownfield", "test", ANALYST, NOW],
     );
     const list = await req(`/api/brownfield/${preId}/target-proposals`, { headers: { cookie: analystCookie } });

@@ -630,7 +630,8 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
     setGapRows((prev) => [
       ...prev,
       { id: `gap-manual-${Date.now().toString(36)}`, capability, source: "manual", requiredNote: "",
-        held: { status: "unevaluated", holders: [], evidence: "" }, resolution: null, note: "" },
+        held: { status: "unevaluated", holders: [], evidence: "" }, resolution: null, note: "",
+        requiredLevel: "", currentLevel: "" },
     ]);
     setNewGapCap("");
   }

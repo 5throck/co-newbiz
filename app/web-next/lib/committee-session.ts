@@ -66,6 +66,10 @@ export interface SessionMeta {
   target_ref?: string;
   /** Track the session was convened under — resolves conditional seats (8). */
   track?: string;
+  /** Extra judgement-basis text appended to every member's topic prompt
+   * (e.g. S6/S7's t-01~t-09 screening verdicts) — persisted so round 2+
+   * (advance()) rebuilds the same enriched topic, not just convene-time. */
+  brief_md?: string;
   synthesized?: boolean;
   evaluation_id?: string;
 }
@@ -214,6 +218,10 @@ export interface ConveneOpts {
   targetRef?: string;
   /** Conditional-seat resolution (applies_when: track == ...). */
   track?: string;
+  /** Extra judgement-basis text appended to every member's topic prompt
+   * (e.g. S6/S7's t-01~t-09 screening verdicts, built client-side from
+   * data the caller already has). */
+  briefMd?: string;
   actor: string;
   callAgent?: CallAgent;
   source?: string;
@@ -236,7 +244,8 @@ export class CommitteeError extends Error {
 
 function sessionTopic(committee: CommitteeDef, opts: ConveneOpts): string {
   const scope = opts.targetRef ? `대상 ${opts.targetRef}` : opts.gate ? `진행 ${opts.gate}` : committee.applies_to;
-  return `${committee.applies_to} 심의 (${scope})`;
+  const base = `${committee.applies_to} 심의 (${scope})`;
+  return opts.briefMd ? `${base}\n\n## 판정 근거\n${opts.briefMd}` : base;
 }
 
 function createSessionRun(entity: EntityRef, committee: CommitteeDef, opts: ConveneOpts, meta: SessionMeta): string {
@@ -286,6 +295,7 @@ export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOp
     gate,
     ...(opts.targetRef ? { target_ref: opts.targetRef } : {}),
     ...(opts.track ? { track: opts.track } : {}),
+    ...(opts.briefMd ? { brief_md: opts.briefMd } : {}),
   };
 
   // agent_team: agents propose through the full engine — one call, all
@@ -448,6 +458,7 @@ export async function advanceCommitteeSession(
     decisionMode: meta.decision_mode,
     gate: meta.gate as ConveneOpts["gate"],
     targetRef: meta.target_ref,
+    briefMd: meta.brief_md,
     actor: opts.actor,
   });
 

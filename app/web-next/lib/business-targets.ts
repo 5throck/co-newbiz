@@ -165,7 +165,9 @@ export function finalYearLineAmount(line: { annual_amount_krw_m: number; start_y
 }
 
 /** Operating margin uses labor+opex as operating costs; capex is investment and
- * stays out of the margin numerator (documented in ADR-0114). */
+ * stays out of the margin numerator (documented in ADR-0114). `gov_rnd`
+ * (government R&D grants) falls through the same way — it isn't core
+ * commercial revenue either (ADR-0138). */
 export function finalYearCaseFigures(adopted: BusinessCaseView): { revenueKrwM: number | null; operatingMargin: number | null } {
   let revenue = 0;
   let operatingCost = 0;

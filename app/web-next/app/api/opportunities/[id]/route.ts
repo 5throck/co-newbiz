@@ -120,7 +120,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   if (existing.project_id) {
     return badRequest(
       "opportunity_promoted",
-      "이 기회는 프로젝트로 승격되어 있습니다. 프로젝트 개요에서 프로젝트를 삭제한 뒤 다시 시도하세요.",
+      "이 기회는 프로젝트로 추진되어 있습니다. 프로젝트 개요에서 프로젝트를 삭제한 뒤 다시 시도하세요.",
     );
   }
   const now = new Date().toISOString();

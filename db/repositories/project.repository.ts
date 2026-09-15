@@ -29,6 +29,7 @@
 import { getDb } from "../client.ts";
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit, grantProjectMembership, logDataAccess } from "../lib/access-control.ts";
+import { getCurrentRouteDecision } from "./route-decision.repository.ts";
 
 export interface ProjectRow {
   id: string;
@@ -85,7 +86,6 @@ interface PromotionSourceRow {
 }
 
 interface GreenfieldAssessmentCheck {
-  capability_gaps_json: string | null;
   entry_strategy: string | null;
   alternatives_considered: string | null;
 }
@@ -155,13 +155,16 @@ function assertPromotionPreconditions(db: ReturnType<typeof getDb>, opp: Promoti
   if (opp.track === "greenfield") {
     const a = db
       .query(
-        `SELECT capability_gaps_json, entry_strategy, alternatives_considered
+        `SELECT entry_strategy, alternatives_considered
          FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1`,
       )
       .get(opp.id) as GreenfieldAssessmentCheck | undefined;
+    // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서
+    // 센다 — greenfield_assessment.capability_gaps_json은 더 이상 채워지지 않는다.
+    const gapRow = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(opp.id) as { capability_gap_json: string | null } | undefined;
     let gapCount = 0;
     try {
-      gapCount = a?.capability_gaps_json ? (JSON.parse(a.capability_gaps_json) as unknown[]).length : 0;
+      gapCount = gapRow?.capability_gap_json ? ((JSON.parse(gapRow.capability_gap_json) as { rows?: unknown[] }).rows ?? []).length : 0;
     } catch {
       /* unparseable = empty */
     }
@@ -224,6 +227,10 @@ export function promoteOpportunity(
     /** ADR-0104 charter — display name + structured charter JSON built by lib/project-charter.ts. */
     projectName?: string;
     charterJson?: string;
+    /** 승격 시점 팀원 배정 — 승격자 본인(lead)은 항상 별도로 등록되므로 여기
+     * 포함돼도 무시된다. 각 행은 승격자가 입력한 동일한 needToKnowBasis로
+     * grantProjectMembership을 거친다(개별 사유 입력은 받지 않음). */
+    members?: Array<{ userId: string; projectRole: "lead" | "contributor" | "reviewer" | "observer" }>;
   },
 ): PromotedProject {
   if (!opts.needToKnowBasis?.trim()) {
@@ -243,10 +250,9 @@ export function promoteOpportunity(
       throw new PromotionError("already_promoted", `opportunity '${opportunityId}' is already promoted to project '${opp.project_id}'.`);
     }
 
-    const route = db
-      .query("SELECT track FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
-      .get(opportunityId) as { track: "greenfield" | "brownfield" } | undefined;
-    const track = route?.track ?? null;
+    // ADR-0135: 권위 행은 is_current=1로 읽는다 — getCurrentRouteDecision 재사용.
+    const route = getCurrentRouteDecision(opportunityId, db);
+    const track = (route?.track as "greenfield" | "brownfield" | undefined) ?? null;
     assertPromotionPreconditions(db, { id: opp.id, project_id: opp.project_id, track });
 
     const id = ulid();
@@ -281,6 +287,45 @@ export function promoteOpportunity(
       }
     }
 
+    // Greenfield: copy S5's "투자비 검토 요건" (business_case_lines_json) into
+    // a real business_case_model/business_case_line so S8 doesn't start blank
+    // (ADR-0137, ADR-0138). One model, one line per S5 entry; amounts are 억원
+    // in S5's UI, annual_amount_krw_m is 백만원, hence ×100. period(월/분기/년)
+    // is normalized into that same annual figure; lumpsum과 비KRW 통화는
+    // 변환하지 않고 note 플래그로만 남긴다(경계 #2 — 위조하지 않는다).
+    if (track === "greenfield") {
+      const assessment = db
+        .query("SELECT business_case_lines_json FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
+        .get(opportunityId) as { business_case_lines_json: string | null } | undefined;
+      let lines: Array<{ line: string; category: string; amount: number; note?: string; period?: string; currency?: string }> = [];
+      try {
+        lines = assessment?.business_case_lines_json ? JSON.parse(assessment.business_case_lines_json) : [];
+      } catch { /* malformed — treat as none, don't block promotion over it */ }
+      const validCategories = new Set(["labor", "opex", "capex", "revenue", "gov_rnd"]);
+      lines = lines.filter((l) => l?.line?.trim() && validCategories.has(l.category));
+      if (lines.length > 0) {
+        const modelId = ulid();
+        db.run(
+          "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
+          [modelId, row.id, "greenfield_cost", "S5 투자비 검토 요건 (자동 이관)", 5, opts.promotedBy, now],
+        );
+        const PERIOD_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1, lumpsum: 1 };
+        for (const l of lines) {
+          const periodMult = PERIOD_MULTIPLIER[l.period ?? "yearly"] ?? 1;
+          const annualAmount = (l.amount || 0) * periodMult * 100;
+          const flags: string[] = [];
+          if (l.period === "lumpsum") flags.push("일시불 총액 — 연반복 아님");
+          if (l.currency && l.currency !== "KRW") flags.push(`원문 통화: ${l.currency} — 환율 미반영, S8에서 환산 필요`);
+          const note = [...flags, l.note?.trim() || "S5에서 이관됨 — 검증 필요"].join(". ");
+          db.run(
+            `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note, created_by, created_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?)`,
+            [ulid(), modelId, l.category, l.line.trim(), annualAmount, 1, 0, note, opts.promotedBy, now],
+          );
+        }
+      }
+    }
+
     db.run("UPDATE opportunity SET project_id = ?, promoted_at = ? WHERE id = ?", [row.id, now, opportunityId]);
 
     // Same transaction as the insert — see the zero-member-invisibility JSDoc.
@@ -292,6 +337,20 @@ export function promoteOpportunity(
       needToKnowBasis: opts.needToKnowBasis,
       now,
     });
+
+    // 승격 시점 팀원 배정 — 승격자 본인은 이미 lead로 등록했으므로 중복 배정을
+    // 건너뛴다(자기 자신을 다른 역할로 다시 넣어 lead를 덮어쓰지 못하게 한다).
+    for (const member of opts.members ?? []) {
+      if (member.userId === opts.promotedBy) continue;
+      grantProjectMembership(db, {
+        projectId: row.id,
+        userId: member.userId,
+        projectRole: member.projectRole,
+        grantedBy: opts.promotedBy,
+        needToKnowBasis: opts.needToKnowBasis,
+        now,
+      });
+    }
 
     appendAudit(db, { actor: opts.promotedBy, action: "opportunity_promoted", target: `${opportunityId}:${row.id}`, now });
 

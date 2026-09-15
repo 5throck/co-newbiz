@@ -168,6 +168,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
               held: { status: "unevaluated" as const, holders: [], evidence: "" },
               resolution: null,
               note: "LLM 시너지 영역 도출 초안 — 사람이 확인해 확정하세요.",
+              requiredLevel: "",
+              currentLevel: "",
             }));
           if (newRows.length > 0) rows = [...rows, ...newRows];
           source = "llm";

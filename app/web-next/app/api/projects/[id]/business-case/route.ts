@@ -15,7 +15,7 @@ import { listBusinessCases } from "../../../../../lib/business-case.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
 const KINDS = new Set(["greenfield_cost", "revenue", "valuation", "investment_return"]);
-const CATEGORIES = new Set(["labor", "opex", "capex", "revenue"]);
+const CATEGORIES = new Set(["labor", "opex", "capex", "revenue", "gov_rnd"]);
 
 interface LineInput {
   category?: string;

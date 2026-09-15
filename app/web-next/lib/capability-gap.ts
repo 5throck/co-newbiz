@@ -20,6 +20,10 @@ export interface CapabilityGapRow {
   held: { status: GapHeldStatus; holders: string[]; evidence: string };
   resolution: GapResolution | null;
   note: string;
+  // S5(그린필드 자체 진출, ADR-0136)가 채우는 필드 — S3은 이 값을
+  // 모른 채로 두어도(읽지 않고 그대로 왕복시켜도) 무방하다.
+  requiredLevel: string;
+  currentLevel: string;
 }
 
 export interface CapabilityGapRegister {
@@ -34,9 +38,11 @@ export const HELD_STATUS_LABEL: Record<GapHeldStatus, string> = {
   unevaluated: "미판정",
 };
 
+// S4 브라운필드 sub_track 라벨(RouteDecisionStage.tsx의 partnership: "파트너십")과
+// 표현을 통일한다(ADR-0136) — build/hire/invest는 S4에 대응 개념이 없어 그대로 둔다.
 export const RESOLUTION_LABEL: Record<GapResolution, string> = {
   build: "구축",
-  partner: "파트너",
+  partner: "파트너십",
   hire: "영입",
   invest: "투자",
 };
@@ -80,6 +86,8 @@ export function normalizeGapRows(raw: unknown): CapabilityGapRow[] {
       },
       resolution,
       note: str(item.note, 300),
+      requiredLevel: str(item.requiredLevel, 120),
+      currentLevel: str(item.currentLevel, 120),
     });
   }
   return rows;
