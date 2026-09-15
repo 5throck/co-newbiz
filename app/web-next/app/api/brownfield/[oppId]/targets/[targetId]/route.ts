@@ -59,5 +59,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   db.run("UPDATE brownfield_target SET screening_json = ?, gate_evaluation_id = COALESCE(?, gate_evaluation_id), updated_at = ? WHERE id = ?", [JSON.stringify(merged), gateEvaluationId, now(), targetId]);
   appendAudit(db, { actor: auth.auth.userId, action: "brownfield_target.screening", target: `${oppId}:${targetId}`, now: new Date().toISOString() });
   const updated = db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId) as unknown as TargetRow;
-  return ok({ target: updated, screening_summary: screeningSummary(updated) }, 200);
+  // GET .../targets와 동일한 형태(summary가 행에 포함)로 반환한다 — 클라이언트가
+  // { ...t, ...target }로 병합할 때 summary가 undefined로 덮여 쓰이지 않도록.
+  return ok({ target: { ...updated, screening_summary: screeningSummary(updated) } }, 200);
 }
