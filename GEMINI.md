@@ -135,24 +135,16 @@ Interact and exchange contracts with spawned agents via their unique `conversati
 The platform supports **Reactive Wakeup**: you do not need to poll or query tasks in a loop. Simply yield execution, and the platform will wake you up automatically as soon as an agent replies or a background task completes.
 
 #### Phase 4 Execution Loop
-See [AGENTS.md - Subagent Roster](AGENTS.md#subagent-roster) for the complete agent list:
+See [AGENTS.md - Subagent Roster](AGENTS.md#roster-overview) for the complete agent list:
 1.  **automation-engineer** implements the changes.
 2.  **PM** verifies against acceptance criteria by running `bun scripts/audit.ts` directly.
 3.  **Quality gate (audit script)** validates compliance.
 
 > Loop and correct if review errors are flagged - maximum **3 iterations** before escalating to the user.
 
-#### Cost Optimization (3-Tier Model Strategy)
-The High/Medium/Low tier concept and its usage rules are the Single Source of Truth in [AGENTS.md §3.6 3-Tier Strategy](AGENTS.md#36-3-tier-strategy). Gemini/Antigravity's model-ID mapping (overridden per subagent invocation when appropriate):
-- **High-tier** → `gemini-3.1-pro` (Parameter: `thinking_level="medium"`)
-- **Medium-tier** → `gemini-3.8-flash` (no thinking parameter)
-- **Low-tier** → `gemini-3.8-flash` (no thinking parameter)
-
----
-
 <!-- COMMON-GEMINI:START -->
 #### Cost Optimization (3-Tier Model Strategy)
-The High/Medium/Low tier concept and its usage rules are the Single Source of Truth in [AGENTS.md §3.6 3-Tier Strategy](AGENTS.md#36-3-tier-strategy). Gemini/Antigravity's model-ID mapping (overridden per subagent invocation when appropriate):
+The High/Medium/Low tier concept and its usage rules are the Single Source of Truth in [workspace-root AGENTS.md §3.6 3-Tier Strategy](../../AGENTS.md#36-3-tier-strategy). Gemini/Antigravity's model-ID mapping (overridden per subagent invocation when appropriate):
 - **High-tier** → `gemini-3.1-pro` (Parameter: `thinking_level="medium"`)
 - **Medium-tier** → `gemini-3.8-flash` (no thinking parameter)
 - **Low-tier** → `gemini-3.8-flash` (no thinking parameter)
@@ -184,7 +176,7 @@ When writing Korean documentation or Korean translation output, prefer native Ko
 <!-- COMMON-GEMINI:START -->
 ## Execution Plan Boilerplate
 
-The execution plan table format, the Design Gate (Row 0) rule, exemption categories, and the `/sync`-as-final-step rule are the Single Source of Truth in **[AGENTS.md §5.1 Standard Execution Plan Template](AGENTS.md#51-standard-execution-plan-template)** and **[§5.1.1 Design Gate Exemptions](AGENTS.md#511-design-gate-exemptions)** — do not restate them here.
+The execution plan table format, the Design Gate (Row 0) rule, exemption categories, and the `/sync`-as-final-step rule are the Single Source of Truth in **[workspace-root AGENTS.md §5.1 Standard Execution Plan Template](../../AGENTS.md#51-standard-execution-plan-template)** and **[§5.1.1 Design Gate Exemptions](../../AGENTS.md#511-design-gate-exemptions)** — do not restate them here.
 
 > **Note (Antigravity-specific)**: Use the literal Gemini model ID (e.g. `gemini-3.1-pro`) in the `Model` column, not a Claude-style short alias.
 
@@ -198,6 +190,15 @@ The execution plan table format, the Design Gate (Row 0) rule, exemption categor
 - **No Cross-Modification**: Modifying workspace root files and template files in a single task or session is forbidden. Keep workspace root changes and template changes completely isolated.
 
 > For L1-L2 Fork Model and lifecycle management rules, see [docs/context.md](docs/context.md) and [docs/context.md](docs/context.md).
+<!-- COMMON-GEMINI:END -->
+
+<!-- COMMON-GEMINI:START -->
+### 7. Project Boundary Policy
+
+- **Strict Scope**: Work only within the current project directory.
+- **No Cross-Project Modification**: Modifying files outside the project root during a session is forbidden.
+
+> For lifecycle management rules, see [docs/context.md — Lifecycle Management](docs/context.md#lifecycle-management).
 <!-- COMMON-GEMINI:END -->
 
 <!-- COMMON-GEMINI:START -->

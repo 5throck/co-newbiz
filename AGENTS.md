@@ -30,7 +30,7 @@
 
 | Agent | File | Tier | Role |
 |---|---|---|---|
-| **pm** | [`agents/pm.md`](agents/pm.md) | High | New Business Review Lead — coordinates four domain leads, enforces stage gates, approves ADRs |
+| **pm** | [`agents/pm.md`](agents/pm.md) | Medium | New Business Review Lead — coordinates four domain leads, enforces stage gates, approves ADRs |
 
 ## Functional Domain — Regulations, Procedures, Operation, Deal Review (25)
 
@@ -101,7 +101,7 @@
 
 ## Governance
 
-- **PM Gateway**: PM is the only agent users may directly invoke. All 39 specialist agents require PM dispatch.
+- **PM Gateway**: PM is the only agent users may directly invoke. All 40 specialist agents require PM dispatch.
 - **Three-stage review**: every deliverable passes AI 1st (formal) -> AI 2nd (cross-domain, different domain than the author) -> human final (judgement and approval). See "Deal Pipeline Orchestration" below and the `deal-pipeline-orchestration` skill.
 - **Process authority layering**: `process/flow.spec.yaml` (ADR-0074) is the SSOT for stages/gates and for **stage-level agent dispatch** (its `activities[].agent` is who PM dispatches for pipeline work); `procedures/_shared/*/schema.yaml` governs **within-procedure step assignments** (`agent_key`) and is authoritative over `skills/*.md`. Where a stage activity and a procedure step name different agents for the same work, the flow.spec activity governs pipeline dispatch and the procedure governs its internal steps — a divergence is a defect to reconcile, not a choice.
 - **Non-negotiable boundaries**: agents inherit caller permissions and hold no accounts of their own; gate approval and investment decisions belong to humans — LLM-drafted information and recommendations are the sanctioned decision-support input (proposals only; a person records the verdict); `procedures/*.yaml` is authoritative over `skills/*.md`; data confidence caps the RAG grade; permits and certifications are tracked separately.

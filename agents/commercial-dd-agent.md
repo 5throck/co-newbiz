@@ -18,7 +18,7 @@ last_reviewed: "2026-08-19"
 lifecycle:
   phase: production
   created: 2026-08-19
-  last_updated: 2026-08-19
+  last_updated: 2026-09-12
   governance: docs/lifecycle/agents/commercial-dd-agent.md
 required_skills:
   - commercial-due-diligence
