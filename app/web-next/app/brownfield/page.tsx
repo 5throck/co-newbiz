@@ -576,14 +576,8 @@ export function BrownfieldView() {
     }
   }
 
-  // ── S7 선정 퍼널 집계 — Long List에서 Short List로 좁히는 과정의 스냅샷 ──
   const targets = selected?.targets ?? [];
   const shortlistedTargets = targets.filter((t) => t.status === "shortlisted");
-  const excludedTargets = targets.filter((t) => t.status === "excluded");
-  const fullyAssessed = targets.filter((t) => t.screening_summary && t.screening_summary.assessed === t.screening_summary.total);
-  const promotionReady = targets.filter((t) => t.status === "pending" && t.screening_summary?.knockOutsPassed);
-  // S7 완료기준(모든 후보가 랭킹 점수 또는 제외 사유)의 남은 작업 목록.
-  const openTargets = targets.filter((t) => t.status === "pending" && !t.screening_summary?.knockOutsPassed);
   // Long List(심사 중) 구간만 재무·기술 평가 종합 점수로 잠정 정렬한다 —
   // Short List 승격 후 순위(rank)는 사람이 손으로 조정하는 영역이라 건드리지
   // 않는다(status가 다르면 비교 없이 0을 반환해 안정 정렬로 원래 그룹 순서를
@@ -650,7 +644,7 @@ export function BrownfieldView() {
         <nav aria-label="S6/S7 진행 흐름" className="flex flex-wrap items-center gap-1 mb-3 text-[0.75rem]">
           {([
             ["①", "목표 시장 정의", "universe"],
-            ["②", "후보 발굴", "longlist"],
+            ["②", "후보 발굴", "universe"],
             ["③", "재무·기술 평가", "longlist"],
             ["④", "랭킹·Short List 승격", "longlist"],
             ["⑤", "위원회 심의(t-01~09 판정)", "shortlist"],
@@ -669,8 +663,8 @@ export function BrownfieldView() {
       {/* ── 목표 시장 정의 (S6) — 보기(읽기 전용) / 수정(모달) 분리. mockup처럼
           탭 없이 항상 렌더링, 흐름 배너에서 스크롤로만 이동한다. ── */}
       {selected && (
-        <div id={SECTION_IDS.universe} style={{ scrollMarginTop: "1rem" }}>
-        <section aria-label="목표 시장 정의" className="market-section">
+        <div id={SECTION_IDS.universe} className="grid gap-3 items-start md:grid-cols-[1fr_2fr]" style={{ scrollMarginTop: "1rem" }}>
+        <section aria-label="목표 시장 정의" className="market-section mb-0">
           <div className="sizing-grade-card">
             <div className="flex items-start justify-between gap-2 mb-2">
               <h4 className="text-[0.85rem] mb-0">목표 시장 정의</h4>
@@ -680,12 +674,6 @@ export function BrownfieldView() {
             </div>
             {selected.universe ? (
               <>
-                <p className="mb-2 text-[0.78rem]">
-                  커버리지:{" "}
-                  <span className={`status-chip ${selected.targets.filter((t) => t.status !== "excluded").length >= (selected.universe.min_long_list ?? 5) ? "status-green" : "status-amber"}`}>
-                    Long List {selected.targets.filter((t) => t.status !== "excluded").length} / 최소 {selected.universe.min_long_list ?? 5}
-                  </span>
-                </p>
                 {selected.universe.scope && <p className="mb-1 text-[0.78rem] text-[color:var(--muted-fg)]">커버리지 범위: {selected.universe.scope}</p>}
                 <p className="mb-2 text-[0.85rem]">{selected.universe.definition}</p>
               </>
@@ -696,6 +684,141 @@ export function BrownfieldView() {
                 </p>
                 <button type="button" className="btn-ghost btn-sm" onClick={openUniverseEditor}>목표 시장 정의 시작</button>
               </>
+            )}
+          </div>
+        </section>
+
+        {/* ── S6 ② 후보 발굴 — 시장·기업 마스터 기반 제안 / 웹 검색·LLM 제안
+            두 방식을 한 카드에 모은다(mockup baseline-v5.html S6/S7 card② 차용).
+            목표 시장 정의 옆에 좌/우로 배치한다(사용자 요청, 2026-09-15). ── */}
+        <section aria-label="후보 발굴" className="market-section mb-0">
+          <div className="sizing-grade-card">
+            <h4 className="text-[0.85rem] mb-2">후보 발굴 — Long List 채우기</h4>
+            <div className="flex flex-wrap gap-2 mb-2">
+              <button
+                type="button"
+                className={`btn-ghost btn-sm ${discoveryPanel === "master" ? "control-chip status-green" : ""}`}
+                onClick={() => setDiscoveryPanel(discoveryPanel === "master" ? null : "master")}
+              >
+                시장·기업 마스터 기반 제안{proposals && proposals.length > 0 ? ` (${proposals.length})` : ""}
+              </button>
+              <button
+                type="button"
+                className={`btn-ghost btn-sm ${discoveryPanel === "web" ? "control-chip status-green" : ""}`}
+                onClick={() => {
+                  setDiscoveryPanel(discoveryPanel === "web" ? null : "web");
+                  if (webProposals === null) void generateWebProposals();
+                }}
+              >
+                웹 검색·LLM 제안 <span className="status-chip status-amber ml-1">LLM 제안 라벨</span>
+              </button>
+            </div>
+
+            {/* 직접 등록은 토글 없이 항상 보여준다(사용자 요청, 2026-09-15) —
+                시장·기업 마스터/웹 검색·LLM 제안과 달리 즉시 입력 가능해야 한다. */}
+            <form onSubmit={addTarget} className="sizing-new-form mb-2">
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="text-[0.78rem]">
+                  <span className="block mb-1">후보 회사명 * (Long List)</span>
+                  <input value={newTarget.company_name} onChange={(e) => setNewTarget({ ...newTarget, company_name: e.target.value })} placeholder="예: 레인보우로보틱스" required className="sizing-new-input" />
+                </label>
+                <label className="text-[0.78rem]">
+                  <span className="block mb-1">DART 고유번호 (선택, 8자리)</span>
+                  <input value={newTarget.dart_corp_code} onChange={(e) => setNewTarget({ ...newTarget, dart_corp_code: e.target.value })} placeholder="8자리 고유번호" className="sizing-new-input sizing-new-input-sm" />
+                </label>
+                <label className="text-[0.78rem]">
+                  <span className="block mb-1">목표 시장 근거 (선택)</span>
+                  <input value={newTarget.universe_note} onChange={(e) => setNewTarget({ ...newTarget, universe_note: e.target.value })} placeholder="후보 자격 기준·가치사슬 위치 등" className="sizing-new-input sizing-new-input-sm" />
+                </label>
+                <button type="submit" className="btn-ghost btn-sm" disabled={busy || !newTarget.company_name.trim()}>후보 등록</button>
+              </div>
+              <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+                S6 대상 후보 발굴 — 목표 시장 정의(후보 자격 기준·커버리지)를 기반으로 후보를 등록합니다.
+                각 후보는 S7에서 <code>chk-target-screening</code>(t-01~t-09)로 스크리닝됩니다.
+              </p>
+            </form>
+
+            {discoveryPanel === "master" && (
+              <div className="mb-2">
+                {proposals === null ? (
+                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">불러오는 중...</p>
+                ) : proposals.length === 0 ? (
+                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">제안 가능한 신규 후보가 없습니다 — 직접 등록하거나 웹 검색 제안을 시도하세요.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {proposals.map((c) => (
+                      <button key={c.id} type="button" className="control-chip"
+                        title={c.dart_corp_code ? `DART ${c.dart_corp_code}` : undefined}
+                        onClick={() => acceptProposal(c.name_ko, c.dart_corp_code)}>
+                        ＋ {c.name_ko}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-1 mb-0 text-[0.7rem] text-[color:var(--muted-fg)]">수용 시 discovery_source=master_proposal로 기록됩니다.</p>
+              </div>
+            )}
+
+            {discoveryPanel === "web" && (
+              <div className="mb-2">
+                <p className="mb-2 text-[0.78rem] text-[color:var(--muted-fg)]">
+                  실시간 웹 검색으로 근거를 찾고, 그 근거에 등장하는 회사만 후보로 제안합니다 (ADR-0118 §5 — 근거 없는
+                  회사명은 만들지 않습니다. 검색을 쓸 수 없으면 LLM 자체 지식 기반 미검증 제안으로 대체됩니다).
+                  각 후보는 출처와 신뢰도(A/B/C)를 함께 표시하며, "Long List에 등록"을 눌러야 등록됩니다 (경계 #2).
+                </p>
+                {webProposals === null ? (
+                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">{webBusy ? "웹 검색·제안 생성 중..." : "불러오는 중..."}</p>
+                ) : webProposals.length === 0 ? (
+                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">{webNote ?? "제안할 후보가 없습니다 — 목표 시장 정의를 구체화한 뒤 다시 시도하세요."}</p>
+                ) : (
+                  <div>
+                    <p className="mb-2 text-[0.75rem]">
+                      <span className={`status-chip ${webSource === "llm" ? "status-green" : webSource === "llm_knowledge" ? "status-red" : "status-amber"}`}>
+                        {webSource === "llm" ? "제안 · LLM (웹검색 근거)" : webSource === "llm_knowledge" ? "제안 · LLM (미검증, 근거 없음)" : "제안 · 결정론 폴백"}
+                      </span>
+                      {webNote && <span className="ml-2">{webNote}</span>}
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 mb-2">
+                      {webProposals.map((s) => (
+                        <div key={s.company_name} className="sizing-grade-card mb-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <strong className="text-[0.85rem]">{s.company_name}</strong>
+                            <span className="status-chip status-not-started" title="출처 도메인 신뢰도 — 정부·공시 A, 주요 언론·컨설팅 B, 기타 C">
+                              신뢰도 {s.reliability}
+                            </span>
+                          </div>
+                          <p className="mb-1 text-[0.78rem]">{s.rationale}</p>
+                          {s.sources.slice(0, 2).map((src) => (
+                            <a key={src.url} href={src.url} target="_blank" rel="noreferrer" className="block text-[0.72rem] text-[color:var(--accent)] underline truncate" title={src.title}>
+                              출처: {src.url}
+                            </a>
+                          ))}
+                          <span className="flex items-center gap-1 mt-1">
+                            <button
+                              type="button"
+                              className="btn-ghost btn-sm"
+                              onClick={() => void acceptProposal(s.company_name, s.dart_corp_code ?? null, "web_proposal", `웹 검색 제안 — ${s.rationale.slice(0, 80)} (출처: ${s.sources[0]?.url ?? "없음"})`)}
+                            >
+                              Long List에 등록
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-ghost btn-sm"
+                              title="이 제안을 목록에서 지웁니다 — 등록하지 않고 무시(재생성 시 다시 나올 수 있음)"
+                              onClick={() => setWebProposals((prev) => (prev ?? []).filter((p) => p.company_name !== s.company_name))}
+                            >
+                              무시
+                            </button>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void generateWebProposals()}>
+                      {webBusy ? "재생성 중..." : "다시 생성"}
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </section>
@@ -773,132 +896,14 @@ export function BrownfieldView() {
         <div id={SECTION_IDS.longlist} style={{ scrollMarginTop: "1rem" }}>
         {/* ── S6/S7: 후보 등록 + Long List + 스크리닝 ── */}
         <section aria-label="대상 후보 스크리닝" className="market-section">
-          {/* ── S6 ② 후보 발굴 — 시장·기업 마스터 기반 제안 / 웹 검색·LLM 제안
-              두 방식을 한 카드에 모은다(mockup baseline-v5.html S6/S7 card② 차용).
-              수용하면 discovery_source가 후보별로 기록된다. ── */}
-          <div className="sizing-grade-card mb-3">
-            <h4 className="text-[0.85rem] mb-2">후보 발굴 — Long List 채우기</h4>
-            <div className="flex flex-wrap gap-2 mb-2">
-              <button
-                type="button"
-                className={`btn-ghost btn-sm ${discoveryPanel === "master" ? "control-chip status-green" : ""}`}
-                onClick={() => setDiscoveryPanel(discoveryPanel === "master" ? null : "master")}
-              >
-                시장·기업 마스터 기반 제안{proposals && proposals.length > 0 ? ` (${proposals.length})` : ""}
-              </button>
-              <button
-                type="button"
-                className={`btn-ghost btn-sm ${discoveryPanel === "web" ? "control-chip status-green" : ""}`}
-                onClick={() => {
-                  setDiscoveryPanel(discoveryPanel === "web" ? null : "web");
-                  if (webProposals === null) void generateWebProposals();
-                }}
-              >
-                웹 검색·LLM 제안 <span className="status-chip status-amber ml-1">LLM 제안 라벨</span>
-              </button>
-            </div>
-
-            {discoveryPanel === "master" && (
-              <div className="mb-2">
-                {proposals === null ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">불러오는 중...</p>
-                ) : proposals.length === 0 ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">제안 가능한 신규 후보가 없습니다 — 직접 등록하거나 웹 검색 제안을 시도하세요.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {proposals.map((c) => (
-                      <button key={c.id} type="button" className="control-chip"
-                        title={c.dart_corp_code ? `DART ${c.dart_corp_code}` : undefined}
-                        onClick={() => acceptProposal(c.name_ko, c.dart_corp_code)}>
-                        ＋ {c.name_ko}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <p className="mt-1 mb-0 text-[0.7rem] text-[color:var(--muted-fg)]">수용 시 discovery_source=master_proposal로 기록됩니다.</p>
-              </div>
-            )}
-
-            {discoveryPanel === "web" && (
-              <div className="mb-2">
-                <p className="mb-2 text-[0.78rem] text-[color:var(--muted-fg)]">
-                  실시간 웹 검색으로 근거를 찾고, 그 근거에 등장하는 회사만 후보로 제안합니다 (ADR-0118 §5 — 근거 없는
-                  회사명은 만들지 않습니다. 검색을 쓸 수 없으면 LLM 자체 지식 기반 미검증 제안으로 대체됩니다).
-                  각 후보는 출처와 신뢰도(A/B/C)를 함께 표시하며, "Long List에 등록"을 눌러야 등록됩니다 (경계 #2).
-                </p>
-                {webProposals === null ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">{webBusy ? "웹 검색·제안 생성 중..." : "불러오는 중..."}</p>
-                ) : webProposals.length === 0 ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">{webNote ?? "제안할 후보가 없습니다 — 목표 시장 정의를 구체화한 뒤 다시 시도하세요."}</p>
-                ) : (
-                  <div>
-                    <p className="mb-2 text-[0.75rem]">
-                      <span className={`status-chip ${webSource === "llm" ? "status-green" : webSource === "llm_knowledge" ? "status-red" : "status-amber"}`}>
-                        {webSource === "llm" ? "제안 · LLM (웹검색 근거)" : webSource === "llm_knowledge" ? "제안 · LLM (미검증, 근거 없음)" : "제안 · 결정론 폴백"}
-                      </span>
-                      {webNote && <span className="ml-2">{webNote}</span>}
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                      {webProposals.map((s) => (
-                        <div key={s.company_name} className="sizing-grade-card mb-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <strong className="text-[0.85rem]">{s.company_name}</strong>
-                            <span className="status-chip status-not-started" title="출처 도메인 신뢰도 — 정부·공시 A, 주요 언론·컨설팅 B, 기타 C">
-                              신뢰도 {s.reliability}
-                            </span>
-                          </div>
-                          <p className="mb-1 text-[0.78rem]">{s.rationale}</p>
-                          {s.sources.slice(0, 2).map((src) => (
-                            <a key={src.url} href={src.url} target="_blank" rel="noreferrer" className="block text-[0.72rem] text-[color:var(--accent)] underline truncate" title={src.title}>
-                              출처: {src.url}
-                            </a>
-                          ))}
-                          <button
-                            type="button"
-                            className="btn-ghost btn-sm mt-1"
-                            onClick={() => void acceptProposal(s.company_name, s.dart_corp_code ?? null, "web_proposal", `웹 검색 제안 — ${s.rationale.slice(0, 80)} (출처: ${s.sources[0]?.url ?? "없음"})`)}
-                          >
-                            Long List에 등록
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void generateWebProposals()}>
-                      {webBusy ? "재생성 중..." : "다시 생성"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* S6 — 후보 등록 (목표 시장 정의 근거 포함) */}
-          <form onSubmit={addTarget} className="sizing-new-form mb-3">
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[0.78rem]">
-                <span className="block mb-1">후보 회사명 * (Long List)</span>
-                <input value={newTarget.company_name} onChange={(e) => setNewTarget({ ...newTarget, company_name: e.target.value })} placeholder="예: 레인보우로보틱스" required className="sizing-new-input" />
-              </label>
-              <label className="text-[0.78rem]">
-                <span className="block mb-1">DART 고유번호 (선택, 8자리)</span>
-                <input value={newTarget.dart_corp_code} onChange={(e) => setNewTarget({ ...newTarget, dart_corp_code: e.target.value })} placeholder="8자리 고유번호" className="sizing-new-input sizing-new-input-sm" />
-              </label>
-              <label className="text-[0.78rem]">
-                <span className="block mb-1">목표 시장 근거 (선택)</span>
-                <input value={newTarget.universe_note} onChange={(e) => setNewTarget({ ...newTarget, universe_note: e.target.value })} placeholder="후보 자격 기준·가치사슬 위치 등" className="sizing-new-input sizing-new-input-sm" />
-              </label>
-              <button type="submit" className="btn-ghost btn-sm" disabled={busy || !newTarget.company_name.trim()}>후보 등록</button>
-            </div>
-            <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
-              S6 대상 후보 발굴 — 목표 시장 정의(후보 자격 기준·커버리지)를 기반으로 후보를 등록합니다.
-              각 후보는 S7에서 <code>chk-target-screening</code>(t-01~t-09)로 스크리닝됩니다.
-            </p>
-          </form>
+          {/* 후보 등록 폼은 위 "후보 발굴" 카드에 항상 표시된다(사용자 요청,
+              2026-09-15) — 시장·기업 마스터/웹 검색·LLM 제안과 나란히 묶인다. */}
 
           {/* S7 선정 퍼널·게이트·위원회·승격은 아래 이어지는 섹션에서 계속된다
               (mockup처럼 탭 없이 한 화면 — 사용자 요청, 2026-09-15). */}
 
           {/* Long List 테이블 */}
+          <h4 className="text-[0.85rem] mb-2">Long List → 판정 · 랭킹 · Short List</h4>
           {targets.length === 0 ? (
             <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">Long List 후보가 없습니다 — 위에서 후보를 등록하세요.</p>
           ) : displayedTargets.length === 0 ? (
@@ -911,7 +916,6 @@ export function BrownfieldView() {
                   <th scope="col">후보</th><th scope="col">DART</th>
                   <th scope="col" title="재무·기술 평가(ADR-0139) 100점 가중 점수 — 충족 1점·부분충족 0.5점·미충족 0점을 가중평균, 예외(해당없음·예외)는 제외">재무·기술 평가</th>
                   <th scope="col" title="위 재무·기술 평가 종합 점수(financial·technical 평균) — Long List 잠정 순위(Short List rank와 별개)">잠정 순위</th>
-                  <th scope="col" title="chk-target-screening t-01~t-09 판정 현황 — 충: 충족, 미: 미충족, 예: 예외, N: 해당없음 (위원회 심의의 판정 근거)">스크리닝 (t-01~09)</th>
                   <th scope="col">상태</th>
                   <th scope="col">제외 사유</th>
                 </tr>
@@ -920,7 +924,6 @@ export function BrownfieldView() {
                 {displayedTargets.map((t) => {
                   const sm = t.screening_summary;
                   const isOpen = openTarget === t.id;
-                  const states = t.screening_json ? (JSON.parse(t.screening_json) as Record<string, string>) : {};
                   const es = t.eval_summary;
                   const orderIdx = shortlistOrder.indexOf(t.id);
                   const canPromote = t.status === "pending" && Boolean(sm?.knockOutsPassed);
@@ -941,7 +944,11 @@ export function BrownfieldView() {
                           >
                             {t.company_name}
                           </button>
-                          {t.universe_note && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{t.universe_note}</span>}
+                          {/* 제외된 후보는 universe_note(발굴 시점 근거, LLM 미검증 문구
+                              등 포함 가능) 대신 제외 사유 컬럼만 보여준다 — 중복·잡음 제거. */}
+                          {t.status !== "excluded" && t.universe_note && (
+                            <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{t.universe_note}</span>
+                          )}
                         </td>
                         <td><code className="dd-item-id">{t.dart_corp_code ?? "—"}</code></td>
                         <td>
@@ -962,19 +969,6 @@ export function BrownfieldView() {
                           ) : (
                             <span className="text-[color:var(--muted-fg)]">평가 필요</span>
                           )}
-                        </td>
-                        <td>
-                          <span className="flex items-center gap-0.5" aria-label={`스크리닝 ${sm ? `${sm.assessed}/${sm.total}` : `0/${selected.checklist.length}`}`}>
-                            {selected.checklist.map((it) => {
-                              const st = states[it.id] ?? "pending";
-                              const [glyph, cls] = st === "pass" ? ["충", "status-green"] : st === "fail" ? ["미", "status-red"] : st === "waived" ? ["예", "status-amber"] : st === "na" ? ["N", "status-not-started"] : ["·", "status-not-started"];
-                              return (
-                                <span key={it.id} className={`status-chip ${cls}`} style={{ minWidth: "1.5rem", padding: "0 0.2rem", textAlign: "center" }} title={`${it.id} — ${VERDICT_KO[st]}`}>
-                                  {glyph}
-                                </span>
-                              );
-                            })}
-                          </span>
                         </td>
                         <td>
                           <span className="flex items-center gap-1">
@@ -1230,35 +1224,6 @@ export function BrownfieldView() {
           Long List 아래 이어서 렌더링, 탭 없음) ── */}
       {selected && (
         <div id={SECTION_IDS.shortlist} style={{ scrollMarginTop: "1rem" }}>
-          {/* S7 선정 퍼널 — Long List에서 Short List로 좁히는 과정을 한눈에
-              보여준다. 완료기준(flow.spec S7): 모든 후보가 랭킹 점수 또는 제외
-              사유를 갖는다. */}
-          <section aria-label="S7 선정 현황" className="market-section">
-            {targets.length > 0 ? (
-              <div className="mb-0">
-                <div role="group" aria-label="S7 선정 퍼널" className="flex flex-wrap items-center gap-1">
-                  <span className="control-chip status-not-started">Long List {targets.length}</span>
-                  <span aria-hidden="true" className="text-[color:var(--muted-fg)]">→</span>
-                  <span className="control-chip status-amber" title="t-01~t-09 9개 항목을 모두 판정한 후보">판정 완료 {fullyAssessed.length}</span>
-                  <span aria-hidden="true" className="text-[color:var(--muted-fg)]">→</span>
-                  <span className="control-chip status-amber" title="knock-out 통과 — Short List 승격 가능">승격 가능 {promotionReady.length}</span>
-                  <span aria-hidden="true" className="text-[color:var(--muted-fg)]">→</span>
-                  <span className="control-chip status-green">Short List {shortlistedTargets.length}</span>
-                  <span className="control-chip status-not-started" title="제외 사유가 기록된 후보">제외 {excludedTargets.length}</span>
-                </div>
-                {openTargets.length > 0 ? (
-                  <p className="note mt-1 mb-0">S7 완료까지 — 판정 또는 제외가 남은 후보: {openTargets.map((t) => t.company_name).join(", ")} <span className="text-[color:var(--muted-fg)]">(판정은 위 Long List에서)</span></p>
-                ) : (
-                  <p className="note mt-1 mb-0">
-                    모든 후보의 판정이 완료되었습니다 — 아래 위원회 심의(제안)와 target_screening 게이트 결정(사람)으로 Short List를 확정하세요.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mb-0">Long List 후보가 없습니다 — 위 Long List에서 후보를 등록하세요.</p>
-            )}
-          </section>
-
           {/* ── 인수 가능성 (참고용) — chk-target-screening t-01/t-02/t-08 발췌.
               공식 판정이 아니며 승격/추진을 막지 않는다(참고 표시일 뿐). ── */}
           {shortlistedTargets.length > 0 && (
@@ -1288,18 +1253,10 @@ export function BrownfieldView() {
             </section>
           )}
 
-          <GateDecisionPanel
-            opportunityId={selected.opportunity.id}
-            gates={["target_screening"]}
-            killHint={
-              selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded" && (t.screening_summary?.knockOutsPassed ?? false))
-                ? "knock-out 통과 후보 0건 — Target Screening 진행 KILL 기준 검토가 필요합니다 (flow.spec S7 kill criteria)."
-                : null
-            }
-          />
           {/* ADR-0097: target-longlist-shortlist-committee 심의 — 에이전트는 제안, 확정은 인간.
               위원회 판정 근거는 t-01~09(스크리닝)로 한다 — 랭킹에 쓰는 재무·기술
-              평가와 역할을 분리한다(사용자 요청, 2026-09-15). */}
+              평가와 역할을 분리한다(사용자 요청, 2026-09-15). 위원회 심의(제안)가
+              게이트 결정(사람) 위에 오도록 배치한다(사용자 요청, 2026-09-15). */}
           {selected.targets.length > 0 && (
             <CommitteePanel
               opportunityId={selected.opportunity.id}
@@ -1309,6 +1266,15 @@ export function BrownfieldView() {
               briefMd={buildScreeningBriefMd(selected.targets, selected.checklist)}
             />
           )}
+          <GateDecisionPanel
+            opportunityId={selected.opportunity.id}
+            gates={["target_screening"]}
+            killHint={
+              selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded" && (t.screening_summary?.knockOutsPassed ?? false))
+                ? "knock-out 통과 후보 0건 — Target Screening 진행 KILL 기준 검토가 필요합니다 (flow.spec S7 kill criteria)."
+                : null
+            }
+          />
           <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
             ↓ 위 Target Screening 게이트가 <b>GO</b>로 기록되어야 아래 프로젝트 추진이 가능합니다 — 승인 기록은 판단, 추진은 그 판단을 전제로 한 장부상 전환입니다.
           </p>
