@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0083: Visual UI standard — toolbar structure, two button sizes, delete hierarchy
 
 **Status**: Accepted — implemented in the same change (`components/layout.tsx`, `app/styles.css`, page refactors)

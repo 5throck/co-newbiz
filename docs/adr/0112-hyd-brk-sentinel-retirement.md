@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0112: Retire the HYD-BRK freeze sentinel — the hydraulic-breaker report becomes a regular persisted analysis version
 
 - Status: Accepted

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0051: Workflow gap closure — fifteen-step chain concretization
 
 **Status**: Accepted

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0100: S10 investment screening & execution — IC package surface, project-keyed establishment steps, and 0057 deprecation
 
 - Status: Accepted

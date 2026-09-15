@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0111: `md_industry.ksic_code` becomes nullable — retiring the fabricated `NEW-*` placeholder codes and adding a KSIC code picker
 
 - Status: Accepted

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0085: S10 entity establishment execution — spec alignment and execution record layer
 
 **Status**: Accepted — implemented in the same change (flow.spec S10, migration 0059, establishment API)

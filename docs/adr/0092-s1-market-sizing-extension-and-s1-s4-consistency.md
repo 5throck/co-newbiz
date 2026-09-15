@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0092: S1 market-sizing schema extension, `failed` status, seed route, screening-gate fix, and S3→S4 handoff
 
 **Status**: Accepted — implemented concurrently with this record (per ADR-0032, documents before code but same PR)

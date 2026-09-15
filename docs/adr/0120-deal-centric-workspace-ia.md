@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0120: Deal-centric workspace IA — one deal, one URL family, S1–S12 inside
 
 - Status: Accepted

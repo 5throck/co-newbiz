@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0082: Unified CRUD interaction pattern for web surfaces
 
 **Status**: Accepted — implemented in the same change (`components/crud.tsx`, page refactors)

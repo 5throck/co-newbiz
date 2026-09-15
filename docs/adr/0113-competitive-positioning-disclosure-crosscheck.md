@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0113: Competitive-positioning disclosure cross-check — the S3 경쟁 tab gains a DART 사업보고서 + targeted-research verification step (payload schemaVersion 3)
 
 - Status: Accepted

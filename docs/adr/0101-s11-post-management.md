@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0101: S11 post-management — portfolio scorecard view, human transition-decision ledger, and completion of the S8–S11 chain
 
 - Status: Accepted

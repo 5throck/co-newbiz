@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0094: S4 re-review, S5–S7 stage completion, opportunity-keyed gates, and S3 role separation
 
 - Status: Accepted

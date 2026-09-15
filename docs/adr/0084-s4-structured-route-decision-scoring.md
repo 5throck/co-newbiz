@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0084: S4 structured route-decision scoring (two-stage framework)
 
 **Status**: Accepted — implemented in the same change (migration 0058, API + route-decision UI)

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0095: Project promotion foundation — opportunity→project transition carrier for S8–S11
 
 - Status: Accepted

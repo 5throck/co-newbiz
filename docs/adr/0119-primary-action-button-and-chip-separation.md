@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0119: Primary action button and chip role separation — amend ADR-0083's two-variant button rule
 
 - Status: Accepted

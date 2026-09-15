@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0093: Company-profile expansion to S1-level comprehensiveness
 
 - Status: Accepted

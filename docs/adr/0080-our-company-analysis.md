@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0080: Our-company analysis — group/affiliate two-level self-profile feeding S3
 
 **Status**: Accepted — implemented in the same change (migration 0054, pipeline, APIs, page, nav)

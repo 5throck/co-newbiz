@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0106: Deal structuring as a first-class stage (S10) — investment vehicle, four-axis review, financing plan
 
 - Status: Accepted

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0046: Typed JSON predicate AST and an evidence-variable registry with run-scoped snapshots
 
 **Status**: Accepted

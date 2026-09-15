@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0027: Compensation harmonization: upward-bias default
 
 **Status**: Accepted

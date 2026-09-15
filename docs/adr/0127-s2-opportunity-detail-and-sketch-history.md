@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0127: S2 기회 상세 화면 분리 + 비즈니스 모델 검토 버전 이력
 
 - Status: Accepted

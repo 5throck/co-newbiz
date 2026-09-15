@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0124: S4 route decision — separate "저장" (draft) from "결정" (finalize)
 
 - Status: Accepted

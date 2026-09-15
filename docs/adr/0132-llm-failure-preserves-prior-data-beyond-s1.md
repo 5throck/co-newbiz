@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0132 — Extend "LLM failure preserves prior data" beyond S1 market sizing
 
 - Date: 2026-09-14

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0102: Industry × company end-to-end auto pipeline — the state machine that drives S1–S11 and stops only at human gates
 
 - Status: Accepted

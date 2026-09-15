@@ -12,8 +12,9 @@
       "timeout": 300000
     },
     "graft": {
-      "command": "graft",
+      "command": "bunx",
       "args": [
+        "@nanonets/graft",
         "mcp"
       ]
     }

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0108: Single documentation surface — retire the static knowledge-hub portal, extend `/library`
 
 - Status: Accepted

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0105: Navigation SSOT — menu registration and order as an enforced contract
 
 - Status: Accepted

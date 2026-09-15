@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # Architecture Decision Records — co-newbiz
 
 **Numbering**: local sequence starting at 0001, distinct from `ai_workspace`'s own ADR numbering. Format follows the workspace convention (`# ADR-NNNN` / Status / Date / Deciders / Context / Decision / Consequences — see `docs/adr/0055-spec-registry-enforcement.md` at the workspace root for the canonical example).

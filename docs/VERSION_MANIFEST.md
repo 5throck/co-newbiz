@@ -63,6 +63,7 @@
 
 ---
 
+<!-- validate-md-language:allowlist-begin reason="Triggers column embeds verbatim Korean search keywords copied from k-* SKILL.md frontmatter (proper-noun data values, not prose). Generated region — a whole-file lang: ko exception would be dishonest and would un-validate the rest of the manifest, so scripts/validate-md-language.ts exempts only this marked section (T-20260912-015)." -->
 ## Skills
 
 | Name | Version | Status | Location | Platform | Triggers | Owner |
@@ -234,6 +235,8 @@
 | zod-contract-gate | 1.0.0 | active | skills/zod-contract-gate/SKILL.md | workspace | zod-contract-gate, /zod-contract-gate, zod contract validation, schema contract gate, runtime schema validation | backend-engineer |
 
 ---
+
+<!-- validate-md-language:allowlist-end -->
 
 ## Scripts
 

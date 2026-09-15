@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0061: Correct REAL money columns to integer minor units (schema debt F-3)
 
 **Status**: Accepted — EXECUTED 2026-08-24 (migration 0028; scale convention and two scope corrections recorded below)

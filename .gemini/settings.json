@@ -49,10 +49,10 @@
   ],
   "mcpServers": {
     "graft": {
-      "command": "bunx",
+      "command": "graft",
       "args": [
-        "@nanonets/graft",
-        "mcp"
+        "mcp",
+        "@nanonets/graft"
       ]
     }
   }

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0107: Documentation surfaces — knowledge-hub portal, platform handbook, and web library role separation
 
 - Status: **Superseded by ADR-0108** (2026-09-06) — the knowledge-hub static portal this ADR carved out as a distinct surface was retired; `/library` is now the single documentation surface. Kept for history.

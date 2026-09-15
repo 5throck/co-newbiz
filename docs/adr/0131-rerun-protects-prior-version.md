@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0131 — Re-analysis must not silently overwrite a good prior version on LLM failure
 
 - Date: 2026-09-13

@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0130 — S1 linked-industry serial queue, operator-perspective proposals, first-analysis scope
 
 - Date: 2026-09-13
