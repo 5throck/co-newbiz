@@ -105,6 +105,7 @@ export const NON_MENU_ROUTES: string[] = [
   "/password-change",
   "/agents",
   "/opportunities/[id]",
+  "/brownfield/targets/[targetId]",
   "/companies",
   "/companies/[companyId]",
   "/process/[stage]",

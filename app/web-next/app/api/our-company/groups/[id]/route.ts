@@ -36,7 +36,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     company_name: m.company_name,
     role: m.role,
     latest_version: m.latest_version,
-    profile: m.latest_version ? loadLatestProfile(db, m.id) : null,
+    profile: m.latest_version ? loadLatestProfile(db, { kind: "member", id: m.id }) : null,
   }));
 
   return ok({ group, members, profiles }, 200, { member_count: members.length });

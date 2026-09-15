@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   // Handlers under app/api/** must not be bundled for the Edge runtime
   // (which has no bun:sqlite); this config keeps them on the Node/Bun
   // server runtime, matching every route in this phase.
-  serverExternalPackages: ["bun:sqlite"],
+  serverExternalPackages: ["bun:sqlite", "playwright-core"],
   // Next/Turbopack can otherwise infer C:\git as the workspace root because
   // this workstation has parent-directory lockfiles. Scope the workspace to
   // the co-newbiz repository: wide enough for ../../db imports, narrow enough

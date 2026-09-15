@@ -15,6 +15,7 @@ import { authenticate } from "../../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../../lib/llm.ts";
 import { isWebResearchConfigured, researchSourcesDetailed, type WebSource } from "../../../../../../lib/web-research.ts";
+import { playwrightSearch } from "../../../../../../lib/playwright-search.ts";
 import { isSimilar } from "../../../../../../lib/name-similarity.ts";
 import { reliabilityForSource } from "../../../../../../lib/dd-checklist-tailor.ts";
 import { systemMessage } from "../../../../../../lib/prompts.ts";
@@ -201,23 +202,43 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     db.query("SELECT company_name FROM brownfield_target WHERE opportunity_id = ?").all(oppId) as Array<{ company_name: string }>
   ).map((e) => e.company_name);
 
-  // 1) 실검색 근거 확보 — 검색 미설정이면 LLM 자체 지식 폴백(미검증 라벨).
-  if (!isWebResearchConfigured()) {
-    return llmKnowledgeFallback(
-      db, auth.auth.userId, opp, universe, requiredCapabilities, existingNames, oppId,
-      "실시간 웹 검색이 설정되지 않았습니다",
-    );
-  }
+  // 1) 실검색 근거 확보 — 검색 미설정이면 Playwright headless 폴백, 그래도
+  // 안 되면 LLM 자체 지식 폴백(미검증 라벨).
   const queries = buildQueries(opp, universe, requiredCapabilities);
-  const { sources, quotaExceeded } = await researchSourcesDetailed(queries, 10);
+  let searchNote: string | null = null;
+  let sources: WebSource[] = [];
+  let environmentFailure = false;
+  if (isWebResearchConfigured()) {
+    const tavily = await researchSourcesDetailed(queries, 10);
+    sources = tavily.sources;
+    if (sources.length === 0 && tavily.quotaExceeded) {
+      // Tavily 쿼터 초과(HTTP 432) — Playwright headless(시스템 Chrome)로
+      // 실검색 근거를 다시 확보한다(2026-09-15 사용자 요청). 성공하면
+      // 미검증 폴백이 아니라 정상 근거 기반 경로를 그대로 탄다.
+      const headless = await playwrightSearch(queries, 10);
+      if (headless.length > 0) {
+        sources = headless;
+        searchNote = "웹 검색 쿼터가 초과되어 Playwright headless 검색으로 근거를 확보했습니다 — 출처 URL을 반드시 확인하세요.";
+      } else {
+        environmentFailure = true;
+      }
+    }
+  } else {
+    // TAVILY_API_KEY 미설정 — Playwright headless 검색을 1차 수단으로 쓴다.
+    sources = await playwrightSearch(queries, 10);
+    if (sources.length > 0) {
+      searchNote = "웹 검색 API가 설정되지 않아 Playwright headless 검색으로 근거를 확보했습니다 — 출처 URL을 반드시 확인하세요.";
+    } else {
+      environmentFailure = true;
+    }
+  }
   if (sources.length === 0) {
-    // 검색 자체가 실패(쿼터 초과)한 경우와 검색은 됐지만 근거가 0건인 경우를
-    // 구분한다 — 쿼터 초과일 때만 LLM 자체 지식 폴백으로 간다(근거 0건은
-    // ADR-0118 원칙대로 날조 방지를 위해 결정론 폴백을 유지).
-    if (quotaExceeded) {
+    // 근거를 전혀 확보하지 못했다 — 쿼터 초과/미설정 등 환경 문제이면 LLM 자체
+    // 지식 폴백(미검증 라벨), 단순 0건이면 ADR-0118 원칙대로 결정론 폴백을 유지한다.
+    if (environmentFailure) {
       return llmKnowledgeFallback(
         db, auth.auth.userId, opp, universe, requiredCapabilities, existingNames, oppId,
-        "웹 검색 쿼터가 초과되었습니다",
+        isWebResearchConfigured() ? "웹 검색 쿼터가 초과되었습니다" : "실시간 웹 검색이 설정되지 않았습니다",
       );
     }
     return synthesisFallback(db, auth.auth.userId, opp, existingNames, "웹 검색에서 근거를 찾지 못했습니다 — 기업 마스터 기반 결정론 제안으로 대체합니다.");
@@ -252,7 +273,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     {
       source: llmRes.source,
       provider: llmRes.provider,
-      note: llmRes.source === "synthesis" ? "LLM 호출 실패 — 결정론 폴백으로 대체했습니다." : null,
+      note: llmRes.source === "synthesis" ? "LLM 호출 실패 — 결정론 폴백으로 대체했습니다." : searchNote,
       query_count: queries.length,
       suggestions,
     },

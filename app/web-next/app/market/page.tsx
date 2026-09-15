@@ -783,12 +783,12 @@ export function MarketView() {
             <caption className="sr-only">분석 대상 산업 목록</caption>
             <thead>
               <tr>
-                <th scope="col">산업명</th>
-                <th scope="col" className="w-[6rem]">KSIC 코드</th>
-                <th scope="col" className="w-[7rem]">연결 드라이버</th>
-                <th scope="col" className="w-[15rem]">분석 상태</th>
+                <th scope="col" className="w-[25rem]">산업명</th>
+                <th scope="col" className="w-[5rem]">KSIC 코드</th>
+                <th scope="col" className="w-[6rem]">연결 드라이버</th>
+                <th scope="col" className="w-[10rem]">분석 상태</th>
                 <th scope="col" className="col-date">분석일</th>
-                <th scope="col" className="w-[13rem]"><span className="sr-only">작업</span></th>
+                <th scope="col" className="w-[11rem]"><span className="sr-only">작업</span></th>
               </tr>
             </thead>
             <tbody>

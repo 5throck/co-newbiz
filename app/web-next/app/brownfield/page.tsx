@@ -1,9 +1,11 @@
 "use client";
 
 import { Fragment, Suspense, useCallback, useEffect, useState } from "react";
+import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { StageFrame } from "../../components/StageFrame.tsx";
+import { SectionToolbar } from "../../components/layout.tsx";
 import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
 import { CommitteePanel } from "../../components/CommitteePanel.tsx";
 import { PromotionPanel } from "../../components/PromotionPanel.tsx";
@@ -30,7 +32,7 @@ interface TargetRow {
   screening_summary?: { assessed: number; total: number; knockOutsPassed: boolean; anyKnockOutFail: boolean; mandatoryOpen: string[] };
   // 재무·기술 평가(ADR-0139) 기반 랭킹 점수 — 서버가 계산해 붙여준다.
   // 위원회 심의(t-01~09)와 역할을 분리한다(사용자 요청, 2026-09-15).
-  eval_summary?: { financial: { score: number | null }; technical: { score: number | null }; combined: number | null };
+  eval_summary?: { financial: { score: number | null }; technical: { score: number | null }; combined: number | null; complete?: boolean };
 }
 // 재무 참고 패널 — GET /api/companies/[companyId]/financials 응답의 필요한 부분만.
 interface FinancialsResp {
@@ -106,18 +108,18 @@ const VERDICTS = ["pass", "fail", "na", "waived"] as const;
 const EVAL_VERDICTS = ["pass", "partial", "fail", "na", "waived"] as const;
 const VERDICT_KO: Record<string, string> = { pass: "충족", partial: "부분충족", fail: "미충족", na: "해당없음", waived: "예외", pending: "미판정" };
 
-// 위원회 심의(target-longlist-shortlist-committee) 판정 근거 — t-01~09 스크리닝
-// 결과를 후보별 표로 압축해 소집 topic에 붙인다(사용자 요청, 2026-09-15).
-// 제외된 후보는 뺀다(이미 Long List에서 걸러졌으므로 심의 대상이 아니다).
-// 프롬프트 비대화 방지로 최대 12개 후보 × 9개 항목만 담는다.
-function buildScreeningBriefMd(targets: TargetRow[], checklist: ChecklistItem[]): string | undefined {
+// 위원회 심의(target-longlist-shortlist-committee) 판정 근거 — 후보별 재무·
+// 기술 평가 100점 점수를 표로 압축해 소집 topic에 붙인다(2026-09-15).
+// t-01~09 스크리닝 UI가 제거되어 더 이상 수집되지 않는 데이터는 근거로 쓰지
+// 않는다. 제외된 후보는 뺀다. 프롬프트 비대화 방지로 최대 12개 후보만 담는다.
+function buildEvalBriefMd(targets: TargetRow[]): string | undefined {
   const candidates = targets.filter((t) => t.status !== "excluded").slice(0, 12);
-  if (candidates.length === 0 || checklist.length === 0) return undefined;
-  const header = `| 후보 | ${checklist.map((c) => c.id).join(" | ")} |`;
-  const sep = `| --- | ${checklist.map(() => "---").join(" | ")} |`;
+  if (candidates.length === 0) return undefined;
+  const header = "| 후보 | 재무 점수 | 기술 점수 | 종합 점수 |";
+  const sep = "| --- | --- | --- | --- |";
   const rows = candidates.map((t) => {
-    const states = t.screening_json ? (JSON.parse(t.screening_json) as Record<string, string>) : {};
-    return `| ${t.company_name} | ${checklist.map((c) => VERDICT_KO[states[c.id] ?? "pending"]).join(" | ")} |`;
+    const es = t.eval_summary;
+    return `| ${t.company_name} | ${es?.financial.score ?? "—"} | ${es?.technical.score ?? "—"} | ${es?.combined ?? "—"} |`;
   });
   return [header, sep, ...rows].join("\n").slice(0, 4000);
 }
@@ -127,9 +129,6 @@ function buildScreeningBriefMd(targets: TargetRow[], checklist: ChecklistItem[])
 // → 게이트, 전부 한 페이지). 탭을 없애고 흐름 배너는 섹션으로 스크롤 이동만
 // 한다(사용자 요청, 2026-09-15).
 const SECTION_IDS = { universe: "s6s7-universe", longlist: "s6s7-longlist", shortlist: "s6s7-shortlist" } as const;
-function scrollToSection(key: keyof typeof SECTION_IDS) {
-  document.getElementById(SECTION_IDS[key])?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
 
 export function BrownfieldView() {
   const searchParams = useSearchParams();
@@ -137,10 +136,9 @@ export function BrownfieldView() {
   const [opps, setOpps] = useState<OppRow[] | null>(null);
   const [selected, setSelected] = useState<OppDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [openTarget, setOpenTarget] = useState<string | null>(null);
   const [screeningDraft, setScreeningDraft] = useState<Record<string, string>>({});
   const [excludeReason, setExcludeReason] = useState<Record<string, string>>({});
-  const [newTarget, setNewTarget] = useState({ company_name: "", dart_corp_code: "", universe_note: "" });
+  const [newTarget, setNewTarget] = useState({ company_name: "", dart_corp_code: "" });
   // S6 목표 시장 정의 — 완료기준(definition + 최소 Long List 커버리지).
   // 보기/수정 분리: 평소엔 저장된 값을 읽기 전용 카드로 보여주고, "수정" 클릭
   // 시 모달에서 편집한다 — 모달을 취소하면 어떤 값도 반영되지 않는다.
@@ -153,6 +151,16 @@ export function BrownfieldView() {
   const [busy, setBusy] = useState(false);
   // 후보 발굴 카드(② — mockup 차용) — 두 제안 방식 중 열어본 쪽만 보여준다.
   const [discoveryPanel, setDiscoveryPanel] = useState<"master" | "web" | null>(null);
+  // DART 회사 검색(등록 폼에 통합) — /api/synergy/dart-search 재사용(그룹/계열사
+  // 화면과 동일 원천). 검색 결과를 클릭하면 등록 폼(newTarget)의 회사명·고유번호를
+  // 채운다 — 별도 폼이 아니라 등록 폼의 보조 기능이다(사용자 요청, 2026-09-15).
+  const [dartBusy, setDartBusy] = useState(false);
+  const [dartResults, setDartResults] = useState<Array<{ corp_code: string; corp_name: string; source?: string; validated?: boolean | null }> | null>(null);
+  const [dartError, setDartError] = useState<string | null>(null);
+  // 모달 포커스 관리(ADR-0082 동반) — 웹검색 결과·목표 시장 정의 양쪽 모달에
+  // 동일하게 적용한다(초기 포커스·Tab 트랩·ESC 닫기·포커스 복원).
+  const webModalFocus = useModalFocus(() => { if (!webBusy) setDiscoveryPanel(null); });
+  const universeModalFocus = useModalFocus(() => { if (!savingUniverse) closeUniverseEditor(); });
 
   const selectedId = searchParams.get("opportunity");
   interface Suggestion { id: string; name_ko: string; dart_corp_code: string | null }
@@ -188,6 +196,21 @@ export function BrownfieldView() {
       .catch(() => setProposals([]));
   }, [selectedId]);
   useEffect(() => { loadProposals(); }, [loadProposals]);
+
+  async function searchDartCompanies(query: string) {
+    const q = query.trim();
+    if (!q || dartBusy) return;
+    setDartBusy(true); setDartError(null);
+    try {
+      const r = await api.get<{ configured: boolean; results: Array<{ corp_code: string; corp_name: string; source?: string; validated?: boolean | null }>; error?: string }>(`/api/synergy/dart-search?q=${encodeURIComponent(q)}`);
+      setDartResults(r.data.results);
+      if (r.data.error) setDartError(r.data.error);
+    } catch (err) {
+      setDartError(err instanceof Error ? err.message : "DART 검색 실패");
+    } finally {
+      setDartBusy(false);
+    }
+  }
 
   async function acceptProposal(companyName: string, dartCorpCode: string | null, source: "master_proposal" | "web_proposal" = "master_proposal", universeNote?: string) {
     try {
@@ -496,9 +519,8 @@ export function BrownfieldView() {
       await api.post(`/api/brownfield/${selected.opportunity.id}/targets`, {
         company_name: newTarget.company_name.trim(),
         dart_corp_code: newTarget.dart_corp_code.trim() || undefined,
-        universe_note: newTarget.universe_note.trim() || undefined,
       });
-      setNewTarget({ company_name: "", dart_corp_code: "", universe_note: "" });
+      setNewTarget({ company_name: "", dart_corp_code: "" });
       loadDetail(selected.opportunity.id);
       loadOpps();
     } catch (err) {
@@ -598,7 +620,7 @@ export function BrownfieldView() {
 
   return (
     <main>
-      <StageFrame stageId={["S6", "S7"]} track="brownfield">
+      <StageFrame stageId={["S6", "S7"]} track="brownfield" heading="S6/S7 대상발굴·선정">
         Brownfield 경로 — 진출방식이 Brownfield로 결정된 기회의
         대상 후보를 발굴하고(S6 Long List), <code>chk-target-screening</code> 체크리스트로 스크리닝해
         Short List로 좁힙니다(S7). CDD/TDD는 Short List 확정 후 S9에서 수행합니다.
@@ -608,7 +630,7 @@ export function BrownfieldView() {
 
       {/* ── Brownfield 기회 (칩) ── */}
       <section aria-label="브라운필드 기회" className="market-section">
-        <div className="section-toolbar"><span className="section-title"><h2>Brownfield로 결정된 기회</h2></span></div>
+        <SectionToolbar title="Brownfield로 결정된 기회" count={opps?.length} />
         {opps === null ? (
           <p>불러오는 중...</p>
         ) : opps.length === 0 ? (
@@ -633,45 +655,16 @@ export function BrownfieldView() {
         )}
       </section>
 
-      {/* ── S6/S7 흐름 배너(mockup baseline-v5.html S6/S7 step-flow 차용) —
-          누구와 결합할 것인가? 목표 시장 정의 → 후보 발굴 → 재무·기술 평가 →
-          랭킹·Short List 승격 → 위원회 심의(t-01~09 판정 근거) → Target
-          Screening 게이트. t-01~09 스크리닝은 별도 단계가 아니라 위원회
-          심의의 판정 근거로만 쓴다(사용자 요청, 2026-09-15). 탭으로 나누지
-          않은 단일 연속 화면(mockup 구조) — 각 단계는 해당 섹션으로 스크롤
-          이동만 한다(사용자 요청, 2026-09-15). ── */}
-      {selected && (
-        <nav aria-label="S6/S7 진행 흐름" className="flex flex-wrap items-center gap-1 mb-3 text-[0.75rem]">
-          {([
-            ["①", "목표 시장 정의", "universe"],
-            ["②", "후보 발굴", "universe"],
-            ["③", "재무·기술 평가", "longlist"],
-            ["④", "랭킹·Short List 승격", "longlist"],
-            ["⑤", "위원회 심의(t-01~09 판정)", "shortlist"],
-            ["⑥", "Target Screening 게이트", "shortlist"],
-          ] as const).map(([n, label, sectionKey], i) => (
-            <span key={label} className="flex items-center gap-1">
-              {i > 0 && <span className="text-[color:var(--muted-fg)]">→</span>}
-              <button type="button" className="control-chip status-not-started" onClick={() => scrollToSection(sectionKey)}>
-                {n} {label}
-              </button>
-            </span>
-          ))}
-        </nav>
-      )}
-
       {/* ── 목표 시장 정의 (S6) — 보기(읽기 전용) / 수정(모달) 분리. mockup처럼
           탭 없이 항상 렌더링, 흐름 배너에서 스크롤로만 이동한다. ── */}
       {selected && (
-        <div id={SECTION_IDS.universe} className="grid gap-3 items-start md:grid-cols-[1fr_2fr]" style={{ scrollMarginTop: "1rem" }}>
-        <section aria-label="목표 시장 정의" className="market-section mb-0">
-          <div className="sizing-grade-card">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <h4 className="text-[0.85rem] mb-0">목표 시장 정의</h4>
-              {selected.universe && (
-                <button type="button" className="btn-ghost btn-sm shrink-0" onClick={openUniverseEditor}>수정</button>
-              )}
-            </div>
+        <div id={SECTION_IDS.universe} className="grid gap-3 items-stretch md:grid-cols-[1fr_1fr]" style={{ scrollMarginTop: "1rem" }}>
+        <section aria-label="목표 시장 정의" className="market-section mb-0 flex flex-col">
+          <SectionToolbar
+            title="목표 시장 정의"
+            actions={selected.universe && <button type="button" className="btn-ghost btn-sm shrink-0" onClick={openUniverseEditor}>수정</button>}
+          />
+          <div className="sizing-grade-card flex-1">
             {selected.universe ? (
               <>
                 {selected.universe.scope && <p className="mb-1 text-[0.78rem] text-[color:var(--muted-fg)]">커버리지 범위: {selected.universe.scope}</p>}
@@ -691,51 +684,87 @@ export function BrownfieldView() {
         {/* ── S6 ② 후보 발굴 — 시장·기업 마스터 기반 제안 / 웹 검색·LLM 제안
             두 방식을 한 카드에 모은다(mockup baseline-v5.html S6/S7 card② 차용).
             목표 시장 정의 옆에 좌/우로 배치한다(사용자 요청, 2026-09-15). ── */}
-        <section aria-label="후보 발굴" className="market-section mb-0">
-          <div className="sizing-grade-card">
-            <h4 className="text-[0.85rem] mb-2">후보 발굴 — Long List 채우기</h4>
+        <section aria-label="후보 발굴" className="market-section mb-0 flex flex-col">
+          <SectionToolbar title="후보 발굴 — Long List 채우기" />
+          <div className="sizing-grade-card flex-1">
             <div className="flex flex-wrap gap-2 mb-2">
               <button
                 type="button"
                 className={`btn-ghost btn-sm ${discoveryPanel === "master" ? "control-chip status-green" : ""}`}
                 onClick={() => setDiscoveryPanel(discoveryPanel === "master" ? null : "master")}
               >
-                시장·기업 마스터 기반 제안{proposals && proposals.length > 0 ? ` (${proposals.length})` : ""}
+                시장·기업 마스터{proposals && proposals.length > 0 ? ` (${proposals.length})` : ""}
               </button>
               <button
                 type="button"
                 className={`btn-ghost btn-sm ${discoveryPanel === "web" ? "control-chip status-green" : ""}`}
                 onClick={() => {
-                  setDiscoveryPanel(discoveryPanel === "web" ? null : "web");
+                  setDiscoveryPanel("web");
                   if (webProposals === null) void generateWebProposals();
                 }}
               >
-                웹 검색·LLM 제안 <span className="status-chip status-amber ml-1">LLM 제안 라벨</span>
+                웹검색{webProposals && webProposals.length > 0 ? ` (${webProposals.length})` : ""}
               </button>
             </div>
 
-            {/* 직접 등록은 토글 없이 항상 보여준다(사용자 요청, 2026-09-15) —
-                시장·기업 마스터/웹 검색·LLM 제안과 달리 즉시 입력 가능해야 한다. */}
+            {/* 등록 폼 + DART 검색 통합(사용자 요청, 2026-09-15) — 회사명을 입력하고
+                "DART 검색"으로 찾은 결과를 클릭하면 회사명·고유번호가 폼에 채워진다.
+                DART에 없는(비상장 등) 회사는 그대로 직접 입력해 등록할 수 있다.
+                dart_corp_code가 채워진 채 등록되면 상세 화면의 DART 정보(재무
+                facts·공시)가 바로 활성화된다. */}
             <form onSubmit={addTarget} className="sizing-new-form mb-2">
               <div className="flex flex-wrap items-end gap-2">
-                <label className="text-[0.78rem]">
+                <label className="text-[0.78rem]" style={{ flex: "1 1 14rem" }}>
                   <span className="block mb-1">후보 회사명 * (Long List)</span>
-                  <input value={newTarget.company_name} onChange={(e) => setNewTarget({ ...newTarget, company_name: e.target.value })} placeholder="예: 레인보우로보틱스" required className="sizing-new-input" />
+                  <input
+                    value={newTarget.company_name}
+                    onChange={(e) => { setNewTarget({ ...newTarget, company_name: e.target.value }); setDartResults(null); }}
+                    placeholder="예: 레인보우로보틱스"
+                    required
+                    className="sizing-new-input w-full"
+                  />
                 </label>
-                <label className="text-[0.78rem]">
+                <label className="text-[0.78rem]" style={{ flex: "1 1 11rem" }}>
                   <span className="block mb-1">DART 고유번호 (선택, 8자리)</span>
-                  <input value={newTarget.dart_corp_code} onChange={(e) => setNewTarget({ ...newTarget, dart_corp_code: e.target.value })} placeholder="8자리 고유번호" className="sizing-new-input sizing-new-input-sm" />
+                  <input value={newTarget.dart_corp_code} onChange={(e) => setNewTarget({ ...newTarget, dart_corp_code: e.target.value })} placeholder="검색 결과 선택 또는 직접 입력" className="sizing-new-input sizing-new-input-sm w-full" />
                 </label>
-                <label className="text-[0.78rem]">
-                  <span className="block mb-1">목표 시장 근거 (선택)</span>
-                  <input value={newTarget.universe_note} onChange={(e) => setNewTarget({ ...newTarget, universe_note: e.target.value })} placeholder="후보 자격 기준·가치사슬 위치 등" className="sizing-new-input sizing-new-input-sm" />
-                </label>
-                <button type="submit" className="btn-ghost btn-sm" disabled={busy || !newTarget.company_name.trim()}>후보 등록</button>
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm whitespace-nowrap shrink-0"
+                  disabled={dartBusy || !newTarget.company_name.trim()}
+                  onClick={() => void searchDartCompanies(newTarget.company_name)}
+                >
+                  {dartBusy ? "검색 중..." : "DART 검색"}
+                </button>
+                <button type="submit" className="btn-premium btn-sm shrink-0" disabled={busy || !newTarget.company_name.trim()}>후보 등록</button>
               </div>
-              <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
-                S6 대상 후보 발굴 — 목표 시장 정의(후보 자격 기준·커버리지)를 기반으로 후보를 등록합니다.
-                각 후보는 S7에서 <code>chk-target-screening</code>(t-01~t-09)로 스크리닝됩니다.
-              </p>
+              {dartError && <p className="mt-1 mb-0 text-[0.75rem] text-[color:var(--muted-fg)]">{dartError}</p>}
+              {dartResults !== null && dartResults.length === 0 && !dartError && (
+                <p className="mt-1 mb-0 text-[0.75rem] text-[color:var(--muted-fg)]">DART 검색 결과가 없습니다 — 비상장 등 미등록 회사라면 위 필드에 직접 입력해 등록하세요.</p>
+              )}
+              {dartResults !== null && dartResults.length > 0 && (
+                <ul className="sizing-note-list mt-1">
+                  {dartResults.map((r) => (
+                    <li key={r.corp_code} className="flex flex-wrap items-center gap-2">
+                      <code className="dd-item-id">{r.corp_code}</code>
+                      <span className="flex-1 min-w-[12rem] text-[0.8rem]">{r.corp_name}</span>
+                      {r.source === "web" ? (
+                        <span className="status-chip status-amber" title="DART 직접 조회 실패 시 웹 검색으로 수집된 미검증 후보">웹 수집</span>
+                      ) : (
+                        <span className="status-chip status-green" title={r.source === "local" ? "기업 마스터" : "DART 기업목록 조회"}>검증</span>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm whitespace-nowrap"
+                        aria-pressed={newTarget.dart_corp_code === r.corp_code}
+                        onClick={() => { setNewTarget((prev) => ({ ...prev, company_name: r.corp_name, dart_corp_code: r.corp_code })); setDartResults(null); }}
+                      >
+                        {newTarget.dart_corp_code === r.corp_code ? "✔ 선택됨" : "이 회사로 채우기"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </form>
 
             {discoveryPanel === "master" && (
@@ -743,7 +772,7 @@ export function BrownfieldView() {
                 {proposals === null ? (
                   <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">불러오는 중...</p>
                 ) : proposals.length === 0 ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">제안 가능한 신규 후보가 없습니다 — 직접 등록하거나 웹 검색 제안을 시도하세요.</p>
+                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">제안 가능한 신규 후보가 없습니다 — 직접 등록하거나 웹검색 제안을 시도하세요.</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {proposals.map((c) => (
@@ -758,77 +787,96 @@ export function BrownfieldView() {
                 <p className="mt-1 mb-0 text-[0.7rem] text-[color:var(--muted-fg)]">수용 시 discovery_source=master_proposal로 기록됩니다.</p>
               </div>
             )}
-
-            {discoveryPanel === "web" && (
-              <div className="mb-2">
-                <p className="mb-2 text-[0.78rem] text-[color:var(--muted-fg)]">
-                  실시간 웹 검색으로 근거를 찾고, 그 근거에 등장하는 회사만 후보로 제안합니다 (ADR-0118 §5 — 근거 없는
-                  회사명은 만들지 않습니다. 검색을 쓸 수 없으면 LLM 자체 지식 기반 미검증 제안으로 대체됩니다).
-                  각 후보는 출처와 신뢰도(A/B/C)를 함께 표시하며, "Long List에 등록"을 눌러야 등록됩니다 (경계 #2).
-                </p>
-                {webProposals === null ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">{webBusy ? "웹 검색·제안 생성 중..." : "불러오는 중..."}</p>
-                ) : webProposals.length === 0 ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">{webNote ?? "제안할 후보가 없습니다 — 목표 시장 정의를 구체화한 뒤 다시 시도하세요."}</p>
-                ) : (
-                  <div>
-                    <p className="mb-2 text-[0.75rem]">
-                      <span className={`status-chip ${webSource === "llm" ? "status-green" : webSource === "llm_knowledge" ? "status-red" : "status-amber"}`}>
-                        {webSource === "llm" ? "제안 · LLM (웹검색 근거)" : webSource === "llm_knowledge" ? "제안 · LLM (미검증, 근거 없음)" : "제안 · 결정론 폴백"}
-                      </span>
-                      {webNote && <span className="ml-2">{webNote}</span>}
-                    </p>
-                    <div className="grid grid-cols-1 gap-2 mb-2">
-                      {webProposals.map((s) => (
-                        <div key={s.company_name} className="sizing-grade-card mb-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <strong className="text-[0.85rem]">{s.company_name}</strong>
-                            <span className="status-chip status-not-started" title="출처 도메인 신뢰도 — 정부·공시 A, 주요 언론·컨설팅 B, 기타 C">
-                              신뢰도 {s.reliability}
-                            </span>
-                          </div>
-                          <p className="mb-1 text-[0.78rem]">{s.rationale}</p>
-                          {s.sources.slice(0, 2).map((src) => (
-                            <a key={src.url} href={src.url} target="_blank" rel="noreferrer" className="block text-[0.72rem] text-[color:var(--accent)] underline truncate" title={src.title}>
-                              출처: {src.url}
-                            </a>
-                          ))}
-                          <span className="flex items-center gap-1 mt-1">
-                            <button
-                              type="button"
-                              className="btn-ghost btn-sm"
-                              onClick={() => void acceptProposal(s.company_name, s.dart_corp_code ?? null, "web_proposal", `웹 검색 제안 — ${s.rationale.slice(0, 80)} (출처: ${s.sources[0]?.url ?? "없음"})`)}
-                            >
-                              Long List에 등록
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-ghost btn-sm"
-                              title="이 제안을 목록에서 지웁니다 — 등록하지 않고 무시(재생성 시 다시 나올 수 있음)"
-                              onClick={() => setWebProposals((prev) => (prev ?? []).filter((p) => p.company_name !== s.company_name))}
-                            >
-                              무시
-                            </button>
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void generateWebProposals()}>
-                      {webBusy ? "재생성 중..." : "다시 생성"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </section>
         </div>
       )}
 
+      {/* ── 웹검색 결과 모달 — 검색·선택을 한 화면에서 끝낸다(사용자 요청,
+          2026-09-15). 제안 수용은 사람이 항목별로 클릭한다(경계 #2). ── */}
+      {selected && discoveryPanel === "web" && (
+        <div className="modal-backdrop" onClick={() => { if (!webBusy) setDiscoveryPanel(null); }} onKeyDown={webModalFocus.onKeyDown}>
+          <div ref={webModalFocus.panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-label="웹검색 후보 제안" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>웹검색 후보 제안</h2>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setDiscoveryPanel(null)} disabled={webBusy} aria-label="닫기">닫기</button>
+            </div>
+            <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
+              실시간 웹 검색으로 근거를 찾고, 그 근거에 등장하는 회사만 후보로 제안합니다 (ADR-0118 §5 — 근거 없는
+              회사명은 만들지 않습니다). 검색을 쓸 수 없으면 LLM 자체 지식 기반 미검증 제안으로 대체됩니다.
+              등록은 항목별 "Long List에 등록" 클릭으로만 이뤄집니다.
+            </p>
+            {webBusy && webProposals === null ? (
+              <p className="my-4 text-center text-[0.85rem] text-[color:var(--muted-fg)]">웹 검색·제안 생성 중...</p>
+            ) : webProposals !== null && webProposals.length === 0 ? (
+              <>
+                <p className="my-4 text-center text-[0.85rem] text-[color:var(--muted-fg)]">{webNote ?? "제안할 후보가 없습니다 — 목표 시장 정의를 구체화한 뒤 다시 시도하세요."}</p>
+                <div className="flex justify-end">
+                  <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void generateWebProposals()}>다시 시도</button>
+                </div>
+              </>
+            ) : (
+              <>
+                {webProposals !== null && (
+                  <p className="mb-2 text-[0.75rem]">
+                    <span className={`status-chip ${webSource === "llm" ? "status-green" : webSource === "llm_knowledge" ? "status-red" : "status-amber"}`}>
+                      {webSource === "llm" ? "제안 · 웹검색 근거" : webSource === "llm_knowledge" ? "제안 · 미검증 (근거 없음)" : "제안 · 결정론 폴백"}
+                    </span>
+                    {webNote && <span className="ml-2 text-[color:var(--muted-fg)]">{webNote}</span>}
+                  </p>
+                )}
+                <div className="grid grid-cols-1 gap-2 mb-3" style={{ maxHeight: "60vh", overflowY: "auto" }}>
+                  {(webProposals ?? []).map((s) => (
+                    <div key={s.company_name} className="sizing-grade-card mb-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <strong className="text-[0.85rem]">{s.company_name}</strong>
+                        <span className="status-chip status-not-started" title="출처 도메인 신뢰도 — 정부·공시 A, 주요 언론·컨설팅 B, 기타 C">
+                          신뢰도 {s.reliability}
+                        </span>
+                      </div>
+                      <p className="mb-1 text-[0.78rem]">{s.rationale}</p>
+                      {s.sources.slice(0, 2).map((src) => (
+                        <a key={src.url} href={src.url} target="_blank" rel="noreferrer" className="block text-[0.72rem] text-[color:var(--accent)] underline truncate" title={src.title}>
+                          출처: {src.url}
+                        </a>
+                      ))}
+                      <span className="flex items-center gap-1 mt-1">
+                        <button
+                          type="button"
+                          className="btn-ghost btn-sm"
+                          disabled={webBusy}
+                          onClick={() => void acceptProposal(s.company_name, s.dart_corp_code ?? null, "web_proposal", `웹 검색 제안 — ${s.rationale.slice(0, 80)} (출처: ${s.sources[0]?.url ?? "없음"})`)}
+                        >
+                          Long List에 등록
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost btn-sm"
+                          title="이 제안을 목록에서 지웁니다 — 등록하지 않고 무시(재생성 시 다시 나올 수 있음)"
+                          onClick={() => setWebProposals((prev) => (prev ?? []).filter((p) => p.company_name !== s.company_name))}
+                        >
+                          무시
+                        </button>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void generateWebProposals()}>
+                    {webBusy ? "재생성 중..." : "다시 생성"}
+                  </button>
+                  <button type="button" className="btn-ghost btn-sm" onClick={() => setDiscoveryPanel(null)}>닫기</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── 목표 시장 정의 수정 모달 — 취소하면 어떤 값도 반영되지 않는다 ── */}
       {editingUniverse && (
-        <div className="modal-backdrop" onClick={() => { if (!savingUniverse) closeUniverseEditor(); }}>
-          <div className="modal-panel" role="dialog" aria-modal="true" aria-label="목표 시장 정의 수정" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop" onClick={() => { if (!savingUniverse) closeUniverseEditor(); }} onKeyDown={universeModalFocus.onKeyDown}>
+          <div ref={universeModalFocus.panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-label="목표 시장 정의 수정" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <h2>목표 시장 정의 수정</h2>
               <button type="button" className="btn-ghost btn-sm" onClick={closeUniverseEditor} disabled={savingUniverse} aria-label="닫기">닫기</button>
@@ -902,15 +950,20 @@ export function BrownfieldView() {
           {/* S7 선정 퍼널·게이트·위원회·승격은 아래 이어지는 섹션에서 계속된다
               (mockup처럼 탭 없이 한 화면 — 사용자 요청, 2026-09-15). */}
 
-          {/* Long List 테이블 */}
-          <h4 className="text-[0.85rem] mb-2">Long List → 판정 · 랭킹 · Short List</h4>
+          {/* Long List 테이블 — 목표 시장 정의·후보 발굴 카드와 같은 카드 표면으로
+              감싸 화면 위계를 맞춘다(UX 정리, 2026-09-15). */}
+          <SectionToolbar
+            title="Long List → 판정 · 랭킹 → Short List"
+            summary={<span className="text-[0.72rem] text-[color:var(--muted-fg)]">Long List {targets.length} · Short List {shortlistedTargets.length}</span>}
+          />
+          <div className="sizing-grade-card">
           {targets.length === 0 ? (
-            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">Long List 후보가 없습니다 — 위에서 후보를 등록하세요.</p>
+            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mb-0">Long List 후보가 없습니다 — 위에서 후보를 등록하세요.</p>
           ) : displayedTargets.length === 0 ? (
-            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">해당 상태의 후보가 없습니다.</p>
+            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mb-0">해당 상태의 후보가 없습니다.</p>
           ) : (
             <table className="data-table" aria-label="Long List">
-              <caption className="sr-only">Long List 후보 — S7 스크리닝 현황</caption>
+              <caption className="sr-only">Long List 후보 — 평가 점수·잠정 순위·상태</caption>
               <thead>
                 <tr>
                   <th scope="col">후보</th><th scope="col">DART</th>
@@ -923,32 +976,23 @@ export function BrownfieldView() {
               <tbody>
                 {displayedTargets.map((t) => {
                   const sm = t.screening_summary;
-                  const isOpen = openTarget === t.id;
                   const es = t.eval_summary;
                   const orderIdx = shortlistOrder.indexOf(t.id);
-                  const canPromote = t.status === "pending" && Boolean(sm?.knockOutsPassed);
+                  const canPromote = t.status === "pending" && t.eval_summary?.complete === true;
                   return (
                     <Fragment key={t.id}>
-                      <tr className={isOpen ? "row-selected" : undefined}>
+                      <tr>
                         <td className="cell-primary">
-                          <button
-                            type="button"
-                            className="font-semibold text-left underline-offset-2 hover:underline"
-                            title="행을 펼쳐 스크리닝 판정"
-                            onClick={() => {
-                              const next = isOpen ? null : t.id;
-                              setOpenTarget(next);
-                              if (next && !evalItems[next]) loadEvalItems(next);
-                              if (next && t.company_id && !(t.company_id in financials)) loadFinancials(t.company_id);
-                            }}
+                          <a
+                            href={`/brownfield/targets/${encodeURIComponent(t.id)}`}
+                            className="font-semibold text-[color:var(--fg)] underline-offset-2 hover:underline"
+                            title="후보 상세 화면(판정·평가·DART 정보)으로 이동합니다"
                           >
                             {t.company_name}
-                          </button>
-                          {/* 제외된 후보는 universe_note(발굴 시점 근거, LLM 미검증 문구
-                              등 포함 가능) 대신 제외 사유 컬럼만 보여준다 — 중복·잡음 제거. */}
-                          {t.status !== "excluded" && t.universe_note && (
-                            <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{t.universe_note}</span>
-                          )}
+                          </a>
+                          {/* 발굴 근거(universe_note — 웹검색 제안 문구 등)는 테이블
+                              가독성을 해치므로 표시하지 않는다(사용자 요청, 2026-09-15).
+                              제외 사유만 별도 컬럼으로 남는다. */}
                         </td>
                         <td><code className="dd-item-id">{t.dart_corp_code ?? "—"}</code></td>
                         <td>
@@ -976,7 +1020,7 @@ export function BrownfieldView() {
                               {STATUS_LABEL[t.status]}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
                             </span>
                             {canPromote && (
-                              <button type="button" className="btn-ghost btn-sm" disabled={busy} title="knock-out 통과 — Short List로 승격" onClick={() => shortlist(t.id)}>승격</button>
+                              <button type="button" className="btn-ghost btn-sm" disabled={busy} title="재무·기술 평가 완료 — Short List로 승격" onClick={() => shortlist(t.id)}>승격</button>
                             )}
                             {t.status === "shortlisted" && (
                               <span role="group" aria-label="Short List 순위 조정" className="flex items-center gap-0.5">
@@ -986,236 +1030,19 @@ export function BrownfieldView() {
                             )}
                           </span>
                         </td>
-                        <td className="text-[0.75rem] text-[color:var(--muted-fg)]">{t.exclusion_reason ?? "—"}</td>
+                        <td className="text-[0.75rem] text-[color:var(--muted-fg)]">
+                          {t.exclusion_reason ? (
+                            <span className="inline-block max-w-[18rem] truncate align-bottom" title={t.exclusion_reason}>{t.exclusion_reason}</span>
+                          ) : "—"}
+                        </td>
                       </tr>
-                      {isOpen && (
-                        <tr key={`${t.id}-detail`}>
-                          <td colSpan={7}>
-                            <div className="text-[0.78rem] py-1">
-                              <h4 className="text-[0.85rem] mb-2">S7 스크리닝 — chk-target-screening (t-01~t-09)</h4>
-                              {/* E — 판정 LLM 초안 (웹검색 근거 있는 항목만 채움, 저장은 사람) */}
-                              <div className="flex flex-wrap items-center gap-2 mb-2">
-                                <button
-                                  type="button"
-                                  className="btn-ghost btn-sm"
-                                  disabled={screeningRecoBusy !== null || busy}
-                                  title="웹 검색으로 항목별 근거를 찾아 판정 초안을 채웁니다 — 근거 없는 항목은 미판정으로 남습니다"
-                                  onClick={() => void generateScreeningDraft(t.id)}
-                                >
-                                  {screeningRecoBusy === t.id ? "초안 생성 중..." : "LLM 판정 초안 생성"}
-                                </button>
-                                {screeningReco[t.id]?.note && <span className="text-[0.75rem] text-[color:var(--muted-fg)]">{screeningReco[t.id].note}</span>}
-                              </div>
-                              <ul className="sizing-note-list">
-                                {selected.checklist.map((item) => {
-                                  const key = `${t.id}:${item.id}`;
-                                  const current = screeningDraft[key] ?? (t.screening_json ? (JSON.parse(t.screening_json) as Record<string, string>)[item.id] : undefined) ?? "pending";
-                                  const rec = screeningReco[t.id]?.drafts[item.id];
-                                  const isLlmFilled = rec !== undefined && (screeningDraft[key] ?? "") === rec.verdict;
-                                  return (
-                                    <li key={item.id} className="flex flex-wrap items-start gap-2">
-                                      <code className="dd-item-id mt-1">{item.id}</code>
-                                      <span className="flex-1 min-w-[16rem]">
-                                        {item.text}
-                                        {isLlmFilled && (
-                                          <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">
-                                            <span className="status-chip status-amber mr-1">LLM 제안 · 미확정</span>
-                                            {rec.rationale}
-                                            {rec.source_url && (
-                                              <>
-                                              {" "}
-                                              <a href={rec.source_url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">근거 링크</a>
-                                              </>
-                                            )}
-                                          </span>
-                                        )}
-                                      </span>
-                                      {item.mandatory && <span className="status-chip status-amber">필수</span>}
-                                      <select
-                                        aria-label={`${item.id} 판정`}
-                                        value={screeningDraft[key] ?? current}
-                                        onChange={(e) => setScreeningDraft((prev) => ({ ...prev, [key]: e.target.value }))}
-                                        className="sizing-new-input sizing-new-input-sm"
-                                      >
-                                        <option value="pending">미판정</option>
-                                        {VERDICTS.map((v) => (
-                                          <option key={v} value={v}>
-                                            {v === "pass" ? "충족" : v === "fail" ? "미충족" : v === "na" ? "해당없음" : "예외"}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-
-                              {/* ── S7 재무·기술 평가 (ADR-0139) — chk-target-screening과 별도 레이어 ── */}
-                              {(["financial", "technical"] as const).map((cat) => {
-                                const items = (evalItems[t.id] ?? []).filter((it) => it.category === cat);
-                                const nlKey = `${t.id}:${cat}`;
-                                const catScore = evalScores[t.id]?.[cat];
-                                return (
-                                  <div key={cat} className="sizing-grade-card mt-3">
-                                    <div className="flex items-center justify-between gap-2 mb-2">
-                                      <h4 className="text-[0.8rem] mb-0">{EVAL_CATEGORY_LABEL[cat]}</h4>
-                                      <span
-                                        className={`status-chip ${catScore?.score == null ? "status-not-started" : catScore.score >= 70 ? "status-green" : catScore.score >= 40 ? "status-amber" : "status-red"}`}
-                                        title="충족 1점·부분충족 0.5점·미충족 0점을 항목 가중치로 가중평균 — 예외(해당없음·예외)는 계산에서 제외, 미판정 항목이 남아있으면 잠정치"
-                                      >
-                                        {catScore?.score == null ? "점수 — 판정 필요" : `${catScore.score}점 / 100점`}
-                                      </span>
-                                    </div>
-                                    {catScore && catScore.totalWeight > catScore.scoredWeight && (
-                                      <p className="mb-2 text-[0.72rem] text-[color:var(--muted-fg)]">
-                                        미판정 가중치 {catScore.totalWeight - catScore.scoredWeight} / 전체 {catScore.totalWeight} 남음 — 전 항목 판정 전까지는 잠정 점수입니다.
-                                      </p>
-                                    )}
-                                    {cat === "financial" && (
-                                      <div className="mb-2 p-2 text-[0.72rem]" style={{ background: "var(--surface-1, rgba(0,0,0,0.03))", borderRadius: "0.5rem" }}>
-                                        {!t.company_id ? (
-                                          <p className="mb-0 text-[color:var(--muted-fg)]">회사 마스터 미연결 — 재무 데이터를 표시할 수 없습니다.</p>
-                                        ) : financials[t.company_id] === undefined ? (
-                                          <p className="mb-0 text-[color:var(--muted-fg)]">재무 데이터 불러오는 중...</p>
-                                        ) : financials[t.company_id] === null ? (
-                                          <p className="mb-0 text-[color:var(--muted-fg)]">재무 데이터를 불러오지 못했습니다.</p>
-                                        ) : financials[t.company_id]!.financials.length === 0 ? (
-                                          <>
-                                            <p className="mb-1 text-[color:var(--muted-fg)]">DART 재무 데이터가 아직 동기화되지 않았습니다.</p>
-                                            <button type="button" className="btn-ghost btn-sm" disabled={financialsSyncing === t.company_id} onClick={() => void syncFinancials(t.company_id!)}>
-                                              {financialsSyncing === t.company_id ? "동기화 중..." : "재무 데이터 동기화"}
-                                            </button>
-                                          </>
-                                        ) : (() => {
-                                          const a = financials[t.company_id]!.analysis;
-                                          const years = a.years;
-                                          const seriesLine = (key: string, label: string) => {
-                                            const s = a.series.find((x) => x.key === key);
-                                            if (!s) return null;
-                                            return `${label} ${s.points.map((p) => (p.value === null ? "—" : p.value.toLocaleString())).join(" → ")}억원`;
-                                          };
-                                          const latest = a.ratios[a.ratios.length - 1];
-                                          return (
-                                            <>
-                                              {years.length > 0 && years.length < 5 && (
-                                                <p className="mb-1 text-[color:var(--amber-fg,#b45309)]">데이터 부족 — {years.length}개년만 확인됨(5개년 미만).</p>
-                                              )}
-                                              <p className="mb-0.5">{seriesLine("revenue", "매출액")}</p>
-                                              <p className="mb-0.5">{seriesLine("operatingProfit", "영업이익")}</p>
-                                              <p className="mb-0.5">{seriesLine("totalDebt", "부채")}</p>
-                                              {latest && (
-                                                <p className="mb-0 text-[color:var(--muted-fg)]">
-                                                  {latest.year} 참고 비율 — 영업이익률 {latest.operatingMargin != null ? `${(latest.operatingMargin * 100).toFixed(1)}%` : "—"} ·
-                                                  {" "}순이익률 {latest.netMargin != null ? `${(latest.netMargin * 100).toFixed(1)}%` : "—"} ·
-                                                  {" "}부채비율 {latest.debtRatio != null ? `${(latest.debtRatio * 100).toFixed(1)}%` : "—"}
-                                                </p>
-                                              )}
-                                            </>
-                                          );
-                                        })()}
-                                      </div>
-                                    )}
-                                    {items.length === 0 ? (
-                                      <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
-                                        {cat === "technical" ? "S3에 필요 역량이 정의되지 않아 기술 평가 항목이 없습니다 — 먼저 S3에서 정의하세요." : "불러오는 중..."}
-                                      </p>
-                                    ) : (
-                                      <ul className="sizing-note-list mb-2">
-                                        {items.map((it) => (
-                                          <li key={it.id} className="flex flex-wrap items-start gap-2">
-                                            <span className="flex-1 min-w-[14rem]">
-                                              {it.label}
-                                              {it.description && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{it.description}</span>}
-                                            </span>
-                                            {it.is_mandatory === 1 && <span className="status-chip status-amber">{it.source === "seeded" ? "S3 승계·필수" : "필수"}</span>}
-                                            <label className="text-[0.72rem] text-[color:var(--muted-fg)] flex items-center gap-1" title="가중치 — 카테고리 100점 점수 계산 시 이 항목의 상대 비중">
-                                              가중치
-                                              <input
-                                                type="number" min={1} step={1}
-                                                aria-label={`${it.label} 가중치`}
-                                                defaultValue={it.weight}
-                                                disabled={evalBusy === it.id}
-                                                onBlur={(e) => {
-                                                  const v = Number(e.target.value);
-                                                  if (v > 0 && v !== it.weight) void setEvalWeight(t.id, it.id, v);
-                                                }}
-                                                className="sizing-new-input sizing-new-input-sm"
-                                                style={{ width: "4rem" }}
-                                              />
-                                            </label>
-                                            <select
-                                              aria-label={`${it.label} 판정`}
-                                              value={it.state?.status ?? "pending"}
-                                              disabled={evalBusy === it.id}
-                                              onChange={(e) => void setEvalVerdict(t.id, it.id, e.target.value as "pending" | "pass" | "partial" | "fail" | "na" | "waived")}
-                                              className="sizing-new-input sizing-new-input-sm"
-                                            >
-                                              <option value="pending">미판정</option>
-                                              {EVAL_VERDICTS.map((v) => (
-                                                <option key={v} value={v}>{VERDICT_KO[v]}</option>
-                                              ))}
-                                            </select>
-                                            {it.is_deletable === 1 && (
-                                              <button type="button" className="btn-ghost btn-sm" disabled={evalBusy === it.id} title="항목 삭제" onClick={() => void removeEvalCriterion(t.id, it.id)}>✕</button>
-                                            )}
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    )}
-                                    <div className="flex items-center gap-1">
-                                      <input
-                                        aria-label={`${EVAL_CATEGORY_LABEL[cat]} 항목 추가`}
-                                        placeholder="+ 항목 추가"
-                                        value={newCriterionLabel[nlKey] ?? ""}
-                                        onChange={(e) => setNewCriterionLabel((prev) => ({ ...prev, [nlKey]: e.target.value }))}
-                                        className="sizing-new-input sizing-new-input-sm"
-                                        style={{ flex: "1 1 12rem" }}
-                                      />
-                                      <button type="button" className="btn-ghost btn-sm" disabled={evalBusy === nlKey || !(newCriterionLabel[nlKey] ?? "").trim()} onClick={() => void addEvalCriterion(t.id, cat)}>추가</button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-
-                              <div className="flex flex-wrap items-center gap-2 mt-3">
-                                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => saveScreening(t.id)}>판정 저장</button>
-                                {t.status !== "shortlisted" && (
-                                  <button
-                                    type="button"
-                                    className="btn-ghost btn-sm"
-                                    disabled={busy || !sm?.knockOutsPassed}
-                                    title={sm && !sm.knockOutsPassed ? "knock-out 통과 + 필수 항목 판정 후 승격 가능합니다" : "Short List 승격"}
-                                    onClick={() => shortlist(t.id)}
-                                  >
-                                    Short List 승격
-                                  </button>
-                                )}
-                                {t.status !== "excluded" && (
-                                  <span className="flex items-center gap-1">
-                                    <input
-                                      aria-label="제외 사유"
-                                      placeholder="제외 사유"
-                                      value={excludeReason[t.id] ?? ""}
-                                      onChange={(e) => setExcludeReason((prev) => ({ ...prev, [t.id]: e.target.value }))}
-                                      className="sizing-new-input sizing-new-input-sm"
-                                      style={{ flex: "1 1 12rem" }}
-                                    />
-                                    <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => exclude(t.id)}>제외</button>
-                                  </span>
-                                )}
-                              </div>
-                              {sm && sm.mandatoryOpen.length > 0 && (
-                                <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">필수 미판정: {sm.mandatoryOpen.join(", ")}</p>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
                     </Fragment>
                   );
                 })}
               </tbody>
             </table>
           )}
+          </div>
         </section>
         </div>
       )}
@@ -1223,12 +1050,12 @@ export function BrownfieldView() {
       {/* ── S7 선정 퍼널 + 게이트 결정 + 위원회 심의 + 승격(mockup 구조 —
           Long List 아래 이어서 렌더링, 탭 없음) ── */}
       {selected && (
-        <div id={SECTION_IDS.shortlist} style={{ scrollMarginTop: "1rem" }}>
+        <div id={SECTION_IDS.shortlist} className="mt-3 flex flex-col gap-3 items-stretch" style={{ scrollMarginTop: "1rem" }}>
           {/* ── 인수 가능성 (참고용) — chk-target-screening t-01/t-02/t-08 발췌.
               공식 판정이 아니며 승격/추진을 막지 않는다(참고 표시일 뿐). ── */}
           {shortlistedTargets.length > 0 && (
             <section aria-label="인수 가능성" className="market-section">
-              <h2 className="text-[0.9rem] mb-2">인수 가능성 <span className="note">— 참고용, 공식 판정 아님</span></h2>
+              <SectionToolbar title="인수 가능성" summary={<span className="note">— 참고용, 공식 판정 아님</span>} />
               {shortlistedTargets.map((t) => {
                 const states = t.screening_json ? (JSON.parse(t.screening_json) as Record<string, string>) : {};
                 const keyItems = selected.checklist.filter((it) => ["t-01", "t-02", "t-08"].includes(it.id));
@@ -1263,15 +1090,15 @@ export function BrownfieldView() {
               committeeKey="target-longlist-shortlist-committee"
               committeeLabel="S6/S7 대상 롱리스트→숏리스트 위원회"
               gates={["screening"]}
-              briefMd={buildScreeningBriefMd(selected.targets, selected.checklist)}
+              briefMd={buildEvalBriefMd(selected.targets)}
             />
           )}
           <GateDecisionPanel
             opportunityId={selected.opportunity.id}
             gates={["target_screening"]}
             killHint={
-              selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded" && (t.screening_summary?.knockOutsPassed ?? false))
-                ? "knock-out 통과 후보 0건 — Target Screening 진행 KILL 기준 검토가 필요합니다 (flow.spec S7 kill criteria)."
+              selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded" && t.eval_summary?.complete === true)
+                ? "재무·기술 평가가 완료된 후보가 0건입니다 — Target Screening 진행 KILL 기준 검토가 필요합니다 (flow.spec S7 kill criteria)."
                 : null
             }
           />

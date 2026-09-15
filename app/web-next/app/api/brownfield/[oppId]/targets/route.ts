@@ -26,7 +26,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
       // 체크리스트(screening_summary)는 위원회 심의의 판정 근거로 쓰고,
       // Long List 단계의 스코어·정렬에는 쓰지 않는다(사용자 요청, 2026-09-15).
       const evalScores = computeEvalScore(targetEvalStates(oppId, t.id, auth.auth.userId));
-      return { ...t, screening_summary: screeningSummary(t), eval_summary: { ...evalScores, combined: combinedEvalScore(evalScores) } };
+      const complete = (["financial", "technical"] as const).every(
+        (c) => evalScores[c].totalWeight > 0 && evalScores[c].scoredWeight === evalScores[c].totalWeight,
+      );
+      return { ...t, screening_summary: screeningSummary(t), eval_summary: { ...evalScores, combined: combinedEvalScore(evalScores), complete } };
     }),
   }, 200);
 }

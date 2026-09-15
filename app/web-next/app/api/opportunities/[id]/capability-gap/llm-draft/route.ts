@@ -80,7 +80,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     const { loadLatestProfile } = await import("../../../../../../lib/company-profile-pipeline.ts");
     const profileLines: string[] = [];
     for (const m of scoped.slice(0, 10)) {
-      const prof = loadLatestProfile(db, m.id);
+      const prof = loadLatestProfile(db, { kind: "member", id: m.id });
       if (!prof) continue;
       const strengths = (prof.strengths ?? []).slice(0, 5).join(" / ");
       const exposures = (prof.industryExposure ?? []).slice(0, 6).join(" / ");

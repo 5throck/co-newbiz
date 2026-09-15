@@ -34,7 +34,7 @@ const db = getDb(TEST_DB_PATH);
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
-const { startCompanyProfilePipeline, getProfileJobStatus, _profileJobs } = await import(
+const { startCompanyProfilePipeline, getProfileJobStatus, resolveMemberSubject, _profileJobs } = await import(
   "../../app/web-next/lib/company-profile-pipeline.ts"
 );
 
@@ -105,12 +105,12 @@ describe("company-profile analysis status", () => {
 
   test("a recorded pipeline failure is reported by the profile GET with its error", async () => {
     const memberId = await seedMember("status-failed");
-    _profileJobs.set(memberId, { status: "failed", error: "boom: deterministic seed", startedAt: NOW, failedAt: NOW });
+    _profileJobs.set(`member:${memberId}`, { status: "failed", error: "boom: deterministic seed", startedAt: NOW, failedAt: NOW });
     const res = await req(`/api/our-company/members/${memberId}/profile`, { headers: { cookie: rootCookie } });
     const body = (await res.json()) as { data: { status: string; error?: string } };
     expect(body.data.status).toBe("failed");
     expect(body.data.error).toBe("boom: deterministic seed");
-    _profileJobs.delete(memberId);
+    _profileJobs.delete(`member:${memberId}`);
   });
 
   test("analyze runs the offline pipeline to a completed version", async () => {
@@ -120,7 +120,7 @@ describe("company-profile analysis status", () => {
     expect(((await start.json()) as { data: { status: string } }).data.status).toBe("in_progress");
 
     const done = await waitFor(() => {
-      const job = getProfileJobStatus(memberId);
+      const job = getProfileJobStatus({ kind: "member", id: memberId });
       if (job?.status === "failed") throw new Error(`pipeline failed: ${job.error}`);
       return job === null ? true : null; // 성공 시 레지스트리가 지워진다
     });
@@ -136,19 +136,21 @@ describe("company-profile analysis status", () => {
 
   test("a pipeline crash (member gone mid-flight) is recorded as failed", async () => {
     const memberId = await seedMember("status-crash");
-    // 실제 크래시 경로: 파이프라인 실행 중 회사 행이 사라진 경우 재현 —
-    // 행을 지운 뒤 러너를 직접 실행하면 not found로 실패가 기록된다.
+    // 실제 크래시 경로: 파이프라인 실행 중 회사 행이 사라진 경우 재현 — 구독 정보는
+    // 삭제 전에 해소해 두고(라우트가 하는 것과 동일), 행을 지운 뒤 러너를 직접
+    // 실행하면 company_profile_version.member_id FK 위반으로 실패가 기록된다.
+    const subject = resolveMemberSubject(db, memberId);
     db.run("DELETE FROM company_group_member WHERE id = ?", [memberId]);
     // 러너의 console.error는 설계된 서버 로그 — 실패를 기다리는 동안 출력 침묵.
     const originalConsoleError = console.error;
     console.error = () => {};
     try {
-      startCompanyProfilePipeline(db, memberId, "root");
+      startCompanyProfilePipeline(db, subject, "root");
       const job = await waitFor(() => {
-        const j = getProfileJobStatus(memberId);
+        const j = getProfileJobStatus({ kind: "member", id: memberId });
         return j?.status === "failed" ? j : null;
       });
-      expect(job.error).toContain("not found");
+      expect(job.error).toBeTruthy();
     } finally {
       console.error = originalConsoleError;
     }

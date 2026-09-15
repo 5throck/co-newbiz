@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-16](2026-09-16.md) | feat(web-next): generalize brownfield candidate profile pipeline, fix S1 industry-name display |
 | [2026-09-15](2026-09-15.md) | feat(web-next): synergy score human confirmation, list-table standard, S4 advisory and chart fixes |
 | [2026-09-14](2026-09-14.md) | chore: update |
 | [2026-09-13](2026-09-13.md) | feat(restyle): stage linkage strip on every stage screen via StageFrame |

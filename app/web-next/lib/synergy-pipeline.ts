@@ -174,7 +174,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     if (row.target_type === "affiliate") {
       const member = db.query("SELECT company_name FROM company_group_member WHERE id = ?").get(row.member_id) as { company_name: string } | undefined;
       company = member?.company_name ?? row.name_ko;
-      const prof = row.member_id ? loadLatestProfile(db, row.member_id) : null;
+      const prof = row.member_id ? loadLatestProfile(db, { kind: "member", id: row.member_id }) : null;
       if (!prof) throw new Error("계열사 프로파일이 없습니다 — 그룹/계열사 분석 화면에서 먼저 분석하세요.");
       profileRef = {
         kind: "affiliate",
@@ -198,7 +198,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       const exposures = new Set<string>();
       let best: ReturnType<typeof loadLatestProfile> = null;
       for (const m of members) {
-        const prof = loadLatestProfile(db, m.id);
+        const prof = loadLatestProfile(db, { kind: "member", id: m.id });
         if (!prof) continue;
         prof.strengths.forEach((x) => strengths.add(x));
         (prof.industryExposure ?? []).forEach((x) => exposures.add(x));

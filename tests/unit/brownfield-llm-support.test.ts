@@ -16,6 +16,7 @@ const NOW = "2026-09-15T10:00:00Z";
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { setWebResearchOverrideForTests } = await import("../../app/web-next/lib/web-research.ts");
+const { setPlaywrightSearchOverrideForTests } = await import("../../app/web-next/lib/playwright-search.ts");
 // 순수 로직 — route 파일에서 export된 정규화 함수(네트워크·DB 없음)
 const { normalizeLlmSuggestions } = await import("../../app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts");
 const { parseScreeningDrafts } = await import("../../app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/screening-draft/route.ts");
@@ -27,8 +28,11 @@ let viewerCookie = "";
 let oppId = "";
 
 // 검색 미설정 상태를 시뮬레이션한다 — 실제 키가 .env에 설정된 환경에서도
-// 테스트가 네트워크 호출 없이 결정론 폴백 경로를 검증하게 한다.
+// 테스트가 네트워크 호출 없이 결정론 폴백 경로를 검증하게 한다. Playwright
+// headless 폴백도 함께 막아(빈 결과 고정) 테스트가 실제 Chrome을 기동하거나
+// 네트워크로 나가지 않게 한다.
 setWebResearchOverrideForTests({ configured: false, sources: [] });
+setPlaywrightSearchOverrideForTests([]);
 
 function req(path: string, init?: RequestInit) {
   return nextRequest(path, init);
