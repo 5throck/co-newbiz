@@ -30,6 +30,13 @@ function llmUnavailable(): Error {
 
 // ── Business case prose enrichment ──────────────────────────────────────────
 
+const BC_AGENT_KEY: Record<BusinessCaseStep, string> = {
+  growth_projection: "financial-analyst",
+  valuation_model: "valuation-agent",
+  distributional_valuation: "quant-methodologist",
+  scenario_risk_assessment: "quant-methodologist",
+};
+
 const BC_STEP_ROLE: Record<BusinessCaseStep, string> = {
   growth_projection: "재무 분석가(financial-analyst)",
   valuation_model: "밸류에이션 전문가(valuation-agent)",
@@ -53,7 +60,7 @@ export function makeLlmBusinessCaseExecutor(): BusinessCaseStepExecutor {
           },
           { role: "user", content: `단계/역할: ${BC_STEP_ROLE[step]}\n시나리오: ${ctx.scenario}\n\n[확정 수치 블록]\n${deterministic}` },
         ],
-        { temperature: 0.4, maxTokens: 800 },
+        { temperature: 0.4, maxTokens: 800, agent: { key: BC_AGENT_KEY[step], purpose: "S8 사업성 분석 단계 산출 해석 보강" } },
       );
       return prose.trim() || deterministic;
     } catch {
@@ -108,7 +115,7 @@ export function makeLlmDdTailorExecutor(): DdTailorExecutor {
         },
         { role: "user", content: `도메인: ${domain}\n산업: ${ctx.industry}\n프로젝트: ${ctx.projectId}` },
       ],
-      { temperature: 0.4, maxTokens: 1400 },
+      { temperature: 0.4, maxTokens: 1400, agent: { key: "technical-dd-agent", purpose: "S9 산업 맞춤 DD 체크리스트 항목 제안" } },
     );
     const drafts = parseDrafts(raw);
     if (drafts.length > 0) return drafts;

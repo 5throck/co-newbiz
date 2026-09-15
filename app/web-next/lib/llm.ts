@@ -65,7 +65,7 @@ export function loadRootEnvPipelineKeys(): void {
         for (const line of readFileSync(envPath, "utf-8").split(/\r?\n/)) {
           const m = line.match(/^([A-Z_]+)=(.*)$/);
           if (m && PIPELINE_ENV_KEYS.test(m[1]) && process.env[m[1]] === undefined) {
-            process.env[m[1]] = m[2].trim();
+            process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
           }
         }
         if (process.env.CO_NEWBIZ_LLM_PROVIDER && process.env.DART_API_KEY && process.env.TAVILY_API_KEY) return;
@@ -100,11 +100,12 @@ export function isLlmConfigured(): boolean {
 /** One shot: messages → text. Throws on provider errors after a single retry. */
 export async function complete(
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number } = {},
+  opts: { temperature?: number; maxTokens?: number; agent?: AgentCallMeta } = {},
 ): Promise<string> {
   const cfg = getProviderConfig();
   if (!cfg) throw new Error("LLM provider is not configured.");
   const url = resolveUrl(cfg);
+  const started = Date.now();
   let lastError: unknown = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -122,6 +123,9 @@ export async function complete(
       const json = (await res.json()) as Record<string, unknown>;
       const text = extractText(cfg.provider, json);
       if (!text.trim()) throw new Error("LLM returned an empty response (reasoning tokens may have exhausted max_tokens).");
+      // 직접 호출 지점도 ADR-0128 런 장부에 남는다 — completeOrFallback 경로의 기록과 중복되지 않도록
+      // 성공/실패 로그는 이곳(complete)에서만 담당한다.
+      logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model: cfg.model ?? "unknown" }, true, null, Date.now() - started);
       return text;
     } catch (err) {
       lastError = err;
@@ -129,6 +133,8 @@ export async function complete(
       break;
     }
   }
+  const reason = lastError instanceof Error ? lastError.message : String(lastError);
+  logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model: cfg.model ?? "unknown" }, false, reason, Date.now() - started);
   throw lastError instanceof Error ? lastError : new Error("LLM call failed.");
 }
 
@@ -250,8 +256,8 @@ export async function completeOrFallback(
   }
   const started = Date.now();
   try {
+    // llm 경로의 런 장부 기록은 complete() 내부에서 이루어진다.
     const text = await complete(messages, opts);
-    logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model: cfg.model ?? "unknown" }, true, null, Date.now() - started);
     return { source: "llm", provider: cfg.provider, text };
   } catch (err) {
     // 폴백 자체는 설계된 동작이지만 사유가 로그에 없으면 현장에서 진단 불가 —

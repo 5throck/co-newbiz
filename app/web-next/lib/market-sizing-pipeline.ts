@@ -233,7 +233,7 @@ async function summarize(industry: string, step: number, title: string, context:
       { role: "user", content: `산업: ${industry}\n단계 ${step}: ${title}\n산출 데이터: ${context}` },
     ],
     () => `${industry} — ${title}: 방법론 절차에 따라 작성되었습니다.`,
-    { maxTokens: 400 },
+    { maxTokens: 400, agent: { key: "market-intelligence-agent", purpose: `S1 시장규모 단계 요약 — ${title}` } },
   );
   return { summary: res.text, source: res.source };
 }
@@ -262,7 +262,7 @@ export async function classifyIndustryKsic(db: Database, industryId: string, ind
       },
     ],
     () => "NOT_JSON",
-    { temperature: 0.2, maxTokens: 300 },
+    { temperature: 0.2, maxTokens: 300, agent: { key: "market-intelligence-agent", purpose: "산업 KSIC 코드 분류 제안" } },
   );
   let code = "";
   if (res.source === "llm") {
@@ -291,6 +291,13 @@ export async function classifyIndustryKsic(db: Database, industryId: string, ind
   const held = db.query("SELECT id FROM md_industry WHERE ksic_code = ? AND id != ?").get(code, industryId);
   if (held) return null;
   db.run("UPDATE md_industry SET ksic_code = ? WHERE id = ? AND ksic_code IS NULL", [code, industryId]);
+  // 화이트리스트 분류라도 LLM 선정 값이 DB에 남는 유일한 경로다 — 감사 추적을 남긴다.
+  appendAudit(db, {
+    actor: "market-intelligence-agent",
+    action: "md_industry.ksic_llm_fill",
+    target: industryId,
+    now: new Date().toISOString(),
+  });
   return code;
 }
 

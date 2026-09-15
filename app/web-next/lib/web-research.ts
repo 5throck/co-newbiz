@@ -43,12 +43,17 @@ export async function tavilySearch(query: string, opts: { maxResults?: number } 
       }),
       signal: AbortSignal.timeout(20_000),
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      // 침묵 대신 원인을 남긴다 — 중단된 웹 리서치가 "근거 없음"과 구분되어야 한다.
+      console.error(`tavily search HTTP ${res.status} for query: ${query.slice(0, 80)}`);
+      return [];
+    }
     const json = (await res.json()) as { results?: Array<{ title?: string; url?: string; content?: string }> };
     return (json.results ?? [])
       .filter((r) => r.url)
       .map((r) => ({ title: r.title ?? r.url!, url: r.url!, snippet: (r.content ?? "").slice(0, 400) }));
-  } catch {
+  } catch (err) {
+    console.error("tavily search failed:", err instanceof Error ? err.message : err);
     return [];
   }
 }

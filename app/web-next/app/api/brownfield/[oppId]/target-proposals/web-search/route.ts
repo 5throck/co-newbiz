@@ -114,7 +114,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     {
       maxTokens: 1600,
       agent: {
-        key: "brownfield-agent",
+        key: "market-intelligence-agent",
         purpose: "S6 대상 후보 웹검색 제안 — 실검색 근거 기반 후보 도출",
         contextType: "opportunity",
         contextId: oppId,

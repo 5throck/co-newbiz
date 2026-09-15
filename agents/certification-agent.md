@@ -18,7 +18,7 @@ last_reviewed: "2026-08-22"
 lifecycle:
   phase: production
   created: 2026-08-19
-  last_updated: 2026-09-12
+  last_updated: 2026-09-15
   governance: docs/lifecycle/agents/certification-agent.md
 required_skills:
   - certification-roadmap
