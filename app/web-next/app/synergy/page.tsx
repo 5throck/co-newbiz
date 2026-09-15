@@ -768,7 +768,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                 <div className="sizing-grade-card mb-3">
                   <h4 className="text-[0.85rem] mb-2">연결 기회 — S2 기회발굴</h4>
                   <p className="mb-2 text-[0.85rem]"><strong>{p.opportunity.name}</strong></p>
-                  {confirmError && <p className="mb-2 text-[0.8rem] text-red-400" role="alert">{confirmError}</p>}
+                  {confirmError && <p className="mb-2 text-[0.8rem] text-[color:var(--red-fg)]" role="alert">{confirmError}</p>}
                   {currentScore != null ? (
                     <>
                       <p className="mb-2 text-[0.82rem]">

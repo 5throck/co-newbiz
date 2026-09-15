@@ -17,19 +17,13 @@ export function setPlaywrightSearchOverrideForTests(sources: WebSource[] | null)
 
 function findChromeBinary(): string | null {
   if (process.env.CHROME_PATH?.trim()) return process.env.CHROME_PATH.trim();
-  const candidates = [
-    // macOS
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    // Linux (CI/배포 서버)
-    "/usr/bin/google-chrome",
-    "/usr/bin/google-chrome-stable",
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-  ];
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
-  const { existsSync } = require("node:fs") as typeof import("node:fs");
-  for (const p of candidates) {
-    if (existsSync(p)) return p;
+  // Do not probe the filesystem here: under Next/Turbopack, broad fs probes in
+  // a route dependency can make output-file tracing think the whole project is
+  // relevant. Return the conventional path for the current platform and let
+  // chromium.launch fail softly below when Chrome is absent.
+  if (process.platform === "darwin") return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  if (process.platform === "linux") {
+    return process.env.CI ? "/usr/bin/google-chrome" : "/usr/bin/google-chrome-stable";
   }
   return null;
 }
@@ -78,9 +72,12 @@ export async function playwrightSearch(queries: string[], limit = 10): Promise<W
   if (!chromeBinary || queries.length === 0) return [];
   let chromium: typeof import("playwright-core").chromium;
   try {
-    // 번들러(Next/Turbopack)에서 require는 실패하므로 동적 import를 쓴다 —
-    // playwright-core는 package.json 의존성이라 항상 해석된다.
-    ({ chromium } = await import("playwright-core"));
+    // Keep the optional Playwright fallback outside Turbopack's static module
+    // graph. A literal dynamic import("playwright-core") is enough for Next to
+    // trace the whole browser package and emit NFT warnings even though this
+    // function is a best-effort server-only fallback.
+    const dynamicImport = new Function("specifier", "return import(specifier)") as <T>(specifier: string) => Promise<T>;
+    ({ chromium } = await dynamicImport<typeof import("playwright-core")>("playwright-core"));
   } catch {
     console.error("playwright-search: playwright-core not installed — skipping headless fallback");
     return [];

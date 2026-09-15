@@ -44,6 +44,27 @@ function ensureMigrationsTable(db: ReturnType<typeof getDb>): void {
   `);
 }
 
+function migrationFiles(): string[] {
+  return readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+}
+
+export function getMigrationStatus(dbPath?: string): { applied: string[]; pending: string[] } {
+  const db = getDb(dbPath);
+  ensureMigrationsTable(db);
+
+  const already = new Set(
+    db.query("SELECT filename FROM schema_migrations").all().map((r: any) => r.filename)
+  );
+
+  const files = migrationFiles();
+  return {
+    applied: files.filter((f) => already.has(f)),
+    pending: files.filter((f) => !already.has(f)),
+  };
+}
+
 export function runMigrations(dbPath?: string): { applied: string[]; skipped: string[] } {
   const db = getDb(dbPath);
   ensureMigrationsTable(db);
@@ -52,9 +73,7 @@ export function runMigrations(dbPath?: string): { applied: string[]; skipped: st
     db.query("SELECT filename FROM schema_migrations").all().map((r: any) => r.filename)
   );
 
-  const files = readdirSync(MIGRATIONS_DIR)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
+  const files = migrationFiles();
 
   const applied: string[] = [];
   const skipped: string[] = [];

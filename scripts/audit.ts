@@ -1544,6 +1544,25 @@ function checkDesignLint() {
 }
 checkDesignLint();
 
+// Project-local co-newbiz design gate. The generic design-lint gate above is
+// schema-driven and can legitimately skip L3 projects that do not carry
+// docs/workspace-schema.json scan roots; co-newbiz also has a stricter
+// app/web-next-specific linter exposed as `bun run design:lint`. If present,
+// run it here so the full audit cannot pass while the product UI lint fails.
+{
+    const coNewbizDesignLint = path.join('scripts', 'co-newbiz', 'design-lint.ts');
+    if (fs.existsSync(coNewbizDesignLint)) {
+        const result = spawnSync('bun', [coNewbizDesignLint], { encoding: 'utf-8' });
+        if (result.status === 0) {
+            Pass('co-newbiz design-lint gate: app/web-next UI checks CLEAN');
+        } else {
+            if (result.stdout) console.log(result.stdout);
+            if (result.stderr) console.error(result.stderr);
+            Fail('co-newbiz design-lint gate failed — run: bun run design:lint');
+        }
+    }
+}
+
 // Variant script drift detection (WARN-only, first-pass heuristic).
 // Flags templates/co-*/scripts files that duplicate templates/common/scripts files by >50% content overlap.
 // See docs/designs/2026-08-16-august-regression-coverage-design.md §2 for design, rationale, and denominator choice.
