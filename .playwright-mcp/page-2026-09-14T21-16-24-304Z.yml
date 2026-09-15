@@ -1,0 +1,312 @@
+- generic [active] [ref=f8e1]:
+  - generic [ref=f8e2]:
+    - complementary [ref=f8e3]:
+      - link "CN co-newbiz" [ref=f8e4] [cursor=pointer]:
+        - /url: /deals
+        - generic [ref=f8e5]: CN
+        - generic [ref=f8e6]: co-newbiz
+      - generic [ref=f8e7]:
+        - generic [ref=f8e8]: 탐색
+        - navigation "탐색" [ref=f8e9]:
+          - link "검토/안건 보드" [ref=f8e10] [cursor=pointer]:
+            - /url: /deals
+      - generic [ref=f8e17]:
+        - generic [ref=f8e18]: 단계 화면(기존)
+        - navigation "단계 화면(기존)" [ref=f8e19]:
+          - link "S1 시장분석" [ref=f8e20] [cursor=pointer]:
+            - /url: /market
+          - link "S2 기회 발굴" [ref=f8e25] [cursor=pointer]:
+            - /url: /opportunities
+          - link "S3 그룹/계열사 분석" [ref=f8e29] [cursor=pointer]:
+            - /url: /our-company
+          - link "S3 시너지·전략적 적합성" [ref=f8e33] [cursor=pointer]:
+            - /url: /synergy
+          - link "S4 진출방식 결정" [ref=f8e40] [cursor=pointer]:
+            - /url: /route-decision
+          - link "S5 자체 진출" [ref=f8e46] [cursor=pointer]:
+            - /url: /greenfield
+          - link "S6/S7 대상발굴·선정" [ref=f8e51] [cursor=pointer]:
+            - /url: /brownfield
+          - generic [ref=f8e57]:
+            - link "프로젝트" [ref=f8e58]:
+              - /url: /projects
+            - generic [ref=f8e62]:
+              - link "진행 프로젝트" [ref=f8e63] [cursor=pointer]:
+                - /url: /projects
+              - link "아카이브" [ref=f8e65] [cursor=pointer]:
+                - /url: /projects/archives
+      - generic [ref=f8e67]:
+        - generic [ref=f8e68]: 분석·참조
+        - navigation "분석·참조" [ref=f8e69]:
+          - link "벤치마킹 사례" [ref=f8e70] [cursor=pointer]:
+            - /url: /benchmarks
+          - link "문서 허브" [ref=f8e76] [cursor=pointer]:
+            - /url: /library
+          - link "용어집" [ref=f8e81] [cursor=pointer]:
+            - /url: /glossary
+          - link "R&BD 전략" [ref=f8e85] [cursor=pointer]:
+            - /url: /strategy
+    - generic [ref=f8e90]:
+      - banner [ref=f8e91]:
+        - button "S6/S7 대상발굴·선정 목록으로 돌아가기" [ref=f8e92] [cursor=pointer]: S6/S7 대상발굴·선정
+        - generic [ref=f8e95]:
+          - button "다크 모드로 전환" [ref=f8e96] [cursor=pointer]:
+            - generic [ref=f8e99]: 다크 모드
+            - generic [ref=f8e100]: 전환
+          - button "알림 모두 읽음 처리" [ref=f8e101] [cursor=pointer]:
+            - generic [ref=f8e105]: 알림 0
+          - generic [ref=f8e106]: techcross
+          - button "비밀번호 변경" [ref=f8e107] [cursor=pointer]
+          - button "로그아웃" [ref=f8e112] [cursor=pointer]
+      - main [ref=f8e118]:
+        - heading "S6 · 대상 선정" [level=1] [ref=f8e119]
+        - paragraph [ref=f8e120]: 누구와 결합할 것인가?
+        - navigation "프로세스 단계 진행" [ref=f8e121]:
+          - link "1 시장분석" [ref=f8e122] [cursor=pointer]:
+            - /url: /market
+            - generic [ref=f8e123]: "1"
+            - text: 시장분석
+          - link "2 기회 발굴" [ref=f8e124] [cursor=pointer]:
+            - /url: /opportunities
+            - generic [ref=f8e125]: "2"
+            - text: 기회 발굴
+          - link "3 시너지·전략적 적합성" [ref=f8e126] [cursor=pointer]:
+            - /url: /synergy
+            - generic [ref=f8e127]: "3"
+            - text: 시너지·전략적 적합성
+          - link "4 진출방식 결정" [ref=f8e128] [cursor=pointer]:
+            - /url: /route-decision
+            - generic [ref=f8e129]: "4"
+            - text: 진출방식 결정
+          - generic "역량 평가·진출전략 — 현재 트랙 미적용" [ref=f8e130]:
+            - generic [ref=f8e131]: "5"
+            - text: 역량 평가·진출전략
+          - link "6 대상 후보 발굴 Pre-FS" [ref=f8e132] [cursor=pointer]:
+            - /url: /brownfield
+            - generic [ref=f8e133]: "6"
+            - text: 대상 후보 발굴
+            - generic "Pre-FS 게이트 — S1~S4처럼 여러 단계가 같은 게이트 심사를 공유합니다. 이 단계만의 별도 심사가 아니라, 이 단계가 최종적으로 어느 게이트 판정(Go/Hold/Kill)에 속하는지 보여주는 표시입니다." [ref=f8e135]: Pre-FS
+          - link "7 대상 선정 Target Screening" [ref=f8e136] [cursor=pointer]:
+            - /url: /brownfield
+            - generic [ref=f8e137]: "7"
+            - text: 대상 선정
+            - generic "Target Screening 게이트 — S1~S4처럼 여러 단계가 같은 게이트 심사를 공유합니다. 이 단계만의 별도 심사가 아니라, 이 단계가 최종적으로 어느 게이트 판정(Go/Hold/Kill)에 속하는지 보여주는 표시입니다." [ref=f8e139]: Target Screening
+          - generic "사업성 분석 — 돈이 되는가?" [ref=f8e140]:
+            - generic [ref=f8e141]: "8"
+            - text: 사업성 분석
+          - generic "실사·검증 — 사실인가? 위험은 무엇인가?" [ref=f8e142]:
+            - generic [ref=f8e143]: "9"
+            - text: 실사·검증
+          - generic "투자구조 설계 — 어떤 그릇으로, 어떤 자금으로 들어갈 것인가?" [ref=f8e144]:
+            - generic [ref=f8e145]: "10"
+            - text: 투자구조 설계
+          - generic "투자심사·실행 — 투자할 것인가?" [ref=f8e146]:
+            - generic [ref=f8e147]: "11"
+            - text: 투자심사·실행
+          - generic "사후 관리 — 투자 후 사업이 궤도에 올랐는가?" [ref=f8e148]:
+            - generic [ref=f8e149]: "12"
+            - text: 사후 관리
+        - note "단계 연계" [ref=f8e150]:
+          - generic [ref=f8e151]: 입력 ←
+          - generic [ref=f8e152]: S4 트랙·라우트
+          - generic [ref=f8e153]: S1 시장 정의·가치사슬
+          - generic [ref=f8e154]: S3 필요 역량·진입 조건
+          - generic [ref=f8e155]:
+            - generic [ref=f8e156]: 출력 →
+            - link "S7 대상 선정" [ref=f8e157] [cursor=pointer]:
+              - /url: /brownfield
+              - text: S7 대상 선정
+              - generic [aria-hidden] [ref=f8e158]: →
+        - generic [ref=f8e159]:
+          - text: Brownfield 경로 — 진출방식이 Brownfield로 결정된 기회의 대상 후보를 발굴하고(S6 Long List),
+          - code [ref=f8e160]: chk-target-screening
+          - text: 체크리스트로 스크리닝해 Short List로 좁힙니다(S7). CDD/TDD는 Short List 확정 후 S9에서 수행합니다.
+        - region "브라운필드 기회" [ref=f8e161]:
+          - heading "Brownfield로 결정된 기회" [level=2] [ref=f8e164]
+          - button "서비스·요양·접객 영역 휴머노이드 특화 솔루션 사업 Long List 1 · Short List 1" [pressed] [ref=f8e311] [cursor=pointer]:
+            - generic [ref=f8e167]: 서비스·요양·접객 영역 휴머노이드 특화 솔루션 사업
+            - generic [ref=f8e168]: Long List 1 · Short List 1
+        - tablist "S6/S7 화면 섹션" [ref=f8e169]:
+          - tab "유니버스 정의 (S6)" [ref=f8e170] [cursor=pointer]
+          - tab "Long List 1" [selected] [ref=f8e171] [cursor=pointer]:
+            - text: Long List
+            - generic [ref=f8e172]: "1"
+          - tab "Short List 1" [ref=f8e312] [cursor=pointer]:
+            - text: Short List
+            - generic [ref=f8e174]: "1"
+        - region "후보 제안" [ref=f8e175]:
+          - heading "후보 발굴 제안 — 시장·기업 마스터 기반 (결정론)" [level=2] [ref=f8e176]
+          - paragraph [ref=f8e177]: 제안 가능한 신규 후보가 없습니다 — 아래에서 직접 등록하세요.
+          - paragraph [ref=f8e178]: 수용하면 발굴 출처(discovery_source)가 기록됩니다 — 위 제안은 결정론 소스이며, 아래 웹검색 제안은 web_proposal로 별도 기록됩니다.
+          - generic [ref=f8e179]:
+            - heading "Long List 웹검색 후보 제안 제안 · 신규" [level=4] [ref=f8e180]:
+              - text: Long List 웹검색 후보 제안
+              - generic [ref=f8e181]: 제안 · 신규
+            - paragraph [ref=f8e182]: "실시간 웹 검색으로 근거를 찾고, 그 근거에 등장하는 회사만 후보로 제안합니다 (ADR-0118 §5 — 근거 없는 회사명은 만들지 않습니다). 각 후보는 최소 1건의 출처 URL과 신뢰도(A/B/C)를 함께 표시하며, \"Long List에 등록\"을 눌러야 후보가 등록됩니다 (경계 #2)."
+            - button "웹 검색 후보 제안 생성" [ref=f8e183] [cursor=pointer]
+        - region "대상 후보 스크리닝" [ref=f8e184]:
+          - generic [ref=f8e185]:
+            - heading "서비스·요양·접객 영역 휴머노이드 특화 솔루션 사업 — Long List → Short List" [level=2] [ref=f8e187]
+            - group "후보 상태 필터" [ref=f8e189]:
+              - button "전체 1" [pressed] [ref=f8e190] [cursor=pointer]
+              - button "심사 중 0" [ref=f8e313] [cursor=pointer]
+              - button "Short List 1" [ref=f8e314] [cursor=pointer]
+              - button "제외 0" [ref=f8e193] [cursor=pointer]
+            - generic [ref=f8e194]: 1 Short List / 1 Long List
+          - generic [ref=f8e196]:
+            - generic [ref=f8e197]:
+              - generic [ref=f8e198]:
+                - generic [ref=f8e199]: 후보 회사명 * (Long List)
+                - textbox "후보 회사명 * (Long List)" [ref=f8e200]:
+                  - /placeholder: "예: 레인보우로보틱스"
+              - generic [ref=f8e201]:
+                - generic [ref=f8e202]: DART 고유번호 (선택, 8자리)
+                - textbox "DART 고유번호 (선택, 8자리)" [ref=f8e203]:
+                  - /placeholder: 8자리 고유번호
+              - generic [ref=f8e204]:
+                - generic [ref=f8e205]: Universe 근거 (선택)
+                - textbox "Universe 근거 (선택)" [ref=f8e206]:
+                  - /placeholder: 선정 기준·가치사슬 위치 등
+              - button "후보 등록" [disabled] [ref=f8e207] [cursor=pointer]
+            - paragraph [ref=f8e208]:
+              - text: S6 대상 후보 발굴 — Target Universe 정의(선정 기준·커버리지)를 기반으로 후보를 등록합니다. 각 후보는 S7에서
+              - code [ref=f8e209]: chk-target-screening
+              - text: (t-01~t-09)로 스크리닝됩니다.
+          - table "Long List" [ref=f8e210]:
+            - caption [ref=f8e211]: Long List 후보 — S7 스크리닝 현황
+            - rowgroup [ref=f8e212]:
+              - row [ref=f8e213]:
+                - columnheader "후보" [ref=f8e214]
+                - columnheader "DART" [ref=f8e215]
+                - columnheader "S7 판정" [ref=f8e216]
+                - columnheader "점수" [ref=f8e217]
+                - columnheader "상태" [ref=f8e218]
+                - columnheader "제외 사유" [ref=f8e219]
+            - rowgroup [ref=f8e220]:
+              - row [ref=f8e315]:
+                - cell [ref=f8e222]:
+                  - button "검증로봇테크" [ref=f8e223] [cursor=pointer]
+                - cell [ref=f8e224]:
+                  - code [ref=f8e225]: —
+                - cell [ref=f8e226]:
+                  - generic "S7 판정 9/9" [ref=f8e227]:
+                    - generic "t-01 — 충족" [ref=f8e228]: 충
+                    - generic "t-02 — 충족" [ref=f8e229]: 충
+                    - generic "t-03 — 충족" [ref=f8e230]: 충
+                    - generic "t-04 — 충족" [ref=f8e231]: 충
+                    - generic "t-05 — 충족" [ref=f8e232]: 충
+                    - generic "t-06 — 충족" [ref=f8e233]: 충
+                    - generic "t-07 — 충족" [ref=f8e234]: 충
+                    - generic "t-08 — 충족" [ref=f8e235]: 충
+                    - generic "t-09 — 충족" [ref=f8e236]: 충
+                - cell "100%" [ref=f8e237]
+                - 'cell "Short List #1 Short List 순위 조정" [ref=f8e316]':
+                  - generic [ref=f8e239]:
+                    - generic [ref=f8e240]: "Short List #1"
+                    - group "Short List 순위 조정" [ref=f8e317]:
+                      - button "검증로봇테크 순위 올리기" [disabled] [ref=f8e318] [cursor=pointer]: ↑
+                      - button "검증로봇테크 순위 내리기" [disabled] [ref=f8e319] [cursor=pointer]: ↓
+                - cell "—" [ref=f8e242]
+              - row [ref=f8e320]:
+                - cell [ref=f8e321]:
+                  - generic [ref=f8e255]:
+                    - heading "S7 스크리닝 — chk-target-screening (t-01~t-09)" [level=4] [ref=f8e256]
+                    - button "LLM 판정 초안 생성" [ref=f8e258] [cursor=pointer]
+                    - list [ref=f8e259]:
+                      - listitem [ref=f8e260]:
+                        - code [ref=f8e261]: t-01
+                        - generic [ref=f8e262]: "Ownership/availability — the stake is plausibly available: a seller/partner exists, the stake is not subject to an undisclosed lock-up or pre-emption right that blocks the route, and an approach channel is identified (recorded per candidate)"
+                        - generic [ref=f8e263]: 필수
+                        - combobox "t-01 판정" [ref=f8e264]:
+                          - option "미판정"
+                          - option "충족" [selected]
+                          - option "미충족"
+                          - option "해당없음"
+                          - option "예외"
+                      - listitem [ref=f8e265]:
+                        - code [ref=f8e266]: t-02
+                        - generic [ref=f8e267]: Regulatory screen — no known fatal foreign-investment limit, licensing/permitting transfer barrier, or concentration (merger-control pre-screen) that blocks the selected Brownfield route; blocking exposure escalates to the antitrust-agent
+                        - generic [ref=f8e268]: 필수
+                        - combobox "t-02 판정" [ref=f8e269]:
+                          - option "미판정"
+                          - option "충족" [selected]
+                          - option "미충족"
+                          - option "해당없음"
+                          - option "예외"
+                      - listitem [ref=f8e270]:
+                        - code [ref=f8e271]: t-03
+                        - generic [ref=f8e272]: Geographic fit — the candidate's operating footprint aligns with the universe definition's geography criteria, or a recorded exception with justification exists
+                        - generic [ref=f8e273]: 필수
+                        - combobox "t-03 판정" [ref=f8e274]:
+                          - option "미판정"
+                          - option "충족" [selected]
+                          - option "미충족"
+                          - option "해당없음"
+                          - option "예외"
+                      - listitem [ref=f8e275]:
+                        - code [ref=f8e276]: t-04
+                        - generic [ref=f8e277]: No structural market contraction + commoditization — the candidate's served market is not in terminal decline with price-only competition (the standing kill axis from Screening)
+                        - generic [ref=f8e278]: 필수
+                        - combobox "t-04 판정" [ref=f8e279]:
+                          - option "미판정"
+                          - option "충족" [selected]
+                          - option "미충족"
+                          - option "해당없음"
+                          - option "예외"
+                      - listitem [ref=f8e280]:
+                        - code [ref=f8e281]: t-05
+                        - generic [ref=f8e282]: Capability relevance — the candidate materially contributes the required capability list derived in S1/S3 (no capability gap is left unaddressed with no mitigation plan recorded)
+                        - generic [ref=f8e283]: 필수
+                        - combobox "t-05 판정" [ref=f8e284]:
+                          - option "미판정"
+                          - option "충족" [selected]
+                          - option "미충족"
+                          - option "해당없음"
+                          - option "예외"
+                      - listitem [ref=f8e285]:
+                        - code [ref=f8e286]: t-06
+                        - generic [ref=f8e287]: Strategic value — the candidate's position in the opportunity's value chain and its strategic contribution to the declared intent (core/adjacent/transformational)
+                        - generic [ref=f8e288]: 필수
+                        - combobox "t-06 판정" [ref=f8e289]:
+                          - option "미판정"
+                          - option "충족" [selected]
+                          - option "미충족"
+                          - option "해당없음"
+                          - option "예외"
+                      - listitem [ref=f8e290]:
+                        - code [ref=f8e291]: t-07
+                        - generic [ref=f8e292]: Capability complementarity — degree to which the candidate fills the capability gap vs. overlap with existing internal capabilities
+                        - generic [ref=f8e293]: 필수
+                        - combobox "t-07 판정" [ref=f8e294]:
+                          - option "미판정"
+                          - option "충족" [selected]
+                          - option "미충족"
+                          - option "해당없음"
+                          - option "예외"
+                      - listitem [ref=f8e295]:
+                        - code [ref=f8e296]: t-08
+                        - generic [ref=f8e297]: Financial attractiveness — revenue/EBITDA scale, growth profile, margin quality, and balance-sheet health vs. the financial criteria in the universe definition (desk research only)
+                        - generic [ref=f8e298]: 필수
+                        - combobox "t-08 판정" [ref=f8e299]:
+                          - option "미판정"
+                          - option "충족" [selected]
+                          - option "미충족"
+                          - option "해당없음"
+                          - option "예외"
+                      - listitem [ref=f8e300]:
+                        - code [ref=f8e301]: t-09
+                        - generic [ref=f8e302]: Integration/partnership complexity — estimated complexity of the selected route (M&A integration, JV governance, or partnership operational coupling) and the sponsor's capacity to absorb it
+                        - generic [ref=f8e303]: 필수
+                        - combobox "t-09 판정" [ref=f8e304]:
+                          - option "미판정"
+                          - option "충족" [selected]
+                          - option "미충족"
+                          - option "해당없음"
+                          - option "예외"
+                    - generic [ref=f8e305]:
+                      - button "판정 저장" [ref=f8e306] [cursor=pointer]
+                      - generic [ref=f8e308]:
+                        - textbox "제외 사유" [ref=f8e309]
+                        - button "제외" [ref=f8e310] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=f8e248] [cursor=pointer]
+  - alert [ref=f8e252]

@@ -167,7 +167,9 @@ function persistDrafts(projectId: string, domain: DdDomain, agentKey: string, dr
 }
 
 
-function reliabilityForSource(url: string): "A" | "B" | "C" {
+/** 출처 URL의 신뢰도 등급 — 정부·교육·통계·공시 A, 주요 글로벌 언론·컨설팅 B, 기타 C.
+ * (S6 웹검색 후보 제안에서도 재사용 — ADR-0118 근거 표시 계약) */
+export function reliabilityForSource(url: string): "A" | "B" | "C" {
   try {
     const host = new URL(url).hostname.toLowerCase();
     if (host.endsWith(".gov") || host.endsWith(".go.kr") || host.endsWith(".edu") || host.includes("kosis") || host.includes("dart.fss")) return "A";

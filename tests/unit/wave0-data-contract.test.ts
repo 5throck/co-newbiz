@@ -196,9 +196,9 @@ describe("Wave 0 — interviews / customer-coc / comp-parity", () => {
   });
 });
 
-describe("Wave 0 — target proposals (provenance A1/A2)", () => {
+describe("Wave 0 — target proposals (provenance A1/A2, opportunity-keyed)", () => {
   test("POST accepts with discovery_source; row carries provenance", async () => {
-    const res = await req(`/api/projects/${projectId}/target-proposals`, {
+    const res = await req(`/api/brownfield/${opportunityId}/target-proposals`, {
       method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "테스트중공업", discovery_source: "master_proposal" }),
     });
@@ -208,10 +208,53 @@ describe("Wave 0 — target proposals (provenance A1/A2)", () => {
     ).get(((await res.json()).data as { id: string }).id) as { discovery_source: string; proposal_accepted_at: string };
     expect(row.discovery_source).toBe("master_proposal");
     expect(row.proposal_accepted_at).not.toBeNull();
-    expect((await req(`/api/projects/${projectId}/target-proposals`, {
+    expect((await req(`/api/brownfield/${opportunityId}/target-proposals`, {
       method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "x", discovery_source: "gpt_said_so" }),
     })).status).toBe(400);
+  });
+
+  test("viewer POST is 403 (analyst+ floor)", async () => {
+    const res = await req(`/api/brownfield/${opportunityId}/target-proposals`, {
+      method: "POST", headers: { cookie: viewerCookie, "content-type": "application/json" },
+      body: JSON.stringify({ company_name: "뷰어시도", discovery_source: "manual" }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  // Regression: the route used to be keyed by PROJECT id and resolve the
+  // opportunity through md_project.source_opportunity_id — so before S7→S8
+  // promotion (exactly when S6 runs) GET always 404'd and POST failed with
+  // not_promoted, and the /brownfield screen's proposal section was silently
+  // empty. The opportunity-keyed route must work with no md_project row.
+  test("works pre-promotion — no md_project row exists yet (S6 regression)", async () => {
+    const preId = ulid();
+    db.run(
+      `INSERT INTO opportunity (id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
+         attractiveness_score, synergy_score, rationale, status, created_by, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [preId, "브라운필드 사전검증", "로봇 산업", "시스템 통합", 5000, 8.0, 80, 70, "근거", "selected", ANALYST, NOW],
+    );
+    db.run(
+      "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?)",
+      [ulid(), preId, "brownfield", "test", ANALYST, NOW],
+    );
+    const list = await req(`/api/brownfield/${preId}/target-proposals`, { headers: { cookie: analystCookie } });
+    expect(list.status).toBe(200);
+    const post = await req(`/api/brownfield/${preId}/target-proposals`, {
+      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      body: JSON.stringify({ company_name: "사전검증로봇", discovery_source: "web_proposal" }),
+    });
+    expect(post.status).toBe(201);
+    const row = db.query("SELECT discovery_source FROM brownfield_target WHERE opportunity_id = ? AND company_name = ?")
+      .get(preId, "사전검증로봇") as { discovery_source: string };
+    expect(row.discovery_source).toBe("web_proposal");
+    // duplicate registration is rejected (same company, not excluded)
+    const dup = await req(`/api/brownfield/${preId}/target-proposals`, {
+      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      body: JSON.stringify({ company_name: "사전검증로봇", discovery_source: "manual" }),
+    });
+    expect(dup.status).toBe(400);
   });
 });
 

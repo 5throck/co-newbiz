@@ -12,7 +12,16 @@ export interface WebSource {
 
 import { loadRootEnvPipelineKeys } from "./llm.ts";
 
+// 테스트 시임 — 실제 Tavily 키가 설정된 환경에서도 회귀 테스트를 단일하게
+// (네트워크 호출 없이) 만든다. dd-checklist-tailor의 executor factory와 같은
+// 취지다. 프로덕션 코드는 이 함수를 호출하지 않는다.
+let testOverride: { configured: boolean; sources: WebSource[] } | null = null;
+export function setWebResearchOverrideForTests(override: { configured: boolean; sources: WebSource[] } | null): void {
+  testOverride = override;
+}
+
 export function isWebResearchConfigured(): boolean {
+  if (testOverride) return testOverride.configured;
   loadRootEnvPipelineKeys();
   return Boolean(process.env.TAVILY_API_KEY?.trim());
 }
@@ -46,6 +55,7 @@ export async function tavilySearch(query: string, opts: { maxResults?: number } 
 
 /** Run several queries and merge results (deduped by URL), max `limit` items. */
 export async function researchSources(queries: string[], limit = 10): Promise<WebSource[]> {
+  if (testOverride) return testOverride.sources.slice(0, limit);
   const results = await Promise.all(queries.map((q) => tavilySearch(q, { maxResults: 4 })));
   const seen = new Set<string>();
   const merged: WebSource[] = [];

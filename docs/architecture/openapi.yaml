@@ -3800,26 +3800,24 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/projects/{id}/target-proposals:
+  /api/brownfield/{oppId}/target-proposals:
     get:
-      operationId: listProjectTargetProposals
-      summary: Deterministic candidate suggestions minus registered targets (member-visible).
+      operationId: listBrownfieldTargetProposals
+      summary: Deterministic candidate suggestions minus registered targets (opportunity-keyed, works pre-promotion).
       tags:
-        - Reference
+        - Analysis
       responses:
         '200':
           $ref: '#/components/responses/Ok'
-        '400':
-          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
     post:
-      operationId: acceptProjectTargetProposal
+      operationId: acceptBrownfieldTargetProposal
       summary: Accept a proposal or register manually (discovery_source provenance, analyst+).
       tags:
-        - Reference
+        - Analysis
       responses:
         '200':
           $ref: '#/components/responses/Ok'
@@ -3827,10 +3825,60 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '201':
           $ref: '#/components/responses/Created'
+
+  /api/brownfield/{oppId}/targets/{targetId}/screening-draft:
+    post:
+      operationId: draftTargetScreening
+      summary: LLM screening-verdict draft per checklist item, web-search grounded; ungrounded items return null (proposal only, analyst+).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/brownfield/{oppId}/target-proposals/web-search:
+    post:
+      operationId: generateWebSearchTargetProposals
+      summary: LLM candidate-company proposals grounded in live web search evidence (proposal only, no insert, analyst+).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/brownfield/{oppId}/universe-criteria-draft:
+    post:
+      operationId: draftUniverseCriteria
+      summary: LLM draft of Target Universe selection criteria from S1 market analysis + S3 capability outputs (proposal only, analyst+).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/agent-runs:
     get:
       operationId: listProjectAgentRuns
