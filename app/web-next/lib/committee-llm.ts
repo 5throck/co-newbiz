@@ -71,7 +71,7 @@ export function makeLlmCommitteeAgent(): (agentKey: string, prompt: string) => P
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: user },
         ],
-        { temperature: 0.4, maxTokens: 900 },
+        { temperature: 0.4, maxTokens: 900, agent: { key: agentKey, purpose: "위원회 심의 포지션 초안 — 제안 전용" } },
       );
       const parsed = parsePositionMeta(text);
       if (parsed) return parsed;

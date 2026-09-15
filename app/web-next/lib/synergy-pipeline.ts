@@ -295,7 +295,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   const faSummary = await completeOrFallback(
     [{ role: "user", content: `회사 ${company}의 재무·사업 분석을 한국어 2문장으로 요약하세요. 강점 ${financialStrengths.length}개, 약점 ${financialWeaknesses.length}개 도출.` }],
     () => `재무 강점 ${financialStrengths.length}개·약점 ${financialWeaknesses.length}개 도출. ${businessAssessment.slice(0, 120)}`,
-    { maxTokens: 300 },
+    { maxTokens: 300, agent: { key: "financial-analyst", purpose: "시너지 재무·사업 분석 요약" } },
   );
   stepSummaries.push({ step: 3, title: "재무 강/약점 분석", summary: faSummary.text, source: faSummary.source });
   if (llmConfiguredAtStart && faSummary.source !== "llm") hadLlmFailure = true;
