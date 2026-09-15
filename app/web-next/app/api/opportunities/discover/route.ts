@@ -12,6 +12,7 @@ import { badRequest, forbidden, notFound, ok } from "../../../../lib/envelope.ts
 import { completeOrFallback, type LlmOrFallback } from "../../../../lib/llm.ts";
 import { deriveAndSaveFactors } from "../../../../lib/opportunity-factors.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
+import { promptAgent, systemMessage } from "../../../../lib/prompts.ts";
 
 const now = () => new Date().toISOString();
 
@@ -86,11 +87,7 @@ export async function POST(request: Request) {
     .all(industry) as Array<{ name: string; rationale: string | null }>;
 
   const messages = [
-    {
-      role: "system" as const,
-      content:
-        "당신은 신규사업 기회 발굴 전문가입니다. 제공된 시장분석 근거만 사용해 사업 기회 후보를 제안하세요. 근거에 없는 산업·수요처를 만들어내지 마세요.",
-    },
+    systemMessage("s2.discover"),
     {
       role: "user" as const,
       content:
@@ -99,7 +96,7 @@ export async function POST(request: Request) {
   ];
 
   let proposals: DiscoverRow[];
-  const llmRes: LlmOrFallback = await completeOrFallback(messages, () => "", { maxTokens: 1600, agent: { key: "market-intelligence-agent", purpose: "S2 기회 발굴 — 산업 근거 기반 기회 후보 도출" } });
+  const llmRes: LlmOrFallback = await completeOrFallback(messages, () => "", { maxTokens: 1600, agent: promptAgent("s2.discover") });
   if (llmRes.source === "llm") {
     const parsed = parseJson(llmRes.text);
     proposals = (Array.isArray(parsed?.opportunities) ? parsed!.opportunities as Array<Record<string, unknown>> : [])

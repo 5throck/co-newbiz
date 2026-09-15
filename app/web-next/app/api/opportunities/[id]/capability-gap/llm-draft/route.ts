@@ -9,6 +9,7 @@ import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envel
 import { completeOrFallback, isLlmConfigured } from "../../../../../../lib/llm.ts";
 import { route } from "../../../../../../lib/route.ts";
 import { normalizeGapRows, type CapabilityGapRow } from "../../../../../../lib/capability-gap.ts";
+import { promptAgent, systemMessage } from "../../../../../../lib/prompts.ts";
 
 interface MemberLite { id: string; company_name: string; group_id: string }
 
@@ -107,12 +108,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     if (isLlmConfigured()) {
       const res = await completeOrFallback(
         [
-          {
-            role: "system" as const,
-            content:
-              "당신은 신규사업 심의 보좌 분석가입니다. 최종 보유 판정은 사람이 확정하며 당신 산출물은 제안입니다. " +
-              "제공된 프로필 근거 밖의 판단을 하지 말고, 확인 불가능하면 unevaluated로 두세요. JSON만 반환합니다.",
-          },
+          systemMessage("s3.capability_gap_draft"),
           {
             role: "user" as const,
             content:
@@ -128,7 +124,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
           },
         ],
         () => "",
-        { maxTokens: 1600, agent: { key: "risk-officer", purpose: "S3 필요 역량 수준 보유 판정 초안" } },
+        { maxTokens: 1600, agent: promptAgent("s3.capability_gap_draft") },
       );
       if (res.source === "llm") {
         const start = res.text.indexOf("{");

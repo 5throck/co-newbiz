@@ -3,6 +3,7 @@
 // 매력도 평가가 요인 근거 위에서 이루어지도록 하는 것이 목적이다.
 import { getDb } from "../../../db/client.ts";
 import { completeOrFallback, isLlmConfigured } from "../lib/llm.ts";
+import { promptAgent, systemMessage } from "./prompts.ts";
 
 export interface OppFactors {
   opportunity: string[];
@@ -80,11 +81,7 @@ export async function deriveAndSaveFactors(db: ReturnType<typeof getDb>, opp: Op
 
   const res = await completeOrFallback(
     [
-      {
-        role: "system" as const,
-        content:
-          "당신은 신규사업 평가 전문가입니다. 제공된 근거 안에서만 이 기회의 기회 요인과 위험 요인을 도출하세요. 근거가 없는 항목은 만들지 말고 '검증 필요'로 표기하세요.",
-      },
+      systemMessage("s3.opportunity_factors"),
       {
         role: "user" as const,
         content:
@@ -96,7 +93,7 @@ export async function deriveAndSaveFactors(db: ReturnType<typeof getDb>, opp: Op
         opportunity: ["시장분석 기회 요인 기반 — 자동 도출 실패, 수동 등록 필요"],
         risk: ["자동 도출 실패 — LLM 구성 또는 수동 등록 필요"],
       }),
-    { maxTokens: 1200, agent: { key: "market-intelligence-agent", purpose: "S2 기회/위험 요인 자동 도출" } },
+    { maxTokens: 1200, agent: promptAgent("s3.opportunity_factors") },
   );
 
   const text = res.text;

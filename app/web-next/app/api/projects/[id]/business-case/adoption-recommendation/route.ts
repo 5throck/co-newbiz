@@ -10,6 +10,7 @@ import { authenticate } from "../../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../../lib/llm.ts";
 import { route } from "../../../../../../lib/route.ts";
+import { promptAgent, systemMessage } from "../../../../../../lib/prompts.ts";
 
 interface RecoPayload {
   recommended_model_id: string | null;
@@ -69,12 +70,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (isLlmConfigured()) {
     const res = await completeOrFallback(
       [
-        {
-          role: "system" as const,
-          content:
-            "당신은 사업성 분석 심사관입니다. 최종 채택은 사람이 하며 당신 산출물은 제안입니다. " +
-            "제공된 case 수치와 킬크라이어리아 안에서만 판단하세요. market_forward가 진행 1차 기준임을 고려하세요. JSON만 반환합니다.",
-        },
+        systemMessage("s8.business_case_adoption"),
         {
           role: "user" as const,
           content:
@@ -83,7 +79,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 1800, agent: { key: "valuation-agent", purpose: "채택 추천 초안" } },
+      { maxTokens: 1800, agent: promptAgent("s8.business_case_adoption") },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

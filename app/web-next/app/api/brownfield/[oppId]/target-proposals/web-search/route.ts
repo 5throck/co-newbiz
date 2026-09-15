@@ -14,6 +14,7 @@ import { completeOrFallback, type LlmOrFallback } from "../../../../../../lib/ll
 import { isWebResearchConfigured, researchSources, type WebSource } from "../../../../../../lib/web-research.ts";
 import { isSimilar } from "../../../../../../lib/name-similarity.ts";
 import { reliabilityForSource } from "../../../../../../lib/dd-checklist-tailor.ts";
+import { systemMessage } from "../../../../../../lib/prompts.ts";
 
 interface UniverseShape {
   definition?: string;
@@ -103,11 +104,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   // 2) LLM이 검색 근거에 등장하는 회사만 제안하게 한다.
   const llmRes: LlmOrFallback = await completeOrFallback(
     [
-      {
-        role: "system" as const,
-        content:
-          "당신은 M&A·신규사업 대상 후보 발굴 전문가입니다. 제공된 검색 근거(스니펫)에 실제로 등장하는 회사만 제안하세요. 근거에 없는 회사명을 만들어내면 안 됩니다.",
-      },
+      systemMessage("s6.target_proposal_web_search"),
       { role: "user" as const, content: buildPrompt(opp, universe, existingNames, sources) },
     ],
     () => "",

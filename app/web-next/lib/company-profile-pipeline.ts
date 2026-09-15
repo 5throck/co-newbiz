@@ -15,6 +15,7 @@ import { isWebResearchConfigured, researchSources, type WebSource } from "./web-
 import { deriveFinancialAnalysis } from "./company-financials.ts";
 import { crossCheckCompetitive, deriveCompetitiveSectionGrade, mapVerdictToLedger, type CompetitiveCrossCheck } from "./company-profile-crosscheck.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
+import { systemMessage, promptAgent } from "./prompts.ts";
 
 /** S1과 동일한 3단 검증 상태 (ADR-0092 decision 6의 검증 원장 표준) */
 export type LedgerStatus = "confirmed" | "could_not_verify" | "needs_judgement";
@@ -190,7 +191,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
   // ── Step 3: LLM 강점/약점/기회/위협(SWOT)/사업 평가 ──
   const qualJson = await completeOrFallback(
     [
-      { role: "system" as const, content: "당신은 기업 분석 전문가입니다. 제공된 근거(리서치 발췌·재무 데이터) 안에서만 자사 계열사의 프로파일을 작성하세요. 근거가 없는 항목은 '검증 필요'로 명시하세요." },
+      systemMessage("company_profile.qualitative"),
       {
         role: "user" as const,
         content:
@@ -206,7 +207,7 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
         businessAssessment: "리서치 입수 결과가 없어 평가 미생성 — 재분석 또는 수동 작성 필요.",
         industryExposure: [],
       }),
-    { maxTokens: 2000, agent: { key: "market-intelligence-agent", purpose: "S3 그룹/계열사 프로파일 산출" } },
+    { maxTokens: 2000, agent: promptAgent("company_profile.qualitative") },
   );
   let strengths: string[] = [];
   let weaknesses: string[] = [];
@@ -244,14 +245,14 @@ export async function runCompanyProfilePipeline(db: Db, memberId: string, userId
   // ── Step 4: 경쟁 포지셔닝 (LLM — 실패해도 버전 저장을 막지 않는다) ──
   const compJson = await completeOrFallback(
     [
-      { role: "system" as const, content: "당신은 기업 분석 전문가입니다. 근거 발췌 안에서만 답하세요. 알 수 없으면 적지 마세요." },
+      systemMessage("company_profile.competitive"),
       {
         role: "user" as const,
         content: `${company}의 주요 경쟁사와 경쟁 포지셔닝을 분석하세요. JSON: {"competitors":[{"name":"경쟁사명","note":"경쟁 관계 한 문장 [n]"}],"positioning":"이 회사의 포지셔닝 평가 2~3문장"}. 경쟁사 2~5개.\n\n리서치 발췌:\n${researchContext}`,
       },
     ],
     () => JSON.stringify({ competitors: [], positioning: "" }),
-    { maxTokens: 1200, agent: { key: "market-intelligence-agent", purpose: "S3 프로파일 보정" } },
+    { maxTokens: 1200, agent: promptAgent("company_profile.competitive") },
   );
   let competitive: CompanyProfilePayload["competitive"] | undefined;
   try {

@@ -23,6 +23,7 @@ import {
   type BusinessCaseStepExecutor,
 } from "./business-case-generator.ts";
 import type { DdTailorExecutor, TailorItemDraft } from "./dd-checklist-tailor.ts";
+import { systemMessage, promptAgent } from "./prompts.ts";
 
 function llmUnavailable(): Error {
   return new Error("LLM provider is not configured (CO_NEWBIZ_LLM_PROVIDER/API_KEY/MODEL).");
@@ -52,15 +53,10 @@ export function makeLlmBusinessCaseExecutor(): BusinessCaseStepExecutor {
     try {
       const prose = await complete(
         [
-          {
-            role: "system",
-            content:
-              "당신은 신규사업 검토(S8 사업성 분석)의 전문가입니다. 제공된 '확정 수치 블록'은 계산·영속화가 이미 끝난 사실이며 절대 재계산하거나 수치를 바꾸지 마세요. " +
-              "그 사실을 받아 해석·리스크·검증 포인트를 덧붙인 한국어 마크다운 산출물(### 헤더 + 본문 6~12행)을 쓰세요. 수치를 인용할 때는 확정 블록의 값과 정확히 일치시키세요.",
-          },
+          systemMessage("s8.business_case_prose"),
           { role: "user", content: `단계/역할: ${BC_STEP_ROLE[step]}\n시나리오: ${ctx.scenario}\n\n[확정 수치 블록]\n${deterministic}` },
         ],
-        { temperature: 0.4, maxTokens: 800, agent: { key: BC_AGENT_KEY[step], purpose: "S8 사업성 분석 단계 산출 해석 보강" } },
+        { temperature: 0.4, maxTokens: 800, agent: promptAgent("s8.business_case_prose", { key: BC_AGENT_KEY[step] }) },
       );
       return prose.trim() || deterministic;
     } catch {
@@ -105,17 +101,10 @@ export function makeLlmDdTailorExecutor(): DdTailorExecutor {
     if (!isLlmConfigured()) throw llmUnavailable();
     const raw = await complete(
       [
-        {
-          role: "system",
-          content:
-            "당신은 실사(DD) 체크리스트 전문가입니다. 주어진 산업에 맞는 추가 점검 항목을 5~10건 제안하세요. " +
-            "출력은 다른 텍스트 없이 JSON 배열 하나만: [{" +
-            '"item_label": "점검 항목 한 줄", "rationale": "왜 이 산업에서 중요한가"}]. ' +
-            "출처 URL이나 신뢰도 등급을 만들어내지 마세요 — 시스템이 출처 없음(C)으로 표기합니다.",
-        },
+        systemMessage("s9.dd_tailor"),
         { role: "user", content: `도메인: ${domain}\n산업: ${ctx.industry}\n프로젝트: ${ctx.projectId}` },
       ],
-      { temperature: 0.4, maxTokens: 1400, agent: { key: "technical-dd-agent", purpose: "S9 산업 맞춤 DD 체크리스트 항목 제안" } },
+      { temperature: 0.4, maxTokens: 1400, agent: promptAgent("s9.dd_tailor") },
     );
     const drafts = parseDrafts(raw);
     if (drafts.length > 0) return drafts;

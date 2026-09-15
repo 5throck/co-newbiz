@@ -9,6 +9,7 @@ import { authenticate } from "../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
+import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
 
 const TRANSITIONS = [
   "next_tranche_released",
@@ -87,12 +88,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (isLlmConfigured()) {
     const res = await completeOrFallback(
       [
-        {
-          role: "system" as const,
-          content:
-            "당신은 포트폴리오 관리 책임자입니다. 최종 전환 결정은 사람(IC)이 기록하며 당신 산출물은 초안입니다. " +
-            "제공된 모니터링 데이터 안에서만 판단하고 데이터 밖의 사실을 만들지 마세요. JSON만 반환합니다.",
-        },
+        systemMessage("s11.monitoring_brief"),
         {
           role: "user" as const,
           content:
@@ -101,7 +97,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 2000, agent: { key: "risk-officer", purpose: "모니터링 브리프 — 관찰 요약 제안" } },
+      { maxTokens: 2000, agent: promptAgent("s11.monitoring_brief") },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

@@ -4,6 +4,7 @@
 // 결정론 규칙만으로 동작한다 — "LLM 없이도 완전 기능" 원칙 유지.
 import { completeOrFallback, type AgentCallMeta } from "./llm.ts";
 import { AGENT_REGISTRY } from "./agent-registry.generated.ts";
+import { promptSystem, promptAgent } from "./prompts.ts";
 
 export interface PmDecision {
   mode: "single" | "chain";
@@ -71,12 +72,7 @@ export async function routeTask(query: string, ctx: RouteContext): Promise<PmDec
 
   const res = await completeOrFallback(
     [
-      {
-        role: "system" as const,
-        content:
-          "당신은 신규사업 검토 플랫폼의 PM 에이전트입니다. 사용자 질의를 가장 적임 에이전트에 배정하는 것이 역할입니다. " +
-          "JSON만 반환합니다. 배정 가능 에이전트:\n" + roster,
-      },
+      { role: "system" as const, content: promptSystem("pm.query_classify") + roster },
       {
         role: "user" as const,
         content:
@@ -89,7 +85,7 @@ export async function routeTask(query: string, ctx: RouteContext): Promise<PmDec
     {
       temperature: 0,
       maxTokens: 400,
-      agent: { key: "pm", purpose: "질의 분류 — 수행 에이전트 배정", contextType: ctx.opportunityId ? "opportunity" : ctx.projectId ? "project" : undefined, contextId: ctx.opportunityId ?? ctx.projectId },
+      agent: promptAgent("pm.query_classify", { contextType: ctx.opportunityId ? "opportunity" : ctx.projectId ? "project" : undefined, contextId: ctx.opportunityId ?? ctx.projectId }),
     } as { temperature: number; maxTokens: number; agent?: AgentCallMeta },
   );
 

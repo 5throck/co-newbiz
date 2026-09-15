@@ -12,6 +12,7 @@ import { forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../../../lib/llm.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "../../../../../../../lib/web-research.ts";
 import { screeningItems } from "../../../../../../../lib/brownfield-targets.ts";
+import { systemMessage } from "../../../../../../../lib/prompts.ts";
 
 interface ItemDraft {
   verdict: "pass" | "fail" | "na" | "waived";
@@ -138,11 +139,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     .join("\n\n");
   const llmRes: LlmOrFallback = await completeOrFallback(
     [
-      {
-        role: "system" as const,
-        content:
-          "당신은 M&A 대상 스크리닝 전문가입니다. 제공된 검색 근거만 근거로 각 체크리스트 항목을 판정하세요. 근거가 부족한 항목은 verdict를 null로 남기세요 — 추측으로 채우면 안 됩니다.",
-      },
+      systemMessage("s7.screening_draft"),
       {
         role: "user" as const,
         content: [
