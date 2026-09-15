@@ -14,7 +14,7 @@ export function EnginePendingPanel({
     <section aria-label={title} className="mt-6">
       <h4 className="font-semibold mb-2">{title}</h4>
       <div className="glass p-4 text-sm text-[color:var(--muted-fg)] border border-dashed border-[color:var(--border)]">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 mr-2">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[color:var(--amber-bg)] text-[color:var(--amber-fg)] border border-[color:var(--amber-border)] mr-2">
           엔진 의존
         </span>
         {note}

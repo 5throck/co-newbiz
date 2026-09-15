@@ -230,11 +230,11 @@ export default function StrategyPage() {
 
 function MarketBadge({ level }: { level: string }) {
   const map: Record<string, string> = {
-    High: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-    "Medium-High": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-    Medium: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-    "Low-Medium": "bg-slate-500/10 text-slate-400 border border-slate-500/20",
-    Low: "bg-slate-500/10 text-slate-400 border border-slate-500/20",
+    High: "bg-[color:var(--green-bg)] text-[color:var(--green-fg)] border border-[color:var(--green-border)]",
+    "Medium-High": "bg-[color:var(--amber-bg)] text-[color:var(--amber-fg)] border border-[color:var(--amber-border)]",
+    Medium: "bg-[color:var(--primary-bg)] text-[color:var(--primary-dim)] border border-[color:var(--primary-border)]",
+    "Low-Medium": "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)] border border-[color:var(--border)]",
+    Low: "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)] border border-[color:var(--border)]",
   };
   return (
     <span className={`px-2 py-1 rounded-full text-xs font-bold ${map[level] ?? ""}`}>

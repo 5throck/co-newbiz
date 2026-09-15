@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const appRoot = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(appRoot, "..", "..");
+const repoRoot = join(/*turbopackIgnore: true*/ appRoot, "..", "..");
 
 const nextConfig: NextConfig = {
   // db/client.ts imports "bun:sqlite" — a Bun-runtime builtin. Route

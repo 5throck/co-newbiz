@@ -81,6 +81,10 @@ for (const file of targets) {
   if (hexHits.length > 0) violations.push(`${rel}: hardcoded hex color(s) (${hexHits.length}) — use CSS variables from styles.css`);
   if (/rgba?\(\s*\d/.test(src)) violations.push(`${rel}: hardcoded rgba() color — use CSS variables from styles.css`);
   if (/hsl\(\s*\d/.test(src)) violations.push(`${rel}: hardcoded hsl() color — use CSS variables from styles.css`);
+  const semanticColorUtilities = src.match(/\b(?:bg|text|border)-(?:red|amber|yellow|orange|green|emerald|blue|sky|cyan|slate|gray|zinc|neutral|stone|purple|violet|pink|rose)-\d{2,3}(?:\/\d{1,3})?\b/g) ?? [];
+  if (semanticColorUtilities.length > 0) {
+    violations.push(`${rel}: Tailwind semantic color utility/ies (${[...new Set(semanticColorUtilities)].join(", ")}) — use CSS variables from styles.css`);
+  }
 }
 
 if (violations.length > 0) {

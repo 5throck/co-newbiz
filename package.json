@@ -40,7 +40,9 @@
     "procedures:lint": "bun procedures/_validate.ts",
     "checklists:lint": "bun checklists/_validate.ts",
     "db:migrate": "bun scripts/co-newbiz/newbiz.ts db:migrate",
-    "db:status": "bun scripts/co-newbiz/newbiz.ts status"
+    "db:status": "bun scripts/co-newbiz/newbiz.ts status",
+    "db:integrity": "bun scripts/co-newbiz/db-integrity.ts",
+    "seed:s1-s12-demo": "bun scripts/co-newbiz/seed-s1-s12-demo.ts"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",

@@ -55,11 +55,24 @@ export async function register() {
   }
 
   try {
-    const { runMigrations } = await import("../../db/migrate.ts");
+    const { getMigrationStatus, runMigrations } = await import("../../db/migrate.ts");
     const { getDb } = await import("../../db/client.ts");
     const { createUser, approveUser, listUsers } = await import("../../db/lib/accounts.ts");
 
-    const { applied } = runMigrations();
+    const migrationMode = process.env.CO_NEWBIZ_BOOTSTRAP_MIGRATIONS ?? "auto";
+    if (!["auto", "require-current", "off"].includes(migrationMode)) {
+      throw new Error("CO_NEWBIZ_BOOTSTRAP_MIGRATIONS must be one of: auto, require-current, off");
+    }
+    const before = getMigrationStatus();
+    if (migrationMode === "require-current" && before.pending.length > 0) {
+      throw new Error(
+        `database has ${before.pending.length} pending migration(s); run "bun run db:migrate" before starting or set CO_NEWBIZ_BOOTSTRAP_MIGRATIONS=auto`,
+      );
+    }
+    const { applied } = migrationMode === "auto" ? runMigrations() : { applied: [] as string[] };
+    if (migrationMode === "off" && before.pending.length > 0) {
+      console.warn(`[bootstrap] migrations disabled; ${before.pending.length} pending migration(s) remain.`);
+    }
     const db = getDb();
 
     // S1 market-sizing queue recovery — recoverQueuePass is normally driven by

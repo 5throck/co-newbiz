@@ -291,9 +291,16 @@ function generate(spec: FlowSpec): string {
 
 const markdown = generate(spec);
 
+function normalizeForCheck(text: string): string {
+  // Windows checkouts may materialize generated Markdown with CRLF while the
+  // in-memory generator emits LF. Treat line endings as a transport detail so
+  // the freshness gate only reports real spec/doc drift.
+  return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
 if (process.argv.includes("--check")) {
   const current = readFileSync(DOC_PATH, "utf8");
-  if (current !== markdown) {
+  if (normalizeForCheck(current) !== normalizeForCheck(markdown)) {
     console.error("docs/process-flow.md is stale — regenerate with: bun scripts/co-newbiz/generate-process-flow.ts");
     process.exit(1);
   }

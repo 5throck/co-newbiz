@@ -929,7 +929,7 @@ export function BrownfieldView() {
                 );
               })() : (
                 <div>
-                  <p className="mb-2 text-[0.75rem] text-[color:var(--amber-fg, #b45309)]">{uniReco.note ?? "초안을 만들 수 없습니다."}</p>
+                  <p className="mb-2 text-[0.75rem] text-[color:var(--amber-fg)]">{uniReco.note ?? "초안을 만들 수 없습니다."}</p>
                   <button type="button" className="btn-ghost btn-sm" disabled={uniBusy} onClick={() => void generateUniReco()}>{uniBusy ? "재생성 중..." : "다시 시도"}</button>
                 </div>
               )}
