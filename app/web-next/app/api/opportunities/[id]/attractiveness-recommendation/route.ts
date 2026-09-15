@@ -8,6 +8,7 @@ import { authenticate } from "../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
+import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
 
 interface RecoPayload {
   suggested_score: number | null;
@@ -87,12 +88,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (isLlmConfigured()) {
     const res = await completeOrFallback(
       [
-        {
-          role: "system" as const,
-          content:
-            "당신은 신규사업 분석가입니다. 최종 매력도 점수는 사람이 입력하며 당신 산출물은 제안입니다. " +
-            "제공된 S1 산출물과 요인 안에서만 판단하고 근거 없는 점수를 만들지 마세요. JSON만 반환합니다.",
-        },
+        systemMessage("s3.attractiveness_recommendation"),
         {
           role: "user" as const,
           content:
@@ -101,7 +97,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 1200, agent: { key: "risk-officer", purpose: "매력도 점수 초안 제안" } },
+      { maxTokens: 1200, agent: promptAgent("s3.attractiveness_recommendation") },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

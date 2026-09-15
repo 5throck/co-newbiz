@@ -46,4 +46,10 @@ paths = [
   '''(^|/)__pycache__/''',
   # Preserved from this project's prior .gitleaks.toml (not in the current common template):
   '''memory/.*''',
+  # Build artifacts (gitignored; --no-git scans them anyway)
+  '''(^|/)\.next/''',
+  # Prompt registry — "key": "agent-key" fields trip generic-api-key; these are
+  # prompt/agent identifiers from the agents/ roster, never credentials
+  '''prompts/prompts\.json''',
+  '''lib/prompts\.generated\.ts''',
 ]

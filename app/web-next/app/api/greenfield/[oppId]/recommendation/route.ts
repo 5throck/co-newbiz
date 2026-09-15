@@ -8,6 +8,7 @@ import { authenticate } from "../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
+import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
 
 const APPROACHES = ["build", "partner", "hire", "invest"] as const;
 
@@ -111,12 +112,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (isLlmConfigured()) {
     const res = await completeOrFallback(
       [
-        {
-          role: "system" as const,
-          content:
-            "당신은 그린필드 신규사업 기획자입니다. 최종 역량 평가·진출전략은 사람이 확정하며 당신 산출물은 제안입니다. " +
-            "제공된 S1·S3·S4 산출물 안에서만 판단하고, 확인 불가능한 수준 값은 '검증 필요'로 쓰세요. JSON만 반환합니다.",
-        },
+        systemMessage("s5.greenfield_recommendation"),
         {
           role: "user" as const,
           content:
@@ -125,7 +121,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 2200, agent: { key: "greenfield-agent", purpose: "S5 역량 평가 추천 초안" } },
+      { maxTokens: 2200, agent: promptAgent("s5.greenfield_recommendation") },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

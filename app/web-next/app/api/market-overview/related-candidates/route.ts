@@ -9,6 +9,7 @@ import { badRequest, forbidden, ok } from "../../../../lib/envelope.ts";
 import { completeOrFallback } from "../../../../lib/llm.ts";
 import { isWebResearchConfigured, researchSources } from "../../../../lib/web-research.ts";
 import { sanitizeRelatedProposals } from "../../../../lib/value-chain-proposals.ts";
+import { promptAgent, systemMessage } from "../../../../lib/prompts.ts";
 
 interface Candidate {
   name_ko: string; industry_id: string | null; relation: string; note: string | null; source: "link" | "analysis" | "proxy";
@@ -152,7 +153,7 @@ export async function POST(request: Request) {
 
   const res = await completeOrFallback(
     [
-      { role: "system" as const, content: "당신은 가치사슬 분석가입니다. 제공된 산업을 '사업을 운영하는 사업자' 관점에서 보고 상류(조달)와 하류(수요처) 인접 산업을 제안하세요. relation은 후방|전방|후후방|전전방|대체 중 하나입니다. JSON만 반환합니다." },
+      systemMessage("market.related_candidates"),
       {
         role: "user" as const,
         content:
@@ -176,7 +177,7 @@ export async function POST(request: Request) {
           { relation: "전방", name: `${target} 최종 수요처 산업`, note: "결정론 템플릿(검증 필요) — 최종 수요 산업 가정" },
         ],
       }),
-    { temperature: 0.2, maxTokens: 2200, agent: { key: "market-intelligence-agent", purpose: "1차 가치사슬 연계 산업 분석 — 가치사슬 인접 산업 제안" } },
+    { temperature: 0.2, maxTokens: 2200, agent: promptAgent("market.related_candidates") },
   );
   let proposals: Array<{ relation?: string; name?: string; note?: string }> = [];
   const text = res.text.replace(/```json|```/g, "");

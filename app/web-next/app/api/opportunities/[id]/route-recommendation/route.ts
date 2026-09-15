@@ -15,6 +15,7 @@ import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
+import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
 
 const TRACKS = ["greenfield", "brownfield"] as const;
 const GF_SUB = ["existing_business_rbd", "intra_venture"] as const;
@@ -199,12 +200,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   ].filter(Boolean).join("\n");
 
   const messages = [
-    {
-      role: "system" as const,
-      content:
-        "당신은 신규사업 검토 리드 PM입니다. 최종 결정(트랙·라우트·5기준 채점)은 반드시 사람이 기록하며, 당신의 산출물은 사람 결정을 돕는 제안(proposal)입니다. " +
-        "제공된 S1~S3 근거와 결정론 어드바이저 신호 안에서만 판단하고 근거 없는 사실을 만들어내지 마세요. 근거가 부족하면 보수적으로 판단하고 근거란에 '검증 필요'를 명시하세요. JSON만 반환합니다.",
-    },
+    systemMessage("s4.route_recommendation"),
     {
       role: "user" as const,
       content:
@@ -221,7 +217,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   let provider: string | null = null;
   let note: string;
   if (isLlmConfigured()) {
-    const res = await completeOrFallback(messages, () => "", { maxTokens: 2200, agent: { key: "process-governance-manager", purpose: "S4 트랙·라우트·5기준 채점 초안" } });
+    const res = await completeOrFallback(messages, () => "", { maxTokens: 2200, agent: promptAgent("s4.route_recommendation") });
     if (res.source === "llm") {
       const start = res.text.indexOf("{");
       const end = res.text.lastIndexOf("}");

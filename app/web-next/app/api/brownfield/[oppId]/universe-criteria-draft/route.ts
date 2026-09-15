@@ -10,6 +10,7 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../lib/llm.ts";
+import { systemMessage } from "../../../../../lib/prompts.ts";
 
 interface DraftCriteria {
   industry: string;
@@ -110,11 +111,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
 
   const llmRes: LlmOrFallback = await completeOrFallback(
     [
-      {
-        role: "system" as const,
-        content:
-          "당신은 M&A 대상 발굴 전문가입니다. 제공된 산출물만 근거로 Target Universe(후보 풀)의 선정 기준을 제안하세요. 근거에 없는 산업·지역·규모 조건을 만들어내지 마세요.",
-      },
+      systemMessage("s6.universe_criteria_draft"),
       {
         role: "user" as const,
         content: [

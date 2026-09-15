@@ -10,6 +10,7 @@ import {
   fetchDisclosureText,
 } from "./dart-client.ts";
 import { isWebResearchConfigured, tavilySearch, type WebSource } from "./web-research.ts";
+import { promptAgent, systemMessage } from "./prompts.ts";
 
 export type CrossCheckStatus = "cross_checked" | "dart_unavailable" | "research_only";
 export type ClaimVerdict = "confirmed" | "directional" | "contradicted" | "unverified";
@@ -189,7 +190,7 @@ export async function crossCheckCompetitive(input: CrossCheckInput): Promise<Com
   // LLM 주장별 판정 — 근거 발췌(공시 원문 + 타겟 리서치) 안에서만. 판정 실패 시 전부 unverified.
   const verdictJson = await completeOrFallback(
     [
-      { role: "system" as const, content: "당신은 기업 공시 검증 전문가입니다. 제공된 근거 발췌 안에서만 판정하세요. 근거가 없으면 추측하지 말고 unverified로 판정하세요." },
+      systemMessage("company_profile.crosscheck"),
       {
         role: "user" as const,
         content:
@@ -203,7 +204,7 @@ export async function crossCheckCompetitive(input: CrossCheckInput): Promise<Com
       },
     ],
     () => JSON.stringify({}),
-    { maxTokens: 1500, agent: { key: "market-intelligence-agent", purpose: "프로파일 공시 대조 검증" } },
+    { maxTokens: 1500, agent: promptAgent("company_profile.crosscheck") },
   );
 
   const fallbackNote =

@@ -17,6 +17,7 @@ import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
@@ -42,12 +43,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (isLlmConfigured()) {
     const res = await completeOrFallback(
       [
-        {
-          role: "system" as const,
-          content:
-            "당신은 신규사업 검토 리드 PM입니다. 이 진행에 대해 GO/HOLD/KILL 권고와 근거 초안을 작성합니다. 최종 기록은 사람이 하며 당신 산출물은 제안입니다. " +
-            "제공된 매니페스트 산출물 안에서만 판단하고 근거 없는 사실을 만들지 마세요. 근거가 부족하면 HOLD와 '검증 필요'를 제안하세요. JSON만 반환합니다.",
-        },
+        systemMessage("project.gate_brief"),
         {
           role: "user" as const,
           content:
@@ -56,7 +52,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 1600, agent: { key: "risk-officer", purpose: "진행 브리프 — 권고·근거 초안 작성" } },
+      { maxTokens: 1600, agent: promptAgent("project.gate_brief") },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

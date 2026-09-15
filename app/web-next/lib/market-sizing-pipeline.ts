@@ -21,6 +21,7 @@ import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { isWebResearchConfigured, researchSources } from "./web-research.ts";
 import { SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
+import { systemMessage, promptAgent } from "./prompts.ts";
 
 // ---------------------------------------------------------------------------
 // Serial linked-analysis queue (design 2026-09-13, meeting panel-reviewed).
@@ -208,11 +209,11 @@ interface StepResult {
 async function askJson(industry: string, instruction: string, purpose = "시장분석 단계 산출"): Promise<Record<string, unknown> | null> {
   const res = await completeOrFallback(
     [
-      { role: "system", content: "You are a market-sizing analyst. Reply with ONE JSON object only — no prose, no markdown fences." },
+      systemMessage("s1.sizing_ask_json"),
       { role: "user", content: `산업: ${industry}\n${instruction}` },
     ],
     () => "NOT_JSON",
-    { temperature: 0.2, maxTokens: 3200, agent: { key: "market-intelligence-agent", purpose: `S1 파이프라인 — ${purpose}` } }, // 표 형태의 넓은 JSON(권역×세그먼트·외부근거 인용) 잘림 방지
+    { temperature: 0.2, maxTokens: 3200, agent: promptAgent("s1.sizing_ask_json", { purpose: `S1 파이프라인 — ${purpose}` }) }, // 표 형태의 넓은 JSON(권역×세그먼트·외부근거 인용) 잘림 방지
   );
   if (res.source !== "llm") return null;
   const text = res.text.replace(/```json|```/g, "");
@@ -229,11 +230,11 @@ async function askJson(industry: string, instruction: string, purpose = "시장�
 async function summarize(industry: string, step: number, title: string, context: string): Promise<{ summary: string; source: "llm" | "synthesis" }> {
   const res = await completeOrFallback(
     [
-      { role: "system", content: "You are a new-business market analyst. Summarize one step of a market-sizing analysis in Korean, 2 sentences max, plain text." },
+      systemMessage("s1.sizing_summarize"),
       { role: "user", content: `산업: ${industry}\n단계 ${step}: ${title}\n산출 데이터: ${context}` },
     ],
     () => `${industry} — ${title}: 방법론 절차에 따라 작성되었습니다.`,
-    { maxTokens: 400, agent: { key: "market-intelligence-agent", purpose: `S1 시장규모 단계 요약 — ${title}` } },
+    { maxTokens: 400, agent: promptAgent("s1.sizing_summarize", { purpose: `S1 시장규모 단계 요약 — ${title}` }) },
   );
   return { summary: res.text, source: res.source };
 }
@@ -255,14 +256,14 @@ export async function classifyIndustryKsic(db: Database, industryId: string, ind
   const candidateList = candidates.map((e) => `${e.code} ${e.name_ko}${e.detail ? ` (${e.detail})` : ""}`).join("\n");
   const res = await completeOrFallback(
     [
-      { role: "system", content: "You are a KSIC (한국표준산업분류) classifier. Reply with ONE JSON object only — no prose, no markdown fences." },
+      systemMessage("s1.ksic_classify"),
       {
         role: "user",
         content: `산업명: ${industryName}\n아래 KSIC 후보 중 이 산업에 가장 잘 맞는 코드를 하나 고르세요.\n${candidateList}\nJSON: {"ksic_code":"코드"} — 어느 후보도 맞지 않으면 {"ksic_code":""}`,
       },
     ],
     () => "NOT_JSON",
-    { temperature: 0.2, maxTokens: 300, agent: { key: "market-intelligence-agent", purpose: "산업 KSIC 코드 분류 제안" } },
+    { temperature: 0.2, maxTokens: 300, agent: promptAgent("s1.ksic_classify") },
   );
   let code = "";
   if (res.source === "llm") {

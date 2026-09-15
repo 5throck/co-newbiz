@@ -10,6 +10,7 @@ import { authenticate } from "../../../../../lib/auth.ts";
 import { normalizeSketchV2, SKETCH_BLOCKS } from "../../../../../lib/sketch-schema.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
+import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
 
 const now = () => new Date().toISOString();
 
@@ -106,11 +107,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const res = await completeOrFallback(
     [
-      {
-        role: "system" as const,
-        content:
-          "당신은 신규사업 기획 전문가입니다. 제공된 기회 정보와 시장분석 근거 안에서만 한 페이지 비즈니스 모델 스케치(비즈니스 모델 캔버스 + 블루오션 ERRC)를 작성하세요. 근거가 없는 항목은 '검증 필요'로 명시하세요. JSON만 반환합니다.",
-      },
+      systemMessage("opportunity.sketch"),
       {
         role: "user" as const,
         content:
@@ -137,7 +134,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           { name: "비관", assumption: "검증 필요" },
         ],
       }),
-    { maxTokens: 2400, agent: { key: "greenfield-agent", purpose: "비즈니스 모델 검토 초안" } },
+    { maxTokens: 2400, agent: promptAgent("opportunity.sketch") },
   );
 
   const text = res.text;

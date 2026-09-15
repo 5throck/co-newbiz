@@ -10,6 +10,7 @@ import { authenticate } from "../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
+import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
 
 const VEHICLES = ["direct", "spc", "holdco", "spinoff", "jv"] as const;
 
@@ -90,12 +91,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (isLlmConfigured()) {
     const res = await completeOrFallback(
       [
-        {
-          role: "system" as const,
-          content:
-            "당신은 검토/안건 구조 설계 전문가입니다. 최종 투자구조는 사람이 확정하며 당신 산출물은 제안입니다. " +
-            "제공된 S8·S9·WACC 산출물과 현재 상태 안에서만 판단하고 근거 없는 조건을 만들지 마세요. JSON만 반환합니다.",
-        },
+        systemMessage("s8.deal_structure_recommendation"),
         {
           role: "user" as const,
           content:
@@ -104,7 +100,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 2000, agent: { key: "financing-agent", purpose: "딜 구조 추천 초안" } },
+      { maxTokens: 2000, agent: promptAgent("s8.deal_structure_recommendation") },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

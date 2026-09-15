@@ -14,6 +14,7 @@ import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { parseGapRegister } from "./capability-gap.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "./web-research.ts";
 import { fetchFinancials, findCorpCode, isDartConfigured, type DartFinancials } from "./dart-client.ts";
+import { systemMessage, promptAgent, type PromptKey } from "./prompts.ts";
 
 export interface SynergyStepSummary {
   step: number;
@@ -91,14 +92,14 @@ export function recordSynergyRecommendation(db: Database, opportunityId: string,
   );
 }
 
-async function askJson(system: string, user: string, maxTokens = 2500, purpose = "시너지 단계 산출"): Promise<Record<string, unknown> | null> {
+async function askJson(promptKey: PromptKey, user: string, maxTokens = 2500): Promise<Record<string, unknown> | null> {
   const res = await completeOrFallback(
     [
-      { role: "system", content: system },
+      systemMessage(promptKey),
       { role: "user", content: user },
     ],
     () => "NOT_JSON",
-    { temperature: 0.2, maxTokens, agent: { key: "risk-officer", purpose: `S3 파이프라인 — ${purpose}` } },
+    { temperature: 0.2, maxTokens, agent: promptAgent(promptKey) },
   );
   if (res.source !== "llm") return null;
   const text = res.text.replace(/```json|```/g, "");
@@ -281,7 +282,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     ? research.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet}`).join("\n\n")
     : "(웹 리서치 없음)";
   const faJson = await askJsonTracked(
-    "You are an M&A financial analyst. Reply with ONE JSON object only.",
+    "s4.synergy_fa",
     `회사: ${company}\nDART 재무: ${dartContext}${creditText ? `\n\n신용평가자료 발췌:\n${creditText.slice(0, 4000)}` : ""}\n\n외부 리서치 발췌:\n${researchContext}\n\nJSON: {"strengths":["재무·사업 강점", ...],"weaknesses":["재무·사업 약점", ...],"businessAssessment":"종합 평가 3~5문장 — 리서치 발췌와 교차검증하고 상충 시 명시"}. 강점·약점 각 3~5개, 리서치 출처 번호([n])를 문장 끝에 붙이세요.`,
   );
   const listOf = (v: unknown, fallback: string[]): string[] => {
@@ -295,7 +296,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   const faSummary = await completeOrFallback(
     [{ role: "user", content: `회사 ${company}의 재무·사업 분석을 한국어 2문장으로 요약하세요. 강점 ${financialStrengths.length}개, 약점 ${financialWeaknesses.length}개 도출.` }],
     () => `재무 강점 ${financialStrengths.length}개·약점 ${financialWeaknesses.length}개 도출. ${businessAssessment.slice(0, 120)}`,
-    { maxTokens: 300, agent: { key: "financial-analyst", purpose: "시너지 재무·사업 분석 요약" } },
+    { maxTokens: 300, agent: promptAgent("s4.synergy_fa", { purpose: "시너지 재무·사업 분석 요약" }) },
   );
   stepSummaries.push({ step: 3, title: "재무 강/약점 분석", summary: faSummary.text, source: faSummary.source });
   if (llmConfiguredAtStart && faSummary.source !== "llm") hadLlmFailure = true;
@@ -363,7 +364,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     }
   }
   const synJson = await askJsonTracked(
-    "You are a corporate development analyst. Reply with ONE JSON object only.",
+    "s4.synergy_synergy",
     `역할 구분 — 인수 주체: ${acquirer ?? (row.target_type ? `자사 (${company})` : "미지정")}, 검증 대상: ${company}\n대상 기업 재무/사업 평가: ${businessAssessment}\n대상 기업 강점: ${financialStrengths.join(" / ")}\n\nS1·S2 완료 시장 분석(Long List):\n${marketsContext}${oppContext}\n\nJSON: {"synergyAreas":[{"area":"시너지 영역명","synergyType":"매출 시너지|원가 절감|기술·역량|유통·채널 등","rationale":"대상 기업의 역량·자산이 인수 주체와 연결되어 시너지가 나는 근거 2~3문장","opportunity":"구체 기회","risk":"리스크","sources":["관련 출처 번호/명"]}]} — 3~6개 영역. 인수 주체의 역량과 대상 기업 강점, 시장 격차·드라이버를 연결해 Long List를 Short List로 좁히세요.`,
     3000,
   );
@@ -385,7 +386,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   // ── Step 5: Short List 정리 + 시너지 점수 (하이브리드 — ADR-0102) ──
   advance(5);
   const slJson = await askJsonTracked(
-    "You are an IC advisor. Reply with ONE JSON object only.",
+    "s4.synergy_ic",
     `시너지 영역 후보: ${JSON.stringify(synergyAreas.map((a, i) => ({ no: i + 1, area: a.area, opportunity: a.opportunity, risk: a.risk })))}${oppRow ? `\n\n연결 기회: ${oppRow.name} (${oppRow.market_scope ?? "—"})` : ""}\n\nJSON: {"shortList":[{"rank":1,"area":"영역명","verdict":"Short List|보류","reason":"한두 문장"}]} — 전체 순위 매기고 상위 2~3개를 Short List로.`,
   );
   const shortList = (Array.isArray(slJson?.shortList) ? slJson!.shortList : synergyAreas.map((a, i) => ({ rank: i + 1, area: a.area, verdict: "보류", reason: "자동 선별 미생성" })))
@@ -413,7 +414,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   let scoringMethod: "hybrid" | "rule-based" | "unavailable" = rule.score !== null ? "rule-based" : "unavailable";
   if (oppRow) {
     const adj = await askJsonTracked(
-      "You are an IC advisor. Reply with ONE JSON object only.",
+      "s4.synergy_ic",
       `규칙 기반 시너지 점수: ${rule.score ?? "산출 불가"} (인자: ${JSON.stringify(rule.factors)})\n대상: ${company}, 연결 기회: ${oppRow.name}\n강점: ${financialStrengths.join(" / ")}\n시너지 영역: ${synergyAreas.map((a) => a.area).join(", ") || "없도"}\n\nJSON: {"adjustment": <-10..10 정수>, "reason": "<보정 사유 1~2문장, 정성 근거 명시>"} — 데이터가 부족하면 adjustment 0.`,
     );
     if (adj && rule.score !== null) {
@@ -448,7 +449,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
         .map((a) => ({ area: a.area, shortlisted: false, opportunity: a.opportunity, risk: a.risk })),
     ].slice(0, 8);
     const capJson = await askJsonTracked(
-      "You are an IC advisor. Reply with ONE JSON object only.",
+      "s4.synergy_ic",
       `시너지 영역: ${JSON.stringify(areaInputs)}\n대상: ${company}, 연결 기회: ${oppRow.name}\n강점: ${financialStrengths.join(" / ") || "없음"}\n\nJSON: {"rows":[{"capability":"필요 역량명","requiredNote":"시너지 영역 X에서 도출 — 사유"}]} — 위 영역을 실제로 채우는 데 필요한 역량만 제안하고(최대 6개), 이미 같은 역량이면 중복 제안하지 않는다. requiredNote에는 출처 영역명을 인용한다.`,
     );
     const rawRows = Array.isArray(capJson?.rows) ? capJson!.rows : [];
