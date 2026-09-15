@@ -114,7 +114,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `archive-memory.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `audit.ts` | L0 | 2.37.1 | active | —| —| L0+L1 | —|
+| `audit.ts` | L0 | 2.38.1 | active | —| —| L0+L1 | —|
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
@@ -143,7 +143,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `lib/platform-context.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/ssrf.ts` | L0 | 1.1.2 | active | —| —| L0+L1 (SSRF-safe pinned fetch with caller-supplied request headers); v1.1.2 removes two stale `@ts-expect-error` directives on the `LookupFunction` overloads that current Node types no longer need (was failing `tsc`/`next build`) | —|
 | `lib/env-keys.ts` | L0 | 1.0.2 | active | 2026-09-11 | — | L0+L1 (pipeline credential loader — walks up to the root .env and imports only whitelisted pipeline keys, never overriding set values; shared by the k-* source adapters; includes LAW_API_OC for k-law and ECOS_API_KEY for k-ecos) | —|
-| `lifecycle-sync-audit.ts` | L0 | 1.9.0 | active | —| —| L0+L1 | —|
+| `lifecycle-sync-audit.ts` | L0 | 1.12.0 | active | —| —| L0+L1 | —|
 | `md-to-ooxml.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `qa-gate.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `readme-lifecycle-audit.ts` | L0 | 1.0.4 | active | —| —| L0+L1 | —|
@@ -165,7 +165,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `validate-doc-folder.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `validate-docs-links.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `validate-md-language.ts` | L0 | 1.11.0 | active | —| —| L0+L1 | —|
-| `validate-model-registry.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
+| `validate-model-registry.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `validate-skills.ts` | L0 | 1.5.1 | active | —| —| L0+L1 | —|
 | `verify-agent-deliverables.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `verify-memory.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
@@ -207,7 +207,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
 | `resolve-variants.ts` | L0 | 1.0.3 | active | —| —| L0+L1 | —|
 | `validate-variant-readiness.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `validate-templates.ts` | L0 | 1.26.0 | active | —| —| L0+L1 | —|
+| `validate-templates.ts` | L0 | 1.27.0 | active | —| —| L0+L1 | —|
 | `helpers/upgrade-versions.ts` | L0+L1 | 1.0.1 | active | —| —| L0+L1 | —|
 | `lib/propagation-map-schema.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `lib/constitution-scrub.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|

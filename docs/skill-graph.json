@@ -2092,6 +2092,18 @@
       "source": "prose"
     },
     {
+      "type": "composes_with",
+      "from": "agent-lifecycle-manager",
+      "to": "skill-lifecycle-manager",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/agent-lifecycle-manager/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "agent-output-provenance",
       "to": "assumption-audit",

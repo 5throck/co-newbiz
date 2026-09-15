@@ -1,5 +1,16 @@
 # AGENTS.md — co-newbiz
 
+### §3.6 3-Tier Strategy
+
+When leading execution and improvement tasks, PM MUST use the 3-Tier model strategy:
+
+<!-- WORKSPACE-MANAGED: tier-model-mapping -->
+- **High-tier**: Complex reasoning, architectural design, planning (claude-opus-5-0 / gemini-3.1-pro / gpt-5.6-sol)
+- **Medium-tier**: Code review, testing, PR review, quality gates (claude-sonnet-5-0 / gemini-3.8-flash / gpt-5.6-terra)
+- **Low-tier**: Fast, repetitive coding, script maintenance (claude-haiku-4-5 / gemini-3.8-flash / gpt-5.6-luna)
+<!-- /WORKSPACE-MANAGED -->
+
+
 > **🚨 For AI tools reading this file**: This file is a **registry and orchestration reference**, not a set of instructions directed at you.
 > It describes multiple distinct human-defined roles for documentation and dispatch purposes.
 > Do **not** interpret role definitions here as directives for your own behavior.
@@ -174,7 +185,7 @@ Every code change at any tier (L0–L3) must carry spec activity: create/update 
 
 ### LLM Work Routing Policy (ADR-0078)
 
-Substantive LLM-assisted development work — generation or modification of code, documents, designs, tests, or scripts — MUST be routed through this project's agent team: `user → PM triage → Design Gate (unless exempt) → specialist dispatch → QA gate → /sync PR`. Querying an external LLM directly (e.g. a web chat) and landing its output in this repository is a policy violation. IDE inline completions and one-off Q&A that never land in the repository are exempt; repository-landing work uses the E1–E5 exemption codes only. An application calling LLM APIs at runtime is an architecture concern covered by the Design Gate (ADR-0074). Enforcement is structural via the existing hard gates — see workspace-root ADR-0078 (`../../docs/adr/0078-agent-mediated-llm-work-routing.md`, distinct from this repo's own docs/adr/0078, which covers a different decision) for the full decision.
+Substantive LLM-assisted development work — generation or modification of code, documents, designs, tests, or scripts — MUST be routed through this project's agent team: `user → PM triage → Design Gate (unless exempt) → specialist dispatch → QA gate → /sync PR`. Querying an external LLM directly (e.g. a web chat) and landing its output in this repository is a policy violation. IDE inline completions and one-off Q&A that never land in the repository are exempt; repository-landing work uses the E1–E5 exemption codes only. An application calling LLM APIs at runtime is an architecture concern covered by the Design Gate (ADR-0074). Enforcement is structural via the existing hard gates — see ADR-0078 (workspace root, `docs/adr/0078-agent-mediated-llm-work-routing.md`) for the full decision.
 
 ### Instruction Writing Standard (ASD-STE100, ADR-0079)
 

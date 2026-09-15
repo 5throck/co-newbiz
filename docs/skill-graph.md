@@ -12,7 +12,7 @@
 | `accessibility-audit` | L3 | — | — | — | — | — |
 | `admin-console-operations` | L3 | — | — | — | — | — |
 | `adr-governance` | L3 | — | — | — | — | — |
-| `agent-lifecycle-manager` | L3 | — | — | — | — | — |
+| `agent-lifecycle-manager` | L3 | — | — | skill-lifecycle-manager (composes_with) | — | — |
 | `agent-output-provenance` | L3 | — | — | — | — | — |
 | `antitrust-screening` | L3 | antitrust-agent | phase1, phase3, phase4 | brownfield-feasibility (composes_with), certification-transferability (composes_with), commercial-due-diligence (composes_with), competitive-intelligence (composes_with), compliance-monitoring (composes_with), customer-attrition-risk (composes_with), debt-and-contingent-liability-simulation (composes_with), financial-statement-analysis (composes_with), financing-plan-review (composes_with), incentive-clawback-assessment (composes_with), investment-feasibility-modeling (composes_with), management-incentive-review (follows), monte-carlo-simulation (composes_with), org-readiness-assessment (composes_with), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (follows), stage-gate-governance (composes_with), stage-gate-governance (follows), technical-due-diligence (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `api-documentation` | L3 | — | — | — | — | — |
