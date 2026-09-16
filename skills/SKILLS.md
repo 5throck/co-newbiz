@@ -42,7 +42,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `admin-console-operations` | 1.1.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8K — operates the 3 built admin sections, names the 7 not yet built |
 | `adr-governance` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — design §7 ADR trigger-list check and drafting |
 | `agent-lifecycle-manager` | 1.0.0 | active | pm | 2026-05-30 | — | — |
-| `agent-lifecycle-manager` | 1.0.0 | active | pm | 2026-05-30 | — | — |
+|`agent-lifecycle-manager`|1.1.0|active|pm|2026-09-15|—|—|
 | `agent-output-provenance` | 1.2.0 | active | process-governance-manager | 2026-08-28 | — | Wave 5.8I — `analysis_task.reviewed_by` design intent; table not yet migrated, gap flagged explicitly |
 | `antitrust-screening` | 1.1.0 | active | antitrust-agent | 2026-08-23 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
 | `antitrust-screening` | 1.1.0 | active | antitrust-agent | 2026-08-23 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
