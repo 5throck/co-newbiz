@@ -55,12 +55,12 @@ afterAll(() => {
 });
 
 describe("listOrSeedCriteria", () => {
-  test("seeds 5 builtin financial items and one technical item per S3 gap row", () => {
+  test("seeds 4 builtin financial items and one technical item per S3 gap row", () => {
     const oppId = insertOpportunity([{ capability: "관절 감속기 설계" }, { capability: "돌봄 규제 컴플라이언스" }]);
     const criteria = listOrSeedCriteria(oppId, U1, db);
     const financial = criteria.filter((c) => c.category === "financial");
     const technical = criteria.filter((c) => c.category === "technical");
-    expect(financial).toHaveLength(3);
+    expect(financial).toHaveLength(4);
     expect(financial.every((c) => c.source === "builtin" && c.is_deletable === 0)).toBe(true);
     expect(technical).toHaveLength(2);
     expect(technical.map((c) => c.label).sort()).toEqual(["관절 감속기 설계", "돌봄 규제 컴플라이언스"].sort());
@@ -71,14 +71,14 @@ describe("listOrSeedCriteria", () => {
     const oppId = insertOpportunity(null);
     const criteria = listOrSeedCriteria(oppId, U1, db);
     expect(criteria.filter((c) => c.category === "technical")).toHaveLength(0);
-    expect(criteria.filter((c) => c.category === "financial")).toHaveLength(3);
+    expect(criteria.filter((c) => c.category === "financial")).toHaveLength(4);
   });
 
   test("second call does not duplicate seeded rows", () => {
     const oppId = insertOpportunity([{ capability: "A" }]);
     listOrSeedCriteria(oppId, U1, db);
     const second = listOrSeedCriteria(oppId, U1, db);
-    expect(second.filter((c) => c.category === "financial")).toHaveLength(3);
+    expect(second.filter((c) => c.category === "financial")).toHaveLength(4);
     expect(second.filter((c) => c.category === "technical")).toHaveLength(1);
   });
 });
@@ -128,7 +128,7 @@ describe("summarizeEvalStates", () => {
     upsertEvalState(targetId, financial[1].id, { status: "na", note: null, evidence_ref: null, assessedBy: U1 });
     const after = targetEvalStates(oppId, targetId, U1);
     const summary = summarizeEvalStates(after);
-    expect(summary.financial).toEqual({ total: 3, assessed: 2, passed: 1 });
+    expect(summary.financial).toEqual({ total: 4, assessed: 2, passed: 1 });
     expect(summary.technical).toEqual({ total: 1, assessed: 0, passed: 0 });
   });
 });

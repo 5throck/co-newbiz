@@ -10,14 +10,16 @@ import { GateDecisionPanel } from "../../components/GateDecisionPanel.tsx";
 import { CommitteePanel } from "../../components/CommitteePanel.tsx";
 import { PromotionPanel } from "../../components/PromotionPanel.tsx";
 import { summarizeGap, type CapabilityGapRow } from "../../lib/capability-gap.ts";
+import { precheckRecommendation, KNOCKOUT_IDS, SCREENING_VERDICT_KEYS, SCREENING_VERDICT_KO, normalizeVerdict } from "../../lib/brownfield-precheck.ts";
 
 // S6~S7 브라운필드 대상 경로 (/brownfield) — flow.spec v2.0.0.
 //   S6 대상 후보 발굴: Target Universe 정의 → Target Company Long List
 //   S7 대상 선정: Long List → chk-target-screening 판정 → Short List 승격/제외
-// S1 시장분석 패턴: 기회 칩 → 후보 테이블 → 행 펼침 스크리닝 패널.
 // S7 추려내기 가시화(2026-09-14 사용자 리포트): 선정 퍼널(Long List → 판정
-// 완료 → 승격 가능 → Short List), 후보별 t-01~t-09 판정 스트립, 결정론 선정
-// 점수(flow.spec S7 산출물 Target Ranking/Score), Short List 순위 조정.
+// 완료 → 승격 가능 → Short List), Short List 후보의 t-01~t-09 사전 검토(이
+// 화면 "사전 검토" 섹션에서 인라인 기록 — 2026-09-16, 체크리스트는 승격 후보의
+// 최종 점검 도구이고 위원회가 이를 근거로 최종 검토해 사람에게 제안), 결정론
+// 선정 점수(flow.spec S7 산출물 Target Ranking/Score), Short List 순위 조정.
 
 interface OppRow {
   id: string; name: string; market_scope: string | null; synergy_score: number | null;
@@ -78,10 +80,12 @@ interface UniRecoResponse {
   criteria: UniCriteria | null;
   manifest: string[];
 }
+// 사전 검토 판정 초안(웹 검색 + 기확보 근거) — screening-draft 라우트 응답.
 interface ScreeningItemDraft {
   verdict: "pass" | "fail" | "na" | "waived";
   rationale: string;
   source_url: string | null;
+  kind?: "secured" | "web";
 }
 interface ScreeningDraftResponse {
   source: "llm" | "synthesis";
@@ -90,6 +94,9 @@ interface ScreeningDraftResponse {
   drafts: Record<string, ScreeningItemDraft>;
   manifest: string[];
 }
+// 사전 검토 인라인 판정 1건 — 판정값과 수집 근거(사유·출처·구분)를 함께 보관.
+// 저장 시 evidence로 함께 보내 후보 상세 참고 저장소에 적립된다.
+interface PrecheckDraftItem { verdict: string; rationale?: string; source_url?: string | null; kind?: string }
 // S7 재무·기술 평가 (ADR-0139) — chk-target-screening과 병행하는 별도 레이어.
 // 항목별 weight(가중치)로 카테고리(재무/기술)마다 별도 100점 점수를 낸다 —
 // 두 영역을 합치지 않는다(사용자 요구, 2026-09-15).
@@ -102,26 +109,48 @@ interface EvalCategoryScore { score: number | null; scoredWeight: number; totalW
 const EVAL_CATEGORY_LABEL: Record<EvalItem["category"], string> = { financial: "재무적 평가", technical: "기술적 평가" };
 
 const STATUS_LABEL: Record<TargetRow["status"], string> = { pending: "심사 중", shortlisted: "Short List", excluded: "제외" };
-const VERDICTS = ["pass", "fail", "na", "waived"] as const;
-// 재무·기술 평가(EvalItem) 전용 — chk-target-screening의 pass/fail knock-out과
-// 달리 met/partial/unmet 3단계 + 예외(na/waived)로 가중 점수를 낸다.
-const EVAL_VERDICTS = ["pass", "partial", "fail", "na", "waived"] as const;
-const VERDICT_KO: Record<string, string> = { pass: "충족", partial: "부분충족", fail: "미충족", na: "해당없음", waived: "예외", pending: "미판정" };
+// 사전 검토(chk-target-screening) 판정 척도 — 5단 세분화(2026-09-16). 정의·
+// 라벨·정규화는 lib/brownfield-precheck.ts(클라이언트 세이프 공용)에서 온다.
 
-// 위원회 심의(target-longlist-shortlist-committee) 판정 근거 — 후보별 재무·
-// 기술 평가 100점 점수를 표로 압축해 소집 topic에 붙인다(2026-09-15).
-// t-01~09 스크리닝 UI가 제거되어 더 이상 수집되지 않는 데이터는 근거로 쓰지
-// 않는다. 제외된 후보는 뺀다. 프롬프트 비대화 방지로 최대 12개 후보만 담는다.
-function buildEvalBriefMd(targets: TargetRow[]): string | undefined {
+// 위원회 심의(target-longlist-shortlist-committee) 판정 근거 — 후보별 사전
+// 검토(스크리닝 t-01~09) 판정 현황을 표로 압축해 소집 topic에 붙인다
+// (사용자 요청 2026-09-15 · 2026-09-16 — 위원회 근거는 t-01~09, 랭킹에 쓰는
+// 재무·기술 평가와 역할을 분리). 판정 기록은 이 화면 "사전 검토" 섹션에서
+// 인라인으로 한다. 종합 점수는 참고로만 덧붙인다. 제외된 후보는 뺀다.
+// 프롬프트 비대화 방지로 최대 12개 후보만 담는다.
+function buildEvalBriefMd(targets: TargetRow[], checklist: ChecklistItem[], overrides?: Record<string, Record<string, PrecheckDraftItem>>): string | undefined {
   const candidates = targets.filter((t) => t.status !== "excluded").slice(0, 12);
   if (candidates.length === 0) return undefined;
-  const header = "| 후보 | 재무 점수 | 기술 점수 | 종합 점수 |";
-  const sep = "| --- | --- | --- | --- |";
+  const ids = checklist.map((it) => it.id);
+  if (ids.length === 0) return undefined;
+  // 안건 — 위원회가 심의할 "요청된 결정"을 한눈에 알 수 있게 brief 최상단에
+  // 명시한다(사용자 리포트, 2026-09-16: 무슨 안건인지 불명확).
+  const agenda = [
+    "# 안건 — Short List 최종 추천 여부 (Target Screening 게이트)",
+    "",
+    `대상 후보: ${candidates.map((t) => `${t.company_name}${t.rank ? ` (rank ${t.rank})` : ""}`).join(", ")}`,
+    "요청 결정: 후보별로 chk-target-screening(t-01~t-09) 판정(아래 표 — 확정값과 확정 전 제안값 포함)과 재무·기술 평가 종합 점수를 근거로,",
+    "추천 / 조건부 추천 / 보류(근거 부족) / 제외 검토 중 하나의 의사를 심의해 제안한다. 최종 게이트 결정(GO/HOLD/KILL)은 사람이 한다.",
+  ].join("\n");
+  const header = `| 후보 | ${ids.join(" | ")} | 판정 | 종합 점수 |`;
+  const sep = `| --- |${" --- |".repeat(ids.length + 1)}`;
+  let hasProposed = false;
   const rows = candidates.map((t) => {
-    const es = t.eval_summary;
-    return `| ${t.company_name} | ${es?.financial.score ?? "—"} | ${es?.technical.score ?? "—"} | ${es?.combined ?? "—"} |`;
+    const saved = t.screening_json ? (JSON.parse(t.screening_json) as Record<string, string>) : {};
+    const proposed = overrides?.[t.id] ?? {};
+    const states: Record<string, string> = { ...saved };
+    for (const [itemId, d] of Object.entries(proposed)) {
+      if (d.verdict) {
+        states[itemId] = d.verdict;
+        if (!saved[itemId] || saved[itemId] === "pending") hasProposed = true;
+      }
+    }
+    const verdicts = ids.map((id) => SCREENING_VERDICT_KO[normalizeVerdict(states[id])]);
+    const assessed = ids.filter((id) => normalizeVerdict(states[id]) !== "pending").length;
+    return `| ${t.company_name} | ${verdicts.join(" | ")} | ${assessed}/${ids.length} | ${t.eval_summary?.combined ?? "—"} |`;
   });
-  return [header, sep, ...rows].join("\n").slice(0, 4000);
+  const legend = "판정 척도: 충족(근거 명확)/충족(추정)/부분 충족/미충족/근거 부족/미판정 — t-01~09는 chk-target-screening 사전 검토(이 화면 Short List 섹션에서 기록). 종합 점수는 재무·기술 평가(랭킹용)로 위원회 근거와 역할이 다르다." + (hasProposed ? " ※ 일부 판정은 사람이 아직 확정 전인 위원회 제안값입니다." : "");
+  return [agenda, "", header, sep, ...rows, "", legend].join("\n").slice(0, 4000);
 }
 
 // mockup baseline-v5.html의 S6/S7은 탭으로 나뉘지 않은 단일 연속 화면이다
@@ -136,7 +165,15 @@ export function BrownfieldView() {
   const [opps, setOpps] = useState<OppRow[] | null>(null);
   const [selected, setSelected] = useState<OppDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [screeningDraft, setScreeningDraft] = useState<Record<string, string>>({});
+  // 사전 검토(chk-target-screening) 인라인 판정 — Short List 카드에서 바로 기록.
+  // targetId → (itemId → 판정값 + 수집 근거). 근거는 저장 시 함께 보내 후보
+  // 상세의 참고 저장소(screening_evidence_json, 0108)에 적립된다.
+  const [precheckDraft, setPrecheckDraft] = useState<Record<string, Record<string, PrecheckDraftItem>>>({});
+  const [precheckDraftNote, setPrecheckDraftNote] = useState<Record<string, string | null>>({});
+  const [precheckBusy, setPrecheckBusy] = useState<string | null>(null);
+  // 위원회 추천 검토 일괄 실행 상태
+  const [recoBusy, setRecoBusy] = useState(false);
+  const [recoProgress, setRecoProgress] = useState<string | null>(null);
   const [excludeReason, setExcludeReason] = useState<Record<string, string>>({});
   const [newTarget, setNewTarget] = useState({ company_name: "", dart_corp_code: "" });
   // S6 목표 시장 정의 — 완료기준(definition + 최소 Long List 커버리지).
@@ -174,9 +211,6 @@ export function BrownfieldView() {
   const [uniReco, setUniReco] = useState<UniRecoResponse | null>(null);
   const [uniRecoApplied, setUniRecoApplied] = useState(false);
   const [uniBusy, setUniBusy] = useState(false);
-  // E — 후보별 판정 초안 (targetId → 초안 메타)
-  const [screeningReco, setScreeningReco] = useState<Record<string, { note: string; drafts: Record<string, ScreeningItemDraft> }>>({});
-  const [screeningRecoBusy, setScreeningRecoBusy] = useState<string | null>(null);
   // S7 재무·기술 평가 (ADR-0139) — targetId → 카탈로그+판정 목록.
   const [evalItems, setEvalItems] = useState<Record<string, EvalItem[]>>({});
   // targetId → 카테고리별 100점 가중 점수(서버 계산, computeEvalScore).
@@ -395,36 +429,6 @@ export function BrownfieldView() {
     setUniRecoApplied(true);
   }
 
-  // ── E: 후보별 판정 초안 생성 — 미판정 select만 채운다 ──
-  async function generateScreeningDraft(targetId: string) {
-    if (!selected || screeningRecoBusy) return;
-    setScreeningRecoBusy(targetId); setError(null);
-    try {
-      const res = await api.post<ScreeningDraftResponse>(
-        `/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets/${encodeURIComponent(targetId)}/screening-draft`,
-        {},
-      );
-      setScreeningReco((prev) => ({ ...prev, [targetId]: { note: res.data.note ?? "", drafts: res.data.drafts ?? {} } }));
-      // 미판정 항목만 초안값으로 미리 채운다 — 사람이 이미 판정한 값은 건드리지 않음.
-      setScreeningDraft((prev) => {
-        const n = { ...prev };
-        for (const [itemId, d] of Object.entries(res.data.drafts ?? {})) {
-          const key = `${targetId}:${itemId}`;
-          const savedState = selected.targets.find((t) => t.id === targetId)?.screening_json;
-          const already = savedState ? (JSON.parse(savedState) as Record<string, string>)[itemId] : undefined;
-          if (already && already !== "pending") continue;
-          if (n[key] && n[key] !== "pending") continue; // 사람이 이 세션에서 이미 판정한 값 유지
-          n[key] = d.verdict;
-        }
-        return n;
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "판정 초안 생성 실패");
-    } finally {
-      setScreeningRecoBusy(null);
-    }
-  }
-
   // S7 재무·기술 평가 (ADR-0139) — 후보 행을 펼칠 때 불러온다(최초 호출 시
   // 서버가 재무 빌트인·기술 시딩을 lazy하게 채운다).
   function loadEvalItems(targetId: string) {
@@ -530,26 +534,93 @@ export function BrownfieldView() {
     }
   }
 
-  async function saveScreening(targetId: string) {
-    if (!selected) return;
+  // ── 사전 검토(chk-target-screening) — Short List 후보의 최종 점검을 섹션
+  // 카드에서 바로 기록한다(사용자 결정, 2026-09-16: 상세 화면·Long List의
+  // 사전 검토 표면은 제거, 이 곳이 유일한 기록 지점). 저장은 기존
+  // screening_json 병합 라우트 재사용 — 사람이 저장한 판정은 초안이 덮지 않는다.
+  // 수집 근거(사유·출처·구분)는 evidence로 함께 보내 후보 참고 저장소에 적립.
+  async function savePrecheck(targetId: string) {
+    if (!selected || precheckBusy) return;
+    const draft = precheckDraft[targetId];
+    if (!draft || Object.keys(draft).length === 0) return;
     const states: Record<string, string> = {};
-    for (const item of selected.checklist) {
-      const v = screeningDraft[`${targetId}:${item.id}`];
-      if (v) states[item.id] = v;
+    const evidenceMeta: Record<string, { rationale?: string; source_url?: string | null; kind?: string }> = {};
+    for (const [itemId, d] of Object.entries(draft)) {
+      if (!d.verdict) continue;
+      states[itemId] = d.verdict;
+      evidenceMeta[itemId] = { rationale: d.rationale, source_url: d.source_url ?? null, kind: d.kind };
     }
     if (Object.keys(states).length === 0) return;
-    setBusy(true); setError(null);
+    setPrecheckBusy(targetId); setError(null);
     try {
-      const res = await api.post<{ target: TargetRow }>(`/api/brownfield/${selected.opportunity.id}/targets/${targetId}`, { states });
-      const updated = selected.targets.map((t) => (t.id === targetId ? { ...t, ...res.data.target } : t));
-      setSelected({ ...selected, targets: updated });
-      setScreeningDraft((prev) => { const n = { ...prev }; Object.keys(states).forEach((k) => delete n[`${targetId}:${k}`]); return n; });
-      // 판정이 저장되면 LLM 초안 메타도 정리된다 — 이제 사람이 확정한 값이다.
-      setScreeningReco((prev) => { const n = { ...prev }; delete n[targetId]; return n; });
+      await api.post(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets/${encodeURIComponent(targetId)}`, { states, evidence: evidenceMeta });
+      setPrecheckDraft((prev) => { const n = { ...prev }; delete n[targetId]; return n; });
+      setPrecheckDraftNote((prev) => { const n = { ...prev }; delete n[targetId]; return n; });
+      loadDetail(selected.opportunity.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "판정 저장 실패");
+      setError(err instanceof Error ? err.message : "사전 검토 판정 저장 실패");
     } finally {
-      setBusy(false);
+      setPrecheckBusy(null);
+    }
+  }
+
+  // 미판정 항목의 판정 제안 1건 수집 — 기확보 정보(DART 재무 facts·프로파일·
+  // 공시)를 재검색하지 않고 활용하고, 부족한 정보만 서버가 웹검색한다. 결과는
+  // 누적기(acc)에 병합되고 화면 상태에도 반영된다. 사람이 확정(저장)한 항목은
+  // 건드리지 않고, 그 외 항목은 재실행 시 새 제안으로 갱신한다 — 이미 제안된
+  // 항목을 스킵하면 다시 눌러도 변화가 없어 버튼이 죽어 보였다(사용자 리포트,
+  // 2026-09-16). 실패는 삼키지 않고 호출자(소집 흐름)로 전파한다.
+  async function draftPrecheckInto(targetId: string, acc: Record<string, Record<string, PrecheckDraftItem>>): Promise<void> {
+    if (!selected) return;
+    const res = await api.post<ScreeningDraftResponse>(
+      `/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets/${encodeURIComponent(targetId)}/screening-draft`,
+      {},
+    );
+    setPrecheckDraftNote((prev) => ({ ...prev, [targetId]: res.data.note ?? null }));
+    const row = selected.targets.find((t) => t.id === targetId);
+    const saved = row?.screening_json ? (JSON.parse(row.screening_json) as Record<string, string>) : {};
+    const cur = { ...(acc[targetId] ?? {}) };
+    for (const [itemId, d] of Object.entries(res.data.drafts ?? {})) {
+      const already = saved[itemId];
+      if (already && already !== "pending") continue; // 사람이 확정한 판정만 유지
+      cur[itemId] = { verdict: d.verdict, rationale: d.rationale, source_url: d.source_url, kind: d.kind };
+    }
+    acc[targetId] = cur;
+    setPrecheckDraft((prev) => ({ ...prev, [targetId]: cur }));
+  }
+
+  // ── 위원회 추천 검토 — 위원회 소집(CommitteePanel beforeConvene 훅)의 선행
+  // 단계로 실행된다(사용자 결정, 2026-09-16: 사전 검토 제안 생성과 위원회 소집을
+  // 하나의 흐름으로 통합 — 별도 버튼은 역할 중복). Short List 후보 전체의
+  // 기확보 정보(재무·프로파일·공시)를 활용하고 부족한 정보만 검색해 판정 제안을
+  // 만든 뒤, 그 제안을 포함한 심의 brief를 반환한다. 후보가 하나도 성공하지
+  // 못하면 예외를 던져 소집을 막고 패널에 에러를 표시한다 — 부분 성공이면
+  // 성공한 제안으로 소집을 진행한다.
+  async function runCommitteePrecheck(): Promise<string | undefined> {
+    if (!selected || recoBusy) return;
+    setRecoBusy(true); setError(null);
+    const failures: string[] = [];
+    let lastError: Error | null = null;
+    try {
+      const acc: Record<string, Record<string, PrecheckDraftItem>> = { ...precheckDraft };
+      for (let i = 0; i < shortlistedTargets.length; i++) {
+        const t = shortlistedTargets[i];
+        setRecoProgress(`${t.company_name} (${i + 1}/${shortlistedTargets.length})`);
+        try {
+          await draftPrecheckInto(t.id, acc);
+        } catch (err) {
+          failures.push(t.company_name);
+          lastError = err instanceof Error ? err : new Error(String(err));
+          setError(`사전 검토 제안 생성 실패 — ${t.company_name}: ${lastError.message}`);
+        }
+      }
+      if (failures.length > 0 && failures.length === shortlistedTargets.length) {
+        throw lastError ?? new Error("판정 제안 생성에 실패했습니다");
+      }
+      return buildEvalBriefMd(selected.targets, selected.checklist, acc);
+    } finally {
+      setRecoBusy(false);
+      setRecoProgress(null);
     }
   }
 
@@ -600,6 +671,10 @@ export function BrownfieldView() {
 
   const targets = selected?.targets ?? [];
   const shortlistedTargets = targets.filter((t) => t.status === "shortlisted");
+  // 전치 테이블(항목 = 컬럼, 후보 = 행)의 Part 그룹 컬럼 수
+  const checklistItems = selected?.checklist ?? [];
+  const part1Count = checklistItems.filter((it) => KNOCKOUT_IDS.has(it.id)).length;
+  const part2Count = checklistItems.length - part1Count;
   // Long List(심사 중) 구간만 재무·기술 평가 종합 점수로 잠정 정렬한다 —
   // Short List 승격 후 순위(rank)는 사람이 손으로 조정하는 영역이라 건드리지
   // 않는다(status가 다르면 비교 없이 0을 반환해 안정 정렬로 원래 그룹 순서를
@@ -610,13 +685,22 @@ export function BrownfieldView() {
       if (a.status !== "pending" || b.status !== "pending") return 0;
       return (b.eval_summary?.combined ?? -1) - (a.eval_summary?.combined ?? -1);
     });
-  // 잠정 순위 번호는 pending(Long List) 구간에서만 1부터 매긴다 — displayedTargets
-  // 배열 인덱스를 그대로 쓰면 앞쪽 Short List 행 개수만큼 밀린다.
-  const pendingRank = new Map(targets.filter((t) => t.status === "pending")
+  // 평가 기반 잠정 순위 — 제외를 뺀 전 후보(pending + shortlisted) 대상.
+  // Short List로 승격해도 순위가 사라지지 않는다(사용자 리포트, 2026-09-16 —
+  // 승격·제외 시 잠정 순위가 "—"로 사라지는 문제). 승격이 같은 점수 기준이므로
+  // 순위 모집단도 같게 유지한다. Short List의 표시 순위(rank)는 별개(사람 조정).
+  const evalRank = new Map(targets.filter((t) => t.status !== "excluded" && t.eval_summary?.combined != null)
     .slice()
     .sort((a, b) => (b.eval_summary?.combined ?? -1) - (a.eval_summary?.combined ?? -1))
     .map((t, i) => [t.id, i + 1]));
   const shortlistOrder = shortlistedTargets.map((t) => t.id);
+  // Short List 후보 중 사전 검토(chk-target-screening)가 미완료인 후보 수 —
+  // 위원회 최종 검토 전 판정 기록 권장 신호(사용자 결정, 2026-09-16: 체크리스트는
+  // Short List 후보의 "문제 없는지" 최종 점검 도구).
+  const precheckIncomplete = shortlistedTargets.filter((t) => {
+    const s = t.screening_summary;
+    return !s || s.anyKnockOutFail || s.assessed < s.total || s.mandatoryOpen.length > 0;
+  }).length;
 
   return (
     <main>
@@ -975,7 +1059,6 @@ export function BrownfieldView() {
               </thead>
               <tbody>
                 {displayedTargets.map((t) => {
-                  const sm = t.screening_summary;
                   const es = t.eval_summary;
                   const orderIdx = shortlistOrder.indexOf(t.id);
                   const canPromote = t.status === "pending" && t.eval_summary?.complete === true;
@@ -1005,11 +1088,17 @@ export function BrownfieldView() {
                             </span>
                           </span>
                         </td>
-                        <td className="tabular-nums" title="재무·기술 평가 종합 점수(financial·technical 평균) 기준 잠정 순위 — Short List rank(사람이 조정)와 별개">
-                          {t.status !== "pending" ? (
+                        <td className="tabular-nums" title="재무·기술 평가 종합 점수(financial·technical 평균) 기준 잠정 순위 — 제외를 뺀 전 후보 대상으로 유지(승격해도 사라지지 않음). Short List rank(사람이 조정)와 별개">
+                          {t.status === "excluded" ? (
                             <span className="text-[color:var(--muted-fg)]">—</span>
                           ) : es?.combined != null ? (
-                            <>#{pendingRank.get(t.id)} <span className="text-[color:var(--muted-fg)]">({es.combined}점)</span></>
+                            t.status === "shortlisted" ? (
+                              <span className="text-[color:var(--muted-fg)]" title="승격 시점 평가 기준 잠정 순위(참고) — Short List 표시 순위는 사람이 조정한 rank입니다">
+                                #{evalRank.get(t.id)} ({es.combined}점)
+                              </span>
+                            ) : (
+                              <>#{evalRank.get(t.id)} <span className="text-[color:var(--muted-fg)]">({es.combined}점)</span></>
+                            )
                           ) : (
                             <span className="text-[color:var(--muted-fg)]">평가 필요</span>
                           )}
@@ -1051,48 +1140,195 @@ export function BrownfieldView() {
           Long List 아래 이어서 렌더링, 탭 없음) ── */}
       {selected && (
         <div id={SECTION_IDS.shortlist} className="mt-3 flex flex-col gap-3 items-stretch" style={{ scrollMarginTop: "1rem" }}>
-          {/* ── 인수 가능성 (참고용) — chk-target-screening t-01/t-02/t-08 발췌.
-              공식 판정이 아니며 승격/추진을 막지 않는다(참고 표시일 뿐). ── */}
+          {/* ── 사전 검토 — chk-target-screening t-01~t-09 전 항목. Short List에
+              오른 후보를 대상으로 "문제 없는지" 최종 점검하는 체크리스트다
+              (사용자 결정, 2026-09-16). 판정 기록도 이 섹션에서 인라인으로 한다 —
+              상세 화면·Long List의 사전 검토 표면은 제거(사용자 결정, 2026-09-16).
+              공식 판정이 아니며 승격/추진을 막지 않는다. 위원회가 이 판정을 근거로
+              Short List를 최종 검토해 사람에게 게이트 결정을 제안한다. ── */}
           {shortlistedTargets.length > 0 && (
-            <section aria-label="인수 가능성" className="market-section">
-              <SectionToolbar title="인수 가능성" summary={<span className="note">— 참고용, 공식 판정 아님</span>} />
-              {shortlistedTargets.map((t) => {
-                const states = t.screening_json ? (JSON.parse(t.screening_json) as Record<string, string>) : {};
-                const keyItems = selected.checklist.filter((it) => ["t-01", "t-02", "t-08"].includes(it.id));
-                const concern = ["t-01", "t-02"].some((id) => states[id] === "fail");
-                return (
-                  <div key={t.id} className="sizing-grade-card mb-2">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <strong className="text-[0.85rem]">{t.company_name} {t.rank ? `· rank ${t.rank}` : ""}</strong>
-                      {concern && <span className="status-chip status-red">인수 가능성 우려</span>}
-                    </div>
-                    <ul className="sizing-note-list mb-0">
-                      {keyItems.map((it) => (
-                        <li key={it.id} className="text-[0.75rem]">
-                          <code className="dd-item-id mr-1">{it.id}</code>
-                          {VERDICT_KO[states[it.id] ?? "pending"]}
-                        </li>
+            <section aria-label="사전 검토 · 위원회 추천" className="market-section">
+              <SectionToolbar
+                title="사전 검토 · 위원회 추천 — chk-target-screening (t-01~t-09)"
+                summary={
+                  <span className="note">
+                    — Short List 최종 점검 · 공식 판정 아님
+                    <span className={`status-chip ml-2 ${precheckIncomplete === 0 ? "status-green" : "status-amber"}`}>
+                      {precheckIncomplete === 0 ? "전 후보 검토 완료" : `미완료 ${precheckIncomplete}/${shortlistedTargets.length}`}
+                    </span>
+                  </span>
+                }
+              />
+              {/* 통합 플로우(사용자 결정, 2026-09-16): 아래 "위원회 추천 검토 · 소집"
+                  버튼 하나가 (1) 후보별로 기확보 정보(DART 재무 facts·AI 프로파일·
+                  공시 — 재검색 안 함)를 활용하고 부족한 정보만 검색해 판정 제안을
+                  만들고 (2) 그 제안을 심의 근거로 위원회를 소집한다. 사람은 표에서
+                  제안을 검토·수정한 뒤 저장으로 확정하고, 게이트 결정(사람)으로
+                  이어진다. */}
+              {recoBusy && (
+                <p className="text-[0.78rem] text-[color:var(--amber-fg)] mb-2" role="status">
+                  근거 수집·판정 제안 생성 중 — {recoProgress ?? "준비 중"} (완료되면 이 표의 미판정 셀이 채워지고 위원회가 자동 소집됩니다. 수십 초 걸릴 수 있습니다)
+                </p>
+              )}
+              <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
+                이 표는 아래 위원회 패널의 <b>&quot;위원회 추천 검토 · 소집&quot;</b> 버튼으로 채웁니다 — 누르면 ① 후보별 판정 제안이 이 표의 미판정 셀에 채워지고(기확보 정보 활용 + 부족한 정보만 검색, 재실행 시 확정 판정을 유지한 채 미판정만 다시 제안) ② 그 제안을 근거로 위원회가 심의합니다. 셀을 검토·수정한 뒤 행별 <b>판정 저장</b>으로 확정하세요.
+              </p>
+              {/* 전치 테이블 — 평가 항목(t-01~09)이 컬럼 헤더, 후보가 행(사용자
+                  제안, 2026-09-16). 후보 간 비교와 위원회 검토에 맞는 형태다.
+                  셀은 판정 select 하나로 압축하고, 근거(제안 사유·출처·기확보
+                  구분)는 툴팁과 표식으로 보여준다. */}
+              <div className="overflow-x-auto">
+                <table className="data-table" aria-label="사전 검토 · 위원회 추천">
+                  <caption className="sr-only">Short List 후보 × chk-target-screening 항목 판정표</caption>
+                  <thead>
+                    <tr>
+                      <th rowSpan={2} scope="col">후보</th>
+                      <th colSpan={part1Count} scope="colgroup" className="text-center">Part 1 — 필수 (knock-out)</th>
+                      <th colSpan={part2Count} scope="colgroup" className="text-center">Part 2 — 권장 평가</th>
+                      <th rowSpan={2} scope="col">확정</th>
+                    </tr>
+                    <tr>
+                      {checklistItems.map((it) => (
+                        <th key={it.id} scope="col" className="whitespace-nowrap" title={`${it.text}${it.mandatory ? " (필수)" : ""}`}>
+                          <code className="dd-item-id mr-1">{it.id}</code>{it.text.split(" — ")[0]}
+                        </th>
                       ))}
-                    </ul>
-                  </div>
-                );
-              })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shortlistedTargets.map((t) => {
+                      const states = t.screening_json ? (JSON.parse(t.screening_json) as Record<string, string>) : {};
+                      const concern = ["t-01", "t-02"].some((id) => normalizeVerdict(states[id]) === "unfulfilled");
+                      const sm = t.screening_summary;
+                      const total = sm?.total ?? checklistItems.length;
+                      const draft = precheckDraft[t.id] ?? {};
+                      const dirtyCount = Object.keys(draft).length;
+                      // 추천안 — 확정 판정 + 미확정 제안을 합쳐 결정론 규칙으로 도출
+                      // (Part 1 knock-out 기준). 위원회 제안이며 확정은 사람이 저장으로 한다.
+                      const mergedVerdicts: Record<string, string> = { ...states };
+                      for (const [itemId, d] of Object.entries(draft)) {
+                        if (d.verdict) mergedVerdicts[itemId] = d.verdict;
+                      }
+                      const reco = precheckRecommendation(mergedVerdicts);
+                      const hasReco = [...KNOCKOUT_IDS].some((id) => mergedVerdicts[id] && mergedVerdicts[id] !== "pending");
+                      // 진행 칩은 확정+미확정 제안을 합쳐 센다 — 제안으로 채워져도
+                      // 0/9로 보이는 문제를 막는다(사용자 리포트, 2026-09-16).
+                      const mergedAssessed = checklistItems.filter((it) => {
+                        const nv = normalizeVerdict(mergedVerdicts[it.id]);
+                        return nv !== "pending";
+                      }).length;
+                      const mergedClass = sm?.anyKnockOutFail
+                        ? "status-red"
+                        : mergedAssessed === 0
+                          ? "status-not-started"
+                          : mergedAssessed < total || (sm?.mandatoryOpen.length ?? 0) > 0
+                            ? "status-amber"
+                            : "status-green";
+                      const note = precheckDraftNote[t.id];
+                      return (
+                        <tr key={t.id}>
+                          <td className="cell-primary">
+                            <div className="flex flex-col gap-1">
+                              <strong className="text-[0.85rem]">{t.company_name}{t.rank ? ` · rank ${t.rank}` : ""}</strong>
+                              <span className="flex flex-wrap items-center gap-1">
+                                {concern && <span className="status-chip status-red" title="t-01 또는 t-02 미충족">인수 가능성 우려</span>}
+                                {hasReco && (
+                                  <span className={`status-chip ${reco.cls}`} title={`Part 1(knock-out t-01~t-05) 기준 위원회 추천안 — 확정은 사람이 저장으로 합니다${dirtyCount > 0 ? " · 미확정 제안 포함" : ""}`}>
+                                    추천안 · {reco.label}
+                                  </span>
+                                )}
+                                <span
+                                  className={`status-chip ${mergedClass}`}
+                                  title={`t-01~09 판정 ${mergedAssessed}/${total}${dirtyCount > 0 ? ` (미확정 제안 ${dirtyCount}건 포함)` : ""}${sm?.mandatoryOpen.length ? ` · 미판정 필수: ${sm.mandatoryOpen.join(", ")}` : ""}${sm?.anyKnockOutFail ? " · 필수 미충족 있음" : ""}`}
+                                >
+                                  판정 {mergedAssessed}/{total}
+                                </span>
+                              </span>
+                            </div>
+                          </td>
+                          {checklistItems.map((it) => {
+                            const v = draft[it.id]?.verdict ?? states[it.id] ?? "pending";
+                            const meta = draft[it.id];
+                            // 근거(제안 사유·출처)는 셀 안 링크 대신 툴팁으로 — 링크가
+                            // 셀 아래 줄을 만들어 행 높이가 어긋나는 문제를 막는다
+                            // (사용자 UI 리포트, 2026-09-16). 전체 근거는 후보 상세
+                            // '사전 검토 근거' 탭에서 본다.
+                            const tip = [
+                              it.text,
+                              meta?.rationale ? `제안 사유: ${meta.rationale}` : null,
+                              meta?.source_url ? `출처: ${meta.source_url}` : null,
+                            ].filter(Boolean).join("\n");
+                            return (
+                              <td key={it.id}>
+                                <select
+                                  aria-label={`${t.company_name} ${it.id} 판정`}
+                                  className="sizing-new-input sizing-new-input-sm w-full"
+                                  style={{ minWidth: "5.5rem" }}
+                                  title={tip}
+                                  value={v}
+                                  onChange={(e) => setPrecheckDraft((prev) => ({ ...prev, [t.id]: { ...(prev[t.id] ?? {}), [it.id]: { verdict: e.target.value } } }))}
+                                >
+                                  <option value="pending">미판정</option>
+                                  {SCREENING_VERDICT_KEYS.map((sv) => (
+                                    <option key={sv} value={sv}>{SCREENING_VERDICT_KO[sv]}</option>
+                                  ))}
+                                </select>
+                              </td>
+                            );
+                          })}
+                          <td>
+                            <div className="flex flex-col items-start gap-1">
+                              <button
+                                type="button"
+                                className="btn-ghost btn-sm"
+                                disabled={precheckBusy === t.id || recoBusy || dirtyCount === 0}
+                                title="화면에서 고른 판정을 저장합니다 — 수집 근거도 함께 저장되어 후보 상세 '사전 검토 근거' 탭에서 참고할 수 있습니다"
+                                onClick={() => savePrecheck(t.id)}
+                              >
+                                판정 저장{dirtyCount > 0 ? ` (${dirtyCount}건)` : ""}
+                              </button>
+                              {note && (
+                                <span className="text-[0.65rem] text-[color:var(--muted-fg)] max-w-[10rem] truncate" title={note}>{note}</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 위원회 심의 — "위원회 추천 검토 · 소집" 버튼 하나로 (1) 위 표의
+                  판정 제안 생성(기확보 정보 활용 + 부족한 정보만 검색)과 (2) 그
+                  제안을 근거로 한 위원회 소집이 함께 실행된다(ADR-0097 · 사용자
+                  결정 2026-09-16 — 제안 생성과 소집의 역할 중복을 해소). 소집된
+                  위원회의 심의 결과는 제안(PROPOSED)이며, 확정은 사람이 한다.
+                  재무·기술 평가(랭킹용)와 역할은 분리된다. */}
+              <div className="flex flex-wrap items-center gap-2 mt-2 mb-0">
+                {precheckIncomplete === 0 ? (
+                  <span className="status-chip status-green">사전 검토 완료</span>
+                ) : (
+                  <span className="status-chip status-amber" title="판정이 덜 기록되었거나 필수 미충족이 있는 후보가 있습니다">
+                    사전 검토 미완료 {precheckIncomplete}/{shortlistedTargets.length}
+                  </span>
+                )}
+                <span className="text-[0.78rem] text-[color:var(--muted-fg)]">
+                  버튼을 누르면 ① 위 표의 미판정 셀에 판정 제안이 채워지고(기확보 정보 활용 + 부족한 정보만 검색) ② 그 제안을 근거로 위원회가 심의해 ③ 아래 Target Screening 게이트 결정(사람)에 제안합니다. 제안 확정은 표의 판정 저장으로 합니다.
+                </span>
+              </div>
+              <CommitteePanel
+                opportunityId={selected.opportunity.id}
+                committeeKey="target-longlist-shortlist-committee"
+                committeeLabel="S6/S7 Short List 최종 검토 위원회 (롱리스트→숏리스트)"
+                gates={["screening"]}
+                briefMd={buildEvalBriefMd(selected.targets, selected.checklist, precheckDraft)}
+                beforeConvene={runCommitteePrecheck}
+                conveneLabel="위원회 추천 검토 · 소집"
+              />
             </section>
           )}
 
-          {/* ADR-0097: target-longlist-shortlist-committee 심의 — 에이전트는 제안, 확정은 인간.
-              위원회 판정 근거는 t-01~09(스크리닝)로 한다 — 랭킹에 쓰는 재무·기술
-              평가와 역할을 분리한다(사용자 요청, 2026-09-15). 위원회 심의(제안)가
-              게이트 결정(사람) 위에 오도록 배치한다(사용자 요청, 2026-09-15). */}
-          {selected.targets.length > 0 && (
-            <CommitteePanel
-              opportunityId={selected.opportunity.id}
-              committeeKey="target-longlist-shortlist-committee"
-              committeeLabel="S6/S7 대상 롱리스트→숏리스트 위원회"
-              gates={["screening"]}
-              briefMd={buildEvalBriefMd(selected.targets)}
-            />
-          )}
           <GateDecisionPanel
             opportunityId={selected.opportunity.id}
             gates={["target_screening"]}
