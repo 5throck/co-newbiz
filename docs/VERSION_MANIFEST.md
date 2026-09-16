@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-12T00:57:10.610Z
+**Generated**: 2026-09-16T14:18:58.097Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -9,8 +9,8 @@
 ## Summary
 
 - **Agents**: 3
-- **Skills**: 146
-- **Scripts**: 123
+- **Skills**: 148
+- **Scripts**: 130 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -19,46 +19,8 @@
 
 | Name | File | Tier | Model | Last Modified |
 |------|------|------|-------|---------------|
-| access-control-review | 1.0.0 | active | skills/access-control-review/SKILL.md | workspace | runs the monthly access-permission review: every active `project_member` row cross-checked against continued need, stale memberships revoked (not left to expire passively), `wall_group` assignments reviewed for continued relevance, admin-role holder count reviewed quarterly and kept minimal by design (`docs/security/security-baseline | security-engineer |
-| admin-console-operations | 1.1.0 | active | skills/admin-console-operations/SKILL.md | workspace | operates the admin console's built sections (users, audit log, data sources — wave 5 | process-governance-manager |
-| adr-governance | 1.0.0 | active | skills/adr-governance/SKILL.md | workspace | checks, proposed, change, against, the, design | process-governance-manager |
-| agent-output-provenance | 1.2.0 | active | skills/agent-output-provenance/SKILL.md | workspace | stamps every agent-produced deliverable with its producing agent, a confidence grade, and a human-review record before it counts as complete — `docs/governance/process-map | process-governance-manager |
-| assumption-audit | 1.0.0 | active | skills/assumption-audit/SKILL.md | workspace | audits every `assumption` row's `kind` tag (`user`/`assumed`/`derived`) for correctness — a `kind='assumed'` entry requires a non-empty `rationale`, rejected server-side otherwise; an untriangulated claim is never silently upgraded to `derived`; a load-bearing figure (wacc, hurdle irr) must be `user`, never `assumed`, before its gate opens | process-governance-manager |
-| auth-and-account-management | 1.0.0 | active | skills/auth-and-account-management/SKILL.md | workspace | operates the account lifecycle (pending -> active, lockout, password reset) and api-token issuance built in wave 5 | security-engineer |
-| batch-scheduling-operations | 1.0.0 | active | skills/batch-scheduling-operations/SKILL.md | workspace | operates the os-level scheduler registrations (adr-0019) driving `watch:run` and other periodic jobs — an in-process timer dies with the app, so every recurring job must be registered at the os level, not relied on to self-perpetuate from within the running application | infra-automation-engineer |
-| checklist-authoring | 1.0.0 | active | skills/checklist-authoring/SKILL.md | workspace | authors, and, maintains, checklists | process-governance-manager |
-| company-intelligence | 1.0.0 | active | skills/company-intelligence/SKILL.md | workspace | comprehensive, company, and, corporate, group, intelligence, gathering, and | market-intelligence-agent |
-| continuous-monitoring-and-alerting | 1.0.0 | active | skills/continuous-monitoring-and-alerting/SKILL.md | workspace | operates, the, watch, auto-rerun, rag, re-evaluation, notification, cycle | sre |
-| customer-qualification | 1.0.0 | active | skills/customer-qualification/SKILL.md | workspace | assesses, customer-mandated, vendor-registration, and, production-approval, requirements | commercial-dd-agent |
-| data-freshness-and-revision-control | 1.0.0 | active | skills/data-freshness-and-revision-control/SKILL.md | workspace | operates adr-0004's cache-first, revision-preserving fetch policy day to day: monitors cache-staleness across active series, confirms `data_change_log` entries are being written on genuine revisions, and audits that no code path overwrites a `revision_no` row instead of inserting a new one | dba |
-| data-normalization | 1.0.0 | active | skills/data-normalization/SKILL.md | workspace | normalizes raw ingested data (korean dart account names, industry codes, entity identifiers) against `db/mappings`/`python/mappings` tables into the canonical schema, routing values that don't match to `master-data-governance`'s `staging_unmapped` queue rather than discarding or guessing | dba |
-| database-operations | 1.0.0 | active | skills/database-operations/SKILL.md | workspace | runs, backup, and, disaster-recovery, operations, for, the, sqlite | dba |
-| db-migration-governance | 1.0.0 | active | skills/db-migration-governance/SKILL.md | workspace | authors, and, reviews, migrations | dba |
-| deal-execution-playbook | 1.1.0 | active | skills/deal-execution-playbook/SKILL.md | workspace | the gate-by-gate execution map: for each of the seven gates (screening → pre-fs → target screening (brownfield) → fs → dd → entity ic → group ic), which deliverable is due, which agent is r (responsible), which condition is a kill criteria candidate, and where a human review point sits — per `docs/governance/process-map | process-governance-manager |
-| deal-pipeline-orchestration | 1.0.0 | active | skills/deal-pipeline-orchestration/SKILL.md | workspace | harness, execution, runbook, for, the, new, business, review | pm |
-| deal-workspace-operations | 1.1.0 | active | skills/deal-workspace-operations/SKILL.md | workspace | operates a project's workspace lifecycle: opening (creation + lead membership), membership changes, closure, and archiving | process-governance-manager |
-| deployment-and-release | 1.0.0 | active | skills/deployment-and-release/SKILL.md | workspace | executes releases under adr-0014's discipline: every migration tagged reversible-or-not at write time, backup immediately before any migration, health check immediately after, joint release-engineer+dba sign-off for irreversible migrations, and a rehearsed rollback drill at least once per release cycle on a reversible-tagged migration — a scheduled drill, not a hope | release-engineer |
-| design-lint | 1.0.0 | active | skills/design-lint/SKILL.md | workspace | mechanical, enforcement, the, onyx | design-system-agent |
-| expert-interview | 1.1.0 | active | skills/expert-interview/SKILL.md | workspace | conducts, external, expert, interviews, per, docs, guidelines, expert-interview-conduct | commercial-dd-agent |
-| forward-industry-research | 1.0.0 | active | skills/forward-industry-research/SKILL.md | workspace | qualitative research narrative on the target industry's forward (demand-side) and upstream industries: their structure, key players, technology and regulatory trends, and the key drivers that will decide the target industry's future direction — producing the driver-candidate registry entries and scenario definitions the structure simulation consumes | market-intelligence-agent |
-| glossary-management | 1.0.0 | active | skills/glossary-management/SKILL.md | workspace | authors, and, maintains, glossary | glossary-curator |
-| governance-document-hierarchy | 1.0.0 | active | skills/governance-document-hierarchy/SKILL.md | workspace | determines, which, governance, layer, policy, procedure, guideline, checklist | process-governance-manager |
-| group-level-review | 1.0.0 | active | skills/group-level-review/SKILL.md | workspace | owns, the, group, gate, end, end, runs, procedures | group-review-agent |
-| hwp-document-processing | 1.1.0 | active | skills/hwp-document-processing/SKILL.md | workspace | handles, korean, office, document, generation, and, extraction | docs-writer |
-| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-03 |
-| incident-response | 1.0.0 | active | skills/incident-response/SKILL.md | workspace | runs, incident, response, per, docs, security, security-baseline | sre |
-| industry-profile-application | 1.0.0 | active | skills/industry-profile-application/SKILL.md | workspace | applies, industry-specific, profile, data, adr-0024's, profile-first, principle, one | industry-lead |
-| infrastructure-automation | 1.0.0 | active | skills/infrastructure-automation/SKILL.md | workspace | automates deployment, environment provisioning, and operational scripting for the co-newbiz stack (bun/hono api, sqlite, react spa, python computational layer) — the broader automation practice `batch-scheduling-operations` and `deployment-and-release`'s specific disciplines sit within | infra-automation-engineer |
-| interpretation-registry | 1.0.0 | active | skills/interpretation-registry/SKILL.md | workspace | records, and, looks, governance, interpretation, does, this, clause | compliance-officer |
-| legal-risk-register | 1.0.0 | active | skills/legal-risk-register/SKILL.md | workspace | maintains the standing legal-risk register for a project — litigation exposure, regulatory non-compliance findings, contractual risk, and pending statute changes — as the single place these risks are tracked across gates, rather than scattered across each domain skill's own findings | legal-counsel |
-| manual-authoring | 2.1.0 | active | skills/manual-authoring/SKILL.md | workspace | authors and maintains co-newbiz business manuals, sops, and governance reference documents (docs/manuals/, docs/governance/governance-operations | docs-writer |
-| market-data-pipeline | 1.1.0 | active | skills/market-data-pipeline/SKILL.md | workspace | fetches and maintains external statistical series under the cache-first, revision-preserving policy (adr-0004): reuse cache within its validity window, conditional requests otherwise, and on a genuine change insert a new `revision_no` row rather than overwrite — all revisions preserved in `data_change_log` | data-architect |
-| master-data-governance | 1.0.0 | active | skills/master-data-governance/SKILL.md | workspace | resolves the `staging_unmapped` queue — raw values that failed to match an existing master-data code (industry, company, unit, currency, country, period | dba |
-| mcp-server-integration | 1.0.0 | active | skills/mcp-server-integration/SKILL.md | workspace | designs, and, adds, mcp, tools, mcp, co-newbiz, under | backend-engineer |
-| meeting | 1.4.0 | active | skills/meeting/SKILL.md | workspace | facilitates, structured, multi-agent, meetings, using, the, meeting, command | pm |
-| notification-channel-management | 1.0.0 | active | skills/notification-channel-management/SKILL.md | workspace | manages, the, watch, rule, notification, channel, and, bundling | sre |
-| observability-and-alerting | 1.0.0 | active | skills/observability-and-alerting/SKILL.md | workspace | operates system-level observability (health checks, error rates, job-run status via `schedule_job`/`job_run`) — distinct from `continuous-monitoring-and-alerting`'s deal-level rag/watch cycle, this skill covers whether the platform itself is healthy, not whether a specific project's data changed | sre |
-| pm | agents/pm.md | medium | inherit | 2026-09-10 |
+| i18n-specialist | agents/i18n-specialist.md | N/A | inherit | 2026-09-15 |
+| pm | agents/pm.md | N/A | inherit | 2026-09-15 |
 | README_ko | agents/README_ko.md | N/A | N/A | 2026-08-23 |
 
 ---
@@ -72,7 +34,7 @@
 | accessibility-audit | 1.1.0 | active | skills/accessibility-audit/SKILL.md | workspace | accessibility-audit, /accessibility-audit, axe-core audit, wcag accessibility check, wcag 2.1 aa | pm |
 | admin-console-operations | 1.1.0 | active | .claude/skills/admin-console-operations/SKILL.md | both | admin console operation, user approval workflow, audit log review via admin UI, threshold edit ADR requirement | process-governance-manager |
 | adr-governance | 1.0.0 | active | .claude/skills/adr-governance/SKILL.md | both | does this need an ADR, ADR trigger list, draft an ADR, architecture decision record | process-governance-manager |
-| agent-lifecycle-manager | 1.0.0 | active | skills/agent-lifecycle-manager/SKILL.md | workspace | create agent, new agent, validate agents, agent lifecycle, manage agents | pm |
+| agent-lifecycle-manager | 1.1.0 | active | skills/agent-lifecycle-manager/SKILL.md | workspace | create agent, new agent, validate agents, agent lifecycle, manage agents | pm |
 | agent-output-provenance | 1.2.0 | active | .claude/skills/agent-output-provenance/SKILL.md | both | agent output provenance, confidence grade on a deliverable, reviewed_by tracking, AI-produced vs human-confirmed distinction | process-governance-manager |
 | antitrust-screening | 1.1.0 | active | skills/antitrust-screening/SKILL.md | workspace | antitrust screening, HHI calculation, merger control filing, gun-jumping, relevant market definition | antitrust-agent |
 | api-documentation | 1.0.0 | active | skills/api-documentation/SKILL.md | workspace | api documentation, document api, api reference, developer documentation, rest api docs, graphql docs, sdk documentation | pm |
@@ -85,6 +47,7 @@
 | checklist-authoring | 1.0.0 | active | .claude/skills/checklist-authoring/SKILL.md | both | add a checklist item, checklist authoring, mandatory vs optional checklist item, waiver_eligible | process-governance-manager |
 | ci-triage | 0.1.0 | active | skills/ci-triage/SKILL.md | workspace | ci failure, triage failure, audit gate failed, scaffold failed, fix the pipeline | pm |
 | commercial-due-diligence | 1.1.0 | active | skills/commercial-due-diligence/SKILL.md | workspace | commercial due diligence, customer concentration analysis, pricing power assessment, win loss analysis | commercial-dd-agent |
+| committee-deliberation | 1.6.0 | active | .claude/skills/committee-deliberation/SKILL.md | both | committee, committee-deliberation, steering committee, gate deliberation, red-team review | pm |
 | community-partnership-planning | 1.1.0 | active | skills/community-partnership-planning/SKILL.md | workspace | community partnership, local workforce development, community relations, social license to operate | hr-integration-agent |
 | company-intelligence | 1.0.0 | active | .claude/skills/company-intelligence/SKILL.md | both | company research, company analysis, corporate investigation, company intelligence, company profile, corporate intelligence, research this company, analyze this company | market-intelligence-agent |
 | compensation-harmonization-analysis | 1.0.0 | active | skills/compensation-harmonization-analysis/SKILL.md | workspace | compensation harmonization, comp benchmark, upward bias, post-merger pay equalization | hr-integration-agent |
@@ -117,6 +80,7 @@
 | gateguard | 1.0.0 | active | skills/gateguard/SKILL.md | workspace | gateguard, /gateguard, investigate file, check before edit, pre-edit check | pm |
 | glossary-management | 1.0.0 | active | .claude/skills/glossary-management/SKILL.md | both | add a glossary term, glossary lint, undefined term, glossary management, why_it_matters_ko | glossary-curator |
 | governance-document-hierarchy | 1.0.0 | active | .claude/skills/governance-document-hierarchy/SKILL.md | both | governance document hierarchy, policy vs procedure, governance layer, is this mandatory, new governance document | process-governance-manager |
+| graft | N/A | active | .claude/skills/graft/SKILL.md | claude | N/A | N/A |
 | greenfield-feasibility | 1.1.0 | active | skills/greenfield-feasibility/SKILL.md | workspace | green field feasibility, new plant feasibility, new establishment review, greenfield screening | greenfield-agent |
 | group-level-review | 1.0.0 | active | .claude/skills/group-level-review/SKILL.md | both | group IC review, group investment committee, run the group gate, group review agent | group-review-agent |
 | growth-projection-modeling | 1.1.0 | active | skills/growth-projection-modeling/SKILL.md | workspace | growth projection, revenue forecast, base rate warning, anchor_ref, hockey stick check | financial-analyst |
@@ -152,7 +116,6 @@
 | master-data-governance | 1.0.0 | active | .claude/skills/master-data-governance/SKILL.md | both | staging unmapped queue, master data resolution, unmapped raw value, master data code assignment | dba |
 | mcp-server-integration | 1.0.0 | active | .claude/skills/mcp-server-integration/SKILL.md | both | add an MCP tool, MCP server integration, MCP-REST parity, no direct DB access from MCP | backend-engineer |
 | meeting | 1.4.1 | active | .claude/skills/meeting/SKILL.md | both | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
-| committee-deliberation | 1.6.0 | active | skills/committee-deliberation/SKILL.md | workspace | committee, committee-deliberation, steering committee, gate deliberation, red-team review | pm |
 | meeting-facilitation | 1.4.1 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
 | monte-carlo-simulation | 1.1.0 | active | skills/monte-carlo-simulation/SKILL.md | workspace | Monte Carlo simulation, seeded simulation, P50 P95 NPV, contingent liability integration | risk-officer |
 | notification-channel-management | 1.0.0 | active | .claude/skills/notification-channel-management/SKILL.md | both | notification channel, notification bundling, watch_rule configuration, notification severity | sre |
@@ -166,38 +129,26 @@
 | platform-skill-lifecycle-manager | 1.0.0 | active | skills/platform-skill-lifecycle-manager/SKILL.md | workspace | create platform skill, new .claude skill, new .gemini skill, platform skill version, platform skill lifecycle, update platform skill | pm |
 | pmi-planning | 1.1.0 | active | skills/pmi-planning/SKILL.md | workspace | PMI planning, post-merger integration, integration timeline, day-one integration plan | pmi-agent |
 | policy-and-procedure-governance | 1.1.0 | active | .claude/skills/policy-and-procedure-governance/SKILL.md | both | draft a policy, draft a procedure, entity addendum, amend the group policy, new procedure | process-governance-manager |
-| policy-and-procedure-governance | 1.1.0 | active | skills/policy-and-procedure-governance/SKILL.md | workspace | drafts, and, maintains, policy-, and, procedure-layer, governance, documents | process-governance-manager |
 | policy-change-impact-analysis | 1.0.0 | active | .claude/skills/policy-change-impact-analysis/SKILL.md | both | policy impact analysis, procedure amendment impact, does this affect in-flight projects, project_policy_pin, retroactivity decision | process-governance-manager |
-| policy-change-impact-analysis | 1.0.0 | active | skills/policy-change-impact-analysis/SKILL.md | workspace | runs, the, mandatory, impact-analysis, step, the, policy, change | process-governance-manager |
 | portfolio-fit-assessment | 1.3.0 | active | skills/portfolio-fit-assessment/SKILL.md | workspace | portfolio overlap, cannibalization, portfolio fit, group agenda ranking, rank against other group companies | group-review-agent |
 | procedure-reference-override | 1.0.0 | active | .claude/skills/procedure-reference-override/SKILL.md | both | procedure override, entity-specific procedure, region-specific procedure, add_steps, replace_steps, resolve a procedure | process-governance-manager |
-| procedure-reference-override | 1.0.0 | active | skills/procedure-reference-override/SKILL.md | workspace | implements, the, shared, entity, region, override, model, for | process-governance-manager |
 | project-review | 1.6.0 | active | skills/project-review/SKILL.md | workspace | project review, review project, audit project, quality review | pm |
 | proxy-industry-chain | 1.1.0 | active | skills/proxy-industry-chain/SKILL.md | workspace | proxy chain, no direct market data, chain reliability grade, demand estimation via proxy industry | quant-methodologist |
 | quality-of-earnings | 1.1.0 | active | skills/quality-of-earnings/SKILL.md | workspace | quality of earnings, EBITDA adjustments, normalized earnings, QoE report | financial-analyst |
 | query-performance-tuning | 1.0.0 | active | .claude/skills/query-performance-tuning/SKILL.md | both | slow query, query performance, EXPLAIN QUERY PLAN, index coverage review | dba |
-| query-performance-tuning | 1.0.0 | active | skills/query-performance-tuning/SKILL.md | workspace | diagnoses and fixes slow queries against the co-newbiz schema — index coverage review, `explain query plan` analysis, and repository-layer query review — with particular attention to the membership-filtering queries every project-scoped read runs through (design's access-control layer must stay fast, not just correct) | dba |
 | rag-scoring-framework | 1.1.0 | active | skills/rag-scoring-framework/SKILL.md | workspace | RAG grade, RAG scoring, overall grade calculation, hysteresis, structural vs behavioral remedy grading | process-governance-manager |
 | region-profile-application | 1.0.0 | active | .claude/skills/region-profile-application/SKILL.md | both | apply the region profile, region review axes, region profile gap, cross-border review checklist | region-lead |
-| region-profile-application | 1.0.0 | active | skills/region-profile-application/SKILL.md | workspace | applies, region-profiles | region-lead |
 | regional-incentive-sourcing | 1.1.0 | active | skills/regional-incentive-sourcing/SKILL.md | workspace | regional incentive, investment incentive package, site comparison, incentive NPV, compare candidate sites | greenfield-agent |
 | regulation-monitoring | 1.0.0 | active | .claude/skills/regulation-monitoring/SKILL.md | both | regulation monitoring, statute change alert, new regulation affecting our projects, regulatory update | legal-counsel |
-| regulation-monitoring | 1.0.0 | active | skills/regulation-monitoring/SKILL.md | workspace | watches for statute/regulation changes relevant to active and prospective projects (industry-specific and region-specific), and routes a detected change into `policy-change-impact-analysis` when it affects a governance document, a permit pathway, or a certification requirement | legal-counsel |
 | regulatory-change-response | 1.0.0 | active | .claude/skills/regulatory-change-response/SKILL.md | both | upcoming regulation change, pre-effective-date response, regulatory change response plan | legal-counsel |
-| regulatory-change-response | 1.0.0 | active | skills/regulatory-change-response/SKILL.md | workspace | executes, response, plan, when, regulation, enacted, amended, before | legal-counsel |
 | regulatory-screening | 1.1.0 | active | .claude/skills/regulatory-screening/SKILL.md | both | regulatory screening, foreign investment screening trigger, sanctions screening all counterparties, region profile confirmation | legal-counsel |
-| regulatory-screening | 1.1.0 | active | skills/regulatory-screening/SKILL.md | workspace | runs the screening-gate regulatory checks: confirms the applicable region profile(s) exist and are validated for every touched jurisdiction, checks foreign-investment-screening triggers against the region profile's mandatory filing triggers, and runs sanctions/anti-corruption screening against all counterparties, not just the primary target (`checklists/legal-regulatory-checklist | legal-counsel |
 | research-analysis | 1.0.0 | active | skills/research-analysis/SKILL.md | workspace | research, analyze, investigate, synthesize, evidence gathering, data analysis, literature review | pm |
 | rest-api-design | 1.0.0 | active | .claude/skills/rest-api-design/SKILL.md | both | new REST endpoint, API design review, envelope shape, 404 vs 403 for non-members | backend-engineer |
-| rest-api-design | 1.0.0 | active | skills/rest-api-design/SKILL.md | workspace | designs, and, reviews, rest, endpoints, against, docs, architecture | backend-engineer |
 | run-versioning-and-attribution | 1.0.0 | active | .claude/skills/run-versioning-and-attribution/SKILL.md | both | run versioning, input hash, reproduce a prior result, run attribution, superseded_by chain | data-architect |
-| run-versioning-and-attribution | 1.0.0 | active | skills/run-versioning-and-attribution/SKILL.md | workspace | ensures every analysis produces a `run` row with an immutable `run_input` snapshot and `input_hash` (every simulation additionally records its `seed`), so a re-run with identical seed and inputs must reproduce identical output — a verification gate (adr-0005, design §12), not a nice-to-have | data-architect |
 | sample-driven-report-writing | 1.0.0 | active | .claude/skills/sample-driven-report-writing/SKILL.md | both | sample-driven report, deliverable template, match sample structure, write to sample format | docs-writer |
-| sample-driven-report-writing | 1.0.0 | active | skills/sample-driven-report-writing/SKILL.md | workspace | analyzes a deliverable sample (pdf/docx/hwpx) to extract its table-of-contents structure and, for each section, whether tables and/or charts are mandatory — then researches and drafts report content that matches the sample's exact structure and visual-element requirements | docs-writer |
 | scenario-planning | 1.1.0 | active | skills/scenario-planning/SKILL.md | workspace | scenario analysis, downside case, upside case, rate shock scenario, structural scenario planning | risk-officer |
 | script-lifecycle-manager | 1.2.0 | active | skills/script-lifecycle-manager/SKILL.md | workspace | create script, update script, deprecate script, script lifecycle, manage scripts | pm |
 | security-baseline-review | 1.0.0 | active | .claude/skills/security-baseline-review/SKILL.md | both | security baseline cadence, STRIDE matrix refresh, quarterly threat model review, pre-deployment security gate | security-engineer |
-| security-baseline-review | 1.0.0 | active | skills/security-baseline-review/SKILL.md | workspace | runs, docs, security, security-baseline | security-engineer |
 | security-scan | 1.2.0 | active | skills/security-scan/SKILL.md | workspace | security scan, scan for vulnerabilities, security check, run security | pm |
 | site-infrastructure-assessment | 1.1.0 | active | skills/site-infrastructure-assessment/SKILL.md | workspace | site infrastructure, wastewater capacity, power supply capacity, logistics access assessment, site selection | greenfield-agent |
 | site-visit-protocol | 1.1.0 | active | skills/site-visit-protocol/SKILL.md | workspace | site visit protocol, pre-visit document request, on-site evidence capture, site visit checklist | technical-dd-agent |
@@ -206,7 +157,6 @@
 | stage-gate-governance | 1.4.0 | active | skills/stage-gate-governance/SKILL.md | workspace | stage gate, kill criteria, gate sequence, halt the project, does this trigger a kill criterion | process-governance-manager |
 | standup-synthesizer | 1.0.0 | active | skills/standup-synthesizer/SKILL.md | workspace | standup digest, daily standup, synthesize standup, work summary | pm |
 | statute-change-monitoring | 1.0.0 | active | .claude/skills/statute-change-monitoring/SKILL.md | both | statute change affecting this project, regulation change during DD, re-check applicable statutes | legal-counsel |
-| statute-change-monitoring | 1.0.0 | active | skills/statute-change-monitoring/SKILL.md | workspace | tracks statutes/regulations applicable to a specific active project's target industry and jurisdiction, distinct from `regulation-monitoring`'s portfolio-wide standing watch — this skill is the project-scoped dd check that confirms nothing material has changed since screening, and routes a detected change back into that project's own gate review | legal-counsel |
 | strategic-fit-screening | 1.1.0 | active | skills/strategic-fit-screening/SKILL.md | workspace | strategic fit screen, knock-out criteria, hunt zone fit | process-governance-manager |
 | sync | 1.5.0 | active | skills/sync/SKILL.md | workspace | sync, /sync, commit and push, create PR | pm |
 | systematic-market-sizing | 1.5.0 | active | skills/systematic-market-sizing/SKILL.md | workspace | market sizing, TAM SAM SOM, market matrix, region segment demand estimate, market cross-validation, scenario bands | market-intelligence-agent |
@@ -217,26 +167,21 @@
 | translate | 1.0.1 | active | skills/translate/SKILL.md | workspace | translate, translation, Korean translation | pm |
 | two-tier-approval-chain | 1.1.0 | active | skills/two-tier-approval-chain/SKILL.md | workspace | entity IC, group IC, approval chain, IC gate, group agenda ranking, submit to group IC | process-governance-manager |
 | ui-information-architecture | 1.0.0 | active | .claude/skills/ui-information-architecture/SKILL.md | both | new SPA screen, UI design review, 3-depth navigation, RAG display contract, source tooltip | frontend-engineer |
-| ui-information-architecture | 1.0.0 | active | skills/ui-information-architecture/SKILL.md | workspace | designs, and, reviews, spa, screens, against, docs, architecture | frontend-engineer |
 | ui-ux-design-intelligence | 1.0.1 | active | skills/ui-ux-design-intelligence/SKILL.md | workspace | design system, ui design, ux design, component design, visual design, design tokens, interface design | pm |
 | unit-conversion-calibration | 1.0.0 | active | skills/unit-conversion-calibration/SKILL.md | workspace | calibrate a proxy hop, lead-lag regression, unit conversion coefficient, beta calibration for a proxy chain | quant-methodologist |
 | update-bun-packages | 1.3.1 | active | skills/update-bun-packages/SKILL.md | workspace | update bun packages, upgrade bun packages, bun update, update dependencies, upgrade dependencies | pm |
-| validate-docs-links | 1.0.0 | active | skills/validate-docs-links/SKILL.md | workspace | validate links, check links, broken links, docs validation | pm |
+| validate-docs-links | 1.0.0 | active | .claude/skills/validate-docs-links/SKILL.md | both | validate links, check links, broken links, docs validation | pm |
 | value-chain-driver-identification | 1.0.0 | active | .claude/skills/value-chain-driver-identification/SKILL.md | both | chain node sensitivity, per-stage driver sensitivity, driver correlation analysis, lead-lag driver estimation | quant-methodologist |
-| value-chain-driver-identification | 1.0.0 | active | skills/value-chain-driver-identification/SKILL.md | workspace | derives, per-value-chain-stage, driver, sensitivities, systematically, correlates, each, chain | quant-methodologist |
 | value-chain-linkage-analysis | 1.1.0 | active | skills/value-chain-linkage-analysis/SKILL.md | workspace | value chain linkage, pass-through rate, upstream downstream risk exposure, margin risk from supplier or customer industry | quant-methodologist |
 | value-chain-stage-financials | 1.0.0 | active | .claude/skills/value-chain-stage-financials/SKILL.md | both | value chain stage financials, per-node 5-year financials, industry-level KPI rollup, chain stage financial performance | financial-analyst |
-| value-chain-stage-financials | 1.0.0 | active | skills/value-chain-stage-financials/SKILL.md | workspace | populates per-value-chain-node 5-year historical financial performance: for each industry node in the chain topology, identify member companies, collect their dart financials, run the per-company financial pipeline, and roll the results up to industry-level 5-year kpi series (revenue growth, margin | financial-analyst |
 | vulnerability-management | 1.0.0 | active | .claude/skills/vulnerability-management/SKILL.md | both | CVE check, dependency vulnerability, risk acceptance decision, unpatched Critical CVE | security-engineer |
-| vulnerability-management | 1.0.0 | active | skills/vulnerability-management/SKILL.md | workspace | tracks dependency updates via the workspace's `update-bun-packages` tooling on the weekly cadence, requires a cve check before merging any dependency bump, and requires an immediate, recorded risk-acceptance decision by security-engineer for a critical/high cve with no available patch — never silently deferred (`docs/security/security-baseline | security-engineer |
 | wacc-input-session | 1.3.0 | active | skills/wacc-input-session/SKILL.md | workspace | WACC input, hurdle IRR confirmation, CAPM components, discount rate session, beta estimation | valuation-agent |
 | waiver-management | 1.0.1 | active | .claude/skills/waiver-management/SKILL.md | both | file a waiver, waiver request, approve a waiver, waiver expiry, waiver concentration | compliance-officer |
-| waiver-management | 1.0.1 | active | skills/waiver-management/SKILL.md | workspace | files, approves, and monitors governance waivers — the explicit, logged exception path whose absence would push non-compliance underground | compliance-officer |
 | zod-contract-gate | 1.0.0 | active | skills/zod-contract-gate/SKILL.md | workspace | zod-contract-gate, /zod-contract-gate, zod contract validation, schema contract gate, runtime schema validation | backend-engineer |
 
----
-
 <!-- validate-md-language:allowlist-end -->
+
+---
 
 ## Scripts
 
@@ -253,7 +198,9 @@
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | N/A |
 | archive-memory.ts | 1.0.0 | scripts/archive-memory.ts | N/A |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit.ts | 2.34.1 | scripts/audit.ts | bun |
+| audit.ts | 2.39.0 | scripts/audit.ts | bun |
+| backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
+| backfill-capability-gap.ts | 1.0.0 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
 | backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | N/A |
 | build-search-index.ts | 1.0.0 | scripts/handbook/build-search-index.ts | N/A |
@@ -273,16 +220,18 @@
 | check-tables.ts | 1.0.0 | scripts/handbook/check-tables.ts | N/A |
 | cleanup-completed-md.ts | 1.1.0 | scripts/cleanup-completed-md.ts | N/A |
 | clear-pm-approval.ts | 1.0.0 | scripts/clear-pm-approval.ts | N/A |
+| committee-deliberation.ts | 1.1.0 | scripts/co-newbiz/committee-deliberation.ts | N/A |
 | compile-tokens.ts | 1.2.0 | scripts/compile-tokens.ts | N/A |
 | contrast-check.ts | 1.0.0 | scripts/co-newbiz/contrast-check.ts | N/A |
 | convert.ts | 1.0.0 | scripts/co-newbiz/convert.ts | N/A |
 | dart-collect.ts | 1.0.0 | scripts/co-newbiz/dart-collect.ts | N/A |
 | db-export.ts | 1.0.0 | scripts/co-newbiz/db-export.ts | N/A |
+| db-integrity.ts | 1.0.0 | scripts/co-newbiz/db-integrity.ts | N/A |
 | deploy-handbook.ts | 1.1.0 | scripts/handbook/deploy-handbook.ts | N/A |
 | deploy-readme-patch.test.ts | 1.0.0 | scripts/tests/deploy-readme-patch.test.ts | bun:test |
+| design-lint.ts | 1.2.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 1.0.0 | scripts/design-lint.ts | N/A |
-| design-lint.ts | 1.1.0 | scripts/co-newbiz/design-lint.ts | N/A |
-| dev-sync.ts | 1.12.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.14.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.1 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
@@ -292,11 +241,15 @@
 | fin-analyze.ts | 1.0.0 | scripts/co-newbiz/fin-analyze.ts | N/A |
 | fin-pipeline.ts | 1.0.0 | scripts/co-newbiz/fin-pipeline.ts | N/A |
 | fin-project.ts | 1.0.0 | scripts/co-newbiz/fin-project.ts | N/A |
+| fix-construction-machinery-link.ts | 1.0.0 | scripts/co-newbiz/fix-construction-machinery-link.ts | N/A |
 | gen-pk-notnull-rebuild.ts | 1.0.0 | scripts/co-newbiz/gen-pk-notnull-rebuild.ts | bun:sqlite |
 | gen-pr-body.ts | 1.2.0 | scripts/gen-pr-body.ts | bun |
+| generate-agent-registry.ts | N/A | scripts/co-newbiz/generate-agent-registry.ts | N/A |
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
 | generate-process-flow.ts | 1.3.2 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
+| generate-prompt-registry.ts | N/A | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-skill-graph.ts | 1.10.0 | scripts/generate-skill-graph.ts | js-yaml |
+| generate-version-manifest.ts | 1.5.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
 | glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | js-yaml |
 | graph-map.ts | 1.1.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
 | graph.ts | 0.4.1 | scripts/co-newbiz/graph.ts | js-yaml |
@@ -304,16 +257,15 @@
 | handbook-sync-audit.ts | 1.0.0 | scripts/handbook/handbook-sync-audit.ts | N/A |
 | hwp-extract.ts | 1.0.0 | scripts/co-newbiz/hwp-extract.ts | N/A |
 | kosis-units.ts | 1.0.1 | scripts/co-newbiz/kosis-units.ts | N/A |
-| lifecycle-sync-audit.ts | 1.7.1 | scripts/lifecycle-sync-audit.ts | N/A |
+| lifecycle-sync-audit.ts | 1.14.0 | scripts/lifecycle-sync-audit.ts | js-yaml |
 | lint-server-boundary.ts | 1.0.0 | scripts/co-newbiz/lint-server-boundary.ts | N/A |
 | md-to-ooxml.ts | 1.2.0 | scripts/md-to-ooxml.ts | fs, path |
-| meeting.ts | 1.0.0 | scripts/co-newbiz/committee-deliberation.ts | N/A |
 | model.ts | 1.0.0 | scripts/co-newbiz/model.ts | N/A |
 | nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | N/A |
 | newbiz.ts | 1.19.0 | scripts/co-newbiz/newbiz.ts | N/A |
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
 | proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | js-yaml |
-| qa-gate.ts | N/A | scripts/qa-gate.ts | bun |
+| qa-gate.ts | 1.3.0 | scripts/qa-gate.ts | bun |
 | rag.ts | 1.2.1 | scripts/co-newbiz/rag.ts | bun:sqlite |
 | readme-lifecycle-audit.ts | 1.0.4 | scripts/readme-lifecycle-audit.ts | N/A |
 | register-hydraulic-breaker-assumptions.ts | 1.0.0 | scripts/co-newbiz/register-hydraulic-breaker-assumptions.ts | N/A |
@@ -327,20 +279,20 @@
 | scorecard-rollup.ts | 1.0.0 | scripts/co-newbiz/scorecard-rollup.ts | N/A |
 | seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite |
 | seed-hydraulic-breaker-matrix.ts | 1.1.0 | scripts/co-newbiz/seed-hydraulic-breaker-matrix.ts | N/A |
+| seed-s1-s12-demo.ts | 1.0.0 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
 | skill-lifecycle-audit.ts | 1.4.1 | scripts/skill-lifecycle-audit.ts | N/A |
 | skill-session-review.ts | 1.0.0 | scripts/skill-session-review.ts | bun |
 | source-adapters.ts | 1.1.0 | scripts/co-newbiz/source-adapters.ts | N/A |
-| spec-register.ts | 1.1.0 | scripts/spec-register.ts | N/A |
+| spec-register.ts | 1.2.0 | scripts/spec-register.ts | N/A |
 | sync-agent-personas.ts | 1.0.1 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
-| sync-agent-status.ts | 1.0.1 | scripts/sync-agent-status.ts | N/A |
 | sync-md.ts | 1.3.0 | scripts/sync-md.ts | N/A |
 | sync-skill-status.ts | 1.0.1 | scripts/sync-skill-status.ts | N/A |
-| sync-skills.ts | 1.6.0 | scripts/sync-skills.ts | N/A |
-| team-builder.ts | 1.3.0 | scripts/team-builder.ts | N/A |
-| test-runner.ts | 1.2.0 | scripts/test-runner.ts | fs, os, path |
+| sync-skills.ts | 1.8.0 | scripts/sync-skills.ts | N/A |
+| team-builder.ts | 1.4.0 | scripts/team-builder.ts | N/A |
+| test-runner.ts | 1.3.0 | scripts/test-runner.ts | fs, os, path |
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, fs, path |
 | typecheck.ts | 1.1.1 | scripts/typecheck.ts | N/A |
 | update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |
@@ -349,22 +301,22 @@
 | validate-doc-folder.ts | 1.2.0 | scripts/validate-doc-folder.ts | fs, path |
 | validate-docs-links.ts | 1.1.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | N/A |
-| validate-md-language.ts | 1.10.0 | scripts/validate-md-language.ts | fs |
-| validate-model-registry.ts | N/A | scripts/validate-model-registry.ts | N/A |
+| validate-md-language.ts | 1.11.0 | scripts/validate-md-language.ts | fs |
+| validate-model-registry.ts | 1.4.0 | scripts/validate-model-registry.ts | N/A |
 | validate-nav.ts | 1.0.0 | scripts/handbook/validate-nav.ts | N/A |
 | validate-pm-extends.ts | 0.3.1 | scripts/validate-pm-extends.ts | N/A |
 | validate-procedures.ts | 1.1.0 | scripts/validate-procedures.ts | js-yaml |
 | validate-skills.ts | 1.5.1 | scripts/validate-skills.ts | N/A |
-| validate-templates.ts | 1.22.0 | scripts/validate-templates.ts | js-yaml |
+| validate-templates.ts | 1.33.0 | scripts/validate-templates.ts | js-yaml |
 | validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | N/A |
 | verify-agent-deliverables.ts | 1.0.1 | scripts/verify-agent-deliverables.ts | fs |
 | verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |
-| verify-platform-lifecycle.ts | 1.1.2 | scripts/verify-platform-lifecycle.ts | N/A |
+| verify-platform-lifecycle.ts | 1.1.3 | scripts/verify-platform-lifecycle.ts | N/A |
 | verify-readme-sync.ts | 1.4.0 | scripts/verify-readme-sync.ts | bun, fs, path |
 | verify-scripts.ts | 1.6.1 | scripts/verify-scripts.ts | fs, path |
 | verify-skill-graph.ts | 1.6.0 | scripts/verify-skill-graph.ts | N/A |
 | verify-skills.ts | 1.3.0 | scripts/verify-skills.ts | N/A |
-| watch-run.ts | 1.0.0 | scripts/co-newbiz/watch-run.ts | bun:sqlite |
+| watch-run.ts | 1.1.0 | scripts/co-newbiz/watch-run.ts | bun:sqlite |
 
 ---
 
@@ -388,7 +340,7 @@
 **Checked**: Claude (.claude/) vs Gemini (.gemini/)
 
 - **Commands with parity**: 8 / 8
-- **Skills with parity**: 56 / 146 (common-template skills are parity-exempt)
+- **Skills with parity**: 58 / 148 (common-template skills are parity-exempt)
 
 ---
 
@@ -396,4 +348,6 @@
 
 ⚠️ **Drift detected**:
 
+- [WARNING] Agent i18n-specialist missing tier or model metadata
+- [WARNING] Agent pm missing tier or model metadata
 - [WARNING] Agent README_ko missing tier or model metadata
