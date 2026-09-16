@@ -1,11 +1,13 @@
 // S7 재무·기술 평가 레이어 (ADR-0139) — chk-target-screening(t-01~t-09)과
 // 병행하는 오퍼튜니티별 평가 카탈로그. 기술 평가는 S3 역량 갭 레지스터
-// (ADR-0136)에서 항목별로 시딩하고, 재무 평가는 고정 빌트인 5항목 + 커스텀.
-// 판정은 항상 사람이 내린다 — DART 참고값이 자동으로 verdict를 쓰지 않는다.
+// (ADR-0136)에서 항목별로 시딩하고, 재무 평가는 빌트인 4항목 + 커스텀.
+// 판정은 항상 사람이 내린다 — 재무 빌트인 항목은 DART 기반 결정론적 "초안"
+// (ADR-0140, brownfield-financial-rubric.ts)을 사람이 확인·수정해 확정한다.
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { parseGapRegister } from "./capability-gap.ts";
+import { isFinancialDataRef, parseRubric, sanitizeRubricInput, type FinancialDataRef } from "./brownfield-financial-rubric.ts";
 
 export type EvalCategory = "financial" | "technical";
 export type EvalSource = "builtin" | "seeded" | "custom";
@@ -26,6 +28,8 @@ export interface EvalCriterion {
   is_deletable: 0 | 1;
   /** 상대 가중치(기본 10) — 카테고리 내 100점 가중 점수 계산에 쓰인다. */
   weight: number;
+  /** 재무 빌트인 항목의 판정 루브릭 임계값(ADR-0140) — NULL이면 코드 기본값. */
+  rubric_json: string | null;
   created_by: string;
   created_at: string;
 }
@@ -59,6 +63,13 @@ const BUILTIN_FINANCIAL: Array<{ label: string; description: string; data_ref: s
     data_ref: "operating_profit_5y",
   },
   {
+    // 당기순이익 항목(ADR-0140) — 영업이익에 잡히지 않는 금융비용·일회성
+    // 손익까지 반영한 최종 수익성. facts는 이미 입수되고 있으므로 항목만 추가.
+    label: "당기순이익 규모·5개년 추이(순이익률 포함)",
+    description: "5개년 당기순이익과 순이익률(참고) — 영업외 손익·금융비용 부담을 포함한 최종 수익성을 확인한다.",
+    data_ref: "net_income_5y",
+  },
+  {
     label: "부채 규모·5개년 추이(부채비율 포함)",
     description: "5개년 부채총계와 부채비율(참고). 영업부문(사업부문별 실적)은 DART 세그먼트 데이터 미지원으로 v1 범위 밖 — 필요 시 커스텀 항목으로 수기 기록.",
     data_ref: "debt_5y",
@@ -70,26 +81,27 @@ function now(): string {
 }
 
 /** 오퍼튜니티의 평가 카탈로그를 반환한다. 최초 호출 시 재무 빌트인·기술
- * 시딩을 lazy하게 채운다(둘 다 이미 있으면 아무것도 하지 않는다). */
+ * 시딩을 lazy하게 채운다(둘 다 이미 있으면 아무것도 하지 않는다). 재무
+ * 빌트인은 data_ref 단위로 보강한다 — 빌트인 항목이 추가돼도(예: 당기순이익,
+ * ADR-0140) 이미 카탈로그가 있는 기존 오퍼튜니티에 새 항목만 시딩된다. */
 export function listOrSeedCriteria(opportunityId: string, seededBy: string, db: Database = getDb()): EvalCriterion[] {
   const existing = db
     .query("SELECT * FROM brownfield_eval_criterion WHERE opportunity_id = ? AND deleted_at IS NULL ORDER BY category, created_at")
     .all(opportunityId) as unknown as EvalCriterion[];
 
-  const hasFinancialBuiltin = existing.some((c) => c.category === "financial" && c.source === "builtin");
-  const hasTechnicalSeeded = existing.some((c) => c.category === "technical" && c.source === "seeded");
+  const existingFinancialRefs = new Set(existing.filter((c) => c.category === "financial").map((c) => c.data_ref));
   const inserted: EvalCriterion[] = [];
 
-  if (!hasFinancialBuiltin) {
-    for (const item of BUILTIN_FINANCIAL) {
-      inserted.push(insertCriterion(db, {
-        opportunity_id: opportunityId, category: "financial", source: "builtin",
-        label: item.label, description: item.description, data_ref: item.data_ref, seed_ref: null,
-        is_mandatory: 0, is_deletable: 0, weight: DEFAULT_WEIGHT, created_by: seededBy,
-      }));
-    }
+  for (const item of BUILTIN_FINANCIAL) {
+    if (existingFinancialRefs.has(item.data_ref)) continue;
+    inserted.push(insertCriterion(db, {
+      opportunity_id: opportunityId, category: "financial", source: "builtin",
+      label: item.label, description: item.description, data_ref: item.data_ref, seed_ref: null,
+      is_mandatory: 0, is_deletable: 0, weight: DEFAULT_WEIGHT, rubric_json: null, created_by: seededBy,
+    }));
   }
 
+  const hasTechnicalSeeded = existing.some((c) => c.category === "technical" && c.source === "seeded");
   if (!hasTechnicalSeeded) {
     const opp = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(opportunityId) as { capability_gap_json: string | null } | undefined;
     const register = parseGapRegister(opp?.capability_gap_json ?? null);
@@ -99,7 +111,7 @@ export function listOrSeedCriteria(opportunityId: string, seededBy: string, db: 
         label: gap.capability,
         description: `S3 필요 역량 평가 기준. ${gap.requiredNote || ""}`.trim(),
         data_ref: null, seed_ref: gap.id,
-        is_mandatory: 1, is_deletable: 0, weight: DEFAULT_WEIGHT, created_by: seededBy,
+        is_mandatory: 1, is_deletable: 0, weight: DEFAULT_WEIGHT, rubric_json: null, created_by: seededBy,
       }));
     }
     // 레지스터가 비어 있으면 시딩하지 않는다 — 내용을 지어내지 않는다
@@ -115,9 +127,9 @@ function insertCriterion(db: Database, opts: Omit<EvalCriterion, "id" | "created
   const id = ulid();
   const at = now();
   db.run(
-    `INSERT INTO brownfield_eval_criterion (id, opportunity_id, category, source, label, description, data_ref, seed_ref, is_mandatory, is_deletable, weight, created_by, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, opts.opportunity_id, opts.category, opts.source, opts.label, opts.description, opts.data_ref, opts.seed_ref, opts.is_mandatory, opts.is_deletable, opts.weight, opts.created_by, at],
+    `INSERT INTO brownfield_eval_criterion (id, opportunity_id, category, source, label, description, data_ref, seed_ref, is_mandatory, is_deletable, weight, rubric_json, created_by, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, opts.opportunity_id, opts.category, opts.source, opts.label, opts.description, opts.data_ref, opts.seed_ref, opts.is_mandatory, opts.is_deletable, opts.weight, opts.rubric_json, opts.created_by, at],
   );
   return { ...opts, id, created_at: at };
 }
@@ -127,7 +139,7 @@ export function addCustomCriterion(
 ): EvalCriterion {
   return insertCriterion(getDb(), {
     opportunity_id: opportunityId, category, source: "custom",
-    label, description, data_ref: null, seed_ref: null, is_mandatory: 0, is_deletable: 1, weight, created_by: createdBy,
+    label, description, data_ref: null, seed_ref: null, is_mandatory: 0, is_deletable: 1, weight, rubric_json: null, created_by: createdBy,
   });
 }
 
@@ -139,6 +151,28 @@ export function updateCriterionWeight(criterionId: string, weight: number): { ok
   const row = db.query("SELECT id FROM brownfield_eval_criterion WHERE id = ? AND deleted_at IS NULL").get(criterionId) as { id: string } | undefined;
   if (!row) return { ok: false, reason: "not_found" };
   db.run("UPDATE brownfield_eval_criterion SET weight = ? WHERE id = ?", [Math.round(weight), criterionId]);
+  return { ok: true };
+}
+
+export type UpdateRubricResult = { ok: true } | { ok: false; reason: "not_found" | "not_rubric_capable" | "invalid_input" };
+
+/** 재무 빌트인 항목의 판정 루브릭 임계값 수정(ADR-0140) — 부분 PATCH를
+ * 허용한다(기존값·기본값에 병합). 대상은 재무 빌트인(자동 초안 대상)뿐이며
+ * 커스텀·기술 항목은 거부한다 — 루브릭 모양이 data_ref별로 정해지기 때문. */
+export function updateCriterionRubric(criterionId: string, rubricInput: unknown): UpdateRubricResult {
+  const db = getDb();
+  const row = db
+    .query("SELECT id, category, source, data_ref, rubric_json FROM brownfield_eval_criterion WHERE id = ? AND deleted_at IS NULL")
+    .get(criterionId) as { id: string; category: EvalCategory; source: EvalSource; data_ref: string | null; rubric_json: string | null } | undefined;
+  if (!row) return { ok: false, reason: "not_found" };
+  if (row.category !== "financial" || row.source !== "builtin" || !isFinancialDataRef(row.data_ref)) {
+    return { ok: false, reason: "not_rubric_capable" };
+  }
+  const dataRef: FinancialDataRef = row.data_ref;
+  const patch = sanitizeRubricInput(dataRef, rubricInput);
+  if (!patch) return { ok: false, reason: "invalid_input" };
+  const merged = { ...parseRubric(dataRef, row.rubric_json), ...patch };
+  db.run("UPDATE brownfield_eval_criterion SET rubric_json = ? WHERE id = ?", [JSON.stringify(merged), criterionId]);
   return { ok: true };
 }
 
