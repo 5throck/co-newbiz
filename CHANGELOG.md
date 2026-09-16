@@ -6,6 +6,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **[2026-09-16]**: chore(upgrade): synced template infrastructure via `upgrade-project.ts` (workspace common v0.6.0 content sync, 2026-09-16 fleet resync) — delivered the managed-block merge fix (AGENTS.md graft block and .gitignore secret patterns verified intact), platform skill mirror catch-up (`upgrade-project` 1.5.0 + 4 uniform skills), validator fleet refresh (`audit.ts` 2.39.0 with the VERSION_MANIFEST gate, `validate-templates.ts` 1.33.0, `lifecycle-sync-audit.ts` 1.14.0), full manifest regeneration, and retirement of the inert `sync-agent-status.ts` copy + its ghost SCRIPTS.md rows.
+
 
 - **[2026-09-16]**: chore(web-next): **Dependency bumps (minor/patch) held over from an earlier session.** `framer-motion` 13.2.0 → 13.3.0, `lucide-react` 1.43.0 → 1.46.0, `marked` 18.0.12 → 18.0.13, `@types/react` 19.2.18 → 19.3.0, `@types/react-dom` 19.2.7 → 19.3.0 with the matching `bun.lock` (verified: frozen install clean, `tsc --noEmit` clean, design-lint 0 violations). Also sweeps in the pipeline-generated leftovers from the previous sync run: the day's `memory/skill-review/2026-09-16.md` accumulation and the platform skill mirrors (`.claude/skills/{governance-document-hierarchy,handbook,site-infrastructure-assessment}`, `.gemini/skills/decision-record`) emitted by the skill-sync step.
 
