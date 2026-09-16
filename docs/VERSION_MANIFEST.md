@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-16T14:21:03.691Z
+**Generated**: 2026-09-16T14:35:19.674Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -19,8 +19,8 @@
 
 | Name | File | Tier | Model | Last Modified |
 |------|------|------|-------|---------------|
-| i18n-specialist | agents/i18n-specialist.md | N/A | inherit | 2026-09-15 |
-| pm | agents/pm.md | N/A | inherit | 2026-09-16 |
+| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-15 |
+| pm | agents/pm.md | medium | inherit | 2026-09-16 |
 | README_ko | agents/README_ko.md | N/A | N/A | 2026-08-23 |
 
 ---
@@ -348,6 +348,4 @@
 
 ⚠️ **Drift detected**:
 
-- [WARNING] Agent i18n-specialist missing tier or model metadata
-- [WARNING] Agent pm missing tier or model metadata
 - [WARNING] Agent README_ko missing tier or model metadata
