@@ -16,11 +16,13 @@ import { SectionToolbar } from "../../../../components/layout.tsx";
 import { EChart } from "../../../../components/EChart.tsx";
 import { useChartTheme } from "../../../../lib/echarts-theme.ts";
 import { parseRubric, rubricFields, isFinancialDataRef } from "../../../../lib/brownfield-financial-rubric.ts";
+import { KNOCKOUT_IDS, precheckRecommendation, normalizeVerdict, SCREENING_VERDICT_KO, screeningVerdictChipClass } from "../../../../lib/brownfield-precheck.ts";
 
 interface TargetDetail {
   id: string; opportunity_id: string; company_name: string; dart_corp_code: string | null;
   universe_note: string | null; status: "pending" | "shortlisted" | "excluded";
   rank: number | null; exclusion_reason: string | null; screening_json: string | null;
+  screening_evidence_json: string | null;
   company_id: string | null;
 }
 interface EvalItem {
@@ -38,11 +40,24 @@ interface EvalDraftItem {
 }
 interface EvalDraftResp { source: string; years: string[]; latest_sync_at: string | null; drafts: EvalDraftItem[]; note: string }
 interface EvalCategoryScore { score: number | null; scoredWeight: number; totalWeight: number; excludedWeight: number }
+// 사전 검토(chk-target-screening) 근거 — 위원회 추천 검토·등록·재분석에서
+// 수집된 "나중에 참고할" 정보(사용자 결정, 2026-09-16). 이 화면은 읽기 전용
+// 저장소다 — 판정 기록은 /brownfield Short List "사전 검토" 섹션에서 한다.
+interface ScreeningItem { id: string; text: string; mandatory: boolean; waiver_eligible: boolean }
+interface ScreeningSummary { assessed: number; total: number; knockOutsPassed: boolean; anyKnockOutFail: boolean; mandatoryOpen: string[] }
+interface ScreeningItemEvidence { verdict?: string; rationale?: string; source_url?: string | null; kind?: string }
+interface EvidenceRow {
+  id: string; kind: string; title: string; detail: string | null;
+  source_url: string | null; source_kind: string | null; created_by: string | null; created_at: string;
+}
 interface DetailResponse {
   target: TargetDetail;
   opportunity: { id: string; name: string; market_scope: string | null };
   evalItems: EvalItem[];
   scores: Record<"financial" | "technical", EvalCategoryScore> & { combined: number | null };
+  checklist: ScreeningItem[];
+  screening_summary: ScreeningSummary;
+  evidence: EvidenceRow[];
 }
 interface FinancialsResp {
   latest_sync_at: string | null;
@@ -94,11 +109,12 @@ const STATUS_LABEL: Record<TargetDetail["status"], string> = { pending: "심사 
 const EVAL_VERDICTS = ["pass", "partial", "fail", "na", "waived"] as const;
 const VERDICT_KO: Record<string, string> = { pass: "충족", partial: "부분충족", fail: "미충족", na: "해당없음", waived: "예외", pending: "미판정" };
 const EVAL_CATEGORY_LABEL: Record<EvalItem["category"], string> = { financial: "재무적 평가", technical: "기술적 평가" };
-const PROFILE_TABS: Array<["overview" | "aiprofile" | "financials" | "disclosures" | "eval" | "sources", string]> = [
+const PROFILE_TABS: Array<["overview" | "aiprofile" | "financials" | "disclosures" | "precheck" | "eval" | "sources", string]> = [
   ["overview", "개요"],
   ["aiprofile", "강·약점 SWOT"],
   ["financials", "재무"],
   ["disclosures", "공시"],
+  ["precheck", "사전 검토 근거"],
   ["eval", "평가"],
   ["sources", "출처"],
 ];
@@ -128,7 +144,9 @@ export function TargetDetailView() {
   const [busy, setBusy] = useState(false);
   const [excludeReason, setExcludeReason] = useState("");
   // 프로파일 탭 — 그룹/계열사 프로파일과 유사한 구조(library-tabs 패턴).
-  const [profileTab, setProfileTab] = useState<"overview" | "aiprofile" | "financials" | "disclosures" | "eval" | "sources">("overview");
+  // "사전 검토 근거"는 읽기 전용 참고 탭 — 수집된 근거가 있을 때만 탭 목록에
+  // 나타난다. 판정 기록은 /brownfield Short List "사전 검토" 섹션에서 한다.
+  const [profileTab, setProfileTab] = useState<"overview" | "aiprofile" | "financials" | "disclosures" | "precheck" | "eval" | "sources">("overview");
   // AI 분석 — 그룹/계열사 화면과 동일한 LLM 프로파일 파이프라인 재사용(일반화, 2026-09-15).
   const [companyProfile, setCompanyProfile] = useState<CompanyProfileResp | null | undefined>(undefined);
   const [analyzing, setAnalyzing] = useState(false);
@@ -421,7 +439,13 @@ export function TargetDetailView() {
     );
   }
 
-  const { target: t, opportunity, evalItems, scores } = detail;
+  const { target: t, opportunity, evalItems, scores, checklist, screening_summary, evidence } = detail;
+  // 사전 검토 확정 판정 + 항목별 근거(위원회 추천 검토에서 수집·저장된 것).
+  const savedVerdicts = t.screening_json ? (JSON.parse(t.screening_json) as Record<string, string>) : {};
+  const itemEvidence = t.screening_evidence_json
+    ? (JSON.parse(t.screening_evidence_json) as Record<string, ScreeningItemEvidence>)
+    : {};
+  const hasPrecheckData = evidence.length > 0 || screening_summary.assessed > 0;
   // 재무 자동 초안 대상 — 재무 빌트인 + data_ref 있는 항목 중 미판정만.
   const pendingFinancial = evalItems.filter(
     (it) => it.category === "financial" && it.source === "builtin" && isFinancialDataRef(it.data_ref) && (it.state?.status ?? "pending") === "pending",
@@ -501,7 +525,7 @@ export function TargetDetailView() {
         <SectionToolbar title="회사 프로파일" />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="library-tabs" role="tablist" aria-label="후보 회사 프로파일 섹션">
-            {PROFILE_TABS.map(([key, label]) => (
+            {PROFILE_TABS.filter(([key]) => key !== "precheck" || hasPrecheckData).map(([key, label]) => (
               <button key={key} type="button" role="tab" aria-selected={profileTab === key} className={`library-tab ${profileTab === key ? "library-tab-active" : ""}`} onClick={() => setProfileTab(key)}>
                 {label}
               </button>
@@ -835,6 +859,89 @@ export function TargetDetailView() {
                   </ul>
                 )}
               </>
+            )}
+          </div>
+        )}
+
+        {/* ── 사전 검토 근거(읽기 전용 참고 탭) — 위원회 추천 검토·등록·
+            재분석에서 수집된 정보의 저장소(사용자 결정, 2026-09-16). 판정
+            기록은 /brownfield Short List "사전 검토" 섹션에서 하고, 여기서는
+            확정된 판정·항목별 근거·수집 타임라인을 나중에 참고할 수 있게
+            보여준다. 수집된 근거가 없으면 탭 자체가 숨는다. ── */}
+        {profileTab === "precheck" && (
+          <div className="mt-3">
+            <div className="card mb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h4 className="text-[0.9rem] mb-0">사전 검토 — chk-target-screening (t-01~t-09)</h4>
+                <span
+                  className={`status-chip ${screening_summary.anyKnockOutFail ? "status-red" : screening_summary.assessed === 0 ? "status-not-started" : screening_summary.assessed < screening_summary.total || screening_summary.mandatoryOpen.length > 0 ? "status-amber" : "status-green"}`}
+                  title={`확정 판정 ${screening_summary.assessed}/${screening_summary.total}${screening_summary.mandatoryOpen.length ? ` · 미판정 필수: ${screening_summary.mandatoryOpen.join(", ")}` : ""}`}
+                >
+                  확정 판정 {screening_summary.assessed}/{screening_summary.total}
+                </span>
+              </div>
+              {(() => {
+                const reco = precheckRecommendation(savedVerdicts);
+                const anyAssessed = [...KNOCKOUT_IDS].some((id) => savedVerdicts[id] && savedVerdicts[id] !== "pending");
+                return anyAssessed ? (
+                  <p className="mb-2">
+                    <span className="text-[0.78rem] mr-2">사전 검토 결과(확정 판정 기준):</span>
+                    <span className={`status-chip ${reco.cls}`}>{reco.label}</span>
+                  </p>
+                ) : (
+                  <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">아직 확정된 판정이 없습니다 — Short List 승격 후 /brownfield 화면의 "사전 검토" 섹션에서 판정합니다.</p>
+                );
+              })()}
+              <ul className="sizing-note-list mb-1">
+                {checklist.map((item) => {
+                  const v = savedVerdicts[item.id];
+                  const ev = itemEvidence[item.id];
+                  return (
+                    <li key={item.id} className="text-[0.78rem] flex flex-wrap items-start gap-2">
+                      <code className="dd-item-id mt-1">{item.id}</code>
+                      <span className="flex-1 min-w-[14rem]">
+                        <span className="text-[color:var(--muted-fg)]">{item.text.split(" — ")[0]}</span>
+                        {ev?.rationale && <span className="block text-[0.75rem]">{ev.rationale}</span>}
+                        {ev?.source_url && (
+                          <a href={ev.source_url} target="_blank" rel="noreferrer" className="block text-[0.72rem] text-[color:var(--accent)] underline truncate">
+                            출처: {ev.source_url}
+                          </a>
+                        )}
+                      </span>
+                      {ev?.kind === "secured" && <span className="status-chip status-amber">기확보</span>}
+                      {ev?.kind === "web" && <span className="status-chip">웹검색</span>}
+                      <span className={`status-chip ${screeningVerdictChipClass(v)}`}>
+                        {SCREENING_VERDICT_KO[normalizeVerdict(v)]}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+                판정 기록은 /brownfield 화면의 "사전 검토" 섹션에서 합니다 — 이 탭은 수집된 정보의 참고 저장소입니다.
+              </p>
+            </div>
+            {evidence.length > 0 && (
+              <div className="card">
+                <h4 className="text-[0.9rem] mb-2">정보 수집 타임라인</h4>
+                <ul className="sizing-note-list mb-0">
+                  {evidence.map((e) => (
+                    <li key={e.id} className="text-[0.78rem]">
+                      <span className="flex flex-wrap items-center gap-1">
+                        <span className={`status-chip ${e.kind === "discovery" ? "status-amber" : e.kind === "analysis" ? "status-amber" : "status-green"}`}>
+                          {e.kind === "discovery" ? "등록" : e.kind === "analysis" ? "재분석" : "사전 검토"}
+                        </span>
+                        <strong>{e.title}</strong>
+                        <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{e.created_at.slice(0, 16).replace("T", " ")}</span>
+                      </span>
+                      {e.detail && <span className="block text-[0.75rem] text-[color:var(--muted-fg)] whitespace-pre-wrap">{e.detail}</span>}
+                      {e.source_url && (
+                        <a href={e.source_url} target="_blank" rel="noreferrer" className="text-[0.72rem] text-[color:var(--accent)] underline">출처</a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         )}

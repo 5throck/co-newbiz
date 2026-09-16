@@ -20,10 +20,13 @@ gate: Target Screening
 
 items:
   # Part 1 — 필수 통과 knock-out(하나라도 미충족이면 후보 제외, Exclusion Reasons에 기록)
-  # NOTE(UI coupling): t-01/t-02/t-08 판정은 Brownfield Short List 화면의
-  # "인수 가능성"(참고용) 섹션에도 그대로 발췌 표시된다(app/web-next/app/
-  # brownfield/page.tsx) — 이 세 항목의 문구·번호·mandatory 여부를 바꾸면
-  # 해당 UI 섹션도 함께 확인/수정해야 한다.
+  # NOTE(UI coupling): 전 항목(t-01~t-09) 판정은 Short List "사전 검토 · 위원회
+  # 추천" 섹션(app/web-next/app/brownfield/page.tsx — 승격 후보의 최종 점검·기록
+  # 표면, 위원회 최종 검토의 근거)과 위원회 소집 brief(같은 파일
+  # buildEvalBriefMd)에 표시된다. 후보 상세에는 읽기 전용 "사전 검토 근거" 탭이
+  # 있고(수집 근거 참고 저장소, 데이터가 있을 때만 노출) Long List에는 표면이
+  # 없다(사용자 결정, 2026-09-16). 이 항목들의 문구·번호·mandatory 여부를
+  # 바꾸면 해당 UI들도 함께 확인/수정해야 한다.
   - id: t-01
     text: "지분 인수 가능성 — 매도자·파트너가 존재하고, 경로를 막는 미공개 락업이나 우선매수권 등 제약이 없으며, 접촉 채널이 식별되어 있다(후보별로 기록)"
     mandatory: true

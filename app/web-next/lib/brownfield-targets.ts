@@ -5,6 +5,7 @@ import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { getChecklistItems } from "./library.ts";
 import { listOrSeedCriteria } from "./brownfield-eval-criteria.ts";
+import { normalizeVerdict } from "./brownfield-precheck.ts";
 
 // Library registry id for the S7 screening checklist (checklists/target-screening-checklist.yaml).
 // NOTE: the registry id is "chk-target-screening-checklist" — a previous
@@ -51,7 +52,10 @@ export function listTargets(opportunityId: string): Array<TargetRow & { company_
     .all(opportunityId) as unknown as Array<TargetRow & { company_id: string | null }>;
 }
 
-/** 체크리스트 판정 집계 — Long List 커버리지·knock-out 통과 여부 (S7 진행 입력). */
+/** 체크리스트 판정 집계 — Long List 커버리지·knock-out 통과 여부 (S7 진행 입력).
+ * 판정 척도는 2026-09-16 5단으로 세분화(confirmed/probable/partial/unfulfilled/
+ * insufficient) — 구버전 값(pass/fail/na/waived)은 읽기 시점 정규화한다.
+ * assessed는 insufficient도 "판정이 내려진 것"으로 센다(근거 부족도 결정이다). */
 export function screeningSummary(target: TargetRow): {
   assessed: number;
   total: number;
@@ -65,10 +69,10 @@ export function screeningSummary(target: TargetRow): {
   let assessed = 0;
   let anyKnockOutFail = false;
   for (const item of items) {
-    const st = states[item.id];
-    if (st && st !== "pending") assessed++;
-    if (item.mandatory && st === "fail") anyKnockOutFail = true;
-    if (item.mandatory && (!st || st === "pending")) mandatoryOpen.push(item.id);
+    const st = normalizeVerdict(states[item.id]);
+    if (st !== "pending") assessed++;
+    if (item.mandatory && st === "unfulfilled") anyKnockOutFail = true;
+    if (item.mandatory && st === "pending") mandatoryOpen.push(item.id);
   }
   return { assessed, total: items.length, knockOutsPassed: !anyKnockOutFail && mandatoryOpen.length === 0, anyKnockOutFail, mandatoryOpen };
 }
@@ -112,6 +116,56 @@ export function createTarget(opportunityId: string, companyName: string, dartCor
     );
     resolveOrCreateCompany(db, companyName, dartCorpCode);
     listOrSeedCriteria(opportunityId, opts.actorUserId, db);
+    // 등록 시점 근거 — 발굴 경로·제안 사유·출처를 타임라인에 적립한다
+    // (사용자 결정, 2026-09-16: 수집 정보를 후보 상세에서 나중에 참고).
+    insertTargetEvidence(db, {
+      targetId: id,
+      kind: "discovery",
+      title: `후보 등록 — ${opts.discoverySource === "web_proposal" ? "웹검색 제안 수용" : opts.discoverySource === "master_proposal" ? "시장·기업 마스터 제안 수용" : "직접 등록"}`,
+      detail: universeNote,
+      sourceKind: opts.discoverySource ?? "manual",
+      createdBy: opts.actorUserId,
+    });
   })();
   return getDb().query("SELECT * FROM brownfield_target WHERE id = ?").get(id) as unknown as TargetRow;
 }
+
+/** 후보 근거 타임라인 1건 적립(brownfield_target_evidence, 0109). 등록·
+ * 재분석·위원회 추천 검토 등 시점에서 수집된 "나중에 참고할 정보"를 기록한다.
+ * 실패해도 본 작업을 막지 않는다 — 근거 적립은 부가 기록이다. */
+export function insertTargetEvidence(
+  db: Database,
+  row: { targetId: string; kind: "discovery" | "analysis" | "screening"; title: string; detail?: string | null; sourceUrl?: string | null; sourceKind?: string | null; createdBy?: string | null },
+): void {
+  try {
+    db.run(
+      `INSERT INTO brownfield_target_evidence (id, target_id, kind, title, detail, source_url, source_kind, created_by, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [ulid(), row.targetId, row.kind, row.title, row.detail ?? null, row.sourceUrl ?? null, row.sourceKind ?? null, row.createdBy ?? null, new Date().toISOString()],
+    );
+  } catch {
+    // 근거 적립 실패는 본 작업(등록·분석·판정 저장)을 막지 않는다.
+  }
+}
+
+/** 회사 마스터에 연결된 후보 id 목록 — 해석 순서는 상세 화면과 동일
+ * (dart_corp_code 일치 우선, 없으면 name_ko 일치). 재분석 완료 시 관련
+ * 후보 전체에 근거를 적립할 때 쓴다. */
+export function targetIdsForCompany(db: Database, companyId: string): string[] {
+  const company = db.query("SELECT name_ko, dart_corp_code FROM md_company WHERE id = ?").get(companyId) as
+    | { name_ko: string; dart_corp_code: string | null }
+    | undefined;
+  if (!company) return [];
+  const rows = db
+    .query(
+      `SELECT id FROM brownfield_target
+       WHERE (dart_corp_code IS NOT NULL AND dart_corp_code = ?)
+          OR (dart_corp_code IS NULL AND company_name = ?)`,
+    )
+    .all(company.dart_corp_code ?? "\u0000", company.name_ko) as Array<{ id: string }>;
+  return rows.map((r) => r.id);
+}
+
+// 사전 검토(chk-target-screening) 추천안 도출 헬퍼(KNOCKOUT_IDS,
+// precheckRecommendation)는 클라이언트에서도 쓰므로 lib/brownfield-precheck.ts
+// (순수 함수, DB import 없음)에 둔다.

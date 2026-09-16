@@ -155,14 +155,14 @@ describe("E — parseScreeningDrafts (판정 초안 정규화, 순수)", () => {
   const evidence = new Map([["t-01", [{ title: "t", url: "https://dart.fss.or.kr/x", snippet: "s" }]]]);
   const open = [{ id: "t-01" }, { id: "t-02" }];
 
-  test("근거 있는 항목만 초안 생성, verdict enum 화이트리스트", () => {
+  test("근거 있는 항목만 초안 생성, verdict enum 화이트리스트(5단 척도)", () => {
     const out = parseScreeningDrafts(
-      { source: "llm", provider: "test", text: '{"drafts":{"t-01":{"verdict":"pass","rationale":"근거 확인","source_index":1},"t-02":{"verdict":"만들어낸값","rationale":"r","source_index":1}}}' },
+      { source: "llm", provider: "test", text: '{"drafts":{"t-01":{"verdict":"confirmed","rationale":"근거 확인","source_index":1},"t-02":{"verdict":"만들어낸값","rationale":"r","source_index":1}}}' },
       evidence,
       open,
     );
     expect(out["t-01"]).toBeDefined();
-    expect(out["t-01"].verdict).toBe("pass");
+    expect(out["t-01"].verdict).toBe("confirmed");
     expect(out["t-01"].source_url).toBe("https://dart.fss.or.kr/x");
     expect(out["t-02"]).toBeUndefined(); // 비정상 verdict → 초안 없음
   });
