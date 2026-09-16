@@ -131,6 +131,8 @@ export function OurCompanyView() {
   // 행 통합 편집 모드 — 액션 셀의 "수정" 하나로 시작·종료 (ADR-0083: 행 액션은 액션 셀로 모임)
   const [editMember, setEditMember] = useState<{ id: string; name: string; dart: string } | null>(null);
   const [savingMember, setSavingMember] = useState(false);
+  // 역할(지주/HQ·계열사) 인라인 변경 중인 member id — 행별 저장 표시용.
+  const [savingRole, setSavingRole] = useState<string | null>(null);
   const [uploadingMember, setUploadingMember] = useState<string | null>(null);
   const [uploadedNames, setUploadedNames] = useState<Record<string, string>>({});
   const [openMember, setOpenMember] = useState<string | null>(null);
@@ -347,6 +349,22 @@ export function OurCompanyView() {
       setError(err instanceof Error ? err.message : "계열사 정보 저장 실패");
     } finally {
       setSavingMember(false);
+    }
+  }
+
+  // 역할(지주/HQ·계열사) 인라인 변경 — 기존 members PATCH 재사용. 즉시 저장된다.
+  async function updateMemberRole(memberId: string, role: "hq" | "affiliate") {
+    if (!selectedGroup || savingRole) return;
+    setSavingRole(memberId);
+    setError(null);
+    try {
+      await api.patch(`/api/our-company/groups/${selectedGroup.group.id}/members`, { member_id: memberId, role });
+      loadGroup(selectedGroup.group.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "역할 변경 실패");
+      loadGroup(selectedGroup.group.id); // 실패 시 서버 값으로 되돌린다
+    } finally {
+      setSavingRole(null);
     }
   }
 
@@ -607,7 +625,20 @@ export function OurCompanyView() {
                           </button>
                         )}
                       </td>
-                      <td>{m.role === "hq" ? "지주/HQ" : "계열사"}</td>
+                      <td>
+                        {/* 역할 인라인 변경 — 즉시 저장(PATCH members). viewer는
+                            서버가 403으로 막는다. */}
+                        <select
+                          aria-label={`${m.company_name} 역할 변경`}
+                          value={m.role}
+                          disabled={savingRole === m.id}
+                          onChange={(e) => void updateMemberRole(m.id, e.target.value as "hq" | "affiliate")}
+                          className="sizing-new-input sizing-new-input-sm"
+                        >
+                          <option value="affiliate">계열사</option>
+                          <option value="hq">지주/HQ</option>
+                        </select>
+                      </td>
                       <td>
                         {isEditing ? (
                           <RowEdit

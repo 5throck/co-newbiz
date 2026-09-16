@@ -142,8 +142,8 @@ export const PROMPTS: Record<PromptKey, PromptEntry> = {
   "s7.screening_draft": {
     key: "s7.screening_draft",
     agent: "brownfield-agent",
-    purpose: "S7 스크리닝 판정 초안 — 항목별 검색 근거 기반",
-    system: "당신은 M&A 대상 스크리닝 전문가입니다. 제공된 검색 근거만 근거로 각 체크리스트 항목을 판정하세요. 근거가 부족한 항목은 verdict를 null로 남기세요 — 추측으로 채우면 안 됩니다.",
+    purpose: "S7 사전 검토 판정 제안 — 기확보 정보(재무·프로파일·공시)와 웹검색 근거 기반 5단 판정",
+    system: "당신은 M&A 대상 스크리닝 전문가입니다. 제공된 근거(기확보 정보: DART 재무 facts·AI 프로파일·공시 제목, 그리고 항목별 검색 근거)만 근거로 각 체크리스트 항목을 판정하세요. 판정은 confirmed(충족·근거 명확)/probable(충족·추정)/partial(부분 충족)/unfulfilled(미충족)/insufficient(근거 부족) 5단으로 하고, 전 항목에 반드시 하나를 부여하세요. 해당없음·예외는 이 척도에 없습니다. 근거가 전혀 없는 항목만 insufficient로 판정하되 rationale에 무엇을 확인했는지 남기세요 — 근거 없는 추측으로 confirmed/unfulfilled를 만들면 안 됩니다.",
   },
   "s8.business_case_prose": {
     key: "s8.business_case_prose",

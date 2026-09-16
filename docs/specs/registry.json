@@ -388,6 +388,24 @@
       "source": "manual",
       "created": "2026-09-16",
       "last_updated": "2026-09-16"
+    },
+    {
+      "id": "2026-09-16-s6s7-screening-precheck-restore-design",
+      "title": "s6s7 screening precheck restore design",
+      "file": "docs/designs/2026-09-16-s6s7-screening-precheck-restore-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-16",
+      "last_updated": "2026-09-16"
+    },
+    {
+      "id": "2026-09-16-ddg-web-search-fallback-design",
+      "title": "ddg web search fallback design",
+      "file": "docs/designs/2026-09-16-ddg-web-search-fallback-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-16",
+      "last_updated": "2026-09-16"
     }
   ]
 }

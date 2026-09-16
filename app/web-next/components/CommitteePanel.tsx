@@ -54,23 +54,6 @@ function parsePositionMeta(positionMd: string): PositionMeta {
     return {};
   }
 }
-// 좌석별 포지션 요약 (목업 18b) — recommendation/veto를 사람이 읽는
-// 판정어로 압축한다. kill은 명시적 반대이므로 "이견"이 아니라 별도 라벨.
-function positionLabel(meta: PositionMeta): { label: string; cls: string } {
-  if (meta.veto_dissent) return { label: "이견 (veto)", cls: "status-red" };
-  if (meta.recommendation === "hold") return { label: "조건부", cls: "status-amber" };
-  if (meta.recommendation === "go") return { label: "수용", cls: "status-green" };
-  if (meta.recommendation === "kill") return { label: "반대", cls: "status-red" };
-  return { label: "—", cls: "status-not-started" };
-}
-
-// 핵심 논거 — position-meta 주석을 걷어낸 본문의 첫 줄만 요약으로 보여준다.
-function coreArgument(positionMd: string, maxLen = 60): string {
-  const body = stripMeta(positionMd);
-  const firstLine = body.split("\n").find((l) => l.trim() !== "")?.trim() ?? "";
-  return firstLine.length > maxLen ? `${firstLine.slice(0, maxLen)}…` : firstLine || "—";
-}
-
 // 입장 원문 표시용 — <!--position-meta:{...}-->는 저장 형식일 뿐, 검토자가
 // 읽을 이유가 없는 raw JSON이다. 항상 걷어내고 본문만 보여준다.
 function stripMeta(positionMd: string): string {
@@ -100,6 +83,8 @@ export function CommitteePanel({
   gates,
   targetRef,
   briefMd,
+  beforeConvene,
+  conveneLabel,
 }: {
   opportunityId: string;
   committeeKey: string;
@@ -109,12 +94,20 @@ export function CommitteePanel({
   /** Extra judgement-basis text appended to the convene topic (e.g. S6/S7's
    * t-01~t-09 verdict brief) — every committee member's prompt includes it. */
   briefMd?: string;
+  /** 소집 직전에 실행하는 선행 작업(예: S6/S7 사전 검토 제안 생성). 심의 근거를
+   * 새로 만든 뒤 소집하기 위한 훅 — 반환값이 문자열이면 그 내용으로 brief를
+   * 교체한다(상태 반영 지연 없이 최신 근거를 심의에 넣기 위함). 실패 시
+   * 소집하지 않는다. */
+  beforeConvene?: () => Promise<string | undefined>;
+  conveneLabel?: string;
 }) {
   const { me } = useAuth();
   const canAct = me?.role === "admin" || me?.role === "analyst";
   const [sessions, setSessions] = useState<Array<{ sessionId: string; meta: SessionTranscript["meta"]; status: string; startedAt: string }>>([]);
   const [minutesOpen, setMinutesOpen] = useState(false);
   const [transcript, setTranscript] = useState<SessionTranscript | null>(null);
+  // 아코디언 — 펼친 세션(소집 이력 행)의 id. 새로 소집한 세션은 자동 펼침.
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const [decisionMode, setDecisionMode] = useState<"human_only" | "agent_team" | "hybrid">("agent_team");
   const [gate, setGate] = useState(gates[0]);
   const [busy, setBusy] = useState(false);
@@ -143,16 +136,23 @@ export function CommitteePanel({
     if (busy) return;
     setBusy(true); setError(null); setNotice(null);
     try {
+      let effectiveBrief = briefMd;
+      if (beforeConvene) {
+        setNotice("심의 근거(사전 검토 제안)를 준비하는 중...");
+        const fresh = await beforeConvene();
+        if (fresh) effectiveBrief = fresh;
+      }
       const r = await api.post<{ sessionId: string }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`, {
         committeeKey,
         decisionMode,
         gate,
         ...(targetRef ? { targetRef } : {}),
-        ...(briefMd ? { briefMd } : {}),
+        ...(effectiveBrief ? { briefMd: effectiveBrief } : {}),
       });
       setNotice(`위원회 세션이 소집되었습니다 (${r.data.sessionId.slice(-6)}).`);
       loadSessions();
       loadTranscript(r.data.sessionId);
+      setExpandedSessionId(r.data.sessionId); // 새 세션은 자동으로 펼친다
     } catch (err) {
       setError(err instanceof Error ? err.message : "위원회 소집 실패");
     } finally {
@@ -264,109 +264,57 @@ export function CommitteePanel({
             </select>
           </label>
           <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void convene()}>
-            {busy ? "처리 중..." : "위원회 소집"}
+            {busy ? "처리 중..." : conveneLabel ?? "위원회 소집"}
           </button>
         </div>
       )}
 
-      {/* 위원회 소집 이력 — 세션이 여러 건이면 어느 회차인지 구분해서 보여준다. */}
+      {/* 위원회 소집 이력 — 아코디언(사용자 리포트, 2026-09-16: 접힌 목록만
+          보이는 것보다 행을 펼치면 심의 결과가 바로 열리는 구조가 낫다). 새로
+          소집된 세션은 자동으로 펼쳐진다. */}
       {sessions.length > 0 && (
         <section className="mb-3" aria-label="위원회 소집 이력">
-          <p className="text-[0.82rem] font-semibold mb-1">위원회 소집 이력 <span className="text-[0.72rem] font-normal text-[color:var(--muted-fg)]">{sessions.length}건</span></p>
-          <div className="table-scroll">
-            <table className="data-table" aria-label="위원회 소집 이력">
-              <caption className="sr-only">위원회 소집 이력</caption>
-              <thead>
-                <tr>
-                  <th scope="col">소집 일시</th>
-                  <th scope="col">모드</th>
-                  <th scope="col">진행</th>
-                  <th scope="col">상태</th>
-                  <th scope="col"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.map((s) => (
-                  <tr key={s.sessionId} className={transcript?.sessionId === s.sessionId ? "row-selected" : undefined}>
-                    <td className="text-[0.78rem] tabular-nums">{s.startedAt.slice(0, 16).replace("T", " ")}</td>
-                    <td className="text-[0.78rem]">{s.meta.decision_mode}</td>
-                    <td className="text-[0.78rem]">{s.meta.gate}</td>
-                    <td><span className={`status-chip ${s.meta.synthesized ? "status-green" : "status-in-progress"}`}>{s.meta.synthesized ? "PROPOSED" : "진행 중"}</span></td>
-                    <td>
-                      <button type="button" className="btn-ghost btn-sm" aria-pressed={transcript?.sessionId === s.sessionId} onClick={() => loadTranscript(s.sessionId)}>
-                        {transcript?.sessionId === s.sessionId ? "보는 중" : "열기"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <p className="text-[0.82rem] font-semibold mb-1">위원회 소집 이력 <span className="text-[0.72rem] font-normal text-[color:var(--muted-fg)]">{sessions.length}건 — 행을 클릭하면 심의 결과가 열립니다</span></p>
+          {sessions.map((s) => {
+            const expanded = expandedSessionId === s.sessionId;
+            return (
+              <button
+                key={s.sessionId}
+                type="button"
+                className="card w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 mb-1 text-left"
+                aria-expanded={expanded}
+                onClick={() => {
+                  if (expanded) { setExpandedSessionId(null); return; }
+                  setExpandedSessionId(s.sessionId);
+                  loadTranscript(s.sessionId);
+                }}
+              >
+                <span className="flex items-center gap-2 text-[0.8rem]">
+                  <span className="tabular-nums">{s.startedAt.slice(0, 16).replace("T", " ")}</span>
+                  <span className="text-[color:var(--muted-fg)]">{s.meta.decision_mode} · {s.meta.gate}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className={`status-chip ${s.meta.synthesized ? "status-green" : "status-in-progress"}`}>{s.meta.synthesized ? "PROPOSED" : "진행 중"}</span>
+                  <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{expanded ? "▲" : "▼"}</span>
+                </span>
+              </button>
+            );
+          })}
         </section>
       )}
 
-      {transcript && (
+      {/* 좌석별 포지션 표는 제거했다(사용자 리포트, 2026-09-16 — 큰 의미 없음).
+          심의 결과의 본질은 의장 종합(PROPOSAL)과 소수 의견(dissent) 원문이고,
+          좌석별 입장은 "입장 원문(라운드별)"에 감사 기록으로 보존된다. */}
+      {/* 심의 결과 — 펼친(또는 새로 소집된) 세션만 표시한다. */}
+      {transcript && expandedSessionId === transcript.sessionId && (
         <div>
-          {/* 좌석별 포지션 — 목업(18b 위원회 세션 뷰어) 요약 테이블: 포지션은
-              recommendation/veto를 사람이 읽는 판정어(수용/조건부/이견)로,
-              종합 점수는 그 좌석의 5criteria 평균으로 보여준다. 점수가 없는
-              입장은 "—" — 없는 데이터를 있는 것처럼 보이지 않는다.
-              여러 라운드가 있어도 최신 라운드만 요약에 보여준다 — 라운드별로
-              같은 좌석이 반복 나열되면 가독성이 떨어진다. 이전 라운드 전체는
-              아래 "입장 원문(라운드별)"에서 확인한다. */}
-          {transcript.rounds.some((r) => r.positions.length > 0) && (
-            <section className="mb-3" aria-label="좌석별 포지션">
-              <p className="text-[0.85rem] font-semibold mb-1">
-                좌석별 포지션 <span className="text-[0.72rem] font-normal text-[color:var(--muted-fg)]">
-                  — 5기준 1–3 채점 집계{transcript.rounds.length > 1 ? ` · 라운드 ${transcript.rounds[transcript.rounds.length - 1].round} (최신)` : ""}
-                </span>
-              </p>
-              <div className="table-scroll">
-                <table className="data-table" aria-label="좌석별 포지션">
-                  <caption className="sr-only">좌석별 포지션</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">좌석 (에이전트)</th>
-                      <th scope="col">포지션</th>
-                      <th scope="col">핵심 논거</th>
-                      <th scope="col" className="text-right">종합 점수</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transcript.rounds[transcript.rounds.length - 1].positions.map((p) => {
-                      const meta = parsePositionMeta(p.positionMd);
-                      const seat = meta.seat ?? (p.memberType === "human" ? (p.humanUserId ?? "—") : (p.agentKey ?? "—"));
-                      const posLabel = positionLabel(meta);
-                      const scoreValues = Object.values(meta.criteria_scores ?? {});
-                      const avgScore = scoreValues.length
-                        ? Math.round((scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length) * 10) / 10
-                        : null;
-                      return (
-                        <tr key={p.positionId}>
-                          <td className="text-[0.8rem]">{seat}</td>
-                          <td><span className={`status-chip ${posLabel.cls}`}>{posLabel.label}</span></td>
-                          <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{coreArgument(p.positionMd)}</td>
-                          <td className="tabular-nums text-right text-[0.8rem]">{avgScore ?? "—"}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {transcript.rounds.length > 1 && (
-                <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-1 mb-0">이전 라운드는 아래 &quot;입장 원문(라운드별)&quot;에서 확인할 수 있습니다.</p>
-              )}
-              {canAct && (
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void advance()}>
-                    {busy ? "처리 중..." : transcript.rounds.length === 0 ? "라운드 시작" : "의장 종합(제안) 생성"}
-                  </button>
-                  <span className="text-[0.72rem] text-[color:var(--muted-fg)]">다수결·동점은 HOLD · veto 이견은 원문 그대로 dissent 보존</span>
-                </div>
-              )}
-            </section>
-          )}
-
+          <p className="text-[0.8rem] font-semibold mb-2">
+            심의 결과 — {(() => {
+              const s = sessions.find((x) => x.sessionId === transcript.sessionId);
+              return s ? `${s.startedAt.slice(0, 16).replace("T", " ")} 소집분` : "세션";
+            })()}
+          </p>
           {/* 의장 종합(PROPOSAL) + 소수 의견 — 목업 grid2e 두 카드 */}
           {transcript.evaluation && (
             <div className="grid gap-3 md:grid-cols-2 mb-3">
@@ -550,7 +498,6 @@ function MinutesModal({
   onClose: () => void;
 }) {
   const { panelRef, onKeyDown } = useModalFocus(onClose);
-  const seats = transcript.rounds.flatMap((r) => r.positions.map((p) => ({ round: r.round, p })));
   return createPortal(
     <div className="modal-backdrop" onClick={onClose} role="presentation" onKeyDown={onKeyDown}>
       <div
@@ -570,39 +517,8 @@ function MinutesModal({
           세션 {transcript.sessionId.slice(-6)} · 진행 {transcript.meta.gate} · 모드 {transcript.meta.decision_mode} · 상태 {transcript.status}
         </p>
 
-        <h3 className="text-[0.82rem] font-semibold mb-1">좌석별 포지션</h3>
-        <div className="table-scroll mb-3">
-          <table className="data-table" aria-label="좌석별 포지션">
-            <caption className="sr-only">좌석별 포지션</caption>
-            <thead>
-              <tr>
-                {transcript.rounds.length > 1 && <th scope="col">라운드</th>}
-                <th scope="col">좌석</th>
-                <th scope="col">포지션</th>
-                <th scope="col" className="text-right">종합 점수</th>
-              </tr>
-            </thead>
-            <tbody>
-              {seats.map(({ round, p }) => {
-                const meta = parsePositionMeta(p.positionMd);
-                const seat = meta.seat ?? (p.memberType === "human" ? (p.humanUserId ?? "—") : (p.agentKey ?? "—"));
-                const posLabel = positionLabel(meta);
-                const scoreValues = Object.values(meta.criteria_scores ?? {});
-                const avgScore = scoreValues.length
-                  ? Math.round((scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length) * 10) / 10
-                  : null;
-                return (
-                  <tr key={p.positionId}>
-                    {transcript.rounds.length > 1 && <td className="tabular-nums text-[0.78rem]">{round}</td>}
-                    <td className="text-[0.8rem]">{seat}</td>
-                    <td><span className={`status-chip ${posLabel.cls}`}>{posLabel.label}</span></td>
-                    <td className="tabular-nums text-right text-[0.8rem]">{avgScore ?? "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {/* 좌석별 포지션 요약 표는 제거(사용자 리포트, 2026-09-16 — 큰 의미 없음).
+            입장 원문이 좌석·판정 근거를 그대로 담는다. */}
 
         <h3 className="text-[0.82rem] font-semibold mb-1">입장 원문</h3>
         {transcript.rounds.map((r) => (

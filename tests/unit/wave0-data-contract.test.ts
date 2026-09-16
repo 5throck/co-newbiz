@@ -232,7 +232,7 @@ describe("Wave 0 — target proposals (provenance A1/A2, opportunity-keyed)", ()
     const mc = db.query("SELECT id FROM md_company WHERE name_ko = ?").get("웹검색확정테스트") as { id: string } | undefined;
     expect(mc).toBeTruthy();
     const criteria = db.query("SELECT COUNT(*) c FROM brownfield_eval_criterion WHERE opportunity_id = ? AND category = 'financial' AND source = 'builtin'").get(opportunityId) as { c: number };
-    expect(criteria.c).toBe(3);
+    expect(criteria.c).toBe(4);
   });
 
   test("viewer POST is 403 (analyst+ floor)", async () => {

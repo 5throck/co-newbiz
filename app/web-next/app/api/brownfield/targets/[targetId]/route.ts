@@ -7,7 +7,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
-import { resolveOrCreateCompany } from "../../../../../lib/brownfield-targets.ts";
+import { resolveOrCreateCompany, screeningItems, screeningSummary, type TargetRow } from "../../../../../lib/brownfield-targets.ts";
 import { combinedEvalScore, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ targetId: string }> }) {
@@ -33,12 +33,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ targ
   if (!opp) return notFound();
   const evalItems = targetEvalStates(oppId, targetId, auth.auth.userId);
   const scores = computeEvalScore(evalItems);
+  // 사전 검토 근거(참고 저장소) — 위원회 추천 검토·등록·재분석에서 수집된
+  // 정보를 후보 상세에서 나중에 참고할 수 있게 내려준다(사용자 결정, 2026-09-16).
+  const evidence = db
+    .query(
+      `SELECT id, kind, title, detail, source_url, source_kind, created_by, created_at
+       FROM brownfield_target_evidence WHERE target_id = ? ORDER BY created_at DESC, id DESC LIMIT 50`,
+    )
+    .all(targetId);
   return ok(
     {
       target,
       opportunity: opp,
       evalItems,
       scores: { ...scores, combined: combinedEvalScore(scores) },
+      checklist: screeningItems(),
+      screening_summary: screeningSummary(target as unknown as TargetRow),
+      evidence,
     },
     200,
   );
