@@ -505,15 +505,18 @@ export async function searchDisclosures(
   corpCode: string,
   preset: DisclosurePreset["key"] = "recent",
   limit = 20,
+  months = 12,
 ): Promise<{ found: boolean; disclosures: DisclosureRow[]; error?: string }> {
   const key = apiKey();
   if (!key) return { found: false, disclosures: [], error: "DART_API_KEY 미구성" };
   try {
     const disclosures: DisclosureRow[] = [];
     const keywords = PRESET_KEYWORDS[preset];
-    // list.json은 corp_code 지정 시 조회 기간(bgn_de/end_de)이 필수다 — 최근 12개월.
+    // list.json은 corp_code 지정 시 조회 기간(bgn_de/end_de)이 필수다 — 기본
+    // 최근 12개월, months로 확장 가능(기술 평가 초안의 3년 근거, ADR-0141).
     const end = new Date();
-    const bgn = new Date(end.getTime() - 365 * 24 * 60 * 60 * 1000);
+    const bgn = new Date(end);
+    bgn.setMonth(bgn.getMonth() - months);
     const fmt = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "");
     for (let pageNo = 1; pageNo <= 5 && disclosures.length < limit; pageNo++) {
       const json = await dartJson<{ status?: string; list?: Array<{ rcept_no?: string; corp_name?: string; report_nm?: string; rcept_dt?: string }> }>(

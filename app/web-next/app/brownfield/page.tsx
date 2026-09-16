@@ -658,7 +658,7 @@ export function BrownfieldView() {
       {/* ── 목표 시장 정의 (S6) — 보기(읽기 전용) / 수정(모달) 분리. mockup처럼
           탭 없이 항상 렌더링, 흐름 배너에서 스크롤로만 이동한다. ── */}
       {selected && (
-        <div id={SECTION_IDS.universe} className="grid gap-3 items-stretch md:grid-cols-[1fr_1fr]" style={{ scrollMarginTop: "1rem" }}>
+        <div id={SECTION_IDS.universe} className="grid gap-3 items-stretch md:grid-cols-[2fr_3fr]" style={{ scrollMarginTop: "1rem" }}>
         <section aria-label="목표 시장 정의" className="market-section mb-0 flex flex-col">
           <SectionToolbar
             title="목표 시장 정의"
