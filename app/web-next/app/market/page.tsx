@@ -779,14 +779,17 @@ export function MarketView() {
         ) : visibleIndustries.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">검색·필터 조건에 맞는 산업이 없습니다.</p>
         ) : (
-          <table className="data-table list-table" aria-label="분석 대상 산업 목록">
+          <table className="data-table list-table market-list-table" aria-label="분석 대상 산업 목록">
             <caption className="sr-only">분석 대상 산업 목록</caption>
             <thead>
               <tr>
                 <th scope="col" className="w-[25rem]">산업명</th>
                 <th scope="col" className="w-[5rem]">KSIC 코드</th>
                 <th scope="col" className="w-[6rem]">연결 드라이버</th>
-                <th scope="col" className="w-[10rem]">분석 상태</th>
+                {/* 분석 상태는 가장 긴 텍스트 열(재분석 진행률·버전 유지 문구 칩) —
+                    10rem에서는 3줄로 뭉개지므로 14rem으로 늘린다(max-width는
+                    market-list-table이 72rem으로 상향, 아래 styles.css 참조). */}
+                <th scope="col" className="w-[14rem]">분석 상태</th>
                 <th scope="col" className="col-date">분석일</th>
                 <th scope="col" className="w-[11rem]"><span className="sr-only">작업</span></th>
               </tr>

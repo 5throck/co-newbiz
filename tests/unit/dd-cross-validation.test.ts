@@ -57,7 +57,7 @@ function insertProject(): string {
   for (const user of [U1, U2]) {
     db.run(
       "INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
-      [id, user, "contributor", "admin", NOW, "test fixture basis"],
+      [id, user, "member", "admin", NOW, "test fixture basis"],
     );
   }
   return id;

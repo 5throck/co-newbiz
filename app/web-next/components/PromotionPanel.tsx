@@ -37,8 +37,12 @@ interface PromoteResult {
   promoted_at: string;
 }
 
-type ProjectRole = "lead" | "contributor" | "reviewer" | "observer";
-const ROLE_LABEL: Record<ProjectRole, string> = { lead: "리드", contributor: "기여자", reviewer: "리뷰어", observer: "참관자" };
+// 프로젝트 역할 — 리더/팀원 2값 (migration 0110, 사용자 결정 2026-09-17).
+// 리더는 삭제·종료 등 관리 권한을 갖고, 팀원은 need-to-know 승인에 따른
+// 열람·작성 권한을 갖는다. 이전의 기여자/리뷰어/참관자 3분할은 어디에서도
+// 권한 차이가 구현되지 않은 미구현 분류였다 — 구현된 차이만 노출한다.
+type ProjectRole = "lead" | "member";
+const ROLE_LABEL: Record<ProjectRole, string> = { lead: "리더", member: "팀원" };
 interface UserHit { user_id: string; display_name: string; role: string }
 interface TeamMember { userId: string; displayName: string; projectRole: ProjectRole }
 
@@ -91,7 +95,6 @@ export function PromotionPanel({
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<UserHit[] | null>(null);
   const [searchBusy, setSearchBusy] = useState(false);
-  const [pendingRole, setPendingRole] = useState<ProjectRole>("contributor");
   const [members, setMembers] = useState<TeamMember[]>([]);
 
   useEffect(() => {
@@ -120,7 +123,6 @@ export function PromotionPanel({
     }, 250);
     return () => clearTimeout(t);
   }, [query]);
-
   // ADR-0091 — admin에게는 추진 표면 자체를 노출하지 않는다 (API도 거부).
   if (me?.role === "admin") return null;
 
@@ -138,7 +140,8 @@ export function PromotionPanel({
 
   function addMember(hit: UserHit) {
     if (members.some((m) => m.userId === hit.user_id)) return;
-    setMembers((prev) => [...prev, { userId: hit.user_id, displayName: hit.display_name || hit.user_id, projectRole: pendingRole }]);
+    // 추가 배정되는 팀원은 항상 'member' — 리더는 추진자 본인뿐이다.
+    setMembers((prev) => [...prev, { userId: hit.user_id, displayName: hit.display_name || hit.user_id, projectRole: "member" }]);
   }
   function removeMember(userId: string) {
     setMembers((prev) => prev.filter((m) => m.userId !== userId));
@@ -262,7 +265,11 @@ export function PromotionPanel({
           </label>
 
           <div className="sizing-grade-card mb-3">
-            <h4 className="text-[0.8rem] mb-2">팀원 배정 (선택)</h4>
+            <h4 className="text-[0.8rem] mb-1">팀원 배정 (선택)</h4>
+            <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-0 mb-2">
+              추가되는 팀원은 <b>팀원</b> 역할로 배정됩니다 — 프로젝트 데이터 열람·작성 권한(need-to-know 승인).
+              리더는 추진자 본인이며, 삭제·종료 등 관리 권한을 함께 갖습니다.
+            </p>
             <div className="flex flex-wrap items-end gap-2 mb-2">
               <label className="text-[0.78rem]" style={{ flex: "1 1 14rem" }}>
                 <span className="block mb-1">이름·아이디 검색</span>
@@ -272,14 +279,6 @@ export function PromotionPanel({
                   placeholder="예: 홍길동 또는 hong.gd"
                   className="sizing-new-input w-full"
                 />
-              </label>
-              <label className="text-[0.78rem] w-32 shrink-0">
-                <span className="block mb-1">역할</span>
-                <select value={pendingRole} onChange={(e) => setPendingRole(e.target.value as ProjectRole)} className="sizing-new-input sizing-new-input-sm w-full">
-                  {(Object.keys(ROLE_LABEL) as ProjectRole[]).filter((r) => r !== "lead").map((r) => (
-                    <option key={r} value={r}>{ROLE_LABEL[r]}</option>
-                  ))}
-                </select>
               </label>
             </div>
             {searchBusy && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-2">검색 중...</p>}

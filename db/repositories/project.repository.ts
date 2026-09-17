@@ -230,7 +230,7 @@ export function promoteOpportunity(
     /** 승격 시점 팀원 배정 — 승격자 본인(lead)은 항상 별도로 등록되므로 여기
      * 포함돼도 무시된다. 각 행은 승격자가 입력한 동일한 needToKnowBasis로
      * grantProjectMembership을 거친다(개별 사유 입력은 받지 않음). */
-    members?: Array<{ userId: string; projectRole: "lead" | "contributor" | "reviewer" | "observer" }>;
+    members?: Array<{ userId: string; projectRole: "lead" | "member" }>;
   },
 ): PromotedProject {
   if (!opts.needToKnowBasis?.trim()) {
@@ -363,7 +363,7 @@ export function promoteOpportunity(
 export interface ProjectMemberRow {
   project_id: string;
   user_id: string;
-  project_role: "lead" | "contributor" | "reviewer" | "observer";
+  project_role: "lead" | "member";
   granted_by: string;
   granted_at: string;
   revoked_at: string | null;

@@ -23,7 +23,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params;
-  const ROLES = new Set(["lead", "contributor", "reviewer", "observer"]);
+  // project_member 역할은 리더/팀원 2값으로 축소되었다 (migration 0110,
+  // 사용자 결정 2026-09-17 — 4역할 중 lead만 권한 분기가 존재했다).
+  const ROLES = new Set(["lead", "member"]);
   const body = (await request.json().catch(() => null)) as {
     needToKnowBasis?: string;
     origin?: string;
@@ -37,14 +39,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (origin && !["internal", "external", "hybrid", "joint"].includes(origin)) {
     return badRequest("invalid_request", "origin은 internal | external | hybrid | joint 중 하나입니다 (ADR-0013).");
   }
-  const members: Array<{ userId: string; projectRole: "lead" | "contributor" | "reviewer" | "observer" }> = [];
+  const members: Array<{ userId: string; projectRole: "lead" | "member" }> = [];
   for (const m of body?.members ?? []) {
     const userId = m?.userId?.trim();
     if (!userId) continue;
     if (!m?.projectRole || !ROLES.has(m.projectRole)) {
-      return badRequest("invalid_request", "members[].projectRole은 lead | contributor | reviewer | observer 중 하나입니다.");
+      return badRequest("invalid_request", "members[].projectRole은 lead | member 중 하나입니다.");
     }
-    members.push({ userId, projectRole: m.projectRole as "lead" | "contributor" | "reviewer" | "observer" });
+    members.push({ userId, projectRole: m.projectRole as "lead" | "member" });
   }
 
   const db = getDb();

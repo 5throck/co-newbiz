@@ -77,8 +77,8 @@ beforeAll(async () => {
   }
 
   grantProjectMembership(db, { projectId: "P1", userId: "alice", projectRole: "lead", grantedBy: "root", needToKnowBasis: "deal team lead", now: NOW });
-  grantProjectMembership(db, { projectId: "P2", userId: "alice", projectRole: "contributor", grantedBy: "root", needToKnowBasis: "valuation model owner", now: NOW });
-  grantProjectMembership(db, { projectId: "P3", userId: "walled", projectRole: "observer", grantedBy: "root", needToKnowBasis: "ops review", now: NOW });
+  grantProjectMembership(db, { projectId: "P2", userId: "alice", projectRole: "member", grantedBy: "root", needToKnowBasis: "valuation model owner", now: NOW });
+  grantProjectMembership(db, { projectId: "P3", userId: "walled", projectRole: "member", grantedBy: "root", needToKnowBasis: "ops review", now: NOW });
 });
 
 afterAll(async () => {
@@ -182,7 +182,7 @@ describe("security-model §7 item 4 — MNPI handling (FR-SEC-06)", () => {
     expect(row.removed_at).toBe("2026-08-20T12:00:00Z");
     expect(projectRepo.getProjectIfVisible("alice", "P2")).toBeNull();
     // restore for later describes
-    grantProjectMembership(db, { projectId: "P2", userId: "alice", projectRole: "contributor", grantedBy: "root", needToKnowBasis: "valuation model owner", now: "2026-08-20T12:05:00Z" });
+    grantProjectMembership(db, { projectId: "P2", userId: "alice", projectRole: "member", grantedBy: "root", needToKnowBasis: "valuation model owner", now: "2026-08-20T12:05:00Z" });
   });
 
   test("acknowledgement by a non-insider is refused", () => {
@@ -288,7 +288,7 @@ describe("wall_group exclusion (FR-SEC-04)", () => {
   });
 
   test("the same user sees non-walled projects normally if made a member", () => {
-    grantProjectMembership(db, { projectId: "P1", userId: "walled", projectRole: "observer", grantedBy: "root", needToKnowBasis: "ops review", now: NOW });
+    grantProjectMembership(db, { projectId: "P1", userId: "walled", projectRole: "member", grantedBy: "root", needToKnowBasis: "ops review", now: NOW });
     expect(projectRepo.getProjectIfVisible("walled", "P1")?.project_no).toBe("NP-2026-001");
   });
 });
@@ -296,13 +296,13 @@ describe("wall_group exclusion (FR-SEC-04)", () => {
 describe("membership grant guards (design §4-9-1(a) / FR-SEC-08)", () => {
   test("a grant without a need-to-know basis is refused", () => {
     expect(() =>
-      grantProjectMembership(db, { projectId: "P1", userId: "bob", projectRole: "observer", grantedBy: "root", needToKnowBasis: "   ", now: NOW }),
+      grantProjectMembership(db, { projectId: "P1", userId: "bob", projectRole: "member", grantedBy: "root", needToKnowBasis: "   ", now: NOW }),
     ).toThrow(/need_to_know_basis/);
   });
 
   test("a grant to an account that does not exist is refused — no phantom or agent accounts", () => {
     expect(() =>
-      grantProjectMembership(db, { projectId: "P1", userId: "ghost", projectRole: "observer", grantedBy: "root", needToKnowBasis: "x", now: NOW }),
+      grantProjectMembership(db, { projectId: "P1", userId: "ghost", projectRole: "member", grantedBy: "root", needToKnowBasis: "x", now: NOW }),
     ).toThrow(/FR-SEC-08/);
   });
 });
