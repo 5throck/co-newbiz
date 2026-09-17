@@ -19,6 +19,15 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { isWebResearchConfigured, researchSources } from "./web-research.ts";
+import {
+  appendExternalReference,
+  acceptedCalibrationDrivers,
+  buildCalibrationConstraints,
+  isCalibrationTriggered,
+  relativeCagrGapPct,
+  resolveExternalReference,
+  CALIBRATION_TRIGGER_PCT,
+} from "./market-calibration.ts";
 import { SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
 import { systemMessage, promptAgent } from "./prompts.ts";
@@ -316,12 +325,18 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     )
     .get(analysisId) as { version_no: number; payload: string } | null;
   let previousChain: Array<{ relation: string; name: string; note?: string }> = [];
+  let previousGapPct: number | null = null;
   if (prev) {
     try {
       const parsed = JSON.parse(prev.payload) as {
-        matrix?: { chainDirection?: { relatedIndustries?: Array<{ relation: string; name: string; note?: string }> } };
+        matrix?: {
+          chainDirection?: { relatedIndustries?: Array<{ relation: string; name: string; note?: string }> };
+          calibration?: { gapPct?: number | null };
+        };
       };
       previousChain = parsed.matrix?.chainDirection?.relatedIndustries ?? [];
+      // 보정 루프 — 이전 버전의 CAGR 기준 격차(없으면 null)를 다음 제약에 쓴다.
+      previousGapPct = parsed.matrix?.calibration?.gapPct ?? null;
     } catch { /* 파싱 실패 — 앵커 없이 진행 */ }
   }
 
@@ -337,6 +352,17 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   if (!row) throw new Error(`analysis ${analysisId} not found`);
   const analysis = row; // non-null alias — narrowing does not reach the nested step functions
   const industry = analysis.name_ko;
+  // 보정 루프 (v1.2.0) — 기록된 외부 참조와 사람이 수용한 보정 드라이버를
+  // 읽어 2·4단계 프롬프트에 제약으로 주입한다. 이전 버전의 격차와 함께
+  // 주입되므로 재분석이 "단순 반복"이 아니라 수렴 방향으로 움직인다.
+  const externalReference = resolveExternalReference(db, analysis.industry_id);
+  const acceptedDrivers = acceptedCalibrationDrivers(db, analysis.industry_id);
+  const calibrationConstraints = buildCalibrationConstraints({
+    industry,
+    externalCagrPct: externalReference ? externalReference.external_cagr_pct : null,
+    previousGapPct,
+    acceptedDrivers: acceptedDrivers,
+  });
 
   // ADR-0129 — 큐레이션된(사람이 승인/등록한) 수요산업 엣지를 proxy_link에서
   // 직접 조회한다. 전방/전전방(수요처)뿐 아니라 후방/후후방(공급처)도 함께
@@ -542,7 +568,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   advance(2);
   const anchorJson = await askJsonTracked(
     industry,
-    `2026년 글로벌 시장 규모(단위: 십억 달러) 추정치를 3개 소스 관점에서 제시하세요. JSON: {"sources":[{"label":"소스 관점 설명(기관·리포트명)","estimate":2.0,"status":"consensus|excluded","methodology":"그 소스가 시장을 어떻게 정의·측정했는지 한 문장","sourceUrl":"알려진 출처 URL(없으면 생략)","note":"비고"}]}. status는 뚜렷이 튀는 추정치 하나만 excluded로. LLM이 제시하는 total은 사용하지 않으므로 포함하지 말 것.` + demandLine,
+    `2026년 글로벌 시장 규모(단위: 십억 달러) 추정치를 3개 소스 관점에서 제시하세요. JSON: {"sources":[{"label":"소스 관점 설명(기관·리포트명)","estimate":2.0,"status":"consensus|excluded","methodology":"그 소스가 시장을 어떻게 정의·측정했는지 한 문장","sourceUrl":"알려진 출처 URL(없으면 생략)","note":"비고"}]}. status는 뚜렷이 튀는 추정치 하나만 excluded로. LLM이 제시하는 total은 사용하지 않으므로 포함하지 말 것.` + demandLine + calibrationConstraints,
   );
   const rawSources = Array.isArray(anchorJson?.sources) ? (anchorJson!.sources as Array<Record<string, unknown>>) : [];
   const anchorSources = rawSources.slice(0, 4).map((s, i) => ({
@@ -605,7 +631,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   advance(4);
   const cagrJson = await askJsonTracked(
     industry,
-    `권역×세그먼트별 2026 기준 시장규모(십억 달러, 합계≈${anchorTotal.toFixed(2)})와 2026→2030 CAGR(소수)을 추정하세요. JSON: {"baseline":{"china":{"${segs[0].code}":0.2,"${segs[1].code}":0.1${segs[2] ? `,"${segs[2].code}":0.05` : ""}, ...}, ...}, "cagr":{"china":{"${segs[0].code}":0.06, ...}}, "overrides":[{"region":"north_america","segment":"${segs[1].code}","down":0.02,"up":0.11,"reason":"..."}]}. 6개 권역 × ${segs.map((x) => x.code).join("|")}. baseline 합계는 앵커 ${anchorTotal.toFixed(2)}와 ±15% 이내로. 성장률은 수요처(전방) 산업의 성장률과 정합되게.` + demandLine,
+    `권역×세그먼트별 2026 기준 시장규모(십억 달러, 합계≈${anchorTotal.toFixed(2)})와 2026→2030 CAGR(소수)을 추정하세요. JSON: {"baseline":{"china":{"${segs[0].code}":0.2,"${segs[1].code}":0.1${segs[2] ? `,"${segs[2].code}":0.05` : ""}, ...}, ...}, "cagr":{"china":{"${segs[0].code}":0.06, ...}}, "overrides":[{"region":"north_america","segment":"${segs[1].code}","down":0.02,"up":0.11,"reason":"..."}]}. 6개 권역 × ${segs.map((x) => x.code).join("|")}. baseline 합계는 앵커 ${anchorTotal.toFixed(2)}와 ±15% 이내로. 성장률은 수요처(전방) 산업의 성장률과 정합되게.` + demandLine + calibrationConstraints,
   );
   const readMatrix = (obj: unknown): Record<string, Record<string, number>> => {
     const out: Record<string, Record<string, number>> = {};
@@ -686,35 +712,102 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   // 분석한다. 입수되지 않으면 externalForecast 없이 기존 방식(CAGR 외삽)을
   // 그대로 사용한다.
   let externalForecast: SizingMatrix["externalForecast"] | undefined;
-  const efJson = await askJsonTracked(
-    industry,
-    `이 산업의 공개된 미래 시장 전망치(특정 연도의 시장규모, 십억 달러)를 알고 있는가? JSON: {"available":true,"sourceLabel":"전망 출처(기관/리포트명)","targetYear":2030,"marketSize":3.5,"cagr":0.07,"note":"전망의 전제"}. 알려진 공개 전망이 없으면 {"available":false}만.`,
-  );
-  if (efJson?.available === true) {
-    const targetYear = Math.round(num(efJson.targetYear, 2030));
-    const externalSize = num(efJson.marketSize, 0);
-    if (externalSize > 0) {
-      const yearIndex = Math.max(1, targetYear - 2026);
-      const ourSize = REGIONS.reduce((a, r) => a + segs.reduce((b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], yearIndex), 0), 0);
-      const gapPct = Math.round((externalSize / ourSize - 1) * 1000) / 10;
-      const gapJson = await askJsonTracked(
+  // 보정 루프 (v1.2.0) — 외부 참조는 "사람이 출처를 확인한 기록치"를 최우선으로
+  // 쓰고, 없을 때만 LLM 선험에 묻는다. 선험으로 입수된 전망은 llm_prior 참조로
+  // 한 번만 저장해 이후 재분석이 같은 값을 재사용하게 한다(재등록 재주입 방지 —
+  // 이것이 "재분석 = 단순 반복"의 첫 번째 끊는 지점).
+  const efTarget = externalReference;
+  let sourceLabel = efTarget ? efTarget.source_label : null;
+  let targetYear = efTarget ? efTarget.target_year : 0;
+  let externalSize = efTarget ? efTarget.external_size_b ?? 0 : 0;
+  let externalCagrFrac = efTarget ? efTarget.external_cagr_pct / 100 : null;
+  let externalNote = efTarget
+    ? `사람이 기록한 외부 참조 (${efTarget.captured_from === "user" ? "출처 확인" : efTarget.captured_from}) — 재분석 시에도 이 참조를 사용합니다.`
+    : null;
+  if (!efTarget) {
+    const efJson = await askJsonTracked(
+      industry,
+      `이 산업의 공개된 미래 시장 전망치(특정 연도의 시장규모, 십억 달러)를 알고 있는가? JSON: {"available":true,"sourceLabel":"전망 출처(기관/리포트명)","targetYear":2030,"marketSize":3.5,"cagr":0.07,"note":"전망의 전제"}. 알려진 공개 전망이 없으면 {"available":false}만.`,
+    );
+    if (efJson?.available === true) {
+      sourceLabel = str(efJson.sourceLabel, "외부 전망 (검증 전)");
+      targetYear = Math.round(num(efJson.targetYear, 2030));
+      externalSize = num(efJson.marketSize, 0);
+      externalCagrFrac = typeof efJson.cagr === "number" && efJson.cagr > 0 && efJson.cagr < 1 ? efJson.cagr : null;
+      externalNote = str(efJson.note, "LLM이 제시한 공개 전망 — 출처 확인 필요");
+      // llm_prior 참조 저장 — 이 값이 다음 재분석의 고정 참조가 된다.
+      if (sourceLabel && targetYear > 2026 && (externalSize > 0 || externalCagrFrac)) {
+        appendExternalReference(db, {
+          industry_id: analysis.industry_id,
+          source_label: sourceLabel,
+          target_year: targetYear,
+          external_cagr_pct: externalCagrFrac ? Math.round(externalCagrFrac * 1000) / 10 : 0,
+          external_size_b: externalSize > 0 ? externalSize : null,
+          captured_from: "llm_prior",
+          created_by: "market-sizing-pipeline",
+        });
+      }
+    }
+  }
+  let pendingDriverProposals: Array<{ driver: string; direction: "upside" | "downside"; impact_pct: number; rationale: string }> = [];
+  let calibration: SizingMatrix["calibration"] | undefined;
+  if (sourceLabel && (externalSize > 0 || externalCagrFrac)) {
+    const yearIndex = Math.max(1, (targetYear || 2030) - 2026);
+    const ourSize = REGIONS.reduce((a, r) => a + segs.reduce((b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], yearIndex), 0), 0);
+    const ourCagrPct = Math.round(bottomUpCagr * 1000) / 10;
+    const externalCagrPct = externalCagrFrac != null ? Math.round(externalCagrFrac * 1000) / 10 : null;
+    const cagrGap = externalCagrPct != null ? relativeCagrGapPct(ourCagrPct, externalCagrPct) : null;
+    const sizeGapPct = externalSize > 0 ? Math.round((externalSize / ourSize - 1) * 1000) / 10 : undefined;
+    const gapPct = sizeGapPct ?? cagrGap ?? undefined;
+    const cagrBasis = sizeGapPct === undefined;
+    const triggered = externalCagrPct != null && isCalibrationTriggered(ourCagrPct, externalCagrPct);
+    const gapJson = await askJsonTracked(
+      industry,
+      `우리 추정(과거 성장률 연장, CAGR ${ourCagrPct.toFixed(1)}%)과 외부 참조(${sourceLabel}, ${externalCagrPct != null ? `CAGR ${externalCagrPct.toFixed(1)}%` : "크기 전망"})이 ${gapPct != null ? `${gapPct >= 0 ? "+" : ""}${gapPct}%` : "유의미한"} 차이가 난다. JSON: {"gapAnalysis":"과거 드라이버 외에 어떤 요인이 이 격차를 만드는지 3~5문장","newDrivers":["신규/강화 드라이버", "..."]}. 격차 방향(외부가 높음/낮음)을 명시하고, 수요 촉발 요인·규제·기술 전환·대체재 관점에서 설명하세요.`,
+    );
+    const newDrivers = (Array.isArray(gapJson?.newDrivers) ? gapJson!.newDrivers : [])
+      .filter((d): d is string => typeof d === "string" && d.trim().length > 0)
+      .slice(0, 6);
+    externalForecast = {
+      sourceLabel,
+      targetYear: targetYear || 2030,
+      marketSize: externalSize,
+      cagr: externalCagrFrac ?? undefined,
+      note: externalNote ?? "외부 전망 — 출처 확인 필요",
+      ourMarketSize: Math.round(ourSize * 100) / 100,
+      gapPct,
+      cagrGapPct: cagrGap ?? undefined,
+      cagrBasis,
+      gapAnalysis: typeof gapJson?.gapAnalysis === "string" ? gapJson.gapAnalysis : "격차 요인 분석 미생성 — 수동 작성 필요",
+      newDrivers: newDrivers.length ? newDrivers : undefined,
+    };
+    calibration = {
+      triggered,
+      ourCagrPct,
+      externalCagrPct,
+      gapPct: cagrGap ?? null,
+      previousGapPct,
+      appliedDrivers: acceptedDrivers.map((d) => d.driver),
+    };
+    // ── Step 5-C: 드라이버 귀인 제안 (트리거 시에만) — LLM 제안, 수용은 사람.
+    if (triggered) {
+      const dir = externalCagrPct != null && externalCagrPct > ourCagrPct ? "upside" : "downside";
+      const attrJson = await askJsonTracked(
         industry,
-        `우리 추정(과거 성장률 연장)(${ourSize.toFixed(2)}B @${targetYear}, CAGR ${(bottomUpCagr * 100).toFixed(1)}%)과 외부 전망(${externalSize.toFixed(2)}B @${targetYear}, 출처: ${str(efJson.sourceLabel, "외부")})이 ${gapPct >= 0 ? "+" : ""}${gapPct}% 차이가 난다. JSON: {"gapAnalysis":"과거 드라이버 외에 어떤 요인이 이 격차를 만드는지 3~5문장","newDrivers":["신규/강화 드라이버", "..."]}. 격차 방향(외부가 높음/낮음)을 명시하고, 수요 촉발 요인·규제·기술 전환·대체재 관점에서 설명하세요.`,
+        `성장률 격차(우리 ${ourCagrPct.toFixed(1)}% vs 외부 참조 ${externalCagrPct?.toFixed(1)}%)를 설명하는 주요 드라이버 2~5개를 수치로 귀인하세요. 격차 방향은 "${dir === "upside" ? "외부 참조가 높음(상승 여력)" : "외부 참조가 낮음(하강 리스크)"}". JSON: {"drivers":[{"driver":"드라이버명","direction":"${dir}","impact_pct":2.5,"rationale":"이 드라이버가 CAGR을 몇 %p 움직이는지 근거와 함께"}]}. impact_pct는 해당 드라이버의 CAGR 기여 추정치(%p, 격차의 총합이 격차를 넘지 않게), rationale은 이번 분석의 리서치 근거나 상식에 근거해 1-2문장.`,
       );
-      const newDrivers = (Array.isArray(gapJson?.newDrivers) ? gapJson!.newDrivers : [])
-        .filter((d): d is string => typeof d === "string" && d.trim().length > 0)
-        .slice(0, 6);
-      externalForecast = {
-        sourceLabel: str(efJson.sourceLabel, "외부 전망 (검증 전)"),
-        targetYear,
-        marketSize: externalSize,
-        cagr: typeof efJson.cagr === "number" ? efJson.cagr : undefined,
-        note: str(efJson.note, "LLM이 제시한 공개 전망 — 출처 확인 필요"),
-        ourMarketSize: Math.round(ourSize * 100) / 100,
-        gapPct,
-        gapAnalysis: typeof gapJson?.gapAnalysis === "string" ? gapJson.gapAnalysis : "격차 요인 분석 미생성 — 수동 작성 필요",
-        newDrivers: newDrivers.length ? newDrivers : undefined,
-      };
+      const attrs = Array.isArray(attrJson?.drivers) ? attrJson!.drivers as Array<Record<string, unknown>> : [];
+      const seenDrivers = new Set<string>();
+      for (const a of attrs) {
+        const driver = str(a.driver);
+        const impact = num(a.impact_pct, 0);
+        const rationale = str(a.rationale);
+        const d = String(a.direction) === "downside" ? "downside" : String(a.direction) === "upside" ? "upside" : dir;
+        if (!driver || !rationale || impact <= 0 || seenDrivers.has(driver)) continue;
+        seenDrivers.add(driver);
+        pendingDriverProposals.push({ driver, direction: d as "upside" | "downside", impact_pct: Math.round(impact * 10) / 10, rationale });
+        if (pendingDriverProposals.length >= 5) break;
+      }
     }
   }
   const s5b = await summarize(
@@ -722,10 +815,20 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     5,
     "외부 전망 대비 격차 분석",
     externalForecast
-      ? `외부 전망 입수(${externalForecast.sourceLabel}, ${externalForecast.targetYear}년 ${externalForecast.marketSize.toFixed(2)}B) — 우리 추정 대비 ${externalForecast.gapPct}% 격차, 요인 분석 완료.`
+      ? `외부 참조 입수(${externalForecast.sourceLabel}${externalForecast.cagrBasis ? ", CAGR 기준" : `, ${externalForecast.targetYear}년 ${externalForecast.marketSize.toFixed(2)}B`}) — 격차 ${externalForecast.cagrGapPct != null ? `${externalForecast.cagrGapPct}%` : `${externalForecast.gapPct}%`}${calibration?.triggered ? ` — 보정 트리거(≥${CALIBRATION_TRIGGER_PCT}%) 가동` : ""}`
       : "입수된 외부 미래 전망이 없어 기존 방식(CAGR 외삽)을 유지합니다.",
   );
   stepSummaries.push({ step: 5, ...s5b, pendingInputs: externalForecast ? ["외부 전망 출처의 원문 확인"] : [] });
+
+  if (pendingDriverProposals.length > 0) {
+    const s5c = await summarize(
+      industry,
+      5,
+      "격차 드라이버 귀인 제안",
+      `격차가 보정 트리거(≥${CALIBRATION_TRIGGER_PCT}%) 이상 — 드라이버 귀인 제안 ${pendingDriverProposals.length}건 생성. 수용은 사람(경계 #2).`,
+    );
+    stepSummaries.push({ step: 5, ...s5c, pendingInputs: ["드라이버 제안 검토·수용 — 수용 시 다음 재분석에 제약으로 반영"] });
+  }
 
   // ── Step 6: filing cross-validation candidates ──
   advance(6);
@@ -931,6 +1034,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     killCriteriaProposals,
     sectionConfidence,
     ragCapRecommendation,
+    calibration,
     limitations: finalLimitations,
   };
 
@@ -951,23 +1055,37 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     return;
   }
 
-  const payload = JSON.stringify({ methodology: "systematic-market-sizing v1.1.0", matrix, stepSummaries });
+  const payload = JSON.stringify({ methodology: "systematic-market-sizing v1.2.0", matrix, stepSummaries });
   const nextVersionNo =
     ((db.query("SELECT MAX(version_no) m FROM market_sizing_version WHERE analysis_id = ?").get(analysis.id) as { m: number | null }).m ?? 0) + 1;
   const changelog =
     nextVersionNo === 1
       ? "최초 분석 (8단계 LLM 파이프라인 — 추정치, 분석가 확정 전)"
       : `v${nextVersionNo} — LLM 정량 매트릭스 재생성 (8단계 전체)`;
+  const newVersionId = ulid();
   db.transaction(() => {
     db.run(
       `INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, changelog, created_by, created_at)
        VALUES (?,?,?,?,?,?,?)`,
-      [ulid(), analysis.id, nextVersionNo, payload, changelog, "market-sizing-pipeline", now()],
+      [newVersionId, analysis.id, nextVersionNo, payload, changelog, "market-sizing-pipeline", now()],
     );
     db.run(
       `UPDATE market_sizing_analysis SET status = 'completed', current_step = 8, completed_at = ?, rerun_in_progress = 0, error_message = NULL WHERE id = ?`,
       [now(), analysis.id],
     );
+    // 보정 루프 — 트리거로 생성된 드라이버 귀인 제안을 'proposed'로 저장한다.
+    // 이전 제안 중 미결정( proposed)인 것은 이번 제안으로 대체한다(수용·기각된
+    // 이력은 그대로 남긴다 — 감사 대상).
+    if (pendingDriverProposals.length > 0) {
+      db.run("DELETE FROM industry_driver_calibration WHERE industry_id = ? AND status = 'proposed'", [analysis.industry_id]);
+      for (const d of pendingDriverProposals) {
+        db.run(
+          `INSERT INTO industry_driver_calibration (id, industry_id, version_id, driver, direction, impact_pct, rationale, status, proposed_by, created_at)
+           VALUES (?,?,?,?,?,?,?,'proposed',?,?)`,
+          [`idc-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`, analysis.industry_id, newVersionId, d.driver, d.direction, d.impact_pct, d.rationale, "market-sizing-pipeline", now()],
+        );
+      }
+    }
   })();
   }
 }

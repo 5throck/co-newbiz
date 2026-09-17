@@ -135,6 +135,9 @@ stages:
       - 시장 규모·성장 추정 (systematic-market-sizing 매트릭스 — 버전 관리)
       - 경쟁 구조 (시장 집중도·주요 플레이어 — competitive-intelligence 액티비티 산출)
       - 외부 미래 전망 대비 격차 분석 (입수 시 — 신규·강화 드라이버 요인 포함, S2 인사이트로 연동)
+        # v1.2.0 보정 루프 — 격차(상대 CAGR 기준 20% 이상) 시 드라이버 귀인 제안을
+        # 생성하고, 사람이 수용한 보정 드라이버·기록된 외부 참조를 다음 재분석의
+        # 제약으로 주입해 버전 간 격차를 수렴시킨다 (2026-09-18-s1-growth-gap-calibration).
       - 가치사슬 구조
     entryCriteria: []
     activities:

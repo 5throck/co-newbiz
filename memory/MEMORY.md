@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-18](2026-09-18.md) | chore: update |
 | [2026-09-17](2026-09-17.md) | feat: S7 committee pre-check flow, granular verdict scale, DDG search fallback, and candidate evidence persistence |
 | [2026-09-16](2026-09-16.md) | feat(web-next): generalize brownfield candidate profile pipeline, fix S1 industry-name display |
 | [2026-09-15](2026-09-15.md) | feat(web-next): synergy score human confirmation, list-table standard, S4 advisory and chart fixes |

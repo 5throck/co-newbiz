@@ -3380,6 +3380,52 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/market-overview/industry/{industryId}/external-reference:
+    get:
+      operationId: getMarketExternalReference
+      summary: Newest recorded external growth reference for the industry (ADR-0142 calibration loop).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: setMarketExternalReference
+      summary: Record/refresh the external growth reference with a mandatory source label. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/industry/{industryId}/calibration:
+    get:
+      operationId: getMarketCalibration
+      summary: Driver-attribution proposals, accepted calibration set, and the per-version gap trend.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/industry/{industryId}/calibration/{rowId}:
+    post:
+      operationId: decideMarketCalibrationDriver
+      summary: Accept or dismiss a driver-attribution proposal (a person's decision; accepted drivers become rerun constraints). Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/brownfield/{oppId}/targets/{targetId}/eval-draft:
     post:
       operationId: draftTargetEvaluation

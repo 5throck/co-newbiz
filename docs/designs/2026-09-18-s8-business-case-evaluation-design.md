@@ -8,7 +8,7 @@ lang_reason: source-material
 - Spec ID: `2026-09-18-s8-business-case-evaluation`
 - Date: 2026-09-18
 - Status: draft
-- Origin: 2026-09-18 사용자 요구 3건(사업계획 요소, 시뮬레이션 투명성·파라미터 조정, 독립 엔진·병렬 처리·품평회)을 S8 스택 코드 조사로 정착시킨 설계.
+- Origin: 2026-09-18 사용자 요구 4건(사업계획 요소, 시뮬레이션 투명성·파라미터 조정, 독립 엔진·병렬 처리·품평회, GPU·CPU 하이브리드 연산 장치)을 S8 스택 코드 조사로 정착시킨 설계.
 - Related: ADR-0052 §D.4 (시드 결정론 몬테카를로), ADR-0098 (S8 멀티 비즈니스 케이스 생성), ADR-0114 (그룹/계열사 사업목표 기준), ADR-0115 (WACC 성분 분해), ADR-0117 (듀얼 퍼스펙티브 밸류에이션), ADR-0086/0087/0088 (화면 패턴·토큰·데이터 표현), `process/flow.spec.yaml` (S8, fs 게이트), `procedures/_shared/{greenfield,brownfield}-fs/schema.yaml`
 
 ## Problem
@@ -56,6 +56,7 @@ S8(사업성 분석)의 현재 구현은 "돈이 되는가?"라는 단계 목표
 {
   "job_id": "string",
   "seed_policy": { "base": "<projectId>:<scenario>", "hash": "fnv1a" },
+  "device": "auto",
   "iterations": 10000,
   "horizon_years": 5,
   "discount_rate": { "value": 0.10, "subject": "promoter", "source": "user" },
@@ -82,12 +83,21 @@ S8(사업성 분석)의 현재 구현은 "돈이 되는가?"라는 단계 목표
 
 ### 1.3 병렬 처리
 
-- **케이스 간**: multiprocessing Pool로 케이스별 프로세스 병렬(코어 수 캡). 시나리오 × 관점 × 파라미터 세트 그리드가 그대로 병렬 단위가 된다.
+- **케이스 간**: multiprocessing Pool로 케이스별 프로세스 병렬(코어 수 캡). 시나리오 × 관점 × 파라미터 세트 그리드가 그대로 병렬 단위가 된다. GPU가 선택된 작업은 프로세스 풀 대신 단일 프로세스에서 케이스 배치를 장치로 스트리밍한다(GPU 메모리 경합 방지 — §1.4).
 - **케이스 내**: 반복 루프는 numpy 벡터화(반복 수 × 연도 행렬 연산).
 - **시드 정책**: `seed = fnv1a(case_id + ":" + sha256(canonical_case_drivers))`. 같은 입력 → 같은 시드 → 같은 결과(재현성). 파라미터 조정 시에도 재현성 계약이 깨지지 않고, 조정 전후 결과는 독립 표본으로 구분된다(ADR-0117의 variant 간 시드 공유 계약은 같은 드라이버 집합 내에서 유지).
 - **실행 모드**: (a) 웹 오케스트레이터의 동기 서브프로세스 실행 — 기본 크기 그리드; (b) 대량 그리드용 백그라운드 실행 — `activity_run` 진행 폴링 경로(ADR-0096 체계 재사용).
 
-### 1.4 S8 제너레이터 격하
+### 1.4 연산 장치 계층 (GPU·CPU 하이브리드)
+
+- REQ-W7-1: 엔진은 실행 장치를 job-spec `device` 필드로 받는다. `auto`(기본)면 감지 순서 `cuda(NVIDIA) > mps(Apple Silicon) > xpu(Intel) > rocm/hip(AMD) > cpu`로 선택하고, 명시 지정 시 해당 장치만 사용한다. 환경변수 `SIM_ENGINE_DEVICE`가 job-spec 값을 오버라이드할 수 있다(운영 환경 강제용).
+- REQ-W7-2: 연산 런타임은 **PyTorch 단일 추상화**로 통일한다 — 하나의 디바이스 인터페이스가 네 벤더를 커버한다(CUDA 빌드=NVIDIA, ROCm 빌드=AMD/HIP, MPS=Apple Silicon, XPU=Intel oneAPI). 벤더별 개별 어레이 라이브러리 조합(CuPy=NVIDIA, MLX=Apple, dpnp=Intel)은 관리 포인트만 늘어나므로 기각한다. ROCm은 torch ROCm 빌드가 별도로 필요하므로 배포 시 빌드 변형(cuda/rocm/arm64-mps/xpu)을 문서화한다.
+- REQ-W7-3: CPU 경로는 numpy 단독으로 유지한다(추가 의존성 없음). torch는 optional extra로 분리하고 lazy import — torch가 없거나 호환 GPU가 없으면 자동으로 CPU로 폴백하며, 스냅샷 `warnings`에 폴백 사실을 기록한다.
+- REQ-W7-4: 장치별 시드 RNG 스트림은 서로 다르므로 재현 계약을 "**동일 job-spec + 동일 장치 → 동일 결과**"로 정밀화한다. 스냅샷에 사용 장치·빌드·정밀도를 기록하고, 다른 장치로 재현하면 통계적 등가 결과임을 `warnings`로 표시한다.
+- REQ-W7-5: 정밀도 — CPU float64 기본, GPU float32 기본(Metal은 fp64를 지원하지 않는다). 분위수 결과의 백분위 상대오차 허용치(기본 1e-3)를 두고, 백엔드 등가 회귀 테스트(§10-2)가 이 허용오차를 사용한다.
+- REQ-W7-6: GPU 페이오프 휴리스틱 — 전송 오버헤드가 지배하는 작은 작업(반복 수 × 케이스 수 임계 이하)은 GPU가 있어도 CPU로 실행한다. 임계값은 실측으로 보정하며 `auto` 선택 근거를 스냅샷에 남긴다.
+
+### 1.5 S8 제너레이터 격하
 
 - `business-case-generator.ts`는 하드코딩 상수·시뮬레이션 루프를 제거하고 **job-spec 빌더 + 엔진 스포너**가 된다. 현 상수 값(CAPTURE_RATE 0.005, OPEX 0.6, CAPEX 0.1, 초기투자비 0.5, HORIZON 5, 반복 2,000)은 기본값 테이블로 이동하며, 모두 §3의 `bc.*` 오버라이드 대상이 된다.
 
@@ -147,7 +157,7 @@ S8(사업성 분석)의 현재 구현은 "돈이 되는가?"라는 단계 목표
 | 신규 1 | `business_case_line` + `sales_volume`, `unit_price_krw` (nullable) |
 | 신규 2 | `valuation_simulation` + `bep_year`, `bep_volume`, `payback_discounted_years` |
 | 신규 3 | `business_case_model` + `inputs_json` |
-| — | `python/requirements.txt`에 numpy 명시 확인(엔진 런타임 계약) |
+| — | `python/requirements.txt`에 numpy 명시 확인(CPU 기본 경로). GPU는 optional extra(`requirements-gpu-<variant>.txt`: cuda / rocm / arm64-mps / xpu)로 분리하고 lazy import로 폴백 보장 |
 
 - 레거시 행(`inputs_json` 없음): note 파싱 fallback 표시. 값 왜곡 없음.
 - 레거시 시뮬레이션 결과는 재생성 전까지 그대로 유지되며, 재생성 시 스냅샷 체계로 전환된다.
@@ -171,7 +181,8 @@ S8(사업성 분석)의 현재 구현은 "돈이 되는가?"라는 단계 목표
 
 ## 10. 검증 기준
 
-1. 동일 job-spec → 동일 결과(시드 결정론). 파라미터 변경 → 결정적 시드 변경 확인.
-2. 3 시나리오 × 2 관점 × 10,000 반복 기준 실측: 웹 내장 TS 루프 대비 ≥10배 향상, 케이스 수에 따른 선형 확장(병렬) 확인.
-3. fs 게이트 산출물에 BEP 시점·판매목표·입력 스냅샷이 존재함을 체크리스트로 확인.
-4. 품평회 3개 평가 축 전부 통과 기록이 존재함.
+1. 동일 job-spec + 동일 장치 → 동일 결과(시드 결정론, REQ-W7-4). 파라미터 변경 → 결정적 시드 변경 확인. 스냅샷에 장치·빌드·정밀도가 기록됨.
+2. 백엔드 등가 — 같은 job-spec을 CPU와 각 GPU 백엔드(cuda/rocm/mps/xpu, 가용한 것만)로 실행 시 분위수 상대오차가 허용치(기본 1e-3) 이내임을 확인. GPU 미탑재 환경에서는 CPU 폴백 경로만 검증하고 나머지는 타 장치 검증 기록으로 대체.
+3. 3 시나리오 × 2 관점 × 10,000 반복 기준 실측: 웹 내장 TS 루프 대비 ≥10배 향상, 케이스 수에 따른 선형 확장(병렬) 확인. GPU 탑재 장치에서 대형 작업(임계 이상)이 GPU로 분기됨을 확인.
+4. fs 게이트 산출물에 BEP 시점·판매목표·입력 스냅샷이 존재함을 체크리스트로 확인.
+5. 품평회 3개 평가 축 전부 통과 기록이 존재함.
