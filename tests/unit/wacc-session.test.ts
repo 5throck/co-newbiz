@@ -48,7 +48,7 @@ beforeAll(async () => {
   viewerCookie = await loginCookie(VIEWER, "pw-viewer-12345");
   projectId = createProject("NP-WACC-1").id;
   grantProjectMembership(db, { projectId, userId: USER, projectRole: "lead", grantedBy: USER, needToKnowBasis: "wacc test", now: NOW });
-  grantProjectMembership(db, { projectId, userId: VIEWER, projectRole: "observer", grantedBy: USER, needToKnowBasis: "wacc test", now: NOW });
+  grantProjectMembership(db, { projectId, userId: VIEWER, projectRole: "member", grantedBy: USER, needToKnowBasis: "wacc test", now: NOW });
 });
 
 afterAll(async () => {

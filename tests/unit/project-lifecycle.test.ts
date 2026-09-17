@@ -39,7 +39,7 @@ beforeAll(async () => {
   projectId = ulid();
   db.run("INSERT INTO md_project (id, project_no, created_at, project_name) VALUES (?,?,?,?)", [projectId, "PRJ-LIFE", NOW, "Lifecycle test"]);
   db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, "lead-close", "lead", "test", NOW, "test"]);
-  db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, "contrib-close", "contributor", "test", NOW, "test"]);
+  db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, "contrib-close", "member", "test", NOW, "test"]);
 });
 
 afterAll(() => {
@@ -96,7 +96,7 @@ describe("project lifecycle closure (Wave B1)", () => {
     const flagId = ulid();
     db.run("INSERT INTO md_project (id, project_no, created_at, project_name) VALUES (?,?,?,?)", [flagId, "PRJ-LEAD-FLAG", NOW, "Lead flag test"]);
     db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [flagId, "lead-close", "lead", "test", NOW, "test"]);
-    db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [flagId, "contrib-close", "contributor", "test", NOW, "test"]);
+    db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [flagId, "contrib-close", "member", "test", NOW, "test"]);
 
     const asLead = await nextRequest("/api/projects", { headers: { cookie: leadCookie } });
     expect(asLead.status).toBe(200);

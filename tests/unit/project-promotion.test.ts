@@ -161,8 +161,8 @@ describe("promoteOpportunity (ADR-0095)", () => {
       promotedBy: U1,
       needToKnowBasis: "team assignment for this deal",
       members: [
-        { userId: U2, projectRole: "reviewer" },
-        { userId: U1, projectRole: "observer" }, // self-inclusion — must not downgrade lead
+        { userId: U2, projectRole: "member" },
+        { userId: U1, projectRole: "member" }, // self-inclusion — must not downgrade lead
       ],
     });
 
@@ -174,7 +174,7 @@ describe("promoteOpportunity (ADR-0095)", () => {
     const reviewerRow = db
       .query("SELECT project_role, need_to_know_basis, revoked_at FROM project_member WHERE project_id = ? AND user_id = ?")
       .get(result.project.id, U2) as Record<string, unknown>;
-    expect(reviewerRow.project_role).toBe("reviewer");
+    expect(reviewerRow.project_role).toBe("member");
     expect(reviewerRow.need_to_know_basis).toBe("team assignment for this deal");
     expect(reviewerRow.revoked_at).toBeNull();
   });
@@ -189,7 +189,7 @@ describe("promoteOpportunity (ADR-0095)", () => {
       promoteOpportunity(oppId, {
         promotedBy: U1,
         needToKnowBasis: "basis",
-        members: [{ userId: "user-does-not-exist", projectRole: "contributor" }],
+        members: [{ userId: "user-does-not-exist", projectRole: "member" }],
       }),
     ).toThrow();
 

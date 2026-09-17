@@ -90,14 +90,30 @@ list gaps 8–10px, section separation 24px+.
 
 ## 5. Layout Architecture
 
-- **App shell**: fixed sidebar (S1–S7 phase groups, admin section) + topbar
-  (breadcrumb left; theme toggle, user, logout right) + scrollable content pane.
+- **App shell**: collapsible sidebar (S1–S7 phase groups, admin section) +
+  topbar (menu toggle leftmost only while the sidebar is hidden; theme
+  toggle, user, logout right) + scrollable content pane. Two
+  platform-typical modes driven by the `data-sidebar-state` attribute on
+  `.app-shell`:
+  - **Desktop — push collapse**: `docked` (sticky, `--sidebar-width`) ⇄
+    `closed` (in-flow `width → 0`, content reflows in sync — no scrim, no
+    overlay). Collapse preference persists in localStorage (`"cn-sidebar"`).
+  - **Mobile (≤880px) — overlay drawer**: `open` (fixed panel slides in over
+    a fading `.drawer-backdrop` scrim, ESC/backdrop/route-change close,
+    focus trap via `useModalFocus`) ⇄ `closed` (off-canvas + `inert`).
+  - **Toggle dual-home**: the collapse control lives in the sidebar header
+    (`.sidebar-head`) while the sidebar is visible; the topbar button
+    (`.topbar-icon-btn`) appears only when the sidebar is hidden. Both are
+    quiet **outline** icon buttons (1px border, transparent fill,
+    full-contrast icon) — more discoverable than a ghost, calmer than the
+    one-shot action pills.
 - **Content width**: the content pane fills available width (`max-width: none`)
   — centered max-width variants caused the squeezed-column defect and are
   removed. Dense tables may span the full pane.
 - **Deal detail** is stage-guided: sticky progress header (S1–S7 signal lights
   + gate badges) above the tab bar; the Workflow tab is the default.
-- **Responsive**: ≤880px the sidebar collapses; grids collapse to 1 column.
+- **Responsive**: ≤880px the sidebar is drawer-only (the old horizontal icon
+  strip is retired); grids collapse to 1 column.
 
 ## 6. Component Standard
 
@@ -110,6 +126,7 @@ list gaps 8–10px, section separation 24px+.
 | Form control | token background/border, focus ring `--primary` 3px, label mandatory |
 | Tabs | `.tab-nav` / `.stage-stepper` — `aria-current`, state preserved in URL |
 | Modal | `.modal-backdrop` + `.modal-panel` — ESC/backdrop close, focus trap |
+| Sidebar drawer | `.app-sidebar` under `data-sidebar-state` — desktop push collapse (width → 0, no scrim); mobile overlay + `.drawer-backdrop` with the ESC/backdrop/focus-trap contract; `inert` when closed |
 | Signal light | `.process-light pl-*` — icon + stage id + status label |
 
 ## 7. Accessibility

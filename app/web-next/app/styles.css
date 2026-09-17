@@ -94,6 +94,7 @@
 
   /* ── Density scaling ── */
   --content-max: 1440px;
+  --sidebar-width: 264px;
 
   /* ── Chart categorical palette (ECharts series colors) — consumed by
      lib/echarts-theme.ts via getComputedStyle; the ONLY definition of the
@@ -1440,7 +1441,7 @@
     min-height: 100vh;
   }
   .app-sidebar {
-    width: 264px;
+    width: var(--sidebar-width);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -1452,18 +1453,66 @@
     top: 0;
     height: 100vh;
     overflow-y: auto;
+    overflow-x: hidden;
+    /* 접기/펼치기 push 전환 — 폭 수축에 맞춰 콘텐츠가 함께 리플로우된다 */
+    transition: width 0.25s var(--ease-spring), border-right-width 0.25s var(--ease-spring);
+  }
+  /* ── Sidebar collapse (desktop push) ──
+     data-sidebar-state가 배치를 결정한다. 데스크톱 closed는 레이아웃 흐름을
+     유지한 채 폭을 0으로 수축시킨다 — 사이드바가 콘텐츠 위로 떠서 지나가는
+     게 아니라 콘텐츠가 수축에 맞춰 함께 넓어지는 표준 push 전환이며,
+     스크림·오버레이는 없다(접기/펼치기 2상태 직접 토글). 접힌 내비의
+     포커스·탭 차단은 aside의 inert가 담당한다. 모바일은 아래 미디어
+     쿼리가 fixed 오버레이 드로어로 교체한다. */
+  .app-shell[data-sidebar-state="closed"] .app-sidebar {
+    width: 0;
+    min-width: 0;
+    border-right-width: 0;
+    overflow: hidden;
+  }
+  /* 수축 애니메이션 동안 라벨 재배열 대신 클리핑(커튼 와이프)되게 한다 */
+  .sidebar-brand,
+  .sidebar-group-label,
+  .side-nav-link {
+    white-space: nowrap;
+  }
+  /* 브랜드 + 접기 버튼 헤더 행 — 듀얼홈 토글의 펼침 상태 홈. 경계선은
+     brand가 아니라 헤더 행이 소유한다. */
+  .sidebar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0 0.5rem 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
   }
   .sidebar-brand {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0 1.5rem 1.25rem;
+    padding: 0;
     font-weight: 800;
     font-size: 1.15rem;
     text-decoration: none;
     color: var(--fg);
-    border-bottom: 1px solid var(--border-subtle);
   }
+  /* 사이드바 헤더의 접기 버튼 — topbar 토글과 같은 아웃라인 체계
+     (고스트보다 발견 가능성, pill보다 낮은 강조) */
+  .sidebar-collapse-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .sidebar-collapse-btn:hover { background: var(--hover-bg); border-color: var(--border-bright); }
   .sidebar-brand-icon {
     width: 36px;
     height: 36px;
@@ -1700,44 +1749,31 @@
   }
 
   @media (max-width: 880px) {
-    .app-shell {
-      flex-direction: column;
+    /* 모바일은 오버레이 드로어만 — 데스크톱의 폭 수축이 아니라 fixed 패널이
+       화면 밖 ↔ 안으로 슬라이드한다. .drawer-backdrop의 스크림 페이드와
+       포커스 트랩(useModalFocus)이 함께 동작한다. AppShell이 isMobile일 때
+       data-sidebar-state를 open/closed로만 설정한다. */
+    .app-shell[data-sidebar-state="open"] .app-sidebar,
+    .app-shell[data-sidebar-state="closed"] .app-sidebar {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: min(var(--sidebar-width), 84vw);
+      border-right-width: 1px;
+      overflow-y: auto;
+      transition: transform 0.25s var(--ease-spring), visibility 0s linear 0.25s;
     }
-    .app-sidebar {
-      width: 100%;
-      height: auto;
-      position: relative;
-      flex-direction: row;
-      padding: 0.5rem;
-      overflow-x: auto;
-      border-right: none;
-      border-bottom: 1px solid var(--border);
+    .app-shell[data-sidebar-state="closed"] .app-sidebar {
+      transform: translateX(-100%);
+      visibility: hidden;
     }
-    .sidebar-brand {
-      display: none;
-    }
-    .sidebar-nav {
-      flex-direction: row;
-      gap: 0.25rem;
-      padding: 0;
-    }
-    .side-nav-link span {
-      display: none;
-    }
-    .side-nav-link {
-      padding: 0.5rem;
-    }
-    .sidebar-user {
-      flex-direction: row;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0 0.75rem;
-      border-top: none;
-      border-left: 1px solid var(--border);
-      margin-left: auto;
-    }
-    .sidebar-user span:first-child {
-      display: none;
+    .app-shell[data-sidebar-state="open"] .app-sidebar {
+      transform: translateX(0);
+      visibility: visible;
+      z-index: 61; /* .modal-backdrop(60) 위, .toast-region(80) 아래 */
+      box-shadow: var(--shadow-xl);
+      transition: transform 0.25s var(--ease-spring), visibility 0s;
     }
     .charts-row {
       grid-template-columns: 1fr;
@@ -2230,6 +2266,9 @@
    갖도록 design-lint가 강제한다. 긴 칩은 열 안에서 줄바꿈된다(nowrap 해제). */
 .list-table { table-layout: fixed; max-width: 64rem; }
 .list-table .status-chip { white-space: normal; }
+/* S1 시장분석 목록 — 분석 상태 열(긴 진행률 칩) 예산을 위해 상향.
+   모든 열이 th 고정 폭을 가져 폭 흡수 왜곡 없이 남는 폭이 비례 배분된다. */
+.list-table.market-list-table { max-width: 72rem; }
 .opportunity-create { margin-bottom: 1.25rem; }
 .opportunity-create summary { display: inline-flex; cursor: pointer; list-style: none; }
 .opportunity-form { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; align-items: center; }
@@ -2418,6 +2457,25 @@ a.funnel-card:hover { border-color: var(--primary); }
 }
 .topbar-crumbs { font-size: 0.85rem; font-weight: 600; color: var(--muted-fg); }
 .topbar-actions { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+/* 사이드 메뉴 토글(topbar) — 사이드바가 숨어 있을 때만 렌더되는 아웃라인
+   아이콘 버튼. 고스트는 발견 가능성이 떨어지고 초기 pill은 일회성 액션과
+   강조가 같았다 — 아웃라인(테두리만, 배경 없음)이 그 중간이다: 레이아웃
+   컨트롤임을 읽히면서 눈에 띈다. 2.5rem 타깃으로 모바일 터치 여유 확보. */
+.topbar-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.topbar-icon-btn:hover { background: var(--hover-bg); border-color: var(--border-bright); }
 .topbar-user { font-size: 0.8rem; color: var(--muted-fg); max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar-logout {
   display: inline-flex; align-items: center; gap: 0.35rem;
@@ -2525,6 +2583,29 @@ a.funnel-card:hover { border-color: var(--primary); }
   border-radius: var(--radius-xl);
   background: var(--surface);
   box-shadow: var(--shadow-xl);
+}
+/* 사이드 메뉴 드로어용 백드롭 — .modal-backdrop의 배경·z-index를 재사용하고
+   중앙 정렬만 푼다. 비계층 위치에 둬서 .modal-backdrop과 동일한 우선순위를
+   가진다(@layer 안에 두면 이 재정의가 무시된다).
+   모바일 드로어는 백드롭을 마운트 상태로 유지하고 상태 전환으로 페이드
+   인/아웃한다 — 닫힘(opacity 0 + pointer-events none)에는 클릭이 통과한다. */
+.drawer-backdrop {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.app-shell[data-sidebar-state="open"] .drawer-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-backdrop,
+  .app-sidebar {
+    transition: none !important;
+  }
 }
 .modal-head {
   display: flex; align-items: flex-start; justify-content: space-between;

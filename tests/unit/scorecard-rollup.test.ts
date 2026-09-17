@@ -47,7 +47,7 @@ afterAll(() => {
 function seedProjectWithCycle(reviewCycle: string, rows: ScorecardRowInput[]): { projectId: string; runId: string } {
   const projectId = ulid();
   db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [projectId, `NP-${projectId.slice(-6)}`, NOW]);
-  db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, U1, "contributor", "admin", NOW, "test fixture basis"]);
+  db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, U1, "member", "admin", NOW, "test fixture basis"]);
   const runId = ulid();
   db.run("INSERT INTO run (id, project_id, input_hash, created_by, created_at) VALUES (?,?,?,?,?)", [runId, projectId, `hash-${runId.slice(-6)}`, U1, NOW]);
   recordVentureScorecardCycle(

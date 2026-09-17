@@ -67,7 +67,7 @@ function insertMnpiProject(): string {
 }
 
 function grantMember(projectId: string, userId: string): void {
-  db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, userId, "contributor", "admin", NOW, "test fixture basis"]);
+  db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, userId, "member", "admin", NOW, "test fixture basis"]);
 }
 
 function enrollInsider(projectId: string, userId: string): void {
