@@ -348,11 +348,22 @@ export function SynergyView() {
                 // 안 잡힌다 — 재분석/삭제를 막으려면 이 플래그도 함께 봐야 한다.
                 const busy = inProgress || !!a.rerun_in_progress;
                 return (
-                  <tr key={a.id} className={selectedId === a.id ? "row-selected" : undefined}>
+                  // 행 전체가 상세 진입점이다(2026-09-18 사용자 리뷰 — 연결 기회
+                  // 버튼만 진입 가능한 것은 발견성 문제). 회사 셀은 여전히 묶음
+                  // 헤더 레이블이고, 행 내 버튼들은 stopPropagation으로 행 클릭과
+                  // 분리된다. 키보드 접근: Enter/Space.
+                  <tr
+                    key={a.id}
+                    className={`cursor-pointer ${selectedId === a.id ? "row-selected" : undefined}`}
+                    tabIndex={0}
+                    aria-label={`${targetLabel(a)} 시너지 분석 리포트 열기`}
+                    onClick={() => openDetail(a)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(a); } }}
+                  >
                     {companyCell !== null && (() => {
                       const groupLen = groups.get(analysisGroupKey(companyCell))!.length;
                       // 회사 셀은 항상 묶음 헤더(레이블)일 뿐이다 — 상세 진입은
-                      // 그룹 크기와 무관하게 연결 기회 셀 클릭이 일관되게 담당한다.
+                      // 그룹 크기와 무관하게 행 클릭이 일관되게 담당한다.
                       return (
                         <td className="cell-primary align-top" rowSpan={groupLen}>
                           <span className="font-semibold">{targetLabel(companyCell)}</span>
@@ -364,7 +375,7 @@ export function SynergyView() {
                         type="button"
                         className={a.opportunity_name ? "text-[0.8rem] text-left underline-offset-2 hover:underline" : "text-[0.75rem] text-[color:var(--muted-fg)] text-left underline-offset-2 hover:underline"}
                         title="시너지 정합성 리포트 열기"
-                        onClick={() => openDetail(a)}
+                        onClick={(e) => { e.stopPropagation(); openDetail(a); }}
                       >
                         {a.opportunity_name ?? "— (시장 연계만)"}
                       </button>
@@ -390,13 +401,13 @@ export function SynergyView() {
                           className="btn-ghost btn-sm"
                           disabled={!a.target_type}
                           title={a.target_type ? "같은 분석 행을 재사용해 새 버전으로 재실행합니다" : "기존 별도 등록(legacy) 분석은 재실행할 수 없습니다 — 레지스트리 대상 새 분석을 생성하세요"}
-                          onClick={() => void rerun(a, { stayOnList: true })}
+                          onClick={(e) => { e.stopPropagation(); void rerun(a, { stayOnList: true }); }}
                         >
                           재분석
                         </button>
                       )}
                       {!busy && (
-                        <button type="button" className="btn-danger btn-sm" title="이 시너지 분석을 삭제합니다" onClick={() => removeAnalysis(a)}>
+                        <button type="button" className="btn-danger btn-sm" title="이 시너지 분석을 삭제합니다" onClick={(e) => { e.stopPropagation(); removeAnalysis(a); }}>
                           삭제
                         </button>
                       )}
@@ -1111,36 +1122,13 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                   S4로 진행하려면 이 분석에 연결된 기회(S2)가 필요합니다 — 새 분석 시 "연결 기회"를 선택하세요.
                 </p>
               )}
-              {/* Screening gate — flow.spec S1~S3 gates: [screening]. S3 산출물이
-                  모이는 이 화면에서 GO/HOLD/KILL을 기록한다 (ADR-0094 경계 #2:
-                  기록 버튼은 사람의 몫). GO 기록이 곧 S4 진행 결정이므로, 별도
-                  "S4로 진행" 버튼 없이 GO 기록 시 바로 opportunity를 selected로
-                  표시하고 /route-decision으로 이동한다. */}
-              {opportunityId && (
-                <div className="mt-4">
-                  <GateDecisionPanel
-                    opportunityId={opportunityId}
-                    gates={["screening"]}
-                    onRecorded={(decision, gate) => {
-                      if (decision === "go" && gate === "screening") void advanceToRouteDecision();
-                    }}
-                  />
-                  <p className="mt-1 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
-                    GO로 기록하면 이 검토/안건이 "selected"로 표시되고 S4 진출방식 결정으로 자동 이동합니다.{" "}
-                    <a href={`/deals/${encodeURIComponent(opportunityId)}/s4`} className="text-[color:var(--accent)] underline">
-                      지금 바로 S4로 이동 →
-                    </a>
-                  </p>
-                </div>
-              )}
-              {advanceError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mt-1">{advanceError}</p>}
             </div>
           )}
 
           {tab === "refs" && (
             <div className="text-[0.88rem]">
               {p.researchSources.length > 0 && (
-                <details className="market-section" open>
+                <details className="market-section">
                   <summary className="cursor-pointer text-[0.85rem]">입수 출처 ({p.researchSources.length}건 — 출처 명기·교차검증)</summary>
                   <ul className="sizing-note-list mt-2">
                     {p.researchSources.map((s, i) => (
@@ -1149,7 +1137,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                   </ul>
                 </details>
               )}
-              <details className="market-section" open>
+              <details className="market-section">
                 <summary className="cursor-pointer text-[0.85rem]">파이프라인 단계별 노트 ({p.stepSummaries.length}단계)</summary>
                 <ol className="mt-3 space-y-2 text-[0.85rem]">
                   {p.stepSummaries.map((s) => (
@@ -1159,6 +1147,32 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
               </details>
             </div>
           )}
+
+          {/* Screening gate — flow.spec S1~S3 gates: [screening]. 탭 어디에 있든
+              같은 자리에서 기록할 수 있게 탭 판 바깥(상세 하단 고정)에 둔다
+              (2026-09-18 사용자 리뷰: 우선 시너지 영역 탭 맨 아래에 묻힌 것은
+              발견 가능성 문제). S3 산출물이 모이는 이 화면에서 GO/HOLD/KILL을
+              기록한다 (ADR-0094 경계 #2: 기록 버튼은 사람의 몫). GO 기록이 곧
+              S4 진행 결정이므로, 별도 "S4로 진행" 버튼 없이 GO 기록 시 바로
+              opportunity를 selected로 표시하고 /route-decision으로 이동한다. */}
+          {opportunityId && (
+            <div className="mt-4">
+              <GateDecisionPanel
+                opportunityId={opportunityId}
+                gates={["screening"]}
+                onRecorded={(decision, gate) => {
+                  if (decision === "go" && gate === "screening") void advanceToRouteDecision();
+                }}
+              />
+              <p className="mt-1 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+                GO로 기록하면 이 검토/안건이 "selected"로 표시되고 S4 진출방식 결정으로 자동 이동합니다.{" "}
+                <a href={`/deals/${encodeURIComponent(opportunityId)}/s4`} className="text-[color:var(--accent)] underline">
+                  지금 바로 S4로 이동 →
+                </a>
+              </p>
+            </div>
+          )}
+          {advanceError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mt-1">{advanceError}</p>}
         </>
       )}
     </section>

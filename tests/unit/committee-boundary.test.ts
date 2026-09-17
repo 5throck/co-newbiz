@@ -157,6 +157,22 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     expect(gd.decided_by).toBe("root"); // a human account, not a committee chair
   });
 
+  test("the brownfield committee defaults to the target_screening gate (0111 alignment)", async () => {
+    const oppId = await createOpportunity();
+    const res = await req(`/api/opportunities/${oppId}/committee-sessions`, {
+      method: "POST",
+      headers: { cookie: rootCookie },
+      body: JSON.stringify({ committeeKey: "target-longlist-shortlist-committee", decisionMode: "human_only" }),
+    });
+    expect(res.status).toBe(201);
+    const { data } = await res.json();
+    const transcript = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}`, { headers: { cookie: rootCookie } });
+    expect(transcript.status).toBe(200);
+    const t = (await transcript.json()).data;
+    expect(t.meta.committee_key).toBe("target-longlist-shortlist-committee");
+    expect(t.meta.gate).toBe("target_screening");
+  });
+
   test("hybrid session requires a human voice per round before synthesis", async () => {
     const oppId = await createOpportunity();
     const res = await req(`/api/opportunities/${oppId}/committee-sessions`, {

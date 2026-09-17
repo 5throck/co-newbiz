@@ -106,8 +106,8 @@ beforeAll(async () => {
     [sourceOppId, "S11 테스트 기회", "테스트 산업", "selected", ANALYST, NOW],
   );
   db.run(
-    "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)",
-    [ulid(), sourceOppId, "greenfield", "test route", ANALYST, NOW],
+    "INSERT INTO route_decision (id, opportunity_id, track, rationale, alternatives_considered, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
+    [ulid(), sourceOppId, "greenfield", "test route", "M&A 대안 검토 후 제외", ANALYST, NOW],
   );
   db.run(
     `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)

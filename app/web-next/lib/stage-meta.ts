@@ -1,4 +1,4 @@
-// 단계 메타데이터 (클라이언트 안전 — getDb 비의존). flow.spec.yaml (v2.3.0 기준)
+// 단계 메타데이터 (클라이언트 안전 — getDb 비의존). flow.spec.yaml (v2.4.1 기준)
 // 의 발췌본이며 tests/unit/process-flow.test.ts의 stage-meta 정합 테스트가
 // 스펙과의 일치를 강제한다.
 // 표준 화면 패턴 P0 StageFrame/StageRail의 유일한 데이터원 (ADR-0086).

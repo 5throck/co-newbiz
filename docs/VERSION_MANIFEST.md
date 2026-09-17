@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-17T13:32:32.637Z
+**Generated**: 2026-09-17T21:14:26.546Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -246,7 +246,7 @@
 | gen-pr-body.ts | 1.2.0 | scripts/gen-pr-body.ts | bun |
 | generate-agent-registry.ts | N/A | scripts/co-newbiz/generate-agent-registry.ts | N/A |
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
-| generate-process-flow.ts | 1.3.2 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
+| generate-process-flow.ts | 1.3.3 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
 | generate-prompt-registry.ts | N/A | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-skill-graph.ts | 1.10.0 | scripts/generate-skill-graph.ts | js-yaml |
 | generate-version-manifest.ts | 1.6.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
