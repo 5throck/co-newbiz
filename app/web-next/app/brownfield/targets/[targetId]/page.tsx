@@ -173,6 +173,18 @@ export function TargetDetailView() {
 
   const oppId = detail?.opportunity.id ?? "";
   const companyId = detail?.target.company_id ?? null;
+  // ADR-0142 — 확정 경쟁사 레지스트리 (사람의 수용·등록으로만 생긴 목록)
+  const [confirmedCompetitors, setConfirmedCompetitors] = useState<Array<{ id: string; name: string; note: string | null }> | null>(null);
+
+  useEffect(() => {
+    if (!companyId) {
+      setConfirmedCompetitors(null);
+      return;
+    }
+    api.get<{ competitors: Array<{ id: string; name: string; note: string | null; status: string }> }>(`/api/companies/${encodeURIComponent(companyId)}/competitors`)
+      .then((r) => setConfirmedCompetitors((r.data.competitors ?? []).filter((c) => c.status === "confirmed")))
+      .catch(() => setConfirmedCompetitors([]));
+  }, [companyId]);
   const dartCode = detail?.target.dart_corp_code ?? null;
 
   const loadDetail = useCallback(() => {
@@ -724,13 +736,24 @@ export function TargetDetailView() {
                       <>
                         <h3 className="sizing-step-title text-[0.95rem] mt-3">경쟁 포지셔닝</h3>
                         <p className="mb-2">{renderWithCitations(companyProfile.profile.competitive.positioning || "—", companyProfile.profile?.researchSources ?? [])}</p>
-                        {companyProfile.profile.competitive.competitors.length > 0 && (
+                        {/* ADR-0142 — 확정 경쟁사 레지스트리가 1순위. 없으면 payload
+                            제안을 "미확정" 표기와 함께 보여준다(제안≠확정). */}
+                        {(confirmedCompetitors ?? []).length > 0 ? (
                           <ul className="sizing-note-list mb-0">
-                            {companyProfile.profile.competitive.competitors.map((c, i) => (
-                              <li key={i}><b>{c.name}</b> — {renderWithCitations(c.note, companyProfile.profile?.researchSources ?? [])}</li>
+                            {(confirmedCompetitors ?? []).map((c) => (
+                              <li key={c.id}><b>{c.name}</b> — {c.note || "—"} <span className="status-chip status-green ml-1">확정</span></li>
                             ))}
                           </ul>
-                        )}
+                        ) : companyProfile.profile.competitive.competitors.length > 0 ? (
+                          <>
+                            <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-1">아래는 AI 제안(미확정)입니다 — 그룹/계열사 화면의 경쟁사 레지스트리에서 확정할 수 있습니다.</p>
+                            <ul className="sizing-note-list mb-0">
+                              {companyProfile.profile.competitive.competitors.map((c, i) => (
+                                <li key={i}><b>{c.name}</b> — {renderWithCitations(c.note, companyProfile.profile?.researchSources ?? [])} <span className="status-chip status-not-started ml-1">미확정</span></li>
+                              ))}
+                            </ul>
+                          </>
+                        ) : null}
                       </>
                     )}
 

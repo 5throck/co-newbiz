@@ -3124,6 +3124,110 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/our-company/members/{memberId}/competitor-proposals:
+    get:
+      operationId: getMemberCompetitorProposals
+      summary: Stateless competitor proposals assembled from the latest profile payload (ADR-0142); accepted names marked.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/competitors:
+    get:
+      operationId: listMemberCompetitors
+      summary: Human-confirmed competitor registry rows (confirmed only).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: registerMemberCompetitor
+      summary: Accept an AI proposal (discovery_source=ai_proposal) or register manually; the only path that creates a confirmed row. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/competitors/{competitorId}:
+    patch:
+      operationId: updateMemberCompetitor
+      summary: Edit note / DART corp code. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/competitors/{competitorId}/exclude:
+    post:
+      operationId: excludeMemberCompetitor
+      summary: Soft-exclude with a mandatory reason. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/competitors/{competitorId}/restore:
+    post:
+      operationId: restoreMemberCompetitor
+      summary: Restore an excluded competitor (refuses a confirmed name clash). Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitor-proposals:
+    get:
+      operationId: getCompanyCompetitorProposals
+      summary: Competitor proposals for an md_company subject (ADR-0142).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitors:
+    get:
+      operationId: listCompanyCompetitors
+      summary: Human-confirmed competitor registry rows for an md_company subject.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: registerCompanyCompetitor
+      summary: Accept an AI proposal or register manually for an md_company subject. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/our-company/members/{memberId}/upload:
     post:
       operationId: uploadMemberEvidenceFile
@@ -3270,6 +3374,18 @@ paths:
       summary: Promote to Short List (knock-out + mandatory pass required).
       tags:
         - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/targets/{targetId}/eval-draft:
+    post:
+      operationId: draftTargetEvaluation
+      summary: Generate financial/technical evaluation DRAFTS (evidence-based LLM proposals, nothing persisted); humans confirm via PUT eval-state. Analyst+.
+      tags:
+        - Brownfield
       responses:
         '200':
           $ref: '#/components/responses/Ok'
