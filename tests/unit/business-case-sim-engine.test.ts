@@ -45,6 +45,7 @@ async function loginCookie(userId: string, password: string): Promise<string> {
 let analystCookie = "";
 let engineProjectId = "";
 let fallbackProjectId = "";
+let paramsProjectId = "";
 
 async function seedProject(name: string): Promise<string> {
   const oppId = ulid();
@@ -160,6 +161,7 @@ describe("S8 generation x sim-engine bridge", () => {
 
   test("(a3) params roundtrip: saved bc.* assumptions resolve as user and reach the next generation", async () => {
     const projectId3 = await seedProject("파라미터 라운드트립");
+    paramsProjectId = projectId3;
     const post = await req(`/api/projects/${projectId3}/business-case/params`, {
       method: "POST",
       headers: { cookie: analystCookie },
@@ -193,6 +195,35 @@ describe("S8 generation x sim-engine bridge", () => {
       expect(row.note).toContain("capture_rate=0.01");
       expect(row.note).toContain("ramp_source=사용자 확정");
     }
+  });
+
+  test("(a4) manual sales-plan lines: volume+price persist through the line editor; half-specified is rejected (REQ-W1-1)", async () => {
+    const create = await req(`/api/projects/${paramsProjectId}/business-case`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({
+        name: "판매목표 수동 케이스",
+        kind: "revenue",
+        lines: [{ category: "revenue", name: "연간 판매", annual_amount_krw_m: 24000, sales_volume: 200000, unit_price_krw: 120 }],
+      }),
+    });
+    expect(create.status).toBe(201);
+    const modelId = ((await create.json()).data as { id: string }).id;
+
+    const get = await req(`/api/projects/${paramsProjectId}/business-case`, { method: "GET", headers: { cookie: analystCookie } });
+    const manual = ((await get.json()).data.cases as Array<{ id: string; lines: Array<{ sales_volume: number | null; unit_price_krw: number | null }> }>).find((c) => c.id === modelId);
+    expect(manual?.lines[0].sales_volume).toBe(200000);
+    expect(manual?.lines[0].unit_price_krw).toBe(120);
+
+    const half = await req(`/api/projects/${paramsProjectId}/business-case`, {
+      method: "PUT",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({
+        model_id: modelId,
+        lines: [{ category: "revenue", name: "연간 판매", annual_amount_krw_m: 24000, sales_volume: 200000 }],
+      }),
+    });
+    expect(half.status).toBe(400);
   });
 
   test("(b) kill switch: generation falls back to the legacy in-process simulator", async () => {

@@ -86,7 +86,7 @@ export function listBusinessCases(projectId: string): {
     .all(projectId) as Array<{ id: string; kind: string; name: string; horizon_years: number; created_by: string; created_at: string; variant: "market_forward" | "historical" }>;
   const lines = db
     .query(
-      `SELECT id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note
+      `SELECT id, model_id, category, name, annual_amount_krw_m, sales_volume, unit_price_krw, start_year, growth_rate, note
        FROM business_case_line
        WHERE model_id IN (SELECT id FROM business_case_model WHERE project_id = ?)
        ORDER BY category, start_year, id`,

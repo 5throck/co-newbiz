@@ -45,6 +45,14 @@ interface DriverSpec {
   source?: string;
 }
 
+interface SnapshotShape {
+  job_id?: string;
+  iterations?: number;
+  horizon_years?: number;
+  discount_rate?: { value: number; subject: string; source: string };
+  cases?: Array<{ case_id: string; drivers: Record<string, DriverSpec> }>;
+}
+
 const pct = (v: number): string => `${(v * 100).toFixed(1)}%`;
 const driverValue = (d: DriverSpec): string => {
   if (d.dist === "normal") return `N(${d.mean}, ${d.sigma})`;
@@ -120,25 +128,21 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
 
   const snapshotCases = cases.filter((c) => c.inputs_json);
   const latestSnapshot = snapshotCases[snapshotCases.length - 1] ?? null;
-  let snapshot: {
-    job_id?: string;
-    iterations?: number;
-    horizon_years?: number;
-    discount_rate?: { value: number; subject: string; source: string };
-    cases?: Array<{ case_id: string; drivers: Record<string, DriverSpec> }>;
-  } | null = null;
-  if (latestSnapshot?.inputs_json) {
+  const parseSnapshot = (raw: string | null): SnapshotShape | null => {
+    if (!raw) return null;
     try {
-      const parsed = JSON.parse(latestSnapshot.inputs_json) as Record<string, unknown>;
+      const parsed = JSON.parse(raw) as Partial<SnapshotShape> | null;
       // A snapshot without the contract fields is a legacy placeholder — show
       // it as absent instead of crashing (finding #2, 2026-09-18 GUI review).
       if (parsed && typeof parsed === "object" && Array.isArray(parsed.cases) && parsed.cases.length > 0) {
-        snapshot = parsed as typeof snapshot;
+        return parsed as SnapshotShape;
       }
+      return null;
     } catch {
-      snapshot = null;
+      return null;
     }
-  }
+  };
+  const snapshot = parseSnapshot(latestSnapshot?.inputs_json ?? null);
 
   return (
     <>
@@ -250,7 +254,7 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(snapshot.cases[0]?.drivers ?? {}).map(([key, d]) => (
+                  {Object.entries(snapshot.cases?.[0]?.drivers ?? {}).map(([key, d]) => (
                     <tr key={key}>
                       <td className="col-label">{DRIVER_LABELS[key] ?? key}</td>
                       <td>{d.dist}</td>
