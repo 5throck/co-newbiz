@@ -146,6 +146,19 @@ steps:
       series, written to `chain_node_sensitivity` with fit quality and
       confidence grade — replacing unexamined manual entries as the step-7
       simulation's sensitivity inputs.
+  - id: 7.96
+    gate: FS
+    agent_key: financial-analyst
+    skill_key: target-costing-analysis
+    output_type: target_cost_gap
+    description: >
+      Target costing (design 2026-09-18-s8-business-case-evaluation REQ-W2-1):
+      market price anchored to peer benchmark or the proxy demand chain is
+      reversed into an allowable cost at the target margin, compared against
+      the estimated unit cost from the cost structure. The output records
+      market_price, target_margin, allowable_cost, estimated_unit_cost, and
+      the gap with reduction levers; a gap beyond the +10% threshold feeds the
+      downside scenario's opex driver and the business-case snapshot warnings.
   - id: 8
     gate: FS
     agent_key: process-governance-manager

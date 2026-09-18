@@ -1,0 +1,13 @@
+-- 0113_business_case_inputs_snapshot.sql
+-- @version 1.0.0
+-- @reversible: false — nullable additive column; dropping it would discard
+--   the persisted execution contract of past runs (design
+--   2026-09-18-s8-business-case-evaluation REQ-W5-1).
+--
+-- Simulation input snapshot on the model (design REQ-W5-1): when generation
+-- runs through the standalone engine, the job-spec JSON is stored here — the
+-- engine's execution contract is exactly what came back in the result, so
+-- "which parameters produced this distribution" becomes a structured record
+-- instead of a parsed note string. NULL = generated before this column
+-- existed or via the legacy in-process fallback (notes remain the record).
+ALTER TABLE business_case_model ADD COLUMN inputs_json TEXT;

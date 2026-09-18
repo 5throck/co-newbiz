@@ -1,0 +1,3 @@
+# Optional GPU extra — Apple Silicon Metal/MPS (REQ-W7-2). The macOS arm64
+# wheel ships MPS support; float32 only (Metal lacks fp64 — REQ-W7-5).
+torch>=2.4,<3.0

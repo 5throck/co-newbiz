@@ -140,12 +140,12 @@ describe("S10 deal-structure route + repositories (flow.spec v2.2.0)", () => {
   test("(c) S10 completion predicate — flips complete, re-blocks on a fresh incomplete hypothesis", async () => {
     // S8/S9 선행 산출물 시딩 — S10은 선형 체인상 S8·S9이 완료된 뒤 평가된다.
     db.run(
-      "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
-      ["bc-ds1", projectId, "greenfield_cost", "구조 설계 케이스", 5, ANALYST, NOW],
+      "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, inputs_json) VALUES (?,?,?,?,?,?,?,?)",
+      ["bc-ds1", projectId, "greenfield_cost", "구조 설계 케이스", 5, ANALYST, NOW, "{}"],
     );
     db.run(
-      "INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-      [`sim-${ulidText()}`, projectId, "bc-ds1", "base", "p50", 9000, 0.12, "seed=42", NOW],
+      "INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at, bep_year, payback_discounted_years) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+      [`sim-${ulidText()}`, projectId, "bc-ds1", "base", "p50", 9000, 0.12, "seed=42", NOW, 2.5, 2.5],
     );
     db.run(
       "INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?)",

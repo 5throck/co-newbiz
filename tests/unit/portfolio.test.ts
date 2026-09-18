@@ -174,18 +174,18 @@ beforeAll(async () => {
 
   // S8 (case + simulation) and S9 (judged checklist item) artifacts.
   db.run(
-    "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
-    ["bc-pf1", projectId, "greenfield_cost", "S12 케이스", 5, ANALYST, NOW],
+    "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, inputs_json) VALUES (?,?,?,?,?,?,?,?)",
+    ["bc-pf1", projectId, "greenfield_cost", "S12 케이스", 5, ANALYST, NOW, "{}"],
   );
   db.run(
-    "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
-    ["bc-pf2", project2Id, "greenfield_cost", "S12 신선도 케이스", 5, ANALYST, NOW],
+    "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, inputs_json) VALUES (?,?,?,?,?,?,?,?)",
+    ["bc-pf2", project2Id, "greenfield_cost", "S12 신선도 케이스", 5, ANALYST, NOW, "{}"],
   );
   for (const pid of [projectId, project2Id]) {
     const modelId = pid === projectId ? "bc-pf1" : "bc-pf2";
     db.run(
-      "INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-      [ulid(), pid, modelId, "base", "p50", 9000, 0.12, "seed=42", NOW],
+      "INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at, bep_year, payback_discounted_years) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+      [ulid(), pid, modelId, "base", "p50", 9000, 0.12, "seed=42", NOW, 2.5, 2.5],
     );
     db.run(
       "INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?)",

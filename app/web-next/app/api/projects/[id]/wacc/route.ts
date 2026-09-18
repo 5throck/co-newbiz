@@ -6,7 +6,7 @@
 // derivable component set and returns the server-computed WACC alongside the
 // human-confirmed one.
 import { getDb } from "../../../../../../../db/client.ts";
-import { loadProjectComponents, recordWaccSession, resolveProjectHurdleIrr, resolveProjectWacc } from "../../../../../../../db/lib/wacc.ts";
+import { isWaccSubject, loadProjectComponents, recordWaccSession, resolveProjectHurdleIrr, resolveProjectWacc, resolveProjectWaccSubject, resolveReleveredBeta, setProjectWaccSubject } from "../../../../../../../db/lib/wacc.ts";
 import {
   assembleDerivation,
   capmComponentGaps,
@@ -56,8 +56,10 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   const hurdle = resolveProjectHurdleIrr(db, id);
   const { runId, components } = loadProjectComponents(db, id);
   const derivation = components.length > 0 ? assembleDerivation(components) : null;
+  const subject = resolveProjectWaccSubject(db, id);
+  const relevering = subject.subject !== "promoter" ? resolveReleveredBeta(db, id) : null;
   return ok(
-    { wacc, hurdle_irr: hurdle, components, derivation },
+    { wacc, hurdle_irr: hurdle, components, derivation, subject, relevering },
     200,
     { wacc_source: wacc.source, run_id: wacc.run_id ?? undefined, components_run_id: runId ?? undefined },
   );
@@ -77,6 +79,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     anchor_ref?: string;
     as_of?: string;
     components?: unknown;
+    subject?: unknown;
+    subject_rationale?: unknown;
   } | null;
   const wacc = parseRate(body?.wacc);
   if (wacc === null) return badRequest("invalid_request", "wacc는 -1보다 큰 유한한 비율이어야 합니다. 예: 0.095");
@@ -106,6 +110,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     derivation = assembleDerivation(components);
   }
 
+  let subjectInput: { subject: "promoter" | "target" | "project_newco"; rationale: string } | null = null;
+  if (body?.subject !== undefined && body?.subject !== null && body?.subject !== "") {
+    if (!isWaccSubject(body.subject)) {
+      return badRequest("invalid_request", "subject는 promoter | target | project_newco 중 하나여야 합니다.");
+    }
+    const subjectRationale = typeof body.subject_rationale === "string" ? body.subject_rationale.trim() : "";
+    if (!subjectRationale) {
+      return badRequest("invalid_request", "wacc 주체를 확정할 때는 근거(subject_rationale)가 필요합니다.");
+    }
+    subjectInput = { subject: body.subject, rationale: subjectRationale };
+  }
+
   try {
     const result = recordWaccSession(getDb(), {
       projectId: id,
@@ -118,12 +134,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       components,
       actor: auth.auth.userId,
     });
+    if (subjectInput) {
+      setProjectWaccSubject(getDb(), id, subjectInput.subject, subjectInput.rationale, auth.auth.userId);
+    }
+    const subject = resolveProjectWaccSubject(getDb(), id);
     const computed = derivation?.computed.wacc ?? null;
     return ok(
       {
         ...result,
         wacc_computed: computed,
         computed_mismatch: computed != null && Math.abs(computed - wacc) > COMPUTED_TOLERANCE,
+        subject,
       },
       201,
       { run_id: result.run_id, wacc_source: result.wacc.source },

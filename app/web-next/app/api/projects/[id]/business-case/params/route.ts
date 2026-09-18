@@ -1,0 +1,73 @@
+// Business-case parameter session (design 2026-09-18-s8-business-case-
+// evaluation REQ-W6-1..3) — GET resolves the live bc.* parameter set with
+// provenance; POST records a user batch on a fresh run (analyst+, rationale
+// mandatory). Resolution order: user assumption > derived > default, and
+// generation reads exactly this chain — saving then regenerating changes the
+// persisted snapshot deterministically.
+import { getDb } from "../../../../../../../../db/client.ts";
+import { authenticate } from "../../../../../../lib/auth.ts";
+import { visibleProject } from "../../../../../../lib/project-visibility.ts";
+import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { recordBusinessCaseParams, resolveBusinessCaseParams } from "../../../../../../lib/business-case-generator.ts";
+
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  const { id } = await params;
+  if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
+  const resolved = resolveBusinessCaseParams(getDb(), id);
+  return ok({ params: resolved }, 200);
+}
+
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  if (auth.auth.role === "viewer") return forbidden("role_required", "파라미터 확정은 analyst 역할 이상이어야 합니다.");
+  const { id } = await params;
+  if (!visibleProject(auth.auth, id)) return notFound();
+  const body = (await request.json().catch(() => null)) as {
+    params?: Record<string, unknown>;
+    rationale?: string;
+  } | null;
+  const rationale = typeof body?.rationale === "string" ? body.rationale.trim() : "";
+  if (!rationale) return badRequest("invalid_request", "파라미터 확정에는 근거(rationale)가 필수입니다.");
+  const raw = body?.params ?? {};
+  const num = (key: string): number | undefined => {
+    const v = raw[key];
+    if (v === undefined || v === null || v === "") return undefined;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) throw new Error(`${key}는 0 이상의 숫자여야 합니다.`);
+    return n;
+  };
+  let parsed: Parameters<typeof recordBusinessCaseParams>[1]["params"];
+  try {
+    parsed = {
+      capture_rate: num("capture_rate"),
+      opex_ratio: num("opex_ratio"),
+      capex_ratio: num("capex_ratio"),
+      initial_investment_ratio: num("initial_investment_ratio"),
+      growth_override: num("growth_override"),
+      sigma_override: num("sigma_override"),
+      horizon_years: num("horizon_years"),
+      iterations: num("iterations"),
+      ramp_up: Array.isArray(raw.ramp_up)
+        ? (raw.ramp_up as unknown[]).map((v) => {
+            const n = Number(v);
+            if (!Number.isFinite(n) || n < 0) throw new Error("ramp_up 항목은 0 이상의 숫자여야 합니다.");
+            return n;
+          })
+        : undefined,
+    };
+    const result = await recordBusinessCaseParams(getDb(), {
+      projectId: id,
+      params: parsed,
+      rationale,
+      actor: auth.auth.userId,
+    });
+    return ok({ written: result.written, run_id: result.run_id, params: resolveBusinessCaseParams(getDb(), id) }, 201, {
+      written_count: String(result.written.length),
+    });
+  } catch (err) {
+    return badRequest("invalid_request", err instanceof Error ? err.message : "파라미터 저장에 실패했습니다.");
+  }
+}

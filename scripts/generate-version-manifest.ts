@@ -1,4 +1,4 @@
-// @version 1.6.0
+// @version 1.6.1
 // v1.6.0 (T-20260916-013): shallow-tolerant --check. In a shallow checkout
 //           (actions/checkout default depth=1) `git log` has no history, so the
 //           per-file "Last Modified" dates fall back to checkout-time values and
@@ -310,7 +310,11 @@ async function collectScripts(): Promise<ScriptInfo[]> {
             dependencies: extractScriptDependencies(content),
         });
     });
-    return scripts.sort((a, b) => a.name.localeCompare(b.name));
+    // Tie-break equal basenames (e.g. template copy scripts/design-lint.ts vs
+    // project copy scripts/co-newbiz/design-lint.ts) by location — a
+    // name-only sort leaves their relative order to readdirSync, which
+    // differs between environments and made the manifest flaky in CI.
+    return scripts.sort((a, b) => a.name.localeCompare(b.name) || a.location.localeCompare(b.location));
 }
 
 async function collectCommands(): Promise<CommandInfo[]> {
