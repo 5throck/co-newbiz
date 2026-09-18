@@ -33,6 +33,7 @@ import { deriveFinancialAnalysis } from "./company-financials.ts";
 import { historicalGrowthStats } from "./financial-commentary.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef, type CallAgent } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
+import { runSimJob } from "./sim-engine.ts";
 
 // Per-step S8 agent assignment reads from process/flow.spec.yaml (SSOT,
 // ADR-0074) — each execution step maps to the spec activity that owns its
@@ -357,6 +358,74 @@ function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant:
   return flows;
 }
 
+// ── Standalone engine bridge (spec 2026-09-18-s8-business-case-evaluation §1) ─
+
+export interface SimEngineMeta {
+  engine: string;
+  device: string;
+  precision: string;
+}
+
+export interface EngineRunResult {
+  result: SimulationResult;
+  meta: SimEngineMeta;
+  bepYear: number | null;
+}
+
+/**
+ * Translate the S8 legacy model into a generic engine job-spec (design §1.4:
+ * the generator is demoted to a job-spec builder). Same constants, same
+ * semantics — year-1 anchor, growth noise on years 2..H, FCF = revenue ×
+ * (1 − opex − capex), year-0 initial investment (ADR-0106).
+ */
+export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): Record<string, unknown> {
+  const delta = SCENARIO_DELTA[scenario];
+  const eff = effGrowthDisp(inputs, scenario, variant);
+  const year1Revenue = inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth;
+  return {
+    job_id: `s8:${inputs.projectId}:${scenario}:${variant}`,
+    seed_policy: { base: inputs.projectId, hash: "fnv1a" },
+    device: "auto",
+    iterations: MC_ITERATIONS,
+    horizon_years: HORIZON_YEARS,
+    discount_rate: { value: inputs.wacc.value, subject: "promoter", source: inputs.wacc.source },
+    cases: [
+      {
+        case_id: `${scenario}:${variant}`,
+        drivers: {
+          revenue_y1: { dist: "constant", value: year1Revenue, unit: "KRW_M", source: `시장규모 × 포획률 ${(CAPTURE_RATE * 100).toFixed(1)}%` },
+          revenue_growth: { dist: "normal", mean: eff.growth, sigma: eff.disp, unit: "ratio", source: eff.growthSource },
+          opex_ratio: { dist: "constant", value: OPEX_RATIO, unit: "ratio", source: "기본값" },
+          capex_ratio: { dist: "constant", value: CAPEX_RATIO, unit: "ratio", source: "기본값" },
+          initial_investment: { dist: "constant", value: year1Revenue * INITIAL_INVESTMENT_RATIO, unit: "KRW_M", source: "ADR-0106" },
+        },
+      },
+    ],
+  };
+}
+
+/** One engine attempt for an S8 case; null on any failure — the caller falls
+ *  back to the legacy in-process simulator and the fallback is stamped in the
+ *  note so every persisted figure names its origin (REQ-W5-1 transition). */
+async function runEngineSimulation(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant): Promise<EngineRunResult | null> {
+  const job = await runSimJob(buildS8JobSpec(inputs, scenario, variant));
+  const first = job?.cases[0];
+  if (!job || !first || !Number.isFinite(first.npv?.p50)) return null;
+  return {
+    result: {
+      seed: first.seed,
+      iterations: first.iterations,
+      p05: first.npv.p05,
+      p50: first.npv.p50,
+      p95: first.npv.p95,
+      mean: first.npv.mean,
+      std: first.npv.std,
+    },
+    meta: { engine: `python-sim-engine@${job.version}`, device: `${first.device.device}/${first.device.backend}`, precision: first.device.precision },
+    bepYear: first.bep_year,
+  };
+}
+
 // ── Executor seam (Phase 2 pattern, lib/committee-agents.ts) ────────────────
 
 export interface StepContext {
@@ -367,6 +436,10 @@ export interface StepContext {
   inputs: CaseInputs;
   /** Set once the valuation_model step has persisted the model for this scenario. */
   modelId?: string;
+  /** Set by distributional_valuation; scenario_risk_assessment reuses it so
+   *  the engine (or fallback) simulates once per (scenario, variant), not
+   *  twice. */
+  sim?: { result: SimulationResult; engine: SimEngineMeta; bepYear: number | null };
 }
 
 const VARIANT_LABEL: Record<CaseVariant, string> = { market_forward: "시장 기반", historical: "과거 기반" };
@@ -449,9 +522,16 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
     if (step === "distributional_valuation") {
       const modelId = ctx.modelId;
       if (!modelId) throw new Error("distributional_valuation requires valuation_model to have persisted the model");
-      const sim = runSeededSimulation(ctx.inputs, ctx.scenario, variant);
+      // Standalone engine first (design §1); the legacy in-process simulator
+      // remains the fallback and the note names which engine produced the
+      // distribution, on which device (REQ-W5-1 transition contract).
+      const engineRun = await runEngineSimulation(ctx.inputs, ctx.scenario, variant);
+      const sim: SimulationResult = engineRun?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant);
+      const engineMeta: SimEngineMeta = engineRun?.meta ?? { engine: "inline-ts", device: "cpu", precision: "float64" };
+      ctx.sim = { result: sim, engine: engineMeta, bepYear: engineRun?.bepYear ?? null };
       const flows = deterministicCashflows(ctx.inputs, ctx.scenario, variant);
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; ${provenance}`;
+      const bepFragment = engineRun?.bepYear != null ? `; bep_year=${engineRun.bepYear.toFixed(2)}` : "";
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; ${provenance}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
       for (const pct of ["p05", "p50", "p95"] as const) {
         db.run(
           `INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at)
@@ -462,7 +542,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       return [
         `### [정량 방법론] quant-methodologist — 분포 밸류에이션 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
         "",
-        `시드 ${sim.seed}·${sim.iterations}회 몬테카를로 (ADR-0052 §D.4, 결정론적 재현 가능):`,
+        `시드 ${sim.seed}·${sim.iterations}회 몬테카를로 (ADR-0052 §D.4, 결정론적 재현 가능; 엔진 ${engineMeta.engine} · ${engineMeta.device}):`,
         `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
         `NPV p05 ${sim.p05.toFixed(1)} / p50 ${sim.p50.toFixed(1)} / p95 ${sim.p95.toFixed(1)} 억원,`,
         `분산(표준편차) ${sim.std.toFixed(1)} — 지점 추정+서술 각주 금지, 분위수 영속화 완료 (valuation_simulation 3행).`,
@@ -470,11 +550,12 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
     }
     // scenario_risk_assessment (step 5) — covenant-style downside review for
     // this scenario. The CROSS-scenario comparison + RECOMMENDED flag is
-    // recorded once after the chain (see generateBusinessCases).
+    // recorded once after the chain (see generateBusinessCases). Reuses the
+    // distributional_valuation result — the simulation runs once per case.
     return [
       `### [정량 방법론] quant-methodologist — 시나리오 리스크 평가 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
       "",
-      `하락 스트레스: p05 NPV ${runSeededSimulation(ctx.inputs, ctx.scenario, variant).p05.toFixed(1)} 억원 기준,`,
+      `하락 스트레스: p05 NPV ${(ctx.sim?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant)).p05.toFixed(1)} 억원 기준,`,
       ctx.scenario === "downside"
         ? "금리 충격 시 계약(커버넌트) 테스트 관점에서 p05가 0 이하로 내려가는 구간에 대한 완충 확인 필요."
         : "금리 충격 시 계약(커버넌트) 테스트 통과 여향 — 하락 시나리오의 p05 대비 완충 명시 권장.",

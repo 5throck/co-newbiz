@@ -1,0 +1,283 @@
+// @version 1.0.0
+/**
+ * Unit tests for the standalone simulation engine (python/sim_engine/) —
+ * spec 2026-09-18-s8-business-case-evaluation sections 1.2-1.4:
+ *  (a) CLI contract — version probe, validation errors on exit code 2;
+ *  (b) seeded determinism — identical job-spec, identical result;
+ *  (c) closed-form parity — constant drivers reproduce the analytic NPV,
+ *      discounted payback, and std=0;
+ *  (d) seed policy — the engine's seed equals fnv1a32(case_id + ":" +
+ *      sha256(canonical drivers)) computed independently here;
+ *  (e) BEP volume from unit economics (REQ-W3-1) — and null when partial;
+ *  (f) device fallback — an unavailable explicit device degrades to CPU with
+ *      a recorded warning (REQ-W7-3/4), never a failed job;
+ *  (g) case-level parallelism — parallel multi-case output equals serial
+ *      single-case output, order preserved (design section 1.3).
+ *
+ * Skips cleanly when python3 (+numpy) is unavailable — the engine is an
+ * optional accelerator and CI hosts without it still run the TS fallback.
+ */
+
+import { test, expect, describe } from "bun:test";
+import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
+const REPO_ROOT = resolve(import.meta.dirname, "..", "..");
+const PYTHON_DIR = resolve(REPO_ROOT, "python");
+const PYTHON_BIN = existsSync(resolve(REPO_ROOT, ".venv", "bin", "python3"))
+  ? resolve(REPO_ROOT, ".venv", "bin", "python3")
+  : process.platform === "win32"
+    ? "python"
+    : "python3";
+
+function probeEngine(): boolean {
+  const probe = spawnSync(PYTHON_BIN, ["-m", "sim_engine", "--version"], {
+    cwd: PYTHON_DIR,
+    encoding: "utf-8",
+    timeout: 30_000,
+    env: { ...process.env, PYTHONPATH: PYTHON_DIR },
+  });
+  // Bun's spawnSync populates `status`, node's populates `exitCode` — accept both.
+  const exit = probe.status ?? probe.exitCode;
+  return exit === 0 && typeof probe.stdout === "string" && probe.stdout.includes("python-sim-engine");
+}
+const ENGINE_AVAILABLE = probeEngine();
+
+interface EngineCase {
+  case_id: string;
+  seed: number;
+  iterations: number;
+  inputs_hash: string;
+  npv: { p05: number; p50: number; p95: number; mean: number; std: number; base: number };
+  irr: number | null;
+  payback_discounted_years: number | null;
+  bep_year: number | null;
+  bep_volume: number | null;
+  device: { device: string; backend: string; precision: string; build: string };
+  warnings: string[];
+}
+
+interface EngineResult {
+  engine: string;
+  version: string;
+  device: { device: string; backend: string; precision: string; reason: string; warnings: string[] };
+  cases: EngineCase[];
+}
+
+function runEngine(job: unknown, timeoutMs = 120_000): Promise<{ code: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolvePromise) => {
+    const proc = spawn(PYTHON_BIN, ["-m", "sim_engine"], {
+      cwd: PYTHON_DIR,
+      stdio: ["pipe", "pipe", "pipe"],
+      env: { ...process.env, PYTHONPATH: PYTHON_DIR },
+    });
+    let stdout = "";
+    let stderr = "";
+    const timer = setTimeout(() => proc.kill("SIGKILL"), timeoutMs);
+    proc.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString()));
+    proc.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+    proc.on("close", (code) => {
+      clearTimeout(timer);
+      resolvePromise({ code, stdout, stderr });
+    });
+    proc.stdin.write(JSON.stringify(job));
+    proc.stdin.end();
+  });
+}
+
+// Independent re-implementation of the seed policy (design section 1.3) —
+// canonical JSON (sorted keys, compact, integral floats as ints) → sha256 →
+// fnv1a32("case_id:" + hex). Deliberately NOT imported from engine code so a
+// hashing regression cannot hide.
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`);
+  return `{${entries.join(",")}}`;
+}
+
+function fnv1a32(key: string): number {
+  let h = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(key)) {
+    h ^= byte;
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+function expectedSeed(caseId: string, drivers: Record<string, unknown>): number {
+  const hex = createHash("sha256").update(canonicalJson(drivers)).digest("hex");
+  return fnv1a32(`${caseId}:${hex}`);
+}
+
+const CONSTANT_JOB = {
+  job_id: "test:constant",
+  device: "cpu",
+  iterations: 500,
+  horizon_years: 5,
+  discount_rate: { value: 0.1, subject: "promoter", source: "user" },
+  seed_policy: { base: "proj", hash: "fnv1a" },
+  cases: [
+    {
+      case_id: "const:market_forward",
+      drivers: {
+        revenue_y1: { dist: "constant", value: 250, unit: "KRW_M" },
+        revenue_growth: { dist: "constant", value: 0 },
+        opex_ratio: { dist: "constant", value: 0.6 },
+        capex_ratio: { dist: "constant", value: 0.1 },
+        initial_investment: { dist: "constant", value: 100, unit: "KRW_M" },
+      },
+    },
+  ],
+};
+
+describe("sim_engine", () => {
+  test.skipIf(!ENGINE_AVAILABLE)("CLI --version identifies the engine", () => {
+    expect(ENGINE_AVAILABLE).toBe(true);
+  });
+
+  test.skipIf(!ENGINE_AVAILABLE)("closed-form parity: constant drivers reproduce the analytic NPV/payback and std=0", async () => {
+    const { code, stdout, stderr } = await runEngine(CONSTANT_JOB);
+    expect(stderr).toBe("");
+    expect(code).toBe(0);
+    const result = JSON.parse(stdout) as EngineResult;
+    const kase = result.cases[0];
+
+    // NPV = -100 + 75 x 5y annuity @10% = 184.30900...
+    const annuity = [1, 2, 3, 4, 5].reduce((acc, t) => acc + 1 / 1.1 ** t, 0);
+    const expectedNpv = -100 + 75 * annuity;
+    expect(kase.npv.base).toBeCloseTo(expectedNpv, 6);
+    // Degenerate distribution: every iteration is the same value, so the
+    // spread is float-rounding noise only (mean's own ulp), never model noise.
+    expect(kase.npv.std).toBeLessThan(1e-9);
+    expect(kase.npv.p05).toBe(kase.npv.p50);
+    expect(kase.npv.p50).toBe(kase.npv.p95);
+
+    // Discounted payback: cumulative crosses zero during year 2 at 1.51337.
+    expect(kase.payback_discounted_years).toBeCloseTo(1 + 31.8181818 / 61.9834711, 5);
+    expect(kase.bep_year).toBe(kase.payback_discounted_years);
+    expect(kase.irr).not.toBeNull();
+    expect(kase.irr!).toBeGreaterThan(0.65);
+    expect(kase.irr!).toBeLessThan(0.75);
+    expect(result.device.device).toBe("cpu");
+  });
+
+  test.skipIf(!ENGINE_AVAILABLE)("seeded determinism: identical job-spec reproduces an identical result", async () => {
+    const noisyJob = {
+      ...CONSTANT_JOB,
+      job_id: "test:noise",
+      cases: [
+        {
+          case_id: "noise:market_forward",
+          drivers: {
+            ...CONSTANT_JOB.cases[0].drivers,
+            revenue_growth: { dist: "normal", mean: 0.05, sigma: 0.02 },
+          },
+        },
+      ],
+    };
+    const first = await runEngine(noisyJob);
+    const second = await runEngine(noisyJob);
+    expect(first.code).toBe(0);
+    expect(second.code).toBe(0);
+    const a = JSON.parse(first.stdout) as EngineResult;
+    const b = JSON.parse(second.stdout) as EngineResult;
+    expect(a.cases[0].seed).toBe(b.cases[0].seed);
+    expect(a.cases[0].npv).toEqual(b.cases[0].npv);
+    // Noise must actually move the distribution off the deterministic path.
+    expect(a.cases[0].npv.std).toBeGreaterThan(0);
+  });
+
+  test.skipIf(!ENGINE_AVAILABLE)("seed policy: engine seed equals fnv1a32(case_id + ':' + sha256(canonical drivers))", async () => {
+    const { code, stdout } = await runEngine(CONSTANT_JOB);
+    expect(code).toBe(0);
+    const result = JSON.parse(stdout) as EngineResult;
+    const drivers = CONSTANT_JOB.cases[0].drivers;
+    expect(result.cases[0].seed).toBe(expectedSeed(CONSTANT_JOB.cases[0].case_id, drivers));
+    // A driver change must deterministically change the seed (REQ-W6-4).
+    const changedJob = structuredClone(CONSTANT_JOB);
+    (changedJob.cases[0].drivers.revenue_y1 as { value: number }).value = 260;
+    const changed = await runEngine(changedJob);
+    const changedResult = JSON.parse(changed.stdout) as EngineResult;
+    expect(changedResult.cases[0].seed).not.toBe(result.cases[0].seed);
+    expect(changedResult.cases[0].seed).toBe(expectedSeed(CONSTANT_JOB.cases[0].case_id, changedJob.cases[0].drivers));
+  });
+
+  test.skipIf(!ENGINE_AVAILABLE)("BEP volume from unit economics; null with a warning when inputs are partial (REQ-W3-1)", async () => {
+    const bepJob = {
+      ...CONSTANT_JOB,
+      job_id: "test:bep",
+      cases: [
+        {
+          case_id: "bep:market_forward",
+          drivers: {
+            revenue_y1: { dist: "constant", value: 250 },
+            fixed_cost_annual: { dist: "constant", value: 1000, unit: "KRW_M" },
+            unit_price: { dist: "constant", value: 12, unit: "KRW" },
+            unit_variable_cost: { dist: "constant", value: 7, unit: "KRW" },
+          },
+        },
+      ],
+    };
+    const result = JSON.parse((await runEngine(bepJob)).stdout) as EngineResult;
+    expect(result.cases[0].bep_volume).toBe(200);
+
+    const partialJob = structuredClone(bepJob);
+    delete (partialJob.cases[0].drivers as Record<string, unknown>).unit_variable_cost;
+    const partial = JSON.parse((await runEngine(partialJob)).stdout) as EngineResult;
+    expect(partial.cases[0].bep_volume).toBeNull();
+    expect(partial.cases[0].warnings.join(" ")).toContain("bep_volume");
+  });
+
+  test.skipIf(!ENGINE_AVAILABLE)("device fallback: an unavailable explicit device degrades to CPU with a recorded warning (REQ-W7-3/4)", async () => {
+    const gpuJob = { ...CONSTANT_JOB, job_id: "test:gpu", device: "cuda" };
+    const result = JSON.parse((await runEngine(gpuJob)).stdout) as EngineResult;
+    expect(result.device.device).toBe("cpu");
+    expect(result.device.warnings.join(" ")).toContain("fallback");
+    expect(result.cases[0].warnings.join(" ")).toContain("fallback");
+  });
+
+  test.skipIf(!ENGINE_AVAILABLE)("case parallelism: parallel multi-case output equals serial single-case output, order preserved", async () => {
+    const caseDriver = (revenue: number) => ({
+      revenue_y1: { dist: "constant", value: revenue },
+      revenue_growth: { dist: "normal", mean: 0.05, sigma: 0.02 },
+      opex_ratio: { dist: "constant", value: 0.6 },
+      capex_ratio: { dist: "constant", value: 0.1 },
+      initial_investment: { dist: "constant", value: 100 },
+    });
+    const ids = ["base:market_forward", "upside:market_forward", "downside:market_forward"];
+    const multiJob = {
+      ...CONSTANT_JOB,
+      job_id: "test:multi",
+      cases: ids.map((case_id, i) => ({ case_id, drivers: caseDriver(200 + 50 * i) })),
+    };
+    const parallel = JSON.parse((await runEngine(multiJob)).stdout) as EngineResult;
+    expect(parallel.cases.map((c) => c.case_id)).toEqual(ids);
+    for (let i = 0; i < ids.length; i++) {
+      const serialJob = { ...CONSTANT_JOB, job_id: `test:single:${i}`, cases: [multiJob.cases[i]] };
+      const serial = JSON.parse((await runEngine(serialJob)).stdout) as EngineResult;
+      // Same drivers -> same seed -> same distribution, regardless of pooling.
+      expect(serial.cases[0].seed).toBe(parallel.cases[i].seed);
+      expect(serial.cases[0].npv).toEqual(parallel.cases[i].npv);
+    }
+  });
+
+  test.skipIf(!ENGINE_AVAILABLE)("contract violations exit 2 with a precise message, never a stack trace", async () => {
+    const badCases = [
+      { ...CONSTANT_JOB, cases: [] },
+      { ...CONSTANT_JOB, device: "tpu" },
+      { ...CONSTANT_JOB, iterations: "many" },
+      { ...CONSTANT_JOB, cases: [{ case_id: "x", drivers: { revenue_growth: { dist: "constant" } } }] },
+    ];
+    for (const bad of badCases) {
+      const { code, stderr } = await runEngine(bad);
+      expect(code).toBe(2);
+      expect(stderr).toContain("invalid job-spec");
+      expect(stderr).not.toContain("Traceback");
+    }
+  });
+});
