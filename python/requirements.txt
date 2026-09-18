@@ -9,7 +9,10 @@
 pandas>=2.0,<3.0
 
 # correlation.py (proxy-chain calibration), monte_carlo.py (contingent-
-# liability Monte Carlo simulation) — design §4-5, §4-6, ADR-0026.
+# liability Monte Carlo simulation), sim_engine/ (standalone simulation
+# engine, spec 2026-09-18-s8-business-case-evaluation) — design §4-5, §4-6,
+# ADR-0026. numpy alone runs the engine's CPU path; GPU accelerators are
+# OPTIONAL extras — see requirements-gpu-{cuda,rocm,mps,xpu}.txt (REQ-W7-3).
 numpy>=1.26,<3.0
 
 # kpi.py, driver_tree.py — stdlib only (driver_tree.py ported from
