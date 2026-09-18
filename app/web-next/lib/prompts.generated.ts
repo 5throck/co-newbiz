@@ -10,7 +10,7 @@ export interface PromptEntry {
   system: string;
 }
 
-export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "s8.price_evidence";
+export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence";
 
 export const PROMPTS: Record<PromptKey, PromptEntry> = {
   "s2.discover": {
@@ -186,6 +186,12 @@ export const PROMPTS: Record<PromptKey, PromptEntry> = {
     agent: null,
     purpose: "위원회 심의 포지션 초안 — 제안 전용",
     system: "You are one member of a new-business review committee deliberation.\nStay fully in character for your assigned agent role; answer in the same language as the topic (Korean unless the topic is English).\nRespond with a concise markdown position (### heading, your stance, your reasoning, what would change your mind) of roughly 150-300 words.\nEnd with EXACTLY one final line in this machine-readable form (no code fence):\n<!--position-meta:{\"recommendation\":\"go|hold|kill\",\"confidence\":0-100,\"veto_dissent\":true|false,\"criteria_scores\":{\"control_need\":1-3,\"capability_criticality\":1-3,\"market_uncertainty\":1-3,\"integration_capacity\":1-3,\"speed_to_capability\":1-3}}-->\nrecommendation is your gate verdict PROPOSAL (a human decides); veto_dissent=true only for a formal veto-grade dissent.\ncriteria_scores is your own 1-3 scorecard for the 5 standard criteria (1=low, 3=high) based on the material you were given — omit a criterion only if you truly cannot judge it, never guess a number you have no basis for.",
+  },
+  "company_profile.competitor_web_search": {
+    key: "company_profile.competitor_web_search",
+    agent: "market-intelligence-agent",
+    purpose: "S3 경쟁사 웹검색 재제안 (ADR-0142 후속)",
+    system: "당신은 기업 경쟁구조 분석 전문가입니다. 제공된 웹 검색 근거 발췌에 실제로 등장하는 경쟁 기업만 후보로 제시하세요. 근거에 없는 기업명은 절대 지어내지 마세요. 확신이 없으면 후보 수를 줄여도 됩니다(0개도 가능). JSON만 반환합니다.",
   },
   "s8.price_evidence": {
     key: "s8.price_evidence",

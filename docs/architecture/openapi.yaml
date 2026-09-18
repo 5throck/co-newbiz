@@ -3228,6 +3228,66 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/our-company/members/{memberId}/competitor-proposals/web-search:
+    post:
+      operationId: webSearchMemberCompetitorProposals
+      summary: On-demand web-search competitor proposals (evidence-backed; llm_knowledge fallback with unverified labels; nothing persisted). Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitor-proposals/web-search:
+    post:
+      operationId: webSearchCompanyCompetitorProposals
+      summary: On-demand web-search competitor proposals for an md_company subject. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitors/{competitorId}:
+    patch:
+      operationId: updateCompanyCompetitor
+      summary: Edit note / DART corp code for an md_company competitor row. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitors/{competitorId}/exclude:
+    post:
+      operationId: excludeCompanyCompetitor
+      summary: Soft-exclude with a mandatory reason. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitors/{competitorId}/restore:
+    post:
+      operationId: restoreCompanyCompetitor
+      summary: Restore an excluded competitor (refuses a confirmed name clash). Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/our-company/members/{memberId}/upload:
     post:
       operationId: uploadMemberEvidenceFile
