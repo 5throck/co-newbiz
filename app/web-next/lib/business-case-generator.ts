@@ -27,7 +27,7 @@
 
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
-import { resolveProjectWacc, type WaccResolution } from "../../../db/lib/wacc.ts";
+import { resolveProjectWacc, resolveProjectWaccSubject, type WaccResolution, type WaccSubjectResolution } from "../../../db/lib/wacc.ts";
 import { getCompanyFinancialFacts, factRowsToDartItems } from "./dart-financial-facts.ts";
 import { deriveFinancialAnalysis } from "./company-financials.ts";
 import { historicalGrowthStats } from "./financial-commentary.ts";
@@ -295,19 +295,22 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const anchorGrowth = eff.growth;
   const disp = eff.disp;
   const year1Revenue = inputs.marketSizeKrwM * captureRateOf(inputs) * delta.growth;
+  const horizon = horizonOf(inputs);
+  const opexRatio = opexRatioOf(inputs);
+  const capexRatio = capexRatioOf(inputs);
 
   const npvs: number[] = [];
-  const initialInvestment = year1Revenue * INITIAL_INVESTMENT_RATIO;
+  const initialInvestment = year1Revenue * initialInvestmentRatioOf(inputs);
   const ramp = rampUpOf(inputs);
-  for (let it = 0; it < MC_ITERATIONS; it++) {
+  for (let it = 0; it < iterationsOf(inputs); it++) {
     let revenue = year1Revenue;
     let npv = -initialInvestment; // year-0 설립 투자
-    for (let year = 1; year <= HORIZON_YEARS; year++) {
+    for (let year = 1; year <= horizon; year++) {
       if (year > 1) {
         const [z1] = normalPair(rng);
         revenue *= 1 + anchorGrowth + disp * z1;
       }
-      const fcf = revenue * (1 - OPEX_RATIO) - revenue * CAPEX_RATIO;
+      const fcf = revenue * (1 - opexRatio) - revenue * capexRatio;
       const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
       npv += (fcf * utilization) / Math.pow(1 + inputs.wacc.value, year);
     }
@@ -318,14 +321,15 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const variance = npvs.reduce((a, b) => a + (b - mean) * (b - mean), 0) / npvs.length;
   const q = (p: number) => npvs[Math.min(npvs.length - 1, Math.max(0, Math.floor(p * npvs.length)))];
   // Deterministic path — same BEP/payback definition as the engine.
-  const detFlows: number[] = [-year1Revenue * INITIAL_INVESTMENT_RATIO];
+  const initialInvestmentRatio = initialInvestmentRatioOf(inputs);
+  const detFlows: number[] = [-year1Revenue * initialInvestmentRatio];
   let detRevenue = year1Revenue;
-  for (let year = 1; year <= HORIZON_YEARS; year++) {
+  for (let year = 1; year <= horizon; year++) {
     if (year > 1) detRevenue *= 1 + anchorGrowth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
-    detFlows.push(detRevenue * (1 - OPEX_RATIO - CAPEX_RATIO) * utilization);
+    detFlows.push(detRevenue * (1 - opexRatio - capexRatio) * utilization);
   }
-  return { seed, iterations: MC_ITERATIONS, p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance), bepYear: discountedPaybackYear(year1Revenue * INITIAL_INVESTMENT_RATIO, detFlows.slice(1), inputs.wacc.value), bepVolume: null };
+  return { seed, iterations: iterationsOf(inputs), p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance), bepYear: discountedPaybackYear(year1Revenue * initialInvestmentRatio, detFlows.slice(1), inputs.wacc.value), bepVolume: null };
 }
 
 // ── Case inputs (anchored to the promoting opportunity's market facts) ─────
@@ -344,6 +348,9 @@ export interface CaseInputs {
    *  provenance labels. Optional so hand-built contexts fall back to the
    *  deterministic defaults. */
   bcParams?: BusinessCaseParams;
+  /** WACC application subject (REQ-W4-1/2) — whose cost of capital discounts
+   *  the cash flows. Optional for hand-built contexts: defaults to promoter. */
+  waccSubject?: WaccSubjectResolution;
 }
 
 /** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
@@ -354,6 +361,20 @@ export interface BusinessCaseParams {
   captureSource: string;
   rampUp: number[];
   rampSource: string;
+  opexRatio: number;
+  opexSource: string;
+  capexRatio: number;
+  capexSource: string;
+  initialInvestmentRatio: number;
+  initialInvestmentSource: string;
+  growthOverride: number | null;
+  growthOverrideSource: string;
+  sigmaOverride: number | null;
+  sigmaOverrideSource: string;
+  horizonYears: number;
+  horizonSource: string;
+  iterations: number;
+  iterationsSource: string;
 }
 
 /** Resolve bc.* user assumptions (design REQ-W6-1 vocabulary) — capture rate
@@ -380,27 +401,157 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     }
   }
   const rampUp = DEFAULT_RAMP_UP.map((fallback, i) => rampByYear.get(i + 1) ?? fallback);
+  const scalar = (key: string): number | null => {
+    const row = db.query(
+      `SELECT a.value FROM assumption a JOIN run r ON r.id = a.run_id
+       WHERE r.project_id = ? AND a.assumption_key = ? AND a.kind = 'user'
+       ORDER BY a.as_of DESC, r.created_at DESC, a.id DESC LIMIT 1`,
+    ).get(projectId, key) as { value: number } | undefined;
+    return row && Number.isFinite(row.value) ? row.value : null;
+  };
+  const ratio = (key: string, fallback: number): { value: number; source: string } => {
+    const v = scalar(key);
+    return v !== null && v >= 0 ? { value: v, source: `사용자 확정 (${key})` } : { value: fallback, source: "기본값" };
+  };
+  const opex = ratio("bc.opex_ratio", OPEX_RATIO);
+  const capex = ratio("bc.capex_ratio", CAPEX_RATIO);
+  const initInv = ratio("bc.initial_investment_ratio", INITIAL_INVESTMENT_RATIO);
+  const growthOv = scalar("bc.growth_override");
+  const sigmaOv = scalar("bc.sigma_override");
+  const horizon = ratio("bc.horizon_years", HORIZON_YEARS);
+  const iterations = ratio("bc.iterations", MC_ITERATIONS);
   return {
     captureRate: capture && Number.isFinite(capture.value) && capture.value > 0 ? capture.value : CAPTURE_RATE,
     captureSource: capture && Number.isFinite(capture.value) && capture.value > 0 ? "사용자 확정 (bc.capture_rate)" : "기본값",
     rampUp,
     rampSource: rampByYear.size > 0 ? "사용자 확정 (bc.ramp_up.y*)" : "기본값",
+    opexRatio: opex.value,
+    opexSource: opex.source,
+    capexRatio: capex.value,
+    capexSource: capex.source,
+    initialInvestmentRatio: initInv.value,
+    initialInvestmentSource: initInv.source,
+    growthOverride: growthOv,
+    growthOverrideSource: growthOv !== null ? "사용자 오버라이드 (bc.growth_override)" : "기본값",
+    sigmaOverride: sigmaOv !== null && sigmaOv >= 0 ? sigmaOv : (sigmaOv !== null ? sigmaOv : null),
+    sigmaOverrideSource: sigmaOv !== null ? "사용자 오버라이드 (bc.sigma_override)" : "기본값",
+    horizonYears: Math.min(Math.max(Math.round(horizon.value), 1), 50),
+    horizonSource: horizon.source,
+    iterations: Math.min(Math.max(Math.round(iterations.value), 1), 10_000_000),
+    iterationsSource: iterations.source,
   };
+}
+
+/** Persist a batch of bc.* user assumptions on a fresh run (REQ-W6-3) — the
+ *  write side of the resolution chain. Only provided keys are written; every
+ *  write carries the session rationale so the assumption CHECK holds. */
+export async function recordBusinessCaseParams(
+  db: { run: (sql: string, ...args: unknown[]) => void },
+  opts: {
+    projectId: string;
+    params: {
+      capture_rate?: number;
+      ramp_up?: number[];
+      opex_ratio?: number;
+      capex_ratio?: number;
+      initial_investment_ratio?: number;
+      growth_override?: number;
+      sigma_override?: number;
+      horizon_years?: number;
+      iterations?: number;
+    };
+    rationale: string;
+    actor: string;
+    now?: string;
+  },
+): Promise<{ written: string[]; run_id: string }> {
+  const { createRun } = await import("../../../db/lib/versioning.ts");
+  const { recordAssumption } = await import("../../../db/lib/assumption.ts");
+  const now = opts.now ?? new Date().toISOString();
+  const run = createRun(db as never, { projectId: opts.projectId, label: "Business case parameter session", createdBy: opts.actor, overrides: {}, now });
+  const written: string[] = [];
+  const put = (key: string, value: number) => {
+    recordAssumption(db as never, { runId: run.run_id, assumptionKey: key, kind: "user", value, asOf: now.slice(0, 10), rationale: opts.rationale, actor: opts.actor, now });
+    written.push(key);
+  };
+  const p = opts.params;
+  if (p.capture_rate !== undefined) put("bc.capture_rate", p.capture_rate);
+  if (p.ramp_up !== undefined) {
+    if (!Array.isArray(p.ramp_up) || p.ramp_up.length === 0 || !p.ramp_up.every((v) => Number.isFinite(v) && v >= 0)) {
+      throw new Error("ramp_up must be a non-empty array of non-negative numbers");
+    }
+    p.ramp_up.forEach((v, i) => put(`bc.ramp_up.y${i + 1}`, v));
+  }
+  for (const [key, value] of [
+    ["bc.opex_ratio", p.opex_ratio],
+    ["bc.capex_ratio", p.capex_ratio],
+    ["bc.initial_investment_ratio", p.initial_investment_ratio],
+    ["bc.growth_override", p.growth_override],
+    ["bc.sigma_override", p.sigma_override],
+    ["bc.horizon_years", p.horizon_years],
+    ["bc.iterations", p.iterations],
+  ] as const) {
+    if (value !== undefined) {
+      if (!Number.isFinite(value) || value < 0) throw new Error(`${key} must be a non-negative finite number`);
+      put(key, value);
+    }
+  }
+  if (written.length === 0) throw new Error("no parameters provided");
+  return { written, run_id: run.run_id };
 }
 
 /** Deterministic defaults for hand-built contexts without bcParams. */
 function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
-  return { captureRate: CAPTURE_RATE, captureSource: "기본값", rampUp: DEFAULT_RAMP_UP, rampSource: "기본값" };
+  return {
+    captureRate: CAPTURE_RATE,
+    captureSource: "기본값",
+    rampUp: DEFAULT_RAMP_UP,
+    rampSource: "기본값",
+    opexRatio: OPEX_RATIO,
+    opexSource: "기본값",
+    capexRatio: CAPEX_RATIO,
+    capexSource: "기본값",
+    initialInvestmentRatio: INITIAL_INVESTMENT_RATIO,
+    initialInvestmentSource: "기본값",
+    growthOverride: null,
+    growthOverrideSource: "기본값",
+    sigmaOverride: null,
+    sigmaOverrideSource: "기본값",
+    horizonYears: HORIZON_YEARS,
+    horizonSource: "기본값",
+    iterations: MC_ITERATIONS,
+    iterationsSource: "기본값",
+  };
 }
 
-/** Effective capture rate — hand-built contexts without bcParams keep the
- *  legacy constant (REQ-W1-3's default). */
+/** Effective accessors — hand-built contexts without bcParams keep the
+ *  legacy constants (REQ-W6-1's resolution tail: default). */
 function captureRateOf(inputs: CaseInputs): number {
   return inputs.bcParams?.captureRate ?? CAPTURE_RATE;
 }
 
 function rampUpOf(inputs: CaseInputs): number[] {
   return inputs.bcParams?.rampUp ?? DEFAULT_RAMP_UP;
+}
+
+function opexRatioOf(inputs: CaseInputs): number {
+  return inputs.bcParams?.opexRatio ?? OPEX_RATIO;
+}
+
+function capexRatioOf(inputs: CaseInputs): number {
+  return inputs.bcParams?.capexRatio ?? CAPEX_RATIO;
+}
+
+function initialInvestmentRatioOf(inputs: CaseInputs): number {
+  return inputs.bcParams?.initialInvestmentRatio ?? INITIAL_INVESTMENT_RATIO;
+}
+
+function horizonOf(inputs: CaseInputs): number {
+  return inputs.bcParams?.horizonYears ?? HORIZON_YEARS;
+}
+
+function iterationsOf(inputs: CaseInputs): number {
+  return inputs.bcParams?.iterations ?? MC_ITERATIONS;
 }
 
 /** Effective per-(scenario, variant) growth/dispersion. Legacy inputs (no
@@ -412,11 +563,20 @@ export function effGrowthDisp(
 ): { growth: number; disp: number; growthSource: string; dispSource: string } {
   const delta = SCENARIO_DELTA[scenario];
   const gm = inputs.growthModel;
-  if (gm) {
-    const v = variant === "historical" ? (gm.historical ?? gm.market) : gm.market;
-    return { growth: v.growth * delta.growth, disp: v.disp * delta.disp, growthSource: v.growthSource, dispSource: v.dispSource };
-  }
-  return { growth: inputs.anchorGrowth * delta.growth, disp: 0.02 * delta.disp, growthSource: "기본값", dispSource: "고정 2%" };
+  const base = gm
+    ? (variant === "historical" ? (gm.historical ?? gm.market) : gm.market)
+    : { growth: inputs.anchorGrowth, disp: 0.02, growthSource: "기본값", dispSource: "고정 2%" };
+  // REQ-W6-2 resolution tail: a user override (bc.growth_override /
+  // bc.sigma_override) beats the derived model; the scenario delta still
+  // applies on top so scenario semantics survive an override.
+  const growthOv = inputs.bcParams?.growthOverride ?? null;
+  const sigmaOv = inputs.bcParams?.sigmaOverride ?? null;
+  return {
+    growth: (growthOv ?? base.growth) * delta.growth,
+    disp: (sigmaOv ?? base.disp) * delta.disp,
+    growthSource: growthOv !== null ? inputs.bcParams?.growthOverrideSource ?? "사용자 오버라이드" : base.growthSource,
+    dispSource: sigmaOv !== null ? inputs.bcParams?.sigmaOverrideSource ?? "사용자 오버라이드" : base.dispSource,
+  };
 }
 
 export function caseInputsForProject(projectId: string): CaseInputs {
@@ -438,6 +598,7 @@ export function caseInputsForProject(projectId: string): CaseInputs {
     wacc: resolveProjectWacc(getDb(), projectId),
     growthModel: resolveGrowthModel(getDb(), projectId),
     bcParams: resolveBusinessCaseParams(getDb(), projectId),
+    waccSubject: resolveProjectWaccSubject(getDb(), projectId),
   };
 }
 
@@ -445,13 +606,13 @@ function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant:
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
   let revenue = inputs.marketSizeKrwM * captureRateOf(inputs) * delta.growth;
-  const initialInvestment = revenue * INITIAL_INVESTMENT_RATIO;
+  const initialInvestment = revenue * initialInvestmentRatioOf(inputs);
   const ramp = rampUpOf(inputs);
   const flows: number[] = [-initialInvestment]; // year-0 설립 투자
-  for (let year = 1; year <= HORIZON_YEARS; year++) {
+  for (let year = 1; year <= horizonOf(inputs); year++) {
     if (year > 1) revenue *= 1 + eff.growth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
-    flows.push(revenue * (1 - OPEX_RATIO - CAPEX_RATIO) * utilization);
+    flows.push(revenue * (1 - opexRatioOf(inputs) - capexRatioOf(inputs)) * utilization);
   }
   return flows;
 }
@@ -487,9 +648,9 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
     job_id: `s8:${inputs.projectId}:${scenario}:${variant}`,
     seed_policy: { base: inputs.projectId, hash: "fnv1a" },
     device: "auto",
-    iterations: MC_ITERATIONS,
-    horizon_years: HORIZON_YEARS,
-    discount_rate: { value: inputs.wacc.value, subject: "promoter", source: inputs.wacc.source },
+    iterations: bc.iterations,
+    horizon_years: bc.horizonYears,
+    discount_rate: { value: inputs.wacc.value, subject: inputs.waccSubject?.subject ?? "promoter", source: inputs.wacc.source },
     cases: [
       {
         case_id: `${scenario}:${variant}`,
@@ -497,9 +658,9 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
           revenue_y1: { dist: "constant", value: year1Revenue, unit: "KRW_M", source: `시장규모 × 포획률 ${(bc.captureRate * 100).toFixed(1)}% (${bc.captureSource})` },
           ramp_up: { dist: "constant", value: bc.rampUp, source: bc.rampSource },
           revenue_growth: { dist: "normal", mean: eff.growth, sigma: eff.disp, unit: "ratio", source: eff.growthSource },
-          opex_ratio: { dist: "constant", value: OPEX_RATIO, unit: "ratio", source: "기본값" },
-          capex_ratio: { dist: "constant", value: CAPEX_RATIO, unit: "ratio", source: "기본값" },
-          initial_investment: { dist: "constant", value: year1Revenue * INITIAL_INVESTMENT_RATIO, unit: "KRW_M", source: "ADR-0106" },
+          opex_ratio: { dist: "constant", value: bc.opexRatio, unit: "ratio", source: bc.opexSource },
+          capex_ratio: { dist: "constant", value: bc.capexRatio, unit: "ratio", source: bc.capexSource },
+          initial_investment: { dist: "constant", value: year1Revenue * bc.initialInvestmentRatio, unit: "KRW_M", source: `ADR-0106 (${bc.initialInvestmentSource})` },
         },
       },
     ],
@@ -599,13 +760,13 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const npv = flows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + ctx.inputs.wacc.value, i), 0); // flows[0]=year-0
       db.run(
         `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, variant) VALUES (?,?,?,?,?,?,?,?)`,
-        [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${ctx.scenario} — ${VARIANT_LABEL[variant]}`, HORIZON_YEARS, "business-case-generator", nowIso(), variant],
+        [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${ctx.scenario} — ${VARIANT_LABEL[variant]}`, horizonOf(ctx.inputs), "business-case-generator", nowIso(), variant],
       );
       const year1Revenue = ctx.inputs.marketSizeKrwM * captureRateOf(ctx.inputs) * delta.growth;
       const lines: Array<[string, "revenue" | "opex" | "capex", string, number]> = [
         ["revenue", "revenue", "시나리오 매출 (year-1 앵커)", year1Revenue],
-        ["opex", "opex", "운영비 (매출의 60%)", year1Revenue * OPEX_RATIO],
-        ["capex", "capex", "설비 투자 (year-1, 매출의 10%)", year1Revenue * CAPEX_RATIO],
+        ["opex", "opex", `운영비 (매출의 ${Math.round(opexRatioOf(ctx.inputs) * 100)}%)`, year1Revenue * opexRatioOf(ctx.inputs)],
+        ["capex", "capex", `설비 투자 (year-1, 매출의 ${Math.round(capexRatioOf(ctx.inputs) * 100)}%)`, year1Revenue * capexRatioOf(ctx.inputs)],
       ];
       for (const [category, _kind, name, amount] of lines) {
         db.run(
@@ -619,7 +780,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       return [
         `### [밸류에이션] valuation-agent — 밸류에이션 모델 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
         "",
-        `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(1)}%·회수기간 ${HORIZON_YEARS}년 기준 NPV ${npv.toFixed(1)} 억원,`,
+        `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(1)}%·회수기간 ${horizonOf(ctx.inputs)}년 기준 NPV ${npv.toFixed(1)} 억원,`,
         `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
         `WACC 출처: ${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? ` (run ${ctx.inputs.wacc.run_id})` : ""}.`,
         `IRR ${((irr(flows) ?? 0) * 100).toFixed(1)}% (greenfield-fs step 3). 모델/라인 3건 영속화 (model ${modelId}).`,
@@ -641,7 +802,8 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const flows = deterministicCashflows(ctx.inputs, ctx.scenario, variant);
       const bc = ctx.inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
       const bepFragment = sim.bepYear != null ? `; bep_year=${sim.bepYear.toFixed(2)}` : "";
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}; ramp_source=${bc.rampSource}; ${provenance}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
+      const waccSubject = ctx.inputs.waccSubject?.subject ?? "promoter";
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}; ramp_source=${bc.rampSource}; ${provenance}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
       db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
         const isP50 = pct === "p50";

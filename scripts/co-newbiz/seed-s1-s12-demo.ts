@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 // Idempotent S1→S12 brownfield demo chain seed.
 //
 // The operational DB is intentionally gitignored, so a fresh/local database
@@ -16,6 +16,29 @@ import { currentReviewCycle } from "../../app/web-next/lib/portfolio.ts";
 import { SCREENING_CHECKLIST_ID, screeningItems } from "../../app/web-next/lib/brownfield-targets.ts";
 
 const DEMO = {
+  /** Realistic job-spec snapshot so the S8 params panel shows the real
+   *  execution contract instead of a legacy placeholder. */
+  inputsSnapshot: {
+    job_id: "s8:demo-s1-s12-project:base:market_forward",
+    seed_policy: { base: "demo-s1-s12-project", hash: "fnv1a" },
+    device: "cpu",
+    iterations: 2000,
+    horizon_years: 5,
+    discount_rate: { value: 0.09, subject: "target", source: "user" },
+    cases: [
+      {
+        case_id: "base:market_forward",
+        drivers: {
+          revenue_y1: { dist: "constant", value: 15000, unit: "KRW_M", source: "시장규모 × 포획률 0.5%" },
+          ramp_up: { dist: "constant", value: [0.4, 0.7, 0.9, 1.0, 1.0], source: "기본값" },
+          revenue_growth: { dist: "normal", mean: 0.08, sigma: 0.05, unit: "ratio", source: "시장 성장률" },
+          opex_ratio: { dist: "constant", value: 0.6, unit: "ratio", source: "기본값" },
+          capex_ratio: { dist: "constant", value: 0.1, unit: "ratio", source: "기본값" },
+          initial_investment: { dist: "constant", value: 7500, unit: "KRW_M", source: "ADR-0106" },
+        },
+      },
+    ],
+  },
   industryId: "demo-s1-s12-industry",
   companyId: "demo-s1-s12-company",
   oppId: "demo-s1-s12-opportunity",
@@ -197,8 +220,8 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
     db.run(
       `INSERT OR IGNORE INTO business_case_model
        (id, project_id, kind, name, horizon_years, created_by, created_at, variant, inputs_json)
-       VALUES (?, ?, 'investment_return', 'S1-S12 demo base case', 5, ?, ?, 'market_forward', '{}')`,
-      [DEMO.modelId, DEMO.projectId, actor, now],
+       VALUES (?, ?, 'investment_return', 'S1-S12 demo base case', 5, ?, ?, 'market_forward', ?)`,
+      [DEMO.modelId, DEMO.projectId, actor, now, JSON.stringify(DEMO.inputsSnapshot)],
     );
     for (const [id, category, name, amount] of [
       ["revenue", "revenue", "Year-1 revenue", 15000],

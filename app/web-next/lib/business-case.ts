@@ -41,6 +41,7 @@ export interface BusinessCaseView {
   recommended: boolean;
   adopted: boolean;
   created_by: string;
+  inputs_json?: string | null;
   created_at: string;
   lines: LineRow[];
   simulations: SimulationRow[];
@@ -81,7 +82,7 @@ export function listBusinessCases(projectId: string): {
 } {
   const db = getDb();
   const models = db
-    .query("SELECT id, kind, name, horizon_years, created_by, created_at, COALESCE(variant, 'market_forward') AS variant FROM business_case_model WHERE project_id = ? ORDER BY created_at, id")
+    .query("SELECT id, kind, name, horizon_years, created_by, created_at, COALESCE(variant, 'market_forward') AS variant, inputs_json FROM business_case_model WHERE project_id = ? ORDER BY created_at, id")
     .all(projectId) as Array<{ id: string; kind: string; name: string; horizon_years: number; created_by: string; created_at: string; variant: "market_forward" | "historical" }>;
   const lines = db
     .query(
@@ -112,6 +113,7 @@ export function listBusinessCases(projectId: string): {
       adopted: adoption?.modelId === m.id,
       created_by: m.created_by,
       created_at: m.created_at,
+      inputs_json: (m as { inputs_json?: string | null }).inputs_json ?? null,
       lines: lines.filter((l) => l.model_id === m.id).map(({ model_id: _m, ...rest }) => rest),
       simulations: modelSims,
     };

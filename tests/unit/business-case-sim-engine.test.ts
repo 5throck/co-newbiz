@@ -158,6 +158,43 @@ describe("S8 generation x sim-engine bridge", () => {
     expect(state.completedStages).toContain("S8");
   });
 
+  test("(a3) params roundtrip: saved bc.* assumptions resolve as user and reach the next generation", async () => {
+    const projectId3 = await seedProject("파라미터 라운드트립");
+    const post = await req(`/api/projects/${projectId3}/business-case/params`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ params: { capture_rate: 0.01, ramp_up: [0.5, 0.8, 1.0] }, rationale: "시장 재조사 기반 포획률 상향 — 테스트 근거" }),
+    });
+    expect(post.status).toBe(201);
+    const posted = (await post.json()).data as { written: string[] };
+    expect(posted.written).toContain("bc.capture_rate");
+    expect(posted.written).toContain("bc.ramp_up.y1");
+
+    const get = await req(`/api/projects/${projectId3}/business-case/params`, { method: "GET", headers: { cookie: analystCookie } });
+    expect(get.status).toBe(200);
+    const resolved = (await get.json()).data.params as { captureRate: number; captureSource: string; rampUp: number[]; rampSource: string };
+    expect(resolved.captureRate).toBe(0.01);
+    expect(resolved.captureSource).toContain("bc.capture_rate");
+    expect(resolved.rampUp[0]).toBe(0.5);
+    expect(resolved.rampSource).toContain("bc.ramp_up");
+
+    // Rationale is mandatory.
+    const noRationale = await req(`/api/projects/${projectId3}/business-case/params`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ params: { opex_ratio: 0.55 } }),
+    });
+    expect(noRationale.status).toBe(400);
+
+    await generate(projectId3);
+    const notes = simulationNotes(projectId3);
+    expect(notes.length).toBeGreaterThanOrEqual(9);
+    for (const row of notes) {
+      expect(row.note).toContain("capture_rate=0.01");
+      expect(row.note).toContain("ramp_source=사용자 확정");
+    }
+  });
+
   test("(b) kill switch: generation falls back to the legacy in-process simulator", async () => {
     process.env.CO_NEWBIZ_SIM_ENGINE = "off";
     try {

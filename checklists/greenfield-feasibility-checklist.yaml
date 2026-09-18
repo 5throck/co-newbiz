@@ -57,6 +57,10 @@ items:
     text: "Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) — direct parent incorporation vs. a local holding subsidiary, not assumed by default"
     mandatory: true
     waiver_eligible: true
+  - id: gf-12
+    text: "WACC 적용 주체(promoter/target/project_newco)가 확정되고 근거가 기록되었다 — 트랙 기본값(greenfield=promoter)을 벗어나면 재레버링 근거가 세션에 기록된다"
+    mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "Group New Business Review Policy §4.1"

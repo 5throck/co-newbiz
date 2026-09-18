@@ -57,6 +57,10 @@ items:
     text: "Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) as part of the deal structure hypothesis — not just the acquisition mechanics (stake/structure)"
     mandatory: true
     waiver_eligible: true
+  - id: bf-13
+    text: "WACC 적용 주체가 대상기업(target)으로 확정되고 근거가 기록되었다 — 인수·지분참여의 현금흐름 리스크는 대상기업에 귀속되며, 프로포르마 자본구조로 재레버링한 베타 근거가 세션에 남는다"
+    mandatory: true
+    waiver_eligible: true
 
 legal_basis:
   - "Group New Business Review Policy §2.3, §4"

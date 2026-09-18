@@ -100,8 +100,8 @@ function spawnEngine(args: string[], timeoutMs: number, stdinPayload?: string): 
       proc.kill("SIGKILL");
       rejectPromise(new Error(`sim_engine timed out after ${timeoutMs}ms`));
     }, timeoutMs);
-    proc.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString()));
-    proc.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+    proc.stdout?.on("data", (chunk: Buffer) => (stdout += chunk.toString()));
+    proc.stderr?.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
     proc.on("error", (error) => {
       clearTimeout(timer);
       rejectPromise(error);
@@ -111,7 +111,7 @@ function spawnEngine(args: string[], timeoutMs: number, stdinPayload?: string): 
       if (code !== 0) rejectPromise(new Error(`sim_engine exited with code ${code}: ${stderr.trim()}`));
       else resolvePromise(stdout);
     });
-    if (stdinPayload !== undefined) {
+    if (stdinPayload !== undefined && proc.stdin) {
       proc.stdin.write(stdinPayload);
       proc.stdin.end();
     }
