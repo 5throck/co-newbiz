@@ -1,0 +1,12 @@
+-- 0116_target_costing_price_evidence.sql
+-- @version 1.0.0
+-- @reversible: true — nullable additive column; dropping it loses only the
+--   preserved citation for the chosen price (design
+--   2026-09-18-target-costing-price-anchor §4).
+--
+-- Price-evidence preservation (design §4): when a web-search proposal is
+-- confirmed by the human, the adopted candidate (unit price, currency, unit,
+-- source URL, quote, search timestamp) is stored here so the fs gate can
+-- review "where did this price come from". NULL = manual entry or a
+-- pre-0116 row — no evidence was recorded, which the UI states verbatim.
+ALTER TABLE target_costing_analysis ADD COLUMN price_evidence_json TEXT;

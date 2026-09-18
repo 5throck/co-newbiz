@@ -3573,6 +3573,30 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/target-costing/price-draft:
+    post:
+      operationId: draftProjectTargetCostingPrice
+      summary: Web-search price-evidence draft for the market-price anchor — proposals only, nothing persisted (analyst+).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/projects/{id}/target-costing:
     get:
       operationId: getProjectTargetCosting

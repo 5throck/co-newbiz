@@ -63,6 +63,88 @@ afterAll(async () => {
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 });
 
+// ── price-evidence drafts (design 2026-09-18-target-costing-price-anchor) ──
+
+describe("price evidence drafts", () => {
+  test("(e) query builder: three subject variants, never a long sentence", async () => {
+    const { priceQueries } = await import("../../app/web-next/lib/price-evidence.ts");
+    const queries = priceQueries("S1-S12 데모 대상회사 카메라 모듈");
+    expect(queries.length).toBe(3);
+    for (const q of queries) expect(q).toContain("S1-S12 데모 대상회사 카메라 모듈");
+  });
+
+  test("(f) unconfigured search: empty proposals + manual-entry note, flow unblocked", async () => {
+    const { setWebResearchOverrideForTests } = await import("../../app/web-next/lib/web-research.ts");
+    setWebResearchOverrideForTests({ configured: false, sources: [] });
+    try {
+      const { draftPriceEvidence } = await import("../../app/web-next/lib/price-evidence.ts");
+      const draft = await draftPriceEvidence({ subject: "테스트 제품" });
+      expect(draft.proposals).toEqual([]);
+      expect(draft.note).toContain("수동");
+      expect(draft.source).toBe("fallback");
+    } finally {
+      setWebResearchOverrideForTests(null);
+    }
+  });
+
+  test("(g) search without LLM: fallback note, still no fabrication", async () => {
+    const { setWebResearchOverrideForTests } = await import("../../app/web-next/lib/web-research.ts");
+    setWebResearchOverrideForTests({
+      configured: true,
+      sources: [{ title: "가격표", url: "https://example.com/price", snippet: "단가 12,000원 (EA 기준)" }],
+    });
+    try {
+      const { draftPriceEvidence } = await import("../../app/web-next/lib/price-evidence.ts");
+      const draft = await draftPriceEvidence({ subject: "테스트 제품" });
+      // No LLM configured in the test environment → the deterministic
+      // fallback never invents a price.
+      expect(draft.proposals).toEqual([]);
+      expect(draft.note.length).toBeGreaterThan(0);
+    } finally {
+      setWebResearchOverrideForTests(null);
+    }
+  });
+
+  test("(h) confirmed evidence persists; evidence without a source URL is rejected", async () => {
+    const ok = await req(`/api/projects/${projectId}/target-costing`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({
+        market_price: 12000,
+        target_margin: 0.15,
+        estimated_unit_cost: 11800,
+        source: "peer_benchmark",
+        price_evidence: {
+          unit_price: 12000,
+          currency: "KRW",
+          unit: "EA",
+          source_url: "https://example.com/price",
+          source_name: "가격표",
+          quote: "단가 12,000원 (EA 기준)",
+        },
+      }),
+    });
+    expect(ok.status).toBe(201);
+
+    const get = await req(`/api/projects/${projectId}/target-costing`, { method: "GET", headers: { cookie: analystCookie } });
+    const latest = (await get.json()).data.latest as { priceEvidence: { source_url: string; quote: string } | null };
+    expect(latest.priceEvidence).not.toBeNull();
+    expect(latest.priceEvidence!.source_url).toBe("https://example.com/price");
+
+    const noUrl = await req(`/api/projects/${projectId}/target-costing`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({
+        market_price: 12000,
+        target_margin: 0.15,
+        estimated_unit_cost: 11800,
+        price_evidence: { unit_price: 12000, currency: "KRW", unit: "EA", quote: "no url" },
+      }),
+    });
+    expect(noUrl.status).toBe(400);
+  });
+});
+
 // ── pure math ───────────────────────────────────────────────────────────────
 
 describe("computeTargetCostGap (pure)", () => {
