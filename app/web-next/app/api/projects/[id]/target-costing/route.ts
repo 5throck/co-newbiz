@@ -36,6 +36,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     levers?: unknown;
     source?: unknown;
     rationale?: unknown;
+    price_evidence?: unknown;
   } | null;
 
   const num = (key: string): number => {
@@ -48,6 +49,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const levers = Array.isArray(body?.levers) ? (body?.levers as unknown[]).filter((l): l is string => typeof l === "string" && l.trim() !== "") : undefined;
     const source = body?.source === "peer_benchmark" ? "peer_benchmark" : "user";
+    const rawEvidence = body?.price_evidence;
+    const priceEvidence = rawEvidence && typeof rawEvidence === "object"
+      ? (rawEvidence as Record<string, unknown>)
+      : null;
+    if (priceEvidence) {
+      // The column preserves the citation — an object without one is rejected
+      // rather than silently downgraded to manual entry.
+      const url = priceEvidence.source_url;
+      if (typeof url !== "string" || !/^https?:\/\//.test(url)) {
+        return badRequest("invalid_request", "price_evidence.source_url는 http(s) URL이어야 합니다.");
+      }
+    }
     const row = recordTargetCostAnalysis(
       getDb(),
       id,
@@ -58,6 +71,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         levers,
         source,
         rationale: typeof body?.rationale === "string" ? body.rationale : null,
+        priceEvidence: priceEvidence as never,
       },
       auth.auth.userId,
     );

@@ -18,6 +18,19 @@ import { ulid } from "../../../db/lib/ulid.ts";
  *  a downside-scenario input, not a footnote (REQ-W2-3). */
 export const GAP_THRESHOLD = 0.10;
 
+/** The adopted web-search proposal, preserved verbatim for the fs gate
+ *  (design 2026-09-18-target-costing-price-anchor §4). source_url is
+ *  mandatory — evidence without a citation is never stored. */
+export interface PriceEvidence {
+  unit_price: number;
+  currency: string;
+  unit: string;
+  source_url: string;
+  source_name?: string | null;
+  quote?: string | null;
+  searched_at?: string | null;
+}
+
 export interface TargetCostInput {
   marketPrice: number;
   targetMargin: number;
@@ -25,6 +38,7 @@ export interface TargetCostInput {
   levers?: string[];
   source?: "user" | "peer_benchmark";
   rationale?: string | null;
+  priceEvidence?: PriceEvidence | null;
 }
 
 export interface TargetCostGap {
@@ -39,6 +53,7 @@ export interface TargetCostGap {
   levers: string[];
   source: "user" | "peer_benchmark";
   rationale: string | null;
+  priceEvidence: PriceEvidence | null;
 }
 
 export class TargetCostValidationError extends Error {}
@@ -73,7 +88,17 @@ export function computeTargetCostGap(input: TargetCostInput): TargetCostGap {
     levers: input.levers ?? [],
     source: input.source ?? "user",
     rationale: input.rationale?.trim() || null,
+    priceEvidence: validateEvidence(input.priceEvidence),
   };
+}
+
+/** Evidence without a citation is never stored (design §2 rule 3). */
+function validateEvidence(evidence: PriceEvidence | null | undefined): PriceEvidence | null {
+  if (!evidence) return null;
+  const urlOk = typeof evidence.source_url === "string" && /^https?:\/\//.test(evidence.source_url);
+  const priceOk = Number.isFinite(Number(evidence.unit_price)) && Number(evidence.unit_price) > 0;
+  if (!urlOk || !priceOk) return null;
+  return evidence;
 }
 
 export interface TargetCostRow extends TargetCostGap {
@@ -95,8 +120,8 @@ export function recordTargetCostAnalysis(
   db.run(
     `INSERT INTO target_costing_analysis
        (id, project_id, market_price, target_margin, allowable_cost, estimated_unit_cost,
-        gap, gap_ratio, threshold_exceeded, levers_json, source, rationale, created_by, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        gap, gap_ratio, threshold_exceeded, levers_json, source, rationale, created_by, created_at, price_evidence_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       id,
       projectId,
@@ -112,6 +137,7 @@ export function recordTargetCostAnalysis(
       gap.rationale,
       userId,
       now,
+      gap.priceEvidence ? JSON.stringify(gap.priceEvidence) : null,
     ],
   );
   return { id, created_by: userId, created_at: now, ...gap };
@@ -122,11 +148,11 @@ export function latestTargetCostAnalysis(db: ReturnType<typeof getDb>, projectId
   const row = db
     .query(
       `SELECT id, project_id, market_price, target_margin, allowable_cost, estimated_unit_cost,
-              gap, gap_ratio, threshold_exceeded, levers_json, source, rationale, created_by, created_at
+              gap, gap_ratio, threshold_exceeded, levers_json, source, rationale, created_by, created_at, price_evidence_json
        FROM target_costing_analysis WHERE project_id = ? ORDER BY created_at DESC, id DESC LIMIT 1`,
     )
     .get(projectId) as
-    | { id: string; project_id: string; market_price: number; target_margin: number; allowable_cost: number; estimated_unit_cost: number; gap: number; gap_ratio: number | null; threshold_exceeded: number; levers_json: string | null; source: string; rationale: string | null; created_by: string; created_at: string }
+    | { id: string; project_id: string; market_price: number; target_margin: number; allowable_cost: number; estimated_unit_cost: number; gap: number; gap_ratio: number | null; threshold_exceeded: number; levers_json: string | null; source: string; rationale: string | null; created_by: string; created_at: string; price_evidence_json: string | null }
     | undefined;
   if (!row) return null;
   return {
@@ -141,6 +167,7 @@ export function latestTargetCostAnalysis(db: ReturnType<typeof getDb>, projectId
     levers: row.levers_json ? (JSON.parse(row.levers_json) as string[]) : [],
     source: row.source as "user" | "peer_benchmark",
     rationale: row.rationale,
+    priceEvidence: row.price_evidence_json ? validateEvidence(JSON.parse(row.price_evidence_json) as PriceEvidence) : null,
     created_by: row.created_by,
     created_at: row.created_at,
   };

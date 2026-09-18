@@ -8,6 +8,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 
+interface PriceProposal {
+  unit_price: number;
+  currency: string;
+  unit: string;
+  source_url: string;
+  source_name: string;
+  quote: string;
+  confidence: "high" | "medium" | "low";
+}
+
+interface PriceDraft {
+  proposals: PriceProposal[];
+  queries: string[];
+  note: string;
+  source: string;
+}
+
 interface GapAnalysis {
   id: string;
   marketPrice: number;
@@ -34,6 +51,9 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
   const [targetMargin, setTargetMargin] = useState("0.15");
   const [estimatedUnitCost, setEstimatedUnitCost] = useState("");
   const [levers, setLevers] = useState("");
+  const [draft, setDraft] = useState<PriceDraft | null>(null);
+  const [drafting, setDrafting] = useState(false);
+  const [chosenEvidence, setChosenEvidence] = useState<Record<string, unknown> | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +80,38 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
     : null;
   const gapRatioPreview = gapPreview !== null && allowable ? gapPreview / allowable : null;
 
+  async function fetchDraft() {
+    setMessage(null);
+    setError(null);
+    setDrafting(true);
+    try {
+      const res = await api.post<PriceDraft>(
+        `/api/projects/${encodeURIComponent(projectId)}/target-costing/price-draft`,
+        {},
+      );
+      setDraft(res.data);
+      if (res.data.proposals.length === 0) setError(res.data.note || "가격 후보가 없습니다.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "가격 초안 생성에 실패했습니다.");
+    } finally {
+      setDrafting(false);
+    }
+  }
+
+  function useProposal(p: PriceProposal) {
+    setMarketPrice(String(p.unit_price));
+    setChosenEvidence({
+      unit_price: p.unit_price,
+      currency: p.currency,
+      unit: p.unit,
+      source_url: p.source_url,
+      source_name: p.source_name,
+      quote: p.quote,
+      searched_at: new Date().toISOString(),
+    });
+    setMessage(`가격 ${p.unit_price.toLocaleString()} ${p.currency}/${p.unit} 을(를) 채웠습니다 — 출처: ${p.source_name}. 저장으로 확정하세요.`);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
@@ -72,7 +124,9 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
           target_margin: Number(targetMargin),
           estimated_unit_cost: Number(estimatedUnitCost),
           levers: levers.split(",").map((l) => l.trim()).filter((l) => l !== ""),
-          source: "user",
+          source: chosenEvidence ? "peer_benchmark" : "user",
+          price_evidence: chosenEvidence ?? undefined,
+          rationale: chosenEvidence ? `${chosenEvidence.source_url ?? ""}` : undefined,
         },
       );
       setMessage(
@@ -133,6 +187,32 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
       <section className="market-section sizing-step mt-3" aria-label="타겟코스팅 분석 실행">
         <h3 className="sizing-step-title">분석 실행</h3>
         <form className="grid gap-3" onSubmit={submit} style={{ maxWidth: 560 }}>
+          <div className="flex items-center gap-2">
+            <button type="button" className="outline-button" onClick={fetchDraft} disabled={drafting}>
+              {drafting ? "검색 중…" : "가격 초안 (웹검색)"}
+            </button>
+            {chosenEvidence && (
+              <span className="status-chip status-info">웹 근거 채택됨 — 저장 시 함께 기록</span>
+            )}
+          </div>
+          {draft && draft.proposals.length > 0 && (
+            <div className="grid gap-2">
+              {draft.proposals.map((p, i) => (
+                <div key={`${p.source_url}-${p.unit_price}`} className="grid gap-1 border rounded p-2 text-sm" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold tabular-nums">{p.unit_price.toLocaleString()} {p.currency}/{p.unit}</span>
+                    <button type="button" className="outline-button btn-sm" onClick={() => useProposal(p)}>이 가격 사용</button>
+                  </div>
+                  <div className="text-[color:var(--muted-fg)] text-[0.78rem]">
+                    <a href={p.source_url} target="_blank" rel="noreferrer" className="underline">{p.source_name}</a>
+                    {" · 확신도 "}{p.confidence}
+                  </div>
+                  {p.quote && <div className="text-[0.78rem]">"{p.quote.slice(0, 160)}"</div>}
+                  <span className="sr-only">{i}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="grid gap-2 md:grid-cols-2">
             <label className="grid gap-1 text-sm">시장가격 (원/EA)<input className="form-input" value={marketPrice} onChange={(e) => setMarketPrice(e.target.value)} placeholder="12000" /></label>
             <label className="grid gap-1 text-sm">목표마진 (비율, 예: 0.15)<input className="form-input" value={targetMargin} onChange={(e) => setTargetMargin(e.target.value)} placeholder="0.15" /></label>
