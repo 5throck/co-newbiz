@@ -3124,6 +3124,170 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/our-company/members/{memberId}/competitor-proposals:
+    get:
+      operationId: getMemberCompetitorProposals
+      summary: Stateless competitor proposals assembled from the latest profile payload (ADR-0142); accepted names marked.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/competitors:
+    get:
+      operationId: listMemberCompetitors
+      summary: Human-confirmed competitor registry rows (confirmed only).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: registerMemberCompetitor
+      summary: Accept an AI proposal (discovery_source=ai_proposal) or register manually; the only path that creates a confirmed row. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/competitors/{competitorId}:
+    patch:
+      operationId: updateMemberCompetitor
+      summary: Edit note / DART corp code. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/competitors/{competitorId}/exclude:
+    post:
+      operationId: excludeMemberCompetitor
+      summary: Soft-exclude with a mandatory reason. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/competitors/{competitorId}/restore:
+    post:
+      operationId: restoreMemberCompetitor
+      summary: Restore an excluded competitor (refuses a confirmed name clash). Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitor-proposals:
+    get:
+      operationId: getCompanyCompetitorProposals
+      summary: Competitor proposals for an md_company subject (ADR-0142).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitors:
+    get:
+      operationId: listCompanyCompetitors
+      summary: Human-confirmed competitor registry rows for an md_company subject.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: registerCompanyCompetitor
+      summary: Accept an AI proposal or register manually for an md_company subject. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/our-company/members/{memberId}/competitor-proposals/web-search:
+    post:
+      operationId: webSearchMemberCompetitorProposals
+      summary: On-demand web-search competitor proposals (evidence-backed; llm_knowledge fallback with unverified labels; nothing persisted). Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitor-proposals/web-search:
+    post:
+      operationId: webSearchCompanyCompetitorProposals
+      summary: On-demand web-search competitor proposals for an md_company subject. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitors/{competitorId}:
+    patch:
+      operationId: updateCompanyCompetitor
+      summary: Edit note / DART corp code for an md_company competitor row. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitors/{competitorId}/exclude:
+    post:
+      operationId: excludeCompanyCompetitor
+      summary: Soft-exclude with a mandatory reason. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/companies/{companyId}/competitors/{competitorId}/restore:
+    post:
+      operationId: restoreCompanyCompetitor
+      summary: Restore an excluded competitor (refuses a confirmed name clash). Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/our-company/members/{memberId}/upload:
     post:
       operationId: uploadMemberEvidenceFile
@@ -3270,6 +3434,64 @@ paths:
       summary: Promote to Short List (knock-out + mandatory pass required).
       tags:
         - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/industry/{industryId}/external-reference:
+    get:
+      operationId: getMarketExternalReference
+      summary: Newest recorded external growth reference for the industry (ADR-0142 calibration loop).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: setMarketExternalReference
+      summary: Record/refresh the external growth reference with a mandatory source label. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/industry/{industryId}/calibration:
+    get:
+      operationId: getMarketCalibration
+      summary: Driver-attribution proposals, accepted calibration set, and the per-version gap trend.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/industry/{industryId}/calibration/{rowId}:
+    post:
+      operationId: decideMarketCalibrationDriver
+      summary: Accept or dismiss a driver-attribution proposal (a person's decision; accepted drivers become rerun constraints). Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/targets/{targetId}/eval-draft:
+    post:
+      operationId: draftTargetEvaluation
+      summary: Generate financial/technical evaluation DRAFTS (evidence-based LLM proposals, nothing persisted); humans confirm via PUT eval-state. Analyst+.
+      tags:
+        - Brownfield
       responses:
         '200':
           $ref: '#/components/responses/Ok'
@@ -3573,6 +3795,114 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/target-costing/price-draft:
+    post:
+      operationId: draftProjectTargetCostingPrice
+      summary: Web-search price-evidence draft for the market-price anchor — proposals only, nothing persisted (analyst+).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/target-costing:
+    get:
+      operationId: getProjectTargetCosting
+      summary: Latest recorded target-cost gap analysis for the project with the materiality threshold.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordProjectTargetCosting
+      summary: Compute and persist one target_cost_gap analysis (analyst+; market price, target margin, estimated unit cost).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/business-case/params:
+    get:
+      operationId: getProjectBusinessCaseParams
+      summary: Resolve the live bc.* simulation parameter set with provenance (user > derived > default).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordProjectBusinessCaseParams
+      summary: Record a user batch of bc.* parameters on a fresh run (analyst+; rationale required).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/projects/{id}/business-case/generate:
     post:
       operationId: generateProjectBusinessCases

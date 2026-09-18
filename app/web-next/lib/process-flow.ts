@@ -40,7 +40,7 @@ export const STAGES: StageDefinition[] = [
   { id: "S5", name: "자체 진출", sequence: 5, objective: "스스로 진입할 수 있는가? — 자체 역량을 평가하고 격차를 구축 방안(Build/Partner/Hire/Invest)으로 해소해 진출전략을 세운다 (Greenfield 전용 — Target Company 객체가 존재하지 않는다)", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차 평가", "진출전략(Build/Partner/Hire/Invest 결정·근거)"] },
   { id: "S6", name: "대상 후보 발굴", sequence: 6, objective: "누구와 결합할 것인가? — Opportunity에 진입 가능한 기존 기업·자산의 Target Universe를 정의하고 Target Company Long List를 작성한다 (Brownfield 전용)", applicableTracks: ["brownfield"], gateIds: ["pre_fs"], requiredArtifacts: ["Target Universe 정의", "Target Company Long List"] },
   { id: "S7", name: "대상 선정", sequence: 7, objective: "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)", applicableTracks: ["brownfield"], gateIds: ["target_screening"], requiredArtifacts: ["Target Company Short List", "Target Ranking/Score", "Exclusion Reasons"] },
-  { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다", applicableTracks: ["all"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션)", "시뮬레이션 NPV 분위수"] },
+  { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다", applicableTracks: ["all"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션)", "시뮬레이션 NPV 분위수", "BEP 시점과 시뮬레이션 입력 스냅샷"] },
   { id: "S9", name: "실사·검증", sequence: 9, objective: "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 Short List 대상 DD, greenfield는 실현가능성 검증)", applicableTracks: ["all"], gateIds: ["dd"], requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"] },
   { id: "S10", name: "투자구조 설계", sequence: 10, objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 비히클(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["투자구조 가설(4축 검토 완료)", "자금조달 계획(sources & uses 균형)"] },
   { id: "S11", name: "투자심사·실행", sequence: 11, objective: "투자할 것인가? — 투자 구조(Deal/Investment Structure: 비히클·자금 조달·지급 구조)를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다", applicableTracks: ["all"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["IC 패키지", "추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"] },
@@ -337,8 +337,8 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     // ADR-0095 placeholder ("REFINEMENT (Phase 3)" latest-model probe) is
     // paid off here; S9~S12 keep theirs.
     const model = db
-      .query("SELECT id, kind FROM business_case_model WHERE project_id = ? ORDER BY created_at DESC LIMIT 1")
-      .get(project.id) as { id: string; kind: string } | undefined;
+      .query("SELECT id, kind, inputs_json FROM business_case_model WHERE project_id = ? ORDER BY created_at DESC LIMIT 1")
+      .get(project.id) as { id: string; kind: string; inputs_json: string | null } | undefined;
     if (!model) {
       blockers.push("Business Case / 밸류에이션 모델이 필요합니다");
       missing.push("Business Case(비용·수익 라인 또는 밸류에이션)");
@@ -349,6 +349,15 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       if (sims === 0) {
         blockers.push("민감도가 포함된 정량 평가(시뮬레이션 NPV 분위수)가 필요합니다");
         missing.push("시뮬레이션 NPV 분위수");
+      }
+      // 2026-09-18 spec update: BEP year + input snapshot are completion
+      // artifacts too — both land on the latest model's p50 row / inputs_json.
+      const p50 = db
+        .query("SELECT bep_year FROM valuation_simulation WHERE project_id = ? AND model_id = ? AND percentile = 'p50' ORDER BY created_at DESC LIMIT 1")
+        .get(project.id, model.id) as { bep_year: number | null } | undefined;
+      if (!p50 || p50.bep_year == null || model.inputs_json == null) {
+        blockers.push("BEP 시점과 시뮬레이션 입력 스냅샷이 필요합니다 (사업성 분석을 재생성하세요)");
+        missing.push("BEP 시점과 시뮬레이션 입력 스냅샷");
       }
     }
     return { complete: missing.length === 0, blockers, missing };

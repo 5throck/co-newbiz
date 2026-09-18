@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Project-scoped WACC input session (Wave C1; components since ADR-0115).
  *
@@ -29,6 +29,88 @@ import {
 } from "./wacc-components.ts";
 
 export const DEFAULT_WACC = 0.1;
+
+// ── WACC application subject (design 2026-09-18-s8-business-case-evaluation REQ-W4-1..4) ──
+// The discount rate follows the RISK OF THE CASH FLOWS, not the legal form:
+// greenfield self-execution discounts at the promoter's cost of capital, an
+// acquisition or equity stake at the TARGET's risk (relevered to the pro-forma
+// structure), and a ring-fenced newco at its own structure. NULL on
+// md_project = the track-based default applies.
+
+export const WACC_SUBJECTS = ["promoter", "target", "project_newco"] as const;
+export type WaccSubject = (typeof WACC_SUBJECTS)[number];
+
+export interface WaccSubjectResolution {
+  subject: WaccSubject;
+  source: "user" | "track_default";
+  rationale: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  /** The track the default was derived from (null when the user decided). */
+  default_track: "greenfield" | "brownfield" | null;
+}
+
+export function isWaccSubject(value: unknown): value is WaccSubject {
+  return typeof value === "string" && (WACC_SUBJECTS as readonly string[]).includes(value);
+}
+
+/** The track-based default (REQ-W4-2): greenfield self-execution -> promoter;
+ *  brownfield (acquisition / equity participation) -> target. */
+export function trackDefaultSubject(track: "greenfield" | "brownfield" | null): WaccSubject {
+  return track === "brownfield" ? "target" : "promoter";
+}
+
+/** Resolve the project's WACC subject: the recorded user decision, else the
+ *  track default derived from the source opportunity's route decision. */
+export function resolveProjectWaccSubject(db: Database, projectId: string): WaccSubjectResolution {
+  const row = db
+    .query(
+      `SELECT p.wacc_subject, p.wacc_subject_rationale, p.wacc_subject_decided_by, p.wacc_subject_decided_at, rd.track
+       FROM md_project p
+       LEFT JOIN opportunity o ON o.id = p.source_opportunity_id
+       LEFT JOIN route_decision rd ON rd.opportunity_id = o.id AND rd.is_current = 1
+       WHERE p.id = ?`,
+    )
+    .get(projectId) as
+    | { wacc_subject: string | null; wacc_subject_rationale: string | null; wacc_subject_decided_by: string | null; wacc_subject_decided_at: string | null; track: string | null }
+    | undefined;
+  if (row?.wacc_subject && isWaccSubject(row.wacc_subject)) {
+    return { subject: row.wacc_subject, source: "user", rationale: row.wacc_subject_rationale, decided_by: row.wacc_subject_decided_by, decided_at: row.wacc_subject_decided_at, default_track: null };
+  }
+  const track = row?.track === "brownfield" ? "brownfield" : row?.track === "greenfield" ? "greenfield" : null;
+  return { subject: trackDefaultSubject(track), source: "track_default", rationale: null, decided_by: null, decided_at: null, default_track: track };
+}
+
+/** Record the user's subject decision — enum-validated, rationale mandatory
+ *  (REQ-W4-1: the fs gate reviews the choice, not a silent constant). */
+export function setProjectWaccSubject(db: Database, projectId: string, subject: WaccSubject, rationale: string, actor: string, now = new Date().toISOString()): void {
+  if (!isWaccSubject(subject)) throw new Error(`invalid wacc subject: ${subject}`);
+  const trimmed = rationale.trim();
+  if (!trimmed) throw new Error("wacc subject rationale is required");
+  db.run(
+    `UPDATE md_project SET wacc_subject = ?, wacc_subject_rationale = ?, wacc_subject_decided_by = ?, wacc_subject_decided_at = ? WHERE id = ?`,
+    [subject, trimmed, actor, now, projectId],
+  );
+}
+
+/** Relevering support (REQ-W4-3): beta_levered = beta_unlevered x (1 + (1 −
+ *  tax_rate) x D/E) from the latest session's components. null when the
+ *  components are absent — the derivation table shows the gap, never a guess. */
+export function resolveReleveredBeta(db: Database, projectId: string): { beta_levered: number; beta_unlevered: number; target_de: number; tax_rate: number } | null {
+  const { components } = loadProjectComponents(db, projectId);
+  const byKey = new Map(components.map((c) => [c.key, c]));
+  const bu = byKey.get("wacc.beta_unlevered");
+  const de = byKey.get("wacc.target_de") ?? byKey.get("wacc.observed_de");
+  const tax = byKey.get("wacc.tax_rate");
+  if (!bu || !de) return null;
+  const taxRate = tax ? tax.value : 0;
+  return {
+    beta_unlevered: bu.value,
+    target_de: de.value,
+    tax_rate: taxRate,
+    beta_levered: bu.value * (1 + (1 - taxRate) * de.value),
+  };
+}
 
 export interface WaccResolution {
   value: number;

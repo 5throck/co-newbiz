@@ -60,7 +60,9 @@ describe("navigation SSOT (ADR-0105)", () => {
     // single documentation surface now, so no static-public-asset exemption
     // is needed here any more.
     const pages = new Set(allPageRoutes());
-    const broken = menuHrefs().filter((href) => !pages.has(href));
+    // 앵커 자식(href#hash — 예: /brownfield#s6s7-universe)은 해시를 떼면 실제
+    // 페이지다. 해시를 벗긴 뒤 페이지 존재를 검사한다.
+    const broken = menuHrefs().filter((href) => !pages.has(href.split("#")[0]));
     expect(broken).toEqual([]);
   });
 

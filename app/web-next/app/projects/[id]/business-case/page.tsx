@@ -11,6 +11,8 @@ import { TargetCheckPanel } from "../../../../components/TargetCheckPanel.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { TabNav } from "../../../../components/TabNav.tsx";
 import { WaccPanel } from "../../../../components/wacc/WaccPanel.tsx";
+import { ParamsPanel } from "../../../../components/business-case/ParamsPanel.tsx";
+import { TargetCostingPanel } from "../../../../components/business-case/TargetCostingPanel.tsx";
 import { FinancialAnalysisPanel } from "../../../../components/FinancialAnalysisPanel.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 
@@ -91,7 +93,7 @@ function BusinessCasePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const tab = tabParam === "overview" || tabParam === "wacc" || tabParam === "financial-analysis" ? tabParam : "scenarios";
+  const tab = tabParam === "overview" || tabParam === "params" || tabParam === "target-costing" || tabParam === "wacc" || tabParam === "financial-analysis" ? tabParam : "scenarios";
   const setTab = (key: string) => router.replace(`/projects/${projectId}/business-case?tab=${key}`, { scroll: false });
   const { me } = useAuth();
   const canAct = me?.role === "admin" || me?.role === "analyst";
@@ -247,6 +249,8 @@ function BusinessCasePage() {
         tabs={[
           { key: "overview", label: "설명·생성·권고" },
           { key: "scenarios", label: "시나리오 비교" },
+          { key: "params", label: "파라미터·스냅샷" },
+          { key: "target-costing", label: "타겟코스팅" },
           { key: "wacc", label: "WACC" },
           { key: "financial-analysis", label: "재무분석" },
         ]}
@@ -254,6 +258,8 @@ function BusinessCasePage() {
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
 
+      {tab === "params" && <ParamsPanel projectId={projectId} />}
+      {tab === "target-costing" && <TargetCostingPanel projectId={projectId} />}
       {tab === "wacc" && <WaccPanel projectId={projectId} />}
       {tab === "financial-analysis" && <FinancialAnalysisPanel projectId={projectId} />}
 

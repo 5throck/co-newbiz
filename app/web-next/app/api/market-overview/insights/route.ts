@@ -35,6 +35,7 @@ export async function GET(request: Request) {
       };
       qualitative?: { opportunityFactors?: string[]; riskFactors?: string[] };
       chainDirection?: { position?: string; note?: string; relatedIndustries?: Array<{ relation?: string; name?: string; note?: string }> };
+      calibration?: { triggered?: boolean; ourCagrPct?: number; externalCagrPct?: number | null; gapPct?: number | null; previousGapPct?: number | null; appliedDrivers?: string[] };
     };
     let matrix: MatrixShape | null = null;
     try {
@@ -66,6 +67,16 @@ export async function GET(request: Request) {
       opportunity_factors: matrix?.qualitative?.opportunityFactors ?? [],
       risk_factors: matrix?.qualitative?.riskFactors ?? [],
       chain_direction: matrix?.chainDirection ?? null,
+      calibration: matrix?.calibration
+        ? {
+            triggered: matrix.calibration.triggered ?? false,
+            our_cagr_pct: matrix.calibration.ourCagrPct ?? null,
+            external_cagr_pct: matrix.calibration.externalCagrPct ?? null,
+            gap_pct: matrix.calibration.gapPct ?? null,
+            previous_gap_pct: matrix.calibration.previousGapPct ?? null,
+            applied_drivers: matrix.calibration.appliedDrivers ?? [],
+          }
+        : null,
     };
   });
 

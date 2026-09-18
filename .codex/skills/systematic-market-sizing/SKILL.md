@@ -159,6 +159,22 @@ never invent one. The gap analysis feeds S2 (opportunity discovery) as market in
 opportunity growth-rate and attractiveness scoring should use the
 gap-aware driver view, not the naive extrapolation.
 
+**Recorded reference preference (v1.2.0).** An analyst-recorded external
+reference (source label + external CAGR %) takes precedence over the model's
+prior knowledge and is reused verbatim on every re-run; a prior-based forecast
+is persisted once (`llm_prior`) so later runs stop re-rolling it.
+
+**Calibration trigger (≥20% relative CAGR gap).** When
+`|our CAGR − external CAGR| / external CAGR ≥ 20%`, run Step 5-C: attribute
+the gap to 2–5 named drivers with a numeric estimated CAGR contribution
+(percentage points) and rationale, and store them as PROPOSALS. A person
+accepts or dismisses each proposal; accepted drivers plus the recorded
+reference and the previous gap are injected as constraints into the next
+re-run's anchor/CAGR steps, so successive versions converge instead of
+repeating. The version payload records `calibration {gapPct, previousGapPct,
+appliedDrivers}` — report the gap trend across versions. Acceptance is a
+person's action; the pipeline never applies a driver adjustment by itself.
+
 ### Re-analysis and versioning
 An analysis is a versioned artifact, never a one-shot. Re-run the pipeline
 (a new append-only version) when: the previous run FAILED mid-pipeline, the

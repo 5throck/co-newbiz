@@ -349,9 +349,15 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar }: {
               {items.map((item) => {
                 const children = item.href === "/projects" && item.children && projectStageChildren ? projectStageChildren : item.children;
                 if (children) {
-                  const childActive = children.some(
-                    (c) => pathname === c.href || pathname.startsWith(c.href + "/"),
-                  );
+                  // 앵커 자식(/x#hash)은 pathname과 같아질 수 없으므로 부모 href와의
+                  // 비교를 기준으로 활성 판정한다(자식 base = 부모 href).
+                  const childActive =
+                    pathname === item.href ||
+                    pathname.startsWith(item.href + "/") ||
+                    children.some((c) => {
+                      const base = c.href.split("#")[0];
+                      return pathname === base || pathname.startsWith(base + "/");
+                    });
                   return (
                     <div key={item.href} className="side-nav-submenu">
                       <Link

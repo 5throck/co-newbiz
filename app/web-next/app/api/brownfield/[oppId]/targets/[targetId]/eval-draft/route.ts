@@ -25,6 +25,7 @@ import {
   type TechnicalCriterionInput,
 } from "../../../../../../../lib/brownfield-technical-draft.ts";
 import { loadLatestProfile } from "../../../../../../../lib/company-profile-pipeline.ts";
+import { listConfirmedCompetitors } from "../../../../../../../lib/company-competitors.ts";
 import { searchDisclosures } from "../../../../../../../lib/dart-client.ts";
 import { completeOrFallback } from "../../../../../../../lib/llm.ts";
 import { systemMessage } from "../../../../../../../lib/prompts.ts";
@@ -135,6 +136,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
 
   // 근거 1 — 회사 AI 프로파일(강점·약점·포지셔닝).
   const profile = loadLatestProfile(db, { kind: "company", id: target.company_id });
+  // ADR-0142 — 확정 경쟁사 레지스트리가 근거의 1순위 (없으면 payload 제안이 미확정 표기로 들어간다)
+  const confirmedCompetitors = listConfirmedCompetitors(db, { kind: "company", id: target.company_id });
   // 근거 2 — 최근 3년 공시: 전체(recent) + 사업보고서(business)를 합치고
   // 접수번호로 dedupe. 제목만 근거로 쓴다(본문 파싱은 범위 밖).
   let disclosureRows: Array<{ rcept_dt: string; report_nm: string; rcept_no: string }> = [];
@@ -167,7 +170,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       {
         role: "user" as const,
         content: technicalDraftUserContent(company?.name_ko ?? target.company_name, criteria, {
-          profile: profileEvidenceBlock(profile),
+          profile: profileEvidenceBlock(profile, confirmedCompetitors),
           disclosures: disclosureEvidenceBlock(disclosureRows),
           web: webEvidenceBlock(webByCriterion, criteria),
         }),

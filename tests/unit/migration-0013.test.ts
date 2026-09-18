@@ -277,6 +277,9 @@ describe("shape: four new tables + md_project.current_stage_gate", () => {
       "deleted_at", "deleted_by", "delete_reason",
       // 0084 (ADR-0116): subject-company connect rationale appended.
       "subject_company_rationale",
+      // 0114 (design 2026-09-18-s8-business-case-evaluation): WACC subject
+      // decision columns appended (nullable; NULL = track default).
+      "wacc_subject", "wacc_subject_rationale", "wacc_subject_decided_by", "wacc_subject_decided_at",
     ]);
   });
 
