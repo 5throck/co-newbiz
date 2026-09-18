@@ -23,6 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ mem
   const body = (await request.json().catch(() => null)) as {
     name?: string; dart_corp_code?: string | null; note?: string | null;
     discovery_source?: string;
+    evidence?: Array<{ title: string | null; url: string }> | null;
   } | null;
   if (!body?.name?.trim()) return badRequest("name_required", "경쟁사명은 필수입니다.");
   const source = body.discovery_source?.trim() || "manual";
@@ -35,7 +36,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ mem
     const result = registerCompetitor(
       db,
       resolveMemberSubject(db, memberId),
-      { name: body.name, dart_corp_code: body.dart_corp_code ?? null, note: body.note ?? null, discovery_source: source as "manual" | "ai_proposal" },
+      {
+        name: body.name,
+        dart_corp_code: body.dart_corp_code ?? null,
+        note: body.note ?? null,
+        discovery_source: source as "manual" | "ai_proposal",
+        // 웹검색 제안 수용 시 근거 URL을 행에 스냅샷한다 (payload에 없는 후보).
+        evidence: Array.isArray(body.evidence) ? body.evidence : null,
+      },
       auth.auth.userId,
     );
     return ok(result, 201);

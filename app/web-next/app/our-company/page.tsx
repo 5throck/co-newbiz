@@ -159,6 +159,11 @@ export function OurCompanyView() {
   const [competitorForm, setCompetitorForm] = useState({ name: "", dart_corp_code: "", note: "" });
   const [competitorDartSearching, setCompetitorDartSearching] = useState(false);
   const [competitorDartResults, setCompetitorDartResults] = useState<Array<{ corp_code: string; corp_name: string; source?: string; validated?: boolean | null }>>([]);
+  // 웹검색 재제안 (ADR-0142 후속) — 실검색 근거 기반 제안(저장 없음, 수용은 사람)
+  interface WebSuggestionView { name: string; note: string; reliability: "A" | "B" | "C"; sources: Array<{ title: string; url: string }> }
+  const [webSuggestions, setWebSuggestions] = useState<WebSuggestionView[] | null>(null);
+  const [webBusy, setWebBusy] = useState(false);
+  const [webNote, setWebNote] = useState<string | null>(null);
 
   const [profileTab, setProfileTab] = useState<ProfileTabKey>("overview");
   const [profiles, setProfiles] = useState<Record<string, Profile | "loading">>({});
@@ -204,6 +209,39 @@ export function OurCompanyView() {
     try {
       await api.post(`/api/our-company/members/${encodeURIComponent(openMember)}/competitors`, { name, discovery_source: "ai_proposal" });
       setDismissedProposals((prev) => [...prev, name]);
+      loadCompetitors(openMember);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "경쟁사 수용 실패");
+    } finally {
+      setCompBusy(false);
+    }
+  }
+
+  async function runCompetitorWebSearch() {
+    if (!openMember || webBusy) return;
+    setWebBusy(true); setCompError(null);
+    try {
+      const r = await api.post<{ source: "llm" | "llm_knowledge"; note: string; suggestions: WebSuggestionView[] }>(`/api/our-company/members/${encodeURIComponent(openMember)}/competitor-proposals/web-search`, {});
+      setWebSuggestions(r.data.suggestions ?? []);
+      setWebNote(r.data.note ?? null);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "웹검색 재제안 실패");
+    } finally {
+      setWebBusy(false);
+    }
+  }
+
+  async function acceptWebSuggestion(ws: WebSuggestionView) {
+    if (!openMember || compBusy) return;
+    setCompBusy(true); setCompError(null);
+    try {
+      await api.post(`/api/our-company/members/${encodeURIComponent(openMember)}/competitors`, {
+        name: ws.name,
+        note: ws.note || null,
+        discovery_source: "ai_proposal",
+        evidence: ws.sources.map((s) => ({ title: s.title, url: s.url })),
+      });
+      setWebSuggestions((prev) => (prev ?? []).filter((x) => x.name !== ws.name));
       loadCompetitors(openMember);
     } catch (err) {
       setCompError(err instanceof Error ? err.message : "경쟁사 수용 실패");
@@ -1295,6 +1333,9 @@ export function OurCompanyView() {
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <h4 className="text-[0.9rem] font-semibold m-0">AI 제안</h4>
                     <span className="text-[0.75rem] text-[color:var(--muted-fg)]">최신 프로필 분석 기준 — 제안 전용, 수용은 사람</span>
+                    <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void runCompetitorWebSearch()}>
+                      {webBusy ? "웹검색 중..." : "웹검색 재제안"}
+                    </button>
                   </div>
                   {(competitorProposals ?? []).filter((p) => !p.accepted && !dismissedProposals.includes(p.name)).length === 0 ? (
                     <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">
@@ -1327,6 +1368,35 @@ export function OurCompanyView() {
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+
+                  {webSuggestions && webSuggestions.length > 0 && (
+                    <div className="grid gap-2 mt-2">
+                      <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">{webNote ?? "웹검색 기반 추가 제안"}</p>
+                      {webSuggestions.map((ws) => (
+                        <div key={ws.name} className="sizing-grade-card mb-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <strong className="text-[0.88rem]">{ws.name}</strong>
+                            <span className={`status-chip ${ws.reliability === "B" ? "status-in-progress" : "status-amber"}`} title="웹검색 근거 기반 제안 — 수용 전 출처를 확인하세요">
+                              {ws.reliability === "B" ? "제안 · 웹검색 근거" : "제안 · 미검증"}
+                            </span>
+                          </div>
+                          <p className="mb-1 text-[0.8rem]">{ws.note || "—"}</p>
+                          {ws.sources.length > 0 && (
+                            <p className="mb-2 text-[0.72rem] text-[color:var(--muted-fg)]">
+                              근거:{" "}
+                              {ws.sources.map((e, i) => (
+                                <span key={i}>{i > 0 && " · "}<a href={e.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{e.title || "출처"}</a></span>
+                              ))}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            <button type="button" className="btn-primary btn-sm" disabled={compBusy} onClick={() => void acceptWebSuggestion(ws)}>수용</button>
+                            <button type="button" className="btn-ghost btn-sm" onClick={() => setWebSuggestions((prev) => (prev ?? []).filter((x) => x.name !== ws.name))}>무시</button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
