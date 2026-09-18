@@ -7,20 +7,9 @@ lang_reason: source-material
 
 - Spec ID: `2026-09-18-s8-business-case-evaluation`
 - Date: 2026-09-18
-- Status: implemented — Phase 1–4 전부 구현 완료 (pr/20260918-085643-feat-standalone-sim-engine, 2026-09-18). Phase 1: python/sim_engine/ 엔진, TS 브리지. Phase 2: 마이그레이션 0111–0113, ramp_up, bc.capture_rate/bc.ramp_up, 스펙 갱신, target_costing 스텝·스킬. Phase 3: 마이그레이션 0114(md_project wacc_subject 4컬럼 — REQ-W4-1의 assumption 키 대신 프로젝트 컬럼으로 모델링, 값이 문자열 enum이기 때문), resolveProjectWaccSubject(트랙 기본값)·setProjectWaccSubject(근거 필수)·resolveReleveredBeta, wacc API 확장, WaccPanel 주체 선택 UI, 체크리스트 gf-12/bf-13. Phase 4: bc.* 전체 어휘 해석(opex/capex/초기투자 비율·성장/변동성 오버라이드·기간·반복수), business-case/params GET·POST 라우트, S8 화면 파라미터·스냅샷 탭(ParamsPanel), 품평회 실시(아래 기록).
-
-## REQ-W2 구현 기록 (2026-09-18 후속)
-
-target_costing 스텝의 계산 서비스가 구현됐다: 마이그레이션 0115 `target_costing_analysis`(시장가격·목표마진·허용원가·추정단위원가·격차·격차비율·임계초과·축소방안), `lib/target-costing.ts`(순수 격차 계산 + 영속화 + `resolveDownsideOpexUplift`), `POST/GET /api/projects/{id}/target-costing`, S8 화면 타겟코스팅 탭(TargetCostingPanel — 격차 카드·미리보기·축소방안 입력). 임계(+10%) 초과 분석이 존재하면 downside 시나리오의 opex 드라이버가 격차비율만큼 상향되고(job-spec 출처 라벨 + `tc_gap_ratio`/`tc_downside_opex_uplift` 노트 스탬프), base/upside는 불변이다. 시장가격 앵커는 1단계로 사용자 입력/peer 벤치마크 기록을 따르며, 외부 가격 데이터 자동 연계는 별도 설계로 진행한다.
-
-## 품평회 실행 기록 (2026-09-18, REQ-W9)
-
-- 방식: 데모 시드(gui-review.sqlite) + dev 서버(8787) + 브라우저 라이브 리뷰, 스크린샷 증적 gui-review-screenshots/t20–t24. 평가 축: 기능 적합성 / 사용성 / 가독성.
-- 검증 항목(전부 통과): 파라미터 해석 테이블(출처 라벨 표시), 파라미터 확정 폼 저장→해석값 즉시 반영(포획률 0.5%→0.8%), 실행 스냅샷(드라이버·분포·출처·할인율 9.0%·주체 target(user)) 렌더링, WACC 주체 확정 플로우(선택→근거 필수→저장 완료), S8 완료 요건 배너.
-- 발견·조치: [P0] 구버전/플레이스홀더 스냅샷('{}')에서 파라미터 패널 크래시 → 방어 렌더링으로 전환하고 '구버전 형식 — 재생성' 안내 추가, 데모 시드가 실제 job-spec 스냅샷을 기록하도록 수정(완료). [관찰] admin 역할은 역할 분리 규정으로 프로젝트 라우트가 거부 — 결함 아님, 리뷰는 analyst 계정으로 수행.
-- 재검증: 수정 후 동일 화면 재촬영(t22–t24)에서 정상 렌더링 확인.
+- Status: draft
 - Origin: 2026-09-18 사용자 요구 4건(사업계획 요소, 시뮬레이션 투명성·파라미터 조정, 독립 엔진·병렬 처리·품평회, GPU·CPU 하이브리드 연산 장치)을 S8 스택 코드 조사로 정착시킨 설계.
-- Related: ADR-0142 (독립 시뮬레이션 엔진·장치 계층·입력 유도 시드 — 본 설계 §1의 아키텍처 결정 기록), ADR-0052 §D.4 (시드 결정론 몬테카를로), ADR-0098 (S8 멀티 비즈니스 케이스 생성), ADR-0114 (그룹/계열사 사업목표 기준), ADR-0115 (WACC 성분 분해), ADR-0117 (듀얼 퍼스펙티브 밸류에이션), ADR-0086/0087/0088 (화면 패턴·토큰·데이터 표현), `process/flow.spec.yaml` (S8, fs 게이트), `procedures/_shared/{greenfield,brownfield}-fs/schema.yaml`
+- Related: ADR-0052 §D.4 (시드 결정론 몬테카를로), ADR-0098 (S8 멀티 비즈니스 케이스 생성), ADR-0114 (그룹/계열사 사업목표 기준), ADR-0115 (WACC 성분 분해), ADR-0117 (듀얼 퍼스펙티브 밸류에이션), ADR-0086/0087/0088 (화면 패턴·토큰·데이터 표현), `process/flow.spec.yaml` (S8, fs 게이트), `procedures/_shared/{greenfield,brownfield}-fs/schema.yaml`
 
 ## Problem
 

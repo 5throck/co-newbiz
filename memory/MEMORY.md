@@ -4,6 +4,8 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-19](2026-09-19.md) | merge origin/main: resolve spec registry, ADR index and skill-review conflicts |
+| [2026-09-18](2026-09-18.md) | chore: update |
 | [2026-09-18](2026-09-18.md) | feat: standalone monte carlo simulation engine with GPU/CPU device layer and S8 generator bridge |
 | [2026-09-17](2026-09-17.md) | feat: S7 committee pre-check flow, granular verdict scale, DDG search fallback, and candidate evidence persistence |
 | [2026-09-16](2026-09-16.md) | feat(web-next): generalize brownfield candidate profile pipeline, fix S1 industry-name display |
