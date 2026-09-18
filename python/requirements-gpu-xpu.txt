@@ -1,0 +1,3 @@
+# Optional GPU extra — Intel XPU / oneAPI (REQ-W7-2).
+--extra-index-url https://download.pytorch.org/whl/xpu
+torch>=2.4,<3.0

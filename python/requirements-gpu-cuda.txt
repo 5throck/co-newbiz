@@ -1,0 +1,6 @@
+# Optional GPU extra — NVIDIA CUDA builds (design 2026-09-18-s8-business-case-evaluation
+# REQ-W7-2/REQ-W7-3). Install INSTEAD of plain torch when an NVIDIA GPU is the
+# target: python3 -m pip install -r requirements-gpu-cuda.txt
+# The engine lazy-imports torch; without it the CPU (numpy) path is used.
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch>=2.4,<3.0

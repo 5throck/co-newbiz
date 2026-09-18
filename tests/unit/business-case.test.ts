@@ -237,13 +237,24 @@ describe("S8 generation (ADR-0098)", () => {
     expect(bare.currentStage).toBe("S8");
     expect(bare.blockers.join()).toContain("민감도");
 
-    // Persisting one sensitivity row flips the stage — exactly the ADR-0098
-    // predicate (case ≥ 1 AND valuation_simulation ≥ 1).
+    // Persisting one sensitivity row satisfies the original ADR-0098 predicate
+    // (case ≥ 1 AND valuation_simulation ≥ 1) but the 2026-09-18 spec update
+    // added a second completion artifact — BEP year + input snapshot — so the
+    // bare row is still not enough (design 2026-09-18-s8-business-case-
+    // evaluation REQ-W3-3).
     db.run(
       `INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, created_at)
        VALUES (?,?,?,?,?,?,?)`,
       ["vs-nosim", "proj-nosim", "bc-nosim", "base", "p50", 42, NOW],
     );
+    const bareRow = evaluateProcess({ type: "project", id: "proj-nosim" });
+    expect(bareRow.completedStages).not.toContain("S8");
+    expect(bareRow.blockers.join()).toContain("BEP");
+
+    // Stamping bep_year + inputs_json (what both generation paths now do)
+    // completes the predicate.
+    db.run("UPDATE valuation_simulation SET bep_year = 2.5 WHERE id = 'vs-nosim'");
+    db.run("UPDATE business_case_model SET inputs_json = '{}' WHERE id = 'bc-nosim'");
     const flipped = evaluateProcess({ type: "project", id: "proj-nosim" });
     expect(flipped.completedStages).toContain("S8");
   });

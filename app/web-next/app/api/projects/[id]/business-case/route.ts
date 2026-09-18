@@ -21,6 +21,8 @@ interface LineInput {
   category?: string;
   name?: string;
   annual_amount_krw_m?: number;
+  sales_volume?: number;
+  unit_price_krw?: number;
   start_year?: number;
   growth_rate?: number;
   note?: string;
@@ -146,6 +148,18 @@ function validateLines(lines: LineInput[]): string | null {
     if (typeof line.annual_amount_krw_m !== "number" || Number.isNaN(line.annual_amount_krw_m)) {
       return "line annual_amount_krw_m은 숫자여야 합니다.";
     }
+    // Sales-plan decomposition (design REQ-W1-1) — both nullable, but if one
+    // is given the other must be too (revenue = volume x price needs both).
+    const hasVolume = line.sales_volume !== undefined && line.sales_volume !== null;
+    const hasPrice = line.unit_price_krw !== undefined && line.unit_price_krw !== null;
+    if (hasVolume !== hasPrice) {
+      return "sales_volume과 unit_price_krw는 함께 입력해야 합니다.";
+    }
+    for (const [key, value] of [["sales_volume", line.sales_volume], ["unit_price_krw", line.unit_price_krw]] as const) {
+      if (value !== undefined && value !== null && (typeof value !== "number" || Number.isNaN(value) || value < 0)) {
+        return `line ${key}는 0 이상의 숫자여야 합니다.`;
+      }
+    }
   }
   return null;
 }
@@ -154,14 +168,16 @@ function validateLines(lines: LineInput[]): string | null {
 function insertLines(db: ReturnType<typeof getDb>, modelId: string, lines: LineInput[], userId: string, now: string): void {
   for (const line of lines) {
     db.run(
-      `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note, created_by, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, sales_volume, unit_price_krw, start_year, growth_rate, note, created_by, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         ulid(),
         modelId,
         line.category,
         line.name?.trim() || line.category,
         line.annual_amount_krw_m,
+        typeof line.sales_volume === "number" ? line.sales_volume : null,
+        typeof line.unit_price_krw === "number" ? line.unit_price_krw : null,
         typeof line.start_year === "number" && line.start_year >= 1 ? Math.floor(line.start_year) : 1,
         typeof line.growth_rate === "number" ? line.growth_rate : 0,
         line.note?.trim() || null,

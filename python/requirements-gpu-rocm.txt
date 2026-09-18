@@ -1,0 +1,4 @@
+# Optional GPU extra — AMD ROCm/HIP builds (REQ-W7-2). torch's ROCm build
+# reports through the cuda API; the engine detects hip via torch.version.
+--extra-index-url https://download.pytorch.org/whl/rocm6.2
+torch>=2.4,<3.0

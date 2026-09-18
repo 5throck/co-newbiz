@@ -151,4 +151,3 @@ ADRs 0046, 0048, 0049, and 0051 are **Accepted** as of 2026-08-23 — each one's
 
 ADRs 0001-0044 are **Accepted** as of 2026-08-20, ratifying decisions already made during Stage 0-1 (scaffold, agent roster, glossary, and the 12 Stage 1 planning meetings) and formalized in Stage 2's regulation book and procedures. ADR-0045 (Wave 5.10 system-pilot addendum) is Accepted as of the same date. Future amendments to any of these decisions require a new ADR referencing the one it supersedes, per the trigger list above — not an edit to the existing record.
 
-
