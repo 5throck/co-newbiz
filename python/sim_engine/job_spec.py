@@ -102,6 +102,27 @@ def parse_driver(raw: Any, label: str) -> dict:
     return parsed
 
 
+def parse_ramp_up(raw: Any, label: str) -> dict:
+    """The ramp-up curve is a constant array (utilization by year, ratio
+    0..1+) — the one array-valued driver. It multiplies revenue from year 1;
+    a curve shorter than the horizon holds its last value (REQ-W1-2)."""
+    _require(isinstance(raw, dict) and raw.get("dist", "constant") == "constant",
+             f"{label} must be a constant driver with an array value")
+    value = raw.get("value")
+    _require(isinstance(value, list) and len(value) > 0, f"{label}.value must be a non-empty array")
+    curve = []
+    for i, v in enumerate(value):
+        v = _check_finite(v, f"{label}.value[{i}]")
+        _require(v >= 0, f"{label}.value[{i}] must be >= 0")
+        curve.append(v)
+    parsed = {"dist": "constant", "value": curve}
+    for key in ("unit", "source"):
+        if key in raw:
+            _require(isinstance(raw[key], str), f"{label}.{key} must be a string")
+            parsed[key] = raw[key]
+    return parsed
+
+
 def parse_case(raw: Any, index: int) -> dict:
     label = f"cases[{index}]"
     _require(isinstance(raw, dict), f"{label} must be an object")
@@ -116,6 +137,8 @@ def parse_case(raw: Any, index: int) -> dict:
         if name in raw_drivers:
             drivers[name] = parse_driver(raw_drivers[name], f"{label}.drivers.{name}")
     _require("revenue_y1" in drivers, f"{label}: drivers.revenue_y1 is required (the year-1 revenue anchor)")
+    if "ramp_up" in raw_drivers:
+        drivers["ramp_up"] = parse_ramp_up(raw_drivers["ramp_up"], f"{label}.drivers.ramp_up")
 
     if "contingent_liabilities" in raw_drivers:
         liabilities = raw_drivers["contingent_liabilities"]

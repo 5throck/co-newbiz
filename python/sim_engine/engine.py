@@ -82,9 +82,19 @@ def run_case(case: dict, spec: dict, device_info: DeviceInfo) -> dict:
     fcf = revenue * (1.0 - opex - capex)
 
     discount_factors = [(1.0 + rate) ** -t for t in range(1, horizon + 1)]
+
+    # Ramp-up curve (REQ-W1-2) — utilization multiplier by year; a curve
+    # shorter than the horizon holds its last value.
+    ramp_driver = drivers.get("ramp_up")
+    if ramp_driver:
+        curve = list(ramp_driver["value"])
+        ramp = [curve[t] if t < len(curve) else curve[-1] for t in range(horizon)]
+    else:
+        ramp = [1.0] * horizon
+
     npvs = backend.full((iterations,), -initial_investment)
     for t in range(horizon):
-        npvs = npvs + fcf[:, t] * discount_factors[t]
+        npvs = npvs + fcf[:, t] * discount_factors[t] * ramp[t]
 
     # Contingent liabilities — drawn into EVERY iteration (ADR-0026).
     for liability in drivers.get("contingent_liabilities", []):
@@ -105,8 +115,8 @@ def run_case(case: dict, spec: dict, device_info: DeviceInfo) -> dict:
     opex_mean = driver_expected_value(opex_driver)
     capex_mean = driver_expected_value(capex_driver)
     deterministic_flows.append(-initial_investment)
-    for _ in range(horizon):
-        deterministic_flows.append(revenue_det * (1.0 - opex_mean - capex_mean))
+    for t in range(horizon):
+        deterministic_flows.append(revenue_det * (1.0 - opex_mean - capex_mean) * ramp[t])
         revenue_det *= 1.0 + growth_mean
     base_npv = sum(cf / (1.0 + rate) ** t for t, cf in enumerate(deterministic_flows))
 

@@ -280,4 +280,38 @@ describe("sim_engine", () => {
       expect(stderr).not.toContain("Traceback");
     }
   });
+
+  test.skipIf(!ENGINE_AVAILABLE)("ramp-up curve multiplies revenue by year and holds its last value (REQ-W1-2)", async () => {
+    const rampJob = {
+      ...CONSTANT_JOB,
+      job_id: "test:ramp",
+      iterations: 200,
+      cases: [
+        {
+          case_id: "ramp:market_forward",
+          drivers: {
+            revenue_y1: { dist: "constant", value: 100 },
+            revenue_growth: { dist: "constant", value: 0 },
+            opex_ratio: { dist: "constant", value: 0.6 },
+            capex_ratio: { dist: "constant", value: 0.1 },
+            // No initial investment — every flow is positive, payback = 0.
+            ramp_up: { dist: "constant", value: [0.5, 1.0, 1.0] },
+          },
+        },
+      ],
+    };
+    const { code, stdout, stderr } = await runEngine(rampJob);
+    expect(stderr).toBe("");
+    expect(code).toBe(0);
+    const kase = (JSON.parse(stdout) as EngineResult).cases[0];
+
+    // FCF_t = 100 x 0.3 x ramp_t; the 3-year curve holds 1.0 for years 4-5.
+    const rate = 0.1;
+    const ramp = [0.5, 1.0, 1.0, 1.0, 1.0];
+    const expectedNpv = ramp.reduce((acc, u, i) => acc + (100 * 0.3 * u) / (1 + rate) ** (i + 1), 0);
+    expect(kase.npv.base).toBeCloseTo(expectedNpv, 6);
+    expect(kase.npv.std).toBeLessThan(1e-9);
+    // First flow is positive with no year-0 outflow — immediate break-even.
+    expect(kase.payback_discounted_years).toBe(0);
+  });
 });

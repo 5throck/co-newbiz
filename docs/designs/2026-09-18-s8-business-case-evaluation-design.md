@@ -7,7 +7,7 @@ lang_reason: source-material
 
 - Spec ID: `2026-09-18-s8-business-case-evaluation`
 - Date: 2026-09-18
-- Status: draft — Phase 1 구현 완료 (feat/new-feature, 2026-09-18): python/sim_engine/ 엔진, TS 브리지(app/web-next/lib/sim-engine.ts + 제너레이터 격하), 테스트(tests/unit/sim-engine.test.ts, tests/unit/business-case-sim-engine.test.ts). Phase 2–4는 후속.
+- Status: draft — Phase 1·2 구현 완료 (feat/new-feature, 2026-09-18). Phase 1: python/sim_engine/ 엔진, TS 브리지(app/web-next/lib/sim-engine.ts + 제너레이터 격하). Phase 2: 마이그레이션 0111–0113(판매목표 컬럼·BEP 컬럼·inputs_json), 엔진 ramp_up 드라이버, bc.capture_rate/bc.ramp_up.y* 파라미터 체계, flow.spec S8 완료기준 갱신(BEP+스냅샷), greenfield/brownfield-fs target_costing 스텝 + target-costing-analysis 스킬 + target_cost_gap 출력 유형. Phase 3(WACC 주체)·4(UI+품평회)는 후속.
 - Origin: 2026-09-18 사용자 요구 4건(사업계획 요소, 시뮬레이션 투명성·파라미터 조정, 독립 엔진·병렬 처리·품평회, GPU·CPU 하이브리드 연산 장치)을 S8 스택 코드 조사로 정착시킨 설계.
 - Related: ADR-0052 §D.4 (시드 결정론 몬테카를로), ADR-0098 (S8 멀티 비즈니스 케이스 생성), ADR-0114 (그룹/계열사 사업목표 기준), ADR-0115 (WACC 성분 분해), ADR-0117 (듀얼 퍼스펙티브 밸류에이션), ADR-0086/0087/0088 (화면 패턴·토큰·데이터 표현), `process/flow.spec.yaml` (S8, fs 게이트), `procedures/_shared/{greenfield,brownfield}-fs/schema.yaml`
 

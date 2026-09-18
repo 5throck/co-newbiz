@@ -228,6 +228,10 @@ export interface SimulationResult {
   p95: number;
   mean: number;
   std: number;
+  /** Deterministic-path discounted payback = BEP year (design REQ-W3-1); null when the horizon ends first. */
+  bepYear: number | null;
+  /** Unit-economics break-even volume; null when the case has no price/volume split. */
+  bepVolume: number | null;
 }
 
 /** IRR of a cashflow vector by bisection on NPV(rate); null when no sign change. */
@@ -254,6 +258,25 @@ export function irr(cashflows: number[]): number | null {
   return (lo + hi) / 2;
 }
 
+/** Fractional year when cumulative discounted FCF first reaches zero — the
+ *  TS port of sim_engine.metrics.discounted_payback_year (identical math so
+ *  the fallback path and the engine agree). */
+export function discountedPaybackYear(initialInvestment: number, flows: number[], rate: number): number | null {
+  let cumulative = -initialInvestment;
+  if (cumulative >= 0) return 0;
+  let previous = cumulative;
+  for (let year = 1; year <= flows.length; year++) {
+    cumulative += flows[year - 1] / Math.pow(1 + rate, year);
+    if (cumulative >= 0) {
+      const span = cumulative - previous;
+      const fraction = span > 0 ? -previous / span : 0;
+      return year - 1 + Math.min(Math.max(fraction, 0), 1);
+    }
+    previous = cumulative;
+  }
+  return null;
+}
+
 /**
  * Seeded Monte Carlo over the value drivers, mirroring python/monte_carlo.py's
  * SimulationResult contract (scripts/co-newbiz/simulate.ts). The driver is
@@ -271,10 +294,11 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const eff = effGrowthDisp(inputs, scenario, variant);
   const anchorGrowth = eff.growth;
   const disp = eff.disp;
-  const year1Revenue = inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth;
+  const year1Revenue = inputs.marketSizeKrwM * captureRateOf(inputs) * delta.growth;
 
   const npvs: number[] = [];
   const initialInvestment = year1Revenue * INITIAL_INVESTMENT_RATIO;
+  const ramp = rampUpOf(inputs);
   for (let it = 0; it < MC_ITERATIONS; it++) {
     let revenue = year1Revenue;
     let npv = -initialInvestment; // year-0 설립 투자
@@ -284,7 +308,8 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
         revenue *= 1 + anchorGrowth + disp * z1;
       }
       const fcf = revenue * (1 - OPEX_RATIO) - revenue * CAPEX_RATIO;
-      npv += fcf / Math.pow(1 + inputs.wacc.value, year);
+      const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
+      npv += (fcf * utilization) / Math.pow(1 + inputs.wacc.value, year);
     }
     npvs.push(npv);
   }
@@ -292,7 +317,15 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const mean = npvs.reduce((a, b) => a + b, 0) / npvs.length;
   const variance = npvs.reduce((a, b) => a + (b - mean) * (b - mean), 0) / npvs.length;
   const q = (p: number) => npvs[Math.min(npvs.length - 1, Math.max(0, Math.floor(p * npvs.length)))];
-  return { seed, iterations: MC_ITERATIONS, p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance) };
+  // Deterministic path — same BEP/payback definition as the engine.
+  const detFlows: number[] = [-year1Revenue * INITIAL_INVESTMENT_RATIO];
+  let detRevenue = year1Revenue;
+  for (let year = 1; year <= HORIZON_YEARS; year++) {
+    if (year > 1) detRevenue *= 1 + anchorGrowth;
+    const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
+    detFlows.push(detRevenue * (1 - OPEX_RATIO - CAPEX_RATIO) * utilization);
+  }
+  return { seed, iterations: MC_ITERATIONS, p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance), bepYear: discountedPaybackYear(year1Revenue * INITIAL_INVESTMENT_RATIO, detFlows.slice(1), inputs.wacc.value), bepVolume: null };
 }
 
 // ── Case inputs (anchored to the promoting opportunity's market facts) ─────
@@ -306,6 +339,68 @@ export interface CaseInputs {
    *  constructing CaseInputs by hand keep working — without it both variants
    *  fall back to the legacy anchor + 2% dispersion. */
   growthModel?: GrowthModel;
+  /** Sales-plan parameters (design REQ-W1-2/3): capture rate and the
+   *  utilization ramp-up curve, resolvable as bc.* user assumptions with
+   *  provenance labels. Optional so hand-built contexts fall back to the
+   *  deterministic defaults. */
+  bcParams?: BusinessCaseParams;
+}
+
+/** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
+export const DEFAULT_RAMP_UP = [0.4, 0.7, 0.9, 1.0, 1.0];
+
+export interface BusinessCaseParams {
+  captureRate: number;
+  captureSource: string;
+  rampUp: number[];
+  rampSource: string;
+}
+
+/** Resolve bc.* user assumptions (design REQ-W6-1 vocabulary) — capture rate
+ *  and the ramp-up curve, each with a provenance label. Defaults are the
+ *  documented deterministic values; user rows win by recency. Ramp-up years
+ *  live under `bc.ramp_up.y1..yN` (the assumption table stores scalars, so
+ *  the curve is one key per year). */
+export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, projectId: string): BusinessCaseParams {
+  const capture = db.query(
+    `SELECT a.value FROM assumption a JOIN run r ON r.id = a.run_id
+     WHERE r.project_id = ? AND a.assumption_key = 'bc.capture_rate' AND a.kind = 'user'
+     ORDER BY a.as_of DESC, r.created_at DESC, a.id DESC LIMIT 1`,
+  ).get(projectId) as { value: number } | undefined;
+  const rampRows = db.query(
+    `SELECT a.assumption_key, a.value FROM assumption a JOIN run r ON r.id = a.run_id
+     WHERE r.project_id = ? AND a.assumption_key LIKE 'bc.ramp_up.y%' AND a.kind = 'user'
+     ORDER BY a.as_of DESC, r.created_at DESC, a.id DESC`,
+  ).all(projectId) as Array<{ assumption_key: string; value: number }>;
+  const rampByYear = new Map<number, number>();
+  for (const row of rampRows) {
+    const year = Number.parseInt(row.assumption_key.slice("bc.ramp_up.y".length), 10);
+    if (Number.isFinite(year) && year >= 1 && !rampByYear.has(year) && Number.isFinite(row.value) && row.value >= 0) {
+      rampByYear.set(year, row.value); // first hit per year = most recent
+    }
+  }
+  const rampUp = DEFAULT_RAMP_UP.map((fallback, i) => rampByYear.get(i + 1) ?? fallback);
+  return {
+    captureRate: capture && Number.isFinite(capture.value) && capture.value > 0 ? capture.value : CAPTURE_RATE,
+    captureSource: capture && Number.isFinite(capture.value) && capture.value > 0 ? "사용자 확정 (bc.capture_rate)" : "기본값",
+    rampUp,
+    rampSource: rampByYear.size > 0 ? "사용자 확정 (bc.ramp_up.y*)" : "기본값",
+  };
+}
+
+/** Deterministic defaults for hand-built contexts without bcParams. */
+function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
+  return { captureRate: CAPTURE_RATE, captureSource: "기본값", rampUp: DEFAULT_RAMP_UP, rampSource: "기본값" };
+}
+
+/** Effective capture rate — hand-built contexts without bcParams keep the
+ *  legacy constant (REQ-W1-3's default). */
+function captureRateOf(inputs: CaseInputs): number {
+  return inputs.bcParams?.captureRate ?? CAPTURE_RATE;
+}
+
+function rampUpOf(inputs: CaseInputs): number[] {
+  return inputs.bcParams?.rampUp ?? DEFAULT_RAMP_UP;
 }
 
 /** Effective per-(scenario, variant) growth/dispersion. Legacy inputs (no
@@ -342,18 +437,21 @@ export function caseInputsForProject(projectId: string): CaseInputs {
     anchorGrowth: row?.growth_rate ?? 0.05,
     wacc: resolveProjectWacc(getDb(), projectId),
     growthModel: resolveGrowthModel(getDb(), projectId),
+    bcParams: resolveBusinessCaseParams(getDb(), projectId),
   };
 }
 
 function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): number[] {
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
-  let revenue = inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth;
+  let revenue = inputs.marketSizeKrwM * captureRateOf(inputs) * delta.growth;
   const initialInvestment = revenue * INITIAL_INVESTMENT_RATIO;
+  const ramp = rampUpOf(inputs);
   const flows: number[] = [-initialInvestment]; // year-0 설립 투자
   for (let year = 1; year <= HORIZON_YEARS; year++) {
     if (year > 1) revenue *= 1 + eff.growth;
-    flows.push(revenue * (1 - OPEX_RATIO) - revenue * CAPEX_RATIO);
+    const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
+    flows.push(revenue * (1 - OPEX_RATIO - CAPEX_RATIO) * utilization);
   }
   return flows;
 }
@@ -370,6 +468,8 @@ export interface EngineRunResult {
   result: SimulationResult;
   meta: SimEngineMeta;
   bepYear: number | null;
+  bepVolume: number | null;
+  paybackYears: number | null;
 }
 
 /**
@@ -381,7 +481,8 @@ export interface EngineRunResult {
 export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): Record<string, unknown> {
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
-  const year1Revenue = inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth;
+  const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
+  const year1Revenue = inputs.marketSizeKrwM * bc.captureRate * delta.growth;
   return {
     job_id: `s8:${inputs.projectId}:${scenario}:${variant}`,
     seed_policy: { base: inputs.projectId, hash: "fnv1a" },
@@ -393,7 +494,8 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
       {
         case_id: `${scenario}:${variant}`,
         drivers: {
-          revenue_y1: { dist: "constant", value: year1Revenue, unit: "KRW_M", source: `시장규모 × 포획률 ${(CAPTURE_RATE * 100).toFixed(1)}%` },
+          revenue_y1: { dist: "constant", value: year1Revenue, unit: "KRW_M", source: `시장규모 × 포획률 ${(bc.captureRate * 100).toFixed(1)}% (${bc.captureSource})` },
+          ramp_up: { dist: "constant", value: bc.rampUp, source: bc.rampSource },
           revenue_growth: { dist: "normal", mean: eff.growth, sigma: eff.disp, unit: "ratio", source: eff.growthSource },
           opex_ratio: { dist: "constant", value: OPEX_RATIO, unit: "ratio", source: "기본값" },
           capex_ratio: { dist: "constant", value: CAPEX_RATIO, unit: "ratio", source: "기본값" },
@@ -407,8 +509,8 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
 /** One engine attempt for an S8 case; null on any failure — the caller falls
  *  back to the legacy in-process simulator and the fallback is stamped in the
  *  note so every persisted figure names its origin (REQ-W5-1 transition). */
-async function runEngineSimulation(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant): Promise<EngineRunResult | null> {
-  const job = await runSimJob(buildS8JobSpec(inputs, scenario, variant));
+async function runEngineSimulation(jobSpec: Record<string, unknown>, inputs: CaseInputs, scenario: Scenario, variant: CaseVariant): Promise<EngineRunResult | null> {
+  const job = await runSimJob(jobSpec);
   const first = job?.cases[0];
   if (!job || !first || !Number.isFinite(first.npv?.p50)) return null;
   return {
@@ -420,9 +522,13 @@ async function runEngineSimulation(inputs: CaseInputs, scenario: Scenario, varia
       p95: first.npv.p95,
       mean: first.npv.mean,
       std: first.npv.std,
+      bepYear: first.bep_year,
+      bepVolume: first.bep_volume,
     },
     meta: { engine: `python-sim-engine@${job.version}`, device: `${first.device.device}/${first.device.backend}`, precision: first.device.precision },
     bepYear: first.bep_year,
+    bepVolume: first.bep_volume,
+    paybackYears: first.payback_discounted_years,
   };
 }
 
@@ -483,7 +589,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         "",
         `성장 근거: ${eff.growthSource} ${(eff.growth * 100).toFixed(2)}%/년 (시나리오 계수 ×${delta.growth}),`,
         `변동성 근거: ${eff.dispSource} (sigma ${pct1(eff.disp)} ×${delta.disp}).`,
-        `1차년도 매출은 시장 점유율 ${CAPTURE_RATE * 100}% 가정으로 ${(ctx.inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth).toFixed(1)} 억원.`,
+        `1차년도 매출은 시장 점유율 ${captureRateOf(ctx.inputs) * 100}% 가정으로 ${(ctx.inputs.marketSizeKrwM * captureRateOf(ctx.inputs) * delta.growth).toFixed(1)} 억원 (가동률 ${rampUpOf(ctx.inputs).map((v) => v.toFixed(1)).join(" → ")}).`,
         `베이스레이트 점검: 산업 성장률 대비 ±20% 밴드 내 (greenfield-fs step 1).`,
       ].join("\n");
     }
@@ -495,7 +601,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, variant) VALUES (?,?,?,?,?,?,?,?)`,
         [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${ctx.scenario} — ${VARIANT_LABEL[variant]}`, HORIZON_YEARS, "business-case-generator", nowIso(), variant],
       );
-      const year1Revenue = ctx.inputs.marketSizeKrwM * CAPTURE_RATE * delta.growth;
+      const year1Revenue = ctx.inputs.marketSizeKrwM * captureRateOf(ctx.inputs) * delta.growth;
       const lines: Array<[string, "revenue" | "opex" | "capex", string, number]> = [
         ["revenue", "revenue", "시나리오 매출 (year-1 앵커)", year1Revenue],
         ["opex", "opex", "운영비 (매출의 60%)", year1Revenue * OPEX_RATIO],
@@ -524,19 +630,25 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       if (!modelId) throw new Error("distributional_valuation requires valuation_model to have persisted the model");
       // Standalone engine first (design §1); the legacy in-process simulator
       // remains the fallback and the note names which engine produced the
-      // distribution, on which device (REQ-W5-1 transition contract).
-      const engineRun = await runEngineSimulation(ctx.inputs, ctx.scenario, variant);
+      // distribution, on which device (REQ-W5-1 transition contract). The
+      // job-spec is built once and stored on the model — the snapshot IS the
+      // execution contract (REQ-W5-1).
+      const jobSpec = buildS8JobSpec(ctx.inputs, ctx.scenario, variant);
+      const engineRun = await runEngineSimulation(jobSpec, ctx.inputs, ctx.scenario, variant);
       const sim: SimulationResult = engineRun?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant);
       const engineMeta: SimEngineMeta = engineRun?.meta ?? { engine: "inline-ts", device: "cpu", precision: "float64" };
-      ctx.sim = { result: sim, engine: engineMeta, bepYear: engineRun?.bepYear ?? null };
+      ctx.sim = { result: sim, engine: engineMeta, bepYear: sim.bepYear };
       const flows = deterministicCashflows(ctx.inputs, ctx.scenario, variant);
-      const bepFragment = engineRun?.bepYear != null ? `; bep_year=${engineRun.bepYear.toFixed(2)}` : "";
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; ${provenance}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
+      const bc = ctx.inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
+      const bepFragment = sim.bepYear != null ? `; bep_year=${sim.bepYear.toFixed(2)}` : "";
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}; ramp_source=${bc.rampSource}; ${provenance}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
+      db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
+        const isP50 = pct === "p50";
         db.run(
-          `INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at)
-           VALUES (?,?,?,?,?,?,?,?,?)`,
-          [ulid(), ctx.inputs.projectId, modelId, ctx.scenario, pct, sim[pct], pct === "p50" ? irr(flows) : null, note, nowIso()],
+          `INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at, bep_year, bep_volume, payback_discounted_years)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [ulid(), ctx.inputs.projectId, modelId, ctx.scenario, pct, sim[pct], isP50 ? irr(flows) : null, note, nowIso(), isP50 ? sim.bepYear : null, isP50 ? sim.bepVolume : null, isP50 ? sim.bepYear : null],
         );
       }
       return [

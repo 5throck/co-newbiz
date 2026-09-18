@@ -115,6 +115,9 @@ describe("S8 generation x sim-engine bridge", () => {
       expect(row.note).toContain("engine=python-sim-engine@");
       expect(row.note).toMatch(/device=(cpu|cuda|mps|xpu|rocm)\/(numpy|torch)/);
       expect(row.note).toMatch(/precision=(float64|float32)/);
+      // Sales-plan provenance rides in the note too (design REQ-W1-2/3).
+      expect(row.note).toMatch(/capture_rate=0\.00[0-9]+/);
+      expect(row.note).toContain("ramp_source=");
     }
     const p50Notes = notes.filter((n) => n.percentile === "p50");
     for (const row of p50Notes) {
@@ -123,6 +126,36 @@ describe("S8 generation x sim-engine bridge", () => {
     // Scenario distinctness survives the engine bridge (ADR-0098 invariant).
     const seeds = new Set(p50Notes.map((n) => n.note.match(/seed=(\d+)/)?.[1]));
     expect(seeds.size).toBe(3);
+  });
+
+  test("(a2) Phase 2 persistence: inputs_json snapshot and BEP columns land on the model/p50 row", async () => {
+    const model = db
+      .query("SELECT id, inputs_json FROM business_case_model WHERE project_id = ? ORDER BY created_at DESC LIMIT 1")
+      .get(engineProjectId) as { id: string; inputs_json: string | null };
+    expect(model.inputs_json).toBeTruthy();
+    const spec = JSON.parse(model.inputs_json!) as {
+      job_id: string;
+      discount_rate: { subject: string };
+      cases: Array<{ case_id: string; drivers: Record<string, { dist: string; source?: string }> }>;
+    };
+    expect(spec.job_id).toMatch(/^s8:/);
+    expect(spec.discount_rate.subject).toBe("promoter");
+    const drivers = spec.cases[0].drivers;
+    expect(drivers.revenue_y1.dist).toBe("constant");
+    expect(drivers.ramp_up.dist).toBe("constant"); // sales-plan ramp rides in the job-spec (REQ-W1-2)
+    expect(Array.isArray((drivers.ramp_up as { value: number[] }).value)).toBe(true);
+
+    const p50 = db
+      .query("SELECT bep_year, bep_volume, payback_discounted_years FROM valuation_simulation WHERE model_id = ? AND percentile = 'p50' LIMIT 1")
+      .get(model.id) as { bep_year: number | null; bep_volume: number | null; payback_discounted_years: number | null };
+    expect(p50.bep_year).not.toBeNull(); // REQ-W3-2: BEP year persisted on the p50 row
+    expect(p50.payback_discounted_years).toBe(p50.bep_year);
+    expect(p50.bep_volume).toBeNull(); // the S8 model has no unit-economics split yet
+
+    // S8 completion now requires the BEP + snapshot artifacts (spec 2026-09-18 update).
+    const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
+    const state = evaluateProcess({ type: "project", id: engineProjectId });
+    expect(state.completedStages).toContain("S8");
   });
 
   test("(b) kill switch: generation falls back to the legacy in-process simulator", async () => {
@@ -135,6 +168,18 @@ describe("S8 generation x sim-engine bridge", () => {
         expect(row.note).toContain("engine=inline-ts");
         expect(row.note).toContain("seed=");
       }
+      // The fallback satisfies the Phase 2 completion artifacts too — the TS
+      // path computes the same deterministic-path BEP and stores the same
+      // job-spec snapshot.
+      const p50 = db
+        .query(
+          `SELECT vs.bep_year, m.inputs_json FROM valuation_simulation vs
+           JOIN business_case_model m ON m.id = vs.model_id
+           WHERE m.project_id = ? AND vs.percentile = 'p50' LIMIT 1`,
+        )
+        .get(fallbackProjectId) as { bep_year: number | null; inputs_json: string | null };
+      expect(p50.bep_year).not.toBeNull();
+      expect(p50.inputs_json).toBeTruthy();
     } finally {
       delete process.env.CO_NEWBIZ_SIM_ENGINE;
     }

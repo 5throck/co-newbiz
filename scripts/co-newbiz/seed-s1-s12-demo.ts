@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 // Idempotent S1→S12 brownfield demo chain seed.
 //
 // The operational DB is intentionally gitignored, so a fresh/local database
@@ -196,8 +196,8 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
 
     db.run(
       `INSERT OR IGNORE INTO business_case_model
-       (id, project_id, kind, name, horizon_years, created_by, created_at, variant)
-       VALUES (?, ?, 'investment_return', 'S1-S12 demo base case', 5, ?, ?, 'market_forward')`,
+       (id, project_id, kind, name, horizon_years, created_by, created_at, variant, inputs_json)
+       VALUES (?, ?, 'investment_return', 'S1-S12 demo base case', 5, ?, ?, 'market_forward', '{}')`,
       [DEMO.modelId, DEMO.projectId, actor, now],
     );
     for (const [id, category, name, amount] of [
@@ -219,9 +219,9 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
     ] as const) {
       db.run(
         `INSERT OR IGNORE INTO valuation_simulation
-         (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'S1-S12 demo valuation percentile', ?)`,
-        [`demo-s1-s12-val-${scenario}-${percentile}`, DEMO.projectId, DEMO.modelId, scenario, percentile, npv, irr, now],
+         (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at, bep_year, payback_discounted_years)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'S1-S12 demo valuation percentile', ?, ?, ?)`,
+        [`demo-s1-s12-val-${scenario}-${percentile}`, DEMO.projectId, DEMO.modelId, scenario, percentile, npv, irr, now, 2.5, 2.5],
       );
     }
     db.run(
