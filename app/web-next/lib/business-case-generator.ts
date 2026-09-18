@@ -34,6 +34,7 @@ import { historicalGrowthStats } from "./financial-commentary.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef, type CallAgent } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
 import { runSimJob } from "./sim-engine.ts";
+import { resolveDownsideOpexUplift } from "./target-costing.ts";
 
 // Per-step S8 agent assignment reads from process/flow.spec.yaml (SSOT,
 // ADR-0074) — each execution step maps to the spec activity that owns its
@@ -296,7 +297,7 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const disp = eff.disp;
   const year1Revenue = inputs.marketSizeKrwM * captureRateOf(inputs) * delta.growth;
   const horizon = horizonOf(inputs);
-  const opexRatio = opexRatioOf(inputs);
+  const opexRatio = opexRatioOf(inputs, scenario);
   const capexRatio = capexRatioOf(inputs);
 
   const npvs: number[] = [];
@@ -351,6 +352,9 @@ export interface CaseInputs {
   /** WACC application subject (REQ-W4-1/2) — whose cost of capital discounts
    *  the cash flows. Optional for hand-built contexts: defaults to promoter. */
   waccSubject?: WaccSubjectResolution;
+  /** Target-costing downside wiring (REQ-W2-3) — present only when the
+   *  latest target_costing_analysis breaches the +10% gap threshold. */
+  targetCostWiring?: { uplift: number; gapRatio: number };
 }
 
 /** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
@@ -534,8 +538,11 @@ function rampUpOf(inputs: CaseInputs): number[] {
   return inputs.bcParams?.rampUp ?? DEFAULT_RAMP_UP;
 }
 
-function opexRatioOf(inputs: CaseInputs): number {
-  return inputs.bcParams?.opexRatio ?? OPEX_RATIO;
+function opexRatioOf(inputs: CaseInputs, scenario?: Scenario): number {
+  const base = inputs.bcParams?.opexRatio ?? OPEX_RATIO;
+  // REQ-W2-3: a beyond-threshold target-cost gap feeds the downside opex driver.
+  if (scenario === "downside" && inputs.targetCostWiring) return base * inputs.targetCostWiring.uplift;
+  return base;
 }
 
 function capexRatioOf(inputs: CaseInputs): number {
@@ -599,6 +606,7 @@ export function caseInputsForProject(projectId: string): CaseInputs {
     growthModel: resolveGrowthModel(getDb(), projectId),
     bcParams: resolveBusinessCaseParams(getDb(), projectId),
     waccSubject: resolveProjectWaccSubject(getDb(), projectId),
+    targetCostWiring: resolveDownsideOpexUplift(getDb(), projectId) ?? undefined,
   };
 }
 
@@ -612,7 +620,7 @@ function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant:
   for (let year = 1; year <= horizonOf(inputs); year++) {
     if (year > 1) revenue *= 1 + eff.growth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
-    flows.push(revenue * (1 - opexRatioOf(inputs) - capexRatioOf(inputs)) * utilization);
+    flows.push(revenue * (1 - opexRatioOf(inputs, scenario) - capexRatioOf(inputs)) * utilization);
   }
   return flows;
 }
@@ -643,6 +651,7 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
   const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
+  const opexRatio = opexRatioOf(inputs, scenario);
   const year1Revenue = inputs.marketSizeKrwM * bc.captureRate * delta.growth;
   return {
     job_id: `s8:${inputs.projectId}:${scenario}:${variant}`,
@@ -658,7 +667,14 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
           revenue_y1: { dist: "constant", value: year1Revenue, unit: "KRW_M", source: `시장규모 × 포획률 ${(bc.captureRate * 100).toFixed(1)}% (${bc.captureSource})` },
           ramp_up: { dist: "constant", value: bc.rampUp, source: bc.rampSource },
           revenue_growth: { dist: "normal", mean: eff.growth, sigma: eff.disp, unit: "ratio", source: eff.growthSource },
-          opex_ratio: { dist: "constant", value: bc.opexRatio, unit: "ratio", source: bc.opexSource },
+          opex_ratio: {
+            dist: "constant",
+            value: opexRatio,
+            unit: "ratio",
+            source: inputs.targetCostWiring && scenario === "downside"
+              ? `${bc.opexSource} × 타겟코스팅 격차 반영 (+${Math.round((inputs.targetCostWiring.uplift - 1) * 100)}%, REQ-W2-3)`
+              : bc.opexSource,
+          },
           capex_ratio: { dist: "constant", value: bc.capexRatio, unit: "ratio", source: bc.capexSource },
           initial_investment: { dist: "constant", value: year1Revenue * bc.initialInvestmentRatio, unit: "KRW_M", source: `ADR-0106 (${bc.initialInvestmentSource})` },
         },
@@ -803,7 +819,10 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const bc = ctx.inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
       const bepFragment = sim.bepYear != null ? `; bep_year=${sim.bepYear.toFixed(2)}` : "";
       const waccSubject = ctx.inputs.waccSubject?.subject ?? "promoter";
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}; ramp_source=${bc.rampSource}; ${provenance}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
+      const tcFragment = ctx.inputs.targetCostWiring
+        ? `; tc_gap_ratio=${ctx.inputs.targetCostWiring.gapRatio.toFixed(4)}; tc_downside_opex_uplift=${(ctx.scenario === "downside" ? ctx.inputs.targetCostWiring.uplift : 1).toFixed(4)}`
+        : "";
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
       db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
         const isP50 = pct === "p50";

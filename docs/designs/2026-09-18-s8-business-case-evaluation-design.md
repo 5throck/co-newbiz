@@ -9,6 +9,10 @@ lang_reason: source-material
 - Date: 2026-09-18
 - Status: implemented — Phase 1–4 전부 구현 완료 (pr/20260918-085643-feat-standalone-sim-engine, 2026-09-18). Phase 1: python/sim_engine/ 엔진, TS 브리지. Phase 2: 마이그레이션 0111–0113, ramp_up, bc.capture_rate/bc.ramp_up, 스펙 갱신, target_costing 스텝·스킬. Phase 3: 마이그레이션 0114(md_project wacc_subject 4컬럼 — REQ-W4-1의 assumption 키 대신 프로젝트 컬럼으로 모델링, 값이 문자열 enum이기 때문), resolveProjectWaccSubject(트랙 기본값)·setProjectWaccSubject(근거 필수)·resolveReleveredBeta, wacc API 확장, WaccPanel 주체 선택 UI, 체크리스트 gf-12/bf-13. Phase 4: bc.* 전체 어휘 해석(opex/capex/초기투자 비율·성장/변동성 오버라이드·기간·반복수), business-case/params GET·POST 라우트, S8 화면 파라미터·스냅샷 탭(ParamsPanel), 품평회 실시(아래 기록).
 
+## REQ-W2 구현 기록 (2026-09-18 후속)
+
+target_costing 스텝의 계산 서비스가 구현됐다: 마이그레이션 0115 `target_costing_analysis`(시장가격·목표마진·허용원가·추정단위원가·격차·격차비율·임계초과·축소방안), `lib/target-costing.ts`(순수 격차 계산 + 영속화 + `resolveDownsideOpexUplift`), `POST/GET /api/projects/{id}/target-costing`, S8 화면 타겟코스팅 탭(TargetCostingPanel — 격차 카드·미리보기·축소방안 입력). 임계(+10%) 초과 분석이 존재하면 downside 시나리오의 opex 드라이버가 격차비율만큼 상향되고(job-spec 출처 라벨 + `tc_gap_ratio`/`tc_downside_opex_uplift` 노트 스탬프), base/upside는 불변이다. 시장가격 앵커는 1단계로 사용자 입력/peer 벤치마크 기록을 따르며, 외부 가격 데이터 자동 연계는 별도 설계로 진행한다.
+
 ## 품평회 실행 기록 (2026-09-18, REQ-W9)
 
 - 방식: 데모 시드(gui-review.sqlite) + dev 서버(8787) + 브라우저 라이브 리뷰, 스크린샷 증적 gui-review-screenshots/t20–t24. 평가 축: 기능 적합성 / 사용성 / 가독성.
