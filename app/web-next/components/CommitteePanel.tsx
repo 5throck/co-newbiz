@@ -89,7 +89,7 @@ export function CommitteePanel({
   opportunityId: string;
   committeeKey: string;
   committeeLabel: string;
-  gates: Array<"screening" | "pre_fs" | "fs" | "dd" | "entity_ic" | "group_ic">;
+  gates: Array<"screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic">;
   targetRef?: string;
   /** Extra judgement-basis text appended to the convene topic (e.g. S6/S7's
    * t-01~t-09 verdict brief) — every committee member's prompt includes it. */

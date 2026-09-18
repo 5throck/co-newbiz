@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-18](2026-09-18.md) | chore: update |
 | [2026-09-19](2026-09-19.md) | merge origin/main: resolve spec registry, ADR index and skill-review conflicts |
 | [2026-09-18](2026-09-18.md) | chore: update |
 | [2026-09-18](2026-09-18.md) | feat: standalone monte carlo simulation engine with GPU/CPU device layer and S8 generator bridge |

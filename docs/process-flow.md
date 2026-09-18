@@ -207,7 +207,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **완료 기준**
 - 기회에 synergy_score와 근거가 기록되었다
-- 적합성 판단(Go/Hold/Kill 권고)이 존재한다
+- 적합성 판단 근거(rationale)가 기록되고 결정론 권고(매력도·시너지 조합)가 제시되었다
 - 최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)
 
 **적용 트랙**: greenfield, brownfield
@@ -596,22 +596,28 @@ Two entity lifecycles (ADR-0094/0095):
   S5 output (greenfield) or S7 Short List (brownfield) before the project row
   exists (ADR-0095).
 
-### Completion predicates as implemented (file:line as of 2026-09-04)
+### Completion predicates as implemented (registry keys; refreshed 2026-09-18)
 
-| Stage | Predicate | Location |
-|---|---|---|
-| S1 | market size·growth + value-chain node, substitutable by an industry-level completed `market_sizing_analysis` / `proxy_link` | process-flow.ts:99–132 |
-| S2 | opportunity attractiveness score recorded | process-flow.ts:133–135 |
-| S3 | synergy_score + rationale + status `selected` (dropped blocks S4) | process-flow.ts:136–148 |
-| S4 | `route_decision` with track; brownfield additionally sub_track + all 5 criteria scores | process-flow.ts:149–161 |
-| S5 | greenfield capability gaps (≥1), entry strategy, alternatives considered | process-flow.ts:162–175 |
-| S6 | brownfield Target Universe JSON + Long List ≥ min coverage (default 3) | process-flow.ts:176–191 |
-| S7 | every target shortlisted (knock-outs passed) or excluded with reason; 0 knock-out-passed candidates surfaces the target_screening KILL criterion | process-flow.ts:192–212 |
-| S8 | ≥1 `business_case_model` for the project AND ≥1 `valuation_simulation` row (NPV percentiles) — ADR-0098 | process-flow.ts:236–258 |
-| S9 | `ddCompletionSummary`: total > 0, pending = 0, mandatoryUnmet = 0 — ADR-0099 | process-flow.ts:259–275 |
-| S10 | latest `deal_structure_hypothesis` has `four_axis_review_completed` = 1 AND `financing_sources_uses` sources == uses > 0 (balanced) — flow.spec v2.2.0, ADR-0045 | process-flow.ts:281–309 |
-| S11 | `entity_ic` AND `group_ic` gate decisions both `go` (human record only); for origin ∈ {internal, joint}, `establishmentProgress` = 5/5 — ADR-0100 | process-flow.ts:310–328 |
-| S12 | `venture_scorecard` exists with a fresh review cycle (current or previous quarter, `isFreshReviewCycle`) — ADR-0101 | process-flow.ts:329–347 |
+The predicates live in the `OPPORTUNITY_STAGE_COMPLETION` /
+`PROJECT_STAGE_COMPLETION` registries in `app/web-next/lib/process-flow.ts`
+(keyed `S1`…`S12`); refer to those keys instead of line numbers, which rot.
+v2.4.1 alignment: S1 competitive structure became a hard requirement (missing
+artifact, blocks completion), and S4 now checks `alternatives_considered`.
+
+| Stage | Predicate |
+|---|---|
+| S1 | market size·growth + value-chain node, substitutable by an industry-level completed `market_sizing_analysis` / `proxy_link`; latest completed matrix must carry competitive structure (경쟁 구조 — hard since v2.4.1) |
+| S2 | opportunity attractiveness score recorded |
+| S3 | synergy_score + rationale + status `selected` (dropped blocks S4) |
+| S4 | `route_decision` with track; brownfield additionally sub_track + all 5 criteria scores + non-empty alternatives considered |
+| S5 | greenfield capability gaps (≥1), entry strategy, alternatives considered |
+| S6 | brownfield Target Universe JSON + Long List ≥ min coverage (default 3) |
+| S7 | every target shortlisted (knock-outs passed) or excluded with reason; 0 knock-out-passed candidates surfaces the target_screening KILL criterion |
+| S8 | ≥1 `business_case_model` for the project AND ≥1 `valuation_simulation` row (NPV percentiles) — ADR-0098 |
+| S9 | `ddCompletionSummary`: total > 0, pending = 0, mandatoryUnmet = 0 — ADR-0099 |
+| S10 | latest `deal_structure_hypothesis` has `four_axis_review_completed` = 1 AND `financing_sources_uses` sources == uses > 0 (balanced) — flow.spec v2.2.0, ADR-0045 |
+| S11 | `entity_ic` AND `group_ic` gate decisions both `go` (human record only); for origin ∈ {internal, joint}, `establishmentProgress` = 5/5 — ADR-0100 |
+| S12 | `venture_scorecard` exists with a fresh review cycle (current or previous quarter, `isFreshReviewCycle`) — ADR-0101 |
 
 Gate semantics: every gate verdict is a human-recorded `gate_decision` row
 (ADR-0053 `decision_authority: human`; ADR-0094 — the sole human-confirmation

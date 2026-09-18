@@ -34,8 +34,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!body.decisionMode || !DECISION_MODES.includes(body.decisionMode as DecisionMode)) {
     return badRequest("invalid_request", `decisionMode는 ${DECISION_MODES.join(" | ")} 중 하나입니다.`);
   }
-  if (body.gate !== undefined && !["screening", "pre_fs", "fs", "dd", "entity_ic", "group_ic"].includes(body.gate)) {
-    return badRequest("invalid_request", "gate는 screening | pre_fs | fs | dd | entity_ic | group_ic 중 하나입니다.");
+  if (body.gate !== undefined && !["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"].includes(body.gate)) {
+    return badRequest("invalid_request", "gate는 screening | pre_fs | target_screening | fs | dd | entity_ic | group_ic 중 하나입니다.");
   }
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();

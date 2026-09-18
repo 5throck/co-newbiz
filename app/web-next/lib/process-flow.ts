@@ -93,10 +93,10 @@ export function latestGateDecisions(entityType: "opportunity" | "project", entit
 // Latest gate_decision per gate is shared by the process engine and the
 // gate-decisions API so the tie-breaking rule cannot drift between surfaces.
 
-export function latestRouteDecision(opportunityId: string): { id: string; track: "greenfield" | "brownfield"; sub_track: string | null } | undefined {
+export function latestRouteDecision(opportunityId: string): { id: string; track: "greenfield" | "brownfield"; sub_track: string | null; alternatives_considered: string | null } | undefined {
   return getDb()
-    .query("SELECT id, track, sub_track FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
-    .get(opportunityId) as { id: string; track: "greenfield" | "brownfield"; sub_track: string | null } | undefined;
+    .query("SELECT id, track, sub_track, alternatives_considered FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
+    .get(opportunityId) as { id: string; track: "greenfield" | "brownfield"; sub_track: string | null; alternatives_considered: string | null } | undefined;
 }
 
 // ── Stage completion predicate registry ──────────────────────────────────
@@ -152,9 +152,11 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
         missing.push("가치사슬 구조");
       }
     }
-    // v2.4.0 완료기준 — 최신 완료 버전 매트릭스에 경쟁 구조(집중도 요약·주요
-    // 플레이어)가 기록되어야 한다. 기존 완료 분석 다수가 경쟁 구조 이전 버전이라
-    // 소프트 권고로 유지한다: 완료 처리는 바꾸지 않고 재분석 보강을 유도한다.
+    // flow.spec S1 completionCriteria — 최신 완료 버전 매트릭스에 경쟁 구조
+    // (집중도 요약·주요 플레이어)가 기록되어야 한다. v2.4.0 도입 당시에는 기존
+    // 완료 분석 다수가 경쟁 구조 이전 버전이라 소프트 권고로 유지했으나, 그
+    // 전환기는 종료했다(2026-09-18 스펙-엔진 정합): 미기록이면 완료를 막고
+    // requiredArtifacts 누락으로 요구한다. 재분석으로 보강한다.
     if (hasMatrix && industry) {
       const latest = getDb()
         .query(
@@ -167,7 +169,10 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
       const hasCompetitive = !!latest && (() => {
         try { return Boolean((JSON.parse(latest.payload) as { matrix?: { competitive?: unknown } }).matrix?.competitive); } catch { return false; }
       })();
-      if (!hasCompetitive) blockers.push("S1 경쟁 구조 미기록 — 재분석으로 집중도·주요 플레이어 보강 권장");
+      if (!hasCompetitive) {
+        blockers.push("S1 경쟁 구조 미기록 — 재분석으로 집중도·주요 플레이어를 보강해야 합니다");
+        missing.push("경쟁 구조");
+      }
     }
     complete = !missing.length; // blockers에 권고 문구가 있어도 산출물이 있으면 완료
     return { complete, blockers, missing };
@@ -205,7 +210,9 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     // flow.spec S4 completionCriteria: route_decision 존재(트랙 필수).
     // brownfield는 sub_track(7 라우트 중 1)을 요구하고, 5-criteria 채점은
     // 양 트랙 모두 의무다 (스펙 v2.2.0+ "Greenfield인 경우에도 5criteria 채점
-    // 결과를 기록한다" — ADR-0104 트랙 간 비교 가능성).
+    // 결과를 기록한다" — ADR-0104 트랙 간 비교 가능성). 검토한 대안은
+    // requiredArtifacts이므로 완료 검사에 포함한다 (v2.4.1 정합 — S5 선례와
+    // 동일한 비어 있지 않은 문자열 검사).
     const decision = latestRouteDecision(opp.id);
     if (!decision) {
       blockers.push("진출방식 결정(route_decision)이 필요합니다");
@@ -214,6 +221,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
       if (decision.track === "brownfield" && !decision.sub_track) { blockers.push("brownfield 라우트 유형(sub_track) 선택이 필요합니다"); missing.push("brownfield sub_track"); }
       const scoreCount = (getDb().query("SELECT COUNT(*) c FROM route_decision_score WHERE decision_id = ?").get(decision.id) as { c: number }).c;
       if (scoreCount < 5) { blockers.push(`5-criteria 채점 부족 (${scoreCount}/5)`); missing.push("5-criteria 채점"); }
+      if (!decision.alternatives_considered?.trim()) { blockers.push("검토한 대안 기록이 필요합니다"); missing.push("검토한 대안"); }
     }
     complete = missing.length === 0;
     return { complete, blockers, missing };

@@ -45,9 +45,10 @@ function insertOpportunity(status = "selected"): string {
 
 function insertRouteDecision(opportunityId: string, track: "greenfield" | "brownfield"): string {
   const id = ulid();
+  // alternatives_considered: S4 completion predicate requires it (v2.4.1 alignment).
   db.run(
-    "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)",
-    [id, opportunityId, track, "test route", U1, NOW],
+    "INSERT INTO route_decision (id, opportunity_id, track, rationale, alternatives_considered, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
+    [id, opportunityId, track, "test route", "M&A 대안 검토 후 제외", U1, NOW],
   );
   return id;
 }

@@ -185,6 +185,7 @@ describe("(a) full run — boundary #2 is test-enforced", () => {
       body: JSON.stringify({
         track: "greenfield",
         rationale: "트랙 결정 (사람, 테스트)",
+        alternatives_considered: "M&A 대안 검토 후 제외 (S4 필수 산출물)",
         intent: "integration",
         scores: [
           { criterion: "control_need", score: 2, evidence_note: "t" },
@@ -410,7 +411,8 @@ describe("(e) max-iteration safety cap", () => {
       const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
       const capOppId = seedOpportunity("캡 테스트 기회", true);
       seedGreenfieldAssessment(capOppId);
-      db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)", [ulid(), capOppId, "greenfield", "test", ANALYST, NOW]);
+      // alternatives_considered: S4 completion predicate requires it (v2.4.1 alignment).
+      db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, alternatives_considered, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)", [ulid(), capOppId, "greenfield", "test", "M&A 대안 검토 후 제외", ANALYST, NOW]);
       // Promotion preconditions (2026-09-12 hardening): screening + pre_fs must be GO.
       for (const gate of ["screening", "pre_fs"]) {
         db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", capOppId, gate, "go", "test", ANALYST, NOW]);
