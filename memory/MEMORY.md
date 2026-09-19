@@ -5,6 +5,7 @@
 | Date | Summary |
 |------|---------|
 | [2026-09-20](2026-09-20.md) | feat(process): add DEG stage-alignment adapter (ADR-0083) — process/stages.yaml + stage-aliases.yaml, _validate.ts SA-1..SA-4 (PR1 of 2) |
+| [2026-09-20](2026-09-20.md) | chore: update |
 | [2026-09-19](2026-09-19.md) | chore(upgrade): template upgrade — ADR-0080 policy delivery |
 | [2026-09-18](2026-09-18.md) | chore: update |
 | [2026-09-19](2026-09-19.md) | merge origin/main: resolve spec registry, ADR index and skill-review conflicts |

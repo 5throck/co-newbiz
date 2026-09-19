@@ -480,13 +480,40 @@
       "last_updated": "2026-09-19"
     },
     {
+      "id": "2026-09-19-agent-roster-and-skills-design",
+      "title": "agent roster and skills design",
+      "file": "docs/designs/2026-09-19-agent-roster-and-skills-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-19",
+      "last_updated": "2026-09-19"
+    },
+    {
+      "id": "2026-09-19-adr0120-wave2-stage-integration-design",
+      "title": "adr0120 wave2 stage integration design",
+      "file": "docs/designs/2026-09-19-adr0120-wave2-stage-integration-design.md",
+      "status": "proposed",
+      "source": "manual",
+      "created": "2026-09-19",
+      "last_updated": "2026-09-19"
+    },
+    {
+      "id": "2026-09-19-adr0120-wave2-all-phases-design",
+      "title": "adr0120 wave2 all phases design",
+      "file": "docs/designs/2026-09-19-adr0120-wave2-all-phases-design.md",
+      "status": "proposed",
+      "source": "manual",
+      "created": "2026-09-19",
+      "last_updated": "2026-09-19"
+    },
+    {
       "id": "2026-09-20-deg-stage-alignment",
       "title": "deg stage alignment",
       "file": "docs/designs/2026-09-20-deg-stage-alignment.md",
       "status": "implemented",
       "source": "manual",
-      "created": "2026-09-19",
-      "last_updated": "2026-09-19"
+      "created": "2026-09-20",
+      "last_updated": "2026-09-20"
     }
   ]
 }

@@ -1,4 +1,4 @@
-// @version 1.7.0
+// @version 1.8.0
 // v1.7.0 (ADR-0081 / T-20260918-001): --check masks the "Last Modified" columns
 //           on BOTH comparison sides unconditionally — the shallow-only gating
 //           is gone. Rationale: the cells derive from committed `git log`, but
@@ -332,7 +332,10 @@ async function collectScripts(): Promise<ScriptInfo[]> {
             dependencies: extractScriptDependencies(content),
         });
     });
-    return scripts.sort((a, b) => a.name.localeCompare(b.name));
+    // 동명 스크립트(루트 vs 하위 디렉터리)는 경로를 2차 키로 정렬해야 한다 —
+    // 이름만 비교하면 readdir 순서를 따르는 불안정 정렬이 되어 CI와 로컬의
+    // 행 순서가 뒤집힌다(T-20260919 매니페스트 드리프트 원인).
+    return scripts.sort((a, b) => a.name.localeCompare(b.name) || a.location.localeCompare(b.location));
 }
 
 async function collectCommands(): Promise<CommandInfo[]> {
