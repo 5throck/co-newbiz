@@ -1,7 +1,7 @@
 # DEG Stage Alignment for co-newbiz
 
 - **Date**: 2026-09-20
-- **Status**: Proposed (Design Gate deliverable — implementation not started)
+- **Status**: Implemented (PR1 `co-newbiz#365`, PR2 `co-newbiz#367` — merged 2026-09-20)
 - **Scope**: `Projects/co-newbiz` only. No files in the root `ai-workspace-standards` repo change.
 - **Upstream brief**: `ai_workspace/docs/designs/2026-09-19-template-domain-operating-system-design.md` §1.4, §13.2 (P7), §13.3, §13.4
 - **Upstream ADRs**: ADR-0083 (Domain Execution Graph and Stage Axis), ADR-0084 (RACI actor typing)
