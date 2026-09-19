@@ -117,12 +117,12 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `agent-list.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
-| `archive-memory.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
+| `archive-memory.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `audit.ts` | L0 | 2.39.0 | active | —| —| L0+L1 | —|
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
-| `dev-sync.ts` | L0 | 1.14.0 | active | —| —| L0+L1 | —|
+| `dev-sync.ts` | L0 | 1.15.0 | active | —| —| L0+L1 | —|
 | `dispatch-parallel.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `dispatch-serial.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `dispatch.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
@@ -136,8 +136,8 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `helpers/template-utils.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `hooks/gateguard-fact-force.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `hooks/post-write-lifecycle-check.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `hooks/pre-commit.ts` | L0 | 1.7.0 | active | —| —| L0+L1 | —|
-| `hooks/pre-push.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
+| `hooks/pre-commit.ts` | L0 | 1.7.1 | active | —| —| L0+L1 | —|
+| `hooks/pre-push.ts` | L0 | 1.4.1 | active | —| —| L0+L1 | —|
 | `lib/auth.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/encoding-utils.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `lib/error-handling.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
@@ -147,7 +147,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `lib/platform-context.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/ssrf.ts` | L0 | 1.1.2 | active | —| —| L0+L1 (SSRF-safe pinned fetch with caller-supplied request headers); v1.1.2 removes two stale `@ts-expect-error` directives on the `LookupFunction` overloads that current Node types no longer need (was failing `tsc`/`next build`) | —|
 | `lib/env-keys.ts` | L0 | 1.0.2 | active | 2026-09-11 | — | L0+L1 (pipeline credential loader — walks up to the root .env and imports only whitelisted pipeline keys, never overriding set values; shared by the k-* source adapters; includes LAW_API_OC for k-law and ECOS_API_KEY for k-ecos) | —|
-| `lifecycle-sync-audit.ts` | L0 | 1.14.0 | active | —| —| L0+L1 | —|
+| `lifecycle-sync-audit.ts` | L0 | 1.15.0 | active | —| —| L0+L1 | —|
 | `md-to-ooxml.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `qa-gate.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `readme-lifecycle-audit.ts` | L0 | 1.0.4 | active | —| —| L0+L1 | —|
@@ -180,7 +180,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `validate-pm-extends.ts` | L0 | 0.3.1 | active | —| —| L0+L1 | —|
 | `validate-decisions.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `validate-procedures.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `helpers/context-sections.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
+| `helpers/context-sections.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
 | `lib/context-md-schema.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `handbook/apply-handbook-theme.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — applies the shared CSS theme to every HTML page under a handbook's docs/ directory) | —|
 | `handbook/build-search-index.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — reads docs/search-manifest.json and generates docs/assets/search-data.js for client-side search) | —|
@@ -210,21 +210,23 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
 | `resolve-variants.ts` | L0 | 1.0.3 | active | —| —| L0+L1 | —|
 | `validate-variant-readiness.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `validate-templates.ts` | L0 | 1.33.0 | active | —| —| L0+L1 | —|
+| `validate-templates.ts` | L0 | 1.35.0 | active | —| —| L0+L1 | —|
 | `helpers/upgrade-versions.ts` | L0+L1 | 1.0.1 | active | —| —| L0+L1 | —|
 | `lib/propagation-map-schema.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `lib/constitution-scrub.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `helpers/l0-ref-policy.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/markers.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `helpers/layer-filter.ts` | L0 | 1.5.0 | active | —| —| L0+L1 | —|
-| `generate-version-manifest.ts` | L0 | 1.6.0 | active | emits `validate-md-language:allowlist` markers around the generated Skills table (T-20260912-015) | —| L0+L1 | —|
+| `generate-version-manifest.ts` | L0 | 1.7.0 | active | emits `validate-md-language:allowlist` markers around the generated Skills table (T-20260912-015) | —| L0+L1 | —|
 | `lib/platform-delivery.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `lib/managed-block-parity.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
+| `lib/managed-block-parity.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `lib/variant-overlay-guard.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `lib/platform-mirror-freshness.ts` | L0 | 1.0.0 | active | Pure platform-skill-mirror vs skills/ SSOT version comparison for the platform-mirror-freshness check (T-20260916-008) | —| L0+L1 | —|
+| `lib/platform-mirror-freshness.ts` | L0 | 1.0.1 | active | Pure platform-skill-mirror vs skills/ SSOT version comparison for the platform-mirror-freshness check (T-20260916-008) | —| L0+L1 | —|
 | `helpers/rollback-partial-project.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/scaffold-markers.ts` | L0 | 1.3.0 | active | Shared scaffold marker constants + (marker→source) mapping + delivery-tree derivations + transient test-fixture predicate (T-20260916-001) | —| L0+L1 | —|
 | `helpers/generate-variant.ts` | L0 | 1.15.0 | active | —| —| L0+L1 | —|
+| `lint-instructions.ts` | L0 | 1.0.0 | active | `--dir`, `--strict` | —| L0+L1 | —|
+| `helpers/merge-state.ts` | L0 | 1.0.0 | active | §3.3 shared-file taxonomy + unresolved-conflict parsing for dev-sync main-drift/--conclude-merge (ADR-0081/T-20260918-002) | —| L0+L1 | —|
 
 ---
 

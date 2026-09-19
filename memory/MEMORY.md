@@ -4,15 +4,16 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-19](2026-09-19.md) | chore(upgrade): template upgrade — ADR-0080 policy delivery |
 | [2026-09-17](2026-09-17.md) | feat: S7 committee pre-check flow, granular verdict scale, DDG search fallback, and candidate evidence persistence |
 | [2026-09-16](2026-09-16.md) | feat(web-next): generalize brownfield candidate profile pipeline, fix S1 industry-name display |
 | [2026-09-15](2026-09-15.md) | feat(web-next): synergy score human confirmation, list-table standard, S4 advisory and chart fixes |
 | [2026-09-14](2026-09-14.md) | chore: update |
 | [2026-09-13](2026-09-13.md) | feat(restyle): stage linkage strip on every stage screen via StageFrame |
 | [2026-09-12](2026-09-12.md) | feat(web-next): stage-scoped LLM decision support across S1-S12 (ADR-0118) |
-| [2026-09-11](2026-09-11.md) | chore: update |
-| [2026-09-11](2026-09-11.md) | fix(web-next): WACC input rows no longer overlap on md–lg viewports |
-| [2026-09-10](2026-09-10.md) | fix(market): KSIC search falls back to the industry name when the code field is empty |
+| 2026-09-11 | chore: update |
+| 2026-09-11 | fix(web-next): WACC input rows no longer overlap on md–lg viewports |
+| 2026-09-10 | fix(market): KSIC search falls back to the industry name when the code field is empty |
 | [2026-09-09](2026-09-09.md) | --help |
 | [2026-09-08](2026-09-08.md) | test: make unit tests CWD-independent (PROJECT_ROOT-based reads) |
 | [2026-09-06](2026-09-06.md) | docs: unify documentation surface — retire knowledge-hub/handbook portals, extend /library to 8 categories, restructure docs/ into topic folders (ADR-0108) |

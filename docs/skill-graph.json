@@ -1502,6 +1502,12 @@
       }
     },
     {
+      "type": "references",
+      "from": "agent-lifecycle-manager",
+      "to": "skill-lifecycle-manager",
+      "source": "prose"
+    },
+    {
       "type": "composes_with",
       "from": "antitrust-screening",
       "to": "brownfield-feasibility",
@@ -6465,7 +6471,19 @@
     {
       "type": "references",
       "from": "pm",
+      "to": "agent-lifecycle-manager",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "pm",
       "to": "decision-record",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "pm",
+      "to": "skill-lifecycle-manager",
       "source": "prose"
     },
     {
@@ -7530,6 +7548,12 @@
       "type": "references",
       "from": "site-visit-protocol",
       "to": "technical-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "skill-lifecycle-manager",
+      "to": "agent-lifecycle-manager",
       "source": "prose"
     },
     {

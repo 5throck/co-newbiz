@@ -1,4 +1,4 @@
-# co-newbiz — Project Context
+# [Project Name] — Project Context
 
 > Shared reference for all AI tools (Claude Code, Gemini CLI, Antigravity).
 > Tool-specific behaviors: CLAUDE.md (Claude Code), GEMINI.md (Gemini/Antigravity).
@@ -12,7 +12,7 @@
 
 ## Project Overview
 
-co-newbiz is an AI-agent team and system that owns and operates the policies, procedures, guidelines, and checklists for new-business review — Green Field (new establishment) and Brown Field (M&A) — and implements that governance as a working review system.
+[One-sentence description of what this project does and who it's for.]
 
 **Type**: web | cli | api | mcp
 **Status**: Active development
@@ -36,7 +36,7 @@ The mapping is immutable per generation:
 - **Medium**: `claude-sonnet-5-0`
 - **Low**: `claude-haiku-4-5`
 
-Tier layering: the workspace-root PM stays High (workspace governance and design adjudication); template PMs are Medium (project orchestration). A variant whose PM must own design adjudication re-declares `tier: high` in its own `agents/pm.md` frontmatter.
+Tier layering: the workspace-root PM and template PMs are all Medium (orchestration and coordination; workspace-root aligned to Medium 2026-09-15). Design-adjudication-heavy work dispatches to the architect or the High-tier design specialists. A variant whose PM must own design adjudication re-declares `tier: high` in its own `agents/pm.md` frontmatter.
 
 ### LLM Work Routing Policy (ADR-0078)
 
@@ -54,6 +54,14 @@ Development-facing instruction text follows ASD-STE100 (Simplified Technical Eng
 - **Applies to**: requirement statements, task briefs, execution-plan task descriptions, agent dispatch prompts, design-doc requirement sections, API endpoint documentation, and how-to steps.
 - **Rules**: one instruction per sentence (≤ 20 words procedural / ≤ 25 descriptive); active voice with imperative steps; present tense; one term = one meaning (use glossary/registry terms exactly); no idioms; positive phrasing preferred; minimal pronouns; lists for parallel items and tables for structured data.
 - **Enforcement**: advisory — PM conforms task briefs at triage; architect checks requirement sections at Design Gate review. Full decision: ADR-0079 in the workspace root `docs/adr/`.
+
+### PM Team-Management Authority (ADR-0080)
+
+PM owns the composition of this project's agent team and rules on skill changes.
+
+- **Hiring/firing (top-down, PM-decided)**: PM judges timing and target from workflow signals — recurring unmatched work types, role overload, absorbed roles, the periodic roster review — without a blocking user approval. Every decision emits a gate-moment decision record (ADR-0061) before dispatch. Default exit is `status: deprecated`; hard delete requires an explicit user request. Procedure: `agent-lifecycle-manager` skill.
+- **Skill requests (bottom-up, agent-initiated, PM-approved)**: agents file structured request blocks (`create|attach|remove` + evidence) in their task reports and memory logs; PM triages and only approved requests are executed — agents never create, attach, or remove skills unilaterally. Procedure: `skill-lifecycle-manager` skill.
+- **Enforcement**: governance, not code — decision records capture the judgment trail, and the change audits catch structural drift. Full decision: ADR-0080 in the workspace root `docs/adr/`.
 <!-- COMMON-CONTEXT:END -->
 
 Standard directory layout for all projects in this workspace:
@@ -216,9 +224,9 @@ For files where Korean is legally or academically mandatory (such as statutory t
 lang: ko
 lang_reason: legal # legal | source-material | proper-noun
 ```
-*(This exception is NOT available for context files: `context.md`, `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`. It IS available for `agents/*.md` and `skills/*.md` with `lang_reason` declared — see the COMMON-CONSTITUTION Language Policy block below for the authoritative wording.)*
+*(This exception is NOT available for operational files like agents, skills, and context files)*
 
-**Skills needing non-English reference data**: when a skill's guidance or reference excerpts qualify under a declared `lang_reason` (e.g. `source-material`), it may carry the `lang: ko` exception; otherwise store terminology glossaries or source-language excerpts in a non-Markdown file under `skills/<name>/references/` (e.g. `references/terms-ko.json`) — language validation scans `.md` and `.yaml`/`.yml` files, so use another format (`.json`, `.csv`, ...) to stay outside the policy. `SKILL.md` stays English-only and links to it unless the exception is declared.
+**Skills needing non-English reference data**: since `skills/*.md` can never carry the `lang: ko` exception, store terminology glossaries or source-language excerpts in a non-Markdown file under `skills/<name>/references/` (e.g. `references/terms-ko.json`) instead — language validation scans `.md` and `.yaml`/`.yml` files, so use another format (`.json`, `.csv`, ...) to stay outside the policy. `SKILL.md` stays English-only and links to it.
 
 ### File Encoding
 
@@ -418,7 +426,7 @@ Use an external computation tool when the task involves ANY of the following:
 
 ## Git / PR Workflow
 
-<!-- intentional-duplicate: workspace standards §3 — maintained locally for AI context proximity; source: docs/constitution/03-pr-workflow.md; hash: 18ad2842 -->
+<!-- intentional-duplicate: workspace standards §3 — maintained locally for AI context proximity; source: docs/constitution/03-pr-workflow.md; hash: a1be51db -->
 
 ```
 /sync "feat: description"
@@ -434,6 +442,10 @@ Use an external computation tool when the task involves ANY of the following:
 > All PR titles, bodies, and review comments must be in **English**.
 
 > Universal Design Gate (ADR-0074): every code change at any tier must carry spec activity — a design doc under docs/designs/ registered via scripts/spec-register.ts — enforced by the /sync spec-check (audit.ts --spec-check, FATAL). Trivial changes: --spec-exempt=E1..E5.
+
+> LLM Work Routing (ADR-0078): substantive LLM-assisted work must reach /sync through the agent-team path — PM triage → Design Gate → specialist dispatch. Output pasted from an external LLM chat is input material, not a deliverable.
+
+> Conflicted-PR recovery (ADR-0081): when origin/main advances past your branch, merge it in early — dev-sync warns at pre-flight naming the diverged shared pipeline files. If a merge conflict lands despite §3.3, resolve it and conclude through the gates with /sync --conclude-merge (bare git commit stays blocked).
 
 ---
 
@@ -548,4 +560,4 @@ See the workspace governance documentation (Governance Enforcement Layers) and A
 
 ---
 
-*context.md version: 2.8 — Instruction Writing Standard (ASD-STE100, ADR-0079) section added under Architecture*
+*context.md version: 2.9 — PM Team-Management Authority (ADR-0080) section added under Architecture*
