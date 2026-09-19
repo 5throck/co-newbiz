@@ -917,6 +917,11 @@
       "layer": "L3"
     },
     {
+      "id": "forward-industry-research",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "gateguard",
       "type": "skill",
       "layer": "L3"
@@ -1133,6 +1138,11 @@
     },
     {
       "id": "pmi-planning",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "policy-and-procedure-governance",
       "type": "skill",
       "layer": "L3"
     },

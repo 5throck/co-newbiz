@@ -35,6 +35,7 @@
 | `financial-statement-analysis` | L3 | financial-analyst | phase3 | growth-projection-modeling (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (composes_with), investment-vehicle-structuring (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `financing-plan-review` | L3 | valuation-agent | phase4, phase5 | incentive-clawback-assessment (composes_with), insight-synthesis (follows), investment-feasibility-modeling (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (follows), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), wacc-input-session (composes_with) | — | — |
 | `finishing-a-development-branch` | L3 | — | — | — | — | — |
+| `forward-industry-research` | L3 | — | — | — | — | — |
 | `gateguard` | L3 | — | — | — | — | — |
 | `greenfield-feasibility` | L3 | greenfield-agent | phase2 | community-partnership-planning (composes_with), permit-pathway-mapping (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), talent-pipeline-planning (composes_with), wacc-input-session (follows) | — | — |
 | `group-level-review` | L3 | — | — | — | — | — |
@@ -72,6 +73,7 @@
 | `platform-command-lifecycle-manager` | L3 | — | — | — | — | — |
 | `platform-skill-lifecycle-manager` | L3 | — | — | — | — | — |
 | `pmi-planning` | L3 | pmi-agent | phase6 | compensation-harmonization-analysis (follows), stage-gate-governance (composes_with) | — | — |
+| `policy-and-procedure-governance` | L3 | — | — | — | — | — |
 | `portfolio-fit-assessment` | L3 | group-review-agent | phase5, phase6 | executive-presentation (follows), intra-group-transaction-compliance (follows), jv-structuring (follows), project-review (follows), stage-gate-governance (composes_with) | — | — |
 | `project-review` | L3 | process-governance-manager | phase1, phase6 | — | — | — |
 | `proxy-industry-chain` | L3 | quant-methodologist | phase3 | quality-of-earnings (composes_with), scenario-planning (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (follows) | — | — |

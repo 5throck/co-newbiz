@@ -8,6 +8,9 @@ status: experimental
 version: "1.0.0"
 description: "Identify value-chain drivers for industry analysis"
 ---
+metadata:
+  procedure_keys:
+    - greenfield-fs
 
 # value-chain-driver-identification
 

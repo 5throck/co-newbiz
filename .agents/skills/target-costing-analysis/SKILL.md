@@ -8,5 +8,8 @@ status: experimental
 version: "1.0.0"
 description: "Skill referenced by flow.spec.yaml"
 ---
+metadata:
+  procedure_keys:
+    - greenfield-fs
 
 # target-costing-analysis
