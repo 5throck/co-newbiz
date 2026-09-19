@@ -11,6 +11,7 @@ description: "Identify value-chain drivers for industry analysis"
 metadata:
   procedure_keys:
     - greenfield-fs
+    - brownfield-fs
 
 # value-chain-driver-identification
 

@@ -8,6 +8,7 @@ description: "Forward industry research for S1 market analysis"
 metadata:
   procedure_keys:
     - greenfield-screening
+    - brownfield-screening
 
 # forward-industry-research
 

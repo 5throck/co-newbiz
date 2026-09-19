@@ -11,5 +11,6 @@ description: "Skill referenced by flow.spec.yaml"
 metadata:
   procedure_keys:
     - greenfield-fs
+    - brownfield-fs
 
 # target-costing-analysis

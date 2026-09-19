@@ -7,6 +7,9 @@ lifecycle:
 status: experimental
 version: "1.0.0"
 description: "Skill referenced by flow.spec.yaml stage activities"
+  procedure_keys:
+    - brownfield-target-identification
+    - company-profile-analysis
 ---
 
 # company-intelligence
