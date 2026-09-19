@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-19T01:52:13.208Z
+**Generated**: 2026-09-19T02:00:45.004Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -20,7 +20,7 @@
 | Name | File | Tier | Model | Last Modified |
 |------|------|------|-------|---------------|
 | i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-15 |
-| pm | agents/pm.md | medium | inherit | 2026-09-19 |
+| pm | agents/pm.md | medium | inherit | 2026-09-16 |
 | README_ko | agents/README_ko.md | N/A | N/A | 2026-08-23 |
 
 ---
@@ -230,8 +230,8 @@
 | db-integrity.ts | 1.0.0 | scripts/co-newbiz/db-integrity.ts | N/A |
 | deploy-handbook.ts | 1.1.0 | scripts/handbook/deploy-handbook.ts | N/A |
 | deploy-readme-patch.test.ts | 1.0.0 | scripts/tests/deploy-readme-patch.test.ts | bun:test |
-| design-lint.ts | 1.2.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 1.0.0 | scripts/design-lint.ts | N/A |
+| design-lint.ts | 1.2.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | dev-sync.ts | 1.15.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.1 | scripts/dispatch-serial.ts | N/A |

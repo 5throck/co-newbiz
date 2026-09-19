@@ -3486,6 +3486,40 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/market-overview/industry/{industryId}/calibration-sweep:
+    get:
+      operationId: getLatestCalibrationSweep
+      summary: Newest reverse-feasibility sweep result (quantile summaries only — raw samples are never stored).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: runCalibrationSweep
+      summary: Sample accepted-driver impact combinations (±50% triangular, plausibility filter) and store the quantile summary. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/market-overview/industry/{industryId}/calibration-cycle:
+    post:
+      operationId: startCalibrationCycle
+      summary: Accept pending driver proposals (optional) and submit market-sizing rerun jobs to the parallel execution layer. Analyst+.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/brownfield/{oppId}/targets/{targetId}/eval-draft:
     post:
       operationId: draftTargetEvaluation
