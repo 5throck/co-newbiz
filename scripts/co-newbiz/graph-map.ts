@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * graph:map — procedure→agent/skill graph mapping over the MERGED procedure
  * space. Walks every shared procedure × every applicable region/entity layer
@@ -50,6 +50,7 @@ const PROCEDURES_ROOT = join(PROJECT_ROOT, "procedures");
 const AGENTS_DIR = join(PROJECT_ROOT, "agents");
 const SKILLS_DIR = join(PROJECT_ROOT, "skills");
 const HUMAN_ROLES_FILE = join(PROCEDURES_ROOT, "_human-roles.yaml");
+const GRAPH_JSON_FILE = join(PROJECT_ROOT, "docs", "graph", "graph.json");
 
 /**
  * Read the human-role registry statically (ADR-0053). Unreadable or missing
@@ -342,6 +343,53 @@ export function checkSkillGraph(map: GraphMap): string[] {
 }
 
 /**
+ * SA-5 (projection-level validation): every procedure node in the generated
+ * graph that has a non-empty `gate` must have exactly one outgoing `in_stage`
+ * edge. This mirrors SA-2's registry check but operates on the projection to
+ * catch cases where the registry is complete but the generator failed to emit.
+ */
+export function checkSA5(graphJsonPath: string): string[] {
+  const errors: string[] = [];
+  if (!existsSync(graphJsonPath)) {
+    errors.push(`graph.json not found at ${graphJsonPath} — run \`bun scripts/co-newbiz/graph.ts\` first`);
+    return errors;
+  }
+  try {
+    const content = readFileSync(graphJsonPath, "utf-8");
+    const graph = JSON.parse(content) as {
+      nodes: Array<{ id: string; type: string; [key: string]: unknown }>;
+      edges: Array<{ type: string; from: string; to: string; [key: string]: unknown }>;
+    };
+
+    // Find all procedure nodes with non-empty gate property
+    const procNodes = new Map<string, { id: string; gate?: string }>();
+    for (const node of graph.nodes) {
+      if (node.type === "procedure") {
+        procNodes.set(node.id, { id: node.id, gate: node.gate as string | undefined });
+      }
+    }
+
+    // For each procedure with a non-empty gate, check in_stage edges
+    for (const [procId, proc] of procNodes) {
+      if (!proc.gate || proc.gate.trim() === "") continue;
+      const inStageEdges = graph.edges.filter((e) => e.type === "in_stage" && e.from === procId);
+      if (inStageEdges.length === 0) {
+        errors.push(
+          `${procId}: has gate '${proc.gate}' but no outgoing in_stage edge — check process/stage-aliases.yaml for missing entry`,
+        );
+      } else if (inStageEdges.length > 1) {
+        errors.push(
+          `${procId}: has gate '${proc.gate}' but ${inStageEdges.length} outgoing in_stage edge(s) — expected exactly one`,
+        );
+      }
+    }
+  } catch (e) {
+    errors.push(`failed to parse graph.json: ${(e as Error).message}`);
+  }
+  return errors;
+}
+
+/**
  * Distinct-step counts per key, sorted descending (ties alphabetical).
  * A step visible in N layer combos counts ONCE — deduped by
  * (procedure, step id, key) — so counts reflect distinct edges in the graph,
@@ -398,16 +446,20 @@ function printSummary(map: GraphMap): void {
 }
 
 function runCheck(map: GraphMap): void {
-  if (map.missing.agents.length === 0 && map.missing.skills.length === 0 && map.errors.length === 0) {
+  // SA-5: projection-level validation (ADR-0083)
+  const sa5Errors = checkSA5(GRAPH_JSON_FILE);
+  const allErrors = [...map.errors, ...sa5Errors];
+
+  if (map.missing.agents.length === 0 && map.missing.skills.length === 0 && allErrors.length === 0) {
     const totalSteps = map.procedures.reduce((n, p) => n + p.steps.length, 0);
     const humanMarked = map.procedures.reduce((n, p) => n + p.steps.filter((s) => s.decision_authority === "human").length, 0);
     console.log(
-      `✅ graph-map --check passed: ${map.generated_from.procedures} procedure(s), ${map.generated_from.combos} combo(s), ${totalSteps} merged step(s), ${humanMarked} human-authority step(s) — every agent_key and skill_key resolves, skill-graph metadata consistent.`
+      `✅ graph-map --check passed: ${map.generated_from.procedures} procedure(s), ${map.generated_from.combos} combo(s), ${totalSteps} merged step(s), ${humanMarked} human-authority step(s) — every agent_key and skill_key resolves, skill-graph metadata consistent, SA-5 projection-level validation passed.`
     );
     return;
   }
   console.error(
-    `❌ graph-map --check failed: ${map.missing.agents.length} missing agent file(s), ${map.missing.skills.length} missing skill file(s), ${map.errors.length} graph error(s)`
+    `❌ graph-map --check failed: ${map.missing.agents.length} missing agent file(s), ${map.missing.skills.length} missing skill file(s), ${allErrors.length} graph error(s)`
   );
   for (const key of map.missing.agents) {
     const referrers = [...new Set(map.procedures.filter((p) => p.steps.some((s) => s.agent_key === key)).map((p) => p.procedure))];
@@ -417,7 +469,7 @@ function runCheck(map: GraphMap): void {
     const referrers = [...new Set(map.procedures.filter((p) => p.steps.some((s) => s.skill_key === key)).map((p) => p.procedure))];
     console.error(`  [skill] ${key} — no skills/${key}/SKILL.md (referenced by ${referrers.join(", ")})`);
   }
-  for (const err of map.errors) {
+  for (const err of allErrors) {
     console.error(`  [graph] ${err}`);
   }
   process.exit(1);
