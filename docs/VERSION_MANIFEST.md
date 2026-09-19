@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-19T15:52:23.585Z
+**Generated**: 2026-09-19T16:09:24.211Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -64,7 +64,7 @@
 | commercial-due-diligence | 1.1.0 | active | skills/commercial-due-diligence/SKILL.md | workspace | commercial due diligence, customer concentration analysis, pricing power assessment, win loss analysis | commercial-dd-agent |
 | committee-deliberation | 1.6.0 | active | .claude/skills/committee-deliberation/SKILL.md | both | committee, committee-deliberation, steering committee, gate deliberation, red-team review | pm |
 | community-partnership-planning | 1.1.0 | active | skills/community-partnership-planning/SKILL.md | workspace | community partnership, local workforce development, community relations, social license to operate | hr-integration-agent |
-| company-intelligence | N/A | active | skills/company-intelligence/SKILL.md | workspace | N/A | N/A |
+| company-intelligence | 1.0.0 | experimental | skills/company-intelligence/SKILL.md | workspace | N/A | process-governance-manager |
 | compensation-harmonization-analysis | 1.0.0 | active | skills/compensation-harmonization-analysis/SKILL.md | workspace | compensation harmonization, comp benchmark, upward bias, post-merger pay equalization | hr-integration-agent |
 | competitive-intelligence | 1.1.0 | active | skills/competitive-intelligence/SKILL.md | workspace | competitive analysis, market analysis, competitor profiling, market entry analysis, industry attractiveness, competitive intelligence, five forces | market-intelligence-agent |
 | compliance-monitoring | 1.1.0 | active | skills/compliance-monitoring/SKILL.md | workspace | compliance check, is this gate blocked, governance KPI, gate cycle time, checklist completion rate, waiver concentration | compliance-officer |
@@ -91,7 +91,7 @@
 | financial-statement-analysis | 1.0.0 | active | skills/financial-statement-analysis/SKILL.md | workspace | financial statement analysis, ROIC analysis, value driver tree, financial KPI, profitability analysis, cash flow analysis, DART analysis, fundamental analysis, corporate financial analysis | financial-analyst |
 | financing-plan-review | 1.2.0 | active | skills/financing-plan-review/SKILL.md | workspace | financing plan, certainty of funds, sources and uses | valuation-agent |
 | finishing-a-development-branch | 1.0.0 | active | skills/finishing-a-development-branch/SKILL.md | workspace | finish branch, complete work, wrap up, finishing a development branch, merge branch, create PR, push and PR | pm |
-| forward-industry-research | 1.0.0 | active | skills/forward-industry-research/SKILL.md | workspace | N/A | process-governance-manager |
+| forward-industry-research | 1.0.0 | experimental | skills/forward-industry-research/SKILL.md | workspace | N/A | process-governance-manager |
 | gateguard | 1.0.0 | active | skills/gateguard/SKILL.md | workspace | gateguard, /gateguard, investigate file, check before edit, pre-edit check | pm |
 | glossary-management | 1.0.0 | active | .claude/skills/glossary-management/SKILL.md | both | add a glossary term, glossary lint, undefined term, glossary management, why_it_matters_ko | glossary-curator |
 | governance-document-hierarchy | 1.0.0 | active | .claude/skills/governance-document-hierarchy/SKILL.md | both | governance document hierarchy, policy vs procedure, governance layer, is this mandatory, new governance document | process-governance-manager |
@@ -143,7 +143,7 @@
 | platform-command-lifecycle-manager | 1.0.0 | active | skills/platform-command-lifecycle-manager/SKILL.md | workspace | create platform command, new .claude command, new .gemini command, platform command lifecycle, command parity, propagate command | pm |
 | platform-skill-lifecycle-manager | 1.0.0 | active | skills/platform-skill-lifecycle-manager/SKILL.md | workspace | create platform skill, new .claude skill, new .gemini skill, platform skill version, platform skill lifecycle, update platform skill | pm |
 | pmi-planning | 1.1.0 | active | skills/pmi-planning/SKILL.md | workspace | PMI planning, post-merger integration, integration timeline, day-one integration plan | pmi-agent |
-| policy-and-procedure-governance | 1.0.0 | active | skills/policy-and-procedure-governance/SKILL.md | workspace | N/A | process-governance-manager |
+| policy-and-procedure-governance | 1.0.0 | experimental | skills/policy-and-procedure-governance/SKILL.md | workspace | N/A | process-governance-manager |
 | policy-change-impact-analysis | 1.0.0 | active | .claude/skills/policy-change-impact-analysis/SKILL.md | both | policy impact analysis, procedure amendment impact, does this affect in-flight projects, project_policy_pin, retroactivity decision | process-governance-manager |
 | portfolio-fit-assessment | 1.3.0 | active | skills/portfolio-fit-assessment/SKILL.md | workspace | portfolio overlap, cannibalization, portfolio fit, group agenda ranking, rank against other group companies | group-review-agent |
 | procedure-reference-override | 1.0.0 | active | .claude/skills/procedure-reference-override/SKILL.md | both | procedure override, entity-specific procedure, region-specific procedure, add_steps, replace_steps, resolve a procedure | process-governance-manager |
@@ -368,14 +368,7 @@
 
 - [WARNING] Agent README_ko missing tier or model metadata
 - [WARNING] Skill assumption-audit has no triggers defined
-- [ERROR] Skill company-intelligence frontmatter YAML parse error: bad indentation of a mapping entry (9:3)
-
-  6 | status: experimental
-  7 | version: "1.0.0"
-  8 | description: "Skill referenced by ...
-  9 |   procedure_keys:
---------^
- 10 |     - brownfield-target-identific ...
+- [WARNING] Skill company-intelligence has no triggers defined
 - [WARNING] Skill deal-execution-playbook has no triggers defined
 - [WARNING] Skill forward-industry-research has no triggers defined
 - [WARNING] Skill group-level-review has no triggers defined
