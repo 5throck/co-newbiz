@@ -7,6 +7,9 @@ lifecycle:
 status: experimental
 version: "1.0.0"
 description: "Skill referenced by flow.spec.yaml stage activities"
+metadata:
+  procedure_keys:
+    - greenfield-fs
 ---
 
 # value-chain-stage-financials

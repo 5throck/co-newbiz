@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-19T03:35:59.933Z
+**Generated**: 2026-09-19T04:41:23.622Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -91,7 +91,7 @@
 | financial-statement-analysis | 1.0.0 | active | skills/financial-statement-analysis/SKILL.md | workspace | financial statement analysis, ROIC analysis, value driver tree, financial KPI, profitability analysis, cash flow analysis, DART analysis, fundamental analysis, corporate financial analysis | financial-analyst |
 | financing-plan-review | 1.2.0 | active | skills/financing-plan-review/SKILL.md | workspace | financing plan, certainty of funds, sources and uses | valuation-agent |
 | finishing-a-development-branch | 1.0.0 | active | skills/finishing-a-development-branch/SKILL.md | workspace | finish branch, complete work, wrap up, finishing a development branch, merge branch, create PR, push and PR | pm |
-| forward-industry-research | 1.0.0 | active | .claude/skills/forward-industry-research/SKILL.md | both | forward industry research, upstream industry research, key driver identification, industry direction analysis, external environment scenario | market-intelligence-agent |
+| forward-industry-research | 1.0.0 | active | skills/forward-industry-research/SKILL.md | workspace | N/A | process-governance-manager |
 | gateguard | 1.0.0 | active | skills/gateguard/SKILL.md | workspace | gateguard, /gateguard, investigate file, check before edit, pre-edit check | pm |
 | glossary-management | 1.0.0 | active | .claude/skills/glossary-management/SKILL.md | both | add a glossary term, glossary lint, undefined term, glossary management, why_it_matters_ko | glossary-curator |
 | governance-document-hierarchy | 1.0.0 | active | .claude/skills/governance-document-hierarchy/SKILL.md | both | governance document hierarchy, policy vs procedure, governance layer, is this mandatory, new governance document | process-governance-manager |
@@ -143,7 +143,7 @@
 | platform-command-lifecycle-manager | 1.0.0 | active | skills/platform-command-lifecycle-manager/SKILL.md | workspace | create platform command, new .claude command, new .gemini command, platform command lifecycle, command parity, propagate command | pm |
 | platform-skill-lifecycle-manager | 1.0.0 | active | skills/platform-skill-lifecycle-manager/SKILL.md | workspace | create platform skill, new .claude skill, new .gemini skill, platform skill version, platform skill lifecycle, update platform skill | pm |
 | pmi-planning | 1.1.0 | active | skills/pmi-planning/SKILL.md | workspace | PMI planning, post-merger integration, integration timeline, day-one integration plan | pmi-agent |
-| policy-and-procedure-governance | 1.1.0 | active | .claude/skills/policy-and-procedure-governance/SKILL.md | both | draft a policy, draft a procedure, entity addendum, amend the group policy, new procedure | process-governance-manager |
+| policy-and-procedure-governance | 1.0.0 | active | skills/policy-and-procedure-governance/SKILL.md | workspace | N/A | process-governance-manager |
 | policy-change-impact-analysis | 1.0.0 | active | .claude/skills/policy-change-impact-analysis/SKILL.md | both | policy impact analysis, procedure amendment impact, does this affect in-flight projects, project_policy_pin, retroactivity decision | process-governance-manager |
 | portfolio-fit-assessment | 1.3.0 | active | skills/portfolio-fit-assessment/SKILL.md | workspace | portfolio overlap, cannibalization, portfolio fit, group agenda ranking, rank against other group companies | group-review-agent |
 | procedure-reference-override | 1.0.0 | active | .claude/skills/procedure-reference-override/SKILL.md | both | procedure override, entity-specific procedure, region-specific procedure, add_steps, replace_steps, resolve a procedure | process-governance-manager |
@@ -358,7 +358,7 @@
 **Checked**: Claude (.claude/) vs Gemini (.gemini/)
 
 - **Commands with parity**: 8 / 8
-- **Skills with parity**: 47 / 149 (common-template skills are parity-exempt)
+- **Skills with parity**: 45 / 149 (common-template skills are parity-exempt)
 
 ---
 
@@ -370,9 +370,11 @@
 - [WARNING] Skill assumption-audit has no triggers defined
 - [WARNING] Skill company-intelligence has no triggers defined
 - [WARNING] Skill deal-execution-playbook has no triggers defined
+- [WARNING] Skill forward-industry-research has no triggers defined
 - [WARNING] Skill group-level-review has no triggers defined
 - [WARNING] Skill legal-risk-register has no triggers defined
 - [WARNING] Skill market-data-pipeline has no triggers defined
+- [WARNING] Skill policy-and-procedure-governance has no triggers defined
 - [WARNING] Skill regulatory-screening has no triggers defined
 - [WARNING] Skill sample-driven-report-writing has no triggers defined
 - [WARNING] Skill target-costing-analysis has no triggers defined
