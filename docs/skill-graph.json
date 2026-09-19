@@ -722,6 +722,11 @@
       "layer": "L3"
     },
     {
+      "id": "antitrust-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "antitrust-screening",
       "type": "skill",
       "layer": "L3"
@@ -729,6 +734,16 @@
     {
       "id": "api-documentation",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "assumption-audit",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "brownfield-agent",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -752,12 +767,22 @@
       "layer": "L3"
     },
     {
+      "id": "commercial-dd-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "commercial-due-diligence",
       "type": "skill",
       "layer": "L3"
     },
     {
       "id": "community-partnership-planning",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "company-intelligence",
       "type": "skill",
       "layer": "L3"
     },
@@ -777,12 +802,22 @@
       "layer": "L3"
     },
     {
+      "id": "compliance-officer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "customer-attrition-risk",
       "type": "skill",
       "layer": "L3"
     },
     {
       "id": "dd-to-valuation-bridge",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "deal-execution-playbook",
       "type": "skill",
       "layer": "L3"
     },
@@ -862,6 +897,11 @@
       "layer": "L3"
     },
     {
+      "id": "financial-analyst",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "financial-statement-analysis",
       "type": "skill",
       "layer": "L3"
@@ -882,8 +922,23 @@
       "layer": "L3"
     },
     {
+      "id": "greenfield-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "greenfield-feasibility",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "group-level-review",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "group-review-agent",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -992,13 +1047,33 @@
       "layer": "L3"
     },
     {
+      "id": "legal-counsel",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "legal-due-diligence",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "legal-risk-register",
       "type": "skill",
       "layer": "L3"
     },
     {
       "id": "management-incentive-review",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "market-data-pipeline",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "market-intelligence-agent",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -1052,6 +1127,11 @@
       "layer": "L3"
     },
     {
+      "id": "pmi-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "pmi-planning",
       "type": "skill",
       "layer": "L3"
@@ -1059,6 +1139,11 @@
     {
       "id": "portfolio-fit-assessment",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "process-governance-manager",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -1077,6 +1162,11 @@
       "layer": "L3"
     },
     {
+      "id": "quant-methodologist",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "rag-scoring-framework",
       "type": "skill",
       "layer": "L3"
@@ -1087,7 +1177,22 @@
       "layer": "L3"
     },
     {
+      "id": "regulatory-screening",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "research-analysis",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "risk-officer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "sample-driven-report-writing",
       "type": "skill",
       "layer": "L3"
     },
@@ -1157,8 +1262,18 @@
       "layer": "L3"
     },
     {
+      "id": "target-costing-analysis",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "team-builder",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "technical-dd-agent",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -1352,12 +1467,32 @@
       "layer": "L3"
     },
     {
+      "id": "valuation-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "value-chain-driver-identification",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "value-chain-linkage-analysis",
       "type": "skill",
       "layer": "L3"
     },
     {
+      "id": "value-chain-stage-financials",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
       "id": "wacc-input-session",
+      "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "waiver-management",
       "type": "skill",
       "layer": "L3"
     },
@@ -1511,6 +1646,12 @@
       "from": "agent-lifecycle-manager",
       "to": "skill-lifecycle-manager",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "antitrust-screening",
+      "to": "antitrust-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -1810,6 +1951,12 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "brownfield-feasibility",
+      "to": "brownfield-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "brownfield-feasibility",
       "to": "certification-roadmap",
@@ -2116,6 +2263,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "certification-transferability",
+      "to": "legal-counsel",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "certification-transferability",
       "to": "legal-due-diligence",
@@ -2221,6 +2374,12 @@
       "from": "ci-triage",
       "to": "project-review",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "commercial-due-diligence",
+      "to": "commercial-dd-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -2383,6 +2542,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "community-partnership-planning",
+      "to": "greenfield-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "community-partnership-planning",
       "to": "greenfield-feasibility",
@@ -2532,6 +2697,12 @@
       }
     },
     {
+      "type": "references",
+      "from": "competitive-intelligence",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
       "type": "composes_with",
       "from": "competitive-intelligence",
       "to": "compliance-monitoring",
@@ -2621,6 +2792,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "competitive-intelligence",
+      "to": "market-intelligence-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "competitive-intelligence",
       "to": "org-readiness-assessment",
@@ -2691,6 +2868,12 @@
       "from": "competitive-intelligence",
       "to": "value-chain-linkage-analysis",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "compliance-monitoring",
+      "to": "compliance-officer",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -2798,6 +2981,12 @@
         "field": "relates_to",
         "index": 1
       }
+    },
+    {
+      "type": "references",
+      "from": "compliance-monitoring",
+      "to": "waiver-management",
+      "source": "prose"
     },
     {
       "type": "references",
@@ -2905,6 +3094,12 @@
         "field": "relates_to",
         "index": 1
       }
+    },
+    {
+      "type": "used_by",
+      "from": "dd-to-valuation-bridge",
+      "to": "brownfield-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -3000,6 +3195,12 @@
       "source": "prose"
     },
     {
+      "type": "references",
+      "from": "dd-to-valuation-bridge",
+      "to": "legal-risk-register",
+      "source": "prose"
+    },
+    {
       "type": "phase",
       "from": "dd-to-valuation-bridge",
       "to": "phase4",
@@ -3040,6 +3241,12 @@
         "field": "relates_to",
         "index": 9
       }
+    },
+    {
+      "type": "used_by",
+      "from": "dd-to-valuation-bridge",
+      "to": "risk-officer",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -3224,6 +3431,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "debt-and-contingent-liability-simulation",
+      "to": "valuation-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "debt-and-contingent-liability-simulation",
       "to": "wacc-input-session",
@@ -3239,6 +3452,12 @@
       "type": "cites_skill",
       "from": "dec:DEC-20260908-01",
       "to": "project-review",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20260908-02",
+      "to": "waiver-management",
       "source": "skills_used"
     },
     {
@@ -3379,6 +3598,18 @@
         "field": "relates_to",
         "index": 3
       }
+    },
+    {
+      "type": "references",
+      "from": "financial-statement-analysis",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "financial-statement-analysis",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -3572,6 +3803,12 @@
     {
       "type": "references",
       "from": "financing-plan-review",
+      "to": "deal-execution-playbook",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "financing-plan-review",
       "to": "debt-and-contingent-liability-simulation",
       "source": "prose"
     },
@@ -3700,6 +3937,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "financing-plan-review",
+      "to": "valuation-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "financing-plan-review",
       "to": "wacc-input-session",
@@ -3728,6 +3971,12 @@
       "from": "greenfield-feasibility",
       "to": "community-partnership-planning",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "greenfield-feasibility",
+      "to": "greenfield-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -3829,6 +4078,12 @@
         "field": "relates_to",
         "index": 0
       }
+    },
+    {
+      "type": "used_by",
+      "from": "growth-projection-modeling",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -4022,6 +4277,12 @@
       "from": "handbook-sync-audit",
       "to": "project-review",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "historical-financial-analysis",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -4438,6 +4699,12 @@
     {
       "type": "references",
       "from": "insight-synthesis",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "insight-synthesis",
       "to": "competitive-intelligence",
       "source": "prose"
     },
@@ -4462,6 +4729,12 @@
       "type": "phase",
       "from": "insight-synthesis",
       "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "insight-synthesis",
+      "to": "process-governance-manager",
       "source": "skill_manifest"
     },
     {
@@ -4547,6 +4820,18 @@
       "from": "intra-group-transaction-compliance",
       "to": "antitrust-screening",
       "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "intra-group-transaction-compliance",
+      "to": "group-level-review",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "intra-group-transaction-compliance",
+      "to": "group-review-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "phase",
@@ -4755,6 +5040,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "investment-feasibility-modeling",
+      "to": "valuation-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "investment-feasibility-modeling",
       "to": "wacc-input-session",
@@ -4836,6 +5127,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "investment-vehicle-structuring",
+      "to": "legal-counsel",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "investment-vehicle-structuring",
       "to": "legal-due-diligence",
@@ -4846,6 +5143,12 @@
         "field": "relates_to",
         "index": 12
       }
+    },
+    {
+      "type": "references",
+      "from": "investment-vehicle-structuring",
+      "to": "legal-risk-register",
+      "source": "prose"
     },
     {
       "type": "composes_with",
@@ -5002,6 +5305,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "jv-structuring",
+      "to": "legal-counsel",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "jv-structuring",
       "to": "legal-due-diligence",
@@ -5107,6 +5416,12 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "k-dart",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
+    },
+    {
       "type": "phase",
       "from": "k-dart",
       "to": "phase4",
@@ -5116,6 +5431,12 @@
       "type": "phase",
       "from": "k-dart",
       "to": "phase5",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "k-dart",
+      "to": "technical-dd-agent",
       "source": "skill_manifest"
     },
     {
@@ -5483,6 +5804,12 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "k-kosis",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
+    },
+    {
       "type": "references",
       "from": "k-kosis",
       "to": "k-dart",
@@ -5493,6 +5820,12 @@
       "from": "k-kosis",
       "to": "k-law",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "k-kosis",
+      "to": "market-intelligence-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "phase",
@@ -5612,6 +5945,12 @@
         "field": "relates_to",
         "index": 4
       }
+    },
+    {
+      "type": "used_by",
+      "from": "k-law",
+      "to": "legal-counsel",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -5764,6 +6103,18 @@
       "type": "references",
       "from": "legal-due-diligence",
       "to": "k-law",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "legal-due-diligence",
+      "to": "legal-counsel",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "legal-due-diligence",
+      "to": "legal-risk-register",
       "source": "prose"
     },
     {
@@ -5991,6 +6342,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "monte-carlo-simulation",
+      "to": "quant-methodologist",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "monte-carlo-simulation",
       "to": "scenario-planning",
@@ -6298,6 +6655,18 @@
     {
       "type": "references",
       "from": "peer-benchmarking",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "peer-benchmarking",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "peer-benchmarking",
       "to": "growth-projection-modeling",
       "source": "prose"
     },
@@ -6438,6 +6807,12 @@
       "source": "skill_manifest"
     },
     {
+      "type": "references",
+      "from": "permit-pathway-mapping",
+      "to": "regulatory-screening",
+      "source": "prose"
+    },
+    {
       "type": "composes_with",
       "from": "permit-pathway-mapping",
       "to": "site-infrastructure-assessment",
@@ -6543,6 +6918,12 @@
       "source": "skill_manifest"
     },
     {
+      "type": "used_by",
+      "from": "pmi-planning",
+      "to": "pmi-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "pmi-planning",
       "to": "stage-gate-governance",
@@ -6563,6 +6944,12 @@
     {
       "type": "references",
       "from": "portfolio-fit-assessment",
+      "to": "company-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "portfolio-fit-assessment",
       "to": "competitive-intelligence",
       "source": "prose"
     },
@@ -6576,6 +6963,18 @@
         "field": "relates_to",
         "index": 0
       }
+    },
+    {
+      "type": "references",
+      "from": "portfolio-fit-assessment",
+      "to": "group-level-review",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "portfolio-fit-assessment",
+      "to": "group-review-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "follows",
@@ -6659,6 +7058,12 @@
       "source": "skill_manifest"
     },
     {
+      "type": "used_by",
+      "from": "project-review",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
+    },
+    {
       "type": "phase",
       "from": "proxy-industry-chain",
       "to": "phase3",
@@ -6675,6 +7080,12 @@
         "field": "relates_to",
         "index": 1
       }
+    },
+    {
+      "type": "used_by",
+      "from": "proxy-industry-chain",
+      "to": "quant-methodologist",
+      "source": "skill_manifest"
     },
     {
       "type": "references",
@@ -6768,6 +7179,12 @@
       "from": "quality-of-earnings",
       "to": "commercial-due-diligence",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "quality-of-earnings",
+      "to": "financial-analyst",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -7024,6 +7441,12 @@
       "source": "skill_manifest"
     },
     {
+      "type": "used_by",
+      "from": "rag-scoring-framework",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "rag-scoring-framework",
       "to": "project-review",
@@ -7050,6 +7473,12 @@
         "file": "skills/rag-scoring-framework/SKILL.md",
         "field": "prerequisites"
       }
+    },
+    {
+      "type": "used_by",
+      "from": "rag-scoring-framework",
+      "to": "risk-officer",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -7110,6 +7539,12 @@
         "field": "relates_to",
         "index": 6
       }
+    },
+    {
+      "type": "used_by",
+      "from": "regional-incentive-sourcing",
+      "to": "greenfield-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "references",
@@ -7295,6 +7730,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "scenario-planning",
+      "to": "market-intelligence-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "references",
       "from": "scenario-planning",
       "to": "monte-carlo-simulation",
@@ -7335,6 +7776,12 @@
         "field": "relates_to",
         "index": 8
       }
+    },
+    {
+      "type": "used_by",
+      "from": "scenario-planning",
+      "to": "quant-methodologist",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -7401,6 +7848,12 @@
         "field": "relates_to",
         "index": 5
       }
+    },
+    {
+      "type": "used_by",
+      "from": "site-infrastructure-assessment",
+      "to": "greenfield-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "references",
@@ -7538,6 +7991,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "site-visit-protocol",
+      "to": "technical-dd-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "site-visit-protocol",
       "to": "technical-due-diligence",
@@ -7580,6 +8039,18 @@
       "source": "prose"
     },
     {
+      "type": "references",
+      "from": "stage-gate-governance",
+      "to": "deal-execution-playbook",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "stage-gate-governance",
+      "to": "group-level-review",
+      "source": "prose"
+    },
+    {
       "type": "phase",
       "from": "stage-gate-governance",
       "to": "phase1",
@@ -7613,6 +8084,12 @@
       "type": "phase",
       "from": "stage-gate-governance",
       "to": "phase6",
+      "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "stage-gate-governance",
+      "to": "process-governance-manager",
       "source": "skill_manifest"
     },
     {
@@ -7753,6 +8230,12 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "strategic-fit-screening",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "strategic-fit-screening",
       "to": "project-review",
@@ -7841,6 +8324,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "systematic-market-sizing",
+      "to": "market-intelligence-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "phase",
       "from": "systematic-market-sizing",
       "to": "phase2",
@@ -7880,6 +8369,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "systematic-market-sizing",
+      "to": "quant-methodologist",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "systematic-market-sizing",
       "to": "scenario-planning",
@@ -7917,6 +8412,12 @@
       "from": "talent-pipeline-planning",
       "to": "community-partnership-planning",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "talent-pipeline-planning",
+      "to": "greenfield-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -8054,6 +8555,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "technical-due-diligence",
+      "to": "technical-dd-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "follows",
       "from": "token-usage-lint",
       "to": "ui-ux-design-intelligence",
@@ -8063,6 +8570,18 @@
         "field": "relates_to",
         "index": 0
       }
+    },
+    {
+      "type": "references",
+      "from": "two-tier-approval-chain",
+      "to": "deal-execution-playbook",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "two-tier-approval-chain",
+      "to": "group-level-review",
+      "source": "prose"
     },
     {
       "type": "composes_with",
@@ -8092,6 +8611,12 @@
         "field": "relates_to",
         "index": 0
       }
+    },
+    {
+      "type": "used_by",
+      "from": "two-tier-approval-chain",
+      "to": "process-governance-manager",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -8189,6 +8714,12 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "unit-conversion-calibration",
+      "to": "quant-methodologist",
+      "source": "skill_manifest"
+    },
+    {
       "type": "follows",
       "from": "unit-conversion-calibration",
       "to": "stage-gate-governance",
@@ -8216,6 +8747,12 @@
       "from": "value-chain-linkage-analysis",
       "to": "debt-and-contingent-liability-simulation",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "value-chain-linkage-analysis",
+      "to": "market-intelligence-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "phase",
@@ -8327,6 +8864,12 @@
         "field": "relates_to",
         "index": 1
       }
+    },
+    {
+      "type": "used_by",
+      "from": "wacc-input-session",
+      "to": "valuation-agent",
+      "source": "skill_manifest"
     }
   ]
 }
