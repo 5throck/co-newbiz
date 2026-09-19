@@ -2,4 +2,4 @@ variant=co-newbiz
 version=0.6.0
 platform=both
 country=KR
-upgraded=2026-09-16T14:41:55.041Z
+upgraded=2026-09-19T01:23:32.671Z
