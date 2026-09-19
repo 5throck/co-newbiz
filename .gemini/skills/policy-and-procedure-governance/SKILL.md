@@ -1,12 +1,17 @@
 ---
 name: policy-and-procedure-governance
-version: "1.0.0"
+scope: co-newbiz
 owner: process-governance-manager
-status: active
+status: experimental
+version: "1.0.0"
+description: "Skill referenced by flow.spec.yaml stage activities"
+lifecycle:
+  phase: draft
 metadata:
   procedure_keys:
     - brownfield-screening
-description: "Skill referenced by procedure edges"
 ---
 
 # policy-and-procedure-governance
+
+Referenced by process/flow.spec.yaml stage activities.
