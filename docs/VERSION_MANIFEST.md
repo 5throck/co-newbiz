@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-19T16:54:37.204Z
+**Generated**: 2026-09-19T23:26:29.713Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -19,24 +19,24 @@
 
 | Name | File | Tier | Model | Last Modified |
 |------|------|------|-------|---------------|
-| antitrust-agent | agents/antitrust-agent.md | high | inherit | 2026-09-19 |
-| brownfield-agent | agents/brownfield-agent.md | high | inherit | 2026-09-19 |
-| commercial-dd-agent | agents/commercial-dd-agent.md | high | inherit | 2026-09-19 |
-| compliance-officer | agents/compliance-officer.md | high | inherit | 2026-09-19 |
-| financial-analyst | agents/financial-analyst.md | high | inherit | 2026-09-19 |
-| greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-09-19 |
-| group-review-agent | agents/group-review-agent.md | high | inherit | 2026-09-19 |
+| antitrust-agent | agents/antitrust-agent.md | high | inherit | 2026-09-16 |
+| brownfield-agent | agents/brownfield-agent.md | high | inherit | 2026-09-16 |
+| commercial-dd-agent | agents/commercial-dd-agent.md | high | inherit | 2026-09-16 |
+| compliance-officer | agents/compliance-officer.md | high | inherit | 2026-09-16 |
+| financial-analyst | agents/financial-analyst.md | high | inherit | 2026-09-16 |
+| greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-09-16 |
+| group-review-agent | agents/group-review-agent.md | high | inherit | 2026-09-16 |
 | i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-15 |
-| legal-counsel | agents/legal-counsel.md | high | inherit | 2026-09-19 |
-| market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-09-19 |
+| legal-counsel | agents/legal-counsel.md | high | inherit | 2026-09-16 |
+| market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-09-16 |
 | pm | agents/pm.md | medium | inherit | 2026-09-19 |
-| pmi-agent | agents/pmi-agent.md | high | inherit | 2026-09-19 |
-| process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-09-19 |
-| quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-09-19 |
+| pmi-agent | agents/pmi-agent.md | high | inherit | 2026-09-16 |
+| process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-09-16 |
+| quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-09-16 |
 | README_ko | agents/README_ko.md | N/A | N/A | 2026-08-23 |
-| risk-officer | agents/risk-officer.md | high | inherit | 2026-09-19 |
-| technical-dd-agent | agents/technical-dd-agent.md | high | inherit | 2026-09-19 |
-| valuation-agent | agents/valuation-agent.md | high | inherit | 2026-09-19 |
+| risk-officer | agents/risk-officer.md | high | inherit | 2026-09-16 |
+| technical-dd-agent | agents/technical-dd-agent.md | high | inherit | 2026-09-16 |
+| valuation-agent | agents/valuation-agent.md | high | inherit | 2026-09-16 |
 
 ---
 

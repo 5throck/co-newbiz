@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.6.0
+// @version 1.7.0
 /**
  * Procedure Schema Validator — co-newbiz
  *
@@ -91,6 +91,8 @@ const ROUTING_VARS_MIGRATION = join(PROJECT_ROOT, "db", "migrations", "0014_rout
 const HUMAN_ROLES_FILE = join(ROOT, "_human-roles.yaml");
 const OUTPUT_TYPES_FILE = join(ROOT, "_output-types.yaml");
 const COMMITTEES_FILE = join(ROOT, "_committees.yaml");
+const STAGE_ALIASES_FILE = join(ROOT, "..", "process", "stage-aliases.yaml");
+const STAGES_FILE = join(ROOT, "..", "process", "stages.yaml");
 
 interface Issue {
   file: string;
@@ -554,6 +556,176 @@ async function loadOutputTypes(): Promise<{ types: Set<string>; error: Issue | n
   }
 }
 
+// ── Stage aliases registry pass (ADR-0083) ──────────────────────────────────
+
+/**
+ * Load the stage-aliases registry once per run. Unreadable ⇒ error + empty map
+ * (mirrors loadHumanRoles): with an empty map no gate earns validation, so
+ * the coverage check (SA-2) fires for every gate value — the check degrades
+ * loudly, never silently.
+ */
+async function loadStageAliases(): Promise<{
+  aliases: Map<string, { stage: string; note?: string; reference?: string }>;
+  stages: Set<string>;
+  error: Issue | null;
+}> {
+  try {
+    if (!existsSync(STAGE_ALIASES_FILE)) {
+      return {
+        aliases: new Map(),
+        stages: new Set(),
+        error: {
+          file: STAGE_ALIASES_FILE,
+          message: `process/stage-aliases.yaml not found — stage alias checks skipped blind`,
+          severity: "error",
+        },
+      };
+    }
+    const doc = yaml.load(await readFile(STAGE_ALIASES_FILE, "utf-8"), { schema: yaml.JSON_SCHEMA }) as {
+      schema_version?: unknown;
+      variant?: unknown;
+      aliases?: Record<string, unknown>;
+    } | null;
+
+    // SA-1: registry loads, schema_version + variant correct
+    if (!doc || typeof doc !== "object") {
+      return {
+        aliases: new Map(),
+        stages: new Set(),
+        error: { file: STAGE_ALIASES_FILE, message: `Document is not a YAML mapping`, severity: "error" },
+      };
+    }
+    if (doc.schema_version !== "1.0") {
+      return {
+        aliases: new Map(),
+        stages: new Set(),
+        error: {
+          file: STAGE_ALIASES_FILE,
+          message: `schema_version must be "1.0" (got ${JSON.stringify(doc.schema_version)})`,
+          severity: "error",
+        },
+      };
+    }
+    if (doc.variant !== "co-newbiz") {
+      return {
+        aliases: new Map(),
+        stages: new Set(),
+        error: {
+          file: STAGE_ALIASES_FILE,
+          message: `variant must be "co-newbiz" (got ${JSON.stringify(doc.variant)})`,
+          severity: "error",
+        },
+      };
+    }
+
+    const aliases = new Map<string, { stage: string; note?: string; reference?: string }>();
+    if (typeof doc.aliases === "object" && doc.aliases !== null) {
+      for (const [gate, raw] of Object.entries(doc.aliases)) {
+        if (typeof raw !== "object" || raw === null) continue;
+        const alias = raw as Record<string, unknown>;
+        const stage = alias.stage;
+        if (typeof stage !== "string") continue;
+        aliases.set(gate.trim(), {
+          stage,
+          note: typeof alias.note === "string" ? alias.note : undefined,
+          reference: typeof alias.reference === "string" ? alias.reference : undefined,
+        });
+      }
+    }
+
+    // Also load stages to validate against (for SA-3)
+    let stages = new Set<string>();
+    if (existsSync(STAGES_FILE)) {
+      try {
+        const stagesDoc = yaml.load(await readFile(STAGES_FILE, "utf-8"), { schema: yaml.JSON_SCHEMA }) as {
+          stages?: Array<{ id?: unknown }>;
+        } | null;
+        if (stagesDoc && Array.isArray(stagesDoc.stages)) {
+          for (const s of stagesDoc.stages) {
+            if (typeof s === "object" && s !== null && typeof (s as Record<string, unknown>).id === "string") {
+              stages.add((s as Record<string, unknown>).id as string);
+            }
+          }
+        }
+      } catch {
+        // If stages.yaml is unreadable, SA-3 will catch it; don't fail here
+      }
+    }
+
+    return { aliases, stages, error: null };
+  } catch (e) {
+    return {
+      aliases: new Map(),
+      stages: new Set(),
+      error: {
+        file: STAGE_ALIASES_FILE,
+        message: `cannot read the stage-aliases registry: ${(e as Error).message}`,
+        severity: "error",
+      },
+    };
+  }
+}
+
+/**
+ * Validate stage aliases. Static pass after all procedures are loaded.
+ * Returns SA-2, SA-3, SA-4 issues.
+ * Exported for tests/unit/stage-aliases-registry.test.ts.
+ */
+export function validateStageAliases(
+  declaredGates: Map<string, string>, // gate value -> file
+  aliases: Map<string, { stage: string; note?: string; reference?: string }>,
+  stages: Set<string>
+): Issue[] {
+  const issues: Issue[] = [];
+
+  // SA-2: every gate: value used in procedures has a matching alias entry
+  // (skip _template/schema.yaml's TODO sentinel)
+  for (const [gate, file] of declaredGates) {
+    if (gate === "TODO") continue; // Template sentinel, skip per design §6.1
+    if (!aliases.has(gate)) {
+      issues.push({
+        file,
+        message: `gate '${gate}' is not listed in process/stage-aliases.yaml — add the alias entry in the same change`,
+        severity: "error",
+      });
+    }
+  }
+
+  // SA-3: every alias's .stage matches ^S[0-9]+$ and is declared in stages.yaml
+  for (const [gate, alias] of aliases) {
+    const stageId = alias.stage;
+    if (!/^S[0-9]+$/.test(stageId)) {
+      issues.push({
+        file: STAGE_ALIASES_FILE,
+        message: `alias '${gate}' names stage '${stageId}' which does not match pattern ^S[0-9]+$`,
+        severity: "error",
+      });
+    }
+    if (!stages.has(stageId)) {
+      issues.push({
+        file: STAGE_ALIASES_FILE,
+        message: `alias '${gate}' names stage '${stageId}' which is not declared in process/stages.yaml`,
+        severity: "error",
+      });
+    }
+  }
+
+  // SA-4: every alias key is used by at least one procedure (warning, not error)
+  const usedGates = new Set(declaredGates.keys());
+  usedGates.delete("TODO"); // Skip template sentinel
+  for (const gate of aliases.keys()) {
+    if (!usedGates.has(gate)) {
+      issues.push({
+        file: STAGE_ALIASES_FILE,
+        message: `alias '${gate}' is unused by any procedure — remove it or confirm it is reserved`,
+        severity: "warn",
+      });
+    }
+  }
+
+  return issues;
+}
+
 // ── Committee registry pass (ADR-0097 §2/§4) ────────────────────────────────
 
 const DECISION_MODES = new Set(["human_only", "agent_team", "hybrid"]);
@@ -868,6 +1040,7 @@ async function main() {
   const allIssues: Issue[] = [];
   const standaloneStepDocs: { label: string; steps: unknown[] }[] = [];
   const declaredKillCriteria = new Map<string, DeclaredCriterion>();
+  const declaredGates = new Map<string, string>(); // gate value -> file path
 
   // PR-5a: load the var_key vocabulary once — every applies_when below is
   // checked against it in the same pass that parses it.
@@ -882,6 +1055,10 @@ async function main() {
   if (outputTypesError) allIssues.push(outputTypesError);
   const usedOutputTypes = new Set<string>();
 
+  // ADR-0083: load the stage-aliases registry and stages list once.
+  const { aliases: stageAliases, stages: stageIds, error: stageAliasesError } = await loadStageAliases();
+  if (stageAliasesError) allIssues.push(stageAliasesError);
+
   for (const file of files) {
     const raw = await readFile(file, "utf-8");
     let doc: unknown;
@@ -894,6 +1071,13 @@ async function main() {
     allIssues.push(...validateSchema(file, doc, outputTypes));
 
     const p = doc as Record<string, unknown>;
+
+    // ADR-0083: collect gate values for stage-alias validation (SA-2)
+    const gate = p.gate;
+    if (typeof gate === "string" && gate.trim() !== "") {
+      // Trim whitespace and use the normalized scalar (js-yaml already strips comments)
+      declaredGates.set(gate.trim(), file);
+    }
 
     // Structured applies_when pass (Decision 7 / PR-5a) — procedure-level and
     // step-level, on the raw per-file docs (merge never invents predicates,
@@ -956,6 +1140,10 @@ async function main() {
   }
 
   allIssues.push(...(await lintSkillsForGateSteps()));
+
+  // ADR-0083: stage-aliases registry pass — SA-2, SA-3, SA-4 (SA-1 already
+  // checked in loadStageAliases).
+  allIssues.push(...validateStageAliases(declaredGates, stageAliases, stageIds));
 
   // ADR-0097 §4: committee registry pass — every pass above shares the
   // human-role set, so it is loaded before this point.
