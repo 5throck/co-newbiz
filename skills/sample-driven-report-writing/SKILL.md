@@ -1,0 +1,14 @@
+---
+name: sample-driven-report-writing
+scope: co-newbiz
+owner: process-governance-manager
+lifecycle:
+  phase: draft
+version: "1.0.0"
+description: "Skill referenced by flow.spec.yaml stage activities"
+---
+
+# sample-driven-report-writing
+
+Referenced by process/flow.spec.yaml stage activities.
+See the design document and AGENTS.md for the full methodology.
