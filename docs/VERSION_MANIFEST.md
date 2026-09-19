@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-19T02:00:45.004Z
+**Generated**: 2026-09-19T02:19:42.277Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -20,7 +20,7 @@
 | Name | File | Tier | Model | Last Modified |
 |------|------|------|-------|---------------|
 | i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-15 |
-| pm | agents/pm.md | medium | inherit | 2026-09-16 |
+| pm | agents/pm.md | medium | inherit | 2026-09-19 |
 | README_ko | agents/README_ko.md | N/A | N/A | 2026-08-23 |
 
 ---
@@ -230,8 +230,8 @@
 | db-integrity.ts | 1.0.0 | scripts/co-newbiz/db-integrity.ts | N/A |
 | deploy-handbook.ts | 1.1.0 | scripts/handbook/deploy-handbook.ts | N/A |
 | deploy-readme-patch.test.ts | 1.0.0 | scripts/tests/deploy-readme-patch.test.ts | bun:test |
-| design-lint.ts | 1.0.0 | scripts/design-lint.ts | N/A |
 | design-lint.ts | 1.2.0 | scripts/co-newbiz/design-lint.ts | N/A |
+| design-lint.ts | 1.0.0 | scripts/design-lint.ts | N/A |
 | dev-sync.ts | 1.15.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.1 | scripts/dispatch-serial.ts | N/A |
@@ -250,7 +250,7 @@
 | generate-process-flow.ts | 1.3.3 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
 | generate-prompt-registry.ts | N/A | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-skill-graph.ts | 1.10.0 | scripts/generate-skill-graph.ts | js-yaml |
-| generate-version-manifest.ts | 1.7.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
+| generate-version-manifest.ts | 1.8.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
 | glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | js-yaml |
 | graph-map.ts | 1.1.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
 | graph.ts | 0.4.1 | scripts/co-newbiz/graph.ts | js-yaml |
