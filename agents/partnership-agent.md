@@ -1,0 +1,27 @@
+---
+extends: ../../../agents/partnership-agent.md
+name: partnership-agent
+formal_name: Partnership Agent
+status: active
+version: "1.0.0"
+last_updated: "2026-09-17"
+tier:
+  claude: medium
+  gemini: medium
+model: inherit
+lifecycle:
+  phase: production
+  created: "2026-09-17"
+  last_updated: "2026-09-17"
+  governance: docs/lifecycle/agents/partnership-agent.md
+---
+
+## Role
+
+Partner sourcing strategy, partner due diligence including compliance screening, and JV structuring, distinct from community-partnership-planning
+
+## Scope
+
+This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
+  governance: docs/lifecycle/agents/partnership-agent.md
+examples: []

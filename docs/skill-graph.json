@@ -742,6 +742,11 @@
       "layer": "L3"
     },
     {
+      "id": "backend-engineer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "brownfield-agent",
       "type": "agent",
       "layer": "L3"
@@ -749,6 +754,11 @@
     {
       "id": "brownfield-feasibility",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "certification-agent",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -809,6 +819,21 @@
     {
       "id": "customer-attrition-risk",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "customer-retention-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "data-architect",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "dba",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -877,6 +902,16 @@
       "layer": "L3"
     },
     {
+      "id": "design-system-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "docs-writer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "documentation-writing",
       "type": "skill",
       "layer": "L3"
@@ -907,6 +942,11 @@
       "layer": "L3"
     },
     {
+      "id": "financing-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "financing-plan-review",
       "type": "skill",
       "layer": "L3"
@@ -922,8 +962,18 @@
       "layer": "L3"
     },
     {
+      "id": "frontend-engineer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "gateguard",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "glossary-curator",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -967,6 +1017,11 @@
       "layer": "L3"
     },
     {
+      "id": "hr-integration-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "i18n-audit",
       "type": "skill",
       "layer": "L3"
@@ -992,8 +1047,23 @@
       "layer": "L3"
     },
     {
+      "id": "incentive-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "incentive-clawback-assessment",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "industry-lead",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "infra-automation-engineer",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -1014,6 +1084,16 @@
     {
       "id": "investment-vehicle-structuring",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "ip-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
+      "id": "ir-agent",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -1107,6 +1187,11 @@
       "layer": "L3"
     },
     {
+      "id": "partnership-agent",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "peer-benchmarking",
       "type": "skill",
       "layer": "L3"
@@ -1119,6 +1204,11 @@
     {
       "id": "platform-command-lifecycle-manager",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "platform-lead",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -1182,6 +1272,11 @@
       "layer": "L3"
     },
     {
+      "id": "region-lead",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "regional-incentive-sourcing",
       "type": "skill",
       "layer": "L3"
@@ -1189,6 +1284,11 @@
     {
       "id": "regulatory-screening",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "release-engineer",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -1217,8 +1317,18 @@
       "layer": "L3"
     },
     {
+      "id": "security-engineer",
+      "type": "agent",
+      "layer": "L3"
+    },
+    {
       "id": "security-scan",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "site-facility-agent",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -1239,6 +1349,11 @@
     {
       "id": "source-command-commit-push-pr",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "sre",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -1474,6 +1589,11 @@
     {
       "id": "update-bun-packages",
       "type": "skill",
+      "layer": "L3"
+    },
+    {
+      "id": "ux-designer-agent",
+      "type": "agent",
       "layer": "L3"
     },
     {
@@ -2079,6 +2199,12 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "certification-roadmap",
+      "to": "certification-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "references",
       "from": "certification-roadmap",
       "to": "certification-transferability",
@@ -2642,6 +2768,12 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "compensation-harmonization-analysis",
+      "to": "hr-integration-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "compensation-harmonization-analysis",
       "to": "management-incentive-review",
@@ -3003,6 +3135,12 @@
       "from": "customer-attrition-risk",
       "to": "brownfield-feasibility",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "customer-attrition-risk",
+      "to": "customer-retention-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -3493,6 +3631,12 @@
       "from": "evidence-ledger",
       "to": "decision-record",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "executive-presentation",
+      "to": "docs-writer",
+      "source": "skill_manifest"
     },
     {
       "type": "references",
@@ -4627,6 +4771,12 @@
       "from": "incentive-clawback-assessment",
       "to": "debt-and-contingent-liability-simulation",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "incentive-clawback-assessment",
+      "to": "incentive-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "composes_with",
@@ -6223,6 +6373,12 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "management-incentive-review",
+      "to": "hr-integration-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "composes_with",
       "from": "management-incentive-review",
       "to": "org-readiness-assessment",
@@ -6458,6 +6614,12 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "org-readiness-assessment",
+      "to": "hr-integration-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "references",
       "from": "org-readiness-assessment",
       "to": "management-incentive-review",
@@ -6580,6 +6742,12 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "partner-due-diligence",
+      "to": "partnership-agent",
+      "source": "skill_manifest"
+    },
+    {
       "type": "phase",
       "from": "partner-due-diligence",
       "to": "phase1",
@@ -6637,6 +6805,12 @@
       "from": "partner-sourcing-strategy",
       "to": "partner-due-diligence",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "partner-sourcing-strategy",
+      "to": "partnership-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "phase",
@@ -6780,6 +6954,12 @@
         "field": "relates_to",
         "index": 3
       }
+    },
+    {
+      "type": "used_by",
+      "from": "permit-pathway-mapping",
+      "to": "certification-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "follows",
@@ -7054,6 +7234,12 @@
       "from": "portfolio-fit-assessment",
       "to": "two-tier-approval-chain",
       "source": "prose"
+    },
+    {
+      "type": "used_by",
+      "from": "project-review",
+      "to": "partnership-agent",
+      "source": "skill_manifest"
     },
     {
       "type": "phase",
