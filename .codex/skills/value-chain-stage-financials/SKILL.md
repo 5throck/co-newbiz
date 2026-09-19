@@ -10,6 +10,7 @@ description: "Skill referenced by flow.spec.yaml stage activities"
 metadata:
   procedure_keys:
     - greenfield-fs
+    - brownfield-fs
 ---
 
 # value-chain-stage-financials

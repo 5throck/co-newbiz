@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-19T15:33:44.915Z
+**Generated**: 2026-09-19T15:52:23.585Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -64,7 +64,7 @@
 | commercial-due-diligence | 1.1.0 | active | skills/commercial-due-diligence/SKILL.md | workspace | commercial due diligence, customer concentration analysis, pricing power assessment, win loss analysis | commercial-dd-agent |
 | committee-deliberation | 1.6.0 | active | .claude/skills/committee-deliberation/SKILL.md | both | committee, committee-deliberation, steering committee, gate deliberation, red-team review | pm |
 | community-partnership-planning | 1.1.0 | active | skills/community-partnership-planning/SKILL.md | workspace | community partnership, local workforce development, community relations, social license to operate | hr-integration-agent |
-| company-intelligence | 1.0.0 | experimental | skills/company-intelligence/SKILL.md | workspace | N/A | process-governance-manager |
+| company-intelligence | N/A | active | skills/company-intelligence/SKILL.md | workspace | N/A | N/A |
 | compensation-harmonization-analysis | 1.0.0 | active | skills/compensation-harmonization-analysis/SKILL.md | workspace | compensation harmonization, comp benchmark, upward bias, post-merger pay equalization | hr-integration-agent |
 | competitive-intelligence | 1.1.0 | active | skills/competitive-intelligence/SKILL.md | workspace | competitive analysis, market analysis, competitor profiling, market entry analysis, industry attractiveness, competitive intelligence, five forces | market-intelligence-agent |
 | compliance-monitoring | 1.1.0 | active | skills/compliance-monitoring/SKILL.md | workspace | compliance check, is this gate blocked, governance KPI, gate cycle time, checklist completion rate, waiver concentration | compliance-officer |
@@ -368,7 +368,14 @@
 
 - [WARNING] Agent README_ko missing tier or model metadata
 - [WARNING] Skill assumption-audit has no triggers defined
-- [WARNING] Skill company-intelligence has no triggers defined
+- [ERROR] Skill company-intelligence frontmatter YAML parse error: bad indentation of a mapping entry (9:3)
+
+  6 | status: experimental
+  7 | version: "1.0.0"
+  8 | description: "Skill referenced by ...
+  9 |   procedure_keys:
+--------^
+ 10 |     - brownfield-target-identific ...
 - [WARNING] Skill deal-execution-playbook has no triggers defined
 - [WARNING] Skill forward-industry-research has no triggers defined
 - [WARNING] Skill group-level-review has no triggers defined
