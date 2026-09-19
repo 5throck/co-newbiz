@@ -79,7 +79,7 @@ export interface RunDeliberationOpts extends RunOpts {
   /** Injected member executor — required (no hidden LLM dependency). */
   callAgent: CallAgent;
   /** Gate the synthesized evaluation proposes against (0045 CHECK enum). */
-  gate?: "screening" | "pre_fs" | "fs" | "dd" | "entity_ic" | "group_ic";
+  gate?: "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
   /** Chair override; default synthesis uses buildSynthesis (dissent rule). */
   synthesize?: SynthesizeFn;
   /** evaluated_by for the gate_evaluation row; default is the standing chair. */

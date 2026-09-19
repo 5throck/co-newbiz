@@ -61,4 +61,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 }
 
-type ConveneGate = "screening" | "pre_fs" | "fs" | "dd" | "entity_ic" | "group_ic";
+type ConveneGate = "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
