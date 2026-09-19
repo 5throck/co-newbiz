@@ -4,6 +4,7 @@ scope: co-newbiz
 owner: process-governance-manager
 lifecycle:
   phase: draft
+status: experimental
 version: "1.0.0"
 description: "Identify value-chain drivers for industry analysis"
 ---
