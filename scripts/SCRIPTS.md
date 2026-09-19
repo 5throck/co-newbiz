@@ -102,13 +102,13 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `co-newbiz/design-lint.ts` | co-newbiz | 1.2.0 | active | 2026-09-08 | — | ADR-0074 — Onyx 3.0 design system mechanical enforcement (hardcoded hex/rgba/hsl colors, onInput, nested main via depth scan, icon-only buttons without aria-label); exit 1 on violations; v1.1.0 fixed the inverted icon-button rule and the commented-out nested-main check, added rgba/hsl detection; v1.2.0 added the list-table standard check (row-action tables without `.list-table` or an actions header) | — |
 | `co-newbiz/contrast-check.ts` | co-newbiz | 1.0.0 | active | 2026-09-08 | — | L3-only (project-local, `contrast:check` — WCAG AA token-pair contrast over app/web-next/app/styles.css in both themes: hex/rgb/hsl parsing, var() resolution, alpha compositing; ENFORCED pairs fail below 4.5:1, advisory pairs warn; design-accessibility rule 6 mechanized, CI-wired) | — |
 | `co-newbiz/db-integrity.ts` | co-newbiz | 1.0.0 | active | 2026-09-16 | — | L3-only (project-local, `db:integrity` — extends SQLite PRAGMA foreign_key_check with polymorphic gate_decision entity reference validation for opportunity/project ledgers; default read-only gate exits 1 on orphan rows, `--fix` prunes local demo orphan gate decisions only) | — |
-| `co-newbiz/seed-s1-s12-demo.ts` | co-newbiz | 1.2.0 | active | 2026-09-18 | — | L3-only (project-local, `seed:s1-s12-demo` — idempotently creates one clearly-labelled Brownfield demo chain covering S1 market sizing through S12 portfolio scorecard so process/data/web surfaces can be smoke-tested without treating the rows as production data) | — |
+| `co-newbiz/seed-s1-s12-demo.ts` | co-newbiz | 1.2.0 | active | 2026-09-19 | — | L3-only (project-local, `seed:s1-s12-demo` — idempotently creates one clearly-labelled Brownfield demo chain covering S1 market sizing through S12 portfolio scorecard so process/data/web surfaces can be smoke-tested without treating the rows as production data) | — |
 | `co-newbiz/runbook-validate.ts` | co-newbiz | 1.0.0 | active | 2026-09-10 | — | L3-only (project-local, `runbooks:validate` — registry hygiene for docs/runbooks/registry.yaml: parses, unique ids, en/ko file existence, frontmatter lang + counterpart pairs, no orphan .md under docs/{runbooks,guidelines,manuals}, and the library projection carries every registered file; tests/unit/runbook-registry.test.ts runs the same check) | — |
 | `co-newbiz/sync-agent-personas.ts` | co-newbiz | 1.0.1 | active | 2026-09-08 | — | L3-only (project-local, `agents:personas` — generates .claude/agents/<name>.md subagent definitions from the agents/ roster with tier→model mapping; normalizes CRLF input before rendering generated descriptions; --check mode exits 1 on drift, CI-wired) | — |
-| `co-newbiz/job-worker.ts` | co-newbiz | 1.0.0 | active | 2026-09-19 | — | Independent parallel execution layer child worker (design 2026-09-19-sim-engine-runtime-separation) — claims one queued `execution_job` (class-filtered, --loop drains), runs the registered adapter with timeout, records result/failure with retry; `--handlers` loads extension handler modules | — |
-| `co-newbiz/generate-process-flow.ts` | co-newbiz | 1.3.3 | active | 2026-09-18 | — | ADR-0074 — regenerates docs/process-flow.md from process/flow.spec.yaml (plus hand-maintained S8–S12 automation addendum, ADR-0095~0102); --check mode exits 1 on drift | — |
+| `co-newbiz/generate-process-flow.ts` | co-newbiz | 1.3.3 | active | 2026-09-19 | — | ADR-0074 — regenerates docs/process-flow.md from process/flow.spec.yaml (plus hand-maintained S8–S12 automation addendum, ADR-0095~0102); --check mode exits 1 on drift | — |
 | `co-newbiz/generate-prompt-registry.ts` | co-newbiz | 1.0.0 | active | 2026-09-15 | — | Projects app/web-next/prompts/prompts.json SSOT into app/web-next/lib/prompts.generated.ts (system prompts, owning agent, ledger purpose); rerun after prompt edits | — |
 | `co-newbiz/generate-agent-registry.ts` | co-newbiz | 1.0.0 | active | 2026-09-13 | — | ADR-0128 — projects agents/*.md roster into app/web-next/lib/agent-registry.generated.ts for the runtime PM router; rerun after roster edits | — |
+| `co-newbiz/job-worker.ts` | co-newbiz | 1.0.0 | active | 2026-09-19 | — | L3-only (project-local, parallel-execution child-process entrypoint for the independent job layer) | — |
 | `co-newbiz/seed-benchmark-cases.ts` | co-newbiz | 1.0.0 | active | 2026-08-30 | — | ADR-0074 — idempotent seed of 8 public benchmark deals into benchmark_case (migration 0041) | — |
 | `co-newbiz/glossary-lint.ts` | co-newbiz | 1.1.1 | active | —| —| L3-only (project-local, `glossary:lint` — ADR-0022 weekly undefined-jargon report over skills/ + docs/; report-only, exit 0 regardless of findings; distinct from glossary/_validate.ts entry validation; 1.1.0 — `findProjectRoot()` cwd walk-up fallback for the Turbopack server bundle (import.meta.dirname unavailable — proc-resolve.ts pattern), exported scanner reused by GET /api/admin/glossary-lint) | —|
 | `co-newbiz/adr-new.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `adr:new` — scaffolds docs/adr/NNNN-<slug>.md from the next free number with the workspace section skeleton; refuses a duplicate title instead of auto-bumping) | —|
@@ -118,12 +118,12 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `agent-list.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
-| `archive-memory.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
+| `archive-memory.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `audit.ts` | L0 | 2.39.0 | active | —| —| L0+L1 | —|
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
-| `dev-sync.ts` | L0 | 1.14.0 | active | —| —| L0+L1 | —|
+| `dev-sync.ts` | L0 | 1.15.0 | active | —| —| L0+L1 | —|
 | `dispatch-parallel.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `dispatch-serial.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `dispatch.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
@@ -137,8 +137,8 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `helpers/template-utils.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `hooks/gateguard-fact-force.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `hooks/post-write-lifecycle-check.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `hooks/pre-commit.ts` | L0 | 1.7.0 | active | —| —| L0+L1 | —|
-| `hooks/pre-push.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
+| `hooks/pre-commit.ts` | L0 | 1.7.1 | active | —| —| L0+L1 | —|
+| `hooks/pre-push.ts` | L0 | 1.4.1 | active | —| —| L0+L1 | —|
 | `lib/auth.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/encoding-utils.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `lib/error-handling.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
@@ -148,7 +148,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `lib/platform-context.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/ssrf.ts` | L0 | 1.1.2 | active | —| —| L0+L1 (SSRF-safe pinned fetch with caller-supplied request headers); v1.1.2 removes two stale `@ts-expect-error` directives on the `LookupFunction` overloads that current Node types no longer need (was failing `tsc`/`next build`) | —|
 | `lib/env-keys.ts` | L0 | 1.0.2 | active | 2026-09-11 | — | L0+L1 (pipeline credential loader — walks up to the root .env and imports only whitelisted pipeline keys, never overriding set values; shared by the k-* source adapters; includes LAW_API_OC for k-law and ECOS_API_KEY for k-ecos) | —|
-| `lifecycle-sync-audit.ts` | L0 | 1.14.0 | active | —| —| L0+L1 | —|
+| `lifecycle-sync-audit.ts` | L0 | 1.15.0 | active | —| —| L0+L1 | —|
 | `md-to-ooxml.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `qa-gate.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `readme-lifecycle-audit.ts` | L0 | 1.0.4 | active | —| —| L0+L1 | —|
@@ -181,7 +181,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `validate-pm-extends.ts` | L0 | 0.3.1 | active | —| —| L0+L1 | —|
 | `validate-decisions.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `validate-procedures.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `helpers/context-sections.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
+| `helpers/context-sections.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
 | `lib/context-md-schema.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `handbook/apply-handbook-theme.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — applies the shared CSS theme to every HTML page under a handbook's docs/ directory) | —|
 | `handbook/build-search-index.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — reads docs/search-manifest.json and generates docs/assets/search-data.js for client-side search) | —|
@@ -211,21 +211,24 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
 | `resolve-variants.ts` | L0 | 1.0.3 | active | —| —| L0+L1 | —|
 | `validate-variant-readiness.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `validate-templates.ts` | L0 | 1.33.0 | active | —| —| L0+L1 | —|
+| `validate-templates.ts` | L0 | 1.35.0 | active | —| —| L0+L1 | —|
 | `helpers/upgrade-versions.ts` | L0+L1 | 1.0.1 | active | —| —| L0+L1 | —|
 | `lib/propagation-map-schema.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `lib/constitution-scrub.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `helpers/l0-ref-policy.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/markers.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `helpers/layer-filter.ts` | L0 | 1.5.0 | active | —| —| L0+L1 | —|
-| `generate-version-manifest.ts` | L0 | 1.6.1 | active | emits `validate-md-language:allowlist` markers around the generated Skills table (T-20260912-015) | —| L0+L1 | —|
+| `generate-version-manifest.ts` | L0 | 1.7.0 | active | emits `validate-md-language:allowlist` markers around the generated Skills table (T-20260912-015) | —| L0+L1 | —|
 | `lib/platform-delivery.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `lib/managed-block-parity.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
+| `lib/managed-block-parity.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `lib/variant-overlay-guard.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `lib/platform-mirror-freshness.ts` | L0 | 1.0.0 | active | Pure platform-skill-mirror vs skills/ SSOT version comparison for the platform-mirror-freshness check (T-20260916-008) | —| L0+L1 | —|
+| `lib/platform-mirror-freshness.ts` | L0 | 1.0.1 | active | Pure platform-skill-mirror vs skills/ SSOT version comparison for the platform-mirror-freshness check (T-20260916-008) | —| L0+L1 | —|
 | `helpers/rollback-partial-project.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/scaffold-markers.ts` | L0 | 1.3.0 | active | Shared scaffold marker constants + (marker→source) mapping + delivery-tree derivations + transient test-fixture predicate (T-20260916-001) | —| L0+L1 | —|
 | `helpers/generate-variant.ts` | L0 | 1.15.0 | active | —| —| L0+L1 | —|
+| `lint-instructions.ts` | L0 | 1.0.0 | active | `--dir`, `--strict` | —| L0+L1 | —|
+| `helpers/merge-state.ts` | L0 | 1.0.0 | active | §3.3 shared-file taxonomy + unresolved-conflict parsing for dev-sync main-drift/--conclude-merge (ADR-0081/T-20260918-002) | —| L0+L1 | —|
+| `co-newbiz/job-worker.ts` | L0 | 1.0.0 | active | Project-local parallel-execution child-process entrypoint (co-newbiz engagement) | —| L0 | —|
 
 ---
 
