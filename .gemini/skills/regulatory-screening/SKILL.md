@@ -6,6 +6,8 @@ lifecycle:
   phase: draft
 status: experimental
 version: "1.0.0"
+procedure_keys:
+  - brownfield-screening
 description: "Skill referenced by flow.spec.yaml stage activities"
 ---
 
