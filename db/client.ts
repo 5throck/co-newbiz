@@ -70,6 +70,9 @@ export function getDb(dbPath: string = DEFAULT_DB_PATH): any {
 
   const db = new Database(dbPath, { create: true });
   db.run("PRAGMA journal_mode = WAL;");
+  // 병렬 실행 계층(job-worker)과 앱이 같은 DB를 동시에 쓸 때 즉시 BUSY로
+  // 터뜨리지 않고 잠금을 기다리게 한다(2026-09-19-sim-engine-runtime-separation §3).
+  db.run("PRAGMA busy_timeout = 5000;");
   db.run("PRAGMA foreign_keys = ON;");
   _db = db;
   return db;

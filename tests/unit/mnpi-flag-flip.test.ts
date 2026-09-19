@@ -45,7 +45,7 @@ function classifiedProject(members: string[], opts: { revoked?: string[] } = {})
   for (const m of [ADMIN, ...members]) {
     db.run(
       "INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
-      [id, m, "contributor", "admin", T0, "test fixture basis"],
+      [id, m, "member", "admin", T0, "test fixture basis"],
     );
   }
   for (const r of opts.revoked ?? []) {
@@ -126,7 +126,7 @@ describe("retroactive enrollment (0→1)", () => {
     const outsider = ulid();
     db.run(
       "INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
-      [pid, outsider, "observer", "admin", T1, "post-flip grant without enrollment"],
+      [pid, outsider, "member", "admin", T1, "post-flip grant without enrollment"],
     );
     expect(() => requireInsiderIfMnpi(db, pid, outsider)).toThrow(/MNPI project.*not on its active insider list/);
   });

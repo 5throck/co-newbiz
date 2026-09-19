@@ -150,6 +150,10 @@ export interface ExternalForecastGap {
   /** LLM analysis: which drivers explain the gap (incl. new drivers). */
   gapAnalysis?: string;
   newDrivers?: string[];
+  /** ADR — 보정 루프: CAGR 기준 상대 격차(%)와 크기 기준 격차의 구분.
+   *  cagrBasis=true면 gapPct가 아닌 cagrGapPct가 격차의 본 뜻이다. */
+  cagrGapPct?: number;
+  cagrBasis?: boolean;
 }
 
 export interface SizingMatrix {
@@ -184,6 +188,15 @@ export interface SizingMatrix {
   verificationLedger?: VerificationEntry[];
   /** RAG 상한 권고 (선택) — 데이터 신뢰도가 캡핑하는 등급과 근거. */
   ragCapRecommendation?: { grade: "green" | "amber" | "red"; rationale: string };
+  /** 성장율 격차 보정 루프 상태 (선택, v1.2.0) — 트리거·버전 간 격차 추이. */
+  calibration?: {
+    triggered: boolean;
+    ourCagrPct: number;
+    externalCagrPct: number | null;
+    gapPct: number | null;
+    previousGapPct: number | null;
+    appliedDrivers: string[];
+  };
 }
 
 // ── helpers shared by UI + pipeline ──

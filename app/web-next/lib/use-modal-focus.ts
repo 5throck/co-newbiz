@@ -22,13 +22,21 @@ function focusableElements(panel: HTMLElement): HTMLElement[] {
   );
 }
 
-export function useModalFocus(onClose: () => void) {
-  const panelRef = useRef<HTMLDivElement | null>(null);
+// T defaults to HTMLDivElement for the modal-panel call sites; pass
+// HTMLElement when the panel is another element (e.g. the drawer <aside>).
+// active=false defers everything: no initial focus is taken and key events
+// are ignored until it flips true — for panels that stay mounted while
+// hidden (the mobile drawer keeps its scrim mounted to animate the fade).
+export function useModalFocus<T extends HTMLElement = HTMLDivElement>(onClose: () => void, active = true) {
+  const panelRef = useRef<T | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
-  // Initial focus + focus restoration.
+  // Initial focus + focus restoration, re-run per activation.
   useEffect(() => {
+    if (!active) return;
     const panel = panelRef.current;
     if (!panel) return;
     const previous =
@@ -39,9 +47,10 @@ export function useModalFocus(onClose: () => void) {
     return () => {
       previous?.focus();
     };
-  }, []);
+  }, [active]);
 
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!activeRef.current) return;
     if (e.key === "Escape") {
       e.stopPropagation();
       onCloseRef.current();

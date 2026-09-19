@@ -280,11 +280,13 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
     scored.find((s) => s.key === "market_uncertainty")?.score === 3 &&
     (scored.find((s) => s.key === "control_need")?.score ?? 3) <= 2;
   // 채점 의무 — 스펙 v2.2.0+ completionCriteria (ADR-0104 트랙 간 비교 가능성):
-  // 양 트랙 모두 intent + 5criteria 채점이 필수다.
+  // 양 트랙 모두 intent + 5criteria 채점이 필수다. 검토한 대안도 requiredArtifacts
+  // 이므로 최종 "결정"에 필수다 (v2.4.1 정합 — 초안 "저장"은 여전히 자유).
   const canSubmit =
     rationale.trim() !== "" &&
     intent !== "" &&
     allScored &&
+    alternatives.trim() !== "" &&
     !overrideBlocked &&
     (track === "brownfield" ? subTrack !== "" : true);
 
@@ -566,8 +568,8 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} rows={3} required className="sizing-new-input" style={{ width: "100%" }} placeholder="예: S3 적합성 평가 Go(시너지 72) — 자사 역량 보유, 시장 성장 지속..." />
             </label>
             <label className="text-[0.78rem] block mb-3">
-              <span className="block mb-1">검토한 대안 (선택)</span>
-              <textarea value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} className="sizing-new-input" style={{ width: "100%" }} placeholder="고려했지만 선택하지 않은 트랙·라우트와 사유" />
+              <span className="block mb-1">검토한 대안 * (고려했으나 선택하지 않은 트랙·라우트와 사유 — 초안 저장은 선택, 결정은 필수)</span>
+              <textarea value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} required className="sizing-new-input" style={{ width: "100%" }} placeholder="고려했지만 선택하지 않은 트랙·라우트와 사유" />
             </label>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className="btn-ghost" disabled={draftSaving} onClick={() => void performSaveDraft()}>
@@ -769,29 +771,35 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               </p>
             ) : (
               <>
-                <h4 className="text-[0.85rem] mb-2">신호별 근거 (S1~S3)</h4>
-                <div className="table-scroll">
-                  <table className="data-table mb-3" aria-label="신호별 근거">
-                    <caption className="sr-only">신호별 근거</caption>
-                    <thead>
-                      <tr><th scope="col">신호</th><th scope="col">방향</th><th scope="col">가중치</th><th scope="col">근거</th></tr>
-                    </thead>
-                    <tbody>
-                      {advisory.signals.map((s) => (
-                        <tr key={s.key}>
-                          <td className="text-[0.8rem]">{s.label}</td>
-                          <td>
-                            <span className={`status-chip ${s.leans === "greenfield" ? "status-green" : s.leans === "brownfield" ? "status-amber" : "status-not-started"}`}>
-                              {s.leans === "greenfield" ? "그린필드" : s.leans === "brownfield" ? "브라운필드" : "중립"}
-                            </span>
-                          </td>
-                          <td className="tabular-nums text-[0.8rem]">{s.weight}</td>
-                          <td className="text-[0.75rem]">{s.note}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {/* 신호 테이블 — 판정에 필요한 건 "근거 있음"의 확인이므로 요약 카드가
+                    본문이다. 표는 기본 접고(필요 역량 상세와 같은 패턴), 요약에 건수를
+                    표시한다 (2026-09-18 리뷰: eval 탭이 지나치게 길었다). */}
+                <details className="mb-3">
+                  <summary className="cursor-pointer text-[0.85rem]">신호별 근거 (S1~S3 — {advisory.signals.length}건)</summary>
+                  <h4 className="text-[0.85rem] mb-2 mt-2">신호별 근거 (S1~S3)</h4>
+                  <div className="table-scroll">
+                    <table className="data-table mb-3" aria-label="신호별 근거">
+                      <caption className="sr-only">신호별 근거</caption>
+                      <thead>
+                        <tr><th scope="col">신호</th><th scope="col">방향</th><th scope="col">가중치</th><th scope="col">근거</th></tr>
+                      </thead>
+                      <tbody>
+                        {advisory.signals.map((s) => (
+                          <tr key={s.key}>
+                            <td className="text-[0.8rem]">{s.label}</td>
+                            <td>
+                              <span className={`status-chip ${s.leans === "greenfield" ? "status-green" : s.leans === "brownfield" ? "status-amber" : "status-not-started"}`}>
+                                {s.leans === "greenfield" ? "그린필드" : s.leans === "brownfield" ? "브라운필드" : "중립"}
+                              </span>
+                            </td>
+                            <td className="tabular-nums text-[0.8rem]">{s.weight}</td>
+                            <td className="text-[0.75rem]">{s.note}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
 
                 {advisory.capabilityGap ? (
                   <>

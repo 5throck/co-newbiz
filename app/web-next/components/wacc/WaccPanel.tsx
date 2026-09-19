@@ -42,11 +42,21 @@ interface WaccComponentRecord {
   as_of: string;
   run_id: string;
 }
+interface WaccSubjectView {
+  subject: "promoter" | "target" | "project_newco";
+  source: "user" | "track_default";
+  rationale: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  default_track: "greenfield" | "brownfield" | null;
+}
 interface View {
   wacc: WaccResolution;
   hurdle_irr: WaccResolution | null;
   components: WaccComponentRecord[];
   derivation: WaccDerivation | null;
+  subject: WaccSubjectView;
+  relevering: { beta_levered: number; beta_unlevered: number; target_de: number; tax_rate: number } | null;
 }
 
 /** 값 + 출처명 + 근거 URL + 기준일 — 시장 수치 인용 입력 단위. */
@@ -185,6 +195,8 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const APPLY_LABEL: Record<string, string> = { risk_free: "Rf 적용", credit_spread: "가산금리 적용", observed_de: "D/E 적용" };
 
   // ── 직접 입력 ──
+  const [subject, setSubject] = useState<"" | "promoter" | "target" | "project_newco">("");
+  const [subjectRationale, setSubjectRationale] = useState("");
   const [directWacc, setDirectWacc] = useState("0.10");
   const [directHurdle, setDirectHurdle] = useState("");
   const [directRationale, setDirectRationale] = useState("");
@@ -409,13 +421,21 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     setMessage(null);
     setError(null);
     try {
+      if (subject && !subjectRationale.trim()) {
+        setError("WACC 적용 주체를 확정할 때는 근거를 함께 기재해야 합니다.");
+        return;
+      }
       const res = await api.post<{ run_id: string }>(`/api/projects/${encodeURIComponent(projectId)}/wacc`, {
         wacc: Number(directWacc),
         hurdle_irr: directHurdle.trim() ? Number(directHurdle) : undefined,
         mode: "direct",
         rationale: directRationale,
+        subject: subject || undefined,
+        subject_rationale: subject ? subjectRationale : undefined,
       });
       setMessage(`저장 완료 — run ${res.data.run_id}`);
+      setSubject("");
+      setSubjectRationale("");
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "WACC 입력 세션 저장에 실패했습니다.");
@@ -441,6 +461,25 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                 </dd>
               </div>
               <div><dt className="text-[color:var(--muted-fg)]">Hurdle IRR</dt><dd className="font-semibold">{pct(view.hurdle_irr?.value)}</dd></div>
+              <div>
+                <dt className="text-[color:var(--muted-fg)]">WACC 적용 주체</dt>
+                <dd className="font-semibold">
+                  {view.subject.subject === "promoter" ? "투자주체 (promoter)" : view.subject.subject === "target" ? "대상기업 (target)" : "신설법인 (project_newco)"}
+                  <span className="status-chip status-info ml-1">{view.subject.source === "user" ? "사람 확정" : "트랙 기본값"}</span>
+                </dd>
+                {view.subject.source === "user" && view.subject.rationale && (
+                  <dd className="text-[color:var(--muted-fg)] text-[0.78rem]">{view.subject.rationale}</dd>
+                )}
+              </div>
+              {view.relevering && (
+                <div>
+                  <dt className="text-[color:var(--muted-fg)]">재레버링 베타 참조</dt>
+                  <dd className="font-semibold tabular-nums">
+                    {view.relevering.beta_levered.toFixed(3)}
+                    <span className="text-[color:var(--muted-fg)] font-normal text-[0.78rem]"> = βu {view.relevering.beta_unlevered.toFixed(2)} × (1 + (1−t) × D/E {view.relevering.target_de.toFixed(2)})</span>
+                  </dd>
+                </div>
+              )}
               <div><dt className="text-[color:var(--muted-fg)]">Run</dt><dd className="font-mono">{view.wacc.run_id ?? "—"}</dd></div>
               <div><dt className="text-[color:var(--muted-fg)]">As of</dt><dd>{view.wacc.as_of ?? "—"}</dd></div>
             </dl>
@@ -568,6 +607,18 @@ export function WaccPanel({ projectId }: { projectId: string }) {
             <label className="grid gap-1 text-sm">WACC (비율)<input className="form-input" value={directWacc} onChange={(e) => setDirectWacc(e.target.value)} placeholder="0.095" /></label>
             <label className="grid gap-1 text-sm">Hurdle IRR (선택)<input className="form-input" value={directHurdle} onChange={(e) => setDirectHurdle(e.target.value)} placeholder="0.15" /></label>
             <label className="grid gap-1 text-sm">근거/승인 메모<textarea className="form-input" value={directRationale} onChange={(e) => setDirectRationale(e.target.value)} placeholder="Treasury 확인, IC 가이드라인 등" /></label>
+            <label className="grid gap-1 text-sm">
+              WACC 적용 주체 (선택 — 미확정 시 트랙 기본값)
+              <select className="form-input" value={subject} onChange={(e) => setSubject(e.target.value as typeof subject)}>
+                <option value="">트랙 기본값 따름</option>
+                <option value="promoter">투자주체 (promoter) — 자체 추진</option>
+                <option value="target">대상기업 (target) — 인수·지분참여</option>
+                <option value="project_newco">신설법인 (project_newco)</option>
+              </select>
+            </label>
+            {subject && (
+              <label className="grid gap-1 text-sm">주체 근거 (필수)<textarea className="form-input" value={subjectRationale} onChange={(e) => setSubjectRationale(e.target.value)} placeholder="현금흐름 리스크가 대상기업에 귀속 — 유사업종 베타 재레버링 근거 등" /></label>
+            )}
             <button className="primary-button justify-self-start" type="submit">이 값으로 확정</button>
             <p className="text-[color:var(--muted-fg)] text-[0.78rem]">확정하면 이 값이 사람이 확인한 최종 값(출처 등급 user)으로 기록됩니다. 저장 시 최신 run을 복사한 새 run_input 스냅샷과 assumption(wacc/hurdle_irr) 행이 함께 생성됩니다.</p>
           </form>

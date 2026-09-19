@@ -23,6 +23,7 @@ import { systemMessage } from "../../../../../../../lib/prompts.ts";
 import { getCompanyFinancialFacts, factRowsToDartItems } from "../../../../../../../lib/dart-financial-facts.ts";
 import { deriveFinancialAnalysis } from "../../../../../../../lib/company-financials.ts";
 import { loadLatestProfile } from "../../../../../../../lib/company-profile-pipeline.ts";
+import { listConfirmedCompetitors } from "../../../../../../../lib/company-competitors.ts";
 import { searchDisclosures } from "../../../../../../../lib/dart-client.ts";
 import { profileEvidenceBlock } from "../../../../../../../lib/brownfield-technical-draft.ts";
 
@@ -166,6 +167,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   }
 
   const profile = target.company_id ? loadLatestProfile(db, { kind: "company", id: target.company_id }) : null;
+  // ADR-0142 — 확정 경쟁사 레지스트리 우선 (미확정 payload 제안은 표기 후 폴백)
+  const confirmedCompetitors = target.company_id ? listConfirmedCompetitors(db, { kind: "company", id: target.company_id }) : [];
 
   // 기확보 근거 4 — 기회의 목표 시장 정의(지역 기준)·S3 필요 역량(갭)·후보 기술
   // 평가 판정. t-03(지역)/t-05(역량 적합성)/t-07(역량 보완성)의 판정 앵커다
@@ -227,7 +230,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     financialBlock,
     "",
     "회사 AI 프로파일:",
-    profileEvidenceBlock(profile),
+    profileEvidenceBlock(profile, confirmedCompetitors),
     "",
     disclosureTitles.length > 0 ? `최근 공시 제목(3년):\n${disclosureTitles.map((t) => `  - ${t}`).join("\n")}` : "최근 공시 제목: 없음",
   ].join("\n");

@@ -137,6 +137,34 @@ export function OurCompanyView() {
   const [uploadedNames, setUploadedNames] = useState<Record<string, string>>({});
   const [openMember, setOpenMember] = useState<string | null>(null);
 
+  // 경쟁사 레지스트리 (ADR-0142) — 확정 목록은 사람의 수용/등록으로만 생기고,
+  // payload 경쟁사는 "제안"으로만 표시된다.
+  interface CompetitorRowView {
+    id: string; name: string; dart_corp_code: string | null; note: string | null;
+    status: "confirmed" | "excluded"; exclusion_reason: string | null;
+    discovery_source: "manual" | "ai_proposal"; proposal_accepted_at: string;
+    crosscheck_verdict: string | null; evidence_json: string | null;
+  }
+  interface CompetitorProposalView {
+    name: string; note: string; verdict: string | null;
+    evidence: Array<{ title: string | null; url: string }>; accepted: boolean;
+  }
+  const [competitors, setCompetitors] = useState<CompetitorRowView[] | null>(null);
+  const [competitorProposals, setCompetitorProposals] = useState<CompetitorProposalView[] | null>(null);
+  const [dismissedProposals, setDismissedProposals] = useState<string[]>([]);
+  const [compBusy, setCompBusy] = useState(false);
+  const [compError, setCompError] = useState<string | null>(null);
+  const [excludingCompetitor, setExcludingCompetitor] = useState<{ id: string; reason: string } | null>(null);
+  const [editingCompetitor, setEditingCompetitor] = useState<{ id: string; note: string; dart: string } | null>(null);
+  const [competitorForm, setCompetitorForm] = useState({ name: "", dart_corp_code: "", note: "" });
+  const [competitorDartSearching, setCompetitorDartSearching] = useState(false);
+  const [competitorDartResults, setCompetitorDartResults] = useState<Array<{ corp_code: string; corp_name: string; source?: string; validated?: boolean | null }>>([]);
+  // 웹검색 재제안 (ADR-0142 후속) — 실검색 근거 기반 제안(저장 없음, 수용은 사람)
+  interface WebSuggestionView { name: string; note: string; reliability: "A" | "B" | "C"; sources: Array<{ title: string; url: string }> }
+  const [webSuggestions, setWebSuggestions] = useState<WebSuggestionView[] | null>(null);
+  const [webBusy, setWebBusy] = useState(false);
+  const [webNote, setWebNote] = useState<string | null>(null);
+
   const [profileTab, setProfileTab] = useState<ProfileTabKey>("overview");
   const [profiles, setProfiles] = useState<Record<string, Profile | "loading">>({});
   // 산업 연계 탭 — S1 시장분석 미보유 산업에 대한 분석 요청 상태
@@ -158,6 +186,147 @@ export function OurCompanyView() {
     router.replace("/our-company");
     setOpenMember(null);
   }, [router]);
+
+  // ── 경쟁사 레지스트리 액션 (ADR-0142) ──────────────────────────────
+  const loadCompetitors = useCallback((memberId: string) => {
+    api.get<{ competitors: CompetitorRowView[] }>(`/api/our-company/members/${encodeURIComponent(memberId)}/competitors`)
+      .then((r) => setCompetitors(r.data.competitors)).catch(() => setCompetitors([]));
+    api.get<{ proposals: CompetitorProposalView[] }>(`/api/our-company/members/${encodeURIComponent(memberId)}/competitor-proposals`)
+      .then((r) => setCompetitorProposals(r.data.proposals)).catch(() => setCompetitorProposals([]));
+  }, []);
+
+  useEffect(() => {
+    if (!openMember) return;
+    setDismissedProposals([]);
+    setExcludingCompetitor(null);
+    setEditingCompetitor(null);
+    loadCompetitors(openMember);
+  }, [openMember, loadCompetitors]);
+
+  async function acceptProposal(name: string) {
+    if (!openMember || compBusy) return;
+    setCompBusy(true); setCompError(null);
+    try {
+      await api.post(`/api/our-company/members/${encodeURIComponent(openMember)}/competitors`, { name, discovery_source: "ai_proposal" });
+      setDismissedProposals((prev) => [...prev, name]);
+      loadCompetitors(openMember);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "경쟁사 수용 실패");
+    } finally {
+      setCompBusy(false);
+    }
+  }
+
+  async function runCompetitorWebSearch() {
+    if (!openMember || webBusy) return;
+    setWebBusy(true); setCompError(null);
+    try {
+      const r = await api.post<{ source: "llm" | "llm_knowledge"; note: string; suggestions: WebSuggestionView[] }>(`/api/our-company/members/${encodeURIComponent(openMember)}/competitor-proposals/web-search`, {});
+      setWebSuggestions(r.data.suggestions ?? []);
+      setWebNote(r.data.note ?? null);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "웹검색 재제안 실패");
+    } finally {
+      setWebBusy(false);
+    }
+  }
+
+  async function acceptWebSuggestion(ws: WebSuggestionView) {
+    if (!openMember || compBusy) return;
+    setCompBusy(true); setCompError(null);
+    try {
+      await api.post(`/api/our-company/members/${encodeURIComponent(openMember)}/competitors`, {
+        name: ws.name,
+        note: ws.note || null,
+        discovery_source: "ai_proposal",
+        evidence: ws.sources.map((s) => ({ title: s.title, url: s.url })),
+      });
+      setWebSuggestions((prev) => (prev ?? []).filter((x) => x.name !== ws.name));
+      loadCompetitors(openMember);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "경쟁사 수용 실패");
+    } finally {
+      setCompBusy(false);
+    }
+  }
+
+  async function registerManualCompetitor() {
+    if (!openMember || compBusy || !competitorForm.name.trim()) return;
+    setCompBusy(true); setCompError(null);
+    try {
+      await api.post(`/api/our-company/members/${encodeURIComponent(openMember)}/competitors`, {
+        name: competitorForm.name,
+        dart_corp_code: competitorForm.dart_corp_code || null,
+        note: competitorForm.note || null,
+        discovery_source: "manual",
+      });
+      setCompetitorForm({ name: "", dart_corp_code: "", note: "" });
+      setCompetitorDartResults([]);
+      loadCompetitors(openMember);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "경쟁사 등록 실패");
+    } finally {
+      setCompBusy(false);
+    }
+  }
+
+  async function searchCompetitorDart() {
+    const q = competitorForm.name.trim();
+    if (!q || competitorDartSearching) return;
+    setCompetitorDartSearching(true); setCompError(null);
+    try {
+      const res = await api.get<{ configured: boolean; results: Array<{ corp_code: string; corp_name: string; source?: string; validated?: boolean | null }>; error?: string }>(`/api/synergy/dart-search?q=${encodeURIComponent(q)}`);
+      setCompetitorDartResults(res.data.results ?? []);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "DART 검색 실패");
+    } finally {
+      setCompetitorDartSearching(false);
+    }
+  }
+
+  async function saveCompetitorExclude() {
+    if (!openMember || !excludingCompetitor?.reason.trim() || compBusy) return;
+    setCompBusy(true); setCompError(null);
+    try {
+      await api.post(`/api/our-company/members/${encodeURIComponent(openMember)}/competitors/${encodeURIComponent(excludingCompetitor.id)}/exclude`, { reason: excludingCompetitor.reason.trim() });
+      setExcludingCompetitor(null);
+      loadCompetitors(openMember);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "경쟁사 제외 실패");
+    } finally {
+      setCompBusy(false);
+    }
+  }
+
+  async function restoreCompetitorRow(id: string) {
+    if (!openMember || compBusy) return;
+    setCompBusy(true); setCompError(null);
+    try {
+      await api.post(`/api/our-company/members/${encodeURIComponent(openMember)}/competitors/${encodeURIComponent(id)}/restore`, {});
+      loadCompetitors(openMember);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "경쟁사 복원 실패");
+    } finally {
+      setCompBusy(false);
+    }
+  }
+
+  async function saveCompetitorEdit() {
+    if (!openMember || !editingCompetitor || compBusy) return;
+    setCompBusy(true); setCompError(null);
+    try {
+      await api.patch(`/api/our-company/members/${encodeURIComponent(openMember)}/competitors/${encodeURIComponent(editingCompetitor.id)}`, {
+        note: editingCompetitor.note || null,
+        dart_corp_code: editingCompetitor.dart || null,
+      });
+      setEditingCompetitor(null);
+      loadCompetitors(openMember);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "경쟁사 수정 실패");
+    } finally {
+      setCompBusy(false);
+    }
+  }
 
   // ADR-0094 역할 분리 — 프로파일 완성 후 시너지·전략적 적합성(/synergy)으로 이동.
   // 이 계열사를 대상으로 한 기존 분석이 있으면 상세로 딥링크한다.
@@ -1076,32 +1245,196 @@ export function OurCompanyView() {
             {profileTab === "competitive" && (
               <div className="text-[0.88rem]">
                 <h3 className="sizing-step-title text-[0.95rem]">경쟁 포지셔닝</h3>
-                {profile.competitive && !profile.competitive.degraded ? (
-                  <>
-                    <p className="mb-2">{profile.competitive.positioning || "—"}</p>
-                    {profile.competitive.competitors.length > 0 && (
-                      <div className="table-scroll">
-                        <table className="data-table report-table" aria-label="주요 경쟁사">
-                          <caption className="sr-only">주요 경쟁사</caption>
-                          <thead>
-                            <tr><th scope="col" className="col-label">경쟁사</th><th scope="col" className="col-text">경쟁 관계</th><th scope="col" className="w-[6.5rem]">대조</th></tr>
-                          </thead>
-                          <tbody>
-                            {profile.competitive.competitors.map((c, i) => {
-                              const verdict = profile.competitive?.crossCheck?.claims.find((x) => x.claim.startsWith(`경쟁사 ${c.name}:`));
-                              const meta = verdict ? CROSSCHECK_VERDICT_META[verdict.verdict] : null;
-                              return (
-                                <tr key={`${c.name}-${i}`}>
-                                  <td className="col-label font-semibold">{c.name}</td>
-                                  <td className="col-text text-[0.82rem] text-[color:var(--muted-fg)]">{c.note || "—"}</td>
-                                  <td>{meta ? <span className={`status-chip ${meta.chip}`} title={verdict?.evidence}>{meta.label}</span> : <span className="text-[0.78rem] text-[color:var(--muted-fg)]">—</span>}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                {compError && <p role="alert" className="mb-2 text-[0.8rem] text-[color:var(--red-fg)]">{compError}</p>}
+
+                {/* ① 확정 경쟁사 — 사람의 수용·등록으로만 생긴 레지스트리(ADR-0142) */}
+                <div className="market-section mb-3">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <h4 className="text-[0.9rem] font-semibold m-0">확정 경쟁사</h4>
+                    <span className="status-chip status-green">{(competitors ?? []).filter((c) => c.status === "confirmed").length}건</span>
+                  </div>
+                  {(competitors ?? []).filter((c) => c.status === "confirmed").length === 0 ? (
+                    <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">
+                      아직 확정된 경쟁사가 없습니다 — 아래 AI 제안을 수용하거나 직접 등록하세요.
+                    </p>
+                  ) : (
+                    <div className="table-scroll">
+                      <table className="data-table report-table" aria-label="확정 경쟁사">
+                        <caption className="sr-only">확정 경쟁사</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col" className="col-label">경쟁사</th>
+                            <th scope="col" className="w-[7rem]">DART 고유번호</th>
+                            <th scope="col" className="col-text">경쟁 관계</th>
+                            <th scope="col" className="w-[7rem]">출처</th>
+                            <th scope="col" className="w-[6.5rem]">대조</th>
+                            <th scope="col" className="w-[10rem]">관리</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(competitors ?? []).filter((c) => c.status === "confirmed").map((c) => {
+                            const meta = c.crosscheck_verdict ? CROSSCHECK_VERDICT_META[c.crosscheck_verdict as keyof typeof CROSSCHECK_VERDICT_META] : null;
+                            const editing = editingCompetitor?.id === c.id;
+                            const excluding = excludingCompetitor?.id === c.id;
+                            return (
+                              <tr key={c.id}>
+                                <td className="col-label font-semibold">{c.name}</td>
+                                <td className="text-[0.78rem] tabular-nums">
+                                  {editing ? <input value={editingCompetitor.dart} onChange={(e) => setEditingCompetitor({ ...editingCompetitor, dart: e.target.value })} className="sizing-new-input" style={{ width: "7rem" }} placeholder="고유번호" /> : (c.dart_corp_code || "—")}
+                                </td>
+                                <td className="col-text text-[0.82rem] text-[color:var(--muted-fg)]">
+                                  {editing ? <input value={editingCompetitor.note} onChange={(e) => setEditingCompetitor({ ...editingCompetitor, note: e.target.value })} className="sizing-new-input" style={{ width: "100%" }} placeholder="경쟁 관계" /> : (c.note || "—")}
+                                </td>
+                                <td>{c.discovery_source === "ai_proposal" ? <span className="status-chip status-in-progress">AI 제안 수용</span> : <span className="status-chip status-not-started">수작업</span>}</td>
+                                <td>{meta ? <span className={`status-chip ${meta.chip}`} title={String(c.crosscheck_verdict)}>{meta.label}</span> : <span className="text-[0.78rem] text-[color:var(--muted-fg)]">—</span>}</td>
+                                <td>
+                                  {editing ? (
+                                    <span className="actions-row">
+                                      <button type="button" className="btn-primary btn-sm" disabled={compBusy} onClick={() => void saveCompetitorEdit()}>저장</button>
+                                      <button type="button" className="btn-ghost btn-sm" onClick={() => setEditingCompetitor(null)}>취소</button>
+                                    </span>
+                                  ) : excluding ? (
+                                    <span className="actions-row">
+                                      <input value={excludingCompetitor.reason} onChange={(e) => setExcludingCompetitor({ ...excludingCompetitor, reason: e.target.value })} className="sizing-new-input" style={{ width: "8rem" }} placeholder="제외 사유 *" />
+                                      <button type="button" className="btn-danger btn-sm" disabled={compBusy || !excludingCompetitor.reason.trim()} onClick={() => void saveCompetitorExclude()}>확인</button>
+                                      <button type="button" className="btn-ghost btn-sm" onClick={() => setExcludingCompetitor(null)}>취소</button>
+                                    </span>
+                                  ) : (
+                                    <span className="actions-row">
+                                      <button type="button" className="btn-ghost btn-sm" onClick={() => setEditingCompetitor({ id: c.id, note: c.note ?? "", dart: c.dart_corp_code ?? "" })}>수정</button>
+                                      <button type="button" className="btn-ghost btn-sm" onClick={() => setExcludingCompetitor({ id: c.id, reason: "" })}>제외</button>
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {(competitors ?? []).filter((c) => c.status === "excluded").length > 0 && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-[0.8rem] text-[color:var(--muted-fg)]">제외된 경쟁사 {(competitors ?? []).filter((c) => c.status === "excluded").length}건</summary>
+                      <ul className="sizing-note-list mt-1">
+                        {(competitors ?? []).filter((c) => c.status === "excluded").map((c) => (
+                          <li key={c.id}>
+                            {c.name} — {c.exclusion_reason ?? "사유 없음"}{" "}
+                            <button type="button" className="btn-ghost btn-sm" disabled={compBusy} onClick={() => void restoreCompetitorRow(c.id)}>복원</button>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+
+                {/* ② AI 제안 — 최신 프로필 분석의 경쟁사 후보. 수용은 사람(경계 #2) */}
+                <div className="market-section mb-3">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <h4 className="text-[0.9rem] font-semibold m-0">AI 제안</h4>
+                    <span className="text-[0.75rem] text-[color:var(--muted-fg)]">최신 프로필 분석 기준 — 제안 전용, 수용은 사람</span>
+                    <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void runCompetitorWebSearch()}>
+                      {webBusy ? "웹검색 중..." : "웹검색 재제안"}
+                    </button>
+                  </div>
+                  {(competitorProposals ?? []).filter((p) => !p.accepted && !dismissedProposals.includes(p.name)).length === 0 ? (
+                    <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">
+                      새로운 제안이 없습니다 — 프로필을 재분석하면 최신 리서치 기반 후보가 제안됩니다.
+                    </p>
+                  ) : (
+                    <div className="grid gap-2">
+                      {(competitorProposals ?? []).filter((p) => !p.accepted && !dismissedProposals.includes(p.name)).map((p) => {
+                        const meta = p.verdict ? CROSSCHECK_VERDICT_META[p.verdict as keyof typeof CROSSCHECK_VERDICT_META] : null;
+                        return (
+                          <div key={p.name} className="sizing-grade-card mb-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <strong className="text-[0.88rem]">{p.name}</strong>
+                              {meta && <span className={`status-chip ${meta.chip}`} title="공시·리서치 원문 대조 판정 (제안 시점)">{meta.label}</span>}
+                              <span className="status-chip status-not-started" title="이 제안은 확정 기록이 아니며, 수용 버튼으로만 등록됩니다">제안</span>
+                            </div>
+                            <p className="mb-1 text-[0.8rem]">{p.note || "—"}</p>
+                            {p.evidence.length > 0 && (
+                              <p className="mb-2 text-[0.72rem] text-[color:var(--muted-fg)]">
+                                근거:{" "}
+                                {p.evidence.map((e, i) => (
+                                  <span key={i}>{i > 0 && " · "}<a href={e.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{e.title || "출처"}</a></span>
+                                ))}
+                              </p>
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                              <button type="button" className="btn-primary btn-sm" disabled={compBusy} onClick={() => void acceptProposal(p.name)}>수용</button>
+                              <button type="button" className="btn-ghost btn-sm" onClick={() => setDismissedProposals((prev) => [...prev, p.name])}>무시</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {webSuggestions && webSuggestions.length > 0 && (
+                    <div className="grid gap-2 mt-2">
+                      <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">{webNote ?? "웹검색 기반 추가 제안"}</p>
+                      {webSuggestions.map((ws) => (
+                        <div key={ws.name} className="sizing-grade-card mb-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <strong className="text-[0.88rem]">{ws.name}</strong>
+                            <span className={`status-chip ${ws.reliability === "B" ? "status-in-progress" : "status-amber"}`} title="웹검색 근거 기반 제안 — 수용 전 출처를 확인하세요">
+                              {ws.reliability === "B" ? "제안 · 웹검색 근거" : "제안 · 미검증"}
+                            </span>
+                          </div>
+                          <p className="mb-1 text-[0.8rem]">{ws.note || "—"}</p>
+                          {ws.sources.length > 0 && (
+                            <p className="mb-2 text-[0.72rem] text-[color:var(--muted-fg)]">
+                              근거:{" "}
+                              {ws.sources.map((e, i) => (
+                                <span key={i}>{i > 0 && " · "}<a href={e.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{e.title || "출처"}</a></span>
+                              ))}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            <button type="button" className="btn-primary btn-sm" disabled={compBusy} onClick={() => void acceptWebSuggestion(ws)}>수용</button>
+                            <button type="button" className="btn-ghost btn-sm" onClick={() => setWebSuggestions((prev) => (prev ?? []).filter((x) => x.name !== ws.name))}>무시</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* ③ 수작업 등록 — 상시 노출 (브라운필드 후보 등록 폼 패턴) */}
+                <div className="market-section mb-3">
+                  <h4 className="text-[0.9rem] font-semibold mb-2">수작업 등록</h4>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <input value={competitorForm.name} onChange={(e) => setCompetitorForm({ ...competitorForm, name: e.target.value })} className="sizing-new-input" style={{ width: "14rem" }} placeholder="경쟁사명 *" aria-label="경쟁사명" />
+                    <button type="button" className="btn-ghost btn-sm" disabled={competitorDartSearching || !competitorForm.name.trim()} onClick={() => void searchCompetitorDart()}>DART 검색</button>
+                    <input value={competitorForm.dart_corp_code} onChange={(e) => setCompetitorForm({ ...competitorForm, dart_corp_code: e.target.value })} className="sizing-new-input" style={{ width: "10rem" }} placeholder="DART 고유번호 (선택, 8자리)" aria-label="경쟁사 DART 고유번호" />
+                    <input value={competitorForm.note} onChange={(e) => setCompetitorForm({ ...competitorForm, note: e.target.value })} className="sizing-new-input" style={{ flex: "1 1 14rem" }} placeholder="경쟁 관계 (선택)" aria-label="경쟁 관계" />
+                    <button type="button" className="btn-primary btn-sm" disabled={compBusy || !competitorForm.name.trim()} onClick={() => void registerManualCompetitor()}>등록</button>
+                  </div>
+                  {competitorDartResults.length > 0 && (
+                    <ul className="sizing-note-list">
+                      {competitorDartResults.map((r) => (
+                        <li key={r.corp_code}>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => setCompetitorForm({ ...competitorForm, name: r.corp_name, dart_corp_code: r.corp_code })}>이 회사로 채우기</button>{" "}
+                          <strong>{r.corp_name}</strong> <code className="text-[0.72rem]">{r.corp_code}</code>
+                          {r.source === "web" && <span className="status-chip status-amber ml-1">웹 미검증 후보</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* AI 분석 참고 — payload 원문(제안 원천). 확정 목록과 별개다. */}
+                <details className="market-section">
+                  <summary className="cursor-pointer text-[0.85rem] font-semibold">AI 분석 참고 — 포지셔닝·공시 대조 원문 (확정 목록과 별개)</summary>
+                  {profile.competitive && !profile.competitive.degraded ? (
+                    <>
+                      <p className="mt-2 mb-2">{profile.competitive.positioning || "—"}</p>
+                      {profile.competitive.competitors.length > 0 && (
+                        <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+                          이 분석에서 제안된 경쟁사 {profile.competitive.competitors.length}건 — 위 "AI 제안"에서 수용 여부를 결정하세요.
+                        </p>
+                      )}
                     {profile.competitive.crossCheck && (
                       <div className="mt-3">
                         <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -1161,6 +1494,7 @@ export function OurCompanyView() {
                     {profile.competitive?.degraded ?? "경쟁 포지셔닝 데이터가 없습니다 — 재분석 시 생성됩니다."}
                   </p>
                 )}
+                </details>
               </div>
             )}
 

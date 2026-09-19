@@ -174,6 +174,10 @@ export function BrownfieldView() {
   // 위원회 추천 검토 일괄 실행 상태
   const [recoBusy, setRecoBusy] = useState(false);
   const [recoProgress, setRecoProgress] = useState<string | null>(null);
+  // 사전 검토 표 접힘 — 미완료면 기본 펼침, 전 후보 검토 완료면 기본 접음
+  // (2026-09-18 리뷰: 하단 4블록이 항상 펼쳐 페이지가 지나치게 길었다).
+  // null = 데이터 따름, 사용자가 토글하면 그 선택이 우선한다.
+  const [precheckOpen, setPrecheckOpen] = useState<boolean | null>(null);
   const [excludeReason, setExcludeReason] = useState<Record<string, string>>({});
   const [newTarget, setNewTarget] = useState({ company_name: "", dart_corp_code: "" });
   // S6 목표 시장 정의 — 완료기준(definition + 최소 Long List 커버리지).
@@ -1165,6 +1169,17 @@ export function BrownfieldView() {
                   만들고 (2) 그 제안을 심의 근거로 위원회를 소집한다. 사람은 표에서
                   제안을 검토·수정한 뒤 저장으로 확정하고, 게이트 결정(사람)으로
                   이어진다. */}
+              {(() => {
+                // 접힘 기본값: 사용자 선택 > (미완료 → 펼침 / 완료 → 접음)
+                const precheckOpenEffective = precheckOpen ?? precheckIncomplete > 0;
+                return (
+                  <details
+                    open={precheckOpenEffective}
+                    onToggle={(e) => setPrecheckOpen((e.currentTarget as HTMLDetailsElement).open)}
+                  >
+                    <summary className="cursor-pointer text-[0.8rem] text-[color:var(--muted-fg)]">
+                      판정표 열기/닫기 — 후보 {shortlistedTargets.length}건 × chk-target-screening {checklistItems.length}항목
+                    </summary>
               {recoBusy && (
                 <p className="text-[0.78rem] text-[color:var(--amber-fg)] mb-2" role="status">
                   근거 수집·판정 제안 생성 중 — {recoProgress ?? "준비 중"} (완료되면 이 표의 미판정 셀이 채워지고 위원회가 자동 소집됩니다. 수십 초 걸릴 수 있습니다)
@@ -1317,11 +1332,14 @@ export function BrownfieldView() {
                   버튼을 누르면 ① 위 표의 미판정 셀에 판정 제안이 채워지고(기확보 정보 활용 + 부족한 정보만 검색) ② 그 제안을 근거로 위원회가 심의해 ③ 아래 Target Screening 게이트 결정(사람)에 제안합니다. 제안 확정은 표의 판정 저장으로 합니다.
                 </span>
               </div>
+                  </details>
+                );
+              })()}
               <CommitteePanel
                 opportunityId={selected.opportunity.id}
                 committeeKey="target-longlist-shortlist-committee"
                 committeeLabel="S6/S7 Short List 최종 검토 위원회 (롱리스트→숏리스트)"
-                gates={["screening"]}
+                gates={["target_screening"]}
                 briefMd={buildEvalBriefMd(selected.targets, selected.checklist, precheckDraft)}
                 beforeConvene={runCommitteePrecheck}
                 conveneLabel="위원회 추천 검토 · 소집"

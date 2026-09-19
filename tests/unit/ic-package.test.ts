@@ -106,8 +106,8 @@ beforeAll(async () => {
     [sourceOppId, "S11 테스트 기회", "테스트 산업", "selected", ANALYST, NOW],
   );
   db.run(
-    "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)",
-    [ulid(), sourceOppId, "greenfield", "test route", ANALYST, NOW],
+    "INSERT INTO route_decision (id, opportunity_id, track, rationale, alternatives_considered, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
+    [ulid(), sourceOppId, "greenfield", "test route", "M&A 대안 검토 후 제외", ANALYST, NOW],
   );
   db.run(
     `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
@@ -130,15 +130,15 @@ beforeAll(async () => {
 
   // S8 artifact: one case + one persisted simulation percentile.
   db.run(
-    "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
-    ["bc-ic1", projectId, "greenfield_cost", "IC 패키지 케이스", 5, ANALYST, NOW],
+    "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, inputs_json) VALUES (?,?,?,?,?,?,?,?)",
+    ["bc-ic1", projectId, "greenfield_cost", "IC 패키지 케이스", 5, ANALYST, NOW, "{}"],
   );
   // S11 charter baseline JSON exists from promotion (ADR-0104); the human
   // CONFIRMATION act is exercised through the confirm endpoint in describe (e).
   db.run("UPDATE md_project SET charter_json = ? WHERE id = ?", [JSON.stringify({ versions: [{ version: 1, purpose: "IC 테스트 목적" }] }), projectId]);
   db.run(
-    "INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-    [ulid(), projectId, "bc-ic1", "base", "p50", 12000, 0.14, "seed=42", NOW],
+    "INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at, bep_year, payback_discounted_years) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+    [ulid(), projectId, "bc-ic1", "base", "p50", 12000, 0.14, "seed=42", NOW, 2.5, 2.5],
   );
 
   // S9 artifact: one judged state row (approved-custom path — judged pass),

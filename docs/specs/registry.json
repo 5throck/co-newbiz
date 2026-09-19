@@ -406,6 +406,78 @@
       "source": "manual",
       "created": "2026-09-16",
       "last_updated": "2026-09-16"
+    },
+    {
+      "id": "2026-09-17-sidebar-drawer-design",
+      "title": "sidebar drawer design",
+      "file": "docs/designs/2026-09-17-sidebar-drawer-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-17",
+      "last_updated": "2026-09-17"
+    },
+    {
+      "id": "2026-09-17-project-role-lead-member-design",
+      "title": "project role lead member design",
+      "file": "docs/designs/2026-09-17-project-role-lead-member-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-17",
+      "last_updated": "2026-09-17"
+    },
+    {
+      "id": "2026-09-18-s1s7-process-alignment-design",
+      "title": "s1s7 process alignment design",
+      "file": "docs/designs/2026-09-18-s1s7-process-alignment-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-17",
+      "last_updated": "2026-09-17"
+    },
+    {
+      "id": "2026-09-18-s8-business-case-evaluation-design",
+      "title": "s8 business case evaluation design",
+      "file": "docs/designs/2026-09-18-s8-business-case-evaluation-design.md",
+      "status": "draft",
+      "source": "manual",
+      "created": "2026-09-17",
+      "last_updated": "2026-09-17"
+    },
+    {
+      "id": "2026-09-18-company-competitor-registry-design",
+      "title": "company competitor registry design",
+      "file": "docs/designs/2026-09-18-company-competitor-registry-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-17",
+      "last_updated": "2026-09-17"
+    },
+    {
+      "id": "2026-09-18-competitor-followup-nav-split-design",
+      "title": "competitor followup nav split design",
+      "file": "docs/designs/2026-09-18-competitor-followup-nav-split-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-18",
+      "last_updated": "2026-09-18"
+    },
+    {
+      "id": "2026-09-18-target-costing-price-anchor-design",
+      "title": "target costing price anchor design",
+      "file": "docs/designs/2026-09-18-target-costing-price-anchor-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-18",
+      "last_updated": "2026-09-18"
+    },
+    {
+      "id": "2026-09-19-sim-engine-runtime-separation-design",
+      "title": "sim engine runtime separation design",
+      "file": "docs/designs/2026-09-19-sim-engine-runtime-separation-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-09-19",
+      "last_updated": "2026-09-19"
     }
   ]
 }

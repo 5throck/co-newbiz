@@ -212,8 +212,9 @@ function writeAgentPosition(runId: string, p: DeliberationPosition, round: numbe
 export interface ConveneOpts {
   committeeKey: string;
   decisionMode: DecisionMode;
-  /** gate_evaluation.gate (0045 CHECK enum). Defaults per committee scope. */
-  gate?: "screening" | "pre_fs" | "fs" | "dd" | "entity_ic" | "group_ic";
+  /** gate_evaluation.gate (0111 CHECK enum — 'target_screening' added for the
+   * S7 committee). Defaults per committee scope. */
+  gate?: "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
   /** S6/S7 sessions: the brownfield_target under deliberation. */
   targetRef?: string;
   /** Conditional-seat resolution (applies_when: track == ...). */
@@ -288,7 +289,9 @@ export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOp
   if (!committee.decision_modes_allowed.includes(opts.decisionMode)) {
     throw new CommitteeError("mode_not_allowed", `committee '${opts.committeeKey}' allows [${committee.decision_modes_allowed.join(", ")}] — '${opts.decisionMode}' is not allowed`);
   }
-  const gate = opts.gate ?? (committee.applies_to === "brownfield_target" ? "screening" : "pre_fs");
+  // S7 committee (applies_to brownfield_target) convenes the target_screening
+  // gate — the same key the human GateDecisionPanel below records (0111).
+  const gate = opts.gate ?? (committee.applies_to === "brownfield_target" ? "target_screening" : "pre_fs");
   const meta: SessionMeta = {
     committee_key: opts.committeeKey,
     decision_mode: opts.decisionMode,

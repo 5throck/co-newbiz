@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -31,11 +31,25 @@ import {
   Users,
   ScrollText,
   FolderKanban,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
 import { api, type NotificationRow } from "../lib/api.ts";
 import { ADMIN_NAV, NAV_SECTIONS, type NavItem } from "../lib/navigation.ts";
+import { useModalFocus } from "../lib/use-modal-focus.ts";
 import { ThemeToggle } from "./ThemeToggle.tsx";
+
+// 사이드 메뉴 상태 — docked(펼침, 데스크톱 전용) / closed(접힘: 데스크톱은
+// 폭 0 수축 push, 모바일은 화면 밖 대기) / open(모바일 오버레이 드로어).
+// 데스크톱에는 오버레이가 없다 — 표준 push 전환(폭 수축에 콘텐츠 동기 확장).
+// CSS는 .app-shell의 data-sidebar-state 속성만 본다.
+type SidebarState = "docked" | "open" | "closed";
+
+// 접힘 선호 저장 키. 테마("cn-theme")와 다르게 사전 페인트 인라인 스크립트가
+// 필요 없다 — 사이드바는 인증 확인 후에야 렌더되므로 첫 페인트에 깜빡일
+// 대상이 없고, 마운트 후 동기화로 충분하다.
+const SIDEBAR_KEY = "cn-sidebar";
 
 interface AdminNavItem {
   href: string;
@@ -85,7 +99,13 @@ const CHILD_ICON: ReactNode = <Landmark size={14} />;
 // 우측 상단 바 — 맨 왼쪽에 상세 화면용 뒤로 가기, 오른쪽에 테마 전환·로그아웃·
 // 사용자 표시. 위치 표시는 페이지 제목(h1)과 중복되지 않도록 목록 페이지에서는
 // 숨기고, 하위 상세 경로에서만 뒤로 가기 필로 제공한다.
-function Topbar({ pathname, hasAppHistory }: { pathname: string; hasAppHistory: boolean }) {
+function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggleSidebar }: {
+  pathname: string;
+  hasAppHistory: boolean;
+  sidebarState: SidebarState;
+  sidebarDocked: boolean;
+  onToggleSidebar: () => void;
+}) {
   const { me, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -155,6 +175,22 @@ function Topbar({ pathname, hasAppHistory }: { pathname: string; hasAppHistory: 
       : found?.parent ? found.parent.label : item?.label ?? "목록";
   return (
     <header className="topbar">
+      {/* 사이드 메뉴 토글(topbar) — 사이드바가 화면에 없을 때(접힘/모바일)
+          만 렌더된다(듀얼홈 패턴). 펼침 상태에서는 사이드바 헤더의 접기
+          버튼이 그 역할을 하며, 같은 동작이 두 곳에 동시에 보이면 안 된다.
+          icon-only 버튼이므로 aria-label 필수(design-lint). */}
+      {!sidebarDocked && (
+        <button
+          type="button"
+          className="topbar-icon-btn"
+          onClick={onToggleSidebar}
+          aria-label={sidebarState === "open" ? "사이드 메뉴 닫기" : "사이드 메뉴 열기"}
+          aria-expanded={sidebarState === "open"}
+          title={sidebarState === "open" ? "사이드 메뉴 닫기" : "사이드 메뉴 열기"}
+        >
+          {sidebarState === "closed" ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+        </button>
+      )}
       {isNested && (item || dealStageMatch || dealOverviewMatch) && (
         <button
           type="button"
@@ -206,7 +242,15 @@ function Topbar({ pathname, hasAppHistory }: { pathname: string; hasAppHistory: 
 }
 
 // 관리자 전용 내비 — admin 역할은 이 그룹만 사용한다 (ADR-0091: 역할-화면 분리).
-function Sidebar() {
+// panelRef/inert는 드로어 모드용: open일 때는 오버레이 포커스 관리 패널로,
+// closed일 때는 탭·포커스 불가 상태(inert)로 렌더된다. onToggleSidebar는
+// 듀얼홈용 — 데스크톱 docked 상태에서만 전달되며, 그때 헤더에 접기 버튼이
+// 렌더된다(사이드바가 숨으면 topbar 토글로 역할을 넘긴다).
+function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar }: {
+  panelRef?: RefObject<HTMLElement | null>;
+  inert?: boolean;
+  onToggleSidebar?: () => void;
+}) {
   const { me } = useAuth();
   const pathname = usePathname();
   if (!me) return null;
@@ -214,11 +258,24 @@ function Sidebar() {
   // ADR-0091 — 역할-화면 분리: admin은 관리 화면만, 비관리자는 비즈니스 화면만 본다.
   if (me.role === "admin") {
     return (
-      <aside className="app-sidebar">
-        <Link href="/admin" className="sidebar-brand">
-          <span className="sidebar-brand-icon">CN</span>
-          <span>co-newbiz 관리</span>
-        </Link>
+      <aside ref={panelRef} className="app-sidebar" inert={inertAttr}>
+        <div className="sidebar-head">
+          <Link href="/admin" className="sidebar-brand">
+            <span className="sidebar-brand-icon">CN</span>
+            <span>co-newbiz 관리</span>
+          </Link>
+          {onToggleSidebar && (
+            <button
+              type="button"
+              className="sidebar-collapse-btn"
+              onClick={onToggleSidebar}
+              aria-label="사이드 메뉴 접기"
+              title="사이드 메뉴 접기"
+            >
+              <PanelLeftClose size={20} />
+            </button>
+          )}
+        </div>
         <div>
           <div className="sidebar-group-label">관리</div>
           <nav className="sidebar-nav" aria-label="관리">
@@ -264,11 +321,24 @@ function Sidebar() {
     : null;
 
   return (
-    <aside className="app-sidebar">
-      <Link href="/deals" className="sidebar-brand">
-        <span className="sidebar-brand-icon">CN</span>
-        <span>co-newbiz</span>
-      </Link>
+    <aside ref={panelRef} className="app-sidebar" inert={inertAttr}>
+      <div className="sidebar-head">
+        <Link href="/deals" className="sidebar-brand">
+          <span className="sidebar-brand-icon">CN</span>
+          <span>co-newbiz</span>
+        </Link>
+        {onToggleSidebar && (
+          <button
+            type="button"
+            className="sidebar-collapse-btn"
+            onClick={onToggleSidebar}
+            aria-label="사이드 메뉴 접기"
+            title="사이드 메뉴 접기"
+          >
+            <PanelLeftClose size={20} />
+          </button>
+        )}
+      </div>
       {NAV_SECTIONS.map((section) => {
         const items = section.items;
         if (items.length === 0) return null;
@@ -279,9 +349,15 @@ function Sidebar() {
               {items.map((item) => {
                 const children = item.href === "/projects" && item.children && projectStageChildren ? projectStageChildren : item.children;
                 if (children) {
-                  const childActive = children.some(
-                    (c) => pathname === c.href || pathname.startsWith(c.href + "/"),
-                  );
+                  // 앵커 자식(/x#hash)은 pathname과 같아질 수 없으므로 부모 href와의
+                  // 비교를 기준으로 활성 판정한다(자식 base = 부모 href).
+                  const childActive =
+                    pathname === item.href ||
+                    pathname.startsWith(item.href + "/") ||
+                    children.some((c) => {
+                      const base = c.href.split("#")[0];
+                      return pathname === base || pathname.startsWith(base + "/");
+                    });
                   return (
                     <div key={item.href} className="side-nav-submenu">
                       <Link
@@ -330,6 +406,28 @@ function Sidebar() {
   );
 }
 
+// 모바일 드로어 오버레이 — isMobile인 동안(닫힘 포함) 마운트돼 스크림이
+// 상태 전환으로 페이드 인/아웃된다. useModalFocus의 active 게이트 덕분에
+// 열렸을 때만 초기 포커스·포커스 트랩이 적용되고 닫히면 포커스가 복원된다
+// (ADR-0082 dialog 관례의 modal-backdrop + focus trap 재사용).
+function SidebarDrawer({ open, onClose, children }: {
+  open: boolean;
+  onClose: () => void;
+  children: (panelRef: RefObject<HTMLElement | null>) => ReactNode;
+}) {
+  const { panelRef, onKeyDown } = useModalFocus<HTMLElement>(onClose, open);
+  return (
+    <div
+      className="modal-backdrop drawer-backdrop"
+      onClick={(e) => { if (open && e.target === e.currentTarget) onClose(); }}
+      onKeyDown={onKeyDown}
+      aria-hidden={!open}
+    >
+      {children(panelRef)}
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { me, loading } = useAuth();
   const pathname = usePathname();
@@ -360,6 +458,58 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [me, loading, pathname, router]);
 
+  // 사이드 메뉴 드로어 — 접힘 선호(영속) + 드로어 열림(일시) + 모바일 판정.
+  // 접힘 복원은 마운트 후 한 번: 인증 확인이 끝나야 사이드바가 렌더되므로
+  // 이 동기화가 항상 렌더에 먼저 끝난다(사전 페인트 스크립트 불필요).
+  const [collapsed, setCollapsed] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SIDEBAR_KEY) === "collapsed") setCollapsed(true);
+    } catch {
+      // localStorage 불가 환경(비공개 모드 등) — 기본값(펼침) 유지.
+    }
+    const mq = window.matchMedia("(max-width: 880px)");
+    const syncMobile = () => setIsMobile(mq.matches);
+    syncMobile();
+    mq.addEventListener("change", syncMobile);
+    return () => mq.removeEventListener("change", syncMobile);
+  }, []);
+
+  // 경로 이동 시 드로어를 닫는다 — 메뉴 항목 클릭 후 오버레이가 남지 않게.
+  // pathname에는 조회 파라미터가 없으므로 상세 뷰 전환(/market?industry=…)엔
+  // 반응하지 않는다.
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  const sidebarState: SidebarState = isMobile
+    ? (drawerOpen ? "open" : "closed")
+    : (collapsed ? "closed" : "docked");
+
+  const setCollapsedPersisted = useCallback((v: boolean) => {
+    setCollapsed(v);
+    try {
+      localStorage.setItem(SIDEBAR_KEY, v ? "collapsed" : "expanded");
+    } catch {
+      // localStorage 불가 환경 — 이 페이지에서만 접힘 유지.
+    }
+  }, []);
+
+  // 표준 2상태 직접 토글 — 데스크톱은 접기/펼치기(오버레이 없음, 폭 수축
+  // push 전환), 모바일은 드로어 열기/닫기(오버레이 + 스크림).
+  const toggleSidebar = useCallback(() => {
+    if (isMobile) {
+      setDrawerOpen((v) => !v);
+      return;
+    }
+    setCollapsedPersisted(!collapsed);
+  }, [isMobile, collapsed, setCollapsedPersisted]);
+
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
   // /register는 로그인 전 접근 가능해야 한다(계정 신청 → 관리자 승인 플로우).
   if (pathname === "/login" || pathname === "/register") return <>{children}</>;
   if (loading)
@@ -372,11 +522,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (me.mustChangePassword && pathname !== "/password-change") return null;
 
   return (
-    <div className="app-shell">
-      <Sidebar />
+    <div className="app-shell" data-sidebar-state={sidebarState}>
+      {isMobile ? (
+        <SidebarDrawer open={drawerOpen} onClose={closeDrawer}>
+          {(drawerPanelRef) => <Sidebar panelRef={drawerPanelRef} inert={!drawerOpen} />}
+        </SidebarDrawer>
+      ) : (
+        <Sidebar inert={collapsed} onToggleSidebar={toggleSidebar} />
+      )}
       <div className="app-main-col">
         <Suspense fallback={null}>
-          <Topbar pathname={pathname} hasAppHistory={hasAppHistory} />
+          <Topbar
+            pathname={pathname}
+            hasAppHistory={hasAppHistory}
+            sidebarState={sidebarState}
+            sidebarDocked={!isMobile && !collapsed}
+            onToggleSidebar={toggleSidebar}
+          />
         </Suspense>
         <div className="app-content">{children}</div>
       </div>

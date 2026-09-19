@@ -164,9 +164,13 @@ export async function researchSourcesDetailed(queries: string[], limit = 10): Pr
     }
   }
   if (isDdgEnabled() && (merged.length === 0 || quotaExceeded)) {
+    // 폴백 개시 가시성 — 성공은 조용히 지나가므로 운영자가 체인 동작을 알 수
+    // 없다. 개시 시 쿼리 수와 회수 결과를 한 줄로 남긴다(2026-09-19).
+    console.info(`[web-research] ddg fallback engaged — ${queries.length} query(ies), tavily quotaExceeded=${quotaExceeded}`);
     for (const q of queries) {
       if (merged.length >= limit) break;
       const r = await ddgSearchDetailed(q, { maxResults: 4 });
+      if (r.sources.length === 0) console.info(`[web-research] ddg returned 0 results for: ${q.slice(0, 60)}`);
       for (const s of r.sources) push(s);
     }
   }

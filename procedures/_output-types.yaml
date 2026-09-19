@@ -108,3 +108,4 @@ output_types:
   chain_node_sensitivity_set: "ADR-0066 — per-node×driver sensitivity/lag estimates with fit quality written to chain_node_sensitivity (quant-methodologist)"
   wacc_hurdle_confirmed: "kind=user WACC / hurdle-IRR confirmation record (checklist bf-02)"
   works_council_consultation_requirement: "Region layer — labor/works-council consultation requirement finding"
+  target_cost_gap: "Target costing — market price reversed into allowable cost vs estimated unit cost, with the gap and reduction levers (design 2026-09-18-s8-business-case-evaluation REQ-W2-1)"

@@ -27,18 +27,26 @@ export interface TechnicalDraft {
   source_url: string | null;
 }
 
-/** AI 프로파일 → 근거 텍스트 블록(강점·약점·종합평가·산업 노출·포지셔닝). */
-export function profileEvidenceBlock(profile: CompanyProfilePayload | null): string {
+/** AI 프로파일 → 근거 텍스트 블록(강점·약점·종합평가·산업 노출·포지셔닝).
+ *  경쟁사는 확정 레지스트리(ADR-0142)가 우선 — 없으면 payload 제안을
+ *  "미확정" 표기와 함께 쓴다(제안을 확정처럼 서술하지 않기 위함). */
+export function profileEvidenceBlock(
+  profile: CompanyProfilePayload | null,
+  confirmedCompetitors?: Array<{ name: string; note: string | null }>,
+): string {
   if (!profile) return "없음 — 아직 AI 분석을 실행하지 않았습니다.";
+  const competitorLine = confirmedCompetitors && confirmedCompetitors.length > 0
+    ? `경쟁사(확정): ${confirmedCompetitors.map((c) => `${c.name}(${c.note ?? "—"})`).join(" / ")}`
+    : profile.competitive?.competitors && profile.competitive.competitors.length > 0
+      ? `경쟁사(미확정 — AI 제안): ${profile.competitive.competitors.map((c) => `${c.name}(${c.note})`).join(" / ")}`
+      : null;
   const lines = [
     `종합 평가: ${profile.businessAssessment || "—"}`,
     profile.strengths.length > 0 ? `강점: ${profile.strengths.join(" / ")}` : "강점: —",
     profile.weaknesses.length > 0 ? `약점: ${profile.weaknesses.join(" / ")}` : "약점: —",
     profile.industryExposure.length > 0 ? `산업 노출: ${profile.industryExposure.join(" / ")}` : "산업 노출: —",
     profile.competitive?.positioning ? `경쟁 포지셔닝: ${profile.competitive.positioning}` : null,
-    profile.competitive?.competitors && profile.competitive.competitors.length > 0
-      ? `경쟁사: ${profile.competitive.competitors.map((c) => `${c.name}(${c.note})`).join(" / ")}`
-      : null,
+    competitorLine,
   ].filter((x): x is string => x != null);
   return lines.join("\n");
 }

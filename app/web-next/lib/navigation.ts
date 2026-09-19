@@ -47,7 +47,12 @@ export const NAV_SECTIONS: NavSection[] = [
       // 하위 메뉴가 아니라 동등한 레벨의 항목으로 노출한다.
       { href: "/route-decision", label: "S4 진출방식 결정" },
       { href: "/greenfield", label: "S5 자체 진출" },
-      { href: "/brownfield", label: "S6/S7 대상발굴·선정" },
+      { href: "/brownfield", label: "S6/S7 대상발굴·선정", children: [
+        // 앵커 자식 — 브라운필드 화면의 섹션 id로 바로 이동한다(2026-09-18 리뷰:
+        // S5와의 대칭성 개선). 해시 제거 시 실제 페이지로 해석된다(네비 테스트 준수).
+        { href: "/brownfield#s6s7-universe", label: "S6 대상 후보 발굴" },
+        { href: "/brownfield#s6s7-shortlist", label: "S7 대상 선정" },
+      ] },
       // S8~S12 — 프로젝트(project id)로 승격된 뒤에만 실제로 열리는 화면이라
       // 정적 자식 링크는 /projects(선택 목록)로 보낸다. 프로젝트를 이미 열어
       // 둔 상태라면 이 하위 메뉴가 그 프로젝트 id로 바로 열리는 S8~S12

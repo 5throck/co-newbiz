@@ -54,7 +54,7 @@ beforeAll(async () => {
   db.run("INSERT INTO opportunity (id, name, status, created_by, created_at) VALUES (?,?,?,?,?)", [oppA, "딜 삭제 테스트 기회", "selected", "test", NOW]);
   db.run("INSERT INTO md_project (id, project_no, created_at, project_name, source_opportunity_id, track) VALUES (?,?,?,?,?,?)", [projId, "PRJ-DELTEST", NOW, "삭제 테스트 프로젝트", oppA, "brownfield"]);
   db.run("UPDATE opportunity SET project_id = ?, promoted_at = ? WHERE id = ?", [projId, NOW, oppA]);
-  for (const [u, role] of [["lead-del", "lead"], ["contrib-del", "contributor"]] as const) {
+  for (const [u, role] of [["lead-del", "lead"], ["contrib-del", "member"]] as const) {
     db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projId, u, role, "test", NOW, "test"]);
   }
 

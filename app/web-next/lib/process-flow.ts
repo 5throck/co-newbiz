@@ -40,7 +40,7 @@ export const STAGES: StageDefinition[] = [
   { id: "S5", name: "자체 진출", sequence: 5, objective: "스스로 진입할 수 있는가? — 자체 역량을 평가하고 격차를 구축 방안(Build/Partner/Hire/Invest)으로 해소해 진출전략을 세운다 (Greenfield 전용 — Target Company 객체가 존재하지 않는다)", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차 평가", "진출전략(Build/Partner/Hire/Invest 결정·근거)"] },
   { id: "S6", name: "대상 후보 발굴", sequence: 6, objective: "누구와 결합할 것인가? — Opportunity에 진입 가능한 기존 기업·자산의 Target Universe를 정의하고 Target Company Long List를 작성한다 (Brownfield 전용)", applicableTracks: ["brownfield"], gateIds: ["pre_fs"], requiredArtifacts: ["Target Universe 정의", "Target Company Long List"] },
   { id: "S7", name: "대상 선정", sequence: 7, objective: "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)", applicableTracks: ["brownfield"], gateIds: ["target_screening"], requiredArtifacts: ["Target Company Short List", "Target Ranking/Score", "Exclusion Reasons"] },
-  { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다", applicableTracks: ["all"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션)", "시뮬레이션 NPV 분위수"] },
+  { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다", applicableTracks: ["all"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션)", "시뮬레이션 NPV 분위수", "BEP 시점과 시뮬레이션 입력 스냅샷"] },
   { id: "S9", name: "실사·검증", sequence: 9, objective: "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 Short List 대상 DD, greenfield는 실현가능성 검증)", applicableTracks: ["all"], gateIds: ["dd"], requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"] },
   { id: "S10", name: "투자구조 설계", sequence: 10, objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 비히클(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["투자구조 가설(4축 검토 완료)", "자금조달 계획(sources & uses 균형)"] },
   { id: "S11", name: "투자심사·실행", sequence: 11, objective: "투자할 것인가? — 투자 구조(Deal/Investment Structure: 비히클·자금 조달·지급 구조)를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다", applicableTracks: ["all"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["IC 패키지", "추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"] },
@@ -93,10 +93,10 @@ export function latestGateDecisions(entityType: "opportunity" | "project", entit
 // Latest gate_decision per gate is shared by the process engine and the
 // gate-decisions API so the tie-breaking rule cannot drift between surfaces.
 
-export function latestRouteDecision(opportunityId: string): { id: string; track: "greenfield" | "brownfield"; sub_track: string | null } | undefined {
+export function latestRouteDecision(opportunityId: string): { id: string; track: "greenfield" | "brownfield"; sub_track: string | null; alternatives_considered: string | null } | undefined {
   return getDb()
-    .query("SELECT id, track, sub_track FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
-    .get(opportunityId) as { id: string; track: "greenfield" | "brownfield"; sub_track: string | null } | undefined;
+    .query("SELECT id, track, sub_track, alternatives_considered FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
+    .get(opportunityId) as { id: string; track: "greenfield" | "brownfield"; sub_track: string | null; alternatives_considered: string | null } | undefined;
 }
 
 // ── Stage completion predicate registry ──────────────────────────────────
@@ -152,9 +152,11 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
         missing.push("가치사슬 구조");
       }
     }
-    // v2.4.0 완료기준 — 최신 완료 버전 매트릭스에 경쟁 구조(집중도 요약·주요
-    // 플레이어)가 기록되어야 한다. 기존 완료 분석 다수가 경쟁 구조 이전 버전이라
-    // 소프트 권고로 유지한다: 완료 처리는 바꾸지 않고 재분석 보강을 유도한다.
+    // flow.spec S1 completionCriteria — 최신 완료 버전 매트릭스에 경쟁 구조
+    // (집중도 요약·주요 플레이어)가 기록되어야 한다. v2.4.0 도입 당시에는 기존
+    // 완료 분석 다수가 경쟁 구조 이전 버전이라 소프트 권고로 유지했으나, 그
+    // 전환기는 종료했다(2026-09-18 스펙-엔진 정합): 미기록이면 완료를 막고
+    // requiredArtifacts 누락으로 요구한다. 재분석으로 보강한다.
     if (hasMatrix && industry) {
       const latest = getDb()
         .query(
@@ -167,7 +169,10 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
       const hasCompetitive = !!latest && (() => {
         try { return Boolean((JSON.parse(latest.payload) as { matrix?: { competitive?: unknown } }).matrix?.competitive); } catch { return false; }
       })();
-      if (!hasCompetitive) blockers.push("S1 경쟁 구조 미기록 — 재분석으로 집중도·주요 플레이어 보강 권장");
+      if (!hasCompetitive) {
+        blockers.push("S1 경쟁 구조 미기록 — 재분석으로 집중도·주요 플레이어를 보강해야 합니다");
+        missing.push("경쟁 구조");
+      }
     }
     complete = !missing.length; // blockers에 권고 문구가 있어도 산출물이 있으면 완료
     return { complete, blockers, missing };
@@ -205,7 +210,9 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     // flow.spec S4 completionCriteria: route_decision 존재(트랙 필수).
     // brownfield는 sub_track(7 라우트 중 1)을 요구하고, 5-criteria 채점은
     // 양 트랙 모두 의무다 (스펙 v2.2.0+ "Greenfield인 경우에도 5criteria 채점
-    // 결과를 기록한다" — ADR-0104 트랙 간 비교 가능성).
+    // 결과를 기록한다" — ADR-0104 트랙 간 비교 가능성). 검토한 대안은
+    // requiredArtifacts이므로 완료 검사에 포함한다 (v2.4.1 정합 — S5 선례와
+    // 동일한 비어 있지 않은 문자열 검사).
     const decision = latestRouteDecision(opp.id);
     if (!decision) {
       blockers.push("진출방식 결정(route_decision)이 필요합니다");
@@ -214,6 +221,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
       if (decision.track === "brownfield" && !decision.sub_track) { blockers.push("brownfield 라우트 유형(sub_track) 선택이 필요합니다"); missing.push("brownfield sub_track"); }
       const scoreCount = (getDb().query("SELECT COUNT(*) c FROM route_decision_score WHERE decision_id = ?").get(decision.id) as { c: number }).c;
       if (scoreCount < 5) { blockers.push(`5-criteria 채점 부족 (${scoreCount}/5)`); missing.push("5-criteria 채점"); }
+      if (!decision.alternatives_considered?.trim()) { blockers.push("검토한 대안 기록이 필요합니다"); missing.push("검토한 대안"); }
     }
     complete = missing.length === 0;
     return { complete, blockers, missing };
@@ -329,8 +337,8 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     // ADR-0095 placeholder ("REFINEMENT (Phase 3)" latest-model probe) is
     // paid off here; S9~S12 keep theirs.
     const model = db
-      .query("SELECT id, kind FROM business_case_model WHERE project_id = ? ORDER BY created_at DESC LIMIT 1")
-      .get(project.id) as { id: string; kind: string } | undefined;
+      .query("SELECT id, kind, inputs_json FROM business_case_model WHERE project_id = ? ORDER BY created_at DESC LIMIT 1")
+      .get(project.id) as { id: string; kind: string; inputs_json: string | null } | undefined;
     if (!model) {
       blockers.push("Business Case / 밸류에이션 모델이 필요합니다");
       missing.push("Business Case(비용·수익 라인 또는 밸류에이션)");
@@ -341,6 +349,15 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       if (sims === 0) {
         blockers.push("민감도가 포함된 정량 평가(시뮬레이션 NPV 분위수)가 필요합니다");
         missing.push("시뮬레이션 NPV 분위수");
+      }
+      // 2026-09-18 spec update: BEP year + input snapshot are completion
+      // artifacts too — both land on the latest model's p50 row / inputs_json.
+      const p50 = db
+        .query("SELECT bep_year FROM valuation_simulation WHERE project_id = ? AND model_id = ? AND percentile = 'p50' ORDER BY created_at DESC LIMIT 1")
+        .get(project.id, model.id) as { bep_year: number | null } | undefined;
+      if (!p50 || p50.bep_year == null || model.inputs_json == null) {
+        blockers.push("BEP 시점과 시뮬레이션 입력 스냅샷이 필요합니다 (사업성 분석을 재생성하세요)");
+        missing.push("BEP 시점과 시뮬레이션 입력 스냅샷");
       }
     }
     return { complete: missing.length === 0, blockers, missing };

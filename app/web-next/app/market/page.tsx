@@ -779,14 +779,17 @@ export function MarketView() {
         ) : visibleIndustries.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">검색·필터 조건에 맞는 산업이 없습니다.</p>
         ) : (
-          <table className="data-table list-table" aria-label="분석 대상 산업 목록">
+          <table className="data-table list-table market-list-table" aria-label="분석 대상 산업 목록">
             <caption className="sr-only">분석 대상 산업 목록</caption>
             <thead>
               <tr>
                 <th scope="col" className="w-[25rem]">산업명</th>
                 <th scope="col" className="w-[5rem]">KSIC 코드</th>
                 <th scope="col" className="w-[6rem]">연결 드라이버</th>
-                <th scope="col" className="w-[10rem]">분석 상태</th>
+                {/* 분석 상태는 가장 긴 텍스트 열(재분석 진행률·버전 유지 문구 칩) —
+                    10rem에서는 3줄로 뭉개지므로 14rem으로 늘린다(max-width는
+                    market-list-table이 72rem으로 상향, 아래 styles.css 참조). */}
+                <th scope="col" className="w-[14rem]">분석 상태</th>
                 <th scope="col" className="col-date">분석일</th>
                 <th scope="col" className="w-[11rem]"><span className="sr-only">작업</span></th>
               </tr>
@@ -1857,6 +1860,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
             입수된 외부 미래 전망이 없습니다 — 기존 방식(과거 성장률 연장 추정)을 유지합니다. 재분석 시 최신 공개 전망을 반영해 격차 분석이 시도됩니다.
           </p>
         )}
+        <CalibrationPanel industryId={detail.industry.id} matrix={matrix} />
       </StepSection>
       </>
       )}
@@ -2639,5 +2643,159 @@ export default function MarketPage() {
     <Suspense fallback={null}>
       <MarketView />
     </Suspense>
+  );
+}
+
+// ── 성장율 격차 보정 루프 패널 (v1.2.0, design 2026-09-18-s1-growth-gap-calibration)
+// 20% 트리거 배지 · 외부 참조 편집 · 드라이버 제안 수용/기각 · 버전 간 격차 추이.
+// 수용은 사람의 행위(경계 #2) — 수용된 드라이버는 다음 재분석의 제약으로 주입된다.
+function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: SizingMatrix }) {
+  interface PropRow { id: string; driver: string; direction: "upside" | "downside"; impact_pct: number; rationale: string }
+  interface AccRow { id: string; driver: string; direction: "upside" | "downside"; impact_pct: number }
+  interface TrendRow { version_no: number; created_at: string; gap_pct: number; our_cagr_pct: number | null; external_cagr_pct: number | null; triggered: boolean }
+  interface RefRow { source_label: string; source_url: string | null; target_year: number; external_cagr_pct: number; external_size_b: number | null; captured_from: string }
+  const [proposals, setProposals] = useState<PropRow[]>([]);
+  const [accepted, setAccepted] = useState<AccRow[]>([]);
+  const [gapTrend, setGapTrend] = useState<TrendRow[]>([]);
+  const [reference, setReference] = useState<RefRow | null>(null);
+  const [showRefForm, setShowRefForm] = useState(false);
+  const [refForm, setRefForm] = useState({ source_label: "", source_url: "", target_year: "2030", external_cagr_pct: "", external_size_b: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    api.get<{ proposals: PropRow[]; accepted: AccRow[]; gapTrend: TrendRow[] }>(`/api/market-overview/industry/${encodeURIComponent(industryId)}/calibration`)
+      .then((r) => { setProposals(r.data.proposals ?? []); setAccepted(r.data.accepted ?? []); setGapTrend(r.data.gapTrend ?? []); })
+      .catch(() => {});
+    api.get<{ reference: RefRow | null }>(`/api/market-overview/industry/${encodeURIComponent(industryId)}/external-reference`)
+      .then((r) => setReference(r.data.reference)).catch(() => {});
+  }, [industryId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function decide(id: string, action: "accept" | "dismiss") {
+    setBusy(true); setError(null);
+    try {
+      await api.post(`/api/market-overview/industry/${encodeURIComponent(industryId)}/calibration/${encodeURIComponent(id)}`, { action });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "보정 제안 처리 실패");
+    } finally { setBusy(false); }
+  }
+
+  async function saveReference() {
+    setBusy(true); setError(null);
+    try {
+      await api.put(`/api/market-overview/industry/${encodeURIComponent(industryId)}/external-reference`, {
+        source_label: refForm.source_label,
+        source_url: refForm.source_url || null,
+        target_year: Number(refForm.target_year),
+        external_cagr_pct: Number(refForm.external_cagr_pct),
+        external_size_b: refForm.external_size_b ? Number(refForm.external_size_b) : null,
+      });
+      setShowRefForm(false);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "외부 참조 기록 실패");
+    } finally { setBusy(false); }
+  }
+
+  const cal = matrix.calibration;
+  const triggered = cal?.triggered === true;
+  return (
+    <div className="chart-half sizing-grade-card mt-4" aria-label="성장율 격차 보정 루프">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <h4 className="text-[0.85rem] m-0">성장율 격차 보정 루프</h4>
+        {triggered ? (
+          <span className="status-chip status-red" title={`CAGR 상대 격차 ≥ 20% — 드라이버 귀인·보정이 필요합니다 (격차 ${cal?.gapPct ?? "?"}%)`}>보정 필요</span>
+        ) : cal ? (
+          <span className="status-chip status-green">트리거 미만</span>
+        ) : null}
+        <span className="text-[0.72rem] text-[color:var(--muted-fg)]">제안 수용은 사람 — 수용 시 다음 재분석에 제약으로 반영</span>
+      </div>
+
+      {/* 외부 참조 — 출처와 함께 기록. 기록된 참조는 재분석 때 우선 사용된다 */}
+      <div className="mb-2">
+        {reference ? (
+          <p className="mb-1 text-[0.78rem]">
+            외부 참조: <strong>{reference.source_label}</strong> — CAGR {reference.external_cagr_pct.toFixed(1)}% @{reference.target_year}년
+            {reference.external_size_b ? ` · $${reference.external_size_b.toFixed(2)}B` : ""}
+            {" "}<span className="status-chip status-not-started">{reference.captured_from === "user" ? "출처 확인" : reference.captured_from}</span>{" "}
+            <button type="button" className="btn-ghost btn-sm" onClick={() => { setShowRefForm((v) => !v); setRefForm({ source_label: reference.source_label, source_url: reference.source_url ?? "", target_year: String(reference.target_year), external_cagr_pct: String(reference.external_cagr_pct), external_size_b: reference.external_size_b ? String(reference.external_size_b) : "" }); }}>수정</button>
+          </p>
+        ) : (
+          <p className="mb-1 text-[0.78rem] text-[color:var(--muted-fg)]">
+            기록된 외부 참조가 없습니다 — 외부 보고서의 성장률을 출처와 함께 기록하면 재분석이 이 값을 기준으로 수렴합니다.{" "}
+            <button type="button" className="btn-ghost btn-sm" onClick={() => setShowRefForm((v) => !v)}>참조 기록</button>
+          </p>
+        )}
+        {showRefForm && (
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <input value={refForm.source_label} onChange={(e) => setRefForm({ ...refForm, source_label: e.target.value })} className="sizing-new-input" style={{ width: "14rem" }} placeholder="출처 (보고서명·기관) *" aria-label="출처" />
+            <input value={refForm.source_url} onChange={(e) => setRefForm({ ...refForm, source_url: e.target.value })} className="sizing-new-input" style={{ width: "12rem" }} placeholder="URL (선택)" aria-label="출처 URL" />
+            <input value={refForm.target_year} onChange={(e) => setRefForm({ ...refForm, target_year: e.target.value })} className="sizing-new-input" style={{ width: "5rem" }} placeholder="목표연도" aria-label="목표 연도" />
+            <input value={refForm.external_cagr_pct} onChange={(e) => setRefForm({ ...refForm, external_cagr_pct: e.target.value })} className="sizing-new-input" style={{ width: "7rem" }} placeholder="외부 CAGR % *" aria-label="외부 CAGR 퍼센트" />
+            <input value={refForm.external_size_b} onChange={(e) => setRefForm({ ...refForm, external_size_b: e.target.value })} className="sizing-new-input" style={{ width: "8rem" }} placeholder="규모 $B (선택)" aria-label="외부 시장 규모" />
+            <button type="button" className="btn-primary btn-sm" disabled={busy || !refForm.source_label.trim() || !refForm.external_cagr_pct} onClick={() => void saveReference()}>기록</button>
+          </div>
+        )}
+      </div>
+
+      {/* 드라이버 귀인 제안 */}
+      {proposals.length > 0 && (
+        <div className="mb-2">
+          <p className="text-[0.78rem] font-semibold mb-1">드라이버 귀인 제안 {proposals.length}건 — 격차의 원인 분석</p>
+          <div className="grid gap-1">
+            {proposals.map((d) => (
+              <div key={d.id} className="sizing-grade-card mb-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <strong className="text-[0.82rem]">{d.driver}</strong>
+                  <span className={`status-chip ${d.direction === "upside" ? "status-in-progress" : "status-amber"}`}>{d.direction === "upside" ? "상승 요인" : "하강 요인"}</span>
+                  <span className="status-chip status-not-started tabular-nums">CAGR ±{d.impact_pct.toFixed(1)}%p</span>
+                </div>
+                <p className="mb-1 mt-1 text-[0.78rem] text-[color:var(--muted-fg)]">{d.rationale}</p>
+                <div className="flex gap-2">
+                  <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void decide(d.id, "accept")}>수용</button>
+                  <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void decide(d.id, "dismiss")}>기각</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 수용된 보정 드라이버 */}
+      {accepted.length > 0 && (
+        <p className="mb-2 text-[0.78rem]">
+          <strong>수용된 보정 드라이버:</strong>{" "}
+          {accepted.map((d) => (
+            <span key={d.id} className="status-chip status-green mr-1" title={`${d.direction} · CAGR ±${d.impact_pct.toFixed(1)}%p — 다음 재분석에 반영`}>{d.driver}</span>
+          ))}
+          {" "}— [보정 반영 재분석]으로 격차를 줄입니다.
+        </p>
+      )}
+
+      {/* 버전 간 격차 추이 — 수렴 가시화 */}
+      {gapTrend.length > 0 && (
+        <details>
+          <summary className="cursor-pointer text-[0.78rem] text-[color:var(--muted-fg)]">버전 간 격차 추이 ({gapTrend.length}개 버전)</summary>
+          <table className="data-table mt-1" aria-label="버전 간 격차 추이">
+            <thead><tr><th scope="col">버전</th><th scope="col">우리 CAGR</th><th scope="col">외부 CAGR</th><th scope="col">격차</th></tr></thead>
+            <tbody>
+              {gapTrend.map((t) => (
+                <tr key={t.version_no}>
+                  <td>v{t.version_no}</td>
+                  <td className="tabular-nums">{t.our_cagr_pct != null ? `${t.our_cagr_pct.toFixed(1)}%` : "—"}</td>
+                  <td className="tabular-nums">{t.external_cagr_pct != null ? `${t.external_cagr_pct.toFixed(1)}%` : "—"}</td>
+                  <td className="tabular-nums">{t.gap_pct}%{t.triggered ? " (보정 필요)" : ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      )}
+
+      {error && <p role="alert" className="mb-0 text-[0.78rem] text-[color:var(--red-fg)]">{error}</p>}
+    </div>
   );
 }

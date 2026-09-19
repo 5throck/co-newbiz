@@ -56,7 +56,7 @@ beforeAll(async () => {
   db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [projectId, "NP-RECO-T", NOW]);
   // 프로젝트 표면은 멤버십 게이팅(FR-SEC-03) — analyst를 멤버로 등록
   db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
-    [projectId, "reco2-a", "contributor", "test", NOW, "stage llm reco test"]);
+    [projectId, "reco2-a", "member", "test", NOW, "stage llm reco test"]);
 });
 
 afterAll(() => {

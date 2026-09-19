@@ -89,7 +89,7 @@ export function CommitteePanel({
   opportunityId: string;
   committeeKey: string;
   committeeLabel: string;
-  gates: Array<"screening" | "pre_fs" | "fs" | "dd" | "entity_ic" | "group_ic">;
+  gates: Array<"screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic">;
   targetRef?: string;
   /** Extra judgement-basis text appended to the convene topic (e.g. S6/S7's
    * t-01~t-09 verdict brief) — every committee member's prompt includes it. */
@@ -108,6 +108,9 @@ export function CommitteePanel({
   const [transcript, setTranscript] = useState<SessionTranscript | null>(null);
   // 아코디언 — 펼친 세션(소집 이력 행)의 id. 새로 소집한 세션은 자동 펼침.
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  // 소집 이력 공개 여부 — 이력은 상시 노출 대상이 아니라 조회 대상(사용자
+  // 요청, 2026-09-17)이라 기본은 접고, 새 소집 시에만 자동으로 펼친다.
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [decisionMode, setDecisionMode] = useState<"human_only" | "agent_team" | "hybrid">("agent_team");
   const [gate, setGate] = useState(gates[0]);
   const [busy, setBusy] = useState(false);
@@ -153,6 +156,7 @@ export function CommitteePanel({
       loadSessions();
       loadTranscript(r.data.sessionId);
       setExpandedSessionId(r.data.sessionId); // 새 세션은 자동으로 펼친다
+      setHistoryOpen(true); // 방금 소집한 행을 바로 보여준다
     } catch (err) {
       setError(err instanceof Error ? err.message : "위원회 소집 실패");
     } finally {
@@ -269,38 +273,50 @@ export function CommitteePanel({
         </div>
       )}
 
-      {/* 위원회 소집 이력 — 아코디언(사용자 리포트, 2026-09-16: 접힌 목록만
-          보이는 것보다 행을 펼치면 심의 결과가 바로 열리는 구조가 낫다). 새로
-          소집된 세션은 자동으로 펼쳐진다. */}
+      {/* 위원회 소집 이력 — 기본 접힘(사용자 요청, 2026-09-17: 이력은 필요할 때만
+          조회). 요약 줄에 건수를 남겨 접힌 상태에서도 이력 존재는 알 수 있다.
+          행별 아코디언(2026-09-16)은 유지 — 새로 소집된 세션은 이력이 자동으로
+          펼쳐져 행이 곧바로 열린다. */}
       {sessions.length > 0 && (
-        <section className="mb-3" aria-label="위원회 소집 이력">
-          <p className="text-[0.82rem] font-semibold mb-1">위원회 소집 이력 <span className="text-[0.72rem] font-normal text-[color:var(--muted-fg)]">{sessions.length}건 — 행을 클릭하면 심의 결과가 열립니다</span></p>
-          {sessions.map((s) => {
-            const expanded = expandedSessionId === s.sessionId;
-            return (
-              <button
-                key={s.sessionId}
-                type="button"
-                className="card w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 mb-1 text-left"
-                aria-expanded={expanded}
-                onClick={() => {
-                  if (expanded) { setExpandedSessionId(null); return; }
-                  setExpandedSessionId(s.sessionId);
-                  loadTranscript(s.sessionId);
-                }}
-              >
-                <span className="flex items-center gap-2 text-[0.8rem]">
-                  <span className="tabular-nums">{s.startedAt.slice(0, 16).replace("T", " ")}</span>
-                  <span className="text-[color:var(--muted-fg)]">{s.meta.decision_mode} · {s.meta.gate}</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className={`status-chip ${s.meta.synthesized ? "status-green" : "status-in-progress"}`}>{s.meta.synthesized ? "PROPOSED" : "진행 중"}</span>
-                  <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{expanded ? "▲" : "▼"}</span>
-                </span>
-              </button>
-            );
-          })}
-        </section>
+        <details
+          className="mb-3"
+          open={historyOpen}
+          onToggle={(e) => setHistoryOpen((e.target as HTMLDetailsElement).open)}
+        >
+          <summary className="text-[0.82rem] font-semibold cursor-pointer">
+            위원회 소집 이력{" "}
+            <span className="text-[0.72rem] font-normal text-[color:var(--muted-fg)]">
+              {sessions.length}건 — 펼치면 소집 기록과 심의 결과를 볼 수 있습니다
+            </span>
+          </summary>
+          <div className="mt-1">
+            {sessions.map((s) => {
+              const expanded = expandedSessionId === s.sessionId;
+              return (
+                <button
+                  key={s.sessionId}
+                  type="button"
+                  className="card w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 mb-1 text-left"
+                  aria-expanded={expanded}
+                  onClick={() => {
+                    if (expanded) { setExpandedSessionId(null); return; }
+                    setExpandedSessionId(s.sessionId);
+                    loadTranscript(s.sessionId);
+                  }}
+                >
+                  <span className="flex items-center gap-2 text-[0.8rem]">
+                    <span className="tabular-nums">{s.startedAt.slice(0, 16).replace("T", " ")}</span>
+                    <span className="text-[color:var(--muted-fg)]">{s.meta.decision_mode} · {s.meta.gate}</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className={`status-chip ${s.meta.synthesized ? "status-green" : "status-in-progress"}`}>{s.meta.synthesized ? "PROPOSED" : "진행 중"}</span>
+                    <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{expanded ? "▲" : "▼"}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </details>
       )}
 
       {/* 좌석별 포지션 표는 제거했다(사용자 리포트, 2026-09-16 — 큰 의미 없음).

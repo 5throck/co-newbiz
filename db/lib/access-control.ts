@@ -65,7 +65,12 @@ export function logDataAccess(db: Database, entry: DataAccessLogEntry): void {
   );
 }
 
-export type ProjectRole = "lead" | "contributor" | "reviewer" | "observer";
+// Two values by design (migration 0110, user decision 2026-09-17): 'lead'
+// carries the management powers (project delete/close via isLead), 'member'
+// is the need-to-know grant itself. The retired contributor/reviewer/observer
+// tiers never had a permission branch anywhere — a role axis without enforced
+// differences is noise, not access control.
+export type ProjectRole = "lead" | "member";
 
 export interface GrantMembershipOptions {
   projectId: string;
