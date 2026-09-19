@@ -17,6 +17,8 @@ import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { RouteDecisionStage } from "../../../../components/stages/RouteDecisionStage.tsx";
 import { GreenfieldStage } from "../../../../components/stages/GreenfieldStage.tsx";
 import { OpportunityFunnelStage } from "../../../../components/stages/OpportunityFunnelStage.tsx";
+import { SynergyStage } from "../../../../components/stages/SynergyStage.tsx";
+import { BrownfieldStage } from "../../../../components/stages/BrownfieldStage.tsx";
 
 const STAGE_LINK: Record<string, (projectId?: string) => string | null> = {
   S1: () => "/market", S2: () => "/opportunities", S3: () => "/synergy", S4: () => "/route-decision",
@@ -63,6 +65,21 @@ function StageTab() {
     );
   }
 
+  // S3 시너지·전략적 적합성 — Wave 2 Phase B 통합. 캐리어 기회에 연결된 분석을
+  // 자동 선택(?analysis= 딥링크로 특정 분석 지정 가능).
+  if (stageId === "S3") {
+    return (
+      <main>
+        <StageFrame stageId="S3">
+          그룹/계열사 분석에서 만든 자사 프로파일(특정 계열사 또는 그룹 전체)을 S1 시장분석·S2 기회발굴
+          결과와 연결해 시너지 영역 후보를 도출하고 우선 시너지 영역으로 좁힙니다. 기회를 연결하면 완료 시 해당 기회에
+          synergy_score 권고가 기록됩니다.
+        </StageFrame>
+        <SynergyStage opportunityId={params.id} analysisId={searchParams.get("analysis") ?? undefined} embedded />
+      </main>
+    );
+  }
+
   // S5 자체 진출 — Wave 2 Phase A 통합. Greenfield 트랙 캐리어의 역량 평가 화면.
   if (stageId === "S5") {
     return (
@@ -73,6 +90,21 @@ function StageTab() {
           내용)을 확인한 뒤 투자비 검토 요건을 정리합니다.
         </StageFrame>
         <GreenfieldStage opportunityId={params.id} />
+      </main>
+    );
+  }
+
+  // S6/S7 대상발굴·선정 — Wave 2 Phase B 통합. Brownfield 트랙 캐리어의
+  // 목표 시장 → Long List → 사전 검토 → Short List → 게이트·승격 화면.
+  if (stageId === "S6" || stageId === "S7") {
+    return (
+      <main>
+        <StageFrame stageId={["S6", "S7"]} track="brownfield" heading="S6/S7 대상발굴·선정">
+          Brownfield 경로 — 진출방식이 Brownfield로 결정된 기회의
+          대상 후보를 발굴하고(S6 Long List), <code>chk-target-screening</code> 체크리스트로 스크리닝해
+          Short List로 좁힙니다(S7). CDD/TDD는 Short List 확정 후 S9에서 수행합니다.
+        </StageFrame>
+        <BrownfieldStage opportunityId={params.id} />
       </main>
     );
   }
