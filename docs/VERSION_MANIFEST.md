@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-19T02:00:45.004Z
+**Generated**: 2026-09-19T02:11:21.380Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -20,7 +20,7 @@
 | Name | File | Tier | Model | Last Modified |
 |------|------|------|-------|---------------|
 | i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-15 |
-| pm | agents/pm.md | medium | inherit | 2026-09-16 |
+| pm | agents/pm.md | medium | inherit | 2026-09-19 |
 | README_ko | agents/README_ko.md | N/A | N/A | 2026-08-23 |
 
 ---
