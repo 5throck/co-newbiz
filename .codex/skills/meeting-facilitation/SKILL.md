@@ -7,7 +7,7 @@ description: >
   decision-making and problem resolution. Use when: running agent meetings, coordinating
   multi-agent discussions, or facilitating collaborative problem-solving sessions.
 owner: pm
-version: 1.4.1
+version: 1.4.3
 last_reviewed: 2026-09-05
 prerequisites: []
 metadata:
@@ -55,6 +55,5 @@ All meetings facilitated through this skill MUST uphold three invariants:
 
 ## Related Skills
 
-- `committee-deliberation` — engine-run committee deliberation with DB-recorded positions (gate reviews)
 - `project-review` — uses meeting-facilitation for Gemini CLI parallel dispatch
 - `team-builder` — may invoke meetings during team assembly (Phase 0)

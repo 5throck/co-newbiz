@@ -1,21 +1,19 @@
 ---
 name: finishing-a-development-branch
 description: Workspace override — redirects all branch completion to /sync pipeline which enforces CHANGELOG, memlog, audit, and PR creation gates.
+status: active
 owner: pm
 scope: common
-version: 1.0.0
+version: 1.0.1
 last_reviewed: 2026-06-13
-status: active
-metadata:
-  type: process
-  triggers:
-    - "finish branch"
-    - "complete work"
-    - "wrap up"
-    - "finishing a development branch"
-    - "merge branch"
-    - "create PR"
-    - "push and PR"
+triggers:
+  - "finish branch"
+  - "complete work"
+  - "wrap up"
+  - "finishing a development branch"
+  - "merge branch"
+  - "create PR"
+  - "push and PR"
 ---
 
 # Finishing a Development Branch (Workspace Override)

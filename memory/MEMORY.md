@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-21](2026-09-21.md) | fix(skills): complete handbook v0.6.0 delivery — Korean reference files |
 | [2026-09-20](2026-09-20.md) | feat(process): add DEG stage-alignment adapter (ADR-0083) — process/stages.yaml + stage-aliases.yaml, _validate.ts SA-1..SA-4 (PR1 of 2) |
 | [2026-09-20](2026-09-20.md) | chore: update |
 | [2026-09-19](2026-09-19.md) | chore(upgrade): template upgrade — ADR-0080 policy delivery |
@@ -15,7 +16,7 @@
 | [2026-09-16](2026-09-16.md) | feat(web-next): generalize brownfield candidate profile pipeline, fix S1 industry-name display |
 | [2026-09-15](2026-09-15.md) | feat(web-next): synergy score human confirmation, list-table standard, S4 advisory and chart fixes |
 | [2026-09-14](2026-09-14.md) | chore: update |
-| [2026-09-13](2026-09-13.md) | feat(restyle): stage linkage strip on every stage screen via StageFrame |
+| 2026-09-13 | feat(restyle): stage linkage strip on every stage screen via StageFrame |
 | 2026-09-12 | feat(web-next): stage-scoped LLM decision support across S1-S12 (ADR-0118) |
 | 2026-09-11 | chore: update |
 | 2026-09-11 | fix(web-next): WACC input rows no longer overlap on md–lg viewports |

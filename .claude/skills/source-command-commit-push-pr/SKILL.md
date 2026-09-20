@@ -1,9 +1,9 @@
 ---
 name: "source-command-commit-push-pr"
+status: active
 owner: pm
 scope: common
-version: "1.0.1"
-status: active
+version: 1.0.3
 description: "Redirects commit+push+PR requests to the /sync pipeline (workspace enforcement)"
 metadata:
   type: process

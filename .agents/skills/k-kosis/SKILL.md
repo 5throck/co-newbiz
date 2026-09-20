@@ -7,11 +7,18 @@ description: >
   indicators, and other government-published statistical tables. Covers
   keyword search, table-list browsing, statistical data retrieval, and
   metadata lookup. Requires KOSIS_API_KEY environment variable.
-version: 1.0.0
+version: 1.0.2
 last_reviewed: 2026-08-23
 status: active
 owner: financial-analyst
 prerequisites: KOSIS_API_KEY environment variable
+relates_to:
+  - skill: k-dart
+    type: composes_with
+  - skill: k-ecos
+    type: composes_with
+  - skill: k-law
+    type: relates_to
 l2_propagate: true
 metadata:
   type: domain
@@ -65,11 +72,12 @@ Unified skill for the Korean Statistical Information Service (KOSIS, `통계청 
 
 ## Reference Material
 
-- None yet; if recurring lookups reveal stable `vwCd`/classification patterns, capture them as `references/tables-ko.json` following the pattern in `skills/k-dart/references/terms-ko.json`.
+- `references/terms-ko.json`: Korean-original KOSIS terminology mapping (service names, period types, error messages, seed table codes). Non-Markdown reference asset, exempt from the workspace English-only doc policy. New stable `vwCd`/classification patterns from recurring lookups go there.
 
 ## Related Skills
 
 - k-dart
+- k-ecos
 - k-law
 - research
 - storyline
