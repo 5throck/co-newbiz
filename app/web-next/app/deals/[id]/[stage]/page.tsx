@@ -21,6 +21,11 @@ import { SynergyStage } from "../../../../components/stages/SynergyStage.tsx";
 import { BrownfieldStage } from "../../../../components/stages/BrownfieldStage.tsx";
 import { MarketAnalysisStage } from "../../../../components/stages/MarketAnalysisStage.tsx";
 import { OurCompanyStage } from "../../../../components/stages/OurCompanyStage.tsx";
+import { BusinessCaseStage } from "../../../../components/stages/BusinessCaseStage.tsx";
+import { DdStage } from "../../../../components/stages/DdStage.tsx";
+import { DealStructureStage } from "../../../../components/stages/DealStructureStage.tsx";
+import { IcReviewStage } from "../../../../components/stages/IcReviewStage.tsx";
+import { PortfolioStage } from "../../../../components/stages/PortfolioStage.tsx";
 
 const STAGE_LINK: Record<string, (projectId?: string) => string | null> = {
   S1: () => "/market", S2: () => "/opportunities", S3: () => "/synergy", S4: () => "/route-decision",
@@ -151,7 +156,59 @@ function StageTab() {
     );
   }
 
+  // S8~S12 프로젝트 단계 — Wave 3 통합. 캐리어가 기회면 승격된 프로젝트 id로
+  // 해석하고, 프로젝트 id면 그대로 사용한다.
+  if (stageId === "S8" || stageId === "S9" || stageId === "S10" || stageId === "S11" || stageId === "S12") {
+    return <ProjectStageTab carrierId={params.id} stageId={stageId} />;
+  }
+
   return <StageGuidanceTab carrierId={params.id} stageId={stageId} />;
+}
+
+// S8~S12 프로젝트 단계 탭 — Wave 3(components/stages/*Stage.tsx 공유 컴포넌트).
+// ADR-0094/0095: FS 경로가 정리되면 캐리어가 기회에서 프로젝트로 교체된다 —
+// carrierId가 프로젝트 id면 그대로, 기회 id면 opportunity.project_id로 해석한다.
+const PROJECT_STAGES: Record<string, (props: { projectId: string }) => React.ReactNode> = {
+  S8: (p) => <BusinessCaseStage projectId={p.projectId} />,
+  S9: (p) => <DdStage projectId={p.projectId} />,
+  S10: (p) => <DealStructureStage projectId={p.projectId} />,
+  S11: (p) => <IcReviewStage projectId={p.projectId} />,
+  S12: (p) => <PortfolioStage projectId={p.projectId} />,
+};
+
+function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: string }) {
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setError(null);
+    setProjectId(null);
+    api
+      .get<{ project_id: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}`)
+      .then((r) => {
+        if (!alive) return;
+        if (r.data.project_id) setProjectId(r.data.project_id);
+        else setError("이 기회는 아직 프로젝트로 추진되지 않았습니다 — 승격(S5→S8 또는 S7→S8)이 먼저 필요합니다.");
+      })
+      .catch(() => {
+        // 캐리어가 이미 프로젝트 id인 경우 — process 엔드포인트(GET 지원)로
+        // 멤버십 포함 검증 후 그대로 사용한다.
+        api.get(`/api/projects/${encodeURIComponent(carrierId)}/process`)
+          .then(() => { if (alive) setProjectId(carrierId); })
+          .catch((e) => { if (alive) setError(e instanceof Error ? e.message : "캐리어를 확인하지 못했습니다."); });
+      });
+    return () => { alive = false; };
+  }, [carrierId]);
+
+  const StageComponent = PROJECT_STAGES[stageId];
+  return (
+    <main>
+      {error && <PageState state="empty" emptyText={error} />}
+      {!error && !projectId && <PageState state="loading" />}
+      {projectId && StageComponent ? StageComponent({ projectId }) : null}
+    </main>
+  );
 }
 
 // 미통합 단계의 범용 가이던스 탭 — 프로세스 상태·블로커·작업 화면 링크.
