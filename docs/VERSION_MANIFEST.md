@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-20T06:05:32.272Z
+**Generated**: 2026-09-20T07:33:30.738Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -330,7 +330,7 @@
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
 | skill-lifecycle-audit.ts | 1.4.1 | scripts/skill-lifecycle-audit.ts | N/A |
-| skill-session-review.ts | 1.0.0 | scripts/skill-session-review.ts | bun |
+| skill-session-review.ts | 1.1.0 | scripts/skill-session-review.ts | bun |
 | source-adapters.ts | 1.1.0 | scripts/co-newbiz/source-adapters.ts | N/A |
 | spec-register.ts | 1.3.0 | scripts/spec-register.ts | N/A |
 | sync-agent-personas.ts | 1.0.1 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
