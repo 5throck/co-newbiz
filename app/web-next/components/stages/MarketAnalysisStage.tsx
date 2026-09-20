@@ -2658,14 +2658,18 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
   const [accepted, setAccepted] = useState<AccRow[]>([]);
   const [gapTrend, setGapTrend] = useState<TrendRow[]>([]);
   const [reference, setReference] = useState<RefRow | null>(null);
+  interface EscalationRow { id: string; base_our_cagr_pct: number; external_cagr_pct: number; scaled_cagr_pct: number; residual_gap_pct: number; rationale: string; decided_by: string; created_at: string }
+  const [escalation, setEscalation] = useState<EscalationRow | null>(null);
+  const [showEscalate, setShowEscalate] = useState(false);
+  const [escalateRationale, setEscalateRationale] = useState("");
   const [showRefForm, setShowRefForm] = useState(false);
   const [refForm, setRefForm] = useState({ source_label: "", source_url: "", target_year: "2030", external_cagr_pct: "", external_size_b: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    api.get<{ proposals: PropRow[]; accepted: AccRow[]; gapTrend: TrendRow[] }>(`/api/market-overview/industry/${encodeURIComponent(industryId)}/calibration`)
-      .then((r) => { setProposals(r.data.proposals ?? []); setAccepted(r.data.accepted ?? []); setGapTrend(r.data.gapTrend ?? []); })
+    api.get<{ proposals: PropRow[]; accepted: AccRow[]; gapTrend: TrendRow[]; escalation: EscalationRow | null }>(`/api/market-overview/industry/${encodeURIComponent(industryId)}/calibration`)
+      .then((r) => { setProposals(r.data.proposals ?? []); setAccepted(r.data.accepted ?? []); setGapTrend(r.data.gapTrend ?? []); setEscalation(r.data.escalation ?? null); })
       .catch(() => {});
     api.get<{ reference: RefRow | null }>(`/api/market-overview/industry/${encodeURIComponent(industryId)}/external-reference`)
       .then((r) => setReference(r.data.reference)).catch(() => {});
@@ -2697,6 +2701,18 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "외부 참조 기록 실패");
+    } finally { setBusy(false); }
+  }
+
+  async function applyEscalation() {
+    setBusy(true); setError(null);
+    try {
+      await api.post(`/api/market-overview/industry/${encodeURIComponent(industryId)}/calibration/escalate`, { rationale: escalateRationale });
+      setShowEscalate(false);
+      setEscalateRationale("");
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "에스컬레이션 적용 실패");
     } finally { setBusy(false); }
   }
 
@@ -2740,6 +2756,37 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
           </div>
         )}
       </div>
+
+      {/* 에스컬레이션 — 결정론 스케일링 (사람 결정, 경계 #2). LLM 재분석이
+          수렴선에 도달하지 못할 때 외부 참조 × (1−15%)를 조정 CAGR로 채택. */}
+      {escalation ? (
+        <div className="mb-2 sizing-grade-card" aria-label="에스컬레이션 적용 기록">
+          <p className="mb-1 text-[0.8rem]">
+            <span className="status-chip status-green mr-1">에스컬레이션 적용됨</span>
+            <strong>결정론 스케일링</strong> — 우리 CAGR {escalation.base_our_cagr_pct.toFixed(1)}% → <strong>{escalation.scaled_cagr_pct.toFixed(1)}%</strong>
+            (외부 참조 {escalation.external_cagr_pct.toFixed(1)}% × 0.85, 잔여 격차 {escalation.residual_gap_pct}%)
+          </p>
+          <p className="mb-0 text-[0.75rem] text-[color:var(--muted-fg)]">근거: {escalation.rationale} — {escalation.decided_by} · {escalation.created_at.slice(0, 10)}</p>
+        </div>
+      ) : triggered && (cal?.gapPct ?? 0) > 15 ? (
+        <div className="mb-2">
+          {!showEscalate ? (
+            <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">
+              3사이클 이상 수렴선(15%) 미달 시 <strong>결정론 스케일링</strong>으로 종료할 수 있습니다 — 외부 참조 × 0.85를 조정 CAGR로 채택(사람 결정).{" "}
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setShowEscalate(true)}>에스컬레이션 적용</button>
+            </p>
+          ) : (
+            <div className="sizing-new-form mb-0">
+              <p className="text-[0.78rem] mb-1">결정론 스케일링 적용 — 외부 참조 {cal?.externalCagrPct ?? "?"}% × 0.85 = 조정 CAGR. 근거를 기록하세요 (필수).</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input value={escalateRationale} onChange={(e) => setEscalateRationale(e.target.value)} className="sizing-new-input" style={{ width: "100%" }} placeholder="예: 3사이클 미수렴 — 외부 참조 채택 (출처: 보고서명)" aria-label="에스컬레이션 근거" />
+                <button type="button" className="btn-primary btn-sm" disabled={busy || !escalateRationale.trim()} onClick={() => void applyEscalation()}>적용</button>
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setShowEscalate(false)}>취소</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {/* 드라이버 귀인 제안 */}
       {proposals.length > 0 && (

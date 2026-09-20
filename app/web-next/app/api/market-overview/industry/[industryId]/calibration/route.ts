@@ -2,7 +2,7 @@
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
-import { acceptedCalibrationDrivers } from "../../../../../../lib/market-calibration.ts";
+import { acceptedCalibrationDrivers, latestCalibrationEscalation } from "../../../../../../lib/market-calibration.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
@@ -38,5 +38,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
       return [];
     }
   });
-  return ok({ proposals, accepted, gapTrend }, 200);
+  return ok({ proposals, accepted, gapTrend, escalation: latestCalibrationEscalation(db, industryId) }, 200);
 }
