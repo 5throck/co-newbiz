@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-20T23:09:59.335Z
+**Generated**: 2026-09-20T23:12:15.756Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -169,7 +169,7 @@
 | policy-change-impact-analysis | 1.0.0 | active | .claude/skills/policy-change-impact-analysis/SKILL.md | both | policy impact analysis, procedure amendment impact, does this affect in-flight projects, project_policy_pin, retroactivity decision | process-governance-manager |
 | portfolio-fit-assessment | 1.3.0 | active | skills/portfolio-fit-assessment/SKILL.md | workspace | portfolio overlap, cannibalization, portfolio fit, group agenda ranking, rank against other group companies | group-review-agent |
 | procedure-reference-override | 1.0.0 | active | .claude/skills/procedure-reference-override/SKILL.md | both | procedure override, entity-specific procedure, region-specific procedure, add_steps, replace_steps, resolve a procedure | process-governance-manager |
-| project-review | 1.6.0 | active | skills/project-review/SKILL.md | workspace | project review, review project, audit project, quality review | pm |
+| project-review | 1.3.0 | active | skills/project-review/SKILL.md | workspace | project review, review project, audit project, quality review | pm |
 | proxy-industry-chain | 1.1.0 | active | skills/proxy-industry-chain/SKILL.md | workspace | proxy chain, no direct market data, chain reliability grade, demand estimation via proxy industry | quant-methodologist |
 | quality-of-earnings | 1.1.0 | active | skills/quality-of-earnings/SKILL.md | workspace | quality of earnings, EBITDA adjustments, normalized earnings, QoE report | financial-analyst |
 | query-performance-tuning | 1.0.0 | active | .claude/skills/query-performance-tuning/SKILL.md | both | slow query, query performance, EXPLAIN QUERY PLAN, index coverage review | dba |
