@@ -46,6 +46,7 @@ interface SizingInsight {
   industry_name: string;
   completed_at: string | null;
   bottom_up_cagr_pct: number | null;
+  escalated_cagr_pct: number | null;
   external_forecast: {
     source_label: string;
     target_year: number;
@@ -238,6 +239,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
                 <span className="font-semibold">{s.industry_name}</span>
                 <span className="sizing-chip-meta">
                   CAGR {s.bottom_up_cagr_pct !== null ? `${s.bottom_up_cagr_pct}%` : "—"}
+                  {s.escalated_cagr_pct !== null && <span title="에스컬레이션 조정 CAGR (외부 참조 × 0.85 — 사람 결정)"> · 에스컬레이션 {s.escalated_cagr_pct}%</span>}
                   {s.external_forecast?.gap_pct != null ? ` · 격차 ${s.external_forecast.gap_pct > 0 ? "+" : ""}${s.external_forecast.gap_pct}%` : ""}
                 </span>
               </button>

@@ -3,6 +3,7 @@
 // Read-only, any authenticated role. 외부 전망이 없는 분석은 gap 없이
 // CAGR만 노출한다.
 import { getDb } from "../../../../../../db/client.ts";
+import { resolveEffectiveCagr } from "../../../../lib/market-calibration.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { ok } from "../../../../lib/envelope.ts";
 
@@ -53,6 +54,10 @@ export async function GET(request: Request) {
       completed_at: r.completed_at,
       version_no: r.version_no,
       bottom_up_cagr_pct: bottomUp,
+      escalated_cagr_pct: (() => {
+        const eff = resolveEffectiveCagr(db, r.industry_id);
+        return eff?.source === "escalated" ? eff.cagrPct : null;
+      })(),
       external_forecast: ef
         ? {
             source_label: ef.sourceLabel,
