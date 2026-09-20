@@ -6,6 +6,7 @@ import { getDb } from "../../../db/client.ts";
 
 type Db = ReturnType<typeof getDb>;
 import { appendAudit } from "../../../db/lib/access-control.ts";
+import { ulid } from "../../../db/lib/ulid.ts";
 
 /** 보정 트리거 임계값 — 우리 CAGR과 외부 참조 CAGR의 상대 격차(%, 소수 아님). */
 export const CALIBRATION_TRIGGER_PCT = 20;
@@ -147,4 +148,87 @@ export function decideCalibrationDriver(
   ]);
   appendAudit(db, { actor: userId, action: `market_calibration.${action}`, target: row.industry_id, now });
   return db.query("SELECT * FROM industry_driver_calibration WHERE id = ?").get(rowId) as CalibrationDriverRow;
+}
+
+// ── 결정론 CAGR 스케일링 에스컬레이션 (design 2026-09-20-calibration-escalation)
+// LLM 재분석이 수렴선에 도달하지 못하는 산업에 대해, 사람이 결정론 산술로
+// 조정 CAGR을 채택한다: 외부 참조 × (1 − 수렴선) — 외부 참조를 보수성
+// 헤어컷(잔여 격차 = 수렴선)과 함께 채택하는 것과 같다. 순수 함수 — 금액을
+// 지어내지 않고, 결정은 사람이 기록한다(경계 #2).
+export const CONVERGENCE_TARGET_PCT = 15;
+
+export interface DeterministicScaling {
+  scaledCagrPct: number;
+  residualGapPct: number;
+}
+
+export function computeDeterministicScaling(externalCagrPct: number): DeterministicScaling {
+  if (!Number.isFinite(externalCagrPct) || externalCagrPct <= 0) {
+    throw new Error("externalCagrPct must be a positive finite number.");
+  }
+  const scaled = Math.round(externalCagrPct * (1 - CONVERGENCE_TARGET_PCT / 100) * 10) / 10;
+  return { scaledCagrPct: scaled, residualGapPct: CONVERGENCE_TARGET_PCT };
+}
+
+export interface CalibrationEscalationRow {
+  id: string; industry_id: string; version_id: string; method: string;
+  base_our_cagr_pct: number; external_cagr_pct: number; scaled_cagr_pct: number;
+  residual_gap_pct: number; rationale: string; decided_by: string; created_at: string;
+}
+
+export function latestCalibrationEscalation(db: Db, industryId: string): CalibrationEscalationRow | null {
+  return (db
+    .query("SELECT * FROM calibration_escalation WHERE industry_id = ? ORDER BY created_at DESC LIMIT 1")
+    .get(industryId) as CalibrationEscalationRow | undefined) ?? null;
+}
+
+/** 최근 완료 버전의 calibration 블록을 읽어 에스컬레이션을 기록한다. 격차가
+ * 이미 수렴선 이하면 409 충돌로 거부한다(에스컬레이션할 것이 없다). */
+export function applyCalibrationEscalation(
+  db: Db,
+  industryId: string,
+  decidedBy: string,
+  rationale: string,
+  now: string,
+): { escalation: CalibrationEscalationRow } {
+  const version = db
+    .query(
+      `SELECT v.id, v.payload FROM market_sizing_version v
+       JOIN market_sizing_analysis a ON a.id = v.analysis_id
+       WHERE a.industry_id = ? AND a.status = 'completed'
+       ORDER BY v.version_no DESC LIMIT 1`,
+    )
+    .get(industryId) as { id: string; payload: string } | undefined;
+  if (!version) throw new EscalationError("no_completed_version", "완료된 시장분석 버전이 없습니다.");
+  let calib: { gapPct?: number | null; ourCagrPct?: number | null; externalCagrPct?: number | null } | undefined;
+  try {
+    calib = (JSON.parse(version.payload) as { matrix?: { calibration?: typeof calib } }).matrix?.calibration;
+  } catch {
+    calib = undefined;
+  }
+  const our = calib?.ourCagrPct;
+  const external = calib?.externalCagrPct;
+  const gap = calib?.gapPct;
+  if (typeof our !== "number" || typeof external !== "number" || typeof gap !== "number") {
+    throw new EscalationError("no_calibration_block", "최신 버전에 보정 블록이 없습니다 — 재분석이 먼저 필요합니다.");
+  }
+  if (gap <= CONVERGENCE_TARGET_PCT) {
+    throw new EscalationError("already_converged", `격차 ${gap}%가 이미 수렴선(${CONVERGENCE_TARGET_PCT}%) 이하입니다.`);
+  }
+  const { scaledCagrPct, residualGapPct } = computeDeterministicScaling(external);
+  const id = ulid();
+  db.run(
+    `INSERT INTO calibration_escalation
+     (id, industry_id, version_id, method, base_our_cagr_pct, external_cagr_pct, scaled_cagr_pct, residual_gap_pct, rationale, decided_by, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, industryId, version.id, "deterministic_scaling", our, external, scaledCagrPct, residualGapPct, rationale, decidedBy, now],
+  );
+  appendAudit(db, { actor: decidedBy, action: "market_calibration.escalate", target: industryId, now });
+  return { escalation: db.query("SELECT * FROM calibration_escalation WHERE id = ?").get(id) as CalibrationEscalationRow };
+}
+
+export class EscalationError extends Error {
+  constructor(public code: string, message: string) {
+    super(message);
+  }
 }
