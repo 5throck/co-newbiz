@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-20T08:37:23.213Z
+**Generated**: 2026-09-20T13:21:51.018Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -9,7 +9,7 @@
 ## Summary
 
 - **Agents**: 41
-- **Skills**: 148
+- **Skills**: 147
 - **Scripts**: 139 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
@@ -122,7 +122,7 @@
 | greenfield-feasibility | 1.1.0 | active | skills/greenfield-feasibility/SKILL.md | workspace | green field feasibility, new plant feasibility, new establishment review, greenfield screening | greenfield-agent |
 | group-level-review | 1.0.1 | experimental | skills/group-level-review/SKILL.md | workspace | group review, group IC, portfolio fit review | process-governance-manager |
 | growth-projection-modeling | 1.1.0 | active | skills/growth-projection-modeling/SKILL.md | workspace | growth projection, revenue forecast, base rate warning, anchor_ref, hockey stick check | financial-analyst |
-| handbook | 0.4.1 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook | pm |
+| handbook | 0.6.0 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook, update handbook, handbook sync, handbook maintenance | pm |
 | handbook-sync-audit | 1.0.0 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | docs-writer |
 | historical-financial-analysis | 1.0.0 | active | skills/historical-financial-analysis/SKILL.md | workspace | historical financial trend, historical volatility, base rate distribution, multi-year trajectory analysis | financial-analyst |
 | hwp-document-processing | 1.1.0 | active | .claude/skills/hwp-document-processing/SKILL.md | both | hwp, hwpx, hwp document, hwpx document, hwp extraction, hwpx generation, government report template | docs-writer |
@@ -153,7 +153,6 @@
 | market-data-pipeline | 1.0.1 | experimental | skills/market-data-pipeline/SKILL.md | workspace | market data, data pipeline, data freshness | process-governance-manager |
 | master-data-governance | 1.0.0 | active | .claude/skills/master-data-governance/SKILL.md | both | staging unmapped queue, master data resolution, unmapped raw value, master data code assignment | dba |
 | mcp-server-integration | 1.0.0 | active | .claude/skills/mcp-server-integration/SKILL.md | both | add an MCP tool, MCP server integration, MCP-REST parity, no direct DB access from MCP | backend-engineer |
-| meeting | 1.4.1 | active | .claude/skills/meeting/SKILL.md | both | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
 | meeting-facilitation | 1.4.1 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
 | monte-carlo-simulation | 1.1.0 | active | skills/monte-carlo-simulation/SKILL.md | workspace | Monte Carlo simulation, seeded simulation, P50 P95 NPV, contingent liability integration | risk-officer |
 | notification-channel-management | 1.0.0 | active | .claude/skills/notification-channel-management/SKILL.md | both | notification channel, notification bundling, watch_rule configuration, notification severity | sre |
@@ -387,7 +386,7 @@
 **Checked**: Claude (.claude/) vs Gemini (.gemini/)
 
 - **Commands with parity**: 8 / 8
-- **Skills with parity**: 44 / 148 (common-template skills are parity-exempt)
+- **Skills with parity**: 43 / 147 (common-template skills are parity-exempt)
 
 ---
 

@@ -4423,6 +4423,12 @@
     },
     {
       "type": "references",
+      "from": "handbook",
+      "to": "handbook-sync-audit",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "handbook-sync-audit",
       "to": "handbook",
       "source": "prose"
@@ -4611,17 +4617,6 @@
       "source": "prose"
     },
     {
-      "type": "used_by",
-      "from": "i18n-audit",
-      "to": "i18n-specialist",
-      "source": "required_skills",
-      "provenance": {
-        "file": "agents/i18n-specialist.md",
-        "field": "required_skills",
-        "index": 3
-      }
-    },
-    {
       "type": "references",
       "from": "i18n-formatting",
       "to": "i18n-layout",
@@ -4632,17 +4627,6 @@
       "from": "i18n-formatting",
       "to": "i18n-locale-config",
       "source": "prose"
-    },
-    {
-      "type": "used_by",
-      "from": "i18n-formatting",
-      "to": "i18n-specialist",
-      "source": "required_skills",
-      "provenance": {
-        "file": "agents/i18n-specialist.md",
-        "field": "required_skills",
-        "index": 1
-      }
     },
     {
       "type": "references",
@@ -4663,17 +4647,6 @@
       "source": "prose"
     },
     {
-      "type": "used_by",
-      "from": "i18n-layout",
-      "to": "i18n-specialist",
-      "source": "required_skills",
-      "provenance": {
-        "file": "agents/i18n-specialist.md",
-        "field": "required_skills",
-        "index": 2
-      }
-    },
-    {
       "type": "references",
       "from": "i18n-layout",
       "to": "translate",
@@ -4690,17 +4663,6 @@
       "from": "i18n-locale-config",
       "to": "i18n-layout",
       "source": "prose"
-    },
-    {
-      "type": "used_by",
-      "from": "i18n-locale-config",
-      "to": "i18n-specialist",
-      "source": "required_skills",
-      "provenance": {
-        "file": "agents/i18n-specialist.md",
-        "field": "required_skills",
-        "index": 0
-      }
     },
     {
       "type": "references",

@@ -43,10 +43,10 @@
 | `handbook` | L3 | — | — | — | — | — |
 | `handbook-sync-audit` | L3 | — | — | — | — | — |
 | `historical-financial-analysis` | L3 | financial-analyst | phase3 | financial-statement-analysis (composes_with), investment-feasibility-modeling (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (follows), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
-| `i18n-audit` | L3 | i18n-specialist | — | — | — | — |
-| `i18n-formatting` | L3 | i18n-specialist | — | — | — | — |
-| `i18n-layout` | L3 | i18n-specialist | — | — | — | — |
-| `i18n-locale-config` | L3 | i18n-specialist | — | — | — | — |
+| `i18n-audit` | L3 | — | — | — | — | — |
+| `i18n-formatting` | L3 | — | — | — | — | — |
+| `i18n-layout` | L3 | — | — | — | — | — |
+| `i18n-locale-config` | L3 | — | — | — | — | — |
 | `incentive-clawback-assessment` | L3 | incentive-agent | phase4 | debt-and-contingent-liability-simulation (follows), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with) | — | — |
 | `insight-synthesis` | L3 | process-governance-manager | phase5 | executive-presentation (follows), project-review (composes_with), rag-scoring-framework (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (composes_with), strategic-fit-screening (composes_with), two-tier-approval-chain (composes_with) | — | — |
 | `intra-group-transaction-compliance` | L3 | group-review-agent | phase5 | portfolio-fit-assessment (follows), stage-gate-governance (composes_with), two-tier-approval-chain (composes_with) | — | — |
