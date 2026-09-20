@@ -546,6 +546,76 @@
           2,
           3
         ]
+      },
+      {
+        "name": "assumption-audit",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "company-intelligence",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "deal-execution-playbook",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "forward-industry-research",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "group-level-review",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "legal-risk-register",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "market-data-pipeline",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "policy-and-procedure-governance",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "regulatory-screening",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "sample-driven-report-writing",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "target-costing-analysis",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "value-chain-driver-identification",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "value-chain-stage-financials",
+        "used_by_agents": [],
+        "phases": []
+      },
+      {
+        "name": "waiver-management",
+        "used_by_agents": [],
+        "phases": []
       }
     ]
   },
@@ -569,5 +639,171 @@
       "KR"
     ],
     "default": null
-  }
+  },
+  "agents": [
+    {
+      "name": "README",
+      "file": "agents/README.md"
+    },
+    {
+      "name": "README_ko",
+      "file": "agents/README_ko.md"
+    },
+    {
+      "name": "antitrust-agent",
+      "file": "agents/antitrust-agent.md"
+    },
+    {
+      "name": "backend-engineer",
+      "file": "agents/backend-engineer.md"
+    },
+    {
+      "name": "brownfield-agent",
+      "file": "agents/brownfield-agent.md"
+    },
+    {
+      "name": "certification-agent",
+      "file": "agents/certification-agent.md"
+    },
+    {
+      "name": "commercial-dd-agent",
+      "file": "agents/commercial-dd-agent.md"
+    },
+    {
+      "name": "compliance-officer",
+      "file": "agents/compliance-officer.md"
+    },
+    {
+      "name": "customer-retention-agent",
+      "file": "agents/customer-retention-agent.md"
+    },
+    {
+      "name": "data-architect",
+      "file": "agents/data-architect.md"
+    },
+    {
+      "name": "dba",
+      "file": "agents/dba.md"
+    },
+    {
+      "name": "design-system-agent",
+      "file": "agents/design-system-agent.md"
+    },
+    {
+      "name": "docs-writer",
+      "file": "agents/docs-writer.md"
+    },
+    {
+      "name": "financial-analyst",
+      "file": "agents/financial-analyst.md"
+    },
+    {
+      "name": "financing-agent",
+      "file": "agents/financing-agent.md"
+    },
+    {
+      "name": "frontend-engineer",
+      "file": "agents/frontend-engineer.md"
+    },
+    {
+      "name": "glossary-curator",
+      "file": "agents/glossary-curator.md"
+    },
+    {
+      "name": "greenfield-agent",
+      "file": "agents/greenfield-agent.md"
+    },
+    {
+      "name": "group-review-agent",
+      "file": "agents/group-review-agent.md"
+    },
+    {
+      "name": "hr-integration-agent",
+      "file": "agents/hr-integration-agent.md"
+    },
+    {
+      "name": "incentive-agent",
+      "file": "agents/incentive-agent.md"
+    },
+    {
+      "name": "industry-lead",
+      "file": "agents/industry-lead.md"
+    },
+    {
+      "name": "infra-automation-engineer",
+      "file": "agents/infra-automation-engineer.md"
+    },
+    {
+      "name": "ip-agent",
+      "file": "agents/ip-agent.md"
+    },
+    {
+      "name": "ir-agent",
+      "file": "agents/ir-agent.md"
+    },
+    {
+      "name": "legal-counsel",
+      "file": "agents/legal-counsel.md"
+    },
+    {
+      "name": "market-intelligence-agent",
+      "file": "agents/market-intelligence-agent.md"
+    },
+    {
+      "name": "partnership-agent",
+      "file": "agents/partnership-agent.md"
+    },
+    {
+      "name": "platform-lead",
+      "file": "agents/platform-lead.md"
+    },
+    {
+      "name": "pmi-agent",
+      "file": "agents/pmi-agent.md"
+    },
+    {
+      "name": "process-governance-manager",
+      "file": "agents/process-governance-manager.md"
+    },
+    {
+      "name": "quant-methodologist",
+      "file": "agents/quant-methodologist.md"
+    },
+    {
+      "name": "region-lead",
+      "file": "agents/region-lead.md"
+    },
+    {
+      "name": "release-engineer",
+      "file": "agents/release-engineer.md"
+    },
+    {
+      "name": "risk-officer",
+      "file": "agents/risk-officer.md"
+    },
+    {
+      "name": "security-engineer",
+      "file": "agents/security-engineer.md"
+    },
+    {
+      "name": "site-facility-agent",
+      "file": "agents/site-facility-agent.md"
+    },
+    {
+      "name": "sre",
+      "file": "agents/sre.md"
+    },
+    {
+      "name": "technical-dd-agent",
+      "file": "agents/technical-dd-agent.md"
+    },
+    {
+      "name": "ux-designer-agent",
+      "file": "agents/ux-designer-agent.md"
+    },
+    {
+      "name": "valuation-agent",
+      "file": "agents/valuation-agent.md"
+    }
+  ]
 }
