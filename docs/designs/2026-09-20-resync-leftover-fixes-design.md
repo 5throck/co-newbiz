@@ -46,6 +46,13 @@ work on a template-managed file), README `cd` note, `next-env.d.ts` path
   runner. Added a `Create python venv` step building the repo-root `.venv`
   from `python/requirements.txt` — the exact path the scripts resolve via
   `.venv/bin/python3` on non-Windows platforms.
+- `db/lib/simulation.ts` v1.1.0 → v1.2.0 (third live CI run exposed it):
+  five of the six files cleared, but `wacc-session` still failed — this
+  module spawns `python/monte_carlo.py` with a hard-coded system
+  `python3`, the one spawn path ignoring the venv. PYTHON_BIN now resolves
+  `.venv/bin/python3` first on non-Windows, matching the venv-first
+  discipline of `fin-pipeline.ts`/`calibrate.ts`; system interpreter stays
+  the fallback (Windows behavior unchanged).
 - `scripts/SCRIPTS.md` registry: calibrate.ts entry version 1.0.0 → 1.1.0
   with a change note; `docs/VERSION_MANIFEST.md` regenerated.
 

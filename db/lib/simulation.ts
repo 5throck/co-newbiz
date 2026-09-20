@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Simulation orchestrator — the REST-side bridge to python/monte_carlo.py
  * (ADR-0026, design v1.0 §4-6/§4-8, FR-MA-08). The CLI (`newbiz.ts simulate
@@ -29,6 +29,11 @@
  * scenario JSON lives in a throwaway mkdtemp directory, removed whether
  * the engine succeeds or dies. A timeout kills the child.
  *
+ * 1.2.0 — PYTHON_BIN now prefers the repo-root `.venv/bin/python3` on
+ * non-Windows platforms (same venv-first discipline as fin-pipeline.ts and
+ * calibrate.ts), so the numpy-backed engine spawns with its dependencies in
+ * venv-managed environments (CI runners and PEP 668 machines).
+ *
  * 1.1.0 — per-iteration draws are now REQUESTED (scenario include_draws)
  * and PERSISTED into simulation_draw (iteration_no 1..N, metric 'npv').
  * The retention contract is unchanged (migration 0005 header): draws may be
@@ -40,7 +45,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -106,7 +111,17 @@ interface EngineOutput {
 const ENGINE_TIMEOUT_MS = 120_000;
 const MAX_ITERATIONS = 100_000;
 
-const PYTHON_BIN = process.platform === "win32" ? "python" : "python3";
+// Same venv-first discipline as fin-pipeline.ts/calibrate.ts: prefer the
+// repo-root `.venv` (built from python/requirements.txt) so the numpy-backed
+// engine spawns with its dependencies; fall back to the system interpreter.
+function resolvePythonBin(): string {
+  if (process.platform !== "win32") {
+    const venvBin = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", ".venv", "bin", "python3");
+    if (existsSync(venvBin)) return venvBin;
+  }
+  return process.platform === "win32" ? "python" : "python3";
+}
+const PYTHON_BIN = resolvePythonBin();
 const ENGINE_SCRIPT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "python", "monte_carlo.py");
 
 function requireFinite(output: EngineOutput, field: keyof EngineOutput): number {
