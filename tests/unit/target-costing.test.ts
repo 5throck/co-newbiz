@@ -93,14 +93,20 @@ describe("price evidence drafts", () => {
       configured: true,
       sources: [{ title: "가격표", url: "https://example.com/price", snippet: "단가 12,000원 (EA 기준)" }],
     });
+    // The test asserts the no-LLM fallback regardless of the host's .env —
+    // pin the provider off for this test and restore it after (llm.ts reads
+    // CO_NEWBIZ_LLM_* at call time, never overriding explicitly-set values).
+    const prevProvider = process.env.CO_NEWBIZ_LLM_PROVIDER;
+    process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
     try {
       const { draftPriceEvidence } = await import("../../app/web-next/lib/price-evidence.ts");
       const draft = await draftPriceEvidence({ subject: "테스트 제품" });
-      // No LLM configured in the test environment → the deterministic
-      // fallback never invents a price.
+      // Without an LLM the deterministic fallback never invents a price.
       expect(draft.proposals).toEqual([]);
       expect(draft.note.length).toBeGreaterThan(0);
     } finally {
+      if (prevProvider === undefined) delete process.env.CO_NEWBIZ_LLM_PROVIDER;
+      else process.env.CO_NEWBIZ_LLM_PROVIDER = prevProvider;
       setWebResearchOverrideForTests(null);
     }
   });

@@ -7,12 +7,20 @@ lang_reason: source-material
 
 - Spec ID: `2026-09-19-adr0120-wave2-all-phases`
 - Date: 2026-09-19
-- Status: **Proposed** — Phase별 구현 전 승인 필요
+- Status: **Implemented (Phase A)** — Phase A 구현·검증 완료(2026-09-17), Phase B/C는 후속 PR
 - Related: ADR-0120, ADR-0074, ADR-0086, ADR-0094/0095
 - Design pattern: S4 `RouteDecisionStage` 선례 준용 — 본문을 독립 컴포넌트로
   추출하고 기존 페이지·deals 탭이 동일 컴포넌트를 소비한다.
 
 ## 1. Phase A — S5 자체 진출 + S2 기회 발굴 (패턴 확립)
+
+> **구현 현황 (2026-09-17)**: 완료. `GreenfieldStage.tsx`(S5 본문: 진출전략 폼·
+> 필요 역량 확인·투자비 검토 요건·LLM 추천·GateDecisionPanel·PromotionPanel)와
+> `OpportunityFunnelStage.tsx`(S2 본문: KPI 필터·산업 발굴·퍼널 목록·직접 등록,
+> `opportunityId`로 캐리어 기회 행 표시)를 추출했다. `/greenfield`는 칩 선택·URL
+> 동기화 래퍼로, `/opportunities`는 StageFrame 래퍼로 축소했다. deals 탭은 S2·S4·S5
+> 분기마다 별도 자식 컴포넌트로 분리해 훅 순서 위반(조기 반환으로 훅 수 갈림)을
+> 해소했다. 검증: tsc·design-lint·`bun run test:unit`(120/120) 클린.
 
 ### S5 자체 진출 (`/greenfield`, 386줄)
 
