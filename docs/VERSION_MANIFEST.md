@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-20T13:14:28.998Z
+**Generated**: 2026-09-20T13:27:04.829Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -9,7 +9,7 @@
 ## Summary
 
 - **Agents**: 41
-- **Skills**: 148
+- **Skills**: 147
 - **Scripts**: 139 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
@@ -37,7 +37,7 @@
 | greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-09-19 |
 | group-review-agent | agents/group-review-agent.md | high | inherit | 2026-09-19 |
 | hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-09-19 |
-| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-15 |
+| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-20 |
 | incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-09-19 |
 | industry-lead | agents/industry-lead.md | high | inherit | 2026-09-19 |
 | infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-09-19 |
@@ -47,7 +47,7 @@
 | market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-09-19 |
 | partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-09-19 |
 | platform-lead | agents/platform-lead.md | high | inherit | 2026-09-19 |
-| pm | agents/pm.md | medium | inherit | 2026-09-19 |
+| pm | agents/pm.md | medium | inherit | 2026-09-20 |
 | pmi-agent | agents/pmi-agent.md | high | inherit | 2026-09-19 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-09-19 |
 | quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-09-19 |
@@ -153,7 +153,6 @@
 | market-data-pipeline | 1.0.1 | experimental | skills/market-data-pipeline/SKILL.md | workspace | market data, data pipeline, data freshness | process-governance-manager |
 | master-data-governance | 1.0.0 | active | .claude/skills/master-data-governance/SKILL.md | both | staging unmapped queue, master data resolution, unmapped raw value, master data code assignment | dba |
 | mcp-server-integration | 1.0.0 | active | .claude/skills/mcp-server-integration/SKILL.md | both | add an MCP tool, MCP server integration, MCP-REST parity, no direct DB access from MCP | backend-engineer |
-| meeting | 1.4.1 | active | .claude/skills/meeting/SKILL.md | both | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
 | meeting-facilitation | 1.4.1 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
 | monte-carlo-simulation | 1.1.0 | active | skills/monte-carlo-simulation/SKILL.md | workspace | Monte Carlo simulation, seeded simulation, P50 P95 NPV, contingent liability integration | risk-officer |
 | notification-channel-management | 1.0.0 | active | .claude/skills/notification-channel-management/SKILL.md | both | notification channel, notification bundling, watch_rule configuration, notification severity | sre |
@@ -387,7 +386,7 @@
 **Checked**: Claude (.claude/) vs Gemini (.gemini/)
 
 - **Commands with parity**: 8 / 8
-- **Skills with parity**: 44 / 148 (common-template skills are parity-exempt)
+- **Skills with parity**: 43 / 147 (common-template skills are parity-exempt)
 
 ---
 
