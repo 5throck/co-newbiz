@@ -39,7 +39,7 @@ Next.js 자체 빌드가 하나의 프로세스에서 `/api/**`(Route Handlers)�
 cd app/web-next && bun --bun run start
 ```
 
-기본 포트 8787에서 실행(`package.json`의 `start` 스크립트 — `app/server`가 쓰던 동일 포트로, Phase 5에서 의도적으로 선택되어 `CO_NEWBIZ_API_BASE_URL`과 `localhost:8787`을 참조하는 모든 문서/스크립트를 변경할 필요가 없게 됨). `bun run`이 아닌 `bun --bun`이 필요 — 그렇지 않으면 Next의 dev/start 스크립트가 Node 하에서 실행되며, Node는 `bun:sqlite`(`db/client.ts`의 import)를 해석할 수 없습니다. Phase 2에서 경험적으로 발견된 사항입니다.
+기본 포트 7749에서 실행(`package.json`의 `start` 스크립트; 2026-09-20, 일부 운영 환경에서 무관한 Docker 서비스가 8787을 점유함에 따라 Phase 5 컷오버 기본값이던 8787에서 변경). `bun run`이 아닌 `bun --bun`이 필요 — 그렇지 않으면 Next의 dev/start 스크립트가 Node 하에서 실행되며, Node는 `bun:sqlite`(`db/client.ts`의 import)를 해석할 수 없습니다. Phase 2에서 경험적으로 발견된 사항입니다.
 
 헬스 체크: `GET /api/health`가 `{"status":"ok"}`를 반환해야 합니다. 이것이 ADR-0014가 요구하는 "직후 헬스 체크" 단계 — 프로세스가 크래시 없이 시작된 것만이 아니라, 릴리스를 완료로 간주하기 전에 확인해야 합니다.
 

@@ -4,8 +4,8 @@
     {
       "name": "co-newbiz-web-next",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["--cwd", "app/web-next", "--bun", "next", "dev", "-p", "8787"],
-      "port": 8787
+      "runtimeArgs": ["--cwd", "app/web-next", "--bun", "next", "dev", "-p", "7749"],
+      "port": 7749
     }
   ]
 }

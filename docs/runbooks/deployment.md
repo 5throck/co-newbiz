@@ -38,7 +38,7 @@ Next.js's own build serves both `/api/**` (Route Handlers) and the App Router pa
 cd app/web-next && bun --bun run start
 ```
 
-Runs on port 8787 by default (`package.json`'s `start` script — the same port `app/server` used, chosen deliberately in Phase 5 so `CO_NEWBIZ_API_BASE_URL` and every doc/script referencing `localhost:8787` needed no change). `bun --bun` is required, not plain `bun run` — Next's dev/start scripts otherwise execute under Node, which cannot resolve `bun:sqlite` (`db/client.ts`'s import), found empirically during Phase 2.
+Runs on port 7749 by default (`package.json`'s `start` script; moved from 8787 — the Phase 5 cutover default, chosen back then for `CO_NEWBIZ_API_BASE_URL` compatibility — to 7749 on 2026-09-20 after an unrelated local Docker service took 8787 on operator machines). `bun --bun` is required, not plain `bun run` — Next's dev/start scripts otherwise execute under Node, which cannot resolve `bun:sqlite` (`db/client.ts`'s import), found empirically during Phase 2.
 
 Health check: `GET /api/health` should return `{"status":"ok"}`. This is the "health check immediately after" step ADR-0014 requires — confirm it before considering the release complete, not just that the process started without crashing.
 

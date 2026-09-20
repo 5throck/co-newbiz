@@ -57,7 +57,7 @@ python3 -m venv .venv && .venv/bin/pip install -r python/requirements.txt
 cd app/web-next
 bun install
 bun run dev          # first boot prints the initial admin credentials
-# open http://localhost:8787
+# open http://localhost:7749
 ```
 
 Manual DB/account management (optional):
@@ -180,4 +180,4 @@ Internal workspace project — not for external distribution. Governed by the sa
 
 ---
 
-*Last Updated: 2026-09-05*
+*Last Updated: 2026-09-20*

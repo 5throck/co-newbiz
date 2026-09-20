@@ -152,7 +152,7 @@ decision. Report verified / could-not-verify / needs-judgement.
    `\r` to every value and breaks APIs silently.
 3. **Pre-flight**: `bun scripts/co-newbiz/env-check.ts` (before S1;
    `--exports` emits CRLF-safe export lines). The app itself must run under
-   Bun (`bun:sqlite`) on port 8787.
+   Bun (`bun:sqlite`) on port 7749.
 4. **Never trust a subagent's "API key missing" report** without a
    reproducible curl + HTTP status. (A 2026-08-31 run misdiagnosed valid
    keys as missing.)
