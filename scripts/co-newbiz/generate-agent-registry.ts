@@ -1,3 +1,7 @@
+#!/usr/bin/env bun
+/**
+ * @version 1.1.0
+ */
 // generate-agent-registry.ts — agents/*.md 로스터를 런타임 레지스트리로 투영한다
 // (ADR-0128 2단계). 기존 generated 패턴(spec-activities, library)과 동일한 규율:
 // SSOT는 agents/*.md이고, 이 스크립트는 읽어 정적 TS로 내보낼 뿐이다.
@@ -11,7 +15,8 @@ const OUT = join(ROOT, "app", "web-next", "lib", "agent-registry.generated.ts");
 interface Entry { key: string; name: string; role: string; domain: string | null }
 
 function parseFrontmatter(text: string): Record<string, string> {
-  const m = text.match(/^---\n([\s\S]*?)\n---/);
+  const normalized = text.replace(/\r\n/g, "\n");
+  const m = normalized.match(/^---\n([\s\S]*?)\n---/);
   const fm: Record<string, string> = {};
   if (!m) return fm;
   for (const line of m[1].split("\n")) {
@@ -45,5 +50,15 @@ export const AGENT_REGISTRY: AgentRegistryEntry[] = ${JSON.stringify(entries, nu
 
 export const AGENT_KEYS = new Set(AGENT_REGISTRY.map((a) => a.key));
 `;
-writeFileSync(OUT, banner + body);
-console.log(`agent-registry.generated.ts written (${entries.length} agents)`);
+const next = banner + body;
+if (process.argv.includes("--check")) {
+  const current = readFileSync(OUT, "utf-8");
+  if (current !== next) {
+    console.error(`agent-registry.generated.ts drift detected (${entries.length} agents parsed)`);
+    process.exit(1);
+  }
+  console.log(`agent-registry.generated.ts up to date (${entries.length} agents)`);
+} else {
+  writeFileSync(OUT, next);
+  console.log(`agent-registry.generated.ts written (${entries.length} agents)`);
+}
