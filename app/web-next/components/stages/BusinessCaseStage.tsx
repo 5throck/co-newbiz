@@ -64,6 +64,7 @@ interface CasesResponse {
   cases: CaseView[];
   recommended_scenario: string | null;
   adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null;
+  escalated_cagr_pct: number | null;
 }
 interface ActivityRow {
   activityId: string;
@@ -108,6 +109,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const canAct = me?.role === "admin" || me?.role === "analyst";
   const { confirm, confirmDialog } = useConfirm();
   const [data, setData] = useState<CasesResponse | null>(null);
+  // 에스컬레이션 조정 CAGR (§4-Q2) — 과거 기반 관점과의 괴리 경고용
+  const [escalatedCagrPct, setEscalatedCagrPct] = useState<number | null>(null);
   const [run, setRun] = useState<{ runId: string; status: string; activities: ActivityRow[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +148,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
   const load = useCallback(() => {
     api.get<CasesResponse>(`/api/projects/${encodeURIComponent(projectId)}/business-case`)
-      .then((r) => setData(r.data))
+      .then((r) => { setData(r.data); setEscalatedCagrPct(r.data.escalated_cagr_pct ?? null); })
       .catch((e) => setError(e instanceof Error ? e.message : "사업성 분석 데이터를 불러오지 못했습니다."));
   }, [projectId]);
 
@@ -410,6 +413,14 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                         <td>
                           {note.growth ? `${(Number(note.growth) * 100).toFixed(1)}%` : "—"}
                           <span className="text-[color:var(--muted-fg)] text-[0.74rem]"> {note.growth_source ?? ""}</span>
+                          {c.variant === "historical" && note.growth && escalatedCagrPct !== null && Math.abs(Number(note.growth) * 100 - escalatedCagrPct) > 15 && (
+                            <span
+                              className="status-chip status-amber ml-1"
+                              title={`에스컬레이션 조정 CAGR(${escalatedCagrPct.toFixed(1)}%)와 과거 CAGR의 차이가 15%p를 넘습니다 — 성장 가정의 불확실성 신호입니다.`}
+                            >
+                              ⚠ 조정치와 {(Number(note.growth) * 100 - escalatedCagrPct).toFixed(1)}%p 차이
+                            </span>
+                          )}
                         </td>
                         <td>
                           {note.sigma ? pct1(Number(note.sigma)) : "—"}

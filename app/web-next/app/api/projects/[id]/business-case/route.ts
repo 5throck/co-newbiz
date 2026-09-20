@@ -7,6 +7,7 @@
 // non-members get 404 (existence itself is protected, FR-SEC-01); admins are
 // excluded by role separation. Writes are analyst+.
 import { getDb } from "../../../../../../../db/client.ts";
+import { resolveEffectiveCagr } from "../../../../../lib/market-calibration.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
@@ -34,8 +35,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
 if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const { cases, recommendedScenario, adoption } = listBusinessCases(id);
+  const db = getDb();
+  // 에스컬레이션 조정 CAGR (design 2026-09-20-escalation-downstream §4-Q2) —
+  // 과거 기반 관점과의 괴리 경고용. 프로젝트 → 원 기회의 산업에서 resolver 조회.
+  const opp = db
+    .query(
+      "SELECT o.market_scope FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
+    )
+    .get(id) as { market_scope: string | null } | undefined;
+  const ind = opp?.market_scope
+    ? (db.query("SELECT id FROM md_industry WHERE name_ko = ?").get(opp.market_scope) as { id: string } | undefined)
+    : undefined;
+  const eff = ind ? resolveEffectiveCagr(db, ind.id) : null;
   return ok(
-    { cases, recommended_scenario: recommendedScenario, adoption },
+    { cases, recommended_scenario: recommendedScenario, adoption, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null },
     200,
     { count: cases.length },
   );

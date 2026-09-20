@@ -54,6 +54,7 @@ interface Profile {
   industryLinkage?: Array<{
     industry: string; industryId: string | null; matrixFound: boolean;
     anchorTotalUsdB?: number | null; cagr?: number | null; externalGapPercent?: number | null;
+    escalatedCagrPct?: number | null;
     qualitativeLinks?: { opportunityFactors: string[]; riskFactors: string[] };
     note?: string;
   }>;
@@ -1192,7 +1193,10 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                           <tr key={`${l.industry}-${i}`}>
                             <td>{l.industry}</td>
                             <td className="col-num tabular-nums">{l.anchorTotalUsdB != null ? `$${l.anchorTotalUsdB.toFixed(2)}B` : "—"}</td>
-                            <td className="col-num tabular-nums">{l.cagr != null ? `${l.cagr.toFixed(1)}%` : "—"}</td>
+                            <td className="col-num tabular-nums">
+                              {l.cagr != null ? `${l.cagr.toFixed(1)}%` : "—"}
+                              {l.escalatedCagrPct != null && <span className="status-chip status-green ml-1" title="결정론 스케일링 에스컬레이션 적용 — 외부 참조 × 0.85 (사람 결정)">에스컬레이션 {l.escalatedCagrPct}%</span>}
+                            </td>
                             <td className="col-num tabular-nums">{l.externalGapPercent != null ? `${l.externalGapPercent > 0 ? "+" : ""}${l.externalGapPercent}%` : "—"}</td>
                             <td className="text-[0.78rem]">
                               {l.matrixFound && l.industryId ? (

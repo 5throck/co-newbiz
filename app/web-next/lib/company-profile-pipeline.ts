@@ -8,6 +8,7 @@
 //   6. 결정론 합성 — 재무 비율·추세, S1 매트릭스 산업 연계, 섹션별 신뢰도,
 //      검증 원장, RAG 상한 (LLM 없음 — ADR-0093)
 //   7. company_profile_version에 버전 누적 (append-only, ADR-0005 패턴)
+import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
 import { resolveCorpCode, validateCorpCode, fetchFinancials, isDartConfigured, type DartFinancials } from "../lib/dart-client.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
@@ -63,6 +64,7 @@ export interface CompanyProfilePayload {
     matrixFound: boolean;
     anchorTotalUsdB?: number | null;
     cagr?: number | null;
+    escalatedCagrPct?: number | null;
     externalGapPercent?: number | null;
     qualitativeLinks?: { opportunityFactors: string[]; riskFactors: string[] };
     note?: string;
@@ -347,12 +349,14 @@ export async function runCompanyProfilePipeline(db: Db, subject: ProfileSubject,
         qualitative?: { opportunityFactors?: string[]; riskFactors?: string[] };
       };
     }).matrix ?? {};
+    const eff = resolveEffectiveCagr(db, ind.id);
     industryLinkage.push({
       industry: ind.name_ko,
       industryId: ind.id,
       matrixFound: true,
       anchorTotalUsdB: m.anchor?.total ?? null,
       cagr: m.consistency?.bottomUpCagr ?? null,
+      escalatedCagrPct: eff?.source === "escalated" ? eff.cagrPct : null,
       externalGapPercent: m.externalForecast?.gapPct ?? null,
       qualitativeLinks: {
         opportunityFactors: m.qualitative?.opportunityFactors?.slice(0, 3) ?? [],
