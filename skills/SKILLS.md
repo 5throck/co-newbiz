@@ -47,7 +47,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `antitrust-screening` | 1.1.0 | active | antitrust-agent | 2026-08-23 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
 | `antitrust-screening` | 1.1.0 | active | antitrust-agent | 2026-08-23 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
 | `api-documentation` | 1.0.2 | active | pm | 2026-07-19 | — | — |
-| `api-documentation` | 1.0.2 | active | pm | 2026-07-19 | — | — |
+| `api-documentation` | 1.0.0 | active | pm | 2026-07-19 | — | — |
 |`assumption-audit`|1.0.1|active|process-governance-manager|2026-08-20|—|Wave 5.8I — user/assumed/derived kind-tag correctness audit|
 | `auth-and-account-management` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8J — existence-never-leaked auth, dual-credential must-change-password gating |
 | `batch-scheduling-operations` | 1.0.0 | active | infra-automation-engineer | 2026-08-20 | — | Wave 5.8K — ADR-0019 OS-level scheduler, never in-process timer |
@@ -59,7 +59,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `certification-transferability` | 1.2.0 | active | legal-counsel | 2026-08-23 | — | Wave 5.8H — CoC transferability confirmed against the certifying body's own rules; inference disallowed |
 | `checklist-authoring` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — item-by-item mandatory/waiver_eligible checklist layer |
 | `ci-triage` | 0.1.1 | active | pm | 2026-09-08 | - | - |
-| `ci-triage` | 0.1.1 | active | pm | 2026-09-08 | - | - |
+| `ci-triage` | 0.1.0 | active | pm | 2026-09-08 | - | - |
 | `deal-pipeline-orchestration` | 1.0.0 | active | pm | 2026-09-08 | - | - |
 | `manual-authoring` | 2.1.0 | active | docs-writer | 2026-09-06 | — | Manual/SOP/governance-reference authoring standard — audience split, governance metadata, external-reference badge rules; documents render live via `/library` (ADR-0108), no generator step |
 | `commercial-due-diligence` | 1.1.0 | active | commercial-dd-agent | 2026-08-23 | — | Wave 5.8H — checklist cdd-01-07, no-narrative-only-finding rule |
@@ -92,7 +92,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `deployment-and-release` | 1.0.0 | active | release-engineer | 2026-08-20 | — | Wave 5.8K (design §9.3 ops/security group — final Wave 5.8 sub-PR) — ADR-0014 rollback-planned-before-migration discipline |
 | `design-lint` | 1.0.0 | active | design-system-agent | 2026-08-30 | — | ADR-0074 — Onyx 3.0 mechanical enforcement (hardcoded colors, onInput, icon-only buttons without aria-label, nested main); bun scripts/co-newbiz/design-lint.ts |
 | `documentation-writing` | 1.0.3 | active | pm | 2026-07-19 | — | — |
-| `documentation-writing` | 1.0.3 | active | pm | 2026-07-19 | — | — |
+| `documentation-writing` | 1.0.0 | active | pm | 2026-07-19 | — | — |
 | `evidence-ledger` | 1.1.0 | active | pm | 2026-08-25 | — | — |
 | `evidence-ledger` | 1.1.0 | active | pm | 2026-08-25 | — | — |
 | `executive-presentation` | 1.0.0 | active | docs-writer | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — retargeted to Entity/Group IC deck |
@@ -105,10 +105,10 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `financing-plan-review` | 1.2.0 | active | valuation-agent | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — certainty-of-funds evidence pack per chk-financing; DD step 12 + Entity IC precondition |
 | `financing-plan-review` | 1.2.0 | active | valuation-agent | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — certainty-of-funds evidence pack per chk-financing; DD step 12 + Entity IC precondition |
 | `finishing-a-development-branch` | 1.0.1 | active | pm | 2026-06-13 | — | — |
-| `finishing-a-development-branch` | 1.0.1 | active | pm | 2026-06-13 | — | — |
+| `finishing-a-development-branch` | 1.0.0 | active | pm | 2026-06-13 | — | — |
 |`forward-industry-research`|1.0.1|active|market-intelligence-agent|2026-08-29|—|ADR-0066 gap closure — forward/upstream industry qualitative research narrative feeding the driver registry|
 | `gateguard` | 1.0.2 | active | pm | 2026-08-01 | — | — |
-| `gateguard` | 1.0.2 | active | pm | 2026-08-01 | — | — |
+| `gateguard` | 1.0.0 | active | pm | 2026-08-01 | — | — |
 | `glossary-management` | 1.0.0 | active | glossary-curator | 2026-08-20 | — | Wave 5.8C (design §9.2 merge) — absorbs glossary-lint |
 | `governance-document-hierarchy` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B (design §9.3 governance-authoring group) — Policy/Procedure/Guideline/Checklist/Template layer classification |
 | `greenfield-feasibility` | 1.1.0 | active | greenfield-agent | 2026-08-23 | — | Wave 5.8C — Green Field Screening/Pre-FS |
@@ -119,7 +119,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `handbook` | 0.6.0 | active | pm | 2026-09-20 | — | — |
 |`handbook`|0.6.0|active|pm|2026-09-20|—|—|
 | `handbook-sync-audit` | 1.0.4 | active | docs-writer | 2026-08-29 | — | — |
-| `handbook-sync-audit` | 1.0.4 | active | docs-writer | 2026-08-29 | — | — |
+| `handbook-sync-audit` | 1.0.0 | active | docs-writer | 2026-08-29 | — | — |
 | `historical-financial-analysis` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G (design §9.3 financial/simulation group) — historical distribution feeding the growth-projection anchor |
 | `historical-financial-analysis` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G (design §9.3 financial/simulation group) — historical distribution feeding the growth-projection anchor |
 | `hwp-document-processing` | 1.1.0 | active | docs-writer | 2026-09-09 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — generation path only, extraction not yet ported (see SKILL.md Adaptation Note) |
@@ -148,13 +148,13 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `jv-structuring` | 1.2.0 | active | partnership-agent | 2026-08-23 | — | Wave 5.8E — governance/valuation/exit/deadlock documented before term-sheet negotiation |
 | `jv-structuring` | 1.2.0 | active | partnership-agent | 2026-08-23 | — | Wave 5.8E — governance/valuation/exit/deadlock documented before term-sheet negotiation |
 | `k-dart` | 2.1.2 | active | market-intelligence-agent | 2026-08-09 | — | Unified DART OpenAPI skill — disclosure query, financial parsing, line-item extraction; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
-| `k-dart` | 2.1.2 | active | market-intelligence-agent | 2026-08-09 | — | Unified DART OpenAPI skill — disclosure query, financial parsing, line-item extraction; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
+| `k-dart` | 2.1.0 | active | market-intelligence-agent | 2026-08-09 | — | Unified DART OpenAPI skill — disclosure query, financial parsing, line-item extraction; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
 | `k-kosis` | 1.0.2 | active | financial-analyst | 2026-08-23 | — | Korean Statistical Information Service (KOSIS) OpenAPI — national statistics search, table browsing, data retrieval, metadata lookup; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
-| `k-kosis` | 1.0.2 | active | financial-analyst | 2026-08-23 | — | Korean Statistical Information Service (KOSIS) OpenAPI — national statistics search, table browsing, data retrieval, metadata lookup; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
+| `k-kosis` | 1.0.0 | active | financial-analyst | 2026-08-23 | — | Korean Statistical Information Service (KOSIS) OpenAPI — national statistics search, table browsing, data retrieval, metadata lookup; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
 | `k-law` | 1.0.2 | active | market-intelligence-agent | 2026-08-09 | — | Korean Ministry of Government Legislation  OpenAPI — statutes, precedents, ordinances; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
-| `k-law` | 1.0.2 | active | market-intelligence-agent | 2026-08-09 | — | Korean Ministry of Government Legislation  OpenAPI — statutes, precedents, ordinances; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
+| `k-law` | 1.0.0 | active | market-intelligence-agent | 2026-08-09 | — | Korean Ministry of Government Legislation  OpenAPI — statutes, precedents, ordinances; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
 | `k-opendata` | 1.2.2 | active | market-intelligence-agent | 2026-09-03 | — | — |
-| `k-opendata` | 1.2.2 | active | market-intelligence-agent | 2026-09-03 | — | — |
+| `k-opendata` | 1.2.0 | active | market-intelligence-agent | 2026-09-03 | — | — |
 | `legal-due-diligence` | 1.1.0 | active | legal-counsel | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — DD-grade legal workstream per chk-legal-dd; RAG findings register mapped to SPA protections |
 | `legal-due-diligence` | 1.1.0 | active | legal-counsel | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — DD-grade legal workstream per chk-legal-dd; RAG findings register mapped to SPA protections |
 |`legal-risk-register`|1.0.1|active|legal-counsel|2026-08-20|—|Wave 5.8H — consolidated per-project legal-risk view|
@@ -181,9 +181,9 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `permit-pathway-mapping` | 1.1.0 | active | legal-counsel | 2026-08-23 | — | Wave 5.8H — permit DAG + critical path, strictly separate from certification |
 | `permit-pathway-mapping` | 1.1.0 | active | legal-counsel | 2026-08-23 | — | Wave 5.8H — permit DAG + critical path, strictly separate from certification |
 | `platform-command-lifecycle-manager` | 1.0.2 | active | pm | 2026-05-31 | — | — |
-| `platform-command-lifecycle-manager` | 1.0.2 | active | pm | 2026-05-31 | — | — |
+| `platform-command-lifecycle-manager` | 1.0.0 | active | pm | 2026-05-31 | — | — |
 | `platform-skill-lifecycle-manager` | 1.0.2 | active | pm | 2026-05-31 | — | — |
-| `platform-skill-lifecycle-manager` | 1.0.2 | active | pm | 2026-05-31 | — | — |
+| `platform-skill-lifecycle-manager` | 1.0.0 | active | pm | 2026-05-31 | — | — |
 | `pmi-planning` | 1.1.0 | active | pmi-agent | 2026-08-23 | — | Wave 5.8D — synthesis skill sequencing the other five M&A special-topics outputs |
 | `pmi-planning` | 1.1.0 | active | pmi-agent | 2026-08-23 | — | Wave 5.8D — synthesis skill sequencing the other five M&A special-topics outputs |
 |`policy-and-procedure-governance`|1.0.1|active|process-governance-manager|2026-08-23|—|Wave 5.8B — Policy/Procedure authoring, entity addenda and shared/entity/region procedure model|
@@ -207,14 +207,14 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `regulatory-change-response` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — pre-effective-date response planning |
 |`regulatory-screening`|1.0.1|active|legal-counsel|2026-08-23|—|Wave 5.8H (design §9.3 legal/certification/DD group) — Screening-gate region/foreign-investment/sanctions checks|
 | `research-analysis` | 1.0.2 | active | pm | 2026-07-19 | — | — |
-| `research-analysis` | 1.0.2 | active | pm | 2026-07-19 | — | — |
+| `research-analysis` | 1.0.0 | active | pm | 2026-07-19 | — | — |
 | `rest-api-design` | 1.0.0 | active | backend-engineer | 2026-08-20 | — | Wave 5.8J — api-spec.md non-negotiables, 404-not-403, envelope shape |
 | `run-versioning-and-attribution` | 1.0.0 | active | data-architect | 2026-08-20 | — | Wave 5.8I — ADR-0005 immutable run_input/input_hash, superseded_by chains |
 |`sample-driven-report-writing`|1.0.1|active|docs-writer|2026-08-20|—|Wave 5.8A reuse layer, adapted from Projects/co-consult|
 | `scenario-planning` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8G — discrete downside/base/upside cases incl. mandatory +200bp rate-shock test |
 | `scenario-planning` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8G — discrete downside/base/upside cases incl. mandatory +200bp rate-shock test |
 | `script-lifecycle-manager` | 1.2.2 | active | pm | 2026-05-30 | — | — |
-| `script-lifecycle-manager` | 1.2.2 | active | pm | 2026-05-30 | — | — |
+| `script-lifecycle-manager` | 1.2.0 | active | pm | 2026-05-30 | — | — |
 | `security-baseline-review` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — orchestrates `docs/security/security-baseline.md`'s real recurring cadence |
 | `security-scan` | 1.2.0 | active | pm | 2026-08-30 | — | Reassigned from security-expert — not defined in templates/common/agents/ or any variant, caused orphan on every propagated variant |
 | `security-scan` | 1.2.0 | active | pm | 2026-08-30 | — | Reassigned from security-expert — not defined in templates/common/agents/ or any variant, caused orphan on every propagated variant |
@@ -225,7 +225,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `skill-lifecycle-manager` | 1.5.0 | active | pm | 2026-09-21 | — | — |
 |`skill-lifecycle-manager`|1.4.0|active|pm|2026-09-18|—|—|
 | `source-command-commit-push-pr` | 1.0.3 | active | pm | — | — | — |
-| `source-command-commit-push-pr` | 1.0.3 | active | pm | — | — | — |
+| `source-command-commit-push-pr` | 1.0.1 | active | pm | — | — | — |
 | `stage-gate-governance` | 1.4.0 | active | process-governance-manager | 2026-09-08 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
 | `stage-gate-governance` | 1.4.0 | active | process-governance-manager | 2026-09-08 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
 | `standup-synthesizer` | 1.0.0 | active | pm | 2026-08-06 | — | Daily standup digest synthesizer aggregating commits, issues, PRs, and blockers |
@@ -246,7 +246,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `token-usage-lint` | 1.1.0 | active | pm | 2026-09-06 | - | - |
 | `token-usage-lint` | 1.1.0 | active | pm | 2026-09-06 | - | - |
 | `translate` | 1.0.3 | active | pm | 2026-08-24 | — | — |
-| `translate` | 1.0.3 | active | pm | 2026-08-24 | — | — |
+| `translate` | 1.0.1 | active | pm | 2026-08-24 | — | — |
 | `two-tier-approval-chain` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | Wave 5.8B — Entity IC gating + Group IC ranking (ADR-0028/0029) |
 | `two-tier-approval-chain` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | Wave 5.8B — Entity IC gating + Group IC ranking (ADR-0028/0029) |
 | `ui-information-architecture` | 1.0.0 | active | frontend-engineer | 2026-08-20 | — | Wave 5.8J — ui-spec.md non-negotiables, real component patterns from Wave 5.6B |
@@ -267,7 +267,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `wacc-input-session` | 1.3.0 | active | valuation-agent | 2026-09-10 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
 | `waiver-management` | 1.0.1 | active | compliance-officer | 2026-09-08 | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle |
 | `zod-contract-gate` | 1.0.2 | active | backend-engineer | 2026-08-06 | — | Defines Zod runtime schema validation patterns and contract safety rules |
-| `zod-contract-gate` | 1.0.2 | active | backend-engineer | 2026-08-06 | — | Defines Zod runtime schema validation patterns and contract safety rules |
+| `zod-contract-gate` | 1.0.0 | active | backend-engineer | 2026-08-06 | — | Defines Zod runtime schema validation patterns and contract safety rules |
 
 
 
