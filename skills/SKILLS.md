@@ -117,7 +117,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `growth-projection-modeling` | 1.1.0 | active | financial-analyst | 2026-08-23 | — | Wave 5.8G — ADR-0018 anchor_ref + top-decile base-rate warning, feeds the Kill Criterion |
 | `growth-projection-modeling` | 1.1.0 | active | financial-analyst | 2026-08-23 | — | Wave 5.8G — ADR-0018 anchor_ref + top-decile base-rate warning, feeds the Kill Criterion |
 | `handbook` | 0.4.1 | active | pm | 2026-08-17 | — | — |
-| `handbook` | 0.4.1 | active | pm | 2026-08-17 | — | — |
+|`handbook`|0.6.0|active|pm|2026-09-20|—|—|
 | `handbook-sync-audit` | 1.0.0 | active | docs-writer | 2026-08-29 | — | — |
 | `handbook-sync-audit` | 1.0.0 | active | docs-writer | 2026-08-29 | — | — |
 | `historical-financial-analysis` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G (design §9.3 financial/simulation group) — historical distribution feeding the growth-projection anchor |
