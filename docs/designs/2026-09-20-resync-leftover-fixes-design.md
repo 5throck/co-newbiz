@@ -40,6 +40,12 @@ work on a template-managed file), README `cd` note, `next-env.d.ts` path
   resolution errors. Added an `Install web-next dependencies` step
   (`bun install --frozen-lockfile --cwd app/web-next`, conditional on the
   package manifest) before the audit step.
+- `ci.yml` follow-up 2 (second live CI run exposed it): six python-backed
+  unit test files (calibration, simulation, report rendering, fin-pipeline,
+  WACC session, sim-engine bridge) failed with missing numpy/pandas in the
+  runner. Added a `Create python venv` step building the repo-root `.venv`
+  from `python/requirements.txt` — the exact path the scripts resolve via
+  `.venv/bin/python3` on non-Windows platforms.
 - `scripts/SCRIPTS.md` registry: calibrate.ts entry version 1.0.0 → 1.1.0
   with a change note; `docs/VERSION_MANIFEST.md` regenerated.
 
@@ -65,4 +71,6 @@ per ADR-0070).
 - First live CI run on PR #388: `Run unit tests` failed in the GitHub runner
   with `Cannot find module 'next/server'` — the missing `app/web-next`
   dependency install described above; fixed by the added install step.
-- The PR's CI run executes the audit + both test suites green after the fix.
+- Second live CI run: the web-next resolution cleared; six python-backed
+  test files failed on missing numpy/pandas — fixed by the venv step.
+- The PR's CI run executes the audit + both test suites green after the fixes.

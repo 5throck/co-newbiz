@@ -37,6 +37,15 @@ jobs:
         if: ${{ hashFiles('app/web-next/package.json') != '' }}
         run: bun install --frozen-lockfile --cwd app/web-next
 
+      # Python-backed unit tests (calibration, simulation, report rendering,
+      # fin-pipeline) spawn the project scripts, which resolve the repo-root
+      # `.venv/bin/python3` first — build it from python/requirements.txt so
+      # numpy/pandas and the document renderers are available. The runner's
+      # preinstalled python3 satisfies the requirements' constraints.
+      - name: Create python venv
+        if: ${{ hashFiles('python/requirements.txt') != '' }}
+        run: python3 -m venv .venv && .venv/bin/pip install -r python/requirements.txt
+
       - name: Run audit
         run: bun scripts/audit.ts
 
