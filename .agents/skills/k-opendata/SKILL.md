@@ -9,12 +9,14 @@ description: >
   Customs Service (`관세청`) trade-statistics endpoints (HS-code-level
   import/export by country, national/regional totals) as the primary
   reference API set. Requires DATA_GO_KR_API_KEY environment variable.
-version: 1.2.0
+version: 1.2.2
 last_reviewed: 2026-09-03
 status: active
-owner: market-intelligence-agent
+owner: hs-classification-specialist
 prerequisites: DATA_GO_KR_API_KEY environment variable
 relates_to:
+  - skill: k-ecos
+    type: composes_with
   - skill: k-kosis
     type: relates_to
 l2_propagate: true
@@ -37,6 +39,10 @@ metadata:
 lang: ko
 lang_reason: proper-noun
 ---
+
+> **Composition note**: the Korea-Customs analysis workflows that compose with this
+> skill (`hs-classification-workflow`, `market-entry-strategy`, `landed-cost-calculation`)
+> live in the co-export variant (`templates/co-export/skills/`) and are linked there.
 
 ## Context
 
@@ -105,12 +111,14 @@ needed for classification, market-entry, or landed-cost work.
 
 ## Reference Material
 
-- None yet; if recurring lookups reveal a confirmed JSON response shape (`&type=json` support),
-  capture it as `references/customs-endpoints-ko.json` following the pattern in
-  `skills/k-dart/references/terms-ko.json`.
+- `references/terms-ko.json`: Korean-original customs terminology mapping (endpoint names ↔ operations,
+  field aliases incl. the `hsCd`/`hsCode` inconsistency, portal terms, error messages). Non-Markdown
+  reference asset, exempt from the workspace English-only doc policy. A confirmed JSON response shape
+  (`&type=json` support) discovered in recurring lookups goes there.
 
 ## Related Skills
 
+- k-ecos (BOK macro-financial series — complements customs trade figures for balance-of-payments context)
 - k-kosis (macro/aggregate statistics — not HS-code-level; use this skill instead for
   per-HS-code trade figures)
 - hs-classification-workflow (HS code must be confirmed before trade-trend lookup is meaningful)

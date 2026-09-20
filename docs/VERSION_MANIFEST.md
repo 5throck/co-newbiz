@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-20T21:42:30.219Z
+**Generated**: 2026-09-20T23:02:23.589Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -72,10 +72,10 @@
 | accessibility-audit | 1.1.0 | active | skills/accessibility-audit/SKILL.md | workspace | accessibility-audit, /accessibility-audit, axe-core audit, wcag accessibility check, wcag 2.1 aa | pm |
 | admin-console-operations | 1.1.0 | active | .claude/skills/admin-console-operations/SKILL.md | both | admin console operation, user approval workflow, audit log review via admin UI, threshold edit ADR requirement | process-governance-manager |
 | adr-governance | 1.0.0 | active | .claude/skills/adr-governance/SKILL.md | both | does this need an ADR, ADR trigger list, draft an ADR, architecture decision record | process-governance-manager |
-| agent-lifecycle-manager | 1.2.0 | active | skills/agent-lifecycle-manager/SKILL.md | workspace | create agent, new agent, validate agents, agent lifecycle, manage agents, hire agent, fire agent, deprecate agent | pm |
+| agent-lifecycle-manager | 1.3.0 | active | skills/agent-lifecycle-manager/SKILL.md | workspace | create agent, new agent, validate agents, agent lifecycle, manage agents, hire agent, fire agent, deprecate agent | pm |
 | agent-output-provenance | 1.2.0 | active | .claude/skills/agent-output-provenance/SKILL.md | both | agent output provenance, confidence grade on a deliverable, reviewed_by tracking, AI-produced vs human-confirmed distinction | process-governance-manager |
 | antitrust-screening | 1.1.0 | active | skills/antitrust-screening/SKILL.md | workspace | antitrust screening, HHI calculation, merger control filing, gun-jumping, relevant market definition | antitrust-agent |
-| api-documentation | 1.0.0 | active | skills/api-documentation/SKILL.md | workspace | api documentation, document api, api reference, developer documentation, rest api docs, graphql docs, sdk documentation | pm |
+| api-documentation | 1.0.2 | active | skills/api-documentation/SKILL.md | workspace | api documentation, document api, api reference, developer documentation, rest api docs, graphql docs, sdk documentation | pm |
 | assumption-audit | 1.0.1 | experimental | skills/assumption-audit/SKILL.md | workspace | assumption audit, assumption review, assumption register check | process-governance-manager |
 | auth-and-account-management | 1.0.0 | active | .claude/skills/auth-and-account-management/SKILL.md | both | account lockout, password reset, must change password gate, API token issuance, session lifecycle | security-engineer |
 | batch-scheduling-operations | 1.0.0 | active | .claude/skills/batch-scheduling-operations/SKILL.md | both | OS scheduler registration, cron job setup, batch job scheduling, recurring task registration | infra-automation-engineer |
@@ -83,7 +83,7 @@
 | certification-roadmap | 1.0.0 | active | skills/certification-roadmap/SKILL.md | workspace | certification requirements, certification gap analysis, certification roadmap | certification-agent |
 | certification-transferability | 1.2.0 | active | skills/certification-transferability/SKILL.md | workspace | certification transferability, change of control certification, certification survives acquisition | legal-counsel |
 | checklist-authoring | 1.0.0 | active | .claude/skills/checklist-authoring/SKILL.md | both | add a checklist item, checklist authoring, mandatory vs optional checklist item, waiver_eligible | process-governance-manager |
-| ci-triage | 0.1.0 | active | skills/ci-triage/SKILL.md | workspace | ci failure, triage failure, audit gate failed, scaffold failed, fix the pipeline | pm |
+| ci-triage | 0.1.1 | active | skills/ci-triage/SKILL.md | workspace | ci failure, triage failure, audit gate failed, scaffold failed, fix the pipeline | pm |
 | commercial-due-diligence | 1.1.0 | active | skills/commercial-due-diligence/SKILL.md | workspace | commercial due diligence, customer concentration analysis, pricing power assessment, win loss analysis | commercial-dd-agent |
 | committee-deliberation | 1.6.0 | active | .claude/skills/committee-deliberation/SKILL.md | both | committee, committee-deliberation, steering committee, gate deliberation, red-team review | pm |
 | community-partnership-planning | 1.1.0 | active | skills/community-partnership-planning/SKILL.md | workspace | community partnership, local workforce development, community relations, social license to operate | hr-integration-agent |
@@ -106,16 +106,16 @@
 | decision-record | 1.1.0 | active | skills/decision-record/SKILL.md | workspace | decision record, gate ruling, go/no-go decision, escalation decision, record a decision | pm |
 | deployment-and-release | 1.0.0 | active | .claude/skills/deployment-and-release/SKILL.md | both | release deployment, migration rollback, irreversible migration sign-off, rollback drill | release-engineer |
 | design-lint | 1.0.0 | active | .claude/skills/design-lint/SKILL.md | both | design lint, UI consistency | design-system-agent |
-| documentation-writing | 1.0.0 | active | skills/documentation-writing/SKILL.md | workspace | write documentation, create guide, draft communication, write manual, create tutorial, documentation, technical writing | pm |
+| documentation-writing | 1.0.3 | active | skills/documentation-writing/SKILL.md | workspace | write documentation, create guide, draft communication, write manual, create tutorial, documentation, technical writing | pm |
 | evidence-ledger | 1.1.0 | active | skills/evidence-ledger/SKILL.md | workspace | evidence ledger, citation ledger, claim verification, source verification, evidence tracking | pm |
 | executive-presentation | 1.0.0 | active | skills/executive-presentation/SKILL.md | workspace | executive presentation, executive deck, IC presentation, decision deck, strategy deck, board presentation | docs-writer |
 | expert-interview | 1.1.0 | active | .claude/skills/expert-interview/SKILL.md | both | expert interview, expert network call, source triangulation, disconfirming questions | commercial-dd-agent |
 | explain-me | 1.0.0 | experimental | skills/explain-me/SKILL.md | workspace | /explain-me, /reportme, make a report, create report, explain this topic | pm |
 | financial-statement-analysis | 1.0.0 | active | skills/financial-statement-analysis/SKILL.md | workspace | financial statement analysis, ROIC analysis, value driver tree, financial KPI, profitability analysis, cash flow analysis, DART analysis, fundamental analysis, corporate financial analysis | financial-analyst |
 | financing-plan-review | 1.2.0 | active | skills/financing-plan-review/SKILL.md | workspace | financing plan, certainty of funds, sources and uses | valuation-agent |
-| finishing-a-development-branch | 1.0.0 | active | skills/finishing-a-development-branch/SKILL.md | workspace | finish branch, complete work, wrap up, finishing a development branch, merge branch, create PR, push and PR | pm |
+| finishing-a-development-branch | 1.0.1 | active | skills/finishing-a-development-branch/SKILL.md | workspace | finish branch, complete work, wrap up, finishing a development branch, merge branch, create PR, push and PR | pm |
 | forward-industry-research | 1.0.1 | experimental | skills/forward-industry-research/SKILL.md | workspace | industry research, industry outlook, sector research | process-governance-manager |
-| gateguard | 1.0.0 | active | skills/gateguard/SKILL.md | workspace | gateguard, /gateguard, investigate file, check before edit, pre-edit check | pm |
+| gateguard | 1.0.2 | active | skills/gateguard/SKILL.md | workspace | gateguard, /gateguard, investigate file, check before edit, pre-edit check | pm |
 | glossary-management | 1.0.0 | active | .claude/skills/glossary-management/SKILL.md | both | add a glossary term, glossary lint, undefined term, glossary management, why_it_matters_ko | glossary-curator |
 | governance-document-hierarchy | 1.0.0 | active | .claude/skills/governance-document-hierarchy/SKILL.md | both | governance document hierarchy, policy vs procedure, governance layer, is this mandatory, new governance document | process-governance-manager |
 | graft | N/A | active | .claude/skills/graft/SKILL.md | claude | N/A | N/A |
@@ -123,7 +123,7 @@
 | group-level-review | 1.0.1 | experimental | skills/group-level-review/SKILL.md | workspace | group review, group IC, portfolio fit review | process-governance-manager |
 | growth-projection-modeling | 1.1.0 | active | skills/growth-projection-modeling/SKILL.md | workspace | growth projection, revenue forecast, base rate warning, anchor_ref, hockey stick check | financial-analyst |
 | handbook | 0.6.0 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook, update handbook, handbook sync, handbook maintenance | pm |
-| handbook-sync-audit | 1.0.0 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | docs-writer |
+| handbook-sync-audit | 1.0.4 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | handbook-reviewer |
 | historical-financial-analysis | 1.0.0 | active | skills/historical-financial-analysis/SKILL.md | workspace | historical financial trend, historical volatility, base rate distribution, multi-year trajectory analysis | financial-analyst |
 | hwp-document-processing | 1.1.0 | active | .claude/skills/hwp-document-processing/SKILL.md | both | hwp, hwpx, hwp document, hwpx document, hwp extraction, hwpx generation, government report template | docs-writer |
 | i18n-audit | 1.0.0 | active | skills/i18n-audit/SKILL.md | workspace | i18n audit, locale parity, translation parity, glossary audit, L10N parity | pm |
@@ -140,12 +140,12 @@
 | investment-feasibility-modeling | 1.1.0 | active | skills/investment-feasibility-modeling/SKILL.md | workspace | investment feasibility model, NPV IRR calculation, feasibility financial model | valuation-agent |
 | investment-vehicle-structuring | 1.3.0 | active | skills/investment-vehicle-structuring/SKILL.md | workspace | investment vehicle structure, SPV structuring, direct investment vs SPV, holding company routing, deal structure hypothesis vehicle axis | brownfield-agent |
 | jv-structuring | 1.2.0 | active | skills/jv-structuring/SKILL.md | workspace | JV structuring, joint venture governance, veto matters, drag-along tag-along, deadlock resolution, technology contribution valuation | partnership-agent |
-| k-dart | 2.1.0 | active | skills/k-dart/SKILL.md | workspace | k-dart, /k-dart, DART, DART OpenAPI, `DART 공시`, `공시검색`, `기업개황`, `재무제표`, `재무정보`, `재무제표 조회`, financial statement, corporate disclosure | market-intelligence-agent |
+| k-dart | 2.1.2 | active | skills/k-dart/SKILL.md | workspace | k-dart, /k-dart, DART, DART OpenAPI, `DART 공시`, `공시검색`, `기업개황`, `재무제표`, `재무정보`, `재무제표 조회`, financial statement, corporate disclosure | strategy-analyst |
 | k-ecos | 1.0.0 | active | skills/k-ecos/SKILL.md | workspace | k-ecos, /k-ecos, ECOS, `한국은행`, `한국은행 Open API`, `경제통계시스템`, `기준금리`, `환율`, `본원통화`, `100대 통계지표`, Bank of Korea statistics, Korean monetary statistics | financial-analyst |
-| k-kosis | 1.0.0 | active | skills/k-kosis/SKILL.md | workspace | k-kosis, /k-kosis, KOSIS, `통계청`, `국가통계포털`, `인구통계`, `물가지수`, `경제통계`, `국가통계`, Korean national statistics | financial-analyst |
-| k-krx | 1.0.0 | active | skills/k-krx/SKILL.md | workspace | k-krx, /k-krx, KRX, `한국거래소`, `KRX Open API`, `정보데이터시스템`, `주식 시세`, `코스피`, `코스닥`, `코넥스`, `일별매매정보`, `종목기본정보`, Korean stock market data, KOSPI market data, KOSDAQ market data | financial-analyst |
-| k-law | 1.0.0 | active | skills/k-law/SKILL.md | workspace | k-law, /k-law, `법령`, `법률`, `법령정보`, `법령검색`, `판례`, law, statute, legal search, Korea law | market-intelligence-agent |
-| k-opendata | 1.2.0 | active | skills/k-opendata/SKILL.md | workspace | k-opendata, /k-opendata, 공공데이터포털, data.go.kr, `관세청`, `수출입무역통계`, `품목별 국가별 수출입실적`, Korea Customs Service trade statistics, HS code trade data | market-intelligence-agent |
+| k-kosis | 1.0.2 | active | skills/k-kosis/SKILL.md | workspace | k-kosis, /k-kosis, KOSIS, `통계청`, `국가통계포털`, `인구통계`, `물가지수`, `경제통계`, `국가통계`, Korean national statistics | financial-analyst |
+| k-krx | 1.0.2 | active | skills/k-krx/SKILL.md | workspace | k-krx, /k-krx, KRX, `한국거래소`, `KRX Open API`, `정보데이터시스템`, `주식 시세`, `코스피`, `코스닥`, `코넥스`, `일별매매정보`, `종목기본정보`, Korean stock market data, KOSPI market data, KOSDAQ market data | financial-analyst |
+| k-law | 1.0.2 | active | skills/k-law/SKILL.md | workspace | k-law, /k-law, `법령`, `법률`, `법령정보`, `법령검색`, `판례`, law, statute, legal search, Korea law | strategy-analyst |
+| k-opendata | 1.2.2 | active | skills/k-opendata/SKILL.md | workspace | k-opendata, /k-opendata, 공공데이터포털, data.go.kr, `관세청`, `수출입무역통계`, `품목별 국가별 수출입실적`, Korea Customs Service trade statistics, HS code trade data | hs-classification-specialist |
 | legal-due-diligence | 1.1.0 | active | skills/legal-due-diligence/SKILL.md | workspace | legal DD, change-of-control clause scan, IP title chain | legal-counsel |
 | legal-risk-register | 1.0.1 | experimental | skills/legal-risk-register/SKILL.md | workspace | legal risk register, legal issues, risk register | process-governance-manager |
 | management-incentive-review | 1.1.0 | active | skills/management-incentive-review/SKILL.md | workspace | executive compensation review, golden parachute, change of control triggers, key-person retention, non-compete enforceability | incentive-agent |
@@ -153,7 +153,7 @@
 | market-data-pipeline | 1.0.1 | experimental | skills/market-data-pipeline/SKILL.md | workspace | market data, data pipeline, data freshness | process-governance-manager |
 | master-data-governance | 1.0.0 | active | .claude/skills/master-data-governance/SKILL.md | both | staging unmapped queue, master data resolution, unmapped raw value, master data code assignment | dba |
 | mcp-server-integration | 1.0.0 | active | .claude/skills/mcp-server-integration/SKILL.md | both | add an MCP tool, MCP server integration, MCP-REST parity, no direct DB access from MCP | backend-engineer |
-| meeting-facilitation | 1.4.1 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
+| meeting-facilitation | 1.4.3 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
 | monte-carlo-simulation | 1.1.0 | active | skills/monte-carlo-simulation/SKILL.md | workspace | Monte Carlo simulation, seeded simulation, P50 P95 NPV, contingent liability integration | risk-officer |
 | notification-channel-management | 1.0.0 | active | .claude/skills/notification-channel-management/SKILL.md | both | notification channel, notification bundling, watch_rule configuration, notification severity | sre |
 | observability-and-alerting | 1.0.0 | active | .claude/skills/observability-and-alerting/SKILL.md | both | system health monitoring, error rate alerting, job run status, platform observability | sre |
@@ -162,8 +162,8 @@
 | partner-sourcing-strategy | 1.1.0 | active | skills/partner-sourcing-strategy/SKILL.md | workspace | partner sourcing, capability gap for a partner, hard partner dependency, JV partner search | partnership-agent |
 | peer-benchmarking | 1.0.0 | active | skills/peer-benchmarking/SKILL.md | workspace | peer benchmarking, comparable company analysis, peer multiple comparison, industry benchmark | financial-analyst |
 | permit-pathway-mapping | 1.1.0 | active | skills/permit-pathway-mapping/SKILL.md | workspace | permit pathway, permit DAG, permit critical path, operating permit requirements | legal-counsel |
-| platform-command-lifecycle-manager | 1.0.0 | active | skills/platform-command-lifecycle-manager/SKILL.md | workspace | create platform command, new .claude command, new .gemini command, platform command lifecycle, command parity, propagate command | pm |
-| platform-skill-lifecycle-manager | 1.0.0 | active | skills/platform-skill-lifecycle-manager/SKILL.md | workspace | create platform skill, new .claude skill, new .gemini skill, platform skill version, platform skill lifecycle, update platform skill | pm |
+| platform-command-lifecycle-manager | 1.0.2 | active | skills/platform-command-lifecycle-manager/SKILL.md | workspace | create platform command, new .claude command, new .gemini command, platform command lifecycle, command parity, propagate command | pm |
+| platform-skill-lifecycle-manager | 1.0.2 | active | skills/platform-skill-lifecycle-manager/SKILL.md | workspace | create platform skill, new .claude skill, new .gemini skill, platform skill version, platform skill lifecycle, update platform skill | pm |
 | pmi-planning | 1.1.0 | active | skills/pmi-planning/SKILL.md | workspace | PMI planning, post-merger integration, integration timeline, day-one integration plan | pmi-agent |
 | policy-and-procedure-governance | 1.0.1 | experimental | skills/policy-and-procedure-governance/SKILL.md | workspace | procedure governance, policy procedure, process governance | process-governance-manager |
 | policy-change-impact-analysis | 1.0.0 | active | .claude/skills/policy-change-impact-analysis/SKILL.md | both | policy impact analysis, procedure amendment impact, does this affect in-flight projects, project_policy_pin, retroactivity decision | process-governance-manager |
@@ -179,18 +179,18 @@
 | regulation-monitoring | 1.0.0 | active | .claude/skills/regulation-monitoring/SKILL.md | both | regulation monitoring, statute change alert, new regulation affecting our projects, regulatory update | legal-counsel |
 | regulatory-change-response | 1.0.0 | active | .claude/skills/regulatory-change-response/SKILL.md | both | upcoming regulation change, pre-effective-date response, regulatory change response plan | legal-counsel |
 | regulatory-screening | 1.0.1 | experimental | skills/regulatory-screening/SKILL.md | workspace | regulatory screening, regulation check, permit screening | process-governance-manager |
-| research-analysis | 1.0.0 | active | skills/research-analysis/SKILL.md | workspace | research, analyze, investigate, synthesize, evidence gathering, data analysis, literature review | pm |
+| research-analysis | 1.0.2 | active | skills/research-analysis/SKILL.md | workspace | research, analyze, investigate, synthesize, evidence gathering, data analysis, literature review | pm |
 | rest-api-design | 1.0.0 | active | .claude/skills/rest-api-design/SKILL.md | both | new REST endpoint, API design review, envelope shape, 404 vs 403 for non-members | backend-engineer |
 | run-versioning-and-attribution | 1.0.0 | active | .claude/skills/run-versioning-and-attribution/SKILL.md | both | run versioning, input hash, reproduce a prior result, run attribution, superseded_by chain | data-architect |
 | sample-driven-report-writing | 1.0.1 | experimental | skills/sample-driven-report-writing/SKILL.md | workspace | report writing, sample report, report drafting | process-governance-manager |
 | scenario-planning | 1.1.0 | active | skills/scenario-planning/SKILL.md | workspace | scenario analysis, downside case, upside case, rate shock scenario, structural scenario planning | risk-officer |
-| script-lifecycle-manager | 1.2.0 | active | skills/script-lifecycle-manager/SKILL.md | workspace | create script, update script, deprecate script, script lifecycle, manage scripts | pm |
+| script-lifecycle-manager | 1.2.2 | active | skills/script-lifecycle-manager/SKILL.md | workspace | create script, update script, deprecate script, script lifecycle, manage scripts | pm |
 | security-baseline-review | 1.0.0 | active | .claude/skills/security-baseline-review/SKILL.md | both | security baseline cadence, STRIDE matrix refresh, quarterly threat model review, pre-deployment security gate | security-engineer |
 | security-scan | 1.2.0 | active | skills/security-scan/SKILL.md | workspace | security scan, scan for vulnerabilities, security check, run security | pm |
 | site-infrastructure-assessment | 1.1.0 | active | skills/site-infrastructure-assessment/SKILL.md | workspace | site infrastructure, wastewater capacity, power supply capacity, logistics access assessment, site selection | greenfield-agent |
 | site-visit-protocol | 1.1.0 | active | skills/site-visit-protocol/SKILL.md | workspace | site visit protocol, pre-visit document request, on-site evidence capture, site visit checklist | technical-dd-agent |
-| skill-lifecycle-manager | 1.4.0 | active | skills/skill-lifecycle-manager/SKILL.md | workspace | create skill, new skill, validate skills, skill lifecycle, manage skills, skill request, deprecate skill, remove skill | pm |
-| source-command-commit-push-pr | 1.0.1 | active | skills/source-command-commit-push-pr/SKILL.md | workspace | commit-push-pr, commit and push, create PR | pm |
+| skill-lifecycle-manager | 1.5.0 | active | skills/skill-lifecycle-manager/SKILL.md | workspace | create skill, new skill, validate skills, skill lifecycle, manage skills, skill request, deprecate skill, remove skill | pm |
+| source-command-commit-push-pr | 1.0.3 | active | skills/source-command-commit-push-pr/SKILL.md | workspace | commit-push-pr, commit and push, create PR | pm |
 | stage-gate-governance | 1.4.0 | active | skills/stage-gate-governance/SKILL.md | workspace | stage gate, kill criteria, gate sequence, halt the project, does this trigger a kill criterion | process-governance-manager |
 | standup-synthesizer | 1.0.0 | active | skills/standup-synthesizer/SKILL.md | workspace | standup digest, daily standup, synthesize standup, work summary | pm |
 | statute-change-monitoring | 1.0.0 | active | .claude/skills/statute-change-monitoring/SKILL.md | both | statute change affecting this project, regulation change during DD, re-check applicable statutes | legal-counsel |
@@ -202,7 +202,7 @@
 | team-builder | 1.1.0 | active | skills/team-builder/SKILL.md | workspace | build new agent team, create agent team, agent team setup, team builder | pm |
 | technical-due-diligence | 1.1.0 | active | skills/technical-due-diligence/SKILL.md | workspace | technical due diligence, capex plan verification, bottleneck process identification, remaining useful life assessment | technical-dd-agent |
 | token-usage-lint | 1.1.0 | active | skills/token-usage-lint/SKILL.md | workspace | token lint, hardcoded color, design token compliance, raw hex values, hardcoded spacing | pm |
-| translate | 1.0.1 | active | skills/translate/SKILL.md | workspace | translate, translation, Korean translation | pm |
+| translate | 1.0.3 | active | skills/translate/SKILL.md | workspace | translate, translation, Korean translation | pm |
 | two-tier-approval-chain | 1.1.0 | active | skills/two-tier-approval-chain/SKILL.md | workspace | entity IC, group IC, approval chain, IC gate, group agenda ranking, submit to group IC | process-governance-manager |
 | ui-information-architecture | 1.0.0 | active | .claude/skills/ui-information-architecture/SKILL.md | both | new SPA screen, UI design review, 3-depth navigation, RAG display contract, source tooltip | frontend-engineer |
 | ui-ux-design-intelligence | 1.0.1 | active | skills/ui-ux-design-intelligence/SKILL.md | workspace | design system, ui design, ux design, component design, visual design, design tokens, interface design | pm |
@@ -214,7 +214,7 @@
 | vulnerability-management | 1.0.0 | active | .claude/skills/vulnerability-management/SKILL.md | both | CVE check, dependency vulnerability, risk acceptance decision, unpatched Critical CVE | security-engineer |
 | wacc-input-session | 1.3.0 | active | skills/wacc-input-session/SKILL.md | workspace | WACC input, hurdle IRR confirmation, CAPM components, discount rate session, beta estimation | valuation-agent |
 | waiver-management | 1.0.1 | experimental | skills/waiver-management/SKILL.md | workspace | waiver, waiver request, exemption approval | process-governance-manager |
-| zod-contract-gate | 1.0.0 | active | skills/zod-contract-gate/SKILL.md | workspace | zod-contract-gate, /zod-contract-gate, zod contract validation, schema contract gate, runtime schema validation | backend-engineer |
+| zod-contract-gate | 1.0.2 | active | skills/zod-contract-gate/SKILL.md | workspace | zod-contract-gate, /zod-contract-gate, zod contract validation, schema contract gate, runtime schema validation | architect |
 
 <!-- validate-md-language:allowlist-end -->
 
@@ -227,7 +227,7 @@
 | adr-new.ts | 1.0.0 | scripts/co-newbiz/adr-new.ts | N/A |
 | agent-create.ts | 1.0.1 | scripts/agent-create.ts | N/A |
 | agent-delete.ts | 1.0.1 | scripts/agent-delete.ts | N/A |
-| agent-lifecycle-audit.ts | 1.2.1 | scripts/agent-lifecycle-audit.ts | N/A |
+| agent-lifecycle-audit.ts | 1.3.1 | scripts/agent-lifecycle-audit.ts | N/A |
 | agent-list.ts | 1.1.0 | scripts/agent-list.ts | N/A |
 | agent-verify.ts | 1.0.2 | scripts/agent-verify.ts | N/A |
 | analyze-git-history.ts | 1.0.2 | scripts/analyze-git-history.ts | child_process |
@@ -327,7 +327,7 @@
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
-| skill-lifecycle-audit.ts | 1.4.1 | scripts/skill-lifecycle-audit.ts | N/A |
+| skill-lifecycle-audit.ts | 1.5.0 | scripts/skill-lifecycle-audit.ts | N/A |
 | skill-session-review.ts | 1.1.0 | scripts/skill-session-review.ts | bun |
 | source-adapters.ts | 1.1.0 | scripts/co-newbiz/source-adapters.ts | N/A |
 | spec-register.ts | 1.3.0 | scripts/spec-register.ts | N/A |

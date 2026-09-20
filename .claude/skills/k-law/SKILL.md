@@ -6,16 +6,19 @@ description: >
   Information Center Open API (open.law.go.kr) for statutes, precedents,
   administrative rules, municipal ordinances, and legal interpretation cases.
   Requires LAW_API_OC environment variable.
-version: 1.0.0
+version: 1.0.2
 last_reviewed: 2026-08-09
 status: active
-owner: market-intelligence-agent
+owner: strategy-analyst
 prerequisites: LAW_API_OC environment variable
+relates_to:
+  - skill: k-dart
+    type: relates_to
+  - skill: k-kosis
+    type: relates_to
 l2_propagate: true
 metadata:
   type: legal-research
-  procedure_keys:
-    - entity-establishment-execution
   triggers:
     - k-law
     - /k-law
@@ -28,18 +31,6 @@ metadata:
     - statute
     - legal search
     - Korea law
-relates_to:
-  - skill: certification-transferability
-    type: follows
-  - skill: org-readiness-assessment
-    type: composes_with
-  - skill: stage-gate-governance
-    type: composes_with
-  - skill: investment-vehicle-structuring
-    type: composes_with
-  - skill: jv-structuring
-    type: composes_with
-
 ---
 # Skill: k-law
 
@@ -79,11 +70,12 @@ Use when an engagement requires Korean statutory or regulatory research from the
 
 ## Reference Material
 
-- None yet; if recurring lookups reveal stable target-specific parameter sets not covered below, capture them as `references/target-params-ko.json`.
+- `references/terms-ko.json`: Korean-original Korea Law Open API terminology mapping (target category codes, response field names). Non-Markdown reference asset, exempt from the workspace English-only doc policy. New target-specific parameter sets discovered in recurring lookups go there.
 
 ## Related Skills
 
 - k-dart
+- k-kosis
 - competitive-intelligence
 - technical-feasibility
 - change-impact-assessment
