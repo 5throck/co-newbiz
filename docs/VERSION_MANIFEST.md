@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-20T08:37:23.213Z
+**Generated**: 2026-09-20T11:32:16.449Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -122,7 +122,7 @@
 | greenfield-feasibility | 1.1.0 | active | skills/greenfield-feasibility/SKILL.md | workspace | green field feasibility, new plant feasibility, new establishment review, greenfield screening | greenfield-agent |
 | group-level-review | 1.0.1 | experimental | skills/group-level-review/SKILL.md | workspace | group review, group IC, portfolio fit review | process-governance-manager |
 | growth-projection-modeling | 1.1.0 | active | skills/growth-projection-modeling/SKILL.md | workspace | growth projection, revenue forecast, base rate warning, anchor_ref, hockey stick check | financial-analyst |
-| handbook | 0.4.1 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook | pm |
+| handbook | 0.6.0 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook, update handbook, handbook sync, handbook maintenance | pm |
 | handbook-sync-audit | 1.0.0 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | docs-writer |
 | historical-financial-analysis | 1.0.0 | active | skills/historical-financial-analysis/SKILL.md | workspace | historical financial trend, historical volatility, base rate distribution, multi-year trajectory analysis | financial-analyst |
 | hwp-document-processing | 1.1.0 | active | .claude/skills/hwp-document-processing/SKILL.md | both | hwp, hwpx, hwp document, hwpx document, hwp extraction, hwpx generation, government report template | docs-writer |
@@ -284,10 +284,10 @@
 | fix-construction-machinery-link.ts | 1.0.0 | scripts/co-newbiz/fix-construction-machinery-link.ts | N/A |
 | gen-pk-notnull-rebuild.ts | 1.0.0 | scripts/co-newbiz/gen-pk-notnull-rebuild.ts | bun:sqlite |
 | gen-pr-body.ts | 1.2.0 | scripts/gen-pr-body.ts | bun |
-| generate-agent-registry.ts | N/A | scripts/co-newbiz/generate-agent-registry.ts | N/A |
+| generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | N/A |
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
 | generate-process-flow.ts | 1.3.3 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
-| generate-prompt-registry.ts | N/A | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
+| generate-prompt-registry.ts | 1.0.0 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-raci.ts | 1.1.0 | scripts/generate-raci.ts | js-yaml |
 | generate-skill-graph.ts | 1.12.0 | scripts/generate-skill-graph.ts | js-yaml |
 | generate-version-manifest.ts | 1.9.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
@@ -337,7 +337,7 @@
 | sync-skill-status.ts | 1.0.1 | scripts/sync-skill-status.ts | N/A |
 | sync-skills.ts | 1.8.0 | scripts/sync-skills.ts | N/A |
 | team-builder.ts | 1.4.0 | scripts/team-builder.ts | N/A |
-| test-runner.ts | 1.4.0 | scripts/test-runner.ts | fs, os, path |
+| test-runner.ts | 1.5.0 | scripts/test-runner.ts | fs, os, path |
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, fs, path |
 | typecheck.ts | 1.1.1 | scripts/typecheck.ts | N/A |
 | update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |

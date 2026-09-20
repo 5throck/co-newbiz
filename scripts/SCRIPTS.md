@@ -107,7 +107,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `co-newbiz/sync-agent-personas.ts` | co-newbiz | 1.0.1 | active | 2026-09-08 | — | L3-only (project-local, `agents:personas` — generates .claude/agents/<name>.md subagent definitions from the agents/ roster with tier→model mapping; normalizes CRLF input before rendering generated descriptions; --check mode exits 1 on drift, CI-wired) | — |
 | `co-newbiz/generate-process-flow.ts` | co-newbiz | 1.3.3 | active | 2026-09-19 | — | ADR-0074 — regenerates docs/process-flow.md from process/flow.spec.yaml (plus hand-maintained S8–S12 automation addendum, ADR-0095~0102); --check mode exits 1 on drift | — |
 | `co-newbiz/generate-prompt-registry.ts` | co-newbiz | 1.0.0 | active | 2026-09-15 | — | Projects app/web-next/prompts/prompts.json SSOT into app/web-next/lib/prompts.generated.ts (system prompts, owning agent, ledger purpose); rerun after prompt edits | — |
-| `co-newbiz/generate-agent-registry.ts` | co-newbiz | 1.0.0 | active | 2026-09-13 | — | ADR-0128 — projects agents/*.md roster into app/web-next/lib/agent-registry.generated.ts for the runtime PM router; rerun after roster edits | — |
+| `co-newbiz/generate-agent-registry.ts` | co-newbiz | 1.1.0 | active | 2026-09-13 | — | ADR-0128 — projects agents/*.md roster into app/web-next/lib/agent-registry.generated.ts for the runtime PM router; rerun after roster edits | — |
 | `co-newbiz/job-worker.ts` | co-newbiz | 1.0.0 | active | 2026-09-19 | — | L3-only (project-local, parallel-execution child-process entrypoint for the independent job layer) | — |
 | `co-newbiz/seed-benchmark-cases.ts` | co-newbiz | 1.0.0 | active | 2026-08-30 | — | ADR-0074 — idempotent seed of 8 public benchmark deals into benchmark_case (migration 0041) | — |
 | `co-newbiz/glossary-lint.ts` | co-newbiz | 1.1.1 | active | —| —| L3-only (project-local, `glossary:lint` — ADR-0022 weekly undefined-jargon report over skills/ + docs/; report-only, exit 0 regardless of findings; distinct from glossary/_validate.ts entry validation; 1.1.0 — `findProjectRoot()` cwd walk-up fallback for the Turbopack server bundle (import.meta.dirname unavailable — proc-resolve.ts pattern), exported scanner reused by GET /api/admin/glossary-lint) | —|
@@ -163,7 +163,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `sync-skill-status.ts` | L0 | 1.0.1 | active | — | — | L0+L1 | — |
 | `sync-skills.ts` | L0 | 1.8.0 | active | `--dir <path>`, `--all-variants` | — | L0+L1 | — |
 | `team-builder.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
-| `test-runner.ts` | L0 | 1.4.0 | active | —| —| L0+L1 (`--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms`) — v1.2.0: unit per-file timeout 30s→120s, python-engine test files legitimately exceed 30s at file level under parallel CPU contention | —|
+| `test-runner.ts` | L0 | 1.5.0 | active | —| —| L0+L1 (`--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms>`, `--allow-empty`) — v1.5.0: empty suites fail by default and scripts suite scans `scripts/tests/*.test.ts` | —|
 | `translate-readme.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `validate-agents.ts` | L0 | 1.2.1 | active | —| —| L0+L1 | —|
 | `validate-doc-folder.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
