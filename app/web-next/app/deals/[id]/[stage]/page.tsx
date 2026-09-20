@@ -19,6 +19,8 @@ import { GreenfieldStage } from "../../../../components/stages/GreenfieldStage.t
 import { OpportunityFunnelStage } from "../../../../components/stages/OpportunityFunnelStage.tsx";
 import { SynergyStage } from "../../../../components/stages/SynergyStage.tsx";
 import { BrownfieldStage } from "../../../../components/stages/BrownfieldStage.tsx";
+import { MarketAnalysisStage } from "../../../../components/stages/MarketAnalysisStage.tsx";
+import { OurCompanyStage } from "../../../../components/stages/OurCompanyStage.tsx";
 
 const STAGE_LINK: Record<string, (projectId?: string) => string | null> = {
   S1: () => "/market", S2: () => "/opportunities", S3: () => "/synergy", S4: () => "/route-decision",
@@ -38,6 +40,16 @@ function StageTab() {
   const params = useParams<{ id: string; stage: string }>();
   const searchParams = useSearchParams();
   const stageId = params.stage.toUpperCase().startsWith("S") ? params.stage.toUpperCase() : `S${params.stage}`;
+
+  // S1 시장분석 — Wave 2 Phase C 통합. StageFrame 배너(가치사슬 관계도 버튼 포함)는
+  // MarketAnalysisStage가 직접 렌더링한다(?industry= 딥링크로 특정 산업 지정 가능).
+  if (stageId === "S1") {
+    return (
+      <main>
+        <MarketAnalysisStage embedded industryId={searchParams.get("industry") ?? undefined} />
+      </main>
+    );
+  }
 
   // S2 기회 발굴 — Wave 2 Phase A 통합. 캐리어 기회 행을 퍼널에 표시.
   if (stageId === "S2") {
@@ -66,8 +78,19 @@ function StageTab() {
   }
 
   // S3 시너지·전략적 적합성 — Wave 2 Phase B 통합. 캐리어 기회에 연결된 분석을
-  // 자동 선택(?analysis= 딥링크로 특정 분석 지정 가능).
+  // 자동 선택(?analysis= 딥링크로 특정 분석 지정). ?surface=company 로 같은 S3의
+  // 우리계열사 분석 표면(Phase C)으로 전환한다.
   if (stageId === "S3") {
+    if (searchParams.get("surface") === "company") {
+      return (
+        <main>
+          <StageFrame stageId="S3" heading="S3 그룹/계열사 분석">
+            그룹과 계열사를 등록해 자사 강점/약점을 분석합니다. 이 프로파일은 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다. 상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.
+          </StageFrame>
+          <OurCompanyStage embedded />
+        </main>
+      );
+    }
     return (
       <main>
         <StageFrame stageId="S3">

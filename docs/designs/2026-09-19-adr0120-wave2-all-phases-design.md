@@ -7,7 +7,7 @@ lang_reason: source-material
 
 - Spec ID: `2026-09-19-adr0120-wave2-all-phases`
 - Date: 2026-09-19
-- Status: **Implemented (Phase A)** — Phase A 구현·검증 완료(2026-09-17), Phase B/C는 후속 PR
+- Status: **Implemented (Phase A·B·C)** — Phase A(2026-09-17)·B·C(2026-09-20) 구현·검증 완료
 - Related: ADR-0120, ADR-0074, ADR-0086, ADR-0094/0095
 - Design pattern: S4 `RouteDecisionStage` 선례 준용 — 본문을 독립 컴포넌트로
   추출하고 기존 페이지·deals 탭이 동일 컴포넌트를 소비한다.
@@ -83,6 +83,14 @@ GateDecisionPanel + 필요 역량 수준
 - 브라운필드의 체크리스트(t-01~t-09)는 목표 시장 섹션과 통합
 
 ## 3. Phase C — S1 시장분석 + S3 우리계열사
+
+> **구현 현황 (2026-09-20)**: 완료. `MarketAnalysisStage.tsx`(산업 목록 + 8단계
+> 리포트 + 보정 루프 패널 포함 전체 — StageFrame 안내 배너가 가치사슬 관계도
+> 버튼 등 상태 의존 UI를 포함해 컴포넌트가 직접 렌더링하는 예외 적용,
+> `embedded`/`industryId` props)와 `OurCompanyStage.tsx`(그룹 목록 + 프로파일
+> 5탭 + 경쟁사 레지스트리, `embedded`/`memberId` props)를 추출했다. deals 탭에
+> S1 분기와 S3 `?surface=company` 전환을 추가. 검증: tsc·design-lint·
+> `bun run test:unit`(120/120) 클린, 라이브 브라우저 확인, judge 판정 통과.
 
 ### S1 시장분석 (`/market`, 2,801줄)
 
