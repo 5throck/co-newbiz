@@ -5,8 +5,13 @@ owner: process-governance-manager
 lifecycle:
   phase: draft
 status: experimental
-version: "1.0.0"
+version: "1.0.1"
 description: "Skill referenced by flow.spec.yaml stage activities"
+metadata:
+  triggers:
+    - market data
+    - data pipeline
+    - data freshness
 ---
 
 # market-data-pipeline

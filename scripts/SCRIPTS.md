@@ -218,7 +218,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `helpers/l0-ref-policy.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/markers.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `helpers/layer-filter.ts` | L0 | 1.5.0 | active | —| —| L0+L1 | —|
-| `generate-version-manifest.ts` | L0 | 1.8.0 | active | emits `validate-md-language:allowlist` markers around the generated Skills table (T-20260912-015) | —| L0+L1 | —|
+| `generate-version-manifest.ts` | L0 | 1.9.0 | active | emits `validate-md-language:allowlist` markers around the generated Skills table (T-20260912-015) | —| L0+L1 | —|
 | `lib/platform-delivery.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/managed-block-parity.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `lib/variant-overlay-guard.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|

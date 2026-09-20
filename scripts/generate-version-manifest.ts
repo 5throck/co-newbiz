@@ -1,4 +1,8 @@
-// @version 1.8.0
+// @version 1.9.0
+// v1.9.0 (T-20260920-drift): collectAgents skips README(_\w+)?.md (same pattern as
+//           validate-agents isAgentFile) so agents/README_ko.md no longer emits a
+//           missing tier/model drift warning; drift issues print individually when
+//           present instead of a bare count.
 // v1.7.0 (ADR-0081 / T-20260918-001): --check masks the "Last Modified" columns
 //           on BOTH comparison sides unconditionally — the shallow-only gating
 //           is gone. Rationale: the cells derive from committed `git log`, but
@@ -235,7 +239,7 @@ async function collectAgents(): Promise<AgentInfo[]> {
     if (!fs.existsSync(agentsDir)) return agents;
 
     for (const file of fs.readdirSync(agentsDir)) {
-        if (!file.endsWith('.md') || file === '_COMMON.md' || file === 'README.md') continue;
+        if (!file.endsWith('.md') || file === '_COMMON.md' || /^README(_\w+)?\.md$/.test(file)) continue;
         const filePath = path.join(agentsDir, file);
         const content = fs.readFileSync(filePath, 'utf-8');
         const { tier, model } = parseAgentFrontmatter(content);
@@ -678,7 +682,8 @@ async function generateManifest() {
     console.log(`${GREEN}✓ Manifest generated: ${MANIFEST_PATH}${RESET}`);
     console.log(`${GREEN}✓ ${data.agents.length} agents, ${data.skills.length} skills, ${data.scripts.length} scripts, ${data.commands.length} commands${RESET}`);
     if (data.driftIssues.length > 0) {
-        console.log(`${CYAN}⚠ ${data.driftIssues.length} drift issues detected${RESET}`);
+        console.log(`${CYAN}⚠ ${data.driftIssues.length} drift issue(s) detected${RESET}`);
+        for (const issue of data.driftIssues) console.log(`  ${issue}`);
     }
 }
 

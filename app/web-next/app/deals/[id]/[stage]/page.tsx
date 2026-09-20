@@ -78,27 +78,46 @@ function StageTab() {
   }
 
   // S3 시너지·전략적 적합성 — Wave 2 Phase B 통합. 캐리어 기회에 연결된 분석을
-  // 자동 선택(?analysis= 딥링크로 특정 분석 지정). ?surface=company 로 같은 S3의
-  // 우리계열사 분석 표면(Phase C)으로 전환한다.
+  // 자동 선택(?analysis= 딥링크로 특정 분석 지정). 상단 스위처(2026-09-20 리뷰 —
+  // URL 파라미터만으로는 발견되지 않았다)로 같은 S3의 우리계열사 분석 표면(Phase C)과
+  // 전환한다.
   if (stageId === "S3") {
-    if (searchParams.get("surface") === "company") {
-      return (
-        <main>
-          <StageFrame stageId="S3" heading="S3 그룹/계열사 분석">
-            그룹과 계열사를 등록해 자사 강점/약점을 분석합니다. 이 프로파일은 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다. 상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.
-          </StageFrame>
-          <OurCompanyStage embedded />
-        </main>
-      );
-    }
+    const companySurface = searchParams.get("surface") === "company";
     return (
       <main>
-        <StageFrame stageId="S3">
-          그룹/계열사 분석에서 만든 자사 프로파일(특정 계열사 또는 그룹 전체)을 S1 시장분석·S2 기회발굴
-          결과와 연결해 시너지 영역 후보를 도출하고 우선 시너지 영역으로 좁힙니다. 기회를 연결하면 완료 시 해당 기회에
-          synergy_score 권고가 기록됩니다.
-        </StageFrame>
-        <SynergyStage opportunityId={params.id} analysisId={searchParams.get("analysis") ?? undefined} embedded />
+        <div role="group" aria-label="S3 화면 전환" className="flex flex-wrap gap-1 mb-2">
+          <Link
+            href={`/deals/${params.id}/s3`}
+            aria-current={!companySurface ? "page" : undefined}
+            className={`control-chip ${!companySurface ? "status-green" : "status-not-started"}`}
+          >
+            시너지·전략적 적합성
+          </Link>
+          <Link
+            href={`/deals/${params.id}/s3?surface=company`}
+            aria-current={companySurface ? "page" : undefined}
+            className={`control-chip ${companySurface ? "status-green" : "status-not-started"}`}
+          >
+            그룹·계열사 프로파일
+          </Link>
+        </div>
+        {companySurface ? (
+          <>
+            <StageFrame stageId="S3" heading="S3 그룹/계열사 분석">
+              그룹과 계열사를 등록해 자사 강점/약점을 분석합니다. 이 프로파일은 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다. 상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.
+            </StageFrame>
+            <OurCompanyStage embedded />
+          </>
+        ) : (
+          <>
+            <StageFrame stageId="S3">
+              그룹/계열사 분석에서 만든 자사 프로파일(특정 계열사 또는 그룹 전체)을 S1 시장분석·S2 기회발굴
+              결과와 연결해 시너지 영역 후보를 도출하고 우선 시너지 영역으로 좁힙니다. 기회를 연결하면 완료 시 해당 기회에
+              synergy_score 권고가 기록됩니다.
+            </StageFrame>
+            <SynergyStage opportunityId={params.id} analysisId={searchParams.get("analysis") ?? undefined} embedded />
+          </>
+        )}
       </main>
     );
   }

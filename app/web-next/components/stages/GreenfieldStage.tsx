@@ -191,7 +191,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             className="sizing-new-input mb-2"
             style={{ width: "100%" }}
           />
-          <input aria-label="검토한 대안" placeholder="검토한 대안 (선택)" value={alternatives} onChange={(e) => setAlternatives(e.target.value)} className="sizing-new-input mb-3" style={{ width: "100%" }} />
+          {/* 긴 대안 검토 텍스트를 위해 textarea — 단일행 input은 저장된 값이 클리핑됐다(2026-09-20 리뷰) */}
+          <textarea aria-label="검토한 대안" placeholder="검토한 대안 (선택)" value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} className="sizing-new-input mb-3" style={{ width: "100%" }} />
 
           {/* 2. 필요 역량 — S3 레지스터 읽기 전용 + S5 보유 수준·해소방식 편집 */}
           <h3 className="text-[0.85rem] mb-2">2️⃣ 필요 역량 (S3) 확인</h3>
