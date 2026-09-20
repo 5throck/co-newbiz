@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-20T13:21:51.018Z
+**Generated**: 2026-09-20T13:27:04.829Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -37,7 +37,7 @@
 | greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-09-19 |
 | group-review-agent | agents/group-review-agent.md | high | inherit | 2026-09-19 |
 | hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-09-19 |
-| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-15 |
+| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-20 |
 | incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-09-19 |
 | industry-lead | agents/industry-lead.md | high | inherit | 2026-09-19 |
 | infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-09-19 |
@@ -47,7 +47,7 @@
 | market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-09-19 |
 | partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-09-19 |
 | platform-lead | agents/platform-lead.md | high | inherit | 2026-09-19 |
-| pm | agents/pm.md | medium | inherit | 2026-09-19 |
+| pm | agents/pm.md | medium | inherit | 2026-09-20 |
 | pmi-agent | agents/pmi-agent.md | high | inherit | 2026-09-19 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-09-19 |
 | quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-09-19 |
@@ -242,7 +242,7 @@
 | backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | N/A |
 | bootstrap-stages.ts | 1.0.0 | scripts/bootstrap-stages.ts | fs, js-yaml, path |
 | build-search-index.ts | 1.0.0 | scripts/handbook/build-search-index.ts | N/A |
-| calibrate.ts | 1.0.0 | scripts/co-newbiz/calibrate.ts | N/A |
+| calibrate.ts | 1.1.0 | scripts/co-newbiz/calibrate.ts | N/A |
 | check-a11y.ts | 1.0.0 | scripts/handbook/check-a11y.ts | N/A |
 | check-authoring.ts | 1.2.0 | scripts/handbook/check-authoring.ts | N/A |
 | check-external-links.ts | 1.2.0 | scripts/handbook/check-external-links.ts | N/A |
@@ -283,10 +283,10 @@
 | fix-construction-machinery-link.ts | 1.0.0 | scripts/co-newbiz/fix-construction-machinery-link.ts | N/A |
 | gen-pk-notnull-rebuild.ts | 1.0.0 | scripts/co-newbiz/gen-pk-notnull-rebuild.ts | bun:sqlite |
 | gen-pr-body.ts | 1.2.0 | scripts/gen-pr-body.ts | bun |
-| generate-agent-registry.ts | N/A | scripts/co-newbiz/generate-agent-registry.ts | N/A |
+| generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | N/A |
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
 | generate-process-flow.ts | 1.3.3 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
-| generate-prompt-registry.ts | N/A | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
+| generate-prompt-registry.ts | 1.0.0 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-raci.ts | 1.1.0 | scripts/generate-raci.ts | js-yaml |
 | generate-skill-graph.ts | 1.12.0 | scripts/generate-skill-graph.ts | js-yaml |
 | generate-version-manifest.ts | 1.9.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
@@ -336,7 +336,7 @@
 | sync-skill-status.ts | 1.0.1 | scripts/sync-skill-status.ts | N/A |
 | sync-skills.ts | 1.8.0 | scripts/sync-skills.ts | N/A |
 | team-builder.ts | 1.4.0 | scripts/team-builder.ts | N/A |
-| test-runner.ts | 1.4.0 | scripts/test-runner.ts | fs, os, path |
+| test-runner.ts | 1.5.0 | scripts/test-runner.ts | fs, os, path |
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, fs, path |
 | typecheck.ts | 1.1.1 | scripts/typecheck.ts | N/A |
 | update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |

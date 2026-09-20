@@ -1,3 +1,7 @@
+#!/usr/bin/env bun
+/**
+ * @version 1.0.0
+ */
 // generate-prompt-registry.ts — prompts/prompts.json SSOT를 런타임 레지스트리로 투영한다.
 // agent-registry.generated.ts와 동일한 규율: SSOT는 prompts/prompts.json이고,
 // 이 스크립트는 읽어 정적 TS로 내보낼 뿐이다. 문구 수정은 SSOT에서 하고 재생성한다.

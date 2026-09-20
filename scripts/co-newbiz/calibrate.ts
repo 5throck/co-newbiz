@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * calibrate.ts — statistical proxy-hop calibration (Wave A2).
  *
@@ -26,7 +26,9 @@
 import { getDb } from "../../db/client.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 // Prefer the project venv (python/requirements.txt) when present — same
 // PEP 668 discipline as fin-pipeline.ts/simulate.ts.
@@ -92,8 +94,9 @@ export async function runCalibrate(opts: CalibrateOptions): Promise<CalibrateRes
 
   // Spawn the methodology owner (args array, never shell) — same discipline
   // as db/lib/simulation.ts's monte_carlo spawn.
-  const inputPath = `/tmp/calibrate-${ulid().toLowerCase()}.json`;
-  const { writeFileSync, unlinkSync } = await import("node:fs");
+  const tempDir = mkdtempSync(join(tmpdir(), "co-newbiz-calibrate-"));
+  const inputPath = join(tempDir, `calibrate-${ulid().toLowerCase()}.json`);
+  const { writeFileSync } = await import("node:fs");
   writeFileSync(inputPath, JSON.stringify({ from_series: from, to_series: to, max_lag_months: opts.maxLagMonths ?? 6 }));
   let result: { beta: number; r2: number; lag_months: number; ci_low: number; ci_high: number; grade_eligible: boolean; grade_note: string };
   try {
@@ -104,7 +107,7 @@ export async function runCalibrate(opts: CalibrateOptions): Promise<CalibrateRes
     }
     result = JSON.parse(out);
   } finally {
-    if (existsSync(inputPath)) unlinkSync(inputPath);
+    rmSync(tempDir, { recursive: true, force: true });
   }
 
   // Recalibration replaces the previous statistical hop for this pair.

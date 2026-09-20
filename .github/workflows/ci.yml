@@ -30,8 +30,30 @@ jobs:
         if: ${{ hashFiles('package.json') != '' }}
         run: bun install --frozen-lockfile
 
+      # Unit tests import app/web-next modules (next/server via lib/envelope.ts),
+      # and the root install does not cover the web-next package's own
+      # dependencies — without this step those tests cannot resolve next/server.
+      - name: Install web-next dependencies
+        if: ${{ hashFiles('app/web-next/package.json') != '' }}
+        run: bun install --frozen-lockfile --cwd app/web-next
+
+      # Python-backed unit tests (calibration, simulation, report rendering,
+      # fin-pipeline) spawn the project scripts, which resolve the repo-root
+      # `.venv/bin/python3` first — build it from python/requirements.txt so
+      # numpy/pandas and the document renderers are available. The runner's
+      # preinstalled python3 satisfies the requirements' constraints.
+      - name: Create python venv
+        if: ${{ hashFiles('python/requirements.txt') != '' }}
+        run: python3 -m venv .venv && .venv/bin/pip install -r python/requirements.txt
+
       - name: Run audit
         run: bun scripts/audit.ts
+
+      - name: Run unit tests
+        run: bun run test:unit
+
+      - name: Run script tests
+        run: bun run test:scripts
 
   secret-scan:
     name: Secret Scan
@@ -50,7 +72,7 @@ jobs:
         with:
           args: detect --source=/github/workspace --config=/github/workspace/.gitleaks.toml --redact --verbose --no-banner
 
-  # Uncomment and configure the test job for your stack:
+  # Uncomment and configure additional test jobs for your stack:
 
   # test-python:
   #   name: Python Tests

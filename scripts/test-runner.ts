@@ -1,6 +1,11 @@
 /**
  * test-runner.ts — Test Runner for TypeScript Test Suites
- * @version 1.4.0
+ * @version 1.5.0
+ *
+ * v1.5.0 (2026-09-20 project-review): empty suites now fail by default so
+ * package-level test commands cannot pass without executing tests. Use the
+ * explicit --allow-empty flag only for transitional suites. The scripts suite
+ * now scans scripts/tests/*.test.ts.
  *
  * v1.3.0 (T-20260916-001): (1) per-suite `sequential` flag — the `scripts`
  * suite now runs its members one at a time because its E2E files stage
@@ -33,6 +38,7 @@ export interface RunOptions {
   parallel?: boolean;
   concurrency?: number;
   timeout?: number;
+  allowEmpty?: boolean;
 }
 
 interface TestFileResult {
@@ -53,7 +59,7 @@ const suites: TestSuite[] = [
   // sequential: members stage transient fixture dirs under the real templates/
   // tree (test-l3promo-*, co-e2eguard-*, co-e2p2*) and race concurrent
   // validators when run in parallel — T-20260916-001.
-  { name: 'scripts', pattern: 'test-*.ts', timeout: 120000, dir: 'scripts', ext: '.ts', sequential: true }
+  { name: 'scripts', pattern: '*.test.ts', timeout: 120000, dir: 'scripts/tests', ext: '.test.ts', sequential: true }
 ];
 
 function getTestFiles(suite: TestSuite): string[] {
@@ -64,7 +70,7 @@ function getTestFiles(suite: TestSuite): string[] {
     for (const entry of entries) {
       if (!entry.isFile()) continue;
       const matchesExt = suite.ext === '' || entry.name.endsWith(suite.ext);
-      const matchesPattern = suite.name !== 'scripts' || (entry.name.startsWith('test-') && entry.name !== 'test-runner.ts');
+      const matchesPattern = suite.name !== 'scripts' || entry.name.endsWith('.test.ts');
       if (matchesExt && matchesPattern) {
         files.push(join(suite.dir, entry.name));
       }
@@ -297,7 +303,11 @@ export async function runTests(
 
   if (files.length === 0) {
     console.log(`No tests found for suite: ${suiteName}`);
-    return true;
+    if (options.allowEmpty) {
+      console.log(`[test-runner] --allow-empty set; treating empty ${suiteName} suite as pass`);
+      return true;
+    }
+    return false;
   }
 
   const isParallel = options.parallel !== undefined
@@ -318,7 +328,7 @@ export async function runTests(
   const hygieneSnapshot = suiteName === 'scripts' ? takeHygieneSnapshot() : null;
 
   try {
-    const execMode = suiteName === 'scripts' ? 'bun-script' as const : 'bun-test' as const;
+    const execMode = 'bun-test' as const;
     if (isParallel && concurrency > 1) {
       try {
         results = await runInParallel(files, concurrency, (file, _, workerId) =>
@@ -410,6 +420,7 @@ function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
   let parallel: boolean | undefined = undefined;
   let concurrency: number | undefined = undefined;
   let timeout: number | undefined = undefined;
+  let allowEmpty = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -423,12 +434,14 @@ function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
     } else if (arg === '--timeout' || arg === '-t') {
       const val = parseInt(args[++i], 10);
       if (!isNaN(val) && val > 0) timeout = val;
+    } else if (arg === '--allow-empty') {
+      allowEmpty = true;
     } else if (!arg.startsWith('-')) {
       suiteName = arg;
     }
   }
 
-  return { suiteName, options: { parallel, concurrency, timeout } };
+  return { suiteName, options: { parallel, concurrency, timeout, allowEmpty } };
 }
 
 // CLI entrypoint
