@@ -7,7 +7,7 @@ lang_reason: source-material
 
 - Spec ID: `2026-09-20-escalation-downstream-design`
 - Date: 2026-09-20
-- Status: **Proposed** — 구현 전 검토 필요
+- Status: **Implemented (1차)** — §3.1 resolver·§3.2-1 S8 생성기·§3.2-4 S2 인사이트 구현 완료(2026-09-20). §3.2-2 파라미터 스냅샷은 job-spec 스탬프를 통해 간접 반영되어 별도 작업 불요로 확인, §3.2-3 밴드 MC는 루프 종료 산업에 스윕이 무의미하여 미적용(새 루프 발생 시 검토), §4 오픈 질문은 후속 검토 과제로 유지
 - Related: `2026-09-20-calibration-escalation-design`(조정치 기록), `2026-09-18-s1-growth-gap-calibration-design`(보정 루프), ADR-0117/0137(S8 파라미터·사업 케이스)
 
 ## 1. 문제 정의

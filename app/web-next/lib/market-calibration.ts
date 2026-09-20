@@ -227,6 +227,44 @@ export function applyCalibrationEscalation(
   return { escalation: db.query("SELECT * FROM calibration_escalation WHERE id = ?").get(id) as CalibrationEscalationRow };
 }
 
+/** 유효 CAGR 해석기 (design 2026-09-20-escalation-downstream §3.1) — 최근 완료
+ * 버전의 바텀업 CAGR을 기본으로 하되, 사람이 기록한 에스컬레이션 결정이
+ * 재분석보다 최신이면 조정치를 반환한다(재분석이 결정을 덮지 않는다). 모든
+ * 소비자는 source를 표기해야 한다(무표기 치환 금지). */
+export interface EffectiveCagr {
+  cagrPct: number;
+  source: "bottom_up" | "escalated";
+  escalationId?: string;
+  baseCagrPct?: number;
+}
+
+export function resolveEffectiveCagr(db: Db, industryId: string): EffectiveCagr | null {
+  const version = db
+    .query(
+      `SELECT v.created_at, v.payload FROM market_sizing_version v
+       JOIN market_sizing_analysis a ON a.id = v.analysis_id
+       WHERE a.industry_id = ? AND a.status = 'completed'
+       ORDER BY v.version_no DESC LIMIT 1`,
+    )
+    .get(industryId) as { created_at: string; payload: string } | undefined;
+  if (!version) return null;
+  let bottomUp: number | null = null;
+  try {
+    const payload = JSON.parse(version.payload) as { matrix?: { calibration?: { ourCagrPct?: number | null }; consistency?: { bottomUpCagr?: number | null } } };
+    const cal = payload?.matrix?.calibration;
+    bottomUp = typeof cal?.ourCagrPct === "number" ? cal.ourCagrPct : typeof payload?.matrix?.consistency?.bottomUpCagr === "number" ? payload.matrix.consistency.bottomUpCagr : null;
+  } catch {
+    bottomUp = null;
+  }
+  const esc = latestCalibrationEscalation(db, industryId);
+  if (esc && esc.created_at >= version.created_at) {
+    return { cagrPct: esc.scaled_cagr_pct, source: "escalated", escalationId: esc.id, baseCagrPct: esc.base_our_cagr_pct };
+  }
+  if (bottomUp !== null) return { cagrPct: bottomUp, source: "bottom_up" };
+  if (esc) return { cagrPct: esc.scaled_cagr_pct, source: "escalated", escalationId: esc.id, baseCagrPct: esc.base_our_cagr_pct };
+  return null;
+}
+
 export class EscalationError extends Error {
   constructor(public code: string, message: string) {
     super(message);

@@ -25,6 +25,7 @@
 // (human click) and the fs gate record are the only confirmations, and
 // tests/unit/business-case.test.ts proves generation alone produces neither.
 
+import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { resolveProjectWacc, resolveProjectWaccSubject, type WaccResolution, type WaccSubjectResolution } from "../../../db/lib/wacc.ts";
@@ -103,11 +104,21 @@ const pct1 = (v: number): string => `${(v * 100).toFixed(1)}%`;
 export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: string): GrowthModel {
   const opp = db
     .query(
-      "SELECT o.growth_rate FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
+      "SELECT o.growth_rate, o.market_scope FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
     )
-    .get(projectId) as { growth_rate: number | null } | undefined;
-  const marketGrowth = opp?.growth_rate ?? 0.05;
-  const marketGrowthSource = opp?.growth_rate != null ? "시장 성장률 (opportunity)" : "기본값 5% (기회 미입력)";
+    .get(projectId) as { growth_rate: number | null; market_scope: string | null } | undefined;
+  let marketGrowth = opp?.growth_rate ?? 0.05;
+  let marketGrowthSource = opp?.growth_rate != null ? "시장 성장률 (opportunity)" : "기본값 5% (기회 미입력)";
+  // 에스컬레이션 조정 CAGR — 사람이 기록한 결정이 기회 성장률보다 우선한다
+  // (design 2026-09-20-escalation-downstream §3.2-1). 출처는 note 스탬프로 남긴다.
+  const industryRow = opp?.market_scope
+    ? (db.query("SELECT id FROM md_industry WHERE name_ko = ?").get(opp.market_scope) as { id: string } | undefined)
+    : undefined;
+  const effCagr = industryRow ? resolveEffectiveCagr(db, industryRow.id) : null;
+  if (effCagr?.source === "escalated") {
+    marketGrowth = effCagr.cagrPct / 100;
+    marketGrowthSource = `에스컬레이션 조정 CAGR ${effCagr.cagrPct.toFixed(1)}% (외부 참조 × 0.85 — 바텀업 ${effCagr.baseCagrPct?.toFixed(1)}% 대체)`;
+  }
 
   let histCagr: number | null = null;
   let histVol: number | null = null;
