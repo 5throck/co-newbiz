@@ -1,6 +1,7 @@
 # VERSION_MANIFEST.md
 
 **Generated**: 2026-09-19T23:34:20.008Z
+**Generated**: 2026-09-20T00:26:26.510Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -291,8 +292,8 @@
 | generate-skill-graph.ts | 1.10.0 | scripts/generate-skill-graph.ts | js-yaml |
 | generate-version-manifest.ts | 1.8.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
 | glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | js-yaml |
-| graph-map.ts | 1.1.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
-| graph.ts | 0.4.1 | scripts/co-newbiz/graph.ts | js-yaml |
+| graph-map.ts | 1.2.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
+| graph.ts | 0.5.0 | scripts/co-newbiz/graph.ts | js-yaml |
 | handbook-doctor.ts | 1.0.0 | scripts/handbook/handbook-doctor.ts | N/A |
 | handbook-sync-audit.ts | 1.0.0 | scripts/handbook/handbook-sync-audit.ts | N/A |
 | hwp-extract.ts | 1.0.0 | scripts/co-newbiz/hwp-extract.ts | N/A |

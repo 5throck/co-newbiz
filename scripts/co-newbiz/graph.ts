@@ -1,11 +1,17 @@
-// @version 0.4.1
+// @version 0.5.0
 /**
  * Multi-element skill graph extractor — pilot per
  * docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md.
  *
+ * v0.5.0: stage axis adapter (DEG conformance per ADR-0083) — reads
+ *         process/stages.yaml and process/stage-aliases.yaml, emits stage
+ *         nodes, stage_follows edges, in_stage edges (procedure → stage),
+ *         declares graph_profile: "deg/v1" at top level, renames
+ *         executes_agent/executes_skill to step_by_agent/step_uses_skill.
  * v0.4.0: consumes inference promoted to DEFAULT (precision 1/1 vs pilots;
  *         the surviving edge is kill-criteria-corroborated). --no-consumes opts out.
- * v0.3.0: workspace-roster fallback resolves platform-skill owners cross-repo.` + [char]10 + ` * v0.2.0: honors the ADR-0053 human-role registry (procedures/
+ * v0.3.0: workspace-roster fallback resolves platform-skill owners cross-repo.
+ * v0.2.0: honors the ADR-0053 human-role registry (procedures/
  * _human-roles.yaml) — agent_key values registered there are person-roles,
  * emitted as agent nodes with `human_role: true` instead of missing-file
  * warnings, mirroring graph-map.ts's exemption.
@@ -38,12 +44,16 @@ import {
 } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 
+const GENERATOR_VERSION = "0.5.0";
+
 const ROOT = resolvePath(import.meta.dirname, "..", "..");
 const SKILLS_DIR = join(ROOT, "skills");
 const AGENTS_DIR = join(ROOT, "agents");
 const PROCEDURES_SHARED = join(ROOT, "procedures", "_shared");
 const RULES_DIR = join(ROOT, "procedures", "_kill-criteria");
 const HUMAN_ROLES_PATH = join(ROOT, "procedures", "_human-roles.yaml");
+const STAGE_ALIASES_PATH = join(ROOT, "process", "stage-aliases.yaml");
+const STAGES_PATH = join(ROOT, "process", "stages.yaml");
 const DECISIONS_DIR = join(ROOT, "docs", "decisions");
 const ADRS_DIR = join(ROOT, "docs", "adr");
 const OUT_DIR = join(ROOT, "docs", "graph");
@@ -63,6 +73,7 @@ type NodeType =
   | "procedure"
   | "rule"
   | "skill"
+  | "stage"
   | "step"
   | "var";
 
@@ -79,12 +90,14 @@ type EdgeType =
   | "anchored_by"
   | "consumes"
   | "evaluates"
-  | "executes_agent"
-  | "executes_skill"
+  | "in_stage"
   | "member_of"
   | "owns"
   | "produces"
+  | "stage_follows"
+  | "step_by_agent"
   | "step_of"
+  | "step_uses_skill"
   | "supersedes";
 
 interface Warnings {
@@ -95,6 +108,7 @@ interface Warnings {
   undeclared_procedures: string[];
   unanchored_policy_ids: string[];
   decisions_citing_unknown_rules: string[];
+  unaliased_gates: string[];
 }
 
 interface Graph {
@@ -109,6 +123,17 @@ interface SkillInfo {
   status: string;
   owner: string | undefined;
   procedureKeys: string[];
+}
+
+interface StageDef {
+  id: string;
+  title: string;
+  order: number;
+}
+
+interface StageAliases {
+  stages: StageDef[];
+  aliasOf: Map<string, string>; // gate value → stage id
 }
 
 interface StepRec {
@@ -285,6 +310,51 @@ function extractHumanRoles(): Set<string> {
   return roles;
 }
 
+/**
+ * Stage axis adapter (ADR-0083, design §3.3): reads process/stages.yaml and
+ * process/stage-aliases.yaml. Returns stage definitions and a map from gate
+ * value to stage id. Both files must be present; if either is missing, the
+ * generator emits its current output unchanged and records a warning.
+ */
+function loadStageAliases(): StageAliases | null {
+  if (!existsSync(STAGE_ALIASES_PATH) || !existsSync(STAGES_PATH)) {
+    return null;
+  }
+  try {
+    const stagesDoc = yaml.load(readFileSync(STAGES_PATH, "utf-8")) as
+      | Record<string, unknown>
+      | undefined;
+    const stagesRaw = (stagesDoc?.["stages"] as unknown[]) ?? [];
+    const stages: StageDef[] = [];
+    for (const s of stagesRaw) {
+      const rec = s as Record<string, unknown>;
+      const id = asString(rec["id"]);
+      const title = asString(rec["title"]);
+      const order = typeof rec["order"] === "number" ? rec["order"] : 0;
+      if (id && title) {
+        stages.push({ id, title, order });
+      }
+    }
+
+    const aliasesDoc = yaml.load(readFileSync(STAGE_ALIASES_PATH, "utf-8")) as
+      | Record<string, unknown>
+      | undefined;
+    const aliasesRaw = (aliasesDoc?.["aliases"] as Record<string, unknown>) ?? {};
+    const aliasOf = new Map<string, string>();
+    for (const [gate, entry] of Object.entries(aliasesRaw)) {
+      const ent = entry as Record<string, unknown>;
+      const stageId = asString(ent["stage"]);
+      if (stageId) {
+        aliasOf.set(gate, stageId);
+      }
+    }
+
+    return { stages, aliasOf };
+  } catch {
+    return null;
+  }
+}
+
 function extractProcedures(): Map<string, ProcedureInfo> {
   const procs = new Map<string, ProcedureInfo>();
   for (const dir of readdirSync(PROCEDURES_SHARED, { withFileTypes: true })) {
@@ -399,6 +469,7 @@ function buildGraph(includeConsumes: boolean): Graph {
     undeclared_procedures: [],
     unanchored_policy_ids: [],
     decisions_citing_unknown_rules: [],
+    unaliased_gates: [],
   };
 
   const { skills, order: skillOrder } = extractSkills(warnings);
@@ -408,6 +479,7 @@ function buildGraph(includeConsumes: boolean): Graph {
   const procs = extractProcedures();
   const rules = extractRules();
   const docs = extractDocs();
+  const stageAliases = loadStageAliases();
 
   const nodes = new Map<string, GraphNode>();
   const edgeKeys = new Set<string>();
@@ -506,7 +578,7 @@ function buildGraph(includeConsumes: boolean): Graph {
         if (agents.has(st.agentKey)) {
           addNode({ id: `agent:${st.agentKey}`, type: "agent", label: st.agentKey });
           addEdge(
-            "executes_agent",
+            "step_by_agent",
             stepId,
             `agent:${st.agentKey}`,
             `procedures/_shared/${key}/schema.yaml#steps[${st.id}]`,
@@ -521,7 +593,7 @@ function buildGraph(includeConsumes: boolean): Graph {
             human_role: true,
           });
           addEdge(
-            "executes_agent",
+            "step_by_agent",
             stepId,
             `agent:${st.agentKey}`,
             `procedures/_shared/${key}/schema.yaml#steps[${st.id}]`,
@@ -533,7 +605,7 @@ function buildGraph(includeConsumes: boolean): Graph {
       if (st.skillKey) {
         if (skills.has(st.skillKey)) {
           addEdge(
-            "executes_skill",
+            "step_uses_skill",
             stepId,
             `skill:${st.skillKey}`,
             `procedures/_shared/${key}/schema.yaml#steps[${st.id}]`,
@@ -555,6 +627,50 @@ function buildGraph(includeConsumes: boolean): Graph {
           `procedures/_shared/${key}/schema.yaml#steps[${st.id}]`,
         );
       }
+    }
+  }
+
+  // --- stage axis (ADR-0083 conformance) ---
+  if (stageAliases) {
+    // Stage nodes, sorted by order
+    const stagesByOrder = [...stageAliases.stages].sort((a, b) => a.order - b.order);
+    for (const stage of stagesByOrder) {
+      addNode({
+        id: `stage.co-newbiz.${stage.id}`,
+        type: "stage",
+        label: stage.title,
+        order: stage.order,
+        gate_alias: [...stageAliases.aliasOf.entries()].find(([, sid]) => sid === stage.id)?.[0],
+      });
+    }
+    // stage_follows edges between adjacent stages
+    for (let i = 0; i < stagesByOrder.length - 1; i++) {
+      const from = stagesByOrder[i];
+      const to = stagesByOrder[i + 1];
+      addEdge(
+        "stage_follows",
+        `stage.co-newbiz.${from.id}`,
+        `stage.co-newbiz.${to.id}`,
+        "process/stages.yaml",
+      );
+    }
+    // in_stage edges: procedure → stage (derived from gate alias)
+    for (const [procKey, proc] of procs) {
+      // Only emit one in_stage edge per procedure, derived from its gate value
+      // The gate value is taken from the first step (proc-level default).
+      const procGate = proc.steps.length > 0 ? proc.steps[0].gate : asString(proc as any);
+      if (!procGate) continue;
+      const stageId = stageAliases.aliasOf.get(procGate);
+      if (!stageId) {
+        warnings.unaliased_gates.push(`${procKey}: gate '${procGate}' has no alias entry in process/stage-aliases.yaml`);
+        continue;
+      }
+      addEdge(
+        "in_stage",
+        `proc:${procKey}`,
+        `stage.co-newbiz.${stageId}`,
+        `procedures/_shared/${procKey}/schema.yaml`,
+      );
     }
   }
 
@@ -688,9 +804,10 @@ function renderJson(g: Graph): string {
   return (
     JSON.stringify(
       {
+        graph_profile: "deg/v1",
         meta: {
           generator: "scripts/co-newbiz/graph.ts",
-          generator_version: "0.4.0",
+          generator_version: GENERATOR_VERSION,
           design_doc:
             "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
           node_count: g.nodes.length,
@@ -746,10 +863,10 @@ function renderMarkdown(g: Graph, includeConsumes: boolean): string {
     lines.push("|---|---|---|---|---|");
     for (const s of steps) {
       const agentE = g.edges.find(
-        (e) => e.type === "executes_agent" && e.from === s.id,
+        (e) => e.type === "step_by_agent" && e.from === s.id,
       );
       const skillE = g.edges.find(
-        (e) => e.type === "executes_skill" && e.from === s.id,
+        (e) => e.type === "step_uses_skill" && e.from === s.id,
       );
       const prodE = g.edges.find(
         (e) => e.type === "produces" && e.from === s.id,
@@ -830,6 +947,7 @@ function renderMarkdown(g: Graph, includeConsumes: boolean): string {
     ["Procedures declared by zero skills", w.undeclared_procedures],
     ["Unresolved policy ids", w.unanchored_policy_ids],
     ["Citations to unknown rules", w.decisions_citing_unknown_rules],
+    ["Procedures with unaliased gates", w.unaliased_gates],
   ];
   let any = false;
   for (const [title, items] of sections) {
@@ -980,7 +1098,7 @@ function printSkillBundle(g: Graph, name: string): void {
     const procId = me.to;
     const procNode = g.nodes.find((n) => n.id === procId);
     const steps = g.edges
-      .filter((e) => e.type === "executes_skill" && e.to === skillId)
+      .filter((e) => e.type === "step_uses_skill" && e.to === skillId)
       .map((e) => e.from)
       .filter((sid) => sid.startsWith(`${procId}#`));
     lines.push(
@@ -1058,8 +1176,8 @@ function printGateBundle(g: Graph, gate: string): void {
   for (const s of steps) {
     const procId = stepToProc.get(s.id) ?? "";
     procIds.add(procId);
-    const agentE = g.edges.find((e) => e.type === "executes_agent" && e.from === s.id);
-    const skillE = g.edges.find((e) => e.type === "executes_skill" && e.from === s.id);
+    const agentE = g.edges.find((e) => e.type === "step_by_agent" && e.from === s.id);
+    const skillE = g.edges.find((e) => e.type === "step_uses_skill" && e.from === s.id);
     const prodE = g.edges.find((e) => e.type === "produces" && e.from === s.id);
     lines.push(
       `| ${procId.replace("proc:", "")} | ${s.id.split("#")[1]} | ${agentE?.to.replace("agent:", "") ?? ""} | ${skillE?.to.replace("skill:", "") ?? ""} | ${prodE?.to.replace("artifact:", "") ?? ""} |`,
