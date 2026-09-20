@@ -42,13 +42,13 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `admin-console-operations` | 1.1.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8K — operates the 3 built admin sections, names the 7 not yet built |
 | `adr-governance` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — design §7 ADR trigger-list check and drafting |
 | `agent-lifecycle-manager` | 1.0.0 | active | pm | 2026-05-30 | — | — |
-|`agent-lifecycle-manager`|1.1.0|active|pm|2026-09-15|—|—|
+|`agent-lifecycle-manager`|1.2.0|active|pm|2026-09-18|—|—|
 | `agent-output-provenance` | 1.2.0 | active | process-governance-manager | 2026-08-28 | — | Wave 5.8I — `analysis_task.reviewed_by` design intent; table not yet migrated, gap flagged explicitly |
 | `antitrust-screening` | 1.1.0 | active | antitrust-agent | 2026-08-23 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
 | `antitrust-screening` | 1.1.0 | active | antitrust-agent | 2026-08-23 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
 | `api-documentation` | 1.0.0 | active | pm | 2026-07-19 | — | — |
 | `api-documentation` | 1.0.0 | active | pm | 2026-07-19 | — | — |
-| `assumption-audit` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8I — user/assumed/derived kind-tag correctness audit |
+|`assumption-audit`|1.0.1|active|process-governance-manager|2026-08-20|—|Wave 5.8I — user/assumed/derived kind-tag correctness audit|
 | `auth-and-account-management` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8J — existence-never-leaked auth, dual-credential must-change-password gating |
 | `batch-scheduling-operations` | 1.0.0 | active | infra-automation-engineer | 2026-08-20 | — | Wave 5.8K — ADR-0019 OS-level scheduler, never in-process timer |
 | `brownfield-feasibility` | 1.1.0 | active | brownfield-agent | 2026-08-23 | — | Wave 5.8C — Brown Field Screening/Pre-FS/FS/DD incl. six-validator completeness gate |
@@ -66,7 +66,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `commercial-due-diligence` | 1.1.0 | active | commercial-dd-agent | 2026-08-23 | — | Wave 5.8H — checklist cdd-01-07, no-narrative-only-finding rule |
 | `community-partnership-planning` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8C — workforce-development partnerships and community-relations risk |
 | `community-partnership-planning` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8C — workforce-development partnerships and community-relations risk |
-| `company-intelligence` | 1.0.0 | active | market-intelligence-agent | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
+|`company-intelligence`|1.0.1|active|market-intelligence-agent|2026-08-20|—|Wave 5.8A reuse layer, adapted from Projects/co-consult|
 | `compensation-harmonization-analysis` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8D — ADR-0027 bidirectional upward-bias verification rule |
 | `compensation-harmonization-analysis` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8D — ADR-0027 bidirectional upward-bias verification rule |
 | `competitive-intelligence` | 1.1.0 | active | market-intelligence-agent | 2026-08-23 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
@@ -83,7 +83,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `db-migration-governance` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — ADR-0001/0002 SQLite portability-regime conventions |
 | `dd-to-valuation-bridge` | 1.1.0 | active | valuation-agent | 2026-08-23 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams |
 | `dd-to-valuation-bridge` | 1.1.0 | active | valuation-agent | 2026-08-23 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams |
-| `deal-execution-playbook` | 1.1.0 | active | process-governance-manager | 2026-09-08 | — | Wave 5.8I — navigates `docs/governance/process-map.md`/`docs/governance/raci.md`'s real per-gate RACI, never restates |
+|`deal-execution-playbook`|1.0.1|active|process-governance-manager|2026-09-08|—|Wave 5.8I — navigates `docs/governance/process-map.md`/`docs/governance/raci.md`'s real per-gate RACI, never restates|
 | `deal-workspace-operations` | 1.1.0 | active | process-governance-manager | 2026-09-09 | — | Wave B1 — open/membership plus close/archive lifecycle via `PATCH /api/projects/:id/close` and `md_project.status` |
 | `debt-and-contingent-liability-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
 | `debt-and-contingent-liability-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
@@ -106,14 +106,14 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `financing-plan-review` | 1.2.0 | active | valuation-agent | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — certainty-of-funds evidence pack per chk-financing; DD step 12 + Entity IC precondition |
 | `finishing-a-development-branch` | 1.0.0 | active | pm | 2026-06-13 | — | — |
 | `finishing-a-development-branch` | 1.0.0 | active | pm | 2026-06-13 | — | — |
-| `forward-industry-research` | 1.0.0 | active | market-intelligence-agent | 2026-08-29 | — | ADR-0066 gap closure — forward/upstream industry qualitative research narrative feeding the driver registry |
+|`forward-industry-research`|1.0.1|active|market-intelligence-agent|2026-08-29|—|ADR-0066 gap closure — forward/upstream industry qualitative research narrative feeding the driver registry|
 | `gateguard` | 1.0.0 | active | pm | 2026-08-01 | — | — |
 | `gateguard` | 1.0.0 | active | pm | 2026-08-01 | — | — |
 | `glossary-management` | 1.0.0 | active | glossary-curator | 2026-08-20 | — | Wave 5.8C (design §9.2 merge) — absorbs glossary-lint |
 | `governance-document-hierarchy` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B (design §9.3 governance-authoring group) — Policy/Procedure/Guideline/Checklist/Template layer classification |
 | `greenfield-feasibility` | 1.1.0 | active | greenfield-agent | 2026-08-23 | — | Wave 5.8C — Green Field Screening/Pre-FS |
 | `greenfield-feasibility` | 1.1.0 | active | greenfield-agent | 2026-08-23 | — | Wave 5.8C — Green Field Screening/Pre-FS |
-| `group-level-review` | 1.0.0 | active | group-review-agent | 2026-08-20 | — | Wave 5.8C (design §9.3 group review + glossary + GF/BF gate groups) — orchestrates `group-investment-review`'s 5-step Group IC sequence |
+|`group-level-review`|1.0.1|active|group-review-agent|2026-08-20|—|Wave 5.8C (design §9.3 group review + glossary + GF/BF gate groups) — orchestrates `group-investment-review`'s 5-step Group IC sequence|
 | `growth-projection-modeling` | 1.1.0 | active | financial-analyst | 2026-08-23 | — | Wave 5.8G — ADR-0018 anchor_ref + top-decile base-rate warning, feeds the Kill Criterion |
 | `growth-projection-modeling` | 1.1.0 | active | financial-analyst | 2026-08-23 | — | Wave 5.8G — ADR-0018 anchor_ref + top-decile base-rate warning, feeds the Kill Criterion |
 | `handbook` | 0.4.1 | active | pm | 2026-08-17 | — | — |
@@ -157,10 +157,10 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `k-opendata` | 1.2.0 | active | market-intelligence-agent | 2026-09-03 | — | — |
 | `legal-due-diligence` | 1.1.0 | active | legal-counsel | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — DD-grade legal workstream per chk-legal-dd; RAG findings register mapped to SPA protections |
 | `legal-due-diligence` | 1.1.0 | active | legal-counsel | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — DD-grade legal workstream per chk-legal-dd; RAG findings register mapped to SPA protections |
-| `legal-risk-register` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — consolidated per-project legal-risk view |
+|`legal-risk-register`|1.0.1|active|legal-counsel|2026-08-20|—|Wave 5.8H — consolidated per-project legal-risk view|
 | `management-incentive-review` | 1.1.0 | active | incentive-agent | 2026-08-23 | — | Wave 5.8D — CoC-trigger executive compensation, role-based per PII discipline |
 | `management-incentive-review` | 1.1.0 | active | incentive-agent | 2026-08-23 | — | Wave 5.8D — CoC-trigger executive compensation, role-based per PII discipline |
-| `market-data-pipeline` | 1.1.0 | active | data-architect | 2026-08-20 | — | Wave A1 — ADR-0004 cache-first/revision-preserving policy implemented via source-adapter framework; `fetch` and `md:sync` CLI live with fail-closed credentials, KOSIS unit quarantine, and natural-key catalog upserts |
+|`market-data-pipeline`|1.0.1|active|data-architect|2026-08-20|—|Wave A1 — ADR-0004 cache-first/revision-preserving policy implemented via source-adapter framework; `fetch` and `md:sync` CLI live with fail-closed credentials, KOSIS unit quarantine, and natural-key catalog upserts|
 | `master-data-governance` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J (design §9.3 platform group) — real `staging_unmapped` queue resolution |
 | `mcp-server-integration` | 1.0.0 | active | backend-engineer | 2026-08-20 | — | Wave 5.8J — ADR-0011 REST-only, enforced by the real bun:test DB-import scan |
 | `meeting` | 1.4.1 | active | pm | 2026-09-13 | — | — |
@@ -186,7 +186,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `platform-skill-lifecycle-manager` | 1.0.0 | active | pm | 2026-05-31 | — | — |
 | `pmi-planning` | 1.1.0 | active | pmi-agent | 2026-08-23 | — | Wave 5.8D — synthesis skill sequencing the other five M&A special-topics outputs |
 | `pmi-planning` | 1.1.0 | active | pmi-agent | 2026-08-23 | — | Wave 5.8D — synthesis skill sequencing the other five M&A special-topics outputs |
-| `policy-and-procedure-governance` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | Wave 5.8B — Policy/Procedure authoring, entity addenda and shared/entity/region procedure model |
+|`policy-and-procedure-governance`|1.0.1|active|process-governance-manager|2026-08-23|—|Wave 5.8B — Policy/Procedure authoring, entity addenda and shared/entity/region procedure model|
 | `policy-change-impact-analysis` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — mandatory pre-amendment impact analysis, `project_policy_pin` retroactivity |
 | `portfolio-fit-assessment` | 1.3.0 | active | group-review-agent | 2026-08-23 | — | Wave 5.8C — overlap finding + agenda-ranking formula (meeting M2 D-M2-2) |
 | `portfolio-fit-assessment` | 1.3.0 | active | group-review-agent | 2026-08-23 | — | Wave 5.8C — overlap finding + agenda-ranking formula (meeting M2 D-M2-2) |
@@ -205,12 +205,12 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `regional-incentive-sourcing` | 1.1.0 | active | greenfield-agent | 2026-08-23 | — | Wave 5.8C (design §9.2 merge) — absorbs site-comparison, incentive-NPV on one comparison table |
 | `regulation-monitoring` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8B — portfolio-wide statute watch feeding the amendment pipeline |
 | `regulatory-change-response` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — pre-effective-date response planning |
-| `regulatory-screening` | 1.1.0 | active | legal-counsel | 2026-08-23 | — | Wave 5.8H (design §9.3 legal/certification/DD group) — Screening-gate region/foreign-investment/sanctions checks |
+|`regulatory-screening`|1.0.1|active|legal-counsel|2026-08-23|—|Wave 5.8H (design §9.3 legal/certification/DD group) — Screening-gate region/foreign-investment/sanctions checks|
 | `research-analysis` | 1.0.0 | active | pm | 2026-07-19 | — | — |
 | `research-analysis` | 1.0.0 | active | pm | 2026-07-19 | — | — |
 | `rest-api-design` | 1.0.0 | active | backend-engineer | 2026-08-20 | — | Wave 5.8J — api-spec.md non-negotiables, 404-not-403, envelope shape |
 | `run-versioning-and-attribution` | 1.0.0 | active | data-architect | 2026-08-20 | — | Wave 5.8I — ADR-0005 immutable run_input/input_hash, superseded_by chains |
-| `sample-driven-report-writing` | 1.0.0 | active | docs-writer | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
+|`sample-driven-report-writing`|1.0.1|active|docs-writer|2026-08-20|—|Wave 5.8A reuse layer, adapted from Projects/co-consult|
 | `scenario-planning` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8G — discrete downside/base/upside cases incl. mandatory +200bp rate-shock test |
 | `scenario-planning` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8G — discrete downside/base/upside cases incl. mandatory +200bp rate-shock test |
 | `script-lifecycle-manager` | 1.2.0 | active | pm | 2026-05-30 | — | — |
@@ -223,7 +223,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `site-visit-protocol` | 1.1.0 | active | technical-dd-agent | 2026-08-23 | — | Wave 5.8H — evidence-capture discipline (photo/measurement/log) |
 | `site-visit-protocol` | 1.1.0 | active | technical-dd-agent | 2026-08-23 | — | Wave 5.8H — evidence-capture discipline (photo/measurement/log) |
 | `skill-lifecycle-manager` | 1.3.0 | active | pm | 2026-09-06 | — | — |
-| `skill-lifecycle-manager` | 1.3.0 | active | pm | 2026-09-06 | — | — |
+|`skill-lifecycle-manager`|1.4.0|active|pm|2026-09-18|—|—|
 | `source-command-commit-push-pr` | 1.0.1 | active | pm | — | — | — |
 | `source-command-commit-push-pr` | 1.0.1 | active | pm | — | — | — |
 | `stage-gate-governance` | 1.4.0 | active | process-governance-manager | 2026-09-08 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
@@ -234,7 +234,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `strategic-fit-screening` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — entity-level knock-out + scorecard screen at first gate per chk-strategic-fit; thresholds illustrative until the thresholds meeting |
 | `strategic-fit-screening` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — entity-level knock-out + scorecard screen at first gate per chk-strategic-fit; thresholds illustrative until the thresholds meeting |
 | `sync` | 1.5.0 | active | pm | 2026-09-12 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |
-| `sync` | 1.5.0 | active | pm | 2026-09-12 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |
+|`sync`|1.6.0|active|pm|2026-09-17|—|Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan|
 | `systematic-market-sizing` | 1.5.0 | active | market-intelligence-agent | 2026-09-03 | — | — |
 | `systematic-market-sizing` | 1.5.0 | active | market-intelligence-agent | 2026-09-03 | — | — |
 | `talent-pipeline-planning` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8C — Green Field local labor-market supply assessment |
@@ -258,10 +258,10 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `update-bun-packages` | 1.3.1 | active | pm | 2026-09-09 | — | — |
 | `validate-docs-links` | 1.0.0 | active | pm | 2026-05-30 | — | Reassigned from docs-writer — same orphan cause as security-scan |
 | `validate-docs-links` | 1.0.0 | active | pm | 2026-05-30 | — | Reassigned from docs-writer — same orphan cause as security-scan |
-| `value-chain-driver-identification` | 1.0.0 | active | quant-methodologist | 2026-08-29 | — | ADR-0066 gap closure — per-stage driver sensitivity derivation via correlation/lead-lag |
+|`value-chain-driver-identification`|1.0.1|active|quant-methodologist|2026-08-29|—|ADR-0066 gap closure — per-stage driver sensitivity derivation via correlation/lead-lag|
 | `value-chain-linkage-analysis` | 1.1.0 | active | quant-methodologist | 2026-08-23 | — | Wave 5.8F — ADR-0025 deliberate separation from proxy-chain betas |
 | `value-chain-linkage-analysis` | 1.1.0 | active | quant-methodologist | 2026-08-23 | — | Wave 5.8F — ADR-0025 deliberate separation from proxy-chain betas |
-| `value-chain-stage-financials` | 1.0.0 | active | financial-analyst | 2026-08-29 | — | ADR-0066 gap closure — per-chain-node 5-year KPI rollup pipeline into `fact_industry` |
+|`value-chain-stage-financials`|1.0.1|active|financial-analyst|2026-08-29|—|ADR-0066 gap closure — per-chain-node 5-year KPI rollup pipeline into `fact_industry`|
 | `vulnerability-management` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — CVE-check merge gate, mandatory recorded risk-acceptance for unpatched Critical/High |
 | `wacc-input-session` | 1.3.0 | active | valuation-agent | 2026-09-10 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
 | `wacc-input-session` | 1.3.0 | active | valuation-agent | 2026-09-10 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
