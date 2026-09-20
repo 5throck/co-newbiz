@@ -137,7 +137,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `policy-change-impact-analysis` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — mandatory pre-amendment impact analysis, `project_policy_pin` retroactivity |
 | `portfolio-fit-assessment` | 1.3.0 | active | group-review-agent | 2026-08-23 | — | Wave 5.8C — overlap finding + agenda-ranking formula (meeting M2 D-M2-2) |
 | `procedure-reference-override` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — ADR-0020 shared/entity/region override mechanics, `proc:resolve` |
-| `project-review` | 1.6.0 | active | pm | 2026-09-08 | — | Graph-aligned project review runbook refresh |
+| `project-review` | 1.3.0 | active | pm | 2026-09-08 | — | Graph-aligned project review runbook refresh |
 | `proxy-industry-chain` | 1.1.0 | active | quant-methodologist | 2026-08-23 | — | Wave 5.8F (design §9.3 market/proxy-chain group) — ADR-0006 statistical-hop-only grading rule |
 | `quality-of-earnings` | 1.1.0 | active | financial-analyst | 2026-08-23 | — | Wave 5.8G — EBITDA normalization bridge for Brown Field DD |
 | `query-performance-tuning` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — membership-filtering join as the highest-traffic query pattern |
