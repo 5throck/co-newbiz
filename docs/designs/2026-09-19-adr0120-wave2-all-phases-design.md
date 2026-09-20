@@ -50,6 +50,14 @@ lang_reason: source-material
 
 ## 2. Phase B — S3 시너지 + S6/S7 브라운필드
 
+> **구현 현황 (2026-09-20)**: 완료. `SynergyStage.tsx`(목록 + 상세 4탭 + 게이트,
+> `opportunityId`·`analysisId`·`embedded` props — embedded 모드에서 캐리어 기회에
+> 연결된 분석을 1회 자동 선택)와 `BrownfieldStage.tsx`(목표 시장 정의 → 후보 발굴
+> → Long List → 사전 검토 → Short List → 위원회·게이트·승격)를 추출했다.
+> `/synergy`는 URL(?company=) 선택 래퍼로, `/brownfield`는 칩 선택 래퍼로 축소했다.
+> deals 탭에 S3·S6/S7 분기 추가. 검증: tsc·design-lint·`bun run test:unit`(120/120)
+> 클린, 라이브 브라우저 확인(레거시·딥링크·deals 탭·자동 선택), judge 판정 통과.
+
 ### S3 시너지 (`/synergy`, 1,188줄)
 
 **추출 컴포넌트**: `components/stages/SynergyStage.tsx`
