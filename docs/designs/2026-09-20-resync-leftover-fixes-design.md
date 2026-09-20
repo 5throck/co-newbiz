@@ -34,6 +34,12 @@ work on a template-managed file), README `cd` note, `next-env.d.ts` path
 - `ci.yml`: add `Run unit tests` (`bun run test:unit`) and `Run script tests`
   (`bun run test:scripts`) steps after the audit step. Both package scripts
   exist since PR #387.
+- `ci.yml` follow-up (first live CI run exposed it): the job's root
+  `bun install` does not cover the `app/web-next` package, so tests importing
+  `next/server` (via `app/web-next/lib/envelope.ts`) failed with module
+  resolution errors. Added an `Install web-next dependencies` step
+  (`bun install --frozen-lockfile --cwd app/web-next`, conditional on the
+  package manifest) before the audit step.
 - `scripts/SCRIPTS.md` registry: calibrate.ts entry version 1.0.0 → 1.1.0
   with a change note; `docs/VERSION_MANIFEST.md` regenerated.
 
@@ -56,4 +62,7 @@ per ADR-0070).
 - `bun scripts/verify-scripts.ts --verify` — 180 registered scripts verified.
 - `bun scripts/lifecycle-sync-audit.ts` — Check A version match clean.
 - `bun scripts/audit.ts` — full pass.
-- The PR's CI run executes the two new workflow steps live.
+- First live CI run on PR #388: `Run unit tests` failed in the GitHub runner
+  with `Cannot find module 'next/server'` — the missing `app/web-next`
+  dependency install described above; fixed by the added install step.
+- The PR's CI run executes the audit + both test suites green after the fix.

@@ -30,6 +30,13 @@ jobs:
         if: ${{ hashFiles('package.json') != '' }}
         run: bun install --frozen-lockfile
 
+      # Unit tests import app/web-next modules (next/server via lib/envelope.ts),
+      # and the root install does not cover the web-next package's own
+      # dependencies — without this step those tests cannot resolve next/server.
+      - name: Install web-next dependencies
+        if: ${{ hashFiles('app/web-next/package.json') != '' }}
+        run: bun install --frozen-lockfile --cwd app/web-next
+
       - name: Run audit
         run: bun scripts/audit.ts
 
