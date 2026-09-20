@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-20T11:32:16.449Z
+**Generated**: 2026-09-20T12:53:43.661Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -243,7 +243,7 @@
 | backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | N/A |
 | bootstrap-stages.ts | 1.0.0 | scripts/bootstrap-stages.ts | fs, js-yaml, path |
 | build-search-index.ts | 1.0.0 | scripts/handbook/build-search-index.ts | N/A |
-| calibrate.ts | 1.0.0 | scripts/co-newbiz/calibrate.ts | N/A |
+| calibrate.ts | 1.1.0 | scripts/co-newbiz/calibrate.ts | N/A |
 | check-a11y.ts | 1.0.0 | scripts/handbook/check-a11y.ts | N/A |
 | check-authoring.ts | 1.2.0 | scripts/handbook/check-authoring.ts | N/A |
 | check-external-links.ts | 1.2.0 | scripts/handbook/check-external-links.ts | N/A |

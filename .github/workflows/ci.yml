@@ -33,6 +33,12 @@ jobs:
       - name: Run audit
         run: bun scripts/audit.ts
 
+      - name: Run unit tests
+        run: bun run test:unit
+
+      - name: Run script tests
+        run: bun run test:scripts
+
   secret-scan:
     name: Secret Scan
     runs-on: ubuntu-latest
@@ -50,7 +56,7 @@ jobs:
         with:
           args: detect --source=/github/workspace --config=/github/workspace/.gitleaks.toml --redact --verbose --no-banner
 
-  # Uncomment and configure the test job for your stack:
+  # Uncomment and configure additional test jobs for your stack:
 
   # test-python:
   #   name: Python Tests
