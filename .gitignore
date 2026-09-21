@@ -90,3 +90,8 @@ render_out/
 
 # Docker production deployment — pre-deploy DB backups (deploy-web.ts)
 backups/
+
+# Next.js regenerates next-env.d.ts per mode (dev writes .next/dev/types, build
+# writes .next/types) — the two variants would flip-flop through every sync.
+# Next recreates the file on any dev/build run, so it is not tracked.
+app/web-next/next-env.d.ts
