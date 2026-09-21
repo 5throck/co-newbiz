@@ -41,7 +41,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `admin-console-operations` | 1.1.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8K — operates the 3 built admin sections, names the 7 not yet built |
 | `adr-governance` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — design §7 ADR trigger-list check and drafting |
 | `agent-lifecycle-manager` | 1.3.0 | active | pm | 2026-09-21 | — | — |
-|`agent-lifecycle-manager`|1.2.0|active|pm|2026-09-18|—|—|
+|`agent-lifecycle-manager`|1.3.0|active|pm|2026-09-21|—|—|
 | `agent-output-provenance` | 1.2.0 | active | process-governance-manager | 2026-08-28 | — | Wave 5.8I — `analysis_task.reviewed_by` design intent; table not yet migrated, gap flagged explicitly |
 | `antitrust-screening` | 1.1.0 | active | antitrust-agent | 2026-08-23 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
 | `api-documentation` | 1.0.2 | active | pm | 2026-07-19 | — | — |
@@ -92,7 +92,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `growth-projection-modeling` | 1.1.0 | active | financial-analyst | 2026-08-23 | — | Wave 5.8G — ADR-0018 anchor_ref + top-decile base-rate warning, feeds the Kill Criterion |
 | `handbook` | 0.6.0 | active | pm | 2026-09-20 | — | — |
 |`handbook`|0.6.0|active|pm|2026-09-20|—|—|
-| `handbook-sync-audit` | 1.0.4 | active | docs-writer | 2026-08-29 | — | — |
+|`handbook-sync-audit`|1.0.5|active|docs-writer|2026-08-29|—|—|
 | `historical-financial-analysis` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G (design §9.3 financial/simulation group) — historical distribution feeding the growth-projection anchor |
 | `hwp-document-processing` | 1.1.0 | active | docs-writer | 2026-09-09 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — generation path only, extraction not yet ported (see SKILL.md Adaptation Note) |
 | `i18n-audit` | 1.0.0 | active | pm | 2026-08-29 | — | — |
@@ -137,7 +137,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `policy-change-impact-analysis` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — mandatory pre-amendment impact analysis, `project_policy_pin` retroactivity |
 | `portfolio-fit-assessment` | 1.3.0 | active | group-review-agent | 2026-08-23 | — | Wave 5.8C — overlap finding + agenda-ranking formula (meeting M2 D-M2-2) |
 | `procedure-reference-override` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — ADR-0020 shared/entity/region override mechanics, `proc:resolve` |
-| `project-review` | 1.3.0 | active | pm | 2026-09-08 | — | Graph-aligned project review runbook refresh |
+|`project-review`|1.3.0|active|pm|2026-09-14|—|Graph-aligned project review runbook refresh|
 | `proxy-industry-chain` | 1.1.0 | active | quant-methodologist | 2026-08-23 | — | Wave 5.8F (design §9.3 market/proxy-chain group) — ADR-0006 statistical-hop-only grading rule |
 | `quality-of-earnings` | 1.1.0 | active | financial-analyst | 2026-08-23 | — | Wave 5.8G — EBITDA normalization bridge for Brown Field DD |
 | `query-performance-tuning` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — membership-filtering join as the highest-traffic query pattern |
@@ -158,7 +158,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `site-infrastructure-assessment` | 1.1.0 | active | greenfield-agent | 2026-08-23 | — | Wave 5.8C — mandatory infrastructure-minimums exclusion filter |
 | `site-visit-protocol` | 1.1.0 | active | technical-dd-agent | 2026-08-23 | — | Wave 5.8H — evidence-capture discipline (photo/measurement/log) |
 | `skill-lifecycle-manager` | 1.5.0 | active | pm | 2026-09-21 | — | — |
-|`skill-lifecycle-manager`|1.4.0|active|pm|2026-09-18|—|—|
+|`skill-lifecycle-manager`|1.5.0|active|pm|2026-09-21|—|—|
 | `source-command-commit-push-pr` | 1.0.3 | active | pm | — | — | — |
 | `stage-gate-governance` | 1.4.0 | active | process-governance-manager | 2026-09-08 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
 | `standup-synthesizer` | 1.0.0 | active | pm | 2026-08-06 | — | Daily standup digest synthesizer aggregating commits, issues, PRs, and blockers |
