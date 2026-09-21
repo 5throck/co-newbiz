@@ -52,6 +52,8 @@ interface CaseView {
   horizon_years: number;
   scenario: "base" | "upside" | "downside" | null;
   variant: "market_forward" | "historical";
+  target_id: string | null;
+  target_name: string | null;
   source: "generated" | "manual";
   recommended: boolean;
   adopted: boolean;
@@ -60,10 +62,22 @@ interface CaseView {
   lines: LineRow[];
   simulations: SimRow[];
 }
+interface TargetComparisonRow {
+  targetId: string;
+  companyName: string;
+  rank: number | null;
+  baseP05: number | null;
+  baseP50: number | null;
+  irr: number | null;
+  caseCount: number;
+  recommended: boolean;
+}
 interface CasesResponse {
   cases: CaseView[];
   recommended_scenario: string | null;
   adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null;
+  target_selection: { targetId: string; rationale: string; selectedBy: string; selectedAt: string } | null;
+  targets: TargetComparisonRow[];
   escalated_cagr_pct: number | null;
 }
 interface ActivityRow {
@@ -100,7 +114,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const urlSync = !embedded;
   const [localTab, setLocalTab] = useState("scenarios");
   const tabParam = urlSync ? searchParams.get("tab") : null;
-  const tab = tabParam === "overview" || tabParam === "params" || tabParam === "target-costing" || tabParam === "wacc" || tabParam === "financial-analysis" ? tabParam : "scenarios";
+  const tab = tabParam === "overview" || tabParam === "params" || tabParam === "target-costing" || tabParam === "wacc" || tabParam === "financial-analysis" || tabParam === "targets" ? tabParam : "scenarios";
   const setTab = (key: string) => {
     if (urlSync) router.replace(`/projects/${projectId}/business-case?tab=${key}`, { scroll: false });
     else setLocalTab(key);
@@ -115,6 +129,11 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ modelId: string; text: string } | null>(null);
+  // ADR-0143 — brownfield 대상 축: 비교 탭의 선정 근거 입력과 시나리오
+  // 매트릭스의 대상 필터. 기본 필터는 선정 대상(없으면 권고/1순위 대상).
+  const [targetFilter, setTargetFilter] = useState<string | null>(null);
+  const [selecting, setSelecting] = useState<{ targetId: string; name: string } | null>(null);
+  const [selectionRationale, setSelectionRationale] = useState("");
   // ADR-0118 — S8 채택 권고(제안). 채택은 사람의 행위다.
   interface AdoptionReco {
     source: "llm" | "synthesis";
@@ -143,6 +162,27 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       setRecoError(err instanceof Error ? err.message : "권고 생성 실패");
     } finally {
       setRecoLoading(false);
+    }
+  }
+
+  // ADR-0143 — 대상 선정은 인간의 판단이며 근거 기록이 필수다 (경계 #2,
+  // ADR-0053). 선정 시 md_project.company_id가 확정되고, 이후 채택은 선정된
+  // 대상의 케이스로 제한된다.
+  async function submitTargetSelection() {
+    if (!selecting || !selectionRationale.trim() || busy) return;
+    setBusy(true); setError(null);
+    try {
+      await api.post(`/api/projects/${encodeURIComponent(projectId)}/target-selection`, {
+        target_id: selecting.targetId,
+        rationale: selectionRationale.trim(),
+      });
+      setSelecting(null);
+      setSelectionRationale("");
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "대상 선정 실패");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -230,17 +270,28 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     );
   }
 
-  // Group by scenario; within a scenario, market_forward (1차) first, newest first.
+  // Group by scenario; within a scenario, market_forward (1차) first, newest
+  // first. Brownfield (대상 축 존재)는 유효 대상 필터의 케이스만 보여준다 —
+  // 기본값은 선정 대상, 없으면 첫 대상 (ADR-0143).
+  const targets = data?.targets ?? [];
+  const effectiveTargetFilter = useMemo(() => {
+    if (targets.length === 0) return null;
+    if (targetFilter && targets.some((t) => t.targetId === targetFilter)) return targetFilter;
+    return data?.target_selection?.targetId ?? targets[0]?.targetId ?? null;
+  }, [targets, targetFilter, data?.target_selection?.targetId]);
+  const selectedTargetName = targets.find((t) => t.targetId === data?.target_selection?.targetId)?.companyName ?? null;
+
   const byScenario = useMemo(() => {
     const map = new Map<string, CaseView[]>();
     for (const s of SCENARIOS) {
       const list = (data?.cases ?? [])
         .filter((c) => c.scenario === s)
+        .filter((c) => (targets.length === 0 ? c.target_id === null : c.target_id === effectiveTargetFilter))
         .sort((a, b) => (a.variant === b.variant ? b.created_at.localeCompare(a.created_at) : a.variant === "market_forward" ? -1 : 1));
       map.set(s, list);
     }
     return map;
-  }, [data]);
+  }, [data, targets.length, effectiveTargetFilter]);
 
   const hasHistorical = (data?.cases ?? []).some((c) => c.variant === "historical");
 
@@ -259,6 +310,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         active={tab}
         onSelect={setTab}
         tabs={[
+          ...(targets.length > 0 ? [{ key: "targets", label: "대상 비교·선정" }] : []),
           { key: "overview", label: "설명·생성·권고" },
           { key: "scenarios", label: "시나리오 비교" },
           { key: "params", label: "파라미터·스냅샷" },
@@ -274,6 +326,81 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {tab === "target-costing" && <TargetCostingPanel projectId={projectId} />}
       {tab === "wacc" && <WaccPanel projectId={projectId} />}
       {tab === "financial-analysis" && <FinancialAnalysisPanel projectId={projectId} />}
+
+      {/* ── ADR-0143 대상 비교·선정 (brownfield) — 권고 ≠ 선정, 선정은 사람 ── */}
+      {tab === "targets" && targets.length > 0 && (
+      <section className="market-section sizing-step mb-3" aria-label="Short List 대상 비교·선정">
+        <h3 className="sizing-step-title">Short List 대상 비교·선정 <span className="text-[0.72rem] text-[color:var(--muted-fg)]">(flow.spec S8 subjectScope: shortlist — ADR-0143)</span></h3>
+        <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+          각 대상의 최신 gate-primary(시장 기반) 기본 시나리오 결과를 비교합니다. ★ RECOMMENDED는 권고일 뿐이며, 선정은 근거를 남기는 사람의 기록입니다. 선정 후 채택은 선정된 대상의 케이스로 제한됩니다.
+        </p>
+        {selectedTargetName && (
+          <p className="text-[0.8rem] mb-2">
+            <span className="status-chip status-green">선정됨</span> <b>{selectedTargetName}</b> — 근거: {data?.target_selection?.rationale}{" "}
+            <span className="text-[color:var(--muted-fg)]">({data?.target_selection?.selectedBy})</span>
+          </p>
+        )}
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th scope="col">대상</th>
+              <th scope="col" className="num">S7 순위</th>
+              <th scope="col" className="num">Base NPV p05</th>
+              <th scope="col" className="num">Base NPV p50</th>
+              <th scope="col" className="num">IRR</th>
+              <th scope="col" className="num">케이스</th>
+              <th scope="col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {targets.map((t) => {
+              const isSelected = data?.target_selection?.targetId === t.targetId;
+              return (
+                <tr key={t.targetId}>
+                  <td>
+                    <b>{t.companyName}</b>
+                    {t.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(p05) 생존 관점 (시장 기반)">★ RECOMMENDED</span>}
+                    {isSelected && <span className="status-chip status-green ml-1">선정됨</span>}
+                  </td>
+                  <td className="num">{t.rank ?? "—"}</td>
+                  <td className="num mono-num">{t.baseP05 !== null ? fmt(t.baseP05) : "—"}</td>
+                  <td className="num mono-num">{t.baseP50 !== null ? fmt(t.baseP50) : "—"}</td>
+                  <td className="num mono-num">{t.irr != null ? `${(t.irr * 100).toFixed(1)}%` : "—"}</td>
+                  <td className="num">{t.caseCount}</td>
+                  <td>
+                    {canAct && !isSelected && (
+                      <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => { setSelecting({ targetId: t.targetId, name: t.companyName }); setSelectionRationale(""); }}>
+                        대상 선택
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {targets.every((t) => t.caseCount === 0) && (
+          <p className="text-[0.76rem] text-[color:var(--muted-fg)] mt-1">아직 분석된 케이스가 없습니다 — 설명·생성 탭에서 대상별 자동 생성을 실행하세요.</p>
+        )}
+        {selecting && (
+          <div className="mt-2">
+            <p className="text-[0.8rem] mb-1"><b>{selecting.name}</b> 대상 선정 근거 (필수 — ADR-0053 결정 기록):</p>
+            <textarea
+              className="sizing-new-input w-full"
+              rows={3}
+              value={selectionRationale}
+              onChange={(e) => setSelectionRationale(e.target.value)}
+              spellCheck={false}
+              aria-label="대상 선정 근거"
+            />
+            <div className="flex gap-1 mt-1">
+              <button type="button" className="btn-primary btn-sm" disabled={busy || !selectionRationale.trim()} onClick={() => void submitTargetSelection()}>선정 기록</button>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setSelecting(null)}>취소</button>
+            </div>
+          </div>
+        )}
+      </section>
+      )}
 
       {tab === "overview" && (
       <>
@@ -365,8 +492,25 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       </>
       )}
 
-      {/* 시나리오별 이중 관점 비교 */}
-      {tab === "scenarios" && SCENARIOS.map((s) => {
+      {/* 시나리오별 이중 관점 비교 — brownfield는 유효 대상 필터의 케이스만 */}
+      {tab === "scenarios" && (
+      <>
+      {targets.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1 mt-3 mb-1" role="group" aria-label="분석 대상 필터">
+          <span className="text-[0.78rem] text-[color:var(--muted-fg)] mr-1">분석 대상:</span>
+          {targets.map((t) => (
+            <button
+              key={t.targetId}
+              type="button"
+              className={t.targetId === effectiveTargetFilter ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
+              onClick={() => setTargetFilter(t.targetId)}
+            >
+              {t.companyName}{data?.target_selection?.targetId === t.targetId ? " ✓" : ""}
+            </button>
+          ))}
+        </div>
+      )}
+      {SCENARIOS.map((s) => {
         const cases = byScenario.get(s) ?? [];
         const newestMf = cases.find((c) => c.variant === "market_forward");
         const newestMfP50 = newestMf?.simulations.find((x) => x.percentile === "p50")?.npv_krw_m ?? null;
@@ -471,6 +615,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </section>
         );
       })}
+      </>
+      )}
 
       {data && data.cases.length === 0 && (
         <p className="text-[0.85rem] text-[color:var(--muted-fg)]">등록된 Business Case가 없습니다 — 자동 생성을 실행하거나 수동으로 추가하세요.</p>

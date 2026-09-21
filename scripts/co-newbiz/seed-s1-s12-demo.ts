@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.3.0
 // Idempotent S1→S12 brownfield demo chain seed.
 //
 // The operational DB is intentionally gitignored, so a fresh/local database
@@ -48,6 +48,8 @@ const DEMO = {
   routeId: "demo-s1-s12-route",
   modelId: "demo-s1-s12-business-case",
   runId: "demo-s1-s12-run",
+  selectionRunId: "demo-s1-s12-selection-run",
+  targetId: "demo-s1-s12-target-1",
   adoptionRunId: "demo-s1-s12-adoption-run",
   structureId: "demo-s1-s12-structure",
 };
@@ -219,9 +221,9 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
 
     db.run(
       `INSERT OR IGNORE INTO business_case_model
-       (id, project_id, kind, name, horizon_years, created_by, created_at, variant, inputs_json)
-       VALUES (?, ?, 'investment_return', 'S1-S12 demo base case', 5, ?, ?, 'market_forward', ?)`,
-      [DEMO.modelId, DEMO.projectId, actor, now, JSON.stringify(DEMO.inputsSnapshot)],
+       (id, project_id, kind, name, horizon_years, created_by, created_at, variant, target_id, inputs_json)
+       VALUES (?, ?, 'investment_return', 'S1-S12 demo base case', 5, ?, ?, 'market_forward', ?, ?)`,
+      [DEMO.modelId, DEMO.projectId, actor, now, DEMO.targetId, JSON.stringify(DEMO.inputsSnapshot)],
     );
     for (const [id, category, name, amount] of [
       ["revenue", "revenue", "Year-1 revenue", 15000],
@@ -247,6 +249,14 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
         [`demo-s1-s12-val-${scenario}-${percentile}`, DEMO.projectId, DEMO.modelId, scenario, percentile, npv, irr, now, 2.5, 2.5],
       );
     }
+    // ADR-0143: brownfield S8 requires the human target-selection record
+    // BEFORE case adoption (adoption is constrained to the selected target).
+    db.run(
+      `INSERT OR IGNORE INTO process_run
+       (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
+       VALUES (?, 'project', ?, ?, 'demo-s1-s12', 's8_target_select', 'done', 'human', ?, ?, ?, ?)`,
+      [DEMO.selectionRunId, DEMO.projectId, DEMO.projectId, actor, now, now, json({ target_id: DEMO.targetId, rationale: "S1-S12 demo — 유일한 Short List 생존 대상 선정" })],
+    );
     db.run(
       `INSERT OR IGNORE INTO process_run
        (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)

@@ -21,7 +21,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const adoption = adoptBusinessCase(id, body.model_id, ctx.userId);
     return ok(adoption, 201);
-  } catch {
-    return notFound();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (msg.startsWith("business case ")) return notFound();
+    // ADR-0143 constraint violations (target not selected / wrong target) are
+    // client-fixable 400s, not 404s.
+    return badRequest("adoption_rejected", msg || "채택할 수 없습니다.");
   }
 }

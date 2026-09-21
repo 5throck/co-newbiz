@@ -274,6 +274,9 @@ export function promoteOpportunity(
 
     // Brownfield: link the top shortlisted target's md_company so project→company
     // joins work without the legacy backlink (ADR-0104 §company-linkage).
+    // PROVISIONAL binding (ADR-0143): S8 analyzes EVERY shortlisted target and
+    // the human target selection (lib/business-case.ts selectTarget) finalizes
+    // md_project.company_id; rank-1 is only the pre-selection default.
     if (track === "brownfield") {
       const top = db
         .query(

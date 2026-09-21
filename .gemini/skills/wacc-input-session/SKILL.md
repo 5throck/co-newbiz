@@ -15,8 +15,8 @@ description: >
 
   Use when: "WACC input", "hurdle IRR confirmation", "CAPM components",
   "discount rate session", "beta estimation".
-version: 1.3.0
-last_reviewed: 2026-09-10
+version: 1.3.1
+last_reviewed: 2026-09-22
 status: active
 owner: valuation-agent
 prerequisites: none
@@ -99,6 +99,12 @@ bf-02 exists to catch — WACC and hurdle IRR must be `kind='user'`, not
    markdown matches the persisted rows — never hand-retype the numbers
 8. **Block the FS gate** if either figure is still `kind='assumed'` —
    `compliance-monitoring`'s gate check reads this directly
+
+Brownfield multi-target note (ADR-0143): when a brownfield S8 compares
+shortlisted targets, confirm the WACC inputs per analysis subject — a target
+with a materially different capital structure needs its own `wacc` /
+`wacc.target_de` session so the cross-target comparison ranks like against
+like.
 
 ## Snapshot Integration (ADR-0064 + ADR-0115 — how the session feeds kill criteria #5/#6)
 

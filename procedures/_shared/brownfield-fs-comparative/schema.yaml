@@ -1,0 +1,62 @@
+schema_version: "1.0"
+procedure_id: shared-brownfield-fs-comparative
+title: "Brown Field FS Comparative Selection"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: mandatory
+workflow_type: core
+gate: FS
+
+# Brownfield S8의 대상 간 비교·선정 프로시저 (ADR-0143, design
+# 2026-09-22-s8-multi-target-feasibility). 대상별 인스턴스 분석은
+# shared-brownfield-fs가 소유하고, 이 프로시저는 Short List 전체를 한 번
+# 실행한다 — subjectScope: shortlist 반복의 "접합부"다. 프로시저 스키마에는
+# 루프 구문이 없다: 대상별 반복은 디스패치 계층이 shared-brownfield-fs를
+# 대상마다 호출하는 방식으로 처리한다 (flow.spec S8 subjectScope 주석).
+
+steps:
+  - id: 1
+    gate: FS
+    agent_key: financial-analyst
+    skill_key: investment-feasibility-modeling
+    output_type: target_comparison
+    description: >
+      Cross-target comparison of the per-target FS instances (flow.spec S8
+      subjectScope: shortlist). One row per shortlisted target on the
+      gate-primary market_forward variant — p05/p50 NPV, IRR, discounted
+      payback, BEP — ranked by the base-scenario p05 NPV rule. The
+      historical variant is comparison evidence and never enters the
+      ranking (ADR-0117 semantics preserved per target). The step flags a
+      RECOMMENDED target — a PROPOSAL only (boundary #2): selection is the
+      next step's human act, never this flag.
+  - id: 2
+    gate: FS
+    agent_key: pm
+    skill_key: stage-gate-governance
+    output_type: target_selection_record
+    description: >
+      The human target-selection record (ADR-0053 boundary #2): PM attaches
+      the step-1 comparison and recommendation to the fs gate proposal, and
+      the human's recorded selection finalizes the S8 subject. The record
+      carries the selected target id, the selection rationale, and the
+      selector. Finalizing the selection binds md_project.company_id (the
+      rank-1 binding at promotion was provisional until this point) and
+      constrains case adoption to the selected target's cases.
+      Implementation: lib/business-case.ts selectTarget — the only writer
+      of the s8_target_select process_run stage.
+
+kill_criteria:
+  - condition: no_target_meets_base_scenario_hurdle
+    action: escalate_to_risk_officer
+
+legal_basis:
+  - "ADR-0143 (S8 brownfield per-target feasibility — target axis)"
+  - "docs/designs/2026-09-22-s8-multi-target-feasibility-design.md"
+  - "process/flow.spec.yaml v2.5.0 — S8 subjectScope, fs gate decision criteria"
+  - "ADR-0053 (human decision authority — selection is recorded, not proposed)"
+  - "ADR-0098 (per-scenario generation contract the per-target instances reuse)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-09-22"

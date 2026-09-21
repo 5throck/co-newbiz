@@ -32,7 +32,7 @@ import { resolveProjectWacc, resolveProjectWaccSubject, type WaccResolution, typ
 import { getCompanyFinancialFacts, factRowsToDartItems } from "./dart-financial-facts.ts";
 import { deriveFinancialAnalysis } from "./company-financials.ts";
 import { historicalGrowthStats } from "./financial-commentary.ts";
-import { runActivityChain, type ActivitySpec, type EntityRef, type CallAgent } from "./agent-orchestrator.ts";
+import { runActivityChain, type ActivitySpec, type CallAgent } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
 import { runSimJob } from "./sim-engine.ts";
 import { resolveDownsideOpexUplift } from "./target-costing.ts";
@@ -101,7 +101,7 @@ const pct1 = (v: number): string => `${(v * 100).toFixed(1)}%`;
  *  historical revenue volatility and the WACC session's wacc.beta_vol_asset
  *  when both exist, else whichever exists, else the 2% floor. historical.*:
  *  DART revenue CAGR + YoY stdev; null when the series is too short. */
-export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: string): GrowthModel {
+export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: string, opts?: { companyId?: string | null }): GrowthModel {
   const opp = db
     .query(
       "SELECT o.growth_rate, o.market_scope FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
@@ -123,7 +123,14 @@ export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: stri
   let histCagr: number | null = null;
   let histVol: number | null = null;
   let histYears = 0;
-  const p = db.query("SELECT company_id FROM md_project WHERE id = ?").get(projectId) as { company_id: string | null } | undefined;
+  // ADR-0143: opts.companyId가 주어지면(대상별 분석) 그 회사의 series로,
+  // null이면 historical를 만들지 않는다. 미지정이면 기존대로
+  // md_project.company_id (greenfield/project-level 호환).
+  const p = opts
+    ? opts.companyId
+      ? { company_id: opts.companyId }
+      : undefined
+    : (db.query("SELECT company_id FROM md_project WHERE id = ?").get(projectId) as { company_id: string | null } | undefined);
   if (p?.company_id) {
     try {
       const facts = getCompanyFinancialFacts(db, p.company_id);
@@ -202,9 +209,11 @@ function nowIso(): string {
 
 // ── Seeded deterministic simulation (simulate.ts equivalent, no subprocess) ─
 
-/** FNV-1a — the seed is a pure function of (projectId, scenario): reproducible per ADR-0052 §D.4. */
-export function scenarioSeed(projectId: string, scenario: string): number {
-  const key = `${projectId}:${scenario}`;
+/** FNV-1a — the seed is a pure function of (projectId, scenario) for
+ *  project-level cases and (projectId, targetId, scenario) for brownfield
+ *  per-target cases (ADR-0143): reproducible per ADR-0052 §D.4. */
+export function scenarioSeed(projectId: string, scenario: string, targetId?: string | null): number {
+  const key = targetId ? `${projectId}:${targetId}:${scenario}` : `${projectId}:${scenario}`;
   let h = 0x811c9dc5;
   for (let i = 0; i < key.length; i++) {
     h ^= key.charCodeAt(i);
@@ -300,7 +309,7 @@ export function discountedPaybackYear(initialInvestment: number, flows: number[]
  * figure is reproducible.
  */
 export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): SimulationResult {
-  const seed = scenarioSeed(inputs.projectId, scenario);
+  const seed = scenarioSeed(inputs.projectId, scenario, inputs.targetId);
   const rng = mulberry32(seed);
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
@@ -348,6 +357,10 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
 
 export interface CaseInputs {
   projectId: string;
+  /** ADR-0143 target axis — set for brownfield per-target cases (the shortlist
+   *  subject this instance analyzes). Greenfield/project-level cases stay
+   *  NULL, which also keeps legacy seeds byte-identical. */
+  targetId?: string | null;
   marketSizeKrwM: number;
   anchorGrowth: number;
   wacc: WaccResolution;
@@ -621,6 +634,42 @@ export function caseInputsForProject(projectId: string): CaseInputs {
   };
 }
 
+/** Brownfield per-target inputs (ADR-0143): the market anchor stays the
+ *  promoting opportunity's facts; the historical variant resolves from the
+ *  TARGET's company series, not md_project.company_id. Missing company facts
+ *  degrade to historical N/A per target — never fabricated. */
+export function caseInputsForTarget(projectId: string, target: { id: string; companyId: string | null }): CaseInputs {
+  const inputs = caseInputsForProject(projectId);
+  return {
+    ...inputs,
+    targetId: target.id,
+    growthModel: resolveGrowthModel(getDb(), projectId, { companyId: target.companyId }),
+  };
+}
+
+/** Shortlist subjects of a brownfield project's source opportunity — one
+ *  analysis instance each (flow.spec S8 subjectScope: shortlist). Company
+ *  resolution mirrors listTargets (dart_corp_code first, name_ko fallback). */
+export function listShortlistSubjects(db: ReturnType<typeof getDb>, opportunityId: string): Array<{ id: string; name: string; companyId: string | null }> {
+  const rows = db
+    .query(
+      `SELECT bt.id, bt.company_name, bt.dart_corp_code,
+         (SELECT mc.id FROM md_company mc WHERE bt.dart_corp_code IS NOT NULL AND mc.dart_corp_code = bt.dart_corp_code) AS company_id
+       FROM brownfield_target bt
+       WHERE bt.opportunity_id = ? AND bt.status = 'shortlisted'
+       ORDER BY bt.rank IS NULL, bt.rank, bt.created_at`,
+    )
+    .all(opportunityId) as Array<{ id: string; company_name: string; dart_corp_code: string | null; company_id: string | null }>;
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.company_name,
+    companyId: row.company_id
+      ?? (row.company_name
+        ? ((db.query("SELECT id FROM md_company WHERE name_ko = ?").get(row.company_name) as { id: string } | undefined)?.id ?? null)
+        : null),
+  }));
+}
+
 function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): number[] {
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
@@ -664,16 +713,22 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
   const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
   const opexRatio = opexRatioOf(inputs, scenario);
   const year1Revenue = inputs.marketSizeKrwM * bc.captureRate * delta.growth;
+  // ADR-0143: brownfield per-target cases carry the target in the subject
+  // key (job_id + seed_policy base, the persisted snapshot contract) AND in
+  // the engine case_id — the engine derives its seed from case_id + drivers,
+  // so without the subject in the case_id two targets with identical market
+  // drivers would draw the IDENTICAL sample stream.
+  const subjectKey = inputs.targetId ? `${inputs.projectId}:${inputs.targetId}` : inputs.projectId;
   return {
-    job_id: `s8:${inputs.projectId}:${scenario}:${variant}`,
-    seed_policy: { base: inputs.projectId, hash: "fnv1a" },
+    job_id: `s8:${subjectKey}:${scenario}:${variant}`,
+    seed_policy: { base: subjectKey, hash: "fnv1a" },
     device: "auto",
     iterations: bc.iterations,
     horizon_years: bc.horizonYears,
     discount_rate: { value: inputs.wacc.value, subject: inputs.waccSubject?.subject ?? "promoter", source: inputs.wacc.source },
     cases: [
       {
-        case_id: `${scenario}:${variant}`,
+        case_id: `${inputs.targetId ? `${inputs.targetId}:` : ""}${scenario}:${variant}`,
         drivers: {
           revenue_y1: { dist: "constant", value: year1Revenue, unit: "KRW_M", source: `시장규모 × 포획률 ${(bc.captureRate * 100).toFixed(1)}% (${bc.captureSource})` },
           ramp_up: { dist: "constant", value: bc.rampUp, source: bc.rampSource },
@@ -728,6 +783,9 @@ export interface StepContext {
    *  hand-built contexts on the gate-primary variant. */
   variant?: CaseVariant;
   inputs: CaseInputs;
+  /** ADR-0143 — the brownfield analysis subject (shortlist target) this
+   *  instance belongs to. Absent for greenfield/project-level cases. */
+  target?: { id: string; name: string };
   /** Set once the valuation_model step has persisted the model for this scenario. */
   modelId?: string;
   /** Set by distributional_valuation; scenario_risk_assessment reuses it so
@@ -785,9 +843,10 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const modelId = ulid();
       const flows = deterministicCashflows(ctx.inputs, ctx.scenario, variant);
       const npv = flows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + ctx.inputs.wacc.value, i), 0); // flows[0]=year-0
+      const subjectLabel = ctx.target ? `${ctx.target.name} — ` : "";
       db.run(
-        `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, variant) VALUES (?,?,?,?,?,?,?,?)`,
-        [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${ctx.scenario} — ${VARIANT_LABEL[variant]}`, horizonOf(ctx.inputs), "business-case-generator", nowIso(), variant],
+        `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, variant, target_id) VALUES (?,?,?,?,?,?,?,?,?)`,
+        [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${subjectLabel}${ctx.scenario} — ${VARIANT_LABEL[variant]}`, horizonOf(ctx.inputs), "business-case-generator", nowIso(), variant, ctx.target?.id ?? null],
       );
       const year1Revenue = ctx.inputs.marketSizeKrwM * captureRateOf(ctx.inputs) * delta.growth;
       const lines: Array<[string, "revenue" | "opex" | "capex", string, number]> = [
@@ -884,11 +943,16 @@ export interface GenerationResult {
 }
 
 /**
- * Generate the three scenario business cases under ONE process_run
- * (entity = project, ADR-0096). Activities run sequentially — base, upside,
- * downside — each writing its activity_run/agent_run rows as it completes so
- * the GET status route can show per-activity progress. Synchronous by design
- * (bun's sync SQLite layer); the { runId } response contract is unchanged.
+ * Generate the scenario business cases under ONE process_run (entity =
+ * project, ADR-0096). Activities run sequentially so the GET status route can
+ * show per-activity progress. Synchronous by design (bun's sync SQLite
+ * layer); the { runId } response contract is unchanged.
+ *
+ * ADR-0143 subjects: greenfield generates the project-level set (one pass,
+ * target_id NULL — legacy shape and seeds untouched); brownfield generates
+ * one set per SHORTLISTED target of the source opportunity (3 scenarios ×
+ * market_forward, plus the historical variant when that target's company
+ * facts support it), each model row carrying target_id.
  *
  * Writes NO adoption marker and NO gate_decision — boundary #2.
  */
@@ -896,32 +960,52 @@ export async function generateBusinessCases(
   projectId: string,
   opts: { actor: string; source?: string; callAgent?: CallAgent },
 ): Promise<GenerationResult> {
-  const inputs = caseInputsForProject(projectId);
-  const entity: EntityRef = { entityType: "project", entityId: projectId };
-  const executor = getBusinessCaseExecutor();
+  const db = getDb();
+  const project = db
+    .query("SELECT id, track, source_opportunity_id FROM md_project WHERE id = ?")
+    .get(projectId) as { id: string; track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;
+  if (!project) throw new Error(`project '${projectId}' not found`);
 
-  // ADR-0117: each scenario runs in TWO variants — market_forward (gate
-  // primary) and, when the bound company's DART series supports it,
-  // historical (comparison evidence). Missing historical data is not an
-  // error: the variant is skipped and the page shows N/A instead.
-  const variants: CaseVariant[] = inputs.growthModel?.historical ? ["market_forward", "historical"] : ["market_forward"];
+  const subjects = project.track === "brownfield" ? listShortlistSubjects(db, project.source_opportunity_id ?? "") : [];
+  // Promotion requires ≥1 shortlisted target (ADR-0095 precondition), so an
+  // empty brownfield shortlist here is a data-integrity event, not an empty run.
+  if (project.track === "brownfield" && subjects.length === 0) {
+    throw new Error(`brownfield project '${projectId}' has no shortlisted target — S7 Short List required before S8 generation`);
+  }
+
+  const executor = getBusinessCaseExecutor();
   const activities: ActivitySpec[] = [];
-  for (const scenario of SCENARIOS) {
-    for (const variant of variants) {
-      const ctx: StepContext = { scenario, variant, inputs };
-      for (const step of ["growth_projection", "valuation_model", "distributional_valuation", "scenario_risk_assessment"] as BusinessCaseStep[]) {
-        const agentKey = businessCaseAgentFor(step);
-        activities.push({
-          activityId: `${scenario}:${variant}:${step}`,
-          agentKey,
-          prompt: `${step} — ${scenario} scenario (${variant}) for project ${projectId}`,
-          execute: async () => executor(step, ctx),
-        });
+  const buildForSubject = (inputs: CaseInputs, target?: { id: string; name: string }) => {
+    // ADR-0117: each scenario runs in TWO variants — market_forward (gate
+    // primary) and, when the subject company's DART series supports it,
+    // historical (comparison evidence). Missing historical data is not an
+    // error: the variant is skipped and the page shows N/A instead.
+    const variants: CaseVariant[] = inputs.growthModel?.historical ? ["market_forward", "historical"] : ["market_forward"];
+    for (const scenario of SCENARIOS) {
+      for (const variant of variants) {
+        const ctx: StepContext = { scenario, variant, inputs, ...(target ? { target } : {}) };
+        for (const step of ["growth_projection", "valuation_model", "distributional_valuation", "scenario_risk_assessment"] as BusinessCaseStep[]) {
+          const agentKey = businessCaseAgentFor(step);
+          const subjectPrefix = target ? `${target.name}/` : "";
+          activities.push({
+            activityId: `${subjectPrefix}${scenario}:${variant}:${step}`,
+            agentKey,
+            prompt: `${step} — ${scenario} scenario (${variant}) for project ${projectId}${target ? ` target ${target.id} (${target.name})` : ""}`,
+            execute: async () => executor(step, ctx),
+          });
+        }
       }
+    }
+  };
+  if (subjects.length === 0) {
+    buildForSubject(caseInputsForProject(projectId));
+  } else {
+    for (const subject of subjects) {
+      buildForSubject(caseInputsForTarget(projectId, subject), { id: subject.id, name: subject.name });
     }
   }
 
-  const result = await runActivityChain(entity, activities, {
+  const result = await runActivityChain({ entityType: "project", entityId: projectId }, activities, {
     actor: opts.actor,
     source: opts.source ?? "web",
     stage: "s8_business_case_generation",
@@ -931,8 +1015,10 @@ export async function generateBusinessCases(
   // the scenario that best survives the risk tests (highest p05 NPV that is
   // positive; among negatives, the least-negative p05). Recorded on the run's
   // meta_json ONLY — never as an adoption marker, never as a gate decision.
+  // Brownfield runs leave this null: the cross-TARGET recommendation is a
+  // read-model rule (recommendTargetsFromDb), computed on demand.
   let recommendedScenario: Scenario | null = null;
-  if (result.status === "done") {
+  if (result.status === "done" && subjects.length === 0) {
     recommendedScenario = recommendedFromDb(projectId);
     if (recommendedScenario) {
       getDb().run("UPDATE process_run SET meta_json = ? WHERE id = ?", [
@@ -944,7 +1030,9 @@ export async function generateBusinessCases(
   return { processRunId: result.processRunId, status: result.status, recommendedScenario };
 }
 
-/** The recommendation rule, pure over persisted rows — the page and the engine share it. */
+/** The recommendation rule, pure over persisted rows — the page and the engine share it.
+ *  Project-level subjects only (target_id IS NULL); brownfield per-target
+ *  recommendation lives in recommendTargetsFromDb (ADR-0143). */
 export function recommendedFromDb(projectId: string): Scenario | null {
   // ADR-0117: the RECOMMENDED flag judges the market_forward variant only —
   // the historical variant is comparison evidence, never a gate candidate.
@@ -952,7 +1040,7 @@ export function recommendedFromDb(projectId: string): Scenario | null {
     .query(
       `SELECT v.scenario, v.npv_krw_m FROM valuation_simulation v
        JOIN business_case_model m ON m.id = v.model_id
-       WHERE v.project_id = ? AND v.percentile = 'p05'
+       WHERE v.project_id = ? AND v.percentile = 'p05' AND m.target_id IS NULL
          AND COALESCE(m.variant, 'market_forward') = 'market_forward'`,
     )
     .all(projectId) as Array<{ scenario: string; npv_krw_m: number }>;
@@ -963,4 +1051,104 @@ export function recommendedFromDb(projectId: string): Scenario | null {
   const positive = candidates.filter((s) => (byScenario.get(s) ?? 0) > 0);
   const pool = positive.length > 0 ? positive : candidates;
   return pool.reduce((best, s) => ((byScenario.get(s) ?? 0) > (byScenario.get(best) ?? 0) ? s : best), pool[0]);
+}
+
+export interface TargetComparisonRow {
+  targetId: string;
+  companyName: string;
+  rank: number | null;
+  /** Latest market_forward base-scenario percentiles of this target's cases. */
+  baseP05: number | null;
+  baseP50: number | null;
+  irr: number | null;
+  caseCount: number;
+  /** RECOMMENDED flag — the same p05-survival rule as the scenario
+   *  recommendation, applied across targets. A PROPOSAL only (boundary #2). */
+  recommended: boolean;
+}
+
+/**
+ * Cross-target comparison (ADR-0143): one row per shortlisted target, judged
+ * on its LATEST gate-primary (market_forward) base-scenario model. The
+ * historical variant never enters the ranking. Empty for greenfield.
+ */
+export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[] {
+  const db = getDb();
+  const project = db
+    .query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?")
+    .get(projectId) as { track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;
+  if (!project || project.track !== "brownfield" || !project.source_opportunity_id) return [];
+  const targets = listShortlistSubjects(db, project.source_opportunity_id);
+  if (targets.length === 0) return [];
+  const ranks = new Map(
+    (db
+      .query("SELECT id, rank FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'")
+      .all(project.source_opportunity_id) as Array<{ id: string; rank: number | null }>).map((r) => [r.id, r.rank]),
+  );
+  const counts = new Map(
+    (db
+      .query("SELECT target_id, COUNT(*) AS n FROM business_case_model WHERE project_id = ? AND target_id IS NOT NULL GROUP BY target_id")
+      .all(projectId) as Array<{ target_id: string; n: number }>).map((r) => [r.target_id, r.n]),
+  );
+  // Latest gate-primary model per target that carries a BASE-scenario
+  // simulation — the comparison judges base (created_at DESC — first wins).
+  // Scenario is a property of the model's simulations (ADR-0098), not a
+  // column, so "the base model" is expressed as an EXISTS probe.
+  const latest = new Map<string, string>();
+  for (const m of db
+    .query(
+      `SELECT m.id, m.target_id FROM business_case_model m
+       WHERE m.project_id = ? AND m.target_id IS NOT NULL AND COALESCE(m.variant, 'market_forward') = 'market_forward'
+         AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario = 'base')
+       ORDER BY m.created_at DESC, m.id DESC`,
+    )
+    .all(projectId) as Array<{ id: string; target_id: string }>) {
+    if (!latest.has(m.target_id)) latest.set(m.target_id, m.id);
+  }
+  const simRows = db
+    .query("SELECT model_id, percentile, npv_krw_m, irr FROM valuation_simulation WHERE project_id = ? AND scenario = 'base'")
+    .all(projectId) as Array<{ model_id: string; percentile: string; npv_krw_m: number; irr: number | null }>;
+  const baseByModel = new Map<string, { p05: number | null; p50: number | null; irr: number | null }>();
+  for (const r of simRows) {
+    const entry = baseByModel.get(r.model_id) ?? { p05: null, p50: null, irr: null };
+    if (r.percentile === "p05") entry.p05 = r.npv_krw_m;
+    if (r.percentile === "p50") {
+      entry.p50 = r.npv_krw_m;
+      entry.irr = r.irr;
+    }
+    baseByModel.set(r.model_id, entry);
+  }
+
+  return flagRecommendedTarget(
+    targets.map((t) => {
+      const modelId = latest.get(t.id);
+      const sim = modelId ? baseByModel.get(modelId) : undefined;
+      return {
+        targetId: t.id,
+        companyName: t.name,
+        rank: ranks.get(t.id) ?? null,
+        baseP05: sim?.p05 ?? null,
+        baseP50: sim?.p50 ?? null,
+        irr: sim?.irr ?? null,
+        caseCount: counts.get(t.id) ?? 0,
+        recommended: false,
+      };
+    }),
+  );
+}
+
+/** Rank + flag helper shared by the comparison read model — the p05-survival
+ *  rule (positive pool first, then max p05), applied across targets. */
+export function flagRecommendedTarget(rows: TargetComparisonRow[]): TargetComparisonRow[] {
+  const analyzed = rows.filter((r) => r.baseP05 !== null);
+  const positive = analyzed.filter((r) => (r.baseP05 ?? 0) > 0);
+  const pool = positive.length > 0 ? positive : analyzed;
+  const best = pool.reduce<TargetComparisonRow | null>((acc, r) => (!acc || (r.baseP05 ?? 0) > (acc.baseP05 ?? 0) ? r : acc), null);
+  if (best) best.recommended = true;
+  return [...rows].sort((a, b) => {
+    if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
+    const p05 = (b.baseP05 ?? -Infinity) - (a.baseP05 ?? -Infinity);
+    if (p05 !== 0) return p05;
+    return (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER);
+  });
 }

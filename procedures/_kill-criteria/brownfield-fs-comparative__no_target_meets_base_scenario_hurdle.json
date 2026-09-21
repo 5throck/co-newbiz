@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-fs-comparative",
+  "criterion_id": "no_target_meets_base_scenario_hurdle",
+  "title": "No shortlisted target meets the base-scenario hurdle in the S8 per-target FS (market_forward base p05 NPV ≤ 0 or below the confirmed hurdle IRR)",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": "Declared in procedures/_shared/brownfield-fs-comparative/schema.yaml kill_criteria (S8 comparative, ADR-0143); activation awaits the per-target hurdle-threshold var round per ADR-0060 §3",
+  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). Halt is the kill-path: when every shortlisted target fails the base-scenario hurdle, the initiative cannot proceed to target selection or DD; escalate to risk-officer for KILL review."
+}

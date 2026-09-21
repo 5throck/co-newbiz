@@ -98,6 +98,12 @@ stage definitions; it defines *how a harness session executes them*.
 - The S4 route decision records the track. **Greenfield skips S6–S7**;
   **brownfield skips S5** (spec `applicableTracks` — the UI renders them
   `skipped`).
+- **S8 brownfield runs per shortlisted target** (spec `subjectScope:
+  shortlist`, ADR-0143): dispatch the FS activities once per target, then
+  the `target-comparison` activity once over the whole shortlist, then the
+  human target-selection record (`POST /api/projects/:id/target-selection`)
+  before assembling the fs gate proposal. S9 DD covers the selected target
+  only.
 - S4/S6/S7 are committee stages: convene the steering committee
   (`procedures/_committees.yaml`) via the web committee-session APIs
   (`/api/opportunities/:id/committee-sessions/**`) or `/meeting`. For

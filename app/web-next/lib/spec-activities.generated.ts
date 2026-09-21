@@ -2,7 +2,7 @@
 // Do not edit by hand; update process/flow.spec.yaml and regenerate this projection.
 import type { SpecStage } from "./spec-activities.ts";
 
-export const SPEC_VERSION = "2.4.1";
+export const SPEC_VERSION = "2.5.0";
 export const SPEC_STAGES: SpecStage[] = [
   {
     "id": "S1",
@@ -294,6 +294,24 @@ export const SPEC_STAGES: SpecStage[] = [
         "procedure": [
           "greenfield-fs",
           "brownfield-fs"
+        ]
+      },
+      {
+        "id": "target-comparison",
+        "agent": "financial-analyst",
+        "skills": [
+          "investment-feasibility-modeling"
+        ],
+        "procedure": [
+          "brownfield-fs-comparative"
+        ]
+      },
+      {
+        "id": "target-selection",
+        "agent": "pm",
+        "skills": [],
+        "procedure": [
+          "brownfield-fs-comparative"
         ]
       }
     ]
