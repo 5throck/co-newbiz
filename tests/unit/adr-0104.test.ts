@@ -67,7 +67,7 @@ beforeAll(() => {
       "번들링 시너지 크다 <!--position-meta:{\"recommendation\":\"go\",\"confidence\":80,\"criteria_scores\":{\"control_need\":2,\"capability_criticality\":3,\"market_uncertainty\":2,\"integration_capacity\":2,\"speed_to_capability\":3}}-->"
       , 80, 1, NOW]);
 
-}, 30_000); // fresh-DB migration run exceeds bun's default 5s hook timeout on CI runners
+});
 
 afterAll(() => {
   resetDb();

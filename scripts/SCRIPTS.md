@@ -164,7 +164,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `sync-skill-status.ts` | L0 | 1.0.1 | active | — | — | L0+L1 | — |
 | `sync-skills.ts` | L0 | 1.8.0 | active | `--dir <path>`, `--all-variants` | — | L0+L1 | — |
 | `team-builder.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
-| `test-runner.ts` | L0 | 1.5.0 | active | —| —| L0+L1 (`--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms>`, `--allow-empty`) — v1.5.0: empty suites fail by default and scripts suite scans `scripts/tests/*.test.ts` | —|
+| `test-runner.ts` | L0 | 1.6.0 | active | —| —| L0+L1 (`--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms>`, `--allow-empty`) — v1.5.0: empty suites fail by default and scripts suite scans `scripts/tests/*.test.ts`; v1.6.0: bun test runs with `--timeout=30000` (per-test/hook default 5s flaked fresh-DB migration hooks on CI runners) | —|
 | `translate-readme.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `validate-agents.ts` | L0 | 1.2.1 | active | —| —| L0+L1 | —|
 | `validate-doc-folder.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
