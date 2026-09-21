@@ -74,7 +74,6 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `co-newbiz/convert.ts` | co-newbiz | 1.0.0 | active | 2026-09-09 | — | L3-only (project-local, `convert` — same-dimension unit conversion via md_unit.si_coefficient (known units auto-seed) with cross-dimension refusal per FR-DATA-03, or proxy-chain conversion carrying the chain's compounded-CI band and grade) | — |
 | `co-newbiz/kosis-units.ts` | co-newbiz | 1.0.1 | active | 2026-09-09 | — | L3-only (project-local helper — KOSIS unit string → md_unit mapping; unknown units are quarantined, never auto-converted, FR-DATA-03; includes KOSIS 2020=100 index units) | — |
 | `co-newbiz/dart-collect.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, DART OpenAPI collector for chain-node financials — ADR-0066 Phase A: fnlttSinglAcntAll per year → fact_industry revenue/operating_income/net_income; requires DART_API_KEY, financial-imports REST fallback documented on failure) | —|
-| `deploy-web.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local ADR-0014 deploy gate for the Docker production stack — records the running image, pulls ghcr.io/5throck/co-newbiz-web:latest (`--build` builds locally), `docker compose up -d`, then gates completion on /api/health polling with concrete code/db rollback hints on failure; design 2026-09-21-docker-prod-cicd) | —|
 | `co-newbiz/model.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `model`/`diff` — run-based versioning via db/lib/versioning.ts: createRun input snapshot + overrides + input_hash, diffRuns variable-level bridge; NPV-level decomposition deferred until the valuation engine exists) | —|
 | `co-newbiz/proc-resolve.ts` | co-newbiz | 1.2.1 | active | —| —| L3-only (project-local, `proc:resolve` — merges shared+region+entity procedures; v1.1.0 also merges `kill_criteria`, union with shared-first precedence; v1.2.0 adds a cwd-walk-up fallback for `PROCEDURES_ROOT` when `import.meta.dirname` is undefined — found under Turbopack's bundling of a Next.js Route Handler dynamic import, ADR-0069/0070 Phase 2; the CLI and Hono call sites are unaffected) | —|
 | `co-newbiz/gen-pk-notnull-rebuild.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, one-off generator for migration 0033/ADR-0071 — reads sqlite_master, rewrites every single-column `TEXT PRIMARY KEY` to add `NOT NULL` (SQLite does not imply it, unblocking Prisma client generation), emits a topologically-sorted table-rebuild migration with view/trigger recreation; not intended for reuse beyond that one migration) | —|
@@ -212,7 +211,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
 | `resolve-variants.ts` | L0 | 1.0.3 | active | —| —| L0+L1 | —|
 | `validate-variant-readiness.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `validate-templates.ts` | L0 | 1.36.0 | active | —| —| L0+L1 | —|
+| `validate-templates.ts` | L0 | 1.37.0 | active | —| —| L0+L1 | —|
 | `helpers/upgrade-versions.ts` | L0+L1 | 1.0.1 | active | —| —| L0+L1 | —|
 | `lib/propagation-map-schema.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `lib/constitution-scrub.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
@@ -226,7 +225,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `lib/platform-mirror-freshness.ts` | L0 | 1.0.1 | active | Pure platform-skill-mirror vs skills/ SSOT version comparison for the platform-mirror-freshness check (T-20260916-008) | —| L0+L1 | —|
 | `helpers/rollback-partial-project.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/scaffold-markers.ts` | L0 | 1.4.0 | active | Shared scaffold marker constants + (marker→source) mapping + delivery-tree derivations + transient test-fixture predicate (T-20260916-001) | —| L0+L1 | —|
-| `helpers/generate-variant.ts` | L0 | 1.15.0 | active | —| —| L0+L1 | —|
+| `helpers/generate-variant.ts` | L0 | 1.16.0 | active | —| —| L0+L1 | —|
 | `lint-instructions.ts` | L0 | 1.0.0 | active | `--dir`, `--strict` | —| L0+L1 | —|
 | `helpers/merge-state.ts` | L0 | 1.0.0 | active | §3.3 shared-file taxonomy + unresolved-conflict parsing for dev-sync main-drift/--conclude-merge (ADR-0081/T-20260918-002) | —| L0+L1 | —|
 | `co-newbiz/job-worker.ts` | L0 | 1.0.0 | active | Project-local parallel-execution child-process entrypoint (co-newbiz engagement) | —| L0 | —|
@@ -238,7 +237,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `validate-process.ts` | L0 | 1.0.0 | active | Process/stages validation (ADR-0083 DEG-P-*), distinctness check (`--determinism` flag) | —| L0+L1 | —|
 | `validate-raci.ts` | L0 | 1.2.0 | active | RACI validation per ADR-0083 DEG-R-01..05 + ADR-0084 DEG-R-06/07; DEG-R-06: human-accountable must match gate; DEG-R-07: actor_types key set must equal R/A/C/I union | —| L0+L1 | —|
 | `lib/dependency-guard.ts` | L0 | 1.0.2 | active | DEPENDENCY GUARD — scans delivered scripts' bare-package imports vs project package.json, reports missing packages in the upgrade plan (T-20260920-001) | —| L0+L1 | —|
-| `lib/upgrade-policy.ts` | L0 | 1.10.0 | active | exports `lifecyclelessText()` (equal-version agent drift) + `isDeliveredDiff()` (dev-sync 3.9 auto-E5, rollout hardening 2026-09-21) | —| L0+L1 | —|
+| `lib/upgrade-policy.ts` | L0 | 1.11.0 | active | exports `lifecyclelessText()` (equal-version agent drift) + `isDeliveredDiff()` (dev-sync 3.9 auto-E5, rollout hardening 2026-09-21) | —| L0+L1 | —|
 
 ---
 
