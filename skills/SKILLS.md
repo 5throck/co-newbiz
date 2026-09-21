@@ -109,10 +109,10 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `investment-feasibility-modeling` | 1.1.0 | active | valuation-agent | 2026-08-23 | — | Wave 5.8G — synthesis skill assembling confirmed WACC/EBITDA/growth/site-cost inputs |
 | `investment-vehicle-structuring` | 1.3.0 | active | brownfield-agent | 2026-08-23 | — | ADR-0045 — post-Wave-5.10 addendum, deal-structure-hypothesis vehicle axis (tax/liability-isolation/financing-leverage/exit) flagged during the pilot-001 system re-run |
 | `jv-structuring` | 1.2.0 | active | partnership-agent | 2026-08-23 | — | Wave 5.8E — governance/valuation/exit/deadlock documented before term-sheet negotiation |
-| `k-dart` | 2.1.2 | active | market-intelligence-agent | 2026-08-09 | — | Unified DART OpenAPI skill — disclosure query, financial parsing, line-item extraction; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
+| `k-dart` | 2.1.2 | active | strategy-analyst | 2026-08-09 | — | Unified DART OpenAPI skill — disclosure query, financial parsing, line-item extraction; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
 | `k-kosis` | 1.0.2 | active | financial-analyst | 2026-08-23 | — | Korean Statistical Information Service (KOSIS) OpenAPI — national statistics search, table browsing, data retrieval, metadata lookup; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
-| `k-law` | 1.0.2 | active | market-intelligence-agent | 2026-08-09 | — | Korean Ministry of Government Legislation  OpenAPI — statutes, precedents, ordinances; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
-| `k-opendata` | 1.2.2 | active | market-intelligence-agent | 2026-09-03 | — | — |
+| `k-law` | 1.0.2 | active | strategy-analyst | 2026-08-09 | — | Korean Ministry of Government Legislation  OpenAPI — statutes, precedents, ordinances; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
+| `k-opendata` | 1.2.2 | active | hs-classification-specialist | 2026-09-03 | — | — |
 | `legal-due-diligence` | 1.1.0 | active | legal-counsel | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — DD-grade legal workstream per chk-legal-dd; RAG findings register mapped to SPA protections |
 |`legal-risk-register`|1.0.1|active|legal-counsel|2026-08-20|—|Wave 5.8H — consolidated per-project legal-risk view|
 | `management-incentive-review` | 1.1.0 | active | incentive-agent | 2026-08-23 | — | Wave 5.8D — CoC-trigger executive compensation, role-based per PII discipline |
@@ -183,8 +183,8 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 |`value-chain-stage-financials`|1.0.1|active|financial-analyst|2026-08-29|—|ADR-0066 gap closure — per-chain-node 5-year KPI rollup pipeline into `fact_industry`|
 | `vulnerability-management` | 1.0.0 | active | security-engineer | 2026-08-20 | — | Wave 5.8K — CVE-check merge gate, mandatory recorded risk-acceptance for unpatched Critical/High |
 | `wacc-input-session` | 1.3.0 | active | valuation-agent | 2026-09-10 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
-| `waiver-management` | 1.0.1 | active | compliance-officer | 2026-09-08 | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle |
-| `zod-contract-gate` | 1.0.2 | active | backend-engineer | 2026-08-06 | — | Defines Zod runtime schema validation patterns and contract safety rules |
+| `waiver-management` | 1.0.1 | active | process-governance-manager | 2026-09-08 | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle |
+| `zod-contract-gate` | 1.0.2 | active | architect | 2026-08-06 | — | Defines Zod runtime schema validation patterns and contract safety rules |
 
 
 
