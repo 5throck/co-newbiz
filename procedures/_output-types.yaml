@@ -109,3 +109,5 @@ output_types:
   wacc_hurdle_confirmed: "kind=user WACC / hurdle-IRR confirmation record (checklist bf-02)"
   works_council_consultation_requirement: "Region layer — labor/works-council consultation requirement finding"
   target_cost_gap: "Target costing — market price reversed into allowable cost vs estimated unit cost, with the gap and reduction levers (design 2026-09-18-s8-business-case-evaluation REQ-W2-1)"
+  target_comparison: "BF FS comparative — cross-target ranking of per-target FS instances on gate-primary p05 NPV with the RECOMMENDED flag (a proposal; ADR-0143)"
+  target_selection_record: "BF FS comparative — human target-selection record (selected target id + rationale + selector; finalizes md_project.company_id; ADR-0143)"

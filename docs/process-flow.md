@@ -54,6 +54,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **판정 기준**
 - 정량화된 Business Case(NPV/IRR/BEP 또는 밸류에이션 범위)가 존재한다
 - 사전 정의된 사업목표 기준(그룹/계열사 마스터데이터, ADR-0114) 충족 여부가 기본 시나리오 기준으로 확인되었다
+- brownfield: 대상별 비교 분석과 사람의 대상 선정 기록(target_selection)이 존재한다
 
 **Kill 기준**
 - 기준 수익률 미달이 기본 시나리오에서 확인된다
@@ -103,7 +104,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - S5 자체 진출: `greenfield-agent`, `financial-analyst`
 - S6 대상 후보 발굴: `brownfield-agent`, `market-intelligence-agent`
 - S7 대상 선정: `brownfield-agent`, `antitrust-agent`
-- S8 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`
+- S8 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`, `pm`
 - S9 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`, `compliance-officer`
 - S10 투자구조 설계: `brownfield-agent`, `valuation-agent`
 - S11 투자심사·실행: `pm`, `brownfield-agent`, `risk-officer`, `group-review-agent`, `process-governance-manager`, `pmi-agent`
@@ -394,26 +395,32 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 ## S8 — 사업성 분석
 
-**목표**: 돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상 밸류에이션을 정량화한다
+**목표**: 돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상별 밸류에이션을 정량화해 비교·선정한다
 
 **입력**
 - 트랙 결정
 - 진출전략·Business Case 라인 (greenfield — S5)
-- Short List 대상 재무 정보 (brownfield — S7)
+- Short List 대상 재무 정보 (brownfield — S7, 대상별)
 
 **Activities**
 - business-case-modeling · agent: `financial-analyst` · skills: `growth-projection-modeling`, `investment-feasibility-modeling` · procedure: `greenfield-fs`, `brownfield-fs`
 - valuation · agent: `valuation-agent` · skills: `dd-to-valuation-bridge`, `monte-carlo-simulation` · procedure: `greenfield-fs`, `brownfield-fs`
 - quant-methods · agent: `quant-methodologist` · skills: `wacc-input-session`, `monte-carlo-simulation` · procedure: `greenfield-fs`, `brownfield-fs`
+- target-comparison · agent: `financial-analyst` · skills: `investment-feasibility-modeling` · procedure: `brownfield-fs-comparative`
+- target-selection · agent: `pm` · skills:  · procedure: `brownfield-fs-comparative`
 
 **필수 산출물**
-- Business Case(비용·수익 라인 또는 밸류에이션)
+- Business Case(비용·수익 라인 또는 밸류에이션 — brownfield는 대상별)
 - 시뮬레이션 NPV 분위수
 - BEP 시점과 시뮬레이션 입력 스냅샷
+- Target 비교 분석 (brownfield)
+- 대상 선정 기록 (brownfield)
 
 **완료 기준**
 - 민감도가 포함된 정량 평가가 존재한다 (시뮬레이션 또는 밸류에이션 범위)
 - BEP 시점과 시뮬레이션 입력 스냅샷이 산출되어 있다
+- [object Object]
+- [object Object]
 
 **적용 트랙**: greenfield, brownfield
 
@@ -423,6 +430,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **판정 기준**
 - 정량화된 Business Case(NPV/IRR/BEP 또는 밸류에이션 범위)가 존재한다
 - 사전 정의된 사업목표 기준(그룹/계열사 마스터데이터, ADR-0114) 충족 여부가 기본 시나리오 기준으로 확인되었다
+- brownfield: 대상별 비교 분석과 사람의 대상 선정 기록(target_selection)이 존재한다
 
 **Kill 기준**
 - 기준 수익률 미달이 기본 시나리오에서 확인된다
@@ -431,11 +439,12 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 ## S9 — 실사·검증
 
-**목표**: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 Short List 대상 DD, greenfield는 실현가능성 검증)
+**목표**: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, greenfield는 실현가능성 검증)
 
 **입력**
 - 게이트 체크리스트 (commercial/technical/legal)
 - 조사 근거
+- S8 대상 선정 기록 (brownfield)
 
 **Activities**
 - commercial-dd · agent: `commercial-dd-agent` · skills: `commercial-due-diligence` · procedure: `greenfield-dd`, `brownfield-dd`

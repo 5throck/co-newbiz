@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!auth.ok) return auth.response;
   const { id } = await params;
 if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
-  const { cases, recommendedScenario, adoption } = listBusinessCases(id);
+  const { cases, recommendedScenario, adoption, targetSelection, targets } = listBusinessCases(id);
   const db = getDb();
   // 에스컬레이션 조정 CAGR (design 2026-09-20-escalation-downstream §4-Q2) —
   // 과거 기반 관점과의 괴리 경고용. 프로젝트 → 원 기회의 산업에서 resolver 조회.
@@ -48,7 +48,7 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
     : undefined;
   const eff = ind ? resolveEffectiveCagr(db, ind.id) : null;
   return ok(
-    { cases, recommended_scenario: recommendedScenario, adoption, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null },
+    { cases, recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null },
     200,
     { count: cases.length },
   );

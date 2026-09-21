@@ -3998,6 +3998,48 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/target-selection:
+    get:
+      operationId: getProjectTargetSelection
+      summary: Latest human target-selection record for brownfield S8 (ADR-0143) — null when no selection has been recorded yet.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: selectProjectTarget
+      summary: Human-only target selection for brownfield S8 (ADR-0143, boundary #2) — the sole writer of the s8_target_select record; finalizes md_project.company_id and constrains case adoption to the selected target (analyst+, rationale mandatory).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/projects/{id}/business-case/adopt:
     post:
       operationId: adoptProjectBusinessCase
