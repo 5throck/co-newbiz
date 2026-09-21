@@ -16,8 +16,10 @@ const nextConfig: NextConfig = {
   // the co-newbiz repository: wide enough for ../../db imports, narrow enough
   // to avoid tracing the whole checkout hierarchy.
   turbopack: { root: repoRoot },
-  // 원격(IP) 접속 시 HMR 웹소켓 차단 방지 — allowedDevOrigins에 네트워크 IP 추가
-  allowedDevOrigins: ["100.104.16.127"],
+  // Remote (IP) access: dev resources (/_next/webpack-hmr etc.) are blocked
+  // cross-origin by default. List every host the operator browses dev from —
+  // Tailscale IP and the LAN IP of this workstation.
+  allowedDevOrigins: ["100.104.16.127", "192.168.0.44"],
 };
 
 export default nextConfig;
