@@ -25,6 +25,8 @@
 
 **Known limitations (accepted for v1)**: (1) Python-backed analysis subprocesses (proxy-chain calibration via `.venv/bin/python3`, ADR-0006) have no venv inside the image — those routes fail there; host-scheduler-driven batch collection remains the path for them (ADR-0019). (2) `playwright-core` has no browser binaries in the image — browser-rendering routes degrade. Both are documented in the deployment runbook §8 and are the first candidates if container parity gaps bite.
 
+**Follow-up fix (same day, 2026-09-21)**: the admin ADR route (`app/api/admin/adr`) 500'd in the container — Turbopack rewrites `import.meta.dirname` to a synthetic import-meta object whose `dirname` is `undefined` at bundled runtime (`path.resolve(undefined, …)`). Fixed by locating `docs/adr` via a cwd walk-up (the `proc-resolve.ts` discipline), which also corrects a latent off-by-one in the original source-relative depth (`…/app/api/admin/adr` is 5 levels above the repo root, the code assumed 6).
+
 ## Verification
 
 - [x] `docker build -f docker/Dockerfile -t co-newbiz-web:local .` succeeds from the whitelist context
@@ -32,4 +34,5 @@
 - [x] Data persists across `docker compose down && up` (named volume); dev server on 7749 unaffected
 - [x] `bun scripts/deploy-web.ts --build` completes the full ADR-0014 order (backup written → migrate at boot → health gate passes)
 - [x] `bun scripts/audit.ts` exit 0; `gitleaks detect` clean
-- [ ] CI run of `.github/workflows/docker.yml` green on the PR (build) and after merge (publish)
+- [x] CI run of `.github/workflows/docker.yml` green on the PR (build) and after merge (publish)
+- [ ] Follow-up: in a throwaway container (fresh volume), admin login → `GET /api/admin/adr` returns 200 with non-empty `adrs` and `scanned_dir=/repo/docs/adr`
