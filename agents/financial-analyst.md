@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/financial-analyst.md
 name: financial-analyst
+description: "Historical financial analysis, peer benchmarking, quality-of-earnings, and growth-projection methodology, built on the existing DART-to-IFRS-to-KPI-to-ROIC-driver-tree pipeline inherited from co-consult."
 formal_name: Financial Analyst
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Historical financial analysis, peer benchmarking, quality-of-earnings, and growt
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/financial-analyst.md
-examples: []

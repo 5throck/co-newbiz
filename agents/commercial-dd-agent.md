@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/commercial-dd-agent.md
 name: commercial-dd-agent
+description: "Commercial due diligence: customer concentration, pricing power, channel checks, and expert interviews, with mandatory triangulation."
 formal_name: Commercial DD Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Commercial due diligence: customer concentration, pricing power, channel checks,
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/commercial-dd-agent.md
-examples: []

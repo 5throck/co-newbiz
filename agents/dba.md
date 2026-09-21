@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/dba.md
 name: dba
+description: "Database operations: backup/restore, monthly recovery drills, performance tuning, and capacity management."
 formal_name: DBA
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Database operations: backup/restore, monthly recovery drills, performance tuning
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/dba.md
-examples: []

@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/release-engineer.md
 name: release-engineer
+description: "Build and deployment pipeline, migration execution ordering, and rollback procedures."
 formal_name: Release Engineer
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Build and deployment pipeline, migration execution ordering, and rollback proced
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/release-engineer.md
-examples: []

@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/compliance-officer.md
 name: compliance-officer
+description: "Owns governance operation: the standing work of running the rules the team writes, not writing them. Compliance monitoring, waiver adjudication, the interpretation registry, training and notices, and governance KPIs."
 formal_name: Compliance Officer
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Owns governance operation: the standing work of running the rules the team write
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/compliance-officer.md
-examples: []

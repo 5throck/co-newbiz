@@ -1,6 +1,7 @@
 ---
 extends: ../../../agents/docs-writer.md
 name: docs-writer
+description: "Document formatting and language-policy enforcement across all four domains. Belongs to no single domain since documentation quality is a cross-cutting concern."
 formal_name: Docs Writer Agent
 status: active
 version: "1.0.0"
@@ -23,5 +24,3 @@ Document formatting and language-policy enforcement across all four domains
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/docs-writer.md
-examples: []

@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/data-architect.md
 name: data-architect
+description: "ERD, master data governance, normalization, indexing, migration, and portability. Owns the three-layer data architecture (raw / normalized / analytic)."
 formal_name: Data Architect
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ ERD, master data governance, normalization, indexing, migration, and portability
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/data-architect.md
-examples: []

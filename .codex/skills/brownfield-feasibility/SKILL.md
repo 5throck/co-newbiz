@@ -14,8 +14,8 @@ description: >
 
   Use when: "brown field feasibility", "M&A feasibility", "acquisition
   screening", "brownfield DD".
-version: 1.2.0
-last_reviewed: 2026-09-22
+version: 1.1.0
+last_reviewed: 2026-08-23
 status: active
 owner: brownfield-agent
 prerequisites: none
@@ -77,12 +77,8 @@ from every other mandatory-but-waivable item on the same checklist.
    — target longlisting (`brownfield-feasibility` itself, step 1) plus the
    preliminary HHI pre-screen (`antitrust-screening`, step 2 — a rough
    filter only, the full six-way cross-check runs at DD)
-2. **Pre-FS / FS**: run the matching shared procedures **per shortlisted
-   target** (flow.spec S8 `subjectScope: shortlist` — each target's FS
-   instance is one `shared-brownfield-fs` invocation, ADR-0143), then run
-   `procedures/_shared/brownfield-fs-comparative/schema.yaml` once over the
-   whole shortlist for the cross-target comparison and the human
-   target-selection record
+2. **Pre-FS / FS**: run the matching shared procedures for the surviving
+   shortlist
 3. **DD**: run `procedures/_shared/brownfield-dd/schema.yaml` and confirm
    all six mandatory validators are recorded before considering DD
    complete: `antitrust-screening`, `customer-attrition-risk`,

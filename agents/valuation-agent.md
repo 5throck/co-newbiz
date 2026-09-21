@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/valuation-agent.md
 name: valuation-agent
+description: "DCF/NPV/IRR/Payback/DSCR modeling, WACC assembly from live and user-supplied inputs, scenario and Monte Carlo simulation, and debt/contingent-liability simulation."
 formal_name: Valuation Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ DCF/NPV/IRR/Payback/DSCR modeling, WACC assembly from live and user-supplied inp
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/valuation-agent.md
-examples: []
