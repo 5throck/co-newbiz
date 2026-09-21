@@ -1,9 +1,25 @@
 // Admin — ADR index. Scans docs/adr/*.md (excluding README) and returns the
 // ADR id, title, and status parsed from each file's markdown header. Read-only.
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { authenticate, requireAdmin } from "../../../../lib/auth.ts";
 import { ok } from "../../../../lib/envelope.ts";
+
+// import.meta.dirname does not survive Turbopack bundling (undefined in the
+// production container — "paths[0] must be of type string", found
+// empirically), so locate the repo root by walking up from cwd for the
+// docs/adr marker — same discipline as scripts/co-newbiz/proc-resolve.ts.
+function resolveDocsAdrDir(): string {
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    const candidate = path.join(dir, "docs", "adr");
+    if (existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return path.join(process.cwd(), "docs", "adr");
+}
 
 export async function GET(request: Request) {
   const auth = authenticate(request);
@@ -11,7 +27,7 @@ export async function GET(request: Request) {
   const adminCheck = requireAdmin(auth.auth);
   if (adminCheck) return adminCheck;
 
-  const adrDir = path.resolve(import.meta.dirname, "../../../../../../docs/adr");
+  const adrDir = resolveDocsAdrDir();
   let files: string[] = [];
   try {
     files = readdirSync(adrDir).filter((f) => f.endsWith(".md") && !f.toUpperCase().startsWith("README"));
