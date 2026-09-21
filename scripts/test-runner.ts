@@ -1,6 +1,12 @@
 /**
  * test-runner.ts — Test Runner for TypeScript Test Suites
- * @version 1.5.0
+ * @version 1.6.0
+ *
+ * v1.6.0 (2026-09-21 docker-cicd follow-up): bun test now runs with
+ * --timeout=30000. The bun default (5s per test/hook) flaked the
+ * scratch-SQLite house pattern on CI runners — a fresh-DB migration
+ * beforeAll exceeded 5s there while passing locally (adr-0104,
+ * brownfield-eval-criteria). The per-suite process timeout is unchanged.
  *
  * v1.5.0 (2026-09-20 project-review): empty suites now fail by default so
  * package-level test commands cannot pass without executing tests. Use the
@@ -110,7 +116,10 @@ async function executeTestFile(
     // non-zero on failure) — running them under `bun test` fails with
     // "filters did not match any test files" because their names lack a bun
     // test naming pattern. Everything else is a bun test file.
-    const argv = execMode === 'bun-script' ? [process.execPath, file] : [process.execPath, 'test', file];
+    // --timeout: bun's per-test/hook default (5s) is too tight for CI runners —
+    // the scratch-DB migration hooks take >5s there while passing locally. The
+    // per-suite process `timeout` above still bounds each file's total runtime.
+    const argv = execMode === 'bun-script' ? [process.execPath, file] : [process.execPath, 'test', '--timeout=30000', file];
     proc = Bun.spawn(argv, {
       env,
       stdout: 'pipe',
