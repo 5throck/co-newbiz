@@ -8,7 +8,7 @@ counterpart: deployment.md
 
 **Owner**: release-engineer, platform-lead
 **Design of record**: ADR-0014, `docs/security/security-baseline.md` §2 (배포 전 게이트)
-**Status**: 전환(cutover) 이후(ADR-0069/0070, Phase 5/6, 2026-08-26). 오늘날 실제 존재하는 것을 다룹니다 — `app/web-next/`(Next.js, `/api/**`의 REST API와 웹 UI를 모두 서빙) 및 `mcp/co-newbiz/`(stdio MCP 서버). `app/server/`(Hono)와 기존 `app/web/`(Vite SPA)는 Phase 6에서 폐기되었습니다 — 마이그레이션 기록은 `docs/designs/2026-08-25-web-stack-migration-nextjs-prisma_ko.md` 참조. 컨테이너화/오케스트레이션 계층은 아직 없으며, 이 runbook은 직접 프로세스 배포 기준입니다.
+**Status**: 전환(cutover) 이후(ADR-0069/0070, Phase 5/6, 2026-08-26). 오늘날 실제 존재하는 것을 다룹니다 — `app/web-next/`(Next.js, `/api/**`의 REST API와 웹 UI를 모두 서빙) 및 `mcp/co-newbiz/`(stdio MCP 서버). `app/server/`(Hono)와 기존 `app/web/`(Vite SPA)는 Phase 6에서 폐기되었습니다 — 마이그레이션 기록은 `docs/designs/2026-08-25-web-stack-migration-nextjs-prisma_ko.md` 참조. 2026-09-21부터 운영은 운영 PC의 Docker 컨테이너로 실행됩니다(§8). 개발은 호스트에서 직접 프로세스로 실행합니다(§2–§4).
 
 ## 1. 배포 전 게이트 (`docs/security/security-baseline.md` §2)
 
@@ -19,7 +19,7 @@ counterpart: deployment.md
 3. **감사 게이트**: `bun scripts/audit.ts` — 오류 0건 필요(경고는 검토하되 반드시 차단하지는 않음).
 4. **위협 모델 최신성 확인**: 이 릴리스가 신뢰 경계를 건드리는 경우(새 API 엔드포인트, 새 MCP 도구, 새 인증 경로), `docs/security/security-model.md` §2의 STRIDE 매트릭스와 §8의 검증 상태 테이블이 여전히 정확한지 확인 — 후속 작업이 아니라 같은 PR에서 갱신.
 
-## 2. 빌드
+## 2. 빌드 (개발 / 직접 프로세스)
 
 ```bash
 cd app/web-next && bun install && bun run build
@@ -56,7 +56,21 @@ MCP 서버는 각 AI 클라이언트 자체의 설정(Claude Code는 `.mcp.json`
 1. 배포 후 예약 작업이 OS 스케줄러에 여전히 등록되어 있는지 확인(`batch-scheduling-operations`) — OS 수준 스케줄러 등록을 보존하지 않는 배포 프로세스가 이 확인이 존재하는 이유인 실제 리스크입니다.
 2. `observability-and-alerting`의 작업 실행 모니터링이 배포 후 예정대로 예상 작업이 실행되는 것을 보여주는지 확인 — 배포 자체의 성공만이 아니라.
 
-## 8. 관련 문서
+## 8. 컨테이너 운영 배포 (Docker)
+
+2026-09-21부터 운영 서버는 `docker/Dockerfile`로 빌드된 컨테이너로서 운영 PC에서 실행되며, 개발은 호스트의 직접 프로세스로 유지됩니다(§2–§4). CI/CD 분담: **CI** — `main`에 push할 때마다 이미지를 빌드해 `ghcr.io/5throck/co-newbiz-web`에 push합니다(`latest` + `sha-<커밋>` 태그; `.github/workflows/docker.yml`). 앱 관련 변경이 있는 PR은 push 없이 빌드만 수행해 머지 전에 Dockerfile 파손을 조기 검출합니다. **CD** — push된 이미지를 운영 컨테이너에 반영하는 것은 의도된 수동 행위입니다: `bun scripts/deploy-web.ts`(또는 pull 대신 로컬 빌드는 `--build`).
+
+배포는 ADR-0014 규율과 일대일로 대응합니다:
+
+1. **마이그레이션 전 백업** — `docker/entrypoint.sh`는 기존 데이터베이스가 있는 상태의 모든 컨테이너 시작에서 SQLite 파일(WAL/SHM 사이드카 포함; 서버가 아직 실행 중이 아니므로 단순 복사가 일관된 스냅샷)을 `backups/pre-deploy-<timestamp>.db`로 복사합니다.
+2. **마이그레이션** — 서버 부팅이 대기 중인 마이그레이션을 자동 적용합니다(`CO_NEWBIZ_BOOTSTRAP_MIGRATIONS=auto`, `app/web-next/instrumentation.ts`). 새 볼륨의 첫 부팅은 첫 관리자 계정도 부트스트랩합니다(무작위 비밀번호가 컨테이너 로그에 한 번 출력 — 확인: `docker logs co-newbiz-web | grep -i password`).
+3. **직후 헬스 체크** — `bun scripts/deploy-web.ts`는 `http://127.0.0.1:7748/api/health`를 폴링하며, 통과하지 못하면 롤백 힌트와 함께 실패합니다. 실패 시: 이전 이미지를 되돌리고(스크립트가 정확한 `docker tag` 명령을 출력) DB 쪽은 §6을 따릅니다 — 코드 롤백과 DB 롤백은 여전히 분리되고 순서화된 작업입니다.
+
+구성: 호스트 포트 **7748** → 컨테이너 7749(7749는 개발 서버 소유, 8787은 무관한 로컬 Docker 서비스가 점유). 데이터베이스는 앱 자체의 `<repo>/db/data` 디렉터리에 마운트된 `co-newbiz-data` named volume에 존재합니다 — `CO_NEWBIZ_DB_PATH`를 다른 곳으로 지정하지 마십시오(`db/client.ts`가 DB 경로의 조부모 디렉터리에서 마이그레이션 위치를 도출합니다) — 컨테이너 교체는 데이터에 손대지 않습니다. 시크릿은 호스트 로컬의 `.env.prod`에만 존재합니다(`.env.prod.sample`에서 생성; gitignore 처리, 이미지에 베이크되지 않음). 저장소가 비공개이므로 게시된 패키지도 비공개입니다: 첫 pull 전에 `read:packages` 권한의 PAT로 `docker login ghcr.io`를 1회 수행합니다(PAT 순환 후 재수행).
+
+§7의 배포 후 확인은 동일하게 적용됩니다: 예약 작업은 ADR-0019에 따라 **호스트 OS 스케줄러**(launchd)에 등록된 채로 유지됩니다 — 컨테이너는 in-process 타이머를 실행하지 않으며, 컨테이너 교체가 호스트 스케줄러 등록을 흔들어서는 안 됩니다.
+
+## 9. 관련 문서
 
 - `docs/runbooks/backup-restore.md` — 이 runbook이 의존하는 롤백 메커니즘
 - `docs/security/security-baseline.md` — 이 runbook이 실행하는 배포 전 게이트

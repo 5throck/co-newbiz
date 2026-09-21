@@ -1,0 +1,22 @@
+# Whitelist .dockerignore — the Docker build context is the repository root
+# (docker/Dockerfile needs app/web-next/ AND db/), so deny everything first
+# and re-include only what the image build needs. This keeps .git, docs,
+# agents/, memory/, .env*, and every database file out of the context.
+**
+!package.json
+!bun.lock
+!db/**
+db/data/**
+db/dev.db
+!scripts/**
+!procedures/**
+!process/**
+!docs/**
+!docker/entrypoint.sh
+!app/web-next/**
+app/web-next/node_modules/**
+app/web-next/.next/**
+app/web-next/render_out/**
+app/web-next/tsconfig.tsbuildinfo
+app/web-next/.env
+app/web-next/.env.*
