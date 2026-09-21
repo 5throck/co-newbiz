@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/partnership-agent.md
 name: partnership-agent
+description: "Partner sourcing strategy, partner due diligence including compliance screening, and JV structuring, distinct from community-partnership-planning (which covers local-community relations)."
 formal_name: Partnership Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Partner sourcing strategy, partner due diligence including compliance screening,
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/partnership-agent.md
-examples: []

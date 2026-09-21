@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/site-facility-agent.md
 name: site-facility-agent
+description: "Site and facility advisory: site selection, industrial complex eligibility, facility investment, and leasing-versus-build decisions. Assesses candidate sites' infrastructure readiness, regulatory fit, and incentive context so the route decision rests on verifiable site facts rather than broker claims."
 formal_name: Site Facility Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Site and facility advisory: site selection, industrial complex eligibility, faci
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/site-facility-agent.md
-examples: []

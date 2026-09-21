@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/incentive-agent.md
 name: incentive-agent
+description: "Bidirectional policy-benefit management: sourcing regional tax and infrastructure incentives for new sites, and assessing clawback exposure on relocation for M&A and headquarters moves."
 formal_name: Incentive Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Bidirectional policy-benefit management: sourcing regional tax and infrastructur
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/incentive-agent.md
-examples: []

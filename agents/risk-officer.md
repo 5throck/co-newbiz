@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/risk-officer.md
 name: risk-officer
+description: "Red-team function. Audits for optimism bias, enforces base-rate checks against reference-class forecasts, and holds Kill Criteria authority across every stage gate."
 formal_name: Risk Officer
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Red-team function
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/risk-officer.md
-examples: []

@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/antitrust-agent.md
 name: antitrust-agent
+description: "Antitrust and merger-control review: market definition, HHI calculation, multi-jurisdiction filing determination, gun-jumping compliance, and remedy scenario modeling."
 formal_name: Antitrust Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Antitrust and merger-control review: market definition, HHI calculation, multi-j
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/antitrust-agent.md
-examples: []

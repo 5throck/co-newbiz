@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/frontend-engineer.md
 name: frontend-engineer
+description: "Next.js (App Router) UI, Recharts visualizations, the RAG dashboard, the admin console, and accessibility."
 formal_name: Frontend Engineer
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Next.js App Router UI, ECharts visualizations, the RAG dashboard, the admin cons
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/frontend-engineer.md
-examples: []

@@ -1,6 +1,6 @@
 ---
 name: pm
-description: "Orchestrates multi-agent workflows. Enforces quality gates. Use when: \"Managing workflow\", \"Coordinating multi-phase tasks\", \"PM orchestration needed\""
+description: "Orchestrates multi-agent workflows. Enforces quality gates. Decides agent hiring/firing and approves agent skill requests. Use when: \"Managing workflow\", \"Coordinating multi-phase tasks\", \"PM orchestration needed\""
 model: sonnet
 ---
 

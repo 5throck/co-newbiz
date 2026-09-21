@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/region-lead.md
 name: region-lead
+description: "Domain lead for region, owning the region profile system covering domestic and overseas regions: merger control, foreign-investment screening, labor, tax, remittance, sanctions, data transfer, environmental-liability succession, and incentives."
 formal_name: Region Lead
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Domain lead for region — owns the region-profiles/*.yaml system
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/region-lead.md
-examples: []

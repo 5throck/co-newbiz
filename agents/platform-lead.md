@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/platform-lead.md
 name: platform-lead
+description: "Domain lead for technical. Owns architecture decisions, technical ADRs, release scope, and translates functional-domain requirements into system design."
 formal_name: Platform Lead
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Domain lead for technical
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/platform-lead.md
-examples: []
