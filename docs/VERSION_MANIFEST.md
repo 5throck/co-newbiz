@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-20T23:14:07.250Z
+**Generated**: 2026-09-21T03:37:55.322Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -123,7 +123,7 @@
 | group-level-review | 1.0.1 | experimental | skills/group-level-review/SKILL.md | workspace | group review, group IC, portfolio fit review | process-governance-manager |
 | growth-projection-modeling | 1.1.0 | active | skills/growth-projection-modeling/SKILL.md | workspace | growth projection, revenue forecast, base rate warning, anchor_ref, hockey stick check | financial-analyst |
 | handbook | 0.6.0 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook, update handbook, handbook sync, handbook maintenance | pm |
-| handbook-sync-audit | 1.0.4 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | handbook-reviewer |
+| handbook-sync-audit | 1.0.5 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | pm |
 | historical-financial-analysis | 1.0.0 | active | skills/historical-financial-analysis/SKILL.md | workspace | historical financial trend, historical volatility, base rate distribution, multi-year trajectory analysis | financial-analyst |
 | hwp-document-processing | 1.1.0 | active | .claude/skills/hwp-document-processing/SKILL.md | both | hwp, hwpx, hwp document, hwpx document, hwp extraction, hwpx generation, government report template | docs-writer |
 | i18n-audit | 1.0.0 | active | skills/i18n-audit/SKILL.md | workspace | i18n audit, locale parity, translation parity, glossary audit, L10N parity | pm |
@@ -269,7 +269,7 @@
 | deploy-readme-patch.test.ts | 1.0.0 | scripts/tests/deploy-readme-patch.test.ts | bun:test |
 | design-lint.ts | 1.2.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 1.0.0 | scripts/design-lint.ts | N/A |
-| dev-sync.ts | 1.15.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.16.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.1 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
@@ -327,7 +327,7 @@
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
-| skill-lifecycle-audit.ts | 1.5.0 | scripts/skill-lifecycle-audit.ts | N/A |
+| skill-lifecycle-audit.ts | 1.5.1 | scripts/skill-lifecycle-audit.ts | N/A |
 | skill-session-review.ts | 1.1.0 | scripts/skill-session-review.ts | bun |
 | source-adapters.ts | 1.1.0 | scripts/co-newbiz/source-adapters.ts | N/A |
 | spec-register.ts | 1.3.0 | scripts/spec-register.ts | N/A |
