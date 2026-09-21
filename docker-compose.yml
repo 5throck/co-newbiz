@@ -1,0 +1,34 @@
+# Production deployment of the co-newbiz web service on the local-PC Docker
+# host. Development still runs directly on the host (bun, port 7749) — this
+# stack is production only and serves on host port 7748. Operational
+# procedure: docs/runbooks/deployment.md §8 (deploy via `bun scripts/deploy-web.ts`).
+services:
+  web:
+    image: ghcr.io/5throck/co-newbiz-web:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: co-newbiz-web
+    restart: unless-stopped
+    ports:
+      - "7748:7749"
+    env_file:
+      # Create from .env.prod.sample — secrets never enter git or the image.
+      - path: .env.prod
+        required: false
+    volumes:
+      # SQLite database at the app's own db/data directory (never point
+      # CO_NEWBIZ_DB_PATH elsewhere — db/client.ts derives the migrations
+      # location from the DB path's grandparent directory).
+      - co-newbiz-data:/repo/db/data
+      # ADR-0014 pre-deploy backups written by docker/entrypoint.sh.
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('http://127.0.0.1:7749/api/health'); if (!r.ok) process.exit(1);"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  co-newbiz-data:

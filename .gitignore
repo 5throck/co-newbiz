@@ -87,3 +87,6 @@ render_out/
 .playwright-mcp/
 /detail-dart.png
 /detail-standard.png
+
+# Docker production deployment — pre-deploy DB backups (deploy-web.ts)
+backups/
