@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/greenfield-agent.md
 name: greenfield-agent
+description: "New-establishment review lead: site selection, infrastructure assessment, talent pipeline planning, community partnership, permit pathway, and ramp-up modeling for Green Field projects."
 formal_name: Greenfield Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ New-establishment review lead: site selection, infrastructure assessment, talent
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/greenfield-agent.md
-examples: []

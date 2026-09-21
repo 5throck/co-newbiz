@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/design-system-agent.md
 name: design-system-agent
+description: "Verifies compliance with docs/design-system/design-guide.md (Onyx 3.0) token, typography, and component specs; fixes design:lint violations (hardcoded colors, color-only states, accessibility issues); keeps new screens aligned with the guide."
 formal_name: Design System Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Onyx 3.0 design system governance: token, component, and accessibility consisten
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/design-system-agent.md
-examples: []

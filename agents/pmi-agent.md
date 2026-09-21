@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/pmi-agent.md
 name: pmi-agent
+description: "Post-merger integration planning: synergy realization tracking and integration risk assessment."
 formal_name: PMI Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Post-merger integration planning: synergy realization tracking and integration r
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/pmi-agent.md
-examples: []

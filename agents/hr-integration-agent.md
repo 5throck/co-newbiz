@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/hr-integration-agent.md
 name: hr-integration-agent
+description: "Executive compensation review, employee pay-and-benefits parity analysis, and labor/workforce integration for M&A. Enforces the upward-bias assumption in compensation harmonization."
 formal_name: HR Integration Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Executive compensation review, employee pay-and-benefits parity analysis, and la
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/hr-integration-agent.md
-examples: []

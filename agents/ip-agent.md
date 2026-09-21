@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/ip-agent.md
 name: ip-agent
+description: "Patent and IP advisory: patent landscape, freedom-to-operate, IP valuation, trade secrets, and technology licensing. Determines whether the target technology can be commercialized without infringing third-party rights, and what the target's own IP is actually worth as an asset."
 formal_name: IP Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Patent and IP advisory: patent landscape, freedom-to-operate, IP valuation, trad
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/ip-agent.md
-examples: []

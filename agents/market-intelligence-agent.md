@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/market-intelligence-agent.md
 name: market-intelligence-agent
+description: "TAM/SAM/SOM sizing, demand forecasting, competitor capacity-expansion tracking, and the six-axis upstream/downstream value-chain linkage analysis -- kept structurally separate from the proxy chain, since the two serve different purposes."
 formal_name: Market Intelligence Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ TAM/SAM/SOM sizing, demand forecasting, competitor capacity-expansion tracking, 
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/market-intelligence-agent.md
-examples: []

@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/industry-lead.md
 name: industry-lead
+description: "Domain lead for industry, owning the industry profile system used across the roster. Value-chain structure, cycle characteristics, regulatory landscape, technology transition, and unit-economics benchmarks per industry."
 formal_name: Industry Lead
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Domain lead for industry: owns the industry-profiles/*.yaml system
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/industry-lead.md
-examples: []

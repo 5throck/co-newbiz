@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/security-engineer.md
 name: security-engineer
+description: "Threat modeling, security baseline, vulnerability and secrets management, and implementation of access control, personal-data protection, and MNPI handling."
 formal_name: Security Engineer
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Threat modeling, security baseline, vulnerability and secrets management, and im
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/security-engineer.md
-examples: []

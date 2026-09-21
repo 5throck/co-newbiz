@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/customer-retention-agent.md
 name: customer-retention-agent
+description: "Post-acquisition customer attrition risk: change-of-control clause scanning, customer concentration, and competitive-overlap analysis."
 formal_name: Customer Retention Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Post-acquisition customer attrition risk: change-of-control clause scanning, cus
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/customer-retention-agent.md
-examples: []

@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/infra-automation-engineer.md
 name: infra-automation-engineer
+description: "OS configuration, service registration, the scheduled-collection scheduler, and health-check/cleanup automation."
 formal_name: Infra Automation Engineer
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ OS configuration, service registration, the scheduled-collection scheduler, and 
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/infra-automation-engineer.md
-examples: []

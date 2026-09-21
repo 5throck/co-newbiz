@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/backend-engineer.md
 name: backend-engineer
+description: "Next.js Route Handler REST API, authentication, MCP server, the analysis-engine CLI, and the monitoring/alerting pipeline."
 formal_name: Backend Engineer
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Next.js Route Handler API (App Router, ADR-0069), authentication, MCP server, th
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/backend-engineer.md
-examples: []

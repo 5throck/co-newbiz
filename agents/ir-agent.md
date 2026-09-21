@@ -1,6 +1,6 @@
 ---
-extends: ../../../agents/ir-agent.md
 name: ir-agent
+description: "Investor relations advisory: equity story, disclosure discipline, investor communications, and market perception risk. Ensures that what the deal team says to investors and the market stays consistent with what the evidence actually supports, and that disclosure obligations are met before communications are sent."
 formal_name: IR Agent
 status: active
 version: "1.0.0"
@@ -23,5 +23,3 @@ Investor relations advisory: equity story, disclosure discipline, investor commu
 ## Scope
 
 This agent operates within the S1-S12 deal pipeline as defined in process/flow.spec.yaml.
-  governance: docs/lifecycle/agents/ir-agent.md
-examples: []
