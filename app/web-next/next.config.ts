@@ -18,8 +18,9 @@ const nextConfig: NextConfig = {
   turbopack: { root: repoRoot },
   // Remote (IP) access: dev resources (/_next/webpack-hmr etc.) are blocked
   // cross-origin by default. List every host the operator browses dev from —
-  // Tailscale IP and the LAN IP of this workstation.
-  allowedDevOrigins: ["100.104.16.127", "192.168.0.44"],
+  // the Tailscale IP, the LAN IP of this workstation, and the public domain
+  // served through the Cloudflare tunnel to this dev server (7749).
+  allowedDevOrigins: ["100.104.16.127", "192.168.0.44", "co-newbiz.bizknights.org"],
 };
 
 export default nextConfig;
