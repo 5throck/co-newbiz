@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * deploy-web.ts — deploy (or roll forward) the co-newbiz web production
  * container on this host. Implements the ADR-0014 deployment order end to
@@ -25,6 +25,49 @@ const TIMEOUT_SECONDS = Number(process.env.CO_NEWBIZ_HEALTH_TIMEOUT ?? "120");
 interface RunResult {
   status: number;
   stdout: string;
+}
+
+/**
+ * Remove superseded local generations of the app image after a successful
+ * deploy. Keeps the newest two generations — the running image and the one
+ * before it (rollback) — and untags/removes everything older: each generation
+ * is ~3.4 GB in the Docker VM, macOS never returns that space to the host
+ * automatically, and per-deploy accumulation was shrinking the host disk
+ * (2026-09-22 host disk review; retention design:
+ * docs/designs/2026-09-23-docker-image-retention-deploy-restore-design.md).
+ */
+function pruneSupersededGenerations(): void {
+  const inspect = run(["docker", "inspect", "--format", "{{.Image}}", CONTAINER], true);
+  const runningId = inspect.status === 0 ? inspect.stdout.trim() : "";
+  const list = run(
+    ["docker", "images", "--format", "{{.CreatedAt}}|{{.ID}}|{{.Repository}}:{{.Tag}}", CONTAINER],
+    true,
+  );
+  if (list.status !== 0) return;
+
+  // One entry per image ID (a generation may carry several tags).
+  const gens = new Map<string, { id: string; createdAt: string; refs: string[] }>();
+  for (const line of list.stdout.trim().split("\n")) {
+    const parts = line.split("|");
+    if (parts.length < 3) continue;
+    const [createdAt, id, ref] = parts as [string, string, string];
+    if (ref === "<none>:<none>") continue;
+    const g = gens.get(id) ?? { id, createdAt, refs: [] };
+    if (createdAt > g.createdAt) g.createdAt = createdAt;
+    g.refs.push(ref);
+    gens.set(id, g);
+  }
+
+  const sorted = [...gens.values()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  sorted.forEach((g, i) => {
+    if (g.id === runningId || i < 2) return; // keep running + rollback generation
+    for (const ref of g.refs) {
+      console.log(`[deploy] pruning superseded image ${ref} (${g.createdAt.slice(0, 10)})`);
+      if (run(["docker", "rmi", ref], true).status !== 0) {
+        console.error(`[deploy] image prune skipped ${ref} (in use — non-fatal)`);
+      }
+    }
+  });
 }
 
 function run(cmd: string[], capture = false): RunResult {
@@ -61,6 +104,7 @@ while (Date.now() < deadline) {
     const res = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
       console.log("[deploy] healthy — deploy complete.");
+      pruneSupersededGenerations();
       process.exit(0);
     }
   } catch {
