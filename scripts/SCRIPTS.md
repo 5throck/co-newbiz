@@ -165,7 +165,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `team-builder.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
 | `test-runner.ts` | L0 | 1.6.0 | active | —| —| L0+L1 (`--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms>`, `--allow-empty`) — v1.5.0: empty suites fail by default and scripts suite scans `scripts/tests/*.test.ts`; v1.6.0: bun test runs with `--timeout=30000` (per-test/hook default 5s flaked fresh-DB migration hooks on CI runners) | —|
 | `translate-readme.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `validate-agents.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
+| `validate-agents.ts` | L0 | 1.3.1 | active | —| —| L0+L1 | —|
 | `validate-doc-folder.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `validate-docs-links.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `validate-md-language.ts` | L0 | 1.11.0 | active | —| —| L0+L1 | —|
