@@ -1,0 +1,29 @@
+# Retention for the ghcr.io/5throck/co-newbiz-web container package.
+# Each push to main publishes one package version (latest + sha-<commit>
+# tags, .github/workflows/docker.yml); without a retention rule the version
+# list grows without bound. Keep the newest 10 — the deployed `latest` is
+# always the newest version, so the window always covers it.
+# Design: docs/designs/2026-09-23-docker-image-retention-deploy-restore-design.md
+
+name: docker-cleanup
+
+on:
+  schedule:
+    - cron: "40 21 * * 1" # Mondays 21:40 UTC (06:40 KST Tuesday)
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+jobs:
+  prune-ghcr-versions:
+    name: Delete old co-newbiz-web image versions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep newest 10 versions of co-newbiz-web
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: co-newbiz-web
+          package-type: container
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: false
