@@ -33,7 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
+  if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const { cases, recommendedScenario, adoption, targetSelection, targets } = listBusinessCases(id);
   const db = getDb();
   // 에스컬레이션 조정 CAGR (design 2026-09-20-escalation-downstream §4-Q2) —
@@ -65,6 +65,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     name?: string;
     kind?: string;
     horizon_years?: number;
+    target_id?: string;
     lines?: LineInput[];
   } | null;
   if (!body?.name?.trim()) return badRequest("invalid_request", "name은 필수입니다.");
@@ -74,14 +75,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const db = getDb();
   const lineError = validateLines(body.lines ?? []);
   if (lineError) return badRequest("invalid_request", lineError);
+  // ADR-0143: a manual case may be attributed to one shortlisted target of
+  // the project's source opportunity (validated, never taken on faith).
+  let targetId: string | null = null;
+  if (body.target_id) {
+    const t = db
+      .query(
+        `SELECT bt.id FROM brownfield_target bt JOIN md_project p ON p.source_opportunity_id = bt.opportunity_id
+         WHERE p.id = ? AND bt.id = ? AND bt.status = 'shortlisted'`,
+      )
+      .get(id, body.target_id) as { id: string } | undefined;
+    if (!t) return badRequest("invalid_request", "target_id는 이 프로젝트 Short List의 대상이어야 합니다.");
+    targetId = t.id;
+  }
   const modelId = ulid();
   const now = new Date().toISOString();
   // All-or-nothing: model + lines land in ONE transaction (mirror of
   // reviewDdCustomItem) so a failure leaves no orphan/partial rows.
   db.transaction(() => {
     db.run(
-      "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
-      [modelId, id, kind, name, body.horizon_years && body.horizon_years > 0 ? Math.floor(body.horizon_years) : 5, ctx.userId, now],
+      "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, target_id) VALUES (?,?,?,?,?,?,?,?)",
+      [modelId, id, kind, name, body.horizon_years && body.horizon_years > 0 ? Math.floor(body.horizon_years) : 5, ctx.userId, now, targetId],
     );
     insertLines(db, modelId, body.lines ?? [], ctx.userId, now);
   })();
@@ -99,6 +113,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     model_id?: string;
     name?: string;
     horizon_years?: number;
+    target_id?: string | null;
     // Full line replacement — the manual editor sends the whole set.
     lines?: LineInput[];
   } | null;
@@ -108,6 +123,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     | { id: string }
     | undefined;
   if (!model) return notFound();
+  if (body.target_id !== undefined) {
+    if (body.target_id === null) {
+      db.run("UPDATE business_case_model SET target_id = NULL WHERE id = ?", [body.model_id]);
+    } else {
+      const t = db
+        .query(
+          `SELECT bt.id FROM brownfield_target bt JOIN md_project p ON p.source_opportunity_id = bt.opportunity_id
+           WHERE p.id = ? AND bt.id = ? AND bt.status = 'shortlisted'`,
+        )
+        .get(id, body.target_id) as { id: string } | undefined;
+      if (!t) return badRequest("invalid_request", "target_id는 이 프로젝트 Short List의 대상이어야 합니다.");
+      db.run("UPDATE business_case_model SET target_id = ? WHERE id = ?", [body.target_id, body.model_id]);
+    }
+  }
   const now = new Date().toISOString();
   if (typeof body.name === "string" && body.name.trim()) {
     db.run("UPDATE business_case_model SET name = ? WHERE id = ?", [body.name.trim(), body.model_id]);

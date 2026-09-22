@@ -1,4 +1,4 @@
-# Process Flow Specification — SSOT (v2.2.1, ADR-0074)
+# Process Flow Specification — SSOT (ADR-0074; meta.version below is authoritative)
 #
 # This file is the single source of truth for the deal process:
 #   - docs/process-flow.md is GENERATED from this file (scripts/co-newbiz/generate-process-flow.ts)

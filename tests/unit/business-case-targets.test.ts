@@ -175,14 +175,22 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
     expect(withC.blockers.join()).toContain("대상C");
     expect(withC.blockers.join()).toContain("대상C]의 Business Case");
 
-    // Analyze C via the manual write path (write-path-agnostic by design —
-    // the POST generate route is idempotent per ADR-0098 §3: an existing
-    // non-failed run returns 200/alreadyRun instead of duplicating the chain).
-    const manualModelId = ulid();
-    db.run(
-      "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, variant, target_id) VALUES (?,?,?,?,?,?,?,?,?)",
-      [manualModelId, projectId, "valuation", "수동 — 대상C", 5, ANALYST, NOW, "market_forward", targetCId],
-    );
+    // Analyze C via the manual write path — now through the API (ADR-0143:
+    // manual CRUD accepts a validated shortlist target_id, so late shortlist
+    // edits are recoverable without direct DB writes).
+    const offList = await req(`/api/projects/${projectId}/business-case`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ name: "부정 케이스", target_id: ulid() }),
+    });
+    expect(offList.status).toBe(400);
+    const create = await req(`/api/projects/${projectId}/business-case`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ name: "수동 — 대상C", kind: "valuation", target_id: targetCId }),
+    });
+    expect(create.status).toBe(201);
+    const manualModelId = ((await create.json()).data as { id: string }).id;
     db.run("UPDATE business_case_model SET inputs_json = ? WHERE id = ?", ["{}", manualModelId]);
     db.run(
       "INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, bep_year, created_at) VALUES (?,?,?,?,?,?,?,?)",

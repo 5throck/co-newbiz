@@ -29,6 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const body = (await request.json().catch(() => null)) as { target_id?: string; rationale?: string } | null;
   if (!body?.target_id) return badRequest("invalid_request", "target_id는 필수입니다.");
   if (!body.rationale?.trim()) return badRequest("invalid_request", "선정 근거(rationale)는 필수입니다 (ADR-0053 결정 기록).");
+  if (body.rationale.length > 4000) return badRequest("invalid_request", "선정 근거는 4,000자 이내여야 합니다.");
   try {
     const selection = selectTarget(id, body.target_id, body.rationale, ctx.userId);
     return ok(selection, 201);

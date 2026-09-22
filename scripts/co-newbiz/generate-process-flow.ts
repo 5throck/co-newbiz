@@ -52,7 +52,7 @@ interface FlowSpec {
 
 const spec = yaml.load(readFileSync(SPEC_PATH, "utf8")) as FlowSpec;
 
-const HEADER = `# Process Flow — 신규사업 검토 프로세스 (생성 문서)
+const HEADER = `---\nlang: ko\nlang_reason: source-material\n---\n\n# Process Flow — 신규사업 검토 프로세스 (생성 문서)
 
 > **⚠ 이 문서는 생성물입니다.** \`process/flow.spec.yaml\`(SSOT, ADR-0074)에서
 > \`bun scripts/co-newbiz/generate-process-flow.ts\`로 생성됩니다. 이 파일을

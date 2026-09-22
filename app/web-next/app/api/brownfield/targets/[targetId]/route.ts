@@ -6,7 +6,7 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { fail, badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { resolveOrCreateCompany, screeningItems, screeningSummary, type TargetRow } from "../../../../../lib/brownfield-targets.ts";
 import { combinedEvalScore, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
 
@@ -101,6 +101,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ t
     | { id: string; company_name: string }
     | undefined;
   if (!existing) return notFound();
+  // migration 0120 (ADR-0143): business_case_model.target_id references this
+  // target — deleting an analyzed target would throw a raw FK error (500).
+  const caseCount = db
+    .query("SELECT COUNT(*) AS n FROM business_case_model WHERE target_id = ?")
+    .get(targetId) as { n: number };
+  if (caseCount.n > 0) {
+    return fail(409, "target_has_cases", `S8 분석이 존재하는 대상은 삭제할 수 없습니다 — 먼저 해당 대상의 Business Case ${caseCount.n}건을 삭제하세요.`);
+  }
   db.transaction(() => {
     db.run("DELETE FROM brownfield_target_eval_state WHERE brownfield_target_id = ?", [targetId]);
     db.run("DELETE FROM brownfield_target WHERE id = ?", [targetId]);

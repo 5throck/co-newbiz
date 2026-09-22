@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # Process Flow — 신규사업 검토 프로세스 (생성 문서)
 
 > **⚠ 이 문서는 생성물입니다.** `process/flow.spec.yaml`(SSOT, ADR-0074)에서

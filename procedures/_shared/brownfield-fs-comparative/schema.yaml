@@ -35,6 +35,7 @@ steps:
     gate: FS
     agent_key: pm
     skill_key: stage-gate-governance
+    decision_authority: human
     output_type: target_selection_record
     description: >
       The human target-selection record (ADR-0053 boundary #2): PM attaches

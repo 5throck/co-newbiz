@@ -12,6 +12,7 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
 import { resolveOrCreateCompany } from "./brownfield-targets.ts";
+import { SPEC_VERSION } from "./spec-activities.generated.ts";
 
 export interface SimulationRow {
   id: string;
@@ -126,12 +127,13 @@ export function selectTarget(projectId: string, targetId: string, rationale: str
     .get(targetId, project.source_opportunity_id ?? "") as { id: string; company_name: string; dart_corp_code: string | null; status: string } | undefined;
   if (!target || target.status !== "shortlisted") throw new Error(`target '${targetId}' is not on this project's Short List`);
   if (!rationale?.trim()) throw new Error("rationale is mandatory for a target selection record (ADR-0053)");
+  if (rationale.length > 4000) throw new Error("선정 근거는 4,000자 이내여야 합니다.");
   const now = new Date().toISOString();
   db.transaction(() => {
     db.run(
       `INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [ulid(), "project", projectId, projectId, "unknown", "s8_target_select", "done", "web", selectedBy, now, now, JSON.stringify({ target_id: targetId, rationale: rationale.trim() })],
+      [ulid(), "project", projectId, projectId, SPEC_VERSION, "s8_target_select", "done", "web", selectedBy, now, now, JSON.stringify({ target_id: targetId, rationale: rationale.trim() })],
     );
     const companyId = resolveOrCreateCompany(db, target.company_name, target.dart_corp_code);
     db.run("UPDATE md_project SET company_id = ? WHERE id = ?", [companyId, projectId]);
@@ -212,16 +214,28 @@ export function adoptBusinessCase(projectId: string, modelId: string, adoptedBy:
     | { id: string; target_id: string | null }
     | undefined;
   if (!model) throw new Error(`business case '${modelId}' not found for project '${projectId}'`);
-  if (model.target_id) {
+  const project = db
+    .query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?")
+    .get(projectId) as { track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;
+  if (project?.track === "brownfield") {
+    if (!model.target_id) {
+      throw new Error("레거시(대상 미귀속) 케이스는 채택할 수 없습니다 — 대상별 분석을 재생성하세요 (ADR-0143)");
+    }
     const selection = latestTargetSelection(projectId);
     if (!selection) throw new Error("대상 선정이 먼저 필요합니다 — 비교 분석 후 분석 대상을 선정하세요 (ADR-0143)");
     if (selection.targetId !== model.target_id) throw new Error("선정된 대상의 케이스만 채택할 수 있습니다 (ADR-0143)");
+    const sel = db
+      .query("SELECT status FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
+      .get(model.target_id, project.source_opportunity_id ?? "") as { status: string } | undefined;
+    if (!sel || sel.status !== "shortlisted") {
+      throw new Error("선정된 대상이 Short List에서 제외되었습니다 — 대상을 재선정하세요 (ADR-0143)");
+    }
   }
   const now = new Date().toISOString();
   db.run(
     `INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [ulid(), "project", projectId, projectId, "unknown", "s8_case_adopt", "done", "web", adoptedBy, now, now, JSON.stringify({ model_id: modelId })],
+    [ulid(), "project", projectId, projectId, SPEC_VERSION, "s8_case_adopt", "done", "web", adoptedBy, now, now, JSON.stringify({ model_id: modelId })],
   );
   appendAudit(db, { actor: adoptedBy, action: "business_case_adopted", target: `${projectId}:${modelId}`, now });
   return { modelId, adoptedBy, adoptedAt: now };

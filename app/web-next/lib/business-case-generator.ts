@@ -461,7 +461,9 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     initialInvestmentSource: initInv.source,
     growthOverride: growthOv,
     growthOverrideSource: growthOv !== null ? "사용자 오버라이드 (bc.growth_override)" : "기본값",
-    sigmaOverride: sigmaOv !== null && sigmaOv >= 0 ? sigmaOv : (sigmaOv !== null ? sigmaOv : null),
+    // a stored negative is discarded (falls back to the derived model) —
+    // a negative sigma would mirror the noise distribution.
+    sigmaOverride: sigmaOv !== null && sigmaOv >= 0 ? sigmaOv : null,
     sigmaOverrideSource: sigmaOv !== null ? "사용자 오버라이드 (bc.sigma_override)" : "기본값",
     horizonYears: Math.min(Math.max(Math.round(horizon.value), 1), 50),
     horizonSource: horizon.source,
@@ -582,7 +584,11 @@ function horizonOf(inputs: CaseInputs): number {
 }
 
 function iterationsOf(inputs: CaseInputs): number {
-  return inputs.bcParams?.iterations ?? MC_ITERATIONS;
+  // The inline fallback runs on the Next.js event loop — clamp harder than
+  // the engine-spec ceiling (out-of-process Python can afford 10M; the
+  // request thread cannot). The persisted job-spec keeps the spec value.
+  const fallbackClamp = 200_000;
+  return Math.min(inputs.bcParams?.iterations ?? MC_ITERATIONS, fallbackClamp);
 }
 
 /** Effective per-(scenario, variant) growth/dispersion. Legacy inputs (no
@@ -654,7 +660,7 @@ export function listShortlistSubjects(db: ReturnType<typeof getDb>, opportunityI
   const rows = db
     .query(
       `SELECT bt.id, bt.company_name, bt.dart_corp_code,
-         (SELECT mc.id FROM md_company mc WHERE bt.dart_corp_code IS NOT NULL AND mc.dart_corp_code = bt.dart_corp_code) AS company_id
+         (SELECT mc.id FROM md_company mc WHERE bt.dart_corp_code IS NOT NULL AND mc.dart_corp_code = bt.dart_corp_code LIMIT 1) AS company_id
        FROM brownfield_target bt
        WHERE bt.opportunity_id = ? AND bt.status = 'shortlisted'
        ORDER BY bt.rank IS NULL, bt.rank, bt.created_at`,
@@ -1144,8 +1150,9 @@ export function flagRecommendedTarget(rows: TargetComparisonRow[]): TargetCompar
   const positive = analyzed.filter((r) => (r.baseP05 ?? 0) > 0);
   const pool = positive.length > 0 ? positive : analyzed;
   const best = pool.reduce<TargetComparisonRow | null>((acc, r) => (!acc || (r.baseP05 ?? 0) > (acc.baseP05 ?? 0) ? r : acc), null);
-  if (best) best.recommended = true;
-  return [...rows].sort((a, b) => {
+  return [...rows]
+    .map((r) => (r === best ? { ...r, recommended: true } : r))
+    .sort((a, b) => {
     if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
     const p05 = (b.baseP05 ?? -Infinity) - (a.baseP05 ?? -Infinity);
     if (p05 !== 0) return p05;

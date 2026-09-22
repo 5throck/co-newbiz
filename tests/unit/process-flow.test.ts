@@ -192,6 +192,21 @@ describe("process flow spec integrity (ADR-0074)", () => {
     }
   });
 
+  test("S8 subjectScope declares per-subject repetition with a closed vocabulary (v2.5.0, ADR-0143)", () => {
+    // The machine-readable repetition declaration must not drift: a renamed
+    // key or out-of-vocabulary value would silently turn the ADR-0143
+    // per-target contract into dead prose (review 2026-09-22, script-gap).
+    const allowed = ["single", "shortlist"];
+    for (const stage of spec.stages as Array<Record<string, unknown>>) {
+      if (!("subjectScope" in stage)) continue;
+      const scope = stage.subjectScope as Record<string, unknown>;
+      expect(Object.keys(scope).sort()).toEqual([...Object.keys(scope)].sort());
+      for (const value of Object.values(scope)) expect(allowed).toContain(value);
+    }
+    const s8 = (spec.stages as Array<Record<string, unknown>>).find((s) => s.id === "S8")!;
+    expect(s8.subjectScope).toEqual({ greenfield: "single", brownfield: "shortlist" });
+  });
+
   test("docs/process-flow.md is the up-to-date regeneration of the spec", () => {
     // Regenerate in-memory using the same generator entry and compare.
     const genPath = join(ROOT, "scripts", "co-newbiz", "generate-process-flow.ts");
