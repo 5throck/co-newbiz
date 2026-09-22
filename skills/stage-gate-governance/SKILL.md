@@ -11,8 +11,8 @@ description: >
 
   Use when: "stage gate", "kill criteria", "gate sequence", "halt the
   project", "does this trigger a kill criterion".
-version: 1.4.0
-last_reviewed: 2026-09-08
+version: 1.4.1
+last_reviewed: 2026-09-22
 status: active
 owner: process-governance-manager
 prerequisites: none

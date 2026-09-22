@@ -359,11 +359,15 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
         return { complete: false, blockers, missing };
       }
       for (const target of targets) {
+        // Gate-primary only (ADR-0117/0143): judge the market_forward model's
+        // base-scenario p50 — a historical-variant model is comparison
+        // evidence and must never satisfy the completion probe.
         const model = db
           .query(
-            `SELECT id, inputs_json FROM business_case_model
-             WHERE project_id = ? AND target_id = ?
-             ORDER BY created_at DESC, id DESC LIMIT 1`,
+            `SELECT m.id, m.inputs_json FROM business_case_model m
+             WHERE m.project_id = ? AND m.target_id = ? AND COALESCE(m.variant, 'market_forward') = 'market_forward'
+               AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario = 'base' AND v.percentile = 'p50')
+             ORDER BY m.created_at DESC, m.id DESC LIMIT 1`,
           )
           .get(project.id, target.id) as { id: string; inputs_json: string | null } | undefined;
         if (!model) {
@@ -374,7 +378,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
         const p50 = db
           .query(
             `SELECT bep_year FROM valuation_simulation
-             WHERE model_id = ? AND percentile = 'p50' ORDER BY created_at DESC LIMIT 1`,
+             WHERE model_id = ? AND scenario = 'base' AND percentile = 'p50' ORDER BY created_at DESC LIMIT 1`,
           )
           .get(model.id) as { bep_year: number | null } | undefined;
         if (!p50 || p50.bep_year == null || model.inputs_json == null) {
@@ -382,21 +386,39 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
           missing.push("BEP 시점과 시뮬레이션 입력 스냅샷");
         }
       }
+      // ADR-0143: the recorded selection must still point at a SHORTLISTED
+      // target — a later exclusion invalidates it (re-selection required).
       const selection = db
         .query(
-          `SELECT id FROM process_run
-           WHERE entity_type = 'project' AND entity_id = ? AND stage = 's8_target_select' AND status = 'done'
-           ORDER BY started_at DESC, id DESC LIMIT 1`,
+          `SELECT r.meta_json FROM process_run r
+           WHERE r.entity_type = 'project' AND r.entity_id = ? AND r.stage = 's8_target_select' AND r.status = 'done'
+           ORDER BY r.started_at DESC, r.id DESC LIMIT 1`,
         )
-        .get(project.id) as { id: string } | undefined;
-      if (!selection) {
+        .get(project.id) as { meta_json: string | null } | undefined;
+      if (!selection?.meta_json) {
         blockers.push("대상 비교 분석과 사람의 대상 선정 기록이 필요합니다 (fs 진행 입력)");
         missing.push("대상 선정 기록 (brownfield)");
+      } else {
+        let selectedTargetId: string | null = null;
+        try { selectedTargetId = (JSON.parse(selection.meta_json) as { target_id?: string }).target_id ?? null; } catch { /* malformed meta — treated as unselected */ }
+        if (selectedTargetId) {
+          const sel = db
+            .query("SELECT status FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
+            .get(selectedTargetId, project.source_opportunity_id ?? "") as { status: string } | undefined;
+          if (!sel || sel.status !== "shortlisted") {
+            blockers.push("선정된 대상이 Short List에서 제외되었습니다 — 대상을 재선정하세요");
+            missing.push("대상 선정 기록 (brownfield)");
+          }
+        }
       }
       return { complete: missing.length === 0, blockers, missing };
     }
     const model = db
-      .query("SELECT id, kind, inputs_json FROM business_case_model WHERE project_id = ? ORDER BY created_at DESC LIMIT 1")
+      .query(
+        `SELECT id, kind, inputs_json FROM business_case_model
+         WHERE project_id = ? AND COALESCE(variant, 'market_forward') = 'market_forward'
+         ORDER BY created_at DESC LIMIT 1`,
+      )
       .get(project.id) as { id: string; kind: string; inputs_json: string | null } | undefined;
     if (!model) {
       blockers.push("Business Case / 밸류에이션 모델이 필요합니다");

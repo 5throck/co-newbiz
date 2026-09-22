@@ -2,7 +2,7 @@
   "procedure": "brownfield-fs-comparative",
   "criterion_id": "no_target_meets_base_scenario_hurdle",
   "title": "No shortlisted target meets the base-scenario hurdle in the S8 per-target FS (market_forward base p05 NPV ≤ 0 or below the confirmed hurdle IRR)",
-  "action": "halt",
+  "action": "escalate_to_risk_officer",
   "predicate": null,
   "enabled": false,
   "policy_id": null,

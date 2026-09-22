@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-22T01:09:45.282Z
+**Generated**: 2026-09-22T12:09:35.659Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -79,7 +79,7 @@
 | assumption-audit | 1.0.1 | experimental | skills/assumption-audit/SKILL.md | workspace | assumption audit, assumption review, assumption register check | process-governance-manager |
 | auth-and-account-management | 1.0.0 | active | .claude/skills/auth-and-account-management/SKILL.md | both | account lockout, password reset, must change password gate, API token issuance, session lifecycle | security-engineer |
 | batch-scheduling-operations | 1.0.0 | active | .claude/skills/batch-scheduling-operations/SKILL.md | both | OS scheduler registration, cron job setup, batch job scheduling, recurring task registration | infra-automation-engineer |
-| brownfield-feasibility | 1.1.0 | active | skills/brownfield-feasibility/SKILL.md | workspace | brown field feasibility, M&A feasibility, acquisition screening, brownfield DD | brownfield-agent |
+| brownfield-feasibility | 1.2.0 | active | skills/brownfield-feasibility/SKILL.md | workspace | brown field feasibility, M&A feasibility, acquisition screening, brownfield DD | brownfield-agent |
 | certification-roadmap | 1.0.0 | active | skills/certification-roadmap/SKILL.md | workspace | certification requirements, certification gap analysis, certification roadmap | certification-agent |
 | certification-transferability | 1.2.0 | active | skills/certification-transferability/SKILL.md | workspace | certification transferability, change of control certification, certification survives acquisition | legal-counsel |
 | checklist-authoring | 1.0.0 | active | .claude/skills/checklist-authoring/SKILL.md | both | add a checklist item, checklist authoring, mandatory vs optional checklist item, waiver_eligible | process-governance-manager |
@@ -137,7 +137,7 @@
 | insight-synthesis | 1.0.0 | active | skills/insight-synthesis/SKILL.md | workspace | synthesize insights, insight synthesis, integrate analysis, strategic synthesis, combine findings, cross-analysis integration | process-governance-manager |
 | interpretation-registry | 1.0.0 | active | .claude/skills/interpretation-registry/SKILL.md | both | interpretation registry, does this clause apply, record an interpretation, supersede an interpretation | compliance-officer |
 | intra-group-transaction-compliance | 1.1.0 | active | skills/intra-group-transaction-compliance/SKILL.md | workspace | related party transaction, Fair Trade Act Art. 47, intra-group transaction, affiliate transaction screen | group-review-agent |
-| investment-feasibility-modeling | 1.1.0 | active | skills/investment-feasibility-modeling/SKILL.md | workspace | investment feasibility model, NPV IRR calculation, feasibility financial model | valuation-agent |
+| investment-feasibility-modeling | 1.2.0 | active | skills/investment-feasibility-modeling/SKILL.md | workspace | investment feasibility model, NPV IRR calculation, feasibility financial model | valuation-agent |
 | investment-vehicle-structuring | 1.3.0 | active | skills/investment-vehicle-structuring/SKILL.md | workspace | investment vehicle structure, SPV structuring, direct investment vs SPV, holding company routing, deal structure hypothesis vehicle axis | brownfield-agent |
 | jv-structuring | 1.2.0 | active | skills/jv-structuring/SKILL.md | workspace | JV structuring, joint venture governance, veto matters, drag-along tag-along, deadlock resolution, technology contribution valuation | partnership-agent |
 | k-dart | 2.1.2 | active | skills/k-dart/SKILL.md | workspace | k-dart, /k-dart, DART, DART OpenAPI, `DART 공시`, `공시검색`, `기업개황`, `재무제표`, `재무정보`, `재무제표 조회`, financial statement, corporate disclosure | strategy-analyst |
@@ -191,7 +191,7 @@
 | site-visit-protocol | 1.1.0 | active | skills/site-visit-protocol/SKILL.md | workspace | site visit protocol, pre-visit document request, on-site evidence capture, site visit checklist | technical-dd-agent |
 | skill-lifecycle-manager | 1.5.0 | active | skills/skill-lifecycle-manager/SKILL.md | workspace | create skill, new skill, validate skills, skill lifecycle, manage skills, skill request, deprecate skill, remove skill | pm |
 | source-command-commit-push-pr | 1.0.3 | active | skills/source-command-commit-push-pr/SKILL.md | workspace | commit-push-pr, commit and push, create PR | pm |
-| stage-gate-governance | 1.4.0 | active | skills/stage-gate-governance/SKILL.md | workspace | stage gate, kill criteria, gate sequence, halt the project, does this trigger a kill criterion | process-governance-manager |
+| stage-gate-governance | 1.4.1 | active | skills/stage-gate-governance/SKILL.md | workspace | stage gate, kill criteria, gate sequence, halt the project, does this trigger a kill criterion | process-governance-manager |
 | standup-synthesizer | 1.0.0 | active | skills/standup-synthesizer/SKILL.md | workspace | standup digest, daily standup, synthesize standup, work summary | pm |
 | statute-change-monitoring | 1.0.0 | active | .claude/skills/statute-change-monitoring/SKILL.md | both | statute change affecting this project, regulation change during DD, re-check applicable statutes | legal-counsel |
 | strategic-fit-screening | 1.1.0 | active | skills/strategic-fit-screening/SKILL.md | workspace | strategic fit screen, knock-out criteria, hunt zone fit | process-governance-manager |
@@ -212,7 +212,7 @@
 | value-chain-linkage-analysis | 1.1.0 | active | skills/value-chain-linkage-analysis/SKILL.md | workspace | value chain linkage, pass-through rate, upstream downstream risk exposure, margin risk from supplier or customer industry | quant-methodologist |
 | value-chain-stage-financials | 1.0.1 | experimental | skills/value-chain-stage-financials/SKILL.md | workspace | stage financials, value chain economics, segment financials | process-governance-manager |
 | vulnerability-management | 1.0.0 | active | .claude/skills/vulnerability-management/SKILL.md | both | CVE check, dependency vulnerability, risk acceptance decision, unpatched Critical CVE | security-engineer |
-| wacc-input-session | 1.3.0 | active | skills/wacc-input-session/SKILL.md | workspace | WACC input, hurdle IRR confirmation, CAPM components, discount rate session, beta estimation | valuation-agent |
+| wacc-input-session | 1.3.1 | active | skills/wacc-input-session/SKILL.md | workspace | WACC input, hurdle IRR confirmation, CAPM components, discount rate session, beta estimation | valuation-agent |
 | waiver-management | 1.0.1 | experimental | skills/waiver-management/SKILL.md | workspace | waiver, waiver request, exemption approval | process-governance-manager |
 | zod-contract-gate | 1.0.2 | active | skills/zod-contract-gate/SKILL.md | workspace | zod-contract-gate, /zod-contract-gate, zod contract validation, schema contract gate, runtime schema validation | architect |
 
@@ -340,7 +340,7 @@
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, fs, path |
 | typecheck.ts | 1.1.1 | scripts/typecheck.ts | N/A |
 | update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |
-| validate-agents.ts | 1.3.1 | scripts/validate-agents.ts | N/A |
+| validate-agents.ts | 1.3.2 | scripts/validate-agents.ts | N/A |
 | validate-decisions.ts | 1.0.0 | scripts/validate-decisions.ts | js-yaml |
 | validate-doc-folder.ts | 1.2.0 | scripts/validate-doc-folder.ts | fs, path |
 | validate-docs-links.ts | 1.1.0 | scripts/validate-docs-links.ts | fs, path |

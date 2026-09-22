@@ -10,8 +10,8 @@ description: >
 
   Use when: "investment feasibility model", "NPV IRR calculation",
   "feasibility financial model".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.2.0
+last_reviewed: 2026-09-22
 status: active
 owner: valuation-agent
 prerequisites:
@@ -63,7 +63,9 @@ skill's own discipline.
 
 ## When to Use
 
-- Building or updating the core financial feasibility model for a project
+- Building or updating the core financial feasibility model for one analysis
+  subject — the project (greenfield) or each shortlisted target of a
+  brownfield project (flow.spec S8 `subjectScope`, ADR-0143)
 - FS gate, where a complete model is a mandatory deliverable
 
 ## Execution Steps
