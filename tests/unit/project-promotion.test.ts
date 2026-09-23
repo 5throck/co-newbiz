@@ -16,6 +16,7 @@ import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { promoteOpportunity, PromotionError } from "../../db/repositories/project.repository.ts";
+import { buildProjectCharter } from "../../app/web-next/lib/project-charter.ts";
 
 const TEST_DB_PATH = "db/data/test-project-promotion.sqlite";
 const NOW = "2026-09-03T10:00:00Z";
@@ -380,6 +381,22 @@ describe("promoteOpportunity (ADR-0095)", () => {
 // ── Route surface: the role boundary (Phase 0 coverage gap) ─────────────────
 // The repository layer has no role concept — the 403 lives on the promote
 // route. Driven through the real route handlers (nextRequest harness).
+
+describe("buildProjectCharter (ADR-0104) display name", () => {
+  test("promotion name is the opportunity name — sub_track stays a classification, never a title suffix", () => {
+    const oppId = insertOpportunity();
+    insertRouteDecision(oppId, "greenfield");
+    db.run("UPDATE route_decision SET sub_track = 'existing_business_rbd' WHERE opportunity_id = ?", [oppId]);
+
+    const { name, charter } = buildProjectCharter(db, { opportunityId: oppId, track: "greenfield", builtBy: U1, now: NOW });
+    const opp = db.query("SELECT name FROM opportunity WHERE id = ?").get(oppId) as { name: string };
+
+    expect(name).toBe(opp.name);
+    expect(name).not.toContain("existing_business_rbd");
+    // The deal shape itself stays recorded in the charter.
+    expect(charter.subTrack).toBe("existing_business_rbd");
+  });
+});
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser: createAccount, approveUser: approveAccount } = await import("../../db/lib/accounts.ts");
