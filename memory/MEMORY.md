@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-24](2026-09-24.md) | docs(adr): add promotion naming rule (ADR-0144) and sync/engine mutual exclusion (ADR-0145) |
 | [2026-09-23](2026-09-23.md) | --help |
 | [2026-09-22](2026-09-22.md) | chore: upgrade template delivery — fleet resync wave 2 |
 | [2026-09-21](2026-09-21.md) | fix(skills): complete handbook v0.6.0 delivery — Korean reference files |
@@ -15,7 +16,7 @@
 | [2026-09-18](2026-09-18.md) | chore: update |
 | [2026-09-18](2026-09-18.md) | feat: standalone monte carlo simulation engine with GPU/CPU device layer and S8 generator bridge |
 | [2026-09-17](2026-09-17.md) | feat: S7 committee pre-check flow, granular verdict scale, DDG search fallback, and candidate evidence persistence |
-| [2026-09-16](2026-09-16.md) | feat(web-next): generalize brownfield candidate profile pipeline, fix S1 industry-name display |
+| 2026-09-16 | feat(web-next): generalize brownfield candidate profile pipeline, fix S1 industry-name display |
 | 2026-09-15 | feat(web-next): synergy score human confirmation, list-table standard, S4 advisory and chart fixes |
 | 2026-09-14 | chore: update |
 | 2026-09-13 | feat(restyle): stage linkage strip on every stage screen via StageFrame |
