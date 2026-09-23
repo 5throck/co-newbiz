@@ -78,7 +78,9 @@ export function buildProjectCharter(
     entryScope = "트랙 미결정";
   }
 
-  const name = `${opp?.name ?? "프로젝트"}${route?.sub_track ? ` — ${route.sub_track}` : ""}`;
+  // Display name stays the opportunity name — the deal shape lives in
+  // route_decision.sub_track and charter.subTrack, not in the title.
+  const name = opp?.name ?? "프로젝트";
   const charter: CharterVersion = {
     version: 1,
     built_by: opts.builtBy,
