@@ -133,7 +133,7 @@ Skills used in specific lifecycle phases (from `variant.json` `skill_manifest`):
 | `phase` | Skill used in a lifecycle phase (from `variant.json` `skill_manifest.phases`) |
 | `supersedes` | Supersession — overrides (manual) or decision-record prose labels |
 | `references` | Backtick reference in SKILL.md/agent/ADR body prose, DEC `knowledge_refs[]` naming an ADR, or skill → `term:` node from references/terms-ko.json (ADR-0072) |
-| `cites_skill` | Decision record `skills_used[]` validated against the skill set (ADR-0061 amendment 2026-08-25) |
+| `cites_skill` | Decision record `skills_used[]` and workflow-doc citations (`doc:` nodes, Source 4.8, ticket T-20260923-001) validated against the skill set |
 | `composes_with` | Typed `relates_to` entry — symmetric, used together in the same phase/workflow (ADR-0060 Amendment 3) |
 | `follows` | Typed `relates_to` entry — sequential/ordering relation, no dependency implication (ADR-0060 Amendment 3) |
 | `enables` | Typed `relates_to` entry — this skill's output unlocks another skill/workflow (ADR-0060 Amendment 3) |
@@ -304,6 +304,10 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20260909-05` | decision | — | — | — |
 | `dec:DEC-20260909-06` | decision | — | — | — |
 | `dec:DEC-20260909-07` | decision | — | — | dec:DEC-20260909-06 |
+| `doc:AGENTS.md` | doc | `agent-lifecycle-manager`, `skill-lifecycle-manager` | — | — |
+| `doc:procedures/README.md` | doc | `antitrust-screening`, `brownfield-feasibility`, `regional-incentive-sourcing`, `site-infrastructure-assessment` | — | — |
+| `doc:procedures/schema.yaml` | doc | `financing-plan-review`, `investment-vehicle-structuring`, `jv-structuring`, `proxy-industry-chain`, `strategic-fit-screening` | — | — |
+| `doc:process/flow.spec.yaml` | doc | `waiver-management` | — | — |
 
 ## Korean Term Vocabulary (terms-ko.json)
 

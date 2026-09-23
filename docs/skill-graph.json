@@ -913,6 +913,26 @@
       "layer": "L3"
     },
     {
+      "id": "doc:AGENTS.md",
+      "type": "doc",
+      "layer": "L3"
+    },
+    {
+      "id": "doc:procedures/README.md",
+      "type": "doc",
+      "layer": "L3"
+    },
+    {
+      "id": "doc:procedures/schema.yaml",
+      "type": "doc",
+      "layer": "L3"
+    },
+    {
+      "id": "doc:process/flow.spec.yaml",
+      "type": "doc",
+      "layer": "L3"
+    },
+    {
       "id": "docs-writer",
       "type": "agent",
       "layer": "L3"
@@ -4221,6 +4241,78 @@
       "from": "decision-record",
       "to": "evidence-ledger",
       "source": "prose"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:AGENTS.md",
+      "to": "agent-lifecycle-manager",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:AGENTS.md",
+      "to": "skill-lifecycle-manager",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:procedures/README.md",
+      "to": "antitrust-screening",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:procedures/README.md",
+      "to": "brownfield-feasibility",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:procedures/README.md",
+      "to": "regional-incentive-sourcing",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:procedures/README.md",
+      "to": "site-infrastructure-assessment",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:procedures/schema.yaml",
+      "to": "financing-plan-review",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:procedures/schema.yaml",
+      "to": "investment-vehicle-structuring",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:procedures/schema.yaml",
+      "to": "jv-structuring",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:procedures/schema.yaml",
+      "to": "proxy-industry-chain",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:procedures/schema.yaml",
+      "to": "strategic-fit-screening",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:process/flow.spec.yaml",
+      "to": "waiver-management",
+      "source": "workflow-doc"
     },
     {
       "type": "composes_with",
