@@ -334,7 +334,10 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    width: 320px;
+    /* width: 320px removed 2026-09-23 — the fixed width overflowed
+       .login-panel's content box (384px − 2×36px padding − 1px borders =
+       310px) by 10px, pushing the inputs/button right of center inside the
+       panel (left inset 37px vs right 27px). Width now follows the panel. */
   }
   /* .form-error removed 2026-08-26 — converted to inline Tailwind arbitrary
      value className="text-[color:var(--red-fg)]" (same CSS variable). */
