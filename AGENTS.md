@@ -110,7 +110,17 @@ When leading execution and improvement tasks, PM MUST use the 3-Tier model strat
 
 ---
 
-## Governance
+## §6: Skills
+
+> **Registry SSOT**: all project skills (105+) are registered in the project registry file [SKILLS.md](skills/SKILLS.md) under the skills directory — one row per skill with version/status/owner. This section is a pointer, not a copy: consult the registry for the authoritative list.
+>
+> **Note**: co-newbiz is a standalone-track project slated for variant promotion (`project-to-variant`). Full structural alignment with the variant AGENTS.md skeleton (§1–§7 numbering, common-contract deliverables) happens at promotion; the `## §7: Governance` numbering below is a transitional alignment so the skill-table integrity check can run.
+
+### Skill Resolution
+
+Skill sources resolve in this order: project skill directories under the skills tree (registry: SKILLS.md) → platform mirrors (`.claude/skills/`, `.gemini/skills/`) → global plugin skills. If a higher-priority skill's `metadata.triggers` match the request, use it — do not fall through to overlapping lower-priority skills.
+
+## §7: Governance
 
 - **PM Gateway**: PM is the only agent users may directly invoke. All 40 specialist agents require PM dispatch.
 - **Three-stage review**: every deliverable passes AI 1st (formal) -> AI 2nd (cross-domain, different domain than the author) -> human final (judgement and approval). See "Deal Pipeline Orchestration" below and the `deal-pipeline-orchestration` skill.
