@@ -130,7 +130,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `partner-sourcing-strategy` | 1.1.0 | active | partnership-agent | 2026-08-20 | — | Wave 5.8E (design §9.3 partnership + region/industry groups) — ADR-0031 hard/soft partner-dependency classification |
 | `peer-benchmarking` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G — cross-sectional peer distribution, the other anchor input |
 | `permit-pathway-mapping` | 1.1.0 | active | legal-counsel | 2026-08-23 | — | Wave 5.8H — permit DAG + critical path, strictly separate from certification |
-| `platform-command-lifecycle-manager` | 1.0.2 | active | pm | 2026-05-31 | — | — |
+| `platform-command-lifecycle-manager` | 1.0.3 | active | pm | 2026-09-25 | — | — |
 | `platform-skill-lifecycle-manager` | 1.0.2 | active | pm | 2026-05-31 | — | — |
 | `pmi-planning` | 1.1.0 | active | pmi-agent | 2026-08-23 | — | Wave 5.8D — synthesis skill sequencing the other five M&A special-topics outputs |
 |`policy-and-procedure-governance`|1.0.1| experimental |process-governance-manager|2026-08-23|—|Wave 5.8B — Policy/Procedure authoring, entity addenda and shared/entity/region procedure model|
@@ -222,3 +222,4 @@ Skills registered in the catalog but without a `skills/<name>/` directory in the
 | `verify-authorization` | 1.0.0 | active | security-expert | 2026-06-06 | — | co-security only |
 | `version` | 1.3.0 | active | pm | 2026-06-20 | — | co-deck only |
 | `target-costing-analysis` | 1.0.1 | experimental | process-governance-manager | — | — | Added by fleet resync reconcile backfill (2026-09-22) |
+| `design-foundation` | 1.0.0 | active | architect | 2026-08-30 | — | — |
