@@ -28,6 +28,7 @@
 | `deal-execution-playbook` | L3 | — | — | — | — | — |
 | `debt-and-contingent-liability-simulation` | L3 | valuation-agent | phase4 | certification-transferability (follows), financing-plan-review (composes_with), investment-feasibility-modeling (composes_with), legal-due-diligence (composes_with), management-incentive-review (composes_with), org-readiness-assessment (composes_with), stage-gate-governance (composes_with), technical-due-diligence (composes_with), wacc-input-session (composes_with) | — | — |
 | `decision-record` | L3 | — | — | — | — | — |
+| `design-foundation` | L3 | — | — | accessibility-audit (composes_with), token-usage-lint (composes_with), ui-ux-design-intelligence (enables) | — | — |
 | `documentation-writing` | L3 | — | — | team-builder (composes_with) | — | — |
 | `evidence-ledger` | L3 | — | — | — | — | — |
 | `executive-presentation` | L3 | docs-writer | phase5 | financing-plan-review (composes_with), intra-group-transaction-compliance (composes_with), portfolio-fit-assessment (composes_with), rag-scoring-framework (composes_with), stage-gate-governance (follows), two-tier-approval-chain (composes_with) | — | — |

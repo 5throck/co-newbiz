@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-23T22:53:23.359Z
+**Generated**: 2026-09-25T10:21:54.530Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -9,7 +9,7 @@
 ## Summary
 
 - **Agents**: 41
-- **Skills**: 147
+- **Skills**: 148
 - **Scripts**: 140 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
@@ -105,6 +105,7 @@
 | debt-and-contingent-liability-simulation | 1.1.0 | active | skills/debt-and-contingent-liability-simulation/SKILL.md | workspace | contingent liability, covenant breach test, rate shock, Monte Carlo liability integration, CoC debt acceleration | risk-officer |
 | decision-record | 1.1.0 | active | skills/decision-record/SKILL.md | workspace | decision record, gate ruling, go/no-go decision, escalation decision, record a decision | pm |
 | deployment-and-release | 1.0.0 | active | .claude/skills/deployment-and-release/SKILL.md | both | release deployment, migration rollback, irreversible migration sign-off, rollback drill | release-engineer |
+| design-foundation | 1.0.0 | active | skills/design-foundation/SKILL.md | workspace | design foundation, design principles, design guide, design tokens setup, design decision record | architect |
 | design-lint | 1.0.0 | active | .claude/skills/design-lint/SKILL.md | both | design lint, UI consistency | design-system-agent |
 | documentation-writing | 1.0.3 | active | skills/documentation-writing/SKILL.md | workspace | write documentation, create guide, draft communication, write manual, create tutorial, documentation, technical writing | pm |
 | evidence-ledger | 1.1.0 | active | skills/evidence-ledger/SKILL.md | workspace | evidence ledger, citation ledger, claim verification, source verification, evidence tracking | pm |
@@ -162,7 +163,7 @@
 | partner-sourcing-strategy | 1.1.0 | active | skills/partner-sourcing-strategy/SKILL.md | workspace | partner sourcing, capability gap for a partner, hard partner dependency, JV partner search | partnership-agent |
 | peer-benchmarking | 1.0.0 | active | skills/peer-benchmarking/SKILL.md | workspace | peer benchmarking, comparable company analysis, peer multiple comparison, industry benchmark | financial-analyst |
 | permit-pathway-mapping | 1.1.0 | active | skills/permit-pathway-mapping/SKILL.md | workspace | permit pathway, permit DAG, permit critical path, operating permit requirements | legal-counsel |
-| platform-command-lifecycle-manager | 1.0.2 | active | skills/platform-command-lifecycle-manager/SKILL.md | workspace | create platform command, new .claude command, new .gemini command, platform command lifecycle, command parity, propagate command | pm |
+| platform-command-lifecycle-manager | 1.0.3 | active | skills/platform-command-lifecycle-manager/SKILL.md | workspace | create platform command, new .claude command, new .gemini command, platform command lifecycle, command parity, propagate command | pm |
 | platform-skill-lifecycle-manager | 1.0.2 | active | skills/platform-skill-lifecycle-manager/SKILL.md | workspace | create platform skill, new .claude skill, new .gemini skill, platform skill version, platform skill lifecycle, update platform skill | pm |
 | pmi-planning | 1.1.0 | active | skills/pmi-planning/SKILL.md | workspace | PMI planning, post-merger integration, integration timeline, day-one integration plan | pmi-agent |
 | policy-and-procedure-governance | 1.0.1 | experimental | skills/policy-and-procedure-governance/SKILL.md | workspace | procedure governance, policy procedure, process governance | process-governance-manager |
@@ -235,7 +236,7 @@
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | N/A |
 | archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit.ts | 2.39.0 | scripts/audit.ts | bun |
+| audit.ts | 2.45.0 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.0.0 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
@@ -270,13 +271,13 @@
 | deploy-web.ts | 1.1.0 | scripts/deploy-web.ts | N/A |
 | design-lint.ts | 1.2.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 1.0.0 | scripts/design-lint.ts | N/A |
-| dev-sync.ts | 1.16.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.19.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.1 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
 | driver-tree.ts | 1.0.0 | scripts/co-newbiz/driver-tree.ts | N/A |
 | env-check.ts | 1.1.1 | scripts/co-newbiz/env-check.ts | N/A |
-| evidence-backport-scan.ts | 1.0.0 | scripts/evidence-backport-scan.ts | N/A |
+| evidence-backport-scan.ts | 1.1.0 | scripts/evidence-backport-scan.ts | N/A |
 | extract-copycode.ts | 1.0.0 | scripts/handbook/extract-copycode.ts | N/A |
 | fin-analyze.ts | 1.0.0 | scripts/co-newbiz/fin-analyze.ts | N/A |
 | fin-pipeline.ts | 1.0.0 | scripts/co-newbiz/fin-pipeline.ts | N/A |
@@ -300,7 +301,7 @@
 | hwp-extract.ts | 1.0.0 | scripts/co-newbiz/hwp-extract.ts | N/A |
 | job-worker.ts | 1.0.0 | scripts/co-newbiz/job-worker.ts | N/A |
 | kosis-units.ts | 1.0.1 | scripts/co-newbiz/kosis-units.ts | N/A |
-| lifecycle-sync-audit.ts | 1.15.0 | scripts/lifecycle-sync-audit.ts | js-yaml |
+| lifecycle-sync-audit.ts | 1.17.0 | scripts/lifecycle-sync-audit.ts | js-yaml |
 | lint-instructions.ts | 1.0.0 | scripts/lint-instructions.ts | N/A |
 | lint-server-boundary.ts | 1.0.0 | scripts/co-newbiz/lint-server-boundary.ts | N/A |
 | md-to-ooxml.ts | 1.2.0 | scripts/md-to-ooxml.ts | fs, path |
@@ -334,7 +335,7 @@
 | spec-register.ts | 1.3.0 | scripts/spec-register.ts | N/A |
 | sync-agent-personas.ts | 1.0.1 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
 | sync-md.ts | 1.4.0 | scripts/sync-md.ts | N/A |
-| sync-skill-status.ts | 1.0.1 | scripts/sync-skill-status.ts | N/A |
+| sync-skill-status.ts | 1.1.0 | scripts/sync-skill-status.ts | N/A |
 | sync-skills.ts | 1.8.0 | scripts/sync-skills.ts | N/A |
 | team-builder.ts | 1.4.0 | scripts/team-builder.ts | N/A |
 | test-runner.ts | 1.6.0 | scripts/test-runner.ts | fs, os, path |
@@ -346,7 +347,7 @@
 | validate-doc-folder.ts | 1.2.0 | scripts/validate-doc-folder.ts | fs, path |
 | validate-docs-links.ts | 1.1.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | N/A |
-| validate-md-language.ts | 1.11.0 | scripts/validate-md-language.ts | fs |
+| validate-md-language.ts | 1.12.0 | scripts/validate-md-language.ts | fs |
 | validate-model-registry.ts | 1.4.0 | scripts/validate-model-registry.ts | N/A |
 | validate-nav.ts | 1.0.0 | scripts/handbook/validate-nav.ts | N/A |
 | validate-pm-extends.ts | 0.3.1 | scripts/validate-pm-extends.ts | N/A |
@@ -354,11 +355,11 @@
 | validate-process.ts | 1.0.0 | scripts/validate-process.ts | js-yaml |
 | validate-raci.ts | 1.2.0 | scripts/validate-raci.ts | js-yaml |
 | validate-skills.ts | 1.5.1 | scripts/validate-skills.ts | N/A |
-| validate-templates.ts | 1.38.1 | scripts/validate-templates.ts | js-yaml |
+| validate-templates.ts | 1.45.0 | scripts/validate-templates.ts | js-yaml |
 | validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | N/A |
 | verify-agent-deliverables.ts | 1.0.1 | scripts/verify-agent-deliverables.ts | fs |
 | verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |
-| verify-platform-lifecycle.ts | 1.1.3 | scripts/verify-platform-lifecycle.ts | N/A |
+| verify-platform-lifecycle.ts | 1.2.0 | scripts/verify-platform-lifecycle.ts | N/A |
 | verify-readme-sync.ts | 1.4.0 | scripts/verify-readme-sync.ts | bun, fs, path |
 | verify-scripts.ts | 1.8.0 | scripts/verify-scripts.ts | fs, path |
 | verify-skill-graph.ts | 1.6.0 | scripts/verify-skill-graph.ts | N/A |
@@ -387,7 +388,7 @@
 **Checked**: Claude (.claude/) vs Gemini (.gemini/)
 
 - **Commands with parity**: 8 / 8
-- **Skills with parity**: 43 / 147 (common-template skills are parity-exempt)
+- **Skills with parity**: 43 / 148 (common-template skills are parity-exempt)
 
 ---
 
