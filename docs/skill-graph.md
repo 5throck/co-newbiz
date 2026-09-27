@@ -308,6 +308,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20260909-06` | decision | — | — | — |
 | `dec:DEC-20260909-07` | decision | — | — | dec:DEC-20260909-06 |
 | `doc:AGENTS.md` | doc | `agent-lifecycle-manager`, `skill-lifecycle-manager` | — | — |
+| `doc:CODEX.md` | doc | `meeting-facilitation` | — | — |
 | `doc:procedures/README.md` | doc | `antitrust-screening`, `brownfield-feasibility`, `regional-incentive-sourcing`, `site-infrastructure-assessment` | — | — |
 | `doc:procedures/schema.yaml` | doc | `financing-plan-review`, `investment-vehicle-structuring`, `jv-structuring`, `proxy-industry-chain`, `strategic-fit-screening` | — | — |
 | `doc:process/flow.spec.yaml` | doc | `waiver-management` | — | — |
