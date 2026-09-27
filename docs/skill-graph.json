@@ -933,6 +933,11 @@
       "layer": "L3"
     },
     {
+      "id": "doc:CODEX.md",
+      "type": "doc",
+      "layer": "L3"
+    },
+    {
       "id": "doc:procedures/README.md",
       "type": "doc",
       "layer": "L3"
@@ -4320,6 +4325,12 @@
       "type": "cites_skill",
       "from": "doc:AGENTS.md",
       "to": "skill-lifecycle-manager",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:CODEX.md",
+      "to": "meeting-facilitation",
       "source": "workflow-doc"
     },
     {
