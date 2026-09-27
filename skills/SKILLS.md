@@ -121,7 +121,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `mcp-server-integration` | 1.0.0 | active | backend-engineer | 2026-08-20 | — | Wave 5.8J — ADR-0011 REST-only, enforced by the real bun:test DB-import scan |
 | `meeting` | 1.4.1 | active | pm | 2026-09-13 | — | — |
 | `committee-deliberation` | 1.6.0 | active | pm | 2026-09-13 | — | renamed from meeting-facilitation 1.5.0 — engine-run committee deliberation (ADR-0096/0097), distinct from the common meeting-facilitation flow |
-| `meeting-facilitation` | 1.4.3 | active | pm | 2026-09-05 | — | adopted from templates/common 1.4.1 — common collaborative meeting flow; /meeting command |
+| `meeting-facilitation` | 1.4.4 | active | pm | 2026-09-26 | — | adopted from templates/common 1.4.1 — common collaborative meeting flow; /meeting command |
 | `monte-carlo-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8G — ADR-0026 seeded, deterministic `python/monte_carlo.py` P50/P95 NPV |
 | `notification-channel-management` | 1.0.0 | active | sre | 2026-08-20 | — | Wave 5.8J — real watch_rule/notification schema, channel/bundle/severity discipline |
 | `observability-and-alerting` | 1.0.0 | active | sre | 2026-08-20 | — | Wave 5.8K — platform-health counterpart to continuous-monitoring-and-alerting |
@@ -222,4 +222,4 @@ Skills registered in the catalog but without a `skills/<name>/` directory in the
 | `verify-authorization` | 1.0.0 | active | security-expert | 2026-06-06 | — | co-security only |
 | `version` | 1.3.0 | active | pm | 2026-06-20 | — | co-deck only |
 | `target-costing-analysis` | 1.0.1 | experimental | process-governance-manager | — | — | Added by fleet resync reconcile backfill (2026-09-22) |
-| `design-foundation` | 1.0.0 | active | architect | 2026-08-30 | — | — |
+| `design-foundation` | 1.1.0 | active | architect | 2026-09-26 | — | — |
