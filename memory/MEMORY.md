@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-27](2026-09-27.md) | chore(upgrade): template sync v0.7.0 (auto-release 2026-09-27) |
 | [2026-09-26](2026-09-26.md) | docs(agents): add/normalize §6 Skills section and §7 alignment (workspace audit remediation) |
 | [2026-09-25](2026-09-25.md) | chore(upgrade): template sync 2026-09-25 — deliver audit helper chain (Design Gate repair) |
 | [2026-09-24](2026-09-24.md) | docs(adr): add promotion naming rule (ADR-0144) and sync/engine mutual exclusion (ADR-0145) |
@@ -12,9 +13,9 @@
 | [2026-09-21](2026-09-21.md) | fix(skills): complete handbook v0.6.0 delivery — Korean reference files |
 | [2026-09-20](2026-09-20.md) | feat(process): add DEG stage-alignment adapter (ADR-0083) — process/stages.yaml + stage-aliases.yaml, _validate.ts SA-1..SA-4 (PR1 of 2) |
 | [2026-09-20](2026-09-20.md) | chore: update |
-| [2026-09-19](2026-09-19.md) | chore(upgrade): template upgrade — ADR-0080 policy delivery |
+| 2026-09-19 | chore(upgrade): template upgrade — ADR-0080 policy delivery |
 | 2026-09-18 | chore: update |
-| [2026-09-19](2026-09-19.md) | merge origin/main: resolve spec registry, ADR index and skill-review conflicts |
+| 2026-09-19 | merge origin/main: resolve spec registry, ADR index and skill-review conflicts |
 | 2026-09-18 | chore: update |
 | 2026-09-18 | feat: standalone monte carlo simulation engine with GPU/CPU device layer and S8 generator bridge |
 | 2026-09-17 | feat: S7 committee pre-check flow, granular verdict scale, DDG search fallback, and candidate evidence persistence |
