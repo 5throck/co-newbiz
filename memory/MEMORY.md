@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-09-29](2026-09-29.md) | chore(upgrade): template sync v0.8.0 (auto-release 2026-09-29) |
 | [2026-09-28](2026-09-28.md) | docs(governance): backfill v0.7.0 upgrade design record + CHANGELOG entry (PRs #418-#420) |
 | [2026-09-27](2026-09-27.md) | chore(upgrade): template sync v0.7.0 (auto-release 2026-09-27) |
 | [2026-09-26](2026-09-26.md) | docs(agents): add/normalize §6 Skills section and §7 alignment (workspace audit remediation) |
@@ -11,7 +12,7 @@
 | [2026-09-24](2026-09-24.md) | docs(adr): add promotion naming rule (ADR-0144) and sync/engine mutual exclusion (ADR-0145) |
 | [2026-09-23](2026-09-23.md) | --help |
 | [2026-09-22](2026-09-22.md) | chore: upgrade template delivery — fleet resync wave 2 |
-| [2026-09-21](2026-09-21.md) | fix(skills): complete handbook v0.6.0 delivery — Korean reference files |
+| 2026-09-21 | fix(skills): complete handbook v0.6.0 delivery — Korean reference files |
 | 2026-09-20 | feat(process): add DEG stage-alignment adapter (ADR-0083) — process/stages.yaml + stage-aliases.yaml, _validate.ts SA-1..SA-4 (PR1 of 2) |
 | 2026-09-20 | chore: update |
 | 2026-09-19 | chore(upgrade): template upgrade — ADR-0080 policy delivery |
