@@ -223,3 +223,4 @@ Skills registered in the catalog but without a `skills/<name>/` directory in the
 | `version` | 1.3.0 | active | pm | 2026-06-20 | — | co-deck only |
 | `target-costing-analysis` | 1.0.1 | experimental | process-governance-manager | — | — | Added by fleet resync reconcile backfill (2026-09-22) |
 | `design-foundation` | 1.1.0 | active | architect | 2026-09-26 | — | — |
+| `service-design` | 1.1.0 | active | pm | 2026-09-27 | — | — |

@@ -87,6 +87,7 @@
 | `scenario-planning` | L3 | market-intelligence-agent, quant-methodologist | phase3 | competitive-intelligence (composes_with), financial-statement-analysis (follows), historical-financial-analysis (follows), proxy-industry-chain (composes_with), proxy-industry-chain (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with), value-chain-linkage-analysis (composes_with) | — | — |
 | `script-lifecycle-manager` | L3 | — | — | — | — | — |
 | `security-scan` | L3 | — | — | — | — | — |
+| `service-design` | L3 | — | — | accessibility-audit (follows), token-usage-lint (follows), ui-ux-design-intelligence (follows) | — | — |
 | `site-infrastructure-assessment` | L3 | greenfield-agent | phase1, phase2, phase3 | community-partnership-planning (composes_with), investment-feasibility-modeling (follows), regional-incentive-sourcing (follows), stage-gate-governance (composes_with), strategic-fit-screening (composes_with), talent-pipeline-planning (composes_with), unit-conversion-calibration (composes_with) | — | — |
 | `site-visit-protocol` | L3 | technical-dd-agent | phase4 | stage-gate-governance (composes_with), talent-pipeline-planning (follows), technical-due-diligence (composes_with) | — | — |
 | `skill-lifecycle-manager` | L3 | — | — | script-lifecycle-manager (composes_with) | — | — |
