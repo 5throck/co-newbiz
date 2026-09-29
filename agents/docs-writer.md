@@ -5,15 +5,17 @@ description: "Document formatting and language-policy enforcement across all fou
 formal_name: Docs Writer Agent
 status: active
 version: "1.0.0"
-last_updated: "2026-09-17"
+last_updated: "2026-09-30"
 tier:
   claude: medium
   gemini: medium
+  antigravity: medium
+  gemini-cli: medium
 model: inherit
 lifecycle:
   phase: production
   created: "2026-09-17"
-  last_updated: "2026-09-17"
+  last_updated: "2026-09-30"
   governance: docs/lifecycle/agents/docs-writer.md
 ---
 

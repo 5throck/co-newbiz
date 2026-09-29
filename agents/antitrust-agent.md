@@ -4,15 +4,17 @@ description: "Antitrust and merger-control review: market definition, HHI calcul
 formal_name: Antitrust Agent
 status: active
 version: "1.0.0"
-last_updated: "2026-09-19"
+last_updated: "2026-09-30"
 tier:
   claude: high
   gemini: high
+  antigravity: high
+  gemini-cli: high
 model: inherit
 lifecycle:
   phase: production
   created: "2026-09-19"
-  last_updated: "2026-09-19"
+  last_updated: "2026-09-30"
   governance: docs/lifecycle/agents/antitrust-agent.md
 ---
 

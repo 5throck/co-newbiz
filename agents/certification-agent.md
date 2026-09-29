@@ -4,15 +4,17 @@ description: "Certification and regulatory response, kept structurally distinct 
 formal_name: Certification Agent
 status: active
 version: "1.0.0"
-last_updated: "2026-09-17"
+last_updated: "2026-09-30"
 tier:
   claude: high
   gemini: high
+  antigravity: high
+  gemini-cli: high
 model: inherit
 lifecycle:
   phase: production
   created: "2026-09-17"
-  last_updated: "2026-09-17"
+  last_updated: "2026-09-30"
   governance: docs/lifecycle/agents/certification-agent.md
 ---
 

@@ -2,9 +2,10 @@
 extends: ../../../agents/pm.md
 name: pm
 formal_name: Project Manager (PM) Agent
+role: Orchestrates multi-agent workflows and enforces the PM Gateway quality gates
 status: active
 version: "1.2.0"
-last_updated: "2026-09-18"
+last_updated: "2026-09-30"
 tier:
   claude: medium
   gemini: medium

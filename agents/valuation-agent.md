@@ -4,15 +4,17 @@ description: "DCF/NPV/IRR/Payback/DSCR modeling, WACC assembly from live and use
 formal_name: Valuation Agent
 status: active
 version: "1.0.0"
-last_updated: "2026-09-19"
+last_updated: "2026-09-30"
 tier:
   claude: high
   gemini: high
+  antigravity: high
+  gemini-cli: high
 model: inherit
 lifecycle:
   phase: production
   created: "2026-09-19"
-  last_updated: "2026-09-19"
+  last_updated: "2026-09-30"
   governance: docs/lifecycle/agents/valuation-agent.md
 ---
 

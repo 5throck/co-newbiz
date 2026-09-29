@@ -4,15 +4,17 @@ description: "Post-acquisition customer attrition risk: change-of-control clause
 formal_name: Customer Retention Agent
 status: active
 version: "1.0.0"
-last_updated: "2026-09-17"
+last_updated: "2026-09-30"
 tier:
   claude: medium
   gemini: medium
+  antigravity: medium
+  gemini-cli: medium
 model: inherit
 lifecycle:
   phase: production
   created: "2026-09-17"
-  last_updated: "2026-09-17"
+  last_updated: "2026-09-30"
   governance: docs/lifecycle/agents/customer-retention-agent.md
 ---
 
