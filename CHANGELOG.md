@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **[2026-09-30]**: docs(context): **Fill scaffold placeholders and add research References.** Filled the placeholders in `docs/context.md` and `docs/project.md` (clears the audit "Live context placeholder check" WARN) and added a `## References` section to `docs/research/energy-power-profiles-2026-09.md` and `docs/research/machinery-defense-digital-profiles-2026-09.md`, consolidating citations already present in the bodies (clears the "Research files missing ## References" WARN). `docs/context.md` is pipeline-maintained, so a later template sync may overwrite the placeholder edits.
 - **[2026-09-30]**: fix(scripts): **Project review 2026-09-30 validator remediations.** `validate-templates.ts` 1.50.2 returns early when `templates/common` is absent (project context, not the L0 workspace); `agent-lifecycle-audit.ts` 1.4.0 discovers every `agents/*.md` and accepts a role or a description; `verify-scripts.ts` 1.10.0 requires exactly 8 columns per `scripts/SCRIPTS.md` registry row (new `tests/unit/script-registry-audit.test.ts`), and the `regenerate-agents-md.ts` row is corrected (layer L0+L1). Baseline recorded in `docs/reports/2026-09-30-project-review-baseline.md`.
 - **[2026-09-30]**: chore(agents): **Agent frontmatter refresh across 41 `agents/*.md`.** Added `tier.gemini-cli` / `tier.antigravity` to 39 agents, refreshed `last_updated`, added the missing role to `pm.md`, and regenerated `docs/VERSION_MANIFEST.md`.
 

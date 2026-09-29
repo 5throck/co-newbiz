@@ -79,3 +79,17 @@ keep the old file names as historical pointers into the original survey.
   분류 주의사항(시설관리 N74·기계수리 병행 가능)을 name_ko에 명시했다.
 - 군수·방산 관련 서술(드론·잠수함·정찰위성)은 공개 보도·국가 계획 기반이며,
   구체 수주 규모는 방위사업청 공시 시점 기준으로 확인해야 한다.
+
+## References
+
+Consolidated from the citations already present in the sections above (no new sources added). Items without a URL are cited by document name only and remain to be verified against the primary publication.
+
+- Ministry of Economy and Finance — construction machinery sales trend survey: https://www.moef.go.kr (accessed 2026-09-09).
+- Korea Construction Equipment Manufacturers Association (KOCEMA) — export/import trends: https://www.kocema.org (accessed 2026-09-09).
+- IFR World Robotics 2024/2025: https://ifr.org (accessed 2026-09-09).
+- KSIC-11 code 31312 definition: https://www.categoryofbusiness.com/ksic/11/31312 ; https://upjong.co.kr/korean-standard-industry-classification/ksic-31312/ (accessed 2026-09-09).
+- KSIC-11 code 30111 definition (superseded; see Correction section): https://www.categoryofbusiness.com/ksic/11/30111 (accessed 2026-09-09).
+- Clarksons Research — orderbook, newbuilding price index, freight statistics: https://www.clarksons.com (accessed 2026-09-09).
+- KISA — Act on Promotion of Information Protection Industry, security-operations specialist designation: https://www.kisa.or.kr/1040804 (accessed 2026-09-09).
+- SPRi — information services KSIC classification study: https://spri.kr/posts/view/22346?code=stat_sw_classify (accessed 2026-09-09).
+- Named in the body without a URL: EU Stage V and US EPA Tier 4 Final rules; US IIJA (2021); ISO 10218 and ISO/TS 15066; Aviation Safety Act; Space Development Promotion Act (2023-06); NIST SP 800-207; EU NIS2 and DORA; ISMS-P certification; IMO EEXI/CII and 2023 GHG strategy; EU ETS maritime and FuelEU Maritime.

@@ -1,12 +1,12 @@
-# [Project Name] — Project Context
+# co-newbiz — Project Context
 
 > Shared reference for all AI tools (Claude Code, Gemini CLI, Antigravity).
 > Tool-specific behaviors: CLAUDE.md (Claude Code), GEMINI.md (Gemini/Antigravity).
 > Variant-specific configuration (tech stack, agents, skills, scripts, workflow):
->   → docs/<variant-name>.context.md
+>   → the 'Co Newbiz Context' section of CLAUDE.md (no docs/*.context.md variant file exists in this project)
 >
 > ⚠️ This file is pipeline-maintained — make no hand edits after project creation.
->    All project-specific changes belong in docs/<variant-name>.context.md
+>    All project-specific changes belong in CLAUDE.md 'Co Newbiz Context' or docs/project.md
 
 ---
 

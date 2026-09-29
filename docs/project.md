@@ -6,8 +6,8 @@
 
 ## Project Overview
 
-- **Description**: TODO(project-overview): [One-sentence description of what this project does and who it's for.]
-- **Type**: TODO(project-overview): [TBD] — web | cli | api | mcp
+- **Description**: AI-agent team and system for new-business review (Green Field and Brown Field/M&A) that owns the governance documents, implements them as a system, and runs deal reviews for human reviewers and approvers.
+- **Type**: web (Next.js app in `app/web-next`; also ships an MCP server at `mcp/co-newbiz/index.ts`, configured in `.mcp.json`)
 - **Status**: Active development
 
 ---
