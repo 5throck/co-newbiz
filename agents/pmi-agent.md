@@ -4,15 +4,17 @@ description: "Post-merger integration planning: synergy realization tracking and
 formal_name: PMI Agent
 status: active
 version: "1.0.0"
-last_updated: "2026-09-19"
+last_updated: "2026-09-30"
 tier:
   claude: high
   gemini: high
+  antigravity: high
+  gemini-cli: high
 model: inherit
 lifecycle:
   phase: production
   created: "2026-09-19"
-  last_updated: "2026-09-19"
+  last_updated: "2026-09-30"
   governance: docs/lifecycle/agents/pmi-agent.md
 ---
 

@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **[2026-09-30]**: fix(scripts): **Project review 2026-09-30 validator remediations.** `validate-templates.ts` 1.50.2 returns early when `templates/common` is absent (project context, not the L0 workspace); `agent-lifecycle-audit.ts` 1.4.0 discovers every `agents/*.md` and accepts a role or a description; `verify-scripts.ts` 1.10.0 requires exactly 8 columns per `scripts/SCRIPTS.md` registry row (new `tests/unit/script-registry-audit.test.ts`), and the `regenerate-agents-md.ts` row is corrected (layer L0+L1). Baseline recorded in `docs/reports/2026-09-30-project-review-baseline.md`.
+- **[2026-09-30]**: chore(agents): **Agent frontmatter refresh across 41 `agents/*.md`.** Added `tier.gemini-cli` / `tier.antigravity` to 39 agents, refreshed `last_updated`, added the missing role to `pm.md`, and regenerated `docs/VERSION_MANIFEST.md`.
+
 - **[2026-09-29]**: chore(upgrade): **template upgrade to v0.8.1 — Claude 5.5 models.** Registry High/Medium tiers move to `claude-opus-5-5` / `claude-sonnet-5-5`; AGENTS.md `tier-model-mapping` blocks refreshed (now delivered by the fixed upstream managed-block merge); agent tier lines carry the tier word only (stale `# <model-id>` comments removed — the registry resolves models).
 - **[2026-09-28]**: chore(upgrade): **template upgrade — `Hermes.md` renamed to `HERMES.md` (upstream ADR-0093 Amendment 2).** Hermes Agent discovers its instruction file only as `.hermes.md`/`HERMES.md`, so the mixed-case file was skipped on case-sensitive Linux/Docker hosts. Also delivers the current template scripts, skills, and `.gitignore` (generated `.cursorrules`/`.clauderules` now ignored).
 

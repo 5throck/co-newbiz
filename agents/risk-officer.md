@@ -4,15 +4,17 @@ description: "Red-team function. Audits for optimism bias, enforces base-rate ch
 formal_name: Risk Officer
 status: active
 version: "1.0.0"
-last_updated: "2026-09-19"
+last_updated: "2026-09-30"
 tier:
   claude: high
   gemini: high
+  antigravity: high
+  gemini-cli: high
 model: inherit
 lifecycle:
   phase: production
   created: "2026-09-19"
-  last_updated: "2026-09-19"
+  last_updated: "2026-09-30"
   governance: docs/lifecycle/agents/risk-officer.md
 ---
 

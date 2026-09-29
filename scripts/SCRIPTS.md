@@ -115,7 +115,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `co-newbiz/adr-new.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `adr:new` — scaffolds docs/adr/NNNN-<slug>.md from the next free number with the workspace section skeleton; refuses a duplicate title instead of auto-bumping) | —|
 | `co-newbiz/scorecard-rollup.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, `scorecard:rollup` — one review cycle's portfolio scorecard rollup as JSON via venture-scorecard.repository getPortfolioRollup: bifurcated financial/strategic sections, venture_class rollup, insufficient_evidence exceptions, run/cycle provenance; ADR-0059 E.4 link 2, group-operator CLI surface, read-only) | —|
 | `agent-delete.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
-| `agent-lifecycle-audit.ts` | L0 | 1.3.1 | active | —| —| L0+L1 | —|
+| `agent-lifecycle-audit.ts` | L0 | 1.4.0 | active | v1.4.0: discovers all agents/*.md; agent passes with a role or a description | —| L0+L1 | —|
 | `agent-list.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
@@ -177,7 +177,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `verify-platform-lifecycle.ts` | L0 | 1.6.0 | active | —| —| L0+L1 | —|
 | `verify-readme-sync.ts` | L0 | 1.4.1 | active | —| —| L0+L1 | —|
 | `verify-skill-graph.ts` | L0 | 1.6.0 | active | —| —| L0+L1 | —|
-| `verify-scripts.ts` | L0 | 1.9.0 | active | —| —| L0+L1 | —|
+| `verify-scripts.ts` | L0 | 1.10.0 | active | v1.10.0: registry column-count check | —| L0+L1 | —|
 | `verify-skills.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `validate-pm-extends.ts` | L0 | 0.3.1 | active | —| —| L0+L1 | —|
 | `validate-decisions.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
@@ -212,7 +212,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
 | `resolve-variants.ts` | L0 | 1.0.3 | active | —| —| L0+L1 | —|
 | `validate-variant-readiness.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `validate-templates.ts` | L0 | 1.50.1 | active | —| —| L0+L1 | —|
+| `validate-templates.ts` | L0 | 1.50.2 | active | v1.50.2: skips cleanly when no templates/common (project context) | —| L0+L1 | —|
 | `helpers/upgrade-versions.ts` | L0+L1 | 1.0.2 | active | —| —| L0+L1 | —|
 | `lib/propagation-map-schema.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `lib/constitution-scrub.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
@@ -246,7 +246,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `helpers/resolve-pm-stub.ts` | L0 | 1.2.0 | active | v1.2.0 (registry & platform-policy completeness batch, spec docs/designs/2026-09-25-registry-policy-completeness-design.md R2.1): pure, read-only `composeResolvedAgentContent(agentPath, commonAgentPath, variant, opts)` returns exactly the content `resolveAgentExtendsStub` would write, without touching the filesystem (validators must not mutate the tree they audit); the resolver consumes the compose path so one merge implementation exists (in-place writer stays for the new-project/adopt-project delivery paths). Prior: v1.1.0 (T-20260924-003, spec docs/designs/2026-09-25-inventory-decisions-batch-design.md R2.2): generic `resolveAgentExtendsStub(agentPath, commonAgentPath, variant, opts)` wrapper — the pm canonical-prose check (H12) moves behind an injected `opts.isCanonicalStubBody` (pm passes isCanonicalPmStubBody; the empty-body i18n-specialist stubs skip it); `resolvePmExtendsStub` stays as a thin back-compat wrapper. Prior: Shared agents/pm.md normalization — ADR-0033 extends-stub resolution against the L1 body (H12 non-canonical prose flag) + L1-B metadata strip with project-local lifecycle regeneration; extracted verbatim from new-project §2.3b/§2.5, shared with the adopt-project settling pass | —| L0+L1 | —|
 | `helpers/skills-registry.ts` | L0 | 1.2.0 | active | v1.2.0 (registry-policy-completeness batch W5, spec docs/designs/2026-09-25-registry-policy-completeness-design.md R5.1): registry auto-sync machinery — collectRegistryDrift, listSkillDirs, splitRootRegistry, collectCatalogEntries, collectCatalogDrift, syncVariantExclusiveCatalog, syncGenericRegistry, collectWorkspaceRegistryFindings (pure compute shared by the sync CLI, validate-templates VA-08, and unit tests; the root Variant-Exclusive catalog reconciles via a dedicated path — its 7th column is the owner-variant list, not notes). Prior: v1.1.0 (T-20260924-008, spec docs/designs/2026-09-24-skills-registry-overlay-reconcile-design.md): adds collectDeliveredSkills + pruneSkillRegistryRows (fresh-scaffold reconcile half); extractFrontmatterVersionAndReviewed moved in verbatim from upgrade-project.ts. v1.0.0: parse/reconcile project skills/SKILLS.md (T-20260922-001) | —| L0+L1 | —|
 | `lib/platforms.ts` | L0 | 1.1.0 | active | Platform-list SSOT constants (PLATFORM_SKILL_BASES, PLATFORM_MIRROR_DIRS); Step 1 of the platform-parity program (spec: docs/designs/2026-09-24-platform-ssot-constant-design.md) | —| L0+L1 | —|
-| `regenerate-agents-md.ts` | L0 | 1.3.0 | active | v1.2.0: tier extraction strips inline YAML comments (`medium # model-id` leaked into roster rows). | —| —| L0 | —|
+| `regenerate-agents-md.ts` | L0 | 1.3.0 | active | v1.2.0: tier extraction strips inline YAML comments (`medium # model-id` leaked into roster rows). | —| L0+L1 | —|
 
 ---
 

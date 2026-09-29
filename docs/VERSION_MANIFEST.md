@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-29T04:08:26.803Z
+**Generated**: 2026-09-29T22:58:44.356Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -37,7 +37,7 @@
 | greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-09-21 |
 | group-review-agent | agents/group-review-agent.md | high | inherit | 2026-09-21 |
 | hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-09-21 |
-| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-25 |
+| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-09-29 |
 | incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-09-21 |
 | industry-lead | agents/industry-lead.md | high | inherit | 2026-09-21 |
 | infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-09-21 |
@@ -185,7 +185,7 @@
 | adr-new.ts | 1.0.0 | scripts/co-newbiz/adr-new.ts | N/A |
 | agent-create.ts | 1.0.1 | scripts/agent-create.ts | N/A |
 | agent-delete.ts | 1.0.1 | scripts/agent-delete.ts | N/A |
-| agent-lifecycle-audit.ts | 1.3.1 | scripts/agent-lifecycle-audit.ts | N/A |
+| agent-lifecycle-audit.ts | 1.4.0 | scripts/agent-lifecycle-audit.ts | N/A |
 | agent-list.ts | 1.1.0 | scripts/agent-list.ts | N/A |
 | agent-verify.ts | 1.0.2 | scripts/agent-verify.ts | N/A |
 | analyze-git-history.ts | 1.0.2 | scripts/analyze-git-history.ts | child_process |
@@ -313,13 +313,13 @@
 | validate-process.ts | 1.0.0 | scripts/validate-process.ts | js-yaml |
 | validate-raci.ts | 1.2.0 | scripts/validate-raci.ts | js-yaml |
 | validate-skills.ts | 1.5.1 | scripts/validate-skills.ts | N/A |
-| validate-templates.ts | 1.50.1 | scripts/validate-templates.ts | js-yaml |
+| validate-templates.ts | 1.50.2 | scripts/validate-templates.ts | js-yaml |
 | validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | N/A |
 | verify-agent-deliverables.ts | 1.0.1 | scripts/verify-agent-deliverables.ts | fs |
 | verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |
 | verify-platform-lifecycle.ts | 1.6.0 | scripts/verify-platform-lifecycle.ts | N/A |
 | verify-readme-sync.ts | 1.4.1 | scripts/verify-readme-sync.ts | bun, fs, path |
-| verify-scripts.ts | 1.9.0 | scripts/verify-scripts.ts | fs, path |
+| verify-scripts.ts | 1.10.0 | scripts/verify-scripts.ts | fs, path |
 | verify-skill-graph.ts | 1.6.0 | scripts/verify-skill-graph.ts | N/A |
 | verify-skills.ts | 1.3.0 | scripts/verify-skills.ts | N/A |
 | watch-run.ts | 1.1.0 | scripts/co-newbiz/watch-run.ts | bun:sqlite |
