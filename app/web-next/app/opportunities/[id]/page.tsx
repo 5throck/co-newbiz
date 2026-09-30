@@ -274,7 +274,7 @@ export function OpportunityDetail() {
                   {canAct && <button type="button" className="btn-danger btn-sm ml-1" onClick={() => removeFactor("opportunity", i, f)}>삭제</button>}
                 </li>
               ))}
-              {(factors?.opportunity.length ?? 0) === 0 && <li className="text-[color:var(--muted-fg)]">자동 도출 또는 수동 등록하세요.</li>}
+              {(factors?.opportunity.length ?? 0) === 0 && <li className="text-[color:var(--muted-fg)]">{canAct ? "자동 도출 또는 수동 등록하세요." : "아직 등록된 요인이 없습니다."}</li>}
             </ul>
           </div>
           <div className="chart-half sizing-grade-card">
@@ -286,7 +286,7 @@ export function OpportunityDetail() {
                   {canAct && <button type="button" className="btn-danger btn-sm ml-1" onClick={() => removeFactor("risk", i, f)}>삭제</button>}
                 </li>
               ))}
-              {(factors?.risk.length ?? 0) === 0 && <li className="text-[color:var(--muted-fg)]">자동 도출 또는 수동 등록하세요.</li>}
+              {(factors?.risk.length ?? 0) === 0 && <li className="text-[color:var(--muted-fg)]">{canAct ? "자동 도출 또는 수동 등록하세요." : "아직 등록된 요인이 없습니다."}</li>}
             </ul>
           </div>
         </div>

@@ -110,7 +110,7 @@ export default function CompanyFinancialsPage() {
             <h3 className="sizing-step-title">재무실적 <span className="inline-block rounded-full px-2 py-0.5 text-[0.68rem] font-bold whitespace-nowrap bg-[color:var(--success-bg)] text-[color:var(--success)]">live · 인용</span> <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 단위 억원 · DART 연결재무제표</span></h3>
             {accounts.length === 0 ? (
               <div>
-                <p className="text-[color:var(--muted-fg)]">재무 fact가 없습니다 — 아래 동기화 버튼으로 DART에서 5개 회계연도 실적을 가져오세요.</p>
+                <p className="text-[color:var(--muted-fg)]">{canAct ? "재무 fact가 없습니다 — 아래 동기화 버튼으로 DART에서 5개 회계연도 실적을 가져오세요." : "아직 수집된 재무 데이터가 없습니다."}</p>
                 {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer mt-2" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
               </div>
             ) : (
