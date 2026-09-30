@@ -12,8 +12,8 @@
 // (판정 저장)로 확정된다. 저장 경로는 LLM을 전혀 모른다.
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../../lib/auth.ts";
-import { forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
+import { notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../../../lib/llm.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "../../../../../../../lib/web-research.ts";
 import { screeningItems, insertTargetEvidence } from "../../../../../../../lib/brownfield-targets.ts";
@@ -91,7 +91,8 @@ export function parseScreeningDrafts(
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "판정 초안 생성은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "판정 초안 생성은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId, targetId } = await params;
   const db = getDb();
   const opp = db

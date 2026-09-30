@@ -1,8 +1,8 @@
 // S7 — Short List 승격 (재무·기술 평가 전 항목 판정 완료가 조건 — 2026-09-15 사용자 결정: knock-out 게이트 대체).
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { resolveOrCreateCompany, type TargetRow } from "../../../../../../../lib/brownfield-targets.ts";
 import { computeEvalScore, targetEvalStates } from "../../../../../../../lib/brownfield-eval-criteria.ts";
 
@@ -11,7 +11,8 @@ const now = () => new Date().toISOString();
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "Short List 승격은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Short List 승격은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as { rank?: number; universe_note?: string; gate_evaluation_id?: string } | null;
   const db = getDb();

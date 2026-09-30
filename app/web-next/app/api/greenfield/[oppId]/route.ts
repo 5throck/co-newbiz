@@ -2,8 +2,8 @@
 import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
-import { authenticate } from "../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../lib/envelope.ts";
 
 const now = () => new Date().toISOString();
 
@@ -30,7 +30,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "역량 평가 저장은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "역량 평가 저장은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId } = await params;
   // ADR-0136: capability_gaps는 더 이상 이 라우트에서 받지 않는다 — 필요 역량은
   // 오직 S3 레지스터(/api/opportunities/[id]/capability-gap)에만 기록된다.

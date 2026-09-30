@@ -1,7 +1,7 @@
 // POST /api/companies/[companyId]/analyze — 회사(md_company) LLM 프로파일 분석 실행
 // (일반화된 company-profile-pipeline, 2026-09-15). 재분석 시 버전+1로 누적.
-import { authenticate } from "../../../../../lib/auth.ts";
-import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { resolveCompanySubject, startCompanyProfilePipeline } from "../../../../../lib/company-profile-pipeline.ts";
 import { insertTargetEvidence, targetIdsForCompany } from "../../../../../lib/brownfield-targets.ts";
@@ -10,7 +10,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "프로파일 분석은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "프로파일 분석은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { companyId } = await params;
   const db = getDb();
   const company = db.query("SELECT id, name_ko FROM md_company WHERE id = ?").get(companyId) as { id: string; name_ko: string } | null;

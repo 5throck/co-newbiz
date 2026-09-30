@@ -48,7 +48,7 @@ async function loginCookie(userId: string, password: string): Promise<string> {
   return (res.headers.getSetCookie()[0] ?? "").split(";")[0];
 }
 
-let rootCookie: string;
+let analystCookie: string;
 
 async function waitFor<T>(fn: () => T | null | undefined, timeoutMs = 5000): Promise<T> {
   const deadline = Date.now() + timeoutMs;
@@ -62,24 +62,24 @@ async function waitFor<T>(fn: () => T | null | undefined, timeoutMs = 5000): Pro
 
 /** 그룹 1개 + 계열사 1개를 API로 만들고 member id를 돌려준다. */
 async function seedMember(name: string): Promise<string> {
-  const g = await req("/api/our-company/groups", { method: "POST", headers: { cookie: rootCookie }, body: JSON.stringify({ name }) });
+  const g = await req("/api/our-company/groups", { method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify({ name }) });
   const groupId = ((await g.json()) as { data: { id: string } }).data.id;
   const m = await req(`/api/our-company/groups/${groupId}/members`, {
     method: "POST",
-    headers: { cookie: rootCookie },
+    headers: { cookie: analystCookie },
     body: JSON.stringify({ company_name: name, role: "hq" }),
   });
   expect(m.status).toBe(201);
-  const detail = await req(`/api/our-company/groups/${groupId}`, { headers: { cookie: rootCookie } });
+  const detail = await req(`/api/our-company/groups/${groupId}`, { headers: { cookie: analystCookie } });
   const members = ((await detail.json()) as { data: { members: Array<{ id: string }> } }).data.members;
   return members[members.length - 1].id;
 }
 
 beforeAll(async () => {
-  await createUser(db, { userId: "root", role: "admin", password: "pw-root-12345", createdBy: "test", now: NOW });
-  approveUser(db, { userId: "root", approvedBy: "test", now: NOW });
+  await createUser(db, { userId: "alice", role: "analyst", password: "pw-alice-12345", createdBy: "test", now: NOW });
+  approveUser(db, { userId: "alice", approvedBy: "test", now: NOW });
   db.run("UPDATE app_user SET must_change_password = 0");
-  rootCookie = await loginCookie("root", "pw-root-12345");
+  analystCookie = await loginCookie("alice", "pw-alice-12345");
 });
 
 afterAll(async () => {
@@ -98,7 +98,7 @@ afterAll(async () => {
 describe("company-profile analysis status", () => {
   test("no version and no job → in_progress", async () => {
     const memberId = await seedMember("status-idle");
-    const res = await req(`/api/our-company/members/${memberId}/profile`, { headers: { cookie: rootCookie } });
+    const res = await req(`/api/our-company/members/${memberId}/profile`, { headers: { cookie: analystCookie } });
     expect(res.status).toBe(200);
     expect(((await res.json()) as { data: { status: string } }).data.status).toBe("in_progress");
   });
@@ -106,7 +106,7 @@ describe("company-profile analysis status", () => {
   test("a recorded pipeline failure is reported by the profile GET with its error", async () => {
     const memberId = await seedMember("status-failed");
     _profileJobs.set(`member:${memberId}`, { status: "failed", error: "boom: deterministic seed", startedAt: NOW, failedAt: NOW });
-    const res = await req(`/api/our-company/members/${memberId}/profile`, { headers: { cookie: rootCookie } });
+    const res = await req(`/api/our-company/members/${memberId}/profile`, { headers: { cookie: analystCookie } });
     const body = (await res.json()) as { data: { status: string; error?: string } };
     expect(body.data.status).toBe("failed");
     expect(body.data.error).toBe("boom: deterministic seed");
@@ -115,7 +115,7 @@ describe("company-profile analysis status", () => {
 
   test("analyze runs the offline pipeline to a completed version", async () => {
     const memberId = await seedMember("status-completed");
-    const start = await req(`/api/our-company/members/${memberId}/analyze`, { method: "POST", headers: { cookie: rootCookie }, body: "{}" });
+    const start = await req(`/api/our-company/members/${memberId}/analyze`, { method: "POST", headers: { cookie: analystCookie }, body: "{}" });
     expect(start.status).toBe(200);
     expect(((await start.json()) as { data: { status: string } }).data.status).toBe("in_progress");
 
@@ -126,7 +126,7 @@ describe("company-profile analysis status", () => {
     });
     expect(done).toBe(true);
 
-    const res = await req(`/api/our-company/members/${memberId}/profile`, { headers: { cookie: rootCookie } });
+    const res = await req(`/api/our-company/members/${memberId}/profile`, { headers: { cookie: analystCookie } });
     const body = (await res.json()) as { data: { status: string; profile: { companyName: string; schemaVersion?: number } | null; versions: Array<{ version_no: number }> } };
     expect(body.data.status).toBe("completed");
     expect(body.data.profile?.companyName).toBe("status-completed");
@@ -145,7 +145,7 @@ describe("company-profile analysis status", () => {
     const originalConsoleError = console.error;
     console.error = () => {};
     try {
-      startCompanyProfilePipeline(db, subject, "root");
+      startCompanyProfilePipeline(db, subject, "alice");
       const job = await waitFor(() => {
         const j = getProfileJobStatus({ kind: "member", id: memberId });
         return j?.status === "failed" ? j : null;

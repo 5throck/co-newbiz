@@ -1,8 +1,8 @@
 // 외부 성장률 참조 — 사람이 출처와 함께 기록·갱신한다(ADR: 보정 루프 설계문서
 // 2026-09-18-s1-growth-gap-calibration). 기록된 참조는 재분석 때 LLM 선험보다
 // 우선하며, 이것이 "재분석 = 단순 반복"을 끊는 첫 고리다.
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendExternalReference, resolveExternalReference } from "../../../../../../lib/market-calibration.ts";
 
@@ -18,7 +18,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
 export async function PUT(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "외부 참조 기록은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "외부 참조 기록은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { industryId } = await params;
   const body = (await request.json().catch(() => null)) as {
     source_label?: string; source_url?: string | null; target_year?: number;

@@ -1,8 +1,8 @@
 // 보정 사이클 오케스트레이터 — 제안 수용(사람 확인) → 병렬 실행 계층에 재분석
 // 작업 제출까지를 하나의 진입점으로 (design §5 3단계, 경계 #2: 수용은 사람,
 // 계층은 실행만). 워커(job-worker)가 작업을 소화한다.
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
 import { submitJob } from "../../../../../../lib/execution-jobs.ts";
 import { decideCalibrationDriver } from "../../../../../../lib/market-calibration.ts";
@@ -10,7 +10,8 @@ import { decideCalibrationDriver } from "../../../../../../lib/market-calibratio
 export async function POST(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "보정 사이클은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "보정 사이클은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { industryId } = await params;
   const body = (await request.json().catch(() => null)) as { acceptProposals?: boolean } | null;
   const db = getDb();

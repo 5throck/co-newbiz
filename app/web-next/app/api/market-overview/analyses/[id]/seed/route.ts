@@ -15,8 +15,8 @@
 import { getDb } from "../../../../../../../../db/client.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { forbidden, badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import type { SizingMatrix } from "../../../../../../lib/market-sizing.ts";
 import { releaseQueueNext } from "../../../../../../lib/market-sizing-pipeline.ts";
 
@@ -75,7 +75,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "매트릭스 시드 등록은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "매트릭스 시드 등록은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
 
   const { id } = await params;
   const db = getDb();

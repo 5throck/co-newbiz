@@ -2,7 +2,7 @@
 // 요인은 opportunity.factors_json(0051)에 영속되고 매력도 평가의 근거로 쓰인다.
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { deriveAndSaveFactors, loadOpportunityWithFactors, readFactors, saveFactors } from "../../../../../lib/opportunity-factors.ts";
 import { route } from "../../../../../lib/route.ts";
@@ -19,7 +19,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "요인 자동 도출은 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "요인 자동 도출은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const row = db.query("SELECT id, name, market_scope, value_chain_node, rationale FROM opportunity WHERE id = ?").get(id) as
@@ -34,7 +34,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
 export const PUT = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "요인 등록은 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "요인 등록은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { type?: string; text?: string } | null;
   const type = body?.type === "risk" ? "risk" : body?.type === "opportunity" ? "opportunity" : null;
@@ -56,7 +56,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
 export const DELETE = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "요인 삭제는 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "요인 삭제는 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { type?: string; index?: number } | null;
   const type = body?.type === "risk" ? "risk" : body?.type === "opportunity" ? "opportunity" : null;

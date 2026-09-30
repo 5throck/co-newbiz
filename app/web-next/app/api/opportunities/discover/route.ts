@@ -7,7 +7,7 @@
 // inserted as `identified` — attractiveness evaluation happens in the funnel.
 import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../lib/llm.ts";
 import { deriveAndSaveFactors } from "../../../../lib/opportunity-factors.ts";
@@ -27,7 +27,7 @@ interface DiscoverRow {
 export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "기회 발굴은 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "기회 발굴은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const body = (await request.json().catch(() => null)) as { industry?: string } | null;
   const industry = body?.industry?.trim();
   if (!industry) return badRequest("invalid_request", "industry (산업명) is required.");

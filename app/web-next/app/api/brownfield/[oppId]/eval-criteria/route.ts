@@ -1,7 +1,7 @@
 // S7 재무·기술 평가 카탈로그 (ADR-0139) — 목록(+lazy 시딩) / 커스텀 항목 추가.
 import { getDb } from "../../../../../../../db/client.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { addCustomCriterion, listOrSeedCriteria } from "../../../../../lib/brownfield-eval-criteria.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
@@ -17,7 +17,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "평가 항목 추가는 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 항목 추가는 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(oppId)) return notFound();

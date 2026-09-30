@@ -2,7 +2,7 @@
 // The 0065 member_type='human' seat: in human_only / hybrid modes, human
 // members deliberate alongside (or instead of) agents. The submitter's
 // app_user id is taken from the authenticated session — never from the body.
-import { authenticate } from "../../../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
@@ -17,7 +17,7 @@ export async function POST(
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "위원회 입장 제출은 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "위원회 입장 제출은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id, sessionId } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();

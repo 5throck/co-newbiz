@@ -1,8 +1,8 @@
 // S7 대상 선정 — 후보 수정(PATCH) / 체크리스트 판정 저장(POST).
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { screeningSummary, insertTargetEvidence, type TargetRow } from "../../../../../../lib/brownfield-targets.ts";
 
 const now = () => new Date().toISOString();
@@ -10,7 +10,8 @@ const now = () => new Date().toISOString();
 export async function PATCH(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "후보 수정은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "후보 수정은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as
     | { company_name?: string; dart_corp_code?: string | null; universe_note?: string | null }
@@ -35,7 +36,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ op
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "스크리닝 판정은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "스크리닝 판정은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as
     | {

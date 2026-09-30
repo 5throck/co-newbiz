@@ -1,7 +1,7 @@
 // 그룹/계열사 분석 — 그룹 등록/목록/상세 (그룹+계열사+최신 프로파일 롤업).
 import { getDb } from "../../../../../../db/client.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
-import { authenticate } from "../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { badRequest, ok } from "../../../../lib/envelope.ts";
 
 const now = () => new Date().toISOString();
@@ -24,7 +24,8 @@ export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return badRequest("role_required", "그룹 등록은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "그룹 등록은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const body = (await request.json().catch(() => null)) as { name?: string } | null;
   const name = body?.name?.trim();
   if (!name) return badRequest("invalid_request", "그룹명(name)은 필수입니다.");

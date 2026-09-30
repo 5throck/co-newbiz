@@ -1,6 +1,6 @@
 // 계열사 프로파일 분석 실행 — 재분석 시 버전+1로 누적.
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
 import { resolveMemberSubject, startCompanyProfilePipeline } from "../../../../../../lib/company-profile-pipeline.ts";
 
@@ -8,7 +8,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ mem
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "프로파일 분석은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "프로파일 분석은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { memberId } = await params;
   const db = getDb();
   const member = db

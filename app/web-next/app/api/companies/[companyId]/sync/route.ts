@@ -4,14 +4,15 @@
 // corp code / retrieval fails (409). Every mutation is audit-logged.
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
-import { fail, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { fail, notFound, ok } from "../../../../../lib/envelope.ts";
 import { DartSyncError, syncCompanyFinancialFacts } from "../../../../../lib/dart-financial-facts.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ companyId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "DART 동기화는 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "DART 동기화는 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { companyId } = await params;
   const db = getDb();
   const company = db.query("SELECT id FROM md_company WHERE id = ?").get(companyId) as { id: string } | undefined;

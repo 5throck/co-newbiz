@@ -4,7 +4,7 @@
 // 위조하지 않는다(다른 화면이 이미 표시하는 발굴 시 초안과 달리 on-demand).
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
@@ -33,7 +33,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "매력도 초안 생성은 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "매력도 초안 생성은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const opp = db

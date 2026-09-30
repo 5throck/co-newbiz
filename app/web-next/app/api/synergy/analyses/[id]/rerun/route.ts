@@ -5,14 +5,15 @@
 // (target_type NULL — the deleted md_company registration path) are refused.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "시너지 재분석은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "시너지 재분석은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { id } = await params;
   const db = getDb();
   const row = db

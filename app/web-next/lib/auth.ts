@@ -155,3 +155,23 @@ export function requireAdmin(auth: AuthContext): Response | null {
   }
   return null;
 }
+
+// ADR-0146: admin is a system operator kept apart from review/agenda content
+// (ADR-0091), so business routes must reject it centrally instead of each
+// route re-deriving the rule (a route that forgets it lets admin become a
+// project lead and then 404 everywhere else).
+export const ADMIN_BUSINESS_FORBIDDEN_MESSAGE =
+  "admin 계정은 검토/안건 콘텐츠에서 분리되어 있습니다(ADR-0091) — analyst 계정으로 수행하세요.";
+export const VIEWER_WRITE_FORBIDDEN_MESSAGE = "이 작업은 analyst 역할 이상이어야 합니다.";
+
+export function requireBusinessActor(
+  auth: AuthContext,
+  mode: "read" | "write",
+  opts?: { viewerMessage?: string },
+): Response | null {
+  if (auth.role === "admin") return forbidden("role_forbidden", ADMIN_BUSINESS_FORBIDDEN_MESSAGE);
+  if (mode === "write" && auth.role === "viewer") {
+    return forbidden("role_required", opts?.viewerMessage ?? VIEWER_WRITE_FORBIDDEN_MESSAGE);
+  }
+  return null;
+}

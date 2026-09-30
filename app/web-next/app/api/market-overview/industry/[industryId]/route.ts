@@ -3,8 +3,8 @@
 // structure_simulation_result, and md_industry.
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
-import { fail, forbidden, notFound, ok, badRequest } from "../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { fail, notFound, ok, badRequest } from "../../../../../lib/envelope.ts";
 import { parseKsicInput } from "../../../../../lib/ksic.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
@@ -355,7 +355,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
 export async function PATCH(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "Industry update requires the analyst role.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Industry update requires the analyst role." });
+  if (denied) return denied;
   const { industryId } = await params;
   const body = (await request.json().catch(() => null)) as { name_ko?: string; ksic_code?: string | null; pinned?: boolean } | null;
 
@@ -404,7 +405,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
 export async function DELETE(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "Industry deletion requires the analyst role.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Industry deletion requires the analyst role." });
+  if (denied) return denied;
   const ctx = auth.auth;
   const { industryId } = await params;
   const db = getDb();

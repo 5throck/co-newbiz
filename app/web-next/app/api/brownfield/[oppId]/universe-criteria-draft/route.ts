@@ -7,8 +7,8 @@
 // 근거 없는 기준을 날조하지 않는다.
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
-import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../lib/llm.ts";
 import { systemMessage } from "../../../../../lib/prompts.ts";
 
@@ -35,7 +35,8 @@ const str = (v: unknown, max: number): string => (typeof v === "string" ? v.trim
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "평가 기준 초안 생성은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 기준 초안 생성은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
   const opp = db

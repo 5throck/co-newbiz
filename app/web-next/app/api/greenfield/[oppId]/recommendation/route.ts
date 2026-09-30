@@ -5,8 +5,8 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { getCurrentRouteDecision } from "../../../../../../../db/repositories/route-decision.repository.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
-import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
 import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
@@ -50,7 +50,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "투자비 항목 추천 생성은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "투자비 항목 추천 생성은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
   const opp = db
