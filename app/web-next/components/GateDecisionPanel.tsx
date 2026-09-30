@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
+import { canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
 
 interface GateLatest {
@@ -19,7 +20,7 @@ interface GateHistoryRow extends GateLatest { id: string; decided_by: string; de
 
 export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity", onRecorded }: { opportunityId: string; gates: GateMetaId[]; killHint?: string | null; entityType?: "opportunity" | "project"; onRecorded?: (decision: "go" | "hold" | "kill", gate: GateMetaId) => void }) {
   const { me } = useAuth();
-  const canRecord = me?.role === "admin" || me?.role === "analyst";
+  const canRecord = entityType === "project" ? canWriteProject(me?.role) : me?.role === "admin" || me?.role === "analyst";
   const [latest, setLatest] = useState<GateLatest[] | null>(null);
   const [history, setHistory] = useState<GateHistoryRow[]>([]);
   const [error, setError] = useState<string | null>(null);

@@ -11,6 +11,7 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { useConfirm } from "../crud.tsx";
+import { canWriteProject } from "../../lib/project-write-access.ts";
 
 // S11 투자심사·실행 — IC 패키지 열람 + Entity/Group IC 진행 기록 + 설립 실행
 // 5단계 진행 화면 (ADR-0100 §3). 경계 #2: RAG 등급은 'AI 제안'으로만 표시되고
@@ -76,7 +77,7 @@ const RAG_META: Record<string, { icon: string; cls: string }> = {
 
 export function IcReviewStage({ projectId }: { projectId: string }) {
   const { me } = useAuth();
-  const canAct = me?.role === "admin" || me?.role === "analyst";
+  const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
   const [pkg, setPkg] = useState<IcPackage | null>(null);
   const [est, setEst] = useState<EstablishmentView | null>(null);

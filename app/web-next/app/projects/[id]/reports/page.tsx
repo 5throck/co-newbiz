@@ -6,6 +6,7 @@ import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 // 보고서 탭 — 스냅샷 · 렌더러 (ADR-0116 Phase 6; approved mockup
 // docs/designs/mockups/2026-09-11-reports-composer-ui-mockup_ko.html).
@@ -21,7 +22,7 @@ const ALL_FORMATS: Format[] = ["docx", "pdf", "hwpx"];
 export default function ReportsPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const { me } = useAuth();
-  const canAct = me?.role === "admin" || me?.role === "analyst";
+  const canAct = canWriteProject(me?.role);
   const [view, setView] = useState<ReportsView | null>(null);
   const [title, setTitle] = useState("투자 검토 보고서");
   const [content, setContent] = useState("# 투자 검토 보고서\n\n## Executive summary\n\n");

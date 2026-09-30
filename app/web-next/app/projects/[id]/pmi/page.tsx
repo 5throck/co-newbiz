@@ -9,6 +9,7 @@ import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 interface Talent {
   id: string;
@@ -39,7 +40,7 @@ export default function PmiPage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const { me } = useAuth();
-  const canAct = me?.role === "admin" || me?.role === "analyst";
+  const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
   const [talents, setTalents] = useState<Talent[] | null>(null);
   const [certs, setCerts] = useState<Certification[] | null>(null);

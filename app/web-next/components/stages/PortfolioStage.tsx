@@ -10,6 +10,7 @@ import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
 import { useConfirm } from "../crud.tsx";
+import { canWriteProject } from "../../lib/project-write-access.ts";
 
 // S12 사후 관리 — 포트폴리오 스코어카드 열람 + 포트폴리오 전환 결정 기록 화면
 // (ADR-0101 §3). 이 화면은 venture-portfolio-IC의 '인적 결정'을 기록하는
@@ -69,7 +70,7 @@ const EMPTY_FORM = { decision: "next_tranche_released", rationale: "", learning_
 
 export function PortfolioStage({ projectId }: { projectId: string }) {
   const { me } = useAuth();
-  const canAct = me?.role === "admin" || me?.role === "analyst";
+  const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
   const [view, setView] = useState<ScorecardView | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
