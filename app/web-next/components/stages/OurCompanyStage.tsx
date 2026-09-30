@@ -810,7 +810,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                         <select
                           aria-label={`${m.company_name} 역할 변경`}
                           value={m.role}
-                          disabled={savingRole === m.id}
+                          disabled={savingRole === m.id || !canAct}
                           onChange={(e) => void updateMemberRole(m.id, e.target.value as "hq" | "affiliate")}
                           className="sizing-new-input sizing-new-input-sm"
                         >

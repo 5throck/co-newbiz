@@ -195,6 +195,8 @@ function IndustryChainGraph({ nodes, edges }: { nodes: ChainGraphNode[]; edges: 
 }
 
 export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { industryId?: string; embedded?: boolean }) {
+  const { me } = useAuth();
+  const canCurate = canWriteBusiness(me?.role);
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [detail, setDetail] = useState<IndustryDetail | null>(null);
   const router = useRouter();
@@ -709,13 +711,15 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
             </span>
           }
           actions={
-            <button type="button" className="btn-ghost whitespace-nowrap" onClick={() => setShowNewForm((v) => !v)} aria-expanded={showNewForm}>
-              ＋ 신규 산업 분석
-            </button>
+            canCurate ? (
+              <button type="button" className="btn-ghost whitespace-nowrap" onClick={() => setShowNewForm((v) => !v)} aria-expanded={showNewForm}>
+                ＋ 신규 산업 분석
+              </button>
+            ) : null
           }
         />
 
-        {showNewForm && (
+        {canCurate && showNewForm && (
           <form onSubmit={(e) => { e.preventDefault(); if (newName.trim()) void openLinkModal(newName.trim()); }} aria-label="신규 산업 분석 생성" className="sizing-new-form mb-3">
             {/* 제출 시 바로 생성하지 않고 가치사슬 연계 후보 모달로 범위를 확정한다 */}
             <div className="flex flex-wrap items-end gap-2">
@@ -841,6 +845,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                           {/* 핀(★)은 본 산업·연계 산업 모두에 렌더링한다 — 연계 산업도
                               개별 고정 대상(2026-09-14 사용자 리포트: 유압식 브레이커).
                               연계 행은 들여쓰기 + ↳ + 관계 칩으로 위계를 표현한다. */}
+                          {canCurate ? (
                           <button
                             type="button"
                             disabled={pinBusyId === ind.id}
@@ -851,6 +856,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                           >
                             {ind.pinned ? "★" : "☆"}
                           </button>
+                          ) : null}
                           {relation && (
                             <>
                               <span aria-hidden="true" className="text-[color:var(--muted-fg)]">↳</span>
@@ -954,7 +960,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                         </>
                       ) : (
                         <>
-                          {a && !busy && (
+                          {a && !busy && canCurate && (
                             <button
                               type="button"
                               className="btn-ghost btn-sm sizing-rerun-btn"
@@ -974,7 +980,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                               수정
                             </button>
                           )}
-                          {!busy && (
+                          {!busy && canCurate && (
                             <button
                               type="button"
                               className="btn-danger btn-sm"
@@ -1075,15 +1081,18 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                     {linkModal.selected.size >= 5 && " 대기 큐는 최대 5건까지 선택할 수 있습니다."}
                   </p>
                 )}
-                <button type="button" className="btn-ghost btn-sm" disabled={linkModal.loading || linkModal.running} onClick={() => void rerunProxyAnalysis()}>
-                  후보 다시 도출
-                </button>
+                {canCurate && (
+                  <button type="button" className="btn-ghost btn-sm" disabled={linkModal.loading || linkModal.running} onClick={() => void rerunProxyAnalysis()}>
+                    후보 다시 도출
+                  </button>
+                )}
               </>
             )}
             <div className="flex justify-end gap-2 mt-3">
               <button type="button" className="btn-ghost" disabled={linkModal.running} onClick={() => setLinkModal((prev) => ({ ...prev, open: false }))}>
                 취소
               </button>
+              {canCurate && (
               <button type="button" className="btn-primary" disabled={linkModal.running} onClick={() => void runWithSelections()}>
                 {linkModal.running
                   ? "분석 시작 중..."
@@ -1091,6 +1100,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                     ? linkModal.selected.size > 0 ? `재분석 시작 (연계 ${linkModal.selected.size}건은 완료 후 자동 시작)` : "재분석 시작"
                     : "이 산업만 분석"}
               </button>
+              )}
             </div>
           </div>
         </div>
@@ -1448,7 +1458,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
         {/* 가치사슬 연계 — 링크 + 승인 대기 제안 + 등급 (S1 산출물, ADR-0126) */}
         <div className="flex flex-wrap items-center justify-between gap-2 mt-4 mb-1">
           <h4 className="text-[0.82rem] text-[color:var(--muted-fg)]">가치사슬 연계</h4>
-          {onAddLinked && (
+          {canCurate && onAddLinked && (
             <button type="button" className="btn-ghost btn-sm" onClick={onAddLinked} title="이 리포트의 가치사슬 인접 산업 중 추가로 분석할 산업을 고릅니다.">
               연계 산업 이어서 분석
             </button>
@@ -1808,7 +1818,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                     </p>
                     {rerunStarted ? (
                       <p role="status" className="text-[0.78rem] text-[color:var(--green-fg)] mt-1 mb-0">재분석이 시작되었습니다 — 완료되면 목록의 분석일이 갱신됩니다.</p>
-                    ) : (
+                    ) : canCurate ? (
                       <button
                         type="button"
                         className="btn-ghost btn-sm mt-1"
@@ -1824,7 +1834,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                       >
                         지금 재분석 (최신 외부 전망·연계 근거 반영)
                       </button>
-                    )}
+                    ) : null}
                     {rerunError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mt-1 mb-0">{rerunError}</p>}
                   </div>
                 );
@@ -2651,6 +2661,8 @@ function RegistryStatus({ sizing, referenceImplementation }: {
 // 20% 트리거 배지 · 외부 참조 편집 · 드라이버 제안 수용/기각 · 버전 간 격차 추이.
 // 수용은 사람의 행위(경계 #2) — 수용된 드라이버는 다음 재분석의 제약으로 주입된다.
 function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: SizingMatrix }) {
+  const { me } = useAuth();
+  const canCurate = canWriteBusiness(me?.role);
   interface PropRow { id: string; driver: string; direction: "upside" | "downside"; impact_pct: number; rationale: string }
   interface AccRow { id: string; driver: string; direction: "upside" | "downside"; impact_pct: number }
   interface TrendRow { version_no: number; created_at: string; gap_pct: number; our_cagr_pct: number | null; external_cagr_pct: number | null; triggered: boolean }
@@ -2738,15 +2750,19 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
             외부 참조: <strong>{reference.source_label}</strong> — CAGR {reference.external_cagr_pct.toFixed(1)}% @{reference.target_year}년
             {reference.external_size_b ? ` · $${reference.external_size_b.toFixed(2)}B` : ""}
             {" "}<span className="status-chip status-not-started">{reference.captured_from === "user" ? "출처 확인" : reference.captured_from}</span>{" "}
-            <button type="button" className="btn-ghost btn-sm" onClick={() => { setShowRefForm((v) => !v); setRefForm({ source_label: reference.source_label, source_url: reference.source_url ?? "", target_year: String(reference.target_year), external_cagr_pct: String(reference.external_cagr_pct), external_size_b: reference.external_size_b ? String(reference.external_size_b) : "" }); }}>수정</button>
+            {canCurate && (
+              <button type="button" className="btn-ghost btn-sm" onClick={() => { setShowRefForm((v) => !v); setRefForm({ source_label: reference.source_label, source_url: reference.source_url ?? "", target_year: String(reference.target_year), external_cagr_pct: String(reference.external_cagr_pct), external_size_b: reference.external_size_b ? String(reference.external_size_b) : "" }); }}>수정</button>
+            )}
           </p>
         ) : (
           <p className="mb-1 text-[0.78rem] text-[color:var(--muted-fg)]">
             기록된 외부 참조가 없습니다 — 외부 보고서의 성장률을 출처와 함께 기록하면 재분석이 이 값을 기준으로 수렴합니다.{" "}
-            <button type="button" className="btn-ghost btn-sm" onClick={() => setShowRefForm((v) => !v)}>참조 기록</button>
+            {canCurate && (
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setShowRefForm((v) => !v)}>참조 기록</button>
+            )}
           </p>
         )}
-        {showRefForm && (
+        {canCurate && showRefForm && (
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <input value={refForm.source_label} onChange={(e) => setRefForm({ ...refForm, source_label: e.target.value })} className="sizing-new-input" style={{ width: "14rem" }} placeholder="출처 (보고서명·기관) *" aria-label="출처" />
             <input value={refForm.source_url} onChange={(e) => setRefForm({ ...refForm, source_url: e.target.value })} className="sizing-new-input" style={{ width: "12rem" }} placeholder="URL (선택)" aria-label="출처 URL" />
@@ -2774,7 +2790,9 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
           {!showEscalate ? (
             <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">
               3사이클 이상 수렴선(15%) 미달 시 <strong>결정론 스케일링</strong>으로 종료할 수 있습니다 — 외부 참조 × 0.85를 조정 CAGR로 채택(사람 결정).{" "}
-              <button type="button" className="btn-ghost btn-sm" onClick={() => setShowEscalate(true)}>에스컬레이션 적용</button>
+              {canCurate && (
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setShowEscalate(true)}>에스컬레이션 적용</button>
+              )}
             </p>
           ) : (
             <div className="sizing-new-form mb-0">
@@ -2803,8 +2821,12 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
                 </div>
                 <p className="mb-1 mt-1 text-[0.78rem] text-[color:var(--muted-fg)]">{d.rationale}</p>
                 <div className="flex gap-2">
-                  <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void decide(d.id, "accept")}>수용</button>
-                  <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void decide(d.id, "dismiss")}>기각</button>
+                  {canCurate && (
+                    <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void decide(d.id, "accept")}>수용</button>
+                  )}
+                  {canCurate && (
+                    <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void decide(d.id, "dismiss")}>기각</button>
+                  )}
                 </div>
               </div>
             ))}
