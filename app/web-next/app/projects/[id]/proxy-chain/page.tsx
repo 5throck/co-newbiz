@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { api } from "../../../../lib/api.ts";
+import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 // 가치사슬 연계 탭 — 링크와 보정 근거 (구칭: 프록시 체인) (ADR-0116 Phase 5; approved
 // mockup docs/designs/mockups/2026-09-11-proxy-chain-ui-mockup_ko.html).
@@ -24,6 +26,8 @@ const fmt = (v: number | null) => (typeof v === "number" ? v.toFixed(2) : "—")
 
 export default function ProxyChainPage() {
   const { id: projectId } = useParams<{ id: string }>();
+  const { me } = useAuth();
+  const canAct = canWriteProject(me?.role);
   const [view, setView] = useState<View | null>(null);
   const [bindings, setBindings] = useState<BindingRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -140,39 +144,43 @@ export default function ProxyChainPage() {
                 <td className="text-[color:var(--muted-fg)] text-[0.8rem]">{b.rationale}</td>
                 <td className="text-[color:var(--muted-fg)] text-[0.78rem]">{b.bound_by} · {b.bound_at.slice(0, 10)}</td>
                 <td><span className="status-chip status-green">live 바인딩</span></td>
-                <td><button type="button" className="btn-ghost btn-sm" onClick={() => void retire(b.industry_id)}>회수</button></td>
+                <td>{canAct && <button type="button" className="btn-ghost btn-sm" onClick={() => void retire(b.industry_id)}>회수</button>}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
-      <div className="mt-2">
-        <span className="text-[0.78rem] text-[color:var(--muted-fg)]">산업 검색 — md_industry 등록 산업에서 선택</span>
-        <div className="grid gap-2 md:grid-cols-[1fr_auto] mt-1">
-          <input className="sizing-new-input" value={industryQuery} onChange={(e) => setIndustryQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void searchIndustries(); } }}
-            placeholder="예: 건설기계, 특수차량…" aria-label="산업 검색" />
-          <button type="button" className="btn-ghost btn-sm" onClick={() => void searchIndustries()}>검색</button>
-        </div>
-      </div>
-      {industryResults !== null && (
-        industryResults.length === 0 ? (
-          <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-1">검색 결과가 없습니다 — 관리자 콘솔 › 마스터 데이터에서 산업을 먼저 등록하세요.</p>
-        ) : (
-          <div className="border border-[color:var(--border)] rounded-lg mt-2">
-            {industryResults.map((ind) => (
-              <div key={ind.id} className="flex items-center gap-2 px-2 py-1.5 border-b border-[color:var(--border-subtle)] last:border-b-0 text-[0.84rem]">
-                <b>{ind.name_ko}</b>
-                <span className="font-mono text-[0.74rem] text-[color:var(--muted-fg)]">KSIC {ind.ksic_code}</span>
-                <button type="button" className="btn-ghost btn-sm ml-auto" onClick={() => void bind(ind.id)}>이 산업 바인딩</button>
-              </div>
-            ))}
+      {canAct && (
+        <>
+        <div className="mt-2">
+          <span className="text-[0.78rem] text-[color:var(--muted-fg)]">산업 검색 — md_industry 등록 산업에서 선택</span>
+          <div className="grid gap-2 md:grid-cols-[1fr_auto] mt-1">
+            <input className="sizing-new-input" value={industryQuery} onChange={(e) => setIndustryQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void searchIndustries(); } }}
+              placeholder="예: 건설기계, 특수차량…" aria-label="산업 검색" />
+            <button type="button" className="btn-ghost btn-sm" onClick={() => void searchIndustries()}>검색</button>
           </div>
-        )
+        </div>
+        {industryResults !== null && (
+          industryResults.length === 0 ? (
+            <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-1">검색 결과가 없습니다 — 관리자 콘솔 › 마스터 데이터에서 산업을 먼저 등록하세요.</p>
+          ) : (
+            <div className="border border-[color:var(--border)] rounded-lg mt-2">
+              {industryResults.map((ind) => (
+                <div key={ind.id} className="flex items-center gap-2 px-2 py-1.5 border-b border-[color:var(--border-subtle)] last:border-b-0 text-[0.84rem]">
+                  <b>{ind.name_ko}</b>
+                  <span className="font-mono text-[0.74rem] text-[color:var(--muted-fg)]">KSIC {ind.ksic_code}</span>
+                  <button type="button" className="btn-ghost btn-sm ml-auto" onClick={() => void bind(ind.id)}>이 산업 바인딩</button>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+        <label className="grid gap-1 mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">바인딩 근거 (rationale) — 필수
+          <input className="sizing-new-input" value={bindRationale} onChange={(e) => setBindRationale(e.target.value)} placeholder="예: S6 유니버스 정의 — 수요 전파 검증용" />
+        </label>
+        </>
       )}
-      <label className="grid gap-1 mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">바인딩 근거 (rationale) — 필수
-        <input className="sizing-new-input" value={bindRationale} onChange={(e) => setBindRationale(e.target.value)} placeholder="예: S6 유니버스 정의 — 수요 전파 검증용" />
-      </label>
       <p className="note-line">바인딩·회수는 감사 로그에 기록되며, 이력은 유지됩니다.</p>
     </section>
 
@@ -200,41 +208,43 @@ export default function ProxyChainPage() {
         </table>
       )}
 
-      <div className="mt-2">
-        <button type="button" className="btn-ghost btn-sm" onClick={() => setLinkFormOpen((v) => !v)}>
-          {linkFormOpen ? "링크 등록 폼 닫기" : "+ 링크 등록 폼"}
-        </button>
-        {linkFormOpen && (
-        <div className="sizing-new-form grid gap-2 mt-2">
-          <div>
-            <span className="text-[0.78rem] text-[color:var(--muted-fg)]">방향</span>
-            <div className="flex gap-3 text-[0.84rem]">
-              <label><input type="radio" checked={form.direction === "downstream"} onChange={() => setForm({ ...form, direction: "downstream" })} /> downstream (하류 전파)</label>
-              <label><input type="radio" checked={form.direction === "upstream"} onChange={() => setForm({ ...form, direction: "upstream" })} /> upstream (상류 전파)</label>
+      {canAct && (
+        <div className="mt-2">
+          <button type="button" className="btn-ghost btn-sm" onClick={() => setLinkFormOpen((v) => !v)}>
+            {linkFormOpen ? "링크 등록 폼 닫기" : "+ 링크 등록 폼"}
+          </button>
+          {linkFormOpen && (
+          <div className="sizing-new-form grid gap-2 mt-2">
+            <div>
+              <span className="text-[0.78rem] text-[color:var(--muted-fg)]">방향</span>
+              <div className="flex gap-3 text-[0.84rem]">
+                <label><input type="radio" checked={form.direction === "downstream"} onChange={() => setForm({ ...form, direction: "downstream" })} /> downstream (하류 전파)</label>
+                <label><input type="radio" checked={form.direction === "upstream"} onChange={() => setForm({ ...form, direction: "upstream" })} /> upstream (상류 전파)</label>
+              </div>
             </div>
-          </div>
-          <div className="grid gap-2 md:grid-cols-2">
-            <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">from 산업 id
-              <input className="sizing-new-input" value={form.from_industry_id} onChange={(e) => setForm({ ...form, from_industry_id: e.target.value })} placeholder="산업 검색 후 id" />
+            <div className="grid gap-2 md:grid-cols-2">
+              <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">from 산업 id
+                <input className="sizing-new-input" value={form.from_industry_id} onChange={(e) => setForm({ ...form, from_industry_id: e.target.value })} placeholder="산업 검색 후 id" />
+              </label>
+              <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">to 산업 id
+                <input className="sizing-new-input" value={form.to_industry_id} onChange={(e) => setForm({ ...form, to_industry_id: e.target.value })} placeholder="산업 검색 후 id" />
+              </label>
+            </div>
+            <div className="grid gap-2 md:grid-cols-4">
+              <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">탄력성<input className="sizing-new-input" value={form.elasticity} onChange={(e) => setForm({ ...form, elasticity: e.target.value })} placeholder="0.62" /></label>
+              <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">지연(개월)<input className="sizing-new-input" value={form.lag_months} onChange={(e) => setForm({ ...form, lag_months: e.target.value })} placeholder="3" /></label>
+              <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">전환비용<input className="sizing-new-input" value={form.switching_cost_grade} onChange={(e) => setForm({ ...form, switching_cost_grade: e.target.value })} placeholder="low|moderate|high" /></label>
+              <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">대체위협<input className="sizing-new-input" value={form.substitution_threat} onChange={(e) => setForm({ ...form, substitution_threat: e.target.value })} placeholder="negligible|low|moderate…" /></label>
+            </div>
+            <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">근거 (evidence_ref — https:// · doc: · src: 필수 형식)
+              <input className="sizing-new-input" value={form.evidence_ref} onChange={(e) => setForm({ ...form, evidence_ref: e.target.value })} placeholder="https://…" />
             </label>
-            <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">to 산업 id
-              <input className="sizing-new-input" value={form.to_industry_id} onChange={(e) => setForm({ ...form, to_industry_id: e.target.value })} placeholder="산업 검색 후 id" />
-            </label>
+            <div><button type="button" className="primary-button" onClick={() => void createLink()}>링크 등록</button></div>
+            <p className="note-line">β·R² 등 통계 수치는 이 폼으로 입력할 수 없습니다 — 산출은 보정(calibrate) 회귀로만 이뤄집니다.</p>
           </div>
-          <div className="grid gap-2 md:grid-cols-4">
-            <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">탄력성<input className="sizing-new-input" value={form.elasticity} onChange={(e) => setForm({ ...form, elasticity: e.target.value })} placeholder="0.62" /></label>
-            <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">지연(개월)<input className="sizing-new-input" value={form.lag_months} onChange={(e) => setForm({ ...form, lag_months: e.target.value })} placeholder="3" /></label>
-            <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">전환비용<input className="sizing-new-input" value={form.switching_cost_grade} onChange={(e) => setForm({ ...form, switching_cost_grade: e.target.value })} placeholder="low|moderate|high" /></label>
-            <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">대체위협<input className="sizing-new-input" value={form.substitution_threat} onChange={(e) => setForm({ ...form, substitution_threat: e.target.value })} placeholder="negligible|low|moderate…" /></label>
-          </div>
-          <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">근거 (evidence_ref — https:// · doc: · src: 필수 형식)
-            <input className="sizing-new-input" value={form.evidence_ref} onChange={(e) => setForm({ ...form, evidence_ref: e.target.value })} placeholder="https://…" />
-          </label>
-          <div><button type="button" className="primary-button" onClick={() => void createLink()}>링크 등록</button></div>
-          <p className="note-line">β·R² 등 통계 수치는 이 폼으로 입력할 수 없습니다 — 산출은 보정(calibrate) 회귀로만 이뤄집니다.</p>
+          )}
         </div>
-        )}
-      </div>
+      )}
     </section>
 
     {/* ③ 보정된 proxy link */}
@@ -262,12 +272,14 @@ export default function ProxyChainPage() {
           </tbody>
         </table>
       )}
-      <div className="flex gap-2 items-center flex-wrap mt-2">
-        <button type="button" className="primary-button" disabled={calibrating} onClick={() => void runCalibrate()}>
-          {calibrating ? "보정 실행 중..." : "통계 보정 실행 (calibrate)"}
-        </button>
-        <span className="text-[color:var(--muted-fg)] text-[0.78rem]">바인딩·링크 산업쌍에 대해 회귀 보정을 실행합니다 — 관측 시계열이 없으면 실행이 거부되고 필요 데이터가 안내됩니다.</span>
-      </div>
+      {canAct && (
+        <div className="flex gap-2 items-center flex-wrap mt-2">
+          <button type="button" className="primary-button" disabled={calibrating} onClick={() => void runCalibrate()}>
+            {calibrating ? "보정 실행 중..." : "통계 보정 실행 (calibrate)"}
+          </button>
+          <span className="text-[color:var(--muted-fg)] text-[0.78rem]">바인딩·링크 산업쌍에 대해 회귀 보정을 실행합니다 — 관측 시계열이 없으면 실행이 거부되고 필요 데이터가 안내됩니다.</span>
+        </div>
+      )}
     </section>
 
     {/* ④ 체인 등급 */}

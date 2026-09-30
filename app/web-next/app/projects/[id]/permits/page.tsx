@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
+import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 // 인허가·인증 추적 (certification-agent) — Wave 0 REST B5. 허가와 인증을
 // 별도 목록으로 추적한다 (flow.spec: permits and certifications are separate).
@@ -14,6 +16,8 @@ interface Cert { id: string; name: string; agency: string | null; status: string
 function PermitsView() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { me } = useAuth();
+  const canAct = canWriteProject(me?.role);
   const [data, setData] = useState<{ permits: Permit[]; certifications: Cert[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ kind: "permit", name: "", agency: "", statutory_days: "" });
@@ -80,24 +84,26 @@ function PermitsView() {
           )}
         </section>
       </div>
-      <section className="market-section" aria-label="등록">
-        <h2 className="text-[0.9rem] mb-2">등록</h2>
-        <form className="sizing-new-form" onSubmit={create}>
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="text-[0.78rem]"><span className="block mb-1">구분 *</span>
-              <select className="sizing-new-input sizing-new-input-sm" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
-                <option value="permit">허가</option><option value="certification">인증</option>
-              </select></label>
-            <label className="text-[0.78rem] flex-1 min-w-[12rem]"><span className="block mb-1">이름 *</span>
-              <input className="sizing-new-input w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
-            <label className="text-[0.78rem]"><span className="block mb-1">기관</span>
-              <input className="sizing-new-input sizing-new-input-sm" value={form.agency} onChange={(e) => setForm({ ...form, agency: e.target.value })} /></label>
-            <label className="text-[0.78rem] w-[7rem]"><span className="block mb-1">법정기간(일)</span>
-              <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.statutory_days} onChange={(e) => setForm({ ...form, statutory_days: e.target.value })} /></label>
-            <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
-          </div>
-        </form>
-      </section>
+      {canAct && (
+        <section className="market-section" aria-label="등록">
+          <h2 className="text-[0.9rem] mb-2">등록</h2>
+          <form className="sizing-new-form" onSubmit={create}>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-[0.78rem]"><span className="block mb-1">구분 *</span>
+                <select className="sizing-new-input sizing-new-input-sm" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
+                  <option value="permit">허가</option><option value="certification">인증</option>
+                </select></label>
+              <label className="text-[0.78rem] flex-1 min-w-[12rem]"><span className="block mb-1">이름 *</span>
+                <input className="sizing-new-input w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
+              <label className="text-[0.78rem]"><span className="block mb-1">기관</span>
+                <input className="sizing-new-input sizing-new-input-sm" value={form.agency} onChange={(e) => setForm({ ...form, agency: e.target.value })} /></label>
+              <label className="text-[0.78rem] w-[7rem]"><span className="block mb-1">법정기간(일)</span>
+                <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.statutory_days} onChange={(e) => setForm({ ...form, statutory_days: e.target.value })} /></label>
+              <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
+            </div>
+          </form>
+        </section>
+      )}
     </main>
   );
 }

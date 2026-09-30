@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
+import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 // 전문가 인터뷰·채널 체크 (commercial-dd-agent) — Wave 0 REST B7.
 // 증적 참조가 필수이고 주제별 합의/엇갈림 롤업을 제공한다.
@@ -13,6 +15,8 @@ interface Row { id: string; interviewee: string; topic: string; response_summary
 function InterviewsView() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { me } = useAuth();
+  const canAct = canWriteProject(me?.role);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ interviewee: "", topic: "", response_summary: "", disagreement: "", follow_up: "", evidence_ref: "" });
@@ -70,22 +74,24 @@ function InterviewsView() {
           </div>
         )}
       </section>
-      <section className="market-section" aria-label="인터뷰 기록">
-        <h2 className="text-[0.9rem] mb-2">인터뷰 기록</h2>
-        <form className="sizing-new-form" onSubmit={create}>
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="text-[0.78rem] flex-1 min-w-[10rem]"><span className="block mb-1">대상 *</span>
-              <input className="sizing-new-input w-full" value={form.interviewee} onChange={(e) => setForm({ ...form, interviewee: e.target.value })} required /></label>
-            <label className="text-[0.78rem] flex-1 min-w-[10rem]"><span className="block mb-1">주제 *</span>
-              <input className="sizing-new-input w-full" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required /></label>
-            <label className="text-[0.78rem] flex-1 min-w-[14rem]"><span className="block mb-1">응답 요지 *</span>
-              <input className="sizing-new-input w-full" value={form.response_summary} onChange={(e) => setForm({ ...form, response_summary: e.target.value })} required /></label>
-            <label className="text-[0.78rem] flex-1 min-w-[10rem]"><span className="block mb-1">증적 *</span>
-              <input className="sizing-new-input w-full" value={form.evidence_ref} onChange={(e) => setForm({ ...form, evidence_ref: e.target.value })} required placeholder="interview-log#1" /></label>
-            <button type="submit" className="btn-primary" disabled={busy}>{busy ? "기록 중..." : "기록"}</button>
-          </div>
-        </form>
-      </section>
+      {canAct && (
+        <section className="market-section" aria-label="인터뷰 기록">
+          <h2 className="text-[0.9rem] mb-2">인터뷰 기록</h2>
+          <form className="sizing-new-form" onSubmit={create}>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-[0.78rem] flex-1 min-w-[10rem]"><span className="block mb-1">대상 *</span>
+                <input className="sizing-new-input w-full" value={form.interviewee} onChange={(e) => setForm({ ...form, interviewee: e.target.value })} required /></label>
+              <label className="text-[0.78rem] flex-1 min-w-[10rem]"><span className="block mb-1">주제 *</span>
+                <input className="sizing-new-input w-full" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required /></label>
+              <label className="text-[0.78rem] flex-1 min-w-[14rem]"><span className="block mb-1">응답 요지 *</span>
+                <input className="sizing-new-input w-full" value={form.response_summary} onChange={(e) => setForm({ ...form, response_summary: e.target.value })} required /></label>
+              <label className="text-[0.78rem] flex-1 min-w-[10rem]"><span className="block mb-1">증적 *</span>
+                <input className="sizing-new-input w-full" value={form.evidence_ref} onChange={(e) => setForm({ ...form, evidence_ref: e.target.value })} required placeholder="interview-log#1" /></label>
+              <button type="submit" className="btn-primary" disabled={busy}>{busy ? "기록 중..." : "기록"}</button>
+            </div>
+          </form>
+        </section>
+      )}
     </main>
   );
 }

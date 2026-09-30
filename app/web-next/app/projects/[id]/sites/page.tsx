@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
+import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 // 부지·시설 평가 (site-facility-agent) — Wave 0 REST B4. 점수는 저장값만
 // 렌더링하고 순위로 비교한다 (ADR-0112 — 값 발명 금지).
@@ -13,6 +15,8 @@ interface Row { id: string; name: string; region_code: string | null; infra_scor
 function SitesView() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { me } = useAuth();
+  const canAct = canWriteProject(me?.role);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", region_code: "", infra_score: "", logistics_score: "", labor_score: "", permit_lead_time_days: "", total_score: "" });
@@ -75,22 +79,24 @@ function SitesView() {
           </div>
         )}
       </section>
-      <section className="market-section" aria-label="부지 등록">
-        <h2 className="text-[0.9rem] mb-2">부지 등록</h2>
-        <form className="sizing-new-form" onSubmit={create}>
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="text-[0.78rem]"><span className="block mb-1">부지명 *</span>
-              <input className="sizing-new-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
-            <label className="text-[0.78rem]"><span className="block mb-1">지역코드</span>
-              <input className="sizing-new-input sizing-new-input-sm" value={form.region_code} onChange={(e) => setForm({ ...form, region_code: e.target.value })} /></label>
-            {(["infra_score", "logistics_score", "labor_score", "permit_lead_time_days", "total_score"] as const).map((k) => (
-              <label key={k} className="text-[0.78rem] w-[6rem]"><span className="block mb-1">{k === "infra_score" ? "인프라" : k === "logistics_score" ? "물류" : k === "labor_score" ? "노동력" : k === "permit_lead_time_days" ? "인허가(일)" : "총점"}</span>
-                <input type="number" className="sizing-new-input sizing-new-input-sm" value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></label>
-            ))}
-            <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
-          </div>
-        </form>
-      </section>
+      {canAct && (
+        <section className="market-section" aria-label="부지 등록">
+          <h2 className="text-[0.9rem] mb-2">부지 등록</h2>
+          <form className="sizing-new-form" onSubmit={create}>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-[0.78rem]"><span className="block mb-1">부지명 *</span>
+                <input className="sizing-new-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
+              <label className="text-[0.78rem]"><span className="block mb-1">지역코드</span>
+                <input className="sizing-new-input sizing-new-input-sm" value={form.region_code} onChange={(e) => setForm({ ...form, region_code: e.target.value })} /></label>
+              {(["infra_score", "logistics_score", "labor_score", "permit_lead_time_days", "total_score"] as const).map((k) => (
+                <label key={k} className="text-[0.78rem] w-[6rem]"><span className="block mb-1">{k === "infra_score" ? "인프라" : k === "logistics_score" ? "물류" : k === "labor_score" ? "노동력" : k === "permit_lead_time_days" ? "인허가(일)" : "총점"}</span>
+                  <input type="number" className="sizing-new-input sizing-new-input-sm" value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></label>
+              ))}
+              <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
+            </div>
+          </form>
+        </section>
+      )}
     </main>
   );
 }

@@ -15,6 +15,8 @@ import { RoicWaterfallChart } from "../RoicWaterfallChart.tsx";
 import { BetaPanel, type PeerRow } from "./BetaPanel.tsx";
 import { DerivationTable } from "./DerivationTable.tsx";
 import { api } from "../../lib/api.ts";
+import { useAuth } from "../../lib/auth-client.tsx";
+import { canWriteProject } from "../../lib/project-write-access.ts";
 import {
   assembleDerivation,
   capmComponentGaps,
@@ -167,6 +169,8 @@ function formatComponentValue(key: string, v: number): string {
 }
 
 export function WaccPanel({ projectId }: { projectId: string }) {
+  const { me } = useAuth();
+  const canAct = canWriteProject(me?.role);
   const [view, setView] = useState<View | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -486,48 +490,51 @@ export function WaccPanel({ projectId }: { projectId: string }) {
           )}
         </section>
 
-        {/* WACC 참조값 — 두 모드 모두에서 보이는 가져오기 액션 (ADR-0116 Phase 4).
-            제안일 뿐이며, 적용 후 값·출처를 확인하고 사람이 확정한다 (kind=user). */}
-        {sugg && sugg.suggestions.length > 0 && (
-          <section className="market-section sizing-step mt-3" aria-label="WACC 참조값">
-            <h3 className="sizing-step-title">
-              WACC 참조값
-              <span className="status-chip status-info">{sugg.subject?.name_ko ?? "대상 회사"} 기준 · 제안 — 확정은 사람</span>
-            </h3>
-            <div className="flex flex-wrap gap-5 items-start text-[0.85rem]">
-              {sugg.suggestions.filter((x): x is Sugg & { value: number } => x.value !== null).map((x) => (
-                <div key={x.key}>
-                  <div className="font-bold tabular-nums text-[1.05rem]">{x.key === "observed_de" ? x.value.toFixed(2) : `${x.value.toFixed(2)}%`}</div>
-                  <div className="text-[color:var(--muted-fg)] text-[0.74rem]">
-                    {x.key === "risk_free" ? "Rf (국고채 3년)" : x.key === "credit_spread" ? "가산금리 (AA− − 국고채)" : "관측 D/E"} · {x.as_of}
+        {canAct && (
+          <>
+          {/* WACC 참조값 — 두 모드 모두에서 보이는 가져오기 액션 (ADR-0116 Phase 4).
+              제안일 뿐이며, 적용 후 값·출처를 확인하고 사람이 확정한다 (kind=user). */}
+          {sugg && sugg.suggestions.length > 0 && (
+            <section className="market-section sizing-step mt-3" aria-label="WACC 참조값">
+              <h3 className="sizing-step-title">
+                WACC 참조값
+                <span className="status-chip status-info">{sugg.subject?.name_ko ?? "대상 회사"} 기준 · 제안 — 확정은 사람</span>
+              </h3>
+              <div className="flex flex-wrap gap-5 items-start text-[0.85rem]">
+                {sugg.suggestions.filter((x): x is Sugg & { value: number } => x.value !== null).map((x) => (
+                  <div key={x.key}>
+                    <div className="font-bold tabular-nums text-[1.05rem]">{x.key === "observed_de" ? x.value.toFixed(2) : `${x.value.toFixed(2)}%`}</div>
+                    <div className="text-[color:var(--muted-fg)] text-[0.74rem]">
+                      {x.key === "risk_free" ? "Rf (국고채 3년)" : x.key === "credit_spread" ? "가산금리 (AA− − 국고채)" : "관측 D/E"} · {x.as_of}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2 mt-2">
-              <button
-                type="button"
-                className="btn-ghost btn-sm"
-                onClick={() => {
-                  setMode("capm");
-                  for (const x of sugg.suggestions) {
-                    if (x.value !== null) applyRef(x.key, x);
-                  }
-                }}
-              >
-                CAPM 분해에 모두 적용
-              </button>
-              <button type="button" className="btn-ghost btn-sm" onClick={() => void loadSugg()}>새로고침</button>
-            </div>
-            <p className="note-line">참조값은 제안입니다 — 적용 후 값·출처를 확인하고 사람이 확정합니다 (확정값은 kind=user). 출처: 한국은행 ECOS 시장금리 · DART 연결재무제표.</p>
-          </section>
+                ))}
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm"
+                  onClick={() => {
+                    setMode("capm");
+                    for (const x of sugg.suggestions) {
+                      if (x.value !== null) applyRef(x.key, x);
+                    }
+                  }}
+                >
+                  CAPM 분해에 모두 적용
+                </button>
+                <button type="button" className="btn-ghost btn-sm" onClick={() => void loadSugg()}>새로고침</button>
+              </div>
+              <p className="note-line">참조값은 제안입니다 — 적용 후 값·출처를 확인하고 사람이 확정합니다 (확정값은 kind=user). 출처: 한국은행 ECOS 시장금리 · DART 연결재무제표.</p>
+            </section>
+          )}
+          {sugg && sugg.suggestions.every((x) => x.value === null) && (
+            <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-3">
+              참조값을 가져올 데이터가 없습니다 — {(sugg.missing ?? []).join(" · ")}
+            </p>
+          )}
+          </>
         )}
-        {sugg && sugg.suggestions.every((x) => x.value === null) && (
-          <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-3">
-            참조값을 가져올 데이터가 없습니다 — {(sugg.missing ?? []).join(" · ")}
-          </p>
-        )}
-
         {/* 저장된 CAPM 세션 — 계산 과정은 저장 후에도 레지스트리에서 재현된다 (ADR-0115) */}
         {view && view.derivation && view.components.length > 0 && (
           <section className="market-section sizing-step">
@@ -573,247 +580,251 @@ export function WaccPanel({ projectId }: { projectId: string }) {
           </section>
         )}
 
-        {/* 모드 탭 */}
-        <div className="flex gap-1.5 mt-6" role="tablist" aria-label="입력 모드">
-          <button role="tab" aria-selected={mode === "direct"} type="button"
-            className={`rounded-t-lg border border-b-0 px-4 py-2 text-[0.88rem] font-semibold ${mode === "direct" ? "bg-[color:var(--surface)] text-[color:var(--accent)]" : "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]"}`}
-            onClick={() => setMode("direct")}>직접 입력</button>
-          <button role="tab" aria-selected={mode === "capm"} type="button"
-            className={`rounded-t-lg border border-b-0 px-4 py-2 text-[0.88rem] font-semibold ${mode === "capm" ? "bg-[color:var(--surface)] text-[color:var(--accent)]" : "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]"}`}
-            onClick={() => setMode("capm")}>CAPM 분해</button>
-        </div>
+        {canAct && (
+          <>
+          {/* 모드 탭 */}
+          <div className="flex gap-1.5 mt-6" role="tablist" aria-label="입력 모드">
+            <button role="tab" aria-selected={mode === "direct"} type="button"
+              className={`rounded-t-lg border border-b-0 px-4 py-2 text-[0.88rem] font-semibold ${mode === "direct" ? "bg-[color:var(--surface)] text-[color:var(--accent)]" : "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]"}`}
+              onClick={() => setMode("direct")}>직접 입력</button>
+            <button role="tab" aria-selected={mode === "capm"} type="button"
+              className={`rounded-t-lg border border-b-0 px-4 py-2 text-[0.88rem] font-semibold ${mode === "capm" ? "bg-[color:var(--surface)] text-[color:var(--accent)]" : "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]"}`}
+              onClick={() => setMode("capm")}>CAPM 분해</button>
+          </div>
 
-        {mode === "capm" && sugg && sugg.suggestions.some((x) => x.value !== null) && (
-          <section className="market-section sizing-step mt-3" aria-label="WACC 참조값">
-            <h3 className="sizing-step-title">WACC 참조값 <span className="status-chip status-info">{sugg.subject?.name_ko ?? "대상 회사"} 기준 · 제안 — 확정은 사람</span></h3>
-            <table className="data-table">
-              <thead><tr><th scope="col">파라미터</th><th scope="col" className="num">참조값</th><th scope="col">출처 · 기준일</th><th scope="col"></th></tr></thead>
-              <tbody>
-                {sugg.suggestions.map((x) => (
-                  <tr key={x.key}>
-                    <td>{x.key === "risk_free" ? "무위험이자율 (Rf) — 국고채 3년" : x.key === "credit_spread" ? "신용등급 가산금리 (회사채 AA− − 국고채)" : "관측 D/E (부채/자본, 최근 결산)"}</td>
-                    <td className="num mono-num">{x.value === null ? "N/A" : x.key === "observed_de" ? x.value.toFixed(2) : `${x.value.toFixed(2)}%`}</td>
-                    <td className="text-[color:var(--muted-fg)] text-[0.76rem]">{x.value !== null ? `${x.source_label ?? ""} · ${x.as_of ?? ""}` : x.reason ?? ""}</td>
-                    <td>{x.value !== null && <button type="button" className="btn-ghost btn-sm" onClick={() => applyRef(x.key, x)}>{APPLY_LABEL[x.key]}</button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
-        {mode === "direct" ? (
-          <form className="sizing-step grid gap-3 mt-0 rounded-tl-none" style={{ maxWidth: 460 }} onSubmit={submitDirect}>
-            <h3 className="sizing-step-title">직접 입력</h3>
-            <label className="grid gap-1 text-sm">WACC (비율)<input className="form-input" value={directWacc} onChange={(e) => setDirectWacc(e.target.value)} placeholder="0.095" /></label>
-            <label className="grid gap-1 text-sm">Hurdle IRR (선택)<input className="form-input" value={directHurdle} onChange={(e) => setDirectHurdle(e.target.value)} placeholder="0.15" /></label>
-            <label className="grid gap-1 text-sm">근거/승인 메모<textarea className="form-input" value={directRationale} onChange={(e) => setDirectRationale(e.target.value)} placeholder="Treasury 확인, IC 가이드라인 등" /></label>
-            <label className="grid gap-1 text-sm">
-              WACC 적용 주체 (선택 — 미확정 시 트랙 기본값)
-              <select className="form-input" value={subject} onChange={(e) => setSubject(e.target.value as typeof subject)}>
-                <option value="">트랙 기본값 따름</option>
-                <option value="promoter">투자주체 (promoter) — 자체 추진</option>
-                <option value="target">대상기업 (target) — 인수·지분참여</option>
-                <option value="project_newco">신설법인 (project_newco)</option>
-              </select>
-            </label>
-            {subject && (
-              <label className="grid gap-1 text-sm">주체 근거 (필수)<textarea className="form-input" value={subjectRationale} onChange={(e) => setSubjectRationale(e.target.value)} placeholder="현금흐름 리스크가 대상기업에 귀속 — 유사업종 베타 재레버링 근거 등" /></label>
-            )}
-            <button className="primary-button justify-self-start" type="submit">이 값으로 확정</button>
-            <p className="text-[color:var(--muted-fg)] text-[0.78rem]">확정하면 이 값이 사람이 확인한 최종 값(출처 등급 user)으로 기록됩니다. 저장 시 최신 run을 복사한 새 run_input 스냅샷과 assumption(wacc/hurdle_irr) 행이 함께 생성됩니다.</p>
-          </form>
-        ) : (
-          <form className="sizing-step mt-0 rounded-tl-none" onSubmit={submitCapm}>
-            {/* ① 시장 수치 */}
-            <h3 className="sizing-step-title"><span className="sizing-step-badge">1</span>시장 수치 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 공신력 있는 외부 출처에서 확인한 값을 인용합니다 (AlphaSpread, 한국은행 ECOS 등)</span></h3>
-            <div>
-              <CitedRow name="무위험이자율 (Rf)" sub="국고채 3년물 기준" field={rf} onChange={setRf} />
-              <CitedRow name="주식위험프리미엄 (ERP)" sub="시장 위험 프리미엄" field={erp} onChange={setErp} />
-              <CitedRow name="규모 프리미엄" sub="선택 — 중소규모 할증" field={sp} onChange={setSp} forceKind="user" />
-            </div>
-
-            {/* ② 베타 추정 */}
-            <h3 className="sizing-step-title mt-6"><span className="sizing-step-badge">2</span>베타 추정 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 시장 평균 대비 변동성까지 함께 산출합니다</span></h3>
-            <BetaPanel
-              betaTab={betaTab}
-              onBetaTab={setBetaTab}
-              peers={peers}
-              onPeers={setPeers}
-              peerTaxRate={taxN}
-              regressionText={regText}
-              onRegressionText={setRegText}
-              regression={regResult}
-              regressionError={regError}
-              onRunRegression={runRegression}
-              observedDe={obsDe}
-              onObservedDe={setObsDe}
-            />
-            {chain && (
-              <div className="mt-3 rounded-lg border border-dashed border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] p-3 text-[0.85rem]">
-                <b>선택된 베타 경로:</b> {chain.path}
-                {chain.text.startsWith("관측") ? (
-                  <div className="text-[color:var(--muted-fg)]">{chain.text}</div>
-                ) : (
-                  <div className="font-mono text-[0.8rem] mt-1">{chain.text}</div>
-                )}
-              </div>
-            )}
-
-            {/* ③ 타인자본비용 */}
-            <h3 className="sizing-step-title mt-6"><span className="sizing-step-badge">3</span>타인자본비용 (Kd) <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 회사 신용등급 기준 대출금리 또는 실제 조달금리</span></h3>
-            <div className="flex gap-1.5 mb-1">
-              <button type="button" onClick={() => setKdMode("rating")}
-                className={`rounded-full border px-3 py-1 text-[0.8rem] ${kdMode === "rating" ? "border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] text-[color:var(--accent)] font-bold" : "border-[color:var(--border)] bg-[color:var(--surface)] text-[color:var(--muted-fg)]"}`}>
-                신용등급 + 가산금리
-              </button>
-              <button type="button" onClick={() => setKdMode("direct")}
-                className={`rounded-full border px-3 py-1 text-[0.8rem] ${kdMode === "direct" ? "border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] text-[color:var(--accent)] font-bold" : "border-[color:var(--border)] bg-[color:var(--surface)] text-[color:var(--muted-fg)]"}`}>
-                실제 대출금리 직접 입력
-              </button>
-            </div>
-            {kdMode === "rating" ? (
-              <>
-                <CitedRow name="신용등급 가산금리" sub="Rf에 가산 — 출처명에 등급 포함" field={kdSpread} onChange={setKdSpread} />
-                {rfN != null && nOr(kdSpread.value) != null && (
-                  <div className="grid gap-2 md:grid-cols-2 mt-2 text-sm">
-                    <StatCard k="타인자본비용 Kd = Rf + 가산금리">{pct(rfN)} + {pct(nOr(kdSpread.value))} = <b>{pct(rfN + nOr(kdSpread.value)!)}</b></StatCard>
-                  </div>
-                )}
-              </>
-            ) : (
-              <CitedRow name="조달금리 (실제)" sub="실행 대출금리" field={kdDirect} onChange={setKdDirect} forceKind="user" />
-            )}
-
-            {/* ④ 자본구조·세율 */}
-            <h3 className="sizing-step-title mt-6"><span className="sizing-step-badge">4</span>자본구조·세율 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 목표(target) 자본구조 기준</span></h3>
-            <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
+          {mode === "capm" && sugg && sugg.suggestions.some((x) => x.value !== null) && (
+            <section className="market-section sizing-step mt-3" aria-label="WACC 참조값">
+              <h3 className="sizing-step-title">WACC 참조값 <span className="status-chip status-info">{sugg.subject?.name_ko ?? "대상 회사"} 기준 · 제안 — 확정은 사람</span></h3>
+              <table className="data-table">
+                <thead><tr><th scope="col">파라미터</th><th scope="col" className="num">참조값</th><th scope="col">출처 · 기준일</th><th scope="col"></th></tr></thead>
+                <tbody>
+                  {sugg.suggestions.map((x) => (
+                    <tr key={x.key}>
+                      <td>{x.key === "risk_free" ? "무위험이자율 (Rf) — 국고채 3년" : x.key === "credit_spread" ? "신용등급 가산금리 (회사채 AA− − 국고채)" : "관측 D/E (부채/자본, 최근 결산)"}</td>
+                      <td className="num mono-num">{x.value === null ? "N/A" : x.key === "observed_de" ? x.value.toFixed(2) : `${x.value.toFixed(2)}%`}</td>
+                      <td className="text-[color:var(--muted-fg)] text-[0.76rem]">{x.value !== null ? `${x.source_label ?? ""} · ${x.as_of ?? ""}` : x.reason ?? ""}</td>
+                      <td>{x.value !== null && <button type="button" className="btn-ghost btn-sm" onClick={() => applyRef(x.key, x)}>{APPLY_LABEL[x.key]}</button>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
+          {mode === "direct" ? (
+            <form className="sizing-step grid gap-3 mt-0 rounded-tl-none" style={{ maxWidth: 460 }} onSubmit={submitDirect}>
+              <h3 className="sizing-step-title">직접 입력</h3>
+              <label className="grid gap-1 text-sm">WACC (비율)<input className="form-input" value={directWacc} onChange={(e) => setDirectWacc(e.target.value)} placeholder="0.095" /></label>
+              <label className="grid gap-1 text-sm">Hurdle IRR (선택)<input className="form-input" value={directHurdle} onChange={(e) => setDirectHurdle(e.target.value)} placeholder="0.15" /></label>
+              <label className="grid gap-1 text-sm">근거/승인 메모<textarea className="form-input" value={directRationale} onChange={(e) => setDirectRationale(e.target.value)} placeholder="Treasury 확인, IC 가이드라인 등" /></label>
+              <label className="grid gap-1 text-sm">
+                WACC 적용 주체 (선택 — 미확정 시 트랙 기본값)
+                <select className="form-input" value={subject} onChange={(e) => setSubject(e.target.value as typeof subject)}>
+                  <option value="">트랙 기본값 따름</option>
+                  <option value="promoter">투자주체 (promoter) — 자체 추진</option>
+                  <option value="target">대상기업 (target) — 인수·지분참여</option>
+                  <option value="project_newco">신설법인 (project_newco)</option>
+                </select>
+              </label>
+              {subject && (
+                <label className="grid gap-1 text-sm">주체 근거 (필수)<textarea className="form-input" value={subjectRationale} onChange={(e) => setSubjectRationale(e.target.value)} placeholder="현금흐름 리스크가 대상기업에 귀속 — 유사업종 베타 재레버링 근거 등" /></label>
+              )}
+              <button className="primary-button justify-self-start" type="submit">이 값으로 확정</button>
+              <p className="text-[color:var(--muted-fg)] text-[0.78rem]">확정하면 이 값이 사람이 확인한 최종 값(출처 등급 user)으로 기록됩니다. 저장 시 최신 run을 복사한 새 run_input 스냅샷과 assumption(wacc/hurdle_irr) 행이 함께 생성됩니다.</p>
+            </form>
+          ) : (
+            <form className="sizing-step mt-0 rounded-tl-none" onSubmit={submitCapm}>
+              {/* ① 시장 수치 */}
+              <h3 className="sizing-step-title"><span className="sizing-step-badge">1</span>시장 수치 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 공신력 있는 외부 출처에서 확인한 값을 인용합니다 (AlphaSpread, 한국은행 ECOS 등)</span></h3>
               <div>
-                <div className="text-[0.85rem] font-semibold">목표 D/E</div>
-                <div className="text-[color:var(--muted-fg)] text-[0.72rem]">부채/자기자본</div>
+                <CitedRow name="무위험이자율 (Rf)" sub="국고채 3년물 기준" field={rf} onChange={setRf} />
+                <CitedRow name="주식위험프리미엄 (ERP)" sub="시장 위험 프리미엄" field={erp} onChange={setErp} />
+                <CitedRow name="규모 프리미엄" sub="선택 — 중소규모 할증" field={sp} onChange={setSp} forceKind="user" />
               </div>
-              <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">값
-                <input className="form-input" value={targetDe.value} placeholder="0.60" onChange={(e) => setTargetDe({ ...targetDe, value: e.target.value })} />
-              </label>
-              <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">출처명
-                <input className="form-input" value={targetDe.source} placeholder="재무계획 — 인허가 직후 목표 레버리지" onChange={(e) => setTargetDe({ ...targetDe, source: e.target.value })} />
-              </label>
-              <div><KindChip kind="user" /></div>
-            </div>
-            <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
-              <div>
-                <div className="text-[0.85rem] font-semibold">한계 세율</div>
-                <div className="text-[color:var(--muted-fg)] text-[0.72rem]">법인세 + 지방세</div>
-              </div>
-              <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">값
-                <input className="form-input" value={taxRate.value} placeholder="0.22" onChange={(e) => setTaxRate({ ...taxRate, value: e.target.value })} />
-              </label>
-              <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">출처명
-                <input className="form-input" value={taxRate.source} placeholder="법인세법 표준세율" onChange={(e) => setTaxRate({ ...taxRate, source: e.target.value })} />
-              </label>
-              <div><KindChip kind="user" /></div>
-            </div>
-            {derivation?.computed.we != null && derivation?.computed.wd != null && (
-              <div className="grid gap-2 md:grid-cols-2 mt-2 text-sm">
-                <StatCard k="자기자본 가중치 We = 1/(1+D/E)">{pct(derivation.computed.we)}</StatCard>
-                <StatCard k="타인자본 가중치 Wd = D/E/(1+D/E)">{pct(derivation.computed.wd)}</StatCard>
-              </div>
-            )}
 
-            {/* 산식 분해 */}
-            <h3 className="sizing-step-title mt-6">▍산식 분해 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 어떻게 이 값이 나왔는지 한눈에</span></h3>
-            {derivation && derivation.steps.length > 0 ? (
-              <>
-                {derivation.missing.length > 0 && (
-                  <p className="text-[color:var(--warning)] text-[0.8rem] mb-2">미입력: {derivation.missing.join(" · ")}</p>
-                )}
-                <DerivationTable derivation={derivation} />
-                {keSteps.length > 0 && (
-                  <div className="grid gap-4 lg:grid-cols-2 mt-4">
-                    <div className="border border-[color:var(--border-subtle)] rounded-lg p-3">
-                      <h4 className="text-[0.82rem] font-semibold text-[color:var(--muted-fg)] mb-1">자기자본비용 (CAPM) 빌드업</h4>
-                      <RoicWaterfallChart steps={keSteps} numberFormat="percent" />
-                    </div>
-                    {waccSteps.length > 0 && (
-                      <div className="border border-[color:var(--border-subtle)] rounded-lg p-3">
-                        <h4 className="text-[0.82rem] font-semibold text-[color:var(--muted-fg)] mb-1">WACC 가중 혼합</h4>
-                        <RoicWaterfallChart steps={waccSteps} numberFormat="percent" />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              <p className="text-[color:var(--muted-fg)] text-[0.82rem]">시장 수치(①), 베타(②), 타인자본비용(③), 자본구조·세율(④)을 입력하면 산식 분해가 표시됩니다.</p>
-            )}
-
-            {/* 기록될 컴포넌트·출처 */}
-            {components.length > 0 && (
-              <>
-                <h3 className="sizing-step-title mt-6">기록될 컴포넌트·출처 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— assumption registry에 <span className="font-mono">wacc.*</span> 키로 함께 저장됩니다</span></h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[0.85rem]">
-                    <thead>
-                      <tr className="text-left text-[color:var(--muted-fg)] text-[0.75rem] border-b border-[color:var(--border-bright)]">
-                        <th className="py-1.5 px-1.5">가정 키</th>
-                        <th className="py-1.5 px-1.5 text-right">값</th>
-                        <th className="py-1.5 px-1.5">kind</th>
-                        <th className="py-1.5 px-1.5">출처 / 근거</th>
-                        <th className="py-1.5 px-1.5">기준일</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {components.map((c) => (
-                        <tr key={c.key} className="border-b border-[color:var(--border-subtle)]">
-                          <td className="py-1.5 px-1.5">
-                            <div className="text-[0.82rem]">{COMPONENT_LABELS[c.key] ?? c.key}</div>
-                            <div className="font-mono text-[0.7rem] text-[color:var(--muted-fg)]">{c.key}</div>
-                          </td>
-                          <td className="py-1.5 px-1.5 text-right tabular-nums font-semibold">{formatComponentValue(c.key, c.value)}</td>
-                          <td className="py-1.5 px-1.5"><KindChip kind={c.kind} /></td>
-                          <td className="py-1.5 px-1.5 text-[0.8rem] text-[color:var(--muted-fg)]">{c.sourceLabel ?? c.rationale ?? "—"}{c.anchorRef && <> <a href={c.anchorRef} className="text-[color:var(--accent)]" target="_blank" rel="noreferrer">링크</a></>}</td>
-                          <td className="py-1.5 px-1.5 text-[0.8rem]">{c.asOf ?? "—"}</td>
-                        </tr>
-                      ))}
-                      <tr className="border-b border-[color:var(--border-subtle)] bg-[color:var(--primary-bg)] font-bold">
-                        <td className="py-1.5 px-1.5 font-mono text-[0.8em]">wacc (최종 확정)</td>
-                        <td className="py-1.5 px-1.5 text-right tabular-nums">{pct(nOr(waccFinal))}</td>
-                        <td className="py-1.5 px-1.5"><KindChip kind="user" /></td>
-                        <td className="py-1.5 px-1.5 text-[0.8rem] text-[color:var(--muted-fg)]">사람이 최종 확정한 값 — FS 진행 진입 필수 요건</td>
-                        <td className="py-1.5 px-1.5 text-[0.8rem]">—</td>
-                      </tr>
-                    </tbody>
-                  </table>
+              {/* ② 베타 추정 */}
+              <h3 className="sizing-step-title mt-6"><span className="sizing-step-badge">2</span>베타 추정 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 시장 평균 대비 변동성까지 함께 산출합니다</span></h3>
+              <BetaPanel
+                betaTab={betaTab}
+                onBetaTab={setBetaTab}
+                peers={peers}
+                onPeers={setPeers}
+                peerTaxRate={taxN}
+                regressionText={regText}
+                onRegressionText={setRegText}
+                regression={regResult}
+                regressionError={regError}
+                onRunRegression={runRegression}
+                observedDe={obsDe}
+                onObservedDe={setObsDe}
+              />
+              {chain && (
+                <div className="mt-3 rounded-lg border border-dashed border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] p-3 text-[0.85rem]">
+                  <b>선택된 베타 경로:</b> {chain.path}
+                  {chain.text.startsWith("관측") ? (
+                    <div className="text-[color:var(--muted-fg)]">{chain.text}</div>
+                  ) : (
+                    <div className="font-mono text-[0.8rem] mt-1">{chain.text}</div>
+                  )}
                 </div>
-              </>
-            )}
+              )}
 
-            {/* 확정 저장 */}
-            <h3 className="sizing-step-title mt-6">확정 저장 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 사람이 최종 값을 확인·확정합니다 (출처 등급: user = 사람 확정)</span></h3>
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-1 text-sm">WACC (비율) — CAPM 계산값이 미리 채워짐
-                <input className="form-input" value={waccFinal} placeholder={computedWacc != null ? computedWacc.toFixed(4) : "0.095"} onChange={(e) => { setWaccFinal(e.target.value); setWaccTouched(true); }} />
-              </label>
-              <label className="grid gap-1 text-sm">Hurdle IRR (선택)
-                <input className="form-input" value={hurdle} placeholder="0.15" onChange={(e) => setHurdle(e.target.value)} />
-              </label>
-            </div>
-            <label className="grid gap-1 text-sm mt-1">근거/승인 메모
-              <textarea className="form-input" rows={2} value={rationale} placeholder="예: ECOS 9/10 마감값, ERP는 Damodaran 2026-01판, 회귀 표본 250일 — 확정" onChange={(e) => setRationale(e.target.value)} />
-            </label>
-            {computedWacc != null && nOr(waccFinal) != null && (
-              mismatch ? (
-                <p role="status" className="text-[color:var(--warning)] bg-[color:var(--warning-bg)] rounded-md px-3 py-2 text-[0.8rem] mt-2">
-                  ⚠ 계산값 {pct(computedWacc)} ≠ 확정값 {pct(nOr(waccFinal))} — 차이 근거를 메모에 기재해야 합니다.
-                </p>
+              {/* ③ 타인자본비용 */}
+              <h3 className="sizing-step-title mt-6"><span className="sizing-step-badge">3</span>타인자본비용 (Kd) <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 회사 신용등급 기준 대출금리 또는 실제 조달금리</span></h3>
+              <div className="flex gap-1.5 mb-1">
+                <button type="button" onClick={() => setKdMode("rating")}
+                  className={`rounded-full border px-3 py-1 text-[0.8rem] ${kdMode === "rating" ? "border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] text-[color:var(--accent)] font-bold" : "border-[color:var(--border)] bg-[color:var(--surface)] text-[color:var(--muted-fg)]"}`}>
+                  신용등급 + 가산금리
+                </button>
+                <button type="button" onClick={() => setKdMode("direct")}
+                  className={`rounded-full border px-3 py-1 text-[0.8rem] ${kdMode === "direct" ? "border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] text-[color:var(--accent)] font-bold" : "border-[color:var(--border)] bg-[color:var(--surface)] text-[color:var(--muted-fg)]"}`}>
+                  실제 대출금리 직접 입력
+                </button>
+              </div>
+              {kdMode === "rating" ? (
+                <>
+                  <CitedRow name="신용등급 가산금리" sub="Rf에 가산 — 출처명에 등급 포함" field={kdSpread} onChange={setKdSpread} />
+                  {rfN != null && nOr(kdSpread.value) != null && (
+                    <div className="grid gap-2 md:grid-cols-2 mt-2 text-sm">
+                      <StatCard k="타인자본비용 Kd = Rf + 가산금리">{pct(rfN)} + {pct(nOr(kdSpread.value))} = <b>{pct(rfN + nOr(kdSpread.value)!)}</b></StatCard>
+                    </div>
+                  )}
+                </>
               ) : (
-                <p role="status" className="text-[color:var(--success)] bg-[color:var(--success-bg)] rounded-md px-3 py-2 text-[0.8rem] mt-2">
-                  ✓ 확정값 {pct(nOr(waccFinal))} 가 CAPM 계산값과 일치합니다.
-                </p>
-              )
-            )}
-            <button className="primary-button justify-self-start mt-2" type="submit">이 값으로 확정</button>
-            <p className="text-[color:var(--muted-fg)] text-[0.78rem]">확정값이 계산값과 다르면 ⚠ 경고가 표시되고, 차이 근거를 메모에 기재해야 합니다. 저장 시 컴포넌트·산식 분해 전체가 하나의 run 스냅샷으로 기록되어 FS 진행 산출물에서 재현됩니다.</p>
-          </form>
+                <CitedRow name="조달금리 (실제)" sub="실행 대출금리" field={kdDirect} onChange={setKdDirect} forceKind="user" />
+              )}
+
+              {/* ④ 자본구조·세율 */}
+              <h3 className="sizing-step-title mt-6"><span className="sizing-step-badge">4</span>자본구조·세율 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 목표(target) 자본구조 기준</span></h3>
+              <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
+                <div>
+                  <div className="text-[0.85rem] font-semibold">목표 D/E</div>
+                  <div className="text-[color:var(--muted-fg)] text-[0.72rem]">부채/자기자본</div>
+                </div>
+                <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">값
+                  <input className="form-input" value={targetDe.value} placeholder="0.60" onChange={(e) => setTargetDe({ ...targetDe, value: e.target.value })} />
+                </label>
+                <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">출처명
+                  <input className="form-input" value={targetDe.source} placeholder="재무계획 — 인허가 직후 목표 레버리지" onChange={(e) => setTargetDe({ ...targetDe, source: e.target.value })} />
+                </label>
+                <div><KindChip kind="user" /></div>
+              </div>
+              <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
+                <div>
+                  <div className="text-[0.85rem] font-semibold">한계 세율</div>
+                  <div className="text-[color:var(--muted-fg)] text-[0.72rem]">법인세 + 지방세</div>
+                </div>
+                <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">값
+                  <input className="form-input" value={taxRate.value} placeholder="0.22" onChange={(e) => setTaxRate({ ...taxRate, value: e.target.value })} />
+                </label>
+                <label className="grid gap-1 text-[0.78rem] text-[color:var(--muted-fg)]">출처명
+                  <input className="form-input" value={taxRate.source} placeholder="법인세법 표준세율" onChange={(e) => setTaxRate({ ...taxRate, source: e.target.value })} />
+                </label>
+                <div><KindChip kind="user" /></div>
+              </div>
+              {derivation?.computed.we != null && derivation?.computed.wd != null && (
+                <div className="grid gap-2 md:grid-cols-2 mt-2 text-sm">
+                  <StatCard k="자기자본 가중치 We = 1/(1+D/E)">{pct(derivation.computed.we)}</StatCard>
+                  <StatCard k="타인자본 가중치 Wd = D/E/(1+D/E)">{pct(derivation.computed.wd)}</StatCard>
+                </div>
+              )}
+
+              {/* 산식 분해 */}
+              <h3 className="sizing-step-title mt-6">▍산식 분해 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 어떻게 이 값이 나왔는지 한눈에</span></h3>
+              {derivation && derivation.steps.length > 0 ? (
+                <>
+                  {derivation.missing.length > 0 && (
+                    <p className="text-[color:var(--warning)] text-[0.8rem] mb-2">미입력: {derivation.missing.join(" · ")}</p>
+                  )}
+                  <DerivationTable derivation={derivation} />
+                  {keSteps.length > 0 && (
+                    <div className="grid gap-4 lg:grid-cols-2 mt-4">
+                      <div className="border border-[color:var(--border-subtle)] rounded-lg p-3">
+                        <h4 className="text-[0.82rem] font-semibold text-[color:var(--muted-fg)] mb-1">자기자본비용 (CAPM) 빌드업</h4>
+                        <RoicWaterfallChart steps={keSteps} numberFormat="percent" />
+                      </div>
+                      {waccSteps.length > 0 && (
+                        <div className="border border-[color:var(--border-subtle)] rounded-lg p-3">
+                          <h4 className="text-[0.82rem] font-semibold text-[color:var(--muted-fg)] mb-1">WACC 가중 혼합</h4>
+                          <RoicWaterfallChart steps={waccSteps} numberFormat="percent" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-[color:var(--muted-fg)] text-[0.82rem]">시장 수치(①), 베타(②), 타인자본비용(③), 자본구조·세율(④)을 입력하면 산식 분해가 표시됩니다.</p>
+              )}
+
+              {/* 기록될 컴포넌트·출처 */}
+              {components.length > 0 && (
+                <>
+                  <h3 className="sizing-step-title mt-6">기록될 컴포넌트·출처 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— assumption registry에 <span className="font-mono">wacc.*</span> 키로 함께 저장됩니다</span></h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[0.85rem]">
+                      <thead>
+                        <tr className="text-left text-[color:var(--muted-fg)] text-[0.75rem] border-b border-[color:var(--border-bright)]">
+                          <th className="py-1.5 px-1.5">가정 키</th>
+                          <th className="py-1.5 px-1.5 text-right">값</th>
+                          <th className="py-1.5 px-1.5">kind</th>
+                          <th className="py-1.5 px-1.5">출처 / 근거</th>
+                          <th className="py-1.5 px-1.5">기준일</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {components.map((c) => (
+                          <tr key={c.key} className="border-b border-[color:var(--border-subtle)]">
+                            <td className="py-1.5 px-1.5">
+                              <div className="text-[0.82rem]">{COMPONENT_LABELS[c.key] ?? c.key}</div>
+                              <div className="font-mono text-[0.7rem] text-[color:var(--muted-fg)]">{c.key}</div>
+                            </td>
+                            <td className="py-1.5 px-1.5 text-right tabular-nums font-semibold">{formatComponentValue(c.key, c.value)}</td>
+                            <td className="py-1.5 px-1.5"><KindChip kind={c.kind} /></td>
+                            <td className="py-1.5 px-1.5 text-[0.8rem] text-[color:var(--muted-fg)]">{c.sourceLabel ?? c.rationale ?? "—"}{c.anchorRef && <> <a href={c.anchorRef} className="text-[color:var(--accent)]" target="_blank" rel="noreferrer">링크</a></>}</td>
+                            <td className="py-1.5 px-1.5 text-[0.8rem]">{c.asOf ?? "—"}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-b border-[color:var(--border-subtle)] bg-[color:var(--primary-bg)] font-bold">
+                          <td className="py-1.5 px-1.5 font-mono text-[0.8em]">wacc (최종 확정)</td>
+                          <td className="py-1.5 px-1.5 text-right tabular-nums">{pct(nOr(waccFinal))}</td>
+                          <td className="py-1.5 px-1.5"><KindChip kind="user" /></td>
+                          <td className="py-1.5 px-1.5 text-[0.8rem] text-[color:var(--muted-fg)]">사람이 최종 확정한 값 — FS 진행 진입 필수 요건</td>
+                          <td className="py-1.5 px-1.5 text-[0.8rem]">—</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {/* 확정 저장 */}
+              <h3 className="sizing-step-title mt-6">확정 저장 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">— 사람이 최종 값을 확인·확정합니다 (출처 등급: user = 사람 확정)</span></h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-1 text-sm">WACC (비율) — CAPM 계산값이 미리 채워짐
+                  <input className="form-input" value={waccFinal} placeholder={computedWacc != null ? computedWacc.toFixed(4) : "0.095"} onChange={(e) => { setWaccFinal(e.target.value); setWaccTouched(true); }} />
+                </label>
+                <label className="grid gap-1 text-sm">Hurdle IRR (선택)
+                  <input className="form-input" value={hurdle} placeholder="0.15" onChange={(e) => setHurdle(e.target.value)} />
+                </label>
+              </div>
+              <label className="grid gap-1 text-sm mt-1">근거/승인 메모
+                <textarea className="form-input" rows={2} value={rationale} placeholder="예: ECOS 9/10 마감값, ERP는 Damodaran 2026-01판, 회귀 표본 250일 — 확정" onChange={(e) => setRationale(e.target.value)} />
+              </label>
+              {computedWacc != null && nOr(waccFinal) != null && (
+                mismatch ? (
+                  <p role="status" className="text-[color:var(--warning)] bg-[color:var(--warning-bg)] rounded-md px-3 py-2 text-[0.8rem] mt-2">
+                    ⚠ 계산값 {pct(computedWacc)} ≠ 확정값 {pct(nOr(waccFinal))} — 차이 근거를 메모에 기재해야 합니다.
+                  </p>
+                ) : (
+                  <p role="status" className="text-[color:var(--success)] bg-[color:var(--success-bg)] rounded-md px-3 py-2 text-[0.8rem] mt-2">
+                    ✓ 확정값 {pct(nOr(waccFinal))} 가 CAPM 계산값과 일치합니다.
+                  </p>
+                )
+              )}
+              <button className="primary-button justify-self-start mt-2" type="submit">이 값으로 확정</button>
+              <p className="text-[color:var(--muted-fg)] text-[0.78rem]">확정값이 계산값과 다르면 ⚠ 경고가 표시되고, 차이 근거를 메모에 기재해야 합니다. 저장 시 컴포넌트·산식 분해 전체가 하나의 run 스냅샷으로 기록되어 FS 진행 산출물에서 재현됩니다.</p>
+            </form>
+          )}
+          </>
         )}
     </>
   );

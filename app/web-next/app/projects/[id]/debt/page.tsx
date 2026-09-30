@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
+import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 // 부채·커버넌트 (financing/valuation) — Wave 0 REST B6. 차입 상품 목록 관리;
 // 커버넌트 시나리오 테스트는 Wave 3 계산 뷰.
@@ -13,6 +15,8 @@ interface Instrument { id: string; lender: string | null; principal: number; rat
 function DebtView() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { me } = useAuth();
+  const canAct = canWriteProject(me?.role);
   const [rows, setRows] = useState<Instrument[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ lender: "", principal: "", rate: "", rate_type: "fixed", maturity: "", covenant_json: "" });
@@ -149,26 +153,28 @@ function DebtView() {
         </p>
       </section>
 
-      <section className="market-section" aria-label="차입 등록">
-        <h2 className="text-[0.9rem] mb-2">차입 등록</h2>
-        <form className="sizing-new-form" onSubmit={create}>
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="text-[0.78rem]"><span className="block mb-1">대출기관</span>
-              <input className="sizing-new-input sizing-new-input-sm" value={form.lender} onChange={(e) => setForm({ ...form, lender: e.target.value })} /></label>
-            <label className="text-[0.78rem] w-[8rem]"><span className="block mb-1">원금 *</span>
-              <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} required /></label>
-            <label className="text-[0.78rem]"><span className="block mb-1">금리 종류</span>
-              <select className="sizing-new-input sizing-new-input-sm" value={form.rate_type} onChange={(e) => setForm({ ...form, rate_type: e.target.value })}><option value="fixed">고정</option><option value="floating">변동</option></select></label>
-            <label className="text-[0.78rem] w-[6rem]"><span className="block mb-1">금리 (%)</span>
-              <input type="number" step="0.01" className="sizing-new-input sizing-new-input-sm" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} /></label>
-            <label className="text-[0.78rem]"><span className="block mb-1">만기</span>
-              <input className="sizing-new-input sizing-new-input-sm" value={form.maturity} onChange={(e) => setForm({ ...form, maturity: e.target.value })} placeholder="2031-06" /></label>
-            <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
-          </div>
-          <label className="text-[0.78rem] block mt-2"><span className="block mb-1">커버넌트 (JSON 또는 요약)</span>
-            <input className="sizing-new-input w-full" value={form.covenant_json} onChange={(e) => setForm({ ...form, covenant_json: e.target.value })} placeholder="DSCR >= 1.3 · NetLev <= 3.5x" /></label>
-        </form>
-      </section>
+      {canAct && (
+        <section className="market-section" aria-label="차입 등록">
+          <h2 className="text-[0.9rem] mb-2">차입 등록</h2>
+          <form className="sizing-new-form" onSubmit={create}>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-[0.78rem]"><span className="block mb-1">대출기관</span>
+                <input className="sizing-new-input sizing-new-input-sm" value={form.lender} onChange={(e) => setForm({ ...form, lender: e.target.value })} /></label>
+              <label className="text-[0.78rem] w-[8rem]"><span className="block mb-1">원금 *</span>
+                <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} required /></label>
+              <label className="text-[0.78rem]"><span className="block mb-1">금리 종류</span>
+                <select className="sizing-new-input sizing-new-input-sm" value={form.rate_type} onChange={(e) => setForm({ ...form, rate_type: e.target.value })}><option value="fixed">고정</option><option value="floating">변동</option></select></label>
+              <label className="text-[0.78rem] w-[6rem]"><span className="block mb-1">금리 (%)</span>
+                <input type="number" step="0.01" className="sizing-new-input sizing-new-input-sm" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} /></label>
+              <label className="text-[0.78rem]"><span className="block mb-1">만기</span>
+                <input className="sizing-new-input sizing-new-input-sm" value={form.maturity} onChange={(e) => setForm({ ...form, maturity: e.target.value })} placeholder="2031-06" /></label>
+              <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
+            </div>
+            <label className="text-[0.78rem] block mt-2"><span className="block mb-1">커버넌트 (JSON 또는 요약)</span>
+              <input className="sizing-new-input w-full" value={form.covenant_json} onChange={(e) => setForm({ ...form, covenant_json: e.target.value })} placeholder="DSCR >= 1.3 · NetLev <= 3.5x" /></label>
+          </form>
+        </section>
+      )}
     </main>
   );
 }
