@@ -10,6 +10,7 @@
 - **Session cookie (web) + Bearer API token (MCP/CLI)** — tokens are stored hashed, scope-limited, never logged in plaintext.
 - **MCP calls this API exclusively** (ADR-0011) — no separate code path with looser enforcement.
 - **`mnpi_flag=true` projects are excluded from default list/search responses** across every endpoint below, not just MCP (FR-SEC-06/SYS-02).
+- **`admin` is system-administration only (ADR-0146).** Outside the admin console (§8), business routes — `opportunities/**`, `brownfield/**`, `greenfield/**`, `companies/**`, `market-overview/**`, `synergy/**`, `our-company/**`, `archive/deals/**`, `projects/**`, `comments` POST, `agents/query` — reject admin with 403 `role_forbidden` on both reads and writes, via `requireBusinessActor(auth, mode)` in `app/web-next/lib/auth.ts`. Viewer writes keep 403 `role_required`. Exempt (open to admin as shared reference or self-service data): `glossary`, `notifications`, `auth/*`, `health`, `tokens` (read-only scope for admin — write-scoped issuance → 403 `role_forbidden`), `industries`, `benchmarks`, `series`, `procedures/resolve`, `llm-status`, `users/lookup`, `agents/registry`, `interpretations`, `data-changes`, `library`/`library/:docId`, `market-overview/ksic`, `market-overview/value-chain-graph`. `share/:token` is a public unauthenticated token route (ADR-0123) outside the role model. Wherever a row below says `analyst`+ or Authenticated for a business route, admin is excluded.
 - **Write endpoints are audit-logged**, including the actor, scope, and diff where applicable (append-only `audit_log`, FR-SEC-07).
 
 ## 2. Authentication & Session
@@ -22,15 +23,15 @@
 | `/api/auth/logout` | POST | Session invalidation | Session |
 | `/api/auth/password-reset` | POST | Admin-initiated reset, forces `must_change_password` | Admin |
 | `/api/auth/password-change` | POST | User-initiated change, checked against `password_history` | Session |
-| `/api/tokens` | POST/GET | API token issuance/list, scope-limited | Session |
+| `/api/tokens` | POST/GET | API token issuance/list, scope-limited | Session; write-scoped POST rejected for viewer and admin (admin → 403 `role_forbidden`, ADR-0146) |
 | `/api/tokens/:id` | DELETE | Revoke one own API token — foreign ids resolve to 404, never 403 | Session |
 
 ## 3. Projects and Membership
 
 | Endpoint | Method | Purpose | Access Control |
 |---|---|---|---|
-| `/api/projects` | GET | List projects — **filtered to caller's `project_member` rows only**, `mnpi_flag` projects further gated. Rows carry `rag_overall` + `rag_assessed_at` (the latest overall-grade `rag_assessment` row, one aggregate query) only when an overall assessment exists — absence means "no overall grade yet" (never a default color, same rule as `/api/projects/:id/rag`). `stale` is deliberately not emitted: `fact_market_observation` carries no project binding and `ttl_days` is per (run, assumption_key), so no honest per-project freshness signal exists to report | `project_member` deny-by-default |
-| `/api/projects` | POST | Create project (`md_project`) | `analyst`+ role |
+| `/api/projects` | GET | List projects — **filtered to caller's `project_member` rows only; admin → 403 `role_forbidden` (ADR-0146)**, `mnpi_flag` projects further gated. Rows carry `rag_overall` + `rag_assessed_at` (the latest overall-grade `rag_assessment` row, one aggregate query) only when an overall assessment exists — absence means "no overall grade yet" (never a default color, same rule as `/api/projects/:id/rag`). `stale` is deliberately not emitted: `fact_market_observation` carries no project binding and `ttl_days` is per (run, assumption_key), so no honest per-project freshness signal exists to report | `project_member` deny-by-default |
+| `/api/projects` | POST | Create project (`md_project`) | `analyst` role (admin → 403 `role_forbidden`) |
 | `/api/projects/:id` | GET | Project detail | Membership required — 404, not 403, for a non-member (existence itself is protected, FR-SEC-01) |
 | `/api/projects/:id/members` | GET/POST/DELETE | Membership management | `lead` role on the project |
 | `/api/projects/:id/classification` | GET/PUT | `sensitivity`/`mnpi_flag`/`wall_group` | `legal-counsel` or `compliance-officer` role |
@@ -63,9 +64,9 @@ agent 메타 옵션을 통해 `llm_call_log`(migration 0092) 런 장부에 기�
 | Endpoint | Method | Purpose | Access Control | Implementation |
 |---|---|---|---|---|
 | `/api/agents/registry` | GET | Runtime agent roster — `agents/*.md`의 정적 투영(`agent-registry.generated.ts`, 재생성: `bun scripts/co-newbiz/generate-agent-registry.ts`) | Authenticated | as-built (ADR-0128) |
-| `/api/agents/query` | POST | PM 라우터 질의 — `lib/pm-router.ts`가 질의를 분류(LLM, 실패 시 결정론 규칙)해 단일 에이전트 응답 또는 `opportunity_evaluation` 체인(`lib/agent-chains.ts`: 요인→매력도→적합성→PM 종합)을 반환. 응답에 배정 에이전트·분류 방식·단계별 provenance 포함. 기회 체인은 `opportunityId` 컨텍스트 필수 | `analyst`+ role, audit-logged (`agent_query`/`agent_chain_run`) | as-built (ADR-0128) |
-| `/api/market-overview/related-candidates` | GET/POST | S1 분석 범위 모달 — GET: 저장된 가치사슬 연계 후보(승인 링크 + 과거 payload 산업 사슬), POST: 1차 가치사슬 연계 산업 분석(사업자(운영) 관점 판정 규칙 명시, relation 화이트리스트 검증, 대체/보완은 candidates에서 분리해 substitutes로 표출, 결정론 템플릿 폴백). 제안일 뿐 선택 전까지 등록·분석 없음 | GET Authenticated / POST `analyst`+ | as-built (ADR-0126/0128/0130) |
-| `/api/market-overview/analyses` | GET/POST | S1 산업 분석 목록·생성 — POST는 `after_analysis_id`(재분석 중인 앵커)와 `linked_relation`을 수용: 앵커 in_progress면 `pending` 대기 행 생성 후 202 deferred(파이프라인 미기동), completed면 즉시 실행, failed/pending 앵커는 409. 앵커 완료 훅과 watch:run 회수 패스가 대기 행을 한 건씩 직렬 시작(동시성 1, 전방 우선). 루트 실패 시 그룹 취소, 연계 개별 실패는 큐 지속; `queue_claim`/`queue_cancel`/`queue_recover` 감사. rerun은 pending 행에 alreadyQueued 응답, 루트 rerun 시작 시 기존 대기 전량 취소 | GET Authenticated / POST `analyst`+ | as-built (ADR-0130) |
+| `/api/agents/query` | POST | PM 라우터 질의 — `lib/pm-router.ts`가 질의를 분류(LLM, 실패 시 결정론 규칙)해 단일 에이전트 응답 또는 `opportunity_evaluation` 체인(`lib/agent-chains.ts`: 요인→매력도→적합성→PM 종합)을 반환. 응답에 배정 에이전트·분류 방식·단계별 provenance 포함. 기회 체인은 `opportunityId` 컨텍스트 필수 | `analyst` role (admin → 403 `role_forbidden`, ADR-0146), audit-logged (`agent_query`/`agent_chain_run`) | as-built (ADR-0128) |
+| `/api/market-overview/related-candidates` | GET/POST | S1 분석 범위 모달 — GET: 저장된 가치사슬 연계 후보(승인 링크 + 과거 payload 산업 사슬), POST: 1차 가치사슬 연계 산업 분석(사업자(운영) 관점 판정 규칙 명시, relation 화이트리스트 검증, 대체/보완은 candidates에서 분리해 substitutes로 표출, 결정론 템플릿 폴백). 제안일 뿐 선택 전까지 등록·분석 없음 | GET/POST `analyst`/viewer read, POST `analyst`; admin → 403 `role_forbidden` (ADR-0146) | as-built (ADR-0126/0128/0130) |
+| `/api/market-overview/analyses` | GET/POST | S1 산업 분석 목록·생성 — POST는 `after_analysis_id`(재분석 중인 앵커)와 `linked_relation`을 수용: 앵커 in_progress면 `pending` 대기 행 생성 후 202 deferred(파이프라인 미기동), completed면 즉시 실행, failed/pending 앵커는 409. 앵커 완료 훅과 watch:run 회수 패스가 대기 행을 한 건씩 직렬 시작(동시성 1, 전방 우선). 루트 실패 시 그룹 취소, 연계 개별 실패는 큐 지속; `queue_claim`/`queue_cancel`/`queue_recover` 감사. rerun은 pending 행에 alreadyQueued 응답, 루트 rerun 시작 시 기존 대기 전량 취소 | GET viewer/`analyst`, POST `analyst`; admin → 403 `role_forbidden` (ADR-0146) | as-built (ADR-0130) |
 
 ## 5. RAG and Governance
 
@@ -77,7 +78,7 @@ agent 메타 옵션을 통해 `llm_call_log`(migration 0092) 런 장부에 기�
 | `/api/projects/:id/approval-chain` | GET | Entity/Group IC status, `blocked_reason` if applicable | Membership |
 | `/api/group-agenda/:cycle` | GET | Ranked comparison view for a review cycle | Group IC role |
 | `/api/projects/:id/compliance-checks` | GET | Gate-blocking status | Membership |
-| `/api/projects/:id/waivers` | GET/POST | Waiver list/request for the project — `expires_at` required on POST, no waiver path for the six-validator completeness check (rejected server-side, not just client-validated); as-built role mapping: project lead files, admin activates at filing time (the account model has three roles — see module doc in `app/server/projects.ts`) | Membership (GET); project `lead` + `admin` (POST activate) |
+| `/api/projects/:id/waivers` | GET/POST | Waiver list/request for the project — `expires_at` required on POST, no waiver path for the six-validator completeness check (rejected server-side, not just client-validated); as-built: the project route resolves the project through `visibleProject`, which hides projects from admin (404), so admin cannot file or activate waivers here | Membership (GET); POST project member with `analyst` role — admin excluded |
 | `/api/interpretations` | GET/POST | Interpretation registry, search by clause; POST audit-logged (`interpretation_record`) | Public within the workspace (not project-scoped); POST `admin` only |
 
 ## 6. M&A Special Topics and Green Field
@@ -102,7 +103,7 @@ agent 메타 옵션을 통해 `llm_call_log`(migration 0092) 런 장부에 기�
 |---|---|---|---|---|
 | `/api/watch` | GET/POST/DELETE | User subscriptions | Session (own subscriptions only) | as-built (5.6A) |
 | `/api/notifications` | GET | Delivered/pending, per-user — no read/unread state: `notification` has no `read_at` and no cleanly-fitting column exists elsewhere (`session`/`app_user` carry no last-seen; `watch.last_checked_at` is a change-detection watermark), so adding one requires a migration; `sent_at` is the only lifecycle timestamp | Session | as-built (5.6A) |
-| `/api/data-changes` | GET | `data_change_log` scan | Authenticated — market data is workspace-level (`fact_market_observation` carries no project binding) | as-built (5.7B) |
+| `/api/data-changes` | GET | `data_change_log` scan | Authenticated — market data is workspace-level (`fact_market_observation` carries no project binding); stays open to admin (ADR-0146 OP-4: no deal/opportunity/project columns) | as-built (5.7B) |
 | `/api/reports/:run_id` | POST | Generate deliverable (docx/pdf/hwpx) — staleness gate blocks if inputs exceed `ttl_days` | Membership | forward-design |
 | `/api/glossary` | GET | Glossary term list (collection view) | Public within the workspace | as-built (5.6A) |
 | `/api/glossary/:term` | GET | Glossary lookup (also backs UI tooltip, MCP `lookup_term`) | Public within the workspace | as-built (5.6A) |
@@ -144,6 +145,8 @@ All project-scoped via membership (404-not-403); writes analyst-gated and audit-
 | `/api/admin/governance` | GET | Governance document registry (`governance_doc`: layer/key/title/version/enforceability/owner/superseded_by) | `admin` role |
 | `/api/admin/master-data` | GET | Master-data unmapped queue (`staging_unmapped`: raw_value/attempted_master_table/first_seen_at) | `admin` role |
 | `/api/admin/adr` | GET | ADR index scanned from `docs/adr/*.md` (id/title/status); excludes README | `admin` role |
+| `/api/admin/business-targets/groups` | GET | Business Targets group list for the admin console (shared logic `lib/our-company-groups.ts` `listGroups`); replaces the console's former call to `/api/our-company/groups`, which now rejects admin (ADR-0146 Decision 5) | `admin` role only |
+| `/api/admin/business-targets/groups/{id}` | GET | Business Targets group detail (`getGroupDetail`) | `admin` role only |
 
 ## 9. Response Envelope and Error Contract
 

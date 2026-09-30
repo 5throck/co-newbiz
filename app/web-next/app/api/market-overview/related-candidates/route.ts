@@ -95,6 +95,8 @@ function loadStoredCandidates(industry: { id: string; name_ko: string } | null):
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const url = new URL(request.url);
   const db = getDb();
 

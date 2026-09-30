@@ -2,7 +2,7 @@
 // the chair synthesis proposal and the verbatim dissent (ADR-0097 §5).
 // Read-only; the provenance surface a recorded decision links back to via
 // gate_evaluation_id (0066).
-import { authenticate } from "../../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
 import { getCommitteeSession } from "../../../../../../lib/committee-session.ts";
@@ -12,6 +12,7 @@ export const GET = route(
   async (request: Request, { params }: { params: Promise<{ id: string; sessionId: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id, sessionId } = await params;
   if (!getDb().query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
   // Session binding: the session IS a process_run — it must address THIS path

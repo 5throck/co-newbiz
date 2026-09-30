@@ -3,12 +3,14 @@
 // counts; reachable from the project bridge tab's connect flow and the
 // company screen itself. No project scoping — companies are workspace-level.
 import { getDb } from "../../../../../db/client.ts";
-import { authenticate } from "../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
 import { ok } from "../../../lib/envelope.ts";
 
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   const db = getDb();
   const rows = db

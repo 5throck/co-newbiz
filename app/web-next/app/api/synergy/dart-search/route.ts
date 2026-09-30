@@ -4,7 +4,7 @@
 // 교차 검증: 후보 코드는 DART 기업개황(company.json) 역조회로 이름 일치를 확인하고,
 //   DART 자체가 응답하지 않으면 서로 다른 소스 2곳 이상 일치 시에만 미검증 후보로 반환.
 import { getDb } from "../../../../../../db/client.ts";
-import { authenticate } from "../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { ok } from "../../../../lib/envelope.ts";
 import { isDartConfigured, searchCorpCodesWithMeta } from "../../../../lib/dart-client.ts";
 import { webFallbackCorpCodes } from "../../../../lib/corp-code-fallback.ts";
@@ -21,6 +21,8 @@ export interface SearchResult {
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   const webReady = isWebResearchConfigured();
   if (!isDartConfigured() && !webReady) {

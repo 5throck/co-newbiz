@@ -23,6 +23,7 @@ const DECISIONS = new Set(["go", "hold", "kill"]);
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();

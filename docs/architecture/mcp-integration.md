@@ -14,6 +14,8 @@ un_structure_simulation✱ / get_structure_simulation_results over the structure
 
 Bearer API token (same token type as CLI access), scope-limited, hashed at rest. `mnpi_flag=true` projects are excluded from MCP tool responses **by default** — a scoped token with an explicit MNPI grant is required to override, and that access is itself logged to `data_access_log` and reflected in the project's `insider_list` (FR-SEC-06/SYS-02).
 
+**Role inheritance (ADR-0146).** The MCP server only relays HTTP calls with the bearer token, so every tool inherits the token owner's role. The write tools `create_opportunity`, `record_gate_decision`, and `create_route_decision` (`tools/process.ts`) therefore require an `analyst` token. `admin` accounts cannot issue write-scoped tokens (`POST /api/tokens` → 403 `role_forbidden`), and any admin token receives 403 `role_forbidden` on business routes (opportunities, brownfield, greenfield, companies, market-overview, synergy, our-company, archive, projects). Admin endpoints themselves remain never MCP-exposed (§3).
+
 ## 3. Tool Catalog
 
 ### Read-Only

@@ -39,6 +39,8 @@ function findIndustry(db: ReturnType<typeof getDb>, opp: OppRow) {
 export async function GET(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
   const opp = db.query("SELECT id, market_scope FROM opportunity WHERE id = ?").get(oppId) as OppRow | undefined;

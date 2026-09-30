@@ -6,7 +6,7 @@
 // CAGR, competitive structure, capability-gap summary) so the S4 screen can
 // render the market/competitive/capability grounding inline from the same
 // source the advisory signals read.
-import { authenticate } from "../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { computeTrackAdvisory } from "../../../../../lib/track-advisory.ts";
 import { parseGapRegister, summarizeGap, type CapabilityGapRow } from "../../../../../lib/capability-gap.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
@@ -16,6 +16,7 @@ import { route } from "../../../../../lib/route.ts";
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const opp = db.query("SELECT id, market_scope, capability_gap_json FROM opportunity WHERE id = ?").get(id) as

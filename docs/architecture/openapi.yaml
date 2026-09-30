@@ -1025,6 +1025,40 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/business-targets/groups:
+    get:
+      operationId: listBusinessTargetGroups
+      summary: List company groups for the Business Targets screen (admin-side mirror of the group list, ADR-0146). Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/business-targets/groups/{id}:
+    get:
+      operationId: getBusinessTargetGroup
+      summary: Group detail (members and profile rollup) for the Business Targets screen (ADR-0146). Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/adr:
     get:
       operationId: listAdrIndex

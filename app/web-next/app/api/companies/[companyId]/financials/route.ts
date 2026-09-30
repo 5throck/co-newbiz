@@ -5,7 +5,7 @@
 // the KRX price source lands (Phase 8) — the response marks it explicitly
 // rather than inventing a value.
 import { getDb } from "../../../../../../../db/client.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { getCompanyFinancialFacts, factRowsToDartItems } from "../../../../../lib/dart-financial-facts.ts";
 import { deriveFinancialAnalysis } from "../../../../../lib/company-financials.ts";
@@ -14,6 +14,8 @@ import { buildFinancialCommentary } from "../../../../../lib/financial-commentar
 export async function GET(request: Request, { params }: { params: Promise<{ companyId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const { companyId } = await params;
   const db = getDb();
   let facts;

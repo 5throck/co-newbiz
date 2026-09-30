@@ -11,6 +11,7 @@ import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../
 export async function GET(request: Request, { params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { sessionId } = await params;
   const minutes = buildCommitteeMinutes(getDb(), sessionId);
   if (minutes === null) return notFound();

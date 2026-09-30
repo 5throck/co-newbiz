@@ -4,17 +4,17 @@
 // separation, see lib/project-visibility.ts header). Backs the /projects
 // nav entry point added for the S8-S12 project-keyed screens (business-case,
 // dd, ic-review, portfolio) which previously had no list-level entry point.
-import { authenticate } from "../../../lib/auth.ts";
-import { isAdminDealBlocked } from "../../../lib/project-visibility.ts";
+import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
 import { listVisibleProjects } from "../../../../../db/repositories/project.repository.ts";
 import { getDb } from "../../../../../db/client.ts";
-import { ok, forbidden } from "../../../lib/envelope.ts";
+import { ok } from "../../../lib/envelope.ts";
 
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (isAdminDealBlocked(ctx)) return forbidden("role_required", "관리자는 검토/안건 내용에 접근할 수 없습니다.");
+  const denied = requireBusinessActor(ctx, "read");
+  if (denied) return denied;
   const url = new URL(request.url);
   const statusParam = url.searchParams.get("status");
   const status = statusParam === "open" || statusParam === "closed" || statusParam === "archived" ? statusParam : undefined;

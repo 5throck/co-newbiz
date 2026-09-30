@@ -10,6 +10,7 @@ import { route } from "../../../../../lib/route.ts";
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
   const loaded = loadOpportunityWithFactors(id);
   if (!loaded) return notFound();

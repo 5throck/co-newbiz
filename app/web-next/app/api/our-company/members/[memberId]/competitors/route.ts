@@ -9,6 +9,8 @@ import { listConfirmedCompetitors, registerCompetitor } from '../../../../../../
 export async function GET(request: Request, { params }: { params: Promise<{ memberId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const { memberId } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM company_group_member WHERE id = ?").get(memberId)) return notFound();

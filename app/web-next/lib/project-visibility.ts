@@ -26,7 +26,7 @@ export function visibleProject(
   });
 }
 
-/** Admins are blocked from the deal flow entirely (role separation). */
+/** Admins are blocked from the deal flow entirely (role separation). Route handlers now use requireBusinessActor (lib/auth.ts, ADR-0146); kept for ADR/docs reference. */
 export function isAdminDealBlocked(ctx: AuthContext): boolean {
   return ctx.role === "admin";
 }
