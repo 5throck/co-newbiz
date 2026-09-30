@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
+import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 // 인센티브·클로백 (incentive-agent) — Wave 0 REST B3. 수혜 예정/확정 인센티브와
 // 클로백 조건을 관리하고 클로백 추정액은 S10 자금조달과 대조된다.
@@ -13,6 +15,8 @@ interface Row { id: string; program_name: string | null; grantor: string | null;
 function IncentivesView() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { me } = useAuth();
+  const canAct = canWriteProject(me?.role);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ program_name: "", grantor: "", npv_value: "", clawback_rule: "", direction: "prospective" });
@@ -71,22 +75,24 @@ function IncentivesView() {
           </div>
         )}
       </section>
-      <section className="market-section" aria-label="인센티브 등록">
-        <h2 className="text-[0.9rem] mb-2">인센티브 등록</h2>
-        <form className="sizing-new-form" onSubmit={create}>
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="text-[0.78rem] flex-1 min-w-[14rem]"><span className="block mb-1">프로그램명 *</span>
-              <input className="sizing-new-input w-full" value={form.program_name} onChange={(e) => setForm({ ...form, program_name: e.target.value })} required /></label>
-            <label className="text-[0.78rem]"><span className="block mb-1">부여기관</span>
-              <input className="sizing-new-input sizing-new-input-sm" value={form.grantor} onChange={(e) => setForm({ ...form, grantor: e.target.value })} /></label>
-            <label className="text-[0.78rem] w-[7rem]"><span className="block mb-1">NPV (억원)</span>
-              <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.npv_value} onChange={(e) => setForm({ ...form, npv_value: e.target.value })} /></label>
-            <label className="text-[0.78rem] flex-1 min-w-[12rem]"><span className="block mb-1">클로백 조건</span>
-              <input className="sizing-new-input w-full" value={form.clawback_rule} onChange={(e) => setForm({ ...form, clawback_rule: e.target.value })} placeholder="예: 5년 내 이전 시 전액 반환" /></label>
-            <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
-          </div>
-        </form>
-      </section>
+      {canAct && (
+        <section className="market-section" aria-label="인센티브 등록">
+          <h2 className="text-[0.9rem] mb-2">인센티브 등록</h2>
+          <form className="sizing-new-form" onSubmit={create}>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-[0.78rem] flex-1 min-w-[14rem]"><span className="block mb-1">프로그램명 *</span>
+                <input className="sizing-new-input w-full" value={form.program_name} onChange={(e) => setForm({ ...form, program_name: e.target.value })} required /></label>
+              <label className="text-[0.78rem]"><span className="block mb-1">부여기관</span>
+                <input className="sizing-new-input sizing-new-input-sm" value={form.grantor} onChange={(e) => setForm({ ...form, grantor: e.target.value })} /></label>
+              <label className="text-[0.78rem] w-[7rem]"><span className="block mb-1">NPV (억원)</span>
+                <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.npv_value} onChange={(e) => setForm({ ...form, npv_value: e.target.value })} /></label>
+              <label className="text-[0.78rem] flex-1 min-w-[12rem]"><span className="block mb-1">클로백 조건</span>
+                <input className="sizing-new-input w-full" value={form.clawback_rule} onChange={(e) => setForm({ ...form, clawback_rule: e.target.value })} placeholder="예: 5년 내 이전 시 전액 반환" /></label>
+              <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
+            </div>
+          </form>
+        </section>
+      )}
     </main>
   );
 }
