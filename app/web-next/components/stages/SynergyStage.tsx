@@ -88,6 +88,8 @@ const TABS = [
 type TabKey = (typeof TABS)[number][0];
 
 export function SynergyStage({ opportunityId, analysisId, embedded }: { opportunityId?: string; analysisId?: string; embedded?: boolean }) {
+  const { me } = useAuth();
+  const canCurate = canWriteBusiness(me?.role);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [analyses, setAnalyses] = useState<SynergyAnalysis[] | null>(null);
@@ -310,14 +312,16 @@ export function SynergyStage({ opportunityId, analysisId, embedded }: { opportun
           icon=""
           count={analyses?.length ?? 0}
           actions={
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => setShowNewForm((v) => !v)}
-              aria-expanded={showNewForm}
-            >
-              ＋ 새 분석
-            </button>
+            canCurate ? (
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setShowNewForm((v) => !v)}
+                aria-expanded={showNewForm}
+              >
+                ＋ 새 분석
+              </button>
+            ) : null
           }
         />
 
@@ -406,18 +410,16 @@ export function SynergyStage({ opportunityId, analysisId, embedded }: { opportun
                     </td>
                     <td className="col-date tabular-nums">{(a.completed_at ?? a.created_at).slice(0, 10)}</td>
                     <td className="sizing-actions-cell"><span className="actions-row">
-                      {!busy && (
+                      {!busy && canCurate && (
                         <button
                           type="button"
-                          className="btn-ghost btn-sm"
-                          disabled={!a.target_type}
                           title={a.target_type ? "같은 분석 행을 재사용해 새 버전으로 재실행합니다" : "기존 별도 등록(legacy) 분석은 재실행할 수 없습니다 — 레지스트리 대상 새 분석을 생성하세요"}
                           onClick={(e) => { e.stopPropagation(); void rerun(a, { stayOnList: true }); }}
                         >
                           재분석
                         </button>
                       )}
-                      {!busy && (
+                      {!busy && canCurate && (
                         <button type="button" className="btn-danger btn-sm" title="이 시너지 분석을 삭제합니다" onClick={(e) => { e.stopPropagation(); removeAnalysis(a); }}>
                           삭제
                         </button>
@@ -434,7 +436,7 @@ export function SynergyStage({ opportunityId, analysisId, embedded }: { opportun
       </section>
 
       {/* ── 새 분석 폼 (대상 = 그룹/계열사 레지스트리 · 기회 연결 — ADR-0090) ── */}
-      {showNewForm && (
+      {canCurate && showNewForm && (
         <div className="sizing-new-form mb-3">
           <div className="mb-2">
             <span className="text-label block mb-1">① 분석 대상 — 그룹/계열사 분석에서 프로파일을 만든 대상</span>
@@ -742,9 +744,11 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
         actions={
           <>
             <ListBackButton onClick={onBack} />
-            <button type="button" className="btn-ghost" disabled={inProgress} onClick={onRerun}>
-              재분석
-            </button>
+            {canCurate && (
+              <button type="button" className="btn-ghost" disabled={inProgress} onClick={onRerun}>
+                재분석
+              </button>
+            )}
           </>
         }
       />
@@ -933,12 +937,16 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                     count={gapRows.length}
                     actions={
                       <span className="flex items-center gap-1">
-                        <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || gapRows.length === 0} title="시너지 영역 근거로 필요 역량을 추가로 제안하고 프로필 근거로 보유 판정 초안을 생성 (제안 전용 — 저장은 사람)" onClick={() => void draftGap()}>
-                          {gapBusy ? "제안 생성 중..." : "필요 역량 추가 제안"}
-                        </button>
-                        <button type="button" className="btn-primary btn-sm" disabled={gapBusy || gapRows.length === 0} onClick={() => void saveGap()}>
-                          {gapBusy ? "저장 중..." : "저장"}
-                        </button>
+                        {canCurate && (
+                          <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || gapRows.length === 0} title="시너지 영역 근거로 필요 역량을 추가로 제안하고 프로필 근거로 보유 판정 초안을 생성 (제안 전용 — 저장은 사람)" onClick={() => void draftGap()}>
+                            {gapBusy ? "제안 생성 중..." : "필요 역량 추가 제안"}
+                          </button>
+                        )}
+                        {canCurate && (
+                          <button type="button" className="btn-primary btn-sm" disabled={gapBusy || gapRows.length === 0} onClick={() => void saveGap()}>
+                            {gapBusy ? "저장 중..." : "저장"}
+                          </button>
+                        )}
                       </span>
                     }
                   />
@@ -955,6 +963,9 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                     </p>
                   ) : (
                     <div className="table-scroll">
+                      {/* 쓰기 권한이 없으면 레지스터의 셀렉트·입력란을 비활성화한다 —
+                          기록값은 그대로 보인다(표시 유지, 편집만 차단). */}
+                      <fieldset disabled={!canCurate} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                       <table className="data-table" aria-label="필요 역량 수준 레지스터">
                         <caption className="sr-only">필요 역량 수준 레지스터 — 보유 판정은 그룹/계열사 프로필 기준</caption>
                         <thead>
@@ -1013,6 +1024,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                           ))}
                         </tbody>
                       </table>
+                      </fieldset>
                     </div>
                   )}
                   {(() => {
@@ -1025,12 +1037,14 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                       </p>
                     );
                   })()}
+                  {canCurate && (
                   <div className="flex flex-wrap items-center gap-1 mt-2">
                     <input aria-label="필요 역량 추가" placeholder="필요 역량 추가" value={newGapCap}
                       onChange={(e) => setNewGapCap(e.target.value)}
                       className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 14rem" }} />
                     <button type="button" className="btn-ghost btn-sm" onClick={addGapRow}>추가</button>
                   </div>
+                  )}
                 </div>
               ) : (
                 <div className="mt-4 pt-3 border-t border-[color:var(--border)]">
