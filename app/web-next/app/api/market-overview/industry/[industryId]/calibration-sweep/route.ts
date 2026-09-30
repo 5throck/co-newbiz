@@ -1,8 +1,8 @@
 // 드라이버 impact 조합의 역산 feasibility 스윕 + CAGR 밴드 몬테카를로
 // (design 2026-09-19-sim-engine-runtime-separation §2·§4). POST = 스윕 실행·
 // 저장(analyst+), GET = 최신 결과 조회.
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendExternalReference, resolveExternalReference } from "../../../../../../lib/market-calibration.ts";
 import { latestSweep, runCalibrationSweep } from "../../../../../../lib/calibration-sweep.ts";
@@ -19,7 +19,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
 export async function POST(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "스윕 실행은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "스윕 실행은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { industryId } = await params;
   const body = (await request.json().catch(() => null)) as { samples?: number; seed?: number } | null;
   const db = getDb();

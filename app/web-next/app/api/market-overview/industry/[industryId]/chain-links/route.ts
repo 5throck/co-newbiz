@@ -12,8 +12,8 @@
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { route } from "../../../../../../lib/route.ts";
 
 type Relation = "전방" | "전전방" | "후방" | "후후방";
@@ -36,7 +36,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "가치사슬 연계 등록은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "가치사슬 연계 등록은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { industryId } = await params;
   const db = getDb();
 

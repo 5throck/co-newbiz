@@ -4,7 +4,7 @@
 // (append-only, recorded in process_run meta).
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
 import { buildCommitteeMinutes, confirmCommitteeMinutes } from "../../../../../../../lib/committee-scorecard.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 
@@ -24,7 +24,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "회의록 확정은 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "회의록 확정은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id, sessionId } = await params;
   if (!getDb().query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
   const body = (await request.json().catch(() => null)) as { confirm?: boolean } | null;

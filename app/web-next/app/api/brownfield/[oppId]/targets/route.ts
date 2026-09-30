@@ -2,8 +2,8 @@
 // Target Universe 정의 (ADR-0094).
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { createTarget, listTargets, screeningItems, screeningSummary } from "../../../../../lib/brownfield-targets.ts";
 import { combinedEvalScore, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
 
@@ -40,7 +40,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ oppI
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Target Universe 정의는 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Target Universe 정의는 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId } = await params;
   const body = (await request.json().catch(() => null)) as {
     definition?: string; criteria?: string[]; scope?: string; min_long_list?: number;
@@ -69,7 +70,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ oppI
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "후보 등록은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "후보 등록은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId } = await params;
   const body = (await request.json().catch(() => null)) as
     | { company_name?: string; dart_corp_code?: string | null; universe_note?: string | null }

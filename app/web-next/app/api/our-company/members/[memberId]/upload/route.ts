@@ -2,8 +2,8 @@
 // 시너지 정합성 업로드와 동일한 extract_upload_text.py 파이프라인으로 텍스트를 추출한다.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
 
@@ -13,7 +13,8 @@ const MAX_SIZE = 20 * 1024 * 1024;
 export async function POST(request: Request, { params }: { params: Promise<{ memberId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "파일 업로드는 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "파일 업로드는 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { memberId } = await params;
   const db = getDb();
   const member = db

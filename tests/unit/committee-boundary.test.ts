@@ -44,13 +44,13 @@ async function loginCookie(userId: string, password: string): Promise<string> {
   return (res.headers.getSetCookie()[0] ?? "").split(";")[0];
 }
 
-let rootCookie: string;
+let analystCookie: string;
 
 beforeAll(async () => {
-  await createUser(db, { userId: "root", role: "admin", password: "pw-root-12345", createdBy: "test", now: NOW });
-  approveUser(db, { userId: "root", approvedBy: "test", now: NOW });
+  await createUser(db, { userId: "alice", role: "analyst", password: "pw-alice-12345", createdBy: "test", now: NOW });
+  approveUser(db, { userId: "alice", approvedBy: "test", now: NOW });
   db.run("UPDATE app_user SET must_change_password = 0");
-  rootCookie = await loginCookie("root", "pw-root-12345");
+  analystCookie = await loginCookie("alice", "pw-alice-12345");
 });
 
 afterAll(async () => {
@@ -68,7 +68,7 @@ afterAll(async () => {
 async function createOpportunity(): Promise<string> {
   const res = await req("/api/opportunities", {
     method: "POST",
-    headers: { cookie: rootCookie },
+    headers: { cookie: analystCookie },
     body: JSON.stringify({ name: "Boundary test opportunity" }),
   });
   expect(res.status).toBe(201);
@@ -92,7 +92,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     // member executor (risk-officer = kill + veto dissent; others go).
     const res = await req(`/api/opportunities/${oppId}/committee-sessions`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "agent_team" }),
     });
     expect(res.status).toBe(201);
@@ -113,7 +113,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     expect(ev.dissent_json).toBeTruthy();
 
     // Dissent carries the risk-officer position VERBATIM — never a paraphrase.
-    const transcript = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}`, { headers: { cookie: rootCookie } });
+    const transcript = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}`, { headers: { cookie: analystCookie } });
     expect(transcript.status).toBe(200);
     const t = (await transcript.json()).data;
     const riskOfficer = t.rounds.flatMap((r: { positions: Array<{ agentKey: string | null; positionMd: string }> }) => r.positions)
@@ -128,7 +128,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     // used as a side channel to confirm.
     const pos = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}/positions`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ positionMd: "human override attempt" }),
     });
     expect(pos.status).toBe(400);
@@ -141,7 +141,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     // POST the web confirm form makes), citing the committee PROPOSAL.
     const confirm = await req(`/api/opportunities/${oppId}/gate-decisions`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ gate: "pre_fs", decision: "go", rationale: "위원회 PROPOSAL 확인 후 인적 결재", gate_evaluation_id: evaluationId }),
     });
     expect(confirm.status).toBe(201);
@@ -154,19 +154,19 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     const gd = db.query("SELECT gate_evaluation_id, decided_by FROM gate_decision WHERE gate = 'pre_fs'").get() as
       | { gate_evaluation_id: string | null; decided_by: string };
     expect(gd.gate_evaluation_id).toBe(evaluationId);
-    expect(gd.decided_by).toBe("root"); // a human account, not a committee chair
+    expect(gd.decided_by).toBe("alice"); // a human account, not a committee chair
   });
 
   test("the brownfield committee defaults to the target_screening gate (0111 alignment)", async () => {
     const oppId = await createOpportunity();
     const res = await req(`/api/opportunities/${oppId}/committee-sessions`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "target-longlist-shortlist-committee", decisionMode: "human_only" }),
     });
     expect(res.status).toBe(201);
     const { data } = await res.json();
-    const transcript = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}`, { headers: { cookie: rootCookie } });
+    const transcript = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}`, { headers: { cookie: analystCookie } });
     expect(transcript.status).toBe(200);
     const t = (await transcript.json()).data;
     expect(t.meta.committee_key).toBe("target-longlist-shortlist-committee");
@@ -177,7 +177,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     const oppId = await createOpportunity();
     const res = await req(`/api/opportunities/${oppId}/committee-sessions`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "hybrid" }),
     });
     expect(res.status).toBe(201);
@@ -186,7 +186,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     // Round 1 has agent positions only — advance is refused.
     const advance1 = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/advance`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({}),
     });
     expect(advance1.status).toBe(400);
@@ -198,7 +198,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     // claim: a human speaks under their OWN user identity.
     const pos = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ positionMd: "인간 위원 관점: 시장성 충분", recommendation: "go", confidence: 70 }),
     });
     expect(pos.status).toBe(201);
@@ -206,7 +206,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     // Same round again → conflict: one position per (round, member).
     const dup = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ positionMd: "중복 제출 시도", recommendation: "go" }),
     });
     expect(dup.status).toBe(409);
@@ -216,7 +216,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     // industry-lead is an AGENT seat, never claimable by a human submitter.
     const impersonation = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ seat: "industry-lead", positionMd: "다른 위원 사칭 시도", recommendation: "go" }),
     });
     expect(impersonation.status).toBe(403);
@@ -226,7 +226,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     for (let i = 0; i < 3; i++) {
       const r = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/advance`, {
         method: "POST",
-        headers: { cookie: rootCookie },
+        headers: { cookie: analystCookie },
         body: JSON.stringify({}),
       });
       expect(r.status).toBe(200);
@@ -235,7 +235,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
       // each new round needs its own human voice
       const hp = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
         method: "POST",
-        headers: { cookie: rootCookie },
+        headers: { cookie: analystCookie },
         body: JSON.stringify({ positionMd: `round ${i + 2} human position`, recommendation: "go" }),
       });
       expect(hp.status).toBe(201);
@@ -249,7 +249,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     const oppB = await createOpportunity();
     const res = await req(`/api/opportunities/${oppA}/committee-sessions`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "human_only" }),
     });
     expect(res.status).toBe(201);
@@ -257,17 +257,17 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
 
     // The session belongs to oppA's process_run — under oppB's path it is
     // simply not found (existence protection on every session surface).
-    const get = await req(`/api/opportunities/${oppB}/committee-sessions/${sessionId}`, { headers: { cookie: rootCookie } });
+    const get = await req(`/api/opportunities/${oppB}/committee-sessions/${sessionId}`, { headers: { cookie: analystCookie } });
     expect(get.status).toBe(404);
     const pos = await req(`/api/opportunities/${oppB}/committee-sessions/${sessionId}/positions`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ positionMd: "교차 기회 입장 시도" }),
     });
     expect(pos.status).toBe(404);
     const adv = await req(`/api/opportunities/${oppB}/committee-sessions/${sessionId}/advance`, {
       method: "POST",
-      headers: { cookie: rootCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({}),
     });
     expect(adv.status).toBe(404);

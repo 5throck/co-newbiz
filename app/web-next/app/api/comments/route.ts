@@ -3,7 +3,7 @@
 // (visibleProject); opportunity entities require authentication.
 import { getDb } from "../../../../../db/client.ts";
 import { ulid } from "../../../../../db/lib/ulid.ts";
-import { authenticate } from "../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../lib/envelope.ts";
 import { visibleProject } from "../../../lib/project-visibility.ts";
 
@@ -32,6 +32,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  // ADR-0146: comment creation is business-content writing; admin and viewer are rejected.
+  const denied = requireBusinessActor(auth.auth, "write");
+  if (denied) return denied;
   const body = (await request.json().catch(() => null)) as {
     entity_type?: string; entity_id?: string; body?: string;
   } | null;

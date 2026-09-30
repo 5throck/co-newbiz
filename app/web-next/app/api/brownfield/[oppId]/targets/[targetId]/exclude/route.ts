@@ -1,15 +1,16 @@
 // S7 — 제외 (Exclusion Reasons 기록).
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../../lib/envelope.ts";
 
 const now = () => new Date().toISOString();
 
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "제외는 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "제외는 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as { reason?: string; gate_evaluation_id?: string } | null;
   const reason = body?.reason?.trim();

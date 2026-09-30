@@ -7,14 +7,14 @@
 // other opportunity write routes.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { startPipeline, advancePipeline, PipelineError } from "../../../../../../../../app/web-next/lib/pipeline.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "파이프라인 시작은 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "파이프라인 시작은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
 
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {

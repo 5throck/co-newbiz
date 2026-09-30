@@ -1,8 +1,8 @@
 // 그룹 상세 — 그룹 정보 + 계열사 목록 + 각 계열사의 최신 프로파일 요약.
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { loadLatestProfile } from "../../../../../lib/company-profile-pipeline.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -46,7 +46,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "그룹명 수정은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "그룹명 수정은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { name?: string } | null;
   const name = body?.name?.trim();
@@ -64,7 +65,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "그룹 삭제는 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "그룹 삭제는 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { reason?: string } | null;
   const db = getDb();

@@ -10,8 +10,8 @@
 // 은퇴 후 재등록을 쓰라는 의도적 제약이다(ADR-0129 §Decision 4).
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { route } from "../../../../../../../lib/route.ts";
 
 type Relation = "전방" | "전전방" | "후방" | "후후방";
@@ -35,7 +35,8 @@ export const PATCH = route(
     const auth = authenticate(request);
     if (!auth.ok) return auth.response;
     const ctx = auth.auth;
-    if (ctx.role === "viewer") return forbidden("role_required", "가치사슬 연계 수정은 analyst 역할 이상이어야 합니다.");
+    const denied = requireBusinessActor(ctx, "write", { viewerMessage: "가치사슬 연계 수정은 analyst 역할 이상이어야 합니다." });
+    if (denied) return denied;
     const { industryId, linkId } = await params;
     const db = getDb();
 

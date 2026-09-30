@@ -3,15 +3,16 @@
 // 재실행한다. 버전은 append-only(버전 N+1)로 쌓이며 기존 버전은 유지된다.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { runSizingPipeline, cancelPendingDependents } from "../../../../../../lib/market-sizing-pipeline.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "재분석은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "재분석은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { id } = await params;
   const db = getDb();
 

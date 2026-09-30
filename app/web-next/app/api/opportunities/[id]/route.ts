@@ -5,7 +5,7 @@ import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { getSystemMode } from "../../../../../../db/lib/system-mode.ts";
 import { recordDealArchive } from "../../../../lib/deal-archive.ts";
-import { authenticate } from "../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../lib/envelope.ts";
 
 const STATUSES = new Set(["identified", "assessed", "selected", "dropped"]);
@@ -31,7 +31,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Opportunity updates require the analyst role.");
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Opportunity updates require the analyst role." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     name?: string; market_scope?: string; value_chain_node?: string;
@@ -102,7 +102,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Opportunity deletion requires the analyst role.");
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Opportunity deletion requires the analyst role." }); if (denied) return denied; }
   const db = getDb();
   // ADR-0133 — production 모드에서는 딜 데이터 삭제(톰스톤 포함)를 전면 차단한다.
   // 관리자가 /admin/system-mode에서 development로 전환해야 다시 허용된다.

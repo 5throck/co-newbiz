@@ -3,15 +3,16 @@
 // 도달하지 못하는 산업에서 3사이클 에스컬레이션 트리거(sim-engine separation
 // §P3) 이후 사람이 채택하는 종료 경로다. rationale 필수 — 근거 없는 기록은
 // 거부한다.
-import { authenticate } from "../../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { applyCalibrationEscalation, EscalationError } from "../../../../../../../lib/market-calibration.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "에스컬레이션 적용은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "에스컬레이션 적용은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { industryId } = await params;
   const body = (await request.json().catch(() => null)) as { rationale?: string } | null;
   const rationale = body?.rationale?.trim();

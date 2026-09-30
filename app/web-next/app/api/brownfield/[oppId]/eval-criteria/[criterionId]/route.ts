@@ -1,7 +1,7 @@
 // S7 재무·기술 평가 항목 삭제(커스텀 항목만, 판정 기록 없을 때만) / 가중치
 // 수정(모든 항목) / 재무 빌트인 항목의 판정 루브릭 임계값 수정(ADR-0139/0140).
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { deleteCriterion, updateCriterionRubric, updateCriterionWeight } from "../../../../../../lib/brownfield-eval-criteria.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
@@ -9,7 +9,8 @@ import { getDb } from "../../../../../../../../db/client.ts";
 export async function PATCH(request: Request, { params }: { params: Promise<{ oppId: string; criterionId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "평가 항목 수정은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 항목 수정은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { criterionId } = await params;
   const body = (await request.json().catch(() => null)) as { weight?: number; rubric?: Record<string, unknown> } | null;
   if (body?.weight === undefined && body?.rubric === undefined) {
@@ -38,7 +39,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ op
 export async function DELETE(request: Request, { params }: { params: Promise<{ oppId: string; criterionId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "평가 항목 삭제는 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 항목 삭제는 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { criterionId } = await params;
   const result = deleteCriterion(criterionId);
   if (!result.ok) {

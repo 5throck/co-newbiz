@@ -4,8 +4,8 @@
 // industry_id나 name 중 하나로 대상을 지정한다 — 신규 분석(마스터 미등록)은
 // name만 있어도 payload/링크가 없어 빈 후보를 돌려준다(모달에 안내 표시).
 import { getDb } from "../../../../../../db/client.ts";
-import { authenticate } from "../../../../lib/auth.ts";
-import { badRequest, forbidden, ok } from "../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
+import { badRequest, ok } from "../../../../lib/envelope.ts";
 import { completeOrFallback } from "../../../../lib/llm.ts";
 import { isWebResearchConfigured, researchSources } from "../../../../lib/web-research.ts";
 import { sanitizeRelatedProposals } from "../../../../lib/value-chain-proposals.ts";
@@ -116,7 +116,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "1차 가치사슬 연계 산업 분석은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "1차 가치사슬 연계 산업 분석은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const body = (await request.json().catch(() => null)) as { name?: string } | null;
   const target = body?.name?.trim();
   if (!target) return badRequest("name_required", "산업명(name)은 필수입니다.");

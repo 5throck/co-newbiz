@@ -3,7 +3,7 @@
 // with the ADR-0096 §6 verbatim-dissent rule; it NEVER writes a
 // gate_decision / route_decision / brownfield_target record (design
 // boundary #2 — the confirm click is always human).
-import { authenticate } from "../../../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
@@ -16,7 +16,7 @@ export async function POST(
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "위원회 진행은 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "위원회 진행은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id, sessionId } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();

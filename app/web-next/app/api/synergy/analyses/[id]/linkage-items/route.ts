@@ -5,15 +5,16 @@
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { route } from "../../../../../../lib/route.ts";
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "연계 시너지 영역 추가는 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "연계 시너지 영역 추가는 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { id } = await params;
   const db = getDb();
   const analysis = db.query("SELECT id FROM synergy_analysis WHERE id = ?").get(id) as { id: string } | null;

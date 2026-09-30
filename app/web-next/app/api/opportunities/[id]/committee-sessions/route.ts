@@ -4,7 +4,7 @@
 // with the pluggable member executor from lib/committee-agents.ts. The
 // result is ALWAYS a PROPOSAL (gate_evaluation) — never a confirming record
 // (design boundary #2; guarded by tests/unit/committee-boundary.test.ts).
-import { authenticate } from "../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { DECISION_MODES, CommitteeError, conveneCommitteeSession, listCommitteeSessions, type DecisionMode } from "../../../../../lib/committee-session.ts";
@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "위원회 소집은 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "위원회 소집은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     committeeKey?: string; decisionMode?: string; gate?: string; targetRef?: string; track?: string; briefMd?: string;

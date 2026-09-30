@@ -11,8 +11,8 @@
 // web_proposal로 기록).
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
-import { forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../../lib/llm.ts";
 import { isWebResearchConfigured, researchSourcesDetailed, type WebSource } from "../../../../../../lib/web-research.ts";
 import { playwrightSearch } from "../../../../../../lib/playwright-search.ts";
@@ -177,7 +177,8 @@ export function normalizeLlmKnowledgeSuggestions(llmRes: LlmOrFallback, existing
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "웹검색 제안 생성은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "웹검색 제안 생성은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
   const opp = db

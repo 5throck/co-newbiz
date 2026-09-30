@@ -4,8 +4,8 @@
 import { getDb } from "../../../../../../db/client.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../lib/auth.ts";
-import { forbidden, badRequest, fail, ok } from "../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
+import { badRequest, fail, ok } from "../../../../lib/envelope.ts";
 import { runSizingPipeline, releaseQueueNext } from "../../../../lib/market-sizing-pipeline.ts";
 import { parseKsicInput } from "../../../../lib/ksic.ts";
 import { stripCitationMarkers } from "../../../../lib/value-chain-proposals.ts";
@@ -33,7 +33,8 @@ export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "신규 산업 분석 생성은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "신규 산업 분석 생성은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
 
   let body: { name_ko?: string; ksic_code?: string; after_analysis_id?: string; linked_relation?: string };
   try {

@@ -4,8 +4,8 @@
 import { getDb } from "../../../../../../db/client.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../lib/auth.ts";
-import { badRequest, forbidden, ok } from "../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
+import { badRequest, ok } from "../../../../lib/envelope.ts";
 import { runSynergyPipeline } from "../../../../lib/synergy-pipeline.ts";
 
 export async function GET(request: Request) {
@@ -37,7 +37,8 @@ export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "시너지 분석 생성은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "시너지 분석 생성은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
 
   let body: { targetType?: "affiliate" | "group"; memberId?: string; groupId?: string; opportunityId?: string; source_ref?: string };
   try {

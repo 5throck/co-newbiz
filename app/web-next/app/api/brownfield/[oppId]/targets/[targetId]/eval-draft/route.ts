@@ -14,8 +14,8 @@
 // 사람이 판정한 항목은 제안 대상에서 뺀다.
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
+import { badRequest, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getCompanyFinancialFacts, factRowsToDartItems } from "../../../../../../../lib/dart-financial-facts.ts";
 import { deriveFinancialAnalysis } from "../../../../../../../lib/company-financials.ts";
 import { targetEvalStates } from "../../../../../../../lib/brownfield-eval-criteria.ts";
@@ -58,7 +58,8 @@ function resolveTargetCompanyId(db: ReturnType<typeof getDb>, targetId: string, 
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "평가 초안 생성은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 초안 생성은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as { category?: string } | null;
   const category = body?.category === "technical" ? "technical" : "financial";

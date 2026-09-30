@@ -4,7 +4,7 @@
 // 값은 S4 트랙 어드바이저에서 트랙 투표에 쓰이지 않는다(중립 정보 신호).
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
 const now = () => new Date().toISOString();
@@ -49,7 +49,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "시너지 점수 확정은 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "시너지 점수 확정은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { score?: unknown; rationale?: unknown } | null;
 
@@ -80,7 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "시너지 점수 확정 철회는 analyst 역할 이상이어야 합니다.");
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "시너지 점수 확정 철회는 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const row = getRow(db, id);

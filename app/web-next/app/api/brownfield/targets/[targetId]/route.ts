@@ -5,8 +5,8 @@
 // 그 평가 판정을 삭제한다(analyst+, 감사 기록).
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
-import { fail, badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { fail, badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { resolveOrCreateCompany, screeningItems, screeningSummary, type TargetRow } from "../../../../../lib/brownfield-targets.ts";
 import { combinedEvalScore, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
 
@@ -62,7 +62,8 @@ const now = () => new Date().toISOString();
 export async function PATCH(request: Request, { params }: { params: Promise<{ targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "후보 수정은 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "후보 수정은 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { targetId } = await params;
   const body = (await request.json().catch(() => null)) as
     | { company_name?: string; dart_corp_code?: string | null; universe_note?: string | null }
@@ -94,7 +95,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ta
 export async function DELETE(request: Request, { params }: { params: Promise<{ targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "후보 삭제는 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "후보 삭제는 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
   const { targetId } = await params;
   const db = getDb();
   const existing = db.query("SELECT id, company_name FROM brownfield_target WHERE id = ?").get(targetId) as

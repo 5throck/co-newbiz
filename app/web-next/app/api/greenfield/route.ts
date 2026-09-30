@@ -2,7 +2,7 @@
 import { getDb } from "../../../../../db/client.ts";
 import { ulid } from "../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../lib/envelope.ts";
+import { badRequest, notFound, ok } from "../../../lib/envelope.ts";
 
 const now = () => new Date().toISOString();
 

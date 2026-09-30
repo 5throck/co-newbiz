@@ -5,8 +5,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { authenticate } from "../../../../lib/auth.ts";
-import { badRequest, forbidden, ok } from "../../../../lib/envelope.ts";
+import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
+import { badRequest, ok } from "../../../../lib/envelope.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
 
 const UPLOAD_DIR = join(process.cwd(), "..", "workspace", "uploads");
@@ -16,7 +16,8 @@ const EXTRACTOR = join(process.cwd(), "..", "..", "python", "extract_upload_text
 export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "파일 업로드는 analyst 역할 이상이어야 합니다.");
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "파일 업로드는 analyst 역할 이상이어야 합니다." });
+  if (denied) return denied;
 
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");

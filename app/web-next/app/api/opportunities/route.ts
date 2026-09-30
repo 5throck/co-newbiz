@@ -5,7 +5,7 @@
 import { getDb } from "../../../../../db/client.ts";
 import { appendAudit } from "../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../db/lib/ulid.ts";
-import { authenticate } from "../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../lib/envelope.ts";
 
 const STATUSES = new Set(["identified", "assessed", "selected", "dropped"]);
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Opportunity registration requires the analyst role.");
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Opportunity registration requires the analyst role." }); if (denied) return denied; }
   const body = (await request.json().catch(() => null)) as {
     name?: string; market_scope?: string; value_chain_node?: string;
     market_size_krw_m?: number; growth_rate?: number;

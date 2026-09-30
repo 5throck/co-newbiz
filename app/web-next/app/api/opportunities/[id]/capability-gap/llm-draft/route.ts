@@ -4,7 +4,7 @@
 // 보유 판정 근거는 그룹/계열사 프로필뿐 — 내부 역량 평가는 후속 보강 사항.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../../lib/llm.ts";
 import { route } from "../../../../../../lib/route.ts";
@@ -16,7 +16,7 @@ interface MemberLite { id: string; company_name: string; group_id: string }
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
     const auth = authenticate(request);
     if (!auth.ok) return auth.response;
-    if (auth.auth.role === "viewer") return forbidden("role_required", "필요 역량 수준 LLM 초안 생성은 analyst 역할 이상이어야 합니다.");
+    { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "필요 역량 수준 LLM 초안 생성은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
     const { id } = await params;
     const db = getDb();
     const opp = db
