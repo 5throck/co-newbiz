@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
+import { canWriteProject } from "../lib/project-write-access.ts";
 import { useConfirm } from "./crud.tsx";
 
 interface WaiverRow {
@@ -36,7 +37,7 @@ const STATUS_META: Record<WaiverRow["effective_status"], { icon: string; label: 
 
 export function WaiverPanel({ projectId }: { projectId: string }) {
   const { me } = useAuth();
-  const canAct = me?.role === "admin" || me?.role === "analyst";
+  const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
   const [waivers, setWaivers] = useState<WaiverRow[]>([]);
   const [docs, setDocs] = useState<GovernanceDocRef[]>([]);

@@ -14,6 +14,7 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
 import { TabNav } from "../TabNav.tsx";
 import { useConfirm } from "../crud.tsx";
+import { canWriteProject } from "../../lib/project-write-access.ts";
 
 // S10 투자구조 설계 (flow.spec v2.2.0) — 비히클(direct/SPC/holdco/내부 스핀오프/JV)
 // 결정과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조) 검토,
@@ -79,7 +80,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
     else setLocalTab(key);
   };
   const { me } = useAuth();
-  const canAct = me?.role === "admin" || me?.role === "analyst";
+  const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
   const [data, setData] = useState<View | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -13,6 +13,7 @@ import { TabNav } from "../TabNav.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { WaiverPanel } from "../WaiverPanel.tsx";
 import { useConfirm } from "../crud.tsx";
+import { canWriteProject } from "../../lib/project-write-access.ts";
 
 // S9 실사·검증 — 표준 DD 체크리스트 판정 + 산업 맞춤 제안 승인 화면 (ADR-0099 §4).
 // 표준 체크리스트 3개(commercial/technical/legal) 탭 + 산업 맞춤 제안 패널
@@ -87,7 +88,7 @@ const DOMAIN_LABEL: Record<string, string> = { commercial: "Commercial", technic
 
 export function DdStage({ projectId }: { projectId: string }) {
   const { me } = useAuth();
-  const canAct = me?.role === "admin" || me?.role === "analyst";
+  const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
   const [data, setData] = useState<WorkspaceView | null>(null);
   const [tab, setTab] = useState(0);

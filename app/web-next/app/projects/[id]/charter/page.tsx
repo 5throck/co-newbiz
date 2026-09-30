@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteProject } from "../../../../lib/project-write-access.ts";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 
 // 프로젝트 추진계획 (ADR-0104) — 최신 추진계획 버전 열람 + KPI 사전 확정(pre-commit)표
@@ -50,7 +51,7 @@ function CharterViewInner() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const { me } = useAuth();
-  const canAct = me?.role === "admin" || me?.role === "analyst";
+  const canAct = canWriteProject(me?.role);
   const [data, setData] = useState<CharterView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
