@@ -8,6 +8,8 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { api } from "../../lib/api.ts";
+import { useAuth } from "../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { SectionToolbar } from "../layout.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { CommitteePanel } from "../CommitteePanel.tsx";
@@ -154,6 +156,8 @@ function buildEvalBriefMd(targets: TargetRow[], checklist: ChecklistItem[], over
 const SECTION_IDS = { universe: "s6s7-universe", longlist: "s6s7-longlist", shortlist: "s6s7-shortlist" } as const;
 
 export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
+  const { me } = useAuth();
+  const canAct = canWriteBusiness(me?.role);
   const [selected, setSelected] = useState<OppDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   // 사전 검토(chk-target-screening) 인라인 판정 — Short List 카드에서 바로 기록.
@@ -696,7 +700,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
         <section aria-label="목표 시장 정의" className="market-section mb-0 flex flex-col">
           <SectionToolbar
             title="목표 시장 정의"
-            actions={selected.universe && <button type="button" className="btn-ghost btn-sm shrink-0" onClick={openUniverseEditor}>수정</button>}
+            actions={canAct && selected.universe && <button type="button" className="btn-ghost btn-sm shrink-0" onClick={openUniverseEditor}>수정</button>}
           />
           <div className="sizing-grade-card flex-1">
             {selected.universe ? (
@@ -709,7 +713,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 <p className="mb-2 text-[0.8rem] text-[color:var(--muted-fg)]">
                   아직 정의되지 않았습니다 — S6 완료기준입니다. 후보 등록 전에 후보 자격 기준(Long List 범위)과 최소 커버리지를 확정하세요. Long List를 Short List로 좁히는 실제 평가는 S7의 재무·기술 평가에서 이뤄집니다.
                 </p>
-                <button type="button" className="btn-ghost btn-sm" onClick={openUniverseEditor}>목표 시장 정의 시작</button>
+                {canAct && <button type="button" className="btn-ghost btn-sm" onClick={openUniverseEditor}>목표 시장 정의 시작</button>}
               </>
             )}
           </div>
@@ -721,6 +725,8 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
         <section aria-label="후보 발굴" className="market-section mb-0 flex flex-col">
           <SectionToolbar title="후보 발굴 — Long List 채우기" />
           <div className="sizing-grade-card flex-1">
+            {!canAct && <p className="mb-0 text-[0.8rem] text-[color:var(--muted-fg)]">후보 발굴·등록은 분석가 권한이 필요합니다.</p>}
+            {canAct && (<>
             <div className="flex flex-wrap gap-2 mb-2">
               <button
                 type="button"
@@ -821,6 +827,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 <p className="mt-1 mb-0 text-[0.7rem] text-[color:var(--muted-fg)]">수용 시 discovery_source=master_proposal로 기록됩니다.</p>
               </div>
             )}
+            </>)}
           </div>
         </section>
         </div>
@@ -1058,10 +1065,10 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                             <span className={`status-chip ${t.status === "shortlisted" ? "status-green" : t.status === "excluded" ? "status-red" : "status-not-started"}`}>
                               {STATUS_LABEL[t.status]}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
                             </span>
-                            {canPromote && (
+                            {canAct && canPromote && (
                               <button type="button" className="btn-ghost btn-sm" disabled={busy} title="재무·기술 평가 완료 — Short List로 승격" onClick={() => shortlist(t.id)}>승격</button>
                             )}
-                            {t.status === "shortlisted" && (
+                            {canAct && t.status === "shortlisted" && (
                               <span role="group" aria-label="Short List 순위 조정" className="flex items-center gap-0.5">
                                 <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx <= 0} aria-label={`${t.company_name} 순위 올리기`} onClick={() => rerank(t.id, "up")}>↑</button>
                                 <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx < 0 || orderIdx >= shortlistOrder.length - 1} aria-label={`${t.company_name} 순위 내리기`} onClick={() => rerank(t.id, "down")}>↓</button>
@@ -1226,6 +1233,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                                   className="sizing-new-input sizing-new-input-sm w-full"
                                   style={{ minWidth: "5.5rem" }}
                                   title={tip}
+                                  disabled={!canAct}
                                   value={v}
                                   onChange={(e) => setPrecheckDraft((prev) => ({ ...prev, [t.id]: { ...(prev[t.id] ?? {}), [it.id]: { verdict: e.target.value } } }))}
                                 >
@@ -1239,7 +1247,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                           })}
                           <td>
                             <div className="flex flex-col items-start gap-1">
-                              <button
+                              {canAct && <button
                                 type="button"
                                 className="btn-ghost btn-sm"
                                 disabled={precheckBusy === t.id || recoBusy || dirtyCount === 0}
@@ -1247,7 +1255,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                                 onClick={() => savePrecheck(t.id)}
                               >
                                 판정 저장{dirtyCount > 0 ? ` (${dirtyCount}건)` : ""}
-                              </button>
+                              </button>}
                               {note && (
                                 <span className="text-[0.65rem] text-[color:var(--muted-fg)] max-w-[10rem] truncate" title={note}>{note}</span>
                               )}

@@ -9,6 +9,8 @@
 import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { api } from "../../../../lib/api.ts";
+import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../../../lib/project-write-access.ts";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { ListBackButton } from "../../../../components/ListBackButton.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
@@ -137,6 +139,8 @@ function renderWithCitations(text: string, sources: Array<{ title: string; url: 
 }
 
 export function TargetDetailView() {
+  const { me } = useAuth();
+  const canAct = canWriteBusiness(me?.role);
   const params = useParams<{ targetId: string }>();
   const targetId = params?.targetId ?? "";
   const [detail, setDetail] = useState<DetailResponse | null>(null);
@@ -219,13 +223,14 @@ export function TargetDetailView() {
   // 무한 재시도를 막는다.
   const [autoSyncedFor, setAutoSyncedFor] = useState<string | null>(null);
   useEffect(() => {
+    if (!canAct) return; // 쓰기 권한이 없으면 자동 동기화(POST)를 보내지 않는다 — 서버가 403으로 거부한다
     if (!companyId || !dartCode) return;
     if (financials === undefined) return; // 아직 로딩 중
     if (financials !== null && financials.analysis.years.length > 0) return; // 이미 있음
     if (autoSyncedFor === companyId) return; // 이미 자동 시도함(재동기화 없음 → 재요청 안 함)
     setAutoSyncedFor(companyId);
     api.post(`/api/companies/${encodeURIComponent(companyId)}/sync`, {}).then(loadFinancials).catch(() => {});
-  }, [companyId, dartCode, financials, autoSyncedFor, loadFinancials]);
+  }, [canAct, companyId, dartCode, financials, autoSyncedFor, loadFinancials]);
 
   const loadCompanyProfile = useCallback(() => {
     if (!companyId) return;
@@ -502,7 +507,7 @@ export function TargetDetailView() {
             {t.exclusion_reason && <span className="text-[0.75rem] text-[color:var(--muted-fg)]">제외 사유: {t.exclusion_reason}</span>}
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-3">
-            {t.status !== "shortlisted" && (
+            {canAct && t.status !== "shortlisted" && (
               <button
                 type="button"
                 className="btn-premium btn-sm"
@@ -513,7 +518,7 @@ export function TargetDetailView() {
                 Short List 승격
               </button>
             )}
-            {t.status !== "excluded" && (
+            {canAct && t.status !== "excluded" && (
               <span className="flex items-center gap-1">
                 <input
                   aria-label="제외 사유"
@@ -546,7 +551,7 @@ export function TargetDetailView() {
           {/* 핵심 액션 — 탭 목록과 같은 줄 오른쪽에 배치. 정보 수정·후보 삭제·
               재분석은 활성 탭과 무관하게 항상 노출한다(사용자 요청, 2026-09-16).
               수정 폼은 개요 탭에 있으므로 정보 수정 클릭 시 개요 탭으로 전환한다. */}
-          <span className="flex items-center gap-1">
+          {canAct && (<span className="flex items-center gap-1">
             <button
               type="button"
               className="btn-ghost btn-sm"
@@ -568,7 +573,7 @@ export function TargetDetailView() {
             >
               후보 삭제
             </button>
-          </span>
+          </span>)}
         </div>
 
         {/* 후보 정보(소속 기회·상태·DART·평가 점수)는 위 요약 카드에 이미
@@ -977,7 +982,7 @@ export function TargetDetailView() {
                       미판정 가중치 {catScore.totalWeight - catScore.scoredWeight} / 전체 {catScore.totalWeight} 남음 — 전 항목 판정 전까지는 잠정 점수입니다.
                     </p>
                   )}
-                  {cat === "financial" && (
+                  {canAct && cat === "financial" && (
                     <div className="flex flex-wrap items-center gap-1 mb-2">
                       <button
                         type="button"
@@ -1018,7 +1023,7 @@ export function TargetDetailView() {
                       )}
                     </div>
                   )}
-                  {cat === "technical" && (
+                  {canAct && cat === "technical" && (
                     <div className="flex flex-wrap items-center gap-1 mb-2">
                       <button
                         type="button"
@@ -1069,6 +1074,9 @@ export function TargetDetailView() {
                               {it.description && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{it.description}</span>}
                             </span>
                             {it.is_mandatory === 1 && <span className="status-chip status-amber">{it.source === "seeded" ? "S3 승계·필수" : "필수"}</span>}
+                            {!canAct ? (
+                              <span className="text-[0.72rem] text-[color:var(--muted-fg)]" title="가중치 — 카테고리 100점 점수 계산 시 이 항목의 상대 비중">가중치 {it.weight}</span>
+                            ) : (
                             <label className="text-[0.72rem] text-[color:var(--muted-fg)] flex items-center gap-1" title="가중치 — 카테고리 100점 점수 계산 시 이 항목의 상대 비중">
                               가중치
                               <input
@@ -1084,6 +1092,10 @@ export function TargetDetailView() {
                                 style={{ width: "4rem" }}
                               />
                             </label>
+                            )}
+                            {!canAct ? (
+                              <span className="status-chip status-not-started" aria-label={`${it.label} 판정`}>{VERDICT_KO[it.state?.status ?? "pending"] ?? "미판정"}</span>
+                            ) : (
                             <select
                               aria-label={`${it.label} 판정`}
                               value={draft?.status ?? it.state?.status ?? "pending"}
@@ -1106,7 +1118,8 @@ export function TargetDetailView() {
                                 <option key={v} value={v}>{VERDICT_KO[v]}</option>
                               ))}
                             </select>
-                            {it.is_deletable === 1 && (
+                            )}
+                            {canAct && it.is_deletable === 1 && (
                               <button type="button" className="btn-ghost btn-sm" disabled={evalBusy === it.id} title="항목 삭제" onClick={() => void removeEvalCriterion(it.id)}>✕</button>
                             )}
                             {draft && (
@@ -1164,7 +1177,7 @@ export function TargetDetailView() {
                       })}
                     </ul>
                   )}
-                  <div className="flex items-center gap-1">
+                  {canAct && (<div className="flex items-center gap-1">
                     <input
                       aria-label={`${EVAL_CATEGORY_LABEL[cat]} 항목 추가`}
                       placeholder="+ 항목 추가"
@@ -1174,7 +1187,7 @@ export function TargetDetailView() {
                       style={{ flex: "1 1 12rem" }}
                     />
                     <button type="button" className="btn-ghost btn-sm" disabled={evalBusy === cat || !(newCriterionLabel[cat] ?? "").trim()} onClick={() => void addEvalCriterion(cat)}>추가</button>
-                  </div>
+                  </div>)}
                 </div>
               );
             })}
@@ -1243,6 +1256,8 @@ function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
   payloadCompetitors: Array<{ name: string; note: string }>;
 }) {
   interface Row { id: string; name: string; dart_corp_code: string | null; note: string | null; status: "confirmed" | "excluded"; exclusion_reason: string | null; discovery_source: "manual" | "ai_proposal"; proposal_accepted_at: string; crosscheck_verdict: string | null }
+  const { me } = useAuth();
+  const canAct = canWriteBusiness(me?.role);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1295,7 +1310,7 @@ function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
                   <button type="button" className="btn-danger btn-sm" disabled={busy || !excluding.reason.trim()} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors/${encodeURIComponent(c.id)}/exclude`, { reason: excluding.reason.trim() }).then((ok) => { if (ok) setExcluding(null); })}>확인</button>
                   <button type="button" className="btn-ghost btn-sm" onClick={() => setExcluding(null)}>취소</button>
                 </span>
-              ) : (
+              ) : !canAct ? null : (
                 <button type="button" className="btn-ghost btn-sm ml-1" onClick={() => setExcluding({ id: c.id, reason: "" })}>제외</button>
               )}
             </li>
@@ -1308,7 +1323,7 @@ function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
           <ul className="sizing-note-list">
             {excluded.map((c) => (
               <li key={c.id}>{c.name} — {c.exclusion_reason ?? "사유 없음"}{" "}
-                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors/${encodeURIComponent(c.id)}/restore`, {})}>복원</button>
+                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors/${encodeURIComponent(c.id)}/restore`, {})}>복원</button>}
               </li>
             ))}
           </ul>
@@ -1321,18 +1336,18 @@ function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
             {openProposals.map((p) => (
               <li key={p.name}>
                 <b>{p.name}</b> — {p.note || "—"}{" "}
-                <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors`, { name: p.name, note: p.note || null, discovery_source: "ai_proposal" })}>수용</button>
+                {canAct && <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors`, { name: p.name, note: p.note || null, discovery_source: "ai_proposal" })}>수용</button>}
               </li>
             ))}
           </ul>
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-2">
+      {canAct && <div className="flex flex-wrap items-center gap-2">
         <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="sizing-new-input" style={{ width: "12rem" }} placeholder="경쟁사명 *" aria-label="경쟁사명" />
         <input value={form.dart_corp_code} onChange={(e) => setForm({ ...form, dart_corp_code: e.target.value })} className="sizing-new-input" style={{ width: "9rem" }} placeholder="DART 고유번호 (선택)" aria-label="경쟁사 DART 고유번호" />
         <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className="sizing-new-input" style={{ flex: "1 1 10rem" }} placeholder="경쟁 관계 (선택)" aria-label="경쟁 관계" />
         <button type="button" className="btn-primary btn-sm" disabled={busy || !form.name.trim()} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors`, { name: form.name, dart_corp_code: form.dart_corp_code || null, note: form.note || null, discovery_source: "manual" }).then((ok) => { if (ok) setForm({ name: "", dart_corp_code: "", note: "" }); })}>등록</button>
-      </div>
+      </div>}
     </div>
   );
 }

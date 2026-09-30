@@ -13,6 +13,8 @@
 //   보여주고 보유 수준·해소 방식·비고만 확장 편집한다.
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
+import { useAuth } from "../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { SectionToolbar } from "../layout.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../PromotionPanel.tsx";
@@ -55,6 +57,8 @@ const PERIOD_LABEL: Record<BcLine["period"], string> = { monthly: "월", quarter
 const CURRENCY_LABEL: Record<BcLine["currency"], string> = { KRW: "원화", USD: "달러", EUR: "유로", JPY: "엔화", CNY: "위안" };
 
 export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
+  const { me } = useAuth();
+  const canAct = canWriteBusiness(me?.role);
   const [selected, setSelected] = useState<OppDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -180,6 +184,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           }
         />
         <form onSubmit={save} className="sizing-new-form">
+          <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {/* 1. 진출전략 */}
           <h3 className="text-[0.85rem] mb-2">1️⃣ 진출전략 (Build / Partner / Hire / Invest 결정)</h3>
           <textarea
@@ -237,9 +242,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 </tbody>
               </table>
               <div className="flex items-center gap-2 mb-3">
-                <button type="button" className="btn-ghost btn-sm" disabled={savingGaps} onClick={() => void saveGaps()}>
-                  {savingGaps ? "저장 중..." : "필요 역량 확인 저장"}
-                </button>
+                {canAct && (
+                  <button type="button" className="btn-ghost btn-sm" disabled={savingGaps} onClick={() => void saveGaps()}>
+                    {savingGaps ? "저장 중..." : "필요 역량 확인 저장"}
+                  </button>
+                )}
                 {gapStored && <span className="status-chip status-green">S3 레지스터에 저장됨</span>}
               </div>
             </>
@@ -261,10 +268,10 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 {(Object.keys(PERIOD_LABEL) as BcLine["period"][]).map((p) => <option key={p} value={p}>{PERIOD_LABEL[p]}</option>)}
               </select>
               <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 10rem" }} />
-              <button type="button" className="btn-ghost btn-sm" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>
+              {canAct && <button type="button" className="btn-ghost btn-sm" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
             </div>
           ))}
-          <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", category: "opex", amount: 0, period: "yearly", currency: "KRW" }])}>＋ 항목 추가</button>
+          {canAct && <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", category: "opex", amount: 0, period: "yearly", currency: "KRW" }])}>＋ 항목 추가</button>}
 
           {/* ── LLM 투자비 항목 추천 — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
           <div className="sizing-grade-card mb-3">
@@ -276,7 +283,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               금액은 제안하지 않습니다 — 항목을 추가한 뒤 금액은 사람이 입력합니다 (경계 #2).
             </p>
             {recoError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
-            {!reco && !recoLoading && (
+            {canAct && !reco && !recoLoading && (
               <button type="button" className="btn-ghost btn-sm" onClick={() => void generateReco()}>▶ 항목 추천 생성</button>
             )}
             {recoLoading && <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">진출전략·S3 해소 방식을 근거로 항목을 제안하는 중...</p>}
@@ -296,7 +303,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                           <span className="font-semibold">{item.line}</span>
                           <span className="text-[0.72rem] text-[color:var(--muted-fg)]"> ({CATEGORY_LABEL[item.category]}) — {item.note}</span>
                         </span>
-                        <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => addRecoItem(item)}>추가</button>
+                        {canAct && <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => addRecoItem(item)}>추가</button>}
                       </li>
                     ))}
                   </ul>
@@ -306,14 +313,15 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 {reco.recommendation.cautions.length > 0 && (
                   <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-2">{reco.recommendation.cautions.join(" / ")}</p>
                 )}
-                <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "재생성"}</button>
+                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "재생성"}</button>}
               </>
             )}
           </div>
 
           <input aria-label="평가 근거" placeholder="평가 근거 (S1 시장분석·S3 적합성 판단 인용, 선택)" value={rationale} onChange={(e) => setRationale(e.target.value)} className="sizing-new-input mb-3" style={{ width: "100%" }} />
 
-          <button type="submit" className="btn-primary" disabled={busy}>저장</button>
+          {canAct && <button type="submit" className="btn-primary" disabled={busy}>저장</button>}
+          </fieldset>
         </form>
       </section>
 

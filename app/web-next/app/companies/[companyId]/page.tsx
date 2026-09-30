@@ -9,6 +9,8 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../../lib/api.ts";
+import { useAuth } from "../../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 
 interface SummaryCard { key: string; label: string; value: number | null; format: "percent" | "ratio"; trend: "up" | "down" | "flat" | null; trendText: string | null; say: string }
 interface Callout { tone: "warn" | "good" | "info"; text: string }
@@ -42,6 +44,9 @@ export default function CompanyFinancialsPage() {
       .catch((e) => setError(e instanceof Error ? e.message : "회사 재무정보를 불러오지 못했습니다."));
   }, [companyId]);
   useEffect(() => { load(); }, [load]);
+
+  const { me } = useAuth();
+  const canAct = canWriteBusiness(me?.role);
 
   async function runSync() {
     setSyncing(true);
@@ -106,7 +111,7 @@ export default function CompanyFinancialsPage() {
             {accounts.length === 0 ? (
               <div>
                 <p className="text-[color:var(--muted-fg)]">재무 fact가 없습니다 — 아래 동기화 버튼으로 DART에서 5개 회계연도 실적을 가져오세요.</p>
-                <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer mt-2" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>
+                {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer mt-2" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
               </div>
             ) : (
               <table className="data-table">
@@ -160,7 +165,7 @@ export default function CompanyFinancialsPage() {
           {view.financials.length > 0 && (
             <section className="market-section sizing-step mt-3">
               <div className="flex gap-2 items-center flex-wrap">
-                <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>
+                {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
                 <span className="text-[color:var(--muted-fg)] text-[0.8rem]">마지막 동기화 {view.latest_sync_at ? new Date(view.latest_sync_at).toLocaleString("ko-KR") : "—"}</span>
               </div>
               <p className="text-[color:var(--muted-fg)] text-[0.76rem] mt-2">동기화는 DART 공시 원천을 다시 읽어 값을 갱신합니다. 같은 값이면 새 기록을 만들지 않고, 바뀐 값만 새 revision으로 남깁니다(덮어쓰기 없음).</p>

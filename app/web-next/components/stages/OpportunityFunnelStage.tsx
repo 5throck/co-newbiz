@@ -12,6 +12,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
+import { useAuth } from "../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
 
@@ -77,6 +79,8 @@ function nextStepActions(o: OpportunityRow) {
 }
 
 export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: string }) {
+  const { me } = useAuth();
+  const canAct = canWriteBusiness(me?.role);
   const [rows, setRows] = useState<OpportunityRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -258,7 +262,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
                 밝혀 어느 칩을 눌렀는지 스크롤 후에도 알 수 있게 한다. */}
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <strong className="text-[0.85rem]">{selectedInsight.industry_name}</strong>
-              <button
+              {canAct && <button
                 type="button"
                 className="btn-primary btn-sm"
                 style={{ marginLeft: "auto" }} /* lint-exempt: 폼 내부 헤더(SectionToolbar 외부 컨텍스트) */
@@ -267,7 +271,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
                 onClick={() => discoverOpportunities(selectedInsight.industry_name)}
               >
                 {discovering === selectedInsight.industry_name ? "기회 발굴 중..." : "기회 발굴 (요인 자동 도출)"}
-              </button>
+              </button>}
             </div>
             <details>
               <summary className="cursor-pointer text-[0.78rem] text-[color:var(--muted-fg)]">인사이트 상세 (기회·위험 요인, 격차 분석)</summary>
@@ -329,9 +333,11 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
           }
           actions={
             <>
+            {canAct && (
             <button type="button" className="btn-primary btn-sm whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
               ＋ 기회 등록
             </button>
+            )}
             <span role="group" aria-label="정렬" className="flex gap-1">
               {([
                 ["attractiveness", "매력도순"],
@@ -412,7 +418,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
                   </td>
                   <td className="sizing-actions-cell"><span className="actions-row">
                     {nextStepActions(o)}
-                    {!o.project_id && (
+                    {canAct && !o.project_id && (
                       <button
                         type="button"
                         className="btn-danger btn-sm"
@@ -432,6 +438,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
 
 
       {/* ── 수동 등록 (표준 토글 인라인 폼 — ADR-0083) ── */}
+      {canAct && (
       <section aria-label="기회 수동 등록" className="market-section">
         <SectionToolbar
           title="기회 직접 등록"
@@ -471,6 +478,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
           </form>
         )}
       </section>
+      )}
     </>
   );
 }

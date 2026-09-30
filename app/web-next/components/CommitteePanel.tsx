@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
+import { canWriteBusiness } from "../lib/project-write-access.ts";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
 
 interface SessionPosition {
@@ -102,7 +103,7 @@ export function CommitteePanel({
   conveneLabel?: string;
 }) {
   const { me } = useAuth();
-  const canAct = me?.role === "admin" || me?.role === "analyst";
+  const canAct = canWriteBusiness(me?.role);
   const [sessions, setSessions] = useState<Array<{ sessionId: string; meta: SessionTranscript["meta"]; status: string; startedAt: string }>>([]);
   const [minutesOpen, setMinutesOpen] = useState(false);
   const [transcript, setTranscript] = useState<SessionTranscript | null>(null);

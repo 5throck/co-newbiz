@@ -17,6 +17,8 @@ import { ListBackButton } from "../ListBackButton.tsx";
 
 const EChartsCore = dynamic(() => import("echarts-for-react"), { ssr: false });
 import { useConfirm, RowEdit } from "../crud.tsx";
+import { useAuth } from "../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { SectionToolbar } from "../layout.tsx";
 
 interface GroupRow { id: string; name: string; created_at: string; member_count: number }
@@ -118,6 +120,8 @@ function ProfileChips({ profile }: { profile: Profile | "loading" | undefined })
 export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId?: string; embedded?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { me } = useAuth();
+  const canAct = canWriteBusiness(me?.role);
   const urlSync = !embedded;
   const [localMember, setLocalMember] = useState<string | null>(memberIdProp ?? null);
   const [groups, setGroups] = useState<GroupRow[] | null>(null);
@@ -624,17 +628,19 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
           title="분석 대상 그룹"
           icon="🏢"
           actions={
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => { setShowGroupForm((v) => !v); setShowMemberForm(false); }}
-              aria-expanded={showGroupForm}
-            >
-              ＋ 그룹 등록
-            </button>
+            canAct ? (
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => { setShowGroupForm((v) => !v); setShowMemberForm(false); }}
+                aria-expanded={showGroupForm}
+              >
+                ＋ 그룹 등록
+              </button>
+            ) : undefined
           }
         />
-        {showGroupForm && (
+        {canAct && showGroupForm && (
           <form onSubmit={createGroup} className="sizing-new-form mb-3">
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[0.78rem]">
@@ -689,7 +695,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                   <button type="button" className="btn-ghost btn-sm" disabled={busy || !groupNameDraft.trim()} onClick={() => saveGroupName()}>저장</button>
                   <button type="button" className="btn-ghost btn-sm" onClick={() => setEditGroupName(false)}>취소</button>
                 </span>
-              ) : (
+              ) : !canAct ? undefined : (
                 <>
                   <button type="button" className="btn-ghost btn-sm" title="그룹명 수정" onClick={() => { setGroupNameDraft(selectedGroup.group.name); setEditGroupName(true); }}>수정</button>
                   <button type="button" className="btn-danger btn-sm" title="이 그룹과 소속 계열사 전체를 삭제합니다" onClick={() => removeGroup(selectedGroup.group.id, selectedGroup.group.name)}>삭제</button>
@@ -705,7 +711,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
               )
             }
           />
-          {showMemberForm && (
+          {canAct && showMemberForm && (
             <form onSubmit={addMember} aria-label="계열사 등록" className="sizing-new-form mb-3">
               <div className="flex flex-wrap items-end gap-2">
                 <label className="text-[0.78rem]">
@@ -850,10 +856,12 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                             {isOpen ? "닫기" : "열기"}
                           </button>
                         )}
+                        {canAct && (
                         <button type="button" className="btn-ghost btn-sm" disabled={profiles[m.id] === "loading"} onClick={() => analyzeMember(m.id)}>
                           {profiles[m.id] === "loading" ? "분석 중..." : analyzed ? "재분석" : "분석"}
                         </button>
-                        {isEditing ? (
+                        )}
+                        {!canAct ? null : isEditing ? (
                           <>
                             <button type="button" className="btn-ghost btn-sm" disabled={savingMember} onClick={() => saveMemberEdit()}>
                               {savingMember ? "저장 중..." : "저장"}
@@ -865,6 +873,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                             수정
                           </button>
                         )}
+                        {canAct && (
                         <label className="btn-ghost btn-sm cursor-pointer" title="신용평가자료 등 근거 파일 업로드">
                           {uploadingMember === m.id ? "업로드 중..." : "근거파일"}
                           <input
@@ -875,9 +884,12 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                             onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadMemberFile(m.id, f); }}
                           />
                         </label>
+                        )}
+                        {canAct && (
                         <button type="button" className="btn-danger btn-sm" title="이 계열사를 삭제합니다" onClick={() => removeMember(m.id)}>
                           삭제
                         </button>
+                        )}
                       </span></td>
                     </tr>
                   );
@@ -962,9 +974,11 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                     시너지 분석 →
                   </Link>
                 )}
+                {canAct && (
                 <button type="button" className="btn-ghost" disabled={profiles[openMember] === "loading"} onClick={() => analyzeMember(openMember)}>
                   {profiles[openMember] === "loading" ? "분석 중..." : "재분석"}
                 </button>
+                )}
                 <ListBackButton onClick={backToList} />
               </>
             }
@@ -1208,6 +1222,8 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                                 </span>
                               ) : req?.status === "creating" ? (
                                 <span className="status-chip status-not-started">요청 중...</span>
+                              ) : !canAct ? (
+                                <span className="text-[0.78rem] text-[color:var(--muted-fg)]">—</span>
                               ) : (
                                 <button
                                   type="button"
@@ -1306,7 +1322,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                                       <button type="button" className="btn-danger btn-sm" disabled={compBusy || !excludingCompetitor.reason.trim()} onClick={() => void saveCompetitorExclude()}>확인</button>
                                       <button type="button" className="btn-ghost btn-sm" onClick={() => setExcludingCompetitor(null)}>취소</button>
                                     </span>
-                                  ) : (
+                                  ) : !canAct ? null : (
                                     <span className="actions-row">
                                       <button type="button" className="btn-ghost btn-sm" onClick={() => setEditingCompetitor({ id: c.id, note: c.note ?? "", dart: c.dart_corp_code ?? "" })}>수정</button>
                                       <button type="button" className="btn-ghost btn-sm" onClick={() => setExcludingCompetitor({ id: c.id, reason: "" })}>제외</button>
@@ -1327,7 +1343,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                         {(competitors ?? []).filter((c) => c.status === "excluded").map((c) => (
                           <li key={c.id}>
                             {c.name} — {c.exclusion_reason ?? "사유 없음"}{" "}
-                            <button type="button" className="btn-ghost btn-sm" disabled={compBusy} onClick={() => void restoreCompetitorRow(c.id)}>복원</button>
+                            {canAct && <button type="button" className="btn-ghost btn-sm" disabled={compBusy} onClick={() => void restoreCompetitorRow(c.id)}>복원</button>}
                           </li>
                         ))}
                       </ul>
@@ -1340,9 +1356,11 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <h4 className="text-[0.9rem] font-semibold m-0">AI 제안</h4>
                     <span className="text-[0.75rem] text-[color:var(--muted-fg)]">최신 프로필 분석 기준 — 제안 전용, 수용은 사람</span>
+                    {canAct && (
                     <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void runCompetitorWebSearch()}>
                       {webBusy ? "웹검색 중..." : "웹검색 재제안"}
                     </button>
+                    )}
                   </div>
                   {(competitorProposals ?? []).filter((p) => !p.accepted && !dismissedProposals.includes(p.name)).length === 0 ? (
                     <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">
@@ -1368,10 +1386,10 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                                 ))}
                               </p>
                             )}
-                            <div className="flex flex-wrap gap-2">
+                            {canAct && (<div className="flex flex-wrap gap-2">
                               <button type="button" className="btn-primary btn-sm" disabled={compBusy} onClick={() => void acceptProposal(p.name)}>수용</button>
                               <button type="button" className="btn-ghost btn-sm" onClick={() => setDismissedProposals((prev) => [...prev, p.name])}>무시</button>
-                            </div>
+                            </div>)}
                           </div>
                         );
                       })}
@@ -1398,10 +1416,10 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                               ))}
                             </p>
                           )}
-                          <div className="flex flex-wrap gap-2">
+                          {canAct && (<div className="flex flex-wrap gap-2">
                             <button type="button" className="btn-primary btn-sm" disabled={compBusy} onClick={() => void acceptWebSuggestion(ws)}>수용</button>
                             <button type="button" className="btn-ghost btn-sm" onClick={() => setWebSuggestions((prev) => (prev ?? []).filter((x) => x.name !== ws.name))}>무시</button>
-                          </div>
+                          </div>)}
                         </div>
                       ))}
                     </div>
@@ -1409,7 +1427,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                 </div>
 
                 {/* ③ 수작업 등록 — 상시 노출 (브라운필드 후보 등록 폼 패턴) */}
-                <div className="market-section mb-3">
+                {canAct && (<div className="market-section mb-3">
                   <h4 className="text-[0.9rem] font-semibold mb-2">수작업 등록</h4>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <input value={competitorForm.name} onChange={(e) => setCompetitorForm({ ...competitorForm, name: e.target.value })} className="sizing-new-input" style={{ width: "14rem" }} placeholder="경쟁사명 *" aria-label="경쟁사명" />
@@ -1429,7 +1447,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                       ))}
                     </ul>
                   )}
-                </div>
+                </div>)}
 
                 {/* AI 분석 참고 — payload 원문(제안 원천). 확정 목록과 별개다. */}
                 <details className="market-section">

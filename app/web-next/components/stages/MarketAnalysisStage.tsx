@@ -15,6 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Search } from "lucide-react";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
 import { StageFrame } from "../StageFrame.tsx";
@@ -1248,7 +1249,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
   // 등록되고 산업 상세를 다시 불러와 링크 테이블·제안 목록을 갱신한다. 부모가
   // detail을 소유하므로 갱신 결과는 로컬 뷰(localDetail)로 겹쳐 쓴다.
   const { me } = useAuth();
-  const canCurate = me?.role === "admin" || me?.role === "analyst";
+  const canCurate = canWriteBusiness(me?.role);
   const [localDetail, setLocalDetail] = useState<IndustryDetail | null>(null);
   const [approving, setApproving] = useState<string | null>(null);
   const [chainLinkError, setChainLinkError] = useState<string | null>(null);
