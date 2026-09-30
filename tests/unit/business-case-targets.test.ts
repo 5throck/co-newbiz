@@ -37,7 +37,7 @@ const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
-const { flagRecommendedTarget } = await import("../../app/web-next/lib/business-case-generator.ts");
+const { flagRecommendedTarget, recommendTargetsFromDb, enginesMixedAcrossTargets } = await import("../../app/web-next/lib/business-case-generator.ts");
 
 const NOW = new Date().toISOString();
 
@@ -329,12 +329,58 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
 
   test("flagRecommendedTarget: positive pool first, then max p05 (pure rule)", () => {
     const rows = [
-      { targetId: "t1", companyName: "A", rank: 1, baseP05: -5, baseP50: 10, irr: 0.1, caseCount: 3, recommended: false },
-      { targetId: "t2", companyName: "B", rank: 2, baseP05: 3, baseP50: 12, irr: 0.2, caseCount: 3, recommended: false },
-      { targetId: "t3", companyName: "C", rank: 3, baseP05: 1, baseP50: 30, irr: 0.3, caseCount: 3, recommended: false },
+      { targetId: "t1", companyName: "A", rank: 1, baseP05: -5, baseP50: 10, irr: 0.1, caseCount: 3, engine: null, recommended: false },
+      { targetId: "t2", companyName: "B", rank: 2, baseP05: 3, baseP50: 12, irr: 0.2, caseCount: 3, engine: null, recommended: false },
+      { targetId: "t3", companyName: "C", rank: 3, baseP05: 1, baseP50: 30, irr: 0.3, caseCount: 3, engine: null, recommended: false },
     ];
     const flagged = flagRecommendedTarget(rows);
     expect(flagged[0].targetId).toBe("t2"); // positive pool, max p05 — not the max p50
     expect(flagged.filter((r) => r.recommended).length).toBe(1);
+  });
+});
+
+describe("D2 engine provenance on the target comparison", () => {
+  function setEngine(targetId: string, engine: string) {
+    db.run(
+      `UPDATE valuation_simulation SET note = REPLACE(note, SUBSTR(note, INSTR(note, 'engine='), INSTR(SUBSTR(note, INSTR(note, 'engine=')), ';') - 1), ?)
+       WHERE model_id IN (SELECT id FROM business_case_model WHERE project_id = ? AND target_id = ?)`,
+      [`engine=${engine}`, projectId, targetId],
+    );
+  }
+  const snapshot = () => recommendTargetsFromDb(projectId).map((r) => ({ id: r.targetId, rank: r.rank, rec: r.recommended, p05: r.baseP05 }));
+
+  test("python-only, fallback-only and mixed; ranking untouched", () => {
+    setEngine(targetAId, "python-sim-engine@1.0.0");
+    setEngine(targetBId, "python-sim-engine@1.0.0");
+    const before = snapshot();
+    const ab = () => recommendTargetsFromDb(projectId).filter((r) => r.targetId === targetAId || r.targetId === targetBId);
+    let rows = ab();
+    expect(rows.every((r) => r.engine === "python-sim-engine")).toBe(true);
+    expect(enginesMixedAcrossTargets(rows)).toBe(false);
+
+    setEngine(targetAId, "inline-ts");
+    setEngine(targetBId, "inline-ts");
+    rows = ab();
+    expect(rows.every((r) => r.engine === "ts-fallback")).toBe(true);
+    expect(enginesMixedAcrossTargets(rows)).toBe(false);
+
+    setEngine(targetBId, "python-sim-engine@1.0.0");
+    rows = ab();
+    expect(new Set(rows.map((r) => r.engine))).toEqual(new Set(["ts-fallback", "python-sim-engine"]));
+    expect(enginesMixedAcrossTargets(rows)).toBe(true);
+    expect(snapshot()).toEqual(before);
+  });
+
+  test("a target whose own cases mix engines is 'mixed'; flagRecommendedTarget stays pure", () => {
+    const base = { rank: 1, baseP05: 1, baseP50: 2, irr: 0.1, caseCount: 1, recommended: false };
+    const rows = [
+      { ...base, targetId: "a", companyName: "A", engine: "mixed" as const },
+      { ...base, targetId: "b", companyName: "B", engine: null },
+    ];
+    expect(enginesMixedAcrossTargets(rows)).toBe(true);
+    const frozen = JSON.stringify(rows);
+    const out = flagRecommendedTarget(rows);
+    expect(JSON.stringify(rows)).toBe(frozen);
+    expect(out[0]).not.toBe(rows[0]);
   });
 });
