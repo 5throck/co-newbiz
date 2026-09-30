@@ -3,6 +3,7 @@
  * Template Lifecycle Validation Script
  * @version 1.50.2
  *
+ * v1.50.2: When templates/common is absent (variant or project context), main() returns 0 and reports "not applicable" in JSON and text modes.
  * v1.48.0 → v1.49.0 (2026-09-28, sound-synth orphan-mirror follow-up — spec
  *         docs/designs/2026-09-28-sound-synth-orphan-mirror-cleanup-design.md
  *         §5 blind-spot note): B-11 widened from the canonical templates/common/

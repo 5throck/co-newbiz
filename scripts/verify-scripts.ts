@@ -3,6 +3,7 @@
  * verify-scripts.ts — Script Lifecycle Registry Verifier
  * @version 1.10.0
  *
+ * v1.10.0: ERROR on SCRIPTS.md registry rows with column count ≠ 8. Exported REGISTRY_COLUMN_COUNT and findMalformedRegistryRows for test coverage.
  * v1.8.0 (2026-09-23, adopt-project engine prerequisites): walkScripts() skips
  *         scripts/_legacy/ — the archive where adopt-project parks preserved
  *         foreign scripts. Archived files keep their original languages and carry
