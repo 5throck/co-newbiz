@@ -10,7 +10,7 @@
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
-import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
+import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
 import { resolveOrCreateCompany } from "./brownfield-targets.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
 
@@ -156,6 +156,8 @@ export function listBusinessCases(projectId: string): {
   adoption: AdoptionRecord | null;
   targetSelection: TargetSelectionRecord | null;
   targets: TargetComparisonRow[];
+  /** D2: true when compared targets' cases come from different engines. */
+  enginesMixed: boolean;
 } {
   const db = getDb();
   const models = db
@@ -205,7 +207,7 @@ export function listBusinessCases(projectId: string): {
       simulations: modelSims,
     };
   });
-  return { cases, recommendedScenario: recommended, adoption, targetSelection, targets };
+  return { cases, recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets) };
 }
 
 /** Human-only adoption (boundary #2): record WHICH case feeds the fs gate.

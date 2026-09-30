@@ -1078,6 +1078,27 @@ export function recommendedFromDb(projectId: string): Scenario | null {
   return pool.reduce((best, s) => ((byScenario.get(s) ?? 0) > (byScenario.get(best) ?? 0) ? s : best), pool[0]);
 }
 
+export type TargetEngine = "python-sim-engine" | "ts-fallback" | "mixed" | null;
+
+/** Classify one simulation note's `engine=` fragment (written at generation). */
+function engineOfNote(note: string | null): "python-sim-engine" | "ts-fallback" | null {
+  const m = /(?:^|;\s*)engine=([^;]+)/.exec(note ?? "");
+  if (!m) return null;
+  return m[1].trim().startsWith("python-sim-engine") ? "python-sim-engine" : "ts-fallback";
+}
+
+function mergeEngines(kinds: Array<"python-sim-engine" | "ts-fallback" | null>): TargetEngine {
+  const set = new Set(kinds.filter((k): k is "python-sim-engine" | "ts-fallback" => k !== null));
+  if (set.size === 0) return null;
+  return set.size > 1 ? "mixed" : [...set][0];
+}
+
+/** True when the compared targets' cases come from different engines (one footnote). */
+export function enginesMixedAcrossTargets(rows: TargetComparisonRow[]): boolean {
+  const seen = new Set(rows.map((r) => r.engine).filter((e) => e !== null));
+  return seen.has("mixed") || seen.size > 1;
+}
+
 export interface TargetComparisonRow {
   targetId: string;
   companyName: string;
@@ -1087,6 +1108,10 @@ export interface TargetComparisonRow {
   baseP50: number | null;
   irr: number | null;
   caseCount: number;
+  /** Engine provenance of the cases behind baseP05/p50 (D2), parsed from the
+   *  `engine=` fragment each simulation note records. null = unrecorded. Rank
+   *  and RECOMMENDED are NOT adjusted by it — a human judges. */
+  engine: TargetEngine;
   /** RECOMMENDED flag — the same p05-survival rule as the scenario
    *  recommendation, applied across targets. A PROPOSAL only (boundary #2). */
   recommended: boolean;
@@ -1131,8 +1156,14 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
     if (!latest.has(m.target_id)) latest.set(m.target_id, m.id);
   }
   const simRows = db
-    .query("SELECT model_id, percentile, npv_krw_m, irr FROM valuation_simulation WHERE project_id = ? AND scenario = 'base'")
-    .all(projectId) as Array<{ model_id: string; percentile: string; npv_krw_m: number; irr: number | null }>;
+    .query("SELECT model_id, percentile, npv_krw_m, irr, note FROM valuation_simulation WHERE project_id = ? AND scenario = 'base'")
+    .all(projectId) as Array<{ model_id: string; percentile: string; npv_krw_m: number; irr: number | null; note: string | null }>;
+  const engineByModel = new Map<string, Array<"python-sim-engine" | "ts-fallback" | null>>();
+  for (const r of simRows) {
+    const list = engineByModel.get(r.model_id) ?? [];
+    list.push(engineOfNote(r.note));
+    engineByModel.set(r.model_id, list);
+  }
   const baseByModel = new Map<string, { p05: number | null; p50: number | null; irr: number | null }>();
   for (const r of simRows) {
     const entry = baseByModel.get(r.model_id) ?? { p05: null, p50: null, irr: null };
@@ -1156,6 +1187,7 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
         baseP50: sim?.p50 ?? null,
         irr: sim?.irr ?? null,
         caseCount: counts.get(t.id) ?? 0,
+        engine: modelId ? mergeEngines(engineByModel.get(modelId) ?? []) : null,
         recommended: false,
       };
     }),

@@ -21,6 +21,7 @@ import { ParamsPanel } from "../business-case/ParamsPanel.tsx";
 import { TargetCostingPanel } from "../business-case/TargetCostingPanel.tsx";
 import { FinancialAnalysisPanel } from "../FinancialAnalysisPanel.tsx";
 import { useConfirm } from "../crud.tsx";
+import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access.ts";
 
 // S8 사업성 분석 — 이중 관점 밸류에이션 비교 (ADR-0117; approved mockup
 // docs/designs/mockups/2026-09-11-dual-view-valuation-ui-mockup_ko.html).
@@ -71,6 +72,7 @@ interface TargetComparisonRow {
   irr: number | null;
   caseCount: number;
   recommended: boolean;
+  engine: "python-sim-engine" | "ts-fallback" | "mixed" | null;
 }
 interface CasesResponse {
   cases: CaseView[];
@@ -78,6 +80,7 @@ interface CasesResponse {
   adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null;
   target_selection: { targetId: string; rationale: string; selectedBy: string; selectedAt: string } | null;
   targets: TargetComparisonRow[];
+  engines_mixed?: boolean;
   escalated_cagr_pct: number | null;
 }
 interface ActivityRow {
@@ -89,6 +92,7 @@ interface ActivityRow {
 
 const SCENARIOS = ["base", "upside", "downside"] as const;
 const SCEN_LABEL: Record<string, string> = { base: "기본(Base)", upside: "상승(Upside)", downside: "하락(Downside)" };
+const ENGINE_LABEL: Record<string, string> = { "python-sim-engine": "Python 엔진", "ts-fallback": "TS 대체 엔진", mixed: "혼합" };
 const VARIANT_LABEL: Record<string, string> = { market_forward: "시장 기반", historical: "과거 기반" };
 
 function fmt(n: number): string {
@@ -120,7 +124,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     else setLocalTab(key);
   };
   const { me } = useAuth();
-  const canAct = me?.role === "admin" || me?.role === "analyst";
+  const canAct = canWriteProject(me?.role);
+  const readOnlyAdmin = isReadOnlyAdmin(me?.role);
   const { confirm, confirmDialog } = useConfirm();
   const [data, setData] = useState<CasesResponse | null>(null);
   // 에스컬레이션 조정 CAGR (§4-Q2) — 과거 기반 관점과의 괴리 경고용
@@ -304,6 +309,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         <span className="ml-2 status-chip status-not-started">엔진 권고 ≠ 채택 — 채택은 사람의 행위입니다</span>
       </p>
 
+      {readOnlyAdmin && (
+        <p role="status" className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
+          <span className="status-chip status-not-started mr-1">읽기 전용</span>
+          관리자 역할은 프로젝트 데이터를 변경할 수 없어 대상 선택·채택·생성 기능이 표시되지 않습니다.
+        </p>
+      )}
+
       <TabNav
         className="mb-3"
         label="S8 사업성 분석 화면"
@@ -349,6 +361,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               <th scope="col" className="num">Base NPV p50</th>
               <th scope="col" className="num">IRR</th>
               <th scope="col" className="num">케이스</th>
+              <th scope="col">계산 엔진</th>
               <th scope="col"></th>
             </tr>
           </thead>
@@ -367,6 +380,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   <td className="num mono-num">{t.baseP50 !== null ? fmt(t.baseP50) : "—"}</td>
                   <td className="num mono-num">{t.irr != null ? `${(t.irr * 100).toFixed(1)}%` : "—"}</td>
                   <td className="num">{t.caseCount}</td>
+                  <td><span className="status-chip status-not-started">{ENGINE_LABEL[t.engine ?? ""] ?? "엔진 미기록"}</span></td>
                   <td>
                     {canAct && !isSelected && (
                       <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => { setSelecting({ targetId: t.targetId, name: t.companyName }); setSelectionRationale(""); }}>
@@ -379,6 +393,11 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             })}
           </tbody>
         </table>
+        {data?.engines_mixed && (
+          <p className="text-[0.76rem] text-[color:var(--muted-fg)] mt-1" role="note">
+            * 비교된 케이스가 서로 다른 계산 엔진에서 산출되었으므로 순위는 유의하여 해석하세요.
+          </p>
+        )}
         {targets.every((t) => t.caseCount === 0) && (
           <p className="text-[0.76rem] text-[color:var(--muted-fg)] mt-1">아직 분석된 케이스가 없습니다 — 설명·생성 탭에서 대상별 자동 생성을 실행하세요.</p>
         )}
