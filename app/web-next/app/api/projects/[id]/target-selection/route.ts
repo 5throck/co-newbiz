@@ -8,7 +8,7 @@
 // Analyst+; deny-by-default visibility. GET returns the latest record.
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
-import { latestTargetSelection, selectTarget } from "../../../../../lib/business-case.ts";
+import { NotFoundError, latestTargetSelection, selectTarget } from "../../../../../lib/business-case.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -35,7 +35,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return ok(selection, 201);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
-    if (msg.startsWith("project ")) return notFound();
+    if (e instanceof NotFoundError) return notFound();
     // Not-brownfield / not-on-shortlist / empty rationale are client-fixable.
     return badRequest("selection_rejected", msg || "대상을 선정할 수 없습니다.");
   }

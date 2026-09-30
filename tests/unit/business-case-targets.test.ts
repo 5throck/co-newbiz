@@ -152,7 +152,9 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
     const st = (await status.json()).data as { status: string; activities: Array<{ activityId: string; status: string }>; cases: unknown[] };
     expect(st.status).toBe("done");
     expect(st.activities.length).toBe(24); // 2 targets × 3 scenarios × 4 steps
-    expect(st.activities.find((a) => a.activityId.startsWith("대상A/base:market_forward:growth_projection"))).toBeTruthy();
+    // D6: the activity id carries the unique target id — the company name
+    // ("대상A") is not unique across opportunities and must not key the id.
+    expect(st.activities.find((a) => a.activityId.startsWith(`${targetAId}/base:market_forward:growth_projection`))).toBeTruthy();
     expect(st.cases.length).toBe(6);
   });
 
@@ -293,6 +295,36 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
     expect(recommended.length).toBe(1);
     expect(data.targets.length).toBe(3); // A, B, C — every shortlisted target
     expect(data.targets.every((t) => t.caseCount >= 0)).toBe(true);
+  });
+
+  test("(f) error taxonomy — NotFoundError maps to 404, constraint violations stay 400", async () => {
+    // D5: unknown model on adopt → lib throws NotFoundError → route maps via
+    // instanceof to 404 (previously matched by msg.startsWith("business case ")).
+    const unknownModel = await req(`/api/projects/${projectId}/business-case/adopt`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ model_id: "no-such-model" }),
+    });
+    expect(unknownModel.status).toBe(404);
+
+    // D5: ADR-0143 constraint violation (wrong target) stays a client-fixable
+    // 400 — the instanceof 404 mapping must not swallow it.
+    const modelOf = (targetId: string) =>
+      (db.query("SELECT id FROM business_case_model WHERE project_id = ? AND target_id = ? LIMIT 1").get(projectId, targetId) as { id: string }).id;
+    const wrongTarget = await req(`/api/projects/${projectId}/business-case/adopt`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ model_id: modelOf(targetAId) }),
+    });
+    expect(wrongTarget.status).toBe(400);
+
+    // D5: off-shortlist selection stays 400 (selection_rejected path).
+    const offShortlist = await req(`/api/projects/${projectId}/target-selection`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ target_id: ulid(), rationale: "없는 대상" }),
+    });
+    expect(offShortlist.status).toBe(400);
   });
 
   test("flagRecommendedTarget: positive pool first, then max p05 (pure rule)", () => {

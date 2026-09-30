@@ -616,7 +616,11 @@ export function effGrowthDisp(
   };
 }
 
-export function caseInputsForProject(projectId: string): CaseInputs {
+/** Project-level input base shared by caseInputsForProject and
+ *  caseInputsForTarget — everything EXCEPT growthModel, so a brownfield
+ *  multi-target run (D3) resolves the project base once per project run
+ *  instead of once per subject. */
+export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "growthModel" | "targetId"> {
   const row = getDb()
     .query(
       `SELECT o.market_size_krw_m, o.growth_rate
@@ -633,21 +637,32 @@ export function caseInputsForProject(projectId: string): CaseInputs {
     marketSizeKrwM: row?.market_size_krw_m ?? 50000,
     anchorGrowth: row?.growth_rate ?? 0.05,
     wacc: resolveProjectWacc(getDb(), projectId),
-    growthModel: resolveGrowthModel(getDb(), projectId),
     bcParams: resolveBusinessCaseParams(getDb(), projectId),
     waccSubject: resolveProjectWaccSubject(getDb(), projectId),
     targetCostWiring: resolveDownsideOpexUplift(getDb(), projectId) ?? undefined,
   };
 }
 
+export function caseInputsForProject(projectId: string): CaseInputs {
+  return {
+    ...caseInputsBaseForProject(projectId),
+    growthModel: resolveGrowthModel(getDb(), projectId),
+  };
+}
+
 /** Brownfield per-target inputs (ADR-0143): the market anchor stays the
  *  promoting opportunity's facts; the historical variant resolves from the
  *  TARGET's company series, not md_project.company_id. Missing company facts
- *  degrade to historical N/A per target — never fabricated. */
-export function caseInputsForTarget(projectId: string, target: { id: string; companyId: string | null }): CaseInputs {
-  const inputs = caseInputsForProject(projectId);
+ *  degrade to historical N/A per target — never fabricated. Pass a
+ *  pre-resolved project base to avoid re-running the project-level queries
+ *  for every subject in a multi-target run (D3). */
+export function caseInputsForTarget(
+  projectId: string,
+  target: { id: string; companyId: string | null },
+  base: Omit<CaseInputs, "growthModel" | "targetId"> = caseInputsBaseForProject(projectId),
+): CaseInputs {
   return {
-    ...inputs,
+    ...base,
     targetId: target.id,
     growthModel: resolveGrowthModel(getDb(), projectId, { companyId: target.companyId }),
   };
@@ -992,7 +1007,7 @@ export async function generateBusinessCases(
         const ctx: StepContext = { scenario, variant, inputs, ...(target ? { target } : {}) };
         for (const step of ["growth_projection", "valuation_model", "distributional_valuation", "scenario_risk_assessment"] as BusinessCaseStep[]) {
           const agentKey = businessCaseAgentFor(step);
-          const subjectPrefix = target ? `${target.name}/` : "";
+          const subjectPrefix = target ? `${target.id}/` : "";
           activities.push({
             activityId: `${subjectPrefix}${scenario}:${variant}:${step}`,
             agentKey,
@@ -1006,8 +1021,12 @@ export async function generateBusinessCases(
   if (subjects.length === 0) {
     buildForSubject(caseInputsForProject(projectId));
   } else {
+    // D3: resolve the project-level base once per run — caseInputsForTarget
+    // re-uses it instead of re-running WACC/bcParams/waccSubject/targetCost
+    // queries for every subject.
+    const base = caseInputsBaseForProject(projectId);
     for (const subject of subjects) {
-      buildForSubject(caseInputsForTarget(projectId, subject), { id: subject.id, name: subject.name });
+      buildForSubject(caseInputsForTarget(projectId, subject, base), { id: subject.id, name: subject.name });
     }
   }
 
