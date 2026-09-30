@@ -14,6 +14,11 @@ import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, type Scenario, ty
 import { resolveOrCreateCompany } from "./brownfield-targets.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
 
+/** Typed not-found error (D5): routes map this to HTTP 404 via instanceof
+ *  instead of matching on message prefixes, so rewording a lib message can
+ *  never silently change the status mapping. */
+export class NotFoundError extends Error {}
+
 export interface SimulationRow {
   id: string;
   model_id: string;
@@ -120,7 +125,7 @@ export function selectTarget(projectId: string, targetId: string, rationale: str
   const project = db
     .query("SELECT id, track, source_opportunity_id FROM md_project WHERE id = ?")
     .get(projectId) as { id: string; track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;
-  if (!project) throw new Error(`project '${projectId}' not found`);
+  if (!project) throw new NotFoundError(`project '${projectId}' not found`);
   if (project.track !== "brownfield") throw new Error("target selection applies to brownfield projects only");
   const target = db
     .query("SELECT id, company_name, dart_corp_code, status FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
@@ -213,7 +218,7 @@ export function adoptBusinessCase(projectId: string, modelId: string, adoptedBy:
   const model = db.query("SELECT id, target_id FROM business_case_model WHERE id = ? AND project_id = ?").get(modelId, projectId) as
     | { id: string; target_id: string | null }
     | undefined;
-  if (!model) throw new Error(`business case '${modelId}' not found for project '${projectId}'`);
+  if (!model) throw new NotFoundError(`business case '${modelId}' not found for project '${projectId}'`);
   const project = db
     .query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?")
     .get(projectId) as { track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;

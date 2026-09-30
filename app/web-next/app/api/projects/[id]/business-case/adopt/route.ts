@@ -6,7 +6,7 @@
 // tests/unit/business-case.test.ts). Analyst+; deny-by-default visibility.
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { adoptBusinessCase } from "../../../../../../lib/business-case.ts";
+import { NotFoundError, adoptBusinessCase } from "../../../../../../lib/business-case.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return ok(adoption, 201);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
-    if (msg.startsWith("business case ")) return notFound();
+    if (e instanceof NotFoundError) return notFound();
     // ADR-0143 constraint violations (target not selected / wrong target) are
     // client-fixable 400s, not 404s.
     return badRequest("adoption_rejected", msg || "채택할 수 없습니다.");
