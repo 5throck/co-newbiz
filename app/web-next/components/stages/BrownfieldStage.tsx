@@ -173,7 +173,6 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // (2026-09-18 리뷰: 하단 4블록이 항상 펼쳐 페이지가 지나치게 길었다).
   // null = 데이터 따름, 사용자가 토글하면 그 선택이 우선한다.
   const [precheckOpen, setPrecheckOpen] = useState<boolean | null>(null);
-  const [excludeReason, setExcludeReason] = useState<Record<string, string>>({});
   const [newTarget, setNewTarget] = useState({ company_name: "", dart_corp_code: "" });
   // S6 목표 시장 정의 — 완료기준(definition + 최소 Long List 커버리지).
   // 보기/수정 분리: 평소엔 저장된 값을 읽기 전용 카드로 보여주고, "수정" 클릭
@@ -213,11 +212,8 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const [evalItems, setEvalItems] = useState<Record<string, EvalItem[]>>({});
   // targetId → 카테고리별 100점 가중 점수(서버 계산, computeEvalScore).
   const [evalScores, setEvalScores] = useState<Record<string, Record<EvalItem["category"], EvalCategoryScore>>>({});
-  const [evalBusy, setEvalBusy] = useState<string | null>(null);
-  const [newCriterionLabel, setNewCriterionLabel] = useState<Record<string, string>>({});
   // DART 재무 참고 패널 — company_id(Long List 등록 시점부터 존재) 기준.
   const [financials, setFinancials] = useState<Record<string, FinancialsResp | null>>({});
-  const [financialsSyncing, setFinancialsSyncing] = useState<string | null>(null);
 
   const loadProposals = useCallback(() => {
     if (!opportunityId) { setProposals(null); return; }
@@ -428,78 +424,10 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
       .catch((e) => setError(e instanceof Error ? e.message : "재무·기술 평가 불러오기 실패"));
   }
 
-  async function setEvalVerdict(targetId: string, criterionId: string, status: "pending" | "pass" | "partial" | "fail" | "na" | "waived") {
-    if (!selected) return;
-    setEvalBusy(criterionId);
-    try {
-      await api.put(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets/${encodeURIComponent(targetId)}/eval-state/${encodeURIComponent(criterionId)}`, { status });
-      loadEvalItems(targetId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "평가 판정 저장 실패");
-    } finally {
-      setEvalBusy(null);
-    }
-  }
-
-  async function setEvalWeight(targetId: string, criterionId: string, weight: number) {
-    if (!selected || !Number.isFinite(weight) || weight <= 0) return;
-    setEvalBusy(criterionId);
-    try {
-      await api.patch(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/eval-criteria/${encodeURIComponent(criterionId)}`, { weight });
-      loadEvalItems(targetId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "가중치 저장 실패");
-    } finally {
-      setEvalBusy(null);
-    }
-  }
-
-  async function addEvalCriterion(targetId: string, category: EvalItem["category"]) {
-    if (!selected) return;
-    const key = `${targetId}:${category}`;
-    const label = newCriterionLabel[key]?.trim();
-    if (!label) return;
-    setEvalBusy(key);
-    try {
-      await api.post(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/eval-criteria`, { category, label });
-      setNewCriterionLabel((prev) => ({ ...prev, [key]: "" }));
-      loadEvalItems(targetId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "평가 항목 추가 실패");
-    } finally {
-      setEvalBusy(null);
-    }
-  }
-
   function loadFinancials(companyId: string) {
     api.get<FinancialsResp>(`/api/companies/${encodeURIComponent(companyId)}/financials`)
       .then((r) => setFinancials((prev) => ({ ...prev, [companyId]: r.data })))
       .catch(() => setFinancials((prev) => ({ ...prev, [companyId]: null })));
-  }
-
-  async function syncFinancials(companyId: string) {
-    setFinancialsSyncing(companyId);
-    try {
-      await api.post(`/api/companies/${encodeURIComponent(companyId)}/sync`, {});
-      loadFinancials(companyId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "재무 데이터 동기화 실패");
-    } finally {
-      setFinancialsSyncing(null);
-    }
-  }
-
-  async function removeEvalCriterion(targetId: string, criterionId: string) {
-    if (!selected) return;
-    setEvalBusy(criterionId);
-    try {
-      await api.delete(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/eval-criteria/${encodeURIComponent(criterionId)}`);
-      loadEvalItems(targetId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "평가 항목 삭제 실패");
-    } finally {
-      setEvalBusy(null);
-    }
   }
 
   async function addTarget(e: React.FormEvent) {
@@ -620,23 +548,6 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
       onSaved?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Short List 승격 실패");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function exclude(targetId: string) {
-    if (!selected) return;
-    const reason = excludeReason[targetId]?.trim();
-    if (!reason) { setError("제외 사유를 입력하세요."); return; }
-    setBusy(true); setError(null);
-    try {
-      await api.post(`/api/brownfield/${selected.opportunity.id}/targets/${targetId}/exclude`, { reason });
-      setExcludeReason((prev) => { const n = { ...prev }; delete n[targetId]; return n; });
-      loadDetail(selected.opportunity.id);
-      onSaved?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "제외 실패");
     } finally {
       setBusy(false);
     }
