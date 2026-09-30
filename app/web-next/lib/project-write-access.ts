@@ -8,3 +8,16 @@ export function canWriteProject(role: string | null | undefined): boolean {
 export function isReadOnlyAdmin(role: string | null | undefined): boolean {
   return role === "admin";
 }
+
+// Opportunity-carrier (business content) write access. UI mirror of
+// requireBusinessActor write mode (app/web-next/lib/auth.ts), which stays
+// authoritative (ADR-0146): viewer and admin are rejected, only analyst writes.
+export function canWriteBusiness(role: string | null | undefined): boolean {
+  return role === "analyst";
+}
+
+// Business content read access. UI mirror of requireBusinessActor read mode
+// (app/web-next/lib/auth.ts, ADR-0146): viewer and analyst may read, admin may not.
+export function canReadBusiness(role: string | null | undefined): boolean {
+  return role != null && role !== "admin";
+}

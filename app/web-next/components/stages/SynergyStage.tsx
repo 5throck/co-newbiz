@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
@@ -494,7 +495,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
   const analysisDate = latest?.created_at?.slice(0, 10) ?? analysis.created_at.slice(0, 10);
   const router = useRouter();
   const { me } = useAuth();
-  const canCurate = me?.role === "admin" || me?.role === "analyst";
+  const canCurate = canWriteBusiness(me?.role);
   const [advancing, setAdvancing] = useState(false);
   const [advanceError, setAdvanceError] = useState<string | null>(null);
 

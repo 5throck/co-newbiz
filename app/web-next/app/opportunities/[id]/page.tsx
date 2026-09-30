@@ -8,6 +8,8 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { api } from "../../../lib/api.ts";
+import { useAuth } from "../../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { useConfirm } from "../../../components/crud.tsx";
 import { SectionToolbar } from "../../../components/layout.tsx";
 import { ScenarioPremises, SketchCanvas } from "../../../components/SketchCanvas.tsx";
@@ -39,6 +41,8 @@ const STATUS_LABEL: Record<OpportunityRow["status"], string> = { identified: "�
 export function OpportunityDetail() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
+  const { me } = useAuth();
+  const canAct = canWriteBusiness(me?.role);
   const [opp, setOpp] = useState<OpportunityRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [factors, setFactors] = useState<OppFactors | null>(null);
@@ -201,7 +205,7 @@ export function OpportunityDetail() {
           )}
         </div>
         {opp.rationale && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-2">{opp.rationale}</p>}
-        {opp.status === "identified" && (
+        {canAct && opp.status === "identified" && (
           <div className="flex flex-wrap items-center gap-1">
             <input type="number" min={0} max={100} aria-label="매력도" placeholder="매력도 0-100"
               value={attractDraft} onChange={(e) => setAttractDraft(e.target.value)}
@@ -267,7 +271,7 @@ export function OpportunityDetail() {
               {(factors?.opportunity ?? []).map((f, i) => (
                 <li key={i}>
                   {f}
-                  <button type="button" className="btn-danger btn-sm ml-1" onClick={() => removeFactor("opportunity", i, f)}>삭제</button>
+                  {canAct && <button type="button" className="btn-danger btn-sm ml-1" onClick={() => removeFactor("opportunity", i, f)}>삭제</button>}
                 </li>
               ))}
               {(factors?.opportunity.length ?? 0) === 0 && <li className="text-[color:var(--muted-fg)]">자동 도출 또는 수동 등록하세요.</li>}
@@ -279,14 +283,14 @@ export function OpportunityDetail() {
               {(factors?.risk ?? []).map((f, i) => (
                 <li key={i}>
                   {f}
-                  <button type="button" className="btn-danger btn-sm ml-1" onClick={() => removeFactor("risk", i, f)}>삭제</button>
+                  {canAct && <button type="button" className="btn-danger btn-sm ml-1" onClick={() => removeFactor("risk", i, f)}>삭제</button>}
                 </li>
               ))}
               {(factors?.risk.length ?? 0) === 0 && <li className="text-[color:var(--muted-fg)]">자동 도출 또는 수동 등록하세요.</li>}
             </ul>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1 mt-2">
+        {canAct && <div className="flex flex-wrap items-center gap-1 mt-2">
           <button type="button" className="btn-ghost btn-sm" disabled={factorBusy} onClick={() => void autoDeriveFactors()}>
             {factorBusy ? "도출 중..." : "요인 자동 도출"}
           </button>
@@ -298,7 +302,7 @@ export function OpportunityDetail() {
             onChange={(e) => setFactorDraft({ ...factorDraft, text: e.target.value })}
             className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
           <button type="button" className="btn-ghost btn-sm" onClick={() => void addFactor(factorDraft.type)}>추가</button>
-        </div>
+        </div>}
         {/* 시나리오 전제(낙관/기본/비관) — 비즈니스 모델 검토(sketch)에서 산출되는
             데이터지만, 요인과 함께 보는 편이 자연스러워 이 탭에 배치한다.
             위 요인 등록 폼과 바로 붙어 보여 여백을 둔다. 재생성은 비즈니스 모델
@@ -308,10 +312,10 @@ export function OpportunityDetail() {
             {scenarioNotice && <p role="status" className="text-[0.78rem] text-[color:var(--green-fg)] mb-1">{scenarioNotice}</p>}
             <ScenarioPremises
               sketch={sketchView?.sketch as unknown as Record<string, unknown> | null}
-              actions={
+              actions={canAct ?
                 <button type="button" className="btn-ghost btn-sm" disabled={scenarioBusy} onClick={() => void regenerateScenarios()}>
                   {scenarioBusy ? "재생성 중..." : "시나리오 재생성"}
-                </button>
+                </button> : undefined
               }
             />
           </div>
@@ -325,10 +329,10 @@ export function OpportunityDetail() {
         <SectionToolbar
           title="비즈니스 모델 검토"
           icon=""
-          actions={
+          actions={canAct ?
             <button type="button" className="btn-primary btn-sm" disabled={sketchBusy} onClick={() => void createSketch(sketchView?.sketch != null)}>
               {sketchBusy ? "생성 중..." : sketchView?.sketch ? "재생성 (새 버전)" : "검토 생성"}
-            </button>
+            </button> : undefined
           }
         />
         {sketchView === null ? (

@@ -12,6 +12,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "../../lib/api.ts";
+import { useAuth } from "../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { SectionToolbar } from "../layout.tsx";
 import { CommitteePanel } from "../CommitteePanel.tsx";
 import { Tabs } from "../ui.tsx";
@@ -116,6 +118,8 @@ const SCORE_LABEL: Record<number, string> = { 1: "낮음", 2: "중간", 3: "높�
 const OVERRIDDEN_SUBS = ["partnership", "rbd", "corporate_venture"];
 
 export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportunityId: string; rationaleParam?: string | null }) {
+  const { me } = useAuth();
+  const canAct = canWriteBusiness(me?.role);
   // 2026-09-14 전체 재설계 (docs/designs/mockups/2026-09-14-s4-route-decision-redesign.html
   // 승인 목업) — 탭 3개: 결정(기본) / 평가 근거 / 위원회 심의. 결정 이력은 별도 탭이
   // 아니라 결정 탭 안의 접힘 섹션으로 이동했다. 섹션은 display 토글로 유지(마운트
@@ -424,14 +428,14 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                     {reco.source === "llm" ? `제안 · LLM${reco.provider ? ` · ${reco.provider}` : ""}` : "제안 · 결정론 폴백"}
                   </span>
                 )}
-                {reco && (
+                {canAct && reco && (
                   <button type="button" className="btn-ghost btn-sm ml-auto" disabled={recoLoading} onClick={() => void generateRecommendation()}>
                     재생성
                   </button>
                 )}
               </h4>
               {recoError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
-              {!reco && !recoLoading && !recoError && (
+              {canAct && !reco && !recoLoading && !recoError && (
                 <div className="flex flex-wrap items-center gap-2 mb-0">
                   <button type="button" className="btn-ghost" onClick={() => void generateRecommendation()}>
                     ▶ LLM 추천 생성
@@ -461,7 +465,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               )}
             </div>
 
-            {reco && (
+            {canAct && reco && (
               <div className="flex flex-wrap items-center gap-2 mb-0">
                 <button
                   type="button"
@@ -527,6 +531,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
           </div>
 
           <form id="route-form" onSubmit={saveDecision}>
+          <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div className="flex flex-wrap items-end gap-4 mb-3">
               <label className="text-[0.8rem]">
                 <span className="block mb-1 font-medium">트랙 <span className="text-[color:var(--red-fg)]">*</span></span>
@@ -572,16 +577,20 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               <textarea value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} required className="sizing-new-input" style={{ width: "100%" }} placeholder="고려했지만 선택하지 않은 트랙·라우트와 사유" />
             </label>
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" className="btn-ghost" disabled={draftSaving} onClick={() => void performSaveDraft()}>
-                {draftSaving ? "저장 중..." : "저장"}
-              </button>
-              <button type="submit" className="btn-primary" disabled={saving || !canSubmit}>
-                {saving ? "확정 중..." : "결정"}
-              </button>
+              {canAct && (
+                <button type="button" className="btn-ghost" disabled={draftSaving} onClick={() => void performSaveDraft()}>
+                  {draftSaving ? "저장 중..." : "저장"}
+                </button>
+              )}
+              {canAct && (
+                <button type="submit" className="btn-primary" disabled={saving || !canSubmit}>
+                  {saving ? "확정 중..." : "결정"}
+                </button>
+              )}
               <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
                 {draftSavedAt && `초안 저장됨 · ${draftSavedAt.slice(0, 16).replace("T", " ")} · `}
                 {totalScore !== null ? `합산 ${totalScore} / 3.0 · ` : ""}양 트랙 공통 채점 · 사전배제 검증 자동
-                {!allScored && (
+                {canAct && !allScored && (
                   <>
                     {" · "}
                     <button type="button" className="btn-ghost btn-sm" onClick={() => setTab("eval")}>평가 근거 탭에서 5기준 완료 →</button>
@@ -592,6 +601,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
             <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-1 mb-0">
               저장 = 초안을 서버에 보관(완결성 검증 없음) · 결정 = 5기준·근거 완료 후 불변 기록
             </p>
+          </fieldset>
           </form>
 
           {/* ── 결정 이력 — 과거 기록 열람용 참고자료라 기본 접힘(2026-09-14
@@ -891,13 +901,13 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
           <div className="flex flex-wrap items-center gap-3 mb-2">
             <label className="text-[0.8rem]">
               <span className="block mb-1 font-medium">의도 (Stage 1) <span className="text-[color:var(--red-fg)]">*</span></span>
-              <select value={intent} onChange={(e) => setIntent(e.target.value as "" | "integration" | "capability_access")} className="sizing-new-input">
+              <select value={intent} disabled={!canAct} onChange={(e) => setIntent(e.target.value as "" | "integration" | "capability_access")} className="sizing-new-input">
                 <option value="">선택...</option>
                 <option value="integration">통합</option>
                 <option value="capability_access">역량접근</option>
               </select>
             </label>
-            {intent === "" && (
+            {canAct && intent === "" && (
               <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-0">
                 의도를 선택하지 않으면 아래 채점·근거는 저장되지 않습니다 (서버가 의도 없는 채점을 저장하지 않음).
               </p>
@@ -931,6 +941,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                           key={v}
                           type="button"
                           aria-pressed={c.score === v}
+                          disabled={!canAct}
                           className={`control-chip ${c.score === v ? "status-green" : ""}`}
                           onClick={() => setScore(c.key, { score: v })}
                         >
@@ -942,6 +953,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                   <td>
                     <input
                       value={c.note}
+                      disabled={!canAct}
                       onChange={(e) => setScore(c.key, { note: e.target.value })}
                       placeholder="점수의 근거 (S1·S3 산출물 인용)"
                       aria-label={`${c.label} 근거`}
@@ -954,9 +966,11 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
             </tbody>
           </table>
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <button type="button" className="btn-ghost" disabled={draftSaving} onClick={() => void performSaveDraft()}>
-              {draftSaving ? "저장 중..." : "저장"}
-            </button>
+            {canAct && (
+              <button type="button" className="btn-ghost" disabled={draftSaving} onClick={() => void performSaveDraft()}>
+                {draftSaving ? "저장 중..." : "저장"}
+              </button>
+            )}
             <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
               {draftSavedAt && `초안 저장됨 · ${draftSavedAt.slice(0, 16).replace("T", " ")} · `}
               {totalScore !== null ? `합산 ${totalScore} / 3.0 · ` : ""}양 트랙 공통 채점 · 사전배제 검증 자동
