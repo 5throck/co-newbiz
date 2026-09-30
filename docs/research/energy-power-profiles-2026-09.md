@@ -68,3 +68,15 @@
   제조는 발전업이 아닌 제조업(별도 코드)이므로, 본 프로필은 '발전 사업'에 한정한다.
 - 스택 수명(약 40,000시간)과 교체 비용은 사업자별 공시 수준에서만 확인 가능 —
   특정 수치를 단정하지 않았다.
+
+## References
+
+Consolidated from the citations already present in the sections above (no new sources added). Items without a URL are cited by document name only and remain to be verified against the primary publication.
+
+- Korea Energy Agency New and Renewable Energy Center (knrec) — 2024-12 revised renewable-energy industry special classification: https://www.knrec.or.kr (accessed 2026-09-09).
+- KSIC-11 code 35119 definition: https://www.categoryofbusiness.com/ksic/11/35119 (accessed 2026-09-09).
+- KSIC-11 code 74100 definition: https://www.categoryofbusiness.com/ksic/11/74100 (accessed 2026-09-09).
+- 10th Basic Plan for Electricity Supply and Demand (2024-02; Ministry of Economy and Finance, Korea Power Exchange) — named in the body, no URL recorded.
+- Comprehensive Nuclear Energy Promotion Plan (2024-06; Nuclear Safety and Security Commission, Ministry of Science and ICT) — named in the body, no URL recorded.
+- Hydrogen Economy Promotion and Hydrogen Safety Management Act (in force 2020-02) and clean hydrogen certification scheme (2024-05, Ministry of Trade, Industry and Energy) — named in the body, no URL recorded.
+- Other regulations, filings, and press reports (Korea-US nuclear agreement, K-ETS phase 3, Framework Act on Carbon Neutrality, KEPCO KPS business report, ESS safety management notice, Hydrogen Economy Roadmap 2019) — named in the body, no URL recorded.
