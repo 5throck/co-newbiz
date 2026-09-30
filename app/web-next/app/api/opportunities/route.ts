@@ -13,6 +13,7 @@ const STATUSES = new Set(["identified", "assessed", "selected", "dropped"]);
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const url = new URL(request.url);
   const status = url.searchParams.get("status");
   const projectId = url.searchParams.get("project_id");

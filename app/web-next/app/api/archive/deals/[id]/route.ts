@@ -5,15 +5,15 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { getDealArchiveIfVisible } from "../../../../../../../db/repositories/deal-archive.repository.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
-import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
-import { isAdminDealBlocked } from "../../../../../lib/project-visibility.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { notFound, ok } from "../../../../../lib/envelope.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (isAdminDealBlocked(ctx)) return forbidden("role_required", "관리자는 검토/안건 내용에 접근할 수 없습니다.");
+  const denied = requireBusinessActor(ctx, "read");
+  if (denied) return denied;
   const { id } = await params;
   const row = getDealArchiveIfVisible(ctx.userId, id);
   if (!row) return notFound();

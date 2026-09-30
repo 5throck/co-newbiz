@@ -350,9 +350,11 @@ describe("opportunities — role-gated writes over an open read surface (ADR-009
     expect((await req("/api/opportunities")).status).toBe(401);
   });
 
-  test("any authenticated role can read the funnel", async () => {
+  test("every authenticated non-admin role can read the funnel; admin is rejected (ADR-0146)", async () => {
     expect((await req("/api/opportunities", { headers: { cookie: viewerCookie } })).status).toBe(200);
-    expect((await req("/api/opportunities", { headers: { cookie: rootCookie } })).status).toBe(200);
+    const adminRes = await req("/api/opportunities", { headers: { cookie: rootCookie } });
+    expect(adminRes.status).toBe(403);
+    expect(((await adminRes.json()) as { error: { code: string } }).error.code).toBe("role_forbidden");
   });
 
   test("a viewer cannot create an opportunity — 403 role gate", async () => {

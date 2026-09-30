@@ -1,5 +1,5 @@
 // 보정 루프 조회 — 미결 제안, 수용된 드라이버 세트, 버전 간 CAGR 격차 추이.
-import { authenticate } from "../../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
 import { acceptedCalibrationDrivers, latestCalibrationEscalation } from "../../../../../../lib/market-calibration.ts";
@@ -7,6 +7,8 @@ import { acceptedCalibrationDrivers, latestCalibrationEscalation } from "../../.
 export async function GET(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const { industryId } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM md_industry WHERE id = ?").get(industryId)) return notFound();

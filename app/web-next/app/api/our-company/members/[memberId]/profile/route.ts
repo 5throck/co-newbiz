@@ -1,6 +1,6 @@
 // 계열사 프로파일 조회 — 최신 payload + 버전 이력 (분석 완료 폴링용).
 import { getDb } from "../../../../../../../../db/client.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { loadLatestProfile, getProfileJobStatus } from "../../../../../../lib/company-profile-pipeline.ts";
 import { resolveEffectiveCagr } from "../../../../../../lib/market-calibration.ts";
@@ -8,6 +8,8 @@ import { resolveEffectiveCagr } from "../../../../../../lib/market-calibration.t
 export async function GET(request: Request, { params }: { params: Promise<{ memberId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const { memberId } = await params;
   const db = getDb();
   const member = db

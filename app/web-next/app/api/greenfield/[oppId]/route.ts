@@ -10,6 +10,8 @@ const now = () => new Date().toISOString();
 export async function GET(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
   const opp = db.query("SELECT id, name FROM opportunity WHERE id = ?").get(oppId) as { id: string; name: string } | null;

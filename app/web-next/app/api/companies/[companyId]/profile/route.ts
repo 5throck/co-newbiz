@@ -3,13 +3,15 @@
 // 사용자 요청 "일반화하는게 바람직할 듯 해"). 브라운필드 후보 상세화면 등
 // company_group_member에 속하지 않는 회사에서 쓴다 — 최신 payload + 버전 이력.
 import { getDb } from "../../../../../../../db/client.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { loadLatestProfile, getProfileJobStatus } from "../../../../../lib/company-profile-pipeline.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ companyId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const { companyId } = await params;
   const db = getDb();
   const company = db.query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE id = ?").get(companyId) as

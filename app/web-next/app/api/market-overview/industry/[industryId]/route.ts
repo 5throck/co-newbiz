@@ -10,6 +10,8 @@ import { parseKsicInput } from "../../../../../lib/ksic.ts";
 export async function GET(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const { industryId } = await params;
   const db = getDb();
 

@@ -11,6 +11,8 @@ import { runSynergyPipeline } from "../../../../lib/synergy-pipeline.ts";
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const db = getDb();
   const analyses = db
     .query(

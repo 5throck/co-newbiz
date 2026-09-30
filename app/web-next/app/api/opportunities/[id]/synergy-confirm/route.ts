@@ -40,6 +40,7 @@ function state(row: SynergyRow) {
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
   const row = getRow(getDb(), id);
   if (!row) return notFound();

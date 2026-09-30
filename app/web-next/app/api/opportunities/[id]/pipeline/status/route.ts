@@ -6,13 +6,14 @@
 // opportunity row → 404, unauthenticated → 401.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { pauseLinkFor, type PipelineRunRow } from "../../../../../../../../app/web-next/lib/pipeline.ts";
-import { authenticate } from "../../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { route } from "../../../../../../lib/route.ts";
 
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const opp = db.query("SELECT id, project_id FROM opportunity WHERE id = ?").get(id) as { id: string; project_id: string | null } | undefined;

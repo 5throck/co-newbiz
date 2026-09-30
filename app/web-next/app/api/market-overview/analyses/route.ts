@@ -15,6 +15,8 @@ const LINKED_RELATIONS = ["전방", "전전방", "후방", "후후방"];
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const db = getDb();
   const analyses = db
     .query(

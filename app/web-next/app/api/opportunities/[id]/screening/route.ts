@@ -5,12 +5,13 @@
 // 추천(track-advisory.ts)과 같은 원천 신호를 다시 계산하는 중복 계층이라는
 // 판단에 따라 opportunity-screening.ts에서 정리했다.
 import { loadScreeningState } from "../../../../../lib/opportunity-screening.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
   const state = loadScreeningState(id);
   if (!state) return notFound();

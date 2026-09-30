@@ -13,6 +13,8 @@ import { combinedEvalScore, computeEvalScore, targetEvalStates } from "../../../
 export async function GET(request: Request, { params }: { params: Promise<{ targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const { targetId } = await params;
   const db = getDb();
   const target = db

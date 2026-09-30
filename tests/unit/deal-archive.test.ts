@@ -135,6 +135,7 @@ describe("deal_archive lifecycle", () => {
 
     const asAdmin = await nextRequest("/api/archive/deals", { headers: { cookie: adminCookie } });
     expect(asAdmin.status).toBe(403);
+    expect(((await asAdmin.json()) as { error: { code: string } }).error.code).toBe("role_forbidden");
   });
 
   test("detail view is member-only and audit-logged", async () => {

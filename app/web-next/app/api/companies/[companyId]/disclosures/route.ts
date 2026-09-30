@@ -2,7 +2,7 @@
 // 화면용, 2026-09-15). dart-client.searchDisclosures의 프리셋(최근 공시/
 // 사업보고서/정정/감사/자본변동)을 그대로 노출하고, 각 공시에 DART 뷰어 링크
 // (viewer_url)를 붙여준다. 외부 데이터라 LLM 개입 없이 결정론 조회만 한다.
-import { authenticate } from "../../../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { DISCLOSURE_PRESETS, searchDisclosures, type DisclosurePreset } from "../../../../../lib/dart-client.ts";
@@ -12,6 +12,8 @@ const VIEWER_BASE = "https://dart.fss.or.kr/dsaf007/1/view.do?rcpNo=";
 export async function GET(request: Request, { params }: { params: Promise<{ companyId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const { companyId } = await params;
   const db = getDb();
   const company = db.query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE id = ?").get(companyId) as

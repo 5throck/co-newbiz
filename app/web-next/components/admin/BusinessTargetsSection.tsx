@@ -90,7 +90,7 @@ export function BusinessTargetsSection() {
 
   useEffect(() => {
     api
-      .get<{ groups: GroupRow[] }>("/api/our-company/groups")
+      .get<{ groups: GroupRow[] }>("/api/admin/business-targets/groups")
       .then((r) => {
         setGroups(r.data.groups);
         if (r.data.groups[0]) setFormGroupId(r.data.groups[0].id);
@@ -105,7 +105,7 @@ export function BusinessTargetsSection() {
       return;
     }
     api
-      .get<{ members: MemberRow[] }>(`/api/our-company/groups/${encodeURIComponent(groupId)}`)
+      .get<{ members: MemberRow[] }>(`/api/admin/business-targets/groups/${encodeURIComponent(groupId)}`)
       .then((r) => setMembers(r.data.members))
       .catch(() => setMembers([]));
   }, []);

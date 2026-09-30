@@ -1,11 +1,13 @@
 // S6~S7 브라운필드 경로 — Brownfield route 결정된 기회 목록.
 import { getDb } from "../../../../../db/client.ts";
-import { authenticate } from "../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
 import { ok } from "../../../lib/envelope.ts";
 
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const db = getDb();
   const opps = db
     .query(

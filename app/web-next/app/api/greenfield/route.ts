@@ -1,7 +1,7 @@
 // S5 자체 진출 — Greenfield 기회 목록 / 평가 저장 (greenfield-capability-assessment).
 import { getDb } from "../../../../../db/client.ts";
 import { ulid } from "../../../../../db/lib/ulid.ts";
-import { authenticate } from "../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../lib/envelope.ts";
 
 const now = () => new Date().toISOString();
@@ -9,6 +9,8 @@ const now = () => new Date().toISOString();
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const db = getDb();
   const opps = db
     .query(

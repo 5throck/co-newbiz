@@ -23,6 +23,7 @@ const STEP_TITLES: Record<number, string> = {
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const opp = db.query("SELECT id, name, status FROM opportunity WHERE id = ?").get(id) as

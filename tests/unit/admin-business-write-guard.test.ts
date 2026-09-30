@@ -99,9 +99,12 @@ describe("ADR-0146 admin business write guard", () => {
     expect(await errCode(res)).toBe("role_required");
   });
 
-  test("GET /api/opportunities as admin still 200 (reads are a later PR)", async () => {
-    const res = await req("/api/opportunities", { headers: { cookie: adminCookie } });
-    expect(res.status).toBe(200);
+  test("GET /api/opportunities: admin -> 403 role_forbidden; analyst and viewer -> 200", async () => {
+    const admin = await req("/api/opportunities", { headers: { cookie: adminCookie } });
+    expect(admin.status).toBe(403);
+    expect(await errCode(admin)).toBe("role_forbidden");
+    expect((await req("/api/opportunities", { headers: { cookie: analystCookie } })).status).toBe(200);
+    expect((await req("/api/opportunities", { headers: { cookie: viewerCookie } })).status).toBe(200);
   });
 });
 

@@ -45,6 +45,7 @@ function validateScores(raw: unknown): { scores: ScoreInput[] } | { error: strin
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const opp = db.query("SELECT id, name, status FROM opportunity WHERE id = ?").get(id) as

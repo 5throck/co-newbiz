@@ -3,12 +3,14 @@
 // proxy chains, and market observation series counts. Read-only, any
 // authenticated role. This is the S1 workspace-level data (no project_id).
 import { getDb } from "../../../../../db/client.ts";
-import { authenticate } from "../../../lib/auth.ts";
+import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
 import { ok } from "../../../lib/envelope.ts";
 
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
+  const denied = requireBusinessActor(auth.auth, "read");
+  if (denied) return denied;
   const db = getDb();
 
   const industries = db
