@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-01T12:27:15.954Z
+**Generated**: 2026-10-01T14:01:49.266Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -8,8 +8,8 @@
 
 ## Summary
 
-- **Agents**: 41
-- **Skills**: 105
+- **Agents**: 42
+- **Skills**: 106
 - **Scripts**: 142 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
@@ -51,6 +51,7 @@
 | pmi-agent | agents/pmi-agent.md | high | inherit | 2026-09-29 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-09-29 |
 | quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-09-29 |
+| README_ko | agents/README_ko.md | N/A | N/A | 2026-08-23 |
 | region-lead | agents/region-lead.md | high | inherit | 2026-09-29 |
 | release-engineer | agents/release-engineer.md | medium | inherit | 2026-09-29 |
 | risk-officer | agents/risk-officer.md | high | inherit | 2026-09-29 |
@@ -98,6 +99,7 @@
 | finishing-a-development-branch | 1.0.1 | active | skills/finishing-a-development-branch/SKILL.md | workspace | finish branch, complete work, wrap up, finishing a development branch, merge branch, create PR, push and PR | pm |
 | forward-industry-research | 1.0.1 | experimental | skills/forward-industry-research/SKILL.md | workspace | industry research, industry outlook, sector research | process-governance-manager |
 | gateguard | 1.0.2 | active | skills/gateguard/SKILL.md | workspace | gateguard, /gateguard, investigate file, check before edit, pre-edit check | pm |
+| graft | 1.0.0 | active | skills/graft/SKILL.md | workspace | graft, repo context graph, find where code lives, what calls this symbol, blast radius | pm |
 | greenfield-feasibility | 1.2.0 | active | skills/greenfield-feasibility/SKILL.md | workspace | green field feasibility, new plant feasibility, new establishment review, greenfield screening | greenfield-agent |
 | group-level-review | 1.0.1 | experimental | skills/group-level-review/SKILL.md | workspace | group review, group IC, portfolio fit review | process-governance-manager |
 | growth-projection-modeling | 1.1.0 | active | skills/growth-projection-modeling/SKILL.md | workspace | growth projection, revenue forecast, base rate warning, anchor_ref, hockey stick check | financial-analyst |
@@ -248,7 +250,7 @@
 | generate-prompt-registry.ts | 1.0.0 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-raci.ts | 1.1.0 | scripts/generate-raci.ts | js-yaml |
 | generate-skill-graph.ts | 1.14.0 | scripts/generate-skill-graph.ts | js-yaml |
-| generate-version-manifest.ts | 1.9.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
+| generate-version-manifest.ts | 1.10.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
 | glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | js-yaml |
 | graph-delta-log.ts | 1.0.0 | scripts/graph-delta-log.ts | N/A |
 | graph-map.ts | 1.2.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
@@ -295,7 +297,7 @@
 | sync-library-projection.ts | 1.0.0 | scripts/co-newbiz/sync-library-projection.ts | js-yaml |
 | sync-md.ts | 1.4.0 | scripts/sync-md.ts | N/A |
 | sync-skill-status.ts | 1.1.0 | scripts/sync-skill-status.ts | N/A |
-| sync-skills.ts | 1.10.0 | scripts/sync-skills.ts | N/A |
+| sync-skills.ts | 1.11.0 | scripts/sync-skills.ts | N/A |
 | team-builder.ts | 1.4.1 | scripts/team-builder.ts | N/A |
 | test-runner.ts | 1.6.0 | scripts/test-runner.ts | fs, os, path |
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, fs, path |
@@ -331,26 +333,30 @@
 
 | Name | File | Platform | Skill Integration |
 |------|------|----------|-------------------|
-| changelog | .claude/commands/changelog.md | both | N/A |
-| commit-push-pr | .claude/commands/commit-push-pr.md | both | N/A |
-| gateguard | .claude/commands/gateguard.md | both | N/A |
-| meeting | .claude/commands/meeting.md | both | N/A |
-| memlog | .claude/commands/memlog.md | both | N/A |
-| new-task | .claude/commands/new-task.md | both | N/A |
-| project-review | .claude/commands/project-review.md | both | N/A |
-| sync | .claude/commands/sync.md | both | N/A |
+| changelog | .claude/commands/changelog.md | all | N/A |
+| commit-push-pr | .claude/commands/commit-push-pr.md | all | N/A |
+| gateguard | .claude/commands/gateguard.md | all | N/A |
+| meeting | .claude/commands/meeting.md | all | N/A |
+| memlog | .claude/commands/memlog.md | all | N/A |
+| new-task | .claude/commands/new-task.md | all | N/A |
+| project-review | .claude/commands/project-review.md | all | N/A |
+| sync | .claude/commands/sync.md | all | N/A |
 
 ---
 
 ## Platform Parity Status
 
-**Checked**: Claude (.claude/) vs Gemini (.gemini/)
+**Checked**: Claude (.claude/), Gemini (.gemini/), Antigravity (.agents/), Codex (.codex/ prompts mapping)
 
-- **Commands with parity**: 8 / 8
-- **Skills with parity**: 0 / 105 (common-template skills are parity-exempt)
+- **Commands with parity (gemini mirror)**: 8 / 8
+- **Commands with codex prompts mapping**: 8 / 8
+- **Skills in all four mirrors**: 0 / 106
+- **Skills in claude+gemini only (both)**: 0 / 106 (common-template skills are parity-exempt)
 
 ---
 
 ## Drift Detection
 
-✅ No drift detected. All components are properly versioned and integrated.
+⚠️ **Drift detected**:
+
+- [WARNING] Agent README_ko missing tier or model metadata
