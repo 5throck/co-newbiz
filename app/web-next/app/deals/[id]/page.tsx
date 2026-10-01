@@ -22,14 +22,6 @@ interface ProcessView {
   stages: StageLite[];
 }
 
-const STAGE_ROUTES: Record<string, (projectId?: string) => string | null> = {
-  S1: () => "/market", S2: () => "/opportunities", S3: () => "/synergy", S4: () => "/route-decision",
-  S5: () => "/greenfield", S6: () => "/brownfield", S7: () => "/brownfield",
-  S8: (p) => (p ? `/projects/${p}/business-case` : null), S9: (p) => (p ? `/projects/${p}/dd` : null),
-  S10: (p) => (p ? `/projects/${p}/deal-structure` : null), S11: (p) => (p ? `/projects/${p}/ic-review` : null),
-  S12: (p) => (p ? `/projects/${p}/portfolio` : null),
-};
-
 function DealOverview() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -48,9 +40,9 @@ function DealOverview() {
     return () => { alive = false; };
   }, [id]);
 
-  const projectId = proc ? null : null; // overview works for either carrier
   const current = proc?.stages.find((s) => s.status === "current");
-  const routeFor = current ? STAGE_ROUTES[current.id]?.(projectId ?? undefined) : null;
+  // 현재 단계 링크는 항상 이 캐리어의 단계 탭(deal-carrier form)으로 보낸다.
+  const routeFor = current ? `/deals/${id}/${current.id.toLowerCase()}` : null;
 
   return (
     <main>
