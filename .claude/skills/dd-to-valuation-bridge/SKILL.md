@@ -10,8 +10,8 @@ description: >
 
   Use when: "DD to valuation bridge", "value_impact", "does this finding
   move the valuation", "narrative-only finding check".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.2.0
+last_reviewed: 2026-10-01
 status: active
 owner: valuation-agent
 prerequisites:
@@ -81,7 +81,11 @@ connects to something the model can compute against.
    as incomplete work, not an acceptable qualitative note
 4. **Confirm no double-counting**: a finding that's both an `assumption_key`
    input to the projection AND a separate `value_impact` line would
-   double-count its effect — verify each finding maps to exactly one path
+   double-count its effect — verify each finding maps to exactly one path.
+   Watch the revenue-quality margin axis (cdd-08) in particular: a margin
+   shortfall already removed through the `quality-of-earnings` normalized
+   EBITDA must not be entered again as a margin `assumption_key` or
+   `value_impact`
 5. **Produce the final valuation adjustment summary**: base valuation,
    itemized adjustments (from `value_impact` entries), and confirmation
    that every material finding is accounted for

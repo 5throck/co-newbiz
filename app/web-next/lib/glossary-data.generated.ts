@@ -390,6 +390,39 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "owner": "hr-integration-agent"
   },
   {
+    "key": "Revenue Quality",
+    "ko": "매출의 질",
+    "en": "Revenue Quality",
+    "definition_ko": "같은 매출액이라도 얼마나 믿고 이어갈 수 있는지를 따지는 평가. 최소 네 개 축 — 집중도, 이익률, 회수 기간, 반복성 — 을 상위 고객·세그먼트별로 겹쳐 본다.",
+    "why_it_matters_ko": "매출 규모만으로는 밸류에이션의 바탕이 되는 매출을 믿을 수 없다. 한 축만 보면 놓치는 위험(최대 고객이 가장 늦게 지급하고 마진도 가장 낮은 경우 등)을 교차해 잡아내며, 축별 판정은 합산 점수 없이 따로 보인다. 상업 DD의 권고 항목 cdd-08이다.",
+    "category": "financial",
+    "related": [
+      "QoE",
+      "DSO"
+    ],
+    "used_in": [
+      "commercial-due-diligence"
+    ],
+    "owner": "commercial-dd-agent"
+  },
+  {
+    "key": "DSO",
+    "ko": "매출채권 회수 기간",
+    "en": "Days Sales Outstanding",
+    "definition_ko": "매출이 발생한 뒤 대금을 회수하기까지 걸리는 평균 일수(매출채권 ÷ 매출 × 기간 일수).",
+    "why_it_matters_ko": "전사 평균만 보면 특정 대형 고객의 지급 지연이 가려진다. 고객별 연령분석으로 봐야 운전자본 가정과 매출의 질(회수 기간 축)에 정확히 반영된다.",
+    "category": "financial",
+    "related": [
+      "Revenue Quality",
+      "QoE"
+    ],
+    "used_in": [
+      "commercial-due-diligence",
+      "quality-of-earnings"
+    ],
+    "owner": "financial-analyst"
+  },
+  {
     "key": "CGT",
     "ko": "표준화물선환산톤수",
     "en": "Compensated Gross Tonnage",

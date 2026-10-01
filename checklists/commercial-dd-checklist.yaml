@@ -4,17 +4,17 @@ title: "Commercial Due Diligence Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: commercial-dd-agent
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-08-20"
 gate: DD
 
 items:
   - id: cdd-01
-    text: "고객 집중도 분석 (상위 N개 고객 매출 비중, Customer Concentration)"
+    text: "고객 집중도 분석 (상위 N개 고객 매출 비중, Customer Concentration) — 집중도 수치의 단일 계산 소유 항목, 시장 DD mdd-06이 이 수치를 가져다 시장 측 검증을 수행"
     mandatory: true
     waiver_eligible: true
   - id: cdd-02
-    text: "고객 이탈 이력 검토 (Customer Churn)"
+    text: "고객 이탈 이력 검토 (Customer Churn) — 이탈률 수치의 단일 계산 소유 항목, 시장 DD mdd-07이 이 수치를 가져다 시장 측 검증을 수행"
     mandatory: true
     waiver_eligible: true
   - id: cdd-03
@@ -36,6 +36,10 @@ items:
   - id: cdd-07
     text: "전문가 인터뷰 삼각검증 준수 (주요 주장당 독립 출처 2~3개, Triangulation)"
     mandatory: true
+    waiver_eligible: true
+  - id: cdd-08
+    text: "[권고 — 가급적 수행] 매출의 질 평가 (Revenue Quality) — 상위 고객·세그먼트별로 최소 네 개 축(집중도, 이익률, 회수 기간, 반복성)을 같은 단위에 겹쳐 평가하고, 축별 판정과 근거를 기록 (축 간 합산 점수 금지, cdd-01~03 세부 내용 재서술 금지). 고객 단위 자료가 있으면 수행하고, 건너뛰면 사유와 검증하지 못한 축을 기록"
+    mandatory: false
     waiver_eligible: true
 
 legal_basis:

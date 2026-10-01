@@ -4,7 +4,7 @@ title: "Market Due Diligence Checklist (Brown Field DD)"
 scope: shared
 enforceability: mixed
 owner_agent: market-intelligence-agent
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-08-22"
 gate: DD
 
@@ -12,6 +12,18 @@ gate: DD
 # growth, and structure. The target's own commercial position (customer relationships,
 # achievable growth) is already covered by chk-commercial-dd (commercial-dd-agent);
 # this checklist adds the independent market-side test that was previously missing.
+#
+# Single computation owner (v1.1.0): customer concentration and churn FIGURES are
+# computed once, in commercial DD (cdd-01 / cdd-02), from the target's own data.
+# mdd-06 and mdd-07 take those figures as given and add what only the market side
+# can supply — customer-voice evidence, switching costs, leading churn indicators,
+# and the industry/peer norm — then reconcile. Recomputing the same ratios from the
+# same data room is not an independent test. Evidence gathering (customer-voice
+# interviews, peer norms) may run in parallel with commercial DD; the
+# reconciliation waits until the cdd-01 / cdd-02 figures exist. If commercial DD
+# waived or did not complete one of them, the market side computes that figure
+# itself and records it, so the item never has an empty input. Item IDs are unchanged: per-project
+# state (project_checklist_item_state) is keyed by item id.
 
 items:
   - id: mdd-01
@@ -35,11 +47,11 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: mdd-06
-    text: "Customer concentration computed — top-10 customers as % of revenue, with relationship depth and switching costs captured for the top accounts"
+    text: "Customer concentration tested from the market side — the top-10 share is taken from cdd-01 (not recomputed; if cdd-01 was waived or not completed, compute it here and record that) and, where a benchmark exists, set against the industry/peer norm (industry profile revenue_quality_norms, else peer-benchmarking), with relationship depth and switching costs captured for the top accounts from customer evidence; any material gap between the market-side view and cdd-01 is raised as a finding"
     mandatory: true
     waiver_eligible: true
   - id: mdd-07
-    text: "Churn/retention analyzed over 2-3 years by segment, with leading churn indicators listed (executive sponsor departure, budget reallocation, active competitive evaluations, single-champion relationships)"
+    text: "Churn/retention tested from the market side — the 2-3 year by-segment rates are taken from cdd-02 (not recomputed; if cdd-02 was waived or not completed, compute them here and record that), with leading churn indicators listed from customer evidence (executive sponsor departure, budget reallocation, active competitive evaluations, single-champion relationships); any material gap between the market-side view and cdd-02 is raised as a finding"
     mandatory: true
     waiver_eligible: true
   - id: mdd-08

@@ -11,8 +11,8 @@ description: >
 
   Use when: "customer attrition risk", "change of control clause",
   "customer concentration risk", "retained seller as supplier".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.2.0
+last_reviewed: 2026-10-01
 status: active
 owner: customer-retention-agent
 prerequisites: none
@@ -71,7 +71,11 @@ work-streams that might miss cross-references.
    `management-incentive-review` rather than duplicating their analysis)
 4. **Assess concentration and competitive-overlap risk** for post-acquisition
    attrition — which customers/suppliers are concentrated enough that even
-   a moderate attrition probability is material to the deal thesis
+   a moderate attrition probability is material to the deal thesis.
+   Measure concentration and revenue recurrence both before and after close
+   (cdd-08): the deal can itself shift them — e.g. an acquirer that becomes
+   the target's largest customer raises post-close concentration, and a
+   captive volume commitment changes what counts as recurring
 5. **Quantify, don't just list**: attach a probability-weighted revenue-at-risk
    estimate per material CoC-affected relationship, feeding the financial model
    and the RAG risk dimension

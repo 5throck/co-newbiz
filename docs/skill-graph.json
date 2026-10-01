@@ -738,6 +738,16 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0147",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0148",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent-lifecycle-manager",
       "type": "skill",
       "layer": "L3"
@@ -2406,6 +2416,36 @@
       "source": "prose"
     },
     {
+      "type": "references",
+      "from": "adr:0147",
+      "to": "commercial-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0147",
+      "to": "customer-attrition-risk",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0147",
+      "to": "dd-to-valuation-bridge",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0147",
+      "to": "peer-benchmarking",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0147",
+      "to": "quality-of-earnings",
+      "source": "prose"
+    },
+    {
       "type": "composes_with",
       "from": "agent-lifecycle-manager",
       "to": "skill-lifecycle-manager",
@@ -3284,10 +3324,22 @@
       }
     },
     {
+      "type": "references",
+      "from": "commercial-due-diligence",
+      "to": "peer-benchmarking",
+      "source": "prose"
+    },
+    {
       "type": "phase",
       "from": "commercial-due-diligence",
       "to": "phase4",
       "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "commercial-due-diligence",
+      "to": "quality-of-earnings",
+      "source": "prose"
     },
     {
       "type": "composes_with",
@@ -4920,6 +4972,12 @@
       "from": "greenfield-feasibility",
       "to": "greenfield-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "greenfield-feasibility",
+      "to": "peer-benchmarking",
+      "source": "prose"
     },
     {
       "type": "composes_with",

@@ -10,8 +10,8 @@ description: >
 
   Use when: "quality of earnings", "EBITDA adjustments", "normalized
   earnings", "QoE report".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.2.0
+last_reviewed: 2026-10-01
 status: active
 owner: financial-analyst
 prerequisites:
@@ -80,16 +80,22 @@ distortion the target's own reporting choices introduced.
    capitalization vs. expensing choices, reserve/provision levels relative
    to peers — flag where a policy choice materially flatters reported
    earnings
-5. **Produce normalized EBITDA**: reported EBITDA plus/minus each
+5. **Supply revenue-quality inputs to `commercial-due-diligence` (cdd-08)**:
+   margin by customer/segment and DSO/receivable aging by customer, plus the
+   recurring vs. one-off split of revenue (distinct from step 2, which
+   normalizes one-time items in earnings). Provide the data and its
+   reliability; the four-axis judgment stays with commercial DD
+6. **Produce normalized EBITDA**: reported EBITDA plus/minus each
    adjustment, itemized (never a single unexplained delta) — this is the
    figure `investment-feasibility-modeling` should use, not the reported one
 
 ## Output Format
 
 - QoE bridge: reported EBITDA → itemized adjustments → normalized EBITDA
+- Customer-level margin, DSO/aging and recurring-revenue split handed to cdd-08
 
 ## Related Skills
 
 - `financial-statement-analysis` — the validated base figures this adjusts
 - `investment-feasibility-modeling` — the consumer of normalized EBITDA
-- `commercial-due-diligence` — the broader DD context this QoE work sits within
+- `commercial-due-diligence` — the broader DD context this QoE work sits within, and the consumer of the customer-level inputs above

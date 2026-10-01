@@ -4,7 +4,7 @@ title: "M&A Special Topics Checklist (Brown Field)"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.2.0"
+version: "1.3.0"
 effective_from: "2026-08-20"
 gate: DD
 
@@ -43,7 +43,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: ma-08
-    text: "Customer/supplier concentration and competitive-overlap risk assessed for post-acquisition attrition — includes a seller who retains a commercial relationship with the target post-close, not customer-side contracts only"
+    text: "Customer/supplier concentration and competitive-overlap risk assessed for post-acquisition attrition — includes a seller who retains a commercial relationship with the target post-close, not customer-side contracts only; concentration measured both pre- and post-close, since the deal itself can shift it; where cdd-08 is performed, revenue recurrence is measured pre- and post-close as well"
     mandatory: true
     waiver_eligible: true
   - id: ma-09

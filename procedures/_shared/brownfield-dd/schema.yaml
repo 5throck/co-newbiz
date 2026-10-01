@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-dd
 title: "Brown Field Due Diligence"
 scope: shared
 level: entity
-version: "1.6.0"
+version: "1.6.1"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -15,7 +15,12 @@ steps:
     agent_key: commercial-dd-agent
     skill_key: commercial-due-diligence
     output_type: dd_finding
-    description: Customer/channel/pricing-power checks per `checklists/commercial-dd-checklist.yaml`.
+    description: >
+      Customer/channel/pricing-power checks per `checklists/commercial-dd-checklist.yaml`,
+      including the four-axis revenue-quality assessment (cdd-08, recommended:
+      concentration, margin, collection period, recurrence). This step is the single place
+      customer concentration (cdd-01) and churn (cdd-02) figures are computed;
+      step 4 consumes them (ADR-0147).
   - id: 2
     gate: DD
     agent_key: technical-dd-agent
@@ -46,13 +51,15 @@ steps:
     output_type: dd_finding
     description: >
       Market DD per `checklists/market-dd-checklist.yaml` (mdd-01..) —
-      TAM/SAM triangulation, competitive set, moat, customer concentration,
-      churn, 80/20 revenue vs. thesis. Thesis-by-thesis validation verdicts
+      TAM/SAM triangulation, competitive set, moat, market-side tests of
+      customer concentration and churn (figures taken from step 1, not
+      recomputed; ADR-0147), 80/20 revenue vs. thesis. Thesis-by-thesis validation verdicts
       (validated/partially/invalidated) feed the valuation bridge via
       retention-adjusted revenue impact and bid-adjustment recommendations.
       Runs alongside, not inside, commercial DD (step 1): step 1 tests the
       TARGET's commercial position; this step tests the MARKET the target
-      sits in (ADR-0051).
+      sits in (ADR-0051). Evidence gathering may run in parallel with step 1;
+      the reconciliation of concentration/churn waits for step 1's figures.
   - id: 5
     gate: DD
     agent_key: legal-counsel
@@ -214,7 +221,8 @@ legal_basis:
   - "checklists/financing-plan-checklist.yaml (chk-financing, step 12 — ADR-0051)"
   - "checklists/hr-dd-checklist.yaml (chk-hr-dd, step 13 — ADR-0051)"
   - "ADR-0051 (workflow gap closure — six-validator no-waiver core unchanged at steps 6-11; new steps mandatory with standard waiver path)"
+  - "ADR-0147 (revenue-quality four-axis assessment cdd-08; single computation owner for concentration and churn — wording only, steps and keys unchanged)"
   - "ADR-0048 (no-waiver scope = APPLICABLE validators; 3-number completeness record; not_applicable rows + invalidation on reclassification)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-23"
+last_reviewed: "2026-10-01"
