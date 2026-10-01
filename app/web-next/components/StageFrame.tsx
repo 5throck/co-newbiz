@@ -15,15 +15,17 @@ import { useParams } from "next/navigation";
 import { GATE_LABEL, STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
 import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
 
-/** 단계 → 담당 화면 라우트. 프로젝트 단계(S8~S12)는 /projects/[id] 컨텍스트에서만 링크된다. */
+/** 단계 → 담당 화면 라우트. 캐리어(project id)가 있으면 /deals/{id}/sN 탭으로,
+    없으면 플랫 라우트(캐리어 리다이렉트 스텁 — 2026-10-02 route-cleanup design
+    §4.2/§4.3)로 보낸다. 프로젝트 단계(S8~S12)는 /projects/[id] 컨텍스트에서만 링크된다. */
 const STAGE_HREF: Record<StageMetaId, (projectId?: string) => string | null> = {
-  S1: () => "/market",
-  S2: () => "/opportunities",
-  S3: () => "/synergy",
+  S1: (p) => (p ? `/deals/${p}/s1` : "/market"),
+  S2: (p) => (p ? `/deals/${p}/s2` : "/opportunities"),
+  S3: (p) => (p ? `/deals/${p}/s3` : "/synergy"),
   S4: (p) => (p ? `/deals/${p}/s4` : "/route-decision"),
-  S5: () => "/greenfield",
-  S6: () => "/brownfield",
-  S7: () => "/brownfield",
+  S5: (p) => (p ? `/deals/${p}/s5` : "/greenfield"),
+  S6: (p) => (p ? `/deals/${p}/s6` : "/brownfield"),
+  S7: (p) => (p ? `/deals/${p}/s7` : "/brownfield"),
   S8: (p) => (p ? `/projects/${p}/business-case` : null),
   S9: (p) => (p ? `/projects/${p}/dd` : null),
   S10: (p) => (p ? `/projects/${p}/deal-structure` : null),

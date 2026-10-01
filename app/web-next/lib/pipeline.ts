@@ -682,14 +682,17 @@ function firstHumanRuleKey(entity: ProcessEntity, ev: ProcessEvaluation): string
 export function pauseLinkFor(reason: string, run: Pick<PipelineRunRow, "entity_type" | "entity_id">): string {
   const projectId = run.entity_type === "project" ? run.entity_id : null;
   const opportunityId = run.entity_type === "opportunity" ? run.entity_id : null;
+  // 캐리어 id를 알 때는 딜 캐리어 탭(/deals/{id}/sN)으로 직행하고(route-cleanup
+  // design §4.3), 모르면 플랫 라우트로 보낸다 — 플랫 라우트는 이제 캐리어
+  // 리다이렉트 스텁(CarrierGate)이라 어차피 같은 곳에 도달한다.
   if (reason.startsWith("route_confirmation") || reason === "gate_decision:screening" || reason === "gate_decision:pre_fs" || reason.startsWith("promotion_")) {
-    return opportunityId ? `/route-decision?opportunity=${encodeURIComponent(opportunityId)}` : "/opportunities";
+    return opportunityId ? `/deals/${opportunityId}/s4` : "/route-decision";
   }
-  if (reason.startsWith("manual_input")) return "/opportunities";
-  if (reason === "no_automation:S1") return "/market";
-  if (reason === "no_automation:S5") return "/greenfield";
+  if (reason.startsWith("manual_input")) return opportunityId ? `/deals/${opportunityId}/s2` : "/opportunities";
+  if (reason === "no_automation:S1") return opportunityId ? `/deals/${opportunityId}/s1` : "/market";
+  if (reason === "no_automation:S5") return opportunityId ? `/deals/${opportunityId}/s5` : "/greenfield";
   if (reason === "no_automation:S6" || reason === "no_automation:S7" || reason === "gate_decision:target_screening") {
-    return "/brownfield";
+    return opportunityId ? `/deals/${opportunityId}/s6` : "/brownfield";
   }
   if (projectId) return `/projects/${encodeURIComponent(projectId)}`;
   return "/opportunities";

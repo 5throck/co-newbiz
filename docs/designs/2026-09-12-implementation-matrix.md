@@ -13,12 +13,12 @@
 | 5 | `deal-board` | previews/deal-board.png | /deals (new; absorbs /pipeline) | implemented (wave1 /deals) | |
 | 6 | `deal-list` | previews/deal-list.png | /deals/list (new; from /projects) | planned | |
 | 7 | `deal-overview` | previews/deal-overview.png | /deals/{id} (new) | implemented (wave1 /deals/[id]) | |
-| 8 | `s1` | previews/s1.png | /deals/{id}/s1 (from /market) | implemented (legacy /market) | |
-| 9 | `s2` | previews/s2.png | /deals/{id}/s2 (from /opportunities) | implemented (legacy /opportunities) | 2026-09-13: ADR-0127 — opportunity detail screen /opportunities/{id} (factors, attractiveness score, business-model review history, promotion panel), minimal row actions, funnel KPI stage filters |
-| 10 | `s3` | previews/s3.png | /deals/{id}/s3 (from /synergy) | implemented (legacy /synergy) | 2026-09-13: ADR-0125 human curation layer (linkage add, shortlist verdict editing, origin badges); ADR-0126/0128 company-grouped list, /agents PM query surface |
-| 11 | `s4` | previews/s4.png | /deals/{id}/s4 (from /route-decision) | implemented (/deals/{id}/s4) | 2026-09-13: rewritten to baseline card/tab structure in `components/stages/RouteDecisionStage.tsx`; `/route-decision` now redirects |
-| 12 | `s5` | previews/s5.png | /deals/{id}/s5 (from /greenfield) | implemented (legacy /greenfield) | |
-| 13 | `s6s7` | previews/s6s7.png | /deals/{id}/s6+s7 (from /brownfield) | implemented (legacy /brownfield) | |
+| 8 | `s1` | previews/s1.png | /deals/{id}/s1 (from /market) | implemented (legacy /market) | flat route now redirects to /deals/{id}/s1 (carrier-resolving) |
+| 9 | `s2` | previews/s2.png | /deals/{id}/s2 (from /opportunities) | implemented (legacy /opportunities) | 2026-09-13: ADR-0127 — opportunity detail screen /opportunities/{id} (factors, attractiveness score, business-model review history, promotion panel), minimal row actions, funnel KPI stage filters; flat route now redirects to /deals/{id}/s2 (carrier-resolving) |
+| 10 | `s3` | previews/s3.png | /deals/{id}/s3 (from /synergy) | implemented (legacy /synergy) | 2026-09-13: ADR-0125 human curation layer (linkage add, shortlist verdict editing, origin badges); ADR-0126/0128 company-grouped list, /agents PM query surface; flat route now redirects to /deals/{id}/s3 (carrier-resolving) |
+| 11 | `s4` | previews/s4.png | /deals/{id}/s4 (from /route-decision) | implemented (/deals/{id}/s4) | 2026-09-13: rewritten to baseline card/tab structure in `components/stages/RouteDecisionStage.tsx`; `/route-decision` now redirects; flat route now redirects to /deals/{id}/s4 (carrier-resolving) |
+| 12 | `s5` | previews/s5.png | /deals/{id}/s5 (from /greenfield) | implemented (legacy /greenfield) | flat route now redirects to /deals/{id}/s5 (carrier-resolving) |
+| 13 | `s6s7` | previews/s6s7.png | /deals/{id}/s6+s7 (from /brownfield) | implemented (legacy /brownfield) | flat route now redirects to /deals/{id}/s6 (carrier-resolving) |
 | 14 | `s8` | previews/s8.png | /deals/{id}/s8 (from business-case) | implemented (legacy business-case) | |
 | 15 | `s9` | previews/s9.png | /deals/{id}/s9 (from dd) | implemented (legacy dd) | |
 | 16 | `s10` | previews/s10.png | /deals/{id}/s10 (from deal-structure) | implemented (legacy deal-structure) | |
@@ -64,6 +64,8 @@
 | 56 | `share` | previews/share.png | /deals/{id}/share (new; security design sign-off required) | UI implemented (/projects/[id]/share); security-gate note kept | |
 
 > **Route audit note (2026-10-01, Row 5 audit — spec 2026-10-01-s1-s12-process-alignment-design)**: rows carrying "implemented (legacy ...)" are thin wrappers over the shared `components/stages/*Stage.tsx` components, integrated into `/deals/{id}/s1..s12`; `/route-decision` redirects with a no-deal-id picker; `/opportunities/[id]` is a standalone S2 detail surface (ADR-0127). Flat-route redirects (`/market`, `/synergy`, `/greenfield`, `/brownfield`, ...) are a follow-up PR touching `lib/navigation.ts`, `lib/pipeline.ts`, `components/StageFrame.tsx`, and `components/AppShell.tsx`; removal of the dead `STAGE_LINK` map is a follow-up. `/route-decision` and `/opportunities/[id]` need a human decision before any change.
+
+> **Route audit update (2026-10-02, spec 2026-10-02-route-cleanup-followup-design)**: dead `STAGE_LINK`/`STAGE_ROUTES` maps removed (PR A); the five flat routes are carrier-resolving redirect pages (PR B); `/route-decision` and `/opportunities/[id]` kept by design; rows 8-13 stage routes unchanged (same UI, now reached via carrier tabs or the redirecting flat pages).
 
 ## Comparison protocol (at completion)
 

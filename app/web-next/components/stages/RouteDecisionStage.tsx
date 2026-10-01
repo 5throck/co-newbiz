@@ -884,7 +884,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                 ) : (
                   <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">
                     필요 역량 수준 미작성 —{" "}
-                    <Link href="/synergy" className="text-[color:var(--accent)] underline">S3 시너지 화면 연계 시너지 탭</Link>
+                    <Link href={`/deals/${encodeURIComponent(opportunityId)}/s3`} className="text-[color:var(--accent)] underline">S3 시너지 탭</Link>
                     {" "}에서 필요 역량과 보유 판정을 기록하세요.
                   </p>
                 )}
