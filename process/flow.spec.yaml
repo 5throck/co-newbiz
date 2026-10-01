@@ -117,7 +117,7 @@ gates:
       - "brownfield: 대상별 비교 분석과 사람의 대상 선정 기록(target_selection)이 존재한다"
     killCriteria:
       - 기준 수익률 미달이 기본 시나리오에서 확인된다
-    fundingDecision: DD 착시 자원 배정
+    fundingDecision: DD 착수 자원 배정
   - id: dd
     name: DD
     decisionCriteria:
@@ -475,8 +475,8 @@ stages:
     completionCriteria:
       - 민감도가 포함된 정량 평가가 존재한다 (시뮬레이션 또는 밸류에이션 범위)
       - BEP 시점과 시뮬레이션 입력 스냅샷이 산출되어 있다
-      - brownfield: Short List의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)
-      - brownfield: 대상 비교 분석과 사람의 대상 선정 기록이 존재한다
+      - "brownfield: Short List의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)"
+      - "brownfield: 대상 비교 분석과 사람의 대상 선정 기록이 존재한다"
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S9, onHold: S8, onKill: terminal }
     gates: [fs]
@@ -560,7 +560,7 @@ stages:
 
   - id: S11
     name: 투자심사·실행
-    objective: "투자할 것인가? — 투자 구조(Deal/Investment Structure: 비히클·자금 조달·지급 구조)를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다"
+    objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 실행(법인 설립 또는 인수 종결)한다"
     inputs:
       - IC 패키지(사업계획·DD·RAG·검토)
       - 투자 구조안(S10 투자구조 설계의 산출물 — 비히클·4축 검토·자금조달 계획)
@@ -591,8 +591,10 @@ stages:
         # 구현: app/web-next/lib/project-charter.ts · GET/POST /api/projects/[id]/charter
       - id: investment-structuring
         agent: brownfield-agent
-        skills: [investment-vehicle-structuring, financing-plan-review]
+        skills: []
         procedure: [entity-ic-review, jv-lifecycle-governance]
+        # S11은 투자 구조를 설계하지 않는다 — S10 투자구조 설계 산출물(비히클·
+        # 4축 검토·자금조달 계획)을 IC 패키지에 참조로 묶을 뿐이다.
         # jv-lifecycle-governance는 Route가 JV인 경우에 적용한다 (설립·거버넌스·
         # 출구 전 라이프사이클 약속의 기준선).
       - id: risk-review
@@ -640,7 +642,7 @@ stages:
     outputs:
       - 포트폴리오 스코어카드
       - 사업 성과 리포트
-      - 포트폴리오 전환 결정(어휘 5종: next_tranche_released / held_evidence_incomplete / graduate_to_core / reduce_or_divest / kill_with_learning_captured)
+      - "포트폴리오 전환 결정(어휘 5종: next_tranche_released / held_evidence_incomplete / graduate_to_core / reduce_or_divest / kill_with_learning_captured)"
     entryCriteria:
       - S11 완료 (IC 승인, internal/joint는 설립 실행 완료 포함)
     activities:

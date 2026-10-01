@@ -420,10 +420,7 @@ export const SPEC_STAGES: SpecStage[] = [
       {
         "id": "investment-structuring",
         "agent": "brownfield-agent",
-        "skills": [
-          "investment-vehicle-structuring",
-          "financing-plan-review"
-        ],
+        "skills": [],
         "procedure": [
           "entity-ic-review",
           "jv-lifecycle-governance"
