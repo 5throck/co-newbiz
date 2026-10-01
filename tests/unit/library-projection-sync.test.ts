@@ -18,31 +18,11 @@ const REPO = resolve(import.meta.dirname, "../..");
 
 const normalize = (s: string) => s.replace(/\r\n/g, "\n");
 
-// Entries that were already stale when this guard was added (2026-10-01). Refresh
-// the projection for one, then delete it from the list — the test fails if a listed
-// entry is actually fresh, so the list can only shrink.
-const KNOWN_STALE_ITEMS = new Set([
-  "chk-brownfield-feasibility-checklist",
-  "chk-greenfield-feasibility-checklist",
-]);
-const KNOWN_STALE_CONTENT = new Set([
-  "chk-brownfield-feasibility-checklist",
-  "chk-financing-plan-checklist",
-  "chk-greenfield-feasibility-checklist",
-  "chk-hr-dd-checklist",
-  "chk-strategic-fit-screening-checklist",
-  "chk-target-screening-checklist",
-  "proc-greenfield-screening",
-  "proc-brownfield-screening",
-  "proc-greenfield-fs",
-  "proc-brownfield-fs",
-  "ref-phase-definitions",
-  "rb-deployment-ko",
-  "rb-deployment",
-  "des-design-guide",
-  "des-design-components-ko",
-  "des-design-components",
-]);
+// Entries known to be stale on purpose. Empty by design: refresh the projection with
+//   bun scripts/co-newbiz/sync-library-projection.ts
+// instead of listing an entry here. The test also fails if a listed entry is fresh.
+const KNOWN_STALE_ITEMS = new Set<string>([]);
+const KNOWN_STALE_CONTENT = new Set<string>([]);
 
 describe("library.generated.ts matches its source files", () => {
   test("every projected checklist: version, item_count and items equal the yaml", () => {

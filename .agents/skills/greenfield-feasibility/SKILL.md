@@ -11,8 +11,8 @@ description: >
 
   Use when: "green field feasibility", "new plant feasibility",
   "new establishment review", "greenfield screening".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.2.0
+last_reviewed: 2026-10-01
 status: active
 owner: greenfield-agent
 prerequisites: none
@@ -73,7 +73,16 @@ gate, not a weighting adjustment.
    result" to carry forward anyway
 4. **Complete `checklists/greenfield-feasibility-checklist.yaml`** item by
    item as evidence accumulates, not retroactively at the gate
-5. **Hand off** to `site-infrastructure-assessment` (infrastructure detail),
+5. **Forward revenue quality** (recommended, ADR-0147): a new establishment has
+   no revenue history, so the four cdd-08 axes apply to the plan's *assumptions*,
+   not to ledgers — contracted/LOI offtake share and the largest expected
+   customer (concentration), target margin against peers (margin), assumed
+   payment terms against the region's practice (collection period), and
+   contracted vs. spot volume (recurrence). Record each as an assumption with its
+   evidence level; where it rests on management or broker claims, say so. Use
+   `peer-benchmarking` and the industry/region profile norms where they exist.
+   A plan whose revenue rests on one unsigned customer is a finding, not a footnote
+6. **Hand off** to `site-infrastructure-assessment` (infrastructure detail),
    `regional-incentive-sourcing` (incentive NPV), `talent-pipeline-planning`,
    and `community-partnership-planning` for the specialist inputs each gate needs
 
@@ -81,6 +90,7 @@ gate, not a weighting adjustment.
 
 - Screening/Pre-FS deliverables per the shared procedures' `output_type` fields
 - Completed feasibility checklist
+- Forward revenue-quality assumptions (four axes, evidence level each) when step 5 is performed
 
 ## Related Skills
 

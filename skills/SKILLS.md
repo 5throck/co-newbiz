@@ -87,7 +87,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `gateguard` | 1.0.2 | active | pm | 2026-08-01 | — | — |
 | `glossary-management` | 1.0.0 | active | glossary-curator | 2026-08-20 | — | Wave 5.8C (design §9.2 merge) — absorbs glossary-lint |
 | `governance-document-hierarchy` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B (design §9.3 governance-authoring group) — Policy/Procedure/Guideline/Checklist/Template layer classification |
-| `greenfield-feasibility` | 1.1.0 | active | greenfield-agent | 2026-08-23 | — | Wave 5.8C — Green Field Screening/Pre-FS |
+| `greenfield-feasibility` | 1.2.0 | active | greenfield-agent | 2026-10-01 | — | Wave 5.8C — Green Field Screening/Pre-FS |
 |`group-level-review`|1.0.1| experimental | process-governance-manager |2026-08-20|—|Wave 5.8C (design §9.3 group review + glossary + GF/BF gate groups) — orchestrates `group-investment-review`'s 5-step Group IC sequence|
 | `growth-projection-modeling` | 1.1.0 | active | financial-analyst | 2026-08-23 | — | Wave 5.8G — ADR-0018 anchor_ref + top-decile base-rate warning, feeds the Kill Criterion |
 | `handbook` | 0.6.0 | active | pm | 2026-09-20 | — | — |

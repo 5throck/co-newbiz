@@ -743,6 +743,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0148",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent-lifecycle-manager",
       "type": "skill",
       "layer": "L3"
@@ -4967,6 +4972,12 @@
       "from": "greenfield-feasibility",
       "to": "greenfield-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "references",
+      "from": "greenfield-feasibility",
+      "to": "peer-benchmarking",
+      "source": "prose"
     },
     {
       "type": "composes_with",
