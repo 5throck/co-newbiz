@@ -4,7 +4,7 @@ title: "Financial Due Diligence Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: financial-analyst
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-09-05"
 gate: DD
 
@@ -26,7 +26,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: fdd-05
-    text: "Cash flow quality verified — operating cash flow vs. EBITDA reconciliation, capex split maintenance vs. growth, DSO/DPO trends"
+    text: "Cash flow quality verified — operating cash flow vs. EBITDA reconciliation, capex split maintenance vs. growth, DSO/DPO trends (where cdd-08 is performed, customer-level DSO/aging and margin are supplied to it)"
     mandatory: true
     waiver_eligible: true
   - id: fdd-06

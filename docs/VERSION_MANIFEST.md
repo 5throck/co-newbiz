@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-01T06:33:38.620Z
+**Generated**: 2026-10-01T12:03:38.386Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -77,14 +77,14 @@
 | certification-roadmap | 1.0.0 | active | skills/certification-roadmap/SKILL.md | workspace | certification requirements, certification gap analysis, certification roadmap | certification-agent |
 | certification-transferability | 1.2.0 | active | skills/certification-transferability/SKILL.md | workspace | certification transferability, change of control certification, certification survives acquisition | legal-counsel |
 | ci-triage | 0.1.1 | active | skills/ci-triage/SKILL.md | workspace | ci failure, triage failure, audit gate failed, scaffold failed, fix the pipeline | pm |
-| commercial-due-diligence | 1.1.0 | active | skills/commercial-due-diligence/SKILL.md | workspace | commercial due diligence, customer concentration analysis, pricing power assessment, win loss analysis | commercial-dd-agent |
+| commercial-due-diligence | 1.2.0 | active | skills/commercial-due-diligence/SKILL.md | workspace | commercial due diligence, customer concentration analysis, pricing power assessment, win loss analysis, revenue quality | commercial-dd-agent |
 | community-partnership-planning | 1.1.0 | active | skills/community-partnership-planning/SKILL.md | workspace | community partnership, local workforce development, community relations, social license to operate | hr-integration-agent |
 | company-intelligence | 1.0.1 | experimental | skills/company-intelligence/SKILL.md | workspace | company research, company profile, corporate intelligence | process-governance-manager |
 | compensation-harmonization-analysis | 1.0.0 | active | skills/compensation-harmonization-analysis/SKILL.md | workspace | compensation harmonization, comp benchmark, upward bias, post-merger pay equalization | hr-integration-agent |
 | competitive-intelligence | 1.1.0 | active | skills/competitive-intelligence/SKILL.md | workspace | competitive analysis, market analysis, competitor profiling, market entry analysis, industry attractiveness, competitive intelligence, five forces | market-intelligence-agent |
 | compliance-monitoring | 1.1.0 | active | skills/compliance-monitoring/SKILL.md | workspace | compliance check, is this gate blocked, governance KPI, gate cycle time, checklist completion rate, waiver concentration | compliance-officer |
-| customer-attrition-risk | 1.1.0 | active | skills/customer-attrition-risk/SKILL.md | workspace | customer attrition risk, change of control clause, customer concentration risk, retained seller as supplier | customer-retention-agent |
-| dd-to-valuation-bridge | 1.1.0 | active | skills/dd-to-valuation-bridge/SKILL.md | workspace | DD to valuation bridge, value_impact, does this finding move the valuation, narrative-only finding check | valuation-agent |
+| customer-attrition-risk | 1.2.0 | active | skills/customer-attrition-risk/SKILL.md | workspace | customer attrition risk, change of control clause, customer concentration risk, retained seller as supplier | customer-retention-agent |
+| dd-to-valuation-bridge | 1.2.0 | active | skills/dd-to-valuation-bridge/SKILL.md | workspace | DD to valuation bridge, value_impact, does this finding move the valuation, narrative-only finding check | valuation-agent |
 | deal-execution-playbook | 1.0.1 | experimental | skills/deal-execution-playbook/SKILL.md | workspace | deal execution, closing steps, execution playbook | process-governance-manager |
 | debt-and-contingent-liability-simulation | 1.1.0 | active | skills/debt-and-contingent-liability-simulation/SKILL.md | workspace | contingent liability, covenant breach test, rate shock, Monte Carlo liability integration, CoC debt acceleration | risk-officer |
 | decision-record | 1.1.0 | active | skills/decision-record/SKILL.md | workspace | decision record, gate ruling, go/no-go decision, escalation decision, record a decision | pm |
@@ -138,7 +138,7 @@
 | portfolio-fit-assessment | 1.3.0 | active | skills/portfolio-fit-assessment/SKILL.md | workspace | portfolio overlap, cannibalization, portfolio fit, group agenda ranking, rank against other group companies | group-review-agent |
 | project-review | 1.3.1 | active | skills/project-review/SKILL.md | workspace | project review, review project, audit project, quality review | pm |
 | proxy-industry-chain | 1.1.0 | active | skills/proxy-industry-chain/SKILL.md | workspace | proxy chain, no direct market data, chain reliability grade, demand estimation via proxy industry | quant-methodologist |
-| quality-of-earnings | 1.1.0 | active | skills/quality-of-earnings/SKILL.md | workspace | quality of earnings, EBITDA adjustments, normalized earnings, QoE report | financial-analyst |
+| quality-of-earnings | 1.2.0 | active | skills/quality-of-earnings/SKILL.md | workspace | quality of earnings, EBITDA adjustments, normalized earnings, QoE report | financial-analyst |
 | rag-scoring-framework | 1.1.0 | active | skills/rag-scoring-framework/SKILL.md | workspace | RAG grade, RAG scoring, overall grade calculation, hysteresis, structural vs behavioral remedy grading | process-governance-manager |
 | regional-incentive-sourcing | 1.1.0 | active | skills/regional-incentive-sourcing/SKILL.md | workspace | regional incentive, investment incentive package, site comparison, incentive NPV, compare candidate sites | greenfield-agent |
 | regulatory-screening | 1.0.1 | experimental | skills/regulatory-screening/SKILL.md | workspace | regulatory screening, regulation check, permit screening | process-governance-manager |

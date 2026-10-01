@@ -55,20 +55,20 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `ci-triage` | 0.1.1 | active | pm | 2026-09-08 | - | - |
 | `deal-pipeline-orchestration` | 1.0.0 | active | pm | 2026-09-08 | - | - |
 | `manual-authoring` | 2.1.0 | active | docs-writer | 2026-09-06 | — | Manual/SOP/governance-reference authoring standard — audience split, governance metadata, external-reference badge rules; documents render live via `/library` (ADR-0108), no generator step |
-| `commercial-due-diligence` | 1.1.0 | active | commercial-dd-agent | 2026-08-23 | — | Wave 5.8H — checklist cdd-01-07, no-narrative-only-finding rule |
+| `commercial-due-diligence` | 1.2.0 | active | commercial-dd-agent | 2026-10-01 | — | Wave 5.8H — checklist cdd-01-08, no-narrative-only-finding rule; cdd-08 four-axis revenue quality |
 | `community-partnership-planning` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8C — workforce-development partnerships and community-relations risk |
 |`company-intelligence`|1.0.1| experimental | process-governance-manager |2026-08-20|—|Wave 5.8A reuse layer, adapted from Projects/co-consult|
 | `compensation-harmonization-analysis` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8D — ADR-0027 bidirectional upward-bias verification rule |
 | `competitive-intelligence` | 1.1.0 | active | market-intelligence-agent | 2026-08-23 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
 | `compliance-monitoring` | 1.1.0 | active | compliance-officer | 2026-08-23 | — | Wave 5.8B (design §9.2 merge) — absorbs governance-training-and-notice, governance-kpi-reporting |
 | `continuous-monitoring-and-alerting` | 1.0.0 | active | sre | 2026-08-20 | — | Wave 5.8J — ADR-0017 bidirectional (deterioration non-optional) notification policy |
-| `customer-attrition-risk` | 1.1.0 | active | customer-retention-agent | 2026-08-23 | — | Wave 5.8D — CoC-clause scan incl. retained-seller-as-supplier (pilot 002 F-2) |
+| `customer-attrition-risk` | 1.2.0 | active | customer-retention-agent | 2026-10-01 | — | Wave 5.8D — CoC-clause scan incl. retained-seller-as-supplier (pilot 002 F-2); pre/post-close concentration and recurrence |
 | `customer-qualification` | 1.0.0 | active | commercial-dd-agent | 2026-08-20 | — | Wave 5.8H — PPAP/FAI/vendor-registration, distinct from regulatory certification |
 | `data-freshness-and-revision-control` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — ADR-0004 operational counterpart to market-data-pipeline |
 | `data-normalization` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — generalizes `financial-statement-analysis`'s real mapping-table pattern |
 | `database-operations` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8K (design §9.2 merge) — absorbs backup-and-dr; ADR-0015 "a backup never restored is not verified" |
 | `db-migration-governance` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — ADR-0001/0002 SQLite portability-regime conventions |
-| `dd-to-valuation-bridge` | 1.1.0 | active | valuation-agent | 2026-08-23 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams |
+| `dd-to-valuation-bridge` | 1.2.0 | active | valuation-agent | 2026-10-01 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams; margin-axis vs. QoE double-count check |
 |`deal-execution-playbook`|1.0.1| experimental |process-governance-manager|2026-09-08|—|Wave 5.8I — navigates `docs/governance/process-map.md`/`docs/governance/raci.md`'s real per-gate RACI, never restates|
 | `deal-workspace-operations` | 1.1.0 | active | process-governance-manager | 2026-09-09 | — | Wave B1 — open/membership plus close/archive lifecycle via `PATCH /api/projects/:id/close` and `md_project.status` |
 | `debt-and-contingent-liability-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
@@ -139,7 +139,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `procedure-reference-override` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — ADR-0020 shared/entity/region override mechanics, `proc:resolve` |
 |`project-review`|1.3.1|active|pm|2026-09-21|—|Graph-aligned project review runbook refresh|
 | `proxy-industry-chain` | 1.1.0 | active | quant-methodologist | 2026-08-23 | — | Wave 5.8F (design §9.3 market/proxy-chain group) — ADR-0006 statistical-hop-only grading rule |
-| `quality-of-earnings` | 1.1.0 | active | financial-analyst | 2026-08-23 | — | Wave 5.8G — EBITDA normalization bridge for Brown Field DD |
+| `quality-of-earnings` | 1.2.0 | active | financial-analyst | 2026-10-01 | — | Wave 5.8G — EBITDA normalization bridge for Brown Field DD; customer-level inputs to cdd-08 |
 | `query-performance-tuning` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — membership-filtering join as the highest-traffic query pattern |
 | `rag-scoring-framework` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | Wave 5.8I (design §9.3 RAG/quality + deal-execution axis C groups) — ADR-0016 priority-ordered (not weighted-average) overall grade |
 | `region-profile-application` | 1.0.0 | active | region-lead | 2026-08-20 | — | Wave 5.8E — ADR-0023's 10 mandatory review axes, real `region-profiles/*.yaml` (KR/EU/US/CN/SEA) |

@@ -1,4 +1,4 @@
-schema_version: "1.0"
+schema_version: "1.1"
 description: >
   Region profile contract (design v1.0 section 2-6 / 4-9-1 amendment). Each
   top-level section is a provenance-bearing unit: source, verified_on, and
@@ -21,6 +21,14 @@ required_top_level:
   - incentives
   - typical_closing_weeks
 
+optional_top_level:
+  # Validated exactly like a required section WHEN PRESENT (source, verified_on,
+  # maintainer, non-empty data); a profile without it is valid. Optional because
+  # an unsourced placeholder is worse than a missing section. Filled by the project
+  # team while running cdd-08 on a deal (preferred, not required); maintainer is the
+  # agent_key that filled it.
+  - payment_practice   # benchmark for commercial DD cdd-08 collection-period axis
+
 section_shape:
   # every section listed above except code/name_ko/typical_closing_weeks
   # must have this shape
@@ -40,6 +48,9 @@ section_field_reference:
   data_transfer: [regime, cross_border_transfer_mechanism]
   environmental_liability_succession: [successor_liability_default, remediation_fund_available]
   incentives: [categories, clawback_norm]
+  # payment_practice: collection-period norms for receivables owed by customers in
+  # this region. Distinct from fx_and_repatriation (cash movement across borders).
+  payment_practice: [typical_payment_terms_days, statutory_late_payment_rule, collection_enforcement_note, credit_insurance_note]
 
 validation_rules:
   - "Every required_top_level key must be present."

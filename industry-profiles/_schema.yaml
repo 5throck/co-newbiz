@@ -1,4 +1,4 @@
-schema_version: "1.0"
+schema_version: "1.1"
 description: >
   Industry profile contract (design v1.0 section 1-7 / agents/industry-lead.md).
   Each top-level section is a provenance-bearing unit: source, verified_on,
@@ -18,6 +18,15 @@ required_top_level:
   - regulatory_landscape
   - technology_transitions
 
+optional_top_level:
+  # Validated exactly like a required section WHEN PRESENT (source, verified_on,
+  # maintainer, non-empty data); a profile without it is valid. Optional because
+  # an unsourced placeholder is worse than a missing section — add it only with
+  # a real citation and a human-confirmed verified_on. Filled by the project team
+  # while running cdd-08 on a deal (preferred, not required); maintainer is the
+  # agent_key that filled it.
+  - revenue_quality_norms   # benchmark for commercial DD cdd-08 (revenue quality, four axes)
+
 section_shape:
   # every section listed above except code/name_ko must have this shape
   source: string            # citation — statistical agency, trade association, or named advisory source
@@ -30,6 +39,9 @@ section_field_reference:
   cycle_position_indicators: [cycle_driver, typical_cycle_length_years, current_phase_note, peak_earnings_caveat]
   regulatory_landscape: [primary_regimes, licensing_or_certification_bodies, cross_border_notes]
   technology_transitions: [known_transitions, transition_driver, expected_timeline, demand_structure_impact]
+  # revenue_quality_norms mirrors the four cdd-08 axes. Give a range (not a point)
+  # with its basis; record disagreeing sources as a spread, never an average.
+  revenue_quality_norms: [customer_concentration_norm, margin_structure_norm, collection_period_norm, recurrence_norm, contract_structure_note]
 
 validation_rules:
   - "Every required_top_level key must be present."

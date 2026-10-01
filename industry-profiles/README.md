@@ -18,6 +18,16 @@ blocks CI). Exemplar: `KSIC261.yaml` (Wave E pilot).
      cross-border notes (export controls first for semiconductors-class industries).
    - `technology_transitions` — known transitions, their driver, expected
      timeline, and how demand structure shifts.
+   - `revenue_quality_norms` (**optional**) — industry benchmark ranges for the four
+     commercial DD cdd-08 axes: `customer_concentration_norm`, `margin_structure_norm`,
+     `collection_period_norm`, `recurrence_norm`, plus `contract_structure_note`
+     (e.g. milestone vs. spot billing). Omit the section until you have a real
+     source — a missing section is valid, a placeholder is not. It is filled by
+     the project team while running `cdd-08` on a deal (preferred, not required),
+     with `maintainer` set to the agent_key that filled it and `verified_on` the
+     date a human confirmed it. Give ranges with
+     their basis, and record disagreeing sources as a spread. Until the section
+     exists, `cdd-08` falls back to `peer-benchmarking`.
 3. **Cite, then assert.** Every section's `source` field carries the citation
    (statistical agency, trade association, primary regulation, or named advisory
    source). Put the full link list + access dates in a companion research doc

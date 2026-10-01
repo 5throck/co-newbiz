@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Region Profile Validator — co-newbiz
  *
@@ -38,9 +38,15 @@ const REQUIRED_TOP_LEVEL = [
   "typical_closing_weeks",
 ];
 
-const SOURCED_SECTIONS = REQUIRED_TOP_LEVEL.filter(
+const REQUIRED_SOURCED_SECTIONS = REQUIRED_TOP_LEVEL.filter(
   (k) => !["code", "name_ko", "typical_closing_weeks"].includes(k)
 );
+
+// Optional sections are skipped when absent and held to the same provenance
+// rules when present (see optional_top_level in _schema.yaml).
+const OPTIONAL_SOURCED_SECTIONS = ["payment_practice"];
+
+const SOURCED_SECTIONS = [...REQUIRED_SOURCED_SECTIONS, ...OPTIONAL_SOURCED_SECTIONS];
 
 interface Issue {
   file: string;
