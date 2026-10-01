@@ -163,7 +163,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `typecheck.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `sync-md.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
 | `sync-skill-status.ts` | L0 | 1.1.0 | active | — | — | L0+L1 | — |
-| `sync-skills.ts` | L0 | 1.10.0 | active | `--dir <path>`, `--all-variants` | — | L0+L1 | — |
+| `sync-skills.ts` | L0 | 1.11.0 | active | `--dir <path>`, `--all-variants` | — | L0+L1 | — |
 | `team-builder.ts` | L0 | 1.4.1 | active | —| —| L0+L1 | —|
 | `test-runner.ts` | L0 | 1.6.0 | active | —| —| L0+L1 (`--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms>`, `--allow-empty`) — v1.5.0: empty suites fail by default and scripts suite scans `scripts/tests/*.test.ts`; v1.6.0: bun test runs with `--timeout=30000` (per-test/hook default 5s flaked fresh-DB migration hooks on CI runners) | —|
 | `translate-readme.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
@@ -220,7 +220,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `helpers/l0-ref-policy.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/markers.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `helpers/layer-filter.ts` | L0 | 1.5.0 | active | —| —| L0+L1 | —|
-| `generate-version-manifest.ts` | L0 | 1.9.0 | active | emits `validate-md-language:allowlist` markers around the generated Skills table (T-20260912-015) | —| L0+L1 | —|
+| `generate-version-manifest.ts` | L0 | 1.10.0 | active | emits `validate-md-language:allowlist` markers around the generated Skills table (T-20260912-015) | —| L0+L1 | —|
 | `lib/platform-delivery.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/managed-block-parity.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `lib/variant-overlay-guard.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
@@ -238,7 +238,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `validate-process.ts` | L0 | 1.0.0 | active | Process/stages validation (ADR-0083 DEG-P-*), distinctness check (`--determinism` flag) | —| L0+L1 | —|
 | `validate-raci.ts` | L0 | 1.2.0 | active | RACI validation per ADR-0083 DEG-R-01..05 + ADR-0084 DEG-R-06/07; DEG-R-06: human-accountable must match gate; DEG-R-07: actor_types key set must equal R/A/C/I union | —| L0+L1 | —|
 | `lib/dependency-guard.ts` | L0 | 1.0.2 | active | DEPENDENCY GUARD — scans delivered scripts' bare-package imports vs project package.json, reports missing packages in the upgrade plan (T-20260920-001) | —| L0+L1 | —|
-| `lib/upgrade-policy.ts` | L0 | 1.20.0 | active | exports `lifecyclelessText()` (equal-version agent drift) + `isDeliveredDiff()` (dev-sync 3.9 auto-E5, rollout hardening 2026-09-21) | —| L0+L1 | —|
+| `lib/upgrade-policy.ts` | L0 | 1.21.0 | active | exports `lifecyclelessText()` (equal-version agent drift) + `isDeliveredDiff()` (dev-sync 3.9 auto-E5, rollout hardening 2026-09-21) | —| L0+L1 | —|
 | `helpers/golden-reference-loader.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/mirror-hygiene.ts` | L0 | 1.0.0 | active | v1.0.0 mirror-hygiene scanner (R6, spec docs/designs/2026-09-25-verifier-platform-expansion-design.md): a platform skill mirror contains only skill directories; stray files (SKILLS.md/README*.md) and non-skill dirs are findings; wired into validate-templates checkMirrorHygiene (WARN soak) | —| L0+L1 | —|
 | `helpers/registries/capability-registry.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|

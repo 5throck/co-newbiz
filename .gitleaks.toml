@@ -21,9 +21,7 @@ regexes = [
   '''YOUR_SECRET''',
   # gitleaks:allow inline marker (single-line suppression)
   '''gitleaks:allow''',
-  # Prompt-registry key identifiers ("key": "s1.sizing_summarize" and the
-  # generated TS twin) trip generic-api-key; value shapes are project-specific
-  # identifiers, so a real credential in these files still gets flagged.
+  # Preserved from this project's prior .gitleaks.toml (not in the current common template):
   '''s\d\.[a-z_]+''',
 ]
 paths = [
@@ -32,9 +30,6 @@ paths = [
   # filesystem regardless of .gitignore, so exclude it here explicitly
   # (mirrors the same fix already present in the L0 workspace-root config)
   '''\.env$''',
-  # .env.<name> variants (.env.prod) are gitignored like .env; exclude them
-  # from --no-git working-tree scans (git-history scans never see them)
-  '''\.env\.''',
   '''CHANGELOG\.md''',
   '''.*_test\.(js|ts|py|go|rs)$''',
   '''.*\.test\.(js|ts)$''',
@@ -51,5 +46,7 @@ paths = [
   '''(^|/)venv/''',
   '''(^|/)node_modules/''',
   '''(^|/)__pycache__/''',
+  # Preserved from this project's prior .gitleaks.toml (not in the current common template):
+  '''\.env\.''',
   '''(^|/)\.next/''',
 ]
