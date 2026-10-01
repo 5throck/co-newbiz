@@ -27,14 +27,6 @@ import { DealStructureStage } from "../../../../components/stages/DealStructureS
 import { IcReviewStage } from "../../../../components/stages/IcReviewStage.tsx";
 import { PortfolioStage } from "../../../../components/stages/PortfolioStage.tsx";
 
-const STAGE_LINK: Record<string, (projectId?: string) => string | null> = {
-  S1: () => "/market", S2: () => "/opportunities", S3: () => "/synergy", S4: () => "/route-decision",
-  S5: () => "/greenfield", S6: () => "/brownfield", S7: () => "/brownfield",
-  S8: (p) => (p ? `/projects/${p}/business-case` : null), S9: (p) => (p ? `/projects/${p}/dd` : null),
-  S10: (p) => (p ? `/projects/${p}/deal-structure` : null), S11: (p) => (p ? `/projects/${p}/ic-review` : null),
-  S12: (p) => (p ? `/projects/${p}/portfolio` : null),
-};
-
 interface ProcessView {
   currentStage: string | null; nextStage: string | null; track: string | null;
   blockers: string[]; requiredArtifacts: string[]; gateStatus: Record<string, string>;
@@ -211,7 +203,8 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
   );
 }
 
-// 미통합 단계의 범용 가이던스 탭 — 프로세스 상태·블로커·작업 화면 링크.
+// 미통합 단계의 범용 가이던스 탭 — 프로세스 상태·블로커 표시(작업 화면 링크는
+// STAGE_LINK 제거 후 탭 자체가 단계 화면이므로 더 이상 제공하지 않는다).
 // 자식 컴포넌트로 분리해 StageTab의 훅 순서가 단계와 무관하게 일정하다.
 function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: string }) {
   const [proc, setProc] = useState<ProcessView | null>(null);
@@ -231,7 +224,6 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
 
   const stage = proc?.stages.find((s) => s.id === stageId);
   const applicable = stage && stage.status !== "skipped";
-  const link = applicable ? STAGE_LINK[stageId]?.(undefined) : null;
 
   return (
     <main>
@@ -251,11 +243,6 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
           <ul className="sizing-note-list">
             {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b, i) => <li key={i}>{b}</li>)}
           </ul>
-          <p className="mt-3">
-            {link
-              ? <Link className="btn-primary" href={link}>작업 화면으로 이동</Link>
-              : <span className="note">작업 화면 링크는 상위 캐리어 확인 후 활성화됩니다.</span>}
-          </p>
         </div>
       )}
     </main>
