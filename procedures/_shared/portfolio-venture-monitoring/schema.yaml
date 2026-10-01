@@ -3,7 +3,7 @@ procedure_id: shared-portfolio-venture-monitoring
 title: "Venture Portfolio Monitoring (post-approval, group level)"
 scope: shared
 level: group
-version: "1.0.0"
+version: "1.1.0"
 status: active
 # Design §E: cells with venture character — internal venture (cells 9/10),
 # minority/hybrid (5/6), JV (7/8, feeding in via jv-lifecycle-governance
@@ -19,6 +19,7 @@ gate: post_close
 owner_agent: process-governance-manager
 legal_basis:
   - "ADR-0052 §E (venture portfolio monitoring)"
+  - "ADR-0150 (S12 completion criteria mapped to portfolio transitions — accepted 2026-10-02, immediate full application; version 1.0.0 → 1.1.0 adds per-transition records and criterion-6 data ownership)"
   - "docs/designs/2026-08-23-track-coverage-extension-design.md §E"
   - "ADR-0047 (12-cell classification matrix — venture-character cells)"
   - "docs/research/pmi-jv-lifecycle-best-practice.md [pmi-jv C.1-C.3]"
@@ -82,6 +83,26 @@ steps:
       kill_with_learning_captured. Kill decisions are recorded with
       rationale and learning capture recycled into the playbook — a kill
       is a governed decision, not a silent starve.
+
+      ADR-0150 completion records (accepted 2026-10-02, IMMEDIATE full
+      application to all in-flight projects — no cutoff): each review
+      cycle produces the scorecard (step 1, criterion 1) and one human
+      transition decision with non-empty rationale (criterion 2), plus
+      the per-transition record — criterion 3: a continue decision
+      (next_tranche_released / held_evidence_incomplete) records the
+      next tranche condition; criterion 4: graduate_to_core records the
+      hand-off to core business; criterion 5: reduce_or_divest records
+      the divestment or wind-down plan. Criteria 3-5 are recorded in the
+      decision row's rationale/learning_capture fields of
+      venture_transition_decision (migration 0071) — no new columns.
+
+      Criterion 6 data ownership: group-review-agent records the
+      captured learning (the learning_capture field of a
+      kill_with_learning_captured row); risk-officer feeds that
+      learning back into the S1/S2 screening and base-rate reference
+      classes. The transition decision itself stays a human decision by
+      venture-portfolio-ic; agents draft, record, and recycle — they
+      never decide.
 
 # No kill-criteria registry entries: design §E names no candidates — the
 # kill/graduate decision here is portfolio governance OUTPUT (step 3's

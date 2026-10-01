@@ -668,7 +668,7 @@ async function loadStageAliases(): Promise<{
 
 /**
  * Validate stage aliases. Static pass after all procedures are loaded.
- * Returns SA-2, SA-3, SA-4 issues.
+ * Returns SA-2, SA-3, SA-4, SA-5 issues.
  * Exported for tests/unit/stage-aliases-registry.test.ts.
  */
 export function validateStageAliases(
@@ -691,20 +691,27 @@ export function validateStageAliases(
     }
   }
 
-  // SA-3: every alias's .stage matches ^S[0-9]+$ and is declared in stages.yaml
+  // SA-3: every alias's .stage must be an id declared in process/stages.yaml
+  // (ADR-0149: gate-axis ids come from the declared set, whatever their
+  // prefix — G1-G8 today; never a hard-coded pattern over the prefix).
   for (const [gate, alias] of aliases) {
     const stageId = alias.stage;
-    if (!/^S[0-9]+$/.test(stageId)) {
-      issues.push({
-        file: STAGE_ALIASES_FILE,
-        message: `alias '${gate}' names stage '${stageId}' which does not match pattern ^S[0-9]+$`,
-        severity: "error",
-      });
-    }
     if (!stages.has(stageId)) {
       issues.push({
         file: STAGE_ALIASES_FILE,
         message: `alias '${gate}' names stage '${stageId}' which is not declared in process/stages.yaml`,
+        severity: "error",
+      });
+    }
+  }
+
+  // SA-5: every declared stage id must be referenced by at least one alias
+  // (fail-closed in both directions, per the stage-aliases.yaml header).
+  for (const stageId of stages) {
+    if (![...aliases.values()].some((a) => a.stage === stageId)) {
+      issues.push({
+        file: STAGES_FILE,
+        message: `stage '${stageId}' is declared in process/stages.yaml but referenced by no alias in process/stage-aliases.yaml`,
         severity: "error",
       });
     }

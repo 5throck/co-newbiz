@@ -18,36 +18,36 @@ variant: co-newbiz
 
 aliases:
   "Screening":
-    stage: S1
+    stage: G1
     note: >-
       Entry station for all chains. deal-shape-chain also sits here and runs
       parallel to the market-shaped chains.
     reference: procedures/_shared/brownfield-screening/schema.yaml
   "Target Screening":
-    stage: S2
-    note: Brownfield-only. Greenfield chains advance S1 -> S3.
+    stage: G2
+    note: Brownfield-only. Greenfield chains advance G1 -> G3.
     reference: procedures/_shared/brownfield-target-screening/schema.yaml
   "Pre-FS":
-    stage: S3
+    stage: G3
     reference: procedures/_shared/brownfield-pre-fs/schema.yaml
   "FS":
-    stage: S4
+    stage: G4
     reference: procedures/_shared/brownfield-fs/schema.yaml
   "DD":
-    stage: S5
+    stage: G5
     reference: procedures/_shared/brownfield-dd/schema.yaml
   "Entity IC":
-    stage: S6
+    stage: G6
     note: Human decision authority (ADR-0053, boundary #2).
     reference: procedures/_shared/entity-ic-review/schema.yaml
   "Group IC":
-    stage: S7
+    stage: G7
     note: >-
       Ranking decision, not a yes/no approval (ADR-0029). Human decision
       authority.
     reference: procedures/_shared/group-investment-review/schema.yaml
   "post_close":
-    stage: S8
+    stage: G8
     note: >-
       Gate slot added after entity_ic per ADR-0052. Covers PMI, JV lifecycle
       governance, and venture-portfolio monitoring.

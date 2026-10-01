@@ -394,7 +394,7 @@ describe("(b) transition-decision POST — the recorder pattern", () => {
   });
 });
 
-describe("(c) S12 completion — latest-cycle freshness (ADR-0101 §4)", () => {
+describe("(c) S12 completion — ADR-0150 six criteria (fresh cycle + human transition decision)", () => {
   // The freshness sequence runs on project2, whose S8–S11 were completed in
   // setup so S12 is the current stage and its blockers actually surface.
   test("no scorecard rows at all: S12 is current and blocked on the artifact", () => {
@@ -413,11 +413,48 @@ describe("(c) S12 completion — latest-cycle freshness (ADR-0101 §4)", () => {
     expect(stale.blockers.join("\n")).toContain(STALE_CYCLE);
   });
 
-  test("recording a CURRENT-quarter cycle flips S12 complete", () => {
+  test("a FRESH cycle with NO recorded transition decision does NOT complete S12 (ADR-0150 criterion 2)", () => {
     recordCycle(CURRENT_CYCLE, "fresh_measure", "on_target", project2Id);
+    const freshNoDecision = evaluateProcess({ type: "project", id: project2Id });
+    expect(freshNoDecision.completedStages).not.toContain("S12");
+    expect(freshNoDecision.currentStage).toBe("S12");
+    expect(freshNoDecision.blockers.join("\n")).toContain("사람 전환 결정 기록이 필요합니다");
+  });
+
+  test("a recorded kill_with_learning_captured with rationale + learning_capture DOES complete S12 (ADR-0150 criteria 2+6)", () => {
+    const runId3 = ulid();
+    db.run(
+      "INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)",
+      [runId3, project2Id, "S12 전환 결정 테스트 run", "h-portfolio-3", ANALYST, NOW],
+    );
+    db.run(
+      `INSERT INTO venture_transition_decision
+         (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [ulid(), runId3, project2Id, CURRENT_CYCLE, "kill_with_learning_captured", "venture-portfolio-ic", NOW, "시장 검증 실패 — IC 좌장 결정", "규제 미확정 산업의 프록시 수요 추정은 2분기 이내 재검증한다", NOW],
+    );
     const done = evaluateProcess({ type: "project", id: project2Id });
     expect(done.completedStages).toContain("S12");
     expect(done.currentStage).toBeNull(); // S12 is terminal (onComplete: terminal)
+  });
+
+  test("a kill_with_learning_captured WITHOUT learning_capture does NOT complete S12 (ADR-0150 criterion 6)", () => {
+    const runId4 = ulid();
+    db.run(
+      "INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)",
+      [runId4, project2Id, "S12 학습 포착 누락 run", "h-portfolio-4", ANALYST, NOW],
+    );
+    // Latest row by (decided_at, id) wins — this row is newest, so the
+    // predicate reads THIS decision (no learning_capture) and must block.
+    db.run(
+      `INSERT INTO venture_transition_decision
+         (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [ulid(), runId4, project2Id, CURRENT_CYCLE, "kill_with_learning_captured", "venture-portfolio-ic", NOW, "재차 중단 기록 — 학습 미기록", null, NOW],
+    );
+    const blocked = evaluateProcess({ type: "project", id: project2Id });
+    expect(blocked.completedStages).not.toContain("S12");
+    expect(blocked.blockers.join("\n")).toContain("학습 포착 기록(learning_capture)이 필요합니다");
   });
 });
 

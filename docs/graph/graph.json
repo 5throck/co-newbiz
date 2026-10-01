@@ -4,8 +4,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.5.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 586,
-    "edge_count": 951
+    "node_count": 627,
+    "edge_count": 992
   },
   "nodes": [
     {
@@ -719,9 +719,60 @@
       "label": "ADR-0142: company-competitor-human-confirmation"
     },
     {
+      "id": "adr:0143",
+      "type": "adr",
+      "label": "ADR-0143: S8 brownfield feasibility — per-target analysis on one project carrier (target axis)"
+    },
+    {
+      "id": "adr:0144",
+      "type": "adr",
+      "label": "ADR-0144 — 프로모션 프로젝트명은 기회명 그대로 (서브트랙 접미사 금지)"
+    },
+    {
+      "id": "adr:0145",
+      "type": "adr",
+      "label": "ADR-0145 — 작업 트리 단일 작성자 원칙: dev-sync와 템플릿 업그레이드 엔진의 상호 배제"
+    },
+    {
+      "id": "adr:0146",
+      "type": "adr",
+      "label": "ADR-0146 — admin 역할과 업무 콘텐츠의 분리: 관리 콘솔 밖 업무 라우트 읽기·쓰기 차단"
+    },
+    {
+      "id": "adr:0147",
+      "type": "adr",
+      "label": "ADR-0147 — 매출의 질 4축 평가(cdd-08)와 고객 집중도·이탈률의 단일 계산 소유 원칙"
+    },
+    {
+      "id": "adr:0148",
+      "type": "adr",
+      "label": "ADR-0148 — S9 완료 판정이 평가하지 않은 표준 체크리스트 항목을 세도록 한다"
+    },
+    {
+      "id": "adr:0149",
+      "type": "adr",
+      "label": "ADR-0149 — Separate the gate-ladder stage ids from the S1-S12 business stage ids"
+    },
+    {
+      "id": "adr:0150",
+      "type": "adr",
+      "label": "ADR-0150 — S12 lifecycle completion criteria mapped to portfolio transitions"
+    },
+    {
       "id": "agent:antitrust-agent",
       "type": "agent",
       "label": "antitrust-agent"
+    },
+    {
+      "id": "agent:architect",
+      "type": "agent",
+      "label": "architect",
+      "roster": "workspace-root"
+    },
+    {
+      "id": "agent:backend-engineer",
+      "type": "agent",
+      "label": "backend-engineer"
     },
     {
       "id": "agent:bau-exit-certifier",
@@ -735,6 +786,11 @@
       "label": "brownfield-agent"
     },
     {
+      "id": "agent:certification-agent",
+      "type": "agent",
+      "label": "certification-agent"
+    },
+    {
       "id": "agent:commercial-dd-agent",
       "type": "agent",
       "label": "commercial-dd-agent"
@@ -745,10 +801,29 @@
       "label": "compliance-officer"
     },
     {
+      "id": "agent:customer-retention-agent",
+      "type": "agent",
+      "label": "customer-retention-agent"
+    },
+    {
+      "id": "agent:data-architect",
+      "type": "agent",
+      "label": "data-architect"
+    },
+    {
+      "id": "agent:dba",
+      "type": "agent",
+      "label": "dba"
+    },
+    {
+      "id": "agent:design-system-agent",
+      "type": "agent",
+      "label": "design-system-agent"
+    },
+    {
       "id": "agent:docs-writer",
       "type": "agent",
-      "label": "docs-writer",
-      "roster": "workspace-root"
+      "label": "docs-writer"
     },
     {
       "id": "agent:entity-ic-reviewer",
@@ -762,6 +837,21 @@
       "label": "financial-analyst"
     },
     {
+      "id": "agent:financing-agent",
+      "type": "agent",
+      "label": "financing-agent"
+    },
+    {
+      "id": "agent:frontend-engineer",
+      "type": "agent",
+      "label": "frontend-engineer"
+    },
+    {
+      "id": "agent:glossary-curator",
+      "type": "agent",
+      "label": "glossary-curator"
+    },
+    {
       "id": "agent:greenfield-agent",
       "type": "agent",
       "label": "greenfield-agent"
@@ -772,9 +862,39 @@
       "label": "group-review-agent"
     },
     {
+      "id": "agent:hr-integration-agent",
+      "type": "agent",
+      "label": "hr-integration-agent"
+    },
+    {
       "id": "agent:i18n-specialist",
       "type": "agent",
       "label": "i18n-specialist"
+    },
+    {
+      "id": "agent:incentive-agent",
+      "type": "agent",
+      "label": "incentive-agent"
+    },
+    {
+      "id": "agent:industry-lead",
+      "type": "agent",
+      "label": "industry-lead"
+    },
+    {
+      "id": "agent:infra-automation-engineer",
+      "type": "agent",
+      "label": "infra-automation-engineer"
+    },
+    {
+      "id": "agent:ip-agent",
+      "type": "agent",
+      "label": "ip-agent"
+    },
+    {
+      "id": "agent:ir-agent",
+      "type": "agent",
+      "label": "ir-agent"
     },
     {
       "id": "agent:legal-counsel",
@@ -785,6 +905,16 @@
       "id": "agent:market-intelligence-agent",
       "type": "agent",
       "label": "market-intelligence-agent"
+    },
+    {
+      "id": "agent:partnership-agent",
+      "type": "agent",
+      "label": "partnership-agent"
+    },
+    {
+      "id": "agent:platform-lead",
+      "type": "agent",
+      "label": "platform-lead"
     },
     {
       "id": "agent:pm",
@@ -807,14 +937,44 @@
       "label": "quant-methodologist"
     },
     {
+      "id": "agent:region-lead",
+      "type": "agent",
+      "label": "region-lead"
+    },
+    {
+      "id": "agent:release-engineer",
+      "type": "agent",
+      "label": "release-engineer"
+    },
+    {
       "id": "agent:risk-officer",
       "type": "agent",
       "label": "risk-officer"
     },
     {
+      "id": "agent:security-engineer",
+      "type": "agent",
+      "label": "security-engineer"
+    },
+    {
+      "id": "agent:site-facility-agent",
+      "type": "agent",
+      "label": "site-facility-agent"
+    },
+    {
+      "id": "agent:sre",
+      "type": "agent",
+      "label": "sre"
+    },
+    {
       "id": "agent:technical-dd-agent",
       "type": "agent",
       "label": "technical-dd-agent"
+    },
+    {
+      "id": "agent:ux-designer-agent",
+      "type": "agent",
+      "label": "ux-designer-agent"
     },
     {
       "id": "agent:valuation-agent",
@@ -1218,6 +1378,11 @@
       "label": "strategic_fit_screening_result"
     },
     {
+      "id": "artifact:target_comparison",
+      "type": "artifact",
+      "label": "target_comparison"
+    },
+    {
       "id": "artifact:target_cost_gap",
       "type": "artifact",
       "label": "target_cost_gap"
@@ -1241,6 +1406,11 @@
       "id": "artifact:target_screening_result",
       "type": "artifact",
       "label": "target_screening_result"
+    },
+    {
+      "id": "artifact:target_selection_record",
+      "type": "artifact",
+      "label": "target_selection_record"
     },
     {
       "id": "artifact:target_universe_definition",
@@ -1361,6 +1531,11 @@
       "id": "proc:brownfield-fs",
       "type": "procedure",
       "label": "brownfield-fs"
+    },
+    {
+      "id": "proc:brownfield-fs-comparative",
+      "type": "procedure",
+      "label": "brownfield-fs-comparative"
     },
     {
       "id": "proc:brownfield-pre-fs",
@@ -1510,6 +1685,15 @@
       "id": "rule:brownfield-fs__qoe_reveals_material_earnings_quality_gap_unexplained",
       "type": "rule",
       "label": "QoE reveals a material, unexplained earnings-quality gap",
+      "action": "escalate_to_risk_officer",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
+    },
+    {
+      "id": "rule:brownfield-fs-comparative__no_target_meets_base_scenario_hurdle",
+      "type": "rule",
+      "label": "No shortlisted target meets the base-scenario hurdle in the S8 per-target FS (market_forward base p05 NPV ≤ 0 or below the confirmed hurdle IRR)",
       "action": "escalate_to_risk_officer",
       "enabled": false,
       "premise_locked": false,
@@ -1798,7 +1982,7 @@
       "id": "skill:agent-lifecycle-manager",
       "type": "skill",
       "label": "agent-lifecycle-manager",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "status": "active"
     },
     {
@@ -1812,21 +1996,21 @@
       "id": "skill:api-documentation",
       "type": "skill",
       "label": "api-documentation",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "status": "active"
     },
     {
       "id": "skill:assumption-audit",
       "type": "skill",
       "label": "assumption-audit",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
       "id": "skill:brownfield-feasibility",
       "type": "skill",
       "label": "brownfield-feasibility",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
@@ -1847,14 +2031,14 @@
       "id": "skill:ci-triage",
       "type": "skill",
       "label": "ci-triage",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "active"
     },
     {
       "id": "skill:commercial-due-diligence",
       "type": "skill",
       "label": "commercial-due-diligence",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
@@ -1868,7 +2052,7 @@
       "id": "skill:company-intelligence",
       "type": "skill",
       "label": "company-intelligence",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
@@ -1896,21 +2080,21 @@
       "id": "skill:customer-attrition-risk",
       "type": "skill",
       "label": "customer-attrition-risk",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
       "id": "skill:dd-to-valuation-bridge",
       "type": "skill",
       "label": "dd-to-valuation-bridge",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
       "id": "skill:deal-execution-playbook",
       "type": "skill",
       "label": "deal-execution-playbook",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
@@ -1928,10 +2112,17 @@
       "status": "active"
     },
     {
+      "id": "skill:design-foundation",
+      "type": "skill",
+      "label": "design-foundation",
+      "version": "1.1.0",
+      "status": "active"
+    },
+    {
       "id": "skill:documentation-writing",
       "type": "skill",
       "label": "documentation-writing",
-      "version": "1.0.0",
+      "version": "1.0.3",
       "status": "active"
     },
     {
@@ -1973,20 +2164,27 @@
       "id": "skill:finishing-a-development-branch",
       "type": "skill",
       "label": "finishing-a-development-branch",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "active"
     },
     {
       "id": "skill:forward-industry-research",
       "type": "skill",
       "label": "forward-industry-research",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
       "id": "skill:gateguard",
       "type": "skill",
       "label": "gateguard",
+      "version": "1.0.2",
+      "status": "active"
+    },
+    {
+      "id": "skill:graft",
+      "type": "skill",
+      "label": "graft",
       "version": "1.0.0",
       "status": "active"
     },
@@ -1994,14 +2192,14 @@
       "id": "skill:greenfield-feasibility",
       "type": "skill",
       "label": "greenfield-feasibility",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
       "id": "skill:group-level-review",
       "type": "skill",
       "label": "group-level-review",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
@@ -2015,14 +2213,14 @@
       "id": "skill:handbook",
       "type": "skill",
       "label": "handbook",
-      "version": "0.4.1",
+      "version": "0.6.0",
       "status": "active"
     },
     {
       "id": "skill:handbook-sync-audit",
       "type": "skill",
       "label": "handbook-sync-audit",
-      "version": "1.0.0",
+      "version": "1.0.5",
       "status": "active"
     },
     {
@@ -2085,7 +2283,7 @@
       "id": "skill:investment-feasibility-modeling",
       "type": "skill",
       "label": "investment-feasibility-modeling",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
@@ -2106,7 +2304,7 @@
       "id": "skill:k-dart",
       "type": "skill",
       "label": "k-dart",
-      "version": "2.1.0",
+      "version": "2.1.2",
       "status": "active"
     },
     {
@@ -2120,28 +2318,28 @@
       "id": "skill:k-kosis",
       "type": "skill",
       "label": "k-kosis",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "status": "active"
     },
     {
       "id": "skill:k-krx",
       "type": "skill",
       "label": "k-krx",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "status": "active"
     },
     {
       "id": "skill:k-law",
       "type": "skill",
       "label": "k-law",
-      "version": "1.0.0",
+      "version": "1.0.3",
       "status": "active"
     },
     {
       "id": "skill:k-opendata",
       "type": "skill",
       "label": "k-opendata",
-      "version": "1.2.0",
+      "version": "1.2.2",
       "status": "active"
     },
     {
@@ -2155,7 +2353,7 @@
       "id": "skill:legal-risk-register",
       "type": "skill",
       "label": "legal-risk-register",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
@@ -2169,14 +2367,14 @@
       "id": "skill:market-data-pipeline",
       "type": "skill",
       "label": "market-data-pipeline",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
       "id": "skill:meeting-facilitation",
       "type": "skill",
       "label": "meeting-facilitation",
-      "version": "1.4.1",
+      "version": "1.4.4",
       "status": "active"
     },
     {
@@ -2225,14 +2423,14 @@
       "id": "skill:platform-command-lifecycle-manager",
       "type": "skill",
       "label": "platform-command-lifecycle-manager",
-      "version": "1.0.0",
+      "version": "1.0.3",
       "status": "active"
     },
     {
       "id": "skill:platform-skill-lifecycle-manager",
       "type": "skill",
       "label": "platform-skill-lifecycle-manager",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "status": "active"
     },
     {
@@ -2246,7 +2444,7 @@
       "id": "skill:policy-and-procedure-governance",
       "type": "skill",
       "label": "policy-and-procedure-governance",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
@@ -2260,7 +2458,7 @@
       "id": "skill:project-review",
       "type": "skill",
       "label": "project-review",
-      "version": "1.6.0",
+      "version": "1.3.1",
       "status": "active"
     },
     {
@@ -2274,7 +2472,7 @@
       "id": "skill:quality-of-earnings",
       "type": "skill",
       "label": "quality-of-earnings",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
@@ -2295,21 +2493,21 @@
       "id": "skill:regulatory-screening",
       "type": "skill",
       "label": "regulatory-screening",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
       "id": "skill:research-analysis",
       "type": "skill",
       "label": "research-analysis",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "status": "active"
     },
     {
       "id": "skill:sample-driven-report-writing",
       "type": "skill",
       "label": "sample-driven-report-writing",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
@@ -2323,7 +2521,7 @@
       "id": "skill:script-lifecycle-manager",
       "type": "skill",
       "label": "script-lifecycle-manager",
-      "version": "1.2.0",
+      "version": "1.2.2",
       "status": "active"
     },
     {
@@ -2331,6 +2529,13 @@
       "type": "skill",
       "label": "security-scan",
       "version": "1.2.0",
+      "status": "active"
+    },
+    {
+      "id": "skill:service-design",
+      "type": "skill",
+      "label": "service-design",
+      "version": "1.1.0",
       "status": "active"
     },
     {
@@ -2351,21 +2556,21 @@
       "id": "skill:skill-lifecycle-manager",
       "type": "skill",
       "label": "skill-lifecycle-manager",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "status": "active"
     },
     {
       "id": "skill:source-command-commit-push-pr",
       "type": "skill",
       "label": "source-command-commit-push-pr",
-      "version": "1.0.1",
+      "version": "1.0.3",
       "status": "active"
     },
     {
       "id": "skill:stage-gate-governance",
       "type": "skill",
       "label": "stage-gate-governance",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "status": "active"
     },
     {
@@ -2386,7 +2591,7 @@
       "id": "skill:sync",
       "type": "skill",
       "label": "sync",
-      "version": "1.6.0",
+      "version": "1.7.0",
       "status": "active"
     },
     {
@@ -2407,7 +2612,7 @@
       "id": "skill:target-costing-analysis",
       "type": "skill",
       "label": "target-costing-analysis",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
@@ -2435,7 +2640,7 @@
       "id": "skill:translate",
       "type": "skill",
       "label": "translate",
-      "version": "1.0.1",
+      "version": "1.0.3",
       "status": "active"
     },
     {
@@ -2470,7 +2675,7 @@
       "id": "skill:value-chain-driver-identification",
       "type": "skill",
       "label": "value-chain-driver-identification",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
@@ -2484,28 +2689,28 @@
       "id": "skill:value-chain-stage-financials",
       "type": "skill",
       "label": "value-chain-stage-financials",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
       "id": "skill:wacc-input-session",
       "type": "skill",
       "label": "wacc-input-session",
-      "version": "1.3.0",
+      "version": "1.3.1",
       "status": "active"
     },
     {
       "id": "skill:waiver-management",
       "type": "skill",
       "label": "waiver-management",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "experimental"
     },
     {
       "id": "skill:zod-contract-gate",
       "type": "skill",
       "label": "zod-contract-gate",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "status": "active"
     },
     {
@@ -2653,6 +2858,18 @@
       "type": "step",
       "label": "brownfield-dd step 9",
       "gate": "DD"
+    },
+    {
+      "id": "proc:brownfield-fs-comparative#1",
+      "type": "step",
+      "label": "brownfield-fs-comparative step 1",
+      "gate": "FS"
+    },
+    {
+      "id": "proc:brownfield-fs-comparative#2",
+      "type": "step",
+      "label": "brownfield-fs-comparative step 2",
+      "gate": "FS"
     },
     {
       "id": "proc:brownfield-fs#1",
@@ -3635,6 +3852,12 @@
       "from": "adr:0062",
       "to": "rule:brownfield-screening__preliminary_hhi_flags_certain_block",
       "source_ref": "docs/adr/0062-antitrust-premise-reversal-early-screen-var.md"
+    },
+    {
+      "type": "activates_reverses",
+      "from": "adr:0150",
+      "to": "rule:pmi-integration-execution__synergy_run_rate_uncertified_at_bau_handover",
+      "source_ref": "docs/adr/0150-s12-lifecycle-completion-criteria.md"
     },
     {
       "type": "activates_reverses",
@@ -4700,6 +4923,12 @@
     },
     {
       "type": "in_stage",
+      "from": "proc:brownfield-fs-comparative",
+      "to": "stage.co-newbiz.S4",
+      "source_ref": "procedures/_shared/brownfield-fs-comparative/schema.yaml"
+    },
+    {
+      "type": "in_stage",
       "from": "proc:brownfield-pre-fs",
       "to": "stage.co-newbiz.S3",
       "source_ref": "procedures/_shared/brownfield-pre-fs/schema.yaml"
@@ -5073,6 +5302,12 @@
     {
       "type": "member_of",
       "from": "skill:investment-feasibility-modeling",
+      "to": "proc:brownfield-fs-comparative",
+      "source_ref": "skills/investment-feasibility-modeling/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:investment-feasibility-modeling",
       "to": "proc:greenfield-capability-assessment",
       "source_ref": "skills/investment-feasibility-modeling/SKILL.md"
     },
@@ -5355,6 +5590,12 @@
     {
       "type": "member_of",
       "from": "skill:stage-gate-governance",
+      "to": "proc:brownfield-fs-comparative",
+      "source_ref": "skills/stage-gate-governance/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:stage-gate-governance",
       "to": "proc:brownfield-pre-fs",
       "source_ref": "skills/stage-gate-governance/SKILL.md"
     },
@@ -5558,6 +5799,18 @@
     },
     {
       "type": "owns",
+      "from": "agent:architect",
+      "to": "skill:design-foundation",
+      "source_ref": "skills/design-foundation/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:architect",
+      "to": "skill:zod-contract-gate",
+      "source_ref": "skills/zod-contract-gate/SKILL.md"
+    },
+    {
+      "type": "owns",
       "from": "agent:brownfield-agent",
       "to": "skill:brownfield-feasibility",
       "source_ref": "skills/brownfield-feasibility/SKILL.md"
@@ -5567,6 +5820,12 @@
       "from": "agent:brownfield-agent",
       "to": "skill:investment-vehicle-structuring",
       "source_ref": "skills/investment-vehicle-structuring/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:certification-agent",
+      "to": "skill:certification-roadmap",
+      "source_ref": "skills/certification-roadmap/SKILL.md"
     },
     {
       "type": "owns",
@@ -5582,15 +5841,15 @@
     },
     {
       "type": "owns",
-      "from": "agent:docs-writer",
-      "to": "skill:executive-presentation",
-      "source_ref": "skills/executive-presentation/SKILL.md"
+      "from": "agent:customer-retention-agent",
+      "to": "skill:customer-attrition-risk",
+      "source_ref": "skills/customer-attrition-risk/SKILL.md"
     },
     {
       "type": "owns",
       "from": "agent:docs-writer",
-      "to": "skill:handbook-sync-audit",
-      "source_ref": "skills/handbook-sync-audit/SKILL.md"
+      "to": "skill:executive-presentation",
+      "source_ref": "skills/executive-presentation/SKILL.md"
     },
     {
       "type": "owns",
@@ -5672,6 +5931,42 @@
     },
     {
       "type": "owns",
+      "from": "agent:hr-integration-agent",
+      "to": "skill:community-partnership-planning",
+      "source_ref": "skills/community-partnership-planning/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:hr-integration-agent",
+      "to": "skill:compensation-harmonization-analysis",
+      "source_ref": "skills/compensation-harmonization-analysis/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:hr-integration-agent",
+      "to": "skill:org-readiness-assessment",
+      "source_ref": "skills/org-readiness-assessment/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:hr-integration-agent",
+      "to": "skill:talent-pipeline-planning",
+      "source_ref": "skills/talent-pipeline-planning/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:incentive-agent",
+      "to": "skill:incentive-clawback-assessment",
+      "source_ref": "skills/incentive-clawback-assessment/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:incentive-agent",
+      "to": "skill:management-incentive-review",
+      "source_ref": "skills/management-incentive-review/SKILL.md"
+    },
+    {
+      "type": "owns",
       "from": "agent:legal-counsel",
       "to": "skill:certification-transferability",
       "source_ref": "skills/certification-transferability/SKILL.md"
@@ -5697,26 +5992,26 @@
     {
       "type": "owns",
       "from": "agent:market-intelligence-agent",
-      "to": "skill:k-dart",
-      "source_ref": "skills/k-dart/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:market-intelligence-agent",
-      "to": "skill:k-law",
-      "source_ref": "skills/k-law/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:market-intelligence-agent",
-      "to": "skill:k-opendata",
-      "source_ref": "skills/k-opendata/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:market-intelligence-agent",
       "to": "skill:systematic-market-sizing",
       "source_ref": "skills/systematic-market-sizing/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:partnership-agent",
+      "to": "skill:jv-structuring",
+      "source_ref": "skills/jv-structuring/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:partnership-agent",
+      "to": "skill:partner-due-diligence",
+      "source_ref": "skills/partner-due-diligence/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:partnership-agent",
+      "to": "skill:partner-sourcing-strategy",
+      "source_ref": "skills/partner-sourcing-strategy/SKILL.md"
     },
     {
       "type": "owns",
@@ -5781,8 +6076,20 @@
     {
       "type": "owns",
       "from": "agent:pm",
+      "to": "skill:graft",
+      "source_ref": "skills/graft/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
       "to": "skill:handbook",
       "source_ref": "skills/handbook/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
+      "to": "skill:handbook-sync-audit",
+      "source_ref": "skills/handbook-sync-audit/SKILL.md"
     },
     {
       "type": "owns",
@@ -5849,6 +6156,12 @@
       "from": "agent:pm",
       "to": "skill:security-scan",
       "source_ref": "skills/security-scan/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
+      "to": "skill:service-design",
+      "source_ref": "skills/service-design/SKILL.md"
     },
     {
       "type": "owns",
@@ -6185,6 +6498,18 @@
       "from": "proc:brownfield-dd#9",
       "to": "artifact:dd_finding",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[9]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:brownfield-fs-comparative#1",
+      "to": "artifact:target_comparison",
+      "source_ref": "procedures/_shared/brownfield-fs-comparative/schema.yaml#steps[1]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:brownfield-fs-comparative#2",
+      "to": "artifact:target_selection_record",
+      "source_ref": "procedures/_shared/brownfield-fs-comparative/schema.yaml#steps[2]"
     },
     {
       "type": "produces",
@@ -6944,6 +7269,12 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:brownfield-dd#13",
+      "to": "agent:hr-integration-agent",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[13]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:brownfield-dd#14",
       "to": "agent:compliance-officer",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[14]"
@@ -6983,6 +7314,36 @@
       "from": "proc:brownfield-dd#6",
       "to": "agent:antitrust-agent",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[6]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-dd#7",
+      "to": "agent:hr-integration-agent",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[7]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-dd#8",
+      "to": "agent:customer-retention-agent",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[8]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-dd#9",
+      "to": "agent:incentive-agent",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[9]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-fs-comparative#1",
+      "to": "agent:financial-analyst",
+      "source_ref": "procedures/_shared/brownfield-fs-comparative/schema.yaml#steps[1]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-fs-comparative#2",
+      "to": "agent:pm",
+      "source_ref": "procedures/_shared/brownfield-fs-comparative/schema.yaml#steps[2]"
     },
     {
       "type": "step_by_agent",
@@ -7085,6 +7446,18 @@
       "from": "proc:brownfield-pre-fs#2",
       "to": "agent:brownfield-agent",
       "source_ref": "procedures/_shared/brownfield-pre-fs/schema.yaml#steps[2]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-pre-fs#3",
+      "to": "agent:certification-agent",
+      "source_ref": "procedures/_shared/brownfield-pre-fs/schema.yaml#steps[3]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-pre-fs#3.5",
+      "to": "agent:certification-agent",
+      "source_ref": "procedures/_shared/brownfield-pre-fs/schema.yaml#steps[3.5]"
     },
     {
       "type": "step_by_agent",
@@ -7196,6 +7569,24 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:deal-shape-chain#1",
+      "to": "agent:partnership-agent",
+      "source_ref": "procedures/_shared/deal-shape-chain/schema.yaml#steps[1]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:deal-shape-chain#2",
+      "to": "agent:partnership-agent",
+      "source_ref": "procedures/_shared/deal-shape-chain/schema.yaml#steps[2]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:deal-shape-chain#3",
+      "to": "agent:partnership-agent",
+      "source_ref": "procedures/_shared/deal-shape-chain/schema.yaml#steps[3]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:deal-shape-chain#4",
       "to": "agent:legal-counsel",
       "source_ref": "procedures/_shared/deal-shape-chain/schema.yaml#steps[4]"
@@ -7205,6 +7596,12 @@
       "from": "proc:deal-shape-chain#5",
       "to": "agent:legal-counsel",
       "source_ref": "procedures/_shared/deal-shape-chain/schema.yaml#steps[5]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:deal-shape-chain#6",
+      "to": "agent:partnership-agent",
+      "source_ref": "procedures/_shared/deal-shape-chain/schema.yaml#steps[6]"
     },
     {
       "type": "step_by_agent",
@@ -7244,6 +7641,12 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:entity-establishment-execution#4",
+      "to": "agent:hr-integration-agent",
+      "source_ref": "procedures/_shared/entity-establishment-execution/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:entity-establishment-execution#5",
       "to": "agent:process-governance-manager",
       "source_ref": "procedures/_shared/entity-establishment-execution/schema.yaml#steps[5]"
@@ -7277,6 +7680,12 @@
       "from": "proc:entity-ic-review#4.5",
       "to": "agent:process-governance-manager",
       "source_ref": "procedures/_shared/entity-ic-review/schema.yaml#steps[4.5]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:entity-ic-review#4.6",
+      "to": "agent:docs-writer",
+      "source_ref": "procedures/_shared/entity-ic-review/schema.yaml#steps[4.6]"
     },
     {
       "type": "step_by_agent",
@@ -7442,6 +7851,18 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:greenfield-pre-fs#5",
+      "to": "agent:certification-agent",
+      "source_ref": "procedures/_shared/greenfield-pre-fs/schema.yaml#steps[5]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-pre-fs#5.5",
+      "to": "agent:certification-agent",
+      "source_ref": "procedures/_shared/greenfield-pre-fs/schema.yaml#steps[5.5]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:greenfield-pre-fs#6",
       "to": "agent:process-governance-manager",
       "source_ref": "procedures/_shared/greenfield-pre-fs/schema.yaml#steps[6]"
@@ -7508,6 +7929,12 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:group-investment-review#4.5",
+      "to": "agent:docs-writer",
+      "source_ref": "procedures/_shared/group-investment-review/schema.yaml#steps[4.5]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:group-investment-review#5",
       "to": "agent:process-governance-manager",
       "source_ref": "procedures/_shared/group-investment-review/schema.yaml#steps[5]"
@@ -7517,6 +7944,12 @@
       "from": "proc:jv-lifecycle-governance#1",
       "to": "agent:legal-counsel",
       "source_ref": "procedures/_shared/jv-lifecycle-governance/schema.yaml#steps[1]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:jv-lifecycle-governance#2",
+      "to": "agent:partnership-agent",
+      "source_ref": "procedures/_shared/jv-lifecycle-governance/schema.yaml#steps[2]"
     },
     {
       "type": "step_by_agent",
@@ -7571,6 +8004,12 @@
       "from": "proc:pmi-integration-execution#4",
       "to": "agent:pmi-agent",
       "source_ref": "procedures/_shared/pmi-integration-execution/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:pmi-integration-execution#4.5",
+      "to": "agent:hr-integration-agent",
+      "source_ref": "procedures/_shared/pmi-integration-execution/schema.yaml#steps[4.5]"
     },
     {
       "type": "step_by_agent",
@@ -7685,6 +8124,18 @@
       "from": "proc:brownfield-dd#9",
       "to": "proc:brownfield-dd",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:brownfield-fs-comparative#1",
+      "to": "proc:brownfield-fs-comparative",
+      "source_ref": "procedures/_shared/brownfield-fs-comparative/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:brownfield-fs-comparative#2",
+      "to": "proc:brownfield-fs-comparative",
+      "source_ref": "procedures/_shared/brownfield-fs-comparative/schema.yaml"
     },
     {
       "type": "step_of",
@@ -8465,6 +8916,18 @@
       "from": "proc:brownfield-dd#9",
       "to": "skill:incentive-clawback-assessment",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[9]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:brownfield-fs-comparative#1",
+      "to": "skill:investment-feasibility-modeling",
+      "source_ref": "procedures/_shared/brownfield-fs-comparative/schema.yaml#steps[1]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:brownfield-fs-comparative#2",
+      "to": "skill:stage-gate-governance",
+      "source_ref": "procedures/_shared/brownfield-fs-comparative/schema.yaml#steps[2]"
     },
     {
       "type": "step_uses_skill",

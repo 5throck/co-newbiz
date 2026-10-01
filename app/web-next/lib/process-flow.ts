@@ -44,7 +44,7 @@ export const STAGES: StageDefinition[] = [
   { id: "S9", name: "실사·검증", sequence: 9, objective: "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, greenfield는 실현가능성 검증)", applicableTracks: ["all"], gateIds: ["dd"], requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"] },
   { id: "S10", name: "투자구조 설계", sequence: 10, objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 비히클(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["투자구조 가설(4축 검토 완료)", "자금조달 계획(sources & uses 균형)"] },
   { id: "S11", name: "투자심사·실행", sequence: 11, objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 실행(법인 설립 또는 인수 종결)한다", applicableTracks: ["all"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["IC 패키지", "추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"] },
-  { id: "S12", name: "사후 관리", sequence: 12, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["벤처 스코어카드"] },
+  { id: "S12", name: "사후 관리", sequence: 12, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["벤처 스코어카드", "사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)", "전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)"] },
 ];
 
 /** S12 포트폴리오 전환 결정 어휘 5종 (flow.spec S12, portfolio-venture-monitoring). */
@@ -551,12 +551,12 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     const blockers: string[] = [];
     const missing: string[] = [];
     const db = getDb();
-    // ADR-0101 §4 (Phase 6): "분기별 스코어카드가 갱신되었다"를 기계적으로
-    // 검사한다 — 프로젝트의 MAX(review_cycle)가 존재하고 그 주기가 신선해야
-    // 한다 (현재 분기 또는 직전 분기; lib/portfolio.ts의 isFreshReviewCycle
-    // 참고 — 분기 단위 cadence라 직전 분기 스코어카드도 현 분기 IC 심의의
-    // 정당한 근거다). 어긋나면 낡은 주기를 이름으로 지적한다. 이로써 S8~S12
-    // 프로젝트 브랜치의 모든 완료기준이 실재 술어가 된다 (REFINEMENT 잔여 0).
+    // ADR-0150 기준 1 (기존 ADR-0101 §4 술어 유지): "리뷰 주기별로 스코어카드
+    // 검토가 존재한다"를 기계적으로 검사한다 — 프로젝트의 MAX(review_cycle)가
+    // 존재하고 그 주기가 신선해야 한다 (현재 분기 또는 직전 분기;
+    // lib/portfolio.ts의 isFreshReviewCycle 참고 — 분기 단위 cadence라 직전
+    // 분기 스코어카드도 현 분기 IC 심의의 정당한 근거다). 어긋나면 낡은 주기를
+    // 이름으로 지적한다.
     const latest = db
       .query("SELECT MAX(review_cycle) AS c FROM venture_scorecard WHERE project_id = ?")
       .get(project.id) as { c: string | null };
@@ -566,6 +566,44 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     } else if (!isFreshReviewCycle(latest.c)) {
       blockers.push(`스코어카드 주기가 낡았습니다 (최신 ${latest.c} — 현재 분기 기준 갱신 필요)`);
       missing.push("분기별 스코어카드 갱신");
+    }
+    // ADR-0150 기준 2: 최신 리뷰 주기에 사람 전환 결정이 근거(rationale)와 함께
+    // 기록되어 있어야 한다 (venture_transition_decision 원장, 0071). decided_by는
+    // 스키마에서 인간 역할 'venture-portfolio-ic'로 CHECK 고정되지만(설계 경계 2),
+    // 술어는 이를 다시 단언한다 (fail-closed, ADR-0053 사람 최종 승인).
+    if (latest.c) {
+      const decision = db
+        .query(
+          `SELECT decision, decided_by, rationale, learning_capture
+           FROM venture_transition_decision
+           WHERE project_id = ? AND review_cycle = ?
+           ORDER BY decided_at DESC, id DESC LIMIT 1`,
+        )
+        .get(project.id, latest.c) as
+          | { decision: string; decided_by: string; rationale: string; learning_capture: string | null }
+          | undefined;
+      if (!decision) {
+        blockers.push(`사람 전환 결정 기록이 필요합니다 (${latest.c} 주기 — venture_transition_decision)`);
+        missing.push("사람 전환 결정 기록(어휘 5종)");
+      } else {
+        if (!decision.decided_by || decision.rationale.trim() === "") {
+          blockers.push("전환 결정 기록의 decided_by(venture-portfolio-ic)·근거(rationale)가 필요합니다");
+          missing.push("사람 전환 결정 기록(어휘 5종)");
+        }
+        // ADR-0150 기준 3~6 — 전환별 결정 부속 기록. 술어는 5개 전환을 모두
+        // 요구하지 않는다: 기록된 결정(최신 1건)이 무엇이든 그 결정에 맞는
+        // 부속 기록만 요구한다.
+        // 한계 주석 (ADR-0150): 0071 마이그레이션은 rationale·learning_capture
+        // 두 컬럼만 갖는다 — 차기 트랜치 조건(기준 3), 핵심사업 인계(기준 4),
+        // 매각/청산 계획(기준 5)의 전용 컬럼은 존재하지 않는다. 해당 결정들의
+        // 부속 기록은 비어있지 않은 rationale 그 자체로 본다 (rationale은
+        // CHECK <> '' 로 REQUIRED); 전용 컬럼이 추가되는 마이그레이션이 나오면
+        // 이 술어를 그 컬럼 기준으로 강화한다.
+        if (decision.decision === "kill_with_learning_captured" && (decision.learning_capture ?? "").trim() === "") {
+          blockers.push("중단 결정(kill_with_learning_captured)의 학습 포착 기록(learning_capture)이 필요합니다 — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류");
+          missing.push("학습 포착 기록(kill_with_learning_captured)");
+        }
+      }
     }
     return { complete: missing.length === 0, blockers, missing };
   },

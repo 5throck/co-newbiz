@@ -1,4 +1,4 @@
-// @version 1.4.0
+// @version 1.4.1
 // Idempotent S1→S12 brownfield demo chain seed.
 //
 // The operational DB is intentionally gitignored, so a fresh/local database
@@ -357,6 +357,18 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
         [`demo-s1-s12-score-${section}-${measure}`, DEMO.runId, DEMO.projectId, cycle, section, measure, target, actual, `demo:s1-s12-scorecard:${measure}`, now, now],
       );
     }
+
+    // ADR-0150 criterion 2 — S12 now also requires a human transition decision
+    // (decided_by CHECK-pinned to 'venture-portfolio-ic') in the latest review
+    // cycle. The demo records a graduate_to_core decision whose rationale
+    // carries the core-business hand-off note (criterion 4 — 0071 has no
+    // dedicated hand-off column; the rationale IS the record).
+    db.run(
+      `INSERT OR IGNORE INTO venture_transition_decision
+         (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, created_at)
+       VALUES (?, ?, ?, ?, 'graduate_to_core', 'venture-portfolio-ic', ?, ?, ?, ?)`,
+      ["demo-s1-s12-transition", DEMO.runId, DEMO.projectId, cycle, now, "S1-S12 demo — 핵심사업 인계: 사업부 운영으로 이관하고 별도 트랜치 투자를 종료한다", null, now],
+    );
   })();
 
   return { opportunityId: DEMO.oppId, projectId: DEMO.projectId };

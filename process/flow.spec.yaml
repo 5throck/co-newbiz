@@ -652,8 +652,16 @@ stages:
         procedure: [portfolio-venture-monitoring]
     requiredArtifacts:
       - 벤처 스코어카드
+      - "사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)"
+      - "전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)"
     completionCriteria:
-      - 분기별 스코어카드 갱신
+      # ADR-0150 (accepted 2026-10-02) — 즉시 전면 적용(진행 중 핀 프로젝트 포함, 컷오프 없음)
+      - "리뷰 주기별로 스코어카드 검토가 존재한다"
+      - "각 검토마다 사람 전환 결정이 근거(rationale)와 함께 기록되어 있다"
+      - "지속 결정(next_tranche_released/held_evidence_incomplete)은 차기 트랜치 조건을 기록한다"
+      - "확장 결정(graduate_to_core)은 핵심사업 인계를 기록한다"
+      - "축소/철수 결정(reduce_or_divest)은 매각 또는 청산 계획을 기록한다"
+      - "중단 결정(kill_with_learning_captured)은 포착된 학습을 기록하고 S1/S2 기본률에 환류한다"
       # 이 단계의 kill/graduate는 S1~S11의 Kill Criteria와 범주가 다른 포트폴리오 거버넌스 결정이다
       # (procedures/_shared/portfolio-venture-monitoring — venture-portfolio-ic 결정 어휘 5종)
     applicableTracks: [greenfield, brownfield]

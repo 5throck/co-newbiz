@@ -1,4 +1,4 @@
-// @version 0.5.0
+// @version 0.6.0
 /**
  * Multi-element skill graph extractor — pilot per
  * docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md.
@@ -311,10 +311,31 @@ function extractHumanRoles(): Set<string> {
 }
 
 /**
+ * ADR-0149 (accepted 2026-10-02): internal gate-axis stage ids in
+ * process/stages.yaml are G1-G8; the DEG wire format (ADR-0083) still
+ * carries the legacy stage.co-newbiz.S<n> ids. Map internal G ids to
+ * external DEG ids at the export surface only — removed if ADR-0083 is
+ * later amended to accept G ids on the wire.
+ */
+const GATE_ID_TO_DEG: ReadonlyMap<string, string> = new Map(
+  Array.from({ length: 8 }, (_, i) => [`G${i + 1}`, `S${i + 1}`] as const),
+);
+
+function toDegStageId(stageId: string): string {
+  return GATE_ID_TO_DEG.get(stageId) ?? stageId;
+}
+
+/**
  * Stage axis adapter (ADR-0083, design §3.3): reads process/stages.yaml and
  * process/stage-aliases.yaml. Returns stage definitions and a map from gate
  * value to stage id. Both files must be present; if either is missing, the
  * generator emits its current output unchanged and records a warning.
+ *
+ * ADR-0149 (accepted 2026-10-02): process/stages.yaml gate-axis ids were
+ * renamed S1-S8 → G1-G8, but the DEG wire format keeps the legacy
+ * stage.co-newbiz.S<n> ids (ADR-0083 not yet amended to accept G ids).
+ * GATE_ID_TO_DEG maps internal G ids to external DEG ids at the export
+ * surface only; it is removed if ADR-0083 later accepts G ids on the wire.
  */
 function loadStageAliases(): StageAliases | null {
   if (!existsSync(STAGE_ALIASES_PATH) || !existsSync(STAGES_PATH)) {
@@ -636,7 +657,7 @@ function buildGraph(includeConsumes: boolean): Graph {
     const stagesByOrder = [...stageAliases.stages].sort((a, b) => a.order - b.order);
     for (const stage of stagesByOrder) {
       addNode({
-        id: `stage.co-newbiz.${stage.id}`,
+        id: `stage.co-newbiz.${toDegStageId(stage.id)}`,
         type: "stage",
         label: stage.title,
         order: stage.order,
@@ -649,8 +670,8 @@ function buildGraph(includeConsumes: boolean): Graph {
       const to = stagesByOrder[i + 1];
       addEdge(
         "stage_follows",
-        `stage.co-newbiz.${from.id}`,
-        `stage.co-newbiz.${to.id}`,
+        `stage.co-newbiz.${toDegStageId(from.id)}`,
+        `stage.co-newbiz.${toDegStageId(to.id)}`,
         "process/stages.yaml",
       );
     }
@@ -668,7 +689,7 @@ function buildGraph(includeConsumes: boolean): Graph {
       addEdge(
         "in_stage",
         `proc:${procKey}`,
-        `stage.co-newbiz.${stageId}`,
+        `stage.co-newbiz.${toDegStageId(stageId)}`,
         `procedures/_shared/${procKey}/schema.yaml`,
       );
     }
