@@ -25,7 +25,7 @@ interface IcPackage {
   project: { id: string; project_no: string };
   business_case: { adopted: AdoptedCase | null; adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null; note?: string };
   dd: {
-    completion: { total: number; pending: number; mandatoryUnmet: number };
+    completion: { total: number; pending: number; unassessed: number; mandatoryUnmet: number };
     findings: Array<{ id: string; category: string; description: string; value_impact: number | null; evidence_ref: string | null }>;
     finding_count: number;
   };
@@ -198,9 +198,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
 
           <h4 className="text-[0.85rem] mt-3 mb-1">DD 요약 (S9)</h4>
           <p className="text-[0.82rem]">
-            <span className={`status-chip ${pkg && pkg.dd.completion.total > 0 && pkg.dd.completion.pending === 0 && pkg.dd.completion.mandatoryUnmet === 0 ? "status-green" : "status-amber"}`}>
+            <span className={`status-chip ${pkg && pkg.dd.completion.total > 0 && pkg.dd.completion.pending === 0 && pkg.dd.completion.unassessed === 0 && pkg.dd.completion.mandatoryUnmet === 0 ? "status-green" : "status-amber"}`}>
               {pkg && pkg.dd.completion.total > 0
-                ? `판정 ${pkg.dd.completion.total}건 · 대기 ${pkg.dd.completion.pending}건 · 필수 미충족 ${pkg.dd.completion.mandatoryUnmet}건`
+                ? `판정 ${pkg.dd.completion.total}건 · 대기 ${pkg.dd.completion.pending}건 · 미판정 ${pkg.dd.completion.unassessed}건 · 필수 미충족 ${pkg.dd.completion.mandatoryUnmet}건`
                 : "판정 기록 없음"}
             </span>
           </p>

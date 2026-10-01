@@ -19,6 +19,7 @@
  *  (e) the max-iteration safety cap fails the run (never spins silently).
  */
 
+import { judgeAllStandardDdItems } from "./_dd-standard.ts";
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 
@@ -315,6 +316,9 @@ describe("(f) dd gate — the dead-rule regression", () => {
       });
       expect(judged.status).toBe(200);
     }
+
+    // ADR-0148: standard items must be judged too (never-assessed items count as pending).
+    judgeAllStandardDdItems(db, pid, "analyst-test", new Date().toISOString());
 
     // S9 is now COMPLETE (completedStages includes S9, currentStage has moved
     // past it) and the dd gate is still pending — the pipeline must pause for

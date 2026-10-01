@@ -68,7 +68,7 @@ interface DomainView {
 interface WorkspaceView {
   domains: DomainView[];
   findings: FindingRow[];
-  completion: { total: number; pending: number; mandatoryUnmet: number };
+  completion: { total: number; pending: number; unassessed: number; mandatoryUnmet: number };
 }
 
 // P5: 상태는 색+아이콘+텍스트의 조합 — 색 단독으로 상태를 전달하지 않는다.
@@ -227,12 +227,12 @@ export function DdStage({ projectId }: { projectId: string }) {
           {data && (
             <>
               {" — "}
-              <span className={`status-chip ${data.completion.pending === 0 && data.completion.mandatoryUnmet === 0 && data.completion.total > 0 ? "status-green" : "status-amber"}`}>
-                {data.completion.total === 0
+              <span className={`status-chip ${data.completion.pending === 0 && data.completion.unassessed === 0 && data.completion.mandatoryUnmet === 0 && data.completion.total > 0 ? "status-green" : "status-amber"}`}>
+                {data.completion.total === 0 && data.completion.unassessed === 0
                   ? "판정 기록 없음"
-                  : data.completion.pending === 0 && data.completion.mandatoryUnmet === 0
+                  : data.completion.pending === 0 && data.completion.unassessed === 0 && data.completion.mandatoryUnmet === 0
                     ? "✓ 판정 완료 · 필수 미충족 0건"
-                    : `○ 대기 ${data.completion.pending}건 · ✕ 필수 미충족 ${data.completion.mandatoryUnmet}건`}
+                    : `○ 대기 ${data.completion.pending}건 · 미판정 ${data.completion.unassessed}건 · ✕ 필수 미충족 ${data.completion.mandatoryUnmet}건`}
               </span>
             </>
           )}
