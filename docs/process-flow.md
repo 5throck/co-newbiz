@@ -64,7 +64,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **Kill 기준**
 - 기준 수익률 미달이 기본 시나리오에서 확인된다
 
-**자원 결정**: DD 착시 자원 배정
+**자원 결정**: DD 착수 자원 배정
 
 ### DD (dd)
 **판정 기준**
@@ -424,8 +424,8 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **완료 기준**
 - 민감도가 포함된 정량 평가가 존재한다 (시뮬레이션 또는 밸류에이션 범위)
 - BEP 시점과 시뮬레이션 입력 스냅샷이 산출되어 있다
-- [object Object]
-- [object Object]
+- brownfield: Short List의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)
+- brownfield: 대상 비교 분석과 사람의 대상 선정 기록이 존재한다
 
 **적용 트랙**: greenfield, brownfield
 
@@ -440,7 +440,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **Kill 기준**
 - 기준 수익률 미달이 기본 시나리오에서 확인된다
 
-**자원 결정**: DD 착시 자원 배정
+**자원 결정**: DD 착수 자원 배정
 
 ## S9 — 실사·검증
 
@@ -505,7 +505,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 ## S11 — 투자심사·실행
 
-**목표**: 투자할 것인가? — 투자 구조(Deal/Investment Structure: 비히클·자금 조달·지급 구조)를 설계하고 IC 패키지로 Entity/Group IC 심사를 받는다
+**목표**: 투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 실행(법인 설립 또는 인수 종결)한다
 
 **입력**
 - IC 패키지(사업계획·DD·RAG·검토)
@@ -515,7 +515,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **Activities**
 - ic-preparation · agent: `pm` · skills: `executive-presentation`, `sample-driven-report-writing` · procedure: `entity-ic-review`, `group-investment-review`
 - charter-baseline · agent: `pm` · skills:  · procedure: `entity-ic-review`
-- investment-structuring · agent: `brownfield-agent` · skills: `investment-vehicle-structuring`, `financing-plan-review` · procedure: `entity-ic-review`, `jv-lifecycle-governance`
+- investment-structuring · agent: `brownfield-agent` · skills:  · procedure: `entity-ic-review`, `jv-lifecycle-governance`
 - risk-review · agent: `risk-officer` · skills: `legal-risk-register` · procedure: `entity-ic-review`, `group-investment-review`
 - group-review · agent: `group-review-agent` · skills: `group-level-review` · procedure: `entity-ic-review`, `group-investment-review`
 - entity-establishment-execution · agent: `process-governance-manager` · skills: `legal-due-diligence`, `k-law`, `certification-transferability`, `org-readiness-assessment`, `stage-gate-governance` · procedure: `entity-establishment-execution`
