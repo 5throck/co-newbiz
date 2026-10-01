@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-09-30T21:58:05.612Z
+**Generated**: 2026-09-30T23:03:24.317Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -185,7 +185,7 @@
 | adr-new.ts | 1.0.0 | scripts/co-newbiz/adr-new.ts | N/A |
 | agent-create.ts | 1.0.1 | scripts/agent-create.ts | N/A |
 | agent-delete.ts | 1.0.1 | scripts/agent-delete.ts | N/A |
-| agent-lifecycle-audit.ts | 1.4.0 | scripts/agent-lifecycle-audit.ts | N/A |
+| agent-lifecycle-audit.ts | 1.6.0 | scripts/agent-lifecycle-audit.ts | N/A |
 | agent-list.ts | 1.1.0 | scripts/agent-list.ts | N/A |
 | agent-verify.ts | 1.0.2 | scripts/agent-verify.ts | N/A |
 | analyze-git-history.ts | 1.0.2 | scripts/analyze-git-history.ts | child_process |
@@ -228,7 +228,7 @@
 | deploy-web.ts | 1.1.0 | scripts/deploy-web.ts | N/A |
 | design-lint.ts | 1.2.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 2.0.0 | scripts/design-lint.ts | js-yaml |
-| dev-sync.ts | 1.21.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.22.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.1 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
