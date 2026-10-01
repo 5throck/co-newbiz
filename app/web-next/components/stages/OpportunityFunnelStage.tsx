@@ -251,7 +251,14 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
           </div>
         ) : (
           <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
-            완료된 시장분석이 없습니다. <Link href="/market" className="text-[color:var(--accent)] underline">시장분석(S1)</Link>에서 산업을 먼저 분석하세요.
+            완료된 시장분석이 없습니다.{" "}
+            <Link
+              href={opportunityId ? `/deals/${encodeURIComponent(opportunityId)}/s1` : "/market"}
+              className="text-[color:var(--accent)] underline"
+            >
+              시장분석(S1)
+            </Link>
+            에서 산업을 먼저 분석하세요.
           </p>
         )}
 

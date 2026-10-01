@@ -241,7 +241,7 @@ export function OpportunityDetail() {
               </span>
             )}
             <div className="mt-2">
-              <Link href="/synergy" className="btn-ghost btn-sm" title="S3 시너지·전략적 적합성 화면에서 분석합니다">S3 화면으로 이동 →</Link>
+              <Link href={`/deals/${encodeURIComponent(id)}/s3`} className="btn-ghost btn-sm" title="S3 시너지·전략적 적합성 화면에서 분석합니다">S3 탭으로 이동 →</Link>
               <span className="text-[0.72rem] text-[color:var(--muted-fg)] ml-2">필요 역량 수준도 S3 화면의 연계 시너지 탭에서 함께 관리합니다.</span>
             </div>
           </div>
