@@ -22,6 +22,7 @@
  *      and the migration carries the additive-only ADR-0101 §1 shape.
  */
 
+import { judgeAllStandardDdItems } from "./_dd-standard.ts";
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 
@@ -191,6 +192,7 @@ beforeAll(async () => {
       "INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?)",
       [ulid(), pid, "custom:commercial", ulid(), "pass", ANALYST, NOW],
     );
+    judgeAllStandardDdItems(db, pid, ANALYST, NOW);
     // S11 prerequisites (2026-09-12 hardening): adopted S8 case + confirmed charter.
     db.run(
       "INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, started_by, started_at, meta_json) VALUES (?,?,?,?,?,?,?,?,?,?)",

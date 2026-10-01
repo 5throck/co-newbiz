@@ -449,10 +449,14 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     // 적용 체크리스트 범위·필수 미충족 0건 검사
     // (ADR-0099 §5 — completion summary is the single source of the counts).
     const state = ddCompletionSummary(project.id);
-    if (state.total === 0) {
+    if (state.total === 0 && state.unassessed === 0) {
       blockers.push("DD 체크리스트 판정이 필요합니다");
       missing.push("DD 체크리스트 판정(필수 항목 해소)");
     } else {
+      if (state.unassessed > 0) {
+        blockers.push(`아직 판정하지 않은 표준 체크리스트 항목 ${state.unassessed}건이 있습니다 (ADR-0148)`);
+        missing.push("DD 체크리스트 판정(필수 항목 해소)");
+      }
       if (state.pending > 0) {
         blockers.push(`판정 대기 체크리스트 항목 ${state.pending}건이 있습니다`);
         missing.push("DD 체크리스트 판정(필수 항목 해소)");

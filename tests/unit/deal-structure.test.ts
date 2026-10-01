@@ -12,6 +12,7 @@
  *      hypothesis re-blocks S10 — the latest hypothesis wins).
  */
 
+import { judgeAllStandardDdItems } from "./_dd-standard.ts";
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { ulid } from "../../db/lib/ulid.ts";
@@ -151,6 +152,7 @@ describe("S10 deal-structure route + repositories (flow.spec v2.2.0)", () => {
       "INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?)",
       [`pci-${ulidText()}`, projectId, "custom:commercial", `itm-${ulidText()}`, "pass", ANALYST, NOW],
     );
+    judgeAllStandardDdItems(db, projectId, ANALYST, NOW);
     const before = evaluateProcess({ type: "project", id: projectId });
     expect(before.completedStages).toContain("S10");
     expect(before.currentStage).toBe("S11");

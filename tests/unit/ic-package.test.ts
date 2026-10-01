@@ -17,6 +17,7 @@
  *      5/5 (origin internal).
  */
 
+import { judgeAllStandardDdItems } from "./_dd-standard.ts";
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -33,6 +34,7 @@ const { runMigrations } = await import("../../db/migrate.ts");
 resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
+let standardCount = 0;
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
@@ -147,6 +149,7 @@ beforeAll(async () => {
     "INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?)",
     [ulid(), projectId, "custom:commercial", ulid(), "pass", ANALYST, NOW],
   );
+  standardCount = judgeAllStandardDdItems(db, projectId, ANALYST, NOW);
   db.run(
     "INSERT INTO dd_finding (id, project_id, category, description, value_impact, created_at) VALUES (?,?,?,?,?,?)",
     [ulid(), projectId, "commercial", "핵심 고객 계약 변경 통제 조항 발견", -500, NOW],
@@ -223,7 +226,7 @@ describe("(b) the IC package aggregates the S11 read surface", () => {
     expect(res.status).toBe(200);
     const pkg = (await res.json()).data as {
       business_case: { adopted: { id: string; simulations: unknown[] } | null };
-      dd: { completion: { total: number; pending: number; mandatoryUnmet: number }; findings: unknown[] };
+      dd: { completion: { total: number; pending: number; unassessed: number; mandatoryUnmet: number }; findings: unknown[] };
       rag: { grade: string | null; isProposal: boolean; confidence_cap: string | null };
       gates: { latest: Array<{ gate: string; decision: string | null }> };
       establishment: { done: number; total: number; complete: boolean; progress: string };
@@ -231,7 +234,7 @@ describe("(b) the IC package aggregates the S11 read surface", () => {
 
     expect(pkg.business_case.adopted?.id).toBe("bc-ic1");
     expect(pkg.business_case.adopted!.simulations.length).toBe(1);
-    expect(pkg.dd.completion).toEqual({ total: 1, pending: 0, mandatoryUnmet: 0 });
+    expect(pkg.dd.completion).toEqual({ total: 1 + standardCount, pending: 0, unassessed: 0, mandatoryUnmet: 0 });
     expect(pkg.dd.findings.length).toBe(1);
     expect(pkg.rag.grade).toBe("amber");
     expect(pkg.rag.confidence_cap).toBe("amber");

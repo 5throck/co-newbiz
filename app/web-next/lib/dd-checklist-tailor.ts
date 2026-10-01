@@ -384,6 +384,12 @@ export function upsertChecklistState(
 export interface DdCompletionSummary {
   total: number;
   pending: number;
+  /**
+   * Standard items with no state row, counted only for projects created on/after
+   * DD_UNASSESSED_COUNTED_FROM (ADR-0148 option A); always 0 for earlier projects.
+   * Separate from `pending` so the pipeline's checklist_approval trigger keeps its meaning.
+   */
+  unassessed: number;
   /** fail rows on mandatory items without a waiver — the "필수 미충족" count. */
   mandatoryUnmet: number;
 }
@@ -398,6 +404,19 @@ function mandatoryItemIds(checklistId: string): Set<string> | null {
   const set = new Set(items.filter((i) => i.mandatory).map((i) => i.id));
   STANDARD_MANDATORY_CACHE.set(checklistId, set);
   return set;
+}
+
+/**
+ * ADR-0148 option A: from this instant on, a project's standard DD checklist items
+ * that have no state row count as `unassessed`, so a never-assessed mandatory item
+ * blocks S9 like any other undecided item (reported as `unassessed`). Projects created before it keep the
+ * earlier row-only counting (no retroactive blocking). Keyed on md_project.created_at.
+ */
+export const DD_UNASSESSED_COUNTED_FROM = "2026-10-01T00:00:00.000Z";
+
+function countsUnassessedItems(projectId: string): boolean {
+  const row = getDb().query("SELECT created_at FROM md_project WHERE id = ?").get(projectId) as { created_at: string } | undefined;
+  return !!row && row.created_at >= DD_UNASSESSED_COUNTED_FROM;
 }
 
 export function ddCompletionSummary(projectId: string): DdCompletionSummary {
@@ -419,7 +438,17 @@ export function ddCompletionSummary(projectId: string): DdCompletionSummary {
       }
     }
   }
-  return { total: rows.length, pending, mandatoryUnmet };
+  let unassessed = 0;
+  if (countsUnassessedItems(projectId)) {
+    const have = new Set(rows.map((r) => `${r.checklist_id}:${r.item_id}`));
+    for (const checklistId of Object.values(DD_WORKSPACE_CHECKLISTS)) {
+      for (const item of getChecklistItems(checklistId) ?? []) {
+        if (have.has(`${checklistId}:${item.id}`)) continue;
+        unassessed += 1;
+      }
+    }
+  }
+  return { total: rows.length, pending, unassessed, mandatoryUnmet };
 }
 
 // ── Aggregate read surface (GET /api/projects/[id]/dd) ─────────────────────

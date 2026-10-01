@@ -211,7 +211,7 @@ function ddSummary(db: Database, projectId: string): string {
       .all(projectId) as Array<{ category: string; description: string; value_impact: string | null }>;
     const waiverCount = db.query("SELECT COUNT(*) c FROM waiver WHERE project_id = ?").get(projectId) as unknown as { c: number };
     return [
-      `체크리스트: 전체 ${s.total}건, 미판정 ${s.pending}건, 필수 미충족 ${s.mandatoryUnmet}건`,
+      `체크리스트: 전체 ${s.total}건, 미판정 ${s.pending + s.unassessed}건, 필수 미충족 ${s.mandatoryUnmet}건`,
       `waiver ${waiverCount.c}건`,
       ...findings.map((f) => `- [${f.category}] ${f.description.slice(0, 160)}${f.value_impact ? ` (가치영향: ${f.value_impact})` : ""}`),
     ].filter(Boolean).join("\n") || "S9 DD: 데이터 없음";

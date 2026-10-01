@@ -199,7 +199,11 @@ describe("S9 tailored DD checklists (ADR-0099)", () => {
         expect(c.source_reliability).toBe("C");
       }
     }
+    // ADR-0148: nothing judged yet — every standard item counts as pending, nothing is judged.
     expect(data.completion.total).toBe(0);
+    expect(data.completion.pending).toBe(0);
+    expect(data.completion.unassessed).toBeGreaterThan(0);
+    expect(data.completion.mandatoryUnmet).toBe(0);
   });
 
   test("(b) boundary #2: no state row until the human approves; approve+state is one transaction", async () => {
