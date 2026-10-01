@@ -5,10 +5,10 @@ lang_reason: source-material
 
 # ADR-0147 — 매출의 질 4축 평가(cdd-08)와 고객 집중도·이탈률의 단일 계산 소유 원칙
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-01 (제안)
-- Open Points: OP-1~OP-3은 2026-10-01 사용자(사람 검토자)가 결정해 본문에 반영했다. ADR 자체의 수락(Accepted)은 아직 기록되지 않았다
-- Deciders: 사용자 지시에 따라 New Business Review Lead (PM)가 초안 작성. **수락은 사람 검토자의 결정** — ADR은 AI 검토만으로 통과할 수 없다(프로젝트 `CLAUDE.md` "Review Model")
+- Accepted: 2026-10-01 — 사용자(사람 검토자)가 검토 후 승인. OP-1~OP-3은 같은 날 사용자가 결정해 본문에 반영했고, OP-4는 별도 검토로 남긴다
+- Deciders: 사용자(사람 검토자)의 결정. New Business Review Lead (PM)가 초안 작성 — ADR은 AI 검토만으로 통과할 수 없다(프로젝트 `CLAUDE.md` "Review Model")
 - Design of record: 외부 설계 문서 [2026-08-19-co-newbiz-design_ko.md](https://github.com/5throck/ai-workspace-standards/blob/main/docs/designs/2026-08-19-co-newbiz-design_ko.md), 본 ADR
 - Related: ADR-0016 (RAG: 우선순위 규칙, 가중평균 아님, 데이터 신뢰도 상한), ADR-0021 (정책 변경 → 시스템 반영, `project_policy_pin`), ADR-0023 (지역 프로파일 스키마와 필수 검토 축), ADR-0024 (산업·지역 프로파일 우선 원칙), ADR-0037 (필수 항목 누락의 게이트 차단), ADR-0044 (산업·지역 확장은 프로파일 수로), ADR-0051 (워크플로 공백 해소 — 시장 DD 단계 추가)
 
@@ -44,7 +44,7 @@ lang_reason: source-material
 - **쉬워지는 것**: 네 축을 같은 고객 단위로 보는 단일 소유 항목이 생기고, 집중도·이탈률 수치의 출처가 하나로 정리되며, 두 수치가 어긋날 때의 처리 규칙이 생긴다.
 - **어려워지는 것**: 상업 DD와 시장 DD 사이에 산출 순서 의존(대조는 `cdd-01`/`cdd-02` 이후)이 생긴다. 고객 단위 마진·DSO 자료는 매출원장과 관리회계가 필요해서, 데이터룸 접근이 없는 세션에서는 `cdd-08`이 "검증 불가"로 기록되거나 사유와 함께 건너뛴다. 권고 항목이라 이것이 게이트를 막지는 않는다.
 - **영향 파일**: `checklists/commercial-dd-checklist.yaml`(v1.1.0), `checklists/market-dd-checklist.yaml`(v1.1.0), `checklists/financial-dd-checklist.yaml`(v1.1.0), `checklists/ma-special-topics-checklist.yaml`(v1.3.0), `procedures/_shared/brownfield-dd/schema.yaml`, `industry-profiles/_schema.yaml`·`_validate.ts`·`README.md`, `region-profiles/_schema.yaml`·`_validate.ts`, 스킬 4종(`commercial-due-diligence`, `quality-of-earnings`, `dd-to-valuation-bridge`, `customer-attrition-risk`)과 플랫폼 사본.
-- **수락 전 병합 금지**: 이 ADR이 Accepted 되기 전에는 위 변경 묶음을 병합하지 않는다. 절차 변경이 포함되어 있다.
+- **병합 조건 충족**: 이 ADR이 Accepted 되었으므로 위 변경 묶음(절차 문구 정정 포함)을 병합할 수 있다.
 
 ## Open Points
 
@@ -57,4 +57,3 @@ lang_reason: source-material
 남은 항목:
 
 - **OP-4 (미완 강제 범위)**: 필수 항목의 행 부재가 게이트를 막지 않는 현황(위 Consequences 첫 항목)은 이 ADR의 범위 밖이며, 별도 검토 대상이다.
-- **수락**: ADR-0147의 Accepted 전환은 사람 검토자의 몫이다.
