@@ -7,8 +7,8 @@
 import { useEffect, useState } from "react";
 
 interface PipelineStatusData {
-  pipeline_run_id: string;
-  status: "running" | "paused_for_human" | "completed" | "failed" | "killed";
+  pipeline_run_id: string | null;
+  status: "none" | "running" | "paused_for_human" | "completed" | "failed" | "killed";
   current_stage: string | null;
   paused_reason: string | null;
   deep_link: string | null;
@@ -27,6 +27,7 @@ function reasonLabel(reason: string): string {
 }
 
 const STATE_CHIP: Record<PipelineStatusData["status"], { chip: string; icon: string }> = {
+  none: { chip: "status-not-started", icon: "·" }, // 실행 이력 없음 — 렌더 전에 null 반환으로 가려짐
   running: { chip: "status-not-started", icon: "▶" },
   paused_for_human: { chip: "status-amber", icon: "⏸" },
   completed: { chip: "status-green", icon: "✓" },
@@ -50,7 +51,8 @@ export function PipelineStatus({ opportunityId }: { opportunityId: string }) {
     };
   }, [opportunityId]);
 
-  if (!status) return null; // 파이프라인 실행 이력이 없으면 아무것도 렌더링하지 않는다
+  // 파이프라인 실행 이력이 없으면(status "none" 또는 응답 없음) 아무것도 렌더링하지 않는다
+  if (!status || status.status === "none") return null;
 
   const { chip, icon } = STATE_CHIP[status.status];
   const label =

@@ -436,3 +436,32 @@ describe("(e) max-iteration safety cap", () => {
     }
   });
 });
+
+describe("(g) pipeline/status — no-run entity is a defined state, not an error", () => {
+  test("existing opportunity with zero pipeline_run rows → 200 with status 'none'", async () => {
+    const noRunOppId = seedOpportunity("실행 없는 기회", false);
+    const res = await req(`/api/opportunities/${noRunOppId}/pipeline/status`, { headers: { cookie: analystCookie } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()).data;
+    expect(body).toEqual({
+      pipeline_run_id: null,
+      status: "none",
+      current_stage: null,
+      paused_reason: null,
+      deep_link: null,
+      segments: [],
+    });
+  });
+
+  test("unknown opportunity id → 404", async () => {
+    const res = await req(`/api/opportunities/does-not-exist/pipeline/status`, { headers: { cookie: analystCookie } });
+    expect(res.status).toBe(404);
+  });
+
+  test("viewer can read the 'none' status (read-mode allows viewer)", async () => {
+    const noRunOppId = seedOpportunity("뷰어 조회 기회", false);
+    const res = await req(`/api/opportunities/${noRunOppId}/pipeline/status`, { headers: { cookie: viewerCookie } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.status).toBe("none");
+  });
+});

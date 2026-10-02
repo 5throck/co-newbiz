@@ -320,13 +320,14 @@ describe("(b) transition-decision POST — the recorder pattern", () => {
   test("happy path: 201, decided_by pinned to the human role, recorded_by = session user, audit row", async () => {
     const res = await req(`/api/projects/${projectId}/transition-decision`, {
       method: "POST", headers: { cookie: analystCookie },
-      body: JSON.stringify({ decision: "next_tranche_released", rationale: "2분기 연속 목표 달성 — IC 심의 통과" }),
+      body: JSON.stringify({ decision: "next_tranche_released", rationale: "2분기 연속 목표 달성 — IC 심의 통과", tranche_condition: "차기 트랜치는 MRR 2분기 연속 목표 달성 시 방출한다" }),
     });
     expect(res.status).toBe(201);
-    const row = (await res.json()).data as { decided_by: string; recorded_by: string; review_cycle: string; run_id: string };
+    const row = (await res.json()).data as { decided_by: string; recorded_by: string; review_cycle: string; run_id: string; tranche_condition: string | null };
     expect(row.decided_by).toBe("venture-portfolio-ic"); // schema-pinned decider of record
     expect(row.recorded_by).toBe(ANALYST); // recorder = session user via run lineage
     expect(row.review_cycle).toBe(CURRENT_CYCLE); // defaults to the current quarter
+    expect(row.tranche_condition).toContain("트랜치"); // ADR-0151 dedicated column, echoed back
 
     const run = db.query("SELECT created_by FROM run WHERE id = ?").get(row.run_id) as { created_by: string };
     expect(run.created_by).toBe(ANALYST); // ADR-0005 recorder lineage, not a second column
@@ -353,6 +354,44 @@ describe("(b) transition-decision POST — the recorder pattern", () => {
     })).status).toBe(400);
     const after = (db.query("SELECT COUNT(*) c FROM venture_transition_decision").get() as { c: number }).c;
     expect(after).toBe(before); // nothing partially written
+  });
+
+  test("ADR-0151: criteria 3-5 decisions without their dedicated record column 400", async () => {
+    const before = (db.query("SELECT COUNT(*) c FROM venture_transition_decision").get() as { c: number }).c;
+    expect((await req(`/api/projects/${projectId}/transition-decision`, {
+      method: "POST", headers: { cookie: analystCookie },
+      body: JSON.stringify({ decision: "next_tranche_released", rationale: "근거는 있으나 트랜치 조건 누락" }),
+    })).status).toBe(400);
+    expect((await req(`/api/projects/${projectId}/transition-decision`, {
+      method: "POST", headers: { cookie: analystCookie },
+      body: JSON.stringify({ decision: "held_evidence_incomplete", rationale: "근거 미완결" }),
+    })).status).toBe(400);
+    expect((await req(`/api/projects/${projectId}/transition-decision`, {
+      method: "POST", headers: { cookie: analystCookie },
+      body: JSON.stringify({ decision: "graduate_to_core", rationale: "인계 기록 누락" }),
+    })).status).toBe(400);
+    expect((await req(`/api/projects/${projectId}/transition-decision`, {
+      method: "POST", headers: { cookie: analystCookie },
+      body: JSON.stringify({ decision: "reduce_or_divest", rationale: "처분 계획 누락" }),
+    })).status).toBe(400);
+    const after = (db.query("SELECT COUNT(*) c FROM venture_transition_decision").get() as { c: number }).c;
+    expect(after).toBe(before); // nothing partially written
+  });
+
+  test("ADR-0151: criteria 3-5 decisions WITH their dedicated record column 201", async () => {
+    for (const [decision, column, value] of [
+      ["held_evidence_incomplete", "tranche_condition", "차기 트랜치는 정략 근거 보완 후 방출한다"],
+      ["graduate_to_core", "core_handoff", "사업부 운영으로 이관한다"],
+      ["reduce_or_divest", "divest_plan", "2분기 내 지분 매각을 추진한다"],
+    ] as const) {
+      const res = await req(`/api/projects/${projectId}/transition-decision`, {
+        method: "POST", headers: { cookie: analystCookie },
+        body: JSON.stringify({ decision, rationale: "부속 기록 포함 — IC 심의 기록", [column]: value }),
+      });
+      expect(res.status).toBe(201);
+      const row = (await res.json()).data as Record<string, string | null>;
+      expect(row[column]).toBe(value); // the dedicated column is stored and echoed
+    }
   });
 
   test("kill without learning_capture 400; with learning_capture 201", async () => {
@@ -389,7 +428,7 @@ describe("(b) transition-decision POST — the recorder pattern", () => {
   test("supplied run_id must exist and belong to the project (recorder lineage)", async () => {
     expect((await req(`/api/projects/${projectId}/transition-decision`, {
       method: "POST", headers: { cookie: analystCookie },
-      body: JSON.stringify({ decision: "held_evidence_incomplete", rationale: "근거 미완결", run_id: "no-such-run" }),
+      body: JSON.stringify({ decision: "held_evidence_incomplete", rationale: "근거 미완결", tranche_condition: "근거 보완 후 재심의", run_id: "no-such-run" }),
     })).status).toBe(400);
   });
 });
@@ -456,6 +495,67 @@ describe("(c) S12 completion — ADR-0150 six criteria (fresh cycle + human tran
     expect(blocked.completedStages).not.toContain("S12");
     expect(blocked.blockers.join("\n")).toContain("학습 포착 기록(learning_capture)이 필요합니다");
   });
+
+  test("ADR-0151 grandfathering: a PRE-migration rationale-only decision still completes S12", () => {
+    const runId5 = ulid();
+    db.run(
+      "INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)",
+      [runId5, project2Id, "S12 그랜드파더 run", "h-portfolio-5", ANALYST, NOW],
+    );
+    // decided_at BEFORE the ADR-0151 migration date (2026-10-02) — the old
+    // rationale-only contract stays valid for this ledger row. The predicate
+    // reads the LATEST row by (decided_at, id), so the harness first removes
+    // the post-migration rows earlier tests inserted (direct SQL on the
+    // scratch DB — the append-only property is an app-path rule, tested in
+    // describe (d), not a DB constraint).
+    db.run("DELETE FROM venture_transition_decision WHERE project_id = ? AND decided_at >= ?", [project2Id, "2026-10-02"]);
+    db.run(
+      `INSERT INTO venture_transition_decision
+         (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, tranche_condition, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [ulid(), runId5, project2Id, CURRENT_CYCLE, "next_tranche_released", "venture-portfolio-ic", "2026-01-15T00:00:00.000Z", "마이그레이션 이전 rationale-only 결정 — 그랜드파더", null, null, NOW],
+    );
+    const done = evaluateProcess({ type: "project", id: project2Id });
+    expect(done.completedStages).toContain("S12");
+    expect(done.currentStage).toBeNull();
+  });
+
+  test("ADR-0151: a POST-migration decision without its dedicated column blocks S12 with a named blocker", () => {
+    const runId6 = ulid();
+    db.run(
+      "INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)",
+      [runId6, project2Id, "S12 ADR-0151 미충족 run", "h-portfolio-6", ANALYST, NOW],
+    );
+    // Latest row by (decided_at, id) wins — this row is newest (post-migration,
+    // tranche_condition empty), so the predicate reads THIS decision and must
+    // block with the ADR-0151 named blocker.
+    db.run(
+      `INSERT INTO venture_transition_decision
+         (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, tranche_condition, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [ulid(), runId6, project2Id, CURRENT_CYCLE, "next_tranche_released", "venture-portfolio-ic", NOW, "마이그레이션 이후 결정 — 트랜치 조건 누락", null, null, NOW],
+    );
+    const blocked = evaluateProcess({ type: "project", id: project2Id });
+    expect(blocked.completedStages).not.toContain("S12");
+    expect(blocked.blockers.join("\n")).toContain("tranche_condition)이 필요합니다 (ADR-0151)");
+  });
+
+  test("ADR-0151: a POST-migration decision WITH its dedicated column completes S12", () => {
+    const runId7 = ulid();
+    db.run(
+      "INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)",
+      [runId7, project2Id, "S12 ADR-0151 충족 run", "h-portfolio-7", ANALYST, NOW],
+    );
+    db.run(
+      `INSERT INTO venture_transition_decision
+         (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, tranche_condition, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [ulid(), runId7, project2Id, CURRENT_CYCLE, "next_tranche_released", "venture-portfolio-ic", NOW, "마이그레이션 이후 결정 — 트랜치 조건 기록됨", null, "차기 트랜치는 MRR 2분기 연속 목표 달성 시 방출한다", NOW],
+    );
+    const done = evaluateProcess({ type: "project", id: project2Id });
+    expect(done.completedStages).toContain("S12");
+    expect(done.currentStage).toBeNull();
+  });
 });
 
 describe("(d) append-only ledger + migration shape", () => {
@@ -466,7 +566,7 @@ describe("(d) append-only ledger + migration shape", () => {
 
     const res = await req(`/api/projects/${projectId}/transition-decision`, {
       method: "POST", headers: { cookie: analystCookie },
-      body: JSON.stringify({ decision: "held_evidence_incomplete", rationale: "정략 섹션 근거 미완결 — 후속 실사 요청", review_cycle: CURRENT_CYCLE }),
+      body: JSON.stringify({ decision: "held_evidence_incomplete", rationale: "정략 섹션 근거 미완결 — 후속 실사 요청", tranche_condition: "정략 근거 보완 후 재심의한다", review_cycle: CURRENT_CYCLE }),
     });
     expect(res.status).toBe(201); // allowed as a new ledger row, not a correction-in-place
 
@@ -477,7 +577,8 @@ describe("(d) append-only ledger + migration shape", () => {
 
     const view = await req(`/api/projects/${projectId}/scorecard`, { headers: { cookie: analystCookie } });
     const data = (await view.json()).data as { decisions: { history: Array<{ decision: string }>; latest: { decision: string } | null } };
-    expect(data.decisions.history.length).toBe(3); // released + kill + held, newest first
+    const expected = (db.query("SELECT COUNT(*) c FROM venture_transition_decision WHERE project_id = ?").get(projectId) as { c: number }).c;
+    expect(data.decisions.history.length).toBe(expected); // released + kill + held + ADR-0151 route fixtures, newest first
     expect(data.decisions.latest?.decision).toBe("held_evidence_incomplete");
 
     // Append-only: no UPDATE/DELETE path exists anywhere for the table.

@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-01T23:31:43.196Z
+**Generated**: 2026-10-02T08:03:13.618Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 106
-- **Scripts**: 143 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 144 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -250,6 +250,7 @@
 | generate-prompt-registry.ts | 1.0.0 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-raci.ts | 1.1.0 | scripts/generate-raci.ts | js-yaml |
 | generate-skill-graph.ts | 1.14.0 | scripts/generate-skill-graph.ts | js-yaml |
+| generate-spec-activities.ts | 1.0.0 | scripts/co-newbiz/generate-spec-activities.ts | js-yaml |
 | generate-version-manifest.ts | 1.10.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
 | glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | js-yaml |
 | graph-delta-log.ts | 1.0.0 | scripts/graph-delta-log.ts | N/A |

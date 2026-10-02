@@ -12,8 +12,11 @@
 //
 // Route-level rules: the 5-vocabulary is validated server-side (mirroring the
 // 0071 CHECK and PORTFOLIO_TRANSITIONS), rationale is mandatory non-empty,
-// and kill_with_learning_captured additionally requires a non-empty
-// learning_capture (a kill must feed the playbook, ADR-0101 §2). The table is
+// and each transition requires its dedicated record column (ADR-0151, from
+// the 2026-10-02 migration: tranche_condition for next_tranche_released /
+// held_evidence_incomplete, core_handoff for graduate_to_core, divest_plan
+// for reduce_or_divest, learning_capture for kill_with_learning_captured —
+// ADR-0101 §2 + ADR-0150 criteria 3-6). The table is
 // append-only — repeated POSTs for the same review_cycle are NEW ledger rows,
 // never updates; readers surface the latest by (decided_at, id).
 // Deny-by-default: non-members 404 (FR-SEC-01); viewer 403; admins excluded
@@ -30,6 +33,22 @@ import { visibleProject } from "../../../../../lib/project-visibility.ts";
 /** The decider of record is ALWAYS the human role (design boundary #2). */
 const DECIDED_BY = "venture-portfolio-ic";
 const KILL_DECISION = "kill_with_learning_captured";
+// ADR-0151 migration date — the route writes only NEW rows, so the
+// per-decision record requirement is enforced unconditionally here; the
+// grandfathering predicate (decided_at < 2026-10-02 keeps the old
+// rationale-only contract) lives in the S12 completion predicate
+// (PROJECT_STAGE_COMPLETION.S12) for pre-migration ledger rows.
+const ADR_0151_MIGRATION_DATE = "2026-10-02";
+// ADR-0150 criteria 3-5 — each transition's dedicated record column. The
+// route requires it non-empty at write time (per-decision CHECK-style
+// enforcement; migration-level CHECKs are not expressible in SQLite),
+// mirroring the learning_capture requirement for kills (criterion 6).
+const TRANSITION_RECORD_COLUMNS: Record<string, "tranche_condition" | "core_handoff" | "divest_plan"> = {
+  next_tranche_released: "tranche_condition",
+  held_evidence_incomplete: "tranche_condition",
+  graduate_to_core: "core_handoff",
+  reduce_or_divest: "divest_plan",
+};
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -57,6 +76,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const learningCapture = (body?.learning_capture ?? "").trim();
   if (decision === KILL_DECISION && !learningCapture) {
     return badRequest("invalid_request", "kill_with_learning_captured 결정은 learning_capture가 필요합니다 — 학습 내용이 플레이북으로 회수되어야 합니다 (ADR-0101 §2).");
+  }
+  // ADR-0151 — criteria 3-5 decisions require their dedicated record column
+  // (applies from the 2026-10-02 migration date; pre-migration ledger rows
+  // are grandfathered at the predicate, not here — new rows always comply).
+  const recordColumn = TRANSITION_RECORD_COLUMNS[decision];
+  const recordValue = recordColumn
+    ? (((body as Record<string, unknown> | null)?.[recordColumn] as string | undefined) ?? "").trim()
+    : "";
+  if (recordColumn && !recordValue) {
+    return badRequest(
+      "invalid_request",
+      `${decision} 결정은 ${recordColumn}가 필요합니다 — 전환별 결정 부속 기록은 원장 컬럼으로 기록되어야 합니다 (ADR-0151, 마이그레이션 2026-10-02 적용).`,
+    );
   }
 
   const now = new Date().toISOString();
@@ -90,9 +122,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   db.transaction(() => {
     db.run(
       `INSERT INTO venture_transition_decision
-         (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [rowId, runId, id, cycle, decision, DECIDED_BY, now, rationale, learningCapture || null, now],
+         (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, tranche_condition, core_handoff, divest_plan, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [rowId, runId, id, cycle, decision, DECIDED_BY, now, rationale, learningCapture || null,
+        recordColumn === "tranche_condition" ? recordValue : null,
+        recordColumn === "core_handoff" ? recordValue : null,
+        recordColumn === "divest_plan" ? recordValue : null,
+        now],
     );
     logDataAccess(db, {
       userId: ctx.userId,
@@ -121,6 +157,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       decided_at: now,
       rationale,
       learning_capture: learningCapture || null,
+      tranche_condition: recordColumn === "tranche_condition" ? recordValue : null,
+      core_handoff: recordColumn === "core_handoff" ? recordValue : null,
+      divest_plan: recordColumn === "divest_plan" ? recordValue : null,
       run_id: runId,
     },
     201,

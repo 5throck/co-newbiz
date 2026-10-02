@@ -215,4 +215,13 @@ describe("process flow spec integrity (ADR-0074)", () => {
     const proc = Bun.spawnSync(["bun", genPath, "--check"], { cwd: ROOT });
     expect(proc.exitCode).toBe(0);
   });
+
+  test("spec-activities.generated.ts is the up-to-date regeneration of the spec", () => {
+    // Same drift gate as docs/process-flow.md above: the generator's --check
+    // mode exits 0 only when the projection matches the current spec.
+    const genPath = join(ROOT, "scripts", "co-newbiz", "generate-spec-activities.ts");
+    expect(existsSync(genPath)).toBe(true);
+    const proc = Bun.spawnSync(["bun", genPath, "--check"], { cwd: ROOT });
+    expect(proc.exitCode).toBe(0);
+  });
 });

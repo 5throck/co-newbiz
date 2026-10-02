@@ -30,7 +30,18 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
     )
     .all(opp.id, opp.project_id, opp.project_id) as PipelineRunRow[];
   const run = rows.find((r) => r.status === "running" || r.status === "paused_for_human") ?? rows[0];
-  if (!run) return notFound();
+  // A known entity with no pipeline_run rows yet is a defined state ("none"),
+  // not an error — distinguish it from the unknown-id 404 above.
+  if (!run) {
+    return ok({
+      pipeline_run_id: null,
+      status: "none",
+      current_stage: null,
+      paused_reason: null,
+      deep_link: null,
+      segments: [],
+    });
+  }
 
   const paused = run.status === "paused_for_human";
   return ok({
