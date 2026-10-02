@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * @version 1.0.0
+ * @version 1.0.1
  */
 // sync-library-projection.ts — refreshes app/web-next/lib/library.generated.ts from
 // its source files. SSOT is the source documents (checklists/, procedures/, docs/);

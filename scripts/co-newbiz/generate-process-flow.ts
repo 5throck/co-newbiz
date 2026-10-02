@@ -1,4 +1,4 @@
-// @version 1.3.3
+// @version 1.4.0
 // Process Flow Spec → docs/process-flow.md generator (ADR-0074).
 // process/flow.spec.yaml is the SSOT; this script regenerates the markdown
 // reference. The drift test (tests/unit/process-flow.test.ts) validates the
@@ -166,7 +166,7 @@ artifact, blocks completion), and S4 now checks \`alternatives_considered\`.
 | S9 | \`ddCompletionSummary\`: total > 0, pending = 0, mandatoryUnmet = 0 — ADR-0099 |
 | S10 | latest \`deal_structure_hypothesis\` has \`four_axis_review_completed\` = 1 AND \`financing_sources_uses\` sources == uses > 0 (balanced) — flow.spec v2.2.0, ADR-0045 |
 | S11 | \`entity_ic\` AND \`group_ic\` gate decisions both \`go\` (human record only); for origin ∈ {internal, joint}, \`establishmentProgress\` = 5/5 — ADR-0100 |
-| S12 | \`venture_scorecard\` exists with a fresh review cycle (current or previous quarter, \`isFreshReviewCycle\`) — ADR-0101 |
+| S12 | ADR-0150 six criteria: \`venture_scorecard\` exists with a fresh review cycle (current or previous quarter, \`isFreshReviewCycle\` — criterion 1, ADR-0101 §4 mechanics) AND a human transition decision recorded with rationale for the latest cycle (criterion 2), AND the transition's criterion-specific record — tranche conditions (criterion 3), core handover (criterion 4), divest/liquidation plan (criterion 5), captured learning fed back to S1/S2 base rates (criterion 6) |
 
 Gate semantics: every gate verdict is a human-recorded \`gate_decision\` row
 (ADR-0053 \`decision_authority: human\`; ADR-0094 — the sole human-confirmation
@@ -261,7 +261,10 @@ Declared gaps, not hidden ones:
   (\`_committees.yaml\` follow-up note).
 - **Scorecard weights / cadence (ADR-0052 open question b)** — the exact
   venture-scorecard weighting scheme and revisit cadence remain an open
-  question; S12 currently pins only the quarterly freshness predicate.
+  question; the S12 completion predicate is the ADR-0150 six-criteria set
+  (fresh per-review-cycle scorecard review + a human transition decision
+  with rationale, each transition carrying its criterion-specific record —
+  flow.spec S12 completionCriteria).
 `;
 
 function generate(spec: FlowSpec): string {

@@ -1,7 +1,7 @@
 schema_version: "1.0"
 variant: co-newbiz
 stages:
-  - id: S1
+  - id: G1
     title: Screening
     order: 1
     purpose: >-
@@ -18,13 +18,13 @@ stages:
       - "At least one viable target exists in the longlist."
     owner_agent: brownfield-agent
 
-  - id: S2
+  - id: G2
     title: Target Screening
     order: 2
     purpose: >-
       Brownfield-only target shortlisting. Narrows the long list to a short
       list via knock-out screens and ranked scoring using desk research only.
-      Greenfield chains advance from S1 directly to S3; S2 is a stage in the
+      Greenfield chains advance from G1 directly to G3; G2 is a stage in the
       ordering lattice, not a mandatory traversal for every chain.
     entry_criteria:
       - "A target longlist has been established at the Screening gate."
@@ -34,7 +34,7 @@ stages:
       - "At least one target passes all knock-out criteria."
     owner_agent: brownfield-agent
 
-  - id: S3
+  - id: G3
     title: Pre-FS
     order: 3
     purpose: >-
@@ -42,14 +42,14 @@ stages:
       assumptions, WACC/hurdle IRR inputs, and capability-market fit with
       the deal sponsor. Establishes baseline for valuation.
     entry_criteria:
-      - "Target shortlist from S2 (brownfield) or longlist from S1 (greenfield) is available."
+      - "Target shortlist from G2 (brownfield) or longlist from G1 (greenfield) is available."
       - "Sponsor deal thesis and hurdle rate assumptions are documented."
     exit_criteria:
       - "Deal thesis assumptions and WACC/hurdle IRR inputs are confirmed with the sponsor."
       - "Certification transferability risks are assessed (brownfield only)."
-    owner_agent: TODO
+    owner_agent: pm
 
-  - id: S4
+  - id: G4
     title: FS
     order: 4
     purpose: >-
@@ -64,7 +64,7 @@ stages:
       - "Data confidence assessment is recorded."
     owner_agent: financial-analyst
 
-  - id: S5
+  - id: G5
     title: DD
     order: 5
     purpose: >-
@@ -80,7 +80,7 @@ stages:
       - "Financing plan sources & uses and commitment evidence are assembled."
     owner_agent: commercial-dd-agent
 
-  - id: S6
+  - id: G6
     title: Entity IC
     order: 6
     purpose: >-
@@ -92,10 +92,10 @@ stages:
       - "IC memo per template is assembled with RAG table, DD findings, and reviewer sign-off prepared."
     exit_criteria:
       - "Entity IC committee decision is recorded: approved / rejected / conditional."
-      - "If approved, group-level investment ranking begins at S7."
+      - "If approved, group-level investment ranking begins at G7."
     owner_agent: risk-officer
 
-  - id: S7
+  - id: G7
     title: Group IC
     order: 7
     purpose: >-
@@ -110,7 +110,7 @@ stages:
       - "Next funding tranche (venture) or entity establishment (M&A) is authorized or held."
     owner_agent: group-review-agent
 
-  - id: S8
+  - id: G8
     title: Post-Close
     order: 8
     purpose: >-
