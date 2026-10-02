@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-10-03](2026-10-03.md) | chore(upgrade): template sync v0.10.0 delivery (2026-10-03) |
 | [2026-10-02](2026-10-02.md) | chore(upgrade): template sync v0.9.0 fleet rollout (T-20261001-021) |
 | [2026-10-01](2026-10-01.md) | feat(web-next): hide business write controls from non-analysts on opportunity screens (ADR-0146 PR4) |
 | [2026-09-30](2026-09-30.md) | fix(review): project review 2026-09-30 remediations - validator gaps, agent frontmatter |
@@ -11,7 +12,7 @@
 | [2026-09-28](2026-09-28.md) | docs(governance): backfill v0.7.0 upgrade design record + CHANGELOG entry (PRs #418-#420) |
 | [2026-09-27](2026-09-27.md) | chore(upgrade): template sync v0.7.0 (auto-release 2026-09-27) |
 | [2026-09-26](2026-09-26.md) | docs(agents): add/normalize §6 Skills section and §7 alignment (workspace audit remediation) |
-| [2026-09-25](2026-09-25.md) | chore(upgrade): template sync 2026-09-25 — deliver audit helper chain (Design Gate repair) |
+| 2026-09-25 | chore(upgrade): template sync 2026-09-25 — deliver audit helper chain (Design Gate repair) |
 | 2026-09-24 | docs(adr): add promotion naming rule (ADR-0144) and sync/engine mutual exclusion (ADR-0145) |
 | 2026-09-23 | --help |
 | 2026-09-22 | chore: upgrade template delivery — fleet resync wave 2 |
