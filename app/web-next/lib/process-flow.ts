@@ -56,6 +56,15 @@ export const PORTFOLIO_TRANSITIONS = [
   "kill_with_learning_captured",
 ] as const;
 
+/**
+ * ADR-0151 migration date — decisions with decided_at >= this date must carry
+ * their transition's dedicated record column (tranche_condition /
+ * core_handoff / divest_plan; learning_capture for kills, unchanged). Earlier
+ * ledger rows are grandfathered: a non-empty rationale suffices. No backfill
+ * (ADR-0151 Accepted decision 2).
+ */
+export const ADR_0151_MIGRATION_DATE = "2026-10-02";
+
 export type ProcessEntity =
   | { type: "opportunity"; id: string }
   | { type: "project"; id: string };
@@ -574,13 +583,15 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     if (latest.c) {
       const decision = db
         .query(
-          `SELECT decision, decided_by, rationale, learning_capture
+          `SELECT decision, decided_by, decided_at, rationale, learning_capture,
+                  tranche_condition, core_handoff, divest_plan
            FROM venture_transition_decision
            WHERE project_id = ? AND review_cycle = ?
            ORDER BY decided_at DESC, id DESC LIMIT 1`,
         )
         .get(project.id, latest.c) as
-          | { decision: string; decided_by: string; rationale: string; learning_capture: string | null }
+          | { decision: string; decided_by: string; decided_at: string; rationale: string; learning_capture: string | null;
+              tranche_condition: string | null; core_handoff: string | null; divest_plan: string | null }
           | undefined;
       if (!decision) {
         blockers.push(`사람 전환 결정 기록이 필요합니다 (${latest.c} 주기 — venture_transition_decision)`);
@@ -593,12 +604,30 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
         // ADR-0150 기준 3~6 — 전환별 결정 부속 기록. 술어는 5개 전환을 모두
         // 요구하지 않는다: 기록된 결정(최신 1건)이 무엇이든 그 결정에 맞는
         // 부속 기록만 요구한다.
-        // 한계 주석 (ADR-0150): 0071 마이그레이션은 rationale·learning_capture
-        // 두 컬럼만 갖는다 — 차기 트랜치 조건(기준 3), 핵심사업 인계(기준 4),
-        // 매각/청산 계획(기준 5)의 전용 컬럼은 존재하지 않는다. 해당 결정들의
-        // 부속 기록은 비어있지 않은 rationale 그 자체로 본다 (rationale은
-        // CHECK <> '' 로 REQUIRED); 전용 컬럼이 추가되는 마이그레이션이 나오면
-        // 이 술어를 그 컬럼 기준으로 강화한다.
+        // ADR-0151 (마이그레이션 0121, 2026-10-02): 기준 3~5의 전용 컬럼
+        // (tranche_condition·core_handoff·divest_plan)이 0071에 추가되었다.
+        // 백필은 없다(Accepted 결정 2) — decided_at이 마이그레이션 날짜 이후인
+        // 결정만 전용 컬럼을 요구하고, 그 이전 rationale-only 원장 행은
+        // 그랜드파더링되어 rationale-only로 유효하다. 중단 경로(기준 6)는
+        // 변함없다.
+        const grandfathered = decision.decided_at < ADR_0151_MIGRATION_DATE;
+        if (!grandfathered) {
+          if (
+            (decision.decision === "next_tranche_released" || decision.decision === "held_evidence_incomplete") &&
+            (decision.tranche_condition ?? "").trim() === ""
+          ) {
+            blockers.push(`${decision.decision} 결정의 차기 트랜치 조건(tranche_condition)이 필요합니다 (ADR-0151)`);
+            missing.push("차기 트랜치 조건(tranche_condition)");
+          }
+          if (decision.decision === "graduate_to_core" && (decision.core_handoff ?? "").trim() === "") {
+            blockers.push("핵심사업 진입 결정(graduate_to_core)의 인계 기록(core_handoff)이 필요합니다 (ADR-0151)");
+            missing.push("핵심사업 인계 기록(core_handoff)");
+          }
+          if (decision.decision === "reduce_or_divest" && (decision.divest_plan ?? "").trim() === "") {
+            blockers.push("매각/청산 결정(reduce_or_divest)의 처분 계획(divest_plan)이 필요합니다 (ADR-0151)");
+            missing.push("매각/청산 계획(divest_plan)");
+          }
+        }
         if (decision.decision === "kill_with_learning_captured" && (decision.learning_capture ?? "").trim() === "") {
           blockers.push("중단 결정(kill_with_learning_captured)의 학습 포착 기록(learning_capture)이 필요합니다 — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류");
           missing.push("학습 포착 기록(kill_with_learning_captured)");

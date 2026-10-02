@@ -96,6 +96,8 @@ function DealsBoard() {
     for (const o of targets) {
       api.get<{ status: string; entity_id: string; paused_reason: string | null; deep_link: string | null }>(`/api/opportunities/${encodeURIComponent(o.id)}/pipeline/status`)
         .then((r) => {
+          // status "none" = 아직 파이프라인 실행 없음(정상 상태) — 배너 없이 무시
+          if (r.data.status === "none") return;
           if (r.data.status === "paused_for_human" && r.data.paused_reason) {
             setPaused((prev) => ({ ...prev, [r.data.entity_id]: { reason: r.data.paused_reason as string, link: r.data.deep_link } }));
           }

@@ -1,5 +1,8 @@
 // Generated from process/flow.spec.yaml for Next/Turbopack static server bundling.
-// Do not edit by hand; update process/flow.spec.yaml and regenerate this projection.
+// Do not edit by hand; update process/flow.spec.yaml and regenerate this
+// projection with: bun scripts/co-newbiz/generate-spec-activities.ts
+// (--check mode exits 1 on drift; tests/unit/process-flow.test.ts asserts
+// this projection mirrors the spec.)
 import type { SpecStage } from "./spec-activities.ts";
 
 export const SPEC_VERSION = "2.5.0";
