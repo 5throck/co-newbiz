@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-10-03](2026-10-03.md) | chore: upgrade template to 0.10.0 |
 | [2026-10-03](2026-10-03.md) | chore(upgrade): template sync v0.10.0 delivery (2026-10-03) |
 | [2026-10-02](2026-10-02.md) | chore(upgrade): template sync v0.9.0 fleet rollout (T-20261001-021) |
 | [2026-10-01](2026-10-01.md) | feat(web-next): hide business write controls from non-analysts on opportunity screens (ADR-0146 PR4) |
