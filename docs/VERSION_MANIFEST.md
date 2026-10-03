@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-03T01:59:29.662Z
+**Generated**: 2026-10-03T02:05:19.792Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -47,7 +47,7 @@
 | market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-09-29 |
 | partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-09-29 |
 | platform-lead | agents/platform-lead.md | high | inherit | 2026-09-29 |
-| pm | agents/pm.md | medium | inherit | 2026-10-01 |
+| pm | agents/pm.md | medium | inherit | 2026-10-03 |
 | pmi-agent | agents/pmi-agent.md | high | inherit | 2026-09-29 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-09-29 |
 | quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-09-29 |
