@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-03T06:37:06.396Z
+**Generated**: 2026-10-03T06:47:25.191Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -9,7 +9,7 @@
 ## Summary
 
 - **Agents**: 42
-- **Skills**: 106
+- **Skills**: 105
 - **Scripts**: 144 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
@@ -99,7 +99,6 @@
 | finishing-a-development-branch | 1.0.1 | active | skills/finishing-a-development-branch/SKILL.md | workspace | finish branch, complete work, wrap up, finishing a development branch, merge branch, create PR, push and PR | pm |
 | forward-industry-research | 1.0.1 | experimental | skills/forward-industry-research/SKILL.md | workspace | industry research, industry outlook, sector research | process-governance-manager |
 | gateguard | 1.0.2 | active | skills/gateguard/SKILL.md | workspace | gateguard, /gateguard, investigate file, check before edit, pre-edit check | pm |
-| graft | 1.0.0 | active | skills/graft/SKILL.md | workspace | graft, repo context graph, find where code lives, what calls this symbol, blast radius | pm |
 | greenfield-feasibility | 1.2.0 | active | skills/greenfield-feasibility/SKILL.md | workspace | green field feasibility, new plant feasibility, new establishment review, greenfield screening | greenfield-agent |
 | group-level-review | 1.0.1 | experimental | skills/group-level-review/SKILL.md | workspace | group review, group IC, portfolio fit review | process-governance-manager |
 | growth-projection-modeling | 1.1.0 | active | skills/growth-projection-modeling/SKILL.md | workspace | growth projection, revenue forecast, base rate warning, anchor_ref, hockey stick check | financial-analyst |
@@ -352,8 +351,8 @@
 
 - **Commands with parity (gemini mirror)**: 8 / 8
 - **Commands with codex prompts mapping**: 8 / 8
-- **Skills in all four mirrors**: 0 / 106
-- **Skills in claude+gemini only (both)**: 0 / 106 (common-template skills are parity-exempt)
+- **Skills in all four mirrors**: 0 / 105
+- **Skills in claude+gemini only (both)**: 0 / 105 (common-template skills are parity-exempt)
 
 ---
 

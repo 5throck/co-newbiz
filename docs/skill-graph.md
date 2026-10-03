@@ -38,7 +38,6 @@
 | `finishing-a-development-branch` | L3 | — | — | — | — | — |
 | `forward-industry-research` | L3 | — | — | — | — | — |
 | `gateguard` | L3 | — | — | — | — | — |
-| `graft` | L3 | — | — | — | — | — |
 | `greenfield-feasibility` | L3 | greenfield-agent | phase2 | community-partnership-planning (composes_with), permit-pathway-mapping (composes_with), regional-incentive-sourcing (composes_with), site-infrastructure-assessment (composes_with), stage-gate-governance (composes_with), talent-pipeline-planning (composes_with), wacc-input-session (follows) | — | — |
 | `group-level-review` | L3 | — | — | — | — | — |
 | `growth-projection-modeling` | L3 | financial-analyst | phase3 | financial-statement-analysis (composes_with), historical-financial-analysis (composes_with), investment-feasibility-modeling (composes_with), monte-carlo-simulation (composes_with), peer-benchmarking (composes_with), proxy-industry-chain (composes_with), quality-of-earnings (composes_with), scenario-planning (composes_with), site-infrastructure-assessment (follows), stage-gate-governance (composes_with), unit-conversion-calibration (composes_with) | — | — |
@@ -315,7 +314,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20260909-05` | decision | — | — | — |
 | `dec:DEC-20260909-06` | decision | — | — | — |
 | `dec:DEC-20260909-07` | decision | — | — | dec:DEC-20260909-06 |
-| `doc:AGENTS.md` | doc | `agent-lifecycle-manager`, `graft`, `skill-lifecycle-manager` | — | — |
+| `doc:AGENTS.md` | doc | `agent-lifecycle-manager`, `skill-lifecycle-manager` | — | — |
 | `doc:CODEX.md` | doc | `meeting-facilitation` | — | — |
 | `doc:procedures/README.md` | doc | `antitrust-screening`, `brownfield-feasibility`, `regional-incentive-sourcing`, `site-infrastructure-assessment` | — | — |
 | `doc:procedures/schema.yaml` | doc | `financing-plan-review`, `investment-vehicle-structuring`, `jv-structuring`, `proxy-industry-chain`, `strategic-fit-screening` | — | — |

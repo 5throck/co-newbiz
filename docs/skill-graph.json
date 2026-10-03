@@ -1053,11 +1053,6 @@
       "layer": "L3"
     },
     {
-      "id": "graft",
-      "type": "skill",
-      "layer": "L3"
-    },
-    {
       "id": "greenfield-agent",
       "type": "agent",
       "layer": "L3"
@@ -4401,12 +4396,6 @@
       "type": "cites_skill",
       "from": "doc:AGENTS.md",
       "to": "agent-lifecycle-manager",
-      "source": "workflow-doc"
-    },
-    {
-      "type": "cites_skill",
-      "from": "doc:AGENTS.md",
-      "to": "graft",
       "source": "workflow-doc"
     },
     {
