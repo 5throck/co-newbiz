@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-03T06:47:25.191Z
+**Generated**: 2026-10-04T17:12:39.144Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 105
-- **Scripts**: 144 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 145 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -77,7 +77,7 @@
 | brownfield-feasibility | 1.2.0 | active | skills/brownfield-feasibility/SKILL.md | workspace | brown field feasibility, M&A feasibility, acquisition screening, brownfield DD | brownfield-agent |
 | certification-roadmap | 1.0.0 | active | skills/certification-roadmap/SKILL.md | workspace | certification requirements, certification gap analysis, certification roadmap | certification-agent |
 | certification-transferability | 1.2.0 | active | skills/certification-transferability/SKILL.md | workspace | certification transferability, change of control certification, certification survives acquisition | legal-counsel |
-| ci-triage | 0.1.1 | active | skills/ci-triage/SKILL.md | workspace | ci failure, triage failure, audit gate failed, scaffold failed, fix the pipeline | pm |
+| ci-triage | 0.2.0 | active | skills/ci-triage/SKILL.md | workspace | ci failure, triage failure, audit gate failed, scaffold failed, fix the pipeline | pm |
 | commercial-due-diligence | 1.2.0 | active | skills/commercial-due-diligence/SKILL.md | workspace | commercial due diligence, customer concentration analysis, pricing power assessment, win loss analysis, revenue quality | commercial-dd-agent |
 | community-partnership-planning | 1.1.0 | active | skills/community-partnership-planning/SKILL.md | workspace | community partnership, local workforce development, community relations, social license to operate | hr-integration-agent |
 | company-intelligence | 1.0.1 | experimental | skills/company-intelligence/SKILL.md | workspace | company research, company profile, corporate intelligence | process-governance-manager |
@@ -194,7 +194,7 @@
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | N/A |
 | archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit.ts | 2.46.0 | scripts/audit.ts | bun |
+| audit.ts | 2.48.1 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.0.0 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
@@ -224,6 +224,7 @@
 | dart-collect.ts | 1.0.0 | scripts/co-newbiz/dart-collect.ts | N/A |
 | db-export.ts | 1.0.0 | scripts/co-newbiz/db-export.ts | N/A |
 | db-integrity.ts | 1.0.0 | scripts/co-newbiz/db-integrity.ts | N/A |
+| dependency-audit.ts | 1.0.0 | scripts/dependency-audit.ts | N/A |
 | deploy-handbook.ts | 1.1.0 | scripts/handbook/deploy-handbook.ts | N/A |
 | deploy-readme-patch.test.ts | 1.0.0 | scripts/tests/deploy-readme-patch.test.ts | bun:test |
 | deploy-web.ts | 1.1.0 | scripts/deploy-web.ts | N/A |
@@ -292,7 +293,7 @@
 | skill-lifecycle-audit.ts | 1.5.2 | scripts/skill-lifecycle-audit.ts | N/A |
 | skill-session-review.ts | 1.1.0 | scripts/skill-session-review.ts | bun |
 | source-adapters.ts | 1.1.0 | scripts/co-newbiz/source-adapters.ts | N/A |
-| spec-register.ts | 1.3.0 | scripts/spec-register.ts | N/A |
+| spec-register.ts | 1.4.0 | scripts/spec-register.ts | N/A |
 | sync-agent-personas.ts | 1.0.1 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
 | sync-library-projection.ts | 1.0.1 | scripts/co-newbiz/sync-library-projection.ts | js-yaml |
 | sync-md.ts | 1.4.0 | scripts/sync-md.ts | N/A |
@@ -304,9 +305,9 @@
 | typecheck.ts | 1.1.1 | scripts/typecheck.ts | N/A |
 | update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |
 | validate-agents.ts | 1.3.2 | scripts/validate-agents.ts | N/A |
-| validate-decisions.ts | 1.0.0 | scripts/validate-decisions.ts | js-yaml |
-| validate-doc-folder.ts | 1.2.0 | scripts/validate-doc-folder.ts | fs, path |
-| validate-docs-links.ts | 1.3.0 | scripts/validate-docs-links.ts | fs, path |
+| validate-decisions.ts | 1.1.0 | scripts/validate-decisions.ts | js-yaml |
+| validate-doc-folder.ts | 1.2.1 | scripts/validate-doc-folder.ts | fs, path |
+| validate-docs-links.ts | 1.4.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | N/A |
 | validate-md-language.ts | 1.12.0 | scripts/validate-md-language.ts | fs |
 | validate-model-registry.ts | 1.4.1 | scripts/validate-model-registry.ts | N/A |
@@ -323,7 +324,7 @@
 | verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |
 | verify-platform-lifecycle.ts | 1.6.0 | scripts/verify-platform-lifecycle.ts | N/A |
 | verify-readme-sync.ts | 1.4.1 | scripts/verify-readme-sync.ts | bun, fs, path |
-| verify-scripts.ts | 1.10.0 | scripts/verify-scripts.ts | fs, path |
+| verify-scripts.ts | 1.11.1 | scripts/verify-scripts.ts | fs, path |
 | verify-skill-graph.ts | 1.6.0 | scripts/verify-skill-graph.ts | N/A |
 | verify-skills.ts | 1.3.0 | scripts/verify-skills.ts | N/A |
 | watch-run.ts | 1.1.0 | scripts/co-newbiz/watch-run.ts | bun:sqlite |

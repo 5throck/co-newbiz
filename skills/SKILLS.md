@@ -52,7 +52,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `certification-roadmap` | 1.0.0 | active | certification-agent | 2026-08-20 | — | Wave 5.8H — certification gap analysis, strictly separate from permits |
 | `certification-transferability` | 1.2.0 | active | legal-counsel | 2026-08-23 | — | Wave 5.8H — CoC transferability confirmed against the certifying body's own rules; inference disallowed |
 | `checklist-authoring` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — item-by-item mandatory/waiver_eligible checklist layer |
-| `ci-triage` | 0.1.1 | active | pm | 2026-09-08 | - | - |
+| `ci-triage` | 0.2.0 | active | pm | 2026-10-04 | - | - |
 | `deal-pipeline-orchestration` | 1.0.0 | active | pm | 2026-09-08 | - | - |
 | `manual-authoring` | 2.1.0 | active | docs-writer | 2026-09-06 | — | Manual/SOP/governance-reference authoring standard — audience split, governance metadata, external-reference badge rules; documents render live via `/library` (ADR-0108), no generator step |
 | `commercial-due-diligence` | 1.2.0 | active | commercial-dd-agent | 2026-10-01 | — | Wave 5.8H — checklist cdd-01-08, no-narrative-only-finding rule; cdd-08 four-axis revenue quality |
