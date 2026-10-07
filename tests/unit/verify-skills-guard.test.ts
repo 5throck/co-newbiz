@@ -18,12 +18,12 @@ import { join } from "node:path";
 
 const SOURCE = readFileSync(join(import.meta.dirname, "../../scripts/verify-skills.ts"), "utf-8");
 
-test("generateSkillsIndex is gated — the only call site sits inside the isLegacyIndex guard", () => {
+test("generateSkillsIndex is gated — the only call site sits inside the regenerable guard (verify-skills 1.5.1, U-20261006-002)", () => {
   // exactly two occurrences: the function definition + one guarded call site.
   // A re-added unconditional call anywhere else breaks this count.
   const occurrences = SOURCE.match(/generateSkillsIndex\(/g) ?? [];
   expect(occurrences.length).toBe(2);
-  expect(SOURCE).toMatch(/if \(isLegacyIndex\) \{\s*await generateSkillsIndex\(checks\);/);
+  expect(SOURCE).toMatch(/if \(regenerable\) \{\s*await generateSkillsIndex\(checks\);/);
 });
 
 test("the gate keys off the SKILLS.md header — the hand-maintained lifecycle registry is never regenerated", () => {
