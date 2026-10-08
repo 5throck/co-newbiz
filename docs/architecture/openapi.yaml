@@ -437,6 +437,108 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/proposals:
+    get:
+      operationId: listDecisionProposals
+      summary: The caller's own decision proposals (Wave M M-2, ADR-0154).
+      tags:
+        - Tokens
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createDecisionProposal
+      summary: Record a decision PROPOSAL only; returns the confirm URL. Writes no decision (boundary #2). Needs the propose scope over OAuth.
+      tags:
+        - Tokens
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/proposals/{id}:
+    get:
+      operationId: getDecisionProposal
+      summary: Status of a decision proposal visible to the caller.
+      tags:
+        - Tokens
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/proposals/{id}/confirm:
+    get:
+      operationId: viewDecisionProposalConfirmation
+      summary: Human web session only — the proposal, AI-proposed RAG grade, and a single-use confirm nonce. Bearer tokens are refused.
+      tags:
+        - Tokens
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: confirmDecisionProposal
+      summary: Human web session only — runs the existing decision route in the caller's session and records the proposal as confirmed. Bearer tokens and agent identities are refused.
+      tags:
+        - Tokens
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/proposals/{id}/reject:
+    post:
+      operationId: rejectDecisionProposal
+      summary: Human web session only — decline a decision proposal; nothing is decided.
+      tags:
+        - Tokens
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/oauth/register:
     post:
       operationId: oauthRegisterClient

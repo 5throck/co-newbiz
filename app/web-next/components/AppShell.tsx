@@ -458,7 +458,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!me && pathname !== "/login" && pathname !== "/register") {
       // ADR-0154: an OAuth consent request must survive the login detour —
       // only same-origin /oauth/ paths are carried (login re-validates).
-      const next = pathname.startsWith("/oauth/") ? `${pathname}${window.location.search}` : null;
+      const next = pathname.startsWith("/oauth/") || pathname.startsWith("/proposals/") ? `${pathname}${window.location.search}` : null;
       router.replace(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
       return;
     }

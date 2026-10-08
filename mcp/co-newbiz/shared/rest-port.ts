@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * RestPort — the transport-neutral seam between MCP tool handlers and the
  * co-newbiz REST API (ADR-0154 §1, design 2026-10-08-wave-m-mcp-parity §3.1).
@@ -17,5 +17,7 @@ import type { Envelope } from "./rest-client.ts";
 export interface RestPort {
   get<T = unknown>(path: string): Promise<Envelope<T>>;
   post<T = unknown>(path: string, body?: unknown): Promise<Envelope<T>>;
+  put<T = unknown>(path: string, body?: unknown): Promise<Envelope<T>>;
+  patch<T = unknown>(path: string, body?: unknown): Promise<Envelope<T>>;
   delete<T = unknown>(path: string): Promise<Envelope<T>>;
 }

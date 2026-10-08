@@ -1,10 +1,11 @@
-// @version 1.2.0
+// @version 1.3.0
 /**
  * Process tools — ADR-0074 Process Meta Model Platform, ADR-0094
  * opportunity-keyed addressing. All thin REST wrappers (ADR-0011) over
  * /api/opportunities/**. Exposes the S2 opportunity funnel, S1-S11 stage
- * evaluation, gate decisions, and the S4 route decision to MCP clients
- * (Claude Desktop).
+ * evaluation, and gate decision history to MCP clients. Decisions are NEVER
+ * written from here (ADR-0154 §5, M-2): propose_* tools create proposals in
+ * decision-tools.ts and a human confirms them on the web.
  *
  * promote_opportunity removed — its /api/opportunities/:id/promote route
  * does not exist (promotion now happens through the opportunity lifecycle
@@ -44,22 +45,4 @@ export async function getProcessEvaluation(port: RestPort, opportunityId: string
 
 export async function listGateDecisions(port: RestPort, opportunityId: string) {
   return port.get(`/api/opportunities/${encodeURIComponent(opportunityId)}/gate-decisions`);
-}
-
-export async function recordGateDecision(port: RestPort, opportunityId: string, body: {
-  gate: string; decision: string; rationale: string; missing_artifacts?: string[]; learning_capture?: string;
-}) {
-  return port.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/gate-decisions`, body);
-}
-
-// ── Route decision (S4) ─────────────────────────────────────────────────
-
-export async function createRouteDecision(port: RestPort, opportunityId: string, body: {
-  track: string; sub_track?: string;
-  rationale: string; alternatives_considered?: string;
-  // S4 scoring is mandatory on both tracks (spec v2.2.0+, ADR-0104).
-  intent?: string;
-  scores?: Array<{ criterion: string; score: number; evidence_note: string }>;
-}) {
-  return port.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/route-decision`, body);
 }

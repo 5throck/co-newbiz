@@ -1,0 +1,116 @@
+# MCP coverage exclusions — Wave M (ADR-0154 §4, design 2026-10-08-wave-m-mcp-parity §5.3).
+#
+# Everything listed here is HUMAN-ONLY (boundary #2: gate approval, investment
+# decision, closure, and PMI kickoff belong to people). scripts/co-newbiz/
+# mcp-coverage.ts fails when any tool in the registry covers an excluded
+# activity, declares an excluded route, or matches a forbidden tool-name
+# pattern, and when the in-process route guard (HUMAN_ONLY_ROUTES in
+# app/web-next/lib/mcp/in-process-port.ts) does not refuse a listed route.
+#
+# kinds:
+#   activity     ref = flow.spec activity id; no tool may list it in stageActivities
+#   tool_pattern pattern = regex; no tool name may match
+#   route        route = "METHOD /api/path/{}"; no tool may declare a matching route
+#   body_action  route + field + value; every tool wrapping the route must refuse
+#                the value (blockedBodyValues) and the in-process guard must too
+#
+# `inprocess: false` marks routes the in-process port never loads at all (they
+# are absent from its route table), so no HUMAN_ONLY_ROUTES rule is required.
+version: 1
+exclusions:
+  - id: pmi-kickoff-activity
+    kind: activity
+    ref: pmi-kickoff
+    reason: PMI kickoff is a human act after IC approval (ADR-0100); no tool at all.
+  - id: closure-tools
+    kind: tool_pattern
+    pattern: "^(close_|reopen_|kickoff_|start_pmi|execute_|confirm_proposal|approve_proposal|reject_proposal)"
+    reason: Closure, PMI kickoff, and proposal confirmation have no tool (ADR-0152, ADR-0154 §5).
+  - id: project-close
+    kind: route
+    route: "POST /api/projects/{}/close"
+    reason: Typed closure is human-only (ADR-0152).
+  - id: project-close-patch
+    kind: route
+    route: "PATCH /api/projects/{}/close"
+    reason: Closure edits are human-only (ADR-0152).
+  - id: opportunity-close
+    kind: route
+    route: "POST /api/opportunities/{}/close"
+    reason: Opportunity closure is human-only (ADR-0152).
+  - id: pmi-kickoff-route
+    kind: route
+    route: "POST /api/projects/{}/pmi/kickoff"
+    reason: PMI kickoff is human-only; planning drafts use key-talent and synergy-certification.
+  - id: gate-decision-opportunity
+    kind: route
+    route: "POST /api/opportunities/{}/gate-decisions"
+    reason: Gate decisions execute from the confirm page in a human session (propose_gate_decision).
+  - id: gate-decision-project
+    kind: route
+    route: "POST /api/projects/{}/gate-decisions"
+    reason: Gate decisions execute from the confirm page in a human session (propose_gate_decision).
+  - id: route-decision
+    kind: route
+    route: "POST /api/opportunities/{}/route-decision"
+    reason: The route decision executes from the confirm page (propose_route_decision).
+  - id: case-adoption
+    kind: route
+    route: "POST /api/projects/{}/business-case/adopt"
+    reason: Case adoption executes from the confirm page (propose_case_adoption).
+  - id: target-selection
+    kind: route
+    route: "POST /api/projects/{}/target-selection"
+    reason: Target selection executes from the confirm page (propose_target_selection).
+  - id: transition-decision
+    kind: route
+    route: "POST /api/projects/{}/transition-decision"
+    reason: The transition decision executes from the confirm page (propose_transition_decision).
+  - id: charter-confirm
+    kind: route
+    route: "POST /api/projects/{}/charter/confirm"
+    reason: Charter baseline confirmation stamps a human_final review (propose_approval, subject charter_baseline).
+  - id: dd-checklist-judgment
+    kind: route
+    route: "PUT /api/projects/{}/dd-checklist/state"
+    reason: A checklist judgment stamps a human_final review (propose_approval, subject dd_checklist_judgment).
+  - id: four-axis-completion
+    kind: body_action
+    route: "POST /api/projects/{}/deal-structure"
+    field: action
+    value: complete_four_axis
+    reason: Four-axis completion stamps a human_final review (propose_approval, subject four_axis_completion).
+  - id: synergy-confirm
+    kind: route
+    route: "POST /api/opportunities/{}/synergy-confirm"
+    reason: The synergy score is an AI recommendation; its confirmation is the human act (boundary #2).
+  - id: synergy-confirm-withdraw
+    kind: route
+    route: "DELETE /api/opportunities/{}/synergy-confirm"
+    reason: Withdrawing a human confirmation is a human act.
+  - id: target-rerank
+    kind: route
+    route: "POST /api/brownfield/{}/targets/{}/rerank"
+    reason: Short List rank order is confirmed by a person, separate from the computed scores.
+  - id: waiver-decision
+    kind: route
+    route: "PATCH /api/projects/{}/waivers/{}"
+    reason: A waiver is a human-owned instrument; requests are filed, decisions are human.
+  - id: dd-tailor-review
+    kind: route
+    route: "PUT /api/projects/{}/dd-checklist/tailor/{}/review"
+    reason: Approving a proposed custom DD item is a human review.
+  - id: opportunity-promote
+    kind: route
+    route: "POST /api/opportunities/{}/promote"
+    reason: Promotion to a project is a human act.
+  - id: proposal-confirm
+    kind: route
+    route: "POST /api/proposals/{}/confirm"
+    inprocess: false
+    reason: Only a human web session confirms a proposal; an agent identity cannot (design §6.3).
+  - id: proposal-reject
+    kind: route
+    route: "POST /api/proposals/{}/reject"
+    inprocess: false
+    reason: Only a human web session acts on a proposal.

@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * REST client — the ONLY way this server touches co-newbiz data
  * (ADR-0011, FR-SYS-01, mcp-integration.md §1). No file in mcp/co-newbiz/**
@@ -78,6 +78,8 @@ async function call<T>(path: string, init: RequestInit, limiter: RateLimiter): P
 export const rest = {
   get: <T>(path: string) => call<T>(path, { method: "GET" }, readLimiter),
   post: <T>(path: string, body?: unknown) => call<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }, writeLimiter),
+  put: <T>(path: string, body?: unknown) => call<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }, writeLimiter),
+  patch: <T>(path: string, body?: unknown) => call<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }, writeLimiter),
   delete: <T>(path: string) => call<T>(path, { method: "DELETE" }, writeLimiter),
 };
 

@@ -14,7 +14,7 @@ un_structure_simulation✱ / get_structure_simulation_results over the structure
 
 Bearer API token (same token type as CLI access), scope-limited, hashed at rest. `mnpi_flag=true` projects are excluded from MCP tool responses **by default** — a scoped token with an explicit MNPI grant is required to override, and that access is itself logged to `data_access_log` and reflected in the project's `insider_list` (FR-SEC-06/SYS-02).
 
-**Role inheritance (ADR-0146).** The MCP server only relays HTTP calls with the bearer token, so every tool inherits the token owner's role. The write tools `create_opportunity`, `record_gate_decision`, and `create_route_decision` (`tools/process.ts`) therefore require an `analyst` token. `admin` accounts cannot issue write-scoped tokens (`POST /api/tokens` → 403 `role_forbidden`), and any admin token receives 403 `role_forbidden` on business routes (opportunities, brownfield, greenfield, companies, market-overview, synergy, our-company, archive, projects). Admin endpoints themselves remain never MCP-exposed (§3).
+**Role inheritance (ADR-0146).** The MCP server only relays HTTP calls with the bearer token, so every tool inherits the token owner's role. The write tools (for example `create_opportunity` and the S1-S12 stage tools in `tools/stage-tools.ts`) and the `propose_*` tools therefore require an `analyst` token. `admin` accounts cannot issue write-scoped tokens (`POST /api/tokens` → 403 `role_forbidden`), and any admin token receives 403 `role_forbidden` on business routes (opportunities, brownfield, greenfield, companies, market-overview, synergy, our-company, archive, projects). Admin endpoints themselves remain never MCP-exposed (§3).
 
 ## 3. Tool Catalog
 
@@ -62,6 +62,19 @@ Bearer API token (same token type as CLI access), scope-limited, hashed at rest.
 | `add_dd_finding` ✱ | Add a DD finding with `value_impact` |
 | `generate_report` ✱ | Trigger deliverable generation — subject to the staleness gate |
 | `export_report` | Export a generated report to docx/pdf/hwpx |
+
+### S1-S12 stage tools, proposals, and review (Wave M M-2, ADR-0154)
+
+The shared registry (`mcp/co-newbiz/registry.ts`) now advertises one tool set on both transports. Each tool is tagged with a scope (`read`, `write`, or `propose`) and a kind (`read`, `write`, `generate`, `review`, `propose`), wraps exactly one REST route through the `RestPort`, and lists the flow.spec activities (`stageActivities`) and required artifacts (`stageArtifacts`, `stage:S#:N`) it serves. `bun scripts/co-newbiz/mcp-coverage.ts` (run by the variant audit hook) fails when an activity or artifact has no tool.
+
+| Group | Tools |
+|---|---|
+| Stage writes and generation | `tools/stage-tools.ts` (market analysis, opportunity, synergy, capability, route draft, greenfield, candidates, screening, business case, DD records, deal structure, charter, establishment, PMI planning drafts, monitoring brief) |
+| Proposals (scope `propose`) | `propose_gate_decision`, `propose_route_decision`, `propose_case_adoption`, `propose_target_selection`, `propose_transition_decision`, `propose_approval` (subjects `charter_baseline`, `dd_checklist_judgment`, `four_axis_completion`); `get_proposal_status`, `list_my_proposals` |
+| Review | `request_review` (AI 1st), `request_ai_second_review`, `get_review_buckets` |
+| Deprecated aliases | `record_gate_decision` and `create_route_decision` create proposals and return the confirm URL on both transports; removed in the next release |
+
+A `propose_*` tool writes one `decision_proposal` row and returns `confirm_url` (`/proposals/{id}/confirm`). A human opens that page in their own web session, reviews the payload, review buckets, and RAG grade (optionally editing), and confirms; that session then runs the existing decision route, so the decider of record is the human. Proposals expire after 72 hours. When the client supports MCP elicitation the server also asks it to show the link; the reply is ignored and never decides anything. Closure and PMI kickoff have no tool at all, and the human-only routes listed in `scripts/co-newbiz/mcp-coverage.exclusions.yaml` are refused by the in-process port.
 
 **Explicitly never MCP-exposed**: user management, database administration, batch/schedule management, regulation/procedure authoring, master-data correction — all admin-console-only (design §4-11).
 
