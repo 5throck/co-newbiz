@@ -22,6 +22,7 @@
 import { getDb } from "../../db/client.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { appendAudit } from "../../db/lib/access-control.ts";
+import { deriveDataConfidence } from "../../db/lib/data-confidence.ts";
 import type { SizingMatrix } from "../../app/web-next/lib/market-sizing.ts";
 
 const SOURCE_DOC = "docs/research/hydraulic-breaker-market-2026-driver-analysis.md";
@@ -198,9 +199,10 @@ function main(): void {
     }
     const versionNo = (latest?.version_no ?? 0) + 1;
     const versionId = ulid();
+    const confidence = deriveDataConfidence(db, industry.id, (HYD_BRK_MATRIX as SizingMatrix).provenance ?? null);
     db.run(
-      `INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, changelog, created_by, created_at)
-       VALUES (?,?,?,?,?,?,?)`,
+      `INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, changelog, created_by, created_at, data_confidence_grade, chain_hops, confidence_basis)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
       [
         versionId,
         analysis.id,
@@ -209,6 +211,9 @@ function main(): void {
         `연구문서 시드 — 수동 조사 매트릭스를 정식 버전으로 영속화 (HYD-BRK 센티널 은퇴, ${SOURCE_DOC}; ADR-0112)`,
         "backfill-hyd-brk-report.ts",
         now,
+        confidence.grade,
+        confidence.chainHops,
+        confidence.basis,
       ],
     );
 

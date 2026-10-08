@@ -6,6 +6,7 @@
 // routes that call into this module.
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
+import { readRagView } from "../../../db/lib/rag-service.ts";
 import { getCurrentRouteDecision } from "../../../db/repositories/route-decision.repository.ts";
 import { listBusinessCases, latestAdoption } from "./business-case.ts";
 import { parseGapRegister, summarizeGap } from "./capability-gap.ts";
@@ -231,17 +232,16 @@ function dealSummary(db: Database, projectId: string): string {
 }
 
 function ragSummary(db: Database, projectId: string): string {
-  const rows = db
-    .query(
-      `SELECT dimension, grade, rationale FROM (
-         SELECT dimension, grade, rationale,
-                ROW_NUMBER() OVER (PARTITION BY dimension ORDER BY assessed_at DESC, id DESC) AS rn
-         FROM rag_assessment WHERE project_id = ?
-       ) WHERE rn = 1`,
-    )
-    .all(projectId) as Array<{ dimension: string; grade: string; rationale: string }>;
-  if (rows.length === 0) return "RAG 제안: 없음";
-  return rows.map((r) => `- ${r.dimension}: ${r.grade}${r.rationale ? ` — ${r.rationale.slice(0, 120)}` : ""}`).join("\n") + " (AI 제안 — 승인 아님)";
+  const view = readRagView(db, projectId);
+  const rows = Object.entries(view.dimensions);
+  if (rows.length === 0) return "RAG 제안: 없음 (미산정)";
+  const lines = rows.map(([dim, r]) => `- ${dim}: ${r!.grade}${r!.rationale ? ` — ${r!.rationale.slice(0, 120)}` : ""}`);
+  lines.push(
+    view.status === "graded"
+      ? `- 종합: ${view.overall!.grade}`
+      : `- 종합: 미산정 — 미평가 차원 ${view.missing_dimensions.join(", ")} (색상 없음)`,
+  );
+  return lines.join("\n") + " (AI 제안 — 승인 아님)";
 }
 
 function priorGates(db: Database, projectId: string, gates: string[]): string {

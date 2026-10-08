@@ -67,14 +67,15 @@ function seedOpportunity(name: string, completeS1S3: boolean): string {
   const id = ulid();
   db.run(
     `INSERT INTO opportunity (id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
-       attractiveness_score, synergy_score, rationale, status, created_by, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+       attractiveness_score, synergy_score, rationale, status, created_by, created_at, capability_gap_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
-      id, name, "테스트 산업", completeS1S3 ? "크랭크샤프트" : null,
+      id, name, completeS1S3 ? "테스트 산업" : "미분석 산업", completeS1S3 ? "크랭크샤프트" : null,
       completeS1S3 ? 5000 : null, completeS1S3 ? 8.0 : null,
       completeS1S3 ? 80 : null, completeS1S3 ? 70 : null,
       completeS1S3 ? "전략적 적합성 근거" : null,
       completeS1S3 ? "selected" : "identified", ANALYST, NOW,
+      completeS1S3 ? JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", source: "manual", resolution: "hire" }], updatedAt: NOW }) : null,
     ],
   );
   return id;
@@ -90,7 +91,7 @@ function seedGreenfieldAssessment(opportunityId: string): void {
   // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서 센다.
   db.run(
     "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
-    [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }), opportunityId],
+    [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", source: "manual", resolution: "hire" }], updatedAt: NOW }), opportunityId],
   );
 }
 
@@ -135,6 +136,17 @@ beforeAll(async () => {
   );
   companyId = ulid();
   db.run("INSERT INTO md_company (id, name_ko, name_en, created_at) VALUES (?,?,?,?)", [companyId, "테스트 계열사", "Test Co", NOW]);
+  // Wave F-6: S1 now requires a completed sizing matrix with a recorded
+  // data-confidence grade (flow.spec S1 criterion 3) for non-grandfathered opportunities.
+  const analysisId = ulid();
+  db.run(
+    "INSERT INTO market_sizing_analysis (id, industry_id, status, current_step, methodology_version, created_by, created_at, completed_at) VALUES (?,?,?,?,?,?,?,?)",
+    [analysisId, industryId, "completed", 8, "test", "test", NOW, NOW],
+  );
+  db.run(
+    "INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, created_by, created_at, data_confidence_grade, chain_hops) VALUES (?,?,?,?,?,?,?,?)",
+    [ulid(), analysisId, 1, JSON.stringify({ matrix: { competitive: { concentration: "moderate", key_players: ["A"] } } }), "test", NOW, "B", 0],
+  );
 });
 
 afterAll(() => {

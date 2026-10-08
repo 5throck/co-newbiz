@@ -1740,6 +1740,68 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/pmi/kickoff:
+    get:
+      operationId: getPmiKickoff
+      summary: S11 PMI kickoff — whether the project's Brownfield route requires it (M&A/JV/strategic investment) and the latest human-recorded kickoff (owner, plan baseline).
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordPmiKickoff
+      summary: Record the S11 PMI kickoff (owner + integration plan baseline). Analyst+, human only (recorded_by is the session user; agents rejected); append-only; audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/rag/recompute:
+    post:
+      operationId: recomputeProjectRag
+      summary: Explicit, idempotent recompute of the AI-PROPOSED RAG (Wave F-5) — unchanged persisted inputs write nothing; the data-confidence grade (S1 sizing) caps the proposal. Analyst+; never records a gate decision (boundary #2); audited.
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/pmi/key-talent:
     get:
       operationId: listPmiKeyTalent

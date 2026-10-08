@@ -312,6 +312,18 @@ export interface RagEvaluationInput {
   technicalGrade?: RagGrade;
   riskGrade?: RagGrade;
   killCriteriaTriggered?: boolean;
+  /**
+   * Grades for the two dimensions whose raw inputs are not persisted (DSCR and
+   * the regulatory remedy facts) carried forward from the last assessment that
+   * DID have them (Wave F-5 web recompute — it must not erase a grade a CLI or
+   * agent scenario supplied). A carried grade counts as assessed; its
+   * rationale says it is carried. Fresh `financial` / `regulatory` inputs
+   * always win over a carried grade.
+   */
+  carried?: {
+    financial?: { grade: RagGrade; rationale: string };
+    regulatory_permit?: { grade: RagGrade; rationale: string; remedyShape?: "structural" | "behavioral" | "none" };
+  };
 }
 
 export interface DimensionAssessment {
@@ -375,6 +387,8 @@ export function evaluateRag(input: RagEvaluationInput): RagEvaluation {
   } else if (input.financial) {
     const f = financialBand(input.financial);
     dims.push({ dimension: "financial", grade: f.grade, assessed: true, rationale: f.rationale });
+  } else if (input.carried?.financial) {
+    dims.push({ dimension: "financial", grade: input.carried.financial.grade, assessed: true, rationale: input.carried.financial.rationale });
   } else {
     dims.push({
       dimension: "financial",
@@ -400,6 +414,9 @@ export function evaluateRag(input: RagEvaluationInput): RagEvaluation {
   if (input.regulatory) {
     const r = regulatoryPermitGrade(input.regulatory);
     dims.push({ dimension: "regulatory_permit", grade: r.grade, remedyShape: r.remedyShape, assessed: true, rationale: r.rationale });
+  } else if (input.carried?.regulatory_permit) {
+    const c = input.carried.regulatory_permit;
+    dims.push({ dimension: "regulatory_permit", grade: c.grade, remedyShape: c.remedyShape, assessed: true, rationale: c.rationale });
   } else {
     dims.push({ dimension: "regulatory_permit", grade: "amber", assessed: false, rationale: "Regulatory/Permit dimension not yet assessed (display default only; does not count toward an overall grade)." });
   }
@@ -452,6 +469,18 @@ export interface AssessRunOptions {
    */
   previousIrrOverHurdlePp?: number | null;
   now: string;
+  /**
+   * Wave F-5 (design 2026-10-08-wave-f-process-closure-design.md §5): when
+   * true, the data-confidence grade — when genuinely assessed — is an
+   * IMMEDIATE ceiling on the recorded overall grade. The cap can pull a
+   * grade DOWN the moment confidence worsens (bypassing hysteresis' 7-day
+   * hold, which exists to stop flapping, never to prop up a grade above
+   * what the data supports — boundary #4), and can never push it up.
+   * computeOverall already enforces this structurally for complete
+   * assessments; this flag closes the hysteresis gap for WEB recompute only
+   * (the CLI keeps its historic semantics with the flag unset).
+   */
+  enforceConfidenceCeiling?: boolean;
 }
 
 export interface AssessRunResult extends RagEvaluation {
@@ -514,6 +543,20 @@ export function assessRun(db: Database, options: AssessRunOptions): AssessRunRes
     now: options.now,
   });
 
+  // Boundary #4 immediate ceiling (Wave F-5): the recorded grade of record
+  // may sit BELOW the confidence ceiling (other dimensions pulled it down)
+  // but never ABOVE it. Demotion by the cap is immediate — hysteresis exists
+  // to stop flapping between like-for-like bands, never to delay a
+  // confidence downgrade; promotion is untouched (the cap only ever lowers).
+  const confidenceCeiling = evaluation.dimensions.find((d) => d.dimension === "data_confidence" && d.assessed)?.grade;
+  const GRADE_ORDER: Record<RagGrade, number> = { green: 2, amber: 1, red: 0 };
+  let gradeOfRecord = hyst.grade;
+  let capNote = "";
+  if (options.enforceConfidenceCeiling && confidenceCeiling && GRADE_ORDER[hyst.grade] > GRADE_ORDER[confidenceCeiling]) {
+    gradeOfRecord = confidenceCeiling;
+    capNote = ` Data-confidence cap applied immediately: recorded grade lowered ${hyst.grade} -> ${confidenceCeiling} (boundary #4 — never held above what the data supports).`;
+  }
+
   // The overall row carries the POST-hysteresis grade — the grade of record.
   db.run(
     "INSERT INTO rag_assessment (id, run_id, project_id, dimension, grade, remedy_shape, triggered_rules, rationale, assessed_at) VALUES (?,?,?,?,?,?,?,?,?)",
@@ -522,33 +565,33 @@ export function assessRun(db: Database, options: AssessRunOptions): AssessRunRes
       options.runId,
       options.projectId,
       "overall",
-      hyst.grade,
+      gradeOfRecord,
       null,
       "[]",
-      `${evaluation.overall.rationale} ${hyst.rationale}`,
+      `${evaluation.overall.rationale} ${hyst.rationale}${capNote}`,
       options.now,
     ],
   );
 
   let transition: AssessRunResult["transition"] = null;
-  if (prev && prev.grade !== hyst.grade) {
+  if (prev && prev.grade !== gradeOfRecord) {
     db.run(
       "INSERT INTO rag_transition (id, project_id, from_grade, to_grade, run_id, at, reason, notified) VALUES (?,?,?,?,?,?,?,0)",
-      [ulid(), options.projectId, prev.grade, hyst.grade, options.runId, options.now, hyst.rationale],
+      [ulid(), options.projectId, prev.grade, gradeOfRecord, options.runId, options.now, `${hyst.rationale}${capNote}`],
     );
-    transition = { from: prev.grade, to: hyst.grade };
+    transition = { from: prev.grade, to: gradeOfRecord };
   } else if (!prev) {
     db.run(
       "INSERT INTO rag_transition (id, project_id, from_grade, to_grade, run_id, at, reason, notified) VALUES (?,?,NULL,?,?,?,?,0)",
-      [ulid(), options.projectId, hyst.grade, options.runId, options.now, "Initial assessment — no prior grade."],
+      [ulid(), options.projectId, gradeOfRecord, options.runId, options.now, `Initial assessment — no prior grade.${capNote}`],
     );
-    transition = { from: null, to: hyst.grade };
+    transition = { from: null, to: gradeOfRecord };
   }
 
   return {
     ...evaluation,
-    recordedOverall: hyst.grade,
-    hysteresisRationale: hyst.rationale,
+    recordedOverall: gradeOfRecord,
+    hysteresisRationale: `${hyst.rationale}${capNote}`,
     transition,
   };
 }

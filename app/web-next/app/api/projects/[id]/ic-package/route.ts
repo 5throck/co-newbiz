@@ -4,15 +4,20 @@
 // checklist completion + findings), the AI-PROPOSED RAG grade (explicitly
 // labeled a proposal — boundary #2, with the data-confidence cap that bounds
 // it, boundary #4), the entity_ic/group_ic gate history, and the
-// establishment progress (0070 project key). This route writes NOTHING —
-// gate records stay human authority, so there is no POST/PUT here at all.
+// establishment progress (0070 project key). This route never writes a gate
+// record (those stay human authority — no POST/PUT here at all). The ONE write
+// it may make is the lazy RAG recompute (Wave F-5): when the persisted inputs
+// changed since the last web assessment it appends rag_assessment rows — a
+// derived AI PROPOSAL, performed as the calling user (boundary #1).
 // Deny-by-default: getProjectIfVisible via visibleProject — non-members get
 // 404 (FR-SEC-01); admins are excluded by role separation.
 import { getDb } from "../../../../../../../db/client.ts";
+import { readRagView, recomputeRag } from "../../../../../../../db/lib/rag-service.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { latestAdoption, listBusinessCases, type BusinessCaseView } from "../../../../../lib/business-case.ts";
 import { establishmentProgress, listEstablishmentSteps } from "../../../../../lib/establishment.ts";
-import { latestGateDecisions, type GateId, type GateVerdict } from "../../../../../lib/process-flow.ts";
+import { latestGateDecisions, latestRouteDecision, type GateId, type GateVerdict } from "../../../../../lib/process-flow.ts";
+import { latestPmiKickoff, pmiKickoffApplies } from "../../../../../lib/pmi-kickoff.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { ddCompletionSummary, type DdCompletionSummary, type FindingRow } from "../../../../../lib/dd-checklist-tailor.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
@@ -21,21 +26,6 @@ import { financingTotals, listFinancingEntries } from "../../../../../../../db/r
 
 const IC_GATES: GateId[] = ["entity_ic", "group_ic"];
 const TOP_FINDINGS = 10;
-
-/** Latest rag_assessment row per dimension — the AI-proposed grades (never a
- * human confirmation; the gate records are the only human ledger, ADR-0094). */
-function latestRag(projectId: string): Map<string, { grade: string; rationale: string; assessed_at: string }> {
-  const rows = getDb()
-    .query(
-      `SELECT dimension, grade, rationale, assessed_at FROM (
-         SELECT dimension, grade, rationale, assessed_at,
-                ROW_NUMBER() OVER (PARTITION BY dimension ORDER BY assessed_at DESC, id DESC) AS rn
-         FROM rag_assessment WHERE project_id = ?
-       ) WHERE rn = 1`,
-    )
-    .all(projectId) as Array<{ dimension: string; grade: string; rationale: string; assessed_at: string }>;
-  return new Map(rows.map((r) => [r.dimension, { grade: r.grade, rationale: r.rationale, assessed_at: r.assessed_at }]));
-}
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -76,10 +66,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   // RAG — the AI-proposed overall grade, labeled a proposal, with the
   // data_confidence grade that caps it (boundary #4: a capped estimate can
-  // never read as Green regardless of the financials).
-  const rag = latestRag(id);
-  const overall = rag.get("overall");
-  const confidence = rag.get("data_confidence");
+  // never read as Green regardless of the financials). Recomputed lazily when
+  // the persisted inputs changed (stale read); an incomplete assessment has NO
+  // overall grade and is reported "not_graded" — never a default color.
+  try {
+    recomputeRag(db, id, "ic_package", { actor: auth.auth.userId });
+  } catch (err) {
+    console.error(`ic-package: rag recompute failed for ${id}: ${(err as Error).message}`);
+  }
+  const rag = readRagView(db, id);
+  const overall = rag.overall;
+  const confidence = rag.dimensions.data_confidence;
 
   // Gate history — entity_ic and group_ic on the project entity only.
   const latest = latestGateDecisions("project", id);
@@ -114,10 +111,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         : { adopted: null, adoption, note: "채택(adopt)된 Business Case가 없습니다 — Entity IC 심사 전 S8 채택이 필요합니다." },
       dd: { completion, findings, finding_count: findings.length },
       rag: {
-        grade: overall?.grade ?? null,
+        status: rag.status,
+        grade: overall?.grade ?? null, // null = not graded (never a default color)
         isProposal: true, // boundary #2 — AI 제안일 뿐, 승인 기록이 아니다
         rationale: overall?.rationale ?? null,
-        assessed_at: overall?.assessed_at ?? null,
+        assessed_at: overall?.assessed_at ?? rag.assessed_at,
+        missing_dimensions: rag.missing_dimensions,
         confidence_cap: confidence?.grade ?? null,
         confidence_note: confidence
           ? `데이터 신뢰도 등급(${confidence.grade})이 전체 등급 상한을 규정합니다 — 2-hop 프록시 추정은 재무가 좋아도 Green일 수 없습니다.`
@@ -143,6 +142,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           financing: { entries: listFinancingEntries(id, db), totals },
           balanced: totals.balanced,
         };
+      })(),
+      // S11 PMI kickoff (Wave F-6) — brownfield M&A/JV/strategic only.
+      pmi_kickoff: (() => {
+        const p = db.query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?").get(id) as
+          | { track: string | null; source_opportunity_id: string | null }
+          | undefined;
+        const sub = p?.source_opportunity_id ? (latestRouteDecision(p.source_opportunity_id)?.sub_track ?? null) : null;
+        return { applies: pmiKickoffApplies(p?.track ?? null, sub), sub_track: sub, record: latestPmiKickoff(db, id) };
       })(),
       establishment: (() => {
         const steps = listEstablishmentSteps(id);

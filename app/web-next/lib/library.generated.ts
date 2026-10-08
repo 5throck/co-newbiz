@@ -576,6 +576,20 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "lang": "en"
   },
   {
+    "id": "rb-rag-host-scheduler-ko",
+    "category": "runbook",
+    "title": "런북 — RAG 신선도 재산출(호스트 스케줄러)",
+    "file": "docs/runbooks/rag-host-scheduler_ko.md",
+    "lang": "ko"
+  },
+  {
+    "id": "rb-rag-host-scheduler",
+    "category": "runbook",
+    "title": "Runbook — RAG Staleness Recompute (Host Scheduler)",
+    "file": "docs/runbooks/rag-host-scheduler.md",
+    "lang": "en"
+  },
+  {
     "id": "rb-deployment-ko",
     "category": "runbook",
     "title": "런북 — 배포",
@@ -1607,6 +1621,22 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "docs/security/security-baseline.md",
     "lang": "en",
     "content": "---\nlang: en\ncounterpart: security-baseline_ko.md\n---\n\n# Security Baseline — co-newbiz\n\n**Owner**: security-engineer\n**Design of record**: design v1.0 §4-12 (task 4.5), `docs/security/security-model.md`\n**Status**: Stage 5 — executable and first-executed Wave 5.9. §1's weekly dependency/secrets scan (`gitleaks detect`, 0 leaks across 98 commits) and §1's quarterly threat-model refresh (`docs/security/security-model.md` §8, re-walked against every schema/API change through Wave 5.7A) both ran for real this wave, not only documented as intent. The remaining Stage-5-marked rows (monthly/annual cadence items, scheduler-dependent) activate on their own calendar per `docs/governance/ops-cadence.md` and are not yet due for a first real execution.\n\n## 1. Recurring Cadence (Reuses `docs/governance/ops-cadence.md` §1's Table Structure)\n\n| Cadence | Task | Owner |\n|---|---|---|\n| Weekly | Dependency vulnerability scan (`security-scan` skill), secrets scan (gitleaks), false-positive alert review | security-engineer |\n| Monthly | Access-permission review (who has membership on which projects, is it still justified) | security-engineer, compliance-officer |\n| Quarterly | Threat model refresh (`docs/security/security-model.md` STRIDE matrix re-walked against any schema/API changes since last review), DR drill | security-engineer, platform-lead |\n| On every dependency bump | CVE check before merge | release-engineer |\n| On every schema change touching §9 tables (`docs/architecture/db-schema.md`) | Security review required before merge — not optional for information-protection tables specifically | security-engineer + data-architect joint sign-off |\n\n## 2. Pre-Deployment Gate\n\n- `security-scan` — 0 Critical findings required to proceed (design §12 verification item).\n- `stride-threat-matrix` — re-run against the STRIDE matrix in `docs/security/security-model.md` §2 for any change touching a trust boundary.\n- `sarif-exporter` — findings exported in SARIF for tracking.\n- Secrets: no API key ever committed; `.env`/`.env.sample` split enforced by the workspace's existing pre-commit hook.\n\n## 3. Vulnerability Management\n\n- Dependency updates tracked via the workspace's `update-bun-packages` tooling, applied on the weekly cadence above.\n- A Critical/High CVE with no available patch triggers an immediate risk-acceptance decision by security-engineer, recorded (not silently deferred).\n\n## 4. Access Control Review\n\n- Monthly: every active `project_member` row cross-checked against whether the person still has an active need — stale memberships revoked, not left to expire passively.\n- `wall_group` assignments reviewed for continued relevance (e.g. a since-resolved conflict of interest).\n- Admin-role holders list reviewed quarterly — admin count should stay minimal by design, not grow by default.\n\n## 5. Incident Response\n\n1. `sre` triages and classifies severity (reused from `docs/governance/ops-cadence.md` context, since incident response spans both operational and security concerns).\n2. If the incident touches an `mnpi_flag=true` project, `data_access_log` and `insider_list` records become part of the incident record — not an afterthought.\n3. Post-incident analysis mandatory for any production security incident; findings feed the quarterly threat-model refresh.\n4. A security incident affecting the audit log's integrity (however unlikely, given append-only enforcement) is treated as Critical-severity by default, given the log's role as the system's accountability backbone.\n\n## 6. Webhook and Outbound Payload Review\n\n- Webhook payloads (RAG-transition alerts, batch-failure notifications) reviewed to ensure no sensitive financial figures or compensation data are included — summary-level content only, detail requires an authenticated follow-up API call.\n\n## 7. Related\n\n- `docs/security/security-model.md` — the threat model this baseline operationally sustains\n- `docs/governance/ops-cadence.md` — the broader operating rhythm this baseline's cadence is embedded within\n"
+  },
+  "rb-rag-host-scheduler-ko": {
+    "id": "rb-rag-host-scheduler-ko",
+    "category": "runbook",
+    "title": "런북 — RAG 신선도 재산출(호스트 스케줄러)",
+    "file": "docs/runbooks/rag-host-scheduler_ko.md",
+    "lang": "ko",
+    "content": "---\nlang: ko\nlang_reason: source-material\ncounterpart: rag-host-scheduler.md\n---\n\n# 운영 절차서 — RAG 신선도 재산출 (호스트 스케줄러 인계)\n\n담당: infra-automation-engineer. 대상: 운영자. Wave F-5 (설계 `2026-10-08-wave-f-process-closure` §5).\n\n## 목적\n\n웹 앱은 RAG 제안 등급을 필요할 때 다시 계산합니다: IC 게이트의 진행 브리프를 만들 때와 IC 패키지를 읽을 때마다 (`db/lib/rag-service.ts` `recomputeRag`). 아무도 열지 않은 프로젝트는 오래된 제안이 그대로 남습니다. 운영 컨테이너에는 의도적으로 스케줄러가 없으므로, 신선도 점검은 호스트에서 실행합니다.\n\n## 실행 명령\n\n```\nbun scripts/co-newbiz/rag.ts --stale [--db-path <경로>]\n```\n\n모든 프로젝트를 돌며 `recomputeRag(..., \"stale_read\")`를 호출합니다. 입력이 바뀌지 않았으면 아무것도 쓰지 않고 `unchanged`로 보고합니다. 실행 주체는 `cli:watch-cycle`(계정이 아닌 표식)입니다.\n\n## 권장 주기\n\n하루 한 번(예: 오전 6시). 등급 유지 기간이 7일이라 더 자주 돌려도 얻는 정보가 없습니다.\n\n## 확인 기준\n\n1. 데이터베이스 사본에 한 번 실행해 `error`가 없는지 확인합니다.\n2. 두 번째 실행에서 `unchanged`/`nothing_to_assess`만 나오는지 확인합니다.\n3. `gate_decision`·`approval`·`venture_transition_decision`에 기록이 생기지 않았는지 확인합니다 (이 작업은 등급을 제안만 합니다).\n\n## 경계\n\n등급은 제안입니다. 데이터 신뢰도가 상한을 정합니다. 평가가 미완이면 종합 등급이 없고 화면에는 \"미산정\"으로 표시됩니다.\n"
+  },
+  "rb-rag-host-scheduler": {
+    "id": "rb-rag-host-scheduler",
+    "category": "runbook",
+    "title": "Runbook — RAG Staleness Recompute (Host Scheduler)",
+    "file": "docs/runbooks/rag-host-scheduler.md",
+    "lang": "en",
+    "content": "---\nlang: en\ncounterpart: rag-host-scheduler_ko.md\n---\n\n# Runbook — RAG Staleness Recompute (Host Scheduler Handoff)\n\nOwner: infra-automation-engineer. Audience: operators. Wave F-5 (design `2026-10-08-wave-f-process-closure` §5).\n\n## What and why\n\nThe web app recomputes the proposed RAG grade lazily: on gate-brief generation for the IC gates and on every IC-package read (`db/lib/rag-service.ts` `recomputeRag`). A project nobody opens therefore keeps an old proposal. The production container has **no scheduler by design**; the staleness pass is a host-level job.\n\n## The job\n\n```\nbun scripts/co-newbiz/rag.ts --stale [--db-path <path>]\n```\n\nWalks every project and calls `recomputeRag(..., \"stale_read\")`. It is idempotent: an unchanged input set (stage gate, S1 data-confidence grade, carried dimension grades, IRR margin) writes nothing and reports `unchanged`. Output is JSON, one entry per project (`assessed | unchanged | nothing_to_assess | error`). The run is attributed to `cli:watch-cycle` (a label, not an account — agents have no accounts).\n\n## Suggested cadence\n\nDaily (e.g. 06:00 local) via launchd (macOS) or a systemd timer. Hysteresis holds a grade at least 7 days, so a more frequent cadence adds no information.\n\n## Acceptance\n\n1. Run once manually against a copy of the database; confirm no `error` entries.\n2. Run twice; the second run reports only `unchanged`/`nothing_to_assess`.\n3. Confirm no `gate_decision`, `approval`, or `venture_transition_decision` row was written (the job proposes grades only).\n\n## Boundaries\n\nThe grade is a proposal. Data confidence caps it (an unverified LLM estimate never reads Green; a two-statistical-hop chain reads Red). An incomplete assessment produces no overall grade and the UI shows \"not graded\".\n"
   },
   "rb-deployment-ko": {
     "id": "rb-deployment-ko",

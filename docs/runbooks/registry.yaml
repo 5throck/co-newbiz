@@ -52,6 +52,16 @@ entries:
       ko: docs/runbooks/backup-restore_ko.md
     status: active
 
+  - id: rb-rag-host-scheduler
+    layer: runbook
+    title: "Runbook — RAG Staleness Recompute (Host Scheduler Handoff)"
+    audience: operators, infra-automation-engineer
+    owner: infra-automation-engineer
+    files:
+      en: docs/runbooks/rag-host-scheduler.md
+      ko: docs/runbooks/rag-host-scheduler_ko.md
+    status: active
+
   # ── Guidelines ───────────────────────────────────────────────────────────
   - id: gdl-evidence-file-policy
     layer: guideline

@@ -5,6 +5,7 @@
 // nothing persisted.
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
+import { recomputeRag } from "../../../../../../../db/lib/rag-service.ts";
 import {
   buildGateContext,
   gateManifest,
@@ -34,6 +35,16 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const db = getDb();
 
   const manifest = gateManifest("project", gate)!;
+  // Gate-package assembly refreshes the RAG proposal first (Wave F-5) so the
+  // brief reads the current assessment, not a stale or empty table. Only the
+  // IC gates carry a RAG artifact in their manifest.
+  if (gate === "entity_ic" || gate === "group_ic") {
+    try {
+      recomputeRag(db, id, "gate_brief", { actor: ctx.userId });
+    } catch (err) {
+      console.error(`gate-brief: rag recompute failed for ${id}: ${(err as Error).message}`);
+    }
+  }
   const context = buildGateContext(db, "project", id, gate);
 
   let brief;

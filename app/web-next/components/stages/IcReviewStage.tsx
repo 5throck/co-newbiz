@@ -31,7 +31,8 @@ interface IcPackage {
     findings: Array<{ id: string; category: string; description: string; value_impact: number | null; evidence_ref: string | null }>;
     finding_count: number;
   };
-  rag: { grade: string | null; isProposal: true; rationale: string | null; assessed_at: string | null; confidence_cap: string | null; confidence_note: string | null };
+  rag: { status: "graded" | "not_graded"; grade: string | null; isProposal: true; rationale: string | null; assessed_at: string | null; missing_dimensions: string[]; confidence_cap: string | null; confidence_note: string | null };
+  pmi_kickoff: { applies: boolean; sub_track: string | null; record: { id: string; recordedBy: string; recordedAt: string; owner: string; planNote: string } | null };
   gates: {
     latest: Array<{ gate: string; decision: "go" | "hold" | "kill" | null; rationale: string | null; missing_artifacts: string[] | null }>;
     history: Array<{ id: string; gate: string; decision: string; rationale: string; decided_by: string; decided_at: string }>;
@@ -86,6 +87,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   const [form, setForm] = useState<{ step_no: number; status: string; evidence_url: string; note: string }>({
     step_no: 1, status: "done", evidence_url: "", note: "",
   });
+  const [pmiForm, setPmiForm] = useState<{ owner: string; plan_note: string }>({ owner: "", plan_note: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -123,6 +125,27 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
       })();
     }, {
       body: "설립 실행 단계 상태를 기록합니다. 이 기록은 담당자(owner)가 확인한 실행 증적이며, 에이전트가 대신 완료 처리할 수 없습니다.",
+      confirmLabel: "기록",
+    });
+  }
+
+  function recordKickoff() {
+    confirm("PMI 킥오프 기록", () => {
+      void (async () => {
+        setBusy(true); setError(null);
+        try {
+          await api.post(`/api/projects/${encodeURIComponent(projectId)}/pmi/kickoff`, pmiForm);
+          setNotice("PMI 킥오프가 기록되었습니다.");
+          setPmiForm({ owner: "", plan_note: "" });
+          load();
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "PMI 킥오프 기록 실패");
+        } finally {
+          setBusy(false);
+        }
+      })();
+    }, {
+      body: "통합 책임자와 통합 계획 기준선을 기록합니다. 이 기록은 사람이 확인한 PMI 킥오프이며, 에이전트가 대신 기록할 수 없습니다.",
       confirmLabel: "기록",
     });
   }
@@ -237,7 +260,24 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               )}
             </p>
           ) : (
-            <p className="text-[0.82rem] text-[color:var(--muted-fg)]">RAG 종합 평가 기록이 없습니다 — 실사 데이터가 채워지면 자동 제안됩니다.</p>
+            // Incomplete assessment: NO overall grade and NO color — "not graded"
+            // is a distinct outcome, never a default Amber.
+            <p className="text-[0.82rem]">
+              <span className="status-chip status-not-started">○ 미산정 (not graded)</span>
+              <span className="status-chip status-amber ml-2" title="경계 #2 — 이 평가는 AI 분석이 제안한 값이며, IC 승인 기록이 아닙니다">
+                ⚠ AI 제안 (승인 아님)
+              </span>
+              {pkg?.rag.confidence_cap && (
+                <span className="status-chip status-not-started ml-1" title={pkg.rag.confidence_note ?? ""}>
+                  신뢰도 상한 {pkg.rag.confidence_cap}
+                </span>
+              )}
+              <span className="block text-[0.75rem] text-[color:var(--muted-fg)] mt-1">
+                {pkg?.rag.missing_dimensions?.length
+                  ? `종합 등급을 낼 수 없습니다 — 미평가 차원: ${pkg.rag.missing_dimensions.join(", ")}. 여섯 차원이 모두 평가되어야 종합 등급이 산정됩니다 (빨강 신호는 예외로 즉시 표시).`
+                  : "RAG 평가 기록이 없습니다 — 입력이 채워지면 자동 제안됩니다."}
+              </span>
+            </p>
           )}
         </section>
 
@@ -315,6 +355,55 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             </form>
           )}
         </section>
+
+        {/* ── PMI 킥오프 (brownfield M&A·JV·전략적 투자) ─────────────── */}
+        {pkg?.pmi_kickoff.applies && (
+          <section className="market-section sizing-step mt-3" aria-label="PMI 킥오프">
+            <h3 className="sizing-step-title text-[0.95rem]">
+              <span className="sizing-step-badge">🤝</span> PMI 킥오프 — Brownfield 통합 계획 기준선
+            </h3>
+            {pkg.pmi_kickoff.record ? (
+              <p className="text-[0.82rem]">
+                <span className="status-chip status-green">● 킥오프 기록됨</span>
+                <span className="block text-[0.78rem] mt-1">통합 책임자 {pkg.pmi_kickoff.record.owner} · 기록자 {pkg.pmi_kickoff.record.recordedBy} · {pkg.pmi_kickoff.record.recordedAt.slice(0, 10)}</span>
+                <span className="block text-[0.75rem] text-[color:var(--muted-fg)] mt-1">{pkg.pmi_kickoff.record.planNote}</span>
+              </p>
+            ) : (
+              <p className="text-[0.82rem]">
+                <span className="status-chip status-amber">○ 킥오프 미기록</span>
+                <span className="block text-[0.75rem] text-[color:var(--muted-fg)] mt-1">S11 완료에는 사람이 기록한 PMI 킥오프(통합 책임자·계획 기준선)가 필요합니다.</span>
+              </p>
+            )}
+            {canAct && (
+              <form className="sizing-new-form mt-2" aria-label="PMI 킥오프 기록" onSubmit={(e) => { e.preventDefault(); recordKickoff(); }}>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="text-[0.78rem] min-w-[10rem]">
+                    <span className="block mb-1">통합 책임자 (필수)</span>
+                    <input
+                      value={pmiForm.owner}
+                      onChange={(e) => setPmiForm({ ...pmiForm, owner: e.target.value })}
+                      className="sizing-new-input w-full"
+                      required
+                    />
+                  </label>
+                  <label className="text-[0.78rem] flex-1 min-w-[16rem]">
+                    <span className="block mb-1">통합 계획 기준선 (필수, 20자 이상)</span>
+                    <input
+                      value={pmiForm.plan_note}
+                      onChange={(e) => setPmiForm({ ...pmiForm, plan_note: e.target.value })}
+                      className="sizing-new-input w-full"
+                      required
+                      minLength={20}
+                    />
+                  </label>
+                </div>
+                <button type="submit" className="btn-ghost btn-sm mt-2" disabled={busy}>
+                  {busy ? "기록 중..." : "킥오프 기록 (확인 필요)"}
+                </button>
+              </form>
+            )}
+          </section>
+        )}
 
         {/* ── 의사결정 ×2 ─────────────────────────────────────────── */}
         <div className="mt-4">
