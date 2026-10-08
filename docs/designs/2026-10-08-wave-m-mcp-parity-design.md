@@ -1,6 +1,6 @@
 ---
 title: Wave M — MCP Parity (remote transport, OAuth 2.1, full-stage tools, proposal-only decisions)
-status: approved
+status: implemented
 date: 2026-10-08
 owner: platform-lead
 contributors: security-engineer (threat model review), backend-engineer (implementation), frontend-engineer (confirmation page)
@@ -233,3 +233,12 @@ Differences between this design and what M-2 shipped, recorded so reviewers do n
 - **`propose` scope on REST.** A propose-only token maps to REST scope `write` for exactly `POST /api/proposals` and nowhere else (`lib/auth.ts` `restScopesFor`).
 - **Audit hook.** `scripts/audit.ts` is core and unchanged; the coverage gate runs through the variant hook probed at `scripts/co-newbiz/audit-variant.ts` (audit §27).
 - **Left for M-3:** prompts, resources, and the parity test (design §7, §8), and the REST/MCP parity of `evaluateProcess`.
+
+## 16. M-3 implementation notes (backend-engineer, 2026-10-08)
+
+Differences between this design and what M-3 shipped:
+
+- **Prompts and resources come from a generated projection, not a runtime YAML read.** The stdio server and the Next bundle cannot rely on reading `process/flow.spec.yaml` at runtime, so `scripts/co-newbiz/generate-spec-activities.ts` (now v1.1.0) also emits `mcp/co-newbiz/stage-guides.generated.ts`. `--check` fails on drift and `tests/unit/mcp-prompts.test.ts` runs it. A guide maps activities and artifacts to tools through each tool's `stageActivities` and `stageArtifacts`, and a test asserts no step description of a referenced procedure appears in any guide (boundary #3).
+- **Resources.** `glossary://index`, `glossary://term/{key}`, `flowspec://index`, `flowspec://stage/{id}`. The glossary resources read through the caller's `RestPort` (`GET /api/glossary`, `GET /api/glossary/{term}`), so they carry the caller's permissions, and on HTTP they need the `read` scope. `/api/glossary` was added to the in-process route table (GET only is ever called).
+- **Parity test location.** `tests/unit/mcp-parity.test.ts`, not `tests/integration/`. It runs one Green Field and one Brown Field scenario per path, each on its own scratch database. Evidence rows for S1-S11 come from `seed-s1-s12-demo` (the Green Field deal is that chain re-shaped to the own-build track); the seven gate decisions and the S12 transition decision are not seeded and go through the path under test. The typed closure (`graduated_to_core`) is recorded by the human on both paths, because no tool can close. `evaluateProcess` is compared for the opportunity and the project after every step.
+- **The agent reaches the routes through `buildMcpServer` + `InProcessRestPort` over an in-memory MCP client**, not through `/api/mcp` and a real OAuth exchange; the OAuth, scope and confirm-route negatives (propose-scope token on the confirm route, `insufficient_scope`, excluded tools) stay in `mcp-oauth.test.ts` and `mcp-proposals.test.ts`.

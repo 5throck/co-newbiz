@@ -19,7 +19,10 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import {
+  CallToolRequestSchema, ErrorCode, GetPromptRequestSchema, ListPromptsRequestSchema, ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema, ListToolsRequestSchema, McpError, ReadResourceRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import type { ToolDefinition } from "./shared/types.ts";
 import { MCPValidationError } from "./shared/errors.ts";
@@ -30,7 +33,8 @@ import {
 import { STAGE_TOOLS } from "./tools/stage-tools.ts";
 import { DECISION_TOOLS } from "./tools/decision-tools.ts";
 import { searchInterpretations, getProcedure } from "./tools/governance.ts";
-import { lookupTerm } from "./tools/glossary.ts";
+import { lookupTerm, listGlossary } from "./tools/glossary.ts";
+import { STAGE_IDS, flowspecIndex, getStageSpec, promptName, renderStageGuide } from "./stage-guides.ts";
 import { listNotifications } from "./tools/monitoring.ts";
 import { getPipelineStatus } from "./tools/pipeline.ts";
 import { getObservations, listDataChanges, searchSeries } from "./tools/analysis.ts";
@@ -286,10 +290,12 @@ export { MCPScopeError };
 export type { RegistryTool, ToolContext, ToolScope, McpTransportKind };
 
 export function buildMcpServer(opts: BuildServerOptions): Server {
-  const server = new Server({ name: "co-newbiz-mcp", version: "1.9.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "co-newbiz-mcp", version: "1.9.0" }, { capabilities: { tools: {}, prompts: {}, resources: {} } });
   const tools = toolsFor(opts.transport);
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: tools.map(toToolDefinition) }));
+
+  registerPromptsAndResources(server, tools, opts);
 
   server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     const { name, arguments: args } = request.params;
@@ -314,6 +320,70 @@ export function buildMcpServer(opts: BuildServerOptions): Server {
   });
 
   return server;
+}
+
+const JSON_MIME = "application/json";
+
+/**
+ * Prompts (stage_guide_s1..s12) and resources (glossary://, flowspec://),
+ * design §7. Registered for every transport from the same code, so both
+ * advertise the same set. Prompts are static text generated from the flow
+ * spec; resources read through the same RestPort as the lookup_term tool, so
+ * they carry the caller's permissions (and, on HTTP, need the read scope).
+ */
+function registerPromptsAndResources(server: Server, tools: readonly RegistryTool[], opts: BuildServerOptions): void {
+  server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+    prompts: STAGE_IDS.map((id) => {
+      const spec = getStageSpec(id);
+      return { name: promptName(id), description: `Work guide for ${id} ${spec?.name ?? ""}: objective, activities, artifacts, gates and the tools that serve them.` };
+    }),
+  }));
+
+  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    const stage = STAGE_IDS.map((id) => getStageSpec(id)).find((s) => s && promptName(s.id) === request.params.name);
+    if (!stage) throw new McpError(ErrorCode.InvalidParams, `Unknown prompt: ${request.params.name}`);
+    return {
+      description: `${stage.id} ${stage.name}`,
+      messages: [{ role: "user" as const, content: { type: "text" as const, text: renderStageGuide(stage, tools) } }],
+    };
+  });
+
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: [
+      { uri: "glossary://index", name: "Glossary index", description: "Every glossary term key with its Korean and English names.", mimeType: JSON_MIME },
+      { uri: "flowspec://index", name: "Flow spec index", description: "Spec version and the S1-S12 stage list.", mimeType: JSON_MIME },
+    ],
+  }));
+
+  server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
+    resourceTemplates: [
+      { uriTemplate: "glossary://term/{key}", name: "Glossary term", description: "One glossary term (same source as lookup_term).", mimeType: JSON_MIME },
+      { uriTemplate: "flowspec://stage/{id}", name: "Flow spec stage", description: "Read-only slice of process/flow.spec.yaml for one stage (S1-S12).", mimeType: JSON_MIME },
+    ],
+  }));
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
+    const uri = request.params.uri;
+    const asJson = (value: unknown) => ({ contents: [{ uri, mimeType: JSON_MIME, text: JSON.stringify(value, null, 2) }] });
+
+    if (uri === "flowspec://index") return asJson(flowspecIndex());
+    const stageMatch = /^flowspec:\/\/stage\/([^/]+)$/.exec(uri);
+    if (stageMatch) {
+      const stage = getStageSpec(decodeURIComponent(stageMatch[1]));
+      if (!stage) throw new McpError(ErrorCode.InvalidParams, `Unknown stage in ${uri}`);
+      return asJson(stage);
+    }
+
+    const termMatch = /^glossary:\/\/term\/([^/]+)$/.exec(uri);
+    if (uri === "glossary://index" || termMatch) {
+      const ctx = opts.resolveContext({ authInfo: extra.authInfo });
+      if (ctx.scopes && !ctx.scopes.includes("read")) {
+        throw new McpError(ErrorCode.InvalidRequest, "Reading glossary resources needs the 'read' scope; this token does not carry it.");
+      }
+      return asJson(termMatch ? await lookupTerm(ctx.port, decodeURIComponent(termMatch[1])) : await listGlossary(ctx.port));
+    }
+    throw new McpError(ErrorCode.InvalidParams, `Unknown resource: ${uri}`);
+  });
 }
 
 /**

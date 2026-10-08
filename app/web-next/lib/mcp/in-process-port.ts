@@ -45,6 +45,7 @@ export const ROUTE_TABLE: readonly RouteEntry[] = [
   { pattern: "/api/brownfield/:oppId/targets/:targetId/shortlist", load: () => import("../../app/api/brownfield/[oppId]/targets/[targetId]/shortlist/route.ts") },
   { pattern: "/api/brownfield/:oppId/universe-criteria-draft", load: () => import("../../app/api/brownfield/[oppId]/universe-criteria-draft/route.ts") },
   { pattern: "/api/data-changes", load: () => import("../../app/api/data-changes/route.ts") },
+  { pattern: "/api/glossary", load: () => import("../../app/api/glossary/route.ts") },
   { pattern: "/api/glossary/:term", load: () => import("../../app/api/glossary/[term]/route.ts") },
   { pattern: "/api/greenfield/:oppId", load: () => import("../../app/api/greenfield/[oppId]/route.ts") },
   { pattern: "/api/greenfield/:oppId/recommendation", load: () => import("../../app/api/greenfield/[oppId]/recommendation/route.ts") },
