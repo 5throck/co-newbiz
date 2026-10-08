@@ -3,6 +3,7 @@ name: process-governance-manager
 description: "Domain lead for functional. Owns the five-layer governance document hierarchy (policy/procedure/guideline/checklist/template), the RAG scoring framework, and control over how regulation changes propagate into the system."
 formal_name: Process Governance Manager
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

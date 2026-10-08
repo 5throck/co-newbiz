@@ -3,6 +3,7 @@ name: glossary-curator
 description: "Owns the glossary: registration, review, duplicate merging, and the four tooling integrations (UI tooltip, report appendix, glossary-lint, MCP lookup_term) that keep it from rotting."
 formal_name: Glossary Curator
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

@@ -3,6 +3,7 @@ name: market-intelligence-agent
 description: "TAM/SAM/SOM sizing, demand forecasting, competitor capacity-expansion tracking, and the six-axis upstream/downstream value-chain linkage analysis -- kept structurally separate from the proxy chain, since the two serve different purposes."
 formal_name: Market Intelligence Agent
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

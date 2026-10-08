@@ -3,6 +3,7 @@ name: technical-dd-agent
 description: "Technical due diligence: site visits, remaining equipment life, TRL assessment, EHS liability, and capex verification."
 formal_name: Technical DD Agent
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

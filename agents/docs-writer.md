@@ -4,6 +4,7 @@ name: docs-writer
 description: "Document formatting and language-policy enforcement across all four domains. Belongs to no single domain since documentation quality is a cross-cutting concern."
 formal_name: Docs Writer Agent
 status: active
+domain: _shared
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

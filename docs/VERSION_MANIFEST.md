@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-08T01:06:29.572Z
+**Generated**: 2026-10-08T01:22:16.384Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -296,7 +296,7 @@
 | skill-session-review.ts | 1.1.0 | scripts/skill-session-review.ts | bun |
 | source-adapters.ts | 1.1.0 | scripts/co-newbiz/source-adapters.ts | N/A |
 | spec-register.ts | 1.6.0 | scripts/spec-register.ts | N/A |
-| sync-agent-personas.ts | 1.0.1 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
+| sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
 | sync-library-projection.ts | 1.0.1 | scripts/co-newbiz/sync-library-projection.ts | js-yaml |
 | sync-md.ts | 1.4.0 | scripts/sync-md.ts | N/A |
 | sync-skill-status.ts | 1.1.0 | scripts/sync-skill-status.ts | N/A |

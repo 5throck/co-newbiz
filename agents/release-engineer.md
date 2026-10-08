@@ -3,6 +3,7 @@ name: release-engineer
 description: "Build and deployment pipeline, migration execution ordering, and rollback procedures."
 formal_name: Release Engineer
 status: active
+domain: technical
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

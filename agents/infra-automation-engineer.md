@@ -3,6 +3,7 @@ name: infra-automation-engineer
 description: "OS configuration, service registration, the scheduled-collection scheduler, and health-check/cleanup automation."
 formal_name: Infra Automation Engineer
 status: active
+domain: technical
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

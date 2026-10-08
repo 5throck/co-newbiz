@@ -3,6 +3,7 @@ name: pmi-agent
 description: "Post-merger integration planning: synergy realization tracking and integration risk assessment."
 formal_name: PMI Agent
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

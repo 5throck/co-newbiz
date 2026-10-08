@@ -12,6 +12,7 @@ import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { latestGateDecisions } from "../../../../../lib/process-flow.ts";
 import { badRequest, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { route } from "../../../../../lib/route.ts";
+import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
 // Gate placement (2026-09-12): the opportunity is the S1–S7 carrier, so only
 // the S1–S7 gates are recordable here — fs/dd/entity_ic/group_ic belong to the
@@ -105,6 +106,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       return badRequest("provenance_mismatch", "gate_evaluation_id가 이 기회의 위원회 세션 산출물이 아닙니다.");
     }
   }
+  // ADR-0153 — snapshot the artifact as the human saw it, BEFORE the decision lands.
+  const reviewSnapshot = captureReviewSnapshot(body.gate, id);
   db.run(
     `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id, learning_capture)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
@@ -112,5 +115,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId, body.decision === "kill" ? learningCapture : null],
   );
   appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
+  // ADR-0153 — human_final review row: a side effect of THIS human POST only.
+  recordHumanFinalReview(reviewSnapshot, ctx.userId, body.decision);
   return ok({ id: gid, gate: body.gate, decision: body.decision }, 201);
 });

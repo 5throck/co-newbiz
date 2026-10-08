@@ -3,6 +3,7 @@ name: compliance-officer
 description: "Owns governance operation: the standing work of running the rules the team writes, not writing them. Compliance monitoring, waiver adjudication, the interpretation registry, training and notices, and governance KPIs."
 formal_name: Compliance Officer
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

@@ -29,6 +29,7 @@ import { PORTFOLIO_TRANSITIONS } from "../../../../../lib/process-flow.ts";
 import { currentReviewCycle, isValidReviewCycle } from "../../../../../lib/portfolio.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
 /** The decider of record is ALWAYS the human role (design boundary #2). */
 const DECIDED_BY = "venture-portfolio-ic";
@@ -119,6 +120,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const rowId = ulid();
+  // ADR-0153 — snapshot the S12 proposal as the human saw it, BEFORE the decision lands.
+  const reviewSnapshot = captureReviewSnapshot("transition", id);
   db.transaction(() => {
     db.run(
       `INSERT INTO venture_transition_decision
@@ -145,6 +148,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       now,
     });
   })();
+  // ADR-0153 — human_final review row: a side effect of THIS human POST only.
+  recordHumanFinalReview(reviewSnapshot, ctx.userId, decision);
 
   return ok(
     {

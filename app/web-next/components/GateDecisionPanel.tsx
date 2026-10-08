@@ -9,6 +9,7 @@ import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
+import { ReviewBuckets } from "./ReviewBuckets.tsx";
 
 interface GateLatest {
   gate: string;
@@ -164,6 +165,9 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           </tbody>
         </table>
       )}
+
+      {/* ADR-0153 — 3단계 검토(확인됨 / 확인하지 못함 / 판단 필요). PASS 표시 없음 */}
+      <ReviewBuckets entityType={entityType} entityId={opportunityId} gates={gates} />
 
       {/* ADR-0118 — LLM 진행 브리프(제안): 권고·근거 초안 제공, 기록은 사람 */}
       {canRecord && (

@@ -3,6 +3,7 @@ name: greenfield-agent
 description: "New-establishment review lead: site selection, infrastructure assessment, talent pipeline planning, community partnership, permit pathway, and ramp-up modeling for Green Field projects."
 formal_name: Greenfield Agent
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

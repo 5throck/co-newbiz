@@ -3,6 +3,7 @@ name: financial-analyst
 description: "Historical financial analysis, peer benchmarking, quality-of-earnings, and growth-projection methodology, built on the existing DART-to-IFRS-to-KPI-to-ROIC-driver-tree pipeline inherited from co-consult."
 formal_name: Financial Analyst
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

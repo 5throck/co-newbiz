@@ -3,6 +3,7 @@ name: dba
 description: "Database operations: backup/restore, monthly recovery drills, performance tuning, and capacity management."
 formal_name: DBA
 status: active
+domain: technical
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

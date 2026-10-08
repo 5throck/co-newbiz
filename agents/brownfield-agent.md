@@ -3,6 +3,7 @@ name: brownfield-agent
 description: "M&A review lead: target screening, deal structuring, and carve-out assessment. Coordinates the mandatory six-way M&A cross-validation with antitrust, customer-retention, incentive, hr-integration, certification, and region-lead."
 formal_name: Brownfield Agent
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

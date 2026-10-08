@@ -3,6 +3,7 @@ name: risk-officer
 description: "Red-team function. Audits for optimism bias, enforces base-rate checks against reference-class forecasts, and holds Kill Criteria authority across every stage gate."
 formal_name: Risk Officer
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:
