@@ -1,0 +1,60 @@
+case_id: pilot-010
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-010-affinity-lotte-rental.md
+deal_type: brownfield
+public_outcome:
+  kind: prohibition
+  authority: KFTC
+  decision_date: 2026-01-26
+  known: true
+  favourable: false
+  citation: [{ doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "The blocked deal — KFTC decision (2026-01-26)" }]
+inputs_ref: fixtures/pilot-010.input.json
+post_decision_inputs_ref: fixtures/pilot-010.post-decision.json
+expectations:
+  - stage: S6
+    gate: screening
+    function: antitrust_flags
+    expected:
+      filing_required: true
+      jurisdictions: [KR]
+      combination_type: common_control
+      product_overlap: true
+      hhi_flag: high
+      certain_block: true
+      relevant_markets: [short_term_inland, short_term_jeju, long_term]
+    citation:
+      - { doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-screening/schema.yaml`" }
+      - { doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "3. Walkthrough Against `brownfield-dd/schema.yaml` Step 3 (Antitrust) and `docs/governance/rag-framework.md`" }
+  - stage: S7
+    gate: screening
+    function: kill_criteria
+    expected: { hits: [preliminary_hhi_flags_certain_block] }
+    note: First real trigger of this condition; action is escalate_to_risk_officer.
+    citation:
+      - { doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-screening/schema.yaml`" }
+      - { doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "4. Findings" }
+  - stage: S7
+    gate: screening
+    function: rag_overall
+    expected: { overall: red, complete: false }
+    note: A Kill Criteria trigger forces overall Red even when the assessment is incomplete (rag-framework §3; pilot-001 system re-run disposition). Only pre-decision outcome-calibration grade in the set.
+    citation:
+      - { doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "3. Walkthrough Against `brownfield-dd/schema.yaml` Step 3 (Antitrust) and `docs/governance/rag-framework.md`" }
+      - { doc: docs/pilots/pilot-001-system-rerun.md, section: "5. Disposition" }
+  - stage: S9
+    gate: dd
+    function: rag_dimensions
+    input_basis: post_decision
+    expected: { regulatory_permit: red }
+    citation: [{ doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "3. Walkthrough Against `brownfield-dd/schema.yaml` Step 3 (Antitrust) and `docs/governance/rag-framework.md`" }]
+  - stage: S9
+    gate: dd
+    function: dd_tailoring
+    expected: { checklist: ma-special-topics, required_items: [ma-01, ma-02, ma-03] }
+    citation: [{ doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "3. Walkthrough Against `brownfield-dd/schema.yaml` Step 3 (Antitrust) and `docs/governance/rag-framework.md`" }]
+  - stage: S9
+    gate: dd
+    function: review_findings
+    expected: { must_raise: [common_ownership_across_portfolio_competitors, qualitative_competitive_advantage_beyond_hhi, dependent_contingent_financing_transactions], must_declare_could_not_verify: true }
+    citation: [{ doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "4. Findings" }]

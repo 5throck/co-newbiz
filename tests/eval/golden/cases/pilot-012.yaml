@@ -1,0 +1,20 @@
+case_id: pilot-012
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-012-lg-studio341.md
+deal_type: brownfield
+case_subtype: rbd
+inputs_ref: fixtures/pilot-012.input.json
+expectations:
+  - stage: S9
+    gate: dd
+    function: dd_tailoring
+    expected: { checklist: rbd-technology, required_items: [rbd-01, rbd-02, rbd-03, rbd-04, rbd-05, rbd-06] }
+    note: rbd-02 must be kept — TIPS/DIPS are named government co-funding programs with real conditions.
+    citation: [{ doc: docs/pilots/pilot-012-lg-studio341.md, section: "2. Walkthrough Against `checklists/rbd-technology-checklist.yaml`" }]
+  - stage: S9
+    gate: dd
+    function: review_findings
+    expected: { must_raise: [early_stage_trl_high_pivot_rate, government_cofunding_conditions_tips_dips, ip_assignment_terms_not_public], must_declare_could_not_verify: true }
+    citation:
+      - { doc: docs/pilots/pilot-012-lg-studio341.md, section: "2. Walkthrough Against `checklists/rbd-technology-checklist.yaml`" }
+      - { doc: docs/pilots/pilot-012-lg-studio341.md, section: "4. Findings" }

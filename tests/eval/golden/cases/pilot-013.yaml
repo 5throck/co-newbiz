@@ -1,0 +1,20 @@
+case_id: pilot-013
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-013-hexapro-etri.md
+deal_type: brownfield
+case_subtype: rbd
+inputs_ref: fixtures/pilot-013.input.json
+expectations:
+  - stage: S9
+    gate: dd
+    function: dd_tailoring
+    expected: { checklist: rbd-technology, required_items: [rbd-01, rbd-02, rbd-03, rbd-04, rbd-05, rbd-06] }
+    citation: [{ doc: docs/pilots/pilot-013-hexapro-etri.md, section: "2. Walkthrough Against `checklists/rbd-technology-checklist.yaml`" }]
+  - stage: S9
+    gate: dd
+    function: review_findings
+    expected: { must_raise: [trl_unassessable_licensed_scope_unknown, licensor_relationship_not_parent_shape, running_royalty_collection_risk], must_declare_could_not_verify: true }
+    note: The reviewer must not assume the licensed IP is ETRI's multimodal-sensor gripper line — the pilot explicitly refuses that inference.
+    citation:
+      - { doc: docs/pilots/pilot-013-hexapro-etri.md, section: "1. Deal and Program Facts (Real Public Facts)" }
+      - { doc: docs/pilots/pilot-013-hexapro-etri.md, section: "3. Findings" }

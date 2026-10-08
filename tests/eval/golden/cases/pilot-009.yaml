@@ -1,0 +1,40 @@
+case_id: pilot-009
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-009-emart-ebay-korea.md
+deal_type: brownfield
+public_outcome:
+  kind: closed
+  decision_date: 2021-06-24
+  known: true
+  favourable: true
+  citation: [{ doc: docs/pilots/pilot-009-emart-ebay-korea.md, section: "1. Deal Facts (Real Public Facts)" }]
+inputs_ref: fixtures/pilot-009.input.json
+expectations:
+  - stage: S6
+    gate: screening
+    function: antitrust_flags
+    expected: { combination_type: horizontal, product_overlap: true, hhi_flag: moderate, certain_block: false }
+    citation: [{ doc: docs/pilots/pilot-009-emart-ebay-korea.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-fs/schema.yaml` and RAG Framework" }]
+  - stage: S7
+    gate: screening
+    function: kill_criteria
+    expected: { hits: [] }
+    citation: [{ doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-screening/schema.yaml`" }]
+  - stage: S8
+    gate: fs
+    function: rag_dimensions
+    expected: { financial: not_graded }
+    note: Debt side of DSCR is public, coverage side (EBITDA/interest) is not — no Financial grade.
+    citation: [{ doc: docs/pilots/pilot-009-emart-ebay-korea.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-fs/schema.yaml` and RAG Framework" }]
+  - stage: S8
+    gate: fs
+    function: rag_overall
+    expected: { overall: not_graded, complete: false }
+    citation: [{ doc: docs/pilots/pilot-009-emart-ebay-korea.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-fs/schema.yaml` and RAG Framework" }]
+  - stage: S8
+    gate: fs
+    function: review_findings
+    expected: { must_raise: [dscr_not_computable_missing_coverage, qoe_partial_no_normalization_detail, acquisition_vehicle_spc], must_declare_could_not_verify: true }
+    citation:
+      - { doc: docs/pilots/pilot-009-emart-ebay-korea.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-fs/schema.yaml` and RAG Framework" }
+      - { doc: docs/pilots/pilot-009-emart-ebay-korea.md, section: "3. A Genuinely New Observation: SPC Acquisition Structure" }

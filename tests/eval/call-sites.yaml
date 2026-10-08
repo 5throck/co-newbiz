@@ -1,0 +1,98 @@
+# LLM call-site inventory (Wave B-2, design §11). Checked by scripts/eval/inventory.ts.
+# Each file maps to eval suite(s) OR carries an explicit exemption reason.
+call_sites:
+  - file: app/web-next/app/api/agents/query/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts
+    sites: 2
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/eval-draft/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/screening-draft/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/brownfield/[oppId]/universe-criteria-draft/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/greenfield/[oppId]/recommendation/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/market-overview/related-candidates/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/opportunities/[id]/attractiveness-recommendation/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/opportunities/[id]/capability-gap/llm-draft/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/opportunities/[id]/gate-brief/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/opportunities/[id]/route-recommendation/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/opportunities/[id]/sketch/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/opportunities/discover/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/projects/[id]/business-case/adoption-recommendation/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/projects/[id]/deal-structure-recommendation/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/projects/[id]/gate-brief/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/projects/[id]/monitoring-brief/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/lib/agent-chains.ts
+    sites: 1
+    json_parse_migration: "Deferred: chain steps feed raw reply text to later steps; stage-reco scores schema validity of the current replies but has no LLM baseline yet."
+    suites: [stage-reco]
+  - file: app/web-next/lib/committee-llm.ts
+    sites: 1
+    json_parse_migration: "Deferred: output is markdown plus a position-meta tail, not a JSON value; the committee suite scores that tail. Needs a design change, not a drop-in swap."
+    suites: [committee]
+  - file: app/web-next/lib/company-profile-crosscheck.ts
+    sites: 1
+    exempt: "Evidence or web-research pipeline; the golden set has no expectation type for it, and design 3.3 forbids new research in this wave."
+  - file: app/web-next/lib/company-profile-pipeline.ts
+    sites: 2
+    exempt: "Evidence or web-research pipeline; the golden set has no expectation type for it, and design 3.3 forbids new research in this wave."
+  - file: app/web-next/lib/competitor-web-proposals.ts
+    sites: 2
+    json_parse_migration: "Deferred: no suite covers it (exempt); migrating without a suite would be unmeasured."
+    exempt: "Evidence or web-research pipeline; the golden set has no expectation type for it, and design 3.3 forbids new research in this wave."
+  - file: app/web-next/lib/llm-executors.ts
+    sites: 2
+    json_parse_migration: "Deferred: dd-tailor and business-case suites currently score the text path and there is no opt-in LLM baseline yet; moving to completeStructured now would change measured behavior before it is measured. Migrate after the first LLM scoreboard."
+    suites: [dd-tailor, business-case]
+  - file: app/web-next/lib/market-sizing-pipeline.ts
+    sites: 3
+    exempt: "Evidence or web-research pipeline; the golden set has no expectation type for it, and design 3.3 forbids new research in this wave."
+  - file: app/web-next/lib/opportunity-factors.ts
+    sites: 1
+    json_parse_migration: "Deferred: no suite covers it (exempt); migrating without a suite would be unmeasured."
+    exempt: "Evidence or web-research pipeline; the golden set has no expectation type for it, and design 3.3 forbids new research in this wave."
+  - file: app/web-next/lib/pm-router.ts
+    sites: 1
+    json_parse_migration: "Deferred: no suite covers it (exempt); migrating without a suite would be unmeasured."
+    exempt: "PM routing prompt; the golden set has no expectation type for routing decisions."
+  - file: app/web-next/lib/price-evidence.ts
+    sites: 1
+    json_parse_migration: "Deferred: no suite covers it (exempt); migrating without a suite would be unmeasured."
+    exempt: "Evidence or web-research pipeline; the golden set has no expectation type for it, and design 3.3 forbids new research in this wave."
+  - file: app/web-next/lib/review/ai-second.ts
+    sites: 1
+    suites: [review-ai2]
+  - file: app/web-next/lib/synergy-pipeline.ts
+    sites: 2
+    json_parse_migration: "Deferred: no suite covers it (exempt); migrating without a suite would be unmeasured."
+    exempt: "Evidence or web-research pipeline; the golden set has no expectation type for it, and design 3.3 forbids new research in this wave."

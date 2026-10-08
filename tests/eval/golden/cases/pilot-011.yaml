@@ -1,0 +1,25 @@
+case_id: pilot-011
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-011-posco-amberoad.md
+deal_type: brownfield
+case_subtype: rbd
+inputs_ref: fixtures/pilot-011.input.json
+expectations:
+  - stage: S9
+    gate: dd
+    function: dd_tailoring
+    expected: { checklist: rbd-technology, required_items: [rbd-01, rbd-03, rbd-04, rbd-05, rbd-06], droppable_with_reason: [rbd-02] }
+    note: rbd-02 is conditional on a government funding source; none is reported here.
+    citation: [{ doc: docs/pilots/pilot-011-posco-amberoad.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-pre-fs/schema.yaml` and `brownfield-dd/schema.yaml`" }]
+  - stage: S8
+    gate: fs
+    function: rag_dimensions
+    expected: { financial: not_graded }
+    citation: [{ doc: docs/pilots/pilot-011-posco-amberoad.md, section: "3. RAG-Adjacent Observation" }]
+  - stage: S9
+    gate: dd
+    function: review_findings
+    expected: { must_raise: [track_record_self_reported_needs_corroboration, ip_assignment_terms_not_public], must_declare_could_not_verify: true }
+    citation:
+      - { doc: docs/pilots/pilot-011-posco-amberoad.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-pre-fs/schema.yaml` and `brownfield-dd/schema.yaml`" }
+      - { doc: docs/pilots/pilot-011-posco-amberoad.md, section: "4. Findings" }

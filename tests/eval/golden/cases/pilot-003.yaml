@@ -1,0 +1,33 @@
+case_id: pilot-003
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-003-doosan-bobcat-robotics.md
+deal_type: intra_group_restructuring
+public_outcome:
+  kind: suspended
+  decision_date: 2024-12
+  known: true
+  favourable: false
+  citation:
+    - { doc: docs/pilots/pilot-003-doosan-bobcat-robotics.md, section: "0. Purpose and Scope" }
+    - { doc: docs/pilots/pilot-003-doosan-bobcat-robotics.md, section: "1. Deal Structure (Real Public Facts)" }
+inputs_ref: fixtures/pilot-003.input.json
+expectations:
+  - stage: S11
+    gate: group_ic
+    function: review_findings
+    expected: { must_raise: [intra_group_transaction_fair_trade_act_47, exchange_ratio_valuation_fairness, minority_shareholder_opposition], must_declare_could_not_verify: true }
+    note: Step 3 (Fair Trade Act §47 screen) is the strongest real-data match in the pilot set; valuation fairness, not overlap, is the live risk.
+    citation:
+      - { doc: docs/pilots/pilot-003-doosan-bobcat-robotics.md, section: "2. Walkthrough Against `procedures/_shared/group-investment-review/schema.yaml`" }
+      - { doc: docs/pilots/pilot-003-doosan-bobcat-robotics.md, section: "4. Findings" }
+  - stage: S11
+    gate: group_ic
+    function: antitrust_flags
+    expected: { product_overlap: false }
+    citation: [{ doc: docs/pilots/pilot-003-doosan-bobcat-robotics.md, section: "2. Walkthrough Against `procedures/_shared/group-investment-review/schema.yaml`" }]
+  - stage: S11
+    gate: group_ic
+    function: rag_overall
+    expected: { overall: not_graded, complete: false }
+    note: The six-dimension RAG does not apply cleanly to a share-exchange restructuring; no grade may be produced. Group agenda ranking (step 4) is not applicable.
+    citation: [{ doc: docs/pilots/pilot-003-doosan-bobcat-robotics.md, section: "3. Illustrative RAG-Adjacent Observations" }]

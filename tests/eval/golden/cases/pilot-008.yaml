@@ -1,0 +1,50 @@
+case_id: pilot-008
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-008-delivery-hero-woowa-brothers.md
+deal_type: brownfield
+public_outcome:
+  kind: conditional_approval
+  authority: KFTC
+  decision_date: 2020-12-28
+  known: true
+  favourable: true
+  citation: [{ doc: docs/pilots/pilot-008-delivery-hero-woowa-brothers.md, section: "1. Deal Facts (Real Public Facts)" }]
+inputs_ref: fixtures/pilot-008.input.json
+post_decision_inputs_ref: fixtures/pilot-008.post-decision.json
+expectations:
+  - stage: S6
+    gate: screening
+    function: antitrust_flags
+    expected: { filing_required: true, jurisdictions: [KR], multi_jurisdiction: false, combination_type: horizontal, product_overlap: true, hhi_flag: high, certain_block: false }
+    note: Highest concentration in the pilot set, yet the pilot record classes it as high-but-resolvable at Screening (pilot-010 §2 contrast). No remedy-type prediction is labelled — the pilot doc records none before the decision.
+    citation:
+      - { doc: docs/pilots/pilot-008-delivery-hero-woowa-brothers.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-dd/schema.yaml` Step 3 (Antitrust) and `entity-ic-review`" }
+      - { doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-screening/schema.yaml`" }
+  - stage: S7
+    gate: screening
+    function: kill_criteria
+    expected: { hits: [] }
+    citation: [{ doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-screening/schema.yaml`" }]
+  - stage: S9
+    gate: dd
+    function: dd_tailoring
+    expected: { checklist: ma-special-topics, required_items: [ma-01, ma-02, ma-03] }
+    citation: [{ doc: docs/pilots/pilot-008-delivery-hero-woowa-brothers.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-dd/schema.yaml` Step 3 (Antitrust) and `entity-ic-review`" }]
+  - stage: S9
+    gate: dd
+    function: rag_dimensions
+    input_basis: post_decision
+    expected: { regulatory_permit: amber }
+    note: Structural remedy open → Amber; re-gradable toward Green only once divestiture is confirmed discharged (rag-framework §2.5).
+    citation: [{ doc: docs/pilots/pilot-008-delivery-hero-woowa-brothers.md, section: "3. Illustrative RAG Assessment — Regulatory/Permit Dimension, Structural-Remedy Case" }]
+  - stage: S9
+    gate: dd
+    function: rag_overall
+    input_basis: post_decision
+    expected: { overall: not_graded, complete: false }
+    citation: [{ doc: docs/pilots/pilot-008-delivery-hero-woowa-brothers.md, section: "3. Illustrative RAG Assessment — Regulatory/Permit Dimension, Structural-Remedy Case" }]
+  - stage: S9
+    gate: dd
+    function: review_findings
+    expected: { must_raise: [extreme_horizontal_concentration, synergy_rationale_vs_market_power], must_declare_could_not_verify: true }
+    citation: [{ doc: docs/pilots/pilot-008-delivery-hero-woowa-brothers.md, section: "4. Findings" }]

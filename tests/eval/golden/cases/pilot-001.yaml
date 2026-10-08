@@ -1,0 +1,57 @@
+case_id: pilot-001
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md
+deal_type: brownfield
+inputs_ref: fixtures/pilot-001.input.json
+post_decision_inputs_ref: fixtures/pilot-001.post-decision.json
+expectations:
+  - stage: S6
+    gate: screening
+    function: antitrust_flags
+    expected: { filing_required: true, jurisdictions: [KR], multi_jurisdiction: false, combination_type: horizontal, product_overlap: true, hhi_flag: high, certain_block: false }
+    citation:
+      - { doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md, section: "1. Screening" }
+      - { doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md, section: "4. DD — M&A Special Topics Checklist Walkthrough" }
+  - stage: S7
+    gate: screening
+    function: kill_criteria
+    expected: { hits: [] }
+    citation: [{ doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md, section: "1. Screening" }]
+  - stage: S9
+    gate: dd
+    function: dd_tailoring
+    expected: { checklist: ma-special-topics, required_items: [ma-01, ma-02, ma-03, ma-04, ma-05, ma-06, ma-07, ma-08, ma-09, ma-10, ma-11] , droppable_with_reason: [ma-12] }
+    note: ma-04..ma-11 are not executable from public data but must stay on the list (internal-DD items, not defects); ma-12 n/a for an equity-stake purchase.
+    citation:
+      - { doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md, section: "4. DD — M&A Special Topics Checklist Walkthrough" }
+      - { doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md, section: "2. Pre-FS" }
+  - stage: S9
+    gate: dd
+    function: rag_dimensions
+    input_basis: post_decision
+    expected: { regulatory_permit: amber, financial: not_graded, market: not_graded, data_confidence: not_graded, technical_execution: not_graded, risk: not_graded }
+    citation:
+      - { doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md, section: "5. Entity IC / Group IC" }
+      - { doc: docs/pilots/pilot-001-system-rerun.md, section: "3. Comparison — RAG Assessment" }
+  - stage: S9
+    gate: dd
+    function: rag_overall
+    input_basis: post_decision
+    expected: { overall: not_graded, complete: false }
+    note: Precedent case for "no overall grade on incomplete assessment" (system re-run fixed rag-engine to return recorded_overall null).
+    citation:
+      - { doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md, section: "5. Entity IC / Group IC" }
+      - { doc: docs/pilots/pilot-001-system-rerun.md, section: "5. Disposition" }
+  - stage: S9
+    gate: dd
+    function: confidence_cap
+    expected: { cap_applies: false, data_confidence: not_graded }
+    note: No proxy chain exists; the cap cannot apply to an ungraded dimension, and no overall grade is produced anyway.
+    citation: [{ doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md, section: "5. Entity IC / Group IC" }]
+  - stage: S9
+    gate: dd
+    function: review_findings
+    expected: { must_raise: [wacc_hurdle_not_user_supplied, ma_internal_dd_items_not_executable], must_declare_could_not_verify: true }
+    citation:
+      - { doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md, section: "2. Pre-FS" }
+      - { doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md, section: "6. Findings" }
