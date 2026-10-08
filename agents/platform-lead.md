@@ -3,6 +3,7 @@ name: platform-lead
 description: "Domain lead for technical. Owns architecture decisions, technical ADRs, release scope, and translates functional-domain requirements into system design."
 formal_name: Platform Lead
 status: active
+domain: technical
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

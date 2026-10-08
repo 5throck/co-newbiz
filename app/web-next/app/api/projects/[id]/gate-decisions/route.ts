@@ -11,6 +11,7 @@ import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { latestGateDecisions } from "../../../../../lib/process-flow.ts";
 import { badRequest, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
+import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
 const GATES = new Set(["fs", "dd", "entity_ic", "group_ic"]);
 const DECISIONS = new Set(["go", "hold", "kill"]);
@@ -89,6 +90,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   const nowTs = new Date().toISOString();
   const gid = ulid();
+  // ADR-0153 — snapshot the artifact as the human saw it, BEFORE the decision lands.
+  const reviewSnapshot = captureReviewSnapshot(body.gate, id);
   db.run(
     `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id, learning_capture)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
@@ -96,5 +99,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId, body.decision === "kill" ? learningCapture : null],
   );
   appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
+  // ADR-0153 — human_final review row: a side effect of THIS human POST only.
+  recordHumanFinalReview(reviewSnapshot, ctx.userId, body.decision);
   return ok({ id: gid, gate: body.gate, decision: body.decision }, 201);
 }

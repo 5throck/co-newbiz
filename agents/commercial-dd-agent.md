@@ -3,6 +3,7 @@ name: commercial-dd-agent
 description: "Commercial due diligence: customer concentration, pricing power, channel checks, and expert interviews, with mandatory triangulation."
 formal_name: Commercial DD Agent
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

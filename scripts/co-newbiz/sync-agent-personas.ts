@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.1
+// @version 1.1.0
 // sync-agent-personas — generate Claude Code subagent definitions
 // (.claude/agents/<name>.md) from the canonical roster (agents/*.md).
 //
@@ -12,6 +12,11 @@
 // body). This file is GENERATED — never edit .claude/agents/ by hand; rerun:
 //   bun scripts/co-newbiz/sync-agent-personas.ts          (write)
 //   bun scripts/co-newbiz/sync-agent-personas.ts --check  (CI drift gate)
+//
+// Also syncs the machine-readable `domain:` frontmatter of agents/*.md from the
+// AGENTS.md domain tables (ADR-0153: the 3-stage review runtime resolves an
+// authoring agent's domain from it). AGENTS.md is READ ONLY here; the persona
+// output below is unchanged (frontmatter is not part of the persona body).
 import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -57,6 +62,45 @@ function parseAgent(file: string): { key: string; fm: Frontmatter; body: string 
   const status = raw.match(/^status:\s*(.+)$/m)?.[1]?.trim() ?? "active";
   if (!name || !desc) return null;
   return { key: name, fm: { name, description: desc, tierClaude: tier, status }, body };
+}
+
+// ── domain: frontmatter sync (ADR-0153) ───────────────────────────────────
+const DOMAIN_HEADINGS: Array<[RegExp, string]> = [
+  [/^## `_core`/, "_core"],
+  [/^## Functional Domain/, "functional"],
+  [/^## Technical Domain/, "technical"],
+  [/^## Industry Domain/, "industry"],
+  [/^## Region Domain/, "region"],
+  [/^## Shared/, "_shared"],
+];
+
+function domainsFromAgentsMd(): Map<string, string> {
+  const map = new Map<string, string>();
+  let current: string | null = null;
+  for (const line of readFileSync(join(ROOT, "AGENTS.md"), "utf8").split(/\r?\n/)) {
+    if (line.startsWith("## ")) {
+      current = DOMAIN_HEADINGS.find(([re]) => re.test(line))?.[1] ?? null;
+      continue;
+    }
+    const m = line.match(/\(agents\/([a-z0-9-]+)\.md\)/);
+    if (current && m && line.startsWith("|")) map.set(m[1], current);
+  }
+  return map;
+}
+
+const domainDrift: string[] = [];
+let domainsWritten = 0;
+for (const [agent, domain] of domainsFromAgentsMd()) {
+  const file = join(SRC, `${agent}.md`);
+  if (!existsSync(file)) continue;
+  const text = readFileSync(file, "utf8");
+  const existing = text.match(/^domain:\s*(.+)$/m)?.[1]?.trim();
+  if (existing === domain) continue;
+  if (CHECK) { domainDrift.push(`domain: agents/${agent}.md has ${existing ?? "none"}, AGENTS.md says ${domain}`); continue; }
+  const next = existing
+    ? text.replace(/^domain:\s*.+$/m, `domain: ${domain}`)
+    : text.replace(/^(status:\s*.+)$/m, `$1\ndomain: ${domain}`);
+  if (next !== text) { writeFileSync(file, next); domainsWritten++; }
 }
 
 let created = 0, updated = 0, unchanged = 0, skipped = 0;
@@ -107,6 +151,7 @@ if (existsSync(OUT)) {
 }
 
 if (CHECK) {
+  drift.push(...domainDrift);
   if (drift.length > 0) {
     console.error(`sync-agent-personas --check: ${drift.length} divergence(s)`);
     for (const d of drift) console.error("  -", d);
@@ -114,5 +159,5 @@ if (CHECK) {
   }
   console.log(`sync-agent-personas --check: in sync (${unchanged} files).`);
 } else {
-  console.log(`sync-agent-personas: ${created} created, ${updated} updated, ${unchanged} unchanged, ${skipped} skipped.`);
+  console.log(`sync-agent-personas: ${created} created, ${updated} updated, ${unchanged} unchanged, ${skipped} skipped; ${domainsWritten} domain field(s) synced.`);
 }

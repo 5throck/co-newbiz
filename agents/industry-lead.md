@@ -3,6 +3,7 @@ name: industry-lead
 description: "Domain lead for industry, owning the industry profile system used across the roster. Value-chain structure, cycle characteristics, regulatory landscape, technology transition, and unit-economics benchmarks per industry."
 formal_name: Industry Lead
 status: active
+domain: industry
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

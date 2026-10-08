@@ -3,6 +3,7 @@ name: hr-integration-agent
 description: "Executive compensation review, employee pay-and-benefits parity analysis, and labor/workforce integration for M&A. Enforces the upward-bias assumption in compensation harmonization."
 formal_name: HR Integration Agent
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

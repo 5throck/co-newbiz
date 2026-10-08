@@ -3,6 +3,7 @@ name: partnership-agent
 description: "Partner sourcing strategy, partner due diligence including compliance screening, and JV structuring, distinct from community-partnership-planning (which covers local-community relations)."
 formal_name: Partnership Agent
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

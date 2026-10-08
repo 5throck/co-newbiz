@@ -5267,6 +5267,138 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/projects/{id}/reviews:
+    get:
+      operationId: getProjectGateReviews
+      summary: Latest 3-stage review (AI 1st / AI 2nd) of a gate-proposal artifact as verified / could_not_verify / needs_judgement buckets; no PASS stamp (ADR-0153). ?gate=<gate>. Read-only.
+      tags:
+        - Projects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: runProjectGateAiFirstReview
+      summary: (Re)run the deterministic AI 1st check for a gate-proposal artifact (ADR-0153). Body gate. Analyst+; never writes a gate decision.
+      tags:
+        - Projects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/reviews/ai-2nd:
+    post:
+      operationId: requestProjectGateAiSecondReview
+      summary: On-demand cross-domain LLM (AI 2nd) review of a gate-proposal artifact (ADR-0153). Runs as the calling user; cached by content hash; a missing reviewer, LLM or exhausted monthly token cap is recorded as not performed. Never writes a gate decision.
+      tags:
+        - Projects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/reviews:
+    get:
+      operationId: getOpportunityGateReviews
+      summary: Latest 3-stage review (AI 1st / AI 2nd) of a gate-proposal artifact as verified / could_not_verify / needs_judgement buckets; no PASS stamp (ADR-0153). ?gate=<gate>. Read-only.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: runOpportunityGateAiFirstReview
+      summary: (Re)run the deterministic AI 1st check for a gate-proposal artifact (ADR-0153). Body gate. Analyst+; never writes a gate decision.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/reviews/ai-2nd:
+    post:
+      operationId: requestOpportunityGateAiSecondReview
+      summary: On-demand cross-domain LLM (AI 2nd) review of a gate-proposal artifact (ADR-0153). Runs as the calling user; cached by content hash; a missing reviewer, LLM or exhausted monthly token cap is recorded as not performed. Never writes a gate decision.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/wacc:
     get:
       operationId: getProjectWacc

@@ -3,6 +3,7 @@ name: data-architect
 description: "ERD, master data governance, normalization, indexing, migration, and portability. Owns the three-layer data architecture (raw / normalized / analytic)."
 formal_name: Data Architect
 status: active
+domain: technical
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

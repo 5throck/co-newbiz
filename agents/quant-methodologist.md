@@ -3,6 +3,7 @@ name: quant-methodologist
 description: "Owns the proxy industry chain methodology: unit conversion, regression calibration, lead-lag estimation, error propagation, and attribution analysis for run-to-run comparison."
 formal_name: Quant Methodologist
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

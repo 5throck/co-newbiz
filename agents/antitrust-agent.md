@@ -3,6 +3,7 @@ name: antitrust-agent
 description: "Antitrust and merger-control review: market definition, HHI calculation, multi-jurisdiction filing determination, gun-jumping compliance, and remedy scenario modeling."
 formal_name: Antitrust Agent
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

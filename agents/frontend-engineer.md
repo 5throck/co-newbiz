@@ -3,6 +3,7 @@ name: frontend-engineer
 description: "Next.js (App Router) UI, Recharts visualizations, the RAG dashboard, the admin console, and accessibility."
 formal_name: Frontend Engineer
 status: active
+domain: technical
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

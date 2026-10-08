@@ -3,6 +3,7 @@ name: backend-engineer
 description: "Next.js Route Handler REST API, authentication, MCP server, the analysis-engine CLI, and the monitoring/alerting pipeline."
 formal_name: Backend Engineer
 status: active
+domain: technical
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

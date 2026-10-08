@@ -3,6 +3,7 @@ name: sre
 description: "Monitoring and alerting, log pipeline, and incident response with post-incident analysis."
 formal_name: SRE
 status: active
+domain: technical
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

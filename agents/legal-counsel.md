@@ -3,6 +3,7 @@ name: legal-counsel
 description: "Domestic and overseas statute, contract, and regulatory advisory. Owns permit pathway judgment, NDA and information-handling determinations, and confirms certification transferability against source text rather than convention."
 formal_name: Legal Counsel
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

@@ -493,6 +493,20 @@ export interface ReviewStageRow {
   unverified_items_json: string;
   result: string | null;
   created_at: string;
+  // Migration 0124 (ADR-0153) — artifact addressing + 3-bucket payload.
+  artifact_key?: string | null;
+  entity_type?: "project" | "opportunity" | null;
+  entity_id?: string | null;
+  stage_id?: string | null;
+  content_hash?: string | null;
+  buckets_json?: string | null;
+  author_domain?: string | null;
+  model_id?: string | null;
+  cost_tokens?: number;
+  performed?: number;
+  not_performed_reason?: string | null;
+  requested_by?: string | null;
+  reviewed_refs_json?: string | null;
 }
 
 // review_audit_sample — measures the "AI 검토 신뢰도" governance KPI

@@ -3,6 +3,7 @@ name: ir-agent
 description: "Investor relations advisory: equity story, disclosure discipline, investor communications, and market perception risk. Ensures that what the deal team says to investors and the market stays consistent with what the evidence actually supports, and that disclosure obligations are met before communications are sent."
 formal_name: IR Agent
 status: active
+domain: functional
 version: "1.0.0"
 last_updated: "2026-09-30"
 tier:

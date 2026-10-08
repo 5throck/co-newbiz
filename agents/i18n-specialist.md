@@ -3,6 +3,7 @@ name: i18n-specialist
 formal_name: I18N Specialist Agent
 role: specialist
 status: active
+domain: _shared
 tier:
   claude: medium
   gemini: medium
