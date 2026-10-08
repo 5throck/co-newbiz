@@ -41,6 +41,7 @@ import { useAuth } from "../lib/auth-client.tsx";
 import { api, type NotificationRow } from "../lib/api.ts";
 import { ADMIN_NAV, NAV_SECTIONS, type NavItem } from "../lib/navigation.ts";
 import { useInbox } from "../lib/use-inbox.ts";
+import { countOpenDecisions } from "../lib/inbox.ts";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
 import { ThemeToggle } from "./ThemeToggle.tsx";
 
@@ -235,7 +236,7 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
       <div className="topbar-actions">
         <ThemeToggle compact />
         {me.role !== "admin" && (
-          <button type="button" className="topbar-logout" onClick={() => void markAllRead()} aria-label={`알림 ${unreadCount > 0 ? unreadCount : "0"} — 모두 읽음 처리`} title="알림 모두 읽음 처리">
+          <button type="button" className="topbar-logout" onClick={() => void markAllRead()} aria-label={`알림 ${unreadCount > 0 ? unreadCount : "0"} — 모두 읽음 처리`} title="읽지 않은 알림의 수입니다. 누르면 모두 읽음 처리합니다. 결정 대기함의 항목 수와는 별개입니다.">
             <Bell size={16} />
             <span>알림 {unreadCount > 0 ? unreadCount : "0"}</span>
           </button>
@@ -350,6 +351,7 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
                   href={item.href}
                   className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
                   aria-current={active ? "page" : undefined}
+                  title={item.href === "/inbox" ? "결정 대기함 — 내가 결정해야 하는 열린 항목의 수입니다. 알림 수와는 별개입니다." : undefined}
                 >
                   {ICON_BY_HREF[item.href] ?? CHILD_ICON}
                   <span>{item.label}</span>
@@ -491,7 +493,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Inbox badge (design §4.2): same query as /inbox, polled on focus and every 60s.
   const inbox = useInbox(60_000, !!me && me.role !== "admin" && !me.mustChangePassword);
-  const inboxCount = inbox.result?.items.length ?? 0;
+  const inboxCount = countOpenDecisions(inbox.result?.items ?? []);
 
   // /register는 로그인 전 접근 가능해야 한다(계정 신청 → 관리자 승인 플로우).
   if (pathname === "/login" || pathname === "/register") return <>{children}</>;

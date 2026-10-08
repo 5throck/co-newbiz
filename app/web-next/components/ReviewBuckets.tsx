@@ -6,11 +6,13 @@
 // or auto-selected decision. Silence is not approval — a stage that was not
 // performed says so in text. The human decision controls stay in the
 // surrounding panel and are labelled as the human's decision (boundary #2).
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
+import { BUCKET_TITLE, bucketCounts, citationLabel, gateDisplayName, localizeItem } from "../lib/review/review-display.ts";
 import { TabNav } from "./TabNav.tsx";
 import { PrimaryAction } from "./ui.tsx";
 
@@ -25,7 +27,7 @@ const REVIEW_GATE_IDS: ReadonlySet<string> = new Set([
   "group_ic",
   "transition",
 ]);
-const gateLabel = (g: string): string => (g === "transition" ? "S12 전환" : (GATE_LABEL[g as GateMetaId] ?? g));
+const gateLabel = (g: string): string => (g === "transition" ? gateDisplayName(g) : (GATE_LABEL[g as GateMetaId] ?? gateDisplayName(g)));
 
 /** A stage artifact tab (stage:S#:N) the caller offers, with a short Korean label. */
 export interface ReviewArtifactTab {
@@ -62,15 +64,41 @@ interface ReviewView {
 }
 
 type BucketKey = "verified" | "could_not_verify" | "needs_judgement";
-const BUCKETS: Array<{ key: BucketKey; title: string; hint: string }> = [
-  { key: "verified", title: "확인됨 (Verified)", hint: "산출물 자체로 확인된 항목입니다. 승인이 아닙니다." },
-  {
-    key: "could_not_verify",
-    title: "확인하지 못함 (Could not verify)",
-    hint: "검토자가 확인하지 못했다고 밝힌 항목입니다.",
-  },
-  { key: "needs_judgement", title: "판단 필요 (Needs judgement)", hint: "사람이 판단해야 하는 항목입니다." },
+// Korean titles are exact (dissent condition on the 2026-10-09 critique): never softened.
+// English is available only as a tooltip.
+const BUCKETS: Array<{ key: BucketKey; hint: string }> = [
+  { key: "verified", hint: "산출물 자체로 확인된 항목입니다. 승인이 아닙니다." },
+  { key: "could_not_verify", hint: "검토자가 확인하지 못했다고 밝힌 항목입니다." },
+  { key: "needs_judgement", hint: "사람이 판단해야 하는 항목입니다." },
 ];
+
+/** How the review block is laid out.
+ *  - "expanded": decision surfaces (gate panels, inbox, proposal confirm) - buckets always visible.
+ *  - "summary": stage screens - content first; a non-dismissible strip with the three counts that expands to the buckets. */
+export type ReviewVariant = "expanded" | "summary";
+
+function CountStrip({ counts, label }: { counts: ReturnType<typeof bucketCounts>; label?: string }) {
+  const warn = counts.could_not_verify > 0;
+  return (
+    <span className="review-counts" role="group" aria-label="검토 결과 건수">
+      {label && <span className="review-counts-target">{label}</span>}
+      <span className="review-count" title={BUCKET_TITLE.verified.en}>
+        {BUCKET_TITLE.verified.ko} <b className="tabular-nums">{counts.verified}</b>건
+      </span>
+      <span
+        className={`review-count${warn ? " review-count-warn status-chip status-amber" : ""}`}
+        title={BUCKET_TITLE.could_not_verify.en}
+      >
+        {warn && <AlertTriangle size={14} aria-hidden="true" />}
+        {BUCKET_TITLE.could_not_verify.ko} <b className="tabular-nums">{counts.could_not_verify}</b>건
+        {warn && <span className="review-count-flag"> · 확인 필요</span>}
+      </span>
+      <span className="review-count" title={BUCKET_TITLE.needs_judgement.en}>
+        {BUCKET_TITLE.needs_judgement.ko} <b className="tabular-nums">{counts.needs_judgement}</b>건
+      </span>
+    </span>
+  );
+}
 
 function originOf(s: StageView): string {
   return s.origin === "AI 1st"
@@ -84,6 +112,8 @@ export function ReviewBuckets({
   gates,
   artifacts,
   headerPrimary,
+  variant = "summary",
+  headerSlot,
 }: {
   entityType: "opportunity" | "project";
   entityId: string;
@@ -92,6 +122,10 @@ export function ReviewBuckets({
   artifacts?: readonly ReviewArtifactTab[];
   /** Wave U: make "request AI 2nd review" the screen's Primary Action (page header). */
   headerPrimary?: boolean;
+  /** Default "summary" (stage screens). Decision surfaces pass "expanded". */
+  variant?: ReviewVariant;
+  /** Expanded variant only: rendered on the header row beside the three counts (the inbox primary link). */
+  headerSlot?: ReactNode;
 }) {
   const { me } = useAuth();
   const canRequest = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
@@ -109,6 +143,7 @@ export function ReviewBuckets({
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const uid = useId();
+  const [open, setOpen] = useState(variant === "expanded");
 
   const base = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(entityId)}/reviews`;
 
@@ -187,10 +222,43 @@ export function ReviewBuckets({
     }
   }
 
+  const counts = bucketCounts(stages);
+  const activeLabel = tabs.find((t) => t.key === active)?.label;
+  const panelId = `${uid}-panel`;
+  const summaryMode = variant === "summary";
+  const showBody = !summaryMode || open;
+
   return (
-    <section aria-label="3단계 검토" className="market-section sizing-step mt-3">
+    <section aria-label="3단계 검토" className={`market-section sizing-step mt-3 review-block review-block-${variant}`}>
       {headerAction}
-      <h3 className="sizing-step-title text-[0.95rem]">3단계 검토 — 사람 판단 전 참고 자료</h3>
+      {summaryMode ? (
+        // Non-dismissible by design: there is no close control, only an expand toggle.
+        <div className="review-strip">
+          <button
+            type="button"
+            className="review-strip-toggle"
+            aria-expanded={open}
+            aria-controls={panelId}
+            onClick={() => setOpen((o) => !o)}
+          >
+            {open ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
+            <span className="review-strip-title">3단계 검토</span>
+            {view ? (
+              <CountStrip counts={counts} label={tabs.length > 1 ? activeLabel : undefined} />
+            ) : (
+              <span className="review-counts-target">{error ? "불러오지 못함" : "불러오는 중…"}</span>
+            )}
+            <span className="review-strip-action">{open ? "접기" : "펼쳐서 보기"}</span>
+          </button>
+        </div>
+      ) : (
+        <div className="review-head">
+          <h3 className="sizing-step-title text-[0.95rem]">3단계 검토 — 사람 판단 전 참고 자료</h3>
+          {view && <CountStrip counts={counts} />}
+          {headerSlot && <span className="review-head-slot">{headerSlot}</span>}
+        </div>
+      )}
+      <div id={panelId} hidden={!showBody}>
       <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
         검토 결과는 승인·통과 표시가 아닙니다. AI가 확인한 것, 확인하지 못한 것, 사람이 판단할 것을 나누어 보여줄 뿐이며
         결정은 아래에서 사람이 기록합니다.
@@ -217,13 +285,13 @@ export function ReviewBuckets({
                 <li key={s.id}>
                   <span className="font-semibold">{originOf(s)}</span>
                   {s.author_domain ? ` — 작성 도메인 ${s.author_domain}` : ""}
-                  {!s.performed && <span> — 수행되지 않음 (Not performed): {s.not_performed_reason}</span>}
+                  {!s.performed && <span title="Not performed"> — 수행되지 않음: {s.not_performed_reason}</span>}
                   {!s.current && <span> — 이전 산출물 기준의 결과입니다. 산출물이 바뀌었습니다.</span>}
                 </li>
               ))}
-              {!view.ai_2nd && <li>AI 2차 (교차 도메인): 아직 요청되지 않음 (Not performed)</li>}
+              {!view.ai_2nd && <li><span title="Not performed">AI 2차 (교차 도메인): 아직 요청되지 않음 (수행되지 않음)</span></li>}
             </ul>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="review-grid">
               {BUCKETS.map((b) => {
                 const items = stages
                   .filter((s) => s.performed || s.origin === "AI 1st")
@@ -234,32 +302,54 @@ export function ReviewBuckets({
                   <section
                     key={b.key}
                     aria-labelledby={headingId}
-                    className={`border rounded-lg px-3 py-2 ${prominent ? "border-2 border-[color:var(--accent)]" : "border-[color:var(--border)]"}`}
+                    className={`review-bucket border rounded-lg px-3 py-2 ${prominent ? "border-2 border-[color:var(--accent)]" : "border-[color:var(--border)]"}`}
                   >
-                    <h4 id={headingId} className="text-[length:var(--fs-body)] font-semibold mb-1">
-                      {b.title}, {items.length}건
+                    <h4 id={headingId} className="text-[length:var(--fs-body)] font-semibold mb-1" title={BUCKET_TITLE[b.key].en}>
+                      {BUCKET_TITLE[b.key].ko}, {items.length}건
                     </h4>
                     <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{b.hint}</p>
                     {items.length === 0 ? (
                       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">해당 항목 없음</p>
                     ) : (
-                      <ul className="sizing-note-list text-[length:var(--fs-caption)]">
-                        {items.map(({ it, s }) => (
-                          <li key={`${s.id}-${it.claim}`}>
-                            <span className="font-semibold">{it.claim}</span>
-                            <span className="block text-[color:var(--muted-fg)]">{it.reason}</span>
-                            <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                              출처: {s.origin === "AI 1st" ? "AI 1차" : `AI 2차 · ${s.reviewer_domain ?? "?"}`}
-                              {it.evidence_ref ? ` · ${it.evidence_ref}` : ""}
-                            </span>
-                          </li>
-                        ))}
+                      <ul className="review-items text-[length:var(--fs-caption)]">
+                        {items.map(({ it, s }) => {
+                          const l = localizeItem(it);
+                          return (
+                            <li key={`${s.id}-${it.claim}`}>
+                              <span className="font-semibold" title={l.localized ? it.claim : undefined}>{l.claim}</span>
+                              <span className="block text-[color:var(--muted-fg)]" title={l.localized ? it.reason : undefined}>{l.reason}</span>
+                              <span className="block text-[color:var(--muted-fg)]">
+                                출처: {citationLabel(s.origin, s.reviewer_domain, it.evidence_ref)}
+                              </span>
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </section>
                 );
               })}
             </div>
+            <details className="review-dev">
+              <summary>개발자 세부정보</summary>
+              <p className="review-dev-note">내부 식별자와 원문(영문) 그대로의 검토 기록입니다. 검토 결과의 의미는 위 본문과 같습니다.</p>
+              <ul>
+                {stages.flatMap((s) =>
+                  BUCKETS.flatMap((b) =>
+                    s[b.key].map((it) => (
+                      <li key={`${s.id}-${b.key}-${it.claim}`}>
+                        <code>{BUCKET_TITLE[b.key].en}</code> · <code>{s.origin}</code> — {it.claim} — {it.reason}
+                        {it.evidence_ref ? <> · <code>{it.evidence_ref}</code></> : null}
+                      </li>
+                    )),
+                  ),
+                )}
+              </ul>
+              <p className="review-dev-note">
+                검토 기록 <code>{view.content_hash.slice(0, 12)}</code>
+                {stages.map((s) => <span key={s.id}> · <code>{s.id}</code></span>)}
+              </p>
+            </details>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {canRequest && !headerPrimary && (
                 <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void requestAi2nd()}>
@@ -286,6 +376,7 @@ export function ReviewBuckets({
         <p role="status" aria-live="polite" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
           {status}
         </p>
+      </div>
       </div>
     </section>
   );

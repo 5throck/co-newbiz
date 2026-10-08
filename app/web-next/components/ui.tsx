@@ -152,19 +152,25 @@ export function ParamTable({
   );
 }
 
-/* ── ControlChip — interactive filter/sort/score control (NOT a status chip) ── */
+/* ── FilterChip — the ONE interactive filter/sort chip (NOT a status chip) ──
+   Selected = filled, unselected = outline; the state is exposed with aria-pressed and
+   the filled state also bolds the label, so it never relies on color alone. */
 
-export function ControlChip({
+export function FilterChip({
   selected,
   children,
+  className,
   ...rest
-}: { selected?: boolean; children: ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+}: { selected: boolean; children: ReactNode } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "aria-pressed">) {
   return (
-    <button type="button" aria-pressed={selected} {...rest} className={`control-chip ${rest.className ?? ""}`.trim()}>
+    <button type="button" {...rest} aria-pressed={selected} className={`control-chip ${className ?? ""}`.trim()}>
       {children}
     </button>
   );
 }
+
+/** @deprecated use FilterChip — kept so existing imports keep compiling. */
+export const ControlChip = FilterChip;
 
 /* ── Tabs — URL query-synced tab strip (3-depth navigation ceiling, ui-spec §1) ── */
 

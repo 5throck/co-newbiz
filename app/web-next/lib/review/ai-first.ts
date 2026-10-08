@@ -9,6 +9,7 @@
 // It never produces a pass/score and never touches a decision table.
 import type { ReviewBuckets, ReviewItem } from "../../../../db/repositories/review.repository.ts";
 import type { ReviewArtifact } from "./stage-artifacts.ts";
+import { cleanList, joinBlockers } from "./review-display.ts";
 
 export function runAiFirstChecks(artifact: ReviewArtifact): ReviewBuckets {
   const verified: ReviewItem[] = [];
@@ -45,10 +46,11 @@ export function runAiFirstChecks(artifact: ReviewArtifact): ReviewBuckets {
         structural: true,
       });
     } else if (s.status === "current") {
-      const missing = s.missing_artifacts.length > 0 ? ` Missing: ${s.missing_artifacts.join("; ")}.` : "";
+      const missingNames = cleanList(s.missing_artifacts);
+      const missing = missingNames.length > 0 ? ` Missing: ${missingNames.join("; ")}.` : "";
       could.push({
         claim: `Stage ${s.id} (${s.name}) is incomplete`,
-        reason: `${s.blockers.join(" / ") || "Completion predicate not satisfied."}${missing}`,
+        reason: `${joinBlockers(s.blockers) || "Completion predicate not satisfied."}${missing}`,
         evidence_ref: ref,
         structural: true,
       });

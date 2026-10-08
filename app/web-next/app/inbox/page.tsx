@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { PageState, ControlChip, PrimaryAction } from "../../components/ui.tsx";
+import { PageState, FilterChip, PrimaryAction } from "../../components/ui.tsx";
 import { InboxList } from "../../components/InboxList.tsx";
 import { ReviewBuckets } from "../../components/ReviewBuckets.tsx";
 import { useInbox } from "../../lib/use-inbox.ts";
@@ -34,7 +34,8 @@ function primaryLabel(kind: InboxKind): string {
 
 export default function InboxPage() {
   const { result, loading } = useInbox();
-  const [kinds, setKinds] = useState<Set<InboxKind>>(new Set(ALL_KINDS));
+  // Empty set = "전체" (no kind filter). A chip is filled only when it is an active filter.
+  const [kinds, setKinds] = useState<Set<InboxKind>>(new Set());
   const [deal, setDeal] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileDetail, setMobileDetail] = useState(false);
@@ -54,7 +55,7 @@ export default function InboxPage() {
   }, []);
 
   const items = useMemo(
-    () => (result?.items ?? []).filter((i) => kinds.has(i.kind) && (!deal || i.dealId === deal) && !((snoozed[i.id] ?? 0) > Date.now())),
+    () => (result?.items ?? []).filter((i) => (kinds.size === 0 || kinds.has(i.kind)) && (!deal || i.dealId === deal) && !((snoozed[i.id] ?? 0) > Date.now())),
     [result, kinds, deal, snoozed],
   );
   const deals = useMemo(() => {
@@ -63,6 +64,8 @@ export default function InboxPage() {
     return [...m.entries()];
   }, [result]);
   const selected: InboxItem | null = items.find((i) => i.id === selectedId) ?? items[0] ?? null;
+  const showReview = !!(selected?.entityType && selected.dealId && selected.gate && REVIEW_GATES.has(selected.gate));
+  const primaryLink = selected ? <Link href={selected.href} className="btn-primary">{primaryLabel(selected.kind)}</Link> : null;
 
   function select(id: string) {
     setSelectedId(id);
@@ -102,8 +105,9 @@ export default function InboxPage() {
       )}
 
       <div className="inbox-filters" role="group" aria-label="필터">
+        <FilterChip selected={kinds.size === 0} onClick={() => setKinds(new Set())}>전체</FilterChip>
         {ALL_KINDS.map((k) => (
-          <ControlChip key={k} selected={kinds.has(k)} onClick={() => toggleKind(k)}>{KIND_LABEL[k]}</ControlChip>
+          <FilterChip key={k} selected={kinds.has(k)} onClick={() => toggleKind(k)}>{KIND_LABEL[k]}</FilterChip>
         ))}
         <label className="inbox-deal-filter">
           <span>딜</span>
@@ -140,11 +144,19 @@ export default function InboxPage() {
                   <strong>AI 제안(초안)</strong> — 제안일 뿐 결정이 아닙니다. {selected.aiDraft}
                 </p>
               )}
-              {selected.entityType && selected.dealId && selected.gate && REVIEW_GATES.has(selected.gate) && (
-                <ReviewBuckets entityType={selected.entityType} entityId={selected.dealId} gates={[selected.gate]} />
+              {showReview ? (
+                // The reviewer sees the three counts beside the single primary link, buckets expanded below.
+                <ReviewBuckets
+                  entityType={selected.entityType!}
+                  entityId={selected.dealId!}
+                  gates={[selected.gate!]}
+                  variant="expanded"
+                  headerSlot={primaryLink}
+                />
+              ) : (
+                <div className="inbox-actions">{primaryLink}</div>
               )}
               <div className="inbox-actions">
-                <Link href={selected.href} className="btn-primary">{primaryLabel(selected.kind)}</Link>
                 {selected.entityType === "project" && selected.dealId && (
                   <Link href={`/projects/${encodeURIComponent(selected.dealId)}/process`} className="btn-ghost">단계 화면에서 열기</Link>
                 )}

@@ -278,7 +278,7 @@ export default function ProposalConfirmPage() {
             </section>
           )}
 
-          {gateForReview && <ReviewBuckets entityType={proposal.entity_type} entityId={proposal.entity_id} gates={[gateForReview]} />}
+          {gateForReview && <ReviewBuckets entityType={proposal.entity_type} entityId={proposal.entity_id} gates={[gateForReview]} variant="expanded" />}
 
           {pending && (
             <section aria-labelledby="decide-heading">
