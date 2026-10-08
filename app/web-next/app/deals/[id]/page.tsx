@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "../../../lib/api.ts";
 import { PageState } from "../../../components/ui.tsx";
+import { DealBreadcrumb } from "../../../components/DealBreadcrumb.tsx";
 
 interface StageLite { id: string; status: string; gateIds?: string[] }
 interface ProcessView {
@@ -46,7 +47,7 @@ function DealOverview() {
 
   return (
     <main>
-      <p className="crumb">검토/안건 보드</p>
+      <DealBreadcrumb dealId={id} />
       <h1>검토/안건 개요</h1>
       <p className="objective">현재 단계·다음 할 일·완료 조건·진행 상태를 한 장으로 봅니다.</p>
 

@@ -14,6 +14,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { api } from "../../../../lib/api.ts";
 import { PageState } from "../../../../components/ui.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
+import { DealBreadcrumb } from "../../../../components/DealBreadcrumb.tsx";
 import { RouteDecisionStage } from "../../../../components/stages/RouteDecisionStage.tsx";
 import { GreenfieldStage } from "../../../../components/stages/GreenfieldStage.tsx";
 import { OpportunityFunnelStage } from "../../../../components/stages/OpportunityFunnelStage.tsx";
@@ -43,7 +44,7 @@ function StageTab() {
   if (stageId === "S1") {
     return (
       <main>
-        <MarketAnalysisStage embedded industryId={searchParams.get("industry") ?? undefined} />
+        <MarketAnalysisStage embedded dealId={params.id} industryId={searchParams.get("industry") ?? undefined} />
       </main>
     );
   }
@@ -52,6 +53,7 @@ function StageTab() {
   if (stageId === "S2") {
     return (
       <main>
+        <DealBreadcrumb dealId={params.id} stageId="S2" />
         <StageFrame stageId="S2">
           시장분석(S1) 산출물에서 기회를 발굴하고, 기회·위험 요인을 근거로 매력도를 평가합니다.
         </StageFrame>
@@ -64,6 +66,7 @@ function StageTab() {
   if (stageId === "S4") {
     return (
       <main>
+        <DealBreadcrumb dealId={params.id} stageId="S4" />
         <StageFrame stageId="S4">
           선별된 기회의 진출방식을 결정하는 분기점입니다.
           Greenfield(자체 역량 진출)는 S5 역량 평가로, Brownfield(기존 기업·자산 결합)는
@@ -82,6 +85,7 @@ function StageTab() {
     const companySurface = searchParams.get("surface") === "company";
     return (
       <main>
+        <DealBreadcrumb dealId={params.id} stageId="S3" tail={companySurface ? [{ label: "그룹·계열사 프로파일" }] : []} />
         <div role="group" aria-label="S3 화면 전환" className="flex flex-wrap gap-1 mb-2">
           <Link
             href={`/deals/${params.id}/s3`}
@@ -123,6 +127,7 @@ function StageTab() {
   if (stageId === "S5") {
     return (
       <main>
+        <DealBreadcrumb dealId={params.id} stageId="S5" />
         <StageFrame stageId="S5" track="greenfield">
           Greenfield 경로 — 자체 역량으로 진입할 수 있는지 평가합니다. 진출전략을
           Build / Partner / Hire / Invest 중 결정하고, 필요 역량(S3에서 이미 정의·판정된
@@ -138,6 +143,7 @@ function StageTab() {
   if (stageId === "S6" || stageId === "S7") {
     return (
       <main>
+        <DealBreadcrumb dealId={params.id} stageId={stageId as "S6" | "S7"} />
         <StageFrame stageId={["S6", "S7"]} track="brownfield" heading="S6/S7 대상발굴·선정">
           Brownfield 경로 — 진출방식이 Brownfield로 결정된 기회의
           대상 후보를 발굴하고(S6 Long List), <code>chk-target-screening</code> 체크리스트로 스크리닝해
@@ -196,6 +202,7 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
   const StageComponent = PROJECT_STAGES[stageId];
   return (
     <main>
+      <DealBreadcrumb dealId={carrierId} stageId={stageId as "S8"} />
       {error && <PageState state="empty" emptyText={error} />}
       {!error && !projectId && <PageState state="loading" />}
       {projectId && StageComponent ? StageComponent({ projectId }) : null}
@@ -227,7 +234,7 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
 
   return (
     <main>
-      <p className="crumb"><Link href={`/deals/${carrierId}`} className="text-[color:var(--accent)] underline">검토/안건 개요</Link> / {stageId}</p>
+      <DealBreadcrumb dealId={carrierId} stageId={stageId as "S1"} />
       <h1>{stageId} 단계</h1>
       <p className="objective">트랙에 따라 이 단계의 작업 화면으로 연결됩니다. (Wave 2 후속 단계에서 작업 화면이 이 탭 안으로 통합됩니다)</p>
 

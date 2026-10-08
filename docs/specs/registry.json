@@ -759,6 +759,16 @@
       "meeting_ref": "memory/meeting-2026-10-09-ui-critique.md"
     },
     {
+      "id": "2026-10-09-ux-r2-design",
+      "title": "ux r2 design",
+      "file": "docs/designs/2026-10-09-ux-r2-design.md",
+      "status": "approved",
+      "source": "meeting",
+      "created": "2026-10-08",
+      "last_updated": "2026-10-08",
+      "meeting_ref": "memory/meeting-2026-10-09-ui-critique-round2.md"
+    },
+    {
       "id": "design-checklist",
       "title": "DESIGN CHECKLIST",
       "file": "docs/designs/DESIGN-CHECKLIST.md",

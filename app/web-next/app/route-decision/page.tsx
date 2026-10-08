@@ -13,8 +13,8 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
-import { PageState } from "../../components/ui.tsx";
-import { SectionToolbar } from "../../components/layout.tsx";
+import { PageState, PrimaryAction } from "../../components/ui.tsx";
+import { Breadcrumb } from "../../components/Breadcrumb.tsx";
 
 interface OpportunityRow {
   id: string; name: string; attractiveness_score: number | null; synergy_score: number | null;
@@ -166,14 +166,20 @@ function RouteDecisionRedirect() {
   );
 }
 
-/** 검토/안건 미지정 진입(사이드바 nav) 전용 — StageFrame과 달리 검토/안건 컨텍스트(project id)가
-    없어 스테이지 레일 없이 제목/설명만 표시한다(R4: 단계 화면 h1은 StageFrame 전용). */
+/** 검토/안건 미지정 진입 전용 — 검토/안건 컨텍스트(project id)가 없어 스테이지 레일 없이
+    breadcrumb · h1 · 만들기 액션 · 설명을 표시한다(R2-A 페이지 계약). */
 function StageFrameLite() {
   return (
-    <SectionToolbar
-      title="S4 진출방식 결정"
-      summary="어떻게 들어갈 것인가? — Greenfield vs Brownfield를 결정한다 (Brownfield ≠ M&A)"
-    />
+    <>
+      <Breadcrumb items={[{ label: "검토/안건 보드", href: "/deals" }, { label: "S4 진출방식 결정" }]} />
+      <div className="stage-head">
+        <h1>S4 진출방식 결정</h1>
+        <PrimaryAction inline href="/market?new=1" label="새 검토 시작 (시장분석부터)" />
+      </div>
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
+        어떻게 들어갈 것인가? — Greenfield vs Brownfield를 결정한다 (Brownfield ≠ M&A). 결정 화면은 검토/안건별로 열리며, 새 검토는 시장분석부터 시작합니다.
+      </p>
+    </>
   );
 }
 

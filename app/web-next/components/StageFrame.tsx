@@ -15,24 +15,55 @@ import { useParams, usePathname } from "next/navigation";
 import { GATE_LABEL, STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
 import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
 import { PrimarySlot } from "./ui.tsx";
+import { useDealContext } from "../lib/use-deal-context.ts";
 
-/** 단계 → 담당 화면 라우트. 캐리어(project id)가 있으면 /deals/{id}/sN 탭으로,
+/** 단계 → 담당 화면 라우트. 캐리어(deal = 기회 id)가 있으면 /deals/{id}/sN 탭으로,
     없으면 플랫 라우트(캐리어 리다이렉트 스텁 — 2026-10-02 route-cleanup design
-    §4.2/§4.3)로 보낸다. 프로젝트 단계(S8~S12)는 /projects/[id] 컨텍스트에서만 링크된다. */
-const STAGE_HREF: Record<StageMetaId, (projectId?: string) => string | null> = {
-  S1: (p) => (p ? `/deals/${p}/s1` : "/market"),
-  S2: (p) => (p ? `/deals/${p}/s2` : "/opportunities"),
-  S3: (p) => (p ? `/deals/${p}/s3` : "/synergy"),
-  S4: (p) => (p ? `/deals/${p}/s4` : "/route-decision"),
-  S5: (p) => (p ? `/deals/${p}/s5` : "/greenfield"),
-  S6: (p) => (p ? `/deals/${p}/s6` : "/brownfield"),
-  S7: (p) => (p ? `/deals/${p}/s7` : "/brownfield"),
-  S8: (p) => (p ? `/projects/${p}/business-case` : null),
-  S9: (p) => (p ? `/projects/${p}/dd` : null),
-  S10: (p) => (p ? `/projects/${p}/deal-structure` : null),
-  S11: (p) => (p ? `/projects/${p}/ic-review` : null),
-  S12: (p) => (p ? `/projects/${p}/portfolio` : null),
+    §4.2/§4.3)로 보낸다. 프로젝트 단계(S8~S12)는 **프로젝트 id**가 필요하다 —
+    /deals/{id} 의 id는 기회 id이므로 승격된 기회의 project_id로 풀어 쓴다
+    (R2-A, 워크스루 F4: 기회 id로 만든 링크는 "Not found."가 되었다). */
+const STAGE_HREF: Record<StageMetaId, (dealId?: string, projectId?: string) => string | null> = {
+  S1: (d) => (d ? `/deals/${d}/s1` : "/market"),
+  S2: (d) => (d ? `/deals/${d}/s2` : "/opportunities"),
+  S3: (d) => (d ? `/deals/${d}/s3` : "/synergy"),
+  S4: (d) => (d ? `/deals/${d}/s4` : "/route-decision"),
+  S5: (d) => (d ? `/deals/${d}/s5` : "/greenfield"),
+  S6: (d) => (d ? `/deals/${d}/s6` : "/brownfield"),
+  S7: (d) => (d ? `/deals/${d}/s7` : "/brownfield"),
+  S8: (_d, p) => (p ? `/projects/${p}/business-case` : null),
+  S9: (_d, p) => (p ? `/projects/${p}/dd` : null),
+  S10: (_d, p) => (p ? `/projects/${p}/deal-structure` : null),
+  S11: (_d, p) => (p ? `/projects/${p}/ic-review` : null),
+  S12: (_d, p) => (p ? `/projects/${p}/portfolio` : null),
 };
+
+export const NOT_PROMOTED_REASON = "아직 프로젝트로 승격되지 않았습니다 — S7 선정 후 승격하면 열립니다.";
+
+export interface StageLink {
+  href: string | null;
+  /** Set when the stage cannot be opened for a reason other than track applicability. */
+  reason: string | null;
+}
+
+/** Resolves every stage link for the current route: S1~S7 use the deal id,
+    S8~S12 the promoted project id (looked up from the opportunity) and are
+    disabled with a reason while the deal is not promoted. */
+function useStageLinks(): (id: StageMetaId) => StageLink {
+  const params = useParams<{ id?: string }>();
+  const routeId = params?.id;
+  const underProjects = (usePathname() ?? "").startsWith("/projects/");
+  const deal = useDealContext(routeId, !underProjects);
+  return (id) => {
+    const projectStage = PROJECT_STAGE_IDS.has(id);
+    if (!projectStage) return { href: STAGE_HREF[id](underProjects ? undefined : routeId), reason: null };
+    if (underProjects) return { href: STAGE_HREF[id](undefined, routeId), reason: null };
+    if (!routeId) return { href: null, reason: "프로젝트(검토/안건) 화면에서만 열립니다." };
+    if (deal.state === "loading") return { href: null, reason: "프로젝트 승격 여부를 확인하는 중입니다." };
+    if (!deal.ctx) return { href: null, reason: "이 안건의 정보를 확인할 수 없어 열 수 없습니다." };
+    const pid = deal.ctx.projectId;
+    return pid ? { href: STAGE_HREF[id](routeId, pid), reason: null } : { href: null, reason: NOT_PROMOTED_REASON };
+  };
+}
 
 /** 가이던스 스트립이 붙는 프로젝트 전용 단계 — 기회 단계(S1~S7)는 별도 화면이 담당한다. */
 const PROJECT_STAGE_IDS = new Set(["S8", "S9", "S10", "S11", "S12"]);
@@ -55,9 +86,10 @@ export function StageFrame({
   const primary = ids[0];
   const stage = STAGE_META.find((s) => s.id === primary)!;
   const params = useParams<{ id?: string }>();
-  const projectId = params?.id;
+  const linkFor = useStageLinks();
   // Under /projects/[id]/** StageTabs owns the stepper (one stepper per screen).
   const stepperOwnedByTabs = (usePathname() ?? "").startsWith("/projects/");
+  const projectId = stepperOwnedByTabs ? params?.id : undefined;
   return (
     <>
       <div className="stage-head">
@@ -68,7 +100,7 @@ export function StageFrame({
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">{stage.objective}</p>
       {!stepperOwnedByTabs && <StageRail current={ids} track={track} />}
-      <StageHandoffStrip primary={primary} projectId={projectId} track={track} />
+      <StageHandoffStrip primary={primary} linkFor={linkFor} />
       {projectId && PROJECT_STAGE_IDS.has(primary) && <StageGuidance projectId={projectId} stageId={primary} />}
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,
           하단 간격 mb-4). 페이지별 클래스·<strong> 강조 금지(설계서 개정 2026-09-04). */}
@@ -84,10 +116,10 @@ export function StageFrame({
 /** 단계 연계 스트립 — 이 단계가 받는 입력과 넘기는 출력을 모든 단계 화면에
     표시한다 (ADR-0120 단계 연계). 다음 단계 CTA는 트랙·프로젝트 컨텍스트를
     반영해 STAGE_HREF로 연결된다. */
-function StageHandoffStrip({ primary, projectId, track }: { primary: StageMetaId; projectId?: string; track?: TrackId }) {
+function StageHandoffStrip({ primary, linkFor }: { primary: StageMetaId; linkFor: (id: StageMetaId) => StageLink }) {
   const handoff = STAGE_HANDOFF[primary];
   const nextId = STAGE_META.find((s) => s.id === primary)?.onComplete ?? null;
-  const nextHref = nextId && nextId !== "terminal" ? STAGE_HREF[nextId](projectId) : null;
+  const nextHref = nextId && nextId !== "terminal" ? linkFor(nextId).href : null;
   return (
     <details className="handoff-panel">
       <summary>입력과 출력 <span className="handoff-panel-hint">이 단계가 받는 것 · 넘기는 것</span></summary>
@@ -165,14 +197,19 @@ function StageGuidance({ projectId, stageId }: { projectId: string; stageId: str
     aria-current="step". At <=880px it collapses to "S8 / 12 · name" with a
     disclosure list. Status is text (current/skipped), never colour alone. */
 export function StageRail({ current, track }: { current: StageMetaId[]; track?: TrackId }) {
-  const params = useParams<{ id?: string }>();
-  const projectId = params?.id;
+  const linkFor = useStageLinks();
   const listRef = useRef<HTMLDivElement>(null);
   const cur = STAGE_META.find((s) => s.id === current[0])!;
 
+  function trackApplicable(s: (typeof STAGE_META)[number]): boolean {
+    return !track || s.applicableTracks.includes(track) || s.applicableTracks.length === 2;
+  }
   function hrefFor(s: (typeof STAGE_META)[number]): string | null {
-    const trackApplicable = !track || s.applicableTracks.includes(track) || s.applicableTracks.length === 2;
-    return trackApplicable ? STAGE_HREF[s.id](projectId) : null;
+    return trackApplicable(s) ? linkFor(s.id).href : null;
+  }
+  /** Why a track-applicable stage cannot be opened (not promoted yet, still resolving). */
+  function blockedReason(s: (typeof STAGE_META)[number]): string | null {
+    return trackApplicable(s) ? linkFor(s.id).reason : null;
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -212,6 +249,7 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
           {STAGE_META.map((s) => {
             const href = hrefFor(s);
             const isCurrent = current.includes(s.id);
+            const blocked = blockedReason(s);
             return (
               <li key={s.id}>
                 {href ? (
@@ -219,7 +257,7 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
                     {s.sequence}. {s.name}{isCurrent ? " (현재)" : ""}
                   </Link>
                 ) : (
-                  <span className="stage-step-compact-link stage-step-skipped">{s.sequence}. {s.name} (미적용)</span>
+                  <span className="stage-step-compact-link stage-step-skipped">{s.sequence}. {s.name} ({blocked ? "승격 후 열림" : "미적용"})</span>
                 )}
               </li>
             );
@@ -230,14 +268,20 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
         {STAGE_META.map((s) => {
           const isCurrent = current.includes(s.id);
           const href = hrefFor(s);
-          const skipped = !href && !(!track || s.applicableTracks.includes(track) || s.applicableTracks.length === 2);
-          const title = skipped ? `${s.name} — 현재 트랙 미적용` : `${s.name} — ${s.objective}`;
+          const blocked = blockedReason(s);
+          const skipped = !href && !trackApplicable(s);
+          const title = skipped
+            ? `${s.name} — 현재 트랙 미적용`
+            : blocked
+              ? `${s.name} — ${blocked}`
+              : `${s.name} — ${s.objective}`;
           const body = (
             <>
               <span className="stage-step-num">{s.sequence}</span>
               <span className="stage-step-name">{s.name}</span>
               {isCurrent && <span className="stage-step-state">현재</span>}
               {skipped && <span className="stage-step-state">미적용</span>}
+              {!skipped && !href && blocked && <span className="stage-step-state">승격 후</span>}
             </>
           );
           return href ? (
@@ -252,7 +296,7 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
               {body}
             </Link>
           ) : (
-            <span key={s.id} title={title} className={`stage-step stage-step-skipped`}>{body}</span>
+            <span key={s.id} title={title} aria-disabled="true" className={`stage-step stage-step-skipped`}>{body}</span>
           );
         })}
         {gateIds.length > 0 && (

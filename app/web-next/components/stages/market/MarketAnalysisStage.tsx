@@ -10,8 +10,12 @@
 // 모드(deals 탭)는 내부 상태로 선택한다 — router를 건드리지 않는다.
 // industryId prop으로 특정 산업을 고정 딥링크할 수 있다.
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
-import { StageFrame } from "../../StageFrame.tsx";
+import { useEffect, useRef } from "react";
+import { StageFrame, StageRail } from "../../StageFrame.tsx";
 import { PrimaryAction } from "../../ui.tsx";
+import { Breadcrumb } from "../../Breadcrumb.tsx";
+import { DealBreadcrumb } from "../../DealBreadcrumb.tsx";
+import { ListBackButton } from "../../ListBackButton.tsx";
 import { useMarketData } from "./useMarketData.ts";
 import { useMarketLinking } from "./useMarketLinking.ts";
 import { useMarketList } from "./useMarketList.ts";
@@ -20,20 +24,49 @@ import { LinkCandidatesModal } from "./LinkCandidatesModal.tsx";
 import { MarketReport } from "./MarketReport.tsx";
 import { IndustryChainGraph } from "./IndustryChainGraph.tsx";
 
-export function MarketAnalysisStage(props0: { industryId?: string; embedded?: boolean }) {
+/**
+ * `dealId` — the deal carrier when rendered as the /deals/{id}/s1 tab (drives the
+ * breadcrumb and the "next: S2" link). `startNew` — land with the new-industry
+ * form open and focused (board "새 검토 시작", /market?new=1).
+ */
+export function MarketAnalysisStage(props0: { industryId?: string; embedded?: boolean; dealId?: string; startNew?: boolean }) {
   const h0 = useMarketData(props0);
   const h1 = useMarketLinking({ ...h0 });
   const h2 = useMarketList({ ...h0, ...h1 });
   const ctx = { ...h0, ...h1, ...h2 };
-  const { confirmDialog, linkNotice, chainGraph, setChainGraphOpen, error, chainGraphOpen, detail, selectedIndustry, overview, openLinkModal } = ctx;
+  const { confirmDialog, linkNotice, chainGraph, setChainGraphOpen, error, chainGraphOpen, detail, selectedIndustry, overview, openLinkModal, canCurate, showNewForm, backToList } = ctx;
+  const { dealId, startNew } = props0;
+
+  // Known entry (R2-A item 7): scroll the open new-analysis form into view and
+  // focus its first field, once, as soon as it is rendered.
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!startNew || focusedRef.current || !canCurate || !showNewForm || detail) return;
+    const el = document.getElementById("market-new-name");
+    if (!el) return;
+    focusedRef.current = true;
+    el.scrollIntoView({ block: "center" });
+    el.focus();
+  }, [startNew, canCurate, showNewForm, detail, overview]);
 
 
   if (detail && selectedIndustry) {
     const row = overview?.industries.find((i) => i.id === selectedIndustry);
     const analysisId = row?.analysis?.id ?? null;
     const analysisDate = row?.analysis ? (row.analysis.completed_at ?? row.analysis.created_at).slice(0, 10) : null;
+    const nextHref = dealId ? `/deals/${encodeURIComponent(dealId)}/s2` : "/opportunities";
     return (
       <>
+        {dealId ? (
+          <DealBreadcrumb dealId={dealId} stageId="S1" tail={[{ label: detail.industry.name_ko }]} />
+        ) : (
+          <Breadcrumb items={[{ label: "검토/안건 보드", href: "/deals" }, { label: "S1 시장분석", href: "/market" }, { label: detail.industry.name_ko }]} />
+        )}
+        <StageRail current={["S1"]} />
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <ListBackButton onClick={backToList} label="산업 목록으로" />
+          <PrimaryAction inline href={nextHref} label="다음: S2 기회 발굴 →" />
+        </div>
         <MarketReport
           detail={detail}
           analysisId={analysisId}
@@ -47,6 +80,11 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
     <>
       {confirmDialog}
       {linkNotice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-body)] mb-2">{linkNotice}</p>}
+      {dealId ? (
+        <DealBreadcrumb dealId={dealId} stageId="S1" />
+      ) : (
+        <Breadcrumb items={[{ label: "검토/안건 보드", href: "/deals" }, { label: "S1 시장분석" }]} />
+      )}
       <MarketPrimaryAction ctx={ctx} />
       <StageFrame stageId="S1">
         <span className="flex flex-wrap items-center justify-between gap-2">

@@ -3055,7 +3055,7 @@ main li { overflow-wrap: anywhere; }
 }
 
 .sizing-report-header { margin-bottom: 1rem; }
-.sizing-report-header h2 { font-size: 1.05rem; margin: 0 0 0.25rem; }
+.sizing-report-header h1 { margin: 0 0 0.25rem; }
 
 .sizing-step {
   border: 1px solid var(--border); border-radius: var(--radius-xl);
@@ -3628,3 +3628,29 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 /* Inbox deal filter must not overflow narrow viewports. */
 .inbox-deal-filter { max-width: 100%; }
 .inbox-deal-filter select { min-width: 0; max-width: 100%; }
+
+/* ── Breadcrumb (R2-A page contract): 보드 › 안건 › 단계 › 탭 ─────────────── */
+.breadcrumb { margin: 0 0 var(--space-2); font-size: var(--fs-caption); color: var(--muted-fg); }
+.breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
+.breadcrumb li { display: inline-flex; align-items: center; gap: 0.25rem; }
+.breadcrumb a { color: var(--muted-fg); text-decoration: underline; text-underline-offset: 2px; }
+.breadcrumb a:hover { color: var(--accent); }
+.breadcrumb [aria-current="page"] { color: var(--fg); font-weight: 600; }
+.breadcrumb-sep { color: var(--muted-fg); }
+
+/* Moved-route notice (R2-A item 8): visible, dismissible, never a silent redirect. */
+.moved-notice {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);
+  margin: 0 0 var(--space-3); padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-lg);
+  background: var(--surface); color: var(--fg); font-size: var(--fs-caption);
+}
+.moved-notice-text { flex: 1 1 auto; }
+
+/* Known-target landing banner (R2-A item 7). */
+.focus-banner {
+  margin: 0 0 var(--space-3); padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-lg);
+  background: var(--surface); color: var(--fg); font-size: var(--fs-caption);
+}
+.guide-link { text-decoration: underline; text-underline-offset: 2px; color: var(--accent); }

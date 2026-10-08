@@ -18,11 +18,11 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../lib/api.ts";
-import { PageState } from "./ui.tsx";
-import { SectionToolbar } from "./layout.tsx";
+import { PageState, PrimaryAction } from "./ui.tsx";
 import { MarketAnalysisStage } from "./stages/MarketAnalysisStage.tsx";
 import { OpportunityFunnelStage } from "./stages/OpportunityFunnelStage.tsx";
 import { StageFrame } from "./StageFrame.tsx";
+import { Breadcrumb } from "./Breadcrumb.tsx";
 
 export type FlatRouteKey = "market" | "opportunities" | "synergy" | "greenfield" | "brownfield";
 
@@ -55,6 +55,16 @@ const SUMMARY_BY_ROUTE: Record<FlatRouteKey, string> = {
   synergy: "그룹/계열사 역량과의 시너지와 전략적 적합성을 평가해 기회를 선별합니다.",
   greenfield: "Greenfield 경로 — 자체 역량으로 진입할 수 있는지 평가합니다.",
   brownfield: "Brownfield 경로 — 대상 후보를 발굴하고(S6) 선정합니다(S7).",
+};
+
+/** Create action of each picker page (R2-A page contract: pickers are list + create + breadcrumb).
+    S3-S7 pages need a deal that already passed S1/S2, so their create action starts a new review. */
+const CREATE_BY_ROUTE: Record<FlatRouteKey, { label: string; href: string; hint: string }> = {
+  market: { label: "새 시장분석 시작", href: "/market?new=1", hint: "산업을 새로 정해 분석을 시작합니다 — 아래 목록은 이미 진행 중인 검토/안건의 S1 화면입니다." },
+  opportunities: { label: "새 기회 등록", href: "/opportunities?new=1", hint: "기회를 직접 등록합니다 — 아래 목록은 진행 중인 검토/안건의 S2 화면입니다." },
+  synergy: { label: "그룹·계열사 프로파일 등록", href: "/our-company", hint: "시너지 평가는 그룹/계열사 프로파일이 먼저 필요합니다. 새 검토는 시장분석부터 시작합니다." },
+  greenfield: { label: "새 검토 시작 (시장분석부터)", href: "/market?new=1", hint: "새 검토는 시장분석(S1)부터 시작합니다." },
+  brownfield: { label: "새 검토 시작 (시장분석부터)", href: "/market?new=1", hint: "새 검토는 시장분석(S1)부터 시작합니다." },
 };
 
 interface CarrierRow {
@@ -94,15 +104,20 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
   // Wave C-3 (D-5): "start from a known target" lands on the S2 funnel itself —
   // the carrier is created there, so it must not be redirected to an existing deal.
   const startsKnownTarget = route === "opportunities" && !carrierId && searchParams.get("known_target") === "1";
+  // R2-A item 1: "새 시장분석 시작" / "새 기회 등록" land on the working form directly,
+  // never on the deal picker and never auto-redirected into an unrelated deal.
+  const startsNew = !carrierId && searchParams.get("new") === "1" && (route === "market" || route === "opportunities");
   const [rows, setRows] = useState<CarrierRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const firstRowRef = useRef<HTMLAnchorElement | null>(null);
 
   const redirectTarget = useCallback(
-    (id: string) => {
+    (id: string, moved = false) => {
       const extra = new URLSearchParams(searchParams.toString());
       extra.delete("opportunity");
       extra.delete("deal");
+      // R2-A item 8: an automatic redirect is announced on the destination (AppShell notice).
+      if (moved) extra.set("moved", route);
       return dealHref(id, stage, extra);
     },
     [searchParams, stage],
@@ -127,8 +142,8 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
 
   // Rule 3 — exactly one carrier: redirect (client-side router.replace).
   useEffect(() => {
-    if (rows !== null && rows.length === 1 && !startsKnownTarget) router.replace(redirectTarget(rows[0].id));
-  }, [rows, redirectTarget, router, startsKnownTarget]);
+    if (rows !== null && rows.length === 1 && !startsKnownTarget && !startsNew) router.replace(redirectTarget(rows[0].id, true));
+  }, [rows, redirectTarget, router, startsKnownTarget, startsNew]);
 
   // Rule 4 — picker fallback: keyboard focus lands on the first row.
   useEffect(() => {
@@ -139,10 +154,10 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
   // carriers /market renders the S1 screen itself. The empty state below would
   // send the person back to the board, whose "new review" action links here —
   // a dead loop found by the pilot-009 system re-run (Wave C-2).
-  if (route === "market" && !error && rows !== null && rows.length === 0) {
+  if (route === "market" && !error && rows !== null && (rows.length === 0 || startsNew)) {
     return (
       <main>
-        <MarketAnalysisStage embedded />
+        <MarketAnalysisStage embedded startNew={startsNew} />
       </main>
     );
   }
@@ -150,16 +165,17 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
   // Same dead loop for S2 (pilot-009 C-3 re-run): the funnel's registration form
   // is the only way to create the first carrier, so with no deal (or when the
   // person asked to start from a known target) render the funnel itself.
-  if (route === "opportunities" && !carrierId && !error && rows !== null && (rows.length === 0 || startsKnownTarget)) {
+  if (route === "opportunities" && !carrierId && !error && rows !== null && (rows.length === 0 || startsKnownTarget || startsNew)) {
     return (
       <main>
+        <Breadcrumb items={[{ label: "검토/안건 보드", href: "/deals" }, { label: "S2 기회 발굴" }]} />
         <StageFrame stageId="S2">{SUMMARY_BY_ROUTE.opportunities}</StageFrame>
-        <OpportunityFunnelStage />
+        <OpportunityFunnelStage startRegister={startsKnownTarget || startsNew ? (startsKnownTarget ? "known_target" : "name") : undefined} />
       </main>
     );
   }
 
-  if (carrierId || (rows !== null && rows.length === 1 && !startsKnownTarget)) {
+  if (carrierId || (rows !== null && rows.length === 1 && !startsKnownTarget && !startsNew)) {
     return (
       <main>
         <PageState state="loading" />
@@ -169,7 +185,14 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
 
   return (
     <main>
-      <SectionToolbar title={TITLE_BY_ROUTE[route]} summary={SUMMARY_BY_ROUTE[route]} />
+      <Breadcrumb items={[{ label: "검토/안건 보드", href: "/deals" }, { label: TITLE_BY_ROUTE[route] }]} />
+      <div className="stage-head">
+        <h1>{TITLE_BY_ROUTE[route]}</h1>
+        <PrimaryAction inline href={CREATE_BY_ROUTE[route].href} label={CREATE_BY_ROUTE[route].label} />
+      </div>
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
+        {SUMMARY_BY_ROUTE[route]} {CREATE_BY_ROUTE[route].hint}
+      </p>
       {error && <PageState state="error" errorText={error} onRetry={loadRows} />}
       {!error && rows === null && <PageState state="loading" />}
       {!error && rows !== null && rows.length === 0 && (

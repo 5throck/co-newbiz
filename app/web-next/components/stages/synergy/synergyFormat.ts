@@ -27,3 +27,7 @@ export const TABS = [
 ] as const;
 
 export type TabKey = (typeof TABS)[number][0];
+/** Where the group / affiliate profile is registered: the deal's S3 company surface, or the standalone page. */
+export function profileHrefFor(opportunityId?: string): string {
+  return opportunityId ? `/deals/${encodeURIComponent(opportunityId)}/s3?surface=company` : "/our-company";
+}

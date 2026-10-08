@@ -1,13 +1,15 @@
 "use client";
 
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
+import Link from "next/link";
 import { SectionToolbar } from "../../layout.tsx";
+import { profileHrefFor } from "./synergyFormat.ts";
 import { analysisGroupKey, targetLabel } from "./synergyFormat.ts";
 import type { SynergyStageState } from "./useSynergyList.ts";
 import type { SynergyAnalysis } from "./types.ts";
 
 export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
-  const { analyses, canCurate, setShowNewForm, showNewForm, selectedId, openDetail, rerun, removeAnalysis, hasInProgress } = ctx;
+  const { analyses, canCurate, setShowNewForm, showNewForm, selectedId, openDetail, rerun, removeAnalysis, hasInProgress, opportunityId } = ctx;
   return (
     <section aria-label="분석 대상 회사" className="market-section">
         <SectionToolbar
@@ -31,7 +33,13 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
         {analyses === null ? (
           <p>불러오는 중...</p>
         ) : analyses.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic">등록된 시너지 분석이 없습니다. "회사 등록"으로 시작하세요.</p>
+          <div className="text-[length:var(--fs-body)]">
+            <p className="text-[color:var(--muted-fg)] mb-2">
+              등록된 시너지 분석이 없습니다. 분석은 <strong>그룹 → 계열사 → 시너지 분석</strong> 순서로 진행합니다 — 먼저 그룹·계열사 프로파일이 필요합니다.
+            </p>
+            <Link href={profileHrefFor(opportunityId)} className="btn-ghost btn-sm">그룹·계열사 프로파일 등록 →</Link>
+            <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">프로파일을 만든 뒤 이 화면으로 돌아와 「＋ 새 분석」을 누르세요.</span>
+          </div>
         ) : (
           <table className="data-table list-table" aria-label="분석 대상 회사 목록">
             <caption className="sr-only">분석 대상 회사 목록</caption>

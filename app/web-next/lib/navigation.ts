@@ -135,6 +135,30 @@ export const NON_MENU_ROUTES: string[] = [
   "/admin/business-targets",
 ];
 
+/**
+ * Flat (deal-less) routes that belong to the deal board's family (R2-A, page
+ * contract). They have no sidebar entry of their own, so the sidebar marks
+ * "검토/안건 보드" active on them and the topbar offers a contextual back to the
+ * board. Longest prefixes first is not required: matching is prefix-based.
+ */
+export const DEAL_FLOW_FLAT_ROUTES: string[] = [
+  "/market",
+  "/opportunities",
+  "/synergy",
+  "/route-decision",
+  "/greenfield",
+  "/brownfield",
+  "/our-company",
+  "/companies",
+  "/portfolio-view",
+  "/agents",
+  "/onboarding",
+];
+
+export function isDealFlowFlatRoute(pathname: string): boolean {
+  return DEAL_FLOW_FLAT_ROUTES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 /** 관리자 전용 내비 (ADR-0091 역할-화면 분리) — 역시 본 파일이 SSOT다. */
 export const ADMIN_NAV: Array<{ href: string; label: string }> = [
   { href: "/admin", label: "시스템 대시보드" },

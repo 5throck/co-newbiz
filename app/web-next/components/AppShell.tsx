@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
 import { api, type NotificationRow } from "../lib/api.ts";
-import { ADMIN_NAV, NAV_SECTIONS, type NavItem } from "../lib/navigation.ts";
+import { ADMIN_NAV, NAV_SECTIONS, type NavItem, isDealFlowFlatRoute } from "../lib/navigation.ts";
 import { useInbox } from "../lib/use-inbox.ts";
 import { countOpenDecisions } from "../lib/inbox.ts";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
@@ -137,11 +137,20 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
   // the deals board.
   const projectSubMatch = pathname.match(/^\/projects\/([^/]+)\/[^/]+/);
   const projectOverviewMatch = !projectSubMatch && pathname.match(/^\/projects\/([^/]+)$/);
+  // R2-A (page contract): deal-less flat routes (/market, /opportunities, ...)
+  // are not in the sidebar, so they get a contextual back to the board; the
+  // opportunity detail goes back to the deal's S2 list (walkthrough F3).
+  const oppDetailMatch = pathname.match(/^\/opportunities\/([^/]+)$/);
+  const flatBack = oppDetailMatch
+    ? { href: `/deals/${oppDetailMatch[1]}/s2`, label: "S2 기회 발굴" }
+    : isDealFlowFlatRoute(pathname)
+      ? { href: "/deals", label: "검토/안건 보드" }
+      : null;
   const projectBack = projectSubMatch
     ? { href: `/projects/${projectSubMatch[1]}`, label: "프로젝트 개요" }
     : projectOverviewMatch && projectOverviewMatch[1] !== "archives"
       ? { href: "/deals", label: "검토/안건 보드" }
-      : null;
+      : flatBack;
 
   // 활성 내비 항목 해석 — 최상위뿐 아니라 서브메뉴 자식(/synergy 등)도 찾는다.
   // 자식이 활성이면 parent를 함께 기록해 목록(부모/자식 href)로 돌아갈 수 있게 한다.
@@ -344,7 +353,9 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
           <div className="sidebar-group-label">{section.label}</div>
           <nav className="sidebar-nav" aria-label={idx === 0 ? "Primary" : section.label}>
             {section.items.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(item.href + "/");
+              // The deal board owns its family of deal-less flat routes (R2-A item 2).
+              const active = pathname === item.href || pathname.startsWith(item.href + "/")
+                || (item.href === "/deals" && isDealFlowFlatRoute(pathname));
               return (
                 <Link
                   key={item.href}
@@ -402,6 +413,42 @@ function SidebarDrawer({ open, onClose, children }: {
       aria-hidden={!open}
     >
       {children(panelRef)}
+    </div>
+  );
+}
+
+const MOVED_TEXT: Record<string, string> = {
+  market: "시장분석(/market)은 검토/안건별 S1 탭으로 통합되었습니다. 진행 중인 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
+  opportunities: "기회 발굴(/opportunities)은 검토/안건별 S2 탭으로 통합되었습니다. 진행 중인 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
+  synergy: "시너지 평가(/synergy)는 검토/안건별 S3 탭으로 통합되었습니다. 진행 중인 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
+  greenfield: "자체 진출(/greenfield)은 검토/안건별 S5 탭으로 통합되었습니다. 해당 트랙의 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
+  brownfield: "대상 발굴·선정(/brownfield)은 검토/안건별 S6 탭으로 통합되었습니다. 해당 트랙의 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
+  pipeline: "파이프라인 현황(/pipeline)은 검토/안건 보드로 통합되었습니다 — 퍼널과 진행 에이징은 아래 보드에서 봅니다.",
+  process: "단계별 허브(/process)는 단계 진행 표시줄과 검토/안건별 단계 탭으로 대체되었습니다. 검토/안건을 열어 단계를 이동하세요.",
+};
+
+/** Visible, dismissible notice for an automatic redirect (R2-A item 8: no silent redirects). */
+function MovedNotice() {
+  const searchParams = useSearchParams();
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const key = searchParams.get("moved");
+  const text = key ? MOVED_TEXT[key] : undefined;
+  if (!key || !text || dismissed === key) return null;
+  return (
+    <div role="status" className="moved-notice">
+      <span className="moved-notice-text">{text}</span>
+      <button
+        type="button"
+        className="btn-ghost btn-sm"
+        onClick={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("moved");
+          window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+          setDismissed(key);
+        }}
+      >
+        닫기
+      </button>
     </div>
   );
 }
@@ -526,7 +573,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             onToggleSidebar={toggleSidebar}
           />
         </Suspense>
-        <div className="app-content" id="main-content" tabIndex={-1}>{children}</div>
+        <div className="app-content" id="main-content" tabIndex={-1}>
+          <Suspense fallback={null}><MovedNotice /></Suspense>
+          {children}
+        </div>
       </div>
     </div>
   );
