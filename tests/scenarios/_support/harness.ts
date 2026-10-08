@@ -16,7 +16,7 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createUser, approveUser } from "../../../db/lib/accounts.ts";
-import { getDb } from "../../../db/client.ts";
+import { getDb, resetDb } from "../../../db/client.ts";
 import { runMigrations } from "../../../db/migrate.ts";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "..", "..", "..");
@@ -131,6 +131,8 @@ export interface StartOptions {
 
 export async function startApp(name: string, opts: StartOptions = {}): Promise<TestApp> {
   await ensureBuild();
+  // getDb() is a process-wide singleton; scenario files share one bun test process, so drop any previous file's connection.
+  resetDb();
 
   const root = mkdtempSync(join(tmpdir(), `co-newbiz-e2e-${name}-`));
   mkdirSync(join(root, "data"), { recursive: true });
@@ -152,6 +154,7 @@ export async function startApp(name: string, opts: StartOptions = {}): Promise<T
   if (opts.seed) await opts.seed({ dbPath, adminId, analystId });
   // Flush WAL before the server opens the file.
   db.run("PRAGMA wal_checkpoint(TRUNCATE);");
+  resetDb();
 
   const port = await freePort();
   const logChunks: string[] = [];
