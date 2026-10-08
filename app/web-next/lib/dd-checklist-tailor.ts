@@ -29,7 +29,8 @@ import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
-import { DD_WORKSPACE_CHECKLISTS, getChecklistItems, type ChecklistItemDef } from "./library.ts";
+import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, getChecklistItems, type ChecklistItemDef } from "./library.ts";
+import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { isWebResearchConfigured, tavilySearch, type WebSource } from "./web-research.ts";
 
 // ADR-0104 — DD workspace expanded to 7 domains (financial/hr/market/financing
@@ -419,12 +420,36 @@ function countsUnassessedItems(projectId: string): boolean {
   return !!row && row.created_at >= DD_UNASSESSED_COUNTED_FROM;
 }
 
+/**
+ * Wave F-8 (audit B1): sub-track-specific checklists the project must also judge.
+ * Empty for Greenfield, for sub-tracks without one, and for projects pinned
+ * before WAVE_F_PREDICATE_DATE (grandfathered — no retroactive blocking).
+ */
+export function subTrackChecklistIds(projectId: string): string[] {
+  const db = getDb();
+  const proj = db
+    .query("SELECT created_at, source_opportunity_id FROM md_project WHERE id = ?")
+    .get(projectId) as { created_at: string | null; source_opportunity_id: string | null } | undefined;
+  if (!proj?.source_opportunity_id) return [];
+  const pin = db
+    .query("SELECT MIN(pinned_at) AS at FROM project_policy_pin WHERE project_id = ?")
+    .get(projectId) as { at: string | null };
+  if ((pin.at ?? proj.created_at ?? "") < WAVE_F_PREDICATE_DATE) return [];
+  const route = db
+    .query("SELECT track, sub_track FROM route_decision WHERE opportunity_id = ? AND is_current = 1")
+    .get(proj.source_opportunity_id) as { track: string; sub_track: string | null } | undefined;
+  if (route?.track !== "brownfield" || !route.sub_track) return [];
+  return SUB_TRACK_DD_CHECKLISTS[route.sub_track] ?? [];
+}
+
 export function ddCompletionSummary(projectId: string): DdCompletionSummary {
   const rows = getDb()
     .query(
       `SELECT checklist_id, item_id, status, waiver_id FROM project_checklist_item_state WHERE project_id = ?`,
     )
     .all(projectId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null }>;
+  const extraIds = subTrackChecklistIds(projectId);
+  const extraSet = new Set(extraIds);
   let pending = 0;
   let mandatoryUnmet = 0;
   for (const r of rows) {
@@ -438,10 +463,24 @@ export function ddCompletionSummary(projectId: string): DdCompletionSummary {
       }
     }
   }
+  // Binding items (mandatory, waiver_eligible=false — e.g. bf-01 "all six M&A
+  // validators recorded") cannot be satisfied by na/waived: a missing
+  // validator is a Kill Criterion, not an exemption.
+  for (const checklistId of extraIds) {
+    for (const item of getChecklistItems(checklistId) ?? []) {
+      if (!item.mandatory || item.waiver_eligible) continue;
+      const st = rows.find((r) => r.checklist_id === checklistId && r.item_id === item.id);
+      if (st && (st.status === "na" || st.status === "waived")) mandatoryUnmet += 1;
+    }
+  }
   let unassessed = 0;
-  if (countsUnassessedItems(projectId)) {
+  if (countsUnassessedItems(projectId) || extraIds.length > 0) {
     const have = new Set(rows.map((r) => `${r.checklist_id}:${r.item_id}`));
-    for (const checklistId of Object.values(DD_WORKSPACE_CHECKLISTS)) {
+    const applicable = [
+      ...(countsUnassessedItems(projectId) ? Object.values(DD_WORKSPACE_CHECKLISTS) : []),
+      ...extraSet,
+    ];
+    for (const checklistId of applicable) {
       for (const item of getChecklistItems(checklistId) ?? []) {
         if (have.has(`${checklistId}:${item.id}`)) continue;
         unassessed += 1;
@@ -455,7 +494,8 @@ export function ddCompletionSummary(projectId: string): DdCompletionSummary {
 
 export interface DdWorkspaceView {
   domains: Array<{
-    domain: DdDomain;
+    /** DdDomain for the shared tabs; the checklist id for Wave F-8 sub-track tabs. */
+    domain: string;
     checklistId: string;
     title: string;
     items: Array<ChecklistItemDef & { state: { status: ChecklistStateStatus; note: string | null; evidence_ref: string | null; waiver_id: string | null } | null }>;
@@ -530,5 +570,20 @@ export function listDdWorkspace(projectId: string): DdWorkspaceView {
     return { domain, checklistId, title: domainLabels[domain], items, custom: customByDomain.get(domain) ?? [] };
   });
 
-  return { domains, findings, completion: ddCompletionSummary(projectId) };
+  // Wave F-8 (audit B1): sub-track-specific checklists appended as extra tabs.
+  const SUB_TRACK_TITLES: Record<string, string> = {
+    "chk-brownfield-feasibility-checklist": "M&A 6대 검증 (Brownfield Feasibility)",
+    "chk-ma-special-topics-checklist": "M&A 특수 주제",
+    "chk-partnership-checklist": "Partnership",
+    "chk-deal-shape-presigning-checklist": "Pre-signing 딜 구조",
+    "chk-rbd-technology-checklist": "R&BD 기술",
+  };
+  const extra = subTrackChecklistIds(projectId).map((checklistId) => ({
+    domain: checklistId,
+    checklistId,
+    title: SUB_TRACK_TITLES[checklistId] ?? checklistId,
+    items: (getChecklistItems(checklistId) ?? []).map((i) => ({ ...i, state: states.get(`${checklistId}:${i.id}`) ?? null })),
+    custom: [] as CustomItemRow[],
+  }));
+  return { domains: [...domains, ...extra], findings, completion: ddCompletionSummary(projectId) };
 }

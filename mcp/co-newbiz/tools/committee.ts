@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Committee tools — ADR-0097 steering-committee deliberation. Thin READ-ONLY
  * REST wrappers (ADR-0011) over /api/opportunities/:id/committee-sessions**.
@@ -9,14 +9,14 @@
  * not advertise it here before the routes are exposed by name.
  */
 
-import { rest } from "../shared/rest-client.ts";
+import type { RestPort } from "../shared/rest-port.ts";
 
-export async function listCommitteeSessions(opportunityId: string) {
-  return rest.get(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`);
+export async function listCommitteeSessions(port: RestPort, opportunityId: string) {
+  return port.get(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`);
 }
 
-export async function getCommitteeSession(opportunityId: string, sessionId: string) {
-  return rest.get(
+export async function getCommitteeSession(port: RestPort, opportunityId: string, sessionId: string) {
+  return port.get(
     `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(sessionId)}`,
   );
 }

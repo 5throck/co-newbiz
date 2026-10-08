@@ -12,6 +12,7 @@ import { seedS1ToS12Demo } from "../../scripts/co-newbiz/seed-s1-s12-demo.ts";
 import { evaluateProcess, WAVE_F_PREDICATE_DATE } from "../../app/web-next/lib/process-flow.ts";
 import { countSourcedCapabilityRows } from "../../app/web-next/lib/capability-gap.ts";
 import { recordPmiKickoff, PmiKickoffError } from "../../app/web-next/lib/pmi-kickoff.ts";
+import { SUB_TRACK_DD_CHECKLISTS, getChecklistItems } from "../../app/web-next/lib/library.ts";
 import { maybeReopenStaleS12 } from "../../app/web-next/lib/pipeline.ts";
 
 let dir: string | null = null;
@@ -147,6 +148,15 @@ describe("S11 PMI kickoff and human reviewer", () => {
     const { db, projectId } = demo();
     db.run("DELETE FROM process_run WHERE stage = 's11_pmi_kickoff'");
     db.run("UPDATE route_decision SET sub_track = 'minority_investment'");
+    // Wave F-8: minority investment also judges its partnership / pre-signing checklists.
+    for (const checklistId of SUB_TRACK_DD_CHECKLISTS.minority_investment) {
+      for (const item of getChecklistItems(checklistId) ?? []) {
+        db.run(
+          "INSERT OR IGNORE INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?)",
+          [`f6-${checklistId}-${item.id}`, projectId, checklistId, item.id, "pass", "human1", "2026-10-08T00:00:00.000Z"],
+        );
+      }
+    }
     expect(proj(projectId).completedStages).toContain("S12");
   });
   test("an IC GO decided by an agent persona id is not a reviewer record", () => {

@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Notifications (read) — mcp-integration.md §3.
  *
@@ -7,8 +7,8 @@
  * /api/notifications relay remains.
  */
 
-import { rest } from "../shared/rest-client.ts";
+import type { RestPort } from "../shared/rest-port.ts";
 
-export async function listNotifications() {
-  return rest.get("/api/notifications");
+export async function listNotifications(port: RestPort) {
+  return port.get("/api/notifications");
 }

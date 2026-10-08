@@ -59,3 +59,20 @@ export const DD_WORKSPACE_CHECKLISTS: Record<string, string> = {
   market: "chk-market-dd-checklist",
   financing: "chk-financing-plan-checklist",
 };
+
+/**
+ * Wave F-8 (audit B1) — extra S9 checklists applicable by Brownfield
+ * route_decision.sub_track, on top of the seven shared DD domains.
+ * M&A: the six binding validators (bf-01) + special topics. JV / partnership /
+ * minority: partnership + pre-signing deal-shape. R&BD: technology checklist.
+ * Strategic investment and CVC have no sub-track-specific checklist.
+ */
+const PARTNER_SHAPE_CHECKLISTS = ["chk-partnership-checklist", "chk-deal-shape-presigning-checklist"];
+export const SUB_TRACK_DD_CHECKLISTS: Record<string, string[]> = {
+  m_and_a: ["chk-brownfield-feasibility-checklist", "chk-ma-special-topics-checklist"],
+  jv: PARTNER_SHAPE_CHECKLISTS,
+  partnership: PARTNER_SHAPE_CHECKLISTS,
+  minority_investment: PARTNER_SHAPE_CHECKLISTS,
+  rbd: ["chk-rbd-technology-checklist"],
+  existing_business_rbd: ["chk-rbd-technology-checklist"],
+};

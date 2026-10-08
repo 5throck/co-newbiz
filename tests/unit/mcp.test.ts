@@ -1,4 +1,4 @@
-// @version 1.4.0
+// @version 1.5.0
 /**
  * MCP server tests — docs/architecture/mcp-integration.md. Runs a real HTTP server
  * (Bun.serve on an ephemeral port dispatching to app/web-next's Route
@@ -108,11 +108,12 @@ describe("tool catalog", () => {
     }
   });
 
-  test("every TOOLS entry has a dispatch case (no advertised-but-uncallable tool)", async () => {
-    const source = readFileSync(join(PROJECT_ROOT, "mcp/co-newbiz/index.ts"), "utf8");
+  test("every TOOLS entry has a registry handler (no advertised-but-uncallable tool)", async () => {
+    // ADR-0154: dispatch moved from a switch in index.ts to the shared registry.
     const { TOOLS } = await import("../../mcp/co-newbiz/index.ts");
+    const { REGISTRY } = await import("../../mcp/co-newbiz/registry.ts");
     for (const tool of TOOLS) {
-      expect(source).toContain(`case "${tool.name}"`);
+      expect(typeof REGISTRY.find((t) => t.name === tool.name)?.run).toBe("function");
     }
   });
 });

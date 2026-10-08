@@ -13,6 +13,7 @@ import {
   Shield,
   LogOut,
   KeyRound,
+  Plug,
   ListChecks,
   Target,
   FileText,
@@ -232,6 +233,11 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
           <KeyRound size={16} />
           <span>비밀번호 변경</span>
         </button>
+        {/* ADR-0154: MCP 커넥터(연결된 앱) 접근 관리·해지 */}
+        <button type="button" onClick={() => router.push("/settings/connected-apps")} className="topbar-logout" aria-label="연결된 앱 관리">
+          <Plug size={16} />
+          <span>연결된 앱</span>
+        </button>
         <button type="button" onClick={() => logout()} className="topbar-logout" aria-label="로그아웃">
           <LogOut size={16} />
           <span>로그아웃</span>
@@ -450,7 +456,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     if (!me && pathname !== "/login" && pathname !== "/register") {
-      router.replace("/login");
+      // ADR-0154: an OAuth consent request must survive the login detour —
+      // only same-origin /oauth/ paths are carried (login re-validates).
+      const next = pathname.startsWith("/oauth/") ? `${pathname}${window.location.search}` : null;
+      router.replace(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
       return;
     }
     if (me?.mustChangePassword && pathname !== "/password-change") {

@@ -37,7 +37,9 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await login(userId, password);
-      router.push("/");
+      // ADR-0154: return to a pending OAuth consent; only same-origin /oauth/ paths.
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.push(next && next.startsWith("/oauth/") && !next.startsWith("//") ? next : "/");
     } catch (err) {
       setError(describeAuthError(err));
     } finally {

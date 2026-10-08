@@ -155,7 +155,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   );
   const estComplete = pkg?.establishment.complete ?? false;
   const origin = est?.project.origin;
-  const estApplies = origin == null || origin === "internal" || origin === "joint";
+  const estApplies = origin === "internal" || origin === "joint";
 
   return (
 <>

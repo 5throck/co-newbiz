@@ -425,3 +425,21 @@ describe("POST /api/opportunities/[id]/promote — role boundary", () => {
     expect((db.query("SELECT project_id FROM opportunity WHERE id = ?").get(oppId) as { project_id: string | null }).project_id).toBeNull();
   });
 });
+
+describe("promoteOpportunity origin derivation", () => {
+  test("Wave F-8 (B4): origin is derived from the route sub_track when not supplied; an explicit origin wins", () => {
+    const promoteWith = (sub: string, origin?: "external") => {
+      const oppId = insertOpportunity();
+      insertRouteDecision(oppId, "brownfield");
+      db.run("UPDATE route_decision SET sub_track = ? WHERE opportunity_id = ?", [sub, oppId]);
+      completeS7(oppId);
+      seedGates(oppId, "brownfield");
+      const r = promoteOpportunity(oppId, { promotedBy: U1, needToKnowBasis: "basis", origin });
+      return (db.query("SELECT origin FROM md_project WHERE id = ?").get(r.project.id) as { origin: string | null }).origin;
+    };
+    expect(promoteWith("jv")).toBe("joint");
+    expect(promoteWith("corporate_venture")).toBe("internal");
+    expect(promoteWith("m_and_a")).toBe("external");
+    expect(promoteWith("jv", "external")).toBe("external");
+  });
+});

@@ -392,6 +392,139 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/mcp:
+    get:
+      operationId: mcpStream
+      summary: MCP Streamable HTTP server-to-client SSE stream (ADR-0154). OAuth access token audience-bound to this resource; 401 carries WWW-Authenticate resource_metadata (RFC 9728).
+      tags:
+        - Tokens
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: mcpMessage
+      summary: MCP Streamable HTTP JSON-RPC (ADR-0154). Origin allowlist; session bound to user and client.
+      tags:
+        - Tokens
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: mcpSessionEnd
+      summary: End an MCP session (ADR-0154).
+      tags:
+        - Tokens
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/oauth/register:
+    post:
+      operationId: oauthRegisterClient
+      summary: RFC 7591 dynamic client registration — public clients only (ADR-0154).
+      tags:
+        - Tokens
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/oauth/authorize:
+    get:
+      operationId: oauthAuthorizeInfo
+      summary: Validate an authorization request for the consent screen — human web session only (ADR-0154).
+      tags:
+        - Tokens
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: oauthAuthorizeDecision
+      summary: Record the human consent decision; returns the redirect target with code, state and iss (ADR-0154).
+      tags:
+        - Tokens
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/oauth/token:
+    post:
+      operationId: oauthToken
+      summary: Token endpoint — authorization_code (PKCE S256) and refresh_token only; no client_credentials (ADR-0154).
+      tags:
+        - Tokens
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/oauth/revoke:
+    post:
+      operationId: oauthRevoke
+      summary: RFC 7009 token revocation; a refresh token revokes its family (ADR-0154).
+      tags:
+        - Tokens
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+  /api/oauth/apps:
+    get:
+      operationId: listConnectedApps
+      summary: Connected MCP apps holding live tokens for the session user (ADR-0154).
+      tags:
+        - Tokens
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/oauth/apps/{clientId}:
+    delete:
+      operationId: revokeConnectedApp
+      summary: Revoke every token the session user granted to one client (ADR-0154).
+      tags:
+        - Tokens
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/interpretations:
     get:
       operationId: searchInterpretations

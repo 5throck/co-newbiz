@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Portfolio scorecard tool — ADR-0101 §5 S11. Thin READ-ONLY REST wrapper
  * (ADR-0011) over /api/projects/:id/scorecard: the quarterly rollup
@@ -10,7 +10,7 @@
  * recorder flow, not an API convenience (design boundary #2).
  */
 
-import { rest } from "../shared/rest-client.ts";
+import type { RestPort } from "../shared/rest-port.ts";
 
 export interface PortfolioScorecardEnvelope {
   project: { id: string; project_no: string };
@@ -27,7 +27,7 @@ export interface PortfolioScorecardEnvelope {
   decisions: { latest: Record<string, unknown> | null; history: Array<Record<string, unknown>> };
 }
 
-export async function getPortfolioScorecard(projectId: string, reviewCycle?: string) {
+export async function getPortfolioScorecard(port: RestPort, projectId: string, reviewCycle?: string) {
   const query = reviewCycle ? `?review_cycle=${encodeURIComponent(reviewCycle)}` : "";
-  return rest.get<PortfolioScorecardEnvelope>(`/api/projects/${encodeURIComponent(projectId)}/scorecard${query}`);
+  return port.get<PortfolioScorecardEnvelope>(`/api/projects/${encodeURIComponent(projectId)}/scorecard${query}`);
 }

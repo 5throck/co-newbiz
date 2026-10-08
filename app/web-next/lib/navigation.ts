@@ -103,6 +103,8 @@ export const NON_MENU_ROUTES: string[] = [
   "/login",
   "/register",
   "/password-change",
+  "/oauth/authorize", // ADR-0154: OAuth consent for MCP connectors
+  "/settings/connected-apps", // ADR-0154: revoke MCP connector access (topbar link)
   "/agents",
   "/opportunities/[id]",
   "/brownfield/targets/[targetId]",

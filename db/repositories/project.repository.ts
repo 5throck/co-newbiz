@@ -26,6 +26,7 @@
  * cannot skip the basis check.
  */
 
+import { deriveOriginFromSubTrack } from "../lib/origin-derivation.ts";
 import { getDb } from "../client.ts";
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit, grantProjectMembership, logDataAccess } from "../lib/access-control.ts";
@@ -262,7 +263,8 @@ export function promoteOpportunity(
       id,
       project_no: `PRJ-${id.slice(-6)}`,
       created_at: now,
-      origin: opts.origin ?? null,
+      // Wave F-8 (audit B4): derive origin from the route sub_track when not supplied.
+      origin: opts.origin ?? deriveOriginFromSubTrack(track, route?.sub_track ?? null),
       track,
       source_opportunity_id: opportunityId,
       project_name: opts.projectName ?? null,
