@@ -650,7 +650,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
   return (
     <>
       {confirmDialog}
-      {linkNotice && <p role="status" className="text-[color:var(--green-fg)] text-[0.85rem] mb-2">{linkNotice}</p>}
+      {linkNotice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-body)] mb-2">{linkNotice}</p>}
       <StageFrame stageId="S1">
         <span className="flex flex-wrap items-center justify-between gap-2">
           <span>산업을 선택하면 체계적 시장 규모 추정 8단계 절차로 분석된 리포트가 차트로 표시됩니다.</span>
@@ -723,11 +723,11 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
           <form onSubmit={(e) => { e.preventDefault(); if (newName.trim()) void openLinkModal(newName.trim()); }} aria-label="신규 산업 분석 생성" className="sizing-new-form mb-3">
             {/* 제출 시 바로 생성하지 않고 가치사슬 연계 후보 모달로 범위를 확정한다 */}
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[0.78rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">산업명 *</span>
                 <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="예: 산업용 로봇" required className="sizing-new-input" />
               </label>
-              <label className="text-[0.78rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">KSIC 코드 (선택)</span>
                 <span className="flex items-center gap-1">
                   <input
@@ -742,7 +742,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                   </button>
                 </span>
               </label>
-              <button type="submit" className="btn-primary" disabled={!newName.trim()}>
+              <button type="submit" className="btn-ghost" disabled={!newName.trim()}>
                 분석 범위 선택 →
               </button>
               <button
@@ -769,13 +769,13 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                       }}
                     >
                       {newCode === it.code ? "✔ " : ""}{it.name_ko} <code className="dd-item-id">{it.code}</code>
-                      {it.profile && <span className="text-[0.72rem] text-[color:var(--muted-fg)]"> · 업종 프로필</span>}
+                      {it.profile && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> · 업종 프로필</span>}
                     </button>
                   </li>
                 ))}
               </ul>
             )}
-            <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+            <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               KSIC 코드는 선택 — 산업명 또는 코드로 검색한 뒤 목록에서 선택하거나 직접 입력하세요(미지정 시 "—" 표시). 업종 프로필이 있는 코드는 표기됩니다.
               systematic-market-sizing 8단계 파이프라인이 순서대로 실행되며, 완료 전까지는 목록에 "분석 중"으로 표시됩니다.
               {llmStatus && (llmStatus.configured
@@ -1000,7 +1000,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
           </table>
         )}
         {hasInProgress && (
-          <p className="mt-2 mb-0 text-[0.75rem] text-[color:var(--muted-fg)]" role="status">
+          <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="status">
             분석이 진행 중입니다 — 완료되면 목록이 자동으로 갱신됩니다.
           </p>
         )}
@@ -1019,15 +1019,15 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
             <h2 className="text-[0.95rem] mb-1">
               {linkModal.rerunAnalysisId ? "가치사슬 연계 산업 선택" : "가치사슬 연계 산업 미리보기"} — <span className="font-semibold">{linkModal.primaryName}</span>
             </h2>
-            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               {linkModal.rerunAnalysisId
                 ? "재분석 대상 산업과 연관성이 있는 산업 후보입니다. 선택한 산업은 '연계 대기'로 등록되며, 재분석이 완료된 뒤 한 건씩 자동으로 시작됩니다. 마스터에 없는 산업은 시작 시 자동 등록됩니다."
                 : `첫 분석은 '${linkModal.primaryName}'만 진행됩니다. 아래는 함께 볼 만한 연계 산업 제안이며, 분석이 완료되면 리포트에서 '연계 산업 이어서 분석'으로 선택·추가할 수 있습니다.`}
             </p>
             {linkModal.loading ? (
-              <p className="text-[0.85rem]" role="status">연계 산업 후보를 도출하는 중입니다 (수 초 소요) — 아직 분석은 시작되지 않았습니다.</p>
+              <p className="text-[length:var(--fs-body)]" role="status">연계 산업 후보를 도출하는 중입니다 (수 초 소요) — 아직 분석은 시작되지 않았습니다.</p>
             ) : linkModal.candidates.length === 0 && linkModal.substitutes.length === 0 ? (
-              <p className="text-[0.8rem] text-[color:var(--muted-fg)]">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 연관 산업 후보를 도출하지 못했습니다 — 이 산업만 분석을 진행할 수 있습니다.
               </p>
             ) : (
@@ -1035,7 +1035,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                 <ul className="sizing-note-list mb-2" aria-label="연관 산업 후보">
                   {linkModal.candidates.map((c) => (
                     <li key={c.name_ko}>
-                      <label className={`flex items-start gap-2 text-[0.82rem] ${linkModal.rerunAnalysisId && !c.locked ? "cursor-pointer" : ""}`}>
+                      <label className={`flex items-start gap-2 text-[length:var(--fs-caption)] ${linkModal.rerunAnalysisId && !c.locked ? "cursor-pointer" : ""}`}>
                         {linkModal.rerunAnalysisId ? (
                           <input
                             type="checkbox"
@@ -1056,7 +1056,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                           {c.source === "proxy" && <span className="status-chip status-not-started" title="LLM 1차 제안 — 검증 전 가설입니다.">제안 (검증 전)</span>}
                           {c.source === "link" && <span className="status-chip status-green">연계 근거</span>}
                           {c.source === "analysis" && <span className="status-chip status-not-started">과거 분석</span>}
-                          {c.note && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{c.note}</span>}
+                          {c.note && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{c.note}</span>}
                         </span>
                       </label>
                     </li>
@@ -1064,19 +1064,19 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
                 </ul>
                 {linkModal.substitutes.length > 0 && (
                   <div className="mb-2">
-                    <p className="text-[0.78rem] font-semibold">대체 위협 (검토 필요) — 6축 연관성 분석 영역</p>
+                    <p className="text-[length:var(--fs-caption)] font-semibold">대체 위협 (검토 필요) — 6축 연관성 분석 영역</p>
                     <ul className="sizing-note-list" aria-label="대체 위협 후보">
                       {linkModal.substitutes.map((sub) => (
-                        <li key={sub.name_ko} className="text-[0.82rem]">
+                        <li key={sub.name_ko} className="text-[length:var(--fs-caption)]">
                           {sub.name_ko}
-                          {sub.note && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{sub.note}</span>}
+                          {sub.note && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{sub.note}</span>}
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
                 {linkModal.rerunAnalysisId && (
-                  <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-2">
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
                     이미 등록된 수요 산업은 재분석에 자동으로 반영됩니다 — 위 목록에서 제외할 수 없습니다.
                     {linkModal.selected.size >= 5 && " 대기 큐는 최대 5건까지 선택할 수 있습니다."}
                   </p>
@@ -1118,7 +1118,7 @@ export function MarketAnalysisStage({ industryId: industryIdProp, embedded }: { 
             style={{ maxWidth: "min(90vw, 960px)" }}
           >
             <h2 className="text-[0.95rem] mb-1">산업 간 가치사슬 관계도</h2>
-            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               사람이 확정한 전방/전전방/후방/후후방 연계만 표시합니다 — 색이 채워진 노드는 분석 완료된 산업입니다.
             </p>
             <IndustryChainGraph nodes={chainGraph.nodes} edges={chainGraph.edges} />
@@ -1158,7 +1158,7 @@ function MarketReport({ detail, analysisId, analysisDate, onAddLinked }: { detai
           {detail.industry.name_ko} 시장 분석 리포트
           {detail.industry.ksic_code && <code className="dd-item-id ml-2">{detail.industry.ksic_code}</code>}
         </h2>
-        <p className="text-[color:var(--muted-fg)] text-[0.78rem]">
+        <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
           방법론: systematic-market-sizing v1.1
           {manualResearch ? " · 연구문서 기반 수동 분석(분석가 확정)" : " · 8단계 파이프라인 산출"}
           {analysisDate && <> · 분석일: <strong>{analysisDate}</strong></>}
@@ -1185,13 +1185,13 @@ function MarketReport({ detail, analysisId, analysisDate, onAddLinked }: { detai
               실제로 그런 상태인지 명시적으로 경고한다(2026-09-13 휴머노이드
               로봇 리포트 사고 — 경고 없이 $1B/-10000%가 실제 값처럼 보였음). */}
           {stepSummaries && !llmUsed && (
-            <p className="market-section text-[0.82rem] text-[color:var(--red-fg)] font-semibold" role="alert" style={{ border: "1px solid var(--red-border, currentColor)", borderRadius: "0.5rem", padding: "0.6rem 0.8rem" }}>
+            <p className="market-section text-[length:var(--fs-caption)] text-[color:var(--red-fg)] font-semibold" role="alert" style={{ border: "1px solid var(--red-border, currentColor)", borderRadius: "0.5rem", padding: "0.6rem 0.8rem" }}>
               ⚠️ 이 버전은 {stepSummaries.every((s) => s.source !== "llm") ? "전체" : "일부"} 단계가 LLM 미구성/실패로 결정론 합성(더미) 값으로 채워졌습니다 —
               시장 규모·성장률 등 수치를 신뢰하지 마세요. LLM 구성을 확인한 뒤 재분석하세요.
             </p>
           )}
           {matrix.provenance === "llm-estimate" && (
-            <p className="market-section sizing-note-list text-[0.78rem] text-[color:var(--amber-fg)]" role="note">
+            <p className="market-section sizing-note-list text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]" role="note">
               이 매트릭스는 파이프라인 LLM이 생성한 추정치입니다 — 수치는 앵커 삼각검증(2단계)과
               기업 공시 교차검증(6단계)을 거친 동결 매트릭스가 아니며, 정식 인용 전 분석가 확정이 필요합니다.
               {llmUsed && <> (8단계 전체 LLM 요약 사용)</>}
@@ -1209,7 +1209,7 @@ function VersionBar({ versions }: { versions: VersionInfo[] }) {
   if (!versions || versions.length === 0) return null;
   return (
     <details className="market-section sizing-version-bar">
-      <summary className="cursor-pointer text-[0.82rem]">
+      <summary className="cursor-pointer text-[length:var(--fs-caption)]">
         버전 이력 ({versions.length}개 버전) — 최신 v{versions[0].version_no}
       </summary>
       <table className="data-table mt-2" aria-label="분석 버전 이력">
@@ -1221,9 +1221,9 @@ function VersionBar({ versions }: { versions: VersionInfo[] }) {
           {versions.map((v) => (
             <tr key={v.version_no}>
               <td className="font-semibold tabular-nums">v{v.version_no}</td>
-              <td className="text-[0.78rem]">{v.changelog ?? "—"}</td>
-              <td className="text-[0.75rem]">{v.created_by}</td>
-              <td className="text-[0.75rem] tabular-nums">{v.created_at.slice(0, 10)}</td>
+              <td className="text-[length:var(--fs-caption)]">{v.changelog ?? "—"}</td>
+              <td className="text-[length:var(--fs-caption)]">{v.created_by}</td>
+              <td className="text-[length:var(--fs-caption)] tabular-nums">{v.created_at.slice(0, 10)}</td>
             </tr>
           ))}
         </tbody>
@@ -1412,7 +1412,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
       {tab === "structure" && (
       <>
       <StepSection n={1} id="step-1" title="시장 구조 정의 (분석 축·산업 사슬 방향)">
-        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
           시장을 <strong>권역 × 최종수요 세그먼트 × 시나리오</strong> 3축으로 나누고, 산업이 가치사슬에서
           어디에 위치하는지(상류·중류·하류)에 따라 분석 방향을 정합니다 — 하류 산업은 전방/전전방(수요처)을,
           상류 산업은 후방/후후방(공급처)을 분석해야 수요·공급 구조가 온전히 파악됩니다.
@@ -1431,11 +1431,11 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
           </div>
           <div className="chart-half sizing-grade-card">
             <span className="status-chip status-amber">체인 등급 {matrix.chainGrade.grade}</span>
-            <p className="mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">{matrix.chainGrade.note}</p>
-            <p className="mt-1 text-[0.78rem]">통계 hop {matrix.chainGrade.statisticalHops}개 · 분석 hop은 등급에 불가산</p>
+            <p className="mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{matrix.chainGrade.note}</p>
+            <p className="mt-1 text-[length:var(--fs-caption)]">통계 hop {matrix.chainGrade.statisticalHops}개 · 분석 hop은 등급에 불가산</p>
           </div>
         </div>
-        <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">
+        <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-4 mb-1">
           산업 사슬 방향 — 위치: {POSITION_LABELS[matrix.chainDirection.position] ?? matrix.chainDirection.position}
         </h4>
         <table className="data-table" aria-label="산업 사슬 방향 분석">
@@ -1448,16 +1448,16 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
               <tr key={i}>
                 <td className="font-semibold">{r.relation}</td>
                 <td>{r.name}</td>
-                <td className="text-[0.8rem] text-[color:var(--muted-fg)]">{r.note ?? "—"}</td>
+                <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{r.note ?? "—"}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="sizing-note-list mt-2 text-[0.8rem] text-[color:var(--muted-fg)]">{matrix.chainDirection.note}</p>
+        <p className="sizing-note-list mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{matrix.chainDirection.note}</p>
 
         {/* 가치사슬 연계 — 링크 + 승인 대기 제안 + 등급 (S1 산출물, ADR-0126) */}
         <div className="flex flex-wrap items-center justify-between gap-2 mt-4 mb-1">
-          <h4 className="text-[0.82rem] text-[color:var(--muted-fg)]">가치사슬 연계</h4>
+          <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">가치사슬 연계</h4>
           {canCurate && onAddLinked && (
             <button type="button" className="btn-ghost btn-sm" onClick={onAddLinked} title="이 리포트의 가치사슬 인접 산업 중 추가로 분석할 산업을 고릅니다.">
               연계 산업 이어서 분석
@@ -1465,7 +1465,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
           )}
         </div>
         {view.chain.links.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
             이 산업에 등록된 가치사슬 연계 링크가 없습니다 — 아래 승인 대기 제안에서 등록하거나, 신규 분석 산업은 드라이버 민감도가 구조 증거를 대신합니다.
           </p>
         ) : (
@@ -1483,7 +1483,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                   <td>{l.hop_type === "engineering" ? "engineering" : l.hop_type === "statistical" ? "statistical" : "구조 (승인)"}</td>
                   <td className="tabular-nums">{l.hop_type === "engineering" ? l.coefficient : l.beta !== null ? `β ${l.beta} (R² ${l.r2})` : "—"}</td>
                   <td className="tabular-nums">{l.lag_months ?? "—"}</td>
-                  <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{l.evidence_ref}</td>
+                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{l.evidence_ref}</td>
                   {canCurate && (
                     <td>
                       <button
@@ -1506,7 +1506,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
             매칭된 것을 승인 대기 제안으로 제시한다. 등록은 사람의 행위다. */}
         {canCurate && (view.proposals?.length ?? 0) > 0 && (
           <div className="sizing-grade-card mt-2">
-            <p className="text-[0.8rem] mb-1"><span className="font-semibold">승인 대기 제안</span> — 시장 구조 정의(Step 1)에서 도출된 인접 산업입니다. 승인하면 구조(structural) 링크로 등록됩니다 (변환 계수는 통계 보정 후 부여).</p>
+            <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">승인 대기 제안</span> — 시장 구조 정의(Step 1)에서 도출된 인접 산업입니다. 승인하면 구조(structural) 링크로 등록됩니다 (변환 계수는 통계 보정 후 부여).</p>
             <div className="flex flex-wrap gap-2">
               {view.proposals!.map((p) => (
                 <span key={p.industry_id} className="control-chip">
@@ -1517,21 +1517,21 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                 </span>
               ))}
             </div>
-            {chainLinkError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mt-1 mb-0">{chainLinkError}</p>}
+            {chainLinkError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1 mb-0">{chainLinkError}</p>}
           </div>
         )}
         {(view.unmatchedProposals?.length ?? 0) > 0 && (
-          <p className="mt-1 text-[0.75rem] text-[color:var(--muted-fg)]">
+          <p className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             미매칭 후보 (산업 마스터에 없어 등록 불가 — 시장분석 산업 편집에서 먼저 등록하세요): {view.unmatchedProposals!.map((u) => `${u.relation} ${u.name}`).join(", ")}
           </p>
         )}
         {/* ADR-0126 — 제안이 없어도 사람이 직접 연계를 등록할 수 있다 (같은 승인 행위). */}
         {canCurate && (
           <details className="mt-2">
-            <summary className="cursor-pointer text-[0.8rem] text-[color:var(--accent)]">＋ 직접 등록 (산업 마스터에서 선택)</summary>
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">＋ 직접 등록 (산업 마스터에서 선택)</summary>
             <div className="sizing-new-form mt-2">
               <div className="flex flex-wrap items-end gap-2">
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">대상 산업 *</span>
                   <select
                     value={manualLink.industry_id}
@@ -1545,7 +1545,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                     ))}
                   </select>
                 </label>
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">관계 *</span>
                   <select value={manualLink.relation} onChange={(e) => setManualLink({ ...manualLink, relation: e.target.value })} className="sizing-new-input sizing-new-input-sm">
                     <option value="전방">전방 (수요처)</option>
@@ -1554,20 +1554,20 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                     <option value="후후방">후후방 (공급처, 2hop)</option>
                   </select>
                 </label>
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">근거 *</span>
                   <input value={manualLink.evidence_ref} onChange={(e) => setManualLink({ ...manualLink, evidence_ref: e.target.value })} className="sizing-new-input" style={{ flex: "1 1 12rem" }} />
                 </label>
-                <button type="button" className="btn-primary btn-sm" disabled={linkSaving || !manualLink.industry_id || !manualLink.evidence_ref.trim()} onClick={() => void submitManualLink()}>
+                <button type="button" className="btn-ghost btn-sm" disabled={linkSaving || !manualLink.industry_id || !manualLink.evidence_ref.trim()} onClick={() => void submitManualLink()}>
                   {linkSaving ? "등록 중..." : "등록"}
                 </button>
               </div>
-              {linkSaved && <p role="status" className="text-[0.78rem] text-[color:var(--green-fg)] mt-1 mb-0">링크가 등록되었습니다.</p>}
+              {linkSaved && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--green-fg)] mt-1 mb-0">링크가 등록되었습니다.</p>}
             </div>
           </details>
         )}
         {view.chain.grade && (
-          <p className="mt-1 text-[0.8rem] text-[color:var(--muted-fg)]">
+          <p className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             <span className="status-chip status-green mr-1">체인 등급 {view.chain.grade.reliability_grade}</span>
             {view.chain.grade.grade_rationale}
           </p>
@@ -1577,7 +1577,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
             은퇴하지 않고 relation만 지정하면 되므로 별도 섹션으로 분리한다. */}
         {canCurate && view.chain.legacyUntagged.length > 0 && (
           <div className="sizing-grade-card mt-2">
-            <p className="text-[0.8rem] mb-1">
+            <p className="text-[length:var(--fs-caption)] mb-1">
               <span className="font-semibold">레거시 검토</span> — relation이 태깅되지 않은 구(ADR-0126) 구조 링크입니다. 관계를 지정하세요.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -1623,8 +1623,8 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
             산업별 attributes(라벨 자유)를 동적 컬럼으로 렌더링한다 (ADR-0092 optional). */}
         {matrix.competitive && (
           <>
-            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">경쟁 구조</h4>
-            <p className="mb-1 text-[0.85rem]">{matrix.competitive.structure}</p>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-4 mb-1">경쟁 구조</h4>
+            <p className="mb-1 text-[length:var(--fs-body)]">{matrix.competitive.structure}</p>
             {matrix.competitive.players.length > 0 && (() => {
               const players = matrix.competitive.players;
               const hasTechType = players.some((pl) => pl.techType);
@@ -1667,7 +1667,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                       {hasCapacity && <td className="col-num tabular-nums">{pl.capacityMWe !== undefined ? pl.capacityMWe.toLocaleString() : "—"}</td>}
                       {hasProjectStatus && <td className="col-type">{pl.projectStatus ? <span className="status-chip status-in-progress">{pl.projectStatus}</span> : "—"}</td>}
                       {attrLabels.slice(0, 4).map((label) => <td key={label} className="col-type">{attrOf(pl, label)}</td>)}
-                      <td className="col-text text-[0.8rem] text-[color:var(--muted-fg)]">{pl.note}</td>
+                      <td className="col-text text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{pl.note}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1678,11 +1678,11 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
           </>
         )}
           {!matrix.competitive && (
-            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
               경쟁 구조 데이터가 없습니다 — 재분석 시 1단계에서 도출됩니다.
             </p>
           )}
-          <p className="sizing-note-list mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">
+          <p className="sizing-note-list mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             점유율·순위는 정성 추정(공시 대조 전) — 정밀 수치는 S2~S3 이후 공시 교차검증으로 보강됩니다.
           </p>
         </section>
@@ -1693,7 +1693,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
       {tab === "size" && (
       <>
       <StepSection n={2} id="step-2" title="기준 시장규모 산정 (다중 소스 교차)">
-        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
           독립 추정치 2–3개로 기준년 총시장(2026, $B)을 삼각검증하고 이상치를 명시적으로 제외합니다.
           이후 모든 배분이 이 앵커로 수렴해야 합니다.
         </p>
@@ -1703,9 +1703,9 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
             <li key={s.label} className={s.status === "excluded" ? "text-[color:var(--muted-fg)] line-through" : ""}>
               <strong>{s.label}</strong> — ${s.estimate.toFixed(2)}B
               {s.sourceUrl && <> · <a href={s.sourceUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">출처</a></>}
-              {s.asOf && <> <span className="text-[0.75rem] text-[color:var(--muted-fg)]">({s.asOf})</span></>}
-              {s.methodology && <span className="block pl-4 text-[0.75rem] text-[color:var(--muted-fg)]">측정 방법론: {s.methodology}</span>}
-              <span className="block pl-4 text-[0.78rem]">{s.note}</span>
+              {s.asOf && <> <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">({s.asOf})</span></>}
+              {s.methodology && <span className="block pl-4 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">측정 방법론: {s.methodology}</span>}
+              <span className="block pl-4 text-[length:var(--fs-caption)]">{s.note}</span>
             </li>
           ))}
         </ul>
@@ -1717,17 +1717,17 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
       {tab === "allocation" && (
       <>
       <StepSection n={3} id="step-3" title="권역·세그먼트 배분">
-        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
           권역 가중치는 인접 공시시장 프록시에서, 세그먼트 믹스는 글로벌 교차검증치에 맞춘 보정 배분입니다.
           판단 조정은 셀별로 출처와 함께 기록됩니다(바텀업 합산이 아님).
         </p>
         <div className="chart-pair">
           <div className="chart-half">
-            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역 가중치 (도넛)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">권역 가중치 (도넛)</h4>
             <RegionWeightDonut matrix={matrix} />
           </div>
           <div className="chart-half">
-            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역별 세그먼트 믹스 (100% 적층)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">권역별 세그먼트 믹스 (100% 적층)</h4>
             <SegmentMixStack matrix={matrix} />
           </div>
         </div>
@@ -1740,33 +1740,33 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
       {tab === "growth" && (
       <>
       <StepSection n={4} id="step-4" title="셀별 CAGR·시나리오 밴드">
-        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
           권역×세그먼트 셀마다 개별 CAGR을 부여합니다(글로벌 단일 수준 아님). 시나리오 밴드는 기본값
           base×0.5 ~ base×1.55이며, <strong>소스 간 불일치가 문서화된 셀만</strong> 넓은 밴드로 대체합니다.
         </p>
         <div className="chart-pair">
           <div className="chart-half">
-            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">기본 시나리오 CAGR (셀별 그룹 바)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">기본 시나리오 CAGR (셀별 그룹 바)</h4>
             <CagrGroupedBar matrix={matrix} />
           </div>
           <div className="chart-half">
-            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">2026 → 2030 전망 (권역 합계)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">2026 → 2030 전망 (권역 합계)</h4>
             <ProjectionChart matrix={matrix} />
           </div>
         </div>
-        <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">시나리오 밴드 (비관~낙관, 셀별 — 문서화된 오버라이드 강조)</h4>
+        <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-4 mb-1">시나리오 밴드 (비관~낙관, 셀별 — 문서화된 오버라이드 강조)</h4>
         <ScenarioBandChart matrix={matrix} />
         <div className="chart-pair">
           <div className="chart-half">
-            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">시나리오별 2030 전망 — 권역별 CAGR 적용 (그룹 바)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">시나리오별 2030 전망 — 권역별 CAGR 적용 (그룹 바)</h4>
             <RegionScenarioChart matrix={matrix} />
           </div>
           <div className="chart-half">
-            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">시나리오별 2030 전망 (권역 테이블, $B)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">시나리오별 2030 전망 (권역 테이블, $B)</h4>
             <RegionScenarioTable matrix={matrix} />
           </div>
         </div>
-        <p className="sizing-note-list mt-2 text-[0.8rem] text-[color:var(--muted-fg)]">
+        <p className="sizing-note-list mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
           시나리오는 글로벌 단일 CAGR이 아니라 각 권역×세그먼트 셀의 비관/기본/낙관 CAGR(4년 복리)을 그대로
           적용해 계산합니다 — 권역별 성격이 시나리오 결과에 그대로 반영됩니다.
         </p>
@@ -1777,17 +1777,17 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
         <h3 className="sizing-step-title text-[0.95rem]">
           <span className="sizing-step-badge sizing-step-badge-deep">4-A</span> 연도별 시장점유율 추이 (2026 → 2030, 기본 시나리오)
         </h3>
-        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
           각 권역×세그먼트 셀의 기본 CAGR을 연도별로 복리 적용해 권역별 시장 규모와 점유율이
           어떻게 이동하는지 연 단위로 추적합니다.
         </p>
         <div className="chart-pair">
           <div className="chart-half">
-            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역별 점유율 추이 (적층 영역, %)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">권역별 점유율 추이 (적층 영역, %)</h4>
             <YearlyShareAreaChart matrix={matrix} />
           </div>
           <div className="chart-half">
-            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">권역별 시장 규모 추이 (적층 바, $B)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">권역별 시장 규모 추이 (적층 바, $B)</h4>
             <YearlySizeStackedBar matrix={matrix} />
           </div>
         </div>
@@ -1795,16 +1795,16 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
       </section>
 
       <StepSection n={5} id="step-5" title="성장률 정합성 확인 (바텀업 vs 탑다운)">
-        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
           매트릭스를 롤업한 암시 글로벌 CAGR을 탑다운 컨센서스와 비교합니다. 허용 오차 내여도 이는
           <strong> 내부 정합성 확인</strong>일 뿐 — 양쪽 모두 같은 부류의 소스로 소급되므로 독립적 확인으로
           표현하지 않습니다.
         </p>
         <ConsistencyChart matrix={matrix} />
-        <p className="sizing-note-list mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">{matrix.consistency.tolerance}</p>
+        <p className="sizing-note-list mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{matrix.consistency.tolerance}</p>
         {matrix.externalForecast ? (
           <div className="chart-half sizing-grade-card mt-4">
-            <h4 className="text-[0.85rem] mb-2">
+            <h4 className="text-[length:var(--fs-body)] mb-2">
               외부 미래 전망 대비 격차 분석 ({matrix.externalForecast.targetYear}년) — 과거 성장률 연장 추정 vs 외부 전망
 
               {(() => {
@@ -1812,12 +1812,12 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                 if (gap === undefined || Math.abs(gap) < 20) return null;
                 return (
                   <div className="sizing-grade-card mt-2" role="note">
-                    <p className="m-0 text-[0.8rem]">
+                    <p className="m-0 text-[length:var(--fs-caption)]">
                       <span className="status-chip status-red mr-1">검토 필요</span>
                       우리 추정과 외부 전망의 격차가 <strong>{Math.abs(gap).toFixed(1)}%</strong>로 20%를 초과합니다 — 분석 전제(드라이버·세그먼트 정의·앵커 소스)가 현실과 어긋났을 수 있습니다. 재분석으로 최신 외부 전망·연계 산업 근거를 반영하세요.
                     </p>
                     {rerunStarted ? (
-                      <p role="status" className="text-[0.78rem] text-[color:var(--green-fg)] mt-1 mb-0">재분석이 시작되었습니다 — 완료되면 목록의 분석일이 갱신됩니다.</p>
+                      <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--green-fg)] mt-1 mb-0">재분석이 시작되었습니다 — 완료되면 목록의 분석일이 갱신됩니다.</p>
                     ) : canCurate ? (
                       <button
                         type="button"
@@ -1835,7 +1835,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                         지금 재분석 (최신 외부 전망·연계 근거 반영)
                       </button>
                     ) : null}
-                    {rerunError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mt-1 mb-0">{rerunError}</p>}
+                    {rerunError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1 mb-0">{rerunError}</p>}
                   </div>
                 );
               })()}
@@ -1849,33 +1849,33 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                 <tr>
                   <td className="font-semibold">우리 추정 (성장률 연장)</td>
                   <td className="tabular-nums">${(matrix.externalForecast.ourMarketSize ?? 0).toFixed(2)}B</td>
-                  <td className="text-[0.8rem] text-[color:var(--muted-fg)]">바텀업 CAGR {(matrix.consistency.bottomUpCagr).toFixed(1)}% 적용</td>
+                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">바텀업 CAGR {(matrix.consistency.bottomUpCagr).toFixed(1)}% 적용</td>
                 </tr>
                 <tr>
                   <td className="font-semibold">외부 전망</td>
                   <td className="tabular-nums">${matrix.externalForecast.marketSize.toFixed(2)}B</td>
-                  <td className="text-[0.8rem] text-[color:var(--muted-fg)]">{matrix.externalForecast.sourceLabel}{matrix.externalForecast.cagr ? ` · CAGR ${(matrix.externalForecast.cagr * 100).toFixed(1)}%` : ""}</td>
+                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{matrix.externalForecast.sourceLabel}{matrix.externalForecast.cagr ? ` · CAGR ${(matrix.externalForecast.cagr * 100).toFixed(1)}%` : ""}</td>
                 </tr>
                 <tr className="row-selected">
                   <td className="font-semibold">격차</td>
                   <td className="tabular-nums font-semibold">{matrix.externalForecast.gapPct !== undefined ? `${matrix.externalForecast.gapPct > 0 ? "+" : ""}${matrix.externalForecast.gapPct}%` : "—"}</td>
-                  <td className="text-[0.8rem] text-[color:var(--muted-fg)]">외부 전망이 우리 추정 대비 {matrix.externalForecast.gapPct !== undefined && matrix.externalForecast.gapPct > 0 ? "높음 — 추가/강화 드라이버 개연성" : matrix.externalForecast.gapPct !== undefined && matrix.externalForecast.gapPct < 0 ? "낮음 — 기존 드라이버 약화 개연성" : "동일"} </td>
+                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">외부 전망이 우리 추정 대비 {matrix.externalForecast.gapPct !== undefined && matrix.externalForecast.gapPct > 0 ? "높음 — 추가/강화 드라이버 개연성" : matrix.externalForecast.gapPct !== undefined && matrix.externalForecast.gapPct < 0 ? "낮음 — 기존 드라이버 약화 개연성" : "동일"} </td>
                 </tr>
               </tbody>
             </table>
-            <p className="mt-2 mb-0 text-[0.85rem] whitespace-pre-line">{matrix.externalForecast.gapAnalysis}</p>
+            <p className="mt-2 mb-0 text-[length:var(--fs-body)] whitespace-pre-line">{matrix.externalForecast.gapAnalysis}</p>
             {matrix.externalForecast.newDrivers && matrix.externalForecast.newDrivers.length > 0 && (
-              <p className="mt-2 mb-0 text-[0.78rem]">
+              <p className="mt-2 mb-0 text-[length:var(--fs-caption)]">
                 <strong>과거 대비 신규·강화 드라이버:</strong>{" "}
                 {matrix.externalForecast.newDrivers.map((d) => (
                   <span key={d} className="status-chip status-in-progress mr-1">{d}</span>
                 ))}
               </p>
             )}
-            <p className="mt-2 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">{matrix.externalForecast.note}</p>
+            <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{matrix.externalForecast.note}</p>
           </div>
         ) : (
-          <p className="sizing-note-list mt-2 text-[0.8rem] text-[color:var(--muted-fg)]">
+          <p className="sizing-note-list mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             입수된 외부 미래 전망이 없습니다 — 기존 방식(과거 성장률 연장 추정)을 유지합니다. 재분석 시 최신 공개 전망을 반영해 격차 분석이 시도됩니다.
           </p>
         )}
@@ -1889,7 +1889,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
           <h3 className="sizing-step-title text-[0.95rem]">
             <span className="sizing-step-badge sizing-step-badge-deep">5-A</span> 정성 분석 — 기회 요인과 위험 요인
           </h3>
-          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
             정량 매트릭스만으로는 시장의 질적 방향이 보이지 않습니다. 이 요인들은 기회발굴(S2)의
             기회 발굴·요인 자동 도출의 입력으로 직결됩니다.
           </p>
@@ -1916,13 +1916,13 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                 ))}
               </div>
               {matrix.externalForecast.gapAnalysis && (
-                <p className="mb-0 text-[0.85rem] whitespace-pre-line">{matrix.externalForecast.gapAnalysis}</p>
+                <p className="mb-0 text-[length:var(--fs-body)] whitespace-pre-line">{matrix.externalForecast.gapAnalysis}</p>
               )}
             </div>
           )}
           {matrix.qualitative.sources && matrix.qualitative.sources.length > 0 && (
             <details className="mt-3">
-              <summary className="cursor-pointer text-[0.85rem] text-[color:var(--accent)]">입수 출처 ({matrix.qualitative.sources.length}건 — 출처 명기 필수)</summary>
+              <summary className="cursor-pointer text-[length:var(--fs-body)] text-[color:var(--accent)]">입수 출처 ({matrix.qualitative.sources.length}건 — 출처 명기 필수)</summary>
               <ul className="sizing-note-list mt-2">
                 {matrix.qualitative.sources.map((s, i) => (
                   <li key={i}>
@@ -1941,7 +1941,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
           <h3 className="sizing-step-title text-[0.95rem]">
             <span className="sizing-step-badge sizing-step-badge-deep">4-B</span> 수요 파이프라인 — 프로젝트별 신뢰도 티어
           </h3>
-          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
             향후 착공·발주가 예정된 개별 프로젝트를 신뢰도 티어로 구분합니다 — <strong>Tier 1</strong>(실착공·계약 확정)부터
             <strong> Tier 4</strong>(비구속 MOU·초기 검토)까지. 티어가 낮은(숫자가 큰) 항목일수록 수요 불확실성이 크며,
             시장 추정의 상방 근거로만 취급해야 합니다.
@@ -1964,12 +1964,12 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                     <td className="font-semibold">
                       {p.project}
                       {p.relatedDemandIndustry ? (
-                        <span className="block font-normal text-[0.72rem] text-[color:var(--muted-fg)]">{p.relatedDemandIndustry}</span>
+                        <span className="block font-normal text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{p.relatedDemandIndustry}</span>
                       ) : null}
                     </td>
-                    <td className="text-[0.8rem]">{p.status}</td>
+                    <td className="text-[length:var(--fs-caption)]">{p.status}</td>
                     <td className="tabular-nums">{p.codTarget ?? "—"}</td>
-                    <td className="text-[0.75rem]">
+                    <td className="text-[length:var(--fs-caption)]">
                       {p.sourceUrl ? <a href={p.sourceUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문</a> : "—"}
                     </td>
                   </tr>
@@ -1978,7 +1978,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
             </table>
             </div>
           ) : (
-            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
               수요 파이프라인 데이터가 없습니다 — 재분석 또는 시드 등록 시 프로젝트별 근거가 반영됩니다.
             </p>
           )}
@@ -1990,7 +1990,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
           <h3 className="sizing-step-title text-[0.95rem]">
             <span className="sizing-step-badge sizing-step-badge-deep">5-B</span> 규제 환경 비교 — 관할권×항목
           </h3>
-          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
             국가·관할권별 규제·인허가 상태를 비교합니다. <strong>1차 소스 직접 확인</strong> 여부가 표시되며,
             미확인(간접 추정) 항목은 법률 검토 전 인용할 수 없습니다.
           </p>
@@ -2012,13 +2012,13 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                   <tr key={`${r.jurisdiction}-${r.item}-${i}`}>
                     <td className="col-label font-semibold">{r.jurisdiction}</td>
                     <td className="col-type whitespace-normal">{r.item}</td>
-                    <td className="whitespace-normal text-[0.8rem]">{r.status}</td>
+                    <td className="whitespace-normal text-[length:var(--fs-caption)]">{r.status}</td>
                     <td className="col-type">
                       <span className={`status-chip ${r.confirmedDirectly ? "status-green" : "status-not-started"}`}>
                         {r.confirmedDirectly ? "직접 확인" : "간접·추정"}
                       </span>
                     </td>
-                    <td className="col-text whitespace-normal text-[0.75rem]">
+                    <td className="col-text whitespace-normal text-[length:var(--fs-caption)]">
                       {r.sourceUrl ? <a href={r.sourceUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문</a> : "—"}
                       {r.asOf ? ` · ${r.asOf}` : ""}
                     </td>
@@ -2028,7 +2028,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
             </table>
             </div>
           ) : (
-            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
               규제 비교 데이터가 없습니다 — 재분석 또는 시드 등록 시 관할권별 규제 조사가 반영됩니다.
             </p>
           )}
@@ -2040,7 +2040,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
           <h3 className="sizing-step-title text-[0.95rem]">
             <span className="sizing-step-badge sizing-step-badge-deep">7-A</span> 신뢰도·리스크 — RAG 상한 권고·Kill Criteria·검증 원장
           </h3>
-          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
             데이터 신뢰도가 전체 판단 등급을 캡핑합니다(caps the grade). 아래 Kill Criteria 제안과
             "확인 불가" 선언은 분석가 검토 대상이며, 자동 판정이 아닙니다.
           </p>
@@ -2050,12 +2050,12 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
               <span className={`status-chip ${matrix.ragCapRecommendation.grade === "green" ? "status-green" : matrix.ragCapRecommendation.grade === "amber" ? "status-amber" : "status-red"}`}>
                 상한 {matrix.ragCapRecommendation.grade.toUpperCase()}
               </span>
-              <p className="mt-2 mb-0 text-[0.85rem]">{matrix.ragCapRecommendation.rationale}</p>
+              <p className="mt-2 mb-0 text-[length:var(--fs-body)]">{matrix.ragCapRecommendation.rationale}</p>
             </div>
           )}
           {matrix.killCriteriaProposals && matrix.killCriteriaProposals.length > 0 && (
             <div className="mt-3">
-              <h4 className="text-[0.85rem] text-[color:var(--muted-fg)] mb-2">Kill Criteria 제안 ({matrix.killCriteriaProposals.length}건 — 분석가 검토 필요)</h4>
+              <h4 className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)] mb-2">Kill Criteria 제안 ({matrix.killCriteriaProposals.length}건 — 분석가 검토 필요)</h4>
               <div className="grid gap-2">
                 {matrix.killCriteriaProposals.map((k, i) => (
                   <div key={i} className="sizing-grade-card">
@@ -2063,10 +2063,10 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                       <span className={`status-chip ${k.severity === "high" ? "status-red" : k.severity === "medium" ? "status-amber" : "status-not-started"}`}>
                         {k.severity === "high" ? "심각" : k.severity === "medium" ? "보통" : "낮음"}
                       </span>
-                      <strong className="text-[0.85rem]">{k.name}</strong>
+                      <strong className="text-[length:var(--fs-body)]">{k.name}</strong>
                     </div>
-                    <p className="mt-1 mb-0 text-[0.8rem]"><strong>기준:</strong> {k.thresholdText}</p>
-                    <p className="mt-1 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">{k.rationale}</p>
+                    <p className="mt-1 mb-0 text-[length:var(--fs-caption)]"><strong>기준:</strong> {k.thresholdText}</p>
+                    <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{k.rationale}</p>
                   </div>
                 ))}
               </div>
@@ -2074,7 +2074,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
           )}
           {matrix.verificationLedger && matrix.verificationLedger.length > 0 && (
             <details className="mt-3">
-              <summary className="cursor-pointer text-[0.85rem] text-[color:var(--accent)]">
+              <summary className="cursor-pointer text-[length:var(--fs-body)] text-[color:var(--accent)]">
                 검증 원장 ({matrix.verificationLedger.length}건 — 확인/확인불가/판단필요)
               </summary>
               <table className="data-table mt-2" aria-label="검증 원장">
@@ -2091,7 +2091,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                           {v.status === "confirmed" ? "확인" : v.status === "could_not_verify" ? "확인 불가" : "판단 필요"}
                         </span>
                       </td>
-                      <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{v.note ?? "—"}</td>
+                      <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{v.note ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2099,7 +2099,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
             </details>
           )}
           {!matrix.ragCapRecommendation && !matrix.killCriteriaProposals && !matrix.verificationLedger && (
-            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
               신뢰도·리스크 데이터가 없습니다 — 재분석 또는 시드 등록 시 반영됩니다.
             </p>
           )}
@@ -2110,7 +2110,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
       {tab === "validate" && (
       <>
       <StepSection n={6} id="step-6" title="기업 공시 교차검증">
-        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
           카테고리 내 상장사의 연차보고서·중간보고서 원문으로 매트릭스의 각 주장을 검증합니다.
           구조적으로 검증 불가능한 항목은 <strong>검증 불가</strong>로 명시합니다(탐색 실패가 아닌 공시 구조의 한계).
         </p>
@@ -2127,7 +2127,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                 <tr key={v.claim}>
                   <td className="font-semibold">{v.claim}</td>
                   <td className="sizing-verdict-cell"><span className={`status-chip ${meta.chip}`}>{meta.label}</span></td>
-                  <td className="text-[0.78rem]">{v.evidence}</td>
+                  <td className="text-[length:var(--fs-caption)]">{v.evidence}</td>
                 </tr>
               );
             })}
@@ -2137,7 +2137,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
       </StepSection>
 
       <StepSection n={7} id="step-7" title="분석 한계 목록">
-        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
           판단적 보정·소스 불일치·추정 불가 신호를 번호 붙여 고정합니다. 소비자는 이 목록 없이 매트릭스를
           인용할 수 없습니다.
         </p>
@@ -2146,7 +2146,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
         </ol>
         {matrix.sectionConfidence && matrix.sectionConfidence.length > 0 && (
           <>
-            <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mt-4 mb-1">섹션별 데이터 신뢰도 등급 (A 확정 ~ D 추정 불가)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-4 mb-1">섹션별 데이터 신뢰도 등급 (A 확정 ~ D 추정 불가)</h4>
             <table className="data-table" aria-label="섹션별 신뢰도 등급">
               <caption className="sr-only">섹션별 데이터 신뢰도 등급</caption>
               <thead>
@@ -2161,7 +2161,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
                         {s.grade}
                       </span>
                     </td>
-                    <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{s.note ?? "—"}</td>
+                    <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{s.note ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2171,7 +2171,7 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
       </StepSection>
 
       <StepSection n={8} id="step-8" title="가정 레지스트리 등록">
-        <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
           동결된 매트릭스는 assumption 레지스트리에 조합당 1 row(kind='assumed', rationale + anchor_ref + TTL)로
           등록됩니다. 레지스트리는 append-only — 수정은 새 row로 기록됩니다. 아래는 실제 등록 상태(라이브 조회)입니다.
         </p>
@@ -2183,8 +2183,8 @@ function SizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }
 
       {stepSummaries && stepSummaries.length > 0 && (
         <details className="market-section sizing-step">
-          <summary className="cursor-pointer text-[0.85rem]">파이프라인 단계별 분석 노트 ({stepSummaries.length}단계)</summary>
-          <ol className="mt-3 space-y-2 text-[0.85rem]">
+          <summary className="cursor-pointer text-[length:var(--fs-body)]">파이프라인 단계별 분석 노트 ({stepSummaries.length}단계)</summary>
+          <ol className="mt-3 space-y-2 text-[length:var(--fs-body)]">
             {stepSummaries.map((s) => (
               <li key={s.step}>
                 <strong>{s.step}. {STEPS[s.step - 1]?.title ?? s.step}</strong>{" "}
@@ -2216,7 +2216,7 @@ function StepSensitivityChart({ stepNumber, sensitivities }: { stepNumber?: numb
   }
   const labels = [...agg.keys()];
   const values = labels.map((l) => Math.round((agg.get(l) ?? 0) * 100) / 100);
-  if (labels.length === 0) return <p className="text-[color:var(--muted-fg)] italic text-[0.8rem]">기록된 드라이버 민감도가 없습니다.</p>;
+  if (labels.length === 0) return <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-caption)]">기록된 드라이버 민감도가 없습니다.</p>;
   const option = {
     grid: { left: 140, right: 40, top: 16, bottom: 32 },
     xAxis: { type: "value" as const, axisLabel: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
@@ -2226,7 +2226,7 @@ function StepSensitivityChart({ stepNumber, sensitivities }: { stepNumber?: numb
   };
   return (
     <div className="mt-4">
-      {stepNumber !== undefined && <h4 className="text-[0.82rem] text-[color:var(--muted-fg)] mb-1">주요 드라이버 민감도 (민감도 절댓값 ≥ 0.3 → 주요 드라이버)</h4>}
+      {stepNumber !== undefined && <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">주요 드라이버 민감도 (민감도 절댓값 ≥ 0.3 → 주요 드라이버)</h4>}
       <EChart option={option} ariaLabel="주요 드라이버 민감도" height={Math.max(140, labels.length * 40 + 48)} />
     </div>
   );
@@ -2317,7 +2317,7 @@ function RegionTable({ matrix }: { matrix: SizingMatrix }) {
             <td className="tabular-nums">{r.weight}%</td>
             {segs.map((seg) => <td key={seg.code} className="tabular-nums">{r.mix[seg.code] ?? 0}%</td>)}
             <td className="tabular-nums">{regionTotal(matrix, r.code, 0).toFixed(3)}</td>
-            <td className="text-[0.75rem] text-[color:var(--muted-fg)]">{r.adjustment}</td>
+            <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{r.adjustment}</td>
           </tr>
         ))}
         <tr className="row-selected">
@@ -2604,7 +2604,7 @@ function RegistryStatus({ sizing, referenceImplementation }: {
   // 표시한다 — isFrozen 센티널이 아니라 run_label 데이터로 판별한다 (ADR-0112).
   if (!sizing || sizing.run_label !== REGISTRY.runLabel) {
     return (
-      <p className="text-[color:var(--muted-fg)] italic text-[0.8rem]">
+      <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-caption)]">
         아직 가정 레지스트리에 등록되지 않았습니다. 분석 확정 후 {referenceImplementation} 패턴으로
         recordAssumption 등록하면 이 화면에 등록 상태가 표시됩니다.
       </p>
@@ -2616,7 +2616,7 @@ function RegistryStatus({ sizing, referenceImplementation }: {
       <div className="driver-derivation mb-3">
         <div className="driver-derivation-step">
           <span className={`status-chip ${ok ? "status-green" : "status-amber"}`}>{ok ? "등록 완료" : "불일치"}</span>
-          <span>run <code className="text-[0.72rem]">{sizing.run_label}</code></span>
+          <span>run <code className="text-[length:var(--fs-caption)]">{sizing.run_label}</code></span>
         </div>
         <span className="driver-arrow">→</span>
         <div className="driver-derivation-step">
@@ -2629,12 +2629,12 @@ function RegistryStatus({ sizing, referenceImplementation }: {
           <span>비관/기본/낙관 밴드</span>
         </div>
       </div>
-      <p className="text-[0.78rem] text-[color:var(--muted-fg)]">
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
         총 {counts.total} row · 전부 kind='assumed' (rationale + anchor_ref 필수, FR-DATA-07) · TTL {REGISTRY.ttlDays}일 ·
         append-only (수정 = 새 row)
       </p>
       <details className="mt-2">
-        <summary className="text-[0.8rem] cursor-pointer text-[color:var(--accent)]">등록 row 전체 보기 ({counts.total}개)</summary>
+        <summary className="text-[length:var(--fs-caption)] cursor-pointer text-[color:var(--accent)]">등록 row 전체 보기 ({counts.total}개)</summary>
         <table className="data-table mt-2" aria-label="레지스트리 등록 row">
           <caption className="sr-only">레지스트리 등록 row 목록</caption>
           <thead>
@@ -2643,10 +2643,10 @@ function RegistryStatus({ sizing, referenceImplementation }: {
           <tbody>
             {sizing.assumptions.map((a) => (
               <tr key={a.assumption_key}>
-                <td><code className="text-[0.72rem]">{a.assumption_key}</code></td>
+                <td><code className="text-[length:var(--fs-caption)]">{a.assumption_key}</code></td>
                 <td><span className="status-chip status-in-progress">{a.kind}</span></td>
                 <td className="tabular-nums">{a.value}</td>
-                <td className="text-[0.72rem]">{a.anchor_ref ?? "—"}</td>
+                <td className="text-[length:var(--fs-caption)]">{a.anchor_ref ?? "—"}</td>
                 <td className="tabular-nums">{a.ttl_days ?? "—"}d</td>
               </tr>
             ))}
@@ -2734,19 +2734,19 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
   return (
     <div className="chart-half sizing-grade-card mt-4" aria-label="성장율 격차 보정 루프">
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h4 className="text-[0.85rem] m-0">성장율 격차 보정 루프</h4>
+        <h4 className="text-[length:var(--fs-body)] m-0">성장율 격차 보정 루프</h4>
         {triggered ? (
           <span className="status-chip status-red" title={`CAGR 상대 격차 ≥ 20% — 드라이버 귀인·보정이 필요합니다 (격차 ${cal?.gapPct ?? "?"}%)`}>보정 필요</span>
         ) : cal ? (
           <span className="status-chip status-green">트리거 미만</span>
         ) : null}
-        <span className="text-[0.72rem] text-[color:var(--muted-fg)]">제안 수용은 사람 — 수용 시 다음 재분석에 제약으로 반영</span>
+        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">제안 수용은 사람 — 수용 시 다음 재분석에 제약으로 반영</span>
       </div>
 
       {/* 외부 참조 — 출처와 함께 기록. 기록된 참조는 재분석 때 우선 사용된다 */}
       <div className="mb-2">
         {reference ? (
-          <p className="mb-1 text-[0.78rem]">
+          <p className="mb-1 text-[length:var(--fs-caption)]">
             외부 참조: <strong>{reference.source_label}</strong> — CAGR {reference.external_cagr_pct.toFixed(1)}% @{reference.target_year}년
             {reference.external_size_b ? ` · $${reference.external_size_b.toFixed(2)}B` : ""}
             {" "}<span className="status-chip status-not-started">{reference.captured_from === "user" ? "출처 확인" : reference.captured_from}</span>{" "}
@@ -2755,7 +2755,7 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
             )}
           </p>
         ) : (
-          <p className="mb-1 text-[0.78rem] text-[color:var(--muted-fg)]">
+          <p className="mb-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             기록된 외부 참조가 없습니다 — 외부 보고서의 성장률을 출처와 함께 기록하면 재분석이 이 값을 기준으로 수렴합니다.{" "}
             {canCurate && (
               <button type="button" className="btn-ghost btn-sm" onClick={() => setShowRefForm((v) => !v)}>참조 기록</button>
@@ -2769,7 +2769,7 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
             <input value={refForm.target_year} onChange={(e) => setRefForm({ ...refForm, target_year: e.target.value })} className="sizing-new-input" style={{ width: "5rem" }} placeholder="목표연도" aria-label="목표 연도" />
             <input value={refForm.external_cagr_pct} onChange={(e) => setRefForm({ ...refForm, external_cagr_pct: e.target.value })} className="sizing-new-input" style={{ width: "7rem" }} placeholder="외부 CAGR % *" aria-label="외부 CAGR 퍼센트" />
             <input value={refForm.external_size_b} onChange={(e) => setRefForm({ ...refForm, external_size_b: e.target.value })} className="sizing-new-input" style={{ width: "8rem" }} placeholder="규모 $B (선택)" aria-label="외부 시장 규모" />
-            <button type="button" className="btn-primary btn-sm" disabled={busy || !refForm.source_label.trim() || !refForm.external_cagr_pct} onClick={() => void saveReference()}>기록</button>
+            <button type="button" className="btn-ghost btn-sm" disabled={busy || !refForm.source_label.trim() || !refForm.external_cagr_pct} onClick={() => void saveReference()}>기록</button>
           </div>
         )}
       </div>
@@ -2778,17 +2778,17 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
           수렴선에 도달하지 못할 때 외부 참조 × (1−15%)를 조정 CAGR로 채택. */}
       {escalation ? (
         <div className="mb-2 sizing-grade-card" aria-label="에스컬레이션 적용 기록">
-          <p className="mb-1 text-[0.8rem]">
+          <p className="mb-1 text-[length:var(--fs-caption)]">
             <span className="status-chip status-green mr-1">에스컬레이션 적용됨</span>
             <strong>결정론 스케일링</strong> — 우리 CAGR {escalation.base_our_cagr_pct.toFixed(1)}% → <strong>{escalation.scaled_cagr_pct.toFixed(1)}%</strong>
             (외부 참조 {escalation.external_cagr_pct.toFixed(1)}% × 0.85, 잔여 격차 {escalation.residual_gap_pct}%)
           </p>
-          <p className="mb-0 text-[0.75rem] text-[color:var(--muted-fg)]">근거: {escalation.rationale} — {escalation.decided_by} · {escalation.created_at.slice(0, 10)}</p>
+          <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거: {escalation.rationale} — {escalation.decided_by} · {escalation.created_at.slice(0, 10)}</p>
         </div>
       ) : triggered && (cal?.gapPct ?? 0) > 15 ? (
         <div className="mb-2">
           {!showEscalate ? (
-            <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">
+            <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               3사이클 이상 수렴선(15%) 미달 시 <strong>결정론 스케일링</strong>으로 종료할 수 있습니다 — 외부 참조 × 0.85를 조정 CAGR로 채택(사람 결정).{" "}
               {canCurate && (
                 <button type="button" className="btn-ghost btn-sm" onClick={() => setShowEscalate(true)}>에스컬레이션 적용</button>
@@ -2796,10 +2796,10 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
             </p>
           ) : (
             <div className="sizing-new-form mb-0">
-              <p className="text-[0.78rem] mb-1">결정론 스케일링 적용 — 외부 참조 {cal?.externalCagrPct ?? "?"}% × 0.85 = 조정 CAGR. 근거를 기록하세요 (필수).</p>
+              <p className="text-[length:var(--fs-caption)] mb-1">결정론 스케일링 적용 — 외부 참조 {cal?.externalCagrPct ?? "?"}% × 0.85 = 조정 CAGR. 근거를 기록하세요 (필수).</p>
               <div className="flex flex-wrap items-center gap-2">
                 <input value={escalateRationale} onChange={(e) => setEscalateRationale(e.target.value)} className="sizing-new-input" style={{ width: "100%" }} placeholder="예: 3사이클 미수렴 — 외부 참조 채택 (출처: 보고서명)" aria-label="에스컬레이션 근거" />
-                <button type="button" className="btn-primary btn-sm" disabled={busy || !escalateRationale.trim()} onClick={() => void applyEscalation()}>적용</button>
+                <button type="button" className="btn-ghost btn-sm" disabled={busy || !escalateRationale.trim()} onClick={() => void applyEscalation()}>적용</button>
                 <button type="button" className="btn-ghost btn-sm" onClick={() => setShowEscalate(false)}>취소</button>
               </div>
             </div>
@@ -2810,19 +2810,19 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
       {/* 드라이버 귀인 제안 */}
       {proposals.length > 0 && (
         <div className="mb-2">
-          <p className="text-[0.78rem] font-semibold mb-1">드라이버 귀인 제안 {proposals.length}건 — 격차의 원인 분석</p>
+          <p className="text-[length:var(--fs-caption)] font-semibold mb-1">드라이버 귀인 제안 {proposals.length}건 — 격차의 원인 분석</p>
           <div className="grid gap-1">
             {proposals.map((d) => (
               <div key={d.id} className="sizing-grade-card mb-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <strong className="text-[0.82rem]">{d.driver}</strong>
+                  <strong className="text-[length:var(--fs-caption)]">{d.driver}</strong>
                   <span className={`status-chip ${d.direction === "upside" ? "status-in-progress" : "status-amber"}`}>{d.direction === "upside" ? "상승 요인" : "하강 요인"}</span>
                   <span className="status-chip status-not-started tabular-nums">CAGR ±{d.impact_pct.toFixed(1)}%p</span>
                 </div>
-                <p className="mb-1 mt-1 text-[0.78rem] text-[color:var(--muted-fg)]">{d.rationale}</p>
+                <p className="mb-1 mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{d.rationale}</p>
                 <div className="flex gap-2">
                   {canCurate && (
-                    <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void decide(d.id, "accept")}>수용</button>
+                    <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void decide(d.id, "accept")}>수용</button>
                   )}
                   {canCurate && (
                     <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void decide(d.id, "dismiss")}>기각</button>
@@ -2836,7 +2836,7 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
 
       {/* 수용된 보정 드라이버 */}
       {accepted.length > 0 && (
-        <p className="mb-2 text-[0.78rem]">
+        <p className="mb-2 text-[length:var(--fs-caption)]">
           <strong>수용된 보정 드라이버:</strong>{" "}
           {accepted.map((d) => (
             <span key={d.id} className="status-chip status-green mr-1" title={`${d.direction} · CAGR ±${d.impact_pct.toFixed(1)}%p — 다음 재분석에 반영`}>{d.driver}</span>
@@ -2848,7 +2848,7 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
       {/* 버전 간 격차 추이 — 수렴 가시화 */}
       {gapTrend.length > 0 && (
         <details>
-          <summary className="cursor-pointer text-[0.78rem] text-[color:var(--muted-fg)]">버전 간 격차 추이 ({gapTrend.length}개 버전)</summary>
+          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">버전 간 격차 추이 ({gapTrend.length}개 버전)</summary>
           <table className="data-table mt-1" aria-label="버전 간 격차 추이">
             <thead><tr><th scope="col">버전</th><th scope="col">우리 CAGR</th><th scope="col">외부 CAGR</th><th scope="col">격차</th></tr></thead>
             <tbody>
@@ -2865,7 +2865,7 @@ function CalibrationPanel({ industryId, matrix }: { industryId: string; matrix: 
         </details>
       )}
 
-      {error && <p role="alert" className="mb-0 text-[0.78rem] text-[color:var(--red-fg)]">{error}</p>}
+      {error && <p role="alert" className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{error}</p>}
     </div>
   );
 }

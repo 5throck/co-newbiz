@@ -105,15 +105,15 @@ export function WaiverPanel({ projectId }: { projectId: string }) {
           </button>
         )}
       </div>
-      <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
         필수 항목 미충족은 활성 waiver 없이는 DD 진행을 통과할 수 없다. 만료일이 권위이며, 경과 시 상태와 무관하게 만료로 표시된다.
       </p>
-      {error && <p className="text-[0.82rem] mb-2" style={{ color: "var(--red-fg)" }}>{error}</p>}
+      {error && <p className="text-[length:var(--fs-caption)] mb-2" style={{ color: "var(--red-fg)" }}>{error}</p>}
 
       {showForm && canAct && (
         <div className="sizing-new-form mb-4">
           <div className="grid gap-2" style={{ gridTemplateColumns: "minmax(12rem, 2fr) minmax(8rem, 1fr) minmax(10rem, 1fr)" }}>
-            <label className="text-[0.8rem]">
+            <label className="text-[length:var(--fs-caption)]">
               규정 문서
               <select className="sizing-new-input mt-1" value={form.doc} onChange={(e) => setForm((f) => ({ ...f, doc: e.target.value }))}>
                 <option value="">선택…</option>
@@ -122,20 +122,20 @@ export function WaiverPanel({ projectId }: { projectId: string }) {
                 ))}
               </select>
             </label>
-            <label className="text-[0.8rem]">
+            <label className="text-[length:var(--fs-caption)]">
               조항 (clause_ref)
               <input className="sizing-new-input mt-1" value={form.clause} onChange={(e) => setForm((f) => ({ ...f, clause: e.target.value }))} placeholder="예: §4-2.1" />
             </label>
-            <label className="text-[0.8rem]">
+            <label className="text-[length:var(--fs-caption)]">
               만료일 (필수)
               <input type="date" className="sizing-new-input mt-1" value={form.expiresAt} onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))} />
             </label>
           </div>
-          <label className="text-[0.8rem] block mt-2">
+          <label className="text-[length:var(--fs-caption)] block mt-2">
             사유
             <textarea className="sizing-new-input mt-1" rows={2} value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder="왜 이 조항을 면제해야 하는가" />
           </label>
-          <label className="text-[0.8rem] block mt-2">
+          <label className="text-[length:var(--fs-caption)] block mt-2">
             승인 역할 (규정 계층→Group IC · 절차→process-governance-manager · 체크리스트→도메인 리드)
             <input className="sizing-new-input mt-1" value={form.approverRole} onChange={(e) => setForm((f) => ({ ...f, approverRole: e.target.value }))} />
           </label>
@@ -154,7 +154,7 @@ export function WaiverPanel({ projectId }: { projectId: string }) {
       )}
 
       {waivers.length === 0 ? (
-        <p className="text-[color:var(--muted-fg)] text-[0.85rem]">등록된 waiver가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">등록된 waiver가 없습니다.</p>
       ) : (
         <div className="table-scroll">
           <table className="data-table">
@@ -174,9 +174,9 @@ export function WaiverPanel({ projectId }: { projectId: string }) {
                     <td><span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span></td>
                     <td className="col-text">{w.reason}</td>
                     <td>
-                      <span className="text-[0.8rem]">{w.requested_by}</span>
-                      {w.approved_by && <span className="text-[0.78rem] text-[color:var(--muted-fg)]"> → {w.approved_by}</span>}
-                      <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">승인역할 {w.approver_role}</span>
+                      <span className="text-[length:var(--fs-caption)]">{w.requested_by}</span>
+                      {w.approved_by && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> → {w.approved_by}</span>}
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">승인역할 {w.approver_role}</span>
                     </td>
                     <td className="col-num">{w.expires_at.slice(0, 10)}</td>
                     {canAct && (

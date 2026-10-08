@@ -93,7 +93,7 @@ export function BenchmarksView() {
         <p className="text-[color:var(--muted-fg)] italic">일치하는 사례가 없습니다.</p>
       ) : (
         <>
-          <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">총 {cases.length}건</p>
+          <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">총 {cases.length}건</p>
           <ul className="benchmark-grid">
             {cases.map((c) => {
               let metrics: Record<string, unknown> | null = null;
@@ -114,7 +114,7 @@ export function BenchmarksView() {
                     <strong>{c.title}</strong>
                     <span className="status-chip status-in-progress">{TYPE_LABELS[c.deal_type] ?? c.deal_type}</span>
                   </div>
-                  <p className="mt-[0.15rem] mb-1 text-[color:var(--muted-fg)] text-[0.8rem]">
+                  <p className="mt-[0.15rem] mb-1 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
                     {[c.industry, c.region, c.deal_year ? `${c.deal_year}년` : null].filter(Boolean).join(" · ") || "—"}
                     {c.deal_size_krw_m !== null && c.deal_size_krw_m !== undefined && (
                       <> · 규모 약 {nf.format(c.deal_size_krw_m)} KRM</>
@@ -130,7 +130,7 @@ export function BenchmarksView() {
                       ))}
                     </ul>
                   )}
-                  {c.source_ref && <p className="mt-1 text-[color:var(--muted-fg)] text-[0.75rem]">출처: {c.source_ref}</p>}
+                  {c.source_ref && <p className="mt-1 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">출처: {c.source_ref}</p>}
                   <span className="benchmark-more">상세 보기 →</span>
                   </button>
                 </li>
@@ -176,7 +176,7 @@ export function BenchmarksView() {
                 </table>
               ) : null;
             })()}
-            {detailCase.source_ref && <p className="text-[color:var(--muted-fg)] text-[0.78rem]">출처: {detailCase.source_ref}</p>}
+            {detailCase.source_ref && <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">출처: {detailCase.source_ref}</p>}
           </div>
         </div>
       )}

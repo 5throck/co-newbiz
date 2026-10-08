@@ -79,7 +79,7 @@ function RouteDecisionRedirect() {
             {active.length > 0 && (
               <div className="card">
                 <h2>검토/안건 선택</h2>
-                <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
                   진출방식을 결정할 검토/안건을 선택하세요 — 결정 화면은 검토/안건별로 열립니다.
                 </p>
                 <div className="deal-pick-grid">
@@ -110,9 +110,9 @@ function RouteDecisionRedirect() {
               return (
                 <div className="card mt-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                    <h2 className="mb-0">승격 <span className="text-[0.72rem] font-normal text-[color:var(--muted-fg)]">— 결정 이력만 열람 · {filteredPromoted.length}건</span></h2>
+                    <h2 className="mb-0">승격 <span className="text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]">— 결정 이력만 열람 · {filteredPromoted.length}건</span></h2>
                     <div className="flex flex-wrap items-center gap-2">
-                      <label className="text-[0.75rem]">
+                      <label className="text-[length:var(--fs-caption)]">
                         <span className="sr-only">연도</span>
                         <select
                           value={promotedYear}
@@ -123,7 +123,7 @@ function RouteDecisionRedirect() {
                           {years.map((y) => <option key={y} value={y}>{y}년</option>)}
                         </select>
                       </label>
-                      <label className="text-[0.75rem]">
+                      <label className="text-[length:var(--fs-caption)]">
                         <span className="sr-only">월</span>
                         <select
                           value={promotedMonth}
@@ -137,11 +137,11 @@ function RouteDecisionRedirect() {
                       </label>
                     </div>
                   </div>
-                  <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
                     이미 프로젝트로 추진된 검토/안건입니다 — 새로 결정할 수는 없지만 S4 결정 이력은 계속 열람할 수 있습니다.
                   </p>
                   {filteredPromoted.length === 0 ? (
-                    <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">선택한 기간에 승격된 검토/안건이 없습니다.</p>
+                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">선택한 기간에 승격된 검토/안건이 없습니다.</p>
                   ) : (
                     <div className="deal-pick-grid">
                       {filteredPromoted.map((o) => (

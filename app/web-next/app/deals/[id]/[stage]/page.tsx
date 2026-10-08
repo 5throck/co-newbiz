@@ -239,7 +239,7 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
       )}
       {proc && applicable && (
         <div className="market-section">
-          <p className="text-[0.85rem]">이 단계의 상태: <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>{stage?.status}</span></p>
+          <p className="text-[length:var(--fs-body)]">이 단계의 상태: <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>{stage?.status}</span></p>
           <ul className="sizing-note-list">
             {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b, i) => <li key={i}>{b}</li>)}
           </ul>

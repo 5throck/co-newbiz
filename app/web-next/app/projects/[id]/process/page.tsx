@@ -81,7 +81,7 @@ function StageList({ stages, gateStatus }: { stages: StageView[]; gateStatus: Re
           <span className="flex-1">
             {s.name}
             {s.status === "current" && s.requiredArtifacts.length > 0 && (
-              <span className="block text-[0.78rem] text-[color:var(--muted-fg)]">필요: {s.requiredArtifacts.join(", ")}</span>
+              <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">필요: {s.requiredArtifacts.join(", ")}</span>
             )}
           </span>
           {s.gateIds && s.gateIds.length > 0 && (
@@ -136,7 +136,7 @@ export default function ProjectProcessPage() {
       <header>
         <PageHeader title={`프로세스 현황 — ${data.project.project_no ?? data.project.id}`} />
         {data.track && (
-          <p className="text-[0.82rem] text-[color:var(--muted-fg)]">
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             트랙: {data.track}{data.subTrack ? ` / ${data.subTrack}` : ""} · 현재 {data.currentStage ?? "—"} · 다음 {data.nextStage ?? "—"}
             {data.terminated && " · KILL로 종료됨"}
           </p>
@@ -146,7 +146,7 @@ export default function ProjectProcessPage() {
       {data.blockers.length > 0 && (
         <section aria-label="현재 차단 요건" className="market-section">
           <h2 className="text-[0.92rem] font-semibold mb-1">현재 차단 요건</h2>
-          <ul className="sizing-note-list text-[0.85rem]">
+          <ul className="sizing-note-list text-[length:var(--fs-body)]">
             {data.blockers.map((b, i) => <li key={i}>{b}</li>)}
           </ul>
         </section>
@@ -160,7 +160,7 @@ export default function ProjectProcessPage() {
       {data.opportunity && (
         <section aria-label="기회 단계 (S1~S4)" className="market-section">
           <h2 className="text-[0.92rem] font-semibold">
-            기회 단계 <a className="text-[color:var(--accent)] underline text-[0.8rem]" href={`/opportunities?opportunity=${data.opportunity.id}`}>기회 화면 →</a>
+            기회 단계 <a className="text-[color:var(--accent)] underline text-[length:var(--fs-caption)]" href={`/opportunities?opportunity=${data.opportunity.id}`}>기회 화면 →</a>
           </h2>
           <StageList stages={opportunityStages ?? []} gateStatus={data.opportunity.gateStatus} />
         </section>

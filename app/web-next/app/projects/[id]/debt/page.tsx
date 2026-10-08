@@ -105,8 +105,8 @@ function DebtView() {
                   <td className="col-num tabular-nums">{r.principal}</td>
                   <td className="tabular-nums">{r.rate_type === "fixed" ? "고정" : "변동"} {r.rate}%</td>
                   <td className="tabular-nums">{r.maturity ?? "—"}</td>
-                  <td className="text-[0.72rem]">{r.covenant_json ?? "—"}</td>
-                  <td className="text-[0.72rem]">{[r.security, r.seniority].filter(Boolean).join(" · ") || "—"}</td>
+                  <td className="text-[length:var(--fs-caption)]">{r.covenant_json ?? "—"}</td>
+                  <td className="text-[length:var(--fs-caption)]">{[r.security, r.seniority].filter(Boolean).join(" · ") || "—"}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -116,10 +116,10 @@ function DebtView() {
       <section className="market-section" aria-label="커버넌트 시나리오 계산" style={{ border: "1px solid var(--border)", borderRadius: 12 }}>
         <h2 className="text-[0.9rem] mb-2">커버넌트 시나리오 계산 <span className="note">— 산식은 저장 조건 기반, 현금흐름은 명시적 가정 입력</span></h2>
         <div className="form-grid" style={{ marginBottom: 8 }}>
-          <label className="text-[0.78rem] w-[12rem]"><span className="block mb-1">시나리오 연간 영업현금흐름 (억원)</span>
+          <label className="text-[length:var(--fs-caption)] w-[12rem]"><span className="block mb-1">시나리오 연간 영업현금흐름 (억원)</span>
             <input type="number" className="sizing-new-input sizing-new-input-sm" value={scenarioCf} onChange={(e) => setScenarioCf(e.target.value)} placeholder="예: 120" /></label>
           <span className="note">금리 +2%p 스트레스는 체크박스로 적용</span>
-          <label className="text-[0.78rem] flex items-center gap-1" style={{ marginBottom: 4 }}><input type="checkbox" checked={stress} onChange={(e) => setStress(e.target.checked)} /> 금리 +2%p 스트레스</label>
+          <label className="text-[length:var(--fs-caption)] flex items-center gap-1" style={{ marginBottom: 4 }}><input type="checkbox" checked={stress} onChange={(e) => setStress(e.target.checked)} /> 금리 +2%p 스트레스</label>
         </div>
         {rows && rows.length > 0 && scenarioCf && Number(scenarioCf) > 0 ? (
           <div className="table-scroll">
@@ -138,7 +138,7 @@ function DebtView() {
                     <td className="font-semibold">{r.lender ?? "차입"}</td>
                     <td className="col-num tabular-nums">{ds}억</td>
                     <td className="col-num tabular-nums font-semibold">{dscr ?? "—"}</td>
-                    <td className="text-[0.75rem]">{th ? `DSCR ≥ ${th.value}` : "임계값 미등록"}</td>
+                    <td className="text-[length:var(--fs-caption)]">{th ? `DSCR ≥ ${th.value}` : "임계값 미등록"}</td>
                     <td>{pass == null ? <span className="status-chip status-gray">판정 불가</span> : pass ? <span className="status-chip status-green">충족</span> : <span className="status-chip status-red">위반</span>}</td>
                   </tr>
                 );
@@ -158,19 +158,19 @@ function DebtView() {
           <h2 className="text-[0.9rem] mb-2">차입 등록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[0.78rem]"><span className="block mb-1">대출기관</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">대출기관</span>
                 <input className="sizing-new-input sizing-new-input-sm" value={form.lender} onChange={(e) => setForm({ ...form, lender: e.target.value })} /></label>
-              <label className="text-[0.78rem] w-[8rem]"><span className="block mb-1">원금 *</span>
+              <label className="text-[length:var(--fs-caption)] w-[8rem]"><span className="block mb-1">원금 *</span>
                 <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} required /></label>
-              <label className="text-[0.78rem]"><span className="block mb-1">금리 종류</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">금리 종류</span>
                 <select className="sizing-new-input sizing-new-input-sm" value={form.rate_type} onChange={(e) => setForm({ ...form, rate_type: e.target.value })}><option value="fixed">고정</option><option value="floating">변동</option></select></label>
-              <label className="text-[0.78rem] w-[6rem]"><span className="block mb-1">금리 (%)</span>
+              <label className="text-[length:var(--fs-caption)] w-[6rem]"><span className="block mb-1">금리 (%)</span>
                 <input type="number" step="0.01" className="sizing-new-input sizing-new-input-sm" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} /></label>
-              <label className="text-[0.78rem]"><span className="block mb-1">만기</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">만기</span>
                 <input className="sizing-new-input sizing-new-input-sm" value={form.maturity} onChange={(e) => setForm({ ...form, maturity: e.target.value })} placeholder="2031-06" /></label>
               <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
             </div>
-            <label className="text-[0.78rem] block mt-2"><span className="block mb-1">커버넌트 (JSON 또는 요약)</span>
+            <label className="text-[length:var(--fs-caption)] block mt-2"><span className="block mb-1">커버넌트 (JSON 또는 요약)</span>
               <input className="sizing-new-input w-full" value={form.covenant_json} onChange={(e) => setForm({ ...form, covenant_json: e.target.value })} placeholder="DSCR >= 1.3 · NetLev <= 3.5x" /></label>
           </form>
         </section>

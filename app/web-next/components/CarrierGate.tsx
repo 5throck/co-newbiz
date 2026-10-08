@@ -157,7 +157,7 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
       {!error && rows !== null && rows.length > 1 && (
         <div className="card">
           <h2>검토/안건 선택</h2>
-          <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
             여러 진행 중인 검토/안건이 있어 어느 곳으로 갈지 자동으로 정할 수 없습니다 — 열 화면({TITLE_BY_ROUTE[route]})을 열 검토/안건을 선택하세요.
           </p>
           <div className="deal-pick-grid">

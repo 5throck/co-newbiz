@@ -89,15 +89,15 @@ function PermitsView() {
           <h2 className="text-[0.9rem] mb-2">등록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[0.78rem]"><span className="block mb-1">구분 *</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">구분 *</span>
                 <select className="sizing-new-input sizing-new-input-sm" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
                   <option value="permit">허가</option><option value="certification">인증</option>
                 </select></label>
-              <label className="text-[0.78rem] flex-1 min-w-[12rem]"><span className="block mb-1">이름 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">이름 *</span>
                 <input className="sizing-new-input w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
-              <label className="text-[0.78rem]"><span className="block mb-1">기관</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">기관</span>
                 <input className="sizing-new-input sizing-new-input-sm" value={form.agency} onChange={(e) => setForm({ ...form, agency: e.target.value })} /></label>
-              <label className="text-[0.78rem] w-[7rem]"><span className="block mb-1">법정기간(일)</span>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">법정기간(일)</span>
                 <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.statutory_days} onChange={(e) => setForm({ ...form, statutory_days: e.target.value })} /></label>
               <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
             </div>

@@ -47,7 +47,7 @@ export default function CompaniesPage() {
         <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer" type="submit">검색</button>
       </form>
 
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem]">✕ {error}</p>}
+      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>}
       {!rows ? (
         <p className="text-[color:var(--muted-fg)]">불러오는 중...</p>
       ) : rows.length === 0 ? (
@@ -61,10 +61,10 @@ export default function CompaniesPage() {
             {rows.map((c) => (
               <tr key={c.id}>
                 <td className="font-semibold">{c.name_ko}</td>
-                <td className="font-mono text-[0.8rem]">{c.dart_corp_code ?? "—"}</td>
+                <td className="font-mono text-[length:var(--fs-caption)]">{c.dart_corp_code ?? "—"}</td>
                 <td>{c.fact_years > 0 ? `${c.fact_years}개 회계연도` : "없음 — 동기화 필요"}</td>
-                <td className="text-[color:var(--muted-fg)] text-[0.8rem]">{c.latest_sync_at ? new Date(c.latest_sync_at).toLocaleDateString("ko-KR") : "—"}</td>
-                <td><Link className="text-[color:var(--accent)] font-bold text-[0.86rem] whitespace-nowrap" href={`/companies/${c.id}`}>재무성과 보기 →</Link></td>
+                <td className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{c.latest_sync_at ? new Date(c.latest_sync_at).toLocaleDateString("ko-KR") : "—"}</td>
+                <td><Link className="text-[color:var(--accent)] font-bold text-[length:var(--fs-body)] whitespace-nowrap" href={`/companies/${c.id}`}>재무성과 보기 →</Link></td>
               </tr>
             ))}
           </tbody>

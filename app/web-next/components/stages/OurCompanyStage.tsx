@@ -643,7 +643,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
         {canAct && showGroupForm && (
           <form onSubmit={createGroup} className="sizing-new-form mb-3">
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[0.78rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">그룹명 *</span>
                 <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="예: 테크크로스 그룹" required className="sizing-new-input" autoFocus />
               </label>
@@ -655,7 +655,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
         {groups === null ? (
           <p>불러오는 중...</p>
         ) : groups.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">등록된 그룹이 없습니다. "＋ 그룹 등록"으로 시작하세요.</p>
+          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">등록된 그룹이 없습니다. "＋ 그룹 등록"으로 시작하세요.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {groups.map((g) => (
@@ -714,7 +714,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
           {canAct && showMemberForm && (
             <form onSubmit={addMember} aria-label="계열사 등록" className="sizing-new-form mb-3">
               <div className="flex flex-wrap items-end gap-2">
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">회사명 *</span>
                   <span className="flex items-center gap-1">
                     <input value={memberForm.company_name} onChange={(e) => { setMemberForm({ ...memberForm, company_name: e.target.value }); setDartResults([]); }} required className="sizing-new-input" autoFocus />
@@ -723,11 +723,11 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                     </button>
                   </span>
                 </label>
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">DART 고유번호</span>
                   <input value={memberForm.dart_corp_code} onChange={(e) => setMemberForm({ ...memberForm, dart_corp_code: e.target.value })} placeholder="자동 검색 또는 8자리 직접 입력" className="sizing-new-input sizing-new-input-sm" />
                 </label>
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">역할</span>
                   <select value={memberForm.role} onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value as "hq" | "affiliate" })} className="sizing-new-input sizing-new-input-sm">
                     <option value="affiliate">계열사</option>
@@ -758,13 +758,13 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                   ))}
                 </ul>
               )}
-              <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+              <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 DART 고유번호는 시너지 정합성 화면의 DART 검색으로 확인하거나 비워둘 수 있습니다(비상장 — 리서치 기반 분석).
               </p>
             </form>
           )}
           {selectedGroup.members.length === 0 ? (
-            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">계열사가 없습니다. "＋ 계열사 등록"으로 추가하세요.</p>
+            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">계열사가 없습니다. "＋ 계열사 등록"으로 추가하세요.</p>
           ) : (
             <table className="data-table list-table" aria-label="계열사 목록">
               <caption className="sr-only">계열사 목록</caption>
@@ -923,7 +923,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
         return (
           <section aria-label="계열사 간 시너지" className="market-section">
             <div className="section-toolbar"><span className="section-title"><h2>🔗 계열사 간 시너지 매트릭스 — 산업 노출 겹침 기준</h2></span></div>
-            <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
+            <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               각 계열사 프로파일의 산업 노출(industryExposure)이 겹치는 정도를 시너지 후보 지표로 환산한 정성 매트릭스입니다.
               겹침이 있는 계열사 쌍이 상위 표시됩니다 — 공동 R&BD·제휴·수직 통합 후보 발굴의 입력으로 활용하세요.
             </p>
@@ -987,7 +987,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
               </>
             }
           />
-          {profiles[openMember] === "loading" && <p className="text-[0.85rem]" role="status">분석 중입니다 — 완료되면 자동으로 표시됩니다.</p>}
+          {profiles[openMember] === "loading" && <p className="text-[length:var(--fs-body)]" role="status">분석 중입니다 — 완료되면 자동으로 표시됩니다.</p>}
           {profiles[openMember] && profiles[openMember] !== "loading" && (() => {
         const profile = profiles[openMember] as Profile;
         return (
@@ -1014,7 +1014,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                     <span className={`status-chip ${profile.ragCapRecommendation.grade === "green" ? "status-green" : profile.ragCapRecommendation.grade === "amber" ? "status-amber" : "status-red"}`}>
                       상한 {profile.ragCapRecommendation.grade.toUpperCase()}
                     </span>
-                    <p className="mt-2 mb-0 text-[0.85rem]">{profile.ragCapRecommendation.rationale}</p>
+                    <p className="mt-2 mb-0 text-[length:var(--fs-body)]">{profile.ragCapRecommendation.rationale}</p>
                   </div>
                 )}
                 <h3 className="sizing-step-title text-[0.95rem]">종합 평가</h3>
@@ -1025,10 +1025,10 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                     {profile.industryExposure.map((x) => <span key={x} className="status-chip status-in-progress">{x}</span>)}
                   </div>
                 ) : (
-                  <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mb-3">산업 노출 정보 없음</p>
+                  <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-3">산업 노출 정보 없음</p>
                 )}
                 {!profile.schemaVersion && (
-                  <p className="sizing-note-list text-[0.78rem] text-[color:var(--amber-fg)]" role="note">
+                  <p className="sizing-note-list text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]" role="note">
                     ⚠ 이 프로파일은 확장 분석(SWOT·산업 연계·신뢰도) 적용 이전 버전입니다 — <strong>재분석</strong>을 실행하면 전체 리포트가 생성됩니다.
                   </p>
                 )}
@@ -1061,7 +1061,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                     <>
                       <div className="report-chart-card">
                         <EChartsCore option={chartOption} style={{ height: 300 }} />
-                        <p className="mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">단위: 억원 · 출처: DART 사업보고서</p>
+                        <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">단위: 억원 · 출처: DART 사업보고서</p>
                       </div>
                       <div className="table-scroll">
                         <table className="data-table report-table" aria-label="DART 재무 요약 (계정 × 연도)">
@@ -1082,11 +1082,11 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                           </tbody>
                         </table>
                       </div>
-                      <p className="text-[0.72rem] text-[color:var(--muted-fg)]">출처: <span className="status-chip status-green">DART</span> 전자공시 사업보고서{profile.dartFinancials?.reportUrl ? <> — <a href={profile.dartFinancials.reportUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문 보기</a></> : null}</p>
+                      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">출처: <span className="status-chip status-green">DART</span> 전자공시 사업보고서{profile.dartFinancials?.reportUrl ? <> — <a href={profile.dartFinancials.reportUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문 보기</a></> : null}</p>
                     </>
                   );
                 })() : (
-                  <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">{profile.dartFinancials?.error ?? "재무 데이터 없음"}</p>
+                  <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">{profile.dartFinancials?.error ?? "재무 데이터 없음"}</p>
                 )}
                 {profile.financialAnalysis && (
                   profile.financialAnalysis.available ? (
@@ -1143,11 +1143,11 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                       </div>
                     </>
                   ) : (
-                    <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mt-3">재무 비율 분석 불가 — {profile.financialAnalysis.notes.join(" ") || "데이터 부족"}</p>
+                    <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mt-3">재무 비율 분석 불가 — {profile.financialAnalysis.notes.join(" ") || "데이터 부족"}</p>
                   )
                 )}
                 {profile.financialAnalysis && profile.financialAnalysis.missingAccounts.length > 0 && (
-                  <p className="mt-2 mb-0 text-[0.75rem] text-[color:var(--muted-fg)]">미수집 계정: {profile.financialAnalysis.missingAccounts.join(", ")}</p>
+                  <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">미수집 계정: {profile.financialAnalysis.missingAccounts.join(", ")}</p>
                 )}
               </div>
             )}
@@ -1155,7 +1155,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
             {profileTab === "swot" && (
               <div className="text-[0.88rem]">
                 {profile.swot && (
-                  <p className="sizing-note-list mb-2 text-[0.78rem] text-[color:var(--amber-fg)]" role="note">
+                  <p className="sizing-note-list mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]" role="note">
                     ⚠ 기회·위협은 LLM 추정 — 분석가 확정 전까지 인용 시 검증 필요 표기를 유지하세요.
                   </p>
                 )}
@@ -1188,7 +1188,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
             {profileTab === "industry" && (
               <div className="text-[0.88rem]">
                 <h3 className="sizing-step-title text-[0.95rem]">S1 시장분석 연계</h3>
-                <p className="mb-2 text-[color:var(--muted-fg)] text-[0.85rem]">
+                <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
                   산업 노출 항목을 S1 시장분석 매트릭스와 연결합니다 — 완료된 시장분석이 있으면 앵커·CAGR·외부 전망 격차가 실측 연결됩니다.
                 </p>
                 {profile.industryLinkage && profile.industryLinkage.length > 0 ? (
@@ -1216,7 +1216,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                               {l.escalatedCagrPct != null && <span className="status-chip status-green ml-1" title="결정론 스케일링 에스컬레이션 적용 — 외부 참조 × 0.85 (사람 결정)">에스컬레이션 {l.escalatedCagrPct}%</span>}
                             </td>
                             <td className="col-num tabular-nums">{l.externalGapPercent != null ? `${l.externalGapPercent > 0 ? "+" : ""}${l.externalGapPercent}%` : "—"}</td>
-                            <td className="text-[0.78rem]">
+                            <td className="text-[length:var(--fs-caption)]">
                               {l.matrixFound && l.industryId ? (
                                 <Link href={`/market?industry=${encodeURIComponent(l.industryId)}`} className="text-[color:var(--accent)] underline">시장분석 리포트</Link>
                               ) : req?.status === "created" ? (
@@ -1227,7 +1227,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                               ) : req?.status === "creating" ? (
                                 <span className="status-chip status-not-started">요청 중...</span>
                               ) : !canAct ? (
-                                <span className="text-[0.78rem] text-[color:var(--muted-fg)]">—</span>
+                                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">—</span>
                               ) : (
                                 <button
                                   type="button"
@@ -1246,7 +1246,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                     </table>
                   </div>
                 ) : (
-                  <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+                  <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
                     산업 연계 데이터가 없습니다 — 재분석 시 산업 노출이 S1 매트릭스와 자동 연결됩니다.
                   </p>
                 )}
@@ -1272,7 +1272,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
             {profileTab === "competitive" && (
               <div className="text-[0.88rem]">
                 <h3 className="sizing-step-title text-[0.95rem]">경쟁 포지셔닝</h3>
-                {compError && <p role="alert" className="mb-2 text-[0.8rem] text-[color:var(--red-fg)]">{compError}</p>}
+                {compError && <p role="alert" className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{compError}</p>}
 
                 {/* ① 확정 경쟁사 — 사람의 수용·등록으로만 생긴 레지스트리(ADR-0142) */}
                 <div className="market-section mb-3">
@@ -1281,7 +1281,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                     <span className="status-chip status-green">{(competitors ?? []).filter((c) => c.status === "confirmed").length}건</span>
                   </div>
                   {(competitors ?? []).filter((c) => c.status === "confirmed").length === 0 ? (
-                    <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">
+                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
                       아직 확정된 경쟁사가 없습니다 — 아래 AI 제안을 수용하거나 직접 등록하세요.
                     </p>
                   ) : (
@@ -1306,18 +1306,18 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                             return (
                               <tr key={c.id}>
                                 <td className="col-label font-semibold">{c.name}</td>
-                                <td className="text-[0.78rem] tabular-nums">
+                                <td className="text-[length:var(--fs-caption)] tabular-nums">
                                   {editing ? <input value={editingCompetitor.dart} onChange={(e) => setEditingCompetitor({ ...editingCompetitor, dart: e.target.value })} className="sizing-new-input" style={{ width: "7rem" }} placeholder="고유번호" /> : (c.dart_corp_code || "—")}
                                 </td>
-                                <td className="col-text text-[0.82rem] text-[color:var(--muted-fg)]">
+                                <td className="col-text text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                                   {editing ? <input value={editingCompetitor.note} onChange={(e) => setEditingCompetitor({ ...editingCompetitor, note: e.target.value })} className="sizing-new-input" style={{ width: "100%" }} placeholder="경쟁 관계" /> : (c.note || "—")}
                                 </td>
                                 <td>{c.discovery_source === "ai_proposal" ? <span className="status-chip status-in-progress">AI 제안 수용</span> : <span className="status-chip status-not-started">수작업</span>}</td>
-                                <td>{meta ? <span className={`status-chip ${meta.chip}`} title={String(c.crosscheck_verdict)}>{meta.label}</span> : <span className="text-[0.78rem] text-[color:var(--muted-fg)]">—</span>}</td>
+                                <td>{meta ? <span className={`status-chip ${meta.chip}`} title={String(c.crosscheck_verdict)}>{meta.label}</span> : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">—</span>}</td>
                                 <td>
                                   {editing ? (
                                     <span className="actions-row">
-                                      <button type="button" className="btn-primary btn-sm" disabled={compBusy} onClick={() => void saveCompetitorEdit()}>저장</button>
+                                      <button type="button" className="btn-ghost btn-sm" disabled={compBusy} onClick={() => void saveCompetitorEdit()}>저장</button>
                                       <button type="button" className="btn-ghost btn-sm" onClick={() => setEditingCompetitor(null)}>취소</button>
                                     </span>
                                   ) : excluding ? (
@@ -1342,7 +1342,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                   )}
                   {(competitors ?? []).filter((c) => c.status === "excluded").length > 0 && (
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-[0.8rem] text-[color:var(--muted-fg)]">제외된 경쟁사 {(competitors ?? []).filter((c) => c.status === "excluded").length}건</summary>
+                      <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">제외된 경쟁사 {(competitors ?? []).filter((c) => c.status === "excluded").length}건</summary>
                       <ul className="sizing-note-list mt-1">
                         {(competitors ?? []).filter((c) => c.status === "excluded").map((c) => (
                           <li key={c.id}>
@@ -1359,7 +1359,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                 <div className="market-section mb-3">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <h4 className="text-[0.9rem] font-semibold m-0">AI 제안</h4>
-                    <span className="text-[0.75rem] text-[color:var(--muted-fg)]">최신 프로필 분석 기준 — 제안 전용, 수용은 사람</span>
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">최신 프로필 분석 기준 — 제안 전용, 수용은 사람</span>
                     {canAct && (
                     <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void runCompetitorWebSearch()}>
                       {webBusy ? "웹검색 중..." : "웹검색 재제안"}
@@ -1367,7 +1367,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                     )}
                   </div>
                   {(competitorProposals ?? []).filter((p) => !p.accepted && !dismissedProposals.includes(p.name)).length === 0 ? (
-                    <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">
+                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
                       새로운 제안이 없습니다 — 프로필을 재분석하면 최신 리서치 기반 후보가 제안됩니다.
                     </p>
                   ) : (
@@ -1381,9 +1381,9 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                               {meta && <span className={`status-chip ${meta.chip}`} title="공시·리서치 원문 대조 판정 (제안 시점)">{meta.label}</span>}
                               <span className="status-chip status-not-started" title="이 제안은 확정 기록이 아니며, 수용 버튼으로만 등록됩니다">제안</span>
                             </div>
-                            <p className="mb-1 text-[0.8rem]">{p.note || "—"}</p>
+                            <p className="mb-1 text-[length:var(--fs-caption)]">{p.note || "—"}</p>
                             {p.evidence.length > 0 && (
-                              <p className="mb-2 text-[0.72rem] text-[color:var(--muted-fg)]">
+                              <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                                 근거:{" "}
                                 {p.evidence.map((e, i) => (
                                   <span key={i}>{i > 0 && " · "}<a href={e.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{e.title || "출처"}</a></span>
@@ -1391,7 +1391,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                               </p>
                             )}
                             {canAct && (<div className="flex flex-wrap gap-2">
-                              <button type="button" className="btn-primary btn-sm" disabled={compBusy} onClick={() => void acceptProposal(p.name)}>수용</button>
+                              <button type="button" className="btn-ghost btn-sm" disabled={compBusy} onClick={() => void acceptProposal(p.name)}>수용</button>
                               <button type="button" className="btn-ghost btn-sm" onClick={() => setDismissedProposals((prev) => [...prev, p.name])}>무시</button>
                             </div>)}
                           </div>
@@ -1402,7 +1402,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
 
                   {webSuggestions && webSuggestions.length > 0 && (
                     <div className="grid gap-2 mt-2">
-                      <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">{webNote ?? "웹검색 기반 추가 제안"}</p>
+                      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">{webNote ?? "웹검색 기반 추가 제안"}</p>
                       {webSuggestions.map((ws) => (
                         <div key={ws.name} className="sizing-grade-card mb-0">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -1411,9 +1411,9 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                               {ws.reliability === "B" ? "제안 · 웹검색 근거" : "제안 · 미검증"}
                             </span>
                           </div>
-                          <p className="mb-1 text-[0.8rem]">{ws.note || "—"}</p>
+                          <p className="mb-1 text-[length:var(--fs-caption)]">{ws.note || "—"}</p>
                           {ws.sources.length > 0 && (
-                            <p className="mb-2 text-[0.72rem] text-[color:var(--muted-fg)]">
+                            <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                               근거:{" "}
                               {ws.sources.map((e, i) => (
                                 <span key={i}>{i > 0 && " · "}<a href={e.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{e.title || "출처"}</a></span>
@@ -1421,7 +1421,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                             </p>
                           )}
                           {canAct && (<div className="flex flex-wrap gap-2">
-                            <button type="button" className="btn-primary btn-sm" disabled={compBusy} onClick={() => void acceptWebSuggestion(ws)}>수용</button>
+                            <button type="button" className="btn-ghost btn-sm" disabled={compBusy} onClick={() => void acceptWebSuggestion(ws)}>수용</button>
                             <button type="button" className="btn-ghost btn-sm" onClick={() => setWebSuggestions((prev) => (prev ?? []).filter((x) => x.name !== ws.name))}>무시</button>
                           </div>)}
                         </div>
@@ -1438,14 +1438,14 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                     <button type="button" className="btn-ghost btn-sm" disabled={competitorDartSearching || !competitorForm.name.trim()} onClick={() => void searchCompetitorDart()}>DART 검색</button>
                     <input value={competitorForm.dart_corp_code} onChange={(e) => setCompetitorForm({ ...competitorForm, dart_corp_code: e.target.value })} className="sizing-new-input" style={{ width: "10rem" }} placeholder="DART 고유번호 (선택, 8자리)" aria-label="경쟁사 DART 고유번호" />
                     <input value={competitorForm.note} onChange={(e) => setCompetitorForm({ ...competitorForm, note: e.target.value })} className="sizing-new-input" style={{ flex: "1 1 14rem" }} placeholder="경쟁 관계 (선택)" aria-label="경쟁 관계" />
-                    <button type="button" className="btn-primary btn-sm" disabled={compBusy || !competitorForm.name.trim()} onClick={() => void registerManualCompetitor()}>등록</button>
+                    <button type="button" className="btn-ghost btn-sm" disabled={compBusy || !competitorForm.name.trim()} onClick={() => void registerManualCompetitor()}>등록</button>
                   </div>
                   {competitorDartResults.length > 0 && (
                     <ul className="sizing-note-list">
                       {competitorDartResults.map((r) => (
                         <li key={r.corp_code}>
                           <button type="button" className="btn-ghost btn-sm" onClick={() => setCompetitorForm({ ...competitorForm, name: r.corp_name, dart_corp_code: r.corp_code })}>이 회사로 채우기</button>{" "}
-                          <strong>{r.corp_name}</strong> <code className="text-[0.72rem]">{r.corp_code}</code>
+                          <strong>{r.corp_name}</strong> <code className="text-[length:var(--fs-caption)]">{r.corp_code}</code>
                           {r.source === "web" && <span className="status-chip status-amber ml-1">웹 미검증 후보</span>}
                         </li>
                       ))}
@@ -1455,12 +1455,12 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
 
                 {/* AI 분석 참고 — payload 원문(제안 원천). 확정 목록과 별개다. */}
                 <details className="market-section">
-                  <summary className="cursor-pointer text-[0.85rem] font-semibold">AI 분석 참고 — 포지셔닝·공시 대조 원문 (확정 목록과 별개)</summary>
+                  <summary className="cursor-pointer text-[length:var(--fs-body)] font-semibold">AI 분석 참고 — 포지셔닝·공시 대조 원문 (확정 목록과 별개)</summary>
                   {profile.competitive && !profile.competitive.degraded ? (
                     <>
                       <p className="mt-2 mb-2">{profile.competitive.positioning || "—"}</p>
                       {profile.competitive.competitors.length > 0 && (
-                        <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+                        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
                           이 분석에서 제안된 경쟁사 {profile.competitive.competitors.length}건 — 위 "AI 제안"에서 수용 여부를 결정하세요.
                         </p>
                       )}
@@ -1473,7 +1473,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                           </span>
                         </div>
                         {profile.competitive.crossCheck.dartReport && (
-                          <p className="mb-1 text-[0.78rem] text-[color:var(--muted-fg)]">
+                          <p className="mb-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                             출처: DART {profile.competitive.crossCheck.dartReport.reportNm} (접수 {profile.competitive.crossCheck.dartReport.rceptDt.slice(0, 8)}) —{" "}
                             <a href={profile.competitive.crossCheck.dartReport.reportUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문 보기</a>
                           </p>
@@ -1491,9 +1491,9 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                                     <td className="col-label font-semibold">{cl.claim}</td>
                                     <td>
                                       <span className={`status-chip ${CROSSCHECK_VERDICT_META[cl.verdict].chip}`}>{CROSSCHECK_VERDICT_META[cl.verdict].label}</span>
-                                      <span className="ml-1 text-[0.72rem] text-[color:var(--muted-fg)]">{cl.source}</span>
+                                      <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{cl.source}</span>
                                     </td>
-                                    <td className="col-text text-[0.78rem] text-[color:var(--muted-fg)]">
+                                    <td className="col-text text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                                       {cl.evidence}
                                       {cl.url && <> — <a href={cl.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">출처</a></>}
                                     </td>
@@ -1503,14 +1503,14 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                             </table>
                           </div>
                         ) : (
-                          <p className="text-[0.78rem] text-[color:var(--muted-fg)]">{profile.competitive.crossCheck.note ?? "대조 결과가 없습니다."}</p>
+                          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{profile.competitive.crossCheck.note ?? "대조 결과가 없습니다."}</p>
                         )}
                         {profile.competitive.crossCheck.note && profile.competitive.crossCheck.claims.length > 0 && (
-                          <p className="mt-1 text-[0.78rem] text-[color:var(--muted-fg)]">비고: {profile.competitive.crossCheck.note}</p>
+                          <p className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">비고: {profile.competitive.crossCheck.note}</p>
                         )}
                       </div>
                     )}
-                    <p className="sizing-note-list mt-2 text-[0.78rem] text-[color:var(--muted-fg)]">
+                    <p className="sizing-note-list mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                       {profile.competitive.crossCheck
                         ? profile.competitive.crossCheck.status === "cross_checked"
                           ? "공시·리서치 원문 대조 완료 — 판정은 자동 대조 결과이며 분석가 확인 전까지 참고용입니다."
@@ -1519,7 +1519,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                     </p>
                   </>
                 ) : (
-                  <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+                  <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
                     {profile.competitive?.degraded ?? "경쟁 포지셔닝 데이터가 없습니다 — 재분석 시 생성됩니다."}
                   </p>
                 )}
@@ -1553,7 +1553,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                                 {s.grade}
                               </span>
                             </td>
-                            <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{s.note}</td>
+                            <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{s.note}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1562,7 +1562,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                 )}
                 {profile.verificationLedger && profile.verificationLedger.length > 0 && (
                   <details className="mt-3">
-                    <summary className="cursor-pointer text-[0.85rem] text-[color:var(--accent)]">
+                    <summary className="cursor-pointer text-[length:var(--fs-body)] text-[color:var(--accent)]">
                       🔍 검증 원장 ({profile.verificationLedger.length}건 — 확인/확인불가/판단필요)
                     </summary>
                     <table className="data-table mt-2" aria-label="검증 원장">
@@ -1577,7 +1577,7 @@ export function OurCompanyStage({ memberId: memberIdProp, embedded }: { memberId
                                 {v.status === "confirmed" ? "확인" : v.status === "could_not_verify" ? "확인 불가" : "판단 필요"}
                               </span>
                             </td>
-                            <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{v.evidence}</td>
+                            <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{v.evidence}</td>
                           </tr>
                         ))}
                       </tbody>

@@ -142,8 +142,8 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
 
   return (
     <>
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">✕ {error}</p>}
-      {message && <p className="text-[color:var(--green-fg)] text-[0.82rem] mb-2">✓ {message}</p>}
+      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
+      {message && <p className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {message}</p>}
 
       <section className="market-section sizing-step" aria-label="최근 타겟코스팅 분석">
         <h3 className="sizing-step-title">
@@ -173,10 +173,10 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
               <div><dt className="text-[color:var(--muted-fg)]">출처</dt><dd>{latest.source === "peer_benchmark" ? "peer 벤치마크" : "사용자 입력"}</dd></div>
             </dl>
             {latest.levers.length > 0 && (
-              <p className="text-[0.8rem] text-[color:var(--muted-fg)] mt-2">축소 방안: {latest.levers.join(" · ")}</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">축소 방안: {latest.levers.join(" · ")}</p>
             )}
             {latest.thresholdExceeded && (
-              <p className="text-[0.8rem] text-[color:var(--muted-fg)] mt-2">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
                 하락(downside) 시나리오 생성 시 opex 드라이버에 이 격차가 반영됩니다 — 시나리오 비교 탭에서 재생성하세요.
               </p>
             )}
@@ -203,11 +203,11 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
                     <span className="font-semibold tabular-nums">{p.unit_price.toLocaleString()} {p.currency}/{p.unit}</span>
                     <button type="button" className="outline-button btn-sm" onClick={() => useProposal(p)}>이 가격 사용</button>
                   </div>
-                  <div className="text-[color:var(--muted-fg)] text-[0.78rem]">
+                  <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
                     <a href={p.source_url} target="_blank" rel="noreferrer" className="underline">{p.source_name}</a>
                     {" · 확신도 "}{p.confidence}
                   </div>
-                  {p.quote && <div className="text-[0.78rem]">"{p.quote.slice(0, 160)}"</div>}
+                  {p.quote && <div className="text-[length:var(--fs-caption)]">"{p.quote.slice(0, 160)}"</div>}
                   <span className="sr-only">{i}</span>
                 </div>
               ))}
@@ -221,12 +221,12 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
           </div>
           <label className="grid gap-1 text-sm">축소 방안 (쉼표 구분, 선택)<input className="form-input" value={levers} onChange={(e) => setLevers(e.target.value)} placeholder="설계-to-cost, 소싱 단가 협상" /></label>
           {gapRatioPreview !== null && (
-            <p className="text-[0.82rem] text-[color:var(--muted-fg)]">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               미리보기 — 허용원가 {won(allowable!)} · 격차 {won(gapPreview!)} ({pct(gapRatioPreview)})
             </p>
           )}
           <button className="primary-button justify-self-start" type="submit">격차 분석 저장</button>
-          <p className="text-[color:var(--muted-fg)] text-[0.78rem]">
+          <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
             격차 = 추정 단위원가 − 허용원가(시장가격 × (1 − 목표마진)). 기록은 제안이며 판정은 사람의 몫입니다.
           </p>
         </form>

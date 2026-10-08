@@ -148,7 +148,7 @@ function StageGuidance({ projectId, stageId }: { projectId: string; stageId: str
   const items = [...new Set([...info.blockers, ...info.requiredArtifacts])];
   if (items.length === 0) return null;
   return (
-    <div className="mb-3 border border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] rounded-lg px-3 py-2 text-[0.8rem] text-[color:var(--primary-dim)]">
+    <div className="mb-3 border border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] rounded-lg px-3 py-2 text-[length:var(--fs-caption)] text-[color:var(--primary-dim)]">
       <b>이 단계에서 남은 것</b>
       <ul className="mt-1 ml-4 list-disc">
         {items.map((it) => <li key={it}>{it}</li>)}

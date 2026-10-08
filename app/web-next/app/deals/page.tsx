@@ -237,7 +237,7 @@ function DealsBoard() {
       {data && (opps ?? []).filter((o) => o.status !== "dropped").length === 0 && data.projects.length === 0 && (
         <div className="market-section mb-4" style={{ border: "1px dashed var(--border)" }}>
           <h2 className="text-[0.9rem] mb-1">아직 진행 중인 검토/안건이 없습니다</h2>
-          <p className="text-[0.82rem]" style={{ margin: "0 0 8px" }}>
+          <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 8px" }}>
             첫 신규사업 검토는 시장분석(S1)부터 시작합니다 — 4단계 가이드가 준비되어 있습니다.
           </p>
           <Link href="/onboarding" className="btn-primary btn-sm" style={{ textDecoration: "none", display: "inline-block" }}>
@@ -289,11 +289,11 @@ function DealsBoard() {
 
           <section className="market-section" aria-label="진행 에이징">
             <h3 className="sizing-step-title text-[0.9rem] mb-1">진행 에이징 — HOLD·KILL 경과</h3>
-            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               위 퍼널(S1~S7, S8~S12) 어느 한쪽에 속한 목록이 아니라, 전체 단계의 게이트({Object.values(GATE_LABEL).join("·")}) HOLD·KILL 결정을 모두 모은 목록입니다 — &quot;진행&quot; 열이 각 행이 어느 게이트에서 나온 결정인지 나타냅니다.
             </p>
             {data.currentHolds.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] text-[0.82rem]">HOLD·KILL 진행이 없습니다.</p>
+              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">HOLD·KILL 진행이 없습니다.</p>
             ) : (
               <div className="table-scroll">
                 <table className="data-table" aria-label="진행 에이징">
@@ -304,15 +304,15 @@ function DealsBoard() {
                   <tbody>
                     {[...data.currentHolds].sort((a, b) => b.ageDays - a.ageDays).map((r) => (
                       <tr key={`${r.entityType}:${r.entityId}:${r.gate}`}>
-                        <td className="text-[0.8rem]">
+                        <td className="text-[length:var(--fs-caption)]">
                           <Link href={r.entityType === "project" ? `/projects/${r.entityId}/process` : `/opportunities?opportunity=${r.entityId}`}>
                             {r.label}
                           </Link>
                         </td>
-                        <td className="tabular-nums text-[0.78rem]">{GATE_LABEL[r.gate as GateMetaId] ?? r.gate}</td>
+                        <td className="tabular-nums text-[length:var(--fs-caption)]">{GATE_LABEL[r.gate as GateMetaId] ?? r.gate}</td>
                         <td><span className={`status-chip ${r.decision === "kill" ? "status-red" : "status-amber"}`}>{r.decision.toUpperCase()}</span></td>
-                        <td className="text-[0.75rem] tabular-nums">{r.decidedAt.slice(0, 10)}</td>
-                        <td className="col-num tabular-nums text-[0.8rem]">{r.ageDays}일</td>
+                        <td className="text-[length:var(--fs-caption)] tabular-nums">{r.decidedAt.slice(0, 10)}</td>
+                        <td className="col-num tabular-nums text-[length:var(--fs-caption)]">{r.ageDays}일</td>
                       </tr>
                     ))}
                   </tbody>

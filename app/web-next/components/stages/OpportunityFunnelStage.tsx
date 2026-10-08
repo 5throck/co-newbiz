@@ -228,7 +228,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
         ))}
       </div>
 
-      {discoverNotice && <p role="status" className="text-[color:var(--green-fg)] text-[0.85rem] mb-2">{discoverNotice}</p>}
+      {discoverNotice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-body)] mb-2">{discoverNotice}</p>}
 
       {/* ── 분석된 산업 (S1 연동, 접힘) ── */}
       <section aria-label="분석된 산업" className="market-section">
@@ -253,7 +253,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
             ))}
           </div>
         ) : (
-          <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
             완료된 시장분석이 없습니다.{" "}
             <Link
               href={opportunityId ? `/deals/${encodeURIComponent(opportunityId)}/s1` : "/market"}
@@ -271,10 +271,10 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
             {/* CAGR·격차는 위 칩에 이미 표시된다 — 선택된 산업명만 다시
                 밝혀 어느 칩을 눌렀는지 스크롤 후에도 알 수 있게 한다. */}
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <strong className="text-[0.85rem]">{selectedInsight.industry_name}</strong>
+              <strong className="text-[length:var(--fs-body)]">{selectedInsight.industry_name}</strong>
               {canAct && <button
                 type="button"
-                className="btn-primary btn-sm"
+                className="btn-ghost btn-sm"
                 style={{ marginLeft: "auto" }} /* lint-exempt: 폼 내부 헤더(SectionToolbar 외부 컨텍스트) */
                 disabled={discovering !== null}
                 title="시장분석 근거(기회 요인·드라이버·격차 분석)에서 기회 후보를 자동 발굴하고, 기회/위험 요인도 함께 도출합니다"
@@ -284,21 +284,21 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
               </button>}
             </div>
             <details>
-              <summary className="cursor-pointer text-[0.78rem] text-[color:var(--muted-fg)]">인사이트 상세 (기회·위험 요인, 격차 분석)</summary>
+              <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">인사이트 상세 (기회·위험 요인, 격차 분석)</summary>
               <div className="chart-pair mt-2">
                 <div className="chart-half sizing-grade-card">
-                  <h4 className="text-[0.85rem] mb-2">✅ 기회 요인</h4>
+                  <h4 className="text-[length:var(--fs-body)] mb-2">✅ 기회 요인</h4>
                   <ul className="sizing-note-list">
                     {(selectedInsight.opportunity_factors.length ? selectedInsight.opportunity_factors : ["분석 보완 필요"]).map((f, i) => <li key={i}>{f}</li>)}
                   </ul>
                 </div>
                 <div className="chart-half sizing-grade-card">
-                  <h4 className="text-[0.85rem] mb-2">위험 요인</h4>
+                  <h4 className="text-[length:var(--fs-body)] mb-2">위험 요인</h4>
                   <ul className="sizing-note-list">
                     {(selectedInsight.risk_factors.length ? selectedInsight.risk_factors : ["분석 보완 필요"]).map((f, i) => <li key={i}>{f}</li>)}
                   </ul>
                   {selectedInsight.external_forecast?.gap_analysis && (
-                    <p className="mt-2 mb-0 text-[0.75rem] whitespace-pre-line">{selectedInsight.external_forecast.gap_analysis}</p>
+                    <p className="mt-2 mb-0 text-[length:var(--fs-caption)] whitespace-pre-line">{selectedInsight.external_forecast.gap_analysis}</p>
                   )}
                 </div>
               </div>
@@ -370,7 +370,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
         {rows === null ? (
           <p>불러오는 중...</p>
         ) : sortedRows.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
             {statusFilter ? "필터 조건에 맞는 기회가 없습니다." : "등록된 기회가 없습니다 — 분석된 산업에서 기회 발굴을 시작하세요."}
           </p>
         ) : (
@@ -405,7 +405,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
                     </Link>
                     {/* deals 탭에서 진입한 경우 — 이 검토/안건의 캐리어 기회를 표시 */}
                     {o.id === opportunityId && <span className="status-chip status-amber ml-1" title="이 검토/안건의 캐리어 기회입니다">이 안건</span>}
-                    <span className="block text-[0.72rem]">
+                    <span className="block text-[length:var(--fs-caption)]">
                       {o.market_scope && <span className="status-chip status-amber mr-1">{o.market_scope}</span>}
                       {o.value_chain_node && <span className="text-[color:var(--muted-fg)]">{o.value_chain_node}</span>}
                       {!o.market_scope && !o.value_chain_node && "—"}
@@ -414,7 +414,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
                   <td className="tabular-nums">
                     {o.attractiveness_score ?? "—"}
                     {o.attractiveness_score !== null && o.status === "identified" && (
-                      <span className="block text-[0.65rem] text-[color:var(--muted-fg)]">제안</span>
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">제안</span>
                     )}
                   </td>
                   <td className="tabular-nums">
@@ -422,8 +422,8 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
                     {/* 경계 #2 — 파이프라인 권고와 사람 확정을 구분해 표시한다. */}
                     {o.synergy_score !== null && (
                       o.synergy_score_confirmed_at
-                        ? <span className="block text-[0.65rem] text-[color:var(--muted-fg)]">확정</span>
-                        : <span className="block text-[0.65rem] text-[color:var(--muted-fg)]">권고(미확정)</span>
+                        ? <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">확정</span>
+                        : <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">권고(미확정)</span>
                     )}
                   </td>
                   <td className="sizing-actions-cell"><span className="actions-row">
@@ -462,19 +462,19 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
         {showCreateForm && (
           <form onSubmit={create} className="sizing-new-form mb-3">
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[0.78rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">기회명 *</span>
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="sizing-new-input" />
               </label>
-              <label className="text-[0.78rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">시장 범위</span>
                 <input value={form.market_scope} onChange={(e) => setForm({ ...form, market_scope: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
               </label>
-              <label className="text-[0.78rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">가치사슬 노드</span>
                 <input value={form.value_chain_node} onChange={(e) => setForm({ ...form, value_chain_node: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
               </label>
-              <label className="text-[0.78rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">매력도 (0-100)</span>
                 <input type="number" min={0} max={100} value={form.attractiveness_score} onChange={(e) => setForm({ ...form, attractiveness_score: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
               </label>

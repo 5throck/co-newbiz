@@ -174,7 +174,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             onDone={() => { setClosing(false); router.push("/projects/archives"); }}
           />
         )}
-        <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           분기별 스코어카드가 갱신되어야 S12 완료 기준이 충족됩니다 (최신 분기 또는 직전 분기).
           {view && rollup?.review_cycle && (
             <span className={`status-chip ${rollup.financial.length + rollup.strategic.length > 0 ? "status-green" : "status-amber"} ml-2`}>
@@ -185,8 +185,8 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
           )}
         </p>
 
-        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">✕ {error}</p>}
-        {notice && <p role="status" className="text-[color:var(--green-fg)] text-[0.82rem] mb-2">✓ {notice}</p>}
+        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
+        {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
         {/* ── 주기별 트렌드 ──────────────────────────────────────────── */}
         <section className="market-section sizing-step" aria-label="스코어카드 트렌드">
@@ -212,7 +212,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
               </tbody>
             </table>
           ) : (
-            <p className="text-[0.82rem] text-[color:var(--muted-fg)]">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               아직 기록된 스코어카드 주기가 없습니다 — portfolio-venture-monitoring 절차의 분기 기록이 여기 표시됩니다.
             </p>
           )}
@@ -246,7 +246,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
           )}
           {(["financial", "strategic"] as const).map((section) => (
             <div key={section} className="mt-2">
-              <h4 className="text-[0.85rem] mb-1">{section === "financial" ? "재무" : "전략"} 섹션</h4>
+              <h4 className="text-[length:var(--fs-body)] mb-1">{section === "financial" ? "재무" : "전략"} 섹션</h4>
               {(rollup?.[section].length ?? 0) > 0 ? (
                 <table className="data-table" aria-label={`${section} 측정 상세`}>
                   <caption className="sr-only">{section} 섹션 측정 상세</caption>
@@ -269,7 +269,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                   </tbody>
                 </table>
               ) : (
-                <p className="text-[0.78rem] text-[color:var(--muted-fg)]">해당 섹션의 측정 기록이 없습니다.</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">해당 섹션의 측정 기록이 없습니다.</p>
               )}
             </div>
           ))}
@@ -288,17 +288,17 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
         {canAct && (
           <section className="market-section sizing-step mt-3" aria-label="LLM 모니터링 브리프">
             <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 모니터링 브리프 (초안)</h3>
-            <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 전환 결정은 사람(venture-portfolio-IC)이 기록합니다 — 스코어카드·시너지 인증·핵심인재·전환 이력에서 만든 <b>초안</b>입니다.
             </p>
-            {recoError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+            {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
             {!reco && !recoLoading && !recoError && (
               <div className="flex flex-wrap items-center gap-2 mb-0">
                 <button type="button" className="btn-ghost" onClick={() => void generateBrief()}>▶ 모니터링 브리프 생성</button>
-                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">투자 상태 평가·리스크 플래그·전환 제안·근거/학습 정리 초안을 작성해 결정 기록을 돕습니다.</span>
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">투자 상태 평가·리스크 플래그·전환 제안·근거/학습 정리 초안을 작성해 결정 기록을 돕습니다.</span>
               </div>
             )}
-            {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">스코어카드·인증·인재 기록을 근거로 초안을 작성하는 중...</p>}
+            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">스코어카드·인증·인재 기록을 근거로 초안을 작성하는 중...</p>}
             {reco && (
               <>
                 <p className="mb-1 flex flex-wrap items-center gap-1">
@@ -309,14 +309,14 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                     <span className="status-chip status-amber">전환 제안: {TRANSITION_LABELS[reco.brief.transition_suggestion] ?? reco.brief.transition_suggestion}</span>
                   )}
                 </p>
-                {reco.note && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
-                {reco.brief.assessment_draft && <p className="text-[0.8rem] mb-1"><span className="font-semibold">상태 평가 초안:</span> {reco.brief.assessment_draft}</p>}
+                {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
+                {reco.brief.assessment_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">상태 평가 초안:</span> {reco.brief.assessment_draft}</p>}
                 {reco.brief.risk_flags.length > 0 && (
-                  <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ 리스크: {reco.brief.risk_flags.join(" / ")}</p>
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ 리스크: {reco.brief.risk_flags.join(" / ")}</p>
                 )}
-                {reco.brief.rationale_draft && <p className="text-[0.8rem] mb-1"><span className="font-semibold">전환 근거 초안:</span> {reco.brief.rationale_draft}</p>}
-                {reco.brief.learning_capture_draft && <p className="text-[0.8rem] mb-1"><span className="font-semibold">학습 정리 초안:</span> {reco.brief.learning_capture_draft}</p>}
-                <p className="text-[0.7rem] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
+                {reco.brief.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">전환 근거 초안:</span> {reco.brief.rationale_draft}</p>}
+                {reco.brief.learning_capture_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">학습 정리 초안:</span> {reco.brief.learning_capture_draft}</p>}
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
                 <button
                   type="button"
                   className="btn-ghost btn-sm"
@@ -342,7 +342,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
           <h3 className="sizing-step-title text-[0.95rem]">
             <span className="sizing-step-badge">⚖️</span> 포트폴리오 전환 결정 — venture-portfolio-IC 인적 결정 장부
           </h3>
-          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-1">
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
             아래 기록은 사람(venture-portfolio-IC)의 결정이며, 이 화면의 사용자는 그 결정을 <strong>기록</strong>하는
             역할만 수행합니다. 결정자(decided_by)는 사람 역할 키로 고정되고
             기록자(recorded_by)는 세션 사용자로 남습니다.
@@ -361,24 +361,24 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                       {TRANSITION_LABELS[d.decision] ?? d.decision}
                     </span>
                       {d.learning_capture && (
-                        <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">학습 회수: {d.learning_capture}</span>
+                        <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">학습 회수: {d.learning_capture}</span>
                       )}
                     </td>
-                    <td className="text-[0.78rem]">{d.rationale}</td>
-                    <td className="text-[0.75rem] tabular-nums">{d.decided_at.slice(0, 10)}</td>
-                    <td className="text-[0.75rem]">{d.recorded_by}</td>
+                    <td className="text-[length:var(--fs-caption)]">{d.rationale}</td>
+                    <td className="text-[length:var(--fs-caption)] tabular-nums">{d.decided_at.slice(0, 10)}</td>
+                    <td className="text-[length:var(--fs-caption)]">{d.recorded_by}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <p className="text-[0.82rem] text-[color:var(--muted-fg)]">아직 기록된 전환 결정이 없습니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 기록된 전환 결정이 없습니다.</p>
           )}
 
           {canAct && (
             <form className="sizing-new-form mt-2" aria-label="전환 결정 기록" onSubmit={(e) => { e.preventDefault(); recordDecision(); }}>
               <div className="flex flex-wrap items-end gap-2">
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">결정 (어휘 5종)</span>
                   <select
                     value={form.decision}
@@ -388,7 +388,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                     {Object.entries(TRANSITION_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                   </select>
                 </label>
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">리뷰 주기</span>
                   <input
                     value={form.review_cycle}
@@ -397,7 +397,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                     placeholder="YYYY-Qn (비우면 현재 분기)"
                   />
                 </label>
-                <label className="text-[0.78rem] flex-1 min-w-[14rem]">
+                <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]">
                   <span className="block mb-1">근거 (필수)</span>
                   <input
                     value={form.rationale}
@@ -408,7 +408,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                 </label>
               </div>
               {isKill && (
-                <label className="text-[0.78rem] block mt-2">
+                <label className="text-[length:var(--fs-caption)] block mt-2">
                   <span className="block mb-1">학습 내용 회수 (learning_capture — kill 시 필수)</span>
                   <input
                     value={form.learning_capture}

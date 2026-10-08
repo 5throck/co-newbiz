@@ -391,7 +391,7 @@ export function SynergyStage({ opportunityId, analysisId, embedded }: { opportun
                     <td>
                       <button
                         type="button"
-                        className={a.opportunity_name ? "text-[0.8rem] text-left underline-offset-2 hover:underline" : "text-[0.75rem] text-[color:var(--muted-fg)] text-left underline-offset-2 hover:underline"}
+                        className={a.opportunity_name ? "text-[length:var(--fs-caption)] text-left underline-offset-2 hover:underline" : "text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left underline-offset-2 hover:underline"}
                         title="시너지 정합성 리포트 열기"
                         onClick={(e) => { e.stopPropagation(); openDetail(a); }}
                       >
@@ -435,7 +435,7 @@ export function SynergyStage({ opportunityId, analysisId, embedded }: { opportun
             </tbody>
           </table>
         )}
-        {hasInProgress && <p className="mt-2 mb-0 text-[0.75rem] text-[color:var(--muted-fg)]" role="status">분석이 진행 중입니다 — 완료되면 목록이 자동으로 갱신됩니다.</p>}
+        {hasInProgress && <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="status">분석이 진행 중입니다 — 완료되면 목록이 자동으로 갱신됩니다.</p>}
       </section>
 
       {/* ── 새 분석 폼 (대상 = 그룹/계열사 레지스트리 · 기회 연결 — ADR-0090) ── */}
@@ -444,7 +444,7 @@ export function SynergyStage({ opportunityId, analysisId, embedded }: { opportun
           <div className="mb-2">
             <span className="text-label block mb-1">① 분석 대상 — 그룹/계열사 분석에서 프로파일을 만든 대상</span>
             {targets.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mb-0">그룹/계열사 분석 화면에서 회사를 등록·분석하면 여기에 표시됩니다.</p>
+              <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">그룹/계열사 분석 화면에서 회사를 등록·분석하면 여기에 표시됩니다.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {targets.map((t) => (
@@ -757,7 +757,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
       />
 
       {inProgress && (
-        <p className="text-[0.85rem]" role="status">
+        <p className="text-[length:var(--fs-body)]" role="status">
           분석 중 ({analysis.current_step}/5단계) — {STEP_TITLES[analysis.current_step] ?? ""} 진행 중입니다. 완료되면 자동 갱신됩니다.
         </p>
       )}
@@ -785,22 +785,22 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                   {p.profileRef && (
                     <a
                       href={p.profileRef.kind === "affiliate" ? `/our-company?member=${encodeURIComponent(p.profileRef.id)}` : "/our-company"}
-                      className="text-[color:var(--accent)] underline text-[0.8rem]"
+                      className="text-[color:var(--accent)] underline text-[length:var(--fs-caption)]"
                     >
                       상세 프로파일 보기 →
                     </a>
                   )}
                 </div>
-                <p className="mb-0 text-[0.85rem]" style={{ whiteSpace: "pre-line" }}>{p.businessAssessment}</p>
+                <p className="mb-0 text-[length:var(--fs-body)]" style={{ whiteSpace: "pre-line" }}>{p.businessAssessment}</p>
               </div>
               {p.opportunity && (
                 <div className="sizing-grade-card mb-3">
-                  <h4 className="text-[0.85rem] mb-2">연결 기회 — S2 기회발굴</h4>
-                  <p className="mb-2 text-[0.85rem]"><strong>{p.opportunity.name}</strong></p>
-                  {confirmError && <p className="mb-2 text-[0.8rem] text-[color:var(--red-fg)]" role="alert">{confirmError}</p>}
+                  <h4 className="text-[length:var(--fs-body)] mb-2">연결 기회 — S2 기회발굴</h4>
+                  <p className="mb-2 text-[length:var(--fs-body)]"><strong>{p.opportunity.name}</strong></p>
+                  {confirmError && <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" role="alert">{confirmError}</p>}
                   {currentScore != null ? (
                     <>
-                      <p className="mb-2 text-[0.82rem]">
+                      <p className="mb-2 text-[length:var(--fs-caption)]">
                         {synState?.confirmed ? (
                           <>
                             현재 기록: <span className="status-chip status-green">확정 {synState.synergyScore}점 (사람 확정)</span>
@@ -826,14 +826,14 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                            (2026-09-15 사용자 리포트), 필요하면 아래 버튼으로 AI
                            초안을 명시적으로 불러와 검토·수정한다. */
                         <div className="p-2 border border-[color:var(--border)] rounded">
-                          <p className="text-[0.8rem] font-semibold mb-2">시너지 점수 확정 — 점수를 직접 수정하고 기록합니다 (경계 #2)</p>
+                          <p className="text-[length:var(--fs-caption)] font-semibold mb-2">시너지 점수 확정 — 점수를 직접 수정하고 기록합니다 (경계 #2)</p>
                           <div className="flex flex-wrap items-end gap-2">
-                            <label className="text-[0.78rem]">
+                            <label className="text-[length:var(--fs-caption)]">
                               <span className="text-label block mb-1">점수 (0~100)</span>
                               <input type="number" min={0} max={100} className="sizing-new-input sizing-new-input-sm w-[7rem]" value={confirmForm.score}
                                 onChange={(e) => setConfirmForm({ ...confirmForm, score: e.target.value })} />
                             </label>
-                            <label className="text-[0.78rem] flex-1 min-w-[16rem]">
+                            <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]">
                               <span className="text-label block mb-1">확정 근거 — 직접 작성 (사람의 판단)</span>
                               <input type="text" className="sizing-new-input sizing-new-input-sm w-full" value={confirmForm.rationale}
                                 placeholder="이 점수를 확정하는 근거를 직접 기록하세요 — AI 초안을 참고하려면 오른쪽 버튼"
@@ -855,14 +855,14 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                               <button type="button" className="btn-ghost btn-sm" disabled={confirmSaving} onClick={retractSynergyScore}>확정 철회</button>
                             )}
                           </div>
-                          <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-1 mb-0">
+                          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
                             확정된 점수만 S4 진출방식 결정의 트랙 판단 근거로 반영됩니다. 재분석이 다른 점수를 기록하면 확정은 자동으로 무효화됩니다.
                           </p>
                         </div>
                       )}
                     </>
                   ) : (
-                    <p className="mb-0 text-[0.82rem] text-[color:var(--muted-fg)]">연결된 분석에 시너지 점수 권고가 아직 없습니다 — 분석 완료 후 권고가 기록됩니다.</p>
+                    <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">연결된 분석에 시너지 점수 권고가 아직 없습니다 — 분석 완료 후 권고가 기록됩니다.</p>
                   )}
                 </div>
               )}
@@ -872,7 +872,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
           {tab === "linkage" && (
             <div className="text-[0.88rem]">
               <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">3</span> S1·S2 연계 시너지 영역 (후보 탐색 → 본검증)</h3>
-              <p className="mb-2 text-[0.8rem] text-[color:var(--muted-fg)]">
+              <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 연계 시장: {p.marketLinkage.marketSummaries.map((m) => `${m.industry} (CAGR ${m.cagrPct ?? "?"}%${m.gapPct !== null ? `, 격차 ${m.gapPct > 0 ? "+" : ""}${m.gapPct}%` : ""})`).join(" · ") || "없음"}
               </p>
               <div className="table-scroll">
@@ -885,10 +885,10 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                   {p.marketLinkage.synergyAreas.map((a) => (
                     <tr key={a.area}>
                       <td className="font-semibold col-label">{a.area}</td>
-                      <td className="text-[0.8rem] col-type">{a.synergyType}</td>
-                      <td className="text-[0.85rem] col-text">{a.rationale}{a.sources.length > 0 && <span className="text-[color:var(--muted-fg)]"> (출처: {a.sources.join(", ")})</span>}</td>
-                      <td className="text-[0.85rem] col-text">{a.opportunity}</td>
-                      <td className="text-[0.85rem] col-text">{a.risk}</td>
+                      <td className="text-[length:var(--fs-caption)] col-type">{a.synergyType}</td>
+                      <td className="text-[length:var(--fs-body)] col-text">{a.rationale}{a.sources.length > 0 && <span className="text-[color:var(--muted-fg)]"> (출처: {a.sources.join(", ")})</span>}</td>
+                      <td className="text-[length:var(--fs-body)] col-text">{a.opportunity}</td>
+                      <td className="text-[length:var(--fs-body)] col-text">{a.risk}</td>
                       <td className="col-type">
                         <span className={`status-chip ${a.origin === "human" ? "status-in-progress" : "status-not-started"}`}>
                           {a.origin === "human" ? "사람 추가" : "LLM 추천"}
@@ -914,10 +914,10 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                         <input className="sizing-new-input" style={{ flex: "1 1 12rem" }} placeholder="기회 (선택)" value={linkageForm.opportunity} onChange={(e) => setLinkageForm({ ...linkageForm, opportunity: e.target.value })} />
                         <input className="sizing-new-input" style={{ flex: "1 1 12rem" }} placeholder="위험 (선택)" value={linkageForm.risk} onChange={(e) => setLinkageForm({ ...linkageForm, risk: e.target.value })} />
                       </div>
-                      {linkageError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{linkageError}</p>}
+                      {linkageError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{linkageError}</p>}
                       <div className="flex justify-end gap-2">
                         <button type="button" className="btn-ghost btn-sm" onClick={() => { setShowLinkageForm(false); setLinkageError(null); }}>취소</button>
-                        <button type="button" className="btn-primary btn-sm" disabled={linkageSaving || !linkageForm.area.trim() || !linkageForm.synergyType.trim() || !linkageForm.rationale.trim()} onClick={() => void addLinkageItem()}>
+                        <button type="button" className="btn-ghost btn-sm" disabled={linkageSaving || !linkageForm.area.trim() || !linkageForm.synergyType.trim() || !linkageForm.rationale.trim()} onClick={() => void addLinkageItem()}>
                           {linkageSaving ? "추가 중..." : "추가"}
                         </button>
                       </div>
@@ -946,22 +946,22 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                           </button>
                         )}
                         {canCurate && (
-                          <button type="button" className="btn-primary btn-sm" disabled={gapBusy || gapRows.length === 0} onClick={() => void saveGap()}>
+                          <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || gapRows.length === 0} onClick={() => void saveGap()}>
                             {gapBusy ? "저장 중..." : "저장"}
                           </button>
                         )}
                       </span>
                     }
                   />
-                  <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
                     시너지 분석(신규·재분석) 시 위 시너지 영역에서 필요 역량이 자동 도출·병합됩니다.{" "}
                     {gap?.internalAssessmentNote ?? "내부(자사 단독) 역량 평가는 추후 보강 예정 — 현재 보유 판정 근거는 그룹/계열사 프로필 기준입니다."}
                     {gap && !gap.stored && gapRows.length > 0 ? " — 아직 저장되지 않은 시드 초안입니다." : ""}
                   </p>
-                  {gapNote && <p role="status" className="text-[0.78rem] text-[color:var(--green-fg)] mb-2">{gapNote}</p>}
-                  {gapError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{gapError}</p>}
+                  {gapNote && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--green-fg)] mb-2">{gapNote}</p>}
+                  {gapError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{gapError}</p>}
                   {gapRows.length === 0 ? (
-                    <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mb-0">
+                    <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">
                       필요 역량 행이 없습니다 — 분석(재분석)을 실행하면 시너지 영역에서 자동 도출되고, 아래 입력이나 &quot;필요 역량 추가 제안&quot;으로도 추가할 수 있습니다. 비즈니스 모델 검토에 필요 역량(requiredCapabilities)이 있으면 이 섹션에서 시드됩니다.
                     </p>
                   ) : (
@@ -981,8 +981,8 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                           {gapRows.map((r, idx) => (
                             <tr key={r.id}>
                               <td className="cell-primary">
-                                <span className="font-semibold text-[0.8rem]">{r.capability}</span>
-                                <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">
+                                <span className="font-semibold text-[length:var(--fs-caption)]">{r.capability}</span>
+                                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                                   출처: {r.source === "s2_sketch" ? "S2 스케치" : r.source === "s1_factors" ? "S1 요인" : r.source === "synergy_area" ? "S3 시너지 영역" : "수동"}{r.requiredNote ? ` — ${r.requiredNote}` : ""}
                                 </span>
                               </td>
@@ -1006,7 +1006,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                                       className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
                                   </>
                                 ) : (
-                                  <span className="text-[color:var(--muted-fg)] text-[0.75rem]">미판정</span>
+                                  <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">미판정</span>
                                 )}
                               </td>
                               <td>
@@ -1034,7 +1034,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                     const s = summarizeGap(gapRows);
                     if (s.total === 0) return null;
                     return (
-                      <p className="text-[0.78rem] mt-2 mb-0">
+                      <p className="text-[length:var(--fs-caption)] mt-2 mb-0">
                         요약: 필요 역량 {s.total}건 — 충족 {s.met}·부분 {s.partial}·미보유 {s.unmet}·미판정 {s.unevaluated}
                         {s.coveragePct !== null ? ` · 충족률 ${s.coveragePct}%` : ""}
                       </p>
@@ -1052,7 +1052,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
               ) : (
                 <div className="mt-4 pt-3 border-t border-[color:var(--border)]">
                   <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">2.5</span> 필요 역량 수준</h3>
-                  <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
                     이 분석에 연결된 기회가 없어 필요 역량 수준 레지스터를 사용할 수 없습니다 — 분석 등록 시 기회를 연결하세요.
                   </p>
                 </div>
@@ -1088,7 +1088,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                         ) : (
                           <>
                             <td><span className={`status-chip ${s.verdict.includes("Short") ? "status-green" : "status-not-started"}`}>{s.verdict.includes("Short") ? "선별" : s.verdict}</span></td>
-                            <td className="text-[0.85rem]">{s.reason}</td>
+                            <td className="text-[length:var(--fs-body)]">{s.reason}</td>
                           </>
                         )}
                         <td>
@@ -1101,7 +1101,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                             {isEditing ? (
                               <span className="actions-row">
                                 <button type="button" className="btn-ghost btn-sm" disabled={editSaving} onClick={() => setEditingArea(null)}>취소</button>
-                                <button type="button" className="btn-primary btn-sm" disabled={editSaving || !editForm.reason.trim()} onClick={() => void saveShortlistItem(s.area, editForm.verdict, editForm.reason)}>
+                                <button type="button" className="btn-ghost btn-sm" disabled={editSaving || !editForm.reason.trim()} onClick={() => void saveShortlistItem(s.area, editForm.verdict, editForm.reason)}>
                                   {editSaving ? "저장 중..." : "저장"}
                                 </button>
                               </span>
@@ -1115,7 +1115,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                   })}
                 </tbody>
               </table>
-              {editError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mt-1">{editError}</p>}
+              {editError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1">{editError}</p>}
               {canCurate && (
                 <div className="mt-3">
                   {!showShortlistForm ? (
@@ -1134,7 +1134,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                         <button type="button" className="btn-ghost btn-sm" onClick={() => setShowShortlistForm(false)}>취소</button>
                         <button
                           type="button"
-                          className="btn-primary btn-sm"
+                          className="btn-ghost btn-sm"
                           disabled={editSaving || !shortlistForm.area.trim() || !shortlistForm.reason.trim()}
                           onClick={() => void saveShortlistItem(shortlistForm.area.trim(), shortlistForm.verdict, shortlistForm.reason)}
                         >
@@ -1146,7 +1146,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                 </div>
               )}
               {!opportunityId && (
-                <p className="mt-2 mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">
+                <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                   S4로 진행하려면 이 분석에 연결된 기회(S2)가 필요합니다 — 새 분석 시 "연결 기회"를 선택하세요.
                 </p>
               )}
@@ -1157,7 +1157,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
             <div className="text-[0.88rem]">
               {p.researchSources.length > 0 && (
                 <details className="market-section">
-                  <summary className="cursor-pointer text-[0.85rem]">입수 출처 ({p.researchSources.length}건 — 출처 명기·교차검증)</summary>
+                  <summary className="cursor-pointer text-[length:var(--fs-body)]">입수 출처 ({p.researchSources.length}건 — 출처 명기·교차검증)</summary>
                   <ul className="sizing-note-list mt-2">
                     {p.researchSources.map((s, i) => (
                       <li key={i}><a href={s.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{s.title}</a><span className="text-[color:var(--muted-fg)]"> — {s.snippet}</span></li>
@@ -1166,8 +1166,8 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                 </details>
               )}
               <details className="market-section">
-                <summary className="cursor-pointer text-[0.85rem]">파이프라인 단계별 노트 ({p.stepSummaries.length}단계)</summary>
-                <ol className="mt-3 space-y-2 text-[0.85rem]">
+                <summary className="cursor-pointer text-[length:var(--fs-body)]">파이프라인 단계별 노트 ({p.stepSummaries.length}단계)</summary>
+                <ol className="mt-3 space-y-2 text-[length:var(--fs-body)]">
                   {p.stepSummaries.map((s) => (
                     <li key={s.step}><strong>{s.step}. {s.title}</strong> <span className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"}`}>{s.source === "llm" ? "LLM" : "시스템"}</span><br />{s.summary}</li>
                   ))}
@@ -1192,7 +1192,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
                   if (decision === "go" && gate === "screening") void advanceToRouteDecision();
                 }}
               />
-              <p className="mt-1 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+              <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 GO로 기록하면 이 검토/안건이 "selected"로 표시되고 S4 진출방식 결정으로 자동 이동합니다.{" "}
                 <a href={`/deals/${encodeURIComponent(opportunityId)}/s4`} className="text-[color:var(--accent)] underline">
                   지금 바로 S4로 이동 →
@@ -1200,7 +1200,7 @@ function SynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
               </p>
             </div>
           )}
-          {advanceError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mt-1">{advanceError}</p>}
+          {advanceError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1">{advanceError}</p>}
         </>
       )}
     </section>

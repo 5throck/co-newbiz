@@ -72,21 +72,21 @@ export default function ProjectOverviewPage() {
       <section aria-label="추진계획 요약" className="market-section">
         <h2 className="text-[0.92rem] font-semibold mb-2">추진계획 요약 {latest ? `(v${latest.version})` : ""}</h2>
         {latest ? (
-          <dl className="text-[0.85rem] space-y-1">
+          <dl className="text-[length:var(--fs-body)] space-y-1">
             <div><dt className="inline font-semibold mr-1">목적:</dt><dd className="inline">{latest.purpose}</dd></div>
             <div><dt className="inline font-semibold mr-1">시장:</dt><dd className="inline">{latest.marketScope ?? "—"}</dd></div>
             <div><dt className="inline font-semibold mr-1">진출 범위:</dt><dd className="inline">{latest.entryScope}</dd></div>
             <div><dt className="inline font-semibold mr-1">KPI:</dt><dd className="inline">{latest.kpis?.length ? latest.kpis.map((k) => `${k.label}: ${k.target}`).join(" · ") : "미설정"}</dd></div>
           </dl>
         ) : (
-          <p className="text-[color:var(--muted-fg)] text-[0.85rem]">추진계획이 아직 생성되지 않았습니다.</p>
+          <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">추진계획이 아직 생성되지 않았습니다.</p>
         )}
       </section>
 
       {process && (
         <section aria-label="프로세스 스냅샷" className="market-section">
           <h2 className="text-[0.92rem] font-semibold mb-2">프로세스 현황</h2>
-          <ol className="space-y-1 text-[0.85rem]">
+          <ol className="space-y-1 text-[length:var(--fs-body)]">
             {process.stages.map((s2) => (
               <li key={s2.id}>
                 <span className={`status-chip ${STATUS_CLASS[s2.status]} w-[5.2rem] justify-center mr-2`}>{STATUS_LABEL[s2.status]}</span>
@@ -95,7 +95,7 @@ export default function ProjectOverviewPage() {
             ))}
           </ol>
           {process.track && (
-            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mt-2">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
               트랙: {process.track}{process.subTrack ? ` / ${process.subTrack}` : ""}
             </p>
           )}

@@ -42,12 +42,12 @@ function AgentRunsView() {
               <thead><tr><th>시각</th><th>단계</th><th>활동</th><th>유형</th><th>상태</th><th>실행자</th></tr></thead>
               <tbody>{data.runs.map((r, i) => (
                 <tr key={`${r.run_id}-${i}`}>
-                  <td className="text-[0.75rem] tabular-nums">{r.started_at.slice(0, 16).replace("T", " ")}</td>
+                  <td className="text-[length:var(--fs-caption)] tabular-nums">{r.started_at.slice(0, 16).replace("T", " ")}</td>
                   <td><span className="status-chip status-not-started">{r.stage}</span></td>
-                  <td className="text-[0.78rem]">{r.activity_id ?? "—"}</td>
+                  <td className="text-[length:var(--fs-caption)]">{r.activity_id ?? "—"}</td>
                   <td>{r.activity_id ? <span className="status-chip status-gray">산출물</span> : <span className="chip gray">—</span>}</td>
                   <td>{r.activity_status ? <span className={`status-chip ${r.activity_status === "done" ? "status-green" : r.activity_status === "failed" ? "status-red" : "status-amber"}`}>{r.activity_status}</span> : "—"}</td>
-                  <td className="text-[0.75rem]">{r.started_by}</td>
+                  <td className="text-[length:var(--fs-caption)]">{r.started_by}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -83,7 +83,7 @@ function AgentRunsView() {
             <thead><tr><th>시각</th><th>진행</th><th>권고 (제안)</th></tr></thead>
             <tbody>{data.proposals.map((p) => (
               <tr key={p.id}>
-                <td className="text-[0.75rem] tabular-nums">{p.started_at.slice(0, 16).replace("T", " ")}</td>
+                <td className="text-[length:var(--fs-caption)] tabular-nums">{p.started_at.slice(0, 16).replace("T", " ")}</td>
                 <td>{p.gate}</td>
                 <td><span className={`status-chip ${p.recommendation === "go" ? "status-green" : p.recommendation === "kill" ? "status-red" : "status-amber"}`}>{p.recommendation.toUpperCase()}</span></td>
               </tr>

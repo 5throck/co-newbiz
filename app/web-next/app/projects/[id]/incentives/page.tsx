@@ -67,7 +67,7 @@ function IncentivesView() {
                     <td>{r.grantor ?? "—"}</td>
                     <td><span className={`status-chip ${r.direction === "granted" ? "status-green" : "status-amber"}`}>{r.direction === "granted" ? "확정" : "수혜 예정"}</span></td>
                     <td className="col-num tabular-nums">{r.npv_value != null ? `${r.npv_value}억` : "—"}</td>
-                    <td className="text-[0.75rem]">{r.clawback_rule ?? "—"}</td>
+                    <td className="text-[length:var(--fs-caption)]">{r.clawback_rule ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -80,13 +80,13 @@ function IncentivesView() {
           <h2 className="text-[0.9rem] mb-2">인센티브 등록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[0.78rem] flex-1 min-w-[14rem]"><span className="block mb-1">프로그램명 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]"><span className="block mb-1">프로그램명 *</span>
                 <input className="sizing-new-input w-full" value={form.program_name} onChange={(e) => setForm({ ...form, program_name: e.target.value })} required /></label>
-              <label className="text-[0.78rem]"><span className="block mb-1">부여기관</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">부여기관</span>
                 <input className="sizing-new-input sizing-new-input-sm" value={form.grantor} onChange={(e) => setForm({ ...form, grantor: e.target.value })} /></label>
-              <label className="text-[0.78rem] w-[7rem]"><span className="block mb-1">NPV (억원)</span>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">NPV (억원)</span>
                 <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.npv_value} onChange={(e) => setForm({ ...form, npv_value: e.target.value })} /></label>
-              <label className="text-[0.78rem] flex-1 min-w-[12rem]"><span className="block mb-1">클로백 조건</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">클로백 조건</span>
                 <input className="sizing-new-input w-full" value={form.clawback_rule} onChange={(e) => setForm({ ...form, clawback_rule: e.target.value })} placeholder="예: 5년 내 이전 시 전액 반환" /></label>
               <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
             </div>

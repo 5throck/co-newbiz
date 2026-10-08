@@ -19,7 +19,7 @@ interface GateLatest {
 }
 interface GateHistoryRow extends GateLatest { id: string; decided_by: string; decided_at: string }
 
-export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity", onRecorded }: { opportunityId: string; gates: GateMetaId[]; killHint?: string | null; entityType?: "opportunity" | "project"; onRecorded?: (decision: "go" | "hold" | "kill", gate: GateMetaId) => void }) {
+export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity", primary = false, onRecorded }: { opportunityId: string; primary?: boolean; gates: GateMetaId[]; killHint?: string | null; entityType?: "opportunity" | "project"; onRecorded?: (decision: "go" | "hold" | "kill", gate: GateMetaId) => void }) {
   const { me } = useAuth();
   const canRecord = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
   const [latest, setLatest] = useState<GateLatest[] | null>(null);
@@ -101,11 +101,11 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
       <h3 className="sizing-step-title text-[0.95rem]">
         <span className="sizing-step-badge">🚦</span> 의사결정 — 승인 기록 (경계 #2)
       </h3>
-      <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+      <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
         에이전트 권고와 무관하게 GO·HOLD·KILL은 검토자가 기록합니다. HOLD는 미완료 산출물 목록 없이 기록할 수 없습니다.
       </p>
       {killHint && (
-        <p className="sizing-note-list mb-2 text-[0.82rem] text-[color:var(--red-fg)]" role="note">⛔ {killHint}</p>
+        <p className="sizing-note-list mb-2 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" role="note">⛔ {killHint}</p>
       )}
       {gates.length === 1 ? (
         // 진행이 하나뿐이면 표 대신 한 줄 상태로 보여준다 — 바로 아래 기록
@@ -114,7 +114,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           const g = gates[0];
           const d = decisionOf(g);
           return (
-            <p className="mb-2 text-[0.82rem] flex flex-wrap items-center gap-1">
+            <p className="mb-2 text-[length:var(--fs-caption)] flex flex-wrap items-center gap-1">
               <span className="font-semibold">{GATE_LABEL[g]} 현재 결정:</span>
               {d ? (
                 <span className={`status-chip ${d.decision === "go" ? "status-green" : d.decision === "hold" ? "status-amber" : "status-red"}`}>
@@ -124,11 +124,11 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                 <span className="status-chip status-not-started">미결정</span>
               )}
               {d?.missing_artifacts && d.missing_artifacts.length > 0 && (
-                <span className="text-[0.72rem] text-[color:var(--muted-fg)]" title={d.missing_artifacts.join(", ")}>
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={d.missing_artifacts.join(", ")}>
                   미완료 {d.missing_artifacts.length}건
                 </span>
               )}
-              {d?.rationale && <span className="text-[0.78rem] text-[color:var(--muted-fg)]">— {d.rationale}</span>}
+              {d?.rationale && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">— {d.rationale}</span>}
             </p>
           );
         })()
@@ -153,12 +153,12 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                       <span className="status-chip status-not-started">미결정</span>
                     )}
                     {d?.missing_artifacts && d.missing_artifacts.length > 0 && (
-                      <span className="block text-[0.72rem] text-[color:var(--muted-fg)]" title={d.missing_artifacts.join(", ")}>
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={d.missing_artifacts.join(", ")}>
                         미완료 {d.missing_artifacts.length}건
                       </span>
                     )}
                   </td>
-                  <td className="text-[0.78rem] text-[color:var(--muted-fg)]">{d?.rationale ?? "—"}</td>
+                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{d?.rationale ?? "—"}</td>
                 </tr>
               );
             })}
@@ -176,15 +176,15 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
             <button type="button" className="btn-ghost btn-sm" disabled={briefLoading} onClick={() => void generateBrief()}>
               {briefLoading ? "생성 중..." : briefData ? "재생성" : "🤖 LLM 브리프 생성"}
             </button>
-            <span className="text-[0.72rem] text-[color:var(--muted-fg)]">
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               {form.gate} 진행 기준 — 제안은 결정 select를 바꾸지 않으며, 기록은 사람이 합니다 (경계 #2)
             </span>
           </div>
-          {briefError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mt-1 mb-0">{briefError}</p>}
+          {briefError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1 mb-0">{briefError}</p>}
           {briefData && (
             <>
               {briefData.gate !== form.gate && (
-                <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mt-1 mb-0">브리프는 {briefData.gate} 기준입니다 — 진행을 바꾸면 재생성하세요.</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mt-1 mb-0">브리프는 {briefData.gate} 기준입니다 — 진행을 바꾸면 재생성하세요.</p>
               )}
               <p className="mt-2 mb-1 flex flex-wrap items-center gap-1">
                 <span className={`status-chip ${briefData.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
@@ -195,19 +195,19 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                     권고 {briefData.brief.recommendation.toUpperCase()}
                   </span>
                 )}
-                {briefData.brief.confidence && <span className="text-[0.72rem] text-[color:var(--muted-fg)]">확신도 {briefData.brief.confidence}</span>}
+                {briefData.brief.confidence && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">확신도 {briefData.brief.confidence}</span>}
               </p>
-              {briefData.note && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-1">{briefData.note}</p>}
-              {briefData.brief.rationale_draft && <p className="text-[0.78rem] mb-1"><span className="font-semibold">근거 초안:</span> {briefData.brief.rationale_draft}</p>}
+              {briefData.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{briefData.note}</p>}
+              {briefData.brief.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">근거 초안:</span> {briefData.brief.rationale_draft}</p>}
               {briefData.brief.key_evidence.length > 0 && (
                 <ul className="sizing-note-list mb-1">
                   {briefData.brief.key_evidence.map((e, i) => <li key={i}>{e}</li>)}
                 </ul>
               )}
               {briefData.brief.cautions.length > 0 && (
-                <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {briefData.brief.cautions.join(" / ")}</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {briefData.brief.cautions.join(" / ")}</p>
               )}
-              <p className="text-[0.7rem] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {briefData.manifest.join(" · ")}</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {briefData.manifest.join(" · ")}</p>
               <button
                 type="button"
                 className="btn-ghost btn-sm"
@@ -219,7 +219,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
             </>
           )}
           {!briefData && !briefLoading && !briefError && (
-            <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-1 mb-0">LLM이 진행 산출물을 근거로 권고와 근거 초안을 작성해 줍니다 — 기록은 사람의 몫입니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">LLM이 진행 산출물을 근거로 권고와 근거 초안을 작성해 줍니다 — 기록은 사람의 몫입니다.</p>
           )}
         </div>
       )}
@@ -232,7 +232,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
         >
           <div className="flex flex-wrap items-end gap-2">
             {gates.length > 1 && (
-              <label className="text-[0.78rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">진행</span>
                 <select
                   value={form.gate}
@@ -243,7 +243,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                 </select>
               </label>
             )}
-            <label className="text-[0.78rem]">
+            <label className="text-[length:var(--fs-caption)]">
               <span className="block mb-1">결정</span>
               <select
                 value={form.decision}
@@ -255,7 +255,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                 <option value="kill">KILL</option>
               </select>
             </label>
-            <label className="text-[0.78rem] flex-1 min-w-[14rem]">
+            <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]">
               <span className="block mb-1">근거 *</span>
               <input
                 value={form.rationale}
@@ -266,7 +266,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
             </label>
           </div>
           {form.decision === "hold" && (
-            <label className="block mt-2 text-[0.78rem]">
+            <label className="block mt-2 text-[length:var(--fs-caption)]">
               <span className="block mb-1">미완료 산출물 (HOLD 필수 — 쉼표·줄바꿈 구분)</span>
               <textarea
                 value={form.missing}
@@ -277,19 +277,19 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
               />
             </label>
           )}
-          <button type="submit" className="btn-primary btn-sm mt-2" disabled={saving || !form.rationale.trim()}>
+          <button type="submit" className={`${primary ? "btn-primary" : "btn-ghost"} btn-sm mt-2`} disabled={saving || !form.rationale.trim()}>
             {saving ? "기록 중..." : "결정"}
           </button>
         </form>
       ) : (
-        <p className="text-[0.75rem] text-[color:var(--muted-fg)]">결정 기록은 analyst 역할 이상만 가능합니다.</p>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">결정 기록은 analyst 역할 이상만 가능합니다.</p>
       )}
 
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.8rem]">{error}</p>}
+      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p>}
 
       {history.length > 0 && (
         <details className="mt-2">
-          <summary className="cursor-pointer text-[0.8rem] text-[color:var(--accent)]">결정 이력 ({history.length}건 — append-only)</summary>
+          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">결정 이력 ({history.length}건 — append-only)</summary>
           <table className="data-table mt-2" aria-label="의사결정 이력">
             <caption className="sr-only">의사결정 이력</caption>
             <thead>
@@ -300,9 +300,9 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                 <tr key={h.id}>
                   <td>{GATE_LABEL[h.gate as GateMetaId] ?? h.gate}</td>
                   <td><span className={`status-chip ${h.decision === "go" ? "status-green" : h.decision === "hold" ? "status-amber" : "status-red"}`}>{h.decision.toUpperCase()}</span></td>
-                  <td className="text-[0.75rem] text-[color:var(--muted-fg)]">{h.rationale}</td>
-                  <td className="text-[0.72rem]">{h.decided_by}</td>
-                  <td className="text-[0.72rem] tabular-nums">{h.decided_at.slice(0, 10)}</td>
+                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{h.rationale}</td>
+                  <td className="text-[length:var(--fs-caption)]">{h.decided_by}</td>
+                  <td className="text-[length:var(--fs-caption)] tabular-nums">{h.decided_at.slice(0, 10)}</td>
                 </tr>
               ))}
             </tbody>

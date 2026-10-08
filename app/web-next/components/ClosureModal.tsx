@@ -166,11 +166,11 @@ export function ClosureModal({
             {noun} 종료 — {entityName}
           </h2>
         </div>
-        <p className="text-[0.78rem] text-[color:var(--muted-fg)] mt-1 mb-2">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-2">
           종료는 사람의 결정입니다. 유형별 전제조건 기록이 있어야 하며, 종료 후에는 되돌릴 수 없습니다.
         </p>
         {loadError && (
-          <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem]">
+          <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">
             {loadError}
           </p>
         )}
@@ -178,13 +178,13 @@ export function ClosureModal({
         {pre && (
           <form onSubmit={submit} aria-label={`${noun} 종료`}>
             <fieldset className="mb-2" style={{ border: 0, padding: 0, margin: 0 }}>
-              <legend className="text-[0.82rem] font-semibold mb-1">종료 유형 (필수)</legend>
+              <legend className="text-[length:var(--fs-caption)] font-semibold mb-1">종료 유형 (필수)</legend>
               <div role="radiogroup" className="flex flex-col gap-2">
                 {types.map((t) => {
                   const p = pre[t];
                   const descId = `${uid}-${t}-desc`;
                   return (
-                    <div key={t} className="text-[0.82rem]">
+                    <div key={t} className="text-[length:var(--fs-caption)]">
                       <label className="flex items-start gap-2" style={{ minHeight: "2.75rem" }}>
                         <input
                           type="radio"
@@ -229,7 +229,7 @@ export function ClosureModal({
               </div>
             </fieldset>
 
-            <label className="block text-[0.82rem] mb-2">
+            <label className="block text-[length:var(--fs-caption)] mb-2">
               <span className="block mb-1">
                 사유 (필수){sel && sel.min_reason_length > 1 ? ` — ${sel.min_reason_length}자 이상` : ""}
               </span>
@@ -243,7 +243,7 @@ export function ClosureModal({
                 className="sizing-new-input w-full"
               />
             </label>
-            <label className="block text-[0.82rem] mb-2">
+            <label className="block text-[length:var(--fs-caption)] mb-2">
               <span className="block mb-1">학습 포착{sel?.requires_learning_capture ? " (필수)" : " (선택)"}</span>
               <textarea
                 value={learning}
@@ -257,11 +257,11 @@ export function ClosureModal({
               />
             </label>
 
-            <p id={blockId} className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2" aria-live="polite">
+            <p id={blockId} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" aria-live="polite">
               {blockers.length > 0 ? `제출할 수 없음: ${blockers.join(" / ")}` : "모든 조건이 충족되었습니다."}
             </p>
             {error && (
-              <p id={errId} role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">
+              <p id={errId} role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">
                 오류: {error}
               </p>
             )}

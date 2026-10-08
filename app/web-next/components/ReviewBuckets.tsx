@@ -175,7 +175,7 @@ export function ReviewBuckets({
   return (
     <section aria-label="3단계 검토" className="market-section sizing-step mt-3">
       <h3 className="sizing-step-title text-[0.95rem]">3단계 검토 — 사람 판단 전 참고 자료</h3>
-      <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+      <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
         검토 결과는 승인·통과 표시가 아닙니다. AI가 확인한 것, 확인하지 못한 것, 사람이 판단할 것을 나누어 보여줄 뿐이며
         결정은 아래에서 사람이 기록합니다.
       </p>
@@ -189,14 +189,14 @@ export function ReviewBuckets({
       )}
       <div {...(tabs.length > 1 ? { role: "tabpanel", "aria-label": `${tabs.find((t) => t.key === active)?.label ?? ""} 산출물 검토` } : {})}>
         {error && (
-          <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-1">
+          <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-1">
             {error}
           </p>
         )}
-        {!view && !error && <p className="text-[0.8rem] text-[color:var(--muted-fg)]">검토를 불러오는 중…</p>}
+        {!view && !error && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">검토를 불러오는 중…</p>}
         {view && (
           <>
-            <ul className="sizing-note-list mb-2 text-[0.78rem]" aria-label="검토 단계 출처">
+            <ul className="sizing-note-list mb-2 text-[length:var(--fs-caption)]" aria-label="검토 단계 출처">
               {stages.map((s) => (
                 <li key={s.id}>
                   <span className="font-semibold">{originOf(s)}</span>
@@ -220,19 +220,19 @@ export function ReviewBuckets({
                     aria-labelledby={headingId}
                     className={`border rounded-lg px-3 py-2 ${prominent ? "border-2 border-[color:var(--accent)]" : "border-[color:var(--border)]"}`}
                   >
-                    <h4 id={headingId} className="text-[0.85rem] font-semibold mb-1">
+                    <h4 id={headingId} className="text-[length:var(--fs-body)] font-semibold mb-1">
                       {b.title}, {items.length}건
                     </h4>
-                    <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-1">{b.hint}</p>
+                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{b.hint}</p>
                     {items.length === 0 ? (
-                      <p className="text-[0.78rem] text-[color:var(--muted-fg)]">해당 항목 없음</p>
+                      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">해당 항목 없음</p>
                     ) : (
-                      <ul className="sizing-note-list text-[0.78rem]">
+                      <ul className="sizing-note-list text-[length:var(--fs-caption)]">
                         {items.map(({ it, s }) => (
                           <li key={`${s.id}-${it.claim}`}>
                             <span className="font-semibold">{it.claim}</span>
                             <span className="block text-[color:var(--muted-fg)]">{it.reason}</span>
-                            <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">
+                            <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                               출처: {s.origin === "AI 1st" ? "AI 1차" : `AI 2차 · ${s.reviewer_domain ?? "?"}`}
                               {it.evidence_ref ? ` · ${it.evidence_ref}` : ""}
                             </span>
@@ -260,14 +260,14 @@ export function ReviewBuckets({
                   </button>
                 </>
               )}
-              <span className="text-[0.72rem] text-[color:var(--muted-fg)]">
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 이번 달 AI 2차 토큰 {view.token_cap.used.toLocaleString()} / {view.token_cap.cap.toLocaleString()} ·
                 산출물이 같으면 저장된 검토를 재사용합니다
               </span>
             </div>
           </>
         )}
-        <p role="status" aria-live="polite" className="text-[0.75rem] text-[color:var(--muted-fg)] mt-1 mb-0">
+        <p role="status" aria-live="polite" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
           {status}
         </p>
       </div>

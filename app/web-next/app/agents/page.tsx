@@ -69,7 +69,7 @@ export function AgentsView() {
         <SectionToolbar title="PM 에이전트에게 질의" icon="" />
         <div className="sizing-new-form">
           <div className="flex flex-wrap items-end gap-2">
-            <label className="text-[0.78rem]" style={{ flex: "2 1 16rem" }}>
+            <label className="text-[length:var(--fs-caption)]" style={{ flex: "2 1 16rem" }}>
               <span className="block mb-1">질의 *</span>
               <input
                 value={query}
@@ -79,7 +79,7 @@ export function AgentsView() {
                 className="sizing-new-input w-full"
               />
             </label>
-            <label className="text-[0.78rem]" style={{ flex: "1 1 12rem" }}>
+            <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 12rem" }}>
               <span className="block mb-1">연결 기회 (선택 — 체인 평가에 필요)</span>
               <select value={opportunityId} onChange={(e) => setOpportunityId(e.target.value)} className="sizing-new-input w-full">
                 <option value="">없음</option>
@@ -94,7 +94,7 @@ export function AgentsView() {
           </div>
         </div>
 
-        {busy && <p role="status" className="text-[0.85rem] mt-2">PM이 질의를 분류하고 에이전트를 배정하는 중입니다...</p>}
+        {busy && <p role="status" className="text-[length:var(--fs-body)] mt-2">PM이 질의를 분류하고 에이전트를 배정하는 중입니다...</p>}
 
         {result && (
           <div className="sizing-grade-card mt-3">
@@ -102,7 +102,7 @@ export function AgentsView() {
               <span className={`status-chip ${result.mode === "chain" ? "status-in-progress" : "status-green"}`}>
                 {result.mode === "chain" ? "에이전트 체인" : `${result.agentKey} 배정`}
               </span>
-              {result.task && <span className="text-[0.75rem] text-[color:var(--muted-fg)]">{result.task}</span>}
+              {result.task && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{result.task}</span>}
               {result.classifiedBy && <span className="status-chip status-not-started">{result.classifiedBy === "llm" ? "PM LLM 분류" : "규칙 분류"}</span>}
               <span className="status-chip status-amber">제안 전용</span>
             </div>
@@ -118,14 +118,14 @@ export function AgentsView() {
                       <td className="tabular-nums">{s.step}</td>
                       <td>{s.agentKey}</td>
                       <td>{s.purpose}</td>
-                      <td className="text-[0.78rem]">{s.summary}</td>
+                      <td className="text-[length:var(--fs-caption)]">{s.summary}</td>
                       <td>{s.source === "llm" ? "LLM" : "결정론"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
-            <p className="text-[0.85rem] mb-0" style={{ whiteSpace: "pre-line" }}>{result.answer}</p>
+            <p className="text-[length:var(--fs-body)] mb-0" style={{ whiteSpace: "pre-line" }}>{result.answer}</p>
           </div>
         )}
       </section>
@@ -138,7 +138,7 @@ export function AgentsView() {
           <p className="text-[color:var(--muted-fg)] italic">로스터를 불러오지 못했습니다.</p>
         ) : (
           <details>
-            <summary className="cursor-pointer text-[0.8rem] text-[color:var(--accent)]">배정 가능 에이전트 {roster.length}건 보기</summary>
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">배정 가능 에이전트 {roster.length}건 보기</summary>
             <table className="data-table mt-2" aria-label="에이전트 로스터">
               <caption className="sr-only">에이전트 로스터</caption>
               <thead><tr><th scope="col">키</th><th scope="col">이름</th><th scope="col">역할</th><th scope="col">도메인</th></tr></thead>
@@ -147,7 +147,7 @@ export function AgentsView() {
                   <tr key={a.key}>
                     <td><code className="dd-item-id">{a.key}</code></td>
                     <td className="font-semibold">{a.name}</td>
-                    <td className="text-[0.75rem] text-[color:var(--muted-fg)]">{a.role}</td>
+                    <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{a.role}</td>
                     <td>{a.domain ?? "—"}</td>
                   </tr>
                 ))}

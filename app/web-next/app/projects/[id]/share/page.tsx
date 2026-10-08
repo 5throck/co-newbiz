@@ -71,7 +71,7 @@ function ShareView() {
               <tr key={r.id}>
                 <td className="font-semibold">{r.title}</td>
                 <td>{r.recipient}</td>
-                <td className="tabular-nums text-[0.78rem]">{r.expires_at.slice(0, 10)}</td>
+                <td className="tabular-nums text-[length:var(--fs-caption)]">{r.expires_at.slice(0, 10)}</td>
                 <td className="col-num tabular-nums">{r.access_count}회</td>
                 <td>{r.revoked_at ? <span className="status-chip status-gray">만료(철회)</span> : new Date(r.expires_at) > new Date() ? <span className="status-chip status-green">활성</span> : <span className="status-chip status-gray">만료</span>}</td>
                 <td>{canAct && !r.revoked_at && <button type="button" className="btn-danger btn-sm" onClick={() => revoke(r.id)}>즉시 만료</button>}</td>
@@ -85,15 +85,15 @@ function ShareView() {
           <h2 className="text-[0.9rem] mb-2">공유 링크 생성</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[0.78rem] flex-1 min-w-[12rem]"><span className="block mb-1">자료 제목 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">자료 제목 *</span>
                 <input className="sizing-new-input w-full" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></label>
-              <label className="text-[0.78rem] flex-1 min-w-[10rem]"><span className="block mb-1">수신자 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[10rem]"><span className="block mb-1">수신자 *</span>
                 <input className="sizing-new-input w-full" value={form.recipient} onChange={(e) => setForm({ ...form, recipient: e.target.value })} required /></label>
-              <label className="text-[0.78rem] w-[7rem]"><span className="block mb-1">만료 (일, ≤30)</span>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">만료 (일, ≤30)</span>
                 <input type="number" min={1} max={30} className="sizing-new-input sizing-new-input-sm" value={form.expires_in_days} onChange={(e) => setForm({ ...form, expires_in_days: e.target.value })} /></label>
               <button type="submit" className="btn-primary" disabled={busy}>{busy ? "생성 중..." : "링크 생성"}</button>
             </div>
-            <label className="text-[0.78rem] block mt-2"><span className="block mb-1">스냅샷 요약 (원본 대신 전달됩니다)</span>
+            <label className="text-[length:var(--fs-caption)] block mt-2"><span className="block mb-1">스냅샷 요약 (원본 대신 전달됩니다)</span>
               <input className="sizing-new-input w-full" value={form.payload} onChange={(e) => setForm({ ...form, payload: e.target.value })} /></label>
           </form>
         </section>

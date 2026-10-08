@@ -171,7 +171,7 @@ export function ProjectArchivesView() {
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
                     <span className="font-semibold mr-2">{d.project_name ?? d.project_no ?? d.id}</span>
-                    {d.project_no && <span className="text-[color:var(--muted-fg)] text-[0.82rem] mr-2">{d.project_no}</span>}
+                    {d.project_no && <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mr-2">{d.project_no}</span>}
                     <span className="status-chip status-red">삭제</span>
                   </div>
                   <div className="flex gap-2">
@@ -185,13 +185,13 @@ export function ProjectArchivesView() {
                     </button>
                   </div>
                 </div>
-                <p className="text-[0.78rem] text-[color:var(--muted-fg)] mt-1 mb-0">
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
                   삭제자 {d.acted_by} · {fmtDate(d.acted_at)}
                   {d.status_at_archive ? ` · 당시 상태 ${STATUS_LABEL[d.status_at_archive] ?? d.status_at_archive}` : ""}
                   {d.reason ? ` · 사유: ${d.reason}` : ""}
                 </p>
                 {detail[d.id] && (
-                  <div className="text-[0.8rem] mt-2">
+                  <div className="text-[length:var(--fs-caption)] mt-2">
                     <p className="mb-1">시장분석 시점 고정(당시 버전):</p>
                     <ul className="list-disc pl-5">
                       {(detail[d.id].market_freeze ?? []).map((f, i) => (

@@ -9,6 +9,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
+import { ParamTable, type ParamRow } from "../ui.tsx";
+
+function SourceChip({ source }: { source: string }) {
+  return <span className="status-chip status-info">{source}</span>;
+}
 
 interface ResolvedParams {
   captureRate: number; captureSource: string;
@@ -146,8 +151,8 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
 
   return (
     <>
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">✕ {error}</p>}
-      {message && <p className="text-[color:var(--green-fg)] text-[0.82rem] mb-2">✓ {message}</p>}
+      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
+      {message && <p className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {message}</p>}
 
       {/* 현재 해석값 — user > derived > default 출처 표시 (REQ-W6-2) */}
       <section className="market-section sizing-step" aria-label="현재 파라미터">
@@ -155,36 +160,22 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
         {!resolved ? (
           <p>불러오는 중...</p>
         ) : (
-          <div className="table-scroll">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <th className="col-label text-left">항목</th>
-                  <th className="text-right">값</th>
-                  <th className="text-left">출처</th>
-                </tr>
-              </thead>
-              <tbody>
-                {([
-                  ["포획률 (year-1 매출)", pct(resolved.captureRate), resolved.captureSource],
-                  ["가동률 램프업", resolved.rampUp.map((v) => v.toFixed(2)).join(" → "), resolved.rampSource],
-                  ["운영비 비율", pct(resolved.opexRatio), resolved.opexSource],
-                  ["설비투자 비율", pct(resolved.capexRatio), resolved.capexSource],
-                  ["초기투자 비율 (year-1 매출 대비)", pct(resolved.initialInvestmentRatio), resolved.initialInvestmentSource],
-                  ["성장률 오버라이드", resolved.growthOverride != null ? pct(resolved.growthOverride) : "— (유도값 사용)", resolved.growthOverrideSource],
-                  ["변동성 오버라이드", resolved.sigmaOverride != null ? pct(resolved.sigmaOverride) : "— (유도값 사용)", resolved.sigmaOverrideSource],
-                  ["회수 기간 (년)", String(resolved.horizonYears), resolved.horizonSource],
-                  ["반복 수", resolved.iterations.toLocaleString(), resolved.iterationsSource],
-                ] as Array<[string, string, string]>).map(([label, value, source]) => (
-                  <tr key={label}>
-                    <td className="col-label">{label}</td>
-                    <td className="text-right tabular-nums">{value}</td>
-                    <td className="text-[color:var(--muted-fg)] text-[0.78rem]">{source}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ParamTable
+            caption="현재 시뮬레이션 파라미터"
+            rows={[
+              ...(([
+                ["포획률 (year-1 매출)", resolved.captureRate, resolved.captureSource],
+                ["운영비 비율", resolved.opexRatio, resolved.opexSource],
+                ["설비투자 비율", resolved.capexRatio, resolved.capexSource],
+                ["초기투자 비율 (year-1 매출 대비)", resolved.initialInvestmentRatio, resolved.initialInvestmentSource],
+              ] as Array<[string, number, string]>).map(([label, v, source]): ParamRow => ({ label, value: (v * 100).toFixed(1), unit: "%", source: <SourceChip source={source} /> }))),
+              { label: "가동률 램프업", value: resolved.rampUp.map((v) => v.toFixed(2)).join(" → "), unit: "비율", source: <SourceChip source={resolved.rampSource} /> },
+              { label: "성장률 오버라이드", value: resolved.growthOverride != null ? (resolved.growthOverride * 100).toFixed(1) : "— (유도값 사용)", unit: resolved.growthOverride != null ? "%" : "", source: <SourceChip source={resolved.growthOverrideSource} /> },
+              { label: "변동성 오버라이드", value: resolved.sigmaOverride != null ? (resolved.sigmaOverride * 100).toFixed(1) : "— (유도값 사용)", unit: resolved.sigmaOverride != null ? "%" : "", source: <SourceChip source={resolved.sigmaOverrideSource} /> },
+              { label: "회수 기간", value: String(resolved.horizonYears), unit: "년", source: <SourceChip source={resolved.horizonSource} /> },
+              { label: "반복 수", value: resolved.iterations.toLocaleString(), unit: "회", source: <SourceChip source={resolved.iterationsSource} /> },
+            ]}
+          />
         )}
       </section>
 
@@ -218,8 +209,8 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
             </div>
           </div>
           <label className="grid gap-1 text-sm">근거 (필수)<textarea className="form-input" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="시장 조사 결과 포획률 상향 — 출처/근거를 기재하세요" /></label>
-          <button className="primary-button justify-self-start" type="submit">파라미터 확정</button>
-          <p className="text-[color:var(--muted-fg)] text-[0.78rem]">확정된 값은 사용자 등급(user) 가정으로 기록됩니다. 시나리오 비교 탭의 재생성을 실행하면 새 파라미터로 다시 시뮬레이션됩니다.</p>
+          <button className="btn-primary justify-self-start" type="submit">파라미터 확정</button>
+          <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">확정된 값은 사용자 등급(user) 가정으로 기록됩니다. 시나리오 비교 탭의 재생성을 실행하면 새 파라미터로 다시 시뮬레이션됩니다.</p>
         </form>
       </section>
 
@@ -237,19 +228,19 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
               <div><dt className="text-[color:var(--muted-fg)]">회수 기간</dt><dd className="font-semibold">{snapshot.horizon_years}년</dd></div>
               <div>
                 <dt className="text-[color:var(--muted-fg)]">할인율 / 적용 주체</dt>
-                <dd className="font-semibold">{snapshot.discount_rate ? `${pct(snapshot.discount_rate.value)} · ${snapshot.discount_rate.subject}` : "—"} <span className="text-[color:var(--muted-fg)] font-normal text-[0.78rem]">({snapshot.discount_rate?.source ?? ""})</span></dd>
+                <dd className="font-semibold">{snapshot.discount_rate ? `${pct(snapshot.discount_rate.value)} · ${snapshot.discount_rate.subject}` : "—"} <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">({snapshot.discount_rate?.source ?? ""})</span></dd>
               </div>
             </dl>
-            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               모델: {latestSnapshot!.name} {latestSnapshot!.adopted ? "· 채택됨" : latestSnapshot!.recommended ? "· RECOMMENDED" : ""}
             </p>
             <div className="table-scroll">
-              <table className="w-full text-sm">
+              <table className="data-table">
                 <thead>
                   <tr>
                     <th className="col-label text-left">드라이버</th>
                     <th className="text-left">분포</th>
-                    <th className="text-left">값</th>
+                    <th className="text-right">값</th>
                     <th className="text-left">출처</th>
                   </tr>
                 </thead>
@@ -258,8 +249,8 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
                     <tr key={key}>
                       <td className="col-label">{DRIVER_LABELS[key] ?? key}</td>
                       <td>{d.dist}</td>
-                      <td className="tabular-nums">{driverValue(d)}</td>
-                      <td className="text-[color:var(--muted-fg)] text-[0.78rem]">{d.source ?? "—"}</td>
+                      <td className="text-right tabular-nums">{driverValue(d)}</td>
+                      <td className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{d.source ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
