@@ -1,4 +1,4 @@
-// @version 1.6.0
+// @version 1.7.0
 // Idempotent S1→S12 brownfield demo chain seed.
 //
 // The operational DB is intentionally gitignored, so a fresh/local database
@@ -10,6 +10,7 @@
 // Usage:
 //   bun scripts/co-newbiz/seed-s1-s12-demo.ts [--db-path <path>]
 import { getDb } from "../../db/client.ts";
+import type { SizingMatrix } from "../../app/web-next/lib/market-sizing.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, getChecklistItems } from "../../app/web-next/lib/library.ts";
@@ -79,6 +80,38 @@ export interface SeedOptions {
   subTrackDd?: boolean;
 }
 
+/** Small, clearly demo-labelled but structurally complete matrix: the S1 report UI dereferences every field below. */
+const DEMO_MATRIX: SizingMatrix = {
+  industryLabel: "S1-S12 데모 산업 (데모 데이터)",
+  provenance: "llm-estimate",
+  synthesized: true,
+  anchor: { sources: [{ label: "데모 앵커 (실제 출처 아님)", estimate: 0.9, status: "consensus", note: "demo seed — not a real estimate" }], total: 0.9 },
+  segments: [
+    { code: "demo_core", label: "핵심 수요처 (데모)" },
+    { code: "demo_aftermarket", label: "애프터마켓 (데모)" },
+  ],
+  regions: [
+    { code: "KR", label: "한국 (데모)", weight: 60, mix: { demo_core: 70, demo_aftermarket: 30 }, adjustment: "demo seed" },
+    { code: "ROW", label: "기타 지역 (데모)", weight: 40, mix: { demo_core: 60, demo_aftermarket: 40 }, adjustment: "demo seed" },
+  ],
+  baseline2026: { KR: { demo_core: 0.4, demo_aftermarket: 0.2 }, ROW: { demo_core: 0.2, demo_aftermarket: 0.1 } },
+  cagrBase: { KR: { demo_core: 0.13, demo_aftermarket: 0.1 }, ROW: { demo_core: 0.1, demo_aftermarket: 0.08 } },
+  chainGrade: { grade: "B", statisticalHops: 0, note: "demo seed: no statistical hop, llm-estimate source cap" },
+  chainDirection: { position: "midstream", note: "demo seed", relatedIndustries: [{ relation: "전방", name: "데모 수요 산업" }] },
+  qualitative: { opportunityFactors: ["데모 기회 요인"], riskFactors: ["데모 위험 요인"] },
+  consistency: { bottomUpCagr: 0.12, topDownCagr: 0.13, tolerance: "demo seed" },
+  crossValidation: [],
+  limitations: ["데모 시드 데이터 — 실제 시장 분석이 아닙니다."],
+  competitive: {
+    structure: "데모 경쟁 구조 — 과점 (실제 데이터 아님)",
+    players: [
+      { name: "S1-S12 데모 대상회사", tier: "leader", note: "demo seed" },
+      { name: "대체 후보 A", tier: "challenger", note: "demo seed" },
+      { name: "대체 후보 B", tier: "niche", note: "demo seed" },
+    ],
+  },
+};
+
 export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { opportunityId: string; projectId: string } {
   const humanDecisions = opts.humanDecisions ?? true;
   const subTrackDd = opts.subTrackDd ?? true;
@@ -112,14 +145,7 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
         DEMO.versionId,
         DEMO.analysisId,
         json({
-          matrix: {
-            tam_krw_m: 120000,
-            cagr: 0.13,
-            competitive: {
-              concentration: "moderate",
-              key_players: ["S1-S12 데모 대상회사", "대체 후보 A", "대체 후보 B"],
-            },
-          },
+          matrix: DEMO_MATRIX,
         }),
         actor,
         now,

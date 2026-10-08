@@ -3,7 +3,9 @@
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { useState, useEffect } from "react";
 import { api } from "../../../lib/api.ts";
-import { type SizingMatrix } from "../../../lib/market-sizing.ts";
+import { useAuth } from "../../../lib/auth-client.tsx";
+import { canWriteBusiness } from "../../../lib/project-write-access.ts";
+import { isCompleteSizingMatrix, type SizingMatrix } from "../../../lib/market-sizing.ts";
 import { StepSensitivityChart } from "./SizingCharts.tsx";
 import { SizingReport } from "./SizingReport.tsx";
 import type { IndustryDetail, AnalysisDetail, VersionInfo } from "./types.ts";
@@ -21,7 +23,9 @@ export function MarketReport({ detail, analysisId, analysisDate, onAddLinked }: 
       .catch((e) => setError(e instanceof Error ? e.message : "분석 결과 불러오기 실패"));
   }, [analysisId]);
 
-  const matrix: SizingMatrix | null = analysis?.versions[0]?.payload?.matrix ?? null;
+  const rawMatrix: unknown = analysis?.versions[0]?.payload?.matrix ?? null;
+  const matrix: SizingMatrix | null = isCompleteSizingMatrix(rawMatrix) ? rawMatrix : null;
+  const matrixIncomplete = rawMatrix !== null && rawMatrix !== undefined && matrix === null;
   const stepSummaries = analysis?.versions[0]?.payload?.stepSummaries ?? null;
   // provenance는 데이터가 스스로 말한다: 수동 연구 시드(frozen-research)인지 파이프라인 산출인지.
   const manualResearch = matrix?.provenance === "frozen-research";
@@ -45,13 +49,16 @@ export function MarketReport({ detail, analysisId, analysisDate, onAddLinked }: 
       {!analysis && (
         <p className="market-section">분석 결과를 불러오는 중...</p>
       )}
-      {analysis && !matrix && (
+      {analysis && !matrix && !matrixIncomplete && (
         <section aria-label="분석 없음" className="market-section sizing-step">
           <p className="text-[color:var(--muted-fg)] italic">
             이 산업의 정식 분석 기록(버전)이 없습니다. 목록에서 "신규 산업 분석"으로 8단계 파이프라인을 실행하세요.
           </p>
           <StepSensitivityChart stepNumber={1} sensitivities={detail.driver_sensitivities} />
         </section>
+      )}
+      {analysis && matrixIncomplete && (
+        <IncompleteMatrixNotice analysisId={analysisId} />
       )}
       {matrix && (
         <>
@@ -85,6 +92,39 @@ export function MarketReport({ detail, analysisId, analysisDate, onAddLinked }: 
         </>
       )}
     </>
+  );
+}
+
+/* 불완전한 매트릭스 — 크래시 대신 경고 + 재분석 (재분석은 기존 /rerun 엔드포인트) */
+function IncompleteMatrixNotice({ analysisId }: { analysisId: string | null }) {
+  const { me } = useAuth();
+  const canCurate = canWriteBusiness(me?.role);
+  const [started, setStarted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <section aria-label="매트릭스 불완전" className="market-section sizing-step" data-testid="incomplete-matrix">
+      <p role="alert" className="font-semibold text-[color:var(--amber-fg)]">매트릭스가 불완전합니다 — 재분석이 필요합니다</p>
+      {started ? (
+        <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--green-fg)]">재분석이 시작되었습니다 — 완료되면 목록의 분석일이 갱신됩니다.</p>
+      ) : canCurate ? (
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={async () => {
+            if (!analysisId) { setError("분석 id를 찾을 수 없습니다 — 목록에서 재분석하세요."); return; }
+            try {
+              await api.post(`/api/market-overview/analyses/${encodeURIComponent(analysisId)}/rerun`);
+              setStarted(true);
+            } catch (e) {
+              setError(e instanceof Error ? e.message : "재분석 시작 실패");
+            }
+          }}
+        >
+          재분석
+        </button>
+      ) : null}
+      {error && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{error}</p>}
+    </section>
   );
 }
 
