@@ -498,11 +498,20 @@ export interface DdWorkspaceView {
     domain: string;
     checklistId: string;
     title: string;
-    items: Array<ChecklistItemDef & { state: { status: ChecklistStateStatus; note: string | null; evidence_ref: string | null; waiver_id: string | null } | null }>;
+    items: Array<ChecklistItemDef & { state: DdItemState | null }>;
     custom: CustomItemRow[];
   }>;
   findings: FindingRow[];
   completion: DdCompletionSummary;
+}
+
+export interface DdItemState {
+  status: ChecklistStateStatus;
+  note: string | null;
+  evidence_ref: string | null;
+  waiver_id: string | null;
+  assessed_by: string | null;
+  assessed_at: string | null;
 }
 
 export interface CustomItemRow {
@@ -517,7 +526,7 @@ export interface CustomItemRow {
   approved_by: string | null;
   approved_at: string | null;
   created_at: string;
-  state: { status: ChecklistStateStatus; note: string | null; evidence_ref: string | null; waiver_id: string | null } | null;
+  state: DdItemState | null;
 }
 
 export interface FindingRow {
@@ -533,11 +542,11 @@ export interface FindingRow {
 /** Assemble the whole S9 surface: standard items + live state, custom items with provenance, findings, completion. */
 export function listDdWorkspace(projectId: string): DdWorkspaceView {
   const db = getDb();
-  const states = new Map<string, { status: ChecklistStateStatus; note: string | null; evidence_ref: string | null; waiver_id: string | null }>();
+  const states = new Map<string, DdItemState>();
   for (const s of db
-    .query("SELECT checklist_id, item_id, status, note, evidence_ref, waiver_id FROM project_checklist_item_state WHERE project_id = ?")
-    .all(projectId) as Array<{ checklist_id: string; item_id: string; status: ChecklistStateStatus; note: string | null; evidence_ref: string | null; waiver_id: string | null }>) {
-    states.set(`${s.checklist_id}:${s.item_id}`, { status: s.status, note: s.note, evidence_ref: s.evidence_ref, waiver_id: s.waiver_id });
+    .query("SELECT checklist_id, item_id, status, note, evidence_ref, waiver_id, assessed_by, assessed_at FROM project_checklist_item_state WHERE project_id = ?")
+    .all(projectId) as Array<{ checklist_id: string; item_id: string; status: ChecklistStateStatus; note: string | null; evidence_ref: string | null; waiver_id: string | null; assessed_by: string | null; assessed_at: string | null }>) {
+    states.set(`${s.checklist_id}:${s.item_id}`, { status: s.status, note: s.note, evidence_ref: s.evidence_ref, waiver_id: s.waiver_id, assessed_by: s.assessed_by, assessed_at: s.assessed_at });
   }
 
   const customByDomain = new Map<DdDomain, CustomItemRow[]>();

@@ -4,14 +4,16 @@
 // /deals/[id]/s11 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
-import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
+import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
+import { useToast } from "../ui.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 
@@ -34,8 +36,10 @@ interface IcPackage {
   rag: { status: "graded" | "not_graded"; grade: string | null; isProposal: true; rationale: string | null; assessed_at: string | null; missing_dimensions: string[]; confidence_cap: string | null; confidence_note: string | null };
   pmi_kickoff: { applies: boolean; sub_track: string | null; record: { id: string; recordedBy: string; recordedAt: string; owner: string; planNote: string } | null };
   gates: {
-    latest: Array<{ gate: string; decision: "go" | "hold" | "kill" | null; rationale: string | null; missing_artifacts: string[] | null }>;
-    history: Array<{ id: string; gate: string; decision: string; rationale: string; decided_by: string; decided_at: string }>;
+    latest: Array<{ gate: string; decision: "go" | "hold" | "kill" | null; rationale: string | null; missing_artifacts: string[] | null; gap_override?: { items: string[]; rationale: string } | null }>;
+    history: Array<{ id: string; gate: string; decision: string; rationale: string; decided_by: string; decided_at: string; gap_override?: { items: string[]; rationale: string } | null }>;
+    /** Artifacts an IC GO would be missing right now (empty = none). */
+    go_gaps?: string[];
   };
   establishment: {
     steps: Array<{ id: string; step_no: number; status: string; origin: string; owner: string; updated_at: string; note: string | null; evidence_url: string | null; keyed_by: string }>;
@@ -84,9 +88,12 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   const { confirm, confirmDialog } = useConfirm();
   const [pkg, setPkg] = useState<IcPackage | null>(null);
   const [est, setEst] = useState<EstablishmentView | null>(null);
-  const [form, setForm] = useState<{ step_no: number; status: string; evidence_url: string; note: string }>({
-    step_no: 1, status: "done", evidence_url: "", note: "",
+  // Per-step action panel (R2-B item 7): which establishment step is open, and its draft.
+  const [openStep, setOpenStep] = useState<number | null>(null);
+  const [form, setForm] = useState<{ status: string; evidence_url: string; note: string }>({
+    status: "done", evidence_url: "", note: "",
   });
+  const { toast } = useToast();
   const [pmiForm, setPmiForm] = useState<{ owner: string; plan_note: string }>({ owner: "", plan_note: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,19 +110,26 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
 
   useEffect(() => { load(); }, [load]);
 
-  function updateStep() {
-    confirm("설립 실행 단계 기록", () => {
+  function updateStep(stepNo: number) {
+    if (form.status === "done" && !form.evidence_url.trim() && !form.note.trim()) {
+      setError("완료 처리에는 증적 URL 또는 비고(증적 설명)가 필요합니다.");
+      return;
+    }
+    confirm(`설립 실행 ${stepNo}단계 기록`, () => {
       void (async () => {
         setBusy(true); setError(null);
         try {
           await api.put(`/api/projects/${encodeURIComponent(projectId)}/establishment`, {
-            step_no: form.step_no,
+            step_no: stepNo,
             status: form.status,
             origin: est?.project.origin ?? "internal",
             evidence_url: form.evidence_url || undefined,
             note: form.note || undefined,
           });
           setNotice("설립 실행 단계가 기록되었습니다. 완료확인(5단계)은 선행 4단계가 모두 완료된 후에만 완료할 수 있습니다.");
+          toast(`설립 실행 ${stepNo}단계를 기록했습니다.`);
+          setOpenStep(null);
+          setForm({ status: "done", evidence_url: "", note: "" });
           load();
         } catch (e) {
           setError(e instanceof Error ? e.message : "설립 실행 기록 실패");
@@ -124,8 +138,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         }
       })();
     }, {
-      body: "설립 실행 단계 상태를 기록합니다. 이 기록은 담당자(owner)가 확인한 실행 증적이며, 에이전트가 대신 완료 처리할 수 없습니다.",
+      body: "설립 실행 단계 상태를 기록합니다. 기록하는 사람이 이 단계의 담당자로 남으며, 이 기록은 담당자가 확인한 실행 증적입니다. 에이전트가 대신 완료 처리할 수 없습니다.",
       confirmLabel: "기록",
+      tone: "neutral",
     });
   }
 
@@ -136,6 +151,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         try {
           await api.post(`/api/projects/${encodeURIComponent(projectId)}/pmi/kickoff`, pmiForm);
           setNotice("PMI 킥오프가 기록되었습니다.");
+          toast("PMI 킥오프를 기록했습니다.");
           setPmiForm({ owner: "", plan_note: "" });
           load();
         } catch (e) {
@@ -147,9 +163,11 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
     }, {
       body: "통합 책임자와 통합 계획 기준선을 기록합니다. 이 기록은 사람이 확인한 PMI 킥오프이며, 에이전트가 대신 기록할 수 없습니다.",
       confirmLabel: "기록",
+      tone: "neutral",
     });
   }
 
+  const entityGo = pkg?.gates.latest.find((x) => x.gate === "entity_ic")?.decision === "go";
   const bothGatesGo = ["entity_ic", "group_ic"].every((g) =>
     pkg?.gates.latest.find((x) => x.gate === g)?.decision === "go",
   );
@@ -160,17 +178,20 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   return (
 <>
       <StageTabs projectId={projectId} />
-      <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S11")} />
+      <GateDecisionJump gate={entityGo ? "group_ic" : "entity_ic"} />
+      {/* One review block for both IC gates (the panels below do not repeat it). */}
+      <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
       <StageFrame stageId="S11" heading="S11 투자심사·실행 — IC 패키지 · Entity/Group IC · 설립 실행">
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          Entity IC와 Group IC 승인이 모두 기록되고, origin∈{"{internal,joint}"} 프로젝트는 설립 5단계 완료 기록이
-          존재해야 S11이 완료됩니다 (flow.spec v2.0.0).
+          Entity IC와 Group IC 승인이 모두 기록되고, 내부 추진·합작 프로젝트는 설립 5단계 완료 기록이
+          존재해야 S11이 완료됩니다.
+          <Link href={`/projects/${projectId}/charter`} className="ml-2 underline">프로젝트 추진계획(차터) 보기 →</Link>
           <span className={`status-chip ${bothGatesGo ? "status-green" : "status-amber"} ml-2`}>
             {bothGatesGo ? "● IC 진행 2/2 GO" : "○ IC 진행 미승인"}
           </span>
           {estApplies && (
             <span className={`status-chip ${estComplete ? "status-green" : "status-amber"} ml-1`}>
-              {estComplete ? `● 설립 실행 완료 (${pkg?.establishment.progress ?? "—"})` : `◐ 설립 실행 ${pkg?.establishment.progress ?? "—"} (internal/joint 적용)`}
+              {estComplete ? `● 설립 실행 완료 (${pkg?.establishment.progress ?? "—"})` : `◐ 설립 실행 ${pkg?.establishment.progress ?? "—"} (내부 추진·합작 적용)`}
             </span>
           )}
         </p>
@@ -279,81 +300,104 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               </span>
             </p>
           )}
+          {(() => {
+            const overrides = (pkg?.gates.history ?? []).filter((h) => h.gap_override);
+            if (overrides.length === 0) return null;
+            return (
+              <>
+                <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">누락 산출물 예외 근거 (GO 기록 시 작성)</h4>
+                <ul className="sizing-note-list" aria-label="누락 산출물 예외 근거">
+                  {overrides.map((h) => (
+                    <li key={h.id}>
+                      <strong>{h.gate === "entity_ic" ? "Entity IC" : "Group IC"} {h.decision.toUpperCase()}</strong> - {h.decided_by} · {h.decided_at.slice(0, 10)}
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">누락: {h.gap_override!.items.join("; ")}</span>
+                      <span className="block text-[length:var(--fs-caption)]">근거: {h.gap_override!.rationale}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            );
+          })()}
         </section>
 
         {/* ── 설립 실행 5단계 ────────────────────────────────────────── */}
         <section className="market-section sizing-step mt-3" aria-label="설립 실행 5단계">
           <h3 className="sizing-step-title text-[0.95rem]">
-            <span className="sizing-step-badge">🏗</span> 설립 실행 — 5단계 (origin∈{"{internal,joint}"})
+            <span className="sizing-step-badge">🏗</span> 설립 실행 — 5단계 (내부 추진·합작 프로젝트)
           </h3>
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+            담당자는 단계를 기록한 사람입니다. 완료 처리는 증적(URL 또는 설명)과 함께 사람이 기록하며, 에이전트는 대신 완료할 수 없습니다.
+            {!estApplies && " 이 프로젝트는 내부 추진·합작이 아니어서 설립 실행이 적용되지 않습니다."}
+          </p>
+          <div className="table-scroll">
           <table className="data-table" aria-label="설립 실행 단계 현황">
             <caption className="sr-only">설립 실행 5단계 진행 현황</caption>
             <thead>
-              <tr><th scope="col">단계</th><th scope="col">상태</th><th scope="col">담당자</th><th scope="col">갱신</th></tr>
+              <tr><th scope="col">단계</th><th scope="col">상태</th><th scope="col">담당자 (기록자)</th><th scope="col">갱신</th>{canAct && estApplies && <th scope="col">작업</th>}</tr>
             </thead>
             <tbody>
               {[1, 2, 3, 4, 5].map((n) => {
                 const row = est?.steps.find((s) => s.step_no === n) ?? pkg?.establishment.steps.find((s) => s.step_no === n);
                 const meta = stepMeta(row?.status);
+                const isDone = row?.status === "done";
+                const open = openStep === n;
                 return (
-                  <tr key={n}>
-                    <td><span className="tabular-nums mr-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{n}</span>{STEP_TITLES[n]}</td>
-                    <td><span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span></td>
-                    <td className="text-[length:var(--fs-caption)]">{row?.owner ?? "—"}</td>
-                    <td className="text-[length:var(--fs-caption)] tabular-nums">{row?.updated_at?.slice(0, 10) ?? "—"}</td>
-                  </tr>
+                  <Fragment key={n}>
+                    <tr>
+                      <td><span className="tabular-nums mr-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{n}</span>{STEP_TITLES[n]}</td>
+                      <td><span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span></td>
+                      <td className="text-[length:var(--fs-caption)]">
+                        {row?.owner ?? "미지정"}
+                        {row?.evidence_url && <span className="block text-[color:var(--muted-fg)]">증적: {row.evidence_url}</span>}
+                      </td>
+                      <td className="text-[length:var(--fs-caption)] tabular-nums">{row?.updated_at?.slice(0, 10) ?? "—"}</td>
+                      {canAct && estApplies && (
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-ghost btn-sm"
+                            disabled={busy || isDone}
+                            aria-expanded={open}
+                            aria-controls={`est-step-${n}`}
+                            onClick={() => { setOpenStep(open ? null : n); setForm({ status: "done", evidence_url: "", note: "" }); }}
+                          >
+                            {isDone ? "완료됨" : open ? "닫기" : "증적과 함께 완료"}
+                          </button>
+                          {isDone && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">이미 완료 처리됨</span>}
+                        </td>
+                      )}
+                    </tr>
+                    {open && canAct && estApplies && (
+                      <tr id={`est-step-${n}`}>
+                        <td colSpan={5}>
+                          <form className="sizing-new-form" aria-label={`설립 실행 ${n}단계 기록`} onSubmit={(e) => { e.preventDefault(); updateStep(n); }}>
+                            <div className="flex flex-wrap items-end gap-2">
+                              <label className="text-[length:var(--fs-caption)]">
+                                <span className="block mb-1">상태</span>
+                                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="sizing-new-input sizing-new-input-sm">
+                                  {Object.entries(STEP_STATUS_META).filter(([k]) => k !== "pending").map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+                                </select>
+                              </label>
+                              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]">
+                                <span className="block mb-1">증적 URL (완료 시 URL 또는 비고 필수)</span>
+                                <input value={form.evidence_url} onChange={(e) => setForm({ ...form, evidence_url: e.target.value })} className="sizing-new-input w-full" placeholder="data room 링크" />
+                              </label>
+                              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]">
+                                <span className="block mb-1">비고</span>
+                                <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className="sizing-new-input w-full" />
+                              </label>
+                              <button type="submit" className="btn-ghost btn-sm" disabled={busy}>{busy ? "기록 중..." : "단계 기록 (확인 필요)"}</button>
+                            </div>
+                          </form>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>
           </table>
-
-          {canAct && estApplies && (
-            <form className="sizing-new-form mt-2" aria-label="설립 실행 단계 기록" onSubmit={(e) => { e.preventDefault(); updateStep(); }}>
-              <div className="flex flex-wrap items-end gap-2">
-                <label className="text-[length:var(--fs-caption)]">
-                  <span className="block mb-1">단계</span>
-                  <select
-                    value={form.step_no}
-                    onChange={(e) => setForm({ ...form, step_no: Number(e.target.value) })}
-                    className="sizing-new-input sizing-new-input-sm"
-                  >
-                    {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}. {STEP_TITLES[n]}</option>)}
-                  </select>
-                </label>
-                <label className="text-[length:var(--fs-caption)]">
-                  <span className="block mb-1">상태</span>
-                  <select
-                    value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="sizing-new-input sizing-new-input-sm"
-                  >
-                    {Object.entries(STEP_STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
-                  </select>
-                </label>
-                <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]">
-                  <span className="block mb-1">증적 URL</span>
-                  <input
-                    value={form.evidence_url}
-                    onChange={(e) => setForm({ ...form, evidence_url: e.target.value })}
-                    className="sizing-new-input w-full"
-                    placeholder="data room 링크 (선택)"
-                  />
-                </label>
-                <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]">
-                  <span className="block mb-1">비고</span>
-                  <input
-                    value={form.note}
-                    onChange={(e) => setForm({ ...form, note: e.target.value })}
-                    className="sizing-new-input w-full"
-                    placeholder="선택"
-                  />
-                </label>
-              </div>
-              <button type="submit" className="btn-ghost btn-sm mt-2" disabled={busy}>
-                {busy ? "기록 중..." : "단계 기록 (확인 필요)"}
-              </button>
-            </form>
-          )}
+          </div>
         </section>
 
         {/* ── PMI 킥오프 (brownfield M&A·JV·전략적 투자) ─────────────── */}
@@ -374,7 +418,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                 <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">S11 완료에는 사람이 기록한 PMI 킥오프(통합 책임자·계획 기준선)가 필요합니다.</span>
               </p>
             )}
-            {canAct && (
+            {canAct && !pkg.pmi_kickoff.record && (
               <form className="sizing-new-form mt-2" aria-label="PMI 킥오프 기록" onSubmit={(e) => { e.preventDefault(); recordKickoff(); }}>
                 <div className="flex flex-wrap items-end gap-2">
                   <label className="text-[length:var(--fs-caption)] min-w-[10rem]">
@@ -405,14 +449,16 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           </section>
         )}
 
-        {/* ── 의사결정 ×2 ─────────────────────────────────────────── */}
+        {/* ── 의사결정 ×2 (검토 블록은 상단에 한 번만) ───────────────── */}
         <div className="mt-4">
           <GateDecisionPanel
             opportunityId={projectId}
             gates={["entity_ic"]}
-            primary
             entityType="project"
             killHint={null}
+            showReview={false}
+            goGaps={pkg?.gates.go_gaps}
+            nextStage={{ label: "Group IC 결정 기록", href: "#gate-decision-group_ic" }}
           />
         </div>
         <div className="mt-3">
@@ -421,6 +467,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             gates={["group_ic"]}
             entityType="project"
             killHint={null}
+            showReview={false}
+            goGaps={pkg?.gates.go_gaps}
+            nextStage={{ label: "S12 사후 관리", href: `/projects/${projectId}/portfolio` }}
           />
         </div>
         {confirmDialog}

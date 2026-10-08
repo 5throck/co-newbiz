@@ -3654,3 +3654,27 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
   background: var(--surface); color: var(--fg); font-size: var(--fs-caption);
 }
 .guide-link { text-decoration: underline; text-underline-offset: 2px; color: var(--accent); }
+
+/* ── R2-B decision surfaces (shared gate-recording flow, S9 rows, waiver form) ── */
+.gate-recorded {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--green-border);
+  border-left: 3px solid var(--green-fg);
+  border-radius: var(--radius-lg);
+  background: var(--green-bg);
+  font-size: var(--fs-caption);
+}
+/* Waiver request form: columns wrap instead of overlapping at 1280 and 390. */
+.waiver-grid { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+.waiver-grid > label { min-width: 0; }
+/* S9 checklist row actions wrap; below 640px each row becomes a card (no clipped buttons). */
+.dd-actions { flex-wrap: wrap; }
+.dd-nowaive { max-width: 22rem; }
+@media (max-width: 640px) {
+  .dd-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .dd-table, .dd-table tbody, .dd-table tr, .dd-table td { display: block; width: 100%; }
+  .dd-table tr { border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 0.6rem; padding: 0.4rem 0.6rem; }
+  .dd-table td { border: 0; padding: 0.2rem 0; }
+  .dd-table td[data-label]::before { content: attr(data-label) " "; font-size: var(--fs-caption); color: var(--muted-fg); }
+}

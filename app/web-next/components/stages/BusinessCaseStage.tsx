@@ -14,10 +14,9 @@ import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
-import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
+import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { TargetCheckPanel } from "../TargetCheckPanel.tsx";
 import { StageFrame } from "../StageFrame.tsx";
-import { PrimaryAction } from "../ui.tsx";
 import { TabNav } from "../TabNav.tsx";
 import { WaccPanel } from "../wacc/WaccPanel.tsx";
 import { ParamsPanel } from "../business-case/ParamsPanel.tsx";
@@ -120,12 +119,18 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const searchParams = useSearchParams();
   const urlSync = !embedded;
   const [localTab, setLocalTab] = useState("scenarios");
-  const tabParam = urlSync ? searchParams.get("tab") : null;
-  const tab = tabParam === "overview" || tabParam === "params" || tabParam === "target-costing" || tabParam === "wacc" || tabParam === "financial-analysis" || tabParam === "targets" ? tabParam : "scenarios";
+  const tabParam = urlSync ? searchParams.get("tab") : localTab;
+  const tab = tabParam === "decision" || tabParam === "overview" || tabParam === "params" || tabParam === "target-costing" || tabParam === "wacc" || tabParam === "financial-analysis" || tabParam === "targets" ? tabParam : "scenarios";
   const setTab = (key: string) => {
     if (urlSync) router.replace(`/projects/${projectId}/business-case?tab=${key}`, { scroll: false });
     else setLocalTab(key);
   };
+  // Legacy deep links: the project page's stage row owns these two tabs now.
+  useEffect(() => {
+    if (!urlSync) return;
+    if (tabParam === "wacc") router.replace(`/projects/${projectId}/wacc`);
+    else if (tabParam === "financial-analysis") router.replace(`/projects/${projectId}/financial-analysis`);
+  }, [urlSync, tabParam, projectId, router]);
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const readOnlyAdmin = isReadOnlyAdmin(me?.role);
@@ -306,12 +311,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   return (
 <>
       <StageTabs projectId={projectId} />
-      <PrimaryAction
-        label={busy ? "계산 중..." : "밸류에이션 재계산"}
-        onClick={() => void generate()}
-        disabled={!canAct || busy}
-        disabledReason={!canAct ? "재계산은 analyst 권한이 필요합니다." : "계산 중입니다 — 완료되면 결과가 갱신됩니다."}
-      />
+      <GateDecisionJump gate="fs" beforeJump={() => setTab("decision")} />
       <StageFrame stageId="S8" heading="S8 사업성 분석 — 이중 관점 밸류에이션 비교">
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
         같은 시나리오를 <b>시장 기반(진행 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.
@@ -326,7 +326,18 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       )}
 
       {/* Content first: the compact, non-dismissible review strip sits above the analysis tabs and expands on demand. */}
-      <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S8")} />
+      <ReviewBuckets entityType="project" entityId={projectId} gates={["fs"]} artifacts={stageArtifactTabs("S8")} />
+
+      {canAct && tab !== "decision" && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void generate()}>
+            {busy ? "계산 중..." : "밸류에이션 재계산"}
+          </button>
+          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+            {busy ? "계산 중입니다 - 완료되면 결과가 갱신됩니다." : "결정 기록은 위쪽 '결정 기록 (사람)' 또는 '결정' 탭에서 합니다."}
+          </span>
+        </div>
+      )}
 
       <TabNav
         className="mb-3"
@@ -339,8 +350,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           { key: "scenarios", label: "시나리오 비교" },
           { key: "params", label: "파라미터·스냅샷" },
           { key: "target-costing", label: "타겟코스팅" },
-          { key: "wacc", label: "WACC" },
-          { key: "financial-analysis", label: "재무분석" },
+          // WACC and 재무분석 are tabs of the stage row on project pages (StageTabs); only the embedded
+          // deal tab has no such row, so they stay here for it - one place per surface.
+          ...(embedded ? [{ key: "wacc", label: "WACC" }, { key: "financial-analysis", label: "재무분석" }] : []),
+          { key: "decision", label: "결정" },
         ]}
       />
 
@@ -671,9 +684,17 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       )}
 
       <TargetCheckPanel projectId={projectId} />
-      <div className="mt-4">
-        <GateDecisionPanel opportunityId={projectId} gates={["fs"]} entityType="project" />
-      </div>
+      {tab === "decision" && (
+        <div className="mt-4">
+          <GateDecisionPanel
+            opportunityId={projectId}
+            gates={["fs"]}
+            entityType="project"
+            showReview={false}
+            nextStage={{ label: "S9 실사·검증", href: `/projects/${projectId}/dd` }}
+          />
+        </div>
+      )}
       </StageFrame>
       {confirmDialog}
 </>

@@ -6,7 +6,7 @@
 // 탭 상태는 독립 페이지에서 URL ?tab= 동기, embedded(deals 탭) 모드에서는 내부 상태로
 // 유지한다 — router로 프로젝트 페이지를 건드리지 않는다.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
@@ -14,7 +14,7 @@ import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
-import { PrimaryAction } from "../ui.tsx";
+import { PrimaryAction, useToast } from "../ui.tsx";
 import { TabNav } from "../TabNav.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
@@ -60,6 +60,9 @@ const VEHICLE_LABEL: Record<string, string> = {
   internal_venture_spinoff: "내부 벤처 스핀오프",
   jv: "합작(JV)",
 };
+// Korean labels for the stored enum values (display only; the stored values are unchanged).
+const STAKE_LABEL: Record<string, string> = { full: "전량 인수", majority: "과반 지분", minority: "소수 지분", joint_control: "공동 통제" };
+const INSTRUMENT_LABEL: Record<string, string> = { primary: "신주 인수", secondary: "구주 매입", mixed: "신주·구주 혼합" };
 const AXIS_LABEL: Record<string, string> = {
   tax_structure_note: "절세 구조",
   liability_isolation_note: "책임 격리",
@@ -85,10 +88,13 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
+  const { toast } = useToast();
   const [data, setData] = useState<View | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [artifactRef, setArtifactRef] = useState<Record<string, string>>({});
+  const [formOpen, setFormOpen] = useState(false);
+  const formRef = useRef<HTMLDetailsElement | null>(null);
   const [newHyp, setNewHyp] = useState({ vehicle: "", asset_or_stock: "", stake_type: "", instrument_mix: "", tax_structure_note: "", liability_isolation_note: "", financing_leverage_note: "", exit_structure_note: "", rationale: "" });
   const [newEntry, setNewEntry] = useState<{ kind: "source" | "use"; name: string; amount_krw_m: string; note: string }>({ kind: "source", name: "", amount_krw_m: "", note: "" });
   // ADR-0118 — S10 검토/안건구조 LLM 추천(제안). 가설 등록은 사람의 행위다.
@@ -118,10 +124,11 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   }, [projectId]);
   useEffect(() => { load(); }, [load]);
 
-  /** Records the drafted structure hypothesis (the S10 header Primary Action). */
+  /** Records the drafted structure hypothesis (the form's own submit; the header primary opens and focuses the form). */
   function saveStructure() {
     if (!newHyp.rationale.trim()) { setError("근거(rationale)는 필수입니다."); return; }
-    void post({ action: "hypothesize", ...newHyp, vehicle: newHyp.vehicle || null, asset_or_stock: newHyp.asset_or_stock || null, stake_type: newHyp.stake_type || null, instrument_mix: newHyp.instrument_mix || null });
+    void post({ action: "hypothesize", ...newHyp, vehicle: newHyp.vehicle || null, asset_or_stock: newHyp.asset_or_stock || null, stake_type: newHyp.stake_type || null, instrument_mix: newHyp.instrument_mix || null }, "투자구조 가설을 기록했습니다.");
+    setFormOpen(false);
     setNewHyp({ vehicle: "", asset_or_stock: "", stake_type: "", instrument_mix: "", tax_structure_note: "", liability_isolation_note: "", financing_leverage_note: "", exit_structure_note: "", rationale: "" });
   }
 
@@ -158,7 +165,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
     setBusy(true); setError(null);
     try {
       await api.post(`/api/projects/${encodeURIComponent(projectId)}/deal-structure`, body);
-      if (successMsg) setError(null);
+      if (successMsg) toast(successMsg);
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "저장 실패");
@@ -195,10 +202,17 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
       <StageTabs projectId={projectId} />
       <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S10")} />
       <PrimaryAction
-        label={busy ? "저장 중..." : "투자구조 저장"}
-        onClick={saveStructure}
-        disabled={!canAct || busy || !newHyp.rationale.trim()}
-        disabledReason={!canAct ? "투자구조 저장은 analyst 권한이 필요합니다." : busy ? "저장 중입니다." : "투자구조 가설 탭에서 근거(필수)를 입력하면 저장할 수 있습니다."}
+        label="투자구조 가설 기록"
+        onClick={() => {
+          setTab("hypotheses");
+          setFormOpen(true);
+          window.setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            formRef.current?.querySelector<HTMLElement>("select, input, textarea")?.focus({ preventScroll: true });
+          }, 80);
+        }}
+        disabled={!canAct}
+        disabledReason="투자구조 가설 기록은 analyst 권한이 필요합니다."
       />
       <StageFrame stageId="S10" heading="S10 투자구조 설계 — 비히클·4축 검토·자금조달">
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
@@ -242,8 +256,8 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                     {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
                   </span>
                   {reco.recommendation.vehicle && <span className="status-chip status-amber">{VEHICLE_LABEL[reco.recommendation.vehicle] ?? reco.recommendation.vehicle}</span>}
-                  {reco.recommendation.stake_type && <span className="status-chip status-not-started">지분: {reco.recommendation.stake_type}</span>}
-                  {reco.recommendation.instrument_mix && <span className="status-chip status-not-started">수단: {reco.recommendation.instrument_mix}</span>}
+                  {reco.recommendation.stake_type && <span className="status-chip status-not-started">지분: {STAKE_LABEL[reco.recommendation.stake_type] ?? reco.recommendation.stake_type}</span>}
+                  {reco.recommendation.instrument_mix && <span className="status-chip status-not-started">지급 수단 구성: {INSTRUMENT_LABEL[reco.recommendation.instrument_mix] ?? reco.recommendation.instrument_mix}</span>}
                 </p>
                 {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
                 {reco.recommendation.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">구조 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
@@ -285,8 +299,8 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
               <div className="flex flex-wrap items-center gap-1 mb-1">
                 {h.vehicle && <span className="status-chip status-amber">{VEHICLE_LABEL[h.vehicle] ?? h.vehicle}</span>}
                 {h.asset_or_stock && <span className="status-chip status-not-started">{h.asset_or_stock === "asset" ? "자산 인수" : h.asset_or_stock === "stock" ? "주식 인수" : "혼합"}</span>}
-                {h.stake_type && <span className="status-chip status-not-started">지분: {h.stake_type}</span>}
-                {h.instrument_mix && <span className="status-chip status-not-started">수표: {h.instrument_mix}</span>}
+                {h.stake_type && <span className="status-chip status-not-started">지분: {STAKE_LABEL[h.stake_type] ?? h.stake_type}</span>}
+                {h.instrument_mix && <span className="status-chip status-not-started">지급 수단 구성: {INSTRUMENT_LABEL[h.instrument_mix] ?? h.instrument_mix}</span>}
                 {h.four_axis_review_completed === 1
                   ? <span className="status-chip status-green">4축 검토 완료</span>
                   : <span className="status-chip status-red">4축 검토 미완료</span>}
@@ -324,8 +338,8 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
           )}
 
           {canAct && (
-            <details className="mt-2">
-              <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">새 투자구조 가설 기록</summary>
+            <details className="mt-2" ref={formRef} open={formOpen} onToggle={(e) => setFormOpen((e.currentTarget as HTMLDetailsElement).open)}>
+              <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">투자구조 가설 입력란 {formOpen ? "접기" : "펼치기"}</summary>
               <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
                 <label>비히클
                   <select className="sizing-new-input ml-1" value={newHyp.vehicle} onChange={(e) => setNewHyp({ ...newHyp, vehicle: e.target.value })}>
@@ -344,18 +358,13 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 <label>지분
                   <select className="sizing-new-input ml-1" value={newHyp.stake_type} onChange={(e) => setNewHyp({ ...newHyp, stake_type: e.target.value })}>
                     <option value="">—</option>
-                    <option value="full">전량(full)</option>
-                    <option value="majority">과반(majority)</option>
-                    <option value="minority">소수(minority)</option>
-                    <option value="joint_control">공동 통제</option>
+                    {Object.entries(STAKE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </label>
-                <label>수표 믹스
+                <label>지급 수단 구성
                   <select className="sizing-new-input ml-1" value={newHyp.instrument_mix} onChange={(e) => setNewHyp({ ...newHyp, instrument_mix: e.target.value })}>
                     <option value="">—</option>
-                    <option value="primary">신주(primary)</option>
-                    <option value="secondary">구주(secondary)</option>
-                    <option value="mixed">혼합</option>
+                    {Object.entries(INSTRUMENT_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </label>
               </div>
@@ -369,14 +378,18 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                   <textarea className="sizing-new-input w-full" rows={2} value={newHyp.rationale} onChange={(e) => setNewHyp({ ...newHyp, rationale: e.target.value })} />
                 </label>
               </div>
-              <button
-                type="button"
-                className="btn-ghost btn-sm mt-1"
-                disabled={busy}
-                onClick={saveStructure}
-              >
-                가설 기록
-              </button>
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm"
+                  disabled={busy || !newHyp.rationale.trim()}
+                  aria-describedby={!newHyp.rationale.trim() ? "hyp-reason" : undefined}
+                  onClick={saveStructure}
+                >
+                  {busy ? "기록 중..." : "가설 기록"}
+                </button>
+                {!newHyp.rationale.trim() && <span id="hyp-reason" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거(필수)를 입력하면 기록할 수 있습니다.</span>}
+              </div>
             </details>
           )}
         </section>
