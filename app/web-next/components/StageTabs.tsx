@@ -17,6 +17,7 @@ import {
   type StageTabGroup,
 } from "../lib/stage-tabs.ts";
 import { StageRail } from "./StageFrame.tsx";
+import { PrimarySlot } from "./ui.tsx";
 
 function StageTabsInner({ projectId }: { projectId: string }) {
   const pathname = usePathname();
@@ -50,6 +51,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
     <>
     {/* Layer 2 for every project page — StageFrame skips its own rail under /projects/ so it is never doubled. */}
     <StageRail current={[group.stage]} />
+    <div className="stage-tabs-bar">
     <nav aria-label={`${group.stage} 화면`} className="stage-tabs-wrap">
       <div className="stage-tabs" role="tablist" aria-label={`${group.stage} · ${group.name}`} ref={listRef} onKeyDown={onKeyDown}>
         {group.tabs.map((t, i) => {
@@ -113,6 +115,9 @@ function StageTabsInner({ projectId }: { projectId: string }) {
         )}
       </div>
     </nav>
+    {/* The screen's Primary Action (design §5) sits at the top right, beside the stage tabs. */}
+    <PrimarySlot />
+    </div>
     </>
   );
 }

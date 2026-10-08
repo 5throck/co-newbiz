@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { PageState, ControlChip } from "../../components/ui.tsx";
+import { PageState, ControlChip, PrimaryAction } from "../../components/ui.tsx";
 import { InboxList } from "../../components/InboxList.tsx";
 import { ReviewBuckets } from "../../components/ReviewBuckets.tsx";
 import { useInbox } from "../../lib/use-inbox.ts";
@@ -43,6 +43,16 @@ export default function InboxPage() {
 
   useEffect(() => { setSnoozed(readSnooze()); }, []);
 
+  // Single-column layout (<= 880px): the detail pane is a pushed view, so the list view needs its own primary.
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 880px)");
+    const sync = () => setNarrow(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   const items = useMemo(
     () => (result?.items ?? []).filter((i) => kinds.has(i.kind) && (!deal || i.dealId === deal) && !((snoozed[i.id] ?? 0) > Date.now())),
     [result, kinds, deal, snoozed],
@@ -71,7 +81,14 @@ export default function InboxPage() {
 
   return (
     <main className="inbox-page">
-      <h1>결정 대기함</h1>
+      <div className="page-header-row">
+        <h1>결정 대기함</h1>
+        {narrow && !mobileDetail && items.length > 0 && (
+          <span className="ml-auto">
+            <PrimaryAction inline label="맨 위 항목 열기" onClick={() => select(items[0].id)} />
+          </span>
+        )}
+      </div>
       <p className="inbox-lead">
         내가 판단해야 하는 항목을 한곳에 모았습니다. 이 화면은 조회 전용이며, 결정은 각 항목의 기존 사람 전용 화면에서만 기록됩니다.
       </p>

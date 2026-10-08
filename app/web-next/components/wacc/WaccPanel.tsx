@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SourceTooltip } from "../SourceTooltip.tsx";
+import { ParamTable } from "../ui.tsx";
 import { RoicWaterfallChart } from "../RoicWaterfallChart.tsx";
 import { BetaPanel, type PeerRow } from "./BetaPanel.tsx";
 import { DerivationTable } from "./DerivationTable.tsx";
@@ -176,7 +177,9 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   // ── 모드 ──
-  const [mode, setMode] = useState<"direct" | "capm">("direct");
+  // CAPM decomposition is the structured default (the parameters analysts tune live there);
+  // a project whose saved WACC is a direct user input keeps opening in direct mode.
+  const [mode, setMode] = useState<"direct" | "capm">("capm");
 
   // ── 참조값 (ADR-0116 Phase 4; 제안일 뿐 — 확정은 사람) ──
   interface Sugg { key: string; value: number | null; as_of?: string; anchor_ref?: string; source_label?: string; reason?: string }
@@ -235,7 +238,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         setView(r.data);
         setDirectWacc(String(r.data.wacc.value));
         if (r.data.hurdle_irr) setHurdle(String(r.data.hurdle_irr.value));
-        if (r.data.components.length > 0) setMode("capm");
+        setMode(r.data.components.length === 0 && r.data.wacc.source === "user" ? "direct" : "capm");
         setError(null);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "WACC 정보를 불러오지 못했습니다."));
@@ -455,38 +458,41 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         <section className="market-section sizing-step">
           <h3 className="sizing-step-title">현재 확정값</h3>
           {!view ? <p>불러오는 중...</p> : (
-            <dl className="grid gap-2 md:grid-cols-2 text-sm">
-              <div>
-                <dt className="text-[color:var(--muted-fg)]">WACC</dt>
-                <dd className="font-semibold">
-                  <SourceTooltip provenance={{ as_of: view.wacc.as_of, source: view.wacc.rationale, anchor_ref: view.wacc.anchor_ref, run_id: view.wacc.run_id, assumption_key: "wacc" }}>
-                    {pct(view.wacc.value)} ({view.wacc.source})
-                  </SourceTooltip>
-                </dd>
-              </div>
-              <div><dt className="text-[color:var(--muted-fg)]">Hurdle IRR</dt><dd className="font-semibold">{pct(view.hurdle_irr?.value)}</dd></div>
-              <div>
-                <dt className="text-[color:var(--muted-fg)]">WACC 적용 주체</dt>
-                <dd className="font-semibold">
-                  {view.subject.subject === "promoter" ? "투자주체 (promoter)" : view.subject.subject === "target" ? "대상기업 (target)" : "신설법인 (project_newco)"}
-                  <span className="status-chip status-info ml-1">{view.subject.source === "user" ? "사람 확정" : "트랙 기본값"}</span>
-                </dd>
-                {view.subject.source === "user" && view.subject.rationale && (
-                  <dd className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{view.subject.rationale}</dd>
-                )}
-              </div>
-              {view.relevering && (
-                <div>
-                  <dt className="text-[color:var(--muted-fg)]">재레버링 베타 참조</dt>
-                  <dd className="font-semibold tabular-nums">
-                    {view.relevering.beta_levered.toFixed(3)}
-                    <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]"> = βu {view.relevering.beta_unlevered.toFixed(2)} × (1 + (1−t) × D/E {view.relevering.target_de.toFixed(2)})</span>
-                  </dd>
-                </div>
-              )}
-              <div><dt className="text-[color:var(--muted-fg)]">Run</dt><dd className="font-mono">{view.wacc.run_id ?? "—"}</dd></div>
-              <div><dt className="text-[color:var(--muted-fg)]">As of</dt><dd>{view.wacc.as_of ?? "—"}</dd></div>
-            </dl>
+            <ParamTable
+              caption="현재 확정된 WACC 값"
+              labelHeader="항목"
+              rows={[
+                {
+                  label: "WACC",
+                  value: (
+                    <SourceTooltip provenance={{ as_of: view.wacc.as_of, source: view.wacc.rationale, anchor_ref: view.wacc.anchor_ref, run_id: view.wacc.run_id, assumption_key: "wacc" }}>
+                      {pct(view.wacc.value)}
+                    </SourceTooltip>
+                  ),
+                  source: <span className="status-chip status-info">{view.wacc.source}</span>,
+                },
+                { label: "Hurdle IRR", value: pct(view.hurdle_irr?.value) },
+                {
+                  label: "WACC 적용 주체",
+                  value: view.subject.subject === "promoter" ? "투자주체 (promoter)" : view.subject.subject === "target" ? "대상기업 (target)" : "신설법인 (project_newco)",
+                  source: (
+                    <>
+                      <span className="status-chip status-info">{view.subject.source === "user" ? "사람 확정" : "트랙 기본값"}</span>
+                      {view.subject.source === "user" && view.subject.rationale ? <span className="block">{view.subject.rationale}</span> : null}
+                    </>
+                  ),
+                },
+                ...(view.relevering
+                  ? [{
+                      label: "재레버링 베타 참조",
+                      value: view.relevering.beta_levered.toFixed(3),
+                      source: `= βu ${view.relevering.beta_unlevered.toFixed(2)} × (1 + (1−t) × D/E ${view.relevering.target_de.toFixed(2)})`,
+                    }]
+                  : []),
+                { label: "Run", value: view.wacc.run_id ?? "—" },
+                { label: "As of", value: view.wacc.as_of ?? "—" },
+              ]}
+            />
           )}
         </section>
 

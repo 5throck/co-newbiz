@@ -5,7 +5,7 @@
 // 리프레시 토큰이 즉시 무효가 된다(다음 호출부터 401).
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../../../lib/api.ts";
-import { Button, PageState, useToast } from "../../../components/ui.tsx";
+import { Button, PageState, PrimaryAction, useToast } from "../../../components/ui.tsx";
 
 interface ConnectedApp {
   client_id: string;
@@ -24,6 +24,7 @@ export default function ConnectedAppsPage() {
   const [apps, setApps] = useState<ConnectedApp[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
   const { toast } = useToast();
 
   const load = useCallback(() => {
@@ -52,7 +53,23 @@ export default function ConnectedAppsPage() {
 
   return (
     <main aria-labelledby="apps-heading">
-      <h1 id="apps-heading">연결된 앱</h1>
+      <div className="page-header-row">
+        <h1 id="apps-heading">연결된 앱</h1>
+        <span className="ml-auto">
+          <PrimaryAction inline label="앱 연결하기" onClick={() => setGuideOpen((v) => !v)} />
+        </span>
+      </div>
+      {guideOpen && (
+        <section aria-label="앱 연결 방법" className="market-section mb-3">
+          <h2 className="text-[length:var(--fs-body)] mb-1">앱 연결 방법</h2>
+          <ol className="sizing-note-list">
+            <li>사용하는 AI 앱의 커넥터(MCP) 설정에서 아래 주소를 추가합니다.</li>
+            <li>앱이 이 화면으로 연결 허용 요청을 보내면 내용을 확인하고 직접 허용합니다. 앱은 내 권한 범위에서만 동작합니다.</li>
+            <li>허용하면 이 목록에 나타나며, 아래 해지로 언제든 접근을 끊을 수 있습니다.</li>
+          </ol>
+          <p className="mb-0"><code>{typeof window === "undefined" ? "/api/mcp" : `${window.location.origin}/api/mcp`}</code></p>
+        </section>
+      )}
       <p className="objective">
         OAuth로 허용한 외부 AI 앱(MCP 커넥터) 목록입니다. 해지하면 그 앱의 모든 토큰이 즉시 무효가 됩니다.
       </p>

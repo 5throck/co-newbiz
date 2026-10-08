@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
+import { ParamTable } from "../ui.tsx";
 
 interface PriceProposal {
   unit_price: number;
@@ -156,22 +157,26 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
           </p>
         ) : (
           <>
-            <dl className="grid gap-2 md:grid-cols-3 text-sm">
-              <div><dt className="text-[color:var(--muted-fg)]">시장가격</dt><dd className="font-semibold tabular-nums">{won(latest.marketPrice)}</dd></div>
-              <div><dt className="text-[color:var(--muted-fg)]">목표마진</dt><dd className="font-semibold">{pct(latest.targetMargin)}</dd></div>
-              <div><dt className="text-[color:var(--muted-fg)]">허용원가</dt><dd className="font-semibold tabular-nums">{won(latest.allowableCost)}</dd></div>
-              <div><dt className="text-[color:var(--muted-fg)]">추정 단위원가</dt><dd className="font-semibold tabular-nums">{won(latest.estimatedUnitCost)}</dd></div>
-              <div>
-                <dt className="text-[color:var(--muted-fg)]">격차</dt>
-                <dd className="font-semibold tabular-nums">
-                  {won(latest.gap)}
-                  <span className={`status-chip ml-1 ${latest.thresholdExceeded ? "status-danger" : "status-info"}`}>
-                    {pct(latest.gapRatio)} {latest.thresholdExceeded ? "⚠ 임계 초과" : "임계 이내"}
-                  </span>
-                </dd>
-              </div>
-              <div><dt className="text-[color:var(--muted-fg)]">출처</dt><dd>{latest.source === "peer_benchmark" ? "peer 벤치마크" : "사용자 입력"}</dd></div>
-            </dl>
+            <ParamTable
+              caption="최근 목표원가 격차 분석"
+              labelHeader="항목"
+              rows={[
+                { label: "시장가격", value: won(latest.marketPrice) },
+                { label: "목표마진", value: pct(latest.targetMargin) },
+                { label: "허용원가", value: won(latest.allowableCost) },
+                { label: "추정 단위원가", value: won(latest.estimatedUnitCost) },
+                {
+                  label: "격차",
+                  value: won(latest.gap),
+                  source: (
+                    <span className={`status-chip ${latest.thresholdExceeded ? "status-danger" : "status-info"}`}>
+                      {pct(latest.gapRatio)} {latest.thresholdExceeded ? "⚠ 임계 초과" : "임계 이내"}
+                    </span>
+                  ),
+                },
+                { label: "출처", value: latest.source === "peer_benchmark" ? "peer 벤치마크" : "사용자 입력" },
+              ]}
+            />
             {latest.levers.length > 0 && (
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">축소 방안: {latest.levers.join(" · ")}</p>
             )}

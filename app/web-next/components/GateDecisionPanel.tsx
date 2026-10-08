@@ -4,12 +4,13 @@
 // 경계 #2: 에이전트는 진행 출력을 '권고'할 뿐, GO/HOLD/KILL 기록은 사람의 행위다.
 // 이 패널은 그 기록 행위의 표준 UI이며 /route-decision·/greenfield·/brownfield에
 // 마운트된다. HOLD는 missing_artifacts 없이 기록할 수 없다(soft-pass 방지).
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
 import { ReviewBuckets } from "./ReviewBuckets.tsx";
+import { PrimaryAction } from "./ui.tsx";
 
 interface GateLatest {
   gate: string;
@@ -26,6 +27,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const [history, setHistory] = useState<GateHistoryRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const formId = `gate-decision-${useId().replace(/:/g, "")}`;
   const [form, setForm] = useState<{ gate: GateMetaId; decision: "go" | "hold" | "kill"; rationale: string; missing: string }>({
     gate: gates[0],
     decision: "go",
@@ -226,6 +228,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
 
       {canRecord ? (
         <form
+          id={formId}
           className="sizing-new-form"
           aria-label="의사결정 기록"
           onSubmit={(e) => { e.preventDefault(); void record(); }}
@@ -277,12 +280,23 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
               />
             </label>
           )}
-          <button type="submit" className={`${primary ? "btn-primary" : "btn-ghost"} btn-sm mt-2`} disabled={saving || !form.rationale.trim()}>
+          {primary && (
+            <PrimaryAction
+              form={formId}
+              label={saving ? "기록 중..." : "결정 기록 (사람)"}
+              disabled={saving || !form.rationale.trim()}
+              disabledReason={saving ? "기록 중입니다." : "근거를 입력하면 결정을 기록할 수 있습니다."}
+            />
+          )}
+          <button type="submit" className="btn-ghost btn-sm mt-2" disabled={saving || !form.rationale.trim()}>
             {saving ? "기록 중..." : "결정"}
           </button>
         </form>
       ) : (
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">결정 기록은 analyst 역할 이상만 가능합니다.</p>
+        <>
+          {primary && <PrimaryAction label="결정 기록 (사람)" disabled disabledReason="결정 기록은 analyst 역할 이상만 가능합니다." />}
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">결정 기록은 analyst 역할 이상만 가능합니다.</p>
+        </>
       )}
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p>}

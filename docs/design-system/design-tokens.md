@@ -36,8 +36,8 @@ When building screens, colors must be specified only through these tokens; raw c
 
 > Wave U-2: `--fs-body` 0.875rem (14px floor), `--fs-caption` 0.8125rem (13px, captions/source/units only), `--lh-body` 1.5, `--lh-table` 1.35; spacing `--space-1..4,6,8` = 4/8/12/16/24/32px. `design:lint` rejects font-size below 14px outside these tokens.
 
-- Body text is 15px with 1.65× line height, secondary explanations are 14px, and the smallest labels (micro text) are 12px — these size differences are what let the screen communicate "is this a heading, body text, or a side note?"
-- Spacing follows an 8px rhythm (8/16/24/32) — spacing values are utility literals on the 8px grid rather than a spacing token; arbitrary numbers (e.g., 13px, 17px) are avoided so margins keep a steady rhythm across screens.
+- Body text is 14px (`--fs-body`, 0.875rem) with 1.5× line height (tables 1.35×, `--lh-table`); long-form reading text may use 15–16px. Captions, sources and units are 13px (`--fs-caption`, 0.8125rem) — the floor for secondary metadata, never used for values. There is no micro tier below 13px (the former 12px micro text was removed in Wave U-2). Stepper labels, tab labels and table cells are 14px. These size differences are what let the screen communicate "is this a heading, body text, or a side note?"
+- Spacing follows the `--space-1..8` token scale (4/8/12/16/24/32px; `--space-5` and `--space-7` are intentionally unused) — new CSS uses these tokens instead of ad hoc rem values, so margins keep a steady rhythm across screens. Arbitrary numbers (e.g., 13px, 17px) are avoided.
 - Corner radius uses the token scale — `--radius-sm`, `--radius-md` (0.625rem), `--radius-lg`, and `--radius-full` (pills/circles) — never a raw px value; `--radius-md` is the default for interactive controls (buttons, inputs, chips).
 - Amounts are written as integers without decimals, in units of a million KRW, with commas every three digits (e.g., 9,000). This notation is standardized across all screens.
 

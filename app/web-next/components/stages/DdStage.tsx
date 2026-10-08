@@ -223,7 +223,7 @@ export function DdStage({ projectId }: { projectId: string }) {
   return (
 <>
       <StageTabs projectId={projectId} />
-      <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S9")} />
+      <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S9")} headerPrimary />
       <StageFrame stageId="S9" heading="S9 실사·검증 — DD 체크리스트 판정">
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           적용 체크리스트의 모든 항목이 판정되고 필수 미충족이 0건이어야 S9이 완료됩니다 (flow.spec v2.0.0).

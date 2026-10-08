@@ -6,7 +6,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
-import { PageState } from "../../components/ui.tsx";
+import { PageState, PrimaryAction } from "../../components/ui.tsx";
+import { STAGE_TAB_GROUPS } from "../../lib/stage-tabs.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { GATE_LABEL, type GateMetaId } from "../../lib/stage-meta.ts";
 
@@ -160,7 +161,7 @@ function DealsBoard() {
         tone: hold ? "amber" : stage === "S12" ? "green" : "gray",
         hold, track,
         meta: p.projectNo,
-        href: `/projects/${p.projectId}/process`,
+        href: projectStageHref(p.projectId, stage),
       };
     });
     return [...oppCards, ...projectCards];
@@ -201,9 +202,9 @@ function DealsBoard() {
     <main>
       <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 8 }}>
         <h1>검토/안건 보드</h1>
-        <Link href="/market" className="btn-primary btn-sm" style={{ textDecoration: "none", display: "inline-block" }}>
-          ＋ 새 검토/안건 시작 (시장분석부터)
-        </Link>
+        <span className="ml-auto">
+          <PrimaryAction inline href="/market" label="＋ 새 검토 시작 (시장분석부터)" />
+        </span>
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
         모든 검토/안건을 퍼널 한 장으로 봅니다 — 기회(S1~S7)와 프로젝트(S8~S12), 진행 에이징까지.
@@ -240,7 +241,7 @@ function DealsBoard() {
           <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 8px" }}>
             첫 신규사업 검토는 시장분석(S1)부터 시작합니다 — 4단계 가이드가 준비되어 있습니다.
           </p>
-          <Link href="/onboarding" className="btn-primary btn-sm" style={{ textDecoration: "none", display: "inline-block" }}>
+          <Link href="/onboarding" className="btn-ghost btn-sm" style={{ textDecoration: "none", display: "inline-block" }}>
             시작하기 가이드 보기
           </Link>
         </div>
@@ -324,6 +325,12 @@ function DealsBoard() {
       )}
     </main>
   );
+}
+
+/** Opening a deal lands on the workspace of the stage it is currently in (design: "one thing to do next"). */
+function projectStageHref(projectId: string, stage: string): string {
+  const group = STAGE_TAB_GROUPS.find((g) => g.stage === stage);
+  return `/projects/${projectId}${group?.tabs[0]?.seg ?? "/process"}`;
 }
 
 export default function DealsPage() {
