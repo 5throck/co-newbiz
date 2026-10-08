@@ -13,6 +13,7 @@ import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { useConfirm } from "../../../components/crud.tsx";
 import { SectionToolbar } from "../../../components/layout.tsx";
 import { ScenarioPremises, SketchCanvas } from "../../../components/SketchCanvas.tsx";
+import { ClosureModal } from "../../../components/ClosureModal.tsx";
 import { PromotionPanel } from "../../../components/PromotionPanel.tsx";
 
 interface OpportunityRow {
@@ -43,6 +44,7 @@ export function OpportunityDetail() {
   const searchParams = useSearchParams();
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
+  const [closing, setClosing] = useState(false);
   const [opp, setOpp] = useState<OpportunityRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [factors, setFactors] = useState<OppFactors | null>(null);
@@ -188,9 +190,23 @@ export function OpportunityDetail() {
           </span>
         }
         actions={
-          <Link href="/opportunities" className="btn-ghost btn-sm">← 목록으로</Link>
+          <span className="flex items-center gap-1 flex-wrap">
+            {canAct && opp.status !== "dropped" && !opp.project_id && (
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setClosing(true)}>종료…</button>
+            )}
+            <Link href="/opportunities" className="btn-ghost btn-sm">← 목록으로</Link>
+          </span>
         }
       />
+      {closing && (
+        <ClosureModal
+          entity="opportunity"
+          entityId={id}
+          entityName={opp.name}
+          onClose={() => setClosing(false)}
+          onDone={() => { setClosing(false); window.location.reload(); }}
+        />
+      )}
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
       {/* 기회 개요 + 매력도 평가 */}

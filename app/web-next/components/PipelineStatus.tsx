@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 
 interface PipelineStatusData {
   pipeline_run_id: string | null;
-  status: "none" | "running" | "paused_for_human" | "completed" | "failed" | "killed";
+  status: "none" | "running" | "paused_for_human" | "completed" | "failed" | "killed" | "withdrawn";
   current_stage: string | null;
   paused_reason: string | null;
   deep_link: string | null;
@@ -33,6 +33,7 @@ const STATE_CHIP: Record<PipelineStatusData["status"], { chip: string; icon: str
   completed: { chip: "status-green", icon: "✓" },
   failed: { chip: "status-red", icon: "!" },
   killed: { chip: "status-not-started", icon: "■" },
+  withdrawn: { chip: "status-not-started", icon: "■" },
 };
 
 export function PipelineStatus({ opportunityId }: { opportunityId: string }) {
@@ -60,6 +61,7 @@ export function PipelineStatus({ opportunityId }: { opportunityId: string }) {
     : status.status === "paused_for_human" ? `확인 대기: ${reasonLabel(status.paused_reason ?? "")}`
     : status.status === "completed" ? "파이프라인 완료"
     : status.status === "killed" ? "중단(KILL)"
+    : status.status === "withdrawn" ? "철회(종료)"
     : "파이프라인 실패";
 
   const chipNode = (

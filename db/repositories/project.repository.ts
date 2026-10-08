@@ -30,6 +30,7 @@ import { getDb } from "../client.ts";
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit, grantProjectMembership, logDataAccess } from "../lib/access-control.ts";
 import { getCurrentRouteDecision } from "./route-decision.repository.ts";
+import { ClosureError, closeEntity, type ClosureType } from "./closure.repository.ts";
 
 export interface ProjectRow {
   id: string;
@@ -39,6 +40,7 @@ export interface ProjectRow {
   status?: "open" | "closed" | "archived";
   closed_at?: string | null;
   closure_reason?: string | null;
+  closure_type?: string | null;
   /** 0013 classification vocabulary — set at promotion (ADR-0095); the definitive value is classified on project_classification. */
   origin?: string | null;
   /** greenfield/brownfield snapshot of the opportunity's route decision at promotion time (ADR-0095). */
@@ -479,7 +481,7 @@ export function listVisibleProjects(callerId: string, opts: VisibilityOptions = 
   const db = getDb();
   const rows = db
     .query(
-      `SELECT p.id, p.project_no, p.project_name, p.created_at, p.status, p.closed_at, p.closure_reason,
+      `SELECT p.id, p.project_no, p.project_name, p.created_at, p.status, p.closed_at, p.closure_reason, p.closure_type,
               p.origin, p.track, p.source_opportunity_id, p.deleted_at, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
        FROM md_project p
        JOIN project_member m ON m.project_id = p.id
@@ -518,7 +520,7 @@ export function getProjectIfVisible(
   const db = getDb();
   const row = db
     .query(
-      `SELECT p.id, p.project_no, p.project_name, p.created_at, p.status, p.closed_at, p.closure_reason,
+      `SELECT p.id, p.project_no, p.project_name, p.created_at, p.status, p.closed_at, p.closure_reason, p.closure_type,
               p.origin, p.track, p.source_opportunity_id, p.deleted_at, COALESCE(c.mnpi_flag, 0) AS mnpi_flag
        FROM md_project p
        JOIN project_member m ON m.project_id = p.id
@@ -563,9 +565,24 @@ export class ProjectLifecycleError extends Error {
   }
 }
 
+/**
+ * closeProject — thin wrapper over closeEntity (ADR-0152). Closing a project
+ * ('closed') now REQUIRES a closureType and its blocking precondition; the old
+ * reason-only call path fails closed. Archiving ('archived') is a separate,
+ * post-closure retention step: it requires status 'closed' (typed, or legacy
+ * untyped per the ADR-0151 grandfathering precedent) and never re-closes.
+ */
 export function closeProject(
   projectId: string,
-  opts: { status?: "closed" | "archived"; closureReason: string; closedBy: string },
+  opts: {
+    status?: "closed" | "archived";
+    closureReason: string;
+    closedBy: string;
+    closureType?: ClosureType;
+    basisId?: string;
+    learningCapture?: string;
+    agentIds?: ReadonlySet<string>;
+  },
 ): ProjectRow {
   const targetStatus = opts.status ?? "closed";
   if (targetStatus !== "closed" && targetStatus !== "archived") {
@@ -575,22 +592,35 @@ export function closeProject(
     throw new ProjectLifecycleError("precondition_failed", "closureReason is required for project closure/archival.");
   }
   const db = getDb();
+  if (targetStatus === "closed") {
+    if (!opts.closureType) {
+      throw new ProjectLifecycleError("precondition_failed", "closureType is required — a project can only be closed with a typed closure (ADR-0152).");
+    }
+    closeEntity({
+      entityType: "project",
+      entityId: projectId,
+      closureType: opts.closureType,
+      basisId: opts.basisId,
+      closureReason: opts.closureReason,
+      learningCapture: opts.learningCapture,
+      closedBy: opts.closedBy,
+      agentIds: opts.agentIds,
+      db,
+    });
+    return db.query("SELECT * FROM md_project WHERE id = ?").get(projectId) as ProjectRow;
+  }
+  if (opts.agentIds?.has(opts.closedBy)) {
+    throw new ClosureError("agent_forbidden", "Archival is a human decision; an agent identity cannot archive a project.");
+  }
   const now = new Date().toISOString();
-  const row = db.transaction(() => {
-    const existing = db.query("SELECT id, project_no FROM md_project WHERE id = ?").get(projectId) as
-      | { id: string; project_no: string }
-      | undefined;
+  return db.transaction(() => {
+    const existing = db.query("SELECT id, status FROM md_project WHERE id = ?").get(projectId) as { id: string; status: string } | undefined;
     if (!existing) throw new ProjectLifecycleError("not_found", `project '${projectId}' not found.`);
-    db.run(
-      "UPDATE md_project SET status = ?, closed_at = COALESCE(closed_at, ?), closure_reason = ? WHERE id = ?",
-      [targetStatus, now, opts.closureReason.trim(), projectId],
-    );
-    db.run(
-      "UPDATE pipeline_run SET status = 'completed', current_stage = COALESCE(current_stage, 'closed'), paused_reason = NULL, updated_at = ? WHERE entity_type = 'project' AND entity_id = ? AND status IN ('running','paused_for_human')",
-      [now, projectId],
-    );
-    appendAudit(db, { actor: opts.closedBy, action: `project_${targetStatus}`, target: projectId, now });
+    if (existing.status !== "closed") {
+      throw new ProjectLifecycleError("precondition_failed", "A project can only be archived after it is closed (ADR-0152) — close it with a closure type first.");
+    }
+    db.run("UPDATE md_project SET status = 'archived' WHERE id = ?", [projectId]);
+    appendAudit(db, { actor: opts.closedBy, action: "project_archived", target: projectId, now });
     return db.query("SELECT * FROM md_project WHERE id = ?").get(projectId) as ProjectRow;
   })();
-  return row;
 }

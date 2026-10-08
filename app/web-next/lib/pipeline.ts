@@ -27,7 +27,7 @@ import { tailorDdChecklist, ddCompletionSummary } from "./dd-checklist-tailor.ts
 import { conveneCommitteeSession, getCommittee, listCommitteeSessions } from "./committee-session.ts";
 import { promoteOpportunity } from "../../../db/repositories/project.repository.ts";
 
-export type PipelineStatus = "running" | "paused_for_human" | "completed" | "failed" | "killed";
+export type PipelineStatus = "running" | "paused_for_human" | "completed" | "failed" | "killed" | "withdrawn";
 
 export interface PipelineRunRow {
   id: string;
@@ -396,6 +396,31 @@ export interface AdvanceResult {
 }
 
 /**
+ * S12 stale flip (ADR-0152 §3.3): a 'completed' project run whose S12
+ * predicate went incomplete (stale review cycle) goes back to 'running' at
+ * S12 — but ONLY for an open project. Closure is terminal: a closed project
+ * (typed closure_record) is never reopened by staleness. The evaluator is
+ * injectable so the flip is unit-testable without satisfying S8–S11.
+ */
+export function maybeReopenStaleS12(
+  run: PipelineRunRow,
+  evaluate: (entity: ProcessEntity) => Pick<ProcessEvaluation, "currentStage"> = evaluateProcess,
+): PipelineRunRow {
+  if (run.status !== "completed" || run.entity_type !== "project" || run.current_stage !== "S12") return run;
+  const project = getDb().query("SELECT status FROM md_project WHERE id = ?").get(run.entity_id) as { status: string } | undefined;
+  if (project?.status !== "open") return run;
+  let stale = false;
+  try {
+    stale = evaluate({ type: "project", id: run.entity_id }).currentStage === "S12";
+  } catch {
+    stale = false;
+  }
+  if (!stale) return run;
+  setRunState(run.id, "running", { currentStage: "S12" });
+  return getRun(run.id);
+}
+
+/**
  * advancePipeline — one synchronous pass of the loop. Returns the run in its
  * terminal-for-now state: completed / killed / failed, or paused_for_human
  * with a machine-readable paused_reason and a notification row.
@@ -403,7 +428,10 @@ export interface AdvanceResult {
 export async function advancePipeline(pipelineRunId: string, opts: { actor?: string } = {}): Promise<AdvanceResult> {
   const actions: string[] = [];
   let run = getRun(pipelineRunId);
-  if (run.status === "completed" || run.status === "failed" || run.status === "killed") {
+  const reopened = maybeReopenStaleS12(run);
+  if (reopened.status !== run.status) actions.push("reopened:s12_stale");
+  run = reopened;
+  if (run.status === "completed" || run.status === "failed" || run.status === "killed" || run.status === "withdrawn") {
     return { run, actions };
   }
 

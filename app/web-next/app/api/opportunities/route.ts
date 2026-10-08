@@ -51,6 +51,9 @@ export async function POST(request: Request) {
     status?: string; rationale?: string;
   } | null;
   if (!body?.name?.trim()) return badRequest("invalid_request", "name is required.");
+  if (body.status === "dropped") {
+    return badRequest("typed_closure_required", "dropped는 생성 시 지정할 수 없습니다 — POST /api/opportunities/[id]/close로 제외하세요 (ADR-0152).");
+  }
   if (body.status && !STATUSES.has(body.status)) {
     return badRequest("invalid_request", `status must be one of ${[...STATUSES].join("|")}.`);
   }

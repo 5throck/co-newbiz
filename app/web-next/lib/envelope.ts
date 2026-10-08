@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 
-export type EnvelopeStatus = 200 | 201 | 202 | 400 | 401 | 403 | 404 | 409 | 423 | 429 | 500 | 503;
+export type EnvelopeStatus = 200 | 201 | 202 | 400 | 401 | 403 | 404 | 409 | 422 | 423 | 429 | 500 | 503;
 
 export interface ErrorBody {
   code: string;
@@ -44,3 +44,4 @@ export const unauthorized = (code: string, message: string) => fail(401, code, m
 export const forbidden = (code: string, message: string) => fail(403, code, message);
 export const notFound = (message = "Not found.") => fail(404, "not_found", message);
 export const badRequest = (code: string, message: string) => fail(400, code, message);
+export const unprocessable = (code: string, message: string) => fail(422, code, message);
