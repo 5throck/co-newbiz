@@ -1,5 +1,5 @@
 case_id: pilot-005
-golden_version: 1.0.0
+golden_version: 1.1.0
 source_doc: docs/pilots/pilot-005-sk-hynix-yongin-cluster.md
 deal_type: greenfield
 inputs_ref: fixtures/pilot-005.input.json

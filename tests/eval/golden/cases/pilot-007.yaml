@@ -1,5 +1,5 @@
 case_id: pilot-007
-golden_version: 1.0.0
+golden_version: 1.1.0
 source_doc: docs/pilots/pilot-007-punggu-offshore-wind.md
 deal_type: greenfield
 inputs_ref: fixtures/pilot-007.input.json

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * run.ts — `bun run eval`: AI evaluation harness (Wave B-2).
  * Design of record: docs/designs/2026-10-08-wave-b-ai-eval-design.md §4.
@@ -16,13 +16,14 @@
 import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { runCalibrationSuite } from "./calibration.ts";
 import { checkThresholds, runDeterministicSuites } from "./deterministic.ts";
 import { checkInventory } from "./inventory.ts";
 import { BudgetExceeded, LLM_SUITES, RunLedger, metered, promptHashes, realEvalLlm, type EvalLlm, type LlmSuiteName } from "./llm-suites.ts";
 import { loadGoldenSet, ROOT, type GoldenSet } from "./loader.ts";
 import { meanScore, type SuiteResult } from "./types.ts";
 
-export const DETERMINISTIC_SUITES = ["rag", "kill", "antitrust"] as const;
+export const DETERMINISTIC_SUITES = ["rag", "kill", "antitrust", "calibration"] as const;
 export const DEFAULT_MAX_COST_USD = 2.0;
 export const REPORT_DIR = join(ROOT, "docs", "reports", "eval");
 
@@ -106,7 +107,7 @@ export async function runEval(
   if (wantsLlmSuite && !opts.llm) throw new Error(`suite "${opts.suite}" calls an LLM; pass --llm (and set CO_NEWBIZ_EVAL_LLM=1)`);
   if (opts.llm && env.CO_NEWBIZ_EVAL_LLM !== "1") throw new Error("--llm refused: set CO_NEWBIZ_EVAL_LLM=1 to confirm that this run may spend provider budget");
 
-  const detAll = runDeterministicSuites(set);
+  const detAll = [...runDeterministicSuites(set), runCalibrationSuite(set)];
   const suites: SuiteResult[] = detAll.filter((s) => !opts.suite || s.name === opts.suite);
   const skipped: string[] = [];
   const ledger = new RunLedger(opts.maxCostUsd);
@@ -189,8 +190,11 @@ export function renderScoreboard(run: EvalRun, meta: { runId: string; date: stri
   l.push("");
   for (const s of run.suites) {
     l.push(`## Suite: ${s.name}`, "");
-    const extra = Object.entries(s.metrics).map(([k, v]) => `${k} ${pct(v)}`);
-    if (extra.length) l.push(`Metrics: ${extra.join(", ")}`, "");
+    if (s.detail) l.push(...s.detail, "");
+    else {
+      const extra = Object.entries(s.metrics).map(([k, v]) => `${k} ${pct(v)}`);
+      if (extra.length) l.push(`Metrics: ${extra.join(", ")}`, "");
+    }
     l.push("| Case | Stage | Function | Score | Failures |", "|---|---|---|---|---|");
     for (const c of s.cases) l.push(`| ${c.caseId} | ${c.stage} | ${c.fn} | ${pct(c.score)} | ${c.failures.length ? c.failures.join("; ").replace(/\|/g, "/") : "-"} |`);
     l.push("");
@@ -232,6 +236,8 @@ if (import.meta.main) {
     const opts = parseArgs(process.argv.slice(2));
     const run = await runEval(opts);
     for (const s of run.suites) console.log(`${s.name.padEnd(14)} ${s.kind.padEnd(14)} cases=${s.cases.length} mean=${pct(meanScore(s.cases))} could-not-evaluate=${s.couldNotEvaluate.length}`);
+    const cal = run.suites.find((s) => s.name === "calibration");
+    if (cal) console.log(`calibration    n_engine=${cal.metrics.n_engine} n_reference=${cal.metrics.n_reference} brier_reference=${cal.metrics.brier_reference?.toFixed(3) ?? "n/a"} (insufficient for weight changes)`);
     for (const k of run.skipped) console.log(`skipped: ${k}`);
     if (opts.report) {
       const id = opts.runId ?? `${run.provider.model === "-" ? "offline" : "llm"}-${Date.now().toString(36)}`;
