@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -48,7 +48,7 @@ function InterviewsView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>전문가 인터뷰·채널 체크</h1>
       <p className="objective">CDD 증적(인터뷰·채널 확인)을 기록합니다 — 증적 참조가 필수이며 주제별 합의·엇갈림이 롤업됩니다.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

@@ -34,10 +34,13 @@ import {
   FolderKanban,
   PanelLeftClose,
   PanelLeftOpen,
+  Inbox,
+  Archive,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-client.tsx";
 import { api, type NotificationRow } from "../lib/api.ts";
 import { ADMIN_NAV, NAV_SECTIONS, type NavItem } from "../lib/navigation.ts";
+import { useInbox } from "../lib/use-inbox.ts";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
 import { ThemeToggle } from "./ThemeToggle.tsx";
 
@@ -64,20 +67,14 @@ interface AdminNavItem {
 // 순서 드리프트는 tests/unit/navigation.test.ts가 잡는다. 이 파일은 아이콘만
 // 입힌다.
 const ICON_BY_HREF: Record<string, ReactNode> = {
+  "/inbox": <Inbox size={18} />,
   "/deals": <LayoutDashboard size={18} />,
-  "/market": <LineChart size={18} />,
-  "/opportunities": <Lightbulb size={18} />,
-  "/our-company": <Landmark size={18} />,
-  "/synergy": <Handshake size={18} />,
-  "/route-decision": <GitBranch size={18} />,
-  "/greenfield": <Sprout size={18} />,
-  "/brownfield": <Target size={18} />,
-  "/projects": <FolderKanban size={18} />,
-  "/pipeline": <ListChecks size={18} />,
+  "/projects/archives": <Archive size={18} />,
   "/benchmarks": <Building2 size={18} />,
   "/library": <LibraryBig size={18} />,
   "/glossary": <BookOpen size={18} />,
   "/strategy": <Compass size={18} />,
+  "/settings/connected-apps": <Plug size={18} />,
 };
 
 // 관리 콘솔 내비 — 어휘표 원칙(도메인 개념당 1개)에 따라 각 화면에 개별 아이콘을
@@ -94,6 +91,7 @@ const ADMIN_ICON_BY_HREF: Record<string, ReactNode> = {
   "/admin/governance": <Scale size={18} />,
   "/admin/master-data": <Layers size={18} />,
   "/admin/adr": <FileText size={18} />,
+  "/settings/connected-apps": <Plug size={18} />,
 };
 const CHILD_ICON: ReactNode = <Landmark size={14} />;
 
@@ -133,6 +131,16 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
   // 눌러도 보드까지 튕겨나간다 — 딜 개요 한 단계로만 돌아가도록 먼저 처리한다.
   const dealStageMatch = pathname.match(/^\/deals\/([^/]+)\/([^/]+)$/);
   const dealOverviewMatch = !dealStageMatch && pathname.match(/^\/deals\/([^/]+)$/);
+  // Wave U-1: /projects is off the sidebar, so project pages get their own
+  // back target — sub-pages return to the project overview, the overview to
+  // the deals board.
+  const projectSubMatch = pathname.match(/^\/projects\/([^/]+)\/[^/]+/);
+  const projectOverviewMatch = !projectSubMatch && pathname.match(/^\/projects\/([^/]+)$/);
+  const projectBack = projectSubMatch
+    ? { href: `/projects/${projectSubMatch[1]}`, label: "프로젝트 개요" }
+    : projectOverviewMatch && projectOverviewMatch[1] !== "archives"
+      ? { href: "/deals", label: "검토/안건 보드" }
+      : null;
 
   // 활성 내비 항목 해석 — 최상위뿐 아니라 서브메뉴 자식(/synergy 등)도 찾는다.
   // 자식이 활성이면 parent를 함께 기록해 목록(부모/자식 href)로 돌아갈 수 있게 한다.
@@ -142,7 +150,7 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
       ...(i.children ?? []).map((c) => ({ item: { ...c }, parent: i })),
     ]),
   );
-  const found = (dealStageMatch || dealOverviewMatch)
+  const found = (dealStageMatch || dealOverviewMatch || projectBack)
     ? undefined
     : flat.find((e) => pathname === e.item.href || pathname.startsWith(e.item.href + "/"));
   const item = found?.item;
@@ -155,10 +163,12 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
     (pathname === "/route-decision" && !!searchParams.get("opportunity")) ||
     (pathname === "/brownfield" && !!searchParams.get("opportunity")) ||
     (pathname === "/greenfield" && !!searchParams.get("opportunity"));
-  const isNested = dealStageMatch || dealOverviewMatch
+  const isNested = dealStageMatch || dealOverviewMatch || projectBack
     ? true
     : (!!item && (pathname !== item.href || hasDetailParam)) || hasDetailParam;
-  const backHref = dealStageMatch
+  const backHref = projectBack
+    ? projectBack.href
+    : dealStageMatch
     ? `/deals/${dealStageMatch[1]}`
     : dealOverviewMatch
       ? "/deals"
@@ -169,7 +179,9 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
   // hasAppHistory)에는 브라우저 히스토리로 돌아가고, 새로고침·직접 URL
   // 진입처럼 되돌아갈 앱 내 이력이 없을 때만 기존 고정 경로로 폴백한다.
   const stageBackToHistory = !!dealStageMatch && hasAppHistory;
-  const backLabel = dealStageMatch
+  const backLabel = projectBack
+    ? projectBack.label
+    : dealStageMatch
     ? (stageBackToHistory ? "이전" : "검토/안건 개요")
     : dealOverviewMatch
       ? "검토/안건 보드"
@@ -192,7 +204,7 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
           {sidebarState === "closed" ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
         </button>
       )}
-      {isNested && (item || dealStageMatch || dealOverviewMatch) && (
+      {isNested && (item || dealStageMatch || dealOverviewMatch || projectBack) && (
         <button
           type="button"
           className="back-link"
@@ -213,10 +225,10 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
             }
             router.push(backHref);
           }}
-          aria-label={dealStageMatch || dealOverviewMatch ? `${backLabel}로 돌아가기` : `${backLabel} 목록으로 돌아가기`}
+          aria-label={dealStageMatch || dealOverviewMatch || projectBack ? `${backLabel}로 돌아가기` : `${backLabel} 목록으로 돌아가기`}
         >
           <ChevronLeft size={14} />
-          {dealStageMatch || dealOverviewMatch ? backLabel : item!.label}
+          {dealStageMatch || dealOverviewMatch || projectBack ? backLabel : item!.label}
         </button>
       )}
       <div className="topbar-actions">
@@ -233,11 +245,6 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
           <KeyRound size={16} />
           <span>비밀번호 변경</span>
         </button>
-        {/* ADR-0154: MCP 커넥터(연결된 앱) 접근 관리·해지 */}
-        <button type="button" onClick={() => router.push("/settings/connected-apps")} className="topbar-logout" aria-label="연결된 앱 관리">
-          <Plug size={16} />
-          <span>연결된 앱</span>
-        </button>
         <button type="button" onClick={() => logout()} className="topbar-logout" aria-label="로그아웃">
           <LogOut size={16} />
           <span>로그아웃</span>
@@ -252,10 +259,11 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
 // closed일 때는 탭·포커스 불가 상태(inert)로 렌더된다. onToggleSidebar는
 // 듀얼홈용 — 데스크톱 docked 상태에서만 전달되며, 그때 헤더에 접기 버튼이
 // 렌더된다(사이드바가 숨으면 topbar 토글로 역할을 넘긴다).
-function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar }: {
+function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }: {
   panelRef?: RefObject<HTMLElement | null>;
   inert?: boolean;
   onToggleSidebar?: () => void;
+  inboxCount?: number;
 }) {
   const { me } = useAuth();
   const pathname = usePathname();
@@ -284,7 +292,7 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar }: {
         </div>
         <div>
           <div className="sidebar-group-label">관리</div>
-          <nav className="sidebar-nav" aria-label="관리">
+          <nav className="sidebar-nav" aria-label="Primary">
             {ADMIN_NAV.map((item) => {
               const active = pathname === item.href || pathname.startsWith(item.href + "/");
               return (
@@ -304,27 +312,11 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar }: {
     );
   }
 
-  // S8~S12는 프로젝트(project id) 없이는 열 수 없는 화면이라 정적 SSOT에는
-  // 넣을 수 없다 — 현재 /projects/{id}/** 안에 있을 때만, 그 id로 실제 열리는
-  // 링크를 사이드바 "프로젝트" 하위 메뉴에 동적으로 끼워 넣는다. 프로젝트
-  // 상세 화면 내부에서만 쓰이던 탭들을 사이드 메뉴에서도 쓸 수 있게 하는
-  // 조치 — 프로젝트 컨텍스트 밖에서는 기존 목록/아카이브 하위 메뉴 그대로.
-  const currentProjectId = pathname.match(/^\/projects\/([^/]+)/)?.[1];
-  // 아카이브는 항상 마지막 — 프로젝트가 열려 있어 S8~S12 링크가 끼어들 때도
-  // 순서 규칙은 동일하게 유지한다.
-  const projectStageChildren = currentProjectId
-    ? [
-        { href: "/projects", label: "진행 프로젝트" },
-        { href: `/projects/${currentProjectId}/business-case`, label: "S8 사업성 분석" },
-        { href: `/projects/${currentProjectId}/dd`, label: "S9 실사·검증" },
-        { href: `/projects/${currentProjectId}/deal-structure`, label: "S10 투자구조 설계" },
-        { href: `/projects/${currentProjectId}/ic-review`, label: "S11 투자심사·실행" },
-        { href: `/projects/${currentProjectId}/portfolio`, label: "S12 사후 관리" },
-        { href: `/projects/${currentProjectId}/timeline`, label: "타임라인·SLA" },
-        { href: `/projects/${currentProjectId}/risk-heatmap`, label: "리스크 히트맵" },
-        { href: "/projects/archives", label: "아카이브" },
-      ]
-    : null;
+  // Deal-scoped entry (design §3.2): only inside a deal/project. The 12 stages
+  // are NOT repeated here — the stage stepper owns stage navigation.
+  const dealMatch = pathname.match(/^\/(projects|deals)\/([^/]+)/);
+  const dealId = dealMatch && dealMatch[2] !== "archives" ? dealMatch[2] : null;
+  const dealOverviewHref = dealId ? `/${dealMatch![1]}/${dealId}` : null;
 
   return (
     <aside ref={panelRef} className="app-sidebar" inert={inertAttr}>
@@ -345,69 +337,46 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar }: {
           </button>
         )}
       </div>
-      {NAV_SECTIONS.map((section) => {
-        const items = section.items;
-        if (items.length === 0) return null;
-        return (
-          <div key={section.label}>
-            <div className="sidebar-group-label">{section.label}</div>
-            <nav className="sidebar-nav" aria-label={section.label}>
-              {items.map((item) => {
-                const children = item.href === "/projects" && item.children && projectStageChildren ? projectStageChildren : item.children;
-                if (children) {
-                  // 앵커 자식(/x#hash)은 pathname과 같아질 수 없으므로 부모 href와의
-                  // 비교를 기준으로 활성 판정한다(자식 base = 부모 href).
-                  const childActive =
-                    pathname === item.href ||
-                    pathname.startsWith(item.href + "/") ||
-                    children.some((c) => {
-                      const base = c.href.split("#")[0];
-                      return pathname === base || pathname.startsWith(base + "/");
-                    });
-                  return (
-                    <div key={item.href} className="side-nav-submenu">
-                      <Link
-                        href={item.href}
-                        className={`side-nav-link side-nav-parent ${childActive ? "side-nav-link-active" : ""}`}
-                      >
-                        {ICON_BY_HREF[item.href] ?? CHILD_ICON}
-                        <span>{item.label}</span>
-                      </Link>
-                      <div className="side-nav-children">
-                        {children.map((c) => {
-                          const active = pathname === c.href || pathname.startsWith(c.href + "/");
-                          return (
-                            <Link
-                              key={c.href}
-                              href={c.href}
-                              className={`side-nav-link side-nav-child ${active ? "side-nav-link-active" : ""}`}
-                            >
-                              <span className="side-nav-child-dot" aria-hidden />
-                              <span>{c.label}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                }
-                const active =
-                  pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
-                  >
-                    {ICON_BY_HREF[item.href] ?? CHILD_ICON}
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-        );
-      })}
+      {NAV_SECTIONS.map((section, idx) => (
+        <div key={section.label}>
+          <div className="sidebar-group-label">{section.label}</div>
+          <nav className="sidebar-nav" aria-label={idx === 0 ? "Primary" : section.label}>
+            {section.items.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  {ICON_BY_HREF[item.href] ?? CHILD_ICON}
+                  <span>{item.label}</span>
+                  {item.href === "/inbox" && (
+                    <>
+                      <span className="side-nav-badge" aria-hidden="true">{inboxCount > 0 ? inboxCount : ""}</span>
+                      <span className="sr-only" role="status" aria-live="polite">{inboxCount > 0 ? `대기 ${inboxCount}건` : "대기 없음"}</span>
+                    </>
+                  )}
+                </Link>
+              );
+            })}
+            {idx === 0 && dealOverviewHref && (
+              <Link
+                href={dealOverviewHref}
+                className={`side-nav-link ${pathname === dealOverviewHref ? "side-nav-link-active" : ""}`}
+                aria-current={pathname === dealOverviewHref ? "page" : undefined}
+              >
+                <FolderKanban size={18} />
+                <span>현재 딜 개요</span>
+              </Link>
+            )}
+          </nav>
+        </div>
+      ))}
+      <div className="sidebar-footer">
+        의사결정 지원 도구입니다. 게이트 승인과 투자 결정은 사람이 기록합니다.
+      </div>
     </aside>
   );
 }
@@ -519,6 +488,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
+  // Inbox badge (design §4.2): same query as /inbox, polled on focus and every 60s.
+  const inbox = useInbox(60_000, !!me && me.role !== "admin" && !me.mustChangePassword);
+  const inboxCount = inbox.result?.items.length ?? 0;
+
   // /register는 로그인 전 접근 가능해야 한다(계정 신청 → 관리자 승인 플로우).
   if (pathname === "/login" || pathname === "/register") return <>{children}</>;
   if (loading)
@@ -532,12 +505,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="app-shell" data-sidebar-state={sidebarState}>
+      <a href="#main-content" className="skip-link">본문으로 건너뛰기</a>
       {isMobile ? (
         <SidebarDrawer open={drawerOpen} onClose={closeDrawer}>
-          {(drawerPanelRef) => <Sidebar panelRef={drawerPanelRef} inert={!drawerOpen} />}
+          {(drawerPanelRef) => <Sidebar panelRef={drawerPanelRef} inert={!drawerOpen} inboxCount={inboxCount} />}
         </SidebarDrawer>
       ) : (
-        <Sidebar inert={collapsed} onToggleSidebar={toggleSidebar} />
+        <Sidebar inert={collapsed} onToggleSidebar={toggleSidebar} inboxCount={inboxCount} />
       )}
       <div className="app-main-col">
         <Suspense fallback={null}>
@@ -549,7 +523,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onToggleSidebar={toggleSidebar}
           />
         </Suspense>
-        <div className="app-content">{children}</div>
+        <div className="app-content" id="main-content" tabIndex={-1}>{children}</div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -78,7 +78,7 @@ export default function ReportsPage() {
     }
   }
 
-  return <main className="market-page"><ProjectSubNav projectId={projectId} /><StageFrame stageId="S11" heading="보고서 — 스냅샷 · 렌더러">
+  return <main className="market-page"><StageTabs projectId={projectId} /><StageFrame stageId="S11" heading="보고서 — 스냅샷 · 렌더러">
     <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">프로젝트 데이터에서 보고서 초안을 만들고, 문서 파일(docx/pdf/hwpx)로 내려받을 수 있습니다.</p>
 
     {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">✕ {error}</p>}

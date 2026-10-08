@@ -2,10 +2,10 @@
 
 // PMI 사후통합 (deal detail surface) — 핵심인력 잔존(pmi_key_talent)과
 // 시너지 인증(pmi_synergy_certification)을 관리한다. /projects/[id] 하위
-// 상세 화면으로 메뉴 등록 없이 ProjectSubNav로 진입한다.
+// 상세 화면으로 메뉴 등록 없이 StageTabs로 진입한다.
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -94,7 +94,7 @@ export default function PmiPage() {
 
   return (
     <main className="market-page">
-      <ProjectSubNav projectId={projectId} />
+      <StageTabs projectId={projectId} />
       <header className="mb-3">
         <h1 className="text-[1.05rem] font-semibold">PMI 사후통합</h1>
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-1">

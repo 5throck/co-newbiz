@@ -33,7 +33,7 @@
   "tests/unit/migration-0018.test.ts|TS2367": 1,
   "tests/unit/migration-0019.test.ts|TS2367": 1,
   "tests/unit/migration-0022.test.ts|TS2769": 1,
-  "tests/unit/navigation.test.ts|TS7006": 8,
+  "tests/unit/navigation.test.ts|TS7006": 4,
   "tests/unit/predicate.test.ts|TS2322": 3,
   "tests/unit/predicate.test.ts|TS2769": 1,
   "tests/unit/process-flow.test.ts|TS2352": 2,

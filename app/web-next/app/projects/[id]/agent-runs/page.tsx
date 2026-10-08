@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState } from "../../../../components/ui.tsx";
 
@@ -27,7 +27,7 @@ function AgentRunsView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>에이전트 실행 이력</h1>
       <p className="objective">이 검토/안건에서 에이전트·LLM이 실행한 활동과 제안을 추적합니다 — 제안과 사람 기록은 항상 구분됩니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}

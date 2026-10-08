@@ -1,12 +1,12 @@
 "use client";
 
-// 프로젝트 개요 (ADR-0104) — ProjectSubNav "개요" 진입점. 차터 최신본과
+// 프로젝트 개요 (ADR-0104) — StageTabs "개요" 진입점. 차터 최신본과
 // S4~S12 프로세스 스냅샷을 한 화면에서 요약한다. 삭제는 /projects 목록의
 // 행 액션(리드 전용)에서 수행한다.
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "../../../lib/api.ts";
-import { ProjectSubNav } from "../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../components/StageTabs.tsx";
 
 interface CharterKpi { key: string; label: string; target: string }
 interface CharterVersion {
@@ -64,7 +64,7 @@ export default function ProjectOverviewPage() {
 
   return (
     <main className="p-6 space-y-4">
-      <ProjectSubNav projectId={projectId} />
+      <StageTabs projectId={projectId} />
       <header>
         <h1 className="text-[1.05rem] font-semibold">프로젝트 개요 — {data.project_name ?? projectId}</h1>
       </header>

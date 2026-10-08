@@ -72,36 +72,28 @@ describe("navigation SSOT (ADR-0105)", () => {
     expect(stale).toEqual([]);
   });
 
-  test("stage group order: legacy stage group preserves flow.spec sequence, S8~S12 project group follows S4 진출방식 결정 (ADR-0120)", () => {
-    const explore = NAV_SECTIONS.find((s) => s.label === "탐색")!;
-    const hrefs = explore.items.map((i) => i.href);
-    // 2026-09-14: 별도 대시보드("/") 정리 — 검토/안건 보드(/deals)가 단일 랜딩
-    // 화면이 됐다. "/"는 이제 /deals로 가는 리다이렉트 스텁(NON_MENU_ROUTES).
-    expect(hrefs).toEqual(["/deals"]);
-    // 단계 화면(기존) group preserves the stage sequence during migration.
-    // /our-company (그룹/계열사 분석, S3 input) sits between 기회 발굴(S2) and
-    // S4 진출방식 결정 as its own item. S5(/greenfield)·S6/S7(/brownfield) are
-    // now top-level items at the same level as S4, not its submenu children.
-    // S8~S12 project access ("/projects", a submenu) sits right after them, in
-    // flow.spec order — moved out of "탐색" so the whole S1~S12 sequence
-    // lives in one section.
-    const legacy = NAV_SECTIONS.find((s) => s.label === "단계 화면(기존)")!;
-    const legacyHrefs = legacy.items.map((i) => i.href);
-    expect(legacyHrefs).toEqual([
-      "/market", "/opportunities", "/our-company", "/synergy", "/route-decision", "/greenfield", "/brownfield", "/projects",
-    ]);
-    // stage ordering sanity: greenfield(S5) → brownfield(S6/S7)
-    const gf = legacyHrefs.indexOf("/greenfield");
-    const bf = legacyHrefs.indexOf("/brownfield");
-    if (gf !== -1 && bf !== -1) expect(bf).toBeGreaterThan(gf);
+  test("Wave U-1: work section leads with the inbox; legacy stage group and mockup are gone", () => {
+    const work = NAV_SECTIONS.find((s: { label: string }) => s.label === "업무")!;
+    expect(work.items.map((i: { href: string }) => i.href)).toEqual(["/inbox", "/deals", "/projects/archives"]);
+    expect(NAV_SECTIONS.some((s: { label: string }) => s.label === "단계 화면(기존)")).toBe(false);
+    const all = [...menuHrefs(), ...NON_MENU_ROUTES];
+    expect(all).not.toContain("/brownfield-mockup");
+    // The legacy stage routes stay reachable as routes (ADR-0120) but are not sidebar entries.
+    for (const r of ["/market", "/opportunities", "/our-company", "/synergy", "/route-decision", "/greenfield", "/brownfield"]) {
+      expect(menuHrefs()).not.toContain(r);
+      expect(NON_MENU_ROUTES).toContain(r);
+    }
+  });
+
+  test("connected apps is a registered sidebar and admin entry (no longer a topbar-only link)", () => {
+    expect(menuHrefs()).toContain("/settings/connected-apps");
+    expect(ADMIN_NAV.map((i: { href: string }) => i.href)).toContain("/settings/connected-apps");
   });
 
   test("no unintended duplicate menu hrefs", () => {
-    // /route-decision and /projects are each both a submenu parent and one of
-    // their own children by design — the ONLY allowed repetition; anything
-    // else is a copy-paste drift.
+    // Wave U-1: the sidebar has no submenus any more, so no repetition is allowed.
     const hrefs = menuHrefs();
-    const allowedDup = new Set(["/route-decision", "/projects"]);
+    const allowedDup = new Set<string>();
     const dupes = hrefs.filter((h, i) => hrefs.indexOf(h) !== i && !allowedDup.has(h));
     expect(dupes).toEqual([]);
   });
@@ -111,6 +103,7 @@ describe("navigation SSOT (ADR-0105)", () => {
       "/admin", "/admin/users", "/admin/audit", "/admin/data-sources", "/admin/schedule",
       "/admin/database", "/admin/notifications", "/admin/glossary", "/admin/governance",
       "/admin/master-data", "/admin/business-targets", "/admin/adr", "/admin/system-mode",
+      "/settings/connected-apps",
     ]);
     for (const href of ADMIN_NAV.map((i: { href: string }) => i.href)) {
       expect(allPageRoutes().some((r) => r === href || r.startsWith(href + "/"))).toBe(true);

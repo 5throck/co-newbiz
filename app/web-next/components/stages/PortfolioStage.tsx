@@ -1,11 +1,11 @@
 "use client";
 
 // S12 프로젝트 단계 본문 — ADR-0120 Wave 3 추출(/projects/[id]/portfolio 페이지와
-// /deals/[id]/s12 탭이 동일 컴포넌트를 소비한다). ProjectSubNav·StageFrame이
+// /deals/[id]/s12 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
 import { useCallback, useEffect, useState } from "react";
-import { ProjectSubNav } from "../ProjectSubNav.tsx";
+import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
@@ -13,6 +13,8 @@ import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
+import { ClosureModal } from "../ClosureModal.tsx";
+import { useRouter } from "next/navigation";
 
 // S12 사후 관리 — 포트폴리오 스코어카드 열람 + 포트폴리오 전환 결정 기록 화면
 // (ADR-0101 §3). 이 화면은 venture-portfolio-IC의 '인적 결정'을 기록하는
@@ -74,6 +76,8 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
+  const router = useRouter();
+  const [closing, setClosing] = useState(false);
   const [view, setView] = useState<ScorecardView | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [busy, setBusy] = useState(false);
@@ -151,8 +155,25 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
 
   return (
 <>
-      <ProjectSubNav projectId={projectId} />
+      <StageTabs projectId={projectId} />
       <StageFrame stageId="S12" heading="S12 사후 관리 — 포트폴리오 스코어카드 · 전환 결정">
+        {/* Wave U-1 (design §3.5): home of the closure flow — preconditions are
+            shown inside ClosureModal; the decision itself stays human-only. */}
+        {canWriteProject(me?.role) && (
+          <div className="mb-3 flex items-center gap-2">
+            <button type="button" className="btn-ghost" onClick={() => setClosing(true)}>프로젝트 종료…</button>
+            <span className="text-[0.875rem] text-[color:var(--muted-fg)]">종료 선결조건은 다음 창에서 확인합니다. 종료는 사람이 기록합니다.</span>
+          </div>
+        )}
+        {closing && (
+          <ClosureModal
+            entity="project"
+            entityId={projectId}
+            entityName={projectId}
+            onClose={() => setClosing(false)}
+            onDone={() => { setClosing(false); router.push("/projects/archives"); }}
+          />
+        )}
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
           분기별 스코어카드가 갱신되어야 S12 완료 기준이 충족됩니다 (최신 분기 또는 직전 분기).
           {view && rollup?.review_cycle && (

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState } from "../../../../components/ui.tsx";
 
@@ -26,7 +26,7 @@ function TimelineView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>프로세스 타임라인·SLA</h1>
       <p className="objective">단계별 목표 리드타임(SLA 정책) 대비 실제 경과를 추적하고 병목을 찾아냅니다 — 경과는 계산값이며 저장되지 않습니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}

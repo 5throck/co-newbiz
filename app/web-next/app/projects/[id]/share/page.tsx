@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -56,7 +56,7 @@ function ShareView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>외부 안전 공유 <span className="status-chip status-amber">security 설계 승인 전제</span></h1>
       <p className="objective">외부 자문사에게 스냅샷을 만료·워터마크·열람 기록이 있는 링크로만 공유합니다 — 원본 데이터는 노출되지 않습니다.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 
@@ -26,7 +26,7 @@ function CompView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>경영진 보상·임금 형평</h1>
       <p className="objective">경영진 보상 구조와 인수사-피인수사 임금 형평을 분석합니다 — 집계 전용(3인 미만 억제), 개인 노출 없음.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

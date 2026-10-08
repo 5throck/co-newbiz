@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -123,7 +123,7 @@ export default function ProxyChainPage() {
     }
   }
 
-  return <main className="market-page"><ProjectSubNav projectId={projectId} /><StageFrame stageId="S9" heading="가치사슬 연계 — 링크와 보정 근거">
+  return <main className="market-page"><StageTabs projectId={projectId} /><StageFrame stageId="S9" heading="가치사슬 연계 — 링크와 보정 근거">
     <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">사실인가? 위험은 무엇인가? — 분석가 판단(링크·바인딩)과 통계 보정(회귀)을 분리해 관리합니다. 통계 수치(β·R²)는 수동 입력이 불가합니다.</p>
 
     {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">✕ {error}</p>}
