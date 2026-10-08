@@ -10,6 +10,7 @@ import { FilterChip, PageState, PrimaryAction } from "../../components/ui.tsx";
 import { STAGE_TAB_GROUPS } from "../../lib/stage-tabs.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { GATE_LABEL, type GateMetaId } from "../../lib/stage-meta.ts";
+import { buildCardChips } from "../../lib/deal-card-label.ts";
 
 interface PipelineProject {
   projectId: string;
@@ -56,6 +57,7 @@ type Card = {
   queryText: string;
   stage: string;
   stageLabel: string;
+  holdLabel: string | null;
   tone: CardTone;
   hold: boolean;
   track: Track | null;
@@ -119,10 +121,14 @@ function DealsBoard() {
   // (currentHolds, 나이 무관). 카드 자체의 HOLD 표시에도 그대로 쓴다. 단순히
   // 다음 단계를 기다리는 "대기" 상태(예: "S4 대기")와는 다른 개념이다 —
   // 필터 이름을 "진행 대기"로 두면 이 둘이 혼동된다(2026-09-15 사용자 리포트).
-  const opportunityHolds = useMemo(
-    () => new Set((data?.currentHolds ?? []).filter((r) => r.decision === "hold" && r.entityType === "opportunity").map((r) => r.entityId)),
-    [data],
-  );
+  const opportunityHolds = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const r of data?.currentHolds ?? []) {
+      if (r.decision !== "hold" || r.entityType !== "opportunity") continue;
+      m.set(r.entityId, [...(m.get(r.entityId) ?? []), r.gate]);
+    }
+    return m;
+  }, [data]);
 
   const cards: Card[] = useMemo(() => {
     // 승격(project_id)됐지만 그 프로젝트가 실제로 보이는(열려있고 삭제 안 된)
@@ -137,15 +143,17 @@ function DealsBoard() {
       .filter((o) => !(o.project_id && visibleProjectIds.has(o.project_id)))
       .map((o): Card => {
         const stage = stageOf(o);
-        const hold = opportunityHolds.has(o.id);
+        const holdGates = opportunityHolds.get(o.id) ?? [];
+        const hold = holdGates.length > 0;
+        const chips = buildCardChips(stage, holdGates, o.status === "selected" ? "S4 대기" : undefined);
         return {
           kind: "opportunity", id: o.id, name: o.name, queryText: o.name, stage,
           // "대기"(자연스러운 다음 단계 대기)와 "HOLD"(게이트에서 명시적으로
           // 내린 보류 결정)는 서로 다른 개념이다 — 둘 다 amber로 칠하면
           // 구분이 안 된다(2026-09-15 사용자 리포트). HOLD만 amber, 단순
           // 대기는 gray.
-          stageLabel: hold ? `${stage} HOLD` : o.status === "selected" ? "S4 대기" : stage,
-          tone: hold ? "amber" : "gray",
+          ...chips,
+          tone: "gray",
           hold, track: null,
           meta: `매력도 ${o.attractiveness_score ?? "—"} · 시너지 ${o.synergy_score ?? "—"}`,
           href: `/opportunities?opportunity=${o.id}`,
@@ -153,12 +161,14 @@ function DealsBoard() {
       });
     const projectCards: Card[] = (data?.projects ?? []).map((p): Card => {
       const stage = p.currentStage ?? "S8";
-      const hold = Object.values(p.gates).some((v) => v === "hold");
+      const holdGates = Object.entries(p.gates).filter(([, v]) => v === "hold").map(([g]) => g);
+      const hold = holdGates.length > 0;
+      const chips = buildCardChips(stage, holdGates);
       const track: Track | null = p.track === "greenfield" || p.track === "brownfield" ? p.track : null;
       return {
         kind: "project", id: p.projectId, name: p.projectName ?? p.projectNo, queryText: `${p.projectName ?? ""} ${p.projectNo}`, stage,
-        stageLabel: hold ? `${stage} HOLD` : stage,
-        tone: hold ? "amber" : stage === "S12" ? "green" : "gray",
+        ...chips,
+        tone: stage === "S12" ? "green" : "gray",
         hold, track,
         meta: p.projectNo,
         href: projectStageHref(p.projectId, stage),
@@ -264,6 +274,7 @@ function DealsBoard() {
                           <span className="funnel-card-name font-semibold">{c.name}</span>
                           <span className="funnel-card-meta">
                             <span className={`status-chip ${stageTone[c.tone]}`}>{c.stageLabel}</span>
+                            {c.holdLabel && <span className="status-chip status-amber">{c.holdLabel}</span>}
                             {c.track ? (
                               <span className={`status-chip ${c.track === "greenfield" ? "status-green" : "status-amber"}`}>{TRACK_LABEL[c.track]}</span>
                             ) : c.kind === "project" ? (
