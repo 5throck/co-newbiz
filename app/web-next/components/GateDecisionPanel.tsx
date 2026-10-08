@@ -4,24 +4,112 @@
 // 경계 #2: 에이전트는 진행 출력을 '권고'할 뿐, GO/HOLD/KILL 기록은 사람의 행위다.
 // 이 패널은 그 기록 행위의 표준 UI이며 /route-decision·/greenfield·/brownfield에
 // 마운트된다. HOLD는 missing_artifacts 없이 기록할 수 없다(soft-pass 방지).
+import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
 import { ReviewBuckets } from "./ReviewBuckets.tsx";
-import { PrimaryAction } from "./ui.tsx";
+import { PrimaryAction, useToast } from "./ui.tsx";
+import { useConfirm } from "./crud.tsx";
+import { useModalFocus } from "../lib/use-modal-focus.ts";
+import { createPortal } from "react-dom";
+
+const IC_GATES: readonly string[] = ["entity_ic", "group_ic"];
 
 interface GateLatest {
   gate: string;
   decision: "go" | "hold" | "kill";
   rationale: string;
   missing_artifacts: string[] | null;
+  /** R2-B item 3 - the typed rationale an IC GO carried despite missing artifacts. */
+  gap_override?: { items: string[]; rationale: string } | null;
 }
 interface GateHistoryRow extends GateLatest { id: string; decided_by: string; decided_at: string }
 
-export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity", primary = false, onRecorded }: { opportunityId: string; primary?: boolean; gates: GateMetaId[]; killHint?: string | null; entityType?: "opportunity" | "project"; onRecorded?: (decision: "go" | "hold" | "kill", gate: GateMetaId) => void }) {
+
+/** Scroll to a gate decision panel and focus its first field (the "결정 기록" primary of gate stages). */
+export function focusGateDecision(gate?: string, attempts = 12): void {
+  if (typeof document === "undefined") return;
+  const el = document.querySelector<HTMLElement>(gate ? `[data-gate-form="${gate}"]` : "[data-gate-form]");
+  if (!el) {
+    if (attempts > 0) window.setTimeout(() => focusGateDecision(gate, attempts - 1), 50);
+    return;
+  }
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+  const field = el.querySelector<HTMLElement>("form select, form input, form textarea");
+  (field ?? el).focus({ preventScroll: true });
+}
+
+/** The gate stages' Primary Action: jump to (and focus) the decision form, which sits at the end of the page. */
+export function GateDecisionJump({ gate, entityType = "project", beforeJump }: { gate: string; entityType?: "opportunity" | "project"; beforeJump?: () => void }) {
   const { me } = useAuth();
+  const can = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
+  return (
+    <PrimaryAction
+      label="결정 기록 (사람)"
+      onClick={() => { beforeJump?.(); window.setTimeout(() => focusGateDecision(gate), 0); }}
+      disabled={!can}
+      disabledReason="결정 기록은 analyst 역할 이상만 가능합니다."
+    />
+  );
+}
+
+/** Warning dialog for an IC GO that lacks artifacts: lists each gap and requires a typed rationale.
+    It never blocks the person (boundary #2) - it asks them to own the exception in writing. */
+function GapDialog({ gateLabel, gaps, onCancel, onSubmit }: { gateLabel: string; gaps: string[]; onCancel: () => void; onSubmit: (rationale: string) => void }) {
+  const [text, setText] = useState("");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const { panelRef, onKeyDown } = useModalFocus(onCancel);
+  const reasonId = useId();
+  if (!mounted) return null;
+  const blocked = !text.trim();
+  return createPortal(
+    <div className="modal-backdrop" role="presentation" onKeyDown={onKeyDown} onClick={onCancel}>
+      <div ref={panelRef} className="modal-panel" role="alertdialog" aria-modal="true" aria-label="누락 산출물 경고" style={{ maxWidth: "32rem", width: "100%" }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head"><h2 style={{ fontSize: "0.95rem" }}>{gateLabel} GO - 누락된 산출물이 있습니다</h2></div>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-2">
+          아래 항목이 갖춰지지 않은 채로 GO를 기록하려 합니다. 시스템은 기록을 막지 않습니다 - 결정은 사람의 몫입니다(경계 #2). 다만 예외 근거를 직접 적어야 하며, 근거는 IC 패키지에 함께 남습니다.
+        </p>
+        <ul className="sizing-note-list mb-2" aria-label="누락 항목">
+          {gaps.map((g) => <li key={g}>{g}</li>)}
+        </ul>
+        <label className="block text-[length:var(--fs-caption)]">
+          <span className="block mb-1">예외 근거 (필수)</span>
+          <textarea className="sizing-new-input w-full" rows={3} value={text} onChange={(e) => setText(e.target.value)} aria-describedby={blocked ? reasonId : undefined} />
+        </label>
+        {blocked && <p id={reasonId} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">예외 근거를 입력하면 GO를 기록할 수 있습니다.</p>}
+        <div className="flex justify-end gap-2 mt-4">
+          <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>취소</button>
+          <button type="button" className="btn-danger btn-sm" disabled={blocked} onClick={() => onSubmit(text.trim())}>그래도 GO 기록</button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity", showReview = true, nextStage, goGaps, onRecorded }: {
+  opportunityId: string;
+  gates: GateMetaId[];
+  killHint?: string | null;
+  entityType?: "opportunity" | "project";
+  /** Default true. Stage screens that already show the 3-stage review above pass false: one review block per gate. */
+  showReview?: boolean;
+  /** Where to go after a GO is recorded (link in the "recorded" summary). An href starting with "#" focuses that gate panel. */
+  nextStage?: { label: string; href: string } | null;
+  /** IC gates only: artifacts missing right now. A GO with gaps asks for a typed rationale first (never blocks). */
+  goGaps?: string[];
+  onRecorded?: (decision: "go" | "hold" | "kill", gate: GateMetaId) => void;
+}) {
+  const { me } = useAuth();
+  const { toast } = useToast();
+  const { confirm, confirmDialog } = useConfirm();
+  const [gapAsk, setGapAsk] = useState(false);
+  const [recorded, setRecorded] = useState<{ gate: GateMetaId; decision: "go" | "hold" | "kill"; rationale: string; at: string; gap: string | null } | null>(null);
   const canRecord = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
   const [latest, setLatest] = useState<GateLatest[] | null>(null);
   const [history, setHistory] = useState<GateHistoryRow[]>([]);
@@ -78,11 +166,30 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   }
 
   const killNeedsLearning = form.decision === "kill" && !form.learning.trim();
-  const canSubmit = !!form.rationale.trim() && !killNeedsLearning;
 
   const decisionOf = (gate: string): GateLatest | undefined => latest?.find((g) => g.gate === gate);
 
-  async function record() {
+  const holdNeedsMissing = form.decision === "hold" && !form.missing.split(/[\n,]/).some((x) => x.trim());
+  const submitReason = saving ? "기록 중입니다."
+    : !form.rationale.trim() ? "근거를 입력하면 결정을 기록할 수 있습니다."
+    : killNeedsLearning ? "KILL에는 학습 포착이 필요합니다."
+    : holdNeedsMissing ? "HOLD에는 미완료 산출물 목록이 필요합니다."
+    : null;
+  const gapsForGo = form.decision === "go" && IC_GATES.includes(form.gate) ? (goGaps ?? []) : [];
+
+  /** Step 1 of the shared flow: confirm (or, for an IC GO with gaps, the warning dialog). Nothing is sent before this. */
+  function requestRecord() {
+    if (saving || submitReason) return;
+    if (gapsForGo.length > 0) { setGapAsk(true); return; }
+    const verb = form.decision.toUpperCase();
+    confirm(`${GATE_LABEL[form.gate]} ${verb} 결정을 기록할까요?`, () => void record(), {
+      body: `근거: ${form.rationale.trim()} - 결정은 감사 로그에 append-only로 남으며 되돌릴 수 없습니다. 정정이 필요하면 새 결정을 추가로 기록합니다.`,
+      confirmLabel: "기록",
+      tone: form.decision === "kill" ? "danger" : "neutral",
+    });
+  }
+
+  async function record(gapRationale?: string) {
     if (saving) return;
     setSaving(true); setError(null);
     try {
@@ -90,10 +197,14 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
         gate: form.gate,
         decision: form.decision,
         rationale: form.rationale.trim(),
+        gap_rationale: gapRationale,
         missing_artifacts: form.decision === "hold" ? form.missing.split(/[\n,]/).map((s) => s.trim()).filter(Boolean) : undefined,
         // ADR-0152: every KILL carries learning capture (the route answers 422 without it).
         learning_capture: form.decision === "kill" ? form.learning.trim() : undefined,
       });
+      // Step 2-4: toast, the form collapses into a "recorded" summary (no resubmission), next-stage prompt.
+      setRecorded({ gate: form.gate, decision: form.decision, rationale: form.rationale.trim(), at: new Date().toISOString(), gap: gapRationale ?? null });
+      toast(`${GATE_LABEL[form.gate]} ${form.decision.toUpperCase()} 결정을 기록했습니다.`);
       setForm((f) => ({ ...f, rationale: "", missing: "", learning: "" }));
       load();
       onRecorded?.(form.decision, form.gate);
@@ -104,8 +215,9 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     }
   }
 
+  const panelKey = gates.length === 1 ? gates[0] : gates.join(",");
   return (
-    <section aria-label="의사결정" className="market-section sizing-step">
+    <section aria-label="의사결정" className="market-section sizing-step" data-gate-form={panelKey} id={`gate-decision-${panelKey.replace(/,/g, "-")}`} tabIndex={-1}>
       <h3 className="sizing-step-title text-[0.95rem]">
         <span className="sizing-step-badge">🚦</span> 의사결정 — 승인 기록 (경계 #2)
       </h3>
@@ -175,7 +287,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
       )}
 
       {/* ADR-0153 — 3단계 검토(확인됨 / 확인하지 못함 / 판단 필요). PASS 표시 없음 */}
-      <ReviewBuckets entityType={entityType} entityId={opportunityId} gates={gates} variant="expanded" />
+      {showReview && <ReviewBuckets entityType={entityType} entityId={opportunityId} gates={gates} variant="expanded" />}
 
       {/* ADR-0118 — LLM 진행 브리프(제안): 권고·근거 초안 제공, 기록은 사람 */}
       {canRecord && (
@@ -232,12 +344,28 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
         </div>
       )}
 
-      {canRecord ? (
+      {canRecord && recorded && recorded.decision !== "hold" ? (
+        <div className="gate-recorded" role="status" aria-label="기록된 결정">
+          <p className="mb-1">
+            <span className={`status-chip ${recorded.decision === "go" ? "status-green" : "status-red"}`}>● {GATE_LABEL[recorded.gate]} {recorded.decision.toUpperCase()} 기록됨</span>
+            <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums">{recorded.at.slice(0, 16).replace("T", " ")}</span>
+          </p>
+          <p className="text-[length:var(--fs-caption)] mb-1">근거: {recorded.rationale}</p>
+          {recorded.gap && <p className="text-[length:var(--fs-caption)] mb-1">누락 산출물 예외 근거: {recorded.gap}</p>}
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">같은 결정을 다시 제출할 수 없습니다. 정정이 필요하면 페이지를 다시 열어 새 결정을 기록하세요(이력은 append-only).</p>
+          {recorded.decision === "go" && nextStage && (nextStage.href.startsWith("#") ? (
+            <a className="btn-ghost btn-sm" href={nextStage.href} onClick={(e) => { e.preventDefault(); focusGateDecision(nextStage.href.slice(1).replace("gate-decision-", "")); }}>다음: {nextStage.label} →</a>
+          ) : (
+            <Link className="btn-ghost btn-sm" href={nextStage.href}>다음: {nextStage.label} →</Link>
+          ))}
+          {recorded.decision === "kill" && <p className="text-[length:var(--fs-caption)] mb-0">프로젝트 종료 절차는 S12 사후 관리에서 이어집니다.</p>}
+        </div>
+      ) : canRecord ? (
         <form
           id={formId}
           className="sizing-new-form"
           aria-label="의사결정 기록"
-          onSubmit={(e) => { e.preventDefault(); void record(); }}
+          onSubmit={(e) => { e.preventDefault(); requestRecord(); }}
         >
           <div className="flex flex-wrap items-end gap-2">
             {gates.length > 1 && (
@@ -298,23 +426,29 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
               />
             </label>
           )}
-          {primary && (
-            <PrimaryAction
-              form={formId}
-              label={saving ? "기록 중..." : "결정 기록 (사람)"}
-              disabled={saving || !canSubmit}
-              disabledReason={saving ? "기록 중입니다." : killNeedsLearning ? "KILL에는 학습 포착이 필요합니다." : "근거를 입력하면 결정을 기록할 수 있습니다."}
-            />
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <button type="submit" className="btn-ghost btn-sm" disabled={saving || !!submitReason} aria-describedby={submitReason ? `${formId}-reason` : undefined}>
+              {saving ? "기록 중..." : "결정"}
+            </button>
+            {submitReason && <span id={`${formId}-reason`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{submitReason}</span>}
+          </div>
+          {recorded && recorded.decision === "hold" && (
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-0" role="status">
+              ● {GATE_LABEL[recorded.gate]} HOLD 기록됨 - 미완료 산출물을 보완한 뒤 새 결정을 기록할 수 있습니다.
+            </p>
           )}
-          <button type="submit" className="btn-ghost btn-sm mt-2" disabled={saving || !canSubmit}>
-            {saving ? "기록 중..." : "결정"}
-          </button>
         </form>
       ) : (
-        <>
-          {primary && <PrimaryAction label="결정 기록 (사람)" disabled disabledReason="결정 기록은 analyst 역할 이상만 가능합니다." />}
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">결정 기록은 analyst 역할 이상만 가능합니다.</p>
-        </>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">결정 기록은 analyst 역할 이상만 가능합니다.</p>
+      )}
+      {confirmDialog}
+      {gapAsk && (
+        <GapDialog
+          gateLabel={GATE_LABEL[form.gate]}
+          gaps={gapsForGo}
+          onCancel={() => setGapAsk(false)}
+          onSubmit={(text) => { setGapAsk(false); void record(text); }}
+        />
       )}
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p>}
@@ -332,7 +466,10 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                 <tr key={h.id}>
                   <td>{GATE_LABEL[h.gate as GateMetaId] ?? h.gate}</td>
                   <td><span className={`status-chip ${h.decision === "go" ? "status-green" : h.decision === "hold" ? "status-amber" : "status-red"}`}>{h.decision.toUpperCase()}</span></td>
-                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{h.rationale}</td>
+                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                    {h.rationale}
+                    {h.gap_override && <span className="block">누락 산출물 예외 근거: {h.gap_override.rationale} (누락: {h.gap_override.items.join("; ")})</span>}
+                  </td>
                   <td className="text-[length:var(--fs-caption)]">{h.decided_by}</td>
                   <td className="text-[length:var(--fs-caption)] tabular-nums">{h.decided_at.slice(0, 10)}</td>
                 </tr>

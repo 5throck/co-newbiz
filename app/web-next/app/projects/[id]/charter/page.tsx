@@ -115,7 +115,8 @@ function CharterViewInner() {
   return (
     <main>
       <StageTabs projectId={projectId} />
-      <StageFrame stageId="S8" heading="프로젝트 추진계획 — 목적·범위·KPI 사전 확정">
+      {/* Charter lives under the S12 tab group and feeds S11, so its tagline/rail follow S12 (not S8's "돈이 되는가?"). */}
+      <StageFrame stageId="S12" heading="프로젝트 추진계획 — 목적·범위·KPI 사전 확정">
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           추진계획은 프로젝트의 목적·시장 범위·밸류체인 노드·진입 범위·KPI를 진행 심의 전에
           문서로 고정합니다. 수정은 append-only 버전으로만 이루어지며 변경 사유(note)가 필수입니다.

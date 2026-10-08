@@ -16,6 +16,8 @@ export interface ConfirmState {
   title: string;
   body?: string;
   confirmLabel?: string;
+  /** "danger" (default) for destructive actions, "neutral" for ordinary confirmations (e.g. recording a GO). */
+  tone?: "danger" | "neutral";
   onConfirm: () => void;
 }
 
@@ -53,7 +55,7 @@ export function ConfirmDialog({
           </button>
           <button
             type="button"
-            className="btn-danger btn-sm"
+            className={state.tone === "neutral" ? "btn-premium btn-sm" : "btn-danger btn-sm"}
             autoFocus
             onClick={() => {
               state.onConfirm();
@@ -72,7 +74,7 @@ export function ConfirmDialog({
 export function useConfirm() {
   const [state, setState] = useState<ConfirmState | null>(null);
   const confirm = useCallback(
-    (title: string, onConfirm: () => void, opts?: { body?: string; confirmLabel?: string }) =>
+    (title: string, onConfirm: () => void, opts?: { body?: string; confirmLabel?: string; tone?: "danger" | "neutral" }) =>
       setState({ title, onConfirm, ...opts }),
     [],
   );

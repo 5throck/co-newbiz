@@ -11,6 +11,7 @@ import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { gateGoPrerequisiteGaps, latestGateDecisions, type GateId } from "../../../../../lib/process-flow.ts";
 import { badRequest, fail, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
+import { IC_GAP_GATES, composeRationale, icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override.ts";
 import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
 const GATES = new Set(["fs", "dd", "entity_ic", "group_ic"]);
@@ -35,10 +36,10 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   const latest = [...latestMap.entries()].map(([gate, v]) => ({
     gate,
     decision: v.decision,
-    rationale: v.rationale,
+    ...parseRationale(v.rationale),
     missing_artifacts: v.missing,
   }));
-  return ok({ latest, history }, 200, { count: history.length });
+  return ok({ latest, history: history.map((h) => ({ ...h, ...parseRationale(h.rationale) })) }, 200, { count: history.length });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -50,7 +51,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
     gate?: string; decision?: string; rationale?: string; missing_artifacts?: string[];
-    gate_evaluation_id?: string; learning_capture?: string;
+    gate_evaluation_id?: string; learning_capture?: string; gap_rationale?: string;
   } | null;
   if (!body?.gate || !GATES.has(body.gate)) {
     return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")}.`);
@@ -96,6 +97,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return badRequest("provenance_mismatch", "gate_evaluation_id가 이 프로젝트의 위원회 세션 산출물이 아닙니다.");
     }
   }
+  // R2-B item 3 - an IC GO with missing artifacts is never blocked (boundary #2: the human decides).
+  // When the screen collected an override rationale, the gaps are re-derived here (never trusted from the
+  // client) and stored with the decision text so the IC package can show them.
+  const gapRationale = body.gap_rationale?.trim();
+  const gapOverride = body.decision === "go" && (IC_GAP_GATES as readonly string[]).includes(body.gate) && gapRationale
+    ? (() => { const items = icGoGapItems(id, ctx.userId); return items.length > 0 ? { items, rationale: gapRationale } : null; })()
+    : null;
+  const storedRationale = composeRationale(rationale, gapOverride);
   const nowTs = new Date().toISOString();
   const gid = ulid();
   // ADR-0153 — snapshot the artifact as the human saw it, BEFORE the decision lands.
@@ -103,11 +112,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   db.run(
     `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id, learning_capture)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [gid, "project", id, body.gate, body.decision, rationale,
+    [gid, "project", id, body.gate, body.decision, storedRationale,
       body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId, body.decision === "kill" ? learningCapture : null],
   );
   appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
   // ADR-0153 — human_final review row: a side effect of THIS human POST only.
   recordHumanFinalReview(reviewSnapshot, ctx.userId, body.decision);
-  return ok({ id: gid, gate: body.gate, decision: body.decision }, 201);
+  return ok({ id: gid, gate: body.gate, decision: body.decision, gap_override: gapOverride }, 201);
 }

@@ -14,9 +14,10 @@ export async function recordGate(
   gateLabel: string | null,
   decision: GateDecision,
   rationale: string,
-  opts: { learning?: string; panelIndex?: number } = {},
+  opts: { learning?: string; panelIndex?: number; gapRationale?: string } = {},
 ): Promise<void> {
-  await visit(page, app, path);
+  // S8's decision panel lives on its own "결정" tab (R2-B), not under every analysis tab.
+  await visit(page, app, /\/business-case$/.test(path) ? `${path}?tab=decision` : path);
   const panels = page.locator('section[aria-label="의사결정"]');
   await panels.first().waitFor({ state: "visible", timeout: 30_000 });
   const panel: Locator = panels.nth(opts.panelIndex ?? 0);
@@ -33,6 +34,16 @@ export async function recordGate(
   }
   const responsePromise = page.waitForResponse((r) => /gate-decisions$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
   await form.locator('button[type="submit"]').last().click();
+  // Shared gate-recording flow (R2-B): a confirm dialog first - or, for an IC GO with missing artifacts,
+  // the warning dialog that requires a typed rationale. Nothing is sent before one of them is accepted.
+  const dialog = page.getByRole("alertdialog");
+  await dialog.waitFor({ state: "visible", timeout: 20_000 });
+  if ((await dialog.getAttribute("aria-label")) === "누락 산출물 경고") {
+    await dialog.locator("textarea").fill(opts.gapRationale ?? "E2E: 누락 산출물을 인지하고 예외로 GO를 기록함");
+    await dialog.getByRole("button", { name: "그래도 GO 기록" }).click();
+  } else {
+    await dialog.getByRole("button", { name: "기록", exact: true }).click();
+  }
   const res = await responsePromise;
   if (res.status() !== 201) throw new Error(`gate decision POST returned ${res.status()}: ${await res.text()}`);
 }

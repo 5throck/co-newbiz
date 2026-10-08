@@ -42,16 +42,20 @@ describe("greenfield S1 to S12", () => {
 
   test("S11 establishment 5 steps are recorded, then Entity IC and Group IC GO", async () => {
     await visit(s.page, app, `/projects/${P}/ic-review`);
-    const form = s.page.locator('form[aria-label="설립 실행 단계 기록"]');
-    await form.waitFor({ state: "visible", timeout: 30_000 });
+    // R2-B: each step has its own "증적과 함께 완료" action (owner = the person who records it).
     for (let step = 1; step <= 5; step++) {
-      await form.locator("select").nth(0).selectOption(String(step));
-      await form.locator("select").nth(1).selectOption("done");
-      const put = s.page.waitForResponse((r) => /establishment$/.test(new URL(r.url()).pathname) && r.request().method() === "PUT");
+      // Completed steps switch to "완료됨", so the first remaining action is always the next step.
+      const action = s.page.getByRole("button", { name: "증적과 함께 완료" }).first();
+      await action.waitFor({ state: "visible", timeout: 30_000 });
+      await action.click();
+      const form = s.page.locator(`form[aria-label="설립 실행 ${step}단계 기록"]`);
+      await form.locator('input[placeholder="data room 링크"]').fill(`https://dataroom.example/e2e/step-${step}`);
       await form.locator('button[type="submit"]').click();
-      await s.page.getByRole("button", { name: "기록", exact: true }).click();
+      const put = s.page.waitForResponse((r) => /establishment$/.test(new URL(r.url()).pathname) && r.request().method() === "PUT");
+      await s.page.getByRole("alertdialog").getByRole("button", { name: "기록", exact: true }).click();
       const res = await put;
       if (res.status() >= 300) throw new Error(`establishment PUT ${res.status()}: ${await res.text()}`);
+      await form.waitFor({ state: "detached", timeout: 15_000 });
     }
     await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Entity IC: 설립 실행과 투자 구조를 승인", { panelIndex: 0 });
     await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Group IC: 그룹 자본배분에 부합", { panelIndex: 1 });

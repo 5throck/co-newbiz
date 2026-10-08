@@ -35,7 +35,79 @@ const STATUS_META: Record<WaiverRow["effective_status"], { icon: string; label: 
   revoked: { icon: "✕", label: "철회", cls: "status-red" },
 };
 
-export function WaiverPanel({ projectId }: { projectId: string }) {
+export interface WaiverPrefill { clause: string; reason?: string }
+
+/** The waiver request form - shared by the panel and the per-row dialog on S9. Layout wraps (auto-fit), never overlaps. */
+export function WaiverRequestForm({ projectId, docs, prefill, onDone, onCancel }: {
+  projectId: string;
+  docs: GovernanceDocRef[];
+  prefill?: WaiverPrefill | null;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [form, setForm] = useState({ doc: "", clause: prefill?.clause ?? "", reason: prefill?.reason ?? "", approverRole: "process-governance-manager", expiresAt: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const missing = [!form.doc && "규정 문서", !form.clause.trim() && "조항", !form.reason.trim() && "사유", !form.expiresAt && "만료일"].filter(Boolean) as string[];
+  const submit = async () => {
+    setSaving(true); setError(null);
+    try {
+      await api.post(`/api/projects/${encodeURIComponent(projectId)}/waivers`, {
+        governance_doc_id: form.doc,
+        clause_ref: form.clause,
+        reason: form.reason,
+        approver_role: form.approverRole,
+        expires_at: form.expiresAt ? new Date(form.expiresAt).toISOString() : "",
+      });
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "waiver 요청 실패");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="sizing-new-form mb-4" role="group" aria-label="waiver 요청">
+      {error && <p role="alert" className="text-[length:var(--fs-caption)] mb-2" style={{ color: "var(--red-fg)" }}>{error}</p>}
+      <div className="waiver-grid">
+        <label className="text-[length:var(--fs-caption)]">
+          규정 문서
+          <select className="sizing-new-input mt-1 w-full" value={form.doc} onChange={(e) => setForm((f) => ({ ...f, doc: e.target.value }))}>
+            <option value="">선택…</option>
+            {docs.map((d) => (
+              <option key={d.id} value={d.id}>{`[${d.layer}] ${d.key} — ${d.title}`}</option>
+            ))}
+          </select>
+        </label>
+        <label className="text-[length:var(--fs-caption)]">
+          조항 (clause_ref)
+          <input className="sizing-new-input mt-1 w-full" value={form.clause} onChange={(e) => setForm((f) => ({ ...f, clause: e.target.value }))} placeholder="예: §4-2.1" />
+        </label>
+        <label className="text-[length:var(--fs-caption)]">
+          만료일 (필수)
+          <input type="date" className="sizing-new-input mt-1 w-full" value={form.expiresAt} onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))} />
+        </label>
+      </div>
+      <label className="text-[length:var(--fs-caption)] block mt-2">
+        사유
+        <textarea className="sizing-new-input mt-1 w-full" rows={2} value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder="왜 이 조항을 면제해야 하는가" />
+      </label>
+      <label className="text-[length:var(--fs-caption)] block mt-2">
+        승인 역할 (규정 계층→Group IC · 절차→process-governance-manager · 체크리스트→도메인 리드)
+        <input className="sizing-new-input mt-1 w-full" value={form.approverRole} onChange={(e) => setForm((f) => ({ ...f, approverRole: e.target.value }))} />
+      </label>
+      <div className="flex flex-wrap items-center justify-end gap-2 mt-2">
+        {missing.length > 0 && <span id="waiver-req-reason" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">요청하려면 {missing.join(", ")}을(를) 입력하세요.</span>}
+        <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>취소</button>
+        <button type="button" className="btn-premium btn-sm" disabled={saving || missing.length > 0} aria-describedby={missing.length > 0 ? "waiver-req-reason" : undefined} onClick={() => void submit()}>
+          요청
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function WaiverPanel({ projectId, prefill, onRequested }: { projectId: string; prefill?: WaiverPrefill | null; onRequested?: () => void }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
@@ -44,7 +116,8 @@ export function WaiverPanel({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ doc: "", clause: "", reason: "", approverRole: "process-governance-manager", expiresAt: "" });
+  // A row-level "면제 요청" prefills and opens the form (R2-B item 5).
+  useEffect(() => { if (prefill) setShowForm(true); }, [prefill]);
 
   const basePath = `/api/projects/${encodeURIComponent(projectId)}/waivers`;
 
@@ -54,26 +127,6 @@ export function WaiverPanel({ projectId }: { projectId: string }) {
       .catch((e) => setError(e instanceof Error ? e.message : "waiver 목록 불러오기 실패"));
   }, [basePath]);
   useEffect(() => { load(); }, [load]);
-
-  const submit = async () => {
-    setSaving(true); setError(null);
-    try {
-      await api.post(basePath, {
-        governance_doc_id: form.doc,
-        clause_ref: form.clause,
-        reason: form.reason,
-        approver_role: form.approverRole,
-        expires_at: form.expiresAt ? new Date(form.expiresAt).toISOString() : "",
-      });
-      setForm({ doc: "", clause: "", reason: "", approverRole: "process-governance-manager", expiresAt: "" });
-      setShowForm(false);
-      load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "waiver 요청 실패");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const decide = (id: string, decision: "approve" | "reject" | "revoke") => {
     const run = async () => {
@@ -111,46 +164,13 @@ export function WaiverPanel({ projectId }: { projectId: string }) {
       {error && <p className="text-[length:var(--fs-caption)] mb-2" style={{ color: "var(--red-fg)" }}>{error}</p>}
 
       {showForm && canAct && (
-        <div className="sizing-new-form mb-4">
-          <div className="grid gap-2" style={{ gridTemplateColumns: "minmax(12rem, 2fr) minmax(8rem, 1fr) minmax(10rem, 1fr)" }}>
-            <label className="text-[length:var(--fs-caption)]">
-              규정 문서
-              <select className="sizing-new-input mt-1" value={form.doc} onChange={(e) => setForm((f) => ({ ...f, doc: e.target.value }))}>
-                <option value="">선택…</option>
-                {docs.map((d) => (
-                  <option key={d.id} value={d.id}>{`[${d.layer}] ${d.key} — ${d.title}`}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-[length:var(--fs-caption)]">
-              조항 (clause_ref)
-              <input className="sizing-new-input mt-1" value={form.clause} onChange={(e) => setForm((f) => ({ ...f, clause: e.target.value }))} placeholder="예: §4-2.1" />
-            </label>
-            <label className="text-[length:var(--fs-caption)]">
-              만료일 (필수)
-              <input type="date" className="sizing-new-input mt-1" value={form.expiresAt} onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))} />
-            </label>
-          </div>
-          <label className="text-[length:var(--fs-caption)] block mt-2">
-            사유
-            <textarea className="sizing-new-input mt-1" rows={2} value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder="왜 이 조항을 면제해야 하는가" />
-          </label>
-          <label className="text-[length:var(--fs-caption)] block mt-2">
-            승인 역할 (규정 계층→Group IC · 절차→process-governance-manager · 체크리스트→도메인 리드)
-            <input className="sizing-new-input mt-1" value={form.approverRole} onChange={(e) => setForm((f) => ({ ...f, approverRole: e.target.value }))} />
-          </label>
-          <div className="flex justify-end gap-2 mt-2">
-            <button type="button" className="btn-ghost btn-sm" onClick={() => setShowForm(false)}>취소</button>
-            <button
-              type="button"
-              className="btn-premium btn-sm"
-              disabled={saving || !form.doc || !form.clause.trim() || !form.reason.trim() || !form.expiresAt}
-              onClick={() => void submit()}
-            >
-              요청
-            </button>
-          </div>
-        </div>
+        <WaiverRequestForm
+          projectId={projectId}
+          docs={docs}
+          prefill={prefill}
+          onDone={() => { setShowForm(false); load(); onRequested?.(); }}
+          onCancel={() => setShowForm(false)}
+        />
       )}
 
       {waivers.length === 0 ? (

@@ -16,6 +16,7 @@ import { readRagView, recomputeRag } from "../../../../../../../db/lib/rag-servi
 import { authenticate } from "../../../../../lib/auth.ts";
 import { latestAdoption, listBusinessCases, type BusinessCaseView } from "../../../../../lib/business-case.ts";
 import { establishmentProgress, listEstablishmentSteps } from "../../../../../lib/establishment.ts";
+import { icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override.ts";
 import { latestGateDecisions, latestRouteDecision, type GateId, type GateVerdict } from "../../../../../lib/process-flow.ts";
 import { latestPmiKickoff, pmiKickoffApplies } from "../../../../../lib/pmi-kickoff.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
@@ -125,9 +126,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       gates: {
         latest: IC_GATES.map((g) => {
           const v = latest.get(g);
-          return { gate: g, decision: (v?.decision ?? null) as GateVerdict | null, rationale: v?.rationale ?? null, missing_artifacts: v?.missing ?? null };
+          const parsed = v ? parseRationale(v.rationale) : null;
+          return { gate: g, decision: (v?.decision ?? null) as GateVerdict | null, rationale: parsed?.rationale ?? null, gap_override: parsed?.gap_override ?? null, missing_artifacts: v?.missing ?? null };
         }),
-        history,
+        history: history.map((h) => ({ ...h, ...parseRationale(h.rationale) })),
+        // What an IC GO would be missing right now - the screen warns and asks for a rationale (R2-B item 3).
+        go_gaps: icGoGapItems(id),
       },
       deal_structure: (() => {
         // S10 투자구조 설계 산출물 (flow.spec v2.2.0) — 최신 가설의 4축 검토
