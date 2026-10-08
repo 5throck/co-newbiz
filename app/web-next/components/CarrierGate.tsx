@@ -20,6 +20,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../lib/api.ts";
 import { PageState } from "./ui.tsx";
 import { SectionToolbar } from "./layout.tsx";
+import { MarketAnalysisStage } from "./stages/MarketAnalysisStage.tsx";
 
 export type FlatRouteKey = "market" | "opportunities" | "synergy" | "greenfield" | "brownfield";
 
@@ -128,6 +129,18 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
   useEffect(() => {
     if (rows !== null && rows.length > 1) firstRowRef.current?.focus();
   }, [rows]);
+
+  // S1 precedes any deal carrier (a carrier is created in S2), so with zero
+  // carriers /market renders the S1 screen itself. The empty state below would
+  // send the person back to the board, whose "new review" action links here —
+  // a dead loop found by the pilot-009 system re-run (Wave C-2).
+  if (route === "market" && !error && rows !== null && rows.length === 0) {
+    return (
+      <main>
+        <MarketAnalysisStage embedded />
+      </main>
+    );
+  }
 
   if (carrierId || (rows !== null && rows.length === 1)) {
     return (

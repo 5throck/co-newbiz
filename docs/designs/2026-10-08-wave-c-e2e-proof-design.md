@@ -1,6 +1,6 @@
 ---
 title: Wave C — End-to-End Proof (Playwright golden paths, axe gate, demo, real-pilot UI run-through)
-status: approved
+status: implemented
 date: 2026-10-08
 owner: platform-lead
 contributors: frontend-engineer (implementation), design-system-agent (token contrast), ux-designer-agent (demo script), process-governance-manager (closure vocabulary)
@@ -107,7 +107,7 @@ A single scenario: `bun test --timeout=120000 tests/scenarios/greenfield.test.ts
 | PR | Content |
 |---|---|
 | C-1 (this) | Harness, five scenarios, axe gate, product fixes listed in section 7, `e2e` CI job, changelog. |
-| C-2 | Internal demo script (reusing the seeded deals) and the real-pilot UI run-through report, appended here when it lands. |
+| C-2 | Internal demo (`bun run demo`, `--capture` screenshot sequence in `docs/evidence/demo/`, README "Internal demo" with architecture diagram) and the real-pilot UI run-through `docs/pilots/pilot-009-system-rerun.md`. The run halts correctly at S2. Fixed in C-2: the empty-`/market` dead loop and the harness's web-research leak. The remaining defects (D-2 to D-7, D-9, D-10) are listed in the report with severities. |
 
 ## 13. Accessibility
 
