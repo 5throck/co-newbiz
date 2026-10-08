@@ -64,10 +64,10 @@ function InterviewsView() {
                 <tr key={r.id}>
                   <td className="font-semibold">{r.interviewee}</td>
                   <td>{r.topic}</td>
-                  <td className="text-[0.78rem]">{r.response_summary}</td>
-                  <td className="text-[0.75rem]">{r.disagreement ?? "—"}</td>
-                  <td className="text-[0.75rem]">{r.follow_up ?? "—"}</td>
-                  <td className="text-[0.72rem]"><code className="dd-item-id">{r.evidence_ref}</code></td>
+                  <td className="text-[length:var(--fs-caption)]">{r.response_summary}</td>
+                  <td className="text-[length:var(--fs-caption)]">{r.disagreement ?? "—"}</td>
+                  <td className="text-[length:var(--fs-caption)]">{r.follow_up ?? "—"}</td>
+                  <td className="text-[length:var(--fs-caption)]"><code className="dd-item-id">{r.evidence_ref}</code></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -79,13 +79,13 @@ function InterviewsView() {
           <h2 className="text-[0.9rem] mb-2">인터뷰 기록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[0.78rem] flex-1 min-w-[10rem]"><span className="block mb-1">대상 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[10rem]"><span className="block mb-1">대상 *</span>
                 <input className="sizing-new-input w-full" value={form.interviewee} onChange={(e) => setForm({ ...form, interviewee: e.target.value })} required /></label>
-              <label className="text-[0.78rem] flex-1 min-w-[10rem]"><span className="block mb-1">주제 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[10rem]"><span className="block mb-1">주제 *</span>
                 <input className="sizing-new-input w-full" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required /></label>
-              <label className="text-[0.78rem] flex-1 min-w-[14rem]"><span className="block mb-1">응답 요지 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]"><span className="block mb-1">응답 요지 *</span>
                 <input className="sizing-new-input w-full" value={form.response_summary} onChange={(e) => setForm({ ...form, response_summary: e.target.value })} required /></label>
-              <label className="text-[0.78rem] flex-1 min-w-[10rem]"><span className="block mb-1">증적 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[10rem]"><span className="block mb-1">증적 *</span>
                 <input className="sizing-new-input w-full" value={form.evidence_ref} onChange={(e) => setForm({ ...form, evidence_ref: e.target.value })} required placeholder="interview-log#1" /></label>
               <button type="submit" className="btn-primary" disabled={busy}>{busy ? "기록 중..." : "기록"}</button>
             </div>

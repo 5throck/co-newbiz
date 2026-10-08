@@ -22,7 +22,7 @@ export default function OnboardingPage() {
             <h2 className="text-[0.9rem] mb-1">
               <span className="sizing-step-num">{s.n}</span> {s.label}
             </h2>
-            <p className="text-[0.82rem]" style={{ margin: "0 0 6px" }}>{s.desc}</p>
+            <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" }}>{s.desc}</p>
             <Link className="btn-ghost btn-sm" href={s.href}>이동 →</Link>
           </div>
         ))}

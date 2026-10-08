@@ -189,7 +189,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
         <form onSubmit={save} className="sizing-new-form">
           <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {/* 1. 진출전략 */}
-          <h3 className="text-[0.85rem] mb-2">1️⃣ 진출전략 (Build / Partner / Hire / Invest 결정)</h3>
+          <h3 className="text-[length:var(--fs-body)] mb-2">1️⃣ 진출전략 (Build / Partner / Hire / Invest 결정)</h3>
           <textarea
             aria-label="진출전략"
             value={entryStrategy}
@@ -203,9 +203,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           <textarea aria-label="검토한 대안" placeholder="검토한 대안 (선택)" value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} className="sizing-new-input mb-3" style={{ width: "100%" }} />
 
           {/* 2. 필요 역량 — S3 레지스터 읽기 전용 + S5 보유 수준·해소방식 편집 */}
-          <h3 className="text-[0.85rem] mb-2">2️⃣ 필요 역량 (S3) 확인</h3>
+          <h3 className="text-[length:var(--fs-body)] mb-2">2️⃣ 필요 역량 (S3) 확인</h3>
           {gapRows.length === 0 ? (
-            <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
               아직 S3에 필요 역량이 정의되지 않았습니다 — <a href={`/synergy?opportunity=${encodeURIComponent(selected.opportunity.id)}`} className="text-[color:var(--accent)] underline">시너지·전략적 적합성(S3)</a>에서 먼저 정의·판정하세요.
             </p>
           ) : (
@@ -224,13 +224,13 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 <tbody>
                   {gapRows.map((g, i) => (
                     <tr key={g.id}>
-                      <td className="text-[0.8rem]">
+                      <td className="text-[length:var(--fs-caption)]">
                         <span className="font-semibold">{g.capability}</span>
-                        {g.requiredNote && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{g.requiredNote}</span>}
+                        {g.requiredNote && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{g.requiredNote}</span>}
                       </td>
                       <td>
                         <span className={`status-chip ${HELD_STATUS_CHIP[g.held.status]}`}>{HELD_STATUS_LABEL[g.held.status]}</span>
-                        {g.held.holders.length > 0 && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{g.held.holders.join(", ")}</span>}
+                        {g.held.holders.length > 0 && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{g.held.holders.join(", ")}</span>}
                       </td>
                       <td><input aria-label={`${g.capability} 보유 수준`} placeholder="보유 수준" value={g.currentLevel} onChange={(e) => setGapField(i, { currentLevel: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} /></td>
                       <td>
@@ -256,7 +256,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           )}
 
           {/* 3. 투자비 검토 요건 */}
-          <h3 className="text-[0.85rem] mb-2">3️⃣ 투자비 검토 요건 (S8 사업성 분석 입력)</h3>
+          <h3 className="text-[length:var(--fs-body)] mb-2">3️⃣ 투자비 검토 요건 (S8 사업성 분석 입력)</h3>
           {bcLines.map((l, i) => (
             <div key={i} className="flex flex-wrap items-center gap-1 mb-1">
               <input aria-label="항목명" placeholder="항목명 (예: 설비 투자, 연매출)" value={l.line} onChange={(e) => setBc(i, { line: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
@@ -278,43 +278,43 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
           {/* ── LLM 투자비 항목 추천 — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
           <div className="sizing-grade-card mb-3">
-            <h4 className="text-[0.8rem] mb-2">
+            <h4 className="text-[length:var(--fs-caption)] mb-2">
               투자비 항목 추천 <span className="status-chip status-amber">제안 · LLM</span>
             </h4>
-            <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
+            <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               진출전략·필요 역량 해소 방식을 근거로 검토할 만한 인건비/운영비/설비투자/수익 항목명을 제안합니다.
               금액은 제안하지 않습니다 — 항목을 추가한 뒤 금액은 사람이 입력합니다 (경계 #2).
             </p>
-            {recoError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+            {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
             {canAct && !reco && !recoLoading && (
               <button type="button" className="btn-ghost btn-sm" onClick={() => void generateReco()}>▶ 항목 추천 생성</button>
             )}
-            {recoLoading && <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">진출전략·S3 해소 방식을 근거로 항목을 제안하는 중...</p>}
+            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">진출전략·S3 해소 방식을 근거로 항목을 제안하는 중...</p>}
             {reco && (
               <>
-                <p className="mb-1 text-[0.75rem]">
+                <p className="mb-1 text-[length:var(--fs-caption)]">
                   <span className={`status-chip mr-1 ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
                     {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
                   </span>
                 </p>
-                {reco.note && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
+                {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
                 {reco.recommendation.investment_items ? (
                   <ul className="sizing-note-list mb-2">
                     {reco.recommendation.investment_items.map((item, i) => (
                       <li key={i} className="flex items-center justify-between gap-2 mb-1">
                         <span>
                           <span className="font-semibold">{item.line}</span>
-                          <span className="text-[0.72rem] text-[color:var(--muted-fg)]"> ({CATEGORY_LABEL[item.category]}) — {item.note}</span>
+                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> ({CATEGORY_LABEL[item.category]}) — {item.note}</span>
                         </span>
                         {canAct && <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => addRecoItem(item)}>추가</button>}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">제안된 항목이 없습니다.</p>
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">제안된 항목이 없습니다.</p>
                 )}
                 {reco.recommendation.cautions.length > 0 && (
-                  <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-2">{reco.recommendation.cautions.join(" / ")}</p>
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-2">{reco.recommendation.cautions.join(" / ")}</p>
                 )}
                 {canAct && <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "재생성"}</button>}
               </>
@@ -329,7 +329,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
       </section>
 
       <GateDecisionPanel opportunityId={selected.opportunity.id} gates={["pre_fs"]} />
-      <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         ↓ 위 Pre-FS 게이트가 <b>GO</b>로 기록되어야 아래 프로젝트 추진이 가능합니다 — 승인 기록은 판단, 추진은 그 판단을 전제로 한 장부상 전환입니다.
       </p>
       <PromotionPanel

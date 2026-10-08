@@ -110,19 +110,19 @@ export function BetaPanel({
         <button
           type="button"
           onClick={() => onBetaTab("peer")}
-          className={`rounded-full border px-3 py-1 text-[0.8rem] ${betaTab === "peer" ? "border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] text-[color:var(--accent)] font-bold" : "border-[color:var(--border)] bg-[color:var(--surface)] text-[color:var(--muted-fg)]"}`}
+          className={`rounded-full border px-3 py-1 text-[length:var(--fs-caption)] ${betaTab === "peer" ? "border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] text-[color:var(--accent)] font-bold" : "border-[color:var(--border)] bg-[color:var(--surface)] text-[color:var(--muted-fg)]"}`}
         >
           (a) 동종사 인용
         </button>
         <button
           type="button"
           onClick={() => onBetaTab("regression")}
-          className={`rounded-full border px-3 py-1 text-[0.8rem] ${betaTab === "regression" ? "border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] text-[color:var(--accent)] font-bold" : "border-[color:var(--border)] bg-[color:var(--surface)] text-[color:var(--muted-fg)]"}`}
+          className={`rounded-full border px-3 py-1 text-[length:var(--fs-caption)] ${betaTab === "regression" ? "border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] text-[color:var(--accent)] font-bold" : "border-[color:var(--border)] bg-[color:var(--surface)] text-[color:var(--muted-fg)]"}`}
         >
           (b) 시계열 회귀
         </button>
       </div>
-      <p className="text-[color:var(--muted-fg)] text-[0.8rem] mb-2">
+      <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mb-2">
         {betaTab === "peer"
           ? "상장 동종사의 공표 베타(AlphaSpread·ValueInvesting.io 등)를 비레버드 베타(βU)로 환산해 중앙값을 사용합니다."
           : "비교대상(또는 유사 상장사) 종가와 시장지수의 일별 수익률을 붙여넣으면 회귀로 β·R²·변동성을 산출합니다. 형식: date, price, index (CSV/TSV)."}
@@ -130,9 +130,9 @@ export function BetaPanel({
 
       {betaTab === "peer" ? (
         <div className="overflow-x-auto">
-          <table className="w-full text-[0.85rem]">
+          <table className="w-full text-[length:var(--fs-body)]">
             <thead>
-              <tr className="text-left text-[color:var(--muted-fg)] text-[0.75rem] border-b border-[color:var(--border-bright)]">
+              <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
                 <th className="py-1.5 px-1.5">동종사</th>
                 <th className="py-1.5 px-1.5 text-right">공표 β (레버드)</th>
                 <th className="py-1.5 px-1.5 text-right">D/E</th>
@@ -161,7 +161,7 @@ export function BetaPanel({
           </table>
           <div className="flex items-center gap-3 mt-2">
             <button type="button" className="ghost-button" onClick={() => onPeers([...peers, { name: "", beta: "", de: "", source: "" }])}>+ 행 추가</button>
-            <span className="text-[0.82rem]">
+            <span className="text-[length:var(--fs-caption)]">
               중앙값 βU: <b className="tabular-nums">{peerMedian != null ? num(peerMedian) : "—"}</b>
             </span>
           </div>
@@ -169,36 +169,36 @@ export function BetaPanel({
       ) : (
         <div>
           <div className="flex flex-wrap gap-3 items-start">
-            <textarea className="form-input font-mono text-[0.78rem] flex-1 min-w-[280px]" rows={5} value={regressionText}
+            <textarea className="form-input font-mono text-[length:var(--fs-caption)] flex-1 min-w-[280px]" rows={5} value={regressionText}
               placeholder={"date,price,index\n2026-09-10,68400,3421.8\n2026-09-09,67900,3405.2\n…"}
               onChange={(e) => onRegressionText(e.target.value)} />
             <button type="button" className="ghost-button" onClick={onRunRegression}>↻ 회귀 실행</button>
           </div>
-          {regressionError && <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[0.8rem] mt-2">✕ {regressionError}</p>}
+          {regressionError && <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">✕ {regressionError}</p>}
           {regression && (
             <>
               <dl className="grid gap-2 md:grid-cols-4 mt-3 text-sm">
                 <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]">
-                  <dt className="text-[color:var(--muted-fg)] text-[0.72rem]">베타 (β, 레버드)</dt>
+                  <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">베타 (β, 레버드)</dt>
                   <dd className="font-bold text-[1.05rem] tabular-nums">{num(regression.beta)}</dd>
                 </div>
                 <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]">
-                  <dt className="text-[color:var(--muted-fg)] text-[0.72rem]">결정계수 (R²)</dt>
+                  <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">결정계수 (R²)</dt>
                   <dd className="font-bold text-[1.05rem] tabular-nums">{regression.r2.toFixed(2)}</dd>
                 </div>
                 <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]">
-                  <dt className="text-[color:var(--muted-fg)] text-[0.72rem]">표본</dt>
-                  <dd className="font-bold text-[1.05rem] tabular-nums">{regression.n}일 <span className="text-[0.68rem] font-normal text-[color:var(--muted-fg)]">{regression.windowStart} ~ {regression.windowEnd}</span></dd>
+                  <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">표본</dt>
+                  <dd className="font-bold text-[1.05rem] tabular-nums">{regression.n}일 <span className="text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]">{regression.windowStart} ~ {regression.windowEnd}</span></dd>
                 </div>
                 <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]">
-                  <dt className="text-[color:var(--muted-fg)] text-[0.72rem]">α (연율)</dt>
+                  <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">α (연율)</dt>
                   <dd className="font-bold text-[1.05rem] tabular-nums">{pct(regression.annualAlpha)}</dd>
                 </div>
               </dl>
 
               <div className="mt-3">
-                <div className="text-[color:var(--muted-fg)] text-[0.8rem] font-semibold">연율화 변동성 — 시장 평균 대비</div>
-                <div className="grid grid-cols-[10rem_1fr_4rem] gap-2 items-center text-[0.8rem] mt-1">
+                <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-semibold">연율화 변동성 — 시장 평균 대비</div>
+                <div className="grid grid-cols-[10rem_1fr_4rem] gap-2 items-center text-[length:var(--fs-caption)] mt-1">
                   <span>대상 자산</span>
                   <div className="h-2.5 rounded-full bg-[color:var(--muted-bg)] overflow-hidden"><div className="h-full rounded-full bg-[color:var(--accent)]" style={{ width: `${(regression.annualVolAsset / volMax) * 100}%` }} /></div>
                   <span className="text-right font-bold tabular-nums">{pct(regression.annualVolAsset)}</span>
@@ -206,14 +206,14 @@ export function BetaPanel({
                   <div className="h-2.5 rounded-full bg-[color:var(--muted-bg)] overflow-hidden"><div className="h-full rounded-full bg-[color:var(--accent)] opacity-50" style={{ width: `${(regression.annualVolMarket / volMax) * 100}%` }} /></div>
                   <span className="text-right font-bold tabular-nums">{pct(regression.annualVolMarket)}</span>
                 </div>
-                <p className="text-[color:var(--muted-fg)] text-[0.76rem] mt-1">
+                <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-1">
                   시장 대비 변동성 비율 {num(regression.volRatio)}× — 베타 {num(regression.beta)}와 함께 해석: 시장 변동의 {num(regression.beta)}배 움직임, 고유변동(1−R²)은 {(100 - regression.r2 * 100).toFixed(0)}%.
                 </p>
               </div>
 
               {scatter.pts.length > 0 && (
                 <div className="mt-3">
-                  <div className="text-[color:var(--muted-fg)] text-[0.8rem] font-semibold">회귀 산점도 (일별 수익률)</div>
+                  <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-semibold">회귀 산점도 (일별 수익률)</div>
                   <EChart option={scatterOption} height={220} ariaLabel="베타 회귀 산점도" />
                 </div>
               )}
@@ -223,16 +223,16 @@ export function BetaPanel({
           {/* 회귀 대상 종목의 자본구조 — βU 환산 입력 */}
           <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_7.5rem] gap-2 items-end mt-4 text-sm border-t border-[color:var(--border-subtle)] pt-3">
             <div>
-              <div className="text-[0.85rem] font-semibold">관측 D/E</div>
-              <div className="text-[color:var(--muted-fg)] text-[0.72rem]">회귀 대상 종목의 자본구조 — βU 환산에 사용</div>
+              <div className="text-[length:var(--fs-body)] font-semibold">관측 D/E</div>
+              <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">회귀 대상 종목의 자본구조 — βU 환산에 사용</div>
             </div>
-            <label className="grid gap-1 text-[0.82rem] text-[color:var(--muted-fg)]">값
+            <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">값
               <input className="form-input" value={observedDe.value} placeholder="0.90" onChange={(e) => onObservedDe({ ...observedDe, value: e.target.value })} />
             </label>
-            <label className="grid gap-1 text-[0.82rem] text-[color:var(--muted-fg)]">출처명
+            <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">출처명
               <input className="form-input" value={observedDe.source} placeholder="최근 결산 기준 부채/자기자본 (DART)" onChange={(e) => onObservedDe({ ...observedDe, source: e.target.value })} />
             </label>
-            <label className="grid gap-1 text-[0.82rem] text-[color:var(--muted-fg)]">기준일
+            <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">기준일
               <input className="form-input" value={observedDe.asOf} placeholder="2026-06-30" onChange={(e) => onObservedDe({ ...observedDe, asOf: e.target.value })} />
             </label>
           </div>

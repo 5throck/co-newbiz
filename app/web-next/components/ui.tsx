@@ -30,6 +30,43 @@ export function Button({
   );
 }
 
+/* ── ParamTable — label / value / unit / source in separate columns (Wave U-2, design §6) ── */
+
+export interface ParamRow {
+  label: string;
+  value: ReactNode;
+  unit?: string;
+  source?: ReactNode;
+}
+
+export function ParamTable({ rows, caption, labelHeader = "항목" }: { rows: ParamRow[]; caption?: string; labelHeader?: string }) {
+  return (
+    <div className="table-scroll">
+      <table className="param-table">
+        {caption && <caption className="sr-only">{caption}</caption>}
+        <thead>
+          <tr>
+            <th scope="col" className="param-label">{labelHeader}</th>
+            <th scope="col" className="param-value">값</th>
+            <th scope="col" className="param-unit">단위</th>
+            <th scope="col" className="param-source">출처</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label}>
+              <th scope="row" className="param-label">{r.label}</th>
+              <td className="param-value">{r.value}</td>
+              <td className="param-unit">{r.unit ?? ""}</td>
+              <td className="param-source">{r.source}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /* ── ControlChip — interactive filter/sort/score control (NOT a status chip) ── */
 
 export function ControlChip({
@@ -108,7 +145,7 @@ export function PageState({
   if (state === "error") {
     return (
       <div>
-        <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem]">
+        <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">
           ✕ {errorText ?? "데이터를 불러오지 못했습니다"}
         </p>
         {onRetry && (
@@ -120,7 +157,7 @@ export function PageState({
     );
   }
   return (
-    <div className="text-[color:var(--muted-fg)] italic text-[0.85rem]">
+    <div className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
       {emptyText ?? "데이터가 없습니다."} {emptyAction}
     </div>
   );

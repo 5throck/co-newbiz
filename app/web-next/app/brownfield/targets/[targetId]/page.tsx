@@ -504,7 +504,7 @@ export function TargetDetailView() {
             <span className={`status-chip ${scoreChip(scores.combined)}`} title="재무·기술 종합 점수(financial·technical 평균)">
               종합 {scores.combined != null ? `${scores.combined}점 / 100점` : "— 판정 필요"}
             </span>
-            {t.exclusion_reason && <span className="text-[0.75rem] text-[color:var(--muted-fg)]">제외 사유: {t.exclusion_reason}</span>}
+            {t.exclusion_reason && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">제외 사유: {t.exclusion_reason}</span>}
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-3">
             {canAct && t.status !== "shortlisted" && (
@@ -531,7 +531,7 @@ export function TargetDetailView() {
                 <button type="button" className="btn-ghost btn-sm whitespace-nowrap" disabled={busy || !excludeReason.trim()} onClick={() => void exclude()}>제외</button>
               </span>
             )}
-            {t.status === "shortlisted" && <span className="text-[0.75rem] text-[color:var(--muted-fg)]">Short List 승격 완료 — 순위 조정은 목록 화면에서</span>}
+            {t.status === "shortlisted" && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">Short List 승격 완료 — 순위 조정은 목록 화면에서</span>}
           </div>
         </div>
       </section>
@@ -580,13 +580,13 @@ export function TargetDetailView() {
             표시되므로 여기서는 반복하지 않는다 — 수정 폼만 필요할 때 보인다
             (사용자 요청, 2026-09-15 — "다 제거될 필요가 있어"). */}
         {profileTab === "overview" && editing && (
-          <div className="card mt-3 text-[0.85rem]">
+          <div className="card mt-3 text-[length:var(--fs-body)]">
             <form
               className="sizing-new-form mb-0"
               onSubmit={(e) => { e.preventDefault(); void saveEdit(); }}
             >
               <div className="flex flex-wrap items-end gap-2">
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">회사명 *</span>
                   <input
                     value={editDraft.company_name}
@@ -595,7 +595,7 @@ export function TargetDetailView() {
                     className="sizing-new-input"
                   />
                 </label>
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">DART 고유번호 (8자리)</span>
                   <input
                     value={editDraft.dart_corp_code}
@@ -617,7 +617,7 @@ export function TargetDetailView() {
                   취소
                 </button>
               </div>
-              <p className="mt-1 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+              <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 DART 고유번호를 바꾸면 회사 마스터가 재연결되어 재무 facts·공시가 새 회사 기준으로 갱신됩니다.
               </p>
             </form>
@@ -649,7 +649,7 @@ export function TargetDetailView() {
               <div className="flex flex-wrap gap-1">
                 {companyProfile.profile.industryExposure.map((x) => <span key={x} className="status-chip status-in-progress">{x}</span>)}
               </div>
-            ) : <p className="text-[color:var(--muted-fg)] italic text-[0.78rem] mb-0">산업 노출 정보 없음</p>}
+            ) : <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-caption)] mb-0">산업 노출 정보 없음</p>}
             {/* 외부 검색으로 얻은 정보가 이 프로파일에 실제로 쓰였음을 개요에서
                 바로 보여준다(사용자 요청, 2026-09-16) — [n] 인용은 위 종합 평가의
                 링크와 연결되고, 근거 출처 상위 3건을 이 자리에 노출한다. */}
@@ -660,12 +660,12 @@ export function TargetDetailView() {
                   {companyProfile.profile.researchSources.slice(0, 3).map((s) => (
                     <li key={s.url}>
                       <a href={s.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{s.title}</a>
-                      {s.snippet && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{s.snippet}</span>}
+                      {s.snippet && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{s.snippet}</span>}
                     </li>
                   ))}
                 </ul>
                 {companyProfile.profile.researchSources.length > 3 && (
-                  <p className="mt-1 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+                  <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                     전체 {companyProfile.profile.researchSources.length}건은 <button type="button" className="text-[color:var(--accent)] underline" onClick={() => setProfileTab("sources")}>출처 탭</button>에서 확인하세요.
                   </p>
                 )}
@@ -677,11 +677,11 @@ export function TargetDetailView() {
         {profileTab === "aiprofile" && (
           <div className="mt-3">
             {!companyId ? (
-              <div className="card"><p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">회사 마스터가 아직 연결되지 않았습니다 — 후보 등록/수정 시 회사명이 확정되면 연결됩니다.</p></div>
+              <div className="card"><p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">회사 마스터가 아직 연결되지 않았습니다 — 후보 등록/수정 시 회사명이 확정되면 연결됩니다.</p></div>
             ) : companyProfile === undefined ? (
-              <div className="card"><p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">불러오는 중...</p></div>
+              <div className="card"><p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">불러오는 중...</p></div>
             ) : companyProfile === null ? (
-              <div className="card"><p className="mb-0 text-[0.78rem] text-[color:var(--red-fg)]">AI 분석 상태를 불러오지 못했습니다.</p></div>
+              <div className="card"><p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">AI 분석 상태를 불러오지 못했습니다.</p></div>
             ) : (
               <>
                 {/* 헤더 — 회사명·배지만 표시. 분석 실행/재분석 버튼은 탭 목록과
@@ -696,15 +696,15 @@ export function TargetDetailView() {
                 </div>
 
                 {companyProfile.status === "in_progress" ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">DART·웹 리서치·LLM 분석 진행 중 — 완료되면 자동으로 갱신됩니다.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">DART·웹 리서치·LLM 분석 진행 중 — 완료되면 자동으로 갱신됩니다.</p>
                 ) : companyProfile.status === "failed" ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--red-fg)]">분석 실패 — {companyProfile.error ?? "사유 없음"}</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">분석 실패 — {companyProfile.error ?? "사유 없음"}</p>
                 ) : companyProfile.status === "not_started" || !companyProfile.profile ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">아직 분석된 프로파일이 없습니다 — "AI 분석 실행"으로 강점·약점·산업 노출·경쟁 포지셔닝을 생성하세요.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 분석된 프로파일이 없습니다 — "AI 분석 실행"으로 강점·약점·산업 노출·경쟁 포지셔닝을 생성하세요.</p>
                 ) : (
                   <div className="text-[0.88rem]">
                     {companyProfile.profile.swot && (
-                      <p className="sizing-note-list mb-2 text-[0.78rem] text-[color:var(--amber-fg)]" role="note">
+                      <p className="sizing-note-list mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]" role="note">
                         ⚠ 기회·위협은 LLM 추정 — 분석가 확정 전까지 인용 시 검증 필요 표기를 유지하세요.
                       </p>
                     )}
@@ -757,7 +757,7 @@ export function TargetDetailView() {
                         출처 탭에 누적된다. */}
                     {companyProfile.profile.researchSources.length > 0 && (
                       <div className="mt-3 mb-0">
-                        <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-1">
+                        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
                           본 분석에 사용된 외부 리서치 {companyProfile.profile.researchSources.length}건 — 위 <span className="text-[color:var(--accent)]">[n]</span> 표시가 아래 출처로 연결됩니다. 전체 목록은{" "}
                           <button type="button" className="text-[color:var(--accent)] underline" onClick={() => setProfileTab("sources")}>출처 탭</button>에서.
                         </p>
@@ -807,7 +807,7 @@ export function TargetDetailView() {
                 <div className="card mb-3">
                   <h4 className="text-[0.9rem] mb-2">DART 재무 현황 ({companyProfile.profile.dartFinancials!.year}년)</h4>
                   <EChart option={chartOption} height={300} ariaLabel="DART 재무 현황 — 계정별 연도 비교" />
-                  <p className="mt-1 mb-2 text-[0.72rem] text-[color:var(--muted-fg)]">단위: 억원 · 출처: DART 사업보고서</p>
+                  <p className="mt-1 mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">단위: 억원 · 출처: DART 사업보고서</p>
                   <div className="table-scroll">
                     <table className="data-table report-table" aria-label="DART 재무 요약 (계정 × 연도)">
                       <caption className="sr-only">DART 재무 요약 (계정 × 연도)</caption>
@@ -831,7 +831,7 @@ export function TargetDetailView() {
               );
             })()}
             {!companyProfile?.profile?.dartFinancials?.available && (
-              <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
+              <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 계정별 상세 그래프는 AI 분석 실행 후 표시됩니다 — <button type="button" className="text-[color:var(--accent)] underline" onClick={() => setProfileTab("aiprofile")}>AI 분석 탭</button>에서 실행하세요.
               </p>
             )}
@@ -841,13 +841,13 @@ export function TargetDetailView() {
         {profileTab === "disclosures" && (
           <div className="card mt-3">
             {!dartCode || !companyId ? (
-              <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">
+              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 DART 고유번호가 없어 공시를 조회할 수 없습니다 — 등록 시 8자리 고유번호를 입력하면 연결됩니다.
               </p>
             ) : (
               <>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <label className="text-[0.78rem] flex items-center gap-1">
+                  <label className="text-[length:var(--fs-caption)] flex items-center gap-1">
                     공시
                     <select value={discPreset} onChange={(e) => setDiscPreset(e.target.value)} className="sizing-new-input sizing-new-input-sm" aria-label="공시 프리셋">
                       {(disclosures?.presets ?? [{ key: "recent", label: "최근 공시" }, { key: "business", label: "사업보고서" }]).map((pr) => (
@@ -855,14 +855,14 @@ export function TargetDetailView() {
                       ))}
                     </select>
                   </label>
-                  {disclosures === undefined && <span className="text-[0.75rem] text-[color:var(--muted-fg)]">조회 중...</span>}
+                  {disclosures === undefined && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">조회 중...</span>}
                 </div>
                 {disclosures === undefined ? null : disclosures === null ? (
-                  <p className="mb-0 text-[0.75rem] text-[color:var(--muted-fg)]">공시 목록을 불러오지 못했습니다.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">공시 목록을 불러오지 못했습니다.</p>
                 ) : disclosures.error ? (
-                  <p className="mb-0 text-[0.75rem] text-[color:var(--muted-fg)]">{disclosures.error}</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{disclosures.error}</p>
                 ) : disclosures.disclosures.length === 0 ? (
-                  <p className="mb-0 text-[0.75rem] text-[color:var(--muted-fg)]">해당 프리셋의 공시가 최근 12개월 내 없습니다.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">해당 프리셋의 공시가 최근 12개월 내 없습니다.</p>
                 ) : (
                   <ul className="sizing-note-list mb-0" style={{ maxHeight: "16rem", overflowY: "auto", fontSize: "0.88rem" }}>
                     {disclosures.disclosures.map((d) => (
@@ -903,11 +903,11 @@ export function TargetDetailView() {
                 const anyAssessed = [...KNOCKOUT_IDS].some((id) => savedVerdicts[id] && savedVerdicts[id] !== "pending");
                 return anyAssessed ? (
                   <p className="mb-2">
-                    <span className="text-[0.78rem] mr-2">사전 검토 결과(확정 판정 기준):</span>
+                    <span className="text-[length:var(--fs-caption)] mr-2">사전 검토 결과(확정 판정 기준):</span>
                     <span className={`status-chip ${reco.cls}`}>{reco.label}</span>
                   </p>
                 ) : (
-                  <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">아직 확정된 판정이 없습니다 — Short List 승격 후 /brownfield 화면의 "사전 검토" 섹션에서 판정합니다.</p>
+                  <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 확정된 판정이 없습니다 — Short List 승격 후 /brownfield 화면의 "사전 검토" 섹션에서 판정합니다.</p>
                 );
               })()}
               <ul className="sizing-note-list mb-1">
@@ -915,13 +915,13 @@ export function TargetDetailView() {
                   const v = savedVerdicts[item.id];
                   const ev = itemEvidence[item.id];
                   return (
-                    <li key={item.id} className="text-[0.78rem] flex flex-wrap items-start gap-2">
+                    <li key={item.id} className="text-[length:var(--fs-caption)] flex flex-wrap items-start gap-2">
                       <code className="dd-item-id mt-1">{item.id}</code>
                       <span className="flex-1 min-w-[14rem]">
                         <span className="text-[color:var(--muted-fg)]">{item.text.split(" — ")[0]}</span>
-                        {ev?.rationale && <span className="block text-[0.75rem]">{ev.rationale}</span>}
+                        {ev?.rationale && <span className="block text-[length:var(--fs-caption)]">{ev.rationale}</span>}
                         {ev?.source_url && (
-                          <a href={ev.source_url} target="_blank" rel="noreferrer" className="block text-[0.72rem] text-[color:var(--accent)] underline truncate">
+                          <a href={ev.source_url} target="_blank" rel="noreferrer" className="block text-[length:var(--fs-caption)] text-[color:var(--accent)] underline truncate">
                             출처: {ev.source_url}
                           </a>
                         )}
@@ -935,7 +935,7 @@ export function TargetDetailView() {
                   );
                 })}
               </ul>
-              <p className="mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 판정 기록은 /brownfield 화면의 "사전 검토" 섹션에서 합니다 — 이 탭은 수집된 정보의 참고 저장소입니다.
               </p>
             </div>
@@ -944,17 +944,17 @@ export function TargetDetailView() {
                 <h4 className="text-[0.9rem] mb-2">정보 수집 타임라인</h4>
                 <ul className="sizing-note-list mb-0">
                   {evidence.map((e) => (
-                    <li key={e.id} className="text-[0.78rem]">
+                    <li key={e.id} className="text-[length:var(--fs-caption)]">
                       <span className="flex flex-wrap items-center gap-1">
                         <span className={`status-chip ${e.kind === "discovery" ? "status-amber" : e.kind === "analysis" ? "status-amber" : "status-green"}`}>
                           {e.kind === "discovery" ? "등록" : e.kind === "analysis" ? "재분석" : "사전 검토"}
                         </span>
                         <strong>{e.title}</strong>
-                        <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{e.created_at.slice(0, 16).replace("T", " ")}</span>
+                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{e.created_at.slice(0, 16).replace("T", " ")}</span>
                       </span>
-                      {e.detail && <span className="block text-[0.75rem] text-[color:var(--muted-fg)] whitespace-pre-wrap">{e.detail}</span>}
+                      {e.detail && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] whitespace-pre-wrap">{e.detail}</span>}
                       {e.source_url && (
-                        <a href={e.source_url} target="_blank" rel="noreferrer" className="text-[0.72rem] text-[color:var(--accent)] underline">출처</a>
+                        <a href={e.source_url} target="_blank" rel="noreferrer" className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline">출처</a>
                       )}
                     </li>
                   ))}
@@ -978,7 +978,7 @@ export function TargetDetailView() {
                     </span>
                   </div>
                   {catScore.totalWeight > catScore.scoredWeight && (
-                    <p className="mb-2 text-[0.72rem] text-[color:var(--muted-fg)]">
+                    <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                       미판정 가중치 {catScore.totalWeight - catScore.scoredWeight} / 전체 {catScore.totalWeight} 남음 — 전 항목 판정 전까지는 잠정 점수입니다.
                     </p>
                   )}
@@ -1017,7 +1017,7 @@ export function TargetDetailView() {
                         임계값 {rubricOpen ? "닫기" : "편집"}
                       </button>
                       {draftCategory !== "technical" && (
-                        <span className="text-[0.72rem] text-[color:var(--muted-fg)] flex-1 min-w-[16rem]">
+                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex-1 min-w-[16rem]">
                           {draftNote ?? "DART facts로 미판정 항목의 판정 초안을 만듭니다 — 확인·수정 후 저장하며 확정은 항상 사람이 합니다 (경계 #2)."}
                         </span>
                       )}
@@ -1049,16 +1049,16 @@ export function TargetDetailView() {
                         </>
                       )}
                       {draftCategory === "technical" ? (
-                        <span className="text-[0.72rem] text-[color:var(--muted-fg)] flex-1 min-w-[16rem]">{draftNote}</span>
+                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex-1 min-w-[16rem]">{draftNote}</span>
                       ) : (
-                        <span className="text-[0.72rem] text-[color:var(--muted-fg)] flex-1 min-w-[16rem]">
+                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex-1 min-w-[16rem]">
                           최근 3년 공시·AI 프로파일·웹 검색으로 근거를 모아 판정 초안을 만듭니다 — 근거로 확인 안 되는 항목은 "확인 안됨"으로 표시되고, 판정 확정은 항상 사람이 합니다 (경계 #2).
                         </span>
                       )}
                     </div>
                   )}
                   {items.length === 0 ? (
-                    <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
                       {cat === "technical"
                         ? "S3에 필요 역량이 정의되지 않아 기술 평가 항목이 없습니다 — 먼저 S3에서 정의하세요."
                         : "재무 평가 항목이 없습니다 — 불러오는 중이었을 수 있습니다."}
@@ -1071,13 +1071,13 @@ export function TargetDetailView() {
                           <li key={it.id} className="flex flex-wrap items-start gap-2">
                             <span className="flex-1 min-w-[14rem]">
                               {it.label}
-                              {it.description && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{it.description}</span>}
+                              {it.description && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{it.description}</span>}
                             </span>
                             {it.is_mandatory === 1 && <span className="status-chip status-amber">{it.source === "seeded" ? "S3 승계·필수" : "필수"}</span>}
                             {!canAct ? (
-                              <span className="text-[0.72rem] text-[color:var(--muted-fg)]" title="가중치 — 카테고리 100점 점수 계산 시 이 항목의 상대 비중">가중치 {it.weight}</span>
+                              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title="가중치 — 카테고리 100점 점수 계산 시 이 항목의 상대 비중">가중치 {it.weight}</span>
                             ) : (
-                            <label className="text-[0.72rem] text-[color:var(--muted-fg)] flex items-center gap-1" title="가중치 — 카테고리 100점 점수 계산 시 이 항목의 상대 비중">
+                            <label className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex items-center gap-1" title="가중치 — 카테고리 100점 점수 계산 시 이 항목의 상대 비중">
                               가중치
                               <input
                                 type="number" min={1} step={1}
@@ -1135,7 +1135,7 @@ export function TargetDetailView() {
                                   ))}
                                 </div>
                                 {!draft.status && draft.reason && (
-                                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">{draft.reason}</p>
+                                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{draft.reason}</p>
                                 )}
                                 <input
                                   aria-label={`${it.label} 초안 근거 노트`}
@@ -1149,7 +1149,7 @@ export function TargetDetailView() {
                             {rubricOpen && it.category === "financial" && it.source === "builtin" && isFinancialDataRef(it.data_ref) && (() => {
                               const rubric = parseRubric(it.data_ref, it.rubric_json);
                               return (
-                                <div key={`${it.id}:${it.rubric_json ?? "default"}`} className="w-full mt-1 flex flex-wrap items-center gap-2 text-[0.72rem] text-[color:var(--muted-fg)]">
+                                <div key={`${it.id}:${it.rubric_json ?? "default"}`} className="w-full mt-1 flex flex-wrap items-center gap-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                                   <span>임계값 —</span>
                                   {rubricFields(it.data_ref).map((f) => (
                                     <label key={f.key} className="flex items-center gap-1" title={f.hint}>
@@ -1198,14 +1198,14 @@ export function TargetDetailView() {
           <div className="card mt-3">
             <h4 className="text-[0.9rem] mb-2">출처 · 데이터</h4>
             {!companyId ? (
-              <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">회사 마스터가 아직 연결되지 않았습니다.</p>
+              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">회사 마스터가 아직 연결되지 않았습니다.</p>
             ) : companyProfile === undefined ? (
-              <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">불러오는 중...</p>
+              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">불러오는 중...</p>
             ) : !companyProfile?.profile ? (
-              <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">AI 분석을 먼저 실행하면 리서치 출처가 여기에 표시됩니다.</p>
+              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">AI 분석을 먼저 실행하면 리서치 출처가 여기에 표시됩니다.</p>
             ) : (
               <>
-                <p className="mb-2 text-[0.72rem] text-[color:var(--muted-fg)]">
+                <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                   DART {companyProfile.profile.dataSources?.dart ? `공시(${companyProfile.profile.dataSources.dartYear ?? "—"}년)` : "미입수"} ·
                   {" "}외부 웹 리서치 {companyProfile.profile.dataSources?.webResearchCount ?? 0}건
                 </p>
@@ -1219,13 +1219,13 @@ export function TargetDetailView() {
                   </p>
                 )}
                 {companyProfile.profile.researchSources.length === 0 ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">웹 리서치 출처가 없습니다.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">웹 리서치 출처가 없습니다.</p>
                 ) : (
                   <ul className="sizing-note-list mb-0" style={{ fontSize: "0.88rem" }}>
                     {companyProfile.profile.researchSources.map((s, i) => (
                       <li key={i}>
                         <a href={s.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{s.title}</a>
-                        {s.snippet && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">{s.snippet}</span>}
+                        {s.snippet && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{s.snippet}</span>}
                       </li>
                     ))}
                   </ul>
@@ -1293,11 +1293,11 @@ function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <h4 className="text-[0.88rem] font-semibold m-0">확정 경쟁사</h4>
         <span className="status-chip status-green">{confirmed.length}건</span>
-        <span className="text-[0.72rem] text-[color:var(--muted-fg)]">AI 제안 수용 또는 수작업 등록으로만 생긴다 (ADR-0142)</span>
+        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">AI 제안 수용 또는 수작업 등록으로만 생긴다 (ADR-0142)</span>
       </div>
-      {error && <p role="alert" className="mb-2 text-[0.78rem] text-[color:var(--red-fg)]">{error}</p>}
+      {error && <p role="alert" className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{error}</p>}
       {confirmed.length === 0 ? (
-        <p className="mb-2 text-[0.8rem] text-[color:var(--muted-fg)]">아래 AI 제안을 수용하거나 직접 등록하세요.</p>
+        <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아래 AI 제안을 수용하거나 직접 등록하세요.</p>
       ) : (
         <ul className="sizing-note-list mb-2">
           {confirmed.map((c) => (
@@ -1319,7 +1319,7 @@ function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
       )}
       {excluded.length > 0 && (
         <details className="mb-2">
-          <summary className="cursor-pointer text-[0.78rem] text-[color:var(--muted-fg)]">제외됨 {excluded.length}건</summary>
+          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">제외됨 {excluded.length}건</summary>
           <ul className="sizing-note-list">
             {excluded.map((c) => (
               <li key={c.id}>{c.name} — {c.exclusion_reason ?? "사유 없음"}{" "}
@@ -1331,12 +1331,12 @@ function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
       )}
       {openProposals.length > 0 && (
         <div className="mb-2">
-          <p className="text-[0.78rem] font-semibold mb-1">AI 제안 (미확정) {openProposals.length}건</p>
+          <p className="text-[length:var(--fs-caption)] font-semibold mb-1">AI 제안 (미확정) {openProposals.length}건</p>
           <ul className="sizing-note-list mb-0">
             {openProposals.map((p) => (
               <li key={p.name}>
                 <b>{p.name}</b> — {p.note || "—"}{" "}
-                {canAct && <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors`, { name: p.name, note: p.note || null, discovery_source: "ai_proposal" })}>수용</button>}
+                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors`, { name: p.name, note: p.note || null, discovery_source: "ai_proposal" })}>수용</button>}
               </li>
             ))}
           </ul>
@@ -1346,7 +1346,7 @@ function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
         <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="sizing-new-input" style={{ width: "12rem" }} placeholder="경쟁사명 *" aria-label="경쟁사명" />
         <input value={form.dart_corp_code} onChange={(e) => setForm({ ...form, dart_corp_code: e.target.value })} className="sizing-new-input" style={{ width: "9rem" }} placeholder="DART 고유번호 (선택)" aria-label="경쟁사 DART 고유번호" />
         <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className="sizing-new-input" style={{ flex: "1 1 10rem" }} placeholder="경쟁 관계 (선택)" aria-label="경쟁 관계" />
-        <button type="button" className="btn-primary btn-sm" disabled={busy || !form.name.trim()} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors`, { name: form.name, dart_corp_code: form.dart_corp_code || null, note: form.note || null, discovery_source: "manual" }).then((ok) => { if (ok) setForm({ name: "", dart_corp_code: "", note: "" }); })}>등록</button>
+        <button type="button" className="btn-ghost btn-sm" disabled={busy || !form.name.trim()} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors`, { name: form.name, dart_corp_code: form.dart_corp_code || null, note: form.note || null, discovery_source: "manual" }).then((ok) => { if (ok) setForm({ name: "", dart_corp_code: "", note: "" }); })}>등록</button>
       </div>}
     </div>
   );

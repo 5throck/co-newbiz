@@ -212,15 +212,15 @@ export function OpportunityDetail() {
       {/* 기회 개요 + 매력도 평가 */}
       <section aria-label="기회 개요" className="market-section">
         <div className="flex flex-wrap items-center gap-2 mb-2">
-          <span className="text-[0.85rem]">매력도 <strong className="mono-num">{opp.attractiveness_score ?? "—"}</strong> / 100</span>
+          <span className="text-[length:var(--fs-body)]">매력도 <strong className="mono-num">{opp.attractiveness_score ?? "—"}</strong> / 100</span>
           {opp.synergy_score !== null && (
-            <span className="text-[0.85rem]" title={opp.synergy_score_confirmed_at ? "사람이 확정한 시너지 점수" : "사람 확정 전 권고값 — S3 화면에서 확정할 수 있습니다"}>
+            <span className="text-[length:var(--fs-body)]" title={opp.synergy_score_confirmed_at ? "사람이 확정한 시너지 점수" : "사람 확정 전 권고값 — S3 화면에서 확정할 수 있습니다"}>
               시너지 <strong className="mono-num">{opp.synergy_score}</strong>
-              <span className="text-[0.7rem] text-[color:var(--muted-fg)] ml-1">{opp.synergy_score_confirmed_at ? "확정" : "권고(미확정)"}</span>
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-1">{opp.synergy_score_confirmed_at ? "확정" : "권고(미확정)"}</span>
             </span>
           )}
         </div>
-        {opp.rationale && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-2">{opp.rationale}</p>}
+        {opp.rationale && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{opp.rationale}</p>}
         {canAct && opp.status === "identified" && (
           <div className="flex flex-wrap items-center gap-1">
             <input type="number" min={0} max={100} aria-label="매력도" placeholder="매력도 0-100"
@@ -230,12 +230,12 @@ export function OpportunityDetail() {
             <button type="button" className="btn-ghost btn-sm" disabled={attractBusy} onClick={() => void generateAttractDraft()}>
               {attractBusy ? "초안 생성 중..." : "LLM 초안"}
             </button>
-            {attractReco && <span className="text-[0.7rem] text-[color:var(--muted-fg)]">{attractReco.recommendation.rationale_draft.slice(0, 160) || "초안 없음"}</span>}
+            {attractReco && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{attractReco.recommendation.rationale_draft.slice(0, 160) || "초안 없음"}</span>}
           </div>
         )}
         {/* S3 — 판정 결과와 S3 화면 이동 링크 (인라인 실행 없음, ADR-0127) */}
         {opp.status !== "identified" && (
-          <div className="mt-2 p-2 border border-[color:var(--border)] rounded text-[0.8rem]">
+          <div className="mt-2 p-2 border border-[color:var(--border)] rounded text-[length:var(--fs-caption)]">
             <span className="font-semibold">S3 시너지·전략적 적합성</span>{" "}
             {s3Ready ? (() => {
               const attractiveness = opp.attractiveness_score ?? 0;
@@ -250,7 +250,7 @@ export function OpportunityDetail() {
               <span className="status-chip status-not-started">미실시</span>
             )}
             {opp.synergy_score !== null && (
-              <span className="block mt-1 text-[0.75rem]">
+              <span className="block mt-1 text-[length:var(--fs-caption)]">
                 <strong>시너지 {opp.synergy_score}점</strong>
                 <span className={opp.synergy_score_confirmed_at ? "" : "text-[color:var(--muted-fg)]"}>{opp.synergy_score_confirmed_at ? " (사람 확정)" : " (권고·사람 미확정)"}</span>
                 {" — "}{opp.synergy_rationale ?? "근거 미기록"}
@@ -258,7 +258,7 @@ export function OpportunityDetail() {
             )}
             <div className="mt-2">
               <Link href={`/deals/${encodeURIComponent(id)}/s3`} className="btn-ghost btn-sm" title="S3 시너지·전략적 적합성 화면에서 분석합니다">S3 탭으로 이동 →</Link>
-              <span className="text-[0.72rem] text-[color:var(--muted-fg)] ml-2">필요 역량 수준도 S3 화면의 연계 시너지 탭에서 함께 관리합니다.</span>
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-2">필요 역량 수준도 S3 화면의 연계 시너지 탭에서 함께 관리합니다.</span>
             </div>
           </div>
         )}
@@ -282,7 +282,7 @@ export function OpportunityDetail() {
         <SectionToolbar title="기회·위험 요인" icon="" count={(factors?.opportunity.length ?? 0) + (factors?.risk.length ?? 0)} />
         <div className="chart-pair">
           <div className="chart-half sizing-grade-card">
-            <h4 className="text-[0.85rem] mb-1">✅ 기회 요인</h4>
+            <h4 className="text-[length:var(--fs-body)] mb-1">✅ 기회 요인</h4>
             <ul className="sizing-note-list">
               {(factors?.opportunity ?? []).map((f, i) => (
                 <li key={i}>
@@ -294,7 +294,7 @@ export function OpportunityDetail() {
             </ul>
           </div>
           <div className="chart-half sizing-grade-card">
-            <h4 className="text-[0.85rem] mb-1">위험 요인</h4>
+            <h4 className="text-[length:var(--fs-body)] mb-1">위험 요인</h4>
             <ul className="sizing-note-list">
               {(factors?.risk ?? []).map((f, i) => (
                 <li key={i}>
@@ -325,7 +325,7 @@ export function OpportunityDetail() {
             캔버스 재생성과 분리된 별도 버튼이다(서로 조용히 덮어쓰지 않음). */}
         {(sketchView?.sketch as { scenarios?: unknown[] } | null)?.scenarios != null && (
           <div className="mt-4">
-            {scenarioNotice && <p role="status" className="text-[0.78rem] text-[color:var(--green-fg)] mb-1">{scenarioNotice}</p>}
+            {scenarioNotice && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--green-fg)] mb-1">{scenarioNotice}</p>}
             <ScenarioPremises
               sketch={sketchView?.sketch as unknown as Record<string, unknown> | null}
               actions={canAct ?
@@ -346,32 +346,32 @@ export function OpportunityDetail() {
           title="비즈니스 모델 검토"
           icon=""
           actions={canAct ?
-            <button type="button" className="btn-primary btn-sm" disabled={sketchBusy} onClick={() => void createSketch(sketchView?.sketch != null)}>
+            <button type="button" className="btn-ghost btn-sm" disabled={sketchBusy} onClick={() => void createSketch(sketchView?.sketch != null)}>
               {sketchBusy ? "생성 중..." : sketchView?.sketch ? "재생성 (새 버전)" : "검토 생성"}
             </button> : undefined
           }
         />
         {sketchView === null ? (
-          <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">아직 비즈니스 모델 검토가 없습니다 — 검토 생성으로 시작하세요.</p>
+          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">아직 비즈니스 모델 검토가 없습니다 — 검토 생성으로 시작하세요.</p>
         ) : sketchView.sketch ? (
           <>
             {viewingVersion !== null && (
-              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-1">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
                 과거 버전 v{viewingVersion} 열람 중 —{" "}
                 <button type="button" className="btn-ghost btn-sm" onClick={() => { setViewingVersion(null); setVersionSketch(null); }}>현재 버전으로</button>
               </p>
             )}
-            <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-1">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
               {viewingVersion === null && `현재 버전 · ${sketchView.source === "llm" ? "LLM" : "결정론 합성"} · ${sketchView.created_at?.slice(0, 10) ?? ""}`}
             </p>
             <SketchCanvas sketch={(viewingVersion !== null ? versionSketch : sketchView.sketch) as unknown as Record<string, unknown>} />
           </>
         ) : (
-          <p className="text-[color:var(--muted-fg)] italic text-[0.85rem]">아직 비즈니스 모델 검토가 없습니다 — 검토 생성으로 시작하세요.</p>
+          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">아직 비즈니스 모델 검토가 없습니다 — 검토 생성으로 시작하세요.</p>
         )}
         {(sketchView?.versions.length ?? 0) > 0 && (
           <details className="mt-2">
-            <summary className="cursor-pointer text-[0.8rem] text-[color:var(--accent)]">검토 이력 ({sketchView!.versions.length}건 — 이전에 분석한 내용)</summary>
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">검토 이력 ({sketchView!.versions.length}건 — 이전에 분석한 내용)</summary>
             <table className="data-table mt-2" aria-label="비즈니스 모델 검토 이력">
               <caption className="sr-only">비즈니스 모델 검토 이력</caption>
               <thead><tr><th scope="col">버전</th><th scope="col">생성 방식</th><th scope="col">일시</th><th scope="col"></th></tr></thead>

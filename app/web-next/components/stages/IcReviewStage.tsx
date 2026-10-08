@@ -162,7 +162,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
       <StageTabs projectId={projectId} />
       <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S11")} />
       <StageFrame stageId="S11" heading="S11 투자심사·실행 — IC 패키지 · Entity/Group IC · 설립 실행">
-        <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           Entity IC와 Group IC 승인이 모두 기록되고, origin∈{"{internal,joint}"} 프로젝트는 설립 5단계 완료 기록이
           존재해야 S11이 완료됩니다 (flow.spec v2.0.0).
           <span className={`status-chip ${bothGatesGo ? "status-green" : "status-amber"} ml-2`}>
@@ -175,8 +175,8 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           )}
         </p>
 
-        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">✕ {error}</p>}
-        {notice && <p role="status" className="text-[color:var(--green-fg)] text-[0.82rem] mb-2">✓ {notice}</p>}
+        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
+        {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
         {/* ── IC 패키지 요약 ─────────────────────────────────────────── */}
         <section className="market-section sizing-step" aria-label="IC 패키지 요약">
@@ -184,17 +184,17 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             <span className="sizing-step-badge">📦</span> IC 패키지 — Business Case · DD · RAG 제안
           </h3>
 
-          <h4 className="text-[0.85rem] mt-2 mb-1">채택 Business Case (S8)</h4>
+          <h4 className="text-[length:var(--fs-body)] mt-2 mb-1">채택 Business Case (S8)</h4>
           {pkg?.business_case.adopted ? (
             <>
-              <p className="text-[0.82rem]">
+              <p className="text-[length:var(--fs-caption)]">
                 {pkg.business_case.adopted.name}
                 <span className="status-chip status-green ml-2">✓ 채택됨</span>
                 {pkg.business_case.adopted.scenario && (
                   <span className="status-chip status-not-started ml-1">시나리오: {pkg.business_case.adopted.scenario}</span>
                 )}
                 {pkg.business_case.adoption && (
-                  <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                     채택자 {pkg.business_case.adoption.adoptedBy} · {pkg.business_case.adoption.adoptedAt.slice(0, 10)}
                   </span>
                 )}
@@ -217,13 +217,13 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               </table>
             </>
           ) : (
-            <p className="text-[0.82rem] text-[color:var(--muted-fg)]">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               {pkg?.business_case.note ?? "채택된 Business Case가 없습니다 — 사업성 분석 탭에서 케이스를 생성·채택하세요."}
             </p>
           )}
 
-          <h4 className="text-[0.85rem] mt-3 mb-1">DD 요약 (S9)</h4>
-          <p className="text-[0.82rem]">
+          <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">DD 요약 (S9)</h4>
+          <p className="text-[length:var(--fs-caption)]">
             <span className={`status-chip ${pkg && pkg.dd.completion.total > 0 && pkg.dd.completion.pending === 0 && pkg.dd.completion.unassessed === 0 && pkg.dd.completion.mandatoryUnmet === 0 ? "status-green" : "status-amber"}`}>
               {pkg && pkg.dd.completion.total > 0
                 ? `판정 ${pkg.dd.completion.total}건 · 대기 ${pkg.dd.completion.pending}건 · 미판정 ${pkg.dd.completion.unassessed}건 · 필수 미충족 ${pkg.dd.completion.mandatoryUnmet}건`
@@ -241,9 +241,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             </ul>
           )}
 
-          <h4 className="text-[0.85rem] mt-3 mb-1">RAG 종합 등급</h4>
+          <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">RAG 종합 등급</h4>
           {pkg?.rag.grade ? (
-            <p className="text-[0.82rem]">
+            <p className="text-[length:var(--fs-caption)]">
               <span className={`status-chip ${RAG_META[pkg.rag.grade]?.cls ?? "status-not-started"}`}>
                 {RAG_META[pkg.rag.grade]?.icon ?? "?"} {pkg.rag.grade.toUpperCase()}
               </span>
@@ -256,13 +256,13 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                 </span>
               )}
               {pkg.rag.rationale && (
-                <span className="block text-[0.75rem] text-[color:var(--muted-fg)] mt-1">근거: {pkg.rag.rationale}</span>
+                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">근거: {pkg.rag.rationale}</span>
               )}
             </p>
           ) : (
             // Incomplete assessment: NO overall grade and NO color — "not graded"
             // is a distinct outcome, never a default Amber.
-            <p className="text-[0.82rem]">
+            <p className="text-[length:var(--fs-caption)]">
               <span className="status-chip status-not-started">○ 미산정 (not graded)</span>
               <span className="status-chip status-amber ml-2" title="경계 #2 — 이 평가는 AI 분석이 제안한 값이며, IC 승인 기록이 아닙니다">
                 ⚠ AI 제안 (승인 아님)
@@ -272,7 +272,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                   신뢰도 상한 {pkg.rag.confidence_cap}
                 </span>
               )}
-              <span className="block text-[0.75rem] text-[color:var(--muted-fg)] mt-1">
+              <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
                 {pkg?.rag.missing_dimensions?.length
                   ? `종합 등급을 낼 수 없습니다 — 미평가 차원: ${pkg.rag.missing_dimensions.join(", ")}. 여섯 차원이 모두 평가되어야 종합 등급이 산정됩니다 (빨강 신호는 예외로 즉시 표시).`
                   : "RAG 평가 기록이 없습니다 — 입력이 채워지면 자동 제안됩니다."}
@@ -297,10 +297,10 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                 const meta = stepMeta(row?.status);
                 return (
                   <tr key={n}>
-                    <td><span className="tabular-nums mr-1 text-[0.75rem] text-[color:var(--muted-fg)]">{n}</span>{STEP_TITLES[n]}</td>
+                    <td><span className="tabular-nums mr-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{n}</span>{STEP_TITLES[n]}</td>
                     <td><span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span></td>
-                    <td className="text-[0.78rem]">{row?.owner ?? "—"}</td>
-                    <td className="text-[0.75rem] tabular-nums">{row?.updated_at?.slice(0, 10) ?? "—"}</td>
+                    <td className="text-[length:var(--fs-caption)]">{row?.owner ?? "—"}</td>
+                    <td className="text-[length:var(--fs-caption)] tabular-nums">{row?.updated_at?.slice(0, 10) ?? "—"}</td>
                   </tr>
                 );
               })}
@@ -310,7 +310,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           {canAct && estApplies && (
             <form className="sizing-new-form mt-2" aria-label="설립 실행 단계 기록" onSubmit={(e) => { e.preventDefault(); updateStep(); }}>
               <div className="flex flex-wrap items-end gap-2">
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">단계</span>
                   <select
                     value={form.step_no}
@@ -320,7 +320,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                     {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}. {STEP_TITLES[n]}</option>)}
                   </select>
                 </label>
-                <label className="text-[0.78rem]">
+                <label className="text-[length:var(--fs-caption)]">
                   <span className="block mb-1">상태</span>
                   <select
                     value={form.status}
@@ -330,7 +330,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                     {Object.entries(STEP_STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
                   </select>
                 </label>
-                <label className="text-[0.78rem] flex-1 min-w-[12rem]">
+                <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]">
                   <span className="block mb-1">증적 URL</span>
                   <input
                     value={form.evidence_url}
@@ -339,7 +339,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                     placeholder="data room 링크 (선택)"
                   />
                 </label>
-                <label className="text-[0.78rem] flex-1 min-w-[12rem]">
+                <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]">
                   <span className="block mb-1">비고</span>
                   <input
                     value={form.note}
@@ -363,21 +363,21 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               <span className="sizing-step-badge">🤝</span> PMI 킥오프 — Brownfield 통합 계획 기준선
             </h3>
             {pkg.pmi_kickoff.record ? (
-              <p className="text-[0.82rem]">
+              <p className="text-[length:var(--fs-caption)]">
                 <span className="status-chip status-green">● 킥오프 기록됨</span>
-                <span className="block text-[0.78rem] mt-1">통합 책임자 {pkg.pmi_kickoff.record.owner} · 기록자 {pkg.pmi_kickoff.record.recordedBy} · {pkg.pmi_kickoff.record.recordedAt.slice(0, 10)}</span>
-                <span className="block text-[0.75rem] text-[color:var(--muted-fg)] mt-1">{pkg.pmi_kickoff.record.planNote}</span>
+                <span className="block text-[length:var(--fs-caption)] mt-1">통합 책임자 {pkg.pmi_kickoff.record.owner} · 기록자 {pkg.pmi_kickoff.record.recordedBy} · {pkg.pmi_kickoff.record.recordedAt.slice(0, 10)}</span>
+                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{pkg.pmi_kickoff.record.planNote}</span>
               </p>
             ) : (
-              <p className="text-[0.82rem]">
+              <p className="text-[length:var(--fs-caption)]">
                 <span className="status-chip status-amber">○ 킥오프 미기록</span>
-                <span className="block text-[0.75rem] text-[color:var(--muted-fg)] mt-1">S11 완료에는 사람이 기록한 PMI 킥오프(통합 책임자·계획 기준선)가 필요합니다.</span>
+                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">S11 완료에는 사람이 기록한 PMI 킥오프(통합 책임자·계획 기준선)가 필요합니다.</span>
               </p>
             )}
             {canAct && (
               <form className="sizing-new-form mt-2" aria-label="PMI 킥오프 기록" onSubmit={(e) => { e.preventDefault(); recordKickoff(); }}>
                 <div className="flex flex-wrap items-end gap-2">
-                  <label className="text-[0.78rem] min-w-[10rem]">
+                  <label className="text-[length:var(--fs-caption)] min-w-[10rem]">
                     <span className="block mb-1">통합 책임자 (필수)</span>
                     <input
                       value={pmiForm.owner}
@@ -386,7 +386,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                       required
                     />
                   </label>
-                  <label className="text-[0.78rem] flex-1 min-w-[16rem]">
+                  <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]">
                     <span className="block mb-1">통합 계획 기준선 (필수, 20자 이상)</span>
                     <input
                       value={pmiForm.plan_note}
@@ -410,6 +410,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           <GateDecisionPanel
             opportunityId={projectId}
             gates={["entity_ic"]}
+            primary
             entityType="project"
             killHint={null}
           />

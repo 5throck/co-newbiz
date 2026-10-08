@@ -45,7 +45,7 @@ export function ConfirmDialog({
           <h2 style={{ fontSize: "0.95rem" }}>{state.title}</h2>
         </div>
         {state.body && (
-          <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-2 mb-0">{state.body}</p>
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-0">{state.body}</p>
         )}
         <div className="flex justify-end gap-2 mt-4">
           <button type="button" className="btn-ghost btn-sm" onClick={onClose}>

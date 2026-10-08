@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.3.0
 // design-lint (skills/design-lint) — mechanical enforcement of the Onyx 3.0
 // design guide (docs/design-system/design-guide.md). Fails on:
 //   1. hardcoded hex/rgba/hsl colors in components/app tsx (outside styles.css)
@@ -7,6 +7,9 @@
 //   4. icon-only buttons (svg child, no text) without aria-label
 //   5. row-action tables (.data-table + .sizing-actions-cell) without the
 //      .list-table standard or with an unheaded actions column
+//   6. font-size below the 14px floor (0.875rem) in styles.css or Tailwind
+//      text-[..rem] classes — only var(--fs-caption) (13px) is allowed for
+//      secondary metadata, and only inside .caption-style selectors (Wave U-2)
 // Usage: bun scripts/co-newbiz/design-lint.ts
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -22,6 +25,25 @@ function* walk(dir: string): Generator<string> {
       yield* walk(p);
     } else if (name.endsWith(".tsx")) {
       yield p;
+    }
+  }
+}
+
+const FONT_FLOOR_PX = 14;
+
+// 6. styles.css: literal font-size below the floor is rejected; the token
+//    declarations (--fs-*) and var() usages are the sanctioned path.
+{
+  const cssPath = join(WEB, "app", "styles.css");
+  const css = readFileSync(cssPath, "utf8");
+  for (const m of css.matchAll(/(^|\n)([^{}\n]*)\{([^{}]*)\}/g)) {
+    const selector = m[2].trim();
+    if (selector.startsWith("/*") || selector.startsWith("@")) continue;
+    for (const d of m[3].matchAll(/(?:^|[;\s])font-size:\s*(\d*\.?\d+)(rem|px)/g)) {
+      const px = d[2] === "rem" ? Number(d[1]) * 16 : Number(d[1]);
+      if (px < FONT_FLOOR_PX && !/\.caption\b/.test(selector)) {
+        violations.push(`app/styles.css: "${selector.slice(0, 60)}" font-size ${d[1]}${d[2]} is below the 14px floor — use var(--fs-body) or var(--fs-caption)`);
+      }
     }
   }
 }
@@ -81,6 +103,11 @@ for (const file of targets) {
   if (hexHits.length > 0) violations.push(`${rel}: hardcoded hex color(s) (${hexHits.length}) — use CSS variables from styles.css`);
   if (/rgba?\(\s*\d/.test(src)) violations.push(`${rel}: hardcoded rgba() color — use CSS variables from styles.css`);
   if (/hsl\(\s*\d/.test(src)) violations.push(`${rel}: hardcoded hsl() color — use CSS variables from styles.css`);
+  // 6. font-size floor — Tailwind arbitrary text-[<n>rem|px] below 0.875rem
+  for (const m of src.matchAll(/text-\[(\d*\.?\d+)(rem|px)\]/g)) {
+    const px = m[2] === "rem" ? Number(m[1]) * 16 : Number(m[1]);
+    if (px < FONT_FLOOR_PX) violations.push(`${rel}: text-[${m[1]}${m[2]}] is below the 14px floor — use var(--fs-body), or var(--fs-caption) for captions`);
+  }
   const semanticColorUtilities = src.match(/\b(?:bg|text|border)-(?:red|amber|yellow|orange|green|emerald|blue|sky|cyan|slate|gray|zinc|neutral|stone|purple|violet|pink|rose)-\d{2,3}(?:\/\d{1,3})?\b/g) ?? [];
   if (semanticColorUtilities.length > 0) {
     violations.push(`${rel}: Tailwind semantic color utility/ies (${[...new Set(semanticColorUtilities)].join(", ")}) — use CSS variables from styles.css`);

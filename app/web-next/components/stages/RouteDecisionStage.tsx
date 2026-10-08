@@ -360,7 +360,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
   if (notFound) {
     return (
       <div className="card">
-        <p className="text-[0.85rem] text-[color:var(--muted-fg)]">
+        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
           선별(selected)된 기회를 찾을 수 없습니다 — S3 시너지·적합성 평가를 마친 기회만 여기서 진출방식을 결정할 수 있습니다.
         </p>
       </div>
@@ -391,7 +391,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
             <h2 className="flex items-center gap-2">
               진출방식 추천 <span className="status-chip status-not-started">제안</span>
             </h2>
-            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 최종 결정은 사람이 기록합니다 — 이 카드는 S1~S3 산출물에서 자동으로 만든 <b>제안</b>이며, 아래 &quot;결정&quot; 탭에 반영한 뒤 자유롭게 수정할 수 있습니다.
             </p>
             <p className="text-[0.95rem] mb-0">
@@ -406,25 +406,25 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               <span>Brownfield <strong className="tabular-nums">{advisory.brownfieldScore}</strong></span>
             </div>
             {advisory.recommendedTrack !== "neutral" && (
-              <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-1">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
                 신호 {advisory.signals.length}건 중 {supporting.length}건이 {trackLabel}, {neutralCount}건 중립 (근거 전체는{" "}
                 <button type="button" className="text-[color:var(--accent)] underline" onClick={() => setTab("eval")}>평가 근거 탭</button>)
               </p>
             )}
             {advisory.reReviewTriggers.length > 0 && (
-              <p className="text-[0.75rem] text-[color:var(--amber-fg)] mb-2">점검: {advisory.reReviewTriggers.join(" / ")}</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg)] mb-2">점검: {advisory.reReviewTriggers.join(" / ")}</p>
             )}
             {supporting.length > 0 ? (
               <ul className="sizing-note-list mb-2">
                 {supporting.map((s) => <li key={s.key}>{s.label} — {s.note}</li>)}
               </ul>
             ) : (
-              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">신호가 뚜렷한 방향을 가리키지 않습니다.</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">신호가 뚜렷한 방향을 가리키지 않습니다.</p>
             )}
 
             {/* AI 서술 초안 — 신호 요약을 문장으로 확장한 LLM 초안. 기존 reco 상태 그대로. */}
             <div className="sizing-grade-card mb-3">
-              <h4 className="text-[0.85rem] mb-2 flex items-center gap-2">
+              <h4 className="text-[length:var(--fs-body)] mb-2 flex items-center gap-2">
                 AI 서술 초안
                 {reco && (
                   <span className="status-chip status-not-started">
@@ -437,28 +437,28 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                   </button>
                 )}
               </h4>
-              {recoError && <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+              {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
               {canAct && !reco && !recoLoading && !recoError && (
                 <div className="flex flex-wrap items-center gap-2 mb-0">
                   <button type="button" className="btn-ghost" onClick={() => void generateRecommendation()}>
                     ▶ LLM 추천 생성
                   </button>
-                  <span className="text-[0.75rem] text-[color:var(--muted-fg)]">권장 트랙·라우트·5기준 채점 초안(점수+근거)과 결정 근거 서술 초안을 작성해 채움을 돕습니다.</span>
+                  <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">권장 트랙·라우트·5기준 채점 초안(점수+근거)과 결정 근거 서술 초안을 작성해 채움을 돕습니다.</span>
                 </div>
               )}
-              {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">S1~S3 산출물과 어드바이저 신호를 근거로 초안을 작성하는 중...</p>}
+              {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">S1~S3 산출물과 어드바이저 신호를 근거로 초안을 작성하는 중...</p>}
               {reco && (
                 <>
-                  {reco.note && <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
+                  {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
                   {reco.recommendation.rationale_draft && (
-                    <p className="text-[0.8rem] mb-2"><span className="font-semibold">근거 초안:</span> {reco.recommendation.rationale_draft}</p>
+                    <p className="text-[length:var(--fs-caption)] mb-2"><span className="font-semibold">근거 초안:</span> {reco.recommendation.rationale_draft}</p>
                   )}
                   {reco.recommendation.alternatives_draft && (
-                    <p className="text-[0.8rem] mb-2"><span className="font-semibold">대안 검토 초안:</span> {reco.recommendation.alternatives_draft}</p>
+                    <p className="text-[length:var(--fs-caption)] mb-2"><span className="font-semibold">대안 검토 초안:</span> {reco.recommendation.alternatives_draft}</p>
                   )}
                   {reco.recommendation.cautions.length > 0 && (
                     <>
-                      <p className="text-[0.82rem] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">유의</p>
+                      <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] font-semibold mb-1">유의</p>
                       <ul className="sizing-note-list mb-0">
                         {reco.recommendation.cautions.map((c, i) => <li key={i}>{c}</li>)}
                       </ul>
@@ -472,7 +472,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               <div className="flex flex-wrap items-center gap-2 mb-0">
                 <button
                   type="button"
-                  className="btn-primary"
+                  className="btn-ghost"
                   onClick={() => confirm("추천을 결정 탭에 반영할까요?", applyRecommendation, {
                     body: "현재 입력한 트랙·라우트·채점·근거를 추천 초안으로 덮어씁니다 — 반영 후에도 자유롭게 수정할 수 있고, 결정은 결정 탭의 '결정' 버튼을 누른 사람에게 기록됩니다.",
                     confirmLabel: "반영",
@@ -480,7 +480,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                 >
                   결정 탭에 반영
                 </button>
-                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">반영은 입력값 채움일 뿐입니다 — 최종 기록은 &quot;결정&quot; 탭의 &apos;결정&apos; 버튼 (사람 클릭).</span>
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">반영은 입력값 채움일 뿐입니다 — 최종 기록은 &quot;결정&quot; 탭의 &apos;결정&apos; 버튼 (사람 클릭).</span>
               </div>
             )}
           </div>
@@ -489,7 +489,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
       {selected && advisory === null && (
         <div className="card" id="reco-card">
           <h2>진출방식 추천</h2>
-          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
             추천을 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 필요 역량 수준을 먼저 완료하세요.
           </p>
         </div>
@@ -536,14 +536,14 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
           <form id="route-form" onSubmit={saveDecision}>
           <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div className="flex flex-wrap items-end gap-4 mb-3">
-              <label className="text-[0.8rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1 font-medium">트랙 <span className="text-[color:var(--red-fg)]">*</span></span>
                 <select value={track} onChange={(e) => { setTrack(e.target.value as "greenfield" | "brownfield"); setIntent(""); setSubTrack(""); }} className="sizing-new-input">
                   <option value="greenfield">Greenfield — 자체 역량으로 진출</option>
                   <option value="brownfield">Brownfield — 기존 기업·자산과 결합</option>
                 </select>
               </label>
-              <label className="text-[0.8rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1 font-medium">라우트 {track === "brownfield" ? <><span className="text-[color:var(--red-fg)]">*</span> (Brownfield)</> : "(선택)"}</span>
                 <select value={subTrack} onChange={(e) => setSubTrack(e.target.value)} className="sizing-new-input">
                   <option value="">선택...</option>
@@ -552,7 +552,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                     .map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </label>
-              <label className="text-[0.8rem]">
+              <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1 font-medium">의도 (Stage 1) <span className="text-[color:var(--red-fg)]">*</span></span>
                 <select value={intent} onChange={(e) => setIntent(e.target.value as "" | "integration" | "capability_access")} className="sizing-new-input">
                   <option value="">선택...</option>
@@ -562,20 +562,20 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               </label>
             </div>
             {overrideBlocked && (
-              <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-2">
+              <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">
                 사전배제: 통제 필요도=高 + 역량접근 의도에서는 파트너십·R&BD·CVC 라우트를 선택할 수 없습니다 (합산 점수와 무관).
               </p>
             )}
             {stagingHint && (
-              <p className="text-[0.78rem] text-[color:var(--accent)] mb-2">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--accent)] mb-2">
                 스테이징 권고: 시장 불확실성이 高이고 통제 필요도가 中 이하 — 소수지분/공동개발 + 사전 협약된 step-up(call option / ROFR / 전환 트리거)을 권고합니다.
               </p>
             )}
-            <label className="text-[0.78rem] block mb-2">
+            <label className="text-[length:var(--fs-caption)] block mb-2">
               <span className="block mb-1">결정 근거 * (S1 시장분석·S3 적합성 판단을 인용 — 채점을 보완하는 서술)</span>
               <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} rows={3} required className="sizing-new-input" style={{ width: "100%" }} placeholder="예: S3 적합성 평가 Go(시너지 72) — 자사 역량 보유, 시장 성장 지속..." />
             </label>
-            <label className="text-[0.78rem] block mb-3">
+            <label className="text-[length:var(--fs-caption)] block mb-3">
               <span className="block mb-1">검토한 대안 * (고려했으나 선택하지 않은 트랙·라우트와 사유 — 초안 저장은 선택, 결정은 필수)</span>
               <textarea value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} required className="sizing-new-input" style={{ width: "100%" }} placeholder="고려했지만 선택하지 않은 트랙·라우트와 사유" />
             </label>
@@ -590,7 +590,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                   {saving ? "확정 중..." : "결정"}
                 </button>
               )}
-              <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 {draftSavedAt && `초안 저장됨 · ${draftSavedAt.slice(0, 16).replace("T", " ")} · `}
                 {totalScore !== null ? `합산 ${totalScore} / 3.0 · ` : ""}양 트랙 공통 채점 · 사전배제 검증 자동
                 {canAct && !allScored && (
@@ -601,7 +601,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                 )}
               </span>
             </div>
-            <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-1 mb-0">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
               저장 = 초안을 서버에 보관(완결성 검증 없음) · 결정 = 5기준·근거 완료 후 불변 기록
             </p>
           </fieldset>
@@ -621,11 +621,11 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
             );
             return (
               <details className="sizing-grade-card mt-3" open={historyOpen} onToggle={(e) => setHistoryOpen(e.currentTarget.open)}>
-                <summary className="cursor-pointer text-[0.85rem] font-semibold">결정 이력 ({decisions.length}건) 보기</summary>
+                <summary className="cursor-pointer text-[length:var(--fs-body)] font-semibold">결정 이력 ({decisions.length}건) 보기</summary>
                 <div className="mt-2">
                   {decisions.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <label className="text-[0.75rem]">
+                      <label className="text-[length:var(--fs-caption)]">
                         <span className="sr-only">연도</span>
                         <select
                           value={historyYear}
@@ -636,7 +636,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                           {years.map((y) => <option key={y} value={y}>{y}년</option>)}
                         </select>
                       </label>
-                      <label className="text-[0.75rem]">
+                      <label className="text-[length:var(--fs-caption)]">
                         <span className="sr-only">월</span>
                         <select
                           value={historyMonth}
@@ -651,9 +651,9 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                     </div>
                   )}
                   {decisions.length === 0 ? (
-                    <p className="text-[0.85rem] text-[color:var(--muted-fg)]">아직 기록된 결정이 없습니다.</p>
+                    <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">아직 기록된 결정이 없습니다.</p>
                   ) : filtered.length === 0 ? (
-                    <p className="text-[0.85rem] text-[color:var(--muted-fg)]">선택한 기간에 기록된 결정이 없습니다.</p>
+                    <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">선택한 기간에 기록된 결정이 없습니다.</p>
                   ) : (
                     <div className="table-scroll">
                       <table className="data-table report-table" aria-label="진출방식 결정 이력">
@@ -672,21 +672,21 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                                   {d.track === "brownfield" ? "Brownfield" : "Greenfield"}
                                 </span>
                               </td>
-                              <td className="text-[0.8rem]">{d.sub_track ? (d.track === "brownfield" ? BF_SUB[d.sub_track] ?? d.sub_track : GF_SUB[d.sub_track] ?? d.sub_track) : "—"}</td>
-                              <td className="text-[0.75rem]">{d.intent ? (d.intent === "integration" ? "통합" : "역량접근") : "—"}</td>
-                              <td className="text-[0.75rem]">
+                              <td className="text-[length:var(--fs-caption)]">{d.sub_track ? (d.track === "brownfield" ? BF_SUB[d.sub_track] ?? d.sub_track : GF_SUB[d.sub_track] ?? d.sub_track) : "—"}</td>
+                              <td className="text-[length:var(--fs-caption)]">{d.intent ? (d.intent === "integration" ? "통합" : "역량접근") : "—"}</td>
+                              <td className="text-[length:var(--fs-caption)]">
                                 {d.total_score !== null ? (
                                   <span title={(d.scores ?? []).map((s) => `${s.criterion}: ${s.score} — ${s.evidence_note}`).join("\n")}>
                                     <strong className="tabular-nums">{d.total_score}</strong>/3.0
                                   </span>
                                 ) : "—"}
                                 {d.staging_recommended && (
-                                  <span className="block text-[0.68rem] text-[color:var(--accent)]" title={d.staging_recommended}>step-up 권고</span>
+                                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--accent)]" title={d.staging_recommended}>step-up 권고</span>
                                 )}
                               </td>
-                              <td className="text-[0.8rem]">{d.rationale}</td>
-                              <td className="text-[0.8rem] text-[color:var(--muted-fg)]">{d.alternatives_considered ?? "—"}</td>
-                              <td className="text-[0.75rem] tabular-nums">{d.decided_by} · {d.decided_at.slice(0, 10)}</td>
+                              <td className="text-[length:var(--fs-caption)]">{d.rationale}</td>
+                              <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{d.alternatives_considered ?? "—"}</td>
+                              <td className="text-[length:var(--fs-caption)] tabular-nums">{d.decided_by} · {d.decided_at.slice(0, 10)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -696,7 +696,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                   {sessions.length > 0 && (
                     <>
                       <SectionToolbar title="위원회 심의 이력" />
-                      <ul className="text-[0.85rem] space-y-1">
+                      <ul className="text-[length:var(--fs-body)] space-y-1">
                         {sessions.map((s2) => (
                           <li key={s2.sessionId}>
                             <span className={`status-chip ${s2.status === "done" ? "status-green" : "status-in-progress"}`}>{s2.status}</span>{" "}
@@ -720,15 +720,15 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
         <div className="card">
           <h2>{selected.name} — 경쟁 구조</h2>
           {advisory === null ? (
-            <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
               근거를 불러오지 못했습니다 — 새로고침하거나 S1 시장분석을 먼저 완료하세요.
             </p>
           ) : advisory.s1Evidence?.competitive ? (
             <>
-              <h4 className="text-[0.85rem] mb-1">
+              <h4 className="text-[length:var(--fs-body)] mb-1">
                 경쟁 구조 (S1 v{advisory.s1Evidence.versionNo ?? "?"} — {advisory.s1Evidence.industryName})
               </h4>
-              <p className="text-[0.8rem] mb-1">{advisory.s1Evidence.competitive.structure}</p>
+              <p className="text-[length:var(--fs-caption)] mb-1">{advisory.s1Evidence.competitive.structure}</p>
               {advisory.s1Evidence.competitive.players.length > 0 && (
                 <div className="table-scroll">
                   <table className="data-table mb-0" aria-label="경쟁 구조 — 주요 기업">
@@ -745,7 +745,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                               {p.tier === "leader" ? "리더" : p.tier === "challenger" ? "도전자" : "니치"}
                             </span>
                           </td>
-                          <td className="text-[0.75rem]">{p.note}</td>
+                          <td className="text-[length:var(--fs-caption)]">{p.note}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -754,7 +754,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               )}
             </>
           ) : (
-            <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
               경쟁 구조 미기록 —{" "}
               {selected.market_scope ? (
                 <Link href={`/market?industry=${encodeURIComponent(selected.market_scope)}`} className="text-[color:var(--accent)] underline">S1 리포트</Link>
@@ -779,7 +779,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
 
           <div className="sizing-grade-card mb-3" aria-label="S1 시장·경쟁·역량 평가">
             {advisory === null ? (
-              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
                 근거를 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 필요 역량 수준을 먼저 완료하세요.
               </p>
             ) : (
@@ -788,8 +788,8 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                     본문이다. 표는 기본 접고(필요 역량 상세와 같은 패턴), 요약에 건수를
                     표시한다 (2026-09-18 리뷰: eval 탭이 지나치게 길었다). */}
                 <details className="mb-3">
-                  <summary className="cursor-pointer text-[0.85rem]">신호별 근거 (S1~S3 — {advisory.signals.length}건)</summary>
-                  <h4 className="text-[0.85rem] mb-2 mt-2">신호별 근거 (S1~S3)</h4>
+                  <summary className="cursor-pointer text-[length:var(--fs-body)]">신호별 근거 (S1~S3 — {advisory.signals.length}건)</summary>
+                  <h4 className="text-[length:var(--fs-body)] mb-2 mt-2">신호별 근거 (S1~S3)</h4>
                   <div className="table-scroll">
                     <table className="data-table mb-3" aria-label="신호별 근거">
                       <caption className="sr-only">신호별 근거</caption>
@@ -799,14 +799,14 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                       <tbody>
                         {advisory.signals.map((s) => (
                           <tr key={s.key}>
-                            <td className="text-[0.8rem]">{s.label}</td>
+                            <td className="text-[length:var(--fs-caption)]">{s.label}</td>
                             <td>
                               <span className={`status-chip ${s.leans === "greenfield" ? "status-green" : s.leans === "brownfield" ? "status-amber" : "status-not-started"}`}>
                                 {s.leans === "greenfield" ? "그린필드" : s.leans === "brownfield" ? "브라운필드" : "중립"}
                               </span>
                             </td>
-                            <td className="tabular-nums text-[0.8rem]">{s.weight}</td>
-                            <td className="text-[0.75rem]">{s.note}</td>
+                            <td className="tabular-nums text-[length:var(--fs-caption)]">{s.weight}</td>
+                            <td className="text-[length:var(--fs-caption)]">{s.note}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -818,7 +818,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                   <>
                     {/* 제목과 요약 칩을 한 줄에 나란히 배치 (2026-09-15 사용자 요구) */}
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <h4 className="text-[0.85rem] m-0">필요 역량 수준</h4>
+                      <h4 className="text-[length:var(--fs-body)] m-0">필요 역량 수준</h4>
                       <span className="status-chip status-not-started">필요 역량 <strong className="ml-1">{advisory.capabilityGap.total}건</strong></span>
                       <span className="status-chip status-green">충족 <strong className="ml-1">{advisory.capabilityGap.met}건</strong></span>
                       <span className="status-chip status-amber">부분 충족 <strong className="ml-1">{advisory.capabilityGap.partial}건</strong></span>
@@ -828,7 +828,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                       )}
                     </div>
                     {advisory.capabilityGap.unmetRows.length > 0 && (
-                      <p className="text-[0.78rem] mb-0">
+                      <p className="text-[length:var(--fs-caption)] mb-0">
                         미충족: {advisory.capabilityGap.unmetRows.map((r) => r.capability).join(", ")}
                         <span className="text-[color:var(--muted-fg)]"> — 그룹/계열사 프로필 기준, 내부(자사 단독) 역량 평가는 추후 보강</span>
                       </p>
@@ -840,7 +840,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                         표시하고 열면 전체 레지스터가 나온다. 읽기 전용. */}
                     {advisory.capabilityGap.rows && advisory.capabilityGap.rows.length > 0 && (
                       <details className="mt-2">
-                        <summary className="cursor-pointer text-[0.78rem] text-[color:var(--accent)]">
+                        <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">
                           필요 역량 수준 상세 ({advisory.capabilityGap.rows.length}건
                           {advisory.capabilityGap.coveragePct !== null ? ` · 충족률 ${advisory.capabilityGap.coveragePct}%` : ""}) 보기
                         </summary>
@@ -857,8 +857,8 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                               {advisory.capabilityGap.rows.map((r) => (
                                 <tr key={r.capability}>
                                   <td className="cell-primary">
-                                    <span className="font-semibold text-[0.8rem]">{r.capability}</span>
-                                    <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">
+                                    <span className="font-semibold text-[length:var(--fs-caption)]">{r.capability}</span>
+                                    <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                                       출처: {r.source === "s2_sketch" ? "S2 스케치" : r.source === "s1_factors" ? "S1 요인" : r.source === "synergy_area" ? "S3 시너지 영역" : "수동"}
                                     </span>
                                   </td>
@@ -867,7 +867,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                                       {r.held.status === "met" ? "충족" : r.held.status === "partial" ? "부분 충족" : r.held.status === "unmet" ? "미보유" : "미판정"}
                                     </span>
                                   </td>
-                                  <td className="text-[0.75rem]">
+                                  <td className="text-[length:var(--fs-caption)]">
                                     {r.held.status !== "unevaluated" && (r.held.holders.length > 0 || r.held.evidence) ? (
                                       <>
                                         {r.held.holders.length > 0 && <span className="block">{r.held.holders.join(", ")}</span>}
@@ -875,7 +875,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                                       </>
                                     ) : "—"}
                                   </td>
-                                  <td className="text-[0.75rem]">{r.resolution ? (r.resolution === "build" ? "구축" : r.resolution === "partner" ? "파트너" : r.resolution === "hire" ? "영입" : "투자") : "—"}</td>
+                                  <td className="text-[length:var(--fs-caption)]">{r.resolution ? (r.resolution === "build" ? "구축" : r.resolution === "partner" ? "파트너" : r.resolution === "hire" ? "영입" : "투자") : "—"}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -885,7 +885,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                     )}
                   </>
                 ) : (
-                  <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-0">
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
                     필요 역량 수준 미작성 —{" "}
                     <Link href={`/deals/${encodeURIComponent(opportunityId)}/s3`} className="text-[color:var(--accent)] underline">S3 시너지 탭</Link>
                     {" "}에서 필요 역량과 보유 판정을 기록하세요.
@@ -895,14 +895,14 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
             )}
           </div>
 
-          <h4 className="text-[0.85rem] mb-1">5기준 채점 (Stage 2, 각 20%)</h4>
+          <h4 className="text-[length:var(--fs-body)] mb-1">5기준 채점 (Stage 2, 각 20%)</h4>
           {/* route_decision_score.intent는 NOT NULL이라 의도가 없으면 서버가 채점 행을
               통째로 버린다(draft/route.ts) — 원래 의도 선택은 "결정" 탭에만 있어서, 이
               탭에서 채점만 채우고 저장하면 "초안 저장됨"은 뜨지만 채점은 저장되지
               않고 되돌아왔을 때 빈 화면으로 보이는 혼란이 있었다. 이 탭에서도 바로
               고칠 수 있게 같은 상태를 공유하는 선택자를 둔다. */}
           <div className="flex flex-wrap items-center gap-3 mb-2">
-            <label className="text-[0.8rem]">
+            <label className="text-[length:var(--fs-caption)]">
               <span className="block mb-1 font-medium">의도 (Stage 1) <span className="text-[color:var(--red-fg)]">*</span></span>
               <select value={intent} disabled={!canAct} onChange={(e) => setIntent(e.target.value as "" | "integration" | "capability_access")} className="sizing-new-input">
                 <option value="">선택...</option>
@@ -911,7 +911,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
               </select>
             </label>
             {canAct && intent === "" && (
-              <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-0">
+              <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-0">
                 의도를 선택하지 않으면 아래 채점·근거는 저장되지 않습니다 (서버가 의도 없는 채점을 저장하지 않음).
               </p>
             )}
@@ -924,13 +924,13 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
             <tbody>
               {scored.map((c) => (
                 <tr key={c.key}>
-                  <td className="text-[0.8rem]">
+                  <td className="text-[length:var(--fs-caption)]">
                     {c.label}
-                    <span className="block text-[0.7rem] text-[color:var(--muted-fg)]">{c.hint}</span>
+                    <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{c.hint}</span>
                     {/* 역량 관련 3기준 — S3 필요 역량 수준 레지스터를 채점 참고로
                         직접 인용한다(2026-09-15 사용자 요구). */}
                     {["capability_criticality", "integration_capacity", "speed_to_capability"].includes(c.key) && advisory?.capabilityGap && (
-                      <span className="block text-[0.7rem] mt-0.5" style={{ color: "var(--accent)" }}>
+                      <span className="block text-[length:var(--fs-caption)] mt-0.5" style={{ color: "var(--accent)" }}>
                         역량 참고: {advisory.capabilityGap.total}건 중 충족 {advisory.capabilityGap.met}·부분 {advisory.capabilityGap.partial}·미보유 {advisory.capabilityGap.unmet}
                         {advisory.capabilityGap.coveragePct !== null ? ` (충족률 ${advisory.capabilityGap.coveragePct}%)` : ""}
                         {advisory.capabilityGap.unmetRows.length > 0 ? ` · 미보유: ${advisory.capabilityGap.unmetRows.slice(0, 2).map((r) => r.capability).join(", ")}${advisory.capabilityGap.unmetRows.length > 2 ? " 외" : ""}` : ""}
@@ -974,7 +974,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                 {draftSaving ? "저장 중..." : "저장"}
               </button>
             )}
-            <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               {draftSavedAt && `초안 저장됨 · ${draftSavedAt.slice(0, 16).replace("T", " ")} · `}
               {totalScore !== null ? `합산 ${totalScore} / 3.0 · ` : ""}양 트랙 공통 채점 · 사전배제 검증 자동
             </span>
@@ -984,9 +984,9 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
           {/* ── 판정 규칙 — 이 딜과 무관한 고정 규칙 참고용. 예전엔 모달이었으나
               탭 안 접힘으로 단순화(2026-09-14). ── */}
           <details>
-            <summary className="cursor-pointer text-[0.78rem] text-[color:var(--accent)]">판정 규칙 보기 (참고용 — 이 딜과 무관한 고정 규칙)</summary>
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">판정 규칙 보기 (참고용 — 이 딜과 무관한 고정 규칙)</summary>
             <div className="mt-2">
-              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
                 LLM이 아니라 이미 시스템에 기록된 S1~S3 데이터를 아래 고정 규칙으로 채점하는 방식입니다.
                 신호별로 Greenfield/Brownfield 방향과 가중치(1~3)를 매기고, 트랙별 가중치 합을 100점 만점 비율로 환산해
                 한쪽이 60점 이상이면 그 트랙을 추천하며, 그렇지 않으면 &quot;중립(신호 부족)&quot;으로 표시합니다. 위 &quot;신호별
@@ -1010,14 +1010,14 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
                   <tr><td className="cell-primary">역량 충족률 (S3 필요 역량 수준)</td><td>40~70% (중간)</td><td>중립</td><td>1</td></tr>
                 </tbody>
               </table>
-              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mt-3 mb-1">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3 mb-1">
                 함께 제공되는 정보 — 해당 근거가 아직 없을 때(예: S1 미완료, 필요 역량 수준 미작성)는 그 신호가 중립·약한 가중치로 처리됩니다.
               </p>
               <ul className="sizing-note-list mb-2">
                 <li><b>기저율</b> — 과거 트랙별 결정 건수와 그중 Entity IC를 통과한 건수를 함께 보여줍니다.</li>
                 <li><b>재점검 트리거</b> — 추천과 실제 데이터가 모순될 때(예: Brownfield 추천인데 쇼트리스트가 비어 있음) 경고합니다.</li>
               </ul>
-              <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-0">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
                 원칙 (경계 #2): 이 추천은 제안일 뿐이며, 최종 트랙 결정은 결정 탭의 결정 폼에 사람이 직접 기록합니다.
               </p>
             </div>

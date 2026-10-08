@@ -328,7 +328,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
         onSubmit={(e) => { e.preventDefault(); void saveUniverse(); }}
         aria-label="목표 시장 정의 수정"
       >
-        <label className="text-[0.78rem] block mb-3">
+        <label className="text-[length:var(--fs-caption)] block mb-3">
           <span className="block mb-1">정의 * (후보 풀의 범위)</span>
           <textarea
             value={universeDraft.definition}
@@ -339,12 +339,12 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
             className="sizing-new-input w-full"
           />
         </label>
-        <label className="text-[0.78rem] w-32 shrink-0 block mb-3">
+        <label className="text-[length:var(--fs-caption)] w-32 shrink-0 block mb-3">
           <span className="block mb-1">최소 후보 수</span>
           <input type="number" min={1} value={universeDraft.min_long_list} onChange={(e) => setUniverseDraft({ ...universeDraft, min_long_list: e.target.value })} className="sizing-new-input sizing-new-input-sm w-full" />
         </label>
         {gapHint && (
-          <p className="mb-3 text-[0.72rem] text-[color:var(--muted-fg)]">
+          <p className="mb-3 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             참고(강제 공식 아님): S3 필요 역량 중 미보유 {gapHint.unmet}건 · 부분충족 {gapHint.partial}건
           </p>
         )}
@@ -619,12 +619,12 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
           <div className="sizing-grade-card flex-1">
             {selected.universe ? (
               <>
-                {selected.universe.scope && <p className="mb-1 text-[0.78rem] text-[color:var(--muted-fg)]">커버리지 범위: {selected.universe.scope}</p>}
-                <p className="mb-2 text-[0.85rem]">{selected.universe.definition}</p>
+                {selected.universe.scope && <p className="mb-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">커버리지 범위: {selected.universe.scope}</p>}
+                <p className="mb-2 text-[length:var(--fs-body)]">{selected.universe.definition}</p>
               </>
             ) : (
               <>
-                <p className="mb-2 text-[0.8rem] text-[color:var(--muted-fg)]">
+                <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                   아직 정의되지 않았습니다 — S6 완료기준입니다. 후보 등록 전에 후보 자격 기준(Long List 범위)과 최소 커버리지를 확정하세요. Long List를 Short List로 좁히는 실제 평가는 S7의 재무·기술 평가에서 이뤄집니다.
                 </p>
                 {canAct && <button type="button" className="btn-ghost btn-sm" onClick={openUniverseEditor}>목표 시장 정의 시작</button>}
@@ -639,7 +639,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
         <section aria-label="후보 발굴" className="market-section mb-0 flex flex-col">
           <SectionToolbar title="후보 발굴 — Long List 채우기" />
           <div className="sizing-grade-card flex-1">
-            {!canAct && <p className="mb-0 text-[0.8rem] text-[color:var(--muted-fg)]">후보 발굴·등록은 분석가 권한이 필요합니다.</p>}
+            {!canAct && <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">후보 발굴·등록은 분석가 권한이 필요합니다.</p>}
             {canAct && (<>
             <div className="flex flex-wrap gap-2 mb-2">
               <button
@@ -668,7 +668,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 facts·공시)가 바로 활성화된다. */}
             <form onSubmit={addTarget} className="sizing-new-form mb-2">
               <div className="flex flex-wrap items-end gap-2">
-                <label className="text-[0.78rem]" style={{ flex: "1 1 14rem" }}>
+                <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 14rem" }}>
                   <span className="block mb-1">후보 회사명 * (Long List)</span>
                   <input
                     value={newTarget.company_name}
@@ -678,7 +678,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     className="sizing-new-input w-full"
                   />
                 </label>
-                <label className="text-[0.78rem]" style={{ flex: "1 1 11rem" }}>
+                <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 11rem" }}>
                   <span className="block mb-1">DART 고유번호 (선택, 8자리)</span>
                   <input value={newTarget.dart_corp_code} onChange={(e) => setNewTarget({ ...newTarget, dart_corp_code: e.target.value })} placeholder="검색 결과 선택 또는 직접 입력" className="sizing-new-input sizing-new-input-sm w-full" />
                 </label>
@@ -692,16 +692,16 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 </button>
                 <button type="submit" className="btn-premium btn-sm shrink-0" disabled={busy || !newTarget.company_name.trim()}>후보 등록</button>
               </div>
-              {dartError && <p className="mt-1 mb-0 text-[0.75rem] text-[color:var(--muted-fg)]">{dartError}</p>}
+              {dartError && <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{dartError}</p>}
               {dartResults !== null && dartResults.length === 0 && !dartError && (
-                <p className="mt-1 mb-0 text-[0.75rem] text-[color:var(--muted-fg)]">DART 검색 결과가 없습니다 — 비상장 등 미등록 회사라면 위 필드에 직접 입력해 등록하세요.</p>
+                <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">DART 검색 결과가 없습니다 — 비상장 등 미등록 회사라면 위 필드에 직접 입력해 등록하세요.</p>
               )}
               {dartResults !== null && dartResults.length > 0 && (
                 <ul className="sizing-note-list mt-1">
                   {dartResults.map((r) => (
                     <li key={r.corp_code} className="flex flex-wrap items-center gap-2">
                       <code className="dd-item-id">{r.corp_code}</code>
-                      <span className="flex-1 min-w-[12rem] text-[0.8rem]">{r.corp_name}</span>
+                      <span className="flex-1 min-w-[12rem] text-[length:var(--fs-caption)]">{r.corp_name}</span>
                       {r.source === "web" ? (
                         <span className="status-chip status-amber" title="DART 직접 조회 실패 시 웹 검색으로 수집된 미검증 후보">웹 수집</span>
                       ) : (
@@ -724,9 +724,9 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
             {discoveryPanel === "master" && (
               <div className="mb-2">
                 {proposals === null ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">불러오는 중...</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">불러오는 중...</p>
                 ) : proposals.length === 0 ? (
-                  <p className="mb-0 text-[0.78rem] text-[color:var(--muted-fg)]">제안 가능한 신규 후보가 없습니다 — 직접 등록하거나 웹검색 제안을 시도하세요.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">제안 가능한 신규 후보가 없습니다 — 직접 등록하거나 웹검색 제안을 시도하세요.</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {proposals.map((c) => (
@@ -738,7 +738,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     ))}
                   </div>
                 )}
-                <p className="mt-1 mb-0 text-[0.7rem] text-[color:var(--muted-fg)]">수용 시 discovery_source=master_proposal로 기록됩니다.</p>
+                <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">수용 시 discovery_source=master_proposal로 기록됩니다.</p>
               </div>
             )}
             </>)}
@@ -756,16 +756,16 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
               <h2>웹검색 후보 제안</h2>
               <button type="button" className="btn-ghost btn-sm" onClick={() => setDiscoveryPanel(null)} disabled={webBusy} aria-label="닫기">닫기</button>
             </div>
-            <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
+            <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               실시간 웹 검색으로 근거를 찾고, 그 근거에 등장하는 회사만 후보로 제안합니다 (ADR-0118 §5 — 근거 없는
               회사명은 만들지 않습니다). 검색을 쓸 수 없으면 LLM 자체 지식 기반 미검증 제안으로 대체됩니다.
               등록은 항목별 "Long List에 등록" 클릭으로만 이뤄집니다.
             </p>
             {webBusy && webProposals === null ? (
-              <p className="my-4 text-center text-[0.85rem] text-[color:var(--muted-fg)]">웹 검색·제안 생성 중...</p>
+              <p className="my-4 text-center text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">웹 검색·제안 생성 중...</p>
             ) : webProposals !== null && webProposals.length === 0 ? (
               <>
-                <p className="my-4 text-center text-[0.85rem] text-[color:var(--muted-fg)]">{webNote ?? "제안할 후보가 없습니다 — 목표 시장 정의를 구체화한 뒤 다시 시도하세요."}</p>
+                <p className="my-4 text-center text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{webNote ?? "제안할 후보가 없습니다 — 목표 시장 정의를 구체화한 뒤 다시 시도하세요."}</p>
                 <div className="flex justify-end">
                   <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void generateWebProposals()}>다시 시도</button>
                 </div>
@@ -773,7 +773,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
             ) : (
               <>
                 {webProposals !== null && (
-                  <p className="mb-2 text-[0.75rem]">
+                  <p className="mb-2 text-[length:var(--fs-caption)]">
                     <span className={`status-chip ${webSource === "llm" ? "status-green" : webSource === "llm_knowledge" ? "status-red" : "status-amber"}`}>
                       {webSource === "llm" ? "제안 · 웹검색 근거" : webSource === "llm_knowledge" ? "제안 · 미검증 (근거 없음)" : "제안 · 결정론 폴백"}
                     </span>
@@ -784,14 +784,14 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   {(webProposals ?? []).map((s) => (
                     <div key={s.company_name} className="sizing-grade-card mb-0">
                       <div className="flex items-start justify-between gap-2">
-                        <strong className="text-[0.85rem]">{s.company_name}</strong>
+                        <strong className="text-[length:var(--fs-body)]">{s.company_name}</strong>
                         <span className="status-chip status-not-started" title="출처 도메인 신뢰도 — 정부·공시 A, 주요 언론·컨설팅 B, 기타 C">
                           신뢰도 {s.reliability}
                         </span>
                       </div>
-                      <p className="mb-1 text-[0.78rem]">{s.rationale}</p>
+                      <p className="mb-1 text-[length:var(--fs-caption)]">{s.rationale}</p>
                       {s.sources.slice(0, 2).map((src) => (
-                        <a key={src.url} href={src.url} target="_blank" rel="noreferrer" className="block text-[0.72rem] text-[color:var(--accent)] underline truncate" title={src.title}>
+                        <a key={src.url} href={src.url} target="_blank" rel="noreferrer" className="block text-[length:var(--fs-caption)] text-[color:var(--accent)] underline truncate" title={src.title}>
                           출처: {src.url}
                         </a>
                       ))}
@@ -836,15 +836,15 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
               <h2>목표 시장 정의 수정</h2>
               <button type="button" className="btn-ghost btn-sm" onClick={closeUniverseEditor} disabled={savingUniverse} aria-label="닫기">닫기</button>
             </div>
-            <p className="mb-3 text-[0.72rem] text-[color:var(--muted-fg)]">저장하기 전까지는 아무 값도 반영되지 않습니다.</p>
+            <p className="mb-3 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">저장하기 전까지는 아무 값도 반영되지 않습니다.</p>
 
             {/* D — 선정 기준 LLM 초안. 적용은 아래 정의 입력에 바로 반영되고,
                 선정 기준·최소 후보 수는 사람이 정한 값을 그대로 둔다. */}
             <div className="sizing-grade-card mb-3">
-              <h4 className="text-[0.8rem] mb-2">
+              <h4 className="text-[length:var(--fs-caption)] mb-2">
                 정의 초안 생성 <span className="status-chip status-amber">제안 · LLM</span>
               </h4>
-              <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
+              <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 S1 시장분석 + S3 필요 역량 산출물을 근거로 정의 문구 초안을 제안합니다. "적용"은 아래 <b>정의</b> 입력만 채웁니다 —
                 후보 자격 기준·최소 후보 수는 그대로 유지되며, 실제 저장은 "목표 시장 저장" 버튼(사람 클릭)으로 확정됩니다 (경계 #2).
               </p>
@@ -856,7 +856,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 const rationaleAlreadySaved = !!uniReco.criteria.rationale && uniReco.criteria.rationale.trim() === universeDraft.definition.trim();
                 return (
                   <div>
-                    <p className="mb-1 text-[0.75rem]">
+                    <p className="mb-1 text-[length:var(--fs-caption)]">
                       <span className={`status-chip mr-1 ${uniRecoApplied ? "status-green" : "status-amber"}`}>{uniRecoApplied ? "적용됨" : "제안"}</span>
                       {uniReco.source === "llm" ? "LLM" : "결정론"}
                     </p>
@@ -867,12 +867,12 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     </ul>
                     {uniReco.criteria.rationale && (
                       rationaleAlreadySaved ? (
-                        <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">근거: 아래 정의 입력과 동일합니다.</p>
+                        <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거: 아래 정의 입력과 동일합니다.</p>
                       ) : (
-                        <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">근거: {uniReco.criteria.rationale}</p>
+                        <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거: {uniReco.criteria.rationale}</p>
                       )
                     )}
-                    <p className="mb-2 text-[0.7rem] text-[color:var(--muted-fg)]">이 제안이 본 산출물: {uniReco.manifest.join(" · ") || "(근거 없음)"}</p>
+                    <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">이 제안이 본 산출물: {uniReco.manifest.join(" · ") || "(근거 없음)"}</p>
                     <div className="flex items-center gap-1">
                       <button type="button" className="btn-ghost btn-sm" disabled={rationaleAlreadySaved} onClick={() => applyUniReco(uniReco.criteria!)}>
                         {rationaleAlreadySaved ? "이미 반영됨" : uniRecoApplied ? "다시 적용" : "정의 입력에 적용"}
@@ -884,7 +884,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 );
               })() : (
                 <div>
-                  <p className="mb-2 text-[0.75rem] text-[color:var(--amber-fg)]">{uniReco.note ?? "초안을 만들 수 없습니다."}</p>
+                  <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]">{uniReco.note ?? "초안을 만들 수 없습니다."}</p>
                   <button type="button" className="btn-ghost btn-sm" disabled={uniBusy} onClick={() => void generateUniReco()}>{uniBusy ? "재생성 중..." : "다시 시도"}</button>
                 </div>
               )}
@@ -909,13 +909,13 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
               감싸 화면 위계를 맞춘다(UX 정리, 2026-09-15). */}
           <SectionToolbar
             title="Long List → 판정 · 랭킹 → Short List"
-            summary={<span className="text-[0.72rem] text-[color:var(--muted-fg)]">Long List {targets.length} · Short List {shortlistedTargets.length}</span>}
+            summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">Long List {targets.length} · Short List {shortlistedTargets.length}</span>}
           />
           <div className="sizing-grade-card">
           {targets.length === 0 ? (
-            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mb-0">Long List 후보가 없습니다 — 위에서 후보를 등록하세요.</p>
+            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">Long List 후보가 없습니다 — 위에서 후보를 등록하세요.</p>
           ) : displayedTargets.length === 0 ? (
-            <p className="text-[color:var(--muted-fg)] italic text-[0.85rem] mb-0">해당 상태의 후보가 없습니다.</p>
+            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">해당 상태의 후보가 없습니다.</p>
           ) : (
             <table className="data-table" aria-label="Long List">
               <caption className="sr-only">Long List 후보 — 평가 점수·잠정 순위·상태</caption>
@@ -990,7 +990,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                             )}
                           </span>
                         </td>
-                        <td className="text-[0.75rem] text-[color:var(--muted-fg)]">
+                        <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                           {t.exclusion_reason ? (
                             <span className="inline-block max-w-[18rem] truncate align-bottom" title={t.exclusion_reason}>{t.exclusion_reason}</span>
                           ) : "—"}
@@ -1044,15 +1044,15 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     open={precheckOpenEffective}
                     onToggle={(e) => setPrecheckOpen((e.currentTarget as HTMLDetailsElement).open)}
                   >
-                    <summary className="cursor-pointer text-[0.8rem] text-[color:var(--muted-fg)]">
+                    <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                       판정표 열기/닫기 — 후보 {shortlistedTargets.length}건 × chk-target-screening {checklistItems.length}항목
                     </summary>
               {recoBusy && (
-                <p className="text-[0.78rem] text-[color:var(--amber-fg)] mb-2" role="status">
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg)] mb-2" role="status">
                   근거 수집·판정 제안 생성 중 — {recoProgress ?? "준비 중"} (완료되면 이 표의 미판정 셀이 채워지고 위원회가 자동 소집됩니다. 수십 초 걸릴 수 있습니다)
                 </p>
               )}
-              <p className="mb-2 text-[0.75rem] text-[color:var(--muted-fg)]">
+              <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 이 표는 아래 위원회 패널의 <b>&quot;위원회 추천 검토 · 소집&quot;</b> 버튼으로 채웁니다 — 누르면 ① 후보별 판정 제안이 이 표의 미판정 셀에 채워지고(기확보 정보 활용 + 부족한 정보만 검색, 재실행 시 확정 판정을 유지한 채 미판정만 다시 제안) ② 그 제안을 근거로 위원회가 심의합니다. 셀을 검토·수정한 뒤 행별 <b>판정 저장</b>으로 확정하세요.
               </p>
               {/* 전치 테이블 — 평가 항목(t-01~09)이 컬럼 헤더, 후보가 행(사용자
@@ -1111,7 +1111,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                         <tr key={t.id}>
                           <td className="cell-primary">
                             <div className="flex flex-col gap-1">
-                              <strong className="text-[0.85rem]">{t.company_name}{t.rank ? ` · rank ${t.rank}` : ""}</strong>
+                              <strong className="text-[length:var(--fs-body)]">{t.company_name}{t.rank ? ` · rank ${t.rank}` : ""}</strong>
                               <span className="flex flex-wrap items-center gap-1">
                                 {concern && <span className="status-chip status-red" title="t-01 또는 t-02 미충족">인수 가능성 우려</span>}
                                 {hasReco && (
@@ -1171,7 +1171,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                                 판정 저장{dirtyCount > 0 ? ` (${dirtyCount}건)` : ""}
                               </button>}
                               {note && (
-                                <span className="text-[0.65rem] text-[color:var(--muted-fg)] max-w-[10rem] truncate" title={note}>{note}</span>
+                                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] max-w-[10rem] truncate" title={note}>{note}</span>
                               )}
                             </div>
                           </td>
@@ -1196,7 +1196,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     사전 검토 미완료 {precheckIncomplete}/{shortlistedTargets.length}
                   </span>
                 )}
-                <span className="text-[0.78rem] text-[color:var(--muted-fg)]">
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                   버튼을 누르면 ① 위 표의 미판정 셀에 판정 제안이 채워지고(기확보 정보 활용 + 부족한 정보만 검색) ② 그 제안을 근거로 위원회가 심의해 ③ 아래 Target Screening 게이트 결정(사람)에 제안합니다. 제안 확정은 표의 판정 저장으로 합니다.
                 </span>
               </div>
@@ -1224,7 +1224,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 : null
             }
           />
-          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
             ↓ 위 Target Screening 게이트가 <b>GO</b>로 기록되어야 아래 프로젝트 추진이 가능합니다 — 승인 기록은 판단, 추진은 그 판단을 전제로 한 장부상 전환입니다.
           </p>
           {/* ADR-0095 — S7→S8 승격 표면: 완료 요건 충족 시 사람이 승격을 기록한다 */}

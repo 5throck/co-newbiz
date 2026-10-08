@@ -68,7 +68,7 @@ export function GlossaryView() {
         <p className="text-[color:var(--muted-fg)] italic">검색어와 일치하는 용어가 없습니다.</p>
       ) : (
         <>
-          <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">총 {filtered.length}건 · 카드를 클릭하면 상세가 열립니다</p>
+          <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">총 {filtered.length}건 · 카드를 클릭하면 상세가 열립니다</p>
           <div className="glossary-split">
             <ul className="glossary-grid">
               {filtered.map((t) => (
@@ -82,7 +82,7 @@ export function GlossaryView() {
                       <strong>{t.ko}</strong>
                       {t.category && <span className="dd-category-badge">{t.category}</span>}
                     </div>
-                    <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">
+                    <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
                       {t.en} · <code>{t.key}</code>
                     </p>
                     <GlossaryPreview termKey={t.key} />

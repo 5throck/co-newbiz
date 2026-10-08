@@ -58,7 +58,7 @@ export function TargetCheckPanel({ projectId }: { projectId: string }) {
   if (failed) return (
     // 근거 표시는 부가 정보 — 실패가 S8 화면을 막지는 않지만, 조용히 사라지면
     // 패널이 없는 이유를 알 수 없으므로 한 줄 안내는 남긴다.
-    <div className="market-section sizing-step mt-3 text-[0.8rem] text-[color:var(--muted-fg)]">
+    <div className="market-section sizing-step mt-3 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
       사업목표 기준 대비 정보를 불러오지 못했습니다 — 네트워크 상태를 확인하거나 새로고침하세요.
     </div>
   );
@@ -86,13 +86,13 @@ export function TargetCheckPanel({ projectId }: { projectId: string }) {
         }
       />
       {data === null ? (
-        <p className="text-[0.85rem] text-[color:var(--muted-fg)]">불러오는 중...</p>
+        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">불러오는 중...</p>
       ) : !data.resolvable ? (
-        <p className="text-[0.85rem] text-[color:var(--muted-fg)]">
+        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
           이 프로젝트에 적용할 사업목표 기준 범위(그룹/계열사)를 특정할 수 없습니다 — 프로젝트 회사 연결이 없고 그룹이 둘 이상입니다.
         </p>
       ) : entries.length === 0 ? (
-        <p className="text-[0.85rem] text-[color:var(--muted-fg)]">
+        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
           적용 가능한 사업목표 기준이 없습니다 — 관리자 콘솔 › 마스터 데이터에서 그룹/계열사 기준을 등록하세요.
         </p>
       ) : (

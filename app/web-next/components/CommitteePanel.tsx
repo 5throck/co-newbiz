@@ -248,13 +248,13 @@ export function CommitteePanel({
       <h3 className="sizing-step-title text-[0.95rem]">
         <span className="sizing-step-badge">⚖️</span> {committeeLabel} — 위원회 심의
       </h3>
-      <p className="mb-2 text-[color:var(--muted-fg)] text-[0.8rem]">
+      <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
         에이전트 위원회는 심의하여 <strong>제안(PROPOSED)</strong>만 남깁니다. GO·HOLD·KILL 기록은 검토자의 클릭으로만 이루어집니다 (경계 #2).
       </p>
 
       {canAct && (
         <div className="flex flex-wrap items-end gap-2 mb-3">
-          <label className="text-[0.78rem]">
+          <label className="text-[length:var(--fs-caption)]">
             <span className="block mb-1">의사결정 모드</span>
             <select value={decisionMode} onChange={(e) => setDecisionMode(e.target.value as typeof decisionMode)} className="sizing-new-input sizing-new-input-sm">
               <option value="agent_team">agent_team — 위원회 심의 후 제안</option>
@@ -262,7 +262,7 @@ export function CommitteePanel({
               <option value="human_only">human_only — 인간 심의만</option>
             </select>
           </label>
-          <label className="text-[0.78rem]">
+          <label className="text-[length:var(--fs-caption)]">
             <span className="block mb-1">진행</span>
             <select value={gate} onChange={(e) => setGate(e.target.value as typeof gate)} className="sizing-new-input sizing-new-input-sm">
               {gates.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -284,9 +284,9 @@ export function CommitteePanel({
           open={historyOpen}
           onToggle={(e) => setHistoryOpen((e.target as HTMLDetailsElement).open)}
         >
-          <summary className="text-[0.82rem] font-semibold cursor-pointer">
+          <summary className="text-[length:var(--fs-caption)] font-semibold cursor-pointer">
             위원회 소집 이력{" "}
-            <span className="text-[0.72rem] font-normal text-[color:var(--muted-fg)]">
+            <span className="text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]">
               {sessions.length}건 — 펼치면 소집 기록과 심의 결과를 볼 수 있습니다
             </span>
           </summary>
@@ -305,13 +305,13 @@ export function CommitteePanel({
                     loadTranscript(s.sessionId);
                   }}
                 >
-                  <span className="flex items-center gap-2 text-[0.8rem]">
+                  <span className="flex items-center gap-2 text-[length:var(--fs-caption)]">
                     <span className="tabular-nums">{s.startedAt.slice(0, 16).replace("T", " ")}</span>
                     <span className="text-[color:var(--muted-fg)]">{s.meta.decision_mode} · {s.meta.gate}</span>
                   </span>
                   <span className="flex items-center gap-1">
                     <span className={`status-chip ${s.meta.synthesized ? "status-green" : "status-in-progress"}`}>{s.meta.synthesized ? "PROPOSED" : "진행 중"}</span>
-                    <span className="text-[0.72rem] text-[color:var(--muted-fg)]">{expanded ? "▲" : "▼"}</span>
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{expanded ? "▲" : "▼"}</span>
                   </span>
                 </button>
               );
@@ -326,7 +326,7 @@ export function CommitteePanel({
       {/* 심의 결과 — 펼친(또는 새로 소집된) 세션만 표시한다. */}
       {transcript && expandedSessionId === transcript.sessionId && (
         <div>
-          <p className="text-[0.8rem] font-semibold mb-2">
+          <p className="text-[length:var(--fs-caption)] font-semibold mb-2">
             심의 결과 — {(() => {
               const s = sessions.find((x) => x.sessionId === transcript.sessionId);
               return s ? `${s.startedAt.slice(0, 16).replace("T", " ")} 소집분` : "세션";
@@ -336,28 +336,28 @@ export function CommitteePanel({
           {transcript.evaluation && (
             <div className="grid gap-3 md:grid-cols-2 mb-3">
               <div className="card">
-                <h4 className="text-[0.85rem] font-semibold mb-1">
+                <h4 className="text-[length:var(--fs-body)] font-semibold mb-1">
                   의장 종합 (PROPOSAL){" "}
                   <span className={`status-chip ${transcript.evaluation.recommendation === "go" ? "status-green" : transcript.evaluation.recommendation === "hold" ? "status-amber" : "status-red"}`}>
                     {REC_LABEL[transcript.evaluation.recommendation] ?? transcript.evaluation.recommendation}
                   </span>
                   {dissents.length > 0 && <span className="status-chip status-red ml-1">veto 이견 반영</span>}
                 </h4>
-                <p className="text-[0.8rem] mb-1">
+                <p className="text-[length:var(--fs-caption)] mb-1">
                   {committeeLabel} — {REC_LABEL[transcript.evaluation.recommendation] ?? transcript.evaluation.recommendation} 제안
                   (진행 {transcript.evaluation.gate}, {transcript.evaluation.evaluatedBy})
                 </p>
-                <p className="text-[0.72rem] text-[color:var(--muted-fg)] m-0">
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">
                   근거: {seatScoreSummary(transcript)} · {dissents.length}건 이견 {dissents.length > 0 ? "반영" : "없음"} — 확정은 사람의 진행 기록
                 </p>
               </div>
               <div className="card">
-                <h4 className="text-[0.85rem] font-semibold mb-1">소수 의견 (dissent — 원문 보존)</h4>
+                <h4 className="text-[length:var(--fs-body)] font-semibold mb-1">소수 의견 (dissent — 원문 보존)</h4>
                 {dissents.length === 0 ? (
-                  <p className="text-[0.78rem] text-[color:var(--muted-fg)] m-0">이견 없음</p>
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">이견 없음</p>
                 ) : (
                   dissents.map((d) => (
-                    <pre key={d.member_key} className="whitespace-pre-wrap text-[0.78rem] m-0" style={{ fontFamily: "inherit" }}>
+                    <pre key={d.member_key} className="whitespace-pre-wrap text-[length:var(--fs-caption)] m-0" style={{ fontFamily: "inherit" }}>
                       &quot;{stripMeta(d.position_md)}&quot; — {d.member_key}
                     </pre>
                   ))
@@ -368,20 +368,20 @@ export function CommitteePanel({
 
           {/* 입장 원문 — 라운드별 상세 (감사용 원문 보존, 저장 형식 메타는 걷어냄) */}
           <details className="mb-3">
-            <summary className="text-[0.8rem] font-semibold cursor-pointer">입장 원문 (라운드별)</summary>
+            <summary className="text-[length:var(--fs-caption)] font-semibold cursor-pointer">입장 원문 (라운드별)</summary>
             {transcript.rounds.map((r) => (
               <div key={r.round} className="mt-2 mb-3">
-                <p className="text-[0.8rem] font-semibold mb-1">라운드 {r.round}</p>
+                <p className="text-[length:var(--fs-caption)] font-semibold mb-1">라운드 {r.round}</p>
                 {r.positions.map((p) => (
                   <div key={p.positionId} className="mb-2 pl-2 border-l-2" style={{ borderColor: "var(--muted-fg)" }}>
-                    <p className="text-[0.72rem] mb-1">
+                    <p className="text-[length:var(--fs-caption)] mb-1">
                       <span className={`status-chip ${p.memberType === "human" ? "status-green" : "status-not-started"}`}>
                         {p.memberType === "human" ? "human" : "agent"}
                       </span>{" "}
                       <span className="tabular-nums">{p.memberType === "human" ? p.humanUserId : p.agentKey}</span>
                       {p.confidence !== null && <span className="text-[color:var(--muted-fg)]"> · 신뢰도 {p.confidence}</span>}
                     </p>
-                    <pre className="whitespace-pre-wrap text-[0.78rem] m-0" style={{ fontFamily: "inherit" }}>{stripMeta(p.positionMd)}</pre>
+                    <pre className="whitespace-pre-wrap text-[length:var(--fs-caption)] m-0" style={{ fontFamily: "inherit" }}>{stripMeta(p.positionMd)}</pre>
                   </div>
                 ))}
               </div>
@@ -390,7 +390,7 @@ export function CommitteePanel({
 
           {/* 회의록 — 모달로 보기(포맷된 요약) + 다운로드(원문 markdown) + 확정 */}
           <section className="mt-2 mb-3" aria-label="회의록">
-            <p className="text-[0.85rem] font-semibold mb-1">회의록</p>
+            <p className="text-[length:var(--fs-body)] font-semibold mb-1">회의록</p>
             <span className="actions-row">
               <button type="button" className="btn-ghost btn-sm" onClick={() => setMinutesOpen(true)}>
                 회의록 보기
@@ -415,11 +415,11 @@ export function CommitteePanel({
             <div className="mt-3 mb-2">
               {canAct && (
                 <form className="sizing-new-form mt-3" aria-label="위원회 제안 확정 (인간 기록)" onSubmit={(e) => { e.preventDefault(); void confirm(); }}>
-                  <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
                     제안 확정은 인간만 수행합니다 — 의사결정 기록(위원회 제안이 기본값, 변경 가능)과 동일한 경로입니다.
                   </p>
                   <div className="flex flex-wrap items-end gap-2">
-                    <label className="text-[0.78rem]">
+                    <label className="text-[length:var(--fs-caption)]">
                       <span className="block mb-1">결정</span>
                       <select value={form.decision} onChange={(e) => setForm({ ...form, decision: e.target.value as typeof form.decision })} className="sizing-new-input sizing-new-input-sm">
                         <option value="go">GO</option>
@@ -427,13 +427,13 @@ export function CommitteePanel({
                         <option value="kill">KILL</option>
                       </select>
                     </label>
-                    <label className="text-[0.78rem] flex-1 min-w-[14rem]">
+                    <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]">
                       <span className="block mb-1">근거 (비우면 제안 인용)</span>
                       <input value={form.rationale} onChange={(e) => setForm({ ...form, rationale: e.target.value })} className="sizing-new-input w-full" />
                     </label>
                   </div>
                   {form.decision === "hold" && (
-                    <label className="block mt-2 text-[0.78rem]">
+                    <label className="block mt-2 text-[length:var(--fs-caption)]">
                       <span className="block mb-1">미완료 산출물 (HOLD 필수)</span>
                       <textarea value={form.missing} onChange={(e) => setForm({ ...form, missing: e.target.value })} className="sizing-new-input w-full" rows={2} />
                     </label>
@@ -446,7 +446,7 @@ export function CommitteePanel({
             canAct && (
               <div className="mt-2">
                 {humanText && (
-                  <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
                     {transcript.meta.decision_mode === "hybrid" ? "hybrid: 각 라운드에 인간 입장 1건 이상이 필요합니다." : "human_only: 인간 위원 입장을 제출하세요."}
                   </p>
                 )}
@@ -456,7 +456,7 @@ export function CommitteePanel({
                     aria-label="인간 위원 입장 제출"
                     onSubmit={(e) => { e.preventDefault(); void submitPosition(); }}
                   >
-                    <label className="block text-[0.78rem]">
+                    <label className="block text-[length:var(--fs-caption)]">
                       <span className="block mb-1">입장 내용</span>
                       <textarea
                         value={position.text}
@@ -467,7 +467,7 @@ export function CommitteePanel({
                       />
                     </label>
                     <div className="flex flex-wrap items-end gap-2 mt-2">
-                      <label className="text-[0.78rem]">
+                      <label className="text-[length:var(--fs-caption)]">
                         <span className="block mb-1">권고</span>
                         <select
                           value={position.recommendation}
@@ -492,8 +492,8 @@ export function CommitteePanel({
         </div>
       )}
 
-      {notice && <p role="status" className="text-[color:var(--green-fg)] text-[0.8rem]">{notice}</p>}
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.8rem]">{error}</p>}
+      {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)]">{notice}</p>}
+      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p>}
       {minutesOpen && transcript && (
         <MinutesModal committeeLabel={committeeLabel} transcript={transcript} dissents={dissents} onClose={() => setMinutesOpen(false)} />
       )}
@@ -530,28 +530,28 @@ function MinutesModal({
           <h2 style={{ fontSize: "0.95rem" }}>{committeeLabel} — 회의록</h2>
           <button type="button" className="btn-ghost btn-sm" onClick={onClose} aria-label="닫기">닫기</button>
         </div>
-        <p className="text-[0.75rem] text-[color:var(--muted-fg)] mt-1 mb-3">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-3">
           세션 {transcript.sessionId.slice(-6)} · 진행 {transcript.meta.gate} · 모드 {transcript.meta.decision_mode} · 상태 {transcript.status}
         </p>
 
         {/* 좌석별 포지션 요약 표는 제거(사용자 리포트, 2026-09-16 — 큰 의미 없음).
             입장 원문이 좌석·판정 근거를 그대로 담는다. */}
 
-        <h3 className="text-[0.82rem] font-semibold mb-1">입장 원문</h3>
+        <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">입장 원문</h3>
         {transcript.rounds.map((r) => (
           <div key={r.round} className="mb-3">
-            {transcript.rounds.length > 1 && <p className="text-[0.78rem] font-semibold mb-1">라운드 {r.round}</p>}
+            {transcript.rounds.length > 1 && <p className="text-[length:var(--fs-caption)] font-semibold mb-1">라운드 {r.round}</p>}
             {r.positions.map((p) => {
               const meta = parsePositionMeta(p.positionMd);
               const seat = meta.seat ?? (p.memberType === "human" ? (p.humanUserId ?? "—") : (p.agentKey ?? "—"));
               return (
                 <div key={p.positionId} className="mb-2 pl-2 border-l-2" style={{ borderColor: "var(--muted-fg)" }}>
-                  <p className="text-[0.72rem] mb-1">
+                  <p className="text-[length:var(--fs-caption)] mb-1">
                     <span className={`status-chip ${p.memberType === "human" ? "status-green" : "status-not-started"}`}>{p.memberType}</span>{" "}
                     <span className="tabular-nums">{seat}</span>
                     {p.confidence !== null && <span className="text-[color:var(--muted-fg)]"> · 신뢰도 {p.confidence}</span>}
                   </p>
-                  <p className="whitespace-pre-wrap text-[0.78rem] m-0">{stripMeta(p.positionMd)}</p>
+                  <p className="whitespace-pre-wrap text-[length:var(--fs-caption)] m-0">{stripMeta(p.positionMd)}</p>
                 </div>
               );
             })}
@@ -560,18 +560,18 @@ function MinutesModal({
 
         {transcript.evaluation && (
           <>
-            <h3 className="text-[0.82rem] font-semibold mb-1">의장 종합 (PROPOSED)</h3>
-            <p className="text-[0.8rem] mb-2">
+            <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">의장 종합 (PROPOSED)</h3>
+            <p className="text-[length:var(--fs-caption)] mb-2">
               <span className={`status-chip ${transcript.evaluation.recommendation === "go" ? "status-green" : transcript.evaluation.recommendation === "hold" ? "status-amber" : "status-red"}`}>
                 {REC_LABEL[transcript.evaluation.recommendation] ?? transcript.evaluation.recommendation}
               </span>{" "}
-              <span className="text-[0.72rem] text-[color:var(--muted-fg)]">by {transcript.evaluation.evaluatedBy} · gate {transcript.evaluation.gate}</span>
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">by {transcript.evaluation.evaluatedBy} · gate {transcript.evaluation.gate}</span>
             </p>
             {dissents.length > 0 && (
               <>
-                <h3 className="text-[0.82rem] font-semibold text-[color:var(--red-fg)] mb-1">소수 의견 (dissent — 원문 보존)</h3>
+                <h3 className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--red-fg)] mb-1">소수 의견 (dissent — 원문 보존)</h3>
                 {dissents.map((d) => (
-                  <p key={d.member_key} className="whitespace-pre-wrap text-[0.78rem] mb-2 pl-2 border-l-2" style={{ borderColor: "var(--red-fg)" }}>
+                  <p key={d.member_key} className="whitespace-pre-wrap text-[length:var(--fs-caption)] mb-2 pl-2 border-l-2" style={{ borderColor: "var(--red-fg)" }}>
                     &quot;{stripMeta(d.position_md)}&quot; — {d.member_key}
                   </p>
                 ))}

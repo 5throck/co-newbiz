@@ -187,12 +187,12 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
       <StageTabs projectId={projectId} />
       <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S10")} />
       <StageFrame stageId="S10" heading="S10 투자구조 설계 — 비히클·4축 검토·자금조달">
-        <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
           비히클(SPC 포함)과 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
           자금조달 sources &amp; uses를 균형시킵니다. 이 산출물이 S11 IC 패키지의 입력입니다.
         </p>
 
-        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
+        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
         <TabNav
           className="mb-3"
@@ -210,17 +210,17 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         {tab === "reco" && canAct && (
           <section className="market-section sizing-step mb-3" aria-label="LLM 검토/안건구조 추천">
             <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 검토/안건구조 추천 (제안)</h3>
-            <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 가설 등록·4축 확정은 사람이 합니다 — S8 채택 BC·S9 발견사항·WACC·현재 상태에서 만든 제안입니다.
             </p>
-            {recoError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+            {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
             {!reco && !recoLoading && !recoError && (
               <div className="flex flex-wrap items-center gap-2 mb-0">
                 <button type="button" className="btn-ghost" onClick={() => void generateReco()}>▶ LLM 추천 생성</button>
-                <span className="text-[0.75rem] text-[color:var(--muted-fg)]">비히클·지분·수단과 4축 노트·구조 근거 초안을 작성해 가설 등록을 돕습니다.</span>
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">비히클·지분·수단과 4축 노트·구조 근거 초안을 작성해 가설 등록을 돕습니다.</span>
               </div>
             )}
-            {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">채택 BC·DD 발견사항·WACC를 근거로 초안을 작성하는 중...</p>}
+            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">채택 BC·DD 발견사항·WACC를 근거로 초안을 작성하는 중...</p>}
             {reco && (
               <>
                 <p className="mb-1 flex flex-wrap items-center gap-1">
@@ -231,23 +231,23 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                   {reco.recommendation.stake_type && <span className="status-chip status-not-started">지분: {reco.recommendation.stake_type}</span>}
                   {reco.recommendation.instrument_mix && <span className="status-chip status-not-started">수단: {reco.recommendation.instrument_mix}</span>}
                 </p>
-                {reco.note && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
-                {reco.recommendation.rationale_draft && <p className="text-[0.78rem] mb-1"><span className="font-semibold">구조 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
+                {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
+                {reco.recommendation.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">구조 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
                 <table className="data-table mb-2" aria-label="4축 노트 초안">
                   <caption className="sr-only">4축 노트 초안</caption>
                   <tbody>
                     {(["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const).map((k) => (
                       <tr key={k}>
                         <th scope="row" style={{ width: "8rem" }}>{AXIS_LABEL[k]}</th>
-                        <td className="text-[0.78rem]">{reco.recommendation.four_axis[k]}</td>
+                        <td className="text-[length:var(--fs-caption)]">{reco.recommendation.four_axis[k]}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 {reco.recommendation.cautions.length > 0 && (
-                  <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {reco.recommendation.cautions.join(" / ")}</p>
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {reco.recommendation.cautions.join(" / ")}</p>
                 )}
-                <p className="text-[0.7rem] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
                 <button
                   type="button"
                   className="btn-ghost btn-sm"
@@ -276,7 +276,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 {h.four_axis_review_completed === 1
                   ? <span className="status-chip status-green">4축 검토 완료</span>
                   : <span className="status-chip status-red">4축 검토 미완료</span>}
-                <span className="text-[0.7rem] text-[color:var(--muted-fg)]">{h.hypothesized_at.slice(0, 10)} · {h.hypothesized_by}</span>
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{h.hypothesized_at.slice(0, 10)} · {h.hypothesized_by}</span>
               </div>
               <table className="data-table" aria-label="4축 검토 노트">
                 <caption className="sr-only">4대 축 검토 내용</caption>
@@ -289,11 +289,11 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                   ))}
                 </tbody>
               </table>
-              <p className="text-[0.75rem] text-[color:var(--muted-fg)] mt-1">근거: {h.rationale}</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">근거: {h.rationale}</p>
               {canAct && h.four_axis_review_completed !== 1 && (
                 <div className="flex flex-wrap items-center gap-1 mt-1">
                   <input
-                    className="sizing-new-input text-[0.78rem]"
+                    className="sizing-new-input text-[length:var(--fs-caption)]"
                     style={{ minWidth: "18rem" }}
                     placeholder="deal_structure_review 아티팩트 참조 (필수)"
                     value={artifactRef[h.id] ?? ""}
@@ -306,13 +306,13 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             </div>
           ))}
           {data && data.hypotheses.length === 0 && (
-            <p className="text-[0.85rem] text-[color:var(--muted-fg)]">등록된 가설이 없습니다 — 아래에서 새 가설을 기록하세요.</p>
+            <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">등록된 가설이 없습니다 — 아래에서 새 가설을 기록하세요.</p>
           )}
 
           {canAct && (
             <details className="mt-2">
-              <summary className="cursor-pointer text-[0.82rem] text-[color:var(--accent)]">새 투자구조 가설 기록</summary>
-              <div className="flex flex-wrap gap-2 mt-2 text-[0.8rem]">
+              <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">새 투자구조 가설 기록</summary>
+              <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
                 <label>비히클
                   <select className="sizing-new-input ml-1" value={newHyp.vehicle} onChange={(e) => setNewHyp({ ...newHyp, vehicle: e.target.value })}>
                     <option value="">—</option>
@@ -345,7 +345,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                   </select>
                 </label>
               </div>
-              <div className="grid grid-1 gap-1 mt-2 text-[0.8rem]">
+              <div className="grid grid-1 gap-1 mt-2 text-[length:var(--fs-caption)]">
                 {(["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const).map((k) => (
                   <label key={k}>{AXIS_LABEL[k]}
                     <input className="sizing-new-input w-full" value={newHyp[k]} onChange={(e) => setNewHyp({ ...newHyp, [k]: e.target.value })} />
@@ -376,7 +376,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         <section className="market-section sizing-step" aria-label="자금조달 계획">
           <h3 className="sizing-step-title text-[0.9rem]">자금조달 계획 (sources &amp; uses)</h3>
           {totals && (
-            <p className="text-[0.82rem] mb-1">
+            <p className="text-[length:var(--fs-caption)] mb-1">
               조달 <span className="mono-num">{fmt(totals.sources)}</span> · 사용 <span className="mono-num">{fmt(totals.uses)}</span> · 차액{" "}
               <span className="mono-num">{fmt(diff)}</span> 백만 KRW{" "}
               {totals.balanced
@@ -412,7 +412,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             </tbody>
           </table>
           {canAct && (
-            <div className="flex flex-wrap items-end gap-2 mt-2 text-[0.8rem]">
+            <div className="flex flex-wrap items-end gap-2 mt-2 text-[length:var(--fs-caption)]">
               <label>구분
                 <select className="sizing-new-input ml-1" value={newEntry.kind} onChange={(e) => setNewEntry({ ...newEntry, kind: e.target.value as "source" | "use" })}>
                   <option value="source">조달</option>

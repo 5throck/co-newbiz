@@ -148,12 +148,12 @@ export default function PartnershipPage() {
       <StageTabs projectId={projectId} />
       <header className="mb-3">
         <h1 className="text-[1.05rem] font-semibold">파트너 검토·JV 조건</h1>
-        <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-1">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
           제휴 파트너 후보와 실사 지적사항을 관리하고, 선정 파트너별 JV 조건(지분·거버넌스·엑싯)을 기록합니다.
         </p>
       </header>
 
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
+      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
       <section className="market-section mb-3" aria-label="파트너 후보">
         <div className="section-toolbar">
@@ -203,8 +203,8 @@ export default function PartnershipPage() {
 
         {canAct && (
           <details className="mt-2">
-            <summary className="cursor-pointer text-[0.82rem] text-[color:var(--accent)]">파트너 후보 등록</summary>
-            <div className="flex flex-wrap gap-2 mt-2 text-[0.8rem]">
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">파트너 후보 등록</summary>
+            <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
               <label>후보명 (필수)<input className="sizing-new-input" value={newPartner.name} onChange={(e) => setNewPartner({ ...newPartner, name: e.target.value })} /></label>
               <label>제휴 유형 (필수)<input className="sizing-new-input" placeholder="예: JV / 유통 / 기술제휴" value={newPartner.partner_type} onChange={(e) => setNewPartner({ ...newPartner, partner_type: e.target.value })} /></label>
               <label>지역<input className="sizing-new-input" value={newPartner.region_code} onChange={(e) => setNewPartner({ ...newPartner, region_code: e.target.value })} /></label>
@@ -225,7 +225,7 @@ export default function PartnershipPage() {
         <h2 className="text-[0.92rem] font-semibold mb-2">파트너 실사 지적사항</h2>
         {(data?.partners ?? []).filter((p) => p.findings.length > 0).map((p) => (
           <div key={p.id} className="sizing-grade-card mb-2">
-            <p className="text-[0.85rem] font-semibold mb-1">{p.name}</p>
+            <p className="text-[length:var(--fs-body)] font-semibold mb-1">{p.name}</p>
             <div className="table-scroll">
               <table className="data-table">
                 <caption className="sr-only">{p.name} 실사 지적사항</caption>
@@ -251,14 +251,14 @@ export default function PartnershipPage() {
               </table>
             </div>
             {canAct && (
-              <div className="flex flex-wrap gap-2 mt-2 text-[0.8rem]">
-                <input className="sizing-new-input text-[0.78rem]" style={{ maxWidth: "10rem" }} placeholder="워크스트림 (예: 재무)"
+              <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
+                <input className="sizing-new-input text-[length:var(--fs-caption)]" style={{ maxWidth: "10rem" }} placeholder="워크스트림 (예: 재무)"
                   value={newFinding[p.id]?.workstream ?? ""} onChange={(e) => setNewFinding({ ...newFinding, [p.id]: { ...(newFinding[p.id] ?? { severity: "medium", description: "" }), workstream: e.target.value } })} />
-                <select className="sizing-new-input text-[0.78rem]" value={newFinding[p.id]?.severity ?? "medium"}
+                <select className="sizing-new-input text-[length:var(--fs-caption)]" value={newFinding[p.id]?.severity ?? "medium"}
                   onChange={(e) => setNewFinding({ ...newFinding, [p.id]: { ...(newFinding[p.id] ?? { workstream: "", description: "" }), severity: e.target.value } })}>
                   <option value="high">높음</option><option value="medium">보통</option><option value="low">낮음</option>
                 </select>
-                <input className="sizing-new-input text-[0.78rem] flex-1" style={{ minWidth: "16rem" }} placeholder="지적 내용"
+                <input className="sizing-new-input text-[length:var(--fs-caption)] flex-1" style={{ minWidth: "16rem" }} placeholder="지적 내용"
                   value={newFinding[p.id]?.description ?? ""} onChange={(e) => setNewFinding({ ...newFinding, [p.id]: { ...(newFinding[p.id] ?? { workstream: "", severity: "medium" }), description: e.target.value } })} />
                 <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => addFinding(p.id)}>지적사항 추가</button>
               </div>
@@ -266,7 +266,7 @@ export default function PartnershipPage() {
           </div>
         ))}
         {data && data.partners.filter((p) => p.findings.length > 0).length === 0 && (
-          <p className="text-[0.85rem] text-[color:var(--muted-fg)]">등록된 실사 지적사항이 없습니다 — 파트너 행에서 추가하세요.</p>
+          <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">등록된 실사 지적사항이 없습니다 — 파트너 행에서 추가하세요.</p>
         )}
       </section>
 
@@ -287,9 +287,9 @@ export default function PartnershipPage() {
                 <tr key={t.id}>
                   <td>{t.partner_name}</td>
                   <td>{t.equity_split ?? "—"}</td>
-                  <td>{t.governance_json ? <code className="text-[0.72rem]">{t.governance_json}</code> : "—"}</td>
+                  <td>{t.governance_json ? <code className="text-[length:var(--fs-caption)]">{t.governance_json}</code> : "—"}</td>
                   <td>{t.veto_matters ?? "—"}</td>
-                  <td>{t.contribution_json ? <code className="text-[0.72rem]">{t.contribution_json}</code> : "—"}</td>
+                  <td>{t.contribution_json ? <code className="text-[length:var(--fs-caption)]">{t.contribution_json}</code> : "—"}</td>
                   <td>{t.exit_clause ?? "—"}</td>
                   <td>{t.deadlock_mechanism ?? "—"}</td>
                   <td>{t.non_compete_scope ?? "—"}</td>
@@ -310,8 +310,8 @@ export default function PartnershipPage() {
 
         {canAct && (
           <details className="mt-2">
-            <summary className="cursor-pointer text-[0.82rem] text-[color:var(--accent)]">JV 조건 등록</summary>
-            <div className="flex flex-wrap gap-2 mt-2 text-[0.8rem]">
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">JV 조건 등록</summary>
+            <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
               <label>파트너 (필수)
                 <select className="sizing-new-input ml-1" value={newTerm.partner_id} onChange={(e) => setNewTerm({ ...newTerm, partner_id: e.target.value })}>
                   <option value="">—</option>
@@ -323,7 +323,7 @@ export default function PartnershipPage() {
               <label>교착 해소<input className="sizing-new-input" value={newTerm.deadlock_mechanism} onChange={(e) => setNewTerm({ ...newTerm, deadlock_mechanism: e.target.value })} /></label>
               <label>경업 금지 범위<input className="sizing-new-input" value={newTerm.non_compete_scope} onChange={(e) => setNewTerm({ ...newTerm, non_compete_scope: e.target.value })} /></label>
             </div>
-            <label className="block mt-2 text-[0.8rem]">거부권 사항
+            <label className="block mt-2 text-[length:var(--fs-caption)]">거부권 사항
               <input className="sizing-new-input w-full" value={newTerm.veto_matters} onChange={(e) => setNewTerm({ ...newTerm, veto_matters: e.target.value })} />
             </label>
             <button type="button" className="btn-ghost btn-sm mt-2" disabled={busy} onClick={addTerm}>등록</button>

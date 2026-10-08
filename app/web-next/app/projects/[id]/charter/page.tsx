@@ -116,7 +116,7 @@ function CharterViewInner() {
     <main>
       <StageTabs projectId={projectId} />
       <StageFrame stageId="S8" heading="프로젝트 추진계획 — 목적·범위·KPI 사전 확정">
-        <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           추진계획은 프로젝트의 목적·시장 범위·밸류체인 노드·진입 범위·KPI를 진행 심의 전에
           문서로 고정합니다. 수정은 append-only 버전으로만 이루어지며 변경 사유(note)가 필수입니다.
           {data && (
@@ -136,25 +136,25 @@ function CharterViewInner() {
             <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void confirmBaseline()}>
               {busy ? "확정 처리 중..." : "✓ 차터 기준선 확정 (S11 입력)"}
             </button>
-            <span className="text-[0.72rem] text-[color:var(--muted-fg)]">
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               미확정 상태에서는 S11 투자심사 완료 요건이 충족되지 않습니다. 확정 후 수정안을 반영하면 다시 확정해야 합니다.
             </span>
           </div>
         )}
 
-        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">✕ {error}</p>}
-        {notice && <p role="status" className="text-[color:var(--green-fg)] text-[0.82rem] mb-2">✓ {notice}</p>}
-        {!data && !error && <p className="text-[0.82rem]">불러오는 중...</p>}
+        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
+        {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
+        {!data && !error && <p className="text-[length:var(--fs-caption)]">불러오는 중...</p>}
 
         {latest && (
           <section className="market-section sizing-step" aria-label={`최신 추진계획 v${latest.version}`}>
             <h3 className="sizing-step-title text-[0.9rem]">
               최신 추진계획 v{latest.version}
-              <span className="ml-2 text-[0.72rem] text-[color:var(--muted-fg)]">
+              <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 {latest.source} · {latest.built_by} · {latest.built_at.slice(0, 10)}
               </span>
             </h3>
-            <dl className="text-[0.82rem]" style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "0.25rem 1rem" }}>
+            <dl className="text-[length:var(--fs-caption)]" style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "0.25rem 1rem" }}>
               <dt className="text-[color:var(--muted-fg)]">목적</dt><dd>{latest.purpose}</dd>
               <dt className="text-[color:var(--muted-fg)]">시장 범위</dt><dd>{latest.marketScope}</dd>
               <dt className="text-[color:var(--muted-fg)]">밸류체인 노드</dt><dd>{latest.valueChainNode}</dd>
@@ -163,8 +163,8 @@ function CharterViewInner() {
                 <span className={`status-chip ${latest.track === "brownfield" ? "status-amber" : "status-green"}`}>
                   {TRACK_LABEL[latest.track] ?? latest.track}{latest.subTrack ? ` · ${latest.subTrack}` : ""}
                 </span>
-                {latest.intent && <span className="ml-1 text-[0.75rem]">{latest.intent === "integration" ? "통합 의도" : "역량접근 의도"}</span>}
-                {latest.totalScore !== null && <span className="ml-1 tabular-nums text-[0.75rem]">채점 {latest.totalScore}/3.0</span>}
+                {latest.intent && <span className="ml-1 text-[length:var(--fs-caption)]">{latest.intent === "integration" ? "통합 의도" : "역량접근 의도"}</span>}
+                {latest.totalScore !== null && <span className="ml-1 tabular-nums text-[length:var(--fs-caption)]">채점 {latest.totalScore}/3.0</span>}
               </dd>
               <dt className="text-[color:var(--muted-fg)]">트랙 근거</dt><dd>{latest.trackRationale}</dd>
               <dt className="text-[color:var(--muted-fg)]">진입 범위</dt><dd>{latest.entryScope}</dd>
@@ -183,9 +183,9 @@ function CharterViewInner() {
               <tbody>
                 {latest.kpis.map((k) => (
                   <tr key={k.key}>
-                    <td className="text-[0.8rem]">{k.label}</td>
-                    <td className="text-[0.72rem] tabular-nums text-[color:var(--muted-fg)]">{k.key}</td>
-                    <td className="text-[0.8rem] tabular-nums">{k.target}</td>
+                    <td className="text-[length:var(--fs-caption)]">{k.label}</td>
+                    <td className="text-[length:var(--fs-caption)] tabular-nums text-[color:var(--muted-fg)]">{k.key}</td>
+                    <td className="text-[length:var(--fs-caption)] tabular-nums">{k.target}</td>
                   </tr>
                 ))}
               </tbody>
@@ -197,21 +197,21 @@ function CharterViewInner() {
           <section className="market-section sizing-step mt-3" aria-label="차터 수정안">
             <h3 className="sizing-step-title text-[0.9rem]">차터 수정안 (append-only · analyst+)</h3>
             <form className="sizing-new-form" onSubmit={amend}>
-              <label className="block text-[0.78rem] mb-2">
+              <label className="block text-[length:var(--fs-caption)] mb-2">
                 <span className="block mb-1">변경 사유 (note) * — 스코프 크리프 추적을 위해 기록됩니다</span>
                 <textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} rows={2} required className="sizing-new-input w-full" placeholder="예: 엔터티 IC HOLD 근거에 따라 진입 범위를 1개 국가로 축소" />
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
-                <label className="text-[0.78rem] flex-1 min-w-[16rem]">
+                <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]">
                   <span className="block mb-1">진입 범위 (entryScope) — 변경 시에만 입력</span>
                   <input value={form.entryScope} onChange={(e) => setForm({ ...form, entryScope: e.target.value })} className="sizing-new-input w-full" />
                 </label>
-                <label className="text-[0.78rem] flex-1 min-w-[16rem]">
+                <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]">
                   <span className="block mb-1">목적 (purpose) — 변경 시에만 입력</span>
                   <input value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} className="sizing-new-input w-full" />
                 </label>
               </div>
-              <label className="block text-[0.78rem] mb-2">
+              <label className="block text-[length:var(--fs-caption)] mb-2">
                 <span className="block mb-1">KPI — 한 줄에 하나, "key | label | target" 형식 (변경 시에만 입력)</span>
                 <textarea value={form.kpis} onChange={(e) => setForm({ ...form, kpis: e.target.value })} rows={3} className="sizing-new-input w-full" placeholder={"npv_upside | NPV 상승분 | 150억 이상\npayback | 투자 회수 | 5년 이내"} />
               </label>
@@ -229,10 +229,10 @@ function CharterViewInner() {
               {versions.map((v) => (
                 <li key={v.version}>
                   <strong>v{v.version}</strong>{" "}
-                  <span className="text-[0.72rem] text-[color:var(--muted-fg)] tabular-nums">
+                  <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums">
                     {v.source} · {v.built_by} · {v.built_at.slice(0, 10)}
                   </span>
-                  {v.note && <span className="block text-[0.75rem]">사유: {v.note}</span>}
+                  {v.note && <span className="block text-[length:var(--fs-caption)]">사유: {v.note}</span>}
                 </li>
               ))}
             </ul>

@@ -10,13 +10,13 @@ const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
 
 export function DerivationTable({ derivation }: { derivation: WaccDerivation }) {
   if (derivation.steps.length === 0) {
-    return <p className="text-[color:var(--muted-fg)] text-[0.82rem]">산식 분해에 필요한 컴포넌트가 부족합니다.</p>;
+    return <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">산식 분해에 필요한 컴포넌트가 부족합니다.</p>;
   }
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[0.85rem]">
+      <table className="w-full text-[length:var(--fs-body)]">
         <thead>
-          <tr className="text-left text-[color:var(--muted-fg)] text-[0.75rem] border-b border-[color:var(--border-bright)]">
+          <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
             <th className="py-1.5 px-1.5 font-semibold whitespace-nowrap">항목</th>
             <th className="py-1.5 px-1.5 font-semibold">산식</th>
             <th className="py-1.5 px-1.5 font-semibold">대입</th>

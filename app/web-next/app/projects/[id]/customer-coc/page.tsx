@@ -79,14 +79,14 @@ function CocView() {
           <h2 className="text-[0.9rem] mb-2">계약 CoC 등록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[0.78rem] flex-1 min-w-[12rem]"><span className="block mb-1">상대 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">상대 *</span>
                 <input className="sizing-new-input w-full" value={form.counterparty} onChange={(e) => setForm({ ...form, counterparty: e.target.value })} required /></label>
-              <label className="text-[0.78rem]"><span className="block mb-1">방향</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">방향</span>
                 <select className="sizing-new-input sizing-new-input-sm" value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })}><option value="customer">고객</option><option value="supplier">공급</option></select></label>
-              <label className="text-[0.78rem] flex items-center gap-1" style={{ marginBottom: 8 }}><input type="checkbox" checked={form.coc} onChange={(e) => setForm({ ...form, coc: e.target.checked })} /> CoC 조항 있음</label>
-              <label className="text-[0.78rem] w-[7rem]"><span className="block mb-1">집중도 (%)</span>
+              <label className="text-[length:var(--fs-caption)] flex items-center gap-1" style={{ marginBottom: 8 }}><input type="checkbox" checked={form.coc} onChange={(e) => setForm({ ...form, coc: e.target.checked })} /> CoC 조항 있음</label>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">집중도 (%)</span>
                 <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.concentration_pct} onChange={(e) => setForm({ ...form, concentration_pct: e.target.value })} /></label>
-              <label className="text-[0.78rem] w-[8rem]"><span className="block mb-1">추정 이탈 (억원)</span>
+              <label className="text-[length:var(--fs-caption)] w-[8rem]"><span className="block mb-1">추정 이탈 (억원)</span>
                 <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.est_exit_loss} onChange={(e) => setForm({ ...form, est_exit_loss: e.target.value })} /></label>
               <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
             </div>

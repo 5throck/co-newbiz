@@ -97,12 +97,12 @@ export default function PmiPage() {
       <StageTabs projectId={projectId} />
       <header className="mb-3">
         <h1 className="text-[1.05rem] font-semibold">PMI 사후통합</h1>
-        <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-1">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
           핵심 인력의 잔존 상태와 시너지 실현 인증(런레이트·지속 분기)을 관리합니다.
         </p>
       </header>
 
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
+      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
       <section className="market-section mb-3" aria-label="핵심인력">
         <h2 className="text-[0.92rem] font-semibold mb-2">핵심인력 잔존 ({talents?.length ?? 0}명)</h2>
@@ -147,7 +147,7 @@ export default function PmiPage() {
           </table>
         </div>
         {canAct && (
-          <div className="flex flex-wrap gap-2 mt-2 text-[0.8rem]">
+          <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
             <input className="sizing-new-input" placeholder="예: CTO / 생산공장장 (핵심인력)" value={newTalent} onChange={(e) => setNewTalent(e.target.value)} />
             <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={addTalent}>등록</button>
           </div>
@@ -189,8 +189,8 @@ export default function PmiPage() {
         </div>
         {canAct && (
           <details className="mt-2">
-            <summary className="cursor-pointer text-[0.82rem] text-[color:var(--accent)]">시너지 인증</summary>
-            <div className="flex flex-wrap gap-2 mt-2 text-[0.8rem]">
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">시너지 인증</summary>
+            <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
               <label>런레이트 (bp, 연환산)
                 <input className="sizing-new-input" type="number" min={1} step={1} value={newCert.run_rate_bp}
                   onChange={(e) => setNewCert({ ...newCert, run_rate_bp: e.target.value })} />

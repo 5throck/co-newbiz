@@ -65,8 +65,8 @@ function PortfolioView() {
               <tbody>{dup.map(([scope, arr]) => (
                 <tr key={scope}>
                   <td className="font-semibold">{scope}</td>
-                  <td>{arr.map((a) => <Link key={a.id} href={a.kind === "기회" ? `/opportunities?opportunity=${a.id}` : `/projects/${a.id}/process`} className="block text-[0.78rem] underline">{a.kind} — {a.name}</Link>)}</td>
-                  <td className="text-[0.78rem]"><span className="status-chip status-amber">시너지 통합 검토 또는 시기 조정</span></td>
+                  <td>{arr.map((a) => <Link key={a.id} href={a.kind === "기회" ? `/opportunities?opportunity=${a.id}` : `/projects/${a.id}/process`} className="block text-[length:var(--fs-caption)] underline">{a.kind} — {a.name}</Link>)}</td>
+                  <td className="text-[length:var(--fs-caption)]"><span className="status-chip status-amber">시너지 통합 검토 또는 시기 조정</span></td>
                 </tr>
               ))}</tbody>
             </table>

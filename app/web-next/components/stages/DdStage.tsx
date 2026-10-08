@@ -225,7 +225,7 @@ export function DdStage({ projectId }: { projectId: string }) {
       <StageTabs projectId={projectId} />
       <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S9")} />
       <StageFrame stageId="S9" heading="S9 실사·검증 — DD 체크리스트 판정">
-        <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           적용 체크리스트의 모든 항목이 판정되고 필수 미충족이 0건이어야 S9이 완료됩니다 (flow.spec v2.0.0).
           {data && (
             <>
@@ -250,8 +250,8 @@ export function DdStage({ projectId }: { projectId: string }) {
           </div>
         )}
 
-        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">✕ {error}</p>}
-        {notice && <p role="status" className="text-[color:var(--green-fg)] text-[0.82rem] mb-2">✓ {notice}</p>}
+        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
+        {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
         {domain && (
           <>
@@ -280,7 +280,7 @@ export function DdStage({ projectId }: { projectId: string }) {
                   return (
                     <tr key={item.id}>
                       <td>
-                        <span className="text-[0.72rem] text-[color:var(--muted-fg)] tabular-nums mr-1">{item.id}</span>
+                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">{item.id}</span>
                         {item.text}
                         {item.state?.waiver_id && <span className="status-chip status-amber ml-1" title={`waiver ${item.state.waiver_id}`}>⚖ waiver</span>}
                       </td>
@@ -317,7 +317,7 @@ export function DdStage({ projectId }: { projectId: string }) {
                   return (
                     <tr key={c.id}>
                       <td>
-                        <span className="text-[0.72rem] text-[color:var(--muted-fg)] tabular-nums mr-1">{DOMAIN_LABEL[c.domain] ?? c.domain}-custom</span>
+                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">{DOMAIN_LABEL[c.domain] ?? c.domain}-custom</span>
                         {c.item_label}
                         <span className="status-chip status-not-started ml-1" title="산업 맞춤 제안에서 승인된 항목">맞춤</span>
                         {c.state?.waiver_id && <span className="status-chip status-amber ml-1" title={`waiver ${c.state.waiver_id}`}>⚖ waiver</span>}
@@ -343,18 +343,18 @@ export function DdStage({ projectId }: { projectId: string }) {
             <section className="market-section sizing-step mt-3" aria-label="산업 맞춤 제안">
               <h3 className="sizing-step-title text-[0.9rem]">산업 맞춤 제안 (proposed)</h3>
               {domain.custom.filter((c) => c.status === "proposed").length === 0 && (
-                <p className="text-[0.82rem] text-[color:var(--muted-fg)]">대기 중인 제안이 없습니다 — 에이전트 제안은 실사 체크리스트 수행 중 도착합니다.</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">대기 중인 제안이 없습니다 — 에이전트 제안은 실사 체크리스트 수행 중 도착합니다.</p>
               )}
               <ul className="sizing-note-list">
                 {domain.custom.filter((c) => c.status === "proposed").map((c) => (
                   <li key={c.id}>
                     {c.item_label}
-                    <span className="ml-1 text-[0.72rem] text-[color:var(--muted-fg)]" title={`제안 에이전트 ${c.proposed_by_agent ?? ""}`}>
+                    <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={`제안 에이전트 ${c.proposed_by_agent ?? ""}`}>
                       ({DOMAIN_LABEL[c.domain] ?? c.domain} · {c.proposed_by_agent ?? "unknown agent"})
                     </span>
-                    {c.rationale && <span className="block text-[0.72rem] text-[color:var(--muted-fg)]">근거: {c.rationale}</span>}
+                    {c.rationale && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거: {c.rationale}</span>}
                     {c.source_url ? (
-                      <a className="text-[0.72rem]" href={c.source_url} target="_blank" rel="noreferrer">
+                      <a className="text-[length:var(--fs-caption)]" href={c.source_url} target="_blank" rel="noreferrer">
                         출처 ({c.source_reliability ?? "?"}): {c.source_url}
                       </a>
                     ) : (
@@ -376,14 +376,14 @@ export function DdStage({ projectId }: { projectId: string }) {
             <section className="market-section sizing-step mt-3" aria-label="조사내역 (dd_finding)">
               <h3 className="sizing-step-title text-[0.9rem]">조사내역 (dd_finding)</h3>
               {(data?.findings.length ?? 0) === 0 && (
-                <p className="text-[0.82rem] text-[color:var(--muted-fg)]">등록된 조사내역이 없습니다 — 실사 수행 중 발견한 사실을 상단 폼에서 기록하세요.</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">등록된 조사내역이 없습니다 — 실사 수행 중 발견한 사실을 상단 폼에서 기록하세요.</p>
               )}
               <ul className="sizing-note-list">
                 {(data?.findings ?? []).map((f) => (
                   <li key={f.id}>
                     <strong>{f.category}</strong>: {f.description}
                     {f.value_impact != null && <span className="ml-1 tabular-nums">(가치 영향 {f.value_impact})</span>}
-                    {f.evidence_ref && <span className="ml-1 text-[0.72rem] text-[color:var(--muted-fg)]" title="증적 참조">증적: {f.evidence_ref}</span>}
+                    {f.evidence_ref && <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title="증적 참조">증적: {f.evidence_ref}</span>}
                   </li>
                 ))}
               </ul>
@@ -401,7 +401,7 @@ export function DdStage({ projectId }: { projectId: string }) {
           <div className="modal-backdrop" onClick={() => setWaiverPick(null)}>
             <div className="modal-panel" role="dialog" aria-modal="true" aria-label="waiver 연결" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-[1rem] font-semibold mb-2">활성 waiver 연결</h3>
-              <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
                 항목 {waiverPick.itemId} 에 연결할 활성 waiver를 선택합니다 — 면제 판정(waived)은 사유와 만료가 기록된 승인 waiver에만 가능합니다.
               </p>
               <ul className="space-y-2 mb-3">

@@ -307,13 +307,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       <StageTabs projectId={projectId} />
       <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S8")} />
       <StageFrame stageId="S8" heading="S8 사업성 분석 — 이중 관점 밸류에이션 비교">
-      <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
         같은 시나리오를 <b>시장 기반(진행 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.
         <span className="ml-2 status-chip status-not-started">엔진 권고 ≠ 채택 — 채택은 사람의 행위입니다</span>
       </p>
 
       {readOnlyAdmin && (
-        <p role="status" className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
+        <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
           <span className="status-chip status-not-started mr-1">읽기 전용</span>
           관리자 역할은 프로젝트 데이터를 변경할 수 없어 대상 선택·채택·생성 기능이 표시되지 않습니다.
         </p>
@@ -335,7 +335,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         ]}
       />
 
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mb-2">{error}</p>}
+      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
       {tab === "params" && <ParamsPanel projectId={projectId} />}
       {tab === "target-costing" && <TargetCostingPanel projectId={projectId} />}
@@ -345,12 +345,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {/* ── ADR-0143 대상 비교·선정 (brownfield) — 권고 ≠ 선정, 선정은 사람 ── */}
       {tab === "targets" && targets.length > 0 && (
       <section className="market-section sizing-step mb-3" aria-label="Short List 대상 비교·선정">
-        <h3 className="sizing-step-title">Short List 대상 비교·선정 <span className="text-[0.72rem] text-[color:var(--muted-fg)]">(flow.spec S8 subjectScope: shortlist — ADR-0143)</span></h3>
-        <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+        <h3 className="sizing-step-title">Short List 대상 비교·선정 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">(flow.spec S8 subjectScope: shortlist — ADR-0143)</span></h3>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           각 대상의 최신 gate-primary(시장 기반) 기본 시나리오 결과를 비교합니다. ★ RECOMMENDED는 권고일 뿐이며, 선정은 근거를 남기는 사람의 기록입니다. 선정 후 채택은 선정된 대상의 케이스로 제한됩니다.
         </p>
         {selectedTargetName && (
-          <p className="text-[0.8rem] mb-2">
+          <p className="text-[length:var(--fs-caption)] mb-2">
             <span className="status-chip status-green">선정됨</span> <b>{selectedTargetName}</b> — 근거: {data?.target_selection?.rationale}{" "}
             <span className="text-[color:var(--muted-fg)]">({data?.target_selection?.selectedBy})</span>
           </p>
@@ -386,7 +386,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   <td><span className="status-chip status-not-started">{ENGINE_LABEL[t.engine ?? ""] ?? "엔진 미기록"}</span></td>
                   <td>
                     {canAct && !isSelected && (
-                      <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => { setSelecting({ targetId: t.targetId, name: t.companyName }); setSelectionRationale(""); }}>
+                      <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => { setSelecting({ targetId: t.targetId, name: t.companyName }); setSelectionRationale(""); }}>
                         대상 선택
                       </button>
                     )}
@@ -397,16 +397,16 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </tbody>
         </table>
         {data?.engines_mixed && (
-          <p className="text-[0.76rem] text-[color:var(--muted-fg)] mt-1" role="note">
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
             * 비교된 케이스가 서로 다른 계산 엔진에서 산출되었으므로 순위는 유의하여 해석하세요.
           </p>
         )}
         {targets.every((t) => t.caseCount === 0) && (
-          <p className="text-[0.76rem] text-[color:var(--muted-fg)] mt-1">아직 분석된 케이스가 없습니다 — 설명·생성 탭에서 대상별 자동 생성을 실행하세요.</p>
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">아직 분석된 케이스가 없습니다 — 설명·생성 탭에서 대상별 자동 생성을 실행하세요.</p>
         )}
         {selecting && (
           <div className="mt-2">
-            <p className="text-[0.8rem] mb-1"><b>{selecting.name}</b> 대상 선정 근거 (필수 — ADR-0053 결정 기록):</p>
+            <p className="text-[length:var(--fs-caption)] mb-1"><b>{selecting.name}</b> 대상 선정 근거 (필수 — ADR-0053 결정 기록):</p>
             <textarea
               className="sizing-new-input w-full"
               rows={3}
@@ -416,7 +416,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               aria-label="대상 선정 근거"
             />
             <div className="flex gap-1 mt-1">
-              <button type="button" className="btn-primary btn-sm" disabled={busy || !selectionRationale.trim()} onClick={() => void submitTargetSelection()}>선정 기록</button>
+              <button type="button" className="btn-ghost btn-sm" disabled={busy || !selectionRationale.trim()} onClick={() => void submitTargetSelection()}>선정 기록</button>
               <button type="button" className="btn-ghost btn-sm" onClick={() => setSelecting(null)}>취소</button>
             </div>
           </div>
@@ -446,7 +446,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             </tr>
           </tbody>
         </table>
-        <p className="text-[0.76rem] text-[color:var(--muted-fg)] mt-1">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
           <b className="text-[color:var(--warning)]">진행 판정(채택 요건·킬 크라이테리아·RECOMMENDED)은 시장 기반 값을 사용합니다.</b>{" "}
           과거 기반은 비교용이며, 둘의 차이가 클수록 성장 가정의 불확실성이 크다는 신호입니다.
         </p>
@@ -454,7 +454,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {canAct && (
         <div className="mb-3">
-          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void generate()}>
+          <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void generate()}>
             {busy ? "생성 중..." : "이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)"}
           </button>
         </div>
@@ -462,13 +462,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {run && (
         <details className="mb-3" open>
-          <summary className="cursor-pointer text-[0.82rem] text-[color:var(--accent)]">생성 실행 로그 ({run.runId} — {run.status})</summary>
+          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">생성 실행 로그 ({run.runId} — {run.status})</summary>
           <ul className="sizing-note-list mt-1">
             {run.activities.map((a) => (
               <li key={a.activityId}>
                 <span className={`status-chip ${a.status === "done" ? "status-green" : a.status === "failed" ? "status-red" : "status-not-started"}`}>{a.status}</span>{" "}
                 <strong>{a.activityId}</strong> <span className="text-[color:var(--muted-fg)]">({a.agentKey})</span>
-                {a.outputMd && <pre className="text-[0.7rem] whitespace-pre-wrap mt-1">{a.outputMd}</pre>}
+                {a.outputMd && <pre className="text-[length:var(--fs-caption)] whitespace-pre-wrap mt-1">{a.outputMd}</pre>}
               </li>
             ))}
           </ul>
@@ -479,17 +479,17 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {canAct && (
         <section className="market-section sizing-step mt-3" aria-label="LLM 채택 권고">
           <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 채택 권고 (제안)</h3>
-          <p className="text-[0.75rem] text-[color:var(--muted-fg)] mb-2">
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
             원칙 (경계 #2): 채택은 사람이 합니다 — 이 화면의 케이스들과 킬 크라이테리아 상태에서 만든 제안이며, ★ RECOMMENDED(결정론)와 별개 제안입니다.
           </p>
-          {recoError && <p role="alert" className="text-[0.75rem] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+          {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
           {!reco && !recoLoading && !recoError && (
             <div className="flex flex-wrap items-center gap-2 mb-0">
               <button type="button" className="btn-ghost" onClick={() => void generateAdoptionReco()}>▶ 채택 권고 생성</button>
-              <span className="text-[0.75rem] text-[color:var(--muted-fg)]">권고 케이스와 근거, "무엇이 바뀌면 뒤집히는가" 초안을 작성합니다.</span>
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">권고 케이스와 근거, "무엇이 바뀌면 뒤집히는가" 초안을 작성합니다.</span>
             </div>
           )}
-          {recoLoading && <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-0">케이스 수치와 킬 크라이테리아를 근거로 초안을 작성하는 중...</p>}
+          {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">케이스 수치와 킬 크라이테리아를 근거로 초안을 작성하는 중...</p>}
           {reco && (
             <>
               <p className="mb-1 flex flex-wrap items-center gap-1">
@@ -500,13 +500,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   <span className="status-chip status-green">권고: {(data?.cases ?? []).find((c) => c.id === reco.recommendation.recommended_model_id)?.name ?? reco.recommendation.recommended_model_id}</span>
                 )}
               </p>
-              {reco.note && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
-              {reco.recommendation.rationale_draft && <p className="text-[0.8rem] mb-1"><span className="font-semibold">채택 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
-              {reco.recommendation.what_would_change && <p className="text-[0.8rem] mb-1"><span className="font-semibold">권고가 뒤집히는 조건:</span> {reco.recommendation.what_would_change}</p>}
+              {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
+              {reco.recommendation.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">채택 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
+              {reco.recommendation.what_would_change && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">권고가 뒤집히는 조건:</span> {reco.recommendation.what_would_change}</p>}
               {reco.recommendation.cautions.length > 0 && (
-                <p className="text-[0.72rem] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {reco.recommendation.cautions.join(" / ")}</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {reco.recommendation.cautions.join(" / ")}</p>
               )}
-              <p className="text-[0.7rem] text-[color:var(--muted-fg)] mb-0">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
             </>
           )}
         </section>
@@ -519,12 +519,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       <>
       {targets.length > 0 && (
         <div className="flex flex-wrap items-center gap-1 mt-3 mb-1" role="group" aria-label="분석 대상 필터">
-          <span className="text-[0.78rem] text-[color:var(--muted-fg)] mr-1">분석 대상:</span>
+          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mr-1">분석 대상:</span>
           {targets.map((t) => (
             <button
               key={t.targetId}
               type="button"
-              className={t.targetId === effectiveTargetFilter ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
+              className={t.targetId === effectiveTargetFilter ? "btn-ghost btn-sm" : "btn-ghost btn-sm"}
               onClick={() => setTargetFilter(t.targetId)}
             >
               {t.companyName}{data?.target_selection?.targetId === t.targetId ? " ✓" : ""}
@@ -544,7 +544,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               {newestMf?.adopted && <span className="status-chip status-green ml-1">채택됨 (fs 진행 입력)</span>}
             </h3>
             {cases.length === 0 ? (
-              <p className="text-[0.85rem] text-[color:var(--muted-fg)]">
+              <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
                 이 시나리오의 케이스가 없습니다 — 자동 생성을 실행하세요.
               </p>
             ) : (
@@ -578,7 +578,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                         </td>
                         <td>
                           {note.growth ? `${(Number(note.growth) * 100).toFixed(1)}%` : "—"}
-                          <span className="text-[color:var(--muted-fg)] text-[0.74rem]"> {note.growth_source ?? ""}</span>
+                          <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]"> {note.growth_source ?? ""}</span>
                           {c.variant === "historical" && note.growth && escalatedCagrPct !== null && Math.abs(Number(note.growth) * 100 - escalatedCagrPct) > 15 && (
                             <span
                               className="status-chip status-amber ml-1"
@@ -590,7 +590,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                         </td>
                         <td>
                           {note.sigma ? pct1(Number(note.sigma)) : "—"}
-                          <span className="text-[color:var(--muted-fg)] text-[0.74rem]"> {note.sigma_source ?? ""}</span>
+                          <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]"> {note.sigma_source ?? ""}</span>
                         </td>
                         {(["p05", "p50", "p95"] as const).map((p) => {
                           const sim = c.simulations.find((x) => x.percentile === p);
@@ -608,7 +608,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                           {canAct && (
                             <div className="flex flex-wrap gap-1">
                               {!c.adopted && (
-                                <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => adopt(c.id, c.scenario, c.variant)}>
+                                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => adopt(c.id, c.scenario, c.variant)}>
                                   채택
                                 </button>
                               )}
@@ -622,7 +622,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   })}
                   {!hasHistorical && (
                     <tr>
-                      <td colSpan={9} className="text-[color:var(--muted-fg)] text-[0.8rem]">
+                      <td colSpan={9} className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
                         과거 기반 관점 N/A — 대상 회사 연결 + DART 동기화 후 재생성하면 추가됩니다.{" "}
                         <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("financial-analysis")}>재무분석 탭에서 연결 →</button>
                       </td>
@@ -632,7 +632,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               </table>
             )}
             {(cases[0]?.simulations?.[0]?.note) && (
-              <p className="text-[0.7rem] text-[color:var(--muted-fg)] mt-1" title="재현 근거 (동일 시드로 재계산해도 같은 결과)">{cases[0].simulations[0].note}</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" title="재현 근거 (동일 시드로 재계산해도 같은 결과)">{cases[0].simulations[0].note}</p>
             )}
           </section>
         );
@@ -641,14 +641,14 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       )}
 
       {data && data.cases.length === 0 && (
-        <p className="text-[0.85rem] text-[color:var(--muted-fg)]">등록된 Business Case가 없습니다 — 자동 생성을 실행하거나 수동으로 추가하세요.</p>
+        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">등록된 Business Case가 없습니다 — 자동 생성을 실행하거나 수동으로 추가하세요.</p>
       )}
 
       {editing && (
         <section className="market-section sizing-step mt-3" aria-label="라인 편집">
           <h3 className="sizing-step-title text-[0.9rem]">라인 편집 (JSON — 저장 시 전체 교체)</h3>
           <textarea
-            className="sizing-new-input w-full font-mono text-[0.75rem]"
+            className="sizing-new-input w-full font-mono text-[length:var(--fs-caption)]"
             rows={10}
             value={editing.text}
             onChange={(e) => setEditing({ ...editing, text: e.target.value })}

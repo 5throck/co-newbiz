@@ -53,7 +53,7 @@ export function SystemModeSection() {
   return (
     <div className="card">
       <h2>시스템 모드</h2>
-      <p className="text-[0.8rem] text-[color:var(--muted-fg)] mb-3">
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
         운영(production) 모드에서는 프로젝트·검토/안건 삭제(톰스톤 포함)가 전면 차단됩니다 — 실제 딜 데이터가 실수로 지워지는 사고를 막기 위함입니다.
         개발(development) 모드에서는 테스트 데이터 정리를 위해 삭제가 다시 허용됩니다. 이 설정은 관리자만 변경할 수 있습니다.
       </p>
@@ -67,7 +67,7 @@ export function SystemModeSection() {
               현재: {state.mode === "production" ? "운영 (production)" : "개발 (development)"}
             </span>
             {state.updated_at && (
-              <span className="text-[0.75rem] text-[color:var(--muted-fg)]">
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 마지막 변경: {state.updated_by ?? "—"} · {state.updated_at.slice(0, 16).replace("T", " ")}
               </span>
             )}

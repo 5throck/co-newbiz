@@ -69,8 +69,8 @@ function DealOverview() {
 
           <div className="handoff" style={{ background: "var(--primary-bg)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px", marginBottom: 14, fontSize: "0.78rem" }}>
             <b className="text-[color:var(--muted-fg)]">입력 ←</b>
-            <span className="text-[0.75rem]">상위 단계 산출물이 이 단계의 입력입니다.</span>
-            <span className="text-[0.75rem]" style={{ flex: 1, textAlign: "right" }}>
+            <span className="text-[length:var(--fs-caption)]">상위 단계 산출물이 이 단계의 입력입니다.</span>
+            <span className="text-[length:var(--fs-caption)]" style={{ flex: 1, textAlign: "right" }}>
               출력 → <b>{proc.nextStage ?? "종료"}</b>
             </span>
           </div>
@@ -81,7 +81,7 @@ function DealOverview() {
               {routeFor && <Link className="btn-primary btn-sm" href={routeFor} style={{ textDecoration: "none", display: "inline-block", marginLeft: "0.6rem" }}>단계 화면으로 이동</Link>}
             </h2>
             {proc.blockers.length === 0 && !current ? (
-              <p className="text-[0.85rem]">모든 단계가 완료되었습니다{proc.terminated ? " (KILL 기록됨)" : ""}.</p>
+              <p className="text-[length:var(--fs-body)]">모든 단계가 완료되었습니다{proc.terminated ? " (KILL 기록됨)" : ""}.</p>
             ) : (
               <ul className="sizing-note-list">
                 {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b, i) => (

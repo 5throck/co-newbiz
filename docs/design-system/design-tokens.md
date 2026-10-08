@@ -34,6 +34,8 @@ When building screens, colors must be specified only through these tokens; raw c
 
 ## Font sizes and spacing
 
+> Wave U-2: `--fs-body` 0.875rem (14px floor), `--fs-caption` 0.8125rem (13px, captions/source/units only), `--lh-body` 1.5, `--lh-table` 1.35; spacing `--space-1..4,6,8` = 4/8/12/16/24/32px. `design:lint` rejects font-size below 14px outside these tokens.
+
 - Body text is 15px with 1.65× line height, secondary explanations are 14px, and the smallest labels (micro text) are 12px — these size differences are what let the screen communicate "is this a heading, body text, or a side note?"
 - Spacing follows an 8px rhythm (8/16/24/32) — spacing values are utility literals on the 8px grid rather than a spacing token; arbitrary numbers (e.g., 13px, 17px) are avoided so margins keep a steady rhythm across screens.
 - Corner radius uses the token scale — `--radius-sm`, `--radius-md` (0.625rem), `--radius-lg`, and `--radius-full` (pills/circles) — never a raw px value; `--radius-md` is the default for interactive controls (buttons, inputs, chips).

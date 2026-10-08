@@ -78,31 +78,31 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
 
   return (
     <>
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem]">✕ {error}</p>}
-      {message && <p className="text-[0.82rem] text-[color:var(--accent)]">{message}</p>}
+      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>}
+      {message && <p className="text-[length:var(--fs-caption)] text-[color:var(--accent)]">{message}</p>}
       {!view ? (
         <p>불러오는 중...</p>
       ) : (
         <>
           {company ? (
             <section className="market-section sizing-step">
-              <h3 className="sizing-step-title">연결된 대상 회사 <span className="text-[color:var(--muted-fg)] font-normal text-[0.8rem]">{roleChip}</span></h3>
+              <h3 className="sizing-step-title">연결된 대상 회사 <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">{roleChip}</span></h3>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[1.05rem] font-extrabold">{company.name_ko}</span>
-                {company.dart_corp_code && <span className="font-mono text-[0.78rem] text-[color:var(--muted-fg)]">dart corp code {company.dart_corp_code}</span>}
-                <span className={company.latest_sync_at ? "inline-block rounded-full px-2 py-0.5 text-[0.68rem] font-bold whitespace-nowrap bg-[color:var(--success-bg)] text-[color:var(--success)]" : "inline-block rounded-full px-2 py-0.5 text-[0.68rem] font-bold whitespace-nowrap bg-[color:var(--warning-bg)] text-[color:var(--warning)]"}>{company.latest_sync_at ? `동기화됨 · ${new Date(company.latest_sync_at).toLocaleDateString("ko-KR")}` : "동기화 전 — 회사 화면에서 동기화하세요"}</span>
+                {company.dart_corp_code && <span className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">dart corp code {company.dart_corp_code}</span>}
+                <span className={company.latest_sync_at ? "inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--success-bg)] text-[color:var(--success)]" : "inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--warning-bg)] text-[color:var(--warning)]"}>{company.latest_sync_at ? `동기화됨 · ${new Date(company.latest_sync_at).toLocaleDateString("ko-KR")}` : "동기화 전 — 회사 화면에서 동기화하세요"}</span>
               </div>
               <div className="grid gap-2 md:grid-cols-4 mt-2">
-                <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]"><div className="text-[color:var(--muted-fg)] text-[0.72rem]">매출액 (최근 연도)</div><div className="font-extrabold text-[1.1rem] tabular-nums">{eok(company.metrics.revenue_latest)}</div><div className="text-[0.72rem] text-[color:var(--muted-fg)]">전년 {company.metrics.revenue_growth === null ? "—" : pct(company.metrics.revenue_growth)}</div></div>
-                <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]"><div className="text-[color:var(--muted-fg)] text-[0.72rem]">영업이익률</div><div className="font-extrabold text-[1.1rem] tabular-nums">{pct(company.metrics.operating_margin)}</div></div>
-                <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]"><div className="text-[color:var(--muted-fg)] text-[0.72rem]">부채비율</div><div className="font-extrabold text-[1.1rem] tabular-nums">{pct(company.metrics.debt_ratio)}</div></div>
-                <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]"><div className="text-[color:var(--muted-fg)] text-[0.72rem]">ROE</div><div className="font-extrabold text-[1.1rem] tabular-nums">{pct(company.metrics.roe)}</div></div>
+                <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]"><div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">매출액 (최근 연도)</div><div className="font-extrabold text-[1.1rem] tabular-nums">{eok(company.metrics.revenue_latest)}</div><div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">전년 {company.metrics.revenue_growth === null ? "—" : pct(company.metrics.revenue_growth)}</div></div>
+                <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]"><div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">영업이익률</div><div className="font-extrabold text-[1.1rem] tabular-nums">{pct(company.metrics.operating_margin)}</div></div>
+                <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]"><div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">부채비율</div><div className="font-extrabold text-[1.1rem] tabular-nums">{pct(company.metrics.debt_ratio)}</div></div>
+                <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]"><div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">ROE</div><div className="font-extrabold text-[1.1rem] tabular-nums">{pct(company.metrics.roe)}</div></div>
               </div>
               <div className="mt-3 flex gap-3 items-center flex-wrap">
-                <Link className="text-[color:var(--accent)] font-bold text-[0.86rem] whitespace-nowrap" href={`/companies/${company.id}`}>전체 재무성과 분석 열기 →</Link>
-                <span className="text-[color:var(--muted-fg)] text-[0.8rem]">회사 화면에서 실적 테이블·지표 해설·WACC 참조값을 확인할 수 있습니다.</span>
+                <Link className="text-[color:var(--accent)] font-bold text-[length:var(--fs-body)] whitespace-nowrap" href={`/companies/${company.id}`}>전체 재무성과 분석 열기 →</Link>
+                <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">회사 화면에서 실적 테이블·지표 해설·WACC 참조값을 확인할 수 있습니다.</span>
               </div>
-              {company.rationale && <p className="text-[color:var(--muted-fg)] text-[0.76rem] mt-2">연결 근거(rationale): &quot;{company.rationale}&quot;</p>}
+              {company.rationale && <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">연결 근거(rationale): &quot;{company.rationale}&quot;</p>}
             </section>
           ) : (
             <section className="market-section sizing-step">
@@ -122,7 +122,7 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
               <h3 className="sizing-step-title">대상 회사 연결/변경</h3>
               <div className="grid gap-2 md:grid-cols-[1fr_auto] items-end">
                 <div>
-                  <div className="text-[color:var(--muted-fg)] text-[0.78rem] mb-1">회사명 또는 DART 고유번호 검색</div>
+                  <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mb-1">회사명 또는 DART 고유번호 검색</div>
                   <input
                     className="sizing-new-input w-full"
                     value={q}
@@ -132,31 +132,31 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
                     aria-label="회사 검색"
                   />
                 </div>
-                <button className="border border-[color:var(--border-bright)] bg-[color:var(--surface)] rounded-lg px-4 py-2 text-[0.85rem] cursor-pointer" type="button" onClick={search}>검색</button>
+                <button className="border border-[color:var(--border-bright)] bg-[color:var(--surface)] rounded-lg px-4 py-2 text-[length:var(--fs-body)] cursor-pointer" type="button" onClick={search}>검색</button>
               </div>
               {results !== null && (
                 results.length === 0 ? (
-                  <p className="text-[color:var(--muted-fg)] text-[0.84rem] mt-2">검색 결과가 없습니다 — 회사가 아직 등록되지 않았다면 관리자 콘솔 › 마스터 데이터에서 먼저 등록하세요.</p>
+                  <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">검색 결과가 없습니다 — 회사가 아직 등록되지 않았다면 관리자 콘솔 › 마스터 데이터에서 먼저 등록하세요.</p>
                 ) : (
                   <div className="border border-[color:var(--border)] rounded-lg mt-2">
                     {results.map((c) => (
-                      <div key={c.id} className="flex items-center gap-2 px-2 py-1.5 border-b border-[color:var(--border-subtle)] last:border-b-0 text-[0.86rem]">
+                      <div key={c.id} className="flex items-center gap-2 px-2 py-1.5 border-b border-[color:var(--border-subtle)] last:border-b-0 text-[length:var(--fs-body)]">
                         <b>{c.name_ko}</b>
-                        {c.dart_corp_code && <span className="mono text-[0.76rem] text-[color:var(--muted-fg)]">{c.dart_corp_code}</span>}
-                        <span className="text-[color:var(--muted-fg)] text-[0.78rem]">{c.fact_years > 0 ? `재무 데이터 ${c.fact_years}년` : "재무 데이터 없음"}</span>
-                        <button className="border border-[color:var(--border-bright)] bg-[color:var(--surface)] rounded-lg px-4 py-2 text-[0.85rem] cursor-pointer ml-auto" type="button" disabled={linking} onClick={() => connect(c.id)}>이 회사 연결</button>
+                        {c.dart_corp_code && <span className="mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{c.dart_corp_code}</span>}
+                        <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{c.fact_years > 0 ? `재무 데이터 ${c.fact_years}년` : "재무 데이터 없음"}</span>
+                        <button className="border border-[color:var(--border-bright)] bg-[color:var(--surface)] rounded-lg px-4 py-2 text-[length:var(--fs-body)] cursor-pointer ml-auto" type="button" disabled={linking} onClick={() => connect(c.id)}>이 회사 연결</button>
                       </div>
                     ))}
                   </div>
                 )
               )}
               <div className="mt-2">
-                <div className="text-[color:var(--muted-fg)] text-[0.78rem] mb-1">연결 근거 (rationale) — 필수</div>
+                <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mb-1">연결 근거 (rationale) — 필수</div>
                 <input className="sizing-new-input w-full" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="예: S7 스크리닝 1순위 대상 — 사업 부합" />
               </div>
-              <p className="text-[color:var(--muted-fg)] text-[0.76rem] mt-2">역할은 트랙에서 자동 판정됩니다 — brownfield → <b>인수 대상(target)</b>, greenfield → <b>분석 기준 회사(candidate)</b>. 연결·변경은 감사 로그에 기록됩니다.</p>
+              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">역할은 트랙에서 자동 판정됩니다 — brownfield → <b>인수 대상(target)</b>, greenfield → <b>분석 기준 회사(candidate)</b>. 연결·변경은 감사 로그에 기록됩니다.</p>
               {view.project.track === "greenfield" && (
-                <div className="mt-1 rounded-lg px-3 py-2 text-[0.84rem] bg-[color:var(--warning-bg)] text-[color:var(--warning)] mt-1">
+                <div className="mt-1 rounded-lg px-3 py-2 text-[length:var(--fs-caption)] bg-[color:var(--warning-bg)] text-[color:var(--warning)] mt-1">
                   <b>그린필드 안내</b> — 자체 신설 진출은 인수 대상이 없으므로, 벤치마킹할 <b>분석 기준 회사</b>를 연결합니다. 미연결 시 사업성 분석의 &quot;과거 기반&quot; 관점과 WACC 회사 참조값 없이 진행됩니다(시장 기반만).
                 </div>
               )}

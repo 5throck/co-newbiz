@@ -31,7 +31,7 @@ function BacktestView() {
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <section className="market-section" aria-label="백테스트">
         {outliers.length > 0 && (
-          <p className="text-[0.82rem] mb-2"><span className="status-chip status-red">과대 편향 감지</span> 이탈 아웃라이어 {outliers.length}건 — 원인 태그가 다음 신뢰도 등급에 반영됩니다 (학습 루프).</p>
+          <p className="text-[length:var(--fs-caption)] mb-2"><span className="status-chip status-red">과대 편향 감지</span> 이탈 아웃라이어 {outliers.length}건 — 원인 태그가 다음 신뢰도 등급에 반영됩니다 (학습 루프).</p>
         )}
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
           <PageState state="empty" emptyText="백테스트 대상(채택된 케이스가 있는 프로젝트)이 없습니다." />

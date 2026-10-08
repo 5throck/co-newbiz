@@ -188,7 +188,7 @@ export function PromotionPanel({
           <span className="section-title"><h2>{heading ?? "🚀 프로젝트로 추진"}</h2></span>
           <span className="status-chip status-green">추진됨</span>
         </div>
-        <p className="mb-0 text-[0.85rem]">
+        <p className="mb-0 text-[length:var(--fs-body)]">
           ✅ 프로젝트로 추진되었습니다 —{" "}
           <a href={`/projects/${proc.projectId}`} className="text-[color:var(--accent)] underline">
             프로젝트 개요 보기
@@ -212,14 +212,14 @@ export function PromotionPanel({
       </div>
 
       {procFailed && (
-        <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-0">
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
           프로세스 상태를 불러올 수 없습니다 — 새로고침 후 다시 시도하세요.
         </p>
       )}
-      {proc === null && !procFailed && <p className="text-[0.82rem]">불러오는 중...</p>}
+      {proc === null && !procFailed && <p className="text-[length:var(--fs-caption)]">불러오는 중...</p>}
 
       {proc !== null && proc.track === null && (
-        <p className="text-[0.85rem] mb-0">
+        <p className="text-[length:var(--fs-body)] mb-0">
           진출방식 결정(S4)이 먼저 필요합니다 —{" "}
           <a href="/route-decision" className="text-[color:var(--accent)] underline">
             진출방식 결정 화면으로 이동
@@ -228,7 +228,7 @@ export function PromotionPanel({
       )}
 
       {proc !== null && proc.track !== null && !ready && (
-        <div className="mb-0 text-[0.82rem]">
+        <div className="mb-0 text-[length:var(--fs-caption)]">
           <p className="mt-0 mb-1">
             트랙 최종 단계({proc.track === "brownfield" ? "S7 대상 선정" : "S5 역량 평가"})의 완료
             요건이 아직 충족되지 않았습니다 — 충족 후 추진할 수 있습니다.
@@ -245,7 +245,7 @@ export function PromotionPanel({
 
       {ready && (
         <form onSubmit={requestPromote} className="sizing-new-form mb-0" aria-label="프로젝트 추진">
-          <label className="text-[0.78rem] w-full">
+          <label className="text-[length:var(--fs-caption)] w-full">
             <span className="block mb-1">본인의 프로젝트 접근 필요 근거 * (need-to-know — 추진 사유가 아니라 멤버십 부여의 감사 근거입니다)</span>
             <textarea
               value={needToKnowBasis}
@@ -256,7 +256,7 @@ export function PromotionPanel({
               className="sizing-new-input"
               style={{ width: "100%" }}
             />
-            <span className="block mt-1 text-[0.72rem] text-[color:var(--muted-fg)]">
+            <span className="block mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               위 Pre-FS 게이트의 GO 근거(사업 판단)와는 별개입니다 — 이 프로젝트는 추진 즉시 접근이
               차단된 상태로 시작되며(need-to-know 원칙), 여기 적은 내용은 &ldquo;왜 본인이 이 데이터를
               봐야 하는가&rdquo;를 기록하는 접근 권한 부여 근거입니다. 아래에서 추가하는 팀원에게도
@@ -265,13 +265,13 @@ export function PromotionPanel({
           </label>
 
           <div className="sizing-grade-card mb-3">
-            <h4 className="text-[0.8rem] mb-1">팀원 배정 (선택)</h4>
-            <p className="text-[0.72rem] text-[color:var(--muted-fg)] mt-0 mb-2">
+            <h4 className="text-[length:var(--fs-caption)] mb-1">팀원 배정 (선택)</h4>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-0 mb-2">
               추가되는 팀원은 <b>팀원</b> 역할로 배정됩니다 — 프로젝트 데이터 열람·작성 권한(need-to-know 승인).
               리더는 추진자 본인이며, 삭제·종료 등 관리 권한을 함께 갖습니다.
             </p>
             <div className="flex flex-wrap items-end gap-2 mb-2">
-              <label className="text-[0.78rem]" style={{ flex: "1 1 14rem" }}>
+              <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 14rem" }}>
                 <span className="block mb-1">이름·아이디 검색</span>
                 <input
                   value={query}
@@ -281,12 +281,12 @@ export function PromotionPanel({
                 />
               </label>
             </div>
-            {searchBusy && <p className="text-[0.72rem] text-[color:var(--muted-fg)] mb-2">검색 중...</p>}
+            {searchBusy && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">검색 중...</p>}
             {hits && hits.length > 0 && (
               <ul className="sizing-note-list mb-2">
                 {hits.filter((h) => h.user_id !== me?.userId).map((h) => (
                   <li key={h.user_id} className="flex items-center justify-between gap-2 mb-1">
-                    <span>{h.display_name || h.user_id} <span className="text-[0.72rem] text-[color:var(--muted-fg)]">({h.user_id} · {h.role})</span></span>
+                    <span>{h.display_name || h.user_id} <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">({h.user_id} · {h.role})</span></span>
                     <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => addMember(h)}>추가</button>
                   </li>
                 ))}
@@ -305,7 +305,7 @@ export function PromotionPanel({
           </div>
 
           <div className="flex flex-wrap items-end gap-2">
-            <label className="text-[0.78rem]">
+            <label className="text-[length:var(--fs-caption)]">
               <span className="block mb-1">원본 (origin)</span>
               <select
                 value={origin}
@@ -319,7 +319,7 @@ export function PromotionPanel({
                 <option value="joint">합작 (joint)</option>
               </select>
             </label>
-            <label className="text-[0.78rem]" style={{ flex: "1 1 14rem" }}>
+            <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 14rem" }}>
               <span className="block mb-1">프로젝트명 (미입력 시 차터에서 자동 생성)</span>
               <input
                 value={projectName}
@@ -334,12 +334,12 @@ export function PromotionPanel({
             </button>
           </div>
           {isViewer && (
-            <p role="status" className="text-[0.75rem] text-[color:var(--muted-fg)] mt-2 mb-0">
+            <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-0">
               추진은 analyst 이상 권한의 계정에서만 가능합니다.
             </p>
           )}
           {error && (
-            <p role="alert" className="text-[color:var(--red-fg)] text-[0.8rem] mt-2 mb-0">
+            <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2 mb-0">
               ✕ {error}
             </p>
           )}

@@ -434,7 +434,7 @@ export function AdminConsole({ section }: { section: Section }) {
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="발급된 비밀 정보" onKeyDown={secretModalKeyDown}>
           <div ref={secretModalPanelRef} className="modal-panel">
             <div className="modal-head"><h2>✅ {issuedSecret.kind} 발급 완료</h2></div>
-            <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-2 mb-2">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-2">
               아래 값은 <strong>지금 이 창에서만</strong> 표시됩니다 — 닫으면 다시 볼 수 없습니다. 안전한 곳에 저장하세요.
             </p>
             <div className="flex items-center gap-2">
@@ -447,7 +447,7 @@ export function AdminConsole({ section }: { section: Section }) {
                 복사
               </button>
             </div>
-            <p className="text-[0.75rem] text-[color:var(--muted-fg)] mt-2">{issuedSecret.detail}</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">{issuedSecret.detail}</p>
             <div className="flex justify-end mt-3">
               <button type="button" className="btn-ghost" onClick={() => setIssuedSecret(null)}>닫기</button>
             </div>
@@ -574,7 +574,7 @@ export function AdminConsole({ section }: { section: Section }) {
                             onChange={(e) => setTokenLabel(e.target.value)}
                             className="sizing-new-input sizing-new-input-sm"
                           />
-                          <label className="text-[0.75rem] flex items-center gap-1">
+                          <label className="text-[length:var(--fs-caption)] flex items-center gap-1">
                             <input type="checkbox" checked={tokenWrite} onChange={(e) => setTokenWrite(e.target.checked)} />
                             write 스코프 포함
                           </label>
@@ -583,7 +583,7 @@ export function AdminConsole({ section }: { section: Section }) {
                           </button>
                         </div>
                         {(userTokens[u.user_id] ?? []).length === 0 ? (
-                          <p className="text-[color:var(--muted-fg)] italic text-[0.8rem] mb-0">발급된 토큰이 없습니다.</p>
+                          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-caption)] mb-0">발급된 토큰이 없습니다.</p>
                         ) : (
                           <table className="data-table" aria-label={`${u.user_id} API 토큰`}>
                             <caption className="sr-only">{u.user_id} API 토큰</caption>
@@ -604,7 +604,7 @@ export function AdminConsole({ section }: { section: Section }) {
                             </tbody>
                           </table>
                         )}
-                        <p className="mt-2 mb-0 text-[0.72rem] text-[color:var(--muted-fg)]">
+                        <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                           발급 시 표시되는 토큰 평문은 다시 볼 수 없습니다 — CO_NEWBIZ_API_TOKEN으로 사용합니다.
                         </p>
                       </div>
@@ -767,11 +767,11 @@ export function AdminConsole({ section }: { section: Section }) {
                   </td>
                   <td>
                     {j.enabled === 1 ? (
-                      <span className="inline-flex items-center gap-[0.3rem] px-[0.55rem] py-[0.15rem] rounded-full text-[0.8rem] bg-[color:var(--green-bg)] text-[color:var(--green-fg)]">
+                      <span className="inline-flex items-center gap-[0.3rem] px-[0.55rem] py-[0.15rem] rounded-full text-[length:var(--fs-caption)] bg-[color:var(--green-bg)] text-[color:var(--green-fg)]">
                         <span aria-hidden="true">●</span> 활성
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-[0.3rem] px-[0.55rem] py-[0.15rem] rounded-full text-[0.8rem] bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]">
+                      <span className="inline-flex items-center gap-[0.3rem] px-[0.55rem] py-[0.15rem] rounded-full text-[length:var(--fs-caption)] bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]">
                         <span aria-hidden="true">○</span> 비활성
                       </span>
                     )}
@@ -781,7 +781,7 @@ export function AdminConsole({ section }: { section: Section }) {
                       <>
                         {j.last_run.status}
                         {j.last_run.finished_at && ` · ${new Date(j.last_run.finished_at).toLocaleString("ko-KR")}`}
-                        {j.last_run.error && <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[0.85rem]">{j.last_run.error}</p>}
+                        {j.last_run.error && <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{j.last_run.error}</p>}
                       </>
                     ) : (
                       "실행 이력 없음"
@@ -800,7 +800,7 @@ export function AdminConsole({ section }: { section: Section }) {
 
       {section === "database" && (
         <div>
-          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
             이 섹션의 나머지(마이그레이션 상태·백업 이력)는 아직 API가 없습니다.
           </p>
           <h2>보존 정책 (Retention)</h2>
@@ -835,7 +835,7 @@ export function AdminConsole({ section }: { section: Section }) {
           )}
 
           <h2>정책 생성/수정</h2>
-          <p className="mb-3 text-[color:var(--muted-fg)] text-[0.85rem]">
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
             같은 테이블 키로 저장하면 기존 정책이 수정됩니다(upsert). 모든 변경은 감사 로그에 기록됩니다.
           </p>
           <form onSubmit={saveRetention} className="run-form">
@@ -1039,7 +1039,7 @@ export function AdminConsole({ section }: { section: Section }) {
       {section === "governance" && reviewAudit !== null && reviewAudit !== undefined && (
         <section aria-label="AI 검토 신뢰도 KPI" className="market-section mb-3">
           <h3 className="text-[0.95rem] font-semibold mb-1">AI 검토 신뢰도 — 검표 동의율 (ADR-0153)</h3>
-          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
             사람이 AI 2차 검토 행에 기록한 동의/비동의 검표의 동의율입니다. 권장 표본률 {Math.round(reviewAudit.suggested_sample_rate * 100)}% (강제 아님).
             {reviewAudit.note && <span className="block">{reviewAudit.note}</span>}
           </p>
