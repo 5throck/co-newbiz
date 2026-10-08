@@ -40,8 +40,8 @@
 import type { Database } from "bun:sqlite";
 import { getDb } from "../client.ts";
 import { resolveRoutingVars, collectPredicateVars } from "./applies-when.ts";
-import type { ApplicabilityDecision, LabelFn } from "./applies-when.ts";
-import type { VarLabel } from "./predicate.ts";
+import type { ApplicabilityDecision } from "./applies-when.ts";
+import type { LabelFn, VarLabel } from "./predicate.ts";
 import {
   MA_VALIDATOR_APPLICABILITY,
   maValidatorRuleKey,
@@ -140,7 +140,7 @@ export function evidenceVarLabels(db: Database, varKeys: readonly string[]): Lab
 export function evaluateApplicabilityForProject(
   projectId: string,
   db: Database,
-  opts: { now?: Date } = {}
+  opts: { now?: Date } = {},
 ): Map<MaValidatorKey, ApplicabilityDecision> {
   const routingVarKeys = [
     ...new Set(MA_VALIDATOR_APPLICABILITY.flatMap((row) => [...collectPredicateVars(row.applies_when)])),
@@ -199,7 +199,7 @@ export function evaluateValidatorCompleteness(
   projectId: string,
   runId: string | null = null,
   db: Database = getDb(),
-  opts: { now?: Date } = {}
+  opts: { now?: Date } = {},
 ): ValidatorCompletenessEvaluation {
   const now = opts.now ?? new Date();
   const evaluatedAt = now.toISOString();

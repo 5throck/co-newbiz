@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["db/**/*.ts", "mcp/**/*.ts"],
+  "exclude": ["node_modules", "app", "graft", ".venv", "backups", "render_out", "workspace"]
+}

@@ -44,9 +44,19 @@
     "db:integrity": "bun scripts/co-newbiz/db-integrity.ts",
     "seed:s1-s12-demo": "bun scripts/co-newbiz/seed-s1-s12-demo.ts",
     "test:integration": "bun scripts/test-runner.ts integration --allow-empty",
-    "test:scripts": "bun scripts/test-runner.ts scripts"
+    "test:scripts": "bun scripts/test-runner.ts scripts",
+    "test:coverage": "mkdir -p coverage tests/.temp/worker-0 && TEST_TEMP_DIR=tests/.temp/worker-0 WORKER_ID=0 bun test --timeout=30000 --coverage --coverage-reporter=lcov --coverage-reporter=text --coverage-dir=coverage tests/unit",
+    "coverage:check": "bun scripts/coverage-baseline.ts",
+    "typecheck": "tsc -p tsconfig.core.json --noEmit && bun scripts/typecheck-baseline.ts",
+    "typecheck:core": "tsc -p tsconfig.core.json --noEmit",
+    "typecheck:baseline": "bun scripts/typecheck-baseline.ts",
+    "typecheck:web": "cd app/web-next && tsc --noEmit",
+    "lint": "biome check",
+    "lint:changed": "biome ci --changed --since=origin/main --no-errors-on-unmatched"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/bun": "1.4.2",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.6.2",
     "typescript": "^7.0.2"
