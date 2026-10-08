@@ -7,3 +7,8 @@ import type { RestPort } from "../shared/rest-port.ts";
 export async function lookupTerm(port: RestPort, term: string) {
   return port.get(`/api/glossary/${encodeURIComponent(term)}`);
 }
+
+/** The glossary index (key + names) — backs the glossary://index resource. */
+export async function listGlossary(port: RestPort) {
+  return port.get("/api/glossary");
+}

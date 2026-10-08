@@ -31,6 +31,16 @@ let oppId = "";
 // 테스트가 네트워크 호출 없이 결정론 폴백 경로를 검증하게 한다. Playwright
 // headless 폴백도 함께 막아(빈 결과 고정) 테스트가 실제 Chrome을 기동하거나
 // 네트워크로 나가지 않게 한다.
+// Root cause of the intermittent full-suite failure: loadRootEnvPipelineKeys
+// injects the real LLM provider from the repo-root .env, so the web-search route
+// made a live network LLM call (up to 60s with retry) and exceeded the 20s test
+// timeout under parallel suite load. Assigning "" blocks the .env injection
+// (it only fills undefined keys) and makes getProviderConfig return null, which
+// pins the deterministic synthesis path. The assertions are unchanged.
+process.env.CO_NEWBIZ_LLM_PROVIDER = "";
+process.env.CO_NEWBIZ_LLM_API_KEY = "";
+process.env.CO_NEWBIZ_LLM_BASE_URL = "";
+process.env.CO_NEWBIZ_LLM_MODEL = "";
 setWebResearchOverrideForTests({ configured: false, sources: [] });
 setPlaywrightSearchOverrideForTests([]);
 
