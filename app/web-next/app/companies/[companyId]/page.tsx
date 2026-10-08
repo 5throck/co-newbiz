@@ -101,7 +101,7 @@ export default function CompanyFinancialsPage() {
               ))}
             </div>
             {view.commentary.callouts.map((c, i) => (
-              <p key={i} className={`mt-2 rounded-lg px-3 py-2 text-[length:var(--fs-caption)] ${c.tone === "warn" ? "bg-[color:var(--warning-bg)] text-[color:var(--warning)]" : c.tone === "good" ? "bg-[color:var(--success-bg)] text-[color:var(--success)]" : "bg-[color:var(--primary-bg)] text-[color:var(--primary-dim)]"}`}>{c.text}</p>
+              <p key={i} className={`mt-2 rounded-lg px-3 py-2 text-[length:var(--fs-caption)] ${c.tone === "warn" ? "bg-[color:var(--warning-bg)] text-[color:var(--amber-fg)]" : c.tone === "good" ? "bg-[color:var(--success-bg)] text-[color:var(--success)]" : "bg-[color:var(--primary-bg)] text-[color:var(--primary-dim)]"}`}>{c.text}</p>
             ))}
           </section>
 

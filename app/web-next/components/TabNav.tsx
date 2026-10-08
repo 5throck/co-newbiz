@@ -41,6 +41,7 @@ export function TabNav({
         <button
           key={t.key}
           type="button"
+          className="tab-nav-item"
           role="tab"
           aria-current={t.key === active}
           aria-selected={t.key === active}

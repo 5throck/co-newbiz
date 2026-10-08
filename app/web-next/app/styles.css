@@ -47,6 +47,9 @@
   --border-bright: rgba(16, 22, 34, 0.16);
   --accent: #3558e0;
   --accent-fg: #ffffff;
+  /* R2-C: text on a solid --primary fill (btn-primary, selected chip). Light = white, dark = near-black (>= 4.5:1). */
+  --primary-fg: #ffffff;
+  --primary-strong: #2a49c0;
   --primary-rgb: 53, 88, 224;
 
   /* theme-scoped interaction tokens (no hardcoded whites/blacks below) */
@@ -127,8 +130,11 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --primary-l: 60%;
-  --primary-dim: hsl(var(--primary-h), var(--primary-s), 45%);
+  /* R2-C: lighter primary (L 66%) keeps primary text on tinted/dark surfaces >= 4.5:1; fills use --primary-fg. */
+  --primary-l: 66%;
+  --primary-dim: hsl(var(--primary-h), var(--primary-s), 74%);
+  --primary-fg: #0a0c10;
+  --primary-strong: hsl(var(--primary-h), var(--primary-s), 76%);
 
   --bg: #0a0c10;
   --fg: #eef0f4;
@@ -3328,7 +3334,7 @@ main li { overflow-wrap: anywhere; }
 .btn-primary {
   background: var(--primary);
   border: 1px solid var(--primary);
-  color: var(--primary-fg, #fff);
+  color: var(--primary-fg);
   font-weight: 600;
   /* Self-sufficient shape: links (<a class="btn-primary">) get no UA button padding/radius. */
   display: inline-flex;
@@ -3341,7 +3347,7 @@ main li { overflow-wrap: anywhere; }
   text-decoration: none;
   cursor: pointer;
 }
-.btn-primary:hover { background: var(--primary-strong, #3357d6); border-color: var(--primary-strong, #3357d6); }
+.btn-primary:hover { background: var(--primary-strong); border-color: var(--primary-strong); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* control-chip — interactive filter/sort/score control; visually distinct from
@@ -3359,7 +3365,7 @@ main li { overflow-wrap: anywhere; }
 .control-chip[aria-pressed="true"] {
   background: var(--primary);
   border-color: var(--primary);
-  color: var(--primary-fg, #fff);
+  color: var(--primary-fg);
   font-weight: 600;
 }
 /* Selected is also marked with a check mark, so state never relies on fill color alone. */
@@ -3397,7 +3403,7 @@ main li { overflow-wrap: anywhere; }
 /* pager — large-table pagination standard (round-2 #7) */
 .pager { display: flex; gap: 0.4rem; align-items: center; justify-content: flex-end; font-size: var(--fs-caption); color: var(--muted-fg); margin-top: 0.5rem; }
 .pager .pg { border: 1px solid var(--border); border-radius: 6px; padding: 0.1rem 0.5rem; background: var(--surface); cursor: pointer; }
-.pager .pg.cur { background: var(--primary); color: var(--primary-fg, #fff); border-color: var(--primary); }
+.pager .pg.cur { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
 
 /* ── Wave U-1: two-layer IA (design 2026-10-08-wave-u-ux-overhaul §3, §4, §7) ──
    Tokens only; 14px (0.875rem) floor for nav/tab/stepper/table text. */
@@ -3677,4 +3683,15 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
   .dd-table tr { border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 0.6rem; padding: 0.4rem 0.6rem; }
   .dd-table td { border: 0; padding: 0.2rem 0; }
   .dd-table td[data-label]::before { content: attr(data-label) " "; font-size: var(--fs-caption); color: var(--muted-fg); }
+}
+
+/* ── R2-C: themed 404 / error page ── */
+.status-page { max-width: 40rem; display: flex; flex-direction: column; gap: var(--space-4); padding-top: var(--space-8); }
+.status-page-text { color: var(--muted-fg); margin: 0; }
+.status-page-detail { color: var(--muted-fg); font-size: var(--fs-caption); }
+
+/* ── R2-C: 390px overflow — wide tables scroll inside themselves; long buttons and chips wrap ── */
+@media (max-width: 640px) {
+  .data-table { display: block; max-width: 100%; overflow-x: auto; }
+  .btn-primary, .btn-ghost, .btn-danger, .status-chip { white-space: normal; max-width: 100%; text-align: left; overflow-wrap: anywhere; }
 }

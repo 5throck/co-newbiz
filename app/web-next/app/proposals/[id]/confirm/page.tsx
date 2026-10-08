@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../../../../lib/api.ts";
 import { Button, PageState, PrimaryAction } from "../../../../components/ui.tsx";
 import { ReviewBuckets } from "../../../../components/ReviewBuckets.tsx";
+import { StatusPage } from "../../../../components/StatusPage.tsx";
 
 type Payload = Record<string, unknown>;
 
@@ -76,6 +77,7 @@ export default function ProposalConfirmPage() {
   const id = params.id;
   const [view, setView] = useState<ConfirmView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
@@ -85,13 +87,18 @@ export default function ProposalConfirmPage() {
 
   const load = useCallback(() => {
     setError(null);
+    setMissing(false);
     api
       .get<ConfirmView>(`/api/proposals/${encodeURIComponent(id)}/confirm`)
       .then((r) => {
         setView(r.data);
         setDraft(r.data.proposal.payload);
       })
-      .catch((e) => setError(e instanceof ApiError ? e.message : "제안을 불러오지 못했습니다."));
+      .catch((e) => {
+        // 존재하지 않는(또는 볼 수 없는) 제안은 404와 같은 화면으로 — 일반 오류 문구와 구분한다.
+        if (e instanceof ApiError && e.status === 404) setMissing(true);
+        else setError(e instanceof ApiError ? e.message : "제안을 불러오지 못했습니다.");
+      });
   }, [id]);
 
   useEffect(load, [load]);
@@ -150,6 +157,14 @@ export default function ProposalConfirmPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (missing) {
+    return (
+      <StatusPage title="제안을 찾을 수 없습니다">
+        주소가 잘못되었거나, 이미 정리되었거나, 볼 수 있는 권한이 없는 결정 제안입니다. 받은 링크를 다시 확인하세요.
+      </StatusPage>
+    );
   }
 
   return (

@@ -90,7 +90,7 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[1.05rem] font-extrabold">{company.name_ko}</span>
                 {company.dart_corp_code && <span className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">dart corp code {company.dart_corp_code}</span>}
-                <span className={company.latest_sync_at ? "inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--success-bg)] text-[color:var(--success)]" : "inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--warning-bg)] text-[color:var(--warning)]"}>{company.latest_sync_at ? `동기화됨 · ${new Date(company.latest_sync_at).toLocaleDateString("ko-KR")}` : "동기화 전 — 회사 화면에서 동기화하세요"}</span>
+                <span className={company.latest_sync_at ? "inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--success-bg)] text-[color:var(--success)]" : "inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--warning-bg)] text-[color:var(--amber-fg)]"}>{company.latest_sync_at ? `동기화됨 · ${new Date(company.latest_sync_at).toLocaleDateString("ko-KR")}` : "동기화 전 — 회사 화면에서 동기화하세요"}</span>
               </div>
               <div className="grid gap-2 md:grid-cols-4 mt-2">
                 <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]"><div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">매출액 (최근 연도)</div><div className="font-extrabold text-[1.1rem] tabular-nums">{eok(company.metrics.revenue_latest)}</div><div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">전년 {company.metrics.revenue_growth === null ? "—" : pct(company.metrics.revenue_growth)}</div></div>
@@ -156,7 +156,7 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
               </div>
               <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">역할은 트랙에서 자동 판정됩니다 — brownfield → <b>인수 대상(target)</b>, greenfield → <b>분석 기준 회사(candidate)</b>. 연결·변경은 감사 로그에 기록됩니다.</p>
               {view.project.track === "greenfield" && (
-                <div className="mt-1 rounded-lg px-3 py-2 text-[length:var(--fs-caption)] bg-[color:var(--warning-bg)] text-[color:var(--warning)] mt-1">
+                <div className="mt-1 rounded-lg px-3 py-2 text-[length:var(--fs-caption)] bg-[color:var(--warning-bg)] text-[color:var(--amber-fg)] mt-1">
                   <b>그린필드 안내</b> — 자체 신설 진출은 인수 대상이 없으므로, 벤치마킹할 <b>분석 기준 회사</b>를 연결합니다. 미연결 시 사업성 분석의 &quot;과거 기반&quot; 관점과 WACC 회사 참조값 없이 진행됩니다(시장 기반만).
                 </div>
               )}

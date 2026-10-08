@@ -88,7 +88,7 @@ export default function InboxPage() {
         <h1>결정 대기함</h1>
         {narrow && !mobileDetail && items.length > 0 && (
           <span className="ml-auto">
-            <PrimaryAction inline label="맨 위 항목 열기" onClick={() => select(items[0].id)} />
+            <PrimaryAction readOnly inline label="맨 위 항목 열기" onClick={() => select(items[0].id)} />
           </span>
         )}
       </div>
@@ -97,11 +97,13 @@ export default function InboxPage() {
       </p>
 
       {result && result.failed.length > 0 && (
-        <ul className="inbox-failed" role="alert">
-          {result.failed.map((f) => (
-            <li key={f.source}>불러오지 못함: {f.source} — {f.message}</li>
-          ))}
-        </ul>
+        <div role="alert">
+          <ul className="inbox-failed">
+            {result.failed.map((f) => (
+              <li key={f.source}>불러오지 못함: {f.source} — {f.message}</li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div className="inbox-filters" role="group" aria-label="필터">
@@ -110,7 +112,7 @@ export default function InboxPage() {
           <FilterChip key={k} selected={kinds.has(k)} onClick={() => toggleKind(k)}>{KIND_LABEL[k]}</FilterChip>
         ))}
         <label className="inbox-deal-filter">
-          <span>딜</span>
+          <span>검토/안건</span>
           <select className="form-input" value={deal} onChange={(e) => setDeal(e.target.value)}>
             <option value="">전체</option>
             {deals.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
@@ -135,7 +137,7 @@ export default function InboxPage() {
               <h2 tabIndex={-1} ref={detailHeading}>{selected.title}</h2>
               <dl className="inbox-facts">
                 <div><dt>종류</dt><dd>{KIND_LABEL[selected.kind]}</dd></div>
-                <div><dt>딜</dt><dd>{selected.dealName}{selected.stage ? ` · ${selected.stage}` : ""}</dd></div>
+                <div><dt>검토/안건</dt><dd>{selected.dealName}{selected.stage ? ` · ${selected.stage}` : ""}</dd></div>
                 <div><dt>경과</dt><dd>{selected.ageDays}일</dd></div>
                 <div><dt>긴급도</dt><dd>{SEVERITY_LABEL[selected.severity]}</dd></div>
               </dl>

@@ -2,13 +2,15 @@
 
 // Split from components/admin/AdminConsole.tsx (Wave U-3 decomposition); behavior unchanged.
 import type { AdminConsoleState } from "./useAdminActions.ts";
+import { DevRef } from "../../ui.tsx";
 
 export function ReviewAuditPanel({ ctx }: { ctx: AdminConsoleState }) {
   const { section, reviewAudit } = ctx;
   return (
     <>{section === "governance" && reviewAudit !== null && reviewAudit !== undefined && (
         <section aria-label="AI 검토 신뢰도 KPI" className="market-section mb-3">
-          <h3 className="text-[0.95rem] font-semibold mb-1">AI 검토 신뢰도 — 검표 동의율 (ADR-0153)</h3>
+          <h3 className="text-[0.95rem] font-semibold mb-1">AI 검토 신뢰도 — 검표 동의율</h3>
+          <DevRef refs="ADR-0153" />
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
             사람이 AI 2차 검토 행에 기록한 동의/비동의 검표의 동의율입니다. 권장 표본률 {Math.round(reviewAudit.suggested_sample_rate * 100)}% (강제 아님).
             {reviewAudit.note && <span className="block">{reviewAudit.note}</span>}

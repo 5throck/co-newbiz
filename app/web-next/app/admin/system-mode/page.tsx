@@ -9,7 +9,7 @@ export default function AdminSystemModePage() {
     <main>
       <h1>시스템 모드</h1>
       <p className="objective">
-        운영(production)/개발(development) 전역 스위치 — 운영 모드에서는 딜 데이터 삭제를 차단합니다.
+        운영(production)/개발(development) 전역 스위치 — 운영 모드에서는 검토/안건 데이터 삭제를 차단합니다.
       </p>
       <SystemModeSection />
     </main>

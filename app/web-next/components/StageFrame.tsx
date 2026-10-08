@@ -9,6 +9,7 @@
 // 구현 없이 전 하위 탭에 자동 적용). 데이터가 없거나 조회에 실패하면 조용히
 // 숨는다 — 가이던스는 부가 정보이지 본문을 가리는 것이 아니다.
 
+import { localizeRequirement } from "../lib/labels.ts";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -187,7 +188,7 @@ function StageGuidance({ projectId, stageId }: { projectId: string; stageId: str
     <div className="mb-3 border border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] rounded-lg px-3 py-2 text-[length:var(--fs-caption)] text-[color:var(--primary-dim)]">
       <b>이 단계에서 남은 것</b>
       <ul className="mt-1 ml-4 list-disc">
-        {items.map((it) => <li key={it}>{it}</li>)}
+        {items.map((it) => <li key={it}>{localizeRequirement(it)}</li>)}
       </ul>
     </div>
   );

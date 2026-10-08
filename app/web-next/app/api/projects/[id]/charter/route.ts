@@ -4,7 +4,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { appendCharterAmendment } from "../../../../../lib/project-charter.ts";
-import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
+import { badRequest, notFound, ok, forbidden } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
 interface CharterFile {
@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return badRequest("role_required", "차터 변경은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "차터 변경은 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as

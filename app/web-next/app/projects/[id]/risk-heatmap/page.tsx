@@ -79,13 +79,13 @@ function HeatmapView() {
                 const cellItems = cell(likelihood, impact);
                 return (
                   <div key={idx} style={{ minHeight: 74, border: "1px solid var(--border)", borderRadius: 8, position: "relative", background: "var(--surface)" }}>
-                    <span className="note" style={{ position: "absolute", right: 5, bottom: 3, fontSize: 10 }}>
+                    <span className="note" style={{ position: "absolute", right: 5, bottom: 3, fontSize: "var(--fs-caption)" }}>
                       {["영향 低", "영향 中", "영향 高"][impact - 1]}
                     </span>
                     {cellItems.map((it, i) => (
                       <span key={it.key} title={it.label}
                         style={{ position: "absolute", width: 24, height: 24, borderRadius: "50%",
-                          background: color(it.severity), color: "var(--surface)", fontSize: 11, fontWeight: 700,
+                          background: color(it.severity), color: "var(--surface)", fontSize: "var(--fs-caption)", fontWeight: 700,
                           display: "flex", alignItems: "center", justifyContent: "center",
                           left: `${10 + i * 30}%`, top: "18%" }}>{i + 1}</span>
                     ))}

@@ -7,6 +7,7 @@
 // never "approve", and the server rejects agent identities. Unmet
 // preconditions keep submit disabled with the reason stated in text, and link
 // to the place where the missing record is created.
+import { CLOSURE_RECORD_LABEL, closureRecordLabel } from "../lib/labels.ts";
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -117,7 +118,7 @@ export function ClosureModal({
   const learningMissing = !!sel && sel.requires_learning_capture && !learning.trim();
   const blockers: string[] = [];
   if (!type) blockers.push("종료 유형을 선택하세요.");
-  if (sel && !sel.satisfied) blockers.push(`전제조건 기록이 없습니다: ${sel.missing.map((m) => m.record).join(", ")}`);
+  if (sel && !sel.satisfied) blockers.push(`전제조건 기록이 없습니다: ${sel.missing.map((m) => closureRecordLabel(m.record)).join(", ")}`);
   if (sel && reasonShort)
     blockers.push(
       sel.min_reason_length > 1 ? `사유를 ${sel.min_reason_length}자 이상 입력하세요.` : "사유를 입력하세요.",
@@ -211,7 +212,7 @@ export function ClosureModal({
                               const link = recordLink(entity, entityId, m.record);
                               return (
                                 <li key={m.record}>
-                                  <span className="font-semibold">누락: {m.record}</span> — {m.message}{" "}
+                                  <span className="font-semibold">누락: {closureRecordLabel(m.record)}</span> — {CLOSURE_RECORD_LABEL[m.record]?.message ?? m.message}{" "}
                                   {link && (
                                     <Link href={link.href} className="text-[color:var(--accent)] underline">
                                       {link.label}

@@ -382,7 +382,7 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
                 aria-current={pathname === dealOverviewHref ? "page" : undefined}
               >
                 <FolderKanban size={18} />
-                <span>현재 딜 개요</span>
+                <span>현재 검토/안건 개요</span>
               </Link>
             )}
           </nav>
@@ -424,6 +424,7 @@ const MOVED_TEXT: Record<string, string> = {
   greenfield: "자체 진출(/greenfield)은 검토/안건별 S5 탭으로 통합되었습니다. 해당 트랙의 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
   brownfield: "대상 발굴·선정(/brownfield)은 검토/안건별 S6 탭으로 통합되었습니다. 해당 트랙의 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
   pipeline: "파이프라인 현황(/pipeline)은 검토/안건 보드로 통합되었습니다 — 퍼널과 진행 에이징은 아래 보드에서 봅니다.",
+  admin: "관리자 전용 화면입니다. 현재 계정(분석가·열람자)에는 접근 권한이 없어 검토/안건 보드로 이동했습니다. 권한이 필요하면 관리자에게 요청하세요.",
   process: "단계별 허브(/process)는 단계 진행 표시줄과 검토/안건별 단계 탭으로 대체되었습니다. 검토/안건을 열어 단계를 이동하세요.",
 };
 

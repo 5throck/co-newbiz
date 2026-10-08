@@ -1,4 +1,4 @@
-// @version 1.3.0
+// @version 1.4.0
 // design-lint (skills/design-lint) — mechanical enforcement of the Onyx 3.0
 // design guide (docs/design-system/design-guide.md). Fails on:
 //   1. hardcoded hex/rgba/hsl colors in components/app tsx (outside styles.css)
@@ -10,6 +10,9 @@
 //   6. font-size below the 14px floor (0.875rem) in styles.css or Tailwind
 //      text-[..rem] classes — only var(--fs-caption) (13px) is allowed for
 //      secondary metadata, and only inside .caption-style selectors (Wave U-2)
+//   7. class-less <button> (no className and no spread props) — every button
+//      carries a design class (btn-primary / btn-ghost / btn-danger / control-chip / …)
+//      so it is themed and meets the target size (R2-C)
 // Usage: bun scripts/co-newbiz/design-lint.ts
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -80,6 +83,32 @@ for (const file of targets) {
     const hasIcon = /<svg|Icon\b|size=\{/.test(m[0]);
     if (hasIcon && text === "") {
       violations.push(`${rel}: icon-only button without aria-label`);
+    }
+  }
+
+  // 7. class-less <button>: scan each opening tag brace/quote-aware (arrow functions in
+  //    attribute values contain ">" so a plain regex would cut the tag short).
+  for (const open of src.matchAll(/<button(?=[\s>])/g)) {
+    const lineStart = src.lastIndexOf("\n", open.index ?? 0) + 1;
+    if (/^\s*(\/\/|\*|\/\*)/.test(src.slice(lineStart, open.index))) continue; // comment text, not JSX
+    let i = (open.index ?? 0) + "<button".length;
+    let braces = 0;
+    let quote = "";
+    for (; i < src.length; i++) {
+      const c = src[i];
+      if (quote) {
+        if (c === quote && src[i - 1] !== "\\") quote = "";
+        continue;
+      }
+      if (braces === 0 && (c === '"' || c === "'")) quote = c;
+      else if (c === "{") braces++;
+      else if (c === "}") braces--;
+      else if (c === ">" && braces === 0 && src[i - 1] !== "=") break;
+    }
+    const attrs = src.slice(open.index ?? 0, i);
+    if (!/className\s*=/.test(attrs) && !/\{\s*\.\.\./.test(attrs)) {
+      const line = src.slice(0, open.index ?? 0).split("\n").length;
+      violations.push(`${rel}:${line}: <button> without a design class — add className (btn-primary / btn-ghost / btn-danger / control-chip / …)`);
     }
   }
 

@@ -61,7 +61,7 @@ export default function PasswordChangePage() {
             {error}
           </p>
         )}
-        <button type="submit" disabled={busy}>
+        <button type="submit" className="btn-primary" disabled={busy}>
           {busy ? "변경 중..." : "비밀번호 변경"}
         </button>
       </form>

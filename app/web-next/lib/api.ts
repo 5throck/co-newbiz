@@ -3,6 +3,7 @@
 // that knows the fetch/cookie/error-shape details so every page component
 // only sees typed data.
 
+import { localizeMessage } from "./labels.ts";
 export interface Envelope<T> {
   data: T;
   meta: Record<string, unknown>;
@@ -67,7 +68,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>
     if (body === undefined) throw invalidResponse(res);
   }
   if (!res.ok) {
-    throw new ApiError(res.status, body.error?.code ?? "unknown_error", body.error?.message ?? "Request failed.");
+    throw new ApiError(res.status, body.error?.code ?? "unknown_error", localizeMessage(body.error?.message ?? "Request failed."));
   }
   return body;
 }

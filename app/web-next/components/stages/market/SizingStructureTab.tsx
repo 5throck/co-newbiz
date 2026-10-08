@@ -179,7 +179,7 @@ export function SizingStructureTab({ ctx }: { ctx: SizingReportState }) {
         {canCurate && view.chain.legacyUntagged.length > 0 && (
           <div className="sizing-grade-card mt-2">
             <p className="text-[length:var(--fs-caption)] mb-1">
-              <span className="font-semibold">레거시 검토</span> — relation이 태깅되지 않은 구(ADR-0126) 구조 링크입니다. 관계를 지정하세요.
+              <span className="font-semibold">레거시 검토</span> — 관계가 지정되지 않은 이전 방식의 구조 링크입니다. 관계를 지정하세요.
             </p>
             <div className="flex flex-wrap gap-2">
               {view.chain.legacyUntagged.map((l) => (

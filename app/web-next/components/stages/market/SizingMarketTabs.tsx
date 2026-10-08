@@ -6,9 +6,12 @@ import { StepSection } from "./MarketReport.tsx";
 import { CompetitiveInputForm } from "./CompetitiveInputForm.tsx";
 import { AnchorChart, RegionWeightDonut, SegmentMixStack, RegionTable } from "./SizingCharts.tsx";
 import type { SizingReportState } from "./useSizingReport.ts";
+import { formatPctOrNa, formatUsdBOrNa, isSyntheticSizing, SYNTHETIC_BADGE_TEXT } from "../../../lib/synthetic-value.ts";
 
 export function SizingOverviewTab({ ctx }: { ctx: SizingReportState }) {
-  const { tab, matrix, proj2030Total } = ctx;
+  const { tab, matrix, proj2030Total, stepSummaries } = ctx;
+  const synthetic = isSyntheticSizing(stepSummaries);
+  const badge = synthetic ? <span className="status-chip status-amber">{SYNTHETIC_BADGE_TEXT}</span> : null;
   return (
     <>{tab === "overview" && (
         <section aria-label="개요" className="market-section sizing-step">
@@ -17,15 +20,18 @@ export function SizingOverviewTab({ ctx }: { ctx: SizingReportState }) {
           </h3>
           <div className="summary-cards">
             <div className="summary-card glass">
-              <span className="summary-value mono-num">${Math.round(matrix.anchor.total).toLocaleString()}B</span>
+              <span className="summary-value mono-num">{formatUsdBOrNa(matrix.anchor.total)}</span>
+              {badge}
               <span className="text-label">기준 시장규모 (2026)</span>
             </div>
             <div className="summary-card glass">
-              <span className="summary-value mono-num">{matrix.consistency.bottomUpCagr.toFixed(1)}%</span>
+              <span className="summary-value mono-num">{formatPctOrNa(matrix.consistency.bottomUpCagr)}</span>
+              {badge}
               <span className="text-label">성장률 (연평균, 2026→2030)</span>
             </div>
             <div className="summary-card glass">
-              <span className="summary-value mono-num">${Math.round(proj2030Total).toLocaleString()}B</span>
+              <span className="summary-value mono-num">{formatUsdBOrNa(proj2030Total)}</span>
+              {badge}
               <span className="text-label">2030 전망 (기본 시나리오)</span>
             </div>
             <div className="summary-card glass">
