@@ -70,6 +70,32 @@ bun scripts/co-newbiz/newbiz.ts user:approve alice
 
 Note: the database path is anchored to the repository (`<repo>/db/data/co-newbiz.sqlite`), so the server, CLI scripts, and tests all share one database regardless of the working directory. Set `CO_NEWBIZ_DB_PATH` to override (tests do).
 
+### Internal demo
+
+`bun run demo` starts the production build on a free port (never 7749). It uses a throwaway SQLite database seeded with the S1–S12 brownfield demo deal (human decisions recorded) and the greenfield E2E deal. LLM, DART and web-research settings are blanked, so every executor runs its deterministic fallback. The command prints the URL and the run-only passwords for `analyst` (deal work) and `admin` (no deal data, ADR-0091). Each first login forces a password change. Ctrl-C stops the server and deletes the database. `bun run demo -- --capture` walks S1 to S12 headlessly and writes the numbered screenshots in [`docs/evidence/demo/`](docs/evidence/demo/). Requirements: `bun install` in the repository root and in `app/web-next`, plus a Chromium or an installed Chrome.
+
+```mermaid
+flowchart LR
+  user([Analyst / approver]) --> web["Web UI<br/>Next.js App Router<br/>app/web-next"]
+  web --> api["REST API<br/>Route Handlers /api/*"]
+  agent([AI agent / MCP client]) -->|stdio| mcpStdio["MCP server<br/>mcp/co-newbiz"]
+  agent -->|HTTP + bearer| mcpHttp["MCP HTTP<br/>/api/mcp"]
+  agent -->|authorize, token| oauth["OAuth 2.1<br/>/api/oauth/*"]
+  oauth --> mcpHttp
+  mcpStdio --> api
+  mcpHttp --> api
+  api --> review["Review engine<br/>AI 1st, AI 2nd, human final<br/>lib/review"]
+  api --> rag["RAG engine<br/>db/lib/rag-engine.ts<br/>data confidence caps grade"]
+  api --> db[("SQLite<br/>db/migrations")]
+  review --> db
+  rag --> db
+  eval["Eval suites<br/>scripts/eval, tests/eval/golden"] -.->|scores| rag
+  eval -.->|scores| review
+  mcpStdio -. "propose only;<br/>a person confirms" .-> web
+```
+
+AI agents can only create proposals. Gate decisions, the S12 transition and closure are recorded by a person on the same screens shown in the demo.
+
 ### For Claude Code users:
 
 See `CLAUDE.md` for detailed instructions.
@@ -180,4 +206,4 @@ Internal workspace project — not for external distribution. Governed by the sa
 
 ---
 
-*Last Updated: 2026-09-20*
+*Last Updated: 2026-10-08*

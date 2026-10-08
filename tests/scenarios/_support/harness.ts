@@ -5,8 +5,8 @@
 // Boundary notes:
 //  - The only direct DB writes happen BEFORE the server starts: migrations, the
 //    admin account, and master data / evidence seeding (bootstrap).
-//  - LLM / DART env vars are blanked so every executor uses its offline /
-//    deterministic fallback.
+//  - LLM / DART / web-research env vars are blanked so every executor uses its
+//    offline / deterministic fallback.
 //  - Credentials are generated at runtime and never logged.
 import { Database } from "bun:sqlite";
 import { randomBytes } from "node:crypto";
@@ -173,6 +173,13 @@ export async function startApp(name: string, opts: StartOptions = {}): Promise<T
       CO_NEWBIZ_DD_TAILOR_AGENTS: "",
       DART_API_KEY: "",
       CO_NEWBIZ_DART_API_KEY: "",
+      // Web research: an empty key blocks the root .env fallback, and the
+      // DuckDuckGo fallback is on by default, so switch it off explicitly
+      // (pilot-009 re-run found S1 sizing calling out to the web).
+      TAVILY_API_KEY: "",
+      ECOS_API_KEY: "",
+      KRX_API_KEY: "",
+      WEB_SEARCH_DDG_ENABLED: "false",
       NEXT_TELEMETRY_DISABLED: "1",
       PORT: String(port),
     },
@@ -183,6 +190,9 @@ export async function startApp(name: string, opts: StartOptions = {}): Promise<T
   const killServer = (): void => {
     try {
       proc.kill();
+    } catch {}
+    try {
+      rmSync(root, { recursive: true, force: true });
     } catch {}
   };
   process.once("exit", killServer);
