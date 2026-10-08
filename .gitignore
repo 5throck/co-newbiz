@@ -109,3 +109,9 @@ backups/
 # writes .next/types) — the two variants would flip-flop through every sync.
 # Next recreates the file on any dev/build run, so it is not tracked.
 app/web-next/next-env.d.ts
+
+# Stray root-level screenshots (evidence lives in docs/evidence/)
+/*.png
+
+# bun test --coverage output
+coverage/

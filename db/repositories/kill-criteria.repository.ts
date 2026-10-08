@@ -59,14 +59,19 @@ export interface RecordKillCriteriaResult {
 }
 
 /** Evaluate a procedure's kill criteria for one run and persist the complete ledger. */
-export function recordKillCriteriaEvaluation(input: RecordKillCriteriaInput, db: Database = getDb()): RecordKillCriteriaResult {
+export function recordKillCriteriaEvaluation(
+  input: RecordKillCriteriaInput,
+  db: Database = getDb(),
+): RecordKillCriteriaResult {
   const now = input.now ?? new Date().toISOString();
 
   const run = db.query("SELECT id, project_id FROM run WHERE id = ?").get(input.runId) as
     | { id: string; project_id: string }
     | undefined;
   if (!run) {
-    throw new Error(`kill_criteria_record_rejected: run '${input.runId}' does not exist — evaluations are run-scoped (migration 0023).`);
+    throw new Error(
+      `kill_criteria_record_rejected: run '${input.runId}' does not exist — evaluations are run-scoped (migration 0023).`,
+    );
   }
   if (run.project_id !== input.projectId) {
     throw new Error(
@@ -75,7 +80,9 @@ export function recordKillCriteriaEvaluation(input: RecordKillCriteriaInput, db:
   }
 
   const prior = (
-    db.query("SELECT COUNT(*) AS n FROM kill_criteria_evaluation WHERE run_id = ? AND procedure_key = ?").get(input.runId, input.procedure) as { n: number }
+    db
+      .query("SELECT COUNT(*) AS n FROM kill_criteria_evaluation WHERE run_id = ? AND procedure_key = ?")
+      .get(input.runId, input.procedure) as { n: number }
   ).n;
   if (prior > 0) {
     throw new Error(
@@ -112,7 +119,7 @@ export function recordKillCriteriaEvaluation(input: RecordKillCriteriaInput, db:
     );
     for (const o of result.outcomes) {
       const id = ulid();
-      insert.run([
+      insert.run(
         id,
         input.runId,
         input.projectId,
@@ -125,7 +132,7 @@ export function recordKillCriteriaEvaluation(input: RecordKillCriteriaInput, db:
         o.thresholds_source,
         now,
         input.evaluatedBy,
-      ]);
+      );
       rowIds.push(id);
     }
     logDataAccess(db, {
@@ -215,7 +222,9 @@ export function getRecordedEvaluation(input: GetRecordedEvaluationInput, db: Dat
     | { id: string; project_id: string }
     | undefined;
   if (!run) {
-    throw new Error(`kill_criteria_read_rejected: run '${input.runId}' does not exist — the evaluation ledger is run-scoped (migration 0023).`);
+    throw new Error(
+      `kill_criteria_read_rejected: run '${input.runId}' does not exist — the evaluation ledger is run-scoped (migration 0023).`,
+    );
   }
   if (run.project_id !== input.projectId) {
     throw new Error(
@@ -223,15 +232,23 @@ export function getRecordedEvaluation(input: GetRecordedEvaluationInput, db: Dat
     );
   }
   if (!(input.actor ?? "").trim()) {
-    throw new Error(`kill_criteria_read_rejected: actor is mandatory — a ledger read without its reader is unauditable (design boundary #1).`);
+    throw new Error(
+      `kill_criteria_read_rejected: actor is mandatory — a ledger read without its reader is unauditable (design boundary #1).`,
+    );
   }
   requireActiveMember(db, input.projectId, input.actor);
   requireInsiderIfMnpi(db, input.projectId, input.actor);
 
   const rows = (
     input.procedure
-      ? db.query("SELECT * FROM kill_criteria_evaluation WHERE run_id = ? AND procedure_key = ? ORDER BY procedure_key, criterion_id").all(input.runId, input.procedure)
-      : db.query("SELECT * FROM kill_criteria_evaluation WHERE run_id = ? ORDER BY procedure_key, criterion_id").all(input.runId)
+      ? db
+          .query(
+            "SELECT * FROM kill_criteria_evaluation WHERE run_id = ? AND procedure_key = ? ORDER BY procedure_key, criterion_id",
+          )
+          .all(input.runId, input.procedure)
+      : db
+          .query("SELECT * FROM kill_criteria_evaluation WHERE run_id = ? ORDER BY procedure_key, criterion_id")
+          .all(input.runId)
   ) as Array<{
     procedure_key: string;
     criterion_id: string;

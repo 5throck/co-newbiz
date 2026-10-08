@@ -919,15 +919,6 @@ function fillPartnerDistressVar(db: Database, projectId: string): SnapshotWrite 
   return row;
 }
 
-/** #16 tripwire: RED partner-DD findings on the IP title/chain/encumbrance workstream. Present-always count. */
-function fillPartnerIpRedVar(db: Database, projectId: string): SnapshotWrite {
-  const row = missing("partner.dd_ip_chain_red_count");
-  row.value_num = (db.query("SELECT COUNT(*) AS n FROM partner_dd_finding WHERE project_id = ? AND workstream = 'ip_chain' AND severity = 'red'").get(projectId) as unknown as { n: number }).n;
-  row.evidence_ref = "partner_dd_finding";
-  row.status = "present";
-  return row;
-}
-
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------

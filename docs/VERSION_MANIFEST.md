@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-07T17:38:16.552Z
+**Generated**: 2026-10-08T00:41:17.533Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 105
-- **Scripts**: 146 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 148 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -221,6 +221,7 @@
 | compile-tokens.ts | 1.2.0 | scripts/compile-tokens.ts | N/A |
 | contrast-check.ts | 1.0.0 | scripts/co-newbiz/contrast-check.ts | N/A |
 | convert.ts | 1.0.0 | scripts/co-newbiz/convert.ts | N/A |
+| coverage-baseline.ts | 1.0.0 | scripts/coverage-baseline.ts | N/A |
 | dart-collect.ts | 1.0.0 | scripts/co-newbiz/dart-collect.ts | N/A |
 | db-export.ts | 1.0.0 | scripts/co-newbiz/db-export.ts | N/A |
 | db-integrity.ts | 1.0.0 | scripts/co-newbiz/db-integrity.ts | N/A |
@@ -303,6 +304,7 @@
 | team-builder.ts | 1.4.1 | scripts/team-builder.ts | N/A |
 | test-runner.ts | 1.6.0 | scripts/test-runner.ts | fs, os, path |
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, fs, path |
+| typecheck-baseline.ts | 1.0.0 | scripts/typecheck-baseline.ts | N/A |
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | N/A |
 | update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |
 | validate-agents.ts | 1.3.2 | scripts/validate-agents.ts | N/A |
