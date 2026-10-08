@@ -214,6 +214,31 @@ export interface SizingMatrix {
 
 // ── helpers shared by UI + pipeline ──
 
+const isRec = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * Structural guard for a persisted matrix payload (which is untrusted JSON).
+ * Returns true only when every field the report UI dereferences is present, so
+ * a legacy/partial matrix (e.g. `{ tam_krw_m, cagr }`) renders a warning
+ * instead of crashing the report.
+ */
+export function isCompleteSizingMatrix(matrix: unknown): matrix is SizingMatrix {
+  if (!isRec(matrix)) return false;
+  const m = matrix;
+  if (!Array.isArray(m.regions) || m.regions.length === 0) return false;
+  if (!m.regions.every((r) => isRec(r) && typeof r.code === "string" && isRec(r.mix))) return false;
+  if (m.segments !== undefined && !(Array.isArray(m.segments) && m.segments.every((s) => isRec(s) && typeof s.code === "string"))) return false;
+  if (!isRec(m.baseline2026) || !isRec(m.cagrBase)) return false;
+  if (!isRec(m.anchor) || !Array.isArray(m.anchor.sources)) return false;
+  if (!isRec(m.chainGrade)) return false;
+  if (!isRec(m.chainDirection) || !Array.isArray(m.chainDirection.relatedIndustries)) return false;
+  if (!isRec(m.qualitative) || !Array.isArray(m.qualitative.opportunityFactors) || !Array.isArray(m.qualitative.riskFactors)) return false;
+  if (!isRec(m.consistency)) return false;
+  if (!Array.isArray(m.crossValidation) || !Array.isArray(m.limitations)) return false;
+  if (m.competitive !== undefined && !(isRec(m.competitive) && typeof m.competitive.structure === "string" && Array.isArray(m.competitive.players))) return false;
+  return true;
+}
+
 export function bandFor(m: SizingMatrix, code: string, segment: string): { down: number; base: number; up: number } {
   const base = m.cagrBase[code]?.[segment] ?? 0.05;
   const o = m.bandOverrides?.[`${code}|${segment}`];
