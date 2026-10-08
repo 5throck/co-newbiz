@@ -1,0 +1,25 @@
+# LLM price table (Wave B / B-1). Prices are USD per 1,000,000 tokens.
+# An unknown model has NO entry on purpose: cost is recorded as null and a
+# warning is logged. Never guess a price. GLM-5.3-Flash (custom base URL) is
+# intentionally absent until an operator adds a sourced entry.
+#
+# Every entry needs `source` (where the number came from), `verified_on`
+# (ISO date a person checked it against the source; null = not yet verified)
+# and `maintainer`.
+models:
+  claude-sonnet-4-5:
+    input: 3.0
+    output: 15.0
+    cache_read: 0.30
+    cache_write: 3.75
+    source: Anthropic published list price
+    verified_on: null
+    maintainer: platform-lead
+  claude-haiku-4-5:
+    input: 1.0
+    output: 5.0
+    cache_read: 0.10
+    cache_write: 1.25
+    source: Anthropic published list price
+    verified_on: null
+    maintainer: platform-lead

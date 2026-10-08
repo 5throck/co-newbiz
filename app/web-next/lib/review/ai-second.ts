@@ -22,7 +22,8 @@ import {
   type ReviewItem,
   type ReviewStageRecord,
 } from "../../../../db/repositories/review.repository.ts";
-import { complete, getProviderConfig, isLlmConfigured, type LlmMessage } from "../llm.ts";
+import { complete, completeStructured, getProviderConfig, isLlmConfigured, type LlmMessage } from "../llm.ts";
+import { estimateTokens as estimateTokensFallback, totalTokens } from "../llm-usage.ts";
 import { selectReviewer } from "./domains.ts";
 import { canonicalJson } from "./gate-artifacts.ts";
 import type { ReviewArtifact } from "./stage-artifacts.ts";
@@ -37,16 +38,34 @@ export function monthlyTokenCap(): number {
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DEFAULT_REVIEW_MONTHLY_TOKEN_CAP;
 }
 
-/** Rough token estimate (≈4 chars/token); the provider call returns text only. */
-export const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
+/** chars/4 fallback — used only when the provider response carries no usage (Wave B B-1). */
+export const estimateTokens = estimateTokensFallback;
 
 export interface Ai2ndDeps {
   complete: (messages: LlmMessage[], opts?: { temperature?: number; maxTokens?: number }) => Promise<string>;
+  /** Preferred path (schema-validated, repaired once, real usage). Absent → legacy text path via `complete`. */
+  completeStructured?: (
+    messages: LlmMessage[],
+    opts: { temperature: number; maxTokens: number },
+  ) => Promise<{ value: Ai2ndOutput; tokens: number | null } | null>;
   isConfigured: () => boolean;
   modelId: () => string | null;
 }
 export const defaultAi2ndDeps: Ai2ndDeps = {
   complete,
+  completeStructured: async (messages, opts) => {
+    const r = await completeStructured({
+      messages,
+      schema: Ai2ndOutputSchema,
+      schemaName: "ai_second_review",
+      cache: { system: true },
+      agent: { key: "ai-second-reviewer", purpose: "AI 2nd cross-domain review", functionName: "review.ai_second" },
+      ...opts,
+    });
+    if (r.source !== "llm") return null;
+    // Real provider usage; an estimated record falls back to chars/4 by construction.
+    return { value: r.value, tokens: totalTokens(r.usage) };
+  },
   isConfigured: isLlmConfigured,
   modelId: () => getProviderConfig()?.model ?? null,
 };
@@ -216,20 +235,36 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
 
   let spent = 0;
   let parsed: Ai2ndOutput | null = null;
-  for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
-    let text: string;
+  if (deps.completeStructured) {
     try {
-      text = await deps.complete(messages, { temperature: 0, maxTokens: 1500 });
+      const r = await deps.completeStructured(messages, { temperature: 0, maxTokens: 1500 });
+      if (r) {
+        parsed = r.value;
+        spent = r.tokens ?? promptTokens;
+      }
     } catch (err) {
       return record({
         ...base,
         performed: false,
-        costTokens: spent,
         reason: `LLM call failed: ${err instanceof Error ? err.message : "unknown error"}`,
       });
     }
-    spent += promptTokens + estimateTokens(text);
-    parsed = parseAi2ndOutput(text);
+  } else {
+    for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
+      let text: string;
+      try {
+        text = await deps.complete(messages, { temperature: 0, maxTokens: 1500 });
+      } catch (err) {
+        return record({
+          ...base,
+          performed: false,
+          costTokens: spent,
+          reason: `LLM call failed: ${err instanceof Error ? err.message : "unknown error"}`,
+        });
+      }
+      spent += promptTokens + estimateTokens(text);
+      parsed = parseAi2ndOutput(text);
+    }
   }
   if (!parsed) {
     return record({

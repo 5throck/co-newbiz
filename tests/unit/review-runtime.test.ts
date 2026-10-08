@@ -226,6 +226,20 @@ describe("AI 2nd (LLM mocked)", () => {
     return { opp, artifact };
   }
 
+  test("completeStructured dep: provider token count is the recorded cost; a null result is not performed", async () => {
+    const out = JSON.parse(VALID_REPLY) as ReviewBuckets;
+    const ok: Ai2ndDeps = { ...fakeDeps([VALID_REPLY], { n: 0 }), completeStructured: async () => ({ value: out, tokens: 1234 }) };
+    const a = setup().artifact;
+    const done = await runAiSecond({ artifact: a, ai1stBuckets: CLEAN, userId: USER, db }, ok);
+    expect(done.performed).toBe(true);
+    expect(findReview("ai_2nd", "opportunity", a.entityId, a.artifactKey, a.contentHash, db)!.cost_tokens).toBe(1234);
+    const none: Ai2ndDeps = { ...ok, completeStructured: async () => null };
+    const b = setup().artifact;
+    const skipped = await runAiSecond({ artifact: b, ai1stBuckets: CLEAN, userId: USER, db }, none);
+    expect(skipped.performed).toBe(false);
+    expect(skipped.notPerformedReason).toContain("not valid");
+  });
+
   test("valid output is stored in the 3 buckets by a different-domain reviewer; result stays NULL", async () => {
     const { artifact } = setup();
     const calls = { n: 0 };

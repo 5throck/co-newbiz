@@ -4,6 +4,7 @@ import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { llmUsageRollup } from "../../../../../lib/llm-rollup.ts";
 
 // GET /api/projects/[id]/agent-runs — agent transparency (ADR-0123 #1):
 // the deal's agent_run / activity_run history with the proposal/artifact
@@ -52,5 +53,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       agreement_pct: Math.round((rec.accepted / rec.total) * 100),
     });
   }
-  return ok({ runs, proposals, reliability }, 200, { runs: runs.length, proposals: proposals.length });
+  // Wave B B-1: token and cost rollup for this deal (display-only).
+  const llm_usage = llmUsageRollup(db, id);
+  return ok({ runs, proposals, reliability, llm_usage }, 200, { runs: runs.length, proposals: proposals.length });
 }
