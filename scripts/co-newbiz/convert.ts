@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * convert.ts — unit / proxy conversion with explicit error bands (Wave A2).
  *
@@ -17,6 +17,7 @@
 import { getDb } from "../../db/client.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { KOSIS_UNITS } from "./kosis-units.ts";
+import { applyProxyChain, convertBetweenUnits, hopFactor, type ProxyHopFactor } from "../../packages/core-scoring/src/unit-conversion.ts";
 
 export interface UnitConversionResult {
   value: number;
@@ -44,13 +45,13 @@ export function convertUnits(value: number, fromUnit: string, toUnit: string): U
   const from = load(fromUnit);
   const to = load(toUnit);
   if (!from || !to) throw new Error(`convert: unknown unit '${!from ? fromUnit : toUnit}' — md:sync/fetch seeds md_unit rows.`);
-  if (from.dimension !== to.dimension) {
-    throw new Error(
-      `convert: cross-dimension conversion refused (${from.dimension} → ${to.dimension}) — route it through a calibrated proxy chain (FR-DATA-03).`,
-    );
-  }
-  // value × from.si → SI base → ÷ to.si
-  return { value, fromUnit: from.code, toUnit: to.code, converted: (value * from.si_coefficient) / to.si_coefficient };
+  // value × from.si → SI base → ÷ to.si (pure math in packages/core-scoring).
+  const converted = convertBetweenUnits(
+    value,
+    { code: from.code, dimension: from.dimension, siCoefficient: from.si_coefficient },
+    { code: to.code, dimension: to.dimension, siCoefficient: to.si_coefficient },
+  );
+  return { value, fromUnit: from.code, toUnit: to.code, converted };
 }
 
 export interface ProxyConversionResult {
@@ -72,23 +73,21 @@ export function convertViaProxyChain(value: number, chainId: string): ProxyConve
     | undefined;
   if (!chain) throw new Error(`convert: proxy_chain '${chainId}' not found.`);
   const hopIds = JSON.parse(chain.hop_ids) as string[];
-  let converted = value;
-  for (const hopId of hopIds) {
+  const hops: ProxyHopFactor[] = hopIds.map((hopId) => {
     const hop = db
       .query("SELECT id, hop_type, beta, coefficient FROM proxy_link WHERE id = ?")
       .get(hopId) as { id: string; hop_type: string; beta: number | null; coefficient: number | null } | undefined;
     if (!hop) throw new Error(`convert: proxy_link '${hopId}' missing.`);
-    const factor = hop.hop_type === "statistical" ? hop.beta : hop.coefficient;
-    if (factor == null || !Number.isFinite(factor)) throw new Error(`convert: proxy_link '${hopId}' has no usable factor.`);
-    converted *= factor;
-  }
-  // The chain's compounded CI brackets the conversion FACTOR — scale it by
-  // the input value so the band brackets the CONVERTED figure.
+    const factor: ProxyHopFactor = { id: hop.id, hopType: hop.hop_type, beta: hop.beta, coefficient: hop.coefficient };
+    hopFactor(factor); // same per-hop error order as before: missing / unusable checked hop by hop
+    return factor;
+  });
+  const { converted, ciLow, ciHigh } = applyProxyChain(value, hops, chain.compounded_ci_low, chain.compounded_ci_high);
   return {
     value,
     converted,
-    ciLow: value * (chain.compounded_ci_low ?? 1),
-    ciHigh: value * (chain.compounded_ci_high ?? 1),
+    ciLow,
+    ciHigh,
     grade: chain.reliability_grade,
     gradeRationale: chain.grade_rationale,
     hops: hopIds.length,

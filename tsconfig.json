@@ -11,6 +11,6 @@
     "types": ["bun"],
     "skipLibCheck": true
   },
-  "include": ["db/**/*.ts", "mcp/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
+  "include": ["db/**/*.ts", "mcp/**/*.ts", "packages/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "app", "graft", ".venv", "backups", "render_out", "workspace"]
 }

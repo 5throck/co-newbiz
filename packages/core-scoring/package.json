@@ -1,0 +1,12 @@
+{
+  "name": "@co-newbiz/core-scoring",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure RAG / data-confidence / proxy-chain / kill-criteria scoring core for co-newbiz (no DB, fs or env access).",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "bun test tests" },
+  "peerDependencies": { "zod": "*" }
+}
