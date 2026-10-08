@@ -1,4 +1,4 @@
-// @version 1.4.1
+// @version 1.5.0
 // Idempotent S1→S12 brownfield demo chain seed.
 //
 // The operational DB is intentionally gitignored, so a fresh/local database
@@ -12,7 +12,7 @@
 import { getDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
-import { DD_WORKSPACE_CHECKLISTS, getChecklistItems } from "../../app/web-next/lib/library.ts";
+import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, getChecklistItems } from "../../app/web-next/lib/library.ts";
 import { currentReviewCycle } from "../../app/web-next/lib/portfolio.ts";
 import { SCREENING_CHECKLIST_ID, screeningItems } from "../../app/web-next/lib/brownfield-targets.ts";
 
@@ -303,7 +303,7 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
       [DEMO.projectId, actor, now],
     );
     // ADR-0148: a fresh project completes S9 only when every standard DD item is judged.
-    for (const checklistId of Object.values(DD_WORKSPACE_CHECKLISTS)) {
+    for (const checklistId of [...Object.values(DD_WORKSPACE_CHECKLISTS), ...(SUB_TRACK_DD_CHECKLISTS.m_and_a ?? [])]) {
       for (const item of getChecklistItems(checklistId) ?? []) {
         db.run(
           `INSERT OR IGNORE INTO project_checklist_item_state
