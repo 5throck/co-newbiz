@@ -27,6 +27,15 @@ interface AuditStats {
   byActor: Array<{ actor: string; count: number }>;
 }
 
+interface ReviewAuditRate { key: string; sampled: number; agreed: number; rate: number | null }
+interface ReviewAuditSummary {
+  overall: ReviewAuditRate;
+  by_domain: ReviewAuditRate[];
+  by_quarter: ReviewAuditRate[];
+  suggested_sample_rate: number;
+  note: string | null;
+}
+
 type Section = "users" | "audit" | "data-sources" | "schedule" | "database" | "notifications" | "glossary" | "governance" | "master-data" | "adr";
 
 interface AdminNotificationRow {
@@ -126,6 +135,7 @@ export function AdminConsole({ section }: { section: Section }) {
   const [lintQueue, setLintQueue] = useState<GlossaryLintQueue | null>(null);
   const [adrs, setAdrs] = useState<AdrRow[] | null>(null);
   const [governance, setGovernance] = useState<GovernanceDocRow[] | null>(null);
+  const [reviewAudit, setReviewAudit] = useState<ReviewAuditSummary | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [retentionFormError, setRetentionFormError] = useState<string | null>(null);
   const [retentionNotice, setRetentionNotice] = useState<string | null>(null);
@@ -239,6 +249,12 @@ export function AdminConsole({ section }: { section: Section }) {
         .get<{ adrs: AdrRow[] }>("/api/admin/adr")
         .then((res) => setAdrs(res.data.adrs))
         .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+    }
+    if (section === "governance" && reviewAudit === null) {
+      void api
+        .get<ReviewAuditSummary>("/api/admin/review-audit")
+        .then((r) => setReviewAudit(r.data))
+        .catch(() => setReviewAudit(null));
     }
     if (section === "governance" && governance === null) {
       api
@@ -1018,6 +1034,55 @@ export function AdminConsole({ section }: { section: Section }) {
             {termFormBusy ? "등록 중..." : "용어 등록"}
           </button>
         </form>
+      )}
+
+      {section === "governance" && reviewAudit !== null && reviewAudit !== undefined && (
+        <section aria-label="AI 검토 신뢰도 KPI" className="market-section mb-3">
+          <h3 className="text-[0.95rem] font-semibold mb-1">AI 검토 신뢰도 — 검표 동의율 (ADR-0153)</h3>
+          <p className="text-[0.78rem] text-[color:var(--muted-fg)] mb-2">
+            사람이 AI 2차 검토 행에 기록한 동의/비동의 검표의 동의율입니다. 권장 표본률 {Math.round(reviewAudit.suggested_sample_rate * 100)}% (강제 아님).
+            {reviewAudit.note && <span className="block">{reviewAudit.note}</span>}
+          </p>
+          <table className="data-table">
+            <caption className="sr-only">AI 검토 신뢰도 KPI — 전체, 도메인별, 분기별 동의율</caption>
+            <thead>
+              <tr>
+                <th scope="col">구분</th>
+                <th scope="col">키</th>
+                <th scope="col">표본</th>
+                <th scope="col">동의</th>
+                <th scope="col">동의율</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>전체</td>
+                <td>overall</td>
+                <td className="mono-num">{reviewAudit.overall.sampled}</td>
+                <td className="mono-num">{reviewAudit.overall.agreed}</td>
+                <td className="mono-num">{reviewAudit.overall.rate === null ? "—" : `${Math.round(reviewAudit.overall.rate * 100)}%`}</td>
+              </tr>
+              {reviewAudit.by_domain.map((d) => (
+                <tr key={`d-${d.key}`}>
+                  <td>도메인</td>
+                  <td>{d.key}</td>
+                  <td className="mono-num">{d.sampled}</td>
+                  <td className="mono-num">{d.agreed}</td>
+                  <td className="mono-num">{d.rate === null ? "—" : `${Math.round(d.rate * 100)}%`}</td>
+                </tr>
+              ))}
+              {reviewAudit.by_quarter.map((q) => (
+                <tr key={`q-${q.key}`}>
+                  <td>분기</td>
+                  <td>{q.key}</td>
+                  <td className="mono-num">{q.sampled}</td>
+                  <td className="mono-num">{q.agreed}</td>
+                  <td className="mono-num">{q.rate === null ? "—" : `${Math.round(q.rate * 100)}%`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       )}
 
       {section === "governance" &&

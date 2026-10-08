@@ -842,6 +842,19 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/review-audit:
+    get:
+      operationId: getReviewAuditAgreement
+      summary: AI review reliability KPI (ADR-0153 §4.6) — the agreement rate of human-recorded review_audit_sample rows over performed ai_2nd reviews, overall + per reviewer domain + per quarter, with the suggested 10% sample rate. Read-only, admin role; never touches a decision table.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/notifications:
     get:
       operationId: adminListNotifications
@@ -5267,6 +5280,29 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/reviews/{id}/audit-sample:
+    post:
+      operationId: recordReviewAuditSample
+      summary: Human-only audit sampling of ONE performed ai_2nd review row (ADR-0153 §4.6) — agree/disagree plus an optional note, feeding the AI review reliability KPI. Analyst+; an agent id can never record a sample; sampling never changes the reviewed row or any decision table.
+      tags:
+        - Reviews
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/reviews:
     get:
       operationId: getProjectGateReviews

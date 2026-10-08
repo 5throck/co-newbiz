@@ -26,6 +26,12 @@ const REVIEW_GATE_IDS: ReadonlySet<string> = new Set([
 ]);
 const gateLabel = (g: string): string => (g === "transition" ? "S12 전환" : (GATE_LABEL[g as GateMetaId] ?? g));
 
+/** A stage artifact tab (stage:S#:N) the caller offers, with a short Korean label. */
+export interface ReviewArtifactTab {
+  key: string;
+  label: string;
+}
+
 interface ReviewItem {
   claim: string;
   reason: string;
@@ -75,15 +81,25 @@ export function ReviewBuckets({
   entityType,
   entityId,
   gates,
+  artifacts,
 }: {
   entityType: "opportunity" | "project";
   entityId: string;
-  gates: readonly string[];
+  gates?: readonly string[];
+  /** F-3/F-4: per-stage artifacts (stage:S#:N) alongside the gate proposals. */
+  artifacts?: readonly ReviewArtifactTab[];
 }) {
   const { me } = useAuth();
   const canRequest = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
-  const reviewGates = useMemo(() => gates.filter((g) => REVIEW_GATE_IDS.has(g)) as ReviewGateId[], [gates]);
-  const [active, setActive] = useState<string>(reviewGates[0] ?? "");
+  const reviewGates = useMemo(() => (gates ?? []).filter((g) => REVIEW_GATE_IDS.has(g)) as ReviewGateId[], [gates]);
+  const tabs = useMemo(
+    () => [
+      ...reviewGates.map((g) => ({ key: `gate:${g}`, label: gateLabel(g) })),
+      ...(artifacts ?? []).filter((a) => /^stage:(S[1-9]|S1[0-2]):[1-9][0-9]*$/.test(a.key)),
+    ],
+    [reviewGates, artifacts],
+  );
+  const [active, setActive] = useState<string>(tabs[0]?.key ?? "");
   const [views, setViews] = useState<Record<string, ReviewView>>({});
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
@@ -93,14 +109,15 @@ export function ReviewBuckets({
   const base = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(entityId)}/reviews`;
 
   const refresh = useCallback(
-    async (gate: string) => {
+    async (key: string) => {
       try {
-        let r = await api.get<ReviewView>(`${base}?gate=${encodeURIComponent(gate)}`);
+        const param: Record<string, string> = key.startsWith("gate:") ? { gate: key.slice(5) } : { artifact: key };
+        let r = await api.get<ReviewView>(`${base}?${new URLSearchParams(param)}`);
         // AI 1st is deterministic and cheap — materialise it when absent/stale.
         if (canRequest && !r.data.ai_1st?.current) {
-          r = await api.post<ReviewView>(base, { gate });
+          r = await api.post<ReviewView>(base, param);
         }
-        setViews((v) => ({ ...v, [gate]: r.data }));
+        setViews((v) => ({ ...v, [key]: r.data }));
         setError(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "검토 불러오기 실패");
@@ -113,15 +130,16 @@ export function ReviewBuckets({
     if (active) void refresh(active);
   }, [active, refresh]);
 
-  if (reviewGates.length === 0) return null;
+  if (tabs.length === 0) return null;
   const view = views[active];
+  const activeParam = active.startsWith("gate:") ? { gate: active.slice(5) } : { artifact: active };
 
   async function requestAi2nd() {
     if (busy) return;
     setBusy(true);
     setStatus("AI 2차 검토를 요청했습니다. 진행 중입니다…");
     try {
-      const r = await api.post<ReviewView>(`${base}/ai-2nd`, { gate: active });
+      const r = await api.post<ReviewView>(`${base}/ai-2nd`, activeParam);
       setViews((v) => ({ ...v, [active]: r.data }));
       setStatus(
         r.data.ai_2nd && !r.data.ai_2nd.performed
@@ -139,6 +157,21 @@ export function ReviewBuckets({
 
   const stages = [view?.ai_1st, view?.ai_2nd].filter((s): s is StageView => !!s);
 
+  async function recordAudit(agreed: boolean) {
+    if (!view?.ai_2nd || busy) return;
+    setBusy(true);
+    setStatus(agreed ? "동의 검표를 기록했습니다." : "비동의 검표를 기록했습니다. 검토 신뢰도 KPI에 반영됩니다.");
+    try {
+      await api.post(`/api/reviews/${encodeURIComponent(view.ai_2nd.id)}/audit-sample`, { agreed });
+      setError(null);
+    } catch (e) {
+      setStatus("");
+      setError(e instanceof Error ? e.message : "검표 기록 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section aria-label="3단계 검토" className="market-section sizing-step mt-3">
       <h3 className="sizing-step-title text-[0.95rem]">3단계 검토 — 사람 판단 전 참고 자료</h3>
@@ -146,15 +179,15 @@ export function ReviewBuckets({
         검토 결과는 승인·통과 표시가 아닙니다. AI가 확인한 것, 확인하지 못한 것, 사람이 판단할 것을 나누어 보여줄 뿐이며
         결정은 아래에서 사람이 기록합니다.
       </p>
-      {reviewGates.length > 1 && (
+      {tabs.length > 1 && (
         <TabNav
           label="검토 대상 산출물"
           active={active}
           onSelect={setActive}
-          tabs={reviewGates.map((g) => ({ key: g, label: gateLabel(g) }))}
+          tabs={tabs}
         />
       )}
-      <div {...(reviewGates.length > 1 ? { role: "tabpanel", "aria-label": `${gateLabel(active)} 산출물 검토` } : {})}>
+      <div {...(tabs.length > 1 ? { role: "tabpanel", "aria-label": `${tabs.find((t) => t.key === active)?.label ?? ""} 산출물 검토` } : {})}>
         {error && (
           <p role="alert" className="text-[0.78rem] text-[color:var(--red-fg)] mb-1">
             {error}
@@ -216,6 +249,16 @@ export function ReviewBuckets({
                 <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void requestAi2nd()}>
                   {busy ? "요청 중…" : view.ai_2nd?.current ? "AI 2차 검토 다시 요청" : "AI 2차 검토 요청"}
                 </button>
+              )}
+              {canRequest && view.ai_2nd?.performed && view.ai_2nd.current && (
+                <>
+                  <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void recordAudit(true)}>
+                    이 검토에 동의 (검표)
+                  </button>
+                  <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void recordAudit(false)}>
+                    이 검토에 비동의 (검표)
+                  </button>
+                </>
               )}
               <span className="text-[0.72rem] text-[color:var(--muted-fg)]">
                 이번 달 AI 2차 토큰 {view.token_cap.used.toLocaleString()} / {view.token_cap.cap.toLocaleString()} ·

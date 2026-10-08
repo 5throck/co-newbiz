@@ -9,6 +9,7 @@ import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { recordHumanFinalForStageArtifacts } from "../../../../../../lib/review/human-final.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -27,5 +28,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const now = new Date().toISOString();
   db.run("UPDATE md_project SET charter_confirmed_at = ? WHERE id = ?", [now, id]);
   appendAudit(db, { actor: ctx.userId, action: "project_charter.confirm", target: id, now });
+  // ADR-0153: the human's baseline confirmation is the human_final review of the S11 artifacts.
+  recordHumanFinalForStageArtifacts("S11", id, ctx.userId, "charter_confirmed");
   return ok({ charter_confirmed_at: now }, 200);
 }

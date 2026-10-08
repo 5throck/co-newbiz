@@ -11,6 +11,8 @@
 // 상세 화면에서 S3 화면(/synergy)으로 이동하는 링크로 안내한다.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { ReviewBuckets } from "../ReviewBuckets.tsx";
+import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
@@ -202,6 +204,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
     <>
       {confirmDialog}
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      {opportunityId && <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S2")} />}
 
       {/* ── KPI 요약 (클릭 = 상태 필터) ── */}
       <div className="summary-cards mb-4">

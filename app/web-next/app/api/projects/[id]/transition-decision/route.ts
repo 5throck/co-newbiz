@@ -29,7 +29,7 @@ import { PORTFOLIO_TRANSITIONS } from "../../../../../lib/process-flow.ts";
 import { currentReviewCycle, isValidReviewCycle } from "../../../../../lib/portfolio.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
-import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
+import { captureReviewSnapshot, recordHumanFinalForStageArtifacts, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
 /** The decider of record is ALWAYS the human role (design boundary #2). */
 const DECIDED_BY = "venture-portfolio-ic";
@@ -150,6 +150,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   })();
   // ADR-0153 — human_final review row: a side effect of THIS human POST only.
   recordHumanFinalReview(reviewSnapshot, ctx.userId, decision);
+  // F-3: the same human POST also closes the S12 stage-artifact reviews.
+  recordHumanFinalForStageArtifacts("S12", id, ctx.userId, decision);
 
   return ok(
     {

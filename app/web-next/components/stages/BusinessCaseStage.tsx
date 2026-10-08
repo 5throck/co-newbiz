@@ -9,6 +9,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ReviewBuckets } from "../ReviewBuckets.tsx";
+import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { ProjectSubNav } from "../ProjectSubNav.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -303,6 +305,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   return (
 <>
       <ProjectSubNav projectId={projectId} />
+      <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S8")} />
       <StageFrame stageId="S8" heading="S8 사업성 분석 — 이중 관점 밸류에이션 비교">
       <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">
         같은 시나리오를 <b>시장 기반(진행 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.

@@ -6,6 +6,8 @@
 // 하나에 고정된 작업 화면(목표 시장 정의 → Long List → 사전 검토 → Short List →
 // 게이트·위원회·승격)을 렌더링한다.
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { ReviewBuckets } from "../ReviewBuckets.tsx";
+import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -603,6 +605,7 @@ export function BrownfieldStage({ opportunityId, onSaved }: { opportunityId: str
   return (
     <>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S6", "S7")} />
 
       {/* ── 목표 시장 정의 (S6) — 보기(읽기 전용) / 수정(모달) 분리. mockup처럼
           탭 없이 항상 렌더링, 흐름 배너에서 스크롤로만 이동한다. ── */}

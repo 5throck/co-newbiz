@@ -8,9 +8,9 @@
 //   needs_judgement   — substance of completed artifacts and the gate verdict
 // It never produces a pass/score and never touches a decision table.
 import type { ReviewBuckets, ReviewItem } from "../../../../db/repositories/review.repository.ts";
-import type { GateArtifact } from "./gate-artifacts.ts";
+import type { ReviewArtifact } from "./stage-artifacts.ts";
 
-export function runAiFirstChecks(artifact: GateArtifact): ReviewBuckets {
+export function runAiFirstChecks(artifact: ReviewArtifact): ReviewBuckets {
   const verified: ReviewItem[] = [];
   const could: ReviewItem[] = [];
   const judge: ReviewItem[] = [];
@@ -63,7 +63,10 @@ export function runAiFirstChecks(artifact: GateArtifact): ReviewBuckets {
   }
 
   judge.push({
-    claim: `The ${artifact.gate} gate verdict (go / hold / kill)`,
+    claim:
+      "gate" in artifact
+        ? `The ${artifact.gate} gate verdict (go / hold / kill)`
+        : `The acceptance of stage ${artifact.stageId} artifact "${artifact.artifactName}"`,
     reason: "Gate approval and the investment decision belong to humans; this review only reports evidence and gaps.",
   });
   could.push({

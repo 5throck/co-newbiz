@@ -5,6 +5,8 @@
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
 import { useCallback, useEffect, useState } from "react";
+import { ReviewBuckets } from "../ReviewBuckets.tsx";
+import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { ProjectSubNav } from "../ProjectSubNav.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -221,6 +223,7 @@ export function DdStage({ projectId }: { projectId: string }) {
   return (
 <>
       <ProjectSubNav projectId={projectId} />
+      <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S9")} />
       <StageFrame stageId="S9" heading="S9 실사·검증 — DD 체크리스트 판정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
           적용 체크리스트의 모든 항목이 판정되고 필수 미충족이 0건이어야 S9이 완료됩니다 (flow.spec v2.0.0).

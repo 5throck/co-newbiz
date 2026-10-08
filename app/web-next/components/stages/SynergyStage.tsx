@@ -11,6 +11,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import { ReviewBuckets } from "../ReviewBuckets.tsx";
+import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
@@ -305,6 +307,7 @@ export function SynergyStage({ opportunityId, analysisId, embedded }: { opportun
       {confirmDialog}
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      {opportunityId && <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S3")} />}
 
       <section aria-label="분석 대상 회사" className="market-section">
         <SectionToolbar

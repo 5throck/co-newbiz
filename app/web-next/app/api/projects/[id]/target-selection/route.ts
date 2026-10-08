@@ -9,6 +9,7 @@
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { NotFoundError, latestTargetSelection, selectTarget } from "../../../../../lib/business-case.ts";
+import { recordHumanFinalForStageArtifacts } from "../../../../../lib/review/human-final.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -32,6 +33,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (body.rationale.length > 4000) return badRequest("invalid_request", "선정 근거는 4,000자 이내여야 합니다.");
   try {
     const selection = selectTarget(id, body.target_id, body.rationale, ctx.userId);
+    // ADR-0153: the human's target selection is the human_final review of the S8 artifacts.
+    recordHumanFinalForStageArtifacts("S8", id, ctx.userId, "target_selection");
     return ok(selection, 201);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";

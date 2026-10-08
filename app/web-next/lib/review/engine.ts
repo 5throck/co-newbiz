@@ -14,10 +14,13 @@ import {
 } from "../../../../db/repositories/review.repository.ts";
 import { runAiFirstChecks } from "./ai-first.ts";
 import { defaultAi2ndDeps, monthlyTokenCap, runAiSecond, type Ai2ndDeps, type Ai2ndResult } from "./ai-second.ts";
-import { buildGateArtifact, type GateArtifact, type ReviewGate } from "./gate-artifacts.ts";
+import { buildGateArtifact, type ReviewGate } from "./gate-artifacts.ts";
+import type { ReviewArtifact } from "./stage-artifacts.ts";
 
 export interface ReviewRunContext {
-  gate: ReviewGate;
+  gate?: ReviewGate;
+  /** A stage artifact (stage:S#:N) when the review targets one, else the gate artifact. */
+  artifact?: ReviewArtifact;
   entityId: string;
   /** The calling user (boundary #1: no agent service account). */
   userId: string;
@@ -26,17 +29,22 @@ export interface ReviewRunContext {
 }
 
 export interface Ai1stResult {
-  artifact: GateArtifact;
+  artifact: ReviewArtifact;
   id: string;
   cached: boolean;
   buckets: ReviewBuckets;
 }
 
 /** AI 1st: deterministic; unchanged content reuses the stored row. */
-export function runAiFirst(
-  ctx: ReviewRunContext,
-  artifact: GateArtifact = buildGateArtifact(ctx.gate, ctx.entityId),
-): Ai1stResult {
+/** Resolve the context to one concrete artifact (gate default, stage artifact when given). */
+export function resolveArtifact(ctx: Pick<ReviewRunContext, "gate" | "artifact" | "entityId">): ReviewArtifact {
+  if (ctx.artifact) return ctx.artifact;
+  if (!ctx.gate) throw new Error("review context needs a gate or an artifact");
+  return buildGateArtifact(ctx.gate, ctx.entityId);
+}
+
+export function runAiFirst(ctx: ReviewRunContext, artifactIn?: ReviewArtifact): Ai1stResult {
+  const artifact: ReviewArtifact = artifactIn ?? ctx.artifact ?? buildGateArtifact(ctx.gate!, ctx.entityId);
   const db = ctx.db ?? getDb();
   const hit = findReview(
     "ai_1st",
@@ -83,7 +91,7 @@ export async function runReview(
 }
 
 export interface ReviewView {
-  gate: ReviewGate;
+  gate: string;
   artifact_key: string;
   content_hash: string;
   /** Latest rows per stage; `current` = reviewed the artifact as it is now. */
@@ -132,8 +140,17 @@ export function getReviewView(
   db: Database = getDb(),
   now = new Date().toISOString(),
 ): ReviewView {
-  const artifact = buildGateArtifact(gate, entityId);
-  const rows = latestReviews(artifact.entityType, entityId, artifact.artifactKey, db);
+  return getArtifactReviewView(buildGateArtifact(gate, entityId), db, now);
+}
+
+/** Latest review rows per stage for any registry artifact (gate or stage artifact). */
+export function getArtifactReviewView(
+  artifact: ReviewArtifact,
+  db: Database = getDb(),
+  now = new Date().toISOString(),
+): ReviewView {
+  const gate: string = "gate" in artifact ? artifact.gate : `stage:${artifact.stageId}:${artifact.artifactIndex}`;
+  const rows = latestReviews(artifact.entityType, artifact.entityId, artifact.artifactKey, db);
   const by = (s: ReviewStageRecord["stage"]) => rows.find((r) => r.stage === s) ?? null;
   const first = by("ai_1st");
   const second = by("ai_2nd");
@@ -149,6 +166,6 @@ export function getReviewView(
     })),
     ai_1st: first ? toView(first, artifact.contentHash) : null,
     ai_2nd: second ? toView(second, artifact.contentHash) : null,
-    token_cap: { used: monthlyTokensUsed(artifact.entityType, entityId, now, db), cap: monthlyTokenCap() },
+    token_cap: { used: monthlyTokensUsed(artifact.entityType, artifact.entityId, now, db), cap: monthlyTokenCap() },
   };
 }
