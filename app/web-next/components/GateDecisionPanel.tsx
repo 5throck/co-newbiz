@@ -175,7 +175,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
       )}
 
       {/* ADR-0153 — 3단계 검토(확인됨 / 확인하지 못함 / 판단 필요). PASS 표시 없음 */}
-      <ReviewBuckets entityType={entityType} entityId={opportunityId} gates={gates} />
+      <ReviewBuckets entityType={entityType} entityId={opportunityId} gates={gates} variant="expanded" />
 
       {/* ADR-0118 — LLM 진행 브리프(제안): 권고·근거 초안 제공, 기록은 사람 */}
       {canRecord && (

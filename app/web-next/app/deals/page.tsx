@@ -6,7 +6,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
-import { PageState, PrimaryAction } from "../../components/ui.tsx";
+import { FilterChip, PageState, PrimaryAction } from "../../components/ui.tsx";
 import { STAGE_TAB_GROUPS } from "../../lib/stage-tabs.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { GATE_LABEL, type GateMetaId } from "../../lib/stage-meta.ts";
@@ -216,9 +216,9 @@ function DealsBoard() {
           <span role="group" aria-label="검토/안건 필터" className="flex flex-wrap items-center gap-1">
             <span className="section-meta">필터:</span>
             {FILTERS.map(([k, label]) => (
-              <button key={k} type="button" aria-pressed={filter === k} className="control-chip" onClick={() => setFilter(k)}>
+              <FilterChip key={k} selected={filter === k} onClick={() => setFilter(k)}>
                 {label} <span className="tabular-nums">{counts[k]}</span>
-              </button>
+              </FilterChip>
             ))}
           </span>
         }

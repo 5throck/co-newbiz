@@ -2289,7 +2289,7 @@
 .opportunity-create summary { display: inline-flex; cursor: pointer; list-style: none; }
 .opportunity-form { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; align-items: center; }
 .opportunity-form input { min-width: 10rem; }
-.funnel-board { display: grid; grid-template-columns: repeat(4, minmax(230px, 1fr)); gap: 0.9rem; align-items: start; }
+.funnel-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; align-items: start; }
 .funnel-column-title { font-size: 0.95rem; margin: 0 0 0.6rem; display: flex; align-items: center; gap: 0.4rem; }
 .funnel-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.3rem; height: 1.3rem; padding: 0 0.3rem; border-radius: var(--radius-full); background: color-mix(in oklab, var(--primary) 16%, transparent); font-size: var(--fs-caption); font-variant-numeric: tabular-nums; }
 .funnel-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
@@ -3322,9 +3322,19 @@ main li { overflow-wrap: anywhere; }
 /* btn-primary — the ONE emphasized action per screen/section (ADR-0119). */
 .btn-primary {
   background: var(--primary);
-  border-color: var(--primary);
+  border: 1px solid var(--primary);
   color: var(--primary-fg, #fff);
   font-weight: 600;
+  /* Self-sufficient shape: links (<a class="btn-primary">) get no UA button padding/radius. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 1.1rem;
+  min-height: 2.25rem;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  cursor: pointer;
 }
 .btn-primary:hover { background: var(--primary-strong, #3357d6); border-color: var(--primary-strong, #3357d6); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -3347,6 +3357,8 @@ main li { overflow-wrap: anywhere; }
   color: var(--primary-fg, #fff);
   font-weight: 600;
 }
+/* Selected is also marked with a check mark, so state never relies on fill color alone. */
+.control-chip[aria-pressed="true"]::before { content: "✓ "; }
 .control-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 
 /* skeleton — content-shaped loading block (PageState, ADR-0121) */
@@ -3470,13 +3482,13 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 .stage-tab-menu-item:hover { background: var(--hover-bg); }
 
 /* /inbox */
-.inbox-page { max-width: 80rem; }
+.inbox-page { max-width: none; }
 .inbox-lead { font-size: 0.9375rem; line-height: 1.5; color: var(--muted-fg); margin: 0.25rem 0 1rem; }
 .inbox-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
 .inbox-deal-filter { display: inline-flex; gap: 0.5rem; align-items: center; font-size: 0.875rem; }
 .inbox-failed { list-style: none; margin: 0 0 1rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; border: 1px solid var(--amber-border); background: var(--amber-bg); color: var(--amber-fg); border-radius: var(--radius-md); }
 .inbox-empty { padding: 2rem; text-align: center; font-size: 0.9375rem; color: var(--muted-fg); border: 1px dashed var(--border); border-radius: var(--radius-lg); }
-.inbox-layout { display: grid; grid-template-columns: 2fr 3fr; gap: 1rem; align-items: start; }
+.inbox-layout { display: grid; grid-template-columns: minmax(20rem, 28rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
 .inbox-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
 .inbox-row {
   display: grid; gap: 0.35rem; width: 100%; text-align: left; padding: 0.75rem 1rem;
@@ -3491,7 +3503,8 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 .inbox-detail { padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: grid; gap: 1rem; }
 .inbox-detail h2 { margin: 0; font-size: 1.125rem; }
 .inbox-back { display: none; justify-self: start; }
-.inbox-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.5rem 1rem; margin: 0; font-size: 0.875rem; }
+.inbox-facts { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin: 0; font-size: 0.875rem; }
+.inbox-facts > div { display: inline-flex; gap: 0.4rem; align-items: baseline; }
 .inbox-facts dt { color: var(--muted-fg); font-size: var(--fs-caption); }
 .inbox-facts dd { margin: 0; font-weight: 600; }
 .inbox-ai-draft { margin: 0; padding: 0.75rem; font-size: 0.875rem; line-height: 1.5; border: 1px dashed var(--border); border-radius: var(--radius-md); background: var(--muted-bg); }
@@ -3551,3 +3564,48 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 .grid > * { min-width: 0; }
 form.grid { grid-template-columns: minmax(0, 1fr); }
 .topbar-actions { flex-wrap: wrap; justify-content: flex-end; }
+
+
+/* ── Critique 2026-10-09: review block (items 4, 6, 7), stepper (item 10) ── */
+.review-block { container-type: inline-size; }
+.review-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-bottom: 0.5rem; }
+.review-head h3 { margin: 0; }
+.review-head-slot { margin-left: auto; display: inline-flex; gap: 0.5rem; }
+.review-counts { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.9rem; font-size: var(--fs-caption); }
+.review-counts-target { font-size: var(--fs-caption); color: var(--muted-fg); }
+.review-count { display: inline-flex; align-items: center; gap: 0.3rem; }
+.review-count-warn { font-weight: 600; }
+.review-strip { margin-bottom: 0.5rem; }
+.review-strip-toggle {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.9rem; width: 100%; min-height: 44px;
+  padding: 0.4rem 0.75rem; text-align: left; font: inherit; color: var(--fg); cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+}
+.review-strip-toggle:hover { background: var(--hover-bg); }
+.review-strip-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.review-strip-title { font-weight: 600; font-size: var(--fs-body); }
+.review-strip-action { margin-left: auto; font-size: var(--fs-caption); color: var(--primary); font-weight: 600; }
+/* Buckets: 3 columns only when the container is wide enough, otherwise stacked. */
+.review-grid { display: grid; gap: 0.75rem; grid-template-columns: 1fr; }
+@container (min-width: 1100px) { .review-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* One indent level only: no bullets, no list padding inside the bordered bucket card. */
+.review-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.review-items > li { padding-top: 0.5rem; border-top: 1px solid var(--border); }
+.review-items > li:first-child { padding-top: 0; border-top: 0; }
+.review-dev { margin-top: 0.5rem; font-size: var(--fs-caption); color: var(--muted-fg); }
+.review-dev > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+.review-dev ul { margin: 0.25rem 0; padding-left: 1.1rem; }
+.review-dev code { font-family: var(--font-mono); overflow-wrap: anywhere; }
+.review-dev-note { margin: 0.25rem 0; }
+
+/* Stepper: one row, horizontal scroll, current stage scrolled into view; gate marker is separate. */
+.stage-stepper { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+.stage-step { flex: 0 0 auto; white-space: nowrap; }
+.stage-gate-marker { display: inline-flex; align-items: center; flex: 0 0 auto; margin-left: 0.25rem; padding-left: 0.5rem; border-left: 1px solid var(--border); }
+
+/* Sidebar collapse: the icon must keep its size inside the 36px button (UA button padding squeezed it to 2px). */
+.sidebar-collapse-btn { padding: 0; }
+.sidebar-collapse-btn svg { flex-shrink: 0; }
+/* Inbox deal filter must not overflow narrow viewports. */
+.inbox-deal-filter { max-width: 100%; }
+.inbox-deal-filter select { min-width: 0; max-width: 100%; }

@@ -189,6 +189,16 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
     items[next].focus();
   }
 
+  const gateIds = Array.from(new Set(current.flatMap((id) => STAGE_META.find((s) => s.id === id)?.gateIds ?? [])));
+  const currentKey = current.join(",");
+  // Single-row stepper: keep the current stage in view (centered) after mount / stage change.
+  useEffect(() => {
+    const row = listRef.current;
+    const el = row?.querySelector<HTMLElement>("[aria-current='step']");
+    if (!row || !el) return;
+    row.scrollLeft = Math.max(0, el.offsetLeft - (row.clientWidth - el.offsetWidth) / 2);
+  }, [currentKey]);
+
   const linked = STAGE_META.filter((s) => hrefFor(s));
   const tabStopId = (linked.find((s) => current.includes(s.id)) ?? linked[0])?.id;
 
@@ -228,16 +238,6 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
               <span className="stage-step-name">{s.name}</span>
               {isCurrent && <span className="stage-step-state">현재</span>}
               {skipped && <span className="stage-step-state">미적용</span>}
-              {isCurrent &&
-                s.gateIds.map((g) => (
-                  <span
-                    key={g}
-                    className="status-chip status-amber stage-gate-chip"
-                    title={`${GATE_LABEL[g]} 게이트 — 여러 단계가 같은 게이트 심사를 공유합니다. 이 단계가 최종적으로 어느 게이트 판정(Go/Hold/Kill)에 속하는지 보여주는 표시입니다.`}
-                  >
-                    {GATE_LABEL[g]}
-                  </span>
-                ))}
             </>
           );
           return href ? (
@@ -255,6 +255,19 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
             <span key={s.id} title={title} className={`stage-step stage-step-skipped`}>{body}</span>
           );
         })}
+        {gateIds.length > 0 && (
+          <span className="stage-gate-marker">
+            {gateIds.map((g) => (
+              <span
+                key={g}
+                className="status-chip status-amber stage-gate-chip"
+                title={`${GATE_LABEL[g]} 게이트 — 여러 단계가 같은 게이트 심사를 공유합니다. 현재 단계가 속한 게이트 판정(Go/Hold/Kill)을 보여주는 표시입니다.`}
+              >
+                게이트 {GATE_LABEL[g]}
+              </span>
+            ))}
+          </span>
+        )}
       </div>
     </nav>
   );

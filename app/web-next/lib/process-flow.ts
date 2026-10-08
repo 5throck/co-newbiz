@@ -82,6 +82,7 @@ export const ADR_0151_MIGRATION_DATE = "2026-10-02";
  */
 export { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
+import { cleanList, holdBlockerText } from "./review/review-display.ts";
 
 function opportunityGrandfathered(opp: { created_at: string | null }): boolean {
   return (opp.created_at ?? "") < WAVE_F_PREDICATE_DATE;
@@ -843,8 +844,12 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
       for (const g of current?.gateIds ?? []) {
         const verdict = gates.get(g);
         if (verdict?.decision === "hold") {
-          blockers.push(`${g} 진행 HOLD — 보완 필요: ${(verdict.missing ?? []).join(", ") || "근거 확인"}`);
-          requiredArtifacts = verdict.missing ?? requiredArtifacts;
+          blockers.push(holdBlockerText(g, verdict.missing));
+          {
+            // A HOLD with a blank/empty `missing` list must not blank out the stage's own required artifacts.
+            const heldMissing = cleanList(verdict.missing);
+            if (heldMissing.length > 0) requiredArtifacts = heldMissing;
+          }
         }
       }
     }
@@ -916,8 +921,12 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
       for (const g of current?.gateIds ?? []) {
         const verdict = gates.get(g);
         if (verdict?.decision === "hold") {
-          blockers.push(`${g} 진행 HOLD — 보완 필요: ${(verdict.missing ?? []).join(", ") || "근거 확인"}`);
-          requiredArtifacts = verdict.missing ?? requiredArtifacts;
+          blockers.push(holdBlockerText(g, verdict.missing));
+          {
+            // A HOLD with a blank/empty `missing` list must not blank out the stage's own required artifacts.
+            const heldMissing = cleanList(verdict.missing);
+            if (heldMissing.length > 0) requiredArtifacts = heldMissing;
+          }
         }
       }
     }

@@ -306,7 +306,6 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   return (
 <>
       <StageTabs projectId={projectId} />
-      <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S8")} />
       <PrimaryAction
         label={busy ? "계산 중..." : "밸류에이션 재계산"}
         onClick={() => void generate()}
@@ -325,6 +324,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           관리자 역할은 프로젝트 데이터를 변경할 수 없어 대상 선택·채택·생성 기능이 표시되지 않습니다.
         </p>
       )}
+
+      {/* Content first: the compact, non-dismissible review strip sits above the analysis tabs and expands on demand. */}
+      <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S8")} />
 
       <TabNav
         className="mb-3"

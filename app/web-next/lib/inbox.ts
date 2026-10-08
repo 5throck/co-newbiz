@@ -11,6 +11,8 @@
 // endpoint yet; they are the documented reason a read-only GET /api/inbox
 // aggregation route may be added later (design §13).
 
+import { gateDisplayName } from "./review/review-display.ts";
+
 export type InboxKind =
   | "gate_proposal"
   | "decision_proposal"
@@ -47,6 +49,9 @@ export const KIND_LABEL: Record<InboxKind, string> = {
   closure_precondition: "종료·전환 선결조건",
   notification: "알림",
 };
+
+/** Open decision items only (the sidebar badge). Unread notifications are counted by the top-bar bell instead. */
+export const countOpenDecisions = (items: readonly InboxItem[]): number => items.filter((i) => i.kind !== "notification").length;
 
 export const SEVERITY_LABEL: Record<InboxSeverity, string> = {
   high: "긴급",
@@ -121,7 +126,7 @@ function proposalTitle(p: ProposalSrc): string {
   if (p.kind === "gate_decision") {
     const gate = String(p.payload.gate ?? "");
     const dec = String(p.payload.decision ?? "").toUpperCase();
-    return `${gate} 게이트 — ${dec} 제안 확인`;
+    return `${gateDisplayName(gate)} 게이트 — ${dec} 제안 확인`;
   }
   return `${p.kind.replaceAll("_", " ")} 제안 확인`;
 }
@@ -170,7 +175,7 @@ export function buildInbox(src: InboxSources, nowMs: number = Date.now()): Inbox
       gate: h.gate,
       dealName: h.label,
       stage: null,
-      title: `${h.gate} 게이트 HOLD 해소 대기`,
+      title: `${gateDisplayName(h.gate)} 게이트 HOLD 해소 대기`,
       ageDays: h.ageDays,
       severity: h.ageDays >= 14 ? "high" : h.ageDays >= 7 ? "medium" : "low",
       href: h.entityType === "project" ? `/projects/${encodeURIComponent(h.entityId)}/process` : `/opportunities/${encodeURIComponent(h.entityId)}`,
