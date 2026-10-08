@@ -1,5 +1,5 @@
 case_id: pilot-011
-golden_version: 1.0.0
+golden_version: 1.1.0
 source_doc: docs/pilots/pilot-011-posco-amberoad.md
 deal_type: brownfield
 case_subtype: rbd

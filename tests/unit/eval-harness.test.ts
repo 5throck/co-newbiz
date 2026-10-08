@@ -103,7 +103,7 @@ describe("call-site inventory", () => {
 describe("runEval", () => {
   test("offline default runs only deterministic suites and makes no LLM call", async () => {
     const run = await runEval(parseArgs([]), { llm: { completeDetailed: () => Promise.reject(new Error("must not be called")), completeStructured: () => Promise.reject(new Error("must not be called")) } });
-    expect(run.suites.map((s) => s.name).sort()).toEqual(["antitrust", "kill", "rag"]);
+    expect(run.suites.map((s) => s.name).sort()).toEqual(["antitrust", "calibration", "kill", "rag"]);
     expect(run.ledger.calls).toBe(0);
     expect(run.skipped.length).toBe(5);
   });

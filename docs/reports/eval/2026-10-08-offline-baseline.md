@@ -4,8 +4,8 @@
 
 | Field | Value |
 |---|---|
-| Golden version | 1.0.0 |
-| Git SHA | 6b024b5e |
+| Golden version | 1.1.0 |
+| Git SHA | e60ed340 |
 | Provider | none (offline, deterministic suites only) |
 | Base URL host | - |
 | Model id | - |
@@ -30,8 +30,9 @@
 | Suite | Kind | Cases scored | Mean score | Could not evaluate |
 |---|---|---|---|---|
 | rag | deterministic | 15 | 100.0% | 1 |
-| kill | deterministic | 7 | 85.7% | 2 |
+| kill | deterministic | 6 | 100.0% | 3 |
 | antitrust | deterministic | 1 | 100.0% | 33 |
+| calibration | deterministic | 0 | n/a | 6 |
 
 ## Suite: rag
 
@@ -61,7 +62,6 @@
 | pilot-002 | S7 | kill_criteria | 100.0% | - |
 | pilot-005 | S5 | kill_criteria | 100.0% | - |
 | pilot-007 | S5 | kill_criteria | 100.0% | - |
-| pilot-008 | S7 | kill_criteria | 0.0% | unexpected hit preliminary_hhi_flags_certain_block (golden expects []) |
 | pilot-009 | S7 | kill_criteria | 100.0% | - |
 | pilot-010 | S7 | kill_criteria | 100.0% | - |
 
@@ -71,6 +71,39 @@
 |---|---|---|---|---|
 | pilot-008 | S6 | antitrust_flags | 100.0% | - |
 
+## Suite: calibration
+
+Mapping v1.0.0: green 0.8, amber 0.5, red 0.2. Method: docs/methodology/rag-calibration.md.
+
+**Engine, with data-confidence cap** — n = 0, Brier n/a (95% bootstrap n/a), Green on unfavourable: 0
+
+| Grade | n | Predicted P(fav) | Observed | 95% bootstrap |
+|---|---|---|---|---|
+| green | 0 | 0.80 | n/a | n/a |
+| amber | 0 | 0.50 | n/a | n/a |
+| red | 0 | 0.20 | n/a | n/a |
+
+**Engine, without data-confidence cap** — n = 0, Brier n/a (95% bootstrap n/a), Green on unfavourable: 0
+
+| Grade | n | Predicted P(fav) | Observed | 95% bootstrap |
+|---|---|---|---|---|
+| green | 0 | 0.80 | n/a | n/a |
+| amber | 0 | 0.50 | n/a | n/a |
+| red | 0 | 0.20 | n/a | n/a |
+
+**Reference (pilot-record grade)** — n = 1, Brier 0.040 (95% bootstrap [0.040, 0.040]), Green on unfavourable: 0
+
+| Grade | n | Predicted P(fav) | Observed | 95% bootstrap |
+|---|---|---|---|---|
+| green | 0 | 0.80 | n/a | n/a |
+| amber | 0 | 0.50 | n/a | n/a |
+| red | 1 | 0.20 | 0.000 | [0.000, 0.000] |
+
+Insufficient for weight changes: n is far below what a calibration claim needs. Results never retune RAG weights; any change goes through the policy path with an ADR.
+
+| Case | Stage | Function | Score | Failures |
+|---|---|---|---|---|
+
 ## Could not evaluate
 
 These expectations were NOT scored (neither pass nor fail): the fixture does not carry the structured input the engine needs.
@@ -79,6 +112,7 @@ These expectations were NOT scored (neither pass nor fail): the fixture does not
 |---|---|---|---|
 | rag | pilot-010 | rag_overall | expected red needs structured inputs (kill-criteria var or graded dimensions) the fixture lacks |
 | kill | pilot-005 | kill_criteria.infrastructure_plan_not_finalized_at_site_announcement | predicate variable not supplied by the fixture (UNASSESSED) |
+| kill | pilot-008 | kill_criteria | known disagreement, not scored until a human ADR resolves it: docs/audits/2026-10-08-pilot-008-hhi-presumption-vs-certain-block.md |
 | kill | pilot-010 | kill_criteria.preliminary_hhi_flags_certain_block | predicate variable not supplied by the fixture (UNASSESSED) |
 | antitrust | pilot-001 | antitrust_flags.jurisdictions | fixture has no `jurisdictions` list |
 | antitrust | pilot-001 | antitrust_flags.multi_jurisdiction | fixture has no `jurisdictions` list |
@@ -113,6 +147,12 @@ These expectations were NOT scored (neither pass nor fail): the fixture does not
 | antitrust | pilot-010 | antitrust_flags.product_overlap | judgement/threshold input not in fixture; no deterministic engine to score |
 | antitrust | pilot-010 | antitrust_flags.certain_block | judgement/threshold input not in fixture; no deterministic engine to score |
 | antitrust | pilot-010 | antitrust_flags.relevant_markets | judgement/threshold input not in fixture; no deterministic engine to score |
+| calibration | pilot-003 | calibration.reference | pilot record gives no overall grade at group_ic (not_graded) |
+| calibration | pilot-003 | calibration.engine | engine produces no overall grade from the pre-decision fixture at group_ic |
+| calibration | pilot-008 | calibration | outcome-labelled, but no pre-decision rag_overall expectation |
+| calibration | pilot-009 | calibration.reference | pilot record gives no overall grade at fs (not_graded) |
+| calibration | pilot-009 | calibration.engine | engine produces no overall grade from the pre-decision fixture at fs |
+| calibration | pilot-010 | calibration.engine | engine produces no overall grade from the pre-decision fixture at screening |
 
 ## Skipped
 

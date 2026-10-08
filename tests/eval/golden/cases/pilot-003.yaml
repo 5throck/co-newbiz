@@ -1,5 +1,5 @@
 case_id: pilot-003
-golden_version: 1.0.0
+golden_version: 1.1.0
 source_doc: docs/pilots/pilot-003-doosan-bobcat-robotics.md
 deal_type: intra_group_restructuring
 public_outcome:

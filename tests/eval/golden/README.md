@@ -38,6 +38,7 @@ Each expectation has these fields:
 - `citation`: one or more `{ doc, section }`. `section` is the exact heading text of a `##`/`###` heading in that doc. The loader rejects an expectation that has no citation.
 - `tolerance`: used by `rag_dimensions` only. The value is `exact` or `one_grade`.
 - `note`: optional.
+- `known_disagreement`: optional `{ ref, summary }`. `ref` is a `docs/audits/*.md` record. The expectation keeps its labelled answer but is reported as "could not evaluate" instead of being scored, until a human ADR resolves the rule question.
 
 ### Expectation types
 

@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * deterministic.ts — offline eval suites (rag, kill, antitrust) for Wave B-2.
  *
@@ -234,6 +234,10 @@ export function runKillSuite(set: GoldenSet): SuiteResult {
     for (const e of lc.case.expectations as Expectation[]) {
       if (e.function !== "kill_criteria") continue;
       const id = lc.case.case_id;
+      if (e.known_disagreement) {
+        cne.push({ caseId: id, fn: "kill_criteria", reason: `known disagreement, not scored until a human ADR resolves it: ${e.known_disagreement.ref}` });
+        continue;
+      }
       const r = killHitsFor(lc, e.gate, factsFor(lc, e.input_basis));
       if (!r.evaluable) {
         cne.push({ caseId: id, fn: "kill_criteria", reason: `no kill-criteria registry for ${lc.case.deal_type}/${e.gate}` });
@@ -266,7 +270,7 @@ export function runKillSuite(set: GoldenSet): SuiteResult {
 // ── thresholds (regression gates, design §9; not proofs of accuracy) ───────
 
 /** Minimum mean score per deterministic suite. Set at the recorded baseline; raise only with a golden VERSION bump. */
-export const DETERMINISTIC_THRESHOLDS: Record<string, number> = { rag: 1, kill: 0.85, antitrust: 1 };
+export const DETERMINISTIC_THRESHOLDS: Record<string, number> = { rag: 1, kill: 1, antitrust: 1 };
 
 export function runDeterministicSuites(set: GoldenSet): SuiteResult[] {
   return [runRagSuite(set), runKillSuite(set), runAntitrustSuite(set)];

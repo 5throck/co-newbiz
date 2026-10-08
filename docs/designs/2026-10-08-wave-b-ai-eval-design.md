@@ -1,6 +1,6 @@
 ---
 title: Wave B — AI Evaluation, LLM Hardening, Observability, and RAG Calibration
-status: approved
+status: implemented
 date: 2026-10-08
 owner: platform-lead
 contributors: quant-methodologist (calibration method), risk-officer (kill-criteria expectations), antitrust-agent (antitrust expectations), backend-engineer (implementation), sre (observability), security-engineer (eval data handling)

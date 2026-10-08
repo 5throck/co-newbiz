@@ -1,5 +1,5 @@
 case_id: pilot-013
-golden_version: 1.0.0
+golden_version: 1.1.0
 source_doc: docs/pilots/pilot-013-hexapro-etri.md
 deal_type: brownfield
 case_subtype: rbd

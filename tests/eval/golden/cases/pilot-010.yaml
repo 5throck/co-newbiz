@@ -1,5 +1,5 @@
 case_id: pilot-010
-golden_version: 1.0.0
+golden_version: 1.1.0
 source_doc: docs/pilots/pilot-010-affinity-lotte-rental.md
 deal_type: brownfield
 public_outcome:

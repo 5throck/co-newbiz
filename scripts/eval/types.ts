@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /** Shared result types for the AI evaluation harness (Wave B-2). */
 
 export interface CaseScore {
@@ -23,6 +23,8 @@ export interface SuiteResult {
   couldNotEvaluate: CouldNotEvaluate[];
   /** Extra suite-level metrics (e.g. schema-valid rate). */
   metrics: Record<string, number>;
+  /** Optional pre-rendered markdown lines (e.g. the calibration reliability tables). */
+  detail?: string[];
 }
 
 export const meanScore = (cases: CaseScore[]): number | null => {

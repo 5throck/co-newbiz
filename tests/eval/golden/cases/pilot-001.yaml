@@ -1,5 +1,5 @@
 case_id: pilot-001
-golden_version: 1.0.0
+golden_version: 1.1.0
 source_doc: docs/pilots/pilot-001-hd-hyundai-stx-heavy-industries.md
 deal_type: brownfield
 inputs_ref: fixtures/pilot-001.input.json

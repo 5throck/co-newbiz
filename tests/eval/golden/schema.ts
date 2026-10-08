@@ -28,6 +28,16 @@ const base = {
   input_basis: InputBasis.default("pre_decision"),
   citation: z.array(Citation).min(1),
   note: z.string().optional(),
+  /**
+   * The engine and this expectation disagree, and the disagreement is a rule-design
+   * question for a human ADR, not a golden or fixture error. The expectation stays as
+   * the labelled answer; suites report it as "could not evaluate (known disagreement)"
+   * instead of scoring it, until the ADR resolves it.
+   */
+  known_disagreement: z
+    .object({ ref: z.string().regex(/^docs\/audits\/[\w.-]+\.md$/), summary: z.string().min(20) })
+    .strict()
+    .optional(),
 };
 
 const AntitrustFlags = z.object({

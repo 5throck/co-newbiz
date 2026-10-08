@@ -1,5 +1,5 @@
 case_id: pilot-008
-golden_version: 1.0.0
+golden_version: 1.1.0
 source_doc: docs/pilots/pilot-008-delivery-hero-woowa-brothers.md
 deal_type: brownfield
 public_outcome:
@@ -24,6 +24,10 @@ expectations:
     gate: screening
     function: kill_criteria
     expected: { hits: [] }
+    note: Labelled answer stays "no certain-block hit" (KFTC cleared the deal with a structural remedy). The registry predicate fires on the 2023 presumption zone alone, which this case is deep inside.
+    known_disagreement:
+      ref: docs/audits/2026-10-08-pilot-008-hhi-presumption-vs-certain-block.md
+      summary: preliminary_hhi_flags_certain_block is keyed on the rebuttable 2023 presumption zone (HHI > 1800 and delta > 100), not on a certain block, so it fires on a remedy-resolvable case. Rule-semantics question for a human ADR.
     citation: [{ doc: docs/pilots/pilot-010-affinity-lotte-rental.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-screening/schema.yaml`" }]
   - stage: S9
     gate: dd
