@@ -176,6 +176,7 @@ Scenario inputs ride run-versioning as exact `drv.rate_bp` / `drv.fx_pct` / `drv
 | `oauth_client` | RFC 7591 dynamically registered public MCP OAuth clients (migration 0128, ADR-0154). Clients start unverified | `client_id`, `name`, `redirect_uris` (JSON), `registered_by_user_id`, `verified` |
 | `oauth_code` | Single-use authorization codes, valid for 60 seconds or less, bound to client, redirect URI, PKCE S256 challenge, and resource (migration 0128). A replay revokes `family_id` | `code_hash`, `user_id`, `client_id`, `pkce_challenge`, `scopes`, `expires_at`, `consumed_at`, `family_id` |
 | `api_token` (0128 columns) | `kind` (`personal`\|`oauth_access`\|`oauth_refresh`), `client_id`, `family_id`, `audience`, `expires_at`. Only `personal` tokens are accepted by the REST API; OAuth access tokens are audience-bound to `/api/mcp` | `kind`, `family_id`, `audience`, `expires_at` |
+| `decision_proposal` | Agent decision PROPOSALS awaiting a human (migration 0129, ADR-0154 §5). The only table `propose_*` MCP tools write. A human confirms on `/proposals/{id}/confirm`; that web session runs the existing decision route. Expires after 72 hours; `confirm_token_hash` is the single-use confirm nonce | `kind` (gate_decision, route_decision, case_adoption, target_selection, transition_decision, approval), `entity_type/id`, `payload_json`, `proposed_by_user_id`, `via_client_id`, `status`, `expires_at`, `confirmed_by_user_id`, `confirmed_payload_json`, `resulting_record_id` |
 
 ## 11. Index Rationale
 

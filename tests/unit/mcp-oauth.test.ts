@@ -12,8 +12,6 @@ import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import type { RestPort } from "../../mcp/co-newbiz/shared/rest-port.ts";
-import type { Envelope } from "../../mcp/co-newbiz/shared/rest-client.ts";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
 const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-mcp-oauth.sqlite");
@@ -393,14 +391,16 @@ describe("Streamable HTTP /api/mcp", () => {
     await good.text();
   });
 
-  test("tools/list hides the legacy direct-decision tools; a read tool runs in-process as the user", async () => {
+  test("tools/list advertises the full set (decision tools as proposals only, no closure or kickoff); a read tool runs in-process", async () => {
     const { access } = await issueTokens("alice", "read");
     const sid = await openSession(access);
     const list = await rpc(access, sid, "tools/list", {});
     const names = (list.body?.result?.tools as Array<{ name: string }>).map((t) => t.name);
-    expect(names).toHaveLength(17);
-    expect(names).not.toContain("record_gate_decision");
-    expect(names).not.toContain("create_route_decision");
+    const { REGISTRY } = await import("../../mcp/co-newbiz/registry.ts");
+    expect(names).toHaveLength(REGISTRY.length);
+    expect(names).toContain("propose_gate_decision");
+    expect(names).toContain("record_gate_decision"); // deprecated alias, now proposal-only on BOTH transports
+    expect(names.filter((n) => /close|kickoff/.test(n))).toEqual([]);
     const term = toolText(await rpc(access, sid, "tools/call", { name: "lookup_term", arguments: { term: "WACC" } }));
     expect(term.isError).toBe(false);
     expect((JSON.parse(term.text) as { data: { ko: string } }).data.ko.length).toBeGreaterThan(0);
@@ -457,34 +457,27 @@ describe("Streamable HTTP /api/mcp", () => {
 // ── stdio parity ────────────────────────────────────────────────────────
 
 describe("shared registry", () => {
-  test("the stdio tool list is unchanged (same 19 names, same order)", async () => {
+  test("stdio and HTTP advertise the same tool set, original 17 tools first", async () => {
     const { TOOLS } = await import("../../mcp/co-newbiz/index.ts");
-    expect(TOOLS.map((t) => t.name)).toEqual([
+    const { toolsFor } = await import("../../mcp/co-newbiz/registry.ts");
+    expect(TOOLS.map((t) => t.name)).toEqual(toolsFor("http").map((t) => t.name));
+    expect(TOOLS.slice(0, 17).map((t) => t.name)).toEqual([
       "search_interpretations", "get_procedure", "lookup_term", "list_notifications", "get_pipeline_status",
       "search_series", "get_observations", "list_data_changes", "list_opportunities", "create_opportunity",
-      "get_process_evaluation", "get_gate_decisions", "record_gate_decision", "create_route_decision",
+      "get_process_evaluation", "get_gate_decisions",
       "list_committee_sessions", "get_committee_session", "get_project_ic_package", "get_portfolio_scorecard",
       "get_project_dd_workspace",
     ]);
   });
 
-  test("every registry tool's REST path resolves in the in-process route table", async () => {
+  test("every registry tool's declared REST routes resolve in the in-process route table", async () => {
     const { REGISTRY } = await import("../../mcp/co-newbiz/registry.ts");
-    const seen: string[] = [];
-    const record = async <T,>(p: string): Promise<Envelope<T>> => {
-      seen.push(p);
-      return { data: null as T, meta: {}, error: null };
-    };
-    const recorder: RestPort = { get: record, post: record, delete: record };
-    const sample = {
-      procedure: "x", term: "x", opportunityId: "o1", seriesId: "s1", name: "n", projectId: "p1", sessionId: "c1",
-      gate: "screening", decision: "go", rationale: "r", track: "greenfield",
-    };
     for (const tool of REGISTRY) {
-      seen.length = 0;
-      await tool.run({ port: recorder }, sample);
-      expect(seen.length).toBeGreaterThan(0);
-      for (const p of seen) expect(matchRoute(new URL(p, "http://x").pathname)).not.toBeNull();
+      expect(tool.routes.length, `${tool.name} declares no routes`).toBeGreaterThan(0);
+      for (const route of tool.routes) {
+        const path = route.split(" ")[1].replace(/\{\w+\}/g, "x1");
+        expect(matchRoute(path), `${tool.name}: ${route}`).not.toBeNull();
+      }
     }
   });
 });

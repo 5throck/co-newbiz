@@ -220,3 +220,16 @@ security-engineer reviews this model before M-1 merges. Per CLAUDE.md, the auth 
 3. Run the MCP Inspector against `http://localhost:<port>/api/mcp`: complete DCR, consent, and token; list tools; and call a read tool.
 4. Call `propose_gate_decision` on a fixture project and open the returned confirm URL in the browser. Check the payload, buckets, and RAG label; check keyboard-only navigation and an axe scan; then confirm and verify that the gate decision row shows the human as decider.
 5. Revoke the client in Connected apps and check that the next tool call returns 401.
+
+## 15. M-2 implementation notes (backend-engineer, 2026-10-08)
+
+Differences between this design and what M-2 shipped, recorded so reviewers do not have to rediscover them:
+
+- **Approval proposals cover three human acts, not one.** Three routes stamp a `human_final` review of a stage artifact: charter confirmation (S11), a DD checklist judgment (S9), and four-axis completion (S10). If an agent ran them through its delegated identity, an AI action would be recorded as the human's final review. They are therefore `propose_approval` with subject `charter_baseline`, `dd_checklist_judgment`, or `four_axis_completion`, and the in-process port refuses the underlying routes. `record_deal_structure` refuses the `complete_four_axis` action for the same reason.
+- **Further human-only routes found while mapping tools** (all in `mcp-coverage.exclusions.yaml`, refused by `HUMAN_ONLY_ROUTES`): synergy score confirmation, Short List re-ranking, waiver decisions, DD tailoring item review, and opportunity promotion. S3 "synergy assessment" is covered by `start_synergy_analysis` (the recommendation); S7 "Target Ranking/Score" by `record_candidate_screening` (the computed scores).
+- **Tool inputs.** Route tools take path ids plus an opaque `body` object that the route validates, rather than re-declaring every route field. This keeps the tools free of duplicated validation (design §5.1) at the cost of less self-describing input schemas; each tool's `body` description names the route contract.
+- **`record_learning` is not a separate tool.** The S12 learning capture is a field of the transition decision (`propose_transition_decision`), and no other route records it.
+- **`confirm_token_hash`** is used as a single-use confirm nonce that only the cookie-session confirm view can obtain, so a proposal cannot be confirmed without its payload first being served to a human session. Edits at confirm time are stored in `confirmed_payload_json` next to the proposed `payload_json`.
+- **`propose` scope on REST.** A propose-only token maps to REST scope `write` for exactly `POST /api/proposals` and nowhere else (`lib/auth.ts` `restScopesFor`).
+- **Audit hook.** `scripts/audit.ts` is core and unchanged; the coverage gate runs through the variant hook probed at `scripts/co-newbiz/audit-variant.ts` (audit §27).
+- **Left for M-3:** prompts, resources, and the parity test (design §7, §8), and the REST/MCP parity of `evaluateProcess`.

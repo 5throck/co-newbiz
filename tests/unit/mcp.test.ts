@@ -94,11 +94,12 @@ describe("ADR-0011 — no direct DB access from the MCP server (FR-SYS-01)", () 
 describe("tool catalog", () => {
   test("every registered tool has a name and an object input schema", async () => {
     const { TOOLS } = await import("../../mcp/co-newbiz/index.ts");
-    // ADR-0094 surface alignment: the project-keyed tool suites were removed
-    // with their REST routes; the live catalog is 18 tools — the read
-    // lookups + notifications + the opportunity-keyed process suite + the
-    // ADR-0097 committee read-only pair + the ADR-0102 pipeline status read.
-    expect(TOOLS.length).toBe(19); // 18 relays + get_project_dd_workspace (ADR-0099 S9 read)
+    const { REGISTRY } = await import("../../mcp/co-newbiz/registry.ts");
+    // ADR-0154 M-2: the stdio catalog is the whole shared registry (the 17
+    // original read/write tools + the S1-S12 stage tools + the propose_*,
+    // review, and proposal-status tools). stdio and HTTP advertise one set.
+    expect(TOOLS.length).toBe(REGISTRY.length);
+    expect(TOOLS.length).toBeGreaterThan(90);
     for (const tool of TOOLS) {
       expect(tool.name.length).toBeGreaterThan(0);
       // MCP tool names must be plain identifiers — no decoration characters
@@ -218,29 +219,33 @@ describe("opportunity-keyed process tools (ADR-0094)", () => {
     expect(Array.isArray(decisions.data.history)).toBe(true);
   });
 
-  test("record_gate_decision lands and is read back; missing opportunityId rejects before any REST call", async () => {
+  test("record_gate_decision is a deprecated alias: it creates a proposal and decides nothing", async () => {
     process.env.CO_NEWBIZ_API_TOKEN = writeToken;
     const { dispatch } = await import("../../mcp/co-newbiz/index.ts");
+    const before = db.query("SELECT COUNT(*) AS c FROM gate_decision").get() as { c: number };
     const recorded = (await dispatch("record_gate_decision", {
       opportunityId,
       gate: "screening",
       decision: "go",
       rationale: "clears knock-out set",
-    })) as { data: unknown; error: { code: string } | null };
+    })) as { data: { proposal_id: string; confirm_url: string; status: string }; error: { code: string } | null; deprecation: { replacement: string } };
     expect(recorded.error).toBeNull();
+    expect(recorded.data.status).toBe("pending");
+    expect(recorded.data.confirm_url).toContain(`/proposals/${recorded.data.proposal_id}/confirm`);
+    expect(recorded.deprecation.replacement).toBe("propose_gate_decision");
 
-    const decisions = (await dispatch("get_gate_decisions", { opportunityId })) as {
-      data: { latest: { gate: string; decision: string }[]; history: { decision: string }[] };
-    };
-    expect(decisions.data.latest.some((d) => d.gate === "screening" && d.decision === "go")).toBe(true);
-    expect(decisions.data.history.some((d) => d.decision === "go")).toBe(true);
+    const after = db.query("SELECT COUNT(*) AS c FROM gate_decision").get() as { c: number };
+    expect(after.c).toBe(before.c);
+    const decisions = (await dispatch("get_gate_decisions", { opportunityId })) as { data: { history: unknown[] } };
+    expect(decisions.data.history).toHaveLength(0);
 
     await expect(dispatch("record_gate_decision", { gate: "screening", decision: "go", rationale: "x" })).rejects.toThrow(/opportunityId/);
   });
 
-  test("create_route_decision lands for the opportunity", async () => {
+  test("create_route_decision is a deprecated alias that proposes only", async () => {
     process.env.CO_NEWBIZ_API_TOKEN = writeToken;
     const { dispatch } = await import("../../mcp/co-newbiz/index.ts");
+    const before = db.query("SELECT COUNT(*) AS c FROM route_decision").get() as { c: number };
     const result = (await dispatch("create_route_decision", {
       opportunityId,
       track: "greenfield",
@@ -253,8 +258,11 @@ describe("opportunity-keyed process tools (ADR-0094)", () => {
         { criterion: "integration_capacity", score: 2, evidence_note: "t" },
         { criterion: "speed_to_capability", score: 2, evidence_note: "t" },
       ],
-    })) as { error: { code: string } | null };
+    })) as { data: { status: string }; error: { code: string } | null; deprecation: { replacement: string } };
     expect(result.error).toBeNull();
+    expect(result.data.status).toBe("pending");
+    expect(result.deprecation.replacement).toBe("propose_route_decision");
+    expect((db.query("SELECT COUNT(*) AS c FROM route_decision").get() as { c: number }).c).toBe(before.c);
   });
 });
 

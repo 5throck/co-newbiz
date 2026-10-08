@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 2.0.0
 /**
  * Shared MCP tool registry — ADR-0154 §1, design 2026-10-08-wave-m-mcp-parity §3.1.
  *
@@ -8,11 +8,12 @@
  * wrappers over REST routes through a RestPort (ADR-0011): no business
  * validation, permission check, or DB access lives here.
  *
- * Boundary #2 (ADR-0154 §5): the two legacy direct-decision tools
- * (record_gate_decision, create_route_decision) are kept on stdio for one
- * release for backward compatibility, but are NEVER exposed on the remote
- * HTTP transport — a hosted connector must not gain a direct-decision path
- * before M-2 replaces them with propose_* tools.
+ * Boundary #2 (ADR-0154 §5, M-2): no tool records a decision. Gate, route,
+ * case-adoption, target-selection, transition and approval tools only create a
+ * decision_proposal (tools/decision-tools.ts); a human confirms it on the web
+ * confirm page. record_gate_decision / create_route_decision remain as
+ * deprecated ALIASES that create proposals on both transports. Closure and PMI
+ * kickoff have no tool at all (mcp-coverage.exclusions.yaml).
  */
 
 import { createHash } from "node:crypto";
@@ -20,88 +21,26 @@ import { z } from "zod";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
-import type { RestPort } from "./shared/rest-port.ts";
 import type { ToolDefinition } from "./shared/types.ts";
 import { MCPValidationError } from "./shared/errors.ts";
+import {
+  MCPScopeError, defineTool, optString, requiredString,
+  type McpTransportKind, type RegistryTool, type ToolContext, type ToolScope,
+} from "./define.ts";
+import { STAGE_TOOLS } from "./tools/stage-tools.ts";
+import { DECISION_TOOLS } from "./tools/decision-tools.ts";
 import { searchInterpretations, getProcedure } from "./tools/governance.ts";
 import { lookupTerm } from "./tools/glossary.ts";
 import { listNotifications } from "./tools/monitoring.ts";
 import { getPipelineStatus } from "./tools/pipeline.ts";
 import { getObservations, listDataChanges, searchSeries } from "./tools/analysis.ts";
-import {
-  listOpportunities, createOpportunity, getProcessEvaluation, listGateDecisions,
-  recordGateDecision, createRouteDecision,
-} from "./tools/process.ts";
+import { listOpportunities, createOpportunity, getProcessEvaluation, listGateDecisions } from "./tools/process.ts";
 import { listCommitteeSessions, getCommitteeSession } from "./tools/committee.ts";
 import { getProjectIcPackage } from "./tools/ic-package.ts";
 import { getPortfolioScorecard } from "./tools/portfolio-scorecard.ts";
 import { getProjectDdWorkspace } from "./tools/dd-checklist.ts";
 
-export type ToolScope = "read" | "write" | "propose";
-export type ToolKind = "read" | "write" | "generate" | "review" | "propose";
-export type McpTransportKind = "stdio" | "http";
-
-export interface ToolContext {
-  port: RestPort;
-  /**
-   * Granted OAuth scopes. `undefined` on stdio: the personal token's scopes
-   * are enforced by the REST layer only. On HTTP the registry checks them
-   * per tool before any route runs, and the route checks again.
-   */
-  scopes?: readonly string[];
-}
-
-export class MCPScopeError extends Error {
-  readonly code = "insufficient_scope";
-  constructor(message: string) {
-    super(message);
-    this.name = "MCPScopeError";
-  }
-}
-
-export interface RegistryTool {
-  name: string;
-  description: string;
-  scope: ToolScope;
-  kind: ToolKind;
-  /** flow.spec activity ids this tool serves (M-2 coverage script input). */
-  stageActivities: readonly string[];
-  /** Direct-decision legacy tool: stdio only, never on the remote transport. */
-  legacyDirectDecision?: boolean;
-  inputSchema: ToolDefinition["inputSchema"];
-  run(ctx: ToolContext, rawArgs: unknown): Promise<unknown>;
-}
-
-function formatIssues(error: z.ZodError): string {
-  return error.issues
-    .map((i) => {
-      const key = i.path.map(String).join(".") || "arguments";
-      return i.code === "invalid_type" || i.code === "too_small" ? `${key} is required.` : `${key}: ${i.message}`;
-    })
-    .join(" ");
-}
-
-function defineTool<S extends z.ZodType>(def: Omit<RegistryTool, "run"> & {
-  args: S;
-  handler: (ctx: ToolContext, input: z.output<S>) => Promise<unknown>;
-}): RegistryTool {
-  const { args, handler, ...meta } = def;
-  return {
-    ...meta,
-    run: async (ctx, rawArgs) => {
-      const parsed = args.safeParse(rawArgs ?? {});
-      if (!parsed.success) throw new MCPValidationError(formatIssues(parsed.error));
-      return handler(ctx, parsed.data);
-    },
-  };
-}
-
-const requiredString = z.string().refine((s) => s.trim().length > 0);
-const optString = z.string().optional();
-
-const routeScore = z.object({ criterion: z.string(), score: z.number().int(), evidence_note: z.string() });
-
-export const REGISTRY: readonly RegistryTool[] = [
+const BASE_TOOLS: readonly RegistryTool[] = [
   defineTool({
     name: "search_interpretations",
     description: "Search the governance interpretation registry.",
@@ -219,35 +158,6 @@ export const REGISTRY: readonly RegistryTool[] = [
     handler: (ctx, a) => listGateDecisions(ctx.port, a.opportunityId),
   }),
   defineTool({
-    name: "record_gate_decision",
-    description: "Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited.",
-    scope: "write", kind: "write", stageActivities: [], legacyDirectDecision: true,
-    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, gate: { type: "string", enum: ["screening","pre_fs","fs","dd","entity_ic","group_ic"] }, decision: { type: "string", enum: ["go","hold","kill"] }, rationale: { type: "string" }, missing_artifacts: { type: "array", items: { type: "string" } }, learning_capture: { type: "string", description: "Required by the API when decision is kill (ADR-0152)" } }, required: ["opportunityId", "gate", "decision", "rationale"] },
-    args: z.object({
-      opportunityId: requiredString, gate: requiredString, decision: requiredString, rationale: requiredString,
-      missing_artifacts: z.array(z.string()).optional(), learning_capture: optString,
-    }),
-    handler: (ctx, a) => recordGateDecision(ctx.port, a.opportunityId, {
-      gate: a.gate, decision: a.decision, rationale: a.rationale,
-      missing_artifacts: a.missing_artifacts, learning_capture: a.learning_capture,
-    }),
-  }),
-  defineTool({
-    name: "create_route_decision",
-    description: "Record a route decision (S4) — greenfield/brownfield + sub_track + rationale. Analyst+; audited.",
-    scope: "write", kind: "write", stageActivities: ["route-strategy"], legacyDirectDecision: true,
-    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, track: { type: "string", enum: ["greenfield","brownfield"] }, sub_track: { type: "string", enum: ["existing_business_rbd","intra_venture","m_and_a","jv","strategic_investment","minority_investment","partnership","rbd","corporate_venture"] }, rationale: { type: "string" }, intent: { type: "string", enum: ["integration","capability_access"], description: "Stage 1 intent branch — required on both tracks (ADR-0104)" }, scores: { type: "array", description: "5-criteria scoring, required on both tracks (ADR-0104)", items: { type: "object", properties: { criterion: { type: "string", enum: ["control_need","capability_criticality","market_uncertainty","integration_capacity","speed_to_capability"] }, score: { type: "integer", minimum: 1, maximum: 3 }, evidence_note: { type: "string" } }, required: ["criterion","score","evidence_note"] } } }, required: ["opportunityId", "track", "rationale", "intent", "scores"] },
-    args: z.object({
-      opportunityId: requiredString, track: requiredString, rationale: requiredString,
-      sub_track: optString, alternatives_considered: optString, intent: optString,
-      scores: z.array(routeScore).optional(),
-    }),
-    handler: (ctx, a) => createRouteDecision(ctx.port, a.opportunityId, {
-      track: a.track, sub_track: a.sub_track, rationale: a.rationale,
-      alternatives_considered: a.alternatives_considered, intent: a.intent, scores: a.scores,
-    }),
-  }),
-  defineTool({
     name: "list_committee_sessions",
     description: "List steering-committee deliberation sessions for an opportunity (ADR-0097).",
     scope: "read", kind: "read", stageActivities: [],
@@ -293,9 +203,43 @@ export const REGISTRY: readonly RegistryTool[] = [
   }),
 ];
 
-/** Tools advertised on a transport. Legacy direct-decision tools are stdio-only. */
-export function toolsFor(transport: McpTransportKind): RegistryTool[] {
-  return REGISTRY.filter((t) => transport === "stdio" || !t.legacyDirectDecision);
+/** REST routes (and stage coverage) of the 17 original read/write tools, kept beside them rather than repeated per entry. */
+const BASE_META: Record<string, { routes: string[]; activities?: string[]; artifacts?: string[] }> = {
+  search_interpretations: { routes: ["GET /api/interpretations"] },
+  get_procedure: { routes: ["GET /api/procedures/resolve"] },
+  lookup_term: { routes: ["GET /api/glossary/{term}"] },
+  list_notifications: { routes: ["GET /api/notifications"] },
+  get_pipeline_status: { routes: ["GET /api/opportunities/{opportunityId}/pipeline/status"] },
+  search_series: { routes: ["GET /api/series"] },
+  get_observations: { routes: ["GET /api/series/{seriesId}/observations"] },
+  list_data_changes: { routes: ["GET /api/data-changes"] },
+  list_opportunities: { routes: ["GET /api/opportunities"] },
+  create_opportunity: { routes: ["POST /api/opportunities"], artifacts: ["stage:S2:1"] },
+  get_process_evaluation: { routes: ["GET /api/opportunities/{opportunityId}/process"] },
+  get_gate_decisions: { routes: ["GET /api/opportunities/{opportunityId}/gate-decisions"] },
+  list_committee_sessions: { routes: ["GET /api/opportunities/{opportunityId}/committee-sessions"] },
+  get_committee_session: { routes: ["GET /api/opportunities/{opportunityId}/committee-sessions/{sessionId}"] },
+  get_project_ic_package: { routes: ["GET /api/projects/{projectId}/ic-package"], artifacts: ["stage:S11:1"] },
+  get_portfolio_scorecard: { routes: ["GET /api/projects/{projectId}/scorecard"], activities: ["portfolio-monitoring"], artifacts: ["stage:S12:1"] },
+  get_project_dd_workspace: { routes: ["GET /api/projects/{projectId}/dd"] },
+};
+
+function withMeta(tool: RegistryTool): RegistryTool {
+  const meta = BASE_META[tool.name];
+  if (!meta) throw new Error(`BASE_META is missing an entry for ${tool.name}`);
+  return {
+    ...tool,
+    routes: meta.routes,
+    stageActivities: [...tool.stageActivities, ...(meta.activities ?? [])],
+    stageArtifacts: meta.artifacts ?? [],
+  };
+}
+
+export const REGISTRY: readonly RegistryTool[] = [...BASE_TOOLS.map(withMeta), ...STAGE_TOOLS, ...DECISION_TOOLS];
+
+/** Tools advertised on a transport. Both transports advertise the same set (structural parity). */
+export function toolsFor(_transport: McpTransportKind): RegistryTool[] {
+  return [...REGISTRY];
 }
 
 export function toToolDefinition(t: RegistryTool): ToolDefinition {
@@ -338,6 +282,9 @@ export interface BuildServerOptions {
   log?: (message: string) => void;
 }
 
+export { MCPScopeError };
+export type { RegistryTool, ToolContext, ToolScope, McpTransportKind };
+
 export function buildMcpServer(opts: BuildServerOptions): Server {
   const server = new Server({ name: "co-newbiz-mcp", version: "1.9.0" }, { capabilities: { tools: {} } });
   const tools = toolsFor(opts.transport);
@@ -353,6 +300,8 @@ export function buildMcpServer(opts: BuildServerOptions): Server {
       const ctx = opts.resolveContext({ authInfo: extra.authInfo });
       const result = await callTool(opts.transport, ctx, name, args ?? {});
       const envelopeError = readEnvelopeError(result);
+      const tool = tools.find((t) => t.name === name);
+      if (tool?.kind === "propose" && envelopeError === null) pointToConfirmPage(server, tool, result, opts.log);
       opts.onToolCall?.({ name, scope, ok: envelopeError === null, errorCode: envelopeError, argsHash, authInfo: extra.authInfo });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     } catch (err) {
@@ -365,6 +314,28 @@ export function buildMcpServer(opts: BuildServerOptions): Server {
   });
 
   return server;
+}
+
+/**
+ * MCP elicitation, design §6.3 step 2: when the client supports it, ALSO ask
+ * the client to show the confirm link. The answer is ignored on purpose — an
+ * elicitation reply comes through the agent's client and cannot prove a human
+ * web session, so it can never confirm (let alone execute) a decision. Best
+ * effort and non-blocking: a client that cannot elicit just gets the URL in
+ * the tool result.
+ */
+function pointToConfirmPage(server: Server, tool: RegistryTool, result: unknown, log?: (message: string) => void): void {
+  const data = (result as { data?: { proposal_id?: unknown; confirm_url?: unknown } } | null)?.data;
+  const url = typeof data?.confirm_url === "string" ? data.confirm_url : null;
+  const proposalId = typeof data?.proposal_id === "string" ? data.proposal_id : null;
+  if (!url || !proposalId || !/^https?:\/\//.test(url)) return;
+  const caps = server.getClientCapabilities();
+  if (!caps?.elicitation) return;
+  const message = `${tool.name} recorded a decision proposal. Nothing is decided yet: open ${url} in your logged-in co-newbiz session to review it and confirm or reject it.`;
+  const request = caps.elicitation.url
+    ? server.elicitInput({ mode: "url", message, elicitationId: proposalId, url }, { timeout: 60_000 })
+    : server.elicitInput({ message, requestedSchema: { type: "object", properties: {} } }, { timeout: 60_000 });
+  request.catch((err: unknown) => log?.(`Elicitation for ${tool.name} not delivered: ${err instanceof Error ? err.message : String(err)}`));
 }
 
 function readEnvelopeError(result: unknown): string | null {

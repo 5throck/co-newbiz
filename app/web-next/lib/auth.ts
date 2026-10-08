@@ -71,6 +71,17 @@ function readCookie(request: Request, name: string): string | undefined {
   return undefined;
 }
 
+// ADR-0154: the 'propose' scope opens exactly one mutation — recording a
+// decision proposal (POST /api/proposals). It never maps to REST 'write', so a
+// propose-only token cannot reach any other mutating route.
+function restScopesFor(request: Request, granted: readonly string[]): TokenScope[] {
+  const scopes = (["read", "write"] as const).filter((s) => granted.includes(s));
+  if (granted.includes("propose") && request.method === "POST" && new URL(request.url).pathname === "/api/proposals" && !scopes.includes("write")) {
+    scopes.push("write");
+  }
+  return scopes;
+}
+
 export type AuthResult = { ok: true; auth: AuthContext } | { ok: false; response: Response };
 
 /**
@@ -92,7 +103,7 @@ export function authenticate(request: Request): AuthResult {
       userId: delegated.userId,
       role: delegated.role as UserRole,
       via: "bearer",
-      scopes: (["read", "write"] as const).filter((s) => delegated.scopes.includes(s)),
+      scopes: restScopesFor(request, delegated.scopes),
       mustChangePassword: delegated.mustChangePassword,
       tokenId: delegated.tokenId,
     };
