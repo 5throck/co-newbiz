@@ -10,15 +10,15 @@
       "ADR-0120",
       "ADR-0121"
     ],
-    "note": "디자인 결정의 단일 원본. styles.css의 CSS 변수 체계를 정식화한 것 — 새 토큰은 여기에 먼저 선언한다. 3계층: primitive(절대값) → semantic(의미) → component(컴포넌트). v1.1.0: styles.css 실태와 재정합(re-baseline, 2026-09-08) — accent/primary-blue 단일화(#3d66f5), radius.md 0.625rem, 누락 토큰(surface-elevated·border-subtle/bright·muted-bg/fg) 추가."
+    "note": "디자인 결정의 단일 원본. styles.css의 CSS 변수 체계를 정식화한 것 — 새 토큰은 여기에 먼저 선언한다. 3계층: primitive(절대값) → semantic(의미) → component(컴포넌트). v1.1.0: styles.css 실태와 재정합(re-baseline, 2026-09-08) — accent/primary-blue 단일화(#3d66f5; 2026-10-08 Wave C-1 axe 대비 4.5:1 확보를 위해 #3558e0으로 조정, green-600/amber-600도 동일 사유로 어둡게 조정), radius.md 0.625rem, 누락 토큰(surface-elevated·border-subtle/bright·muted-bg/fg) 추가."
   },
   "primitive": {
     "color": {
-      "blue-500": "#3d66f5",
+      "blue-500": "#3558e0",
       "blue-300": "#6f92f8",
-      "green-600": "#0c7a4b",
+      "green-600": "#0a6d43",
       "green-400": "#7fe0a0",
-      "amber-600": "#935c06",
+      "amber-600": "#7a4c05",
       "amber-400": "#ffcf7a",
       "red-600": "#b32318",
       "red-400": "#ff9d97",

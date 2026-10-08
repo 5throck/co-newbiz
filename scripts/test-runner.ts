@@ -1,6 +1,6 @@
 /**
  * test-runner.ts — Test Runner for TypeScript Test Suites
- * @version 1.6.0
+ * @version 1.7.0
  *
  * v1.6.0 (2026-09-21 docker-cicd follow-up): bun test now runs with
  * --timeout=30000. The bun default (5s per test/hook) flaked the
@@ -61,7 +61,9 @@ interface TestFileResult {
 const suites: TestSuite[] = [
   { name: 'unit', pattern: '*.test.ts', timeout: 120000, dir: 'tests/unit', ext: '.test.ts' },
   { name: 'integration', pattern: '*.test.ts', timeout: 120000, dir: 'tests', ext: '.test.ts' },
-  { name: 'scenarios', pattern: '*', timeout: 300000, dir: 'tests/scenarios', ext: '' },
+  // sequential: every scenario boots its own Next server + Chromium; serial runs keep CPU/RAM
+  // predictable and avoid racing the shared one-time `next build` (Wave C-1).
+  { name: 'scenarios', pattern: '*.test.ts', timeout: 600000, dir: 'tests/scenarios', ext: '.test.ts', sequential: true },
   // sequential: members stage transient fixture dirs under the real templates/
   // tree (test-l3promo-*, co-e2eguard-*, co-e2p2*) and race concurrent
   // validators when run in parallel — T-20260916-001.

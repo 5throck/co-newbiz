@@ -1,4 +1,4 @@
-// @version 1.5.0
+// @version 1.6.0
 // Idempotent S1→S12 brownfield demo chain seed.
 //
 // The operational DB is intentionally gitignored, so a fresh/local database
@@ -68,7 +68,20 @@ function json(value: unknown): string {
   return JSON.stringify(value);
 }
 
-export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; projectId: string } {
+export interface SeedOptions {
+  /** Default true: also write the human gate decisions and the S12 transition
+   *  decision. The E2E harness passes false so those human acts are performed
+   *  through the UI instead of being pre-seeded. */
+  humanDecisions?: boolean;
+  /** Default true: pre-judge the M&A sub-track DD checklists (brownfield
+   *  feasibility + M&A special topics). The E2E passes false to judge them in
+   *  the DD workspace UI. */
+  subTrackDd?: boolean;
+}
+
+export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { opportunityId: string; projectId: string } {
+  const humanDecisions = opts.humanDecisions ?? true;
+  const subTrackDd = opts.subTrackDd ?? true;
   runMigrations(dbPath);
   const db = getDb(dbPath);
   const now = nowIso();
@@ -303,7 +316,7 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
       [DEMO.projectId, actor, now],
     );
     // ADR-0148: a fresh project completes S9 only when every standard DD item is judged.
-    for (const checklistId of [...Object.values(DD_WORKSPACE_CHECKLISTS), ...(SUB_TRACK_DD_CHECKLISTS.m_and_a ?? [])]) {
+    for (const checklistId of [...Object.values(DD_WORKSPACE_CHECKLISTS), ...(subTrackDd ? (SUB_TRACK_DD_CHECKLISTS.m_and_a ?? []) : [])]) {
       for (const item of getChecklistItems(checklistId) ?? []) {
         db.run(
           `INSERT OR IGNORE INTO project_checklist_item_state
@@ -352,7 +365,7 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
       );
     }
 
-    for (const [entityType, entityId, gate] of [
+    if (humanDecisions) for (const [entityType, entityId, gate] of [
       ["opportunity", DEMO.oppId, "screening"],
       ["opportunity", DEMO.oppId, "pre_fs"],
       ["opportunity", DEMO.oppId, "target_screening"],
@@ -388,7 +401,7 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
     // cycle. The demo records a graduate_to_core decision carrying its
     // dedicated hand-off record (criterion 4 — ADR-0151 column, required for
     // decisions recorded from the 2026-10-02 migration date onward).
-    db.run(
+    if (humanDecisions) db.run(
       `INSERT OR IGNORE INTO venture_transition_decision
          (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, core_handoff, created_at)
        VALUES (?, ?, ?, ?, 'graduate_to_core', 'venture-portfolio-ic', ?, ?, ?, ?, ?)`,

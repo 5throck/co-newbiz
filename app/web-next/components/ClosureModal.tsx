@@ -213,7 +213,7 @@ export function ClosureModal({
                                 <li key={m.record}>
                                   <span className="font-semibold">누락: {m.record}</span> — {m.message}{" "}
                                   {link && (
-                                    <Link href={link.href} className="text-[color:var(--accent)]">
+                                    <Link href={link.href} className="text-[color:var(--accent)] underline">
                                       {link.label}
                                     </Link>
                                   )}

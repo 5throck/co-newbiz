@@ -32,12 +32,11 @@ export function ThemeToggle({ compact = false }: { compact?: boolean } = {}) {
       type="button"
       onClick={toggle}
       className={compact ? "theme-toggle-compact" : "side-nav-link theme-toggle"}
-      aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
+      aria-label={theme === "dark" ? "라이트 모드" : "다크 모드"}
       aria-pressed={theme === "dark"}
     >
       {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
       <span>{theme === "dark" ? "라이트 모드" : "다크 모드"}</span>
-      {compact && <span className="sr-only">전환</span>}
     </button>
   );
 }

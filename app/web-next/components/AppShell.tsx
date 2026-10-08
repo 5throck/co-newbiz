@@ -225,16 +225,17 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
             }
             router.push(backHref);
           }}
-          aria-label={dealStageMatch || dealOverviewMatch || projectBack ? `${backLabel}로 돌아가기` : `${backLabel} 목록으로 돌아가기`}
         >
-          <ChevronLeft size={14} />
+          <ChevronLeft size={14} aria-hidden="true" />
+          {/* WCAG 2.5.3: the accessible name is the visible label plus a screen-reader suffix. */}
           {dealStageMatch || dealOverviewMatch || projectBack ? backLabel : item!.label}
+          <span className="sr-only"> 돌아가기</span>
         </button>
       )}
       <div className="topbar-actions">
         <ThemeToggle compact />
         {me.role !== "admin" && (
-          <button type="button" className="topbar-logout" onClick={() => void markAllRead()} aria-label="알림 모두 읽음 처리" title="알림 모두 읽음 처리">
+          <button type="button" className="topbar-logout" onClick={() => void markAllRead()} aria-label={`알림 ${unreadCount > 0 ? unreadCount : "0"} — 모두 읽음 처리`} title="알림 모두 읽음 처리">
             <Bell size={16} />
             <span>알림 {unreadCount > 0 ? unreadCount : "0"}</span>
           </button>
