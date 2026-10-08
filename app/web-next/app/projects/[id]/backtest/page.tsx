@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState } from "../../../../components/ui.tsx";
 
@@ -25,7 +25,7 @@ function BacktestView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>예측-실적 백테스트 <span className="chip gray">조직 집계</span></h1>
       <p className="objective">S8의 예측(NPV p50)과 S12 실적을 자동 대조해 추정 정확도를 증명합니다 — 증거 부족은 가공하지 않고 표시합니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}

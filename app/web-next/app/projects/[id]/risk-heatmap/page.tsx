@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState } from "../../../../components/ui.tsx";
 
@@ -64,7 +64,7 @@ function HeatmapView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>검토/안건 리스크 히트맵</h1>
       <p className="objective">DD 발견사항·고객 집중·클로백을 하나의 그리드로 통합해 위험 전망을 봅니다 — 실재 기록만 플로팅합니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}

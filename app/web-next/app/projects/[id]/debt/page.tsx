@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -87,7 +87,7 @@ function DebtView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>부채·커버넌트</h1>
       <p className="objective">차입 상품과 커버넌트 조건을 관리합니다 — 커버넌트 여력은 자금조달(S10)과 대조됩니다.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

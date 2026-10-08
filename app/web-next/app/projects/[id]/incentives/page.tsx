@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -48,7 +48,7 @@ function IncentivesView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>인센티브·클로백</h1>
       <p className="objective">지역 인센티브 소싱과 이전 시 클로백 노출을 관리합니다 — 클로백 추정은 투자구조(uses)와 대조됩니다.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -49,7 +49,7 @@ function CocView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>고객 집중·CoC</h1>
       <p className="objective">고객·공급 계약의 변경 통제 조항과 매출 집중도를 점검합니다 — 30% 이상 집중은 자동 플래그됩니다.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

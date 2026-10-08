@@ -7,7 +7,7 @@
 // (GateDecisionPanel, boundary #2).
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { PageHeader } from "../../../../components/layout.tsx";
 import { api } from "../../../../lib/api.ts";
 
@@ -132,7 +132,7 @@ export default function ProjectProcessPage() {
 
   return (
     <main className="p-6 space-y-4">
-      <ProjectSubNav projectId={projectId} />
+      <StageTabs projectId={projectId} />
       <header>
         <PageHeader title={`프로세스 현황 — ${data.project.project_no ?? data.project.id}`} />
         {data.track && (

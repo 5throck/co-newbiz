@@ -1,13 +1,13 @@
 "use client";
 
 // S9 프로젝트 단계 본문 — ADR-0120 Wave 3 추출(/projects/[id]/dd 페이지와
-// /deals/[id]/s9 탭이 동일 컴포넌트를 소비한다). ProjectSubNav·StageFrame이
+// /deals/[id]/s9 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
 import { useCallback, useEffect, useState } from "react";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
-import { ProjectSubNav } from "../ProjectSubNav.tsx";
+import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
@@ -222,7 +222,7 @@ export function DdStage({ projectId }: { projectId: string }) {
 
   return (
 <>
-      <ProjectSubNav projectId={projectId} />
+      <StageTabs projectId={projectId} />
       <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S9")} />
       <StageFrame stageId="S9" heading="S9 실사·검증 — DD 체크리스트 판정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">

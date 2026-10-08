@@ -3341,3 +3341,136 @@ a.funnel-card:hover { border-color: var(--primary); }
 .pager { display: flex; gap: 0.4rem; align-items: center; justify-content: flex-end; font-size: 0.75rem; color: var(--muted-fg); margin-top: 0.5rem; }
 .pager .pg { border: 1px solid var(--border); border-radius: 6px; padding: 0.1rem 0.5rem; background: var(--surface); cursor: pointer; }
 .pager .pg.cur { background: var(--primary); color: var(--primary-fg, #fff); border-color: var(--primary); }
+
+/* ── Wave U-1: two-layer IA (design 2026-10-08-wave-u-ux-overhaul §3, §4, §7) ──
+   Tokens only; 14px (0.875rem) floor for nav/tab/stepper/table text. */
+.skip-link {
+  position: absolute; left: 0.5rem; top: -4rem; z-index: 100;
+  padding: 0.5rem 0.75rem; border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--fg); border: 1px solid var(--border);
+}
+.skip-link:focus { top: 0.5rem; }
+
+/* Sidebar footer — in flow, so nothing can overlap it (finding 5). */
+.sidebar-footer {
+  margin-top: auto; padding: 0.75rem 1rem 0;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.8125rem; line-height: 1.5; color: var(--muted-fg);
+}
+.side-nav-badge {
+  margin-left: auto; min-width: 1.25rem; padding: 0 0.4rem; text-align: center;
+  border-radius: var(--radius-full); font-size: 0.8125rem; font-weight: 700;
+  background: var(--primary-bg); color: var(--primary); border: 1px solid var(--primary-border);
+}
+.side-nav-badge:empty { display: none; }
+
+/* Layer 2 — stage stepper. */
+.stage-stepper-wrap { position: sticky; top: 3.2rem; z-index: 5; margin-bottom: 1rem; }
+.stage-stepper {
+  display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.5rem;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+.stage-step {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.6rem; border-radius: var(--radius-sm);
+  font-size: 0.875rem; line-height: 1.35; color: var(--muted-fg); text-decoration: none;
+  border: 1px solid transparent;
+}
+a.stage-step:hover { background: var(--hover-bg); color: var(--fg); }
+a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus-visible,
+.inbox-row:focus-visible, .stage-stepper-compact summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.stage-step-current { color: var(--primary); background: var(--primary-bg); border-color: var(--primary-border); font-weight: 600; }
+.stage-step-skipped { opacity: 0.75; text-decoration: line-through; }
+.stage-step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.4rem; height: 1.4rem; border-radius: var(--radius-full);
+  background: var(--muted-bg); font-size: 0.8125rem; font-weight: 700;
+}
+.stage-step-state { font-size: 0.8125rem; font-weight: 600; }
+.stage-gate-chip { font-size: 0.8125rem; padding: 0.05rem 0.4rem; }
+.stage-stepper-compact { display: none; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.stage-stepper-compact summary { cursor: pointer; padding: 0.75rem 1rem; min-height: 44px; font-size: 0.875rem; font-weight: 600; }
+.stage-stepper-compact-list { list-style: none; margin: 0; padding: 0 0.5rem 0.5rem; }
+.stage-step-compact-link { display: block; padding: 0.75rem; min-height: 44px; font-size: 0.875rem; color: var(--fg); text-decoration: none; }
+.stage-step-compact-link[aria-current="step"] { color: var(--primary); font-weight: 600; }
+@media (max-width: 880px) {
+  .stage-stepper { display: none; }
+  .stage-stepper-compact { display: block; }
+}
+
+/* Inputs/outputs panel (was an always-visible nav strip). */
+.handoff-panel { margin-bottom: 1rem; }
+.handoff-panel > summary { cursor: pointer; font-size: 0.875rem; font-weight: 600; padding: 0.4rem 0; }
+.handoff-panel-hint { font-weight: 400; color: var(--muted-fg); margin-left: 0.5rem; }
+.handoff-panel .handoff { margin-bottom: 0; font-size: 0.875rem; }
+
+/* Layer 3-free stage tabs (replaces ProjectSubNav). */
+.stage-tabs-wrap { margin-bottom: 1rem; }
+.stage-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--border); align-items: flex-end; }
+.stage-tab {
+  display: inline-flex; align-items: center; gap: 0.25rem; min-height: 44px;
+  padding: 0.5rem 0.9rem; font-size: 0.875rem; color: var(--muted-fg); text-decoration: none;
+  background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer;
+}
+.stage-tab:hover { color: var(--fg); }
+.stage-tab-active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.stage-tab-more { position: relative; }
+.stage-tab-menu {
+  position: absolute; right: 0; top: 100%; z-index: 20; min-width: 12rem; padding: 0.25rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px hsla(0, 0%, 0%, 0.12);
+}
+.stage-tab-menu-item { display: block; padding: 0.6rem 0.75rem; min-height: 44px; font-size: 0.875rem; color: var(--fg); text-decoration: none; border-radius: var(--radius-sm); }
+.stage-tab-menu-item:hover { background: var(--hover-bg); }
+
+/* /inbox */
+.inbox-page { max-width: 80rem; }
+.inbox-lead { font-size: 0.9375rem; line-height: 1.5; color: var(--muted-fg); margin: 0.25rem 0 1rem; }
+.inbox-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
+.inbox-deal-filter { display: inline-flex; gap: 0.5rem; align-items: center; font-size: 0.875rem; }
+.inbox-failed { list-style: none; margin: 0 0 1rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; border: 1px solid var(--amber-border); background: var(--amber-bg); color: var(--amber-fg); border-radius: var(--radius-md); }
+.inbox-empty { padding: 2rem; text-align: center; font-size: 0.9375rem; color: var(--muted-fg); border: 1px dashed var(--border); border-radius: var(--radius-lg); }
+.inbox-layout { display: grid; grid-template-columns: 2fr 3fr; gap: 1rem; align-items: start; }
+.inbox-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.inbox-row {
+  display: grid; gap: 0.35rem; width: 100%; text-align: left; padding: 0.75rem 1rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; color: var(--fg);
+}
+.inbox-row:hover { background: var(--hover-bg); }
+.inbox-row[aria-current="true"] { border-color: var(--primary); background: var(--primary-bg); }
+.inbox-row-kind { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8125rem; color: var(--muted-fg); font-weight: 600; }
+.inbox-row-title { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; }
+.inbox-row-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; font-size: 0.8125rem; color: var(--muted-fg); }
+.inbox-chip { padding: 0.05rem 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-full); }
+.inbox-detail { padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: grid; gap: 1rem; }
+.inbox-detail h2 { margin: 0; font-size: 1.125rem; }
+.inbox-back { display: none; justify-self: start; }
+.inbox-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.5rem 1rem; margin: 0; font-size: 0.875rem; }
+.inbox-facts dt { color: var(--muted-fg); font-size: 0.8125rem; }
+.inbox-facts dd { margin: 0; font-weight: 600; }
+.inbox-ai-draft { margin: 0; padding: 0.75rem; font-size: 0.875rem; line-height: 1.5; border: 1px dashed var(--border); border-radius: var(--radius-md); background: var(--muted-bg); }
+.inbox-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.inbox-actions a, .inbox-actions button { min-height: 44px; display: inline-flex; align-items: center; }
+@media (max-width: 880px) {
+  .inbox-layout { grid-template-columns: 1fr; }
+  .inbox-layout[data-detail="closed"] .inbox-detail { display: none; }
+  .inbox-layout[data-detail="open"] .inbox-list-pane { display: none; }
+  .inbox-back { display: inline-flex; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar, .side-nav-link { transition: none; }
+}
+
+/* Mobile topbar (design §9, 390px): icon-only actions (they carry aria-labels)
+   so the bar never causes horizontal scroll; 44px touch targets. */
+@media (max-width: 880px) {
+  .topbar-logout span, .topbar-user { display: none; }
+  .topbar-logout, .topbar-icon-btn { min-width: 44px; min-height: 44px; justify-content: center; }
+  .topbar-actions { gap: 0.25rem; }
+}
+@media (max-width: 880px) {
+  .back-link { white-space: nowrap; min-height: 44px; }
+  .theme-toggle-compact { min-width: 44px; min-height: 44px; justify-content: center; white-space: nowrap; }
+  .theme-toggle-compact > span:not(.sr-only) { display: none; }
+}

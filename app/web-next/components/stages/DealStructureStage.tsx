@@ -1,7 +1,7 @@
 "use client";
 
 // S10 프로젝트 단계 본문 — ADR-0120 Wave 3 추출(/projects/[id]/deal-structure 페이지와
-// /deals/[id]/s10 탭이 동일 컴포넌트를 소비한다). ProjectSubNav·StageFrame이
+// /deals/[id]/s10 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 // 탭 상태는 독립 페이지에서 URL ?tab= 동기, embedded(deals 탭) 모드에서는 내부 상태로
 // 유지한다 — router로 프로젝트 페이지를 건드리지 않는다.
@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
-import { ProjectSubNav } from "../ProjectSubNav.tsx";
+import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
@@ -184,7 +184,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
 
   return (
 <>
-      <ProjectSubNav projectId={projectId} />
+      <StageTabs projectId={projectId} />
       <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S10")} />
       <StageFrame stageId="S10" heading="S10 투자구조 설계 — 비히클·4축 검토·자금조달">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">

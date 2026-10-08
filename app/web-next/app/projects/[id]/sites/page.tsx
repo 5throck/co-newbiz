@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -49,7 +49,7 @@ function SitesView() {
 
   return (
     <main>
-      <ProjectSubNav projectId={id} />
+      <StageTabs projectId={id} />
       <h1>부지·시설 평가</h1>
       <p className="objective">입지 인프라·물류·노동력 점수와 인허가 리드타임을 비교해 최적 부지를 선정합니다.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

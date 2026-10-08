@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
@@ -114,7 +114,7 @@ function CharterViewInner() {
 
   return (
     <main>
-      <ProjectSubNav projectId={projectId} />
+      <StageTabs projectId={projectId} />
       <StageFrame stageId="S8" heading="프로젝트 추진계획 — 목적·범위·KPI 사전 확정">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
           추진계획은 프로젝트의 목적·시장 범위·밸류체인 노드·진입 범위·KPI를 진행 심의 전에

@@ -24,43 +24,16 @@ export interface NavSection {
 
 export const NAV_SECTIONS: NavSection[] = [
   {
-    // 2026-09-14 — 별도 대시보드(추상적인 집계 막대그래프)를 걷어내고 검토/안건
-    // 보드(실제 클릭 가능한 딜 카드 + HOLD·에이징 상세)를 단일 랜딩 화면으로
-    // 통합했다. "/"는 이제 /deals로 가는 리다이렉트 스텁(app/page.tsx)이라
-    // 메뉴 항목이 필요 없다 — NON_MENU_ROUTES에만 등록한다.
-    label: "탐색",
+    // Wave U-1 (design §3.2): layer 1 of the two-layer IA. The legacy
+    // "단계 화면(기존)" group is gone — stage routes stay as routes (ADR-0120
+    // compatibility, see NON_MENU_ROUTES) but are reached through the deal
+    // stage stepper, not the sidebar. The deal-scoped "Overview" entry is
+    // rendered dynamically by AppShell (it needs the current deal id).
+    label: "업무",
     items: [
+      { href: "/inbox", label: "결정 대기함" },
       { href: "/deals", label: "검토/안건 보드" },
-    ],
-  },
-  {
-    // 단계 화면(기존) — Wave 2에서 /deals/{id}/s1..s12 워크스페이스 탭으로
-    // 통합된다 (ADR-0120). 통합 전까지 기존 화면이 내비에서 사라지지 않는다.
-    label: "단계 화면(기존)",
-    items: [
-      { href: "/market", label: "S1 시장분석" },
-      { href: "/opportunities", label: "S2 기회 발굴" },
-      { href: "/our-company", label: "S3 그룹/계열사 분석" },
-      { href: "/synergy", label: "S3 시너지·전략적 적합성" },
-      // S4 진출방식 결정 — S4 라우트 결정으로 그린필드/브라운필드가 갈리는
-      // 구간 (S4 → S5 그린필드 / S6·S7 브라운필드). S5/S6은 더 이상 S4의
-      // 하위 메뉴가 아니라 동등한 레벨의 항목으로 노출한다.
-      { href: "/route-decision", label: "S4 진출방식 결정" },
-      { href: "/greenfield", label: "S5 자체 진출" },
-      { href: "/brownfield", label: "S6/S7 대상발굴·선정" },
-      // S8~S12 — 프로젝트(project id)로 승격된 뒤에만 실제로 열리는 화면이라
-      // 정적 자식 링크는 /projects(선택 목록)로 보낸다. 프로젝트를 이미 열어
-      // 둔 상태라면 이 하위 메뉴가 그 프로젝트 id로 바로 열리는 S8~S12
-      // 링크로 동적 전환된다 (AppShell.tsx Sidebar 참고) — 그래서 여기서는
-      // 프로젝트 미지정 상태의 항목만 정의한다("진행 프로젝트"/"아카이브").
-      {
-        href: "/projects",
-        label: "프로젝트",
-        children: [
-          { href: "/projects", label: "진행 프로젝트" },
-          { href: "/projects/archives", label: "아카이브" },
-        ],
-      },
+      { href: "/projects/archives", label: "아카이브" },
     ],
   },
   {
@@ -70,6 +43,14 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/library", label: "문서 허브" },
       { href: "/glossary", label: "용어집" },
       { href: "/strategy", label: "R&BD 전략" },
+    ],
+  },
+  {
+    // Connected apps (ADR-0154) lives with the account/settings entries, not
+    // in the topbar.
+    label: "설정",
+    items: [
+      { href: "/settings/connected-apps", label: "연결된 앱" },
     ],
   },
 ];
@@ -97,14 +78,20 @@ export function menuHrefs(): string[] {
  *                                         sub-navigation
  */
 export const NON_MENU_ROUTES: string[] = [
-  // 검토용 정적 목업 — 실제 기능이 아니라 UX 재설계 검토안(직접 URL로만
-  // 접근). 승인/폐기가 정해지면 라우트 자체를 제거한다.
-  "/brownfield-mockup",
+  // Legacy stage routes (ADR-0120 compatibility): off the sidebar since
+  // Wave U-1, reached through the deal stage stepper (StageFrame).
+  "/market",
+  "/opportunities",
+  "/our-company",
+  "/synergy",
+  "/route-decision",
+  "/greenfield",
+  "/brownfield",
+  "/projects",
   "/login",
   "/register",
   "/password-change",
   "/oauth/authorize", // ADR-0154: OAuth consent for MCP connectors
-  "/settings/connected-apps", // ADR-0154: revoke MCP connector access (topbar link)
   "/proposals/[id]/confirm", // ADR-0154: human confirmation of an agent's decision proposal (deep link)
   "/agents",
   "/opportunities/[id]",
@@ -163,6 +150,7 @@ export const ADMIN_NAV: Array<{ href: string; label: string }> = [
   { href: "/admin/business-targets", label: "사업목표 기준" },
   { href: "/admin/adr", label: "ADR" },
   { href: "/admin/system-mode", label: "시스템 모드" },
+  { href: "/settings/connected-apps", label: "연결된 앱" },
 ];
 
 export function adminNavHrefs(): string[] {

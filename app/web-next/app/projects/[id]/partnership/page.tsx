@@ -3,10 +3,10 @@
 // 파트너 검토·JV (deal detail surface) — 파트너 후보(partner_candidate)와
 // 실사 지적사항(partner_dd_finding), 그리고 파트너별 JV 조건(jv_term)을
 // 한 화면에서 관리한다. /projects/[id] 하위 상세 화면으로 메뉴 등록
-// 없이 ProjectSubNav로 진입한다 (navigation.ts NON_MENU_ROUTES).
+// 없이 StageTabs로 진입한다 (navigation.ts NON_MENU_ROUTES).
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectSubNav } from "../../../../components/ProjectSubNav.tsx";
+import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -145,7 +145,7 @@ export default function PartnershipPage() {
 
   return (
     <main className="market-page">
-      <ProjectSubNav projectId={projectId} />
+      <StageTabs projectId={projectId} />
       <header className="mb-3">
         <h1 className="text-[1.05rem] font-semibold">파트너 검토·JV 조건</h1>
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mt-1">

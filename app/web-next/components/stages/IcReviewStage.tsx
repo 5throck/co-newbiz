@@ -1,13 +1,13 @@
 "use client";
 
 // S11 프로젝트 단계 본문 — ADR-0120 Wave 3 추출(/projects/[id]/ic-review 페이지와
-// /deals/[id]/s11 탭이 동일 컴포넌트를 소비한다). ProjectSubNav·StageFrame이
+// /deals/[id]/s11 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
 import { useCallback, useEffect, useState } from "react";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
-import { ProjectSubNav } from "../ProjectSubNav.tsx";
+import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
@@ -159,7 +159,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
 
   return (
 <>
-      <ProjectSubNav projectId={projectId} />
+      <StageTabs projectId={projectId} />
       <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S11")} />
       <StageFrame stageId="S11" heading="S11 투자심사·실행 — IC 패키지 · Entity/Group IC · 설립 실행">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-2">
