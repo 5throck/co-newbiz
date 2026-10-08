@@ -9,8 +9,8 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
-import { latestGateDecisions } from "../../../../../lib/process-flow.ts";
-import { badRequest, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
+import { gateGoPrerequisiteGaps, latestGateDecisions, type GateId } from "../../../../../lib/process-flow.ts";
+import { badRequest, fail, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
 const GATES = new Set(["fs", "dd", "entity_ic", "group_ic"]);
@@ -70,6 +70,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return unprocessable("learning_capture_required", "KILL 결정에는 learning_capture(학습 포착)가 필요합니다 — 중단 사유에서 얻은 교훈이 회수되어야 합니다 (ADR-0152).");
   }
   const db = getDb();
+  // Wave C-3 (pilot-009 D-4): GO needs the gate's stage prerequisites complete.
+  // HOLD/KILL stay allowed anytime. New writes only — existing rows are untouched.
+  if (body.decision === "go") {
+    const gaps = gateGoPrerequisiteGaps({ type: "project", id }, body.gate as GateId);
+    if (gaps.length > 0) {
+      return fail(409, "gate_prerequisites_incomplete", `GO 불가 — ${body.gate} 진행의 선행 단계가 완료되지 않았습니다: ${gaps.join("; ")}. HOLD 또는 KILL은 언제든 기록할 수 있습니다.`);
+    }
+  }
   const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
     return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");

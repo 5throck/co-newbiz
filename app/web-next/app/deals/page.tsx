@@ -204,6 +204,7 @@ function DealsBoard() {
         <h1>검토/안건 보드</h1>
         <span className="ml-auto">
           <PrimaryAction inline href="/market" label="＋ 새 검토 시작 (시장분석부터)" />
+          <Link href="/opportunities?known_target=1" className="btn-ghost ml-2">알려진 대상으로 시작</Link>
         </span>
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">

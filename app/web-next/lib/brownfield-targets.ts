@@ -209,3 +209,15 @@ export function targetIdsForCompany(db: Database, companyId: string): string[] {
 // 사전 검토(chk-target-screening) 추천안 도출 헬퍼(KNOCKOUT_IDS,
 // precheckRecommendation)는 클라이언트에서도 쓰므로 lib/brownfield-precheck.ts
 // (순수 함수, DB import 없음)에 둔다.
+
+/**
+ * Wave C-3 (pilot-009 D-5 / discrepancy 4.1): a deal can start from a named
+ * ("known") target. The target is pre-filled into S6 (Long List) with this
+ * marker in universe_note so screens can guide the user through S1–S4 with the
+ * target as context. No predicate is skipped — S1–S4 must still be completed.
+ */
+export const KNOWN_TARGET_NOTE_PREFIX = "[알려진 대상]";
+
+export function isKnownTargetNote(note: string | null | undefined): boolean {
+  return (note ?? "").startsWith(KNOWN_TARGET_NOTE_PREFIX);
+}

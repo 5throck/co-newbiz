@@ -39,6 +39,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     market_size_krw_m?: number; growth_rate?: number;
     attractiveness_score?: number | null; synergy_score?: number | null;
     status?: string; rationale?: string;
+    industry_id?: string | null;
   } | null;
   if (!body) return badRequest("invalid_request", "body required.");
   if (body.status === "dropped") {
@@ -66,6 +67,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     .query("SELECT id, status FROM opportunity WHERE id = ?")
     .get(id) as { id: string; status: string } | null;
   if (!existing) return notFound();
+  // Wave C-3 (D-3): link (or, with null/"", unlink) the analysed S1 industry.
+  const industryProvided = body.industry_id !== undefined;
+  const industryId = body.industry_id?.trim() || null;
+  if (industryId && !db.query("SELECT id FROM md_industry WHERE id = ?").get(industryId)) {
+    return badRequest("invalid_industry", "industry_id가 md_industry에 존재하지 않습니다.");
+  }
 
   const now = new Date().toISOString();
   const terminal = body.status === "selected" || body.status === "dropped";
@@ -80,12 +87,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
        synergy_score = COALESCE(?, synergy_score),
        status = COALESCE(?, status),
        rationale = COALESCE(?, rationale),
+       industry_id = CASE WHEN ? THEN ? ELSE industry_id END,
        decided_by = CASE WHEN ? THEN ? ELSE decided_by END,
        decided_at = CASE WHEN ? THEN ? ELSE decided_at END
      WHERE id = ?`,
     [body.name?.trim() ?? null, body.market_scope?.trim() ?? null, body.value_chain_node?.trim() ?? null,
       body.market_size_krw_m ?? null, body.growth_rate ?? null,
       attractiveness ?? null, synergy ?? null, body.status ?? null, body.rationale?.trim() ?? null,
+      industryProvided ? 1 : 0, industryId,
       terminal ? 1 : 0, ctx.userId, terminal ? 1 : 0, now, id],
   );
   appendAudit(db, {

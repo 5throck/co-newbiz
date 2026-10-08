@@ -15,6 +15,7 @@ import { SectionToolbar } from "../../../components/layout.tsx";
 import { ScenarioPremises, SketchCanvas } from "../../../components/SketchCanvas.tsx";
 import { ClosureModal } from "../../../components/ClosureModal.tsx";
 import { PromotionPanel } from "../../../components/PromotionPanel.tsx";
+import { KnownTargetGuide } from "../../../components/KnownTargetGuide.tsx";
 
 interface OpportunityRow {
   id: string; project_id: string | null; name: string; market_scope: string | null; value_chain_node: string | null;
@@ -208,6 +209,7 @@ export function OpportunityDetail() {
         />
       )}
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      <KnownTargetGuide opportunityId={id} />
 
       {/* 기회 개요 + 매력도 평가 */}
       <section aria-label="기회 개요" className="market-section">

@@ -3,6 +3,7 @@
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { segmentsOf } from "../../../lib/market-sizing.ts";
 import { StepSection } from "./MarketReport.tsx";
+import { CompetitiveInputForm } from "./CompetitiveInputForm.tsx";
 import { AnchorChart, RegionWeightDonut, SegmentMixStack, RegionTable } from "./SizingCharts.tsx";
 import type { SizingReportState } from "./useSizingReport.ts";
 
@@ -44,7 +45,7 @@ export function SizingOverviewTab({ ctx }: { ctx: SizingReportState }) {
 }
 
 export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {
-  const { tab, matrix } = ctx;
+  const { tab, matrix, canCurate, analysisId } = ctx;
   return (
     <>{tab === "competitive" && (
         <section aria-label="경쟁 구조" className="market-section sizing-step">
@@ -112,9 +113,10 @@ export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {
         )}
           {!matrix.competitive && (
             <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
-              경쟁 구조 데이터가 없습니다 — 재분석 시 1단계에서 도출됩니다.
+              경쟁 구조 데이터가 없습니다 — 재분석 시 1단계에서 도출되며, 공시된 시장 구조는 아래에서 직접 입력할 수 있습니다.
             </p>
           )}
+          {canCurate && analysisId && <CompetitiveInputForm analysisId={analysisId} />}
           <p className="sizing-note-list mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             점유율·순위는 정성 추정(공시 대조 전) — 정밀 수치는 S2~S3 이후 공시 교차검증으로 보강됩니다.
           </p>

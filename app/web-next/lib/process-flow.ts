@@ -951,3 +951,40 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     projectId,
   };
 }
+
+/**
+ * Wave C-3 (pilot-009 D-4): the stages that must be complete before a GO can be
+ * recorded on a gate. HOLD and KILL are never gated. Only NEW writes are
+ * checked; rows already in the ledger are untouched (grandfathered).
+ *  - screening        S1–S3
+ *  - pre_fs           S4 + S5 (greenfield) | S6 (brownfield)
+ *  - target_screening brownfield track + S7
+ *  - fs / dd          S8 / S9
+ *  - entity_ic / group_ic  S10 (S11 itself is completed BY the IC approvals)
+ */
+export function gateGoPrerequisiteGaps(entity: ProcessEntity, gate: GateId): string[] {
+  const ev = evaluateProcess(entity);
+  const stageName = (id: StageId) => `${id} ${STAGES.find((s) => s.id === id)?.name ?? ""}`.trim();
+  const gaps: string[] = [];
+  const need = (ids: StageId[]) => {
+    for (const id of ids) if (!ev.completedStages.includes(id)) gaps.push(`${stageName(id)} 미완료`);
+  };
+  if (ev.terminated) return ["프로세스가 KILL로 종료되었습니다"];
+  switch (gate) {
+    case "screening": need(["S1", "S2", "S3"]); break;
+    case "pre_fs":
+      need(["S4"]);
+      if (ev.track === "greenfield") need(["S5"]);
+      else if (ev.track === "brownfield") need(["S6"]);
+      break;
+    case "target_screening":
+      if (ev.track !== "brownfield") gaps.push("brownfield 트랙 결정(S4 route_decision)이 필요합니다");
+      need(["S7"]);
+      break;
+    case "fs": need(["S8"]); break;
+    case "dd": need(["S8", "S9"]); break;
+    case "entity_ic":
+    case "group_ic": need(["S8", "S9", "S10"]); break;
+  }
+  return gaps;
+}

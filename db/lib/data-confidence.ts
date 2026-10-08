@@ -16,6 +16,8 @@
 //               B  anything else (llm-estimate / unknown) — the existing
 //                  ragCapRecommendation principle: an unverified LLM estimate
 //                  caps at Amber.
+//               C  offline / failed-LLM deterministic synthesis (Wave C-3, pilot-009
+//                  D-2): the matrix is placeholder data, never better than C.
 //   grade     = the WORSE of hop grade and source cap.
 import type { Database } from "bun:sqlite";
 
@@ -54,7 +56,12 @@ export function worseGrade(a: ConfidenceGrade, b: ConfidenceGrade): ConfidenceGr
  * Mirrors migration 0125's backfill exactly (same WHERE, same cut lines) —
  * a parity test in tests/unit/wave-f5-rag.test.ts asserts the two agree.
  */
-export function deriveDataConfidence(db: Database, industryId: string, provenance: string | null | undefined): DataConfidence {
+export function deriveDataConfidence(
+  db: Database,
+  industryId: string,
+  provenance: string | null | undefined,
+  opts: { synthesized?: boolean } = {},
+): DataConfidence {
   const hops = db
     .query(
       `SELECT COUNT(*) AS c,
@@ -68,13 +75,13 @@ export function deriveDataConfidence(db: Database, industryId: string, provenanc
 
   // Absent provenance caps at B (the SQL treats it as 'llm-estimate') —
   // never guess A on unknown.
-  const cap = provenanceCap(provenance);
+  const cap: ConfidenceGrade = opts.synthesized ? "C" : provenanceCap(provenance);
   const stat = hops.stat ?? 0;
   const hopGrade = gradeFromHops(stat, hops.min_r2);
   const grade = worseGrade(hopGrade, cap);
   return {
     grade,
     chainHops: hops.c,
-    basis: `proxy-chain hops=${stat} statistical / min r2 ${hops.min_r2 ?? "n/a"} -> hop grade ${hopGrade}; provenance ${provenance ?? "unknown"} -> cap ${cap}`,
+    basis: `proxy-chain hops=${stat} statistical / min r2 ${hops.min_r2 ?? "n/a"} -> hop grade ${hopGrade}; provenance ${provenance ?? "unknown"} -> cap ${cap}${opts.synthesized ? " (deterministic synthesis, not a real estimate)" : ""}`,
   };
 }

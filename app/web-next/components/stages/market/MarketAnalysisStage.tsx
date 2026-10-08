@@ -105,7 +105,7 @@ function MarketPrimaryAction({ ctx }: { ctx: ReturnType<typeof useMarketData> & 
   if (!showNewForm || !newName.trim()) {
     return (
       <PrimaryAction
-        label="입력 완료하기"
+        label="새 산업 분석 입력"
         onClick={() => {
           setShowNewForm(true);
           setTimeout(() => document.getElementById("market-new-name")?.focus(), 0);

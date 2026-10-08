@@ -21,6 +21,8 @@ import { api } from "../lib/api.ts";
 import { PageState } from "./ui.tsx";
 import { SectionToolbar } from "./layout.tsx";
 import { MarketAnalysisStage } from "./stages/MarketAnalysisStage.tsx";
+import { OpportunityFunnelStage } from "./stages/OpportunityFunnelStage.tsx";
+import { StageFrame } from "./StageFrame.tsx";
 
 export type FlatRouteKey = "market" | "opportunities" | "synergy" | "greenfield" | "brownfield";
 
@@ -89,6 +91,9 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
   const searchParams = useSearchParams();
   const stage = FLAT_ROUTE_STAGE[route];
   const carrierId = searchParams.get("opportunity") ?? searchParams.get("deal");
+  // Wave C-3 (D-5): "start from a known target" lands on the S2 funnel itself —
+  // the carrier is created there, so it must not be redirected to an existing deal.
+  const startsKnownTarget = route === "opportunities" && !carrierId && searchParams.get("known_target") === "1";
   const [rows, setRows] = useState<CarrierRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const firstRowRef = useRef<HTMLAnchorElement | null>(null);
@@ -122,8 +127,8 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
 
   // Rule 3 — exactly one carrier: redirect (client-side router.replace).
   useEffect(() => {
-    if (rows !== null && rows.length === 1) router.replace(redirectTarget(rows[0].id));
-  }, [rows, redirectTarget, router]);
+    if (rows !== null && rows.length === 1 && !startsKnownTarget) router.replace(redirectTarget(rows[0].id));
+  }, [rows, redirectTarget, router, startsKnownTarget]);
 
   // Rule 4 — picker fallback: keyboard focus lands on the first row.
   useEffect(() => {
@@ -142,7 +147,19 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
     );
   }
 
-  if (carrierId || (rows !== null && rows.length === 1)) {
+  // Same dead loop for S2 (pilot-009 C-3 re-run): the funnel's registration form
+  // is the only way to create the first carrier, so with no deal (or when the
+  // person asked to start from a known target) render the funnel itself.
+  if (route === "opportunities" && !carrierId && !error && rows !== null && (rows.length === 0 || startsKnownTarget)) {
+    return (
+      <main>
+        <StageFrame stageId="S2">{SUMMARY_BY_ROUTE.opportunities}</StageFrame>
+        <OpportunityFunnelStage />
+      </main>
+    );
+  }
+
+  if (carrierId || (rows !== null && rows.length === 1 && !startsKnownTarget)) {
     return (
       <main>
         <PageState state="loading" />

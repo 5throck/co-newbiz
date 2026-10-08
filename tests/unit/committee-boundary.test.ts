@@ -142,7 +142,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     const confirm = await req(`/api/opportunities/${oppId}/gate-decisions`, {
       method: "POST",
       headers: { cookie: analystCookie },
-      body: JSON.stringify({ gate: "pre_fs", decision: "go", rationale: "위원회 PROPOSAL 확인 후 인적 결재", gate_evaluation_id: evaluationId }),
+      body: JSON.stringify({ gate: "pre_fs", decision: "hold", missing_artifacts: ["S4 route decision"], rationale: "위원회 PROPOSAL 확인 후 인적 결재", gate_evaluation_id: evaluationId }),
     });
     expect(confirm.status).toBe(201);
 
