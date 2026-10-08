@@ -9,6 +9,7 @@ import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { upsertChecklistState, STATE_STATUSES, type ChecklistStateStatus } from "../../../../../../lib/dd-checklist-tailor.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { recordHumanFinalForStageArtifacts } from "../../../../../../lib/review/human-final.ts";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -36,6 +37,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     evidenceRef: body.evidence_ref,
     waiverId: body.waiver_id,
   });
+  // ADR-0153: the human's checklist judgment is the human_final review of the S9 artifact.
+  recordHumanFinalForStageArtifacts("S9", id, ctx.userId, "dd_checklist_judgment");
   if (!result) return notFound();
   return ok(result, 200);
 }

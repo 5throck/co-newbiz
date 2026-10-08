@@ -8,6 +8,7 @@ import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { NotFoundError, adoptBusinessCase } from "../../../../../../lib/business-case.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { recordHumanFinalForStageArtifacts } from "../../../../../../lib/review/human-final.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -20,6 +21,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!body?.model_id) return badRequest("invalid_request", "model_id는 필수입니다.");
   try {
     const adoption = adoptBusinessCase(id, body.model_id, ctx.userId);
+    // ADR-0153: the human's adoption IS the human_final review of the S8 artifacts.
+    recordHumanFinalForStageArtifacts("S8", id, ctx.userId, "s8_case_adopt");
     return ok(adoption, 201);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";

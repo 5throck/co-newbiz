@@ -17,6 +17,8 @@ import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { SectionToolbar } from "../layout.tsx";
 import { CommitteePanel } from "../CommitteePanel.tsx";
 import { Tabs } from "../ui.tsx";
+import { ReviewBuckets } from "../ReviewBuckets.tsx";
+import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { useConfirm } from "../crud.tsx";
 
 // flow.spec v2.4.0 — 결정론 어드바이저(ADR-0104) + S1 시장·경쟁·역량 근거.
@@ -372,6 +374,7 @@ export function RouteDecisionStage({ opportunityId, rationaleParam }: { opportun
 
   return (
     <>
+      <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S4")} />
       {/* ── 진출방식 추천 — 탭 밖 상시 노출 (2026-09-14 재설계). 예전엔 이 카드와
           "의사결정" 탭 안의 룰 기반 추천이 서로 다른 표면에서 겹치는 얘기를 했다.
           이제 신호(항상 있음) → AI 서술(선택, 신호를 풀어씀) 하나의 위계로 통합한다.

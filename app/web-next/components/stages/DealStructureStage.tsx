@@ -8,6 +8,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ReviewBuckets } from "../ReviewBuckets.tsx";
+import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { ProjectSubNav } from "../ProjectSubNav.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -183,6 +185,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   return (
 <>
       <ProjectSubNav projectId={projectId} />
+      <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S10")} />
       <StageFrame stageId="S10" heading="S10 투자구조 설계 — 비히클·4축 검토·자금조달">
         <p className="text-[0.82rem] text-[color:var(--muted-fg)] mb-3">
           비히클(SPC 포함)과 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,

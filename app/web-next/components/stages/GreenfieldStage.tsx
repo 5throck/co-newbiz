@@ -12,6 +12,8 @@
 //   capability_gap_json)가 유일한 출처다. S5는 그 레지스터를 읽기 전용으로
 //   보여주고 보유 수준·해소 방식·비고만 확장 편집한다.
 import { useCallback, useEffect, useState } from "react";
+import { ReviewBuckets } from "../ReviewBuckets.tsx";
+import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
@@ -169,6 +171,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   return (
     <>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S5")} />
 
       <section aria-label="자체 진출" className="market-section">
         <SectionToolbar

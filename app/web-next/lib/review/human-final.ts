@@ -11,6 +11,7 @@ import { getDb } from "../../../../db/client.ts";
 import { findReview, insertHumanFinal, type ReviewItem } from "../../../../db/repositories/review.repository.ts";
 import { AGENT_KEYS as AGENT_IDS } from "../agent-registry.generated.ts";
 import { buildGateArtifact, isReviewGate, type GateArtifact, type ReviewGate } from "./gate-artifacts.ts";
+import { buildStageArtifactsForStage, type ReviewArtifact, type StageArtifact } from "./stage-artifacts.ts";
 
 /** Capture the artifact exactly as the human saw it — call BEFORE the decision insert. */
 export function captureReviewSnapshot(gate: string, entityId: string): GateArtifact | null {
@@ -24,6 +25,26 @@ export function captureReviewSnapshot(gate: string, entityId: string): GateArtif
 }
 
 export function recordHumanFinalReview(snapshot: GateArtifact | null, userId: string, result: string): void {
+  writeHumanFinal(snapshot, userId, result);
+}
+
+/**
+ * F-3/F-4: human_final for STAGE artifacts, written ONLY as a side effect of
+ * an existing human record/approval POST (adopt, checklist judgment, charter
+ * confirm, route decision, transition decision). Never called from AI paths.
+ */
+export function recordHumanFinalForStageArtifacts(stageId: string, entityId: string, userId: string, result: string): void {
+  let snapshots: StageArtifact[];
+  try {
+    snapshots = buildStageArtifactsForStage(stageId as StageArtifact["stageId"], entityId);
+  } catch (err) {
+    console.error("[review] stage artifact snapshot failed; human record proceeds without human_final rows:", err);
+    return;
+  }
+  for (const snapshot of snapshots) writeHumanFinal(snapshot, userId, result);
+}
+
+function writeHumanFinal(snapshot: ReviewArtifact | null, userId: string, result: string): void {
   if (!snapshot) return;
   try {
     const db = getDb();

@@ -10,6 +10,7 @@ import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
+import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 
@@ -315,7 +316,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
         )}
 
         {/* ── 전환 결정 장부 ─────────────────────────────────────────── */}
-        <ReviewBuckets entityType="project" entityId={projectId} gates={["transition"]} />
+        <ReviewBuckets entityType="project" entityId={projectId} gates={["transition"]} artifacts={stageArtifactTabs("S12")} />
         <section className="market-section sizing-step mt-3" aria-label="포트폴리오 전환 결정">
           <h3 className="sizing-step-title text-[0.95rem]">
             <span className="sizing-step-badge">⚖️</span> 포트폴리오 전환 결정 — venture-portfolio-IC 인적 결정 장부

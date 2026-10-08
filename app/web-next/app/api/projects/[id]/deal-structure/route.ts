@@ -20,6 +20,7 @@ import {
   removeFinancingEntry,
 } from "../../../../../../../db/repositories/financing-plan.repository.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
+import { recordHumanFinalForStageArtifacts } from "../../../../../lib/review/human-final.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
 interface DealStructureView {
@@ -83,6 +84,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         return badRequest("invalid_request", "hypothesis_id와 artifact_ref(deal_structure_review 아티팩트 참조)는 필수입니다.");
       }
       const row = completeFourAxisReview({ hypothesis_id: hypothesisId, reviewed_by: ctx.userId, artifact_ref: artifactRef.trim() }, db);
+      // ADR-0153: the human's four-axis completion (reviewed_by recorded) is the
+      // human_final review of the S10 artifacts.
+      recordHumanFinalForStageArtifacts("S10", id, ctx.userId, "deal_structure_four_axis");
       return ok(row, 200);
     }
     if (action === "add_financing_entry") {

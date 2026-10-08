@@ -10,6 +10,7 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { route } from "../../../../../lib/route.ts";
+import { recordHumanFinalForStageArtifacts } from "../../../../../lib/review/human-final.ts";
 
 const TRACKS = ["greenfield", "brownfield"] as const;
 const GF_SUB = ["existing_business_rbd", "intra_venture"] as const;
@@ -170,6 +171,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     );
   }
   appendAudit(db, { actor: ctx.userId, action: "route_decision.create", target: id, now });
+  // ADR-0153: the human's route decision is the human_final review of the S4 artifacts.
+  recordHumanFinalForStageArtifacts("S4", id, ctx.userId, "route_decision");
 
   return ok({
     id: decisionId, track, sub_track: subTrack, rationale, decided_at: now,

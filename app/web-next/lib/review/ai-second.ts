@@ -24,7 +24,8 @@ import {
 } from "../../../../db/repositories/review.repository.ts";
 import { complete, getProviderConfig, isLlmConfigured, type LlmMessage } from "../llm.ts";
 import { selectReviewer } from "./domains.ts";
-import { canonicalJson, type GateArtifact } from "./gate-artifacts.ts";
+import { canonicalJson } from "./gate-artifacts.ts";
+import type { ReviewArtifact } from "./stage-artifacts.ts";
 import { hasStructuralGaps } from "./ai-first.ts";
 import { Ai2ndOutputSchema, type Ai2ndOutput } from "./schema.ts";
 
@@ -51,7 +52,7 @@ export const defaultAi2ndDeps: Ai2ndDeps = {
 };
 
 export interface Ai2ndRequest {
-  artifact: GateArtifact;
+  artifact: ReviewArtifact;
   ai1stBuckets: ReviewBuckets;
   userId: string;
   db?: Database;
@@ -76,7 +77,7 @@ const SYSTEM_PROMPT =
   'Each item is {"claim": string, "reason": string, "evidence_ref": string (optional)}. Use only the artifact provided; do not invent facts.';
 
 export function buildAi2ndMessages(
-  artifact: GateArtifact,
+  artifact: ReviewArtifact,
   reviewerAgent: string,
   reviewerDomain: string,
   authorDomain: string,
