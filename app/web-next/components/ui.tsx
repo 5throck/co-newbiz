@@ -7,6 +7,8 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useAuth } from "../lib/auth-client.tsx";
+import { VIEWER_READONLY_TEXT } from "../lib/labels.ts";
 
 /* ── Button — btn-primary (ONE per screen/section) / btn-ghost / btn-danger ── */
 
@@ -68,12 +70,18 @@ export interface PrimaryActionProps {
   disabledReason?: string;
   /** Render in place instead of the header slot (screens without StageFrame). */
   inline?: boolean;
+  /** Reads or navigates only (no write): stays enabled for the read-only viewer role. */
+  readOnly?: boolean;
 }
 
-export function PrimaryAction({ label, onClick, href, form, disabled, disabledReason, inline }: PrimaryActionProps) {
+export function PrimaryAction({ label, onClick, href, form, disabled, disabledReason: reasonIn, inline, readOnly }: PrimaryActionProps) {
   const slot = useSyncExternalStore(subscribePrimarySlot, () => primarySlotEl, () => null);
   const reasonId = useId();
-  const blocked = !!disabled;
+  const { me } = useAuth();
+  // R2-C 9: a viewer sees the action but cannot use it, and is told why (the server rejects viewer writes too).
+  const viewerBlocked = me?.role === "viewer" && !readOnly;
+  const blocked = !!disabled || viewerBlocked;
+  const disabledReason = viewerBlocked ? VIEWER_READONLY_TEXT : reasonIn;
   const control = href && !blocked ? (
     <Link href={href} className="btn-primary">{label}</Link>
   ) : (
@@ -206,6 +214,17 @@ export function Tabs({
   );
 }
 
+/* ── DevRef — ADR/spec references live in a collapsed developer disclosure, never in reader-facing copy (R2-C 8) ── */
+
+export function DevRef({ refs }: { refs: string }) {
+  return (
+    <details className="review-dev">
+      <summary>개발자 참고</summary>
+      <span>{refs}</span>
+    </details>
+  );
+}
+
 /* ── PageState — loading skeleton / empty / error (one surface, ADR-0121) ── */
 
 export function PageState({
@@ -225,7 +244,7 @@ export function PageState({
 }) {
   if (state === "loading") {
     return (
-      <div aria-busy="true" aria-label="불러오는 중">
+      <div role="status" aria-busy="true" aria-label="불러오는 중">
         <div className="skeleton" style={{ width: "45%" }} />
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="skeleton" style={{ width: `${88 - i * 12}%` }} />

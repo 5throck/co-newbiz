@@ -297,7 +297,7 @@ export function PromotionPanel({
                 {members.map((m) => (
                   <span key={m.userId} className="control-chip">
                     {m.displayName} · {ROLE_LABEL[m.projectRole]}
-                    <button type="button" aria-label={`${m.displayName} 제거`} onClick={() => removeMember(m.userId)} style={{ marginLeft: 6 }}>✕</button>
+                    <button type="button" className="btn-ghost btn-sm" aria-label={`${m.displayName} 제거`} onClick={() => removeMember(m.userId)} style={{ marginLeft: 6 }}>✕</button>
                   </span>
                 ))}
               </div>

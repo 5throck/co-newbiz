@@ -471,7 +471,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                   ),
                   source: <span className="status-chip status-info">{view.wacc.source}</span>,
                 },
-                { label: "Hurdle IRR", value: pct(view.hurdle_irr?.value) },
+                { label: "요구수익률(Hurdle IRR)", value: pct(view.hurdle_irr?.value) },
                 {
                   label: "WACC 적용 주체",
                   value: view.subject.subject === "promoter" ? "투자주체 (promoter)" : view.subject.subject === "target" ? "대상기업 (target)" : "신설법인 (project_newco)",
@@ -489,7 +489,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                       source: `= βu ${view.relevering.beta_unlevered.toFixed(2)} × (1 + (1−t) × D/E ${view.relevering.target_de.toFixed(2)})`,
                     }]
                   : []),
-                { label: "Run", value: view.wacc.run_id ?? "—" },
+                { label: "실행 번호", value: view.wacc.run_id ?? "—" },
                 { label: "As of", value: view.wacc.as_of ?? "—" },
               ]}
             />
@@ -620,7 +620,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
             <form className="sizing-step grid gap-3 mt-0 rounded-tl-none" style={{ maxWidth: 460 }} onSubmit={submitDirect}>
               <h3 className="sizing-step-title">직접 입력</h3>
               <label className="grid gap-1 text-sm">WACC (비율)<input className="form-input" value={directWacc} onChange={(e) => setDirectWacc(e.target.value)} placeholder="0.095" /></label>
-              <label className="grid gap-1 text-sm">Hurdle IRR (선택)<input className="form-input" value={directHurdle} onChange={(e) => setDirectHurdle(e.target.value)} placeholder="0.15" /></label>
+              <label className="grid gap-1 text-sm">요구수익률(Hurdle IRR, 선택)<input className="form-input" value={directHurdle} onChange={(e) => setDirectHurdle(e.target.value)} placeholder="0.15" /></label>
               <label className="grid gap-1 text-sm">근거/승인 메모<textarea className="form-input" value={directRationale} onChange={(e) => setDirectRationale(e.target.value)} placeholder="Treasury 확인, IC 가이드라인 등" /></label>
               <label className="grid gap-1 text-sm">
                 WACC 적용 주체 (선택 — 미확정 시 트랙 기본값)
@@ -808,7 +808,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                 <label className="grid gap-1 text-sm">WACC (비율) — CAPM 계산값이 미리 채워짐
                   <input className="form-input" value={waccFinal} placeholder={computedWacc != null ? computedWacc.toFixed(4) : "0.095"} onChange={(e) => { setWaccFinal(e.target.value); setWaccTouched(true); }} />
                 </label>
-                <label className="grid gap-1 text-sm">Hurdle IRR (선택)
+                <label className="grid gap-1 text-sm">요구수익률(Hurdle IRR, 선택)
                   <input className="form-input" value={hurdle} placeholder="0.15" onChange={(e) => setHurdle(e.target.value)} />
                 </label>
               </div>
@@ -817,7 +817,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
               </label>
               {computedWacc != null && nOr(waccFinal) != null && (
                 mismatch ? (
-                  <p role="status" className="text-[color:var(--warning)] bg-[color:var(--warning-bg)] rounded-md px-3 py-2 text-[length:var(--fs-caption)] mt-2">
+                  <p role="status" className="text-[color:var(--amber-fg)] bg-[color:var(--warning-bg)] rounded-md px-3 py-2 text-[length:var(--fs-caption)] mt-2">
                     ⚠ 계산값 {pct(computedWacc)} ≠ 확정값 {pct(nOr(waccFinal))} — 차이 근거를 메모에 기재해야 합니다.
                   </p>
                 ) : (

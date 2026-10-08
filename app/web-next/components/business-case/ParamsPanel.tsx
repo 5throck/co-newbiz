@@ -237,7 +237,7 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
               ]}
             />
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-              모델: {latestSnapshot!.name} {latestSnapshot!.adopted ? "· 채택됨" : latestSnapshot!.recommended ? "· RECOMMENDED" : ""}
+              모델: {latestSnapshot!.name} {latestSnapshot!.adopted ? "· 채택됨" : latestSnapshot!.recommended ? "· 권고안" : ""}
             </p>
             <div className="table-scroll">
               <table className="data-table">

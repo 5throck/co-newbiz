@@ -36,7 +36,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
               <thead>
                 <tr>
                   <th scope="col">후보</th><th scope="col">DART</th>
-                  <th scope="col" title="재무·기술 평가(ADR-0139) 100점 가중 점수 — 충족 1점·부분충족 0.5점·미충족 0점을 가중평균, 예외(해당없음·예외)는 제외">재무·기술 평가</th>
+                  <th scope="col" title="재무·기술 평가 100점 가중 점수 — 충족 1점·부분충족 0.5점·미충족 0점을 가중평균, 예외(해당없음·예외)는 제외">재무·기술 평가</th>
                   <th scope="col" title="위 재무·기술 평가 종합 점수(financial·technical 평균) — Long List 잠정 순위(Short List rank와 별개)">잠정 순위</th>
                   <th scope="col">상태</th>
                   <th scope="col">제외 사유</th>

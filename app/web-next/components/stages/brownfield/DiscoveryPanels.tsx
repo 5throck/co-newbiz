@@ -14,7 +14,7 @@ export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
               <button type="button" className="btn-ghost btn-sm" onClick={() => setDiscoveryPanel(null)} disabled={webBusy} aria-label="닫기">닫기</button>
             </div>
             <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              실시간 웹 검색으로 근거를 찾고, 그 근거에 등장하는 회사만 후보로 제안합니다 (ADR-0118 §5 — 근거 없는
+              실시간 웹 검색으로 근거를 찾고, 그 근거에 등장하는 회사만 후보로 제안합니다 (근거 없는
               회사명은 만들지 않습니다). 검색을 쓸 수 없으면 LLM 자체 지식 기반 미검증 제안으로 대체됩니다.
               등록은 항목별 "Long List에 등록" 클릭으로만 이뤄집니다.
             </p>

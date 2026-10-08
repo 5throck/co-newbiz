@@ -19,6 +19,7 @@ import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
 import { PrimaryAction } from "../ui.tsx";
+import { isDegeneratePct, NOT_COMPUTABLE_TEXT, SYNTHETIC_BADGE_TEXT } from "../../lib/synthetic-value.ts";
 
 interface OpportunityRow {
   id: string;
@@ -53,6 +54,7 @@ interface SizingInsight {
   industry_name: string;
   completed_at: string | null;
   bottom_up_cagr_pct: number | null;
+  synthetic?: boolean;
   escalated_cagr_pct: number | null;
   external_forecast: {
     source_label: string;
@@ -382,7 +384,8 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
               >
                 <span className="font-semibold">{s.industry_name}</span>
                 <span className="sizing-chip-meta">
-                  CAGR {s.bottom_up_cagr_pct !== null ? `${s.bottom_up_cagr_pct}%` : "—"}
+                  CAGR {isDegeneratePct(s.bottom_up_cagr_pct) ? NOT_COMPUTABLE_TEXT : `${s.bottom_up_cagr_pct}%`}
+                  {s.synthetic && <span className="status-chip status-amber ml-1">{SYNTHETIC_BADGE_TEXT}</span>}
                   {s.escalated_cagr_pct !== null && <span title="에스컬레이션 조정 CAGR (외부 참조 × 0.85 — 사람 결정)"> · 에스컬레이션 {s.escalated_cagr_pct}%</span>}
                   {s.external_forecast?.gap_pct != null ? ` · 격차 ${s.external_forecast.gap_pct > 0 ? "+" : ""}${s.external_forecast.gap_pct}%` : ""}
                 </span>

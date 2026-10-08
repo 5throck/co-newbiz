@@ -4,6 +4,7 @@
 // /deals/[id]/s11 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
+import { DECISION_LABEL, GATE_LABEL } from "../../lib/labels.ts";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
@@ -309,7 +310,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                 <ul className="sizing-note-list" aria-label="누락 산출물 예외 근거">
                   {overrides.map((h) => (
                     <li key={h.id}>
-                      <strong>{h.gate === "entity_ic" ? "Entity IC" : "Group IC"} {h.decision.toUpperCase()}</strong> - {h.decided_by} · {h.decided_at.slice(0, 10)}
+                      <strong>{GATE_LABEL[h.gate] ?? h.gate} {DECISION_LABEL[h.decision] ?? h.decision}</strong> - {h.decided_by} · {h.decided_at.slice(0, 10)}
                       <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">누락: {h.gap_override!.items.join("; ")}</span>
                       <span className="block text-[length:var(--fs-caption)]">근거: {h.gap_override!.rationale}</span>
                     </li>

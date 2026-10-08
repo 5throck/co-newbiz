@@ -48,7 +48,6 @@ export function SourceTooltip({
       <button
         type="button"
         className="source-figure"
-        aria-label="수치 출처 보기"
         aria-describedby={shown ? popoverId : undefined}
         aria-expanded={shown}
         onMouseEnter={() => setOpen(true)}
@@ -64,6 +63,7 @@ export function SourceTooltip({
         }}
       >
         {children}
+        <span className="sr-only"> (수치 출처 보기)</span>
       </button>
       {shown && (
         <span role="tooltip" id={popoverId} className="source-popover">

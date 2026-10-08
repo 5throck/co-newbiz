@@ -15,7 +15,7 @@ export default function ProjectWaccPage() {
   return (
     <main className="market-page">
       <StageTabs projectId={projectId} />
-      <StageFrame stageId="S8" heading="WACC 입력 세션 — FS 진행 할인율 확정">
+      <StageFrame stageId="S8" heading="WACC 입력 세션 — 타당성 분석(FS) 진행 할인율 확정">
         <WaccPanel projectId={projectId} />
       </StageFrame>
     </main>

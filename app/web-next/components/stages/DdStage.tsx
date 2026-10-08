@@ -4,6 +4,7 @@
 // /deals/[id]/s9 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
+import { DD_DOMAIN_LABEL } from "../../lib/labels.ts";
 import { useCallback, useEffect, useState } from "react";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
@@ -92,7 +93,7 @@ function stateMeta(status: string | undefined) {
   return STATE_META[status ?? "pending"] ?? { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
 }
 
-const DOMAIN_LABEL: Record<string, string> = { commercial: "Commercial", technical: "Technical", legal: "Legal" };
+const DOMAIN_LABEL: Record<string, string> = DD_DOMAIN_LABEL;
 
 export function DdStage({ projectId }: { projectId: string }) {
   const { me } = useAuth();

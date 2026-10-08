@@ -8,7 +8,7 @@
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { badRequest, notFound, ok, forbidden } from "../../../../../../lib/envelope.ts";
 import { recordHumanFinalForStageArtifacts } from "../../../../../../lib/review/human-final.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 
@@ -16,7 +16,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return badRequest("role_required", "차터 기준선 확정은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "차터 기준선 확정은 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const db = getDb();

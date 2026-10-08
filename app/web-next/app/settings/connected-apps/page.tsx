@@ -56,7 +56,7 @@ export default function ConnectedAppsPage() {
       <div className="page-header-row">
         <h1 id="apps-heading">연결된 앱</h1>
         <span className="ml-auto">
-          <PrimaryAction inline label="앱 연결하기" onClick={() => setGuideOpen((v) => !v)} />
+          <PrimaryAction readOnly inline label="앱 연결하기" onClick={() => setGuideOpen((v) => !v)} />
         </span>
       </div>
       {guideOpen && (

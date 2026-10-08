@@ -1,6 +1,7 @@
 "use client";
 
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
+import { formatPctOrNa } from "../../../lib/synthetic-value.ts";
 import { api } from "../../../lib/api.ts";
 import { StepSection } from "./MarketReport.tsx";
 import { CagrGroupedBar, ProjectionChart, ScenarioBandChart } from "./SizingCharts.tsx";
@@ -123,7 +124,7 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
                 <tr>
                   <td className="font-semibold">우리 추정 (성장률 연장)</td>
                   <td className="tabular-nums">${(matrix.externalForecast.ourMarketSize ?? 0).toFixed(2)}B</td>
-                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">바텀업 CAGR {(matrix.consistency.bottomUpCagr).toFixed(1)}% 적용</td>
+                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">바텀업 CAGR {formatPctOrNa(matrix.consistency.bottomUpCagr)} 적용</td>
                 </tr>
                 <tr>
                   <td className="font-semibold">외부 전망</td>

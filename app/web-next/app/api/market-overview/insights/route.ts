@@ -6,6 +6,7 @@ import { getDb } from "../../../../../../db/client.ts";
 import { resolveEffectiveCagr } from "../../../../lib/market-calibration.ts";
 import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { ok } from "../../../../lib/envelope.ts";
+import { isSyntheticSizing } from "../../../../lib/synthetic-value.ts";
 
 export async function GET(request: Request) {
   const auth = authenticate(request);
@@ -41,8 +42,11 @@ export async function GET(request: Request) {
       calibration?: { triggered?: boolean; ourCagrPct?: number; externalCagrPct?: number | null; gapPct?: number | null; previousGapPct?: number | null; appliedDrivers?: string[] };
     };
     let matrix: MatrixShape | null = null;
+    let synthetic = false;
     try {
-      matrix = (JSON.parse(r.payload) as { matrix?: MatrixShape }).matrix ?? null;
+      const parsed = JSON.parse(r.payload) as { matrix?: MatrixShape; stepSummaries?: Array<{ source?: string }> };
+      matrix = parsed.matrix ?? null;
+      synthetic = isSyntheticSizing(parsed.stepSummaries);
     } catch {
       matrix = null;
     }
@@ -56,6 +60,7 @@ export async function GET(request: Request) {
       completed_at: r.completed_at,
       version_no: r.version_no,
       bottom_up_cagr_pct: bottomUp,
+      synthetic,
       escalated_cagr_pct: (() => {
         const eff = resolveEffectiveCagr(db, r.industry_id);
         return eff?.source === "escalated" ? eff.cagrPct : null;

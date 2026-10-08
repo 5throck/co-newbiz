@@ -124,6 +124,7 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
                       {!busy && canCurate && (
                         <button
                           type="button"
+                          className="btn-ghost btn-sm"
                           title={a.target_type ? "같은 분석 행을 재사용해 새 버전으로 재실행합니다" : "기존 별도 등록(legacy) 분석은 재실행할 수 없습니다 — 레지스트리 대상 새 분석을 생성하세요"}
                           onClick={(e) => { e.stopPropagation(); void rerun(a, { stayOnList: true }); }}
                         >

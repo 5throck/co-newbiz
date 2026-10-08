@@ -7,6 +7,7 @@
 // 미검증 클라이언트는 텍스트 배지로 표시한다(색상만으로 구분하지 않음).
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../../../lib/api.ts";
+import Link from "next/link";
 import { Button, PageState } from "../../../components/ui.tsx";
 
 interface ConsentInfo {
@@ -67,19 +68,32 @@ export default function OAuthAuthorizePage() {
   }
 
   const blocked = info?.scopes?.some((s) => !s.allowed) ?? false;
+  // R2-C 10: a missing or invalid request is an error state, never a consent screen.
+  const failed = !!error || (info !== null && !info.valid);
 
   return (
     <main aria-labelledby="consent-heading">
       <h1 id="consent-heading" ref={headingRef} tabIndex={-1}>
-        외부 앱 연결 허용
+        {failed ? "연결 요청을 확인할 수 없습니다" : "외부 앱 연결 허용"}
       </h1>
       <p aria-live="polite" className="sr-only">{status}</p>
       {!info && !error && <PageState state="loading" />}
-      {error && <PageState state="error" errorText={error} />}
+      {error && (
+        <section aria-labelledby="invalid-heading">
+          <h2 id="invalid-heading">요청을 처리할 수 없습니다</h2>
+          <p role="alert">연결 요청 정보가 없거나 올바르지 않아 아무 권한도 허용하지 않았습니다. 연결하려는 앱에서 연결을 처음부터 다시 시작하세요.</p>
+          <details className="review-dev"><summary>개발자 참고</summary><span>{error}</span></details>
+          <div className="page-header-actions">
+            <Link href="/settings/connected-apps" className="btn-primary">연결된 앱 보기</Link>
+            <Link href="/deals" className="btn-ghost">검토/안건 보드로 이동</Link>
+          </div>
+        </section>
+      )}
       {info && !info.valid && (
         <section aria-labelledby="invalid-heading">
           <h2 id="invalid-heading">요청을 처리할 수 없습니다</h2>
-          <p role="alert">{info.error_description}</p>
+          <p role="alert">연결 요청이 올바르지 않아 아무 권한도 허용하지 않았습니다.</p>
+          {info.error_description && <details className="review-dev"><summary>개발자 참고</summary><span>{info.error_description}</span></details>}
           {info.redirect_to && (
             <Button onClick={() => window.location.assign(info.redirect_to ?? "")}>앱으로 돌아가기</Button>
           )}

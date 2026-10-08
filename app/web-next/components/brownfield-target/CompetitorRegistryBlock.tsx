@@ -2,6 +2,7 @@
 
 // Split from app/brownfield/targets/[targetId]/page.tsx (Wave U-3 decomposition); behavior unchanged.
 import { useAuth } from "../../lib/auth-client.tsx";
+import { DevRef } from "../ui.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useState, useCallback, useEffect } from "react";
 import { api } from "../../lib/api.ts";
@@ -51,7 +52,8 @@ export function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <h4 className="text-[0.88rem] font-semibold m-0">확정 경쟁사</h4>
         <span className="status-chip status-green">{confirmed.length}건</span>
-        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">AI 제안 수용 또는 수작업 등록으로만 생긴다 (ADR-0142)</span>
+        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">AI 제안 수용 또는 수작업 등록으로만 생긴다</span>
+        <DevRef refs="ADR-0142" />
       </div>
       {error && <p role="alert" className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{error}</p>}
       {confirmed.length === 0 ? (

@@ -65,7 +65,7 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
         <StageRail current={["S1"]} />
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <ListBackButton onClick={backToList} label="산업 목록으로" />
-          <PrimaryAction inline href={nextHref} label="다음: S2 기회 발굴 →" />
+          <PrimaryAction readOnly inline href={nextHref} label="다음: S2 기회 발굴 →" />
         </div>
         <MarketReport
           detail={detail}

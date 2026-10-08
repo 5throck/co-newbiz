@@ -7,6 +7,7 @@
 // 유지한다 — router로 프로젝트 페이지를 건드리지 않는다.
 
 import Link from "next/link";
+import { DevRef } from "../ui.tsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
@@ -240,7 +241,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           }
         })();
       },
-      { body: "이 케이스를 FS 진행 입력으로 채택합니다. 채택은 인간 결정이며 감사 기록으로 남습니다." },
+      { body: "이 케이스를 타당성 분석(FS) 진행 입력으로 채택합니다. 채택은 인간 결정이며 감사 기록으로 남습니다." },
     );
   }
 
@@ -367,9 +368,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {/* ── ADR-0143 대상 비교·선정 (brownfield) — 권고 ≠ 선정, 선정은 사람 ── */}
       {tab === "targets" && targets.length > 0 && (
       <section className="market-section sizing-step mb-3" aria-label="Short List 대상 비교·선정">
-        <h3 className="sizing-step-title">Short List 대상 비교·선정 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">(flow.spec S8 subjectScope: shortlist — ADR-0143)</span></h3>
+        <h3 className="sizing-step-title">Short List 대상 비교·선정 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">(Short List 대상 전체)</span><DevRef refs="flow.spec S8 subjectScope: shortlist · ADR-0143" /></h3>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          각 대상의 최신 gate-primary(시장 기반) 기본 시나리오 결과를 비교합니다. ★ RECOMMENDED는 권고일 뿐이며, 선정은 근거를 남기는 사람의 기록입니다. 선정 후 채택은 선정된 대상의 케이스로 제한됩니다.
+          각 대상의 최신 gate-primary(시장 기반) 기본 시나리오 결과를 비교합니다. ★ 권고안는 권고일 뿐이며, 선정은 근거를 남기는 사람의 기록입니다. 선정 후 채택은 선정된 대상의 케이스로 제한됩니다.
         </p>
         {selectedTargetName && (
           <p className="text-[length:var(--fs-caption)] mb-2">
@@ -397,7 +398,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 <tr key={t.targetId}>
                   <td>
                     <b>{t.companyName}</b>
-                    {t.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(p05) 생존 관점 (시장 기반)">★ RECOMMENDED</span>}
+                    {t.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(p05) 생존 관점 (시장 기반)">★ 권고안</span>}
                     {isSelected && <span className="status-chip status-green ml-1">선정됨</span>}
                   </td>
                   <td className="num">{t.rank ?? "—"}</td>
@@ -428,7 +429,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         )}
         {selecting && (
           <div className="mt-2">
-            <p className="text-[length:var(--fs-caption)] mb-1"><b>{selecting.name}</b> 대상 선정 근거 (필수 — ADR-0053 결정 기록):</p>
+            <p className="text-[length:var(--fs-caption)] mb-1"><b>{selecting.name}</b> 대상 선정 근거 (필수 — 결정 기록으로 남습니다):</p>
             <textarea
               className="sizing-new-input w-full"
               rows={3}
@@ -458,7 +459,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               <td><span className="status-chip status-green">market_forward · 1차</span> 시장 기반</td>
               <td>시장 성장률 (opportunity)</td>
               <td>미래 변동성 프로파일 — 과거 매출 변동성 + WACC 자산 변동성 블렌딩</td>
-              <td>S8 완료·킬 크라이테리아·RECOMMENDED 판정</td>
+              <td>S8 완료·킬 크라이테리아·권고안 판정</td>
             </tr>
             <tr>
               <td><span className="status-chip status-amber">historical · 비교</span> 과거 기반</td>
@@ -469,7 +470,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </tbody>
         </table></div>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-          <b className="text-[color:var(--warning)]">진행 판정(채택 요건·킬 크라이테리아·RECOMMENDED)은 시장 기반 값을 사용합니다.</b>{" "}
+          <b className="text-[color:var(--warning)]">진행 판정(채택 요건·킬 크라이테리아·권고안)은 시장 기반 값을 사용합니다.</b>{" "}
           과거 기반은 비교용이며, 둘의 차이가 클수록 성장 가정의 불확실성이 크다는 신호입니다.
         </p>
       </section>
@@ -502,7 +503,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         <section className="market-section sizing-step mt-3" aria-label="LLM 채택 권고">
           <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 채택 권고 (제안)</h3>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-            원칙 (경계 #2): 채택은 사람이 합니다 — 이 화면의 케이스들과 킬 크라이테리아 상태에서 만든 제안이며, ★ RECOMMENDED(결정론)와 별개 제안입니다.
+            원칙 (경계 #2): 채택은 사람이 합니다 — 이 화면의 케이스들과 킬 크라이테리아 상태에서 만든 제안이며, ★ 권고안(결정론)와 별개 제안입니다.
           </p>
           {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
           {!reco && !recoLoading && !recoError && (
@@ -562,7 +563,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           <section key={s} className="market-section sizing-step mt-3" aria-label={`${SCEN_LABEL[s]} 이중 관점 비교`}>
             <h3 className="sizing-step-title">
               {SCEN_LABEL[s]}
-              {newestMf?.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(p05) 생존 관점 (시장 기반)">★ RECOMMENDED</span>}
+              {newestMf?.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(p05) 생존 관점 (시장 기반)">★ 권고안</span>}
               {newestMf?.adopted && <span className="status-chip status-green ml-1">채택됨 (fs 진행 입력)</span>}
             </h3>
             {cases.length === 0 ? (
