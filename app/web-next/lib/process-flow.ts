@@ -8,7 +8,10 @@
 // opportunityId 기준으로 동작한다. 비적용 단계(brownfield의 S5, greenfield의
 // S6/S7)는 'skipped'로 표시된다.
 import { getDb } from "../../../db/client.ts";
-import { listTargets, screeningSummary } from "./brownfield-targets.ts";
+import { hasScreeningEvidence, listTargets, longListCandidateGaps, screeningSummary } from "./brownfield-targets.ts";
+import { countSourcedCapabilityRows } from "./capability-gap.ts";
+import { AGENT_KEYS } from "./agent-registry.generated.ts";
+import { latestPmiKickoff, pmiKickoffApplies } from "./pmi-kickoff.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { establishmentProgress } from "./establishment.ts";
 import { isFreshReviewCycle } from "./portfolio.ts";
@@ -64,6 +67,31 @@ export const PORTFOLIO_TRANSITIONS = [
  * (ADR-0151 Accepted decision 2).
  */
 export const ADR_0151_MIGRATION_DATE = "2026-10-02";
+
+/**
+ * Wave F-6 migration date (migrations 0125/0126). The F4 predicate tightenings
+ * (S1 confidence grade, S3 capability list, S6 per-candidate source/attributes,
+ * S7 per-candidate screening evidence, S11 PMI kickoff + human reviewer record)
+ * apply only to entities created on/after this date. Earlier entities keep
+ * the legacy predicates — design §9, ADR-0151 precedent: tightening a
+ * predicate never retroactively un-completes in-flight work.
+ *  - opportunity: opportunity.created_at
+ *  - project: the earliest project_policy_pin.pinned_at (the policy version
+ *    the project was pinned to when it entered the pipeline), falling back to
+ *    md_project.created_at when it has no pin.
+ */
+export const WAVE_F_PREDICATE_DATE = "2026-10-08";
+
+function opportunityGrandfathered(opp: { created_at: string | null }): boolean {
+  return (opp.created_at ?? "") < WAVE_F_PREDICATE_DATE;
+}
+
+function projectGrandfathered(project: { id: string; created_at: string | null }): boolean {
+  const pin = getDb()
+    .query("SELECT MIN(pinned_at) AS at FROM project_policy_pin WHERE project_id = ?")
+    .get(project.id) as { at: string | null };
+  return (pin.at ?? project.created_at ?? "") < WAVE_F_PREDICATE_DATE;
+}
 
 export type ProcessEntity =
   | { type: "opportunity"; id: string }
@@ -132,11 +160,9 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     // S1 산출물은 산업 단위 시장분석(market-sizing 매트릭스·가치사슬 연계)이다.
     // 기회가 분석된 산업(market_scope)에서 파생된 경우 산업 산출물로
     // 완료기준을 대체 충족한다 — 개별 기회 필드는 S2 평가 입력으로 보완된다.
-    const industry = opp.market_scope
-      ? getDb()
-          .query("SELECT id FROM md_industry WHERE name_ko = ? LIMIT 1")
-          .get(opp.market_scope) as { id: string } | undefined
-      : undefined;
+    // Wave F-6: the industry is the opportunity's real FK (migration 0126), not
+    // a market_scope = name_ko string join.
+    const industry = opp.industry_id ? { id: opp.industry_id } : undefined;
     const hasMatrix = !!industry
       && !!getDb()
         .query("SELECT id FROM market_sizing_analysis WHERE industry_id = ? AND status = 'completed' LIMIT 1")
@@ -183,6 +209,25 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
         missing.push("경쟁 구조");
       }
     }
+    // flow.spec S1 completionCriteria 3: "데이터 신뢰도 등급이 기록되었다"
+    // (Wave F-6; the grade is persisted per sizing version by migration 0125).
+    // Grandfathered opportunities keep the legacy predicate.
+    if (!opportunityGrandfathered(opp)) {
+      const graded = industry
+        ? getDb()
+            .query(
+              `SELECT v.data_confidence_grade AS g FROM market_sizing_version v
+               JOIN market_sizing_analysis a ON a.id = v.analysis_id
+               WHERE a.industry_id = ? AND a.status = 'completed'
+               ORDER BY v.version_no DESC LIMIT 1`,
+            )
+            .get(industry.id) as { g: string | null } | undefined
+        : undefined;
+      if (!graded?.g) {
+        blockers.push("S1 데이터 신뢰도 등급(A|B|C)이 기록되지 않았습니다 — 산업 시장분석(재분석)으로 프록시 hop 수와 출처에서 산출해야 합니다");
+        missing.push("데이터 신뢰도 등급");
+      }
+    }
     complete = !missing.length; // blockers에 권고 문구가 있어도 산출물이 있으면 완료
     return { complete, blockers, missing };
   },
@@ -200,6 +245,12 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     let complete = false;
     if (opp.synergy_score === null) { blockers.push("시너지 평가가 필요합니다"); missing.push("시너지 평가"); }
     if (!opp.rationale) { blockers.push("전략적 적합성 판단 근거가 필요합니다"); missing.push("전략적 적합성 판단"); }
+    // flow.spec S3 / Wave F-6: the required-capability list must exist with a
+    // recorded source per row (grandfathered opportunities exempt).
+    if (!opportunityGrandfathered(opp) && countSourcedCapabilityRows(opp.capability_gap_json) === 0) {
+      blockers.push("필요 역량 목록이 필요합니다 — 출처(source)가 있는 역량 1건 이상 (S3 역량 갭 레지스터)");
+      missing.push("필요 역량 목록(출처 포함)");
+    }
     // flow.spec S3 completionCriteria: 최소 1개 기회가 selected. 이 기회 자체가
     // 진출 검토 대상으로 선택되지 않았으면 S4로 진행할 수 없다.
     if (opp.status === "dropped") {
@@ -274,8 +325,21 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     // OUTCOME of S7 screening; counting only non-excluded made every
     // post-screening exclusion retroactively regress S6 and re-lock S7+.
     const longList = (getDb().query("SELECT COUNT(*) c FROM brownfield_target WHERE opportunity_id = ?").get(opp.id) as { c: number }).c;
-    if (longList < minLongList) {
-      blockers.push(`Long List 커버리지 부족 (${longList}/${minLongList})`);
+    // Wave F-6: only candidates that carry the required attributes AND a source
+    // count toward coverage (brownfield-target-identification procedure).
+    // Grandfathered opportunities keep the raw row count.
+    let covered = longList;
+    if (!opportunityGrandfathered(opp)) {
+      const candidates = listTargets(opp.id);
+      const incomplete = candidates.filter((t) => longListCandidateGaps(t).length > 0);
+      covered = candidates.length - incomplete.length;
+      if (incomplete.length > 0) {
+        blockers.push(`필수 속성·출처가 없는 Long List 후보 ${incomplete.length}건 — ${incomplete.slice(0, 3).map((t) => t.company_name).join(", ")}${incomplete.length > 3 ? " 외" : ""} (식별자·Universe 적합 메모·발굴 출처 기록 필요)`);
+        missing.push("Long List 후보 필수 속성·출처");
+      }
+    }
+    if (covered < minLongList) {
+      blockers.push(`Long List 커버리지 부족 (${covered}/${minLongList}${covered !== longList ? " — 필수 속성·출처를 갖춘 후보만 산입" : ""})`);
       missing.push("Long List 최소 커버리지");
     }
     complete = missing.length === 0;
@@ -297,6 +361,16 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     if (unresolved.length > 0) {
       blockers.push(`판정 대기 후보 ${unresolved.length}건 — Short List 승격 또는 제외 사유 기록 필요`);
       missing.push("후보별 스크리닝 판정");
+    }
+    // Wave F-6: a shortlisted candidate needs screening evidence (an excluded
+    // one is covered by its explicit exclusion_reason above). Grandfathered
+    // opportunities exempt.
+    if (!opportunityGrandfathered(opp)) {
+      const noEvidence = targets.filter((t) => t.status === "shortlisted" && !hasScreeningEvidence(t));
+      if (noEvidence.length > 0) {
+        blockers.push(`스크리닝 근거가 기록되지 않은 Short List 후보 ${noEvidence.length}건 — ${noEvidence.slice(0, 3).map((t) => t.company_name).join(", ")} (후보별 근거 저장 필요)`);
+        missing.push("후보별 스크리닝 근거");
+      }
     }
     const koPassed = targets.filter((t) => t.status === "shortlisted" && screeningSummary(t).knockOutsPassed);
     if (koPassed.length === 0) {
@@ -320,6 +394,7 @@ interface ProjectRowLite {
   origin: string | null;
   track: "greenfield" | "brownfield" | null;
   source_opportunity_id: string | null;
+  created_at: string | null;
 }
 
 /**
@@ -545,6 +620,33 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       blockers.push("추진계획(차터) 기준선 확정이 필요합니다");
       missing.push("추진계획(차터) 기준선");
     }
+    // Wave F-6 (grandfathered projects exempt):
+    //  - 사람 최종 승인(reviewer 기록): the latest GO of each IC gate must be
+    //    recorded by a person — decided_by present and not an agent persona id.
+    //  - brownfield M&A/JV/전략적 투자: a human-recorded PMI kickoff (spec
+    //    activity pmi-kickoff) — the integration-plan baseline.
+    if (!projectGrandfathered(project)) {
+      const reviewers = db
+        .query(
+          `SELECT gate, decided_by FROM (
+             SELECT gate, decided_by, ROW_NUMBER() OVER (PARTITION BY gate ORDER BY decided_at DESC, id DESC) rn
+             FROM gate_decision WHERE entity_type = 'project' AND entity_id = ? AND gate IN ('entity_ic','group_ic')
+           ) WHERE rn = 1`,
+        )
+        .all(project.id) as Array<{ gate: string; decided_by: string }>;
+      const unreviewed = reviewers.filter((r) => !r.decided_by?.trim() || AGENT_KEYS.has(r.decided_by));
+      if (unreviewed.length > 0) {
+        blockers.push(`사람 최종 승인(reviewer) 기록이 필요합니다 — ${unreviewed.map((r) => r.gate).join(", ")} 진행 기록의 결정자가 사람이 아닙니다`);
+        missing.push("사람 최종 승인(reviewer 기록)");
+      }
+      if (project.track === "brownfield") {
+        const sub = project.source_opportunity_id ? (latestRouteDecision(project.source_opportunity_id)?.sub_track ?? null) : null;
+        if (pmiKickoffApplies(project.track, sub) && !latestPmiKickoff(db, project.id)) {
+          blockers.push("Brownfield PMI 킥오프 기록이 필요합니다 (통합 책임자·통합 계획 기준선 — S11 IC 승인 후 기록)");
+          missing.push("PMI 킥오프 기록 (brownfield)");
+        }
+      }
+    }
     // 설립 실행 기록은 project_id 키로 직접 조회한다 (0070 백필, ADR-0100 §5);
     // 백필 이전 행만 source_opportunity_id 백링크로 대체 조회한다.
     if (project.origin === "internal" || project.origin === "joint") {
@@ -663,6 +765,8 @@ interface OpportunityRow {
   target_universe_json: string | null;
   capability_gap_json: string | null;
   project_id: string | null;
+  industry_id: string | null;
+  created_at: string | null;
 }
 
 export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
@@ -750,7 +854,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     // 단계다 — 승격 전제조건(promoteOpportunity)이 트랙별 선행 산출(S5 또는 S7
     // Short List)을 이미 검증했으므로 프로젝트 평가에서는 모두 complete로 표시한다.
     const project = db
-      .query("SELECT id, project_no, origin, track, source_opportunity_id FROM md_project WHERE id = ?")
+      .query("SELECT id, project_no, origin, track, source_opportunity_id, created_at FROM md_project WHERE id = ?")
       .get(entity.id) as ProjectRowLite | undefined;
     if (!project) throw new Error(`project ${entity.id} not found`);
     const gates = latestGateDecisions("project", entity.id);

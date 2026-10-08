@@ -130,3 +130,22 @@ export function summarizeGap(rows: CapabilityGapRow[]): GapSummary {
     coveragePct: evaluated > 0 ? Math.round(((met + 0.5 * partial) / evaluated) * 100) : null,
   };
 }
+
+/**
+ * S3 completion (Wave F-6): the capability list must be non-empty and every
+ * counted row must carry an EXPLICIT provenance source. normalizeGapRows
+ * defaults a missing source to "manual", so this reads the RAW rows — a
+ * hand-edited register with no `source` does not count.
+ */
+export function countSourcedCapabilityRows(json: string | null | undefined): number {
+  if (!json) return 0;
+  try {
+    const raw = JSON.parse(json) as { rows?: unknown };
+    if (!Array.isArray(raw.rows)) return 0;
+    return (raw.rows as Array<Record<string, unknown>>).filter(
+      (r) => r && typeof r === "object" && typeof r.capability === "string" && r.capability.trim() !== "" && SOURCES.includes(r.source as GapSource),
+    ).length;
+  } catch {
+    return 0;
+  }
+}

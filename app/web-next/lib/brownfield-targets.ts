@@ -24,6 +24,7 @@ export interface TargetRow {
   rank: number | null;
   exclusion_reason: string | null;
   screening_json: string | null;
+  screening_evidence_json: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -75,6 +76,45 @@ export function screeningSummary(target: TargetRow): {
     if (item.mandatory && st === "pending") mandatoryOpen.push(item.id);
   }
   return { assessed, total: items.length, knockOutsPassed: !anyKnockOutFail && mandatoryOpen.length === 0, anyKnockOutFail, mandatoryOpen };
+}
+
+/**
+ * S6 (Wave F-6): a Long List candidate counts toward coverage only when it
+ * carries the procedure's required attributes AND a source
+ * (procedures/_shared/brownfield-target-identification: "candidates without
+ * required attributes or sources do not count toward coverage").
+ *  - attributes: an identity (DART corp code or a resolved md_company) and the
+ *    universe-fit note (segment / why it is in the Universe).
+ *  - source: an accepted master/web proposal, or ≥1 discovery evidence row
+ *    that carries a source URL or a detail note (createTarget writes one on
+ *    registration, so a candidate registered without any note is flagged).
+ * Returns the missing parts ([] = qualified).
+ */
+export function longListCandidateGaps(t: TargetRow & { company_id: string | null }, db: Database = getDb()): Array<"attributes" | "source"> {
+  const gaps: Array<"attributes" | "source"> = [];
+  const hasIdentity = Boolean((t.dart_corp_code ?? "").trim() || t.company_id);
+  if (!t.company_name.trim() || !hasIdentity || !(t.universe_note ?? "").trim()) gaps.push("attributes");
+  const acceptedProposal = t.discovery_source !== "manual" && Boolean(t.proposal_accepted_at);
+  const discovery = db
+    .query(
+      `SELECT 1 FROM brownfield_target_evidence
+       WHERE target_id = ? AND kind = 'discovery' AND (TRIM(COALESCE(source_url, '')) != '' OR TRIM(COALESCE(detail, '')) != '') LIMIT 1`,
+    )
+    .get(t.id);
+  if (!acceptedProposal && !discovery) gaps.push("source");
+  return gaps;
+}
+
+/**
+ * S7 (Wave F-6, flow.spec "스크리닝 근거(evidence)가 후보별로 기록되었다"):
+ * a SHORTLISTED candidate needs ≥1 evidence ref — a saved screening evidence
+ * timeline row or the per-item screening_evidence_json. (An excluded candidate
+ * is covered by its explicit exclusion_reason instead.)
+ */
+export function hasScreeningEvidence(t: TargetRow, db: Database = getDb()): boolean {
+  const json = (t.screening_evidence_json ?? "").trim();
+  if (json && json !== "{}" && json !== "[]" && json !== "null") return true;
+  return Boolean(db.query("SELECT 1 FROM brownfield_target_evidence WHERE target_id = ? AND kind = 'screening' LIMIT 1").get(t.id));
 }
 
 /** 회사명(우선 dart_corp_code, 없으면 name_ko)으로 md_company를 찾거나

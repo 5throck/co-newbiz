@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-08T02:04:06.227Z
+**Generated**: 2026-10-08T02:41:18.719Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -274,7 +274,7 @@
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
 | proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | js-yaml |
 | qa-gate.ts | 1.3.0 | scripts/qa-gate.ts | bun |
-| rag.ts | 1.2.1 | scripts/co-newbiz/rag.ts | bun:sqlite |
+| rag.ts | 1.3.0 | scripts/co-newbiz/rag.ts | bun:sqlite |
 | readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | N/A |
 | regenerate-agents-md.ts | 1.3.0 | scripts/regenerate-agents-md.ts | fs, path |
 | register-hydraulic-breaker-assumptions.ts | 1.0.0 | scripts/co-newbiz/register-hydraulic-breaker-assumptions.ts | N/A |

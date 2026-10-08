@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.2.1
+// @version 1.3.0
 /**
  * rag — evaluate and persist a six-dimension RAG assessment from a scenario
  * JSON. Design v1.0 §4-2, docs/governance/rag-framework.md, FR-RAG-01..08, Wave 5.3.
@@ -29,6 +29,13 @@
  *
  * Usage:
  *   bun scripts/co-newbiz/rag.ts <scenario-json-path> [--db-path <path>]
+ *   bun scripts/co-newbiz/rag.ts --stale [--db-path <path>]
+ *
+ * Scheduling (Wave F-5): there is NO container cron. The `--stale` pass is
+ * the entry point a HOST scheduler (launchd/systemd timer) invokes on a
+ * cadence: it walks every project and runs the idempotent web recompute
+ * (db/lib/rag-service.ts recomputeRag — unchanged inputs write nothing), so
+ * stale proposals are refreshed even when nobody opens an IC package.
  */
 
 import { createHash } from "node:crypto";
@@ -43,6 +50,7 @@ import {
   type RagGrade,
   type StageGate,
 } from "../../db/lib/rag-engine.ts";
+import { recomputeRag } from "../../db/lib/rag-service.ts";
 
 export interface RagScenario {
   project_no: string;
@@ -176,16 +184,29 @@ export function runRagAssessment(scenarioPath: string, dbPath?: string): RagCliR
 
 if (import.meta.main) {
   const argv = process.argv.slice(2);
-  const [scenarioPath] = argv;
-  if (!scenarioPath) {
-    console.error("Usage: bun scripts/co-newbiz/rag.ts <scenario-json-path> [--db-path <path>]");
-    process.exit(1);
-  }
   const dbPathIdx = argv.indexOf("--db-path");
   const dbPath = dbPathIdx >= 0 ? argv[dbPathIdx + 1] : undefined;
   try {
-    const result = runRagAssessment(scenarioPath, dbPath);
-    console.log(JSON.stringify(result, null, 2));
+    if (argv.includes("--stale")) {
+      // Host-scheduler watch cycle: idempotent recompute for every project.
+      const db = getDb(dbPath);
+      const projects = db.query("SELECT id, project_no FROM md_project ORDER BY project_no").all() as Array<{ id: string; project_no: string }>;
+      const results = projects.map((p) => {
+        try {
+          return { project_no: p.project_no, ...recomputeRag(db, p.id, "stale_read", { actor: "cli:watch-cycle" }) };
+        } catch (err) {
+          return { project_no: p.project_no, status: "error" as const, error: (err as Error).message };
+        }
+      });
+      console.log(JSON.stringify(results, null, 2));
+    } else {
+      const [scenarioPath] = argv;
+      if (!scenarioPath) {
+        console.error("Usage: bun scripts/co-newbiz/rag.ts <scenario-json-path | --stale> [--db-path <path>]");
+        process.exit(1);
+      }
+      console.log(JSON.stringify(runRagAssessment(scenarioPath, dbPath), null, 2));
+    }
   } catch (err) {
     console.error(`rag failed: ${(err as Error).message}`);
     process.exit(1);

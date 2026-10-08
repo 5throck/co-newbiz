@@ -15,6 +15,7 @@
 import { getDb } from "../../../../../../../../db/client.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
+import { deriveDataConfidence } from "../../../../../../../../db/lib/data-confidence.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import type { SizingMatrix } from "../../../../../../lib/market-sizing.ts";
@@ -140,11 +141,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     ((db.query("SELECT MAX(version_no) m FROM market_sizing_version WHERE analysis_id = ?").get(id) as { m: number | null }).m ?? 0) + 1;
   const versionId = ulid();
 
+  const confidence = deriveDataConfidence(db, analysis.industry_id, (matrix as { provenance?: string }).provenance ?? null);
   db.transaction(() => {
     db.run(
-      `INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, changelog, created_by, created_at)
-       VALUES (?,?,?,?,?,?,?)`,
-      [versionId, id, nextVersionNo, payload, `v${nextVersionNo} — S1 에이전트 리서치 매트릭스 시드 등록`, ctx.userId, now],
+      `INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, changelog, created_by, created_at, data_confidence_grade, chain_hops, confidence_basis)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [versionId, id, nextVersionNo, payload, `v${nextVersionNo} — S1 에이전트 리서치 매트릭스 시드 등록`, ctx.userId, now, confidence.grade, confidence.chainHops, confidence.basis],
     );
     db.run(
       "UPDATE market_sizing_analysis SET status = 'completed', completed_at = ? WHERE id = ?",

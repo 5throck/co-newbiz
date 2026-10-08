@@ -17,6 +17,7 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
+import { deriveDataConfidence } from "../../../db/lib/data-confidence.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { isWebResearchConfigured, researchSources } from "./web-research.ts";
 import {
@@ -1063,11 +1064,15 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       ? "최초 분석 (8단계 LLM 파이프라인 — 추정치, 분석가 확정 전)"
       : `v${nextVersionNo} — LLM 정량 매트릭스 재생성 (8단계 전체)`;
   const newVersionId = ulid();
+  // Wave F-5 (migration 0125): the version carries its data-confidence grade
+  // (proxy hop count x data source) so RAG data_confidence and the S1
+  // completion predicate have a stored input.
+  const confidence = deriveDataConfidence(db, analysis.industry_id, matrix.provenance);
   db.transaction(() => {
     db.run(
-      `INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, changelog, created_by, created_at)
-       VALUES (?,?,?,?,?,?,?)`,
-      [newVersionId, analysis.id, nextVersionNo, payload, changelog, "market-sizing-pipeline", now()],
+      `INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, changelog, created_by, created_at, data_confidence_grade, chain_hops, confidence_basis)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [newVersionId, analysis.id, nextVersionNo, payload, changelog, "market-sizing-pipeline", now(), confidence.grade, confidence.chainHops, confidence.basis],
     );
     db.run(
       `UPDATE market_sizing_analysis SET status = 'completed', current_step = 8, completed_at = ?, rerun_in_progress = 0, error_message = NULL WHERE id = ?`,

@@ -93,8 +93,8 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
     );
     db.run(
       `INSERT OR IGNORE INTO market_sizing_version
-       (id, analysis_id, version_no, payload, changelog, created_by, created_at)
-       VALUES (?, ?, 1, ?, 'S1-S12 demo market sizing baseline', ?, ?)`,
+       (id, analysis_id, version_no, payload, changelog, created_by, created_at, data_confidence_grade, chain_hops, confidence_basis)
+       VALUES (?, ?, 1, ?, 'S1-S12 demo market sizing baseline', ?, ?, 'B', 0, 'demo seed: no statistical hop, llm-estimate source cap (Wave F-5)')`,
       [
         DEMO.versionId,
         DEMO.analysisId,
@@ -117,8 +117,8 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
       `INSERT OR IGNORE INTO opportunity
        (id, project_id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
         attractiveness_score, synergy_score, status, rationale, decided_by, decided_at, created_by, created_at,
-        target_universe_json, capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        target_universe_json, capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         DEMO.oppId,
         null,
@@ -141,12 +141,13 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
         }),
         json({
           rows: [
-            { capability: "핵심 기술/IP", held: { status: "partial" }, mitigation: "인수 후 통합" },
-            { capability: "레퍼런스 고객", held: { status: "partial" }, mitigation: "채널 결합" },
+            { capability: "핵심 기술/IP", source: "manual", held: { status: "partial" }, mitigation: "인수 후 통합" },
+            { capability: "레퍼런스 고객", source: "manual", held: { status: "partial" }, mitigation: "채널 결합" },
           ],
         }),
         now,
         actor,
+        DEMO.industryId,
       ],
     );
 
@@ -189,12 +190,13 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
     for (let i = 1; i <= 3; i++) {
       db.run(
         `INSERT OR IGNORE INTO brownfield_target
-         (id, opportunity_id, company_name, universe_note, status, rank, exclusion_reason, screening_json, created_at, updated_at, discovery_source, proposal_accepted_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?)`,
+         (id, opportunity_id, company_name, dart_corp_code, universe_note, status, rank, exclusion_reason, screening_json, created_at, updated_at, discovery_source, proposal_accepted_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?)`,
         [
           `demo-s1-s12-target-${i}`,
           DEMO.oppId,
           i === 1 ? "S1-S12 데모 대상회사" : `S1-S12 대체 후보 ${i - 1}`,
+          `DEMO000${i}`,
           "Target Universe 기준 충족",
           i === 1 ? "shortlisted" : "excluded",
           i === 1 ? 1 : null,
@@ -205,6 +207,21 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
           now,
         ],
       );
+      // Wave F-6: per-candidate source (S6) and, for the shortlisted
+      // candidate, screening evidence (S7) — the same rows createTarget /
+      // the screening save route write in the live app.
+      db.run(
+        `INSERT OR IGNORE INTO brownfield_target_evidence (id, target_id, kind, title, detail, source_kind, created_by, created_at)
+         VALUES (?, ?, 'discovery', '후보 등록 — 직접 등록', 'Target Universe 기준 충족', 'manual', ?, ?)`,
+        [`demo-s1-s12-target-${i}-discovery`, `demo-s1-s12-target-${i}`, actor, now],
+      );
+      if (i === 1) {
+        db.run(
+          `INSERT OR IGNORE INTO brownfield_target_evidence (id, target_id, kind, title, detail, source_kind, created_by, created_at)
+           VALUES (?, ?, 'screening', '스크리닝 판정 저장', 'S1-S12 demo knock-out checklist evidence', 'manual', ?, ?)`,
+          [`demo-s1-s12-target-${i}-screening`, `demo-s1-s12-target-${i}`, actor, now],
+        );
+      }
     }
 
     db.run(
@@ -263,6 +280,14 @@ export function seedS1ToS12Demo(dbPath?: string): { opportunityId: string; proje
        (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
        VALUES (?, 'project', ?, ?, 'demo-s1-s12', 's8_case_adopt', 'done', 'human', ?, ?, ?, ?)`,
       [DEMO.adoptionRunId, DEMO.projectId, DEMO.projectId, actor, now, now, json({ adopted_model_id: DEMO.modelId })],
+    );
+
+    // Wave F-6: brownfield M&A S11 requires the human-recorded PMI kickoff.
+    db.run(
+      `INSERT OR IGNORE INTO process_run
+       (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
+       VALUES ('demo-s1-s12-pmi-kickoff', 'project', ?, ?, 'demo-s1-s12', 's11_pmi_kickoff', 'done', 'human', ?, ?, ?, ?)`,
+      [DEMO.projectId, DEMO.projectId, actor, now, now, json({ owner: actor, plan_note: "S1-S12 demo — Day-1 통합 계획 기준선: 인력·시스템·고객 이관 순서 확정" })],
     );
 
     db.run(

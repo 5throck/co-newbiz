@@ -1,11 +1,14 @@
-// Pipeline status (ADR-0102 §3) — read-only. Returns the entity's current
+// Pipeline status (ADR-0102 §3) — read-only apart from the S12 stale sync
+// (Wave F-6: a completed project run whose S12 review cycle went stale is
+// reopened here too, so the widget never shows "completed" over an incomplete
+// S12 — same rule as advancePipeline, open projects only). Returns the entity's current
 // pipeline run (across the promotion handoff: the opportunity segment when
 // pre-promotion, the project segment after), its stage, paused_reason, and a
 // deep link to the pending human action's screen (static blocker → URL map in
 // lib/pipeline.ts). Deny-by-default mirrors the opportunity read routes: no
 // opportunity row → 404, unauthenticated → 401.
 import { getDb } from "../../../../../../../../db/client.ts";
-import { pauseLinkFor, type PipelineRunRow } from "../../../../../../../../app/web-next/lib/pipeline.ts";
+import { maybeReopenStaleS12, pauseLinkFor, type PipelineRunRow } from "../../../../../../../../app/web-next/lib/pipeline.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { route } from "../../../../../../lib/route.ts";
@@ -29,7 +32,9 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
        ORDER BY started_at DESC, id DESC`,
     )
     .all(opp.id, opp.project_id, opp.project_id) as PipelineRunRow[];
-  const run = rows.find((r) => r.status === "running" || r.status === "paused_for_human") ?? rows[0];
+  const picked = rows.find((r) => r.status === "running" || r.status === "paused_for_human") ?? rows[0];
+  const run = picked ? maybeReopenStaleS12(picked) : picked;
+  if (run && picked && run !== picked) rows[rows.indexOf(picked)] = run;
   // A known entity with no pipeline_run rows yet is a defined state ("none"),
   // not an error — distinguish it from the unknown-id 404 above.
   if (!run) {
