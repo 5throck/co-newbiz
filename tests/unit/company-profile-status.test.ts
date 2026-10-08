@@ -23,6 +23,8 @@ process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
 process.env.DART_API_KEY = "";
 process.env.TAVILY_API_KEY = "";
+// DuckDuckGo fallback is on by default and does real HTTP; switch it off.
+process.env.WEB_SEARCH_DDG_ENABLED = "false";
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 

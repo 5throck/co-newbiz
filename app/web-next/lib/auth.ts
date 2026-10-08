@@ -16,6 +16,7 @@ import { getDb } from "../../../db/client.ts";
 import { validateSession, type UserRole } from "../../../db/lib/accounts.ts";
 import { validateApiToken, type TokenScope } from "../../../db/lib/api-tokens.ts";
 import { forbidden, unauthorized } from "./envelope.ts";
+import { currentPrincipal } from "./mcp/principal-context.ts";
 
 export const SESSION_COOKIE = "co_newbiz_session";
 export const CSRF_COOKIE = "co_newbiz_csrf";
@@ -82,7 +83,20 @@ export function authenticate(request: Request): AuthResult {
   const header = request.headers.get("authorization") ?? "";
   let auth: AuthContext | null = null;
 
-  if (header.toLowerCase().startsWith("bearer ")) {
+  // ADR-0154: a route invoked in-process by /api/mcp runs as the OAuth-
+  // delegated human. Only InProcessRestPort can enter this scope; no header
+  // or cookie maps to it. Scopes narrow to the REST read/write vocabulary.
+  const delegated = currentPrincipal();
+  if (delegated) {
+    auth = {
+      userId: delegated.userId,
+      role: delegated.role as UserRole,
+      via: "bearer",
+      scopes: (["read", "write"] as const).filter((s) => delegated.scopes.includes(s)),
+      mustChangePassword: delegated.mustChangePassword,
+      tokenId: delegated.tokenId,
+    };
+  } else if (header.toLowerCase().startsWith("bearer ")) {
     const valid = validateApiToken(db, header.slice(7).trim());
     if (valid) {
       auth = {

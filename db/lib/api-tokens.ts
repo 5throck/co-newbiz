@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Scoped API-token engine — Wave 5.6, api-spec.md §2, design §4-11.
  *
@@ -66,13 +66,17 @@ export interface ValidApiToken {
   mustChangePassword: boolean;
 }
 
-/** Resolve a bearer token to a live, non-revoked token of an active account. */
+/**
+ * Resolve a bearer token to a live, non-revoked PERSONAL token of an active
+ * account. OAuth access/refresh tokens (migration 0128, ADR-0154) are
+ * audience-bound to /api/mcp and are never accepted by the general REST API.
+ */
 export function validateApiToken(db: Database, token: string): ValidApiToken | null {
   const row = db
     .query(
       `SELECT t.id AS token_id, t.user_id, t.scopes, u.role, u.status, u.must_change_password
        FROM api_token t JOIN app_user u ON u.user_id = t.user_id
-       WHERE t.token_hash = ? AND t.revoked_at IS NULL`,
+       WHERE t.token_hash = ? AND t.revoked_at IS NULL AND t.kind = 'personal'`,
     )
     .get(hashToken(token)) as { token_id: string; user_id: string; scopes: string; role: string; status: string; must_change_password: number } | null;
   if (!row || row.status !== "active") return null;
@@ -104,7 +108,7 @@ export function revokeApiToken(db: Database, opts: { tokenId: string; revokedBy:
 export function listApiTokens(db: Database, userId: string) {
   return db
     .query(
-      "SELECT id, label, scopes, created_at, last_used_at, revoked_at FROM api_token WHERE user_id = ? ORDER BY created_at DESC",
+      "SELECT id, label, scopes, created_at, last_used_at, revoked_at FROM api_token WHERE user_id = ? AND kind = 'personal' ORDER BY created_at DESC",
     )
     .all(userId) as { id: string; label: string; scopes: string; created_at: string; last_used_at: string | null; revoked_at: string | null }[];
 }

@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * IC package tool — ADR-0100 S10. Thin READ-ONLY REST wrapper (ADR-0011) over
  * /api/projects/:id/ic-package. Only the implemented surface is exposed
@@ -10,7 +10,7 @@
  * #2, ADR-0100 §6).
  */
 
-import { rest } from "../shared/rest-client.ts";
+import type { RestPort } from "../shared/rest-port.ts";
 
 export interface IcPackageEnvelope {
   project: { id: string; project_no: string };
@@ -43,6 +43,6 @@ export interface IcPackageEnvelope {
   establishment: { steps: Array<Record<string, unknown>>; done: number; total: number; complete: boolean; progress: string };
 }
 
-export async function getProjectIcPackage(projectId: string) {
-  return rest.get<IcPackageEnvelope>(`/api/projects/${encodeURIComponent(projectId)}/ic-package`);
+export async function getProjectIcPackage(port: RestPort, projectId: string) {
+  return port.get<IcPackageEnvelope>(`/api/projects/${encodeURIComponent(projectId)}/ic-package`);
 }

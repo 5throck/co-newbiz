@@ -173,6 +173,9 @@ Scenario inputs ride run-versioning as exact `drv.rate_bp` / `drv.fx_pct` / `drv
 | `synergy_shortlist_curation` | S3 우선 시너지 영역 — 사람의 판정·사유 오버라이드 + 신규 영역 (ADR-0125; `origin`='llm'\|'human'이 제안 출처와 사람 편집을 동시에 보존) | `analysis_id`, `area` (UNIQUE), `origin`, `verdict`, `reason`, `updated_by/at` |
 | `opportunity_sketch_version` | 비즈니스 모델 검토 버전 이력 (ADR-0127; append-only — `opportunity.sketch_json`은 "현재 버전" 포인터) | `opportunity_id`, `version_no` (UNIQUE), `sketch_json`, `source`, `created_by` |
 | `llm_call_log` | 런타임 LLM 호출 런 장부 (ADR-0128; append-only — 모든 completeOrFallback 호출이 에이전트 키·목적·출처·latency와 함께 기록됨) | `agent_key`, `purpose`, `context_type/id`, `source` ('llm'\|'synthesis'), `provider`, `model`, `ok`, `latency_ms` |
+| `oauth_client` | RFC 7591 dynamically registered public MCP OAuth clients (migration 0128, ADR-0154). Clients start unverified | `client_id`, `name`, `redirect_uris` (JSON), `registered_by_user_id`, `verified` |
+| `oauth_code` | Single-use authorization codes, valid for 60 seconds or less, bound to client, redirect URI, PKCE S256 challenge, and resource (migration 0128). A replay revokes `family_id` | `code_hash`, `user_id`, `client_id`, `pkce_challenge`, `scopes`, `expires_at`, `consumed_at`, `family_id` |
+| `api_token` (0128 columns) | `kind` (`personal`\|`oauth_access`\|`oauth_refresh`), `client_id`, `family_id`, `audience`, `expires_at`. Only `personal` tokens are accepted by the REST API; OAuth access tokens are audience-bound to `/api/mcp` | `kind`, `family_id`, `audience`, `expires_at` |
 
 ## 11. Index Rationale
 

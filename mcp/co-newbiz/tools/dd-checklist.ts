@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * DD checklist tools — ADR-0099 S9 tailored DD checklists. Thin READ-ONLY
  * REST wrappers (ADR-0011) over /api/projects/:id/dd. Only the implemented
@@ -10,7 +10,7 @@
  * before the project asks for them.
  */
 
-import { rest } from "../shared/rest-client.ts";
+import type { RestPort } from "../shared/rest-port.ts";
 
 export interface DdWorkspaceEnvelope {
   domains: Array<{
@@ -24,6 +24,6 @@ export interface DdWorkspaceEnvelope {
   completion: { total: number; pending: number; mandatoryUnmet: number };
 }
 
-export async function getProjectDdWorkspace(projectId: string) {
-  return rest.get<DdWorkspaceEnvelope>(`/api/projects/${encodeURIComponent(projectId)}/dd`);
+export async function getProjectDdWorkspace(port: RestPort, projectId: string) {
+  return port.get<DdWorkspaceEnvelope>(`/api/projects/${encodeURIComponent(projectId)}/dd`);
 }

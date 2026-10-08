@@ -1,0 +1,378 @@
+// @version 1.0.0
+/**
+ * Shared MCP tool registry — ADR-0154 §1, design 2026-10-08-wave-m-mcp-parity §3.1.
+ *
+ * One registry serves both transports: stdio (index.ts, HttpRestPort with a
+ * personal token) and Streamable HTTP (app/web-next/app/api/mcp, the
+ * InProcessRestPort acting as the OAuth-delegated human). Tools are thin
+ * wrappers over REST routes through a RestPort (ADR-0011): no business
+ * validation, permission check, or DB access lives here.
+ *
+ * Boundary #2 (ADR-0154 §5): the two legacy direct-decision tools
+ * (record_gate_decision, create_route_decision) are kept on stdio for one
+ * release for backward compatibility, but are NEVER exposed on the remote
+ * HTTP transport — a hosted connector must not gain a direct-decision path
+ * before M-2 replaces them with propose_* tools.
+ */
+
+import { createHash } from "node:crypto";
+import { z } from "zod";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import type { RestPort } from "./shared/rest-port.ts";
+import type { ToolDefinition } from "./shared/types.ts";
+import { MCPValidationError } from "./shared/errors.ts";
+import { searchInterpretations, getProcedure } from "./tools/governance.ts";
+import { lookupTerm } from "./tools/glossary.ts";
+import { listNotifications } from "./tools/monitoring.ts";
+import { getPipelineStatus } from "./tools/pipeline.ts";
+import { getObservations, listDataChanges, searchSeries } from "./tools/analysis.ts";
+import {
+  listOpportunities, createOpportunity, getProcessEvaluation, listGateDecisions,
+  recordGateDecision, createRouteDecision,
+} from "./tools/process.ts";
+import { listCommitteeSessions, getCommitteeSession } from "./tools/committee.ts";
+import { getProjectIcPackage } from "./tools/ic-package.ts";
+import { getPortfolioScorecard } from "./tools/portfolio-scorecard.ts";
+import { getProjectDdWorkspace } from "./tools/dd-checklist.ts";
+
+export type ToolScope = "read" | "write" | "propose";
+export type ToolKind = "read" | "write" | "generate" | "review" | "propose";
+export type McpTransportKind = "stdio" | "http";
+
+export interface ToolContext {
+  port: RestPort;
+  /**
+   * Granted OAuth scopes. `undefined` on stdio: the personal token's scopes
+   * are enforced by the REST layer only. On HTTP the registry checks them
+   * per tool before any route runs, and the route checks again.
+   */
+  scopes?: readonly string[];
+}
+
+export class MCPScopeError extends Error {
+  readonly code = "insufficient_scope";
+  constructor(message: string) {
+    super(message);
+    this.name = "MCPScopeError";
+  }
+}
+
+export interface RegistryTool {
+  name: string;
+  description: string;
+  scope: ToolScope;
+  kind: ToolKind;
+  /** flow.spec activity ids this tool serves (M-2 coverage script input). */
+  stageActivities: readonly string[];
+  /** Direct-decision legacy tool: stdio only, never on the remote transport. */
+  legacyDirectDecision?: boolean;
+  inputSchema: ToolDefinition["inputSchema"];
+  run(ctx: ToolContext, rawArgs: unknown): Promise<unknown>;
+}
+
+function formatIssues(error: z.ZodError): string {
+  return error.issues
+    .map((i) => {
+      const key = i.path.map(String).join(".") || "arguments";
+      return i.code === "invalid_type" || i.code === "too_small" ? `${key} is required.` : `${key}: ${i.message}`;
+    })
+    .join(" ");
+}
+
+function defineTool<S extends z.ZodType>(def: Omit<RegistryTool, "run"> & {
+  args: S;
+  handler: (ctx: ToolContext, input: z.output<S>) => Promise<unknown>;
+}): RegistryTool {
+  const { args, handler, ...meta } = def;
+  return {
+    ...meta,
+    run: async (ctx, rawArgs) => {
+      const parsed = args.safeParse(rawArgs ?? {});
+      if (!parsed.success) throw new MCPValidationError(formatIssues(parsed.error));
+      return handler(ctx, parsed.data);
+    },
+  };
+}
+
+const requiredString = z.string().refine((s) => s.trim().length > 0);
+const optString = z.string().optional();
+
+const routeScore = z.object({ criterion: z.string(), score: z.number().int(), evidence_note: z.string() });
+
+export const REGISTRY: readonly RegistryTool[] = [
+  defineTool({
+    name: "search_interpretations",
+    description: "Search the governance interpretation registry.",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: { type: "object", properties: { doc: { type: "string" }, clause: { type: "string" }, q: { type: "string" } } },
+    args: z.object({ doc: optString, clause: optString, q: optString }),
+    handler: (ctx, a) => searchInterpretations(ctx.port, a),
+  }),
+  defineTool({
+    name: "get_procedure",
+    description: "Merged shared/region/entity procedure result (proc:resolve equivalent), with per-step source attribution.",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: {
+      type: "object",
+      properties: { procedure: { type: "string" }, entity: { type: "string" }, region: { type: "string" } },
+      required: ["procedure"],
+    },
+    args: z.object({ procedure: requiredString, entity: optString, region: optString }),
+    handler: (ctx, a) => getProcedure(ctx.port, a.procedure, a.entity, a.region),
+  }),
+  defineTool({
+    name: "lookup_term",
+    description: "Glossary term lookup — the same source that backs the web UI's tooltip.",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: { type: "object", properties: { term: { type: "string" } }, required: ["term"] },
+    args: z.object({ term: requiredString }),
+    handler: (ctx, a) => lookupTerm(ctx.port, a.term),
+  }),
+  defineTool({
+    name: "list_notifications",
+    description: "The caller's pending and recent notifications.",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: { type: "object", properties: {} },
+    args: z.object({}),
+    handler: (ctx) => listNotifications(ctx.port),
+  }),
+  defineTool({
+    name: "get_pipeline_status",
+    description: "Pipeline status for an opportunity (read-only, ADR-0102) — active run status, current stage, paused reason, and deep link to the pending human action screen.",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
+    args: z.object({ opportunityId: requiredString }),
+    handler: (ctx, a) => getPipelineStatus(ctx.port, a.opportunityId),
+  }),
+  defineTool({
+    name: "search_series",
+    description: "Distinct market/industry series catalog derived from fact_market_observation, with observation counts and period coverage.",
+    scope: "read", kind: "read", stageActivities: ["market-research"],
+    inputSchema: { type: "object", properties: { q: { type: "string", description: "Optional substring filter on series_id." } } },
+    args: z.object({ q: optString }),
+    handler: (ctx, a) => searchSeries(ctx.port, a.q),
+  }),
+  defineTool({
+    name: "get_observations",
+    description: "Observations for one series — latest revision per period by default; every revision row with all_revisions.",
+    scope: "read", kind: "read", stageActivities: ["market-research"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        seriesId: { type: "string" },
+        period_id: { type: "string", description: "Optional narrow to one period." },
+        all_revisions: { type: "boolean", description: "Return every revision row, not just the latest per period." },
+      },
+      required: ["seriesId"],
+    },
+    args: z.object({ seriesId: requiredString, period_id: optString, all_revisions: z.boolean().optional() }),
+    handler: (ctx, a) => getObservations(ctx.port, a.seriesId, { period_id: a.period_id, all_revisions: a.all_revisions === true }),
+  }),
+  defineTool({
+    name: "list_data_changes",
+    description: "data_change_log scan — new/revised/deleted detections, newest first.",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: {
+      type: "object",
+      properties: { series_id: { type: "string" }, limit: { type: "number", description: "1-500, default 100." } },
+    },
+    args: z.object({ series_id: optString, limit: z.number().optional() }),
+    handler: (ctx, a) => listDataChanges(ctx.port, a),
+  }),
+  defineTool({
+    name: "list_opportunities",
+    description: "Opportunity funnel registry (S2) — status/project_id filters.",
+    scope: "read", kind: "read", stageActivities: ["opportunity-discovery"],
+    inputSchema: { type: "object", properties: { status: { type: "string", enum: ["identified", "assessed", "selected", "dropped"] }, project_id: { type: "string" } } },
+    args: z.object({ status: optString, project_id: optString }),
+    handler: (ctx, a) => listOpportunities(ctx.port, a.status),
+  }),
+  defineTool({
+    name: "create_opportunity",
+    description: "Register an opportunity (S2) — analyst+; audited.",
+    scope: "write", kind: "write", stageActivities: ["opportunity-discovery"],
+    inputSchema: { type: "object", properties: { name: { type: "string" }, market_scope: { type: "string" }, value_chain_node: { type: "string" }, market_size_krw_m: { type: "number" }, growth_rate: { type: "number" }, attractiveness_score: { type: "integer" }, synergy_score: { type: "integer" }, rationale: { type: "string" } }, required: ["name"] },
+    args: z.object({
+      name: requiredString, market_scope: optString, value_chain_node: optString,
+      market_size_krw_m: z.number().optional(), growth_rate: z.number().optional(),
+      attractiveness_score: z.number().optional(), synergy_score: z.number().optional(),
+      status: optString, rationale: optString,
+    }),
+    handler: (ctx, a) => createOpportunity(ctx.port, a),
+  }),
+  defineTool({
+    name: "get_process_evaluation",
+    description: "Derived process state (S1-S11) — currentStage, completedStages, gateStatus, requiredArtifacts. Never persisted.",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
+    args: z.object({ opportunityId: requiredString }),
+    handler: (ctx, a) => getProcessEvaluation(ctx.port, a.opportunityId),
+  }),
+  defineTool({
+    name: "get_gate_decisions",
+    description: "Gate decision records (GO/HOLD/KILL) for an opportunity.",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
+    args: z.object({ opportunityId: requiredString }),
+    handler: (ctx, a) => listGateDecisions(ctx.port, a.opportunityId),
+  }),
+  defineTool({
+    name: "record_gate_decision",
+    description: "Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited.",
+    scope: "write", kind: "write", stageActivities: [], legacyDirectDecision: true,
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, gate: { type: "string", enum: ["screening","pre_fs","fs","dd","entity_ic","group_ic"] }, decision: { type: "string", enum: ["go","hold","kill"] }, rationale: { type: "string" }, missing_artifacts: { type: "array", items: { type: "string" } }, learning_capture: { type: "string", description: "Required by the API when decision is kill (ADR-0152)" } }, required: ["opportunityId", "gate", "decision", "rationale"] },
+    args: z.object({
+      opportunityId: requiredString, gate: requiredString, decision: requiredString, rationale: requiredString,
+      missing_artifacts: z.array(z.string()).optional(), learning_capture: optString,
+    }),
+    handler: (ctx, a) => recordGateDecision(ctx.port, a.opportunityId, {
+      gate: a.gate, decision: a.decision, rationale: a.rationale,
+      missing_artifacts: a.missing_artifacts, learning_capture: a.learning_capture,
+    }),
+  }),
+  defineTool({
+    name: "create_route_decision",
+    description: "Record a route decision (S4) — greenfield/brownfield + sub_track + rationale. Analyst+; audited.",
+    scope: "write", kind: "write", stageActivities: ["route-strategy"], legacyDirectDecision: true,
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, track: { type: "string", enum: ["greenfield","brownfield"] }, sub_track: { type: "string", enum: ["existing_business_rbd","intra_venture","m_and_a","jv","strategic_investment","minority_investment","partnership","rbd","corporate_venture"] }, rationale: { type: "string" }, intent: { type: "string", enum: ["integration","capability_access"], description: "Stage 1 intent branch — required on both tracks (ADR-0104)" }, scores: { type: "array", description: "5-criteria scoring, required on both tracks (ADR-0104)", items: { type: "object", properties: { criterion: { type: "string", enum: ["control_need","capability_criticality","market_uncertainty","integration_capacity","speed_to_capability"] }, score: { type: "integer", minimum: 1, maximum: 3 }, evidence_note: { type: "string" } }, required: ["criterion","score","evidence_note"] } } }, required: ["opportunityId", "track", "rationale", "intent", "scores"] },
+    args: z.object({
+      opportunityId: requiredString, track: requiredString, rationale: requiredString,
+      sub_track: optString, alternatives_considered: optString, intent: optString,
+      scores: z.array(routeScore).optional(),
+    }),
+    handler: (ctx, a) => createRouteDecision(ctx.port, a.opportunityId, {
+      track: a.track, sub_track: a.sub_track, rationale: a.rationale,
+      alternatives_considered: a.alternatives_considered, intent: a.intent, scores: a.scores,
+    }),
+  }),
+  defineTool({
+    name: "list_committee_sessions",
+    description: "List steering-committee deliberation sessions for an opportunity (ADR-0097).",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
+    args: z.object({ opportunityId: requiredString }),
+    handler: (ctx, a) => listCommitteeSessions(ctx.port, a.opportunityId),
+  }),
+  defineTool({
+    name: "get_committee_session",
+    description: "Full committee-session transcript — per-round positions, chair PROPOSAL, verbatim dissent. Read-only.",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, sessionId: { type: "string" } }, required: ["opportunityId", "sessionId"] },
+    args: z.object({ opportunityId: requiredString, sessionId: requiredString }),
+    handler: (ctx, a) => getCommitteeSession(ctx.port, a.opportunityId, a.sessionId),
+  }),
+  defineTool({
+    name: "get_project_ic_package",
+    description: "S10 IC package (read-only) — adopted business case + simulations, DD completion, AI-proposed RAG grade (labeled a proposal), entity_ic/group_ic gate history, establishment progress.",
+    scope: "read", kind: "read", stageActivities: ["ic-preparation"],
+    inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] },
+    args: z.object({ projectId: requiredString }),
+    handler: (ctx, a) => getProjectIcPackage(ctx.port, a.projectId),
+  }),
+  defineTool({
+    name: "get_portfolio_scorecard",
+    description: "S11 portfolio scorecard (read-only) — quarterly rollup (financial/strategic sections, class rollup, insufficient_evidence), per-cycle trend, and venture-portfolio-IC transition-decision history. The transition-decision POST is deliberately not MCP-exposed (ADR-0101 §5).",
+    scope: "read", kind: "read", stageActivities: [],
+    inputSchema: { type: "object", properties: { projectId: { type: "string" }, reviewCycle: { type: "string", description: "YYYY-Qn — optional explicit review cycle; defaults to the latest" } }, required: ["projectId"] },
+    args: z.object({ projectId: requiredString, reviewCycle: optString }),
+    handler: (ctx, a) => getPortfolioScorecard(ctx.port, a.projectId, a.reviewCycle),
+  }),
+  defineTool({
+    name: "get_project_dd_workspace",
+    description: "S9 tailored DD workspace (S1-S11 chain) — standard checklist items with live judgment state, custom items with provenance, findings, and the completion summary. Read-only; tailoring and proposal review are web-first human decisions.",
+    scope: "read", kind: "read", stageActivities: ["commercial-dd", "technical-dd", "legal-dd"],
+    inputSchema: {
+      type: "object",
+      properties: { projectId: { type: "string", description: "Project ULID (promoted at S8)." } },
+      required: ["projectId"],
+    },
+    args: z.object({ projectId: requiredString }),
+    handler: (ctx, a) => getProjectDdWorkspace(ctx.port, a.projectId),
+  }),
+];
+
+/** Tools advertised on a transport. Legacy direct-decision tools are stdio-only. */
+export function toolsFor(transport: McpTransportKind): RegistryTool[] {
+  return REGISTRY.filter((t) => transport === "stdio" || !t.legacyDirectDecision);
+}
+
+export function toToolDefinition(t: RegistryTool): ToolDefinition {
+  return { name: t.name, description: t.description, inputSchema: t.inputSchema };
+}
+
+/** Look up and run a tool with per-tool scope enforcement (when scopes are known). */
+export async function callTool(
+  transport: McpTransportKind,
+  ctx: ToolContext,
+  name: string,
+  args: unknown,
+): Promise<unknown> {
+  const tool = toolsFor(transport).find((t) => t.name === name);
+  if (!tool) throw new MCPValidationError(`Unknown tool: ${name}`);
+  if (ctx.scopes && !ctx.scopes.includes(tool.scope)) {
+    throw new MCPScopeError(`Tool '${name}' needs the '${tool.scope}' scope; this token does not carry it.`);
+  }
+  return tool.run(ctx, args);
+}
+
+/** SHA-256 of the canonical JSON arguments — audit stores this, never the arguments (ADR-0154 audit rule). */
+export function hashArgs(args: unknown): string {
+  return createHash("sha256").update(JSON.stringify(args ?? {})).digest("hex");
+}
+
+export interface ToolCallRecord {
+  name: string;
+  scope: ToolScope | null;
+  ok: boolean;
+  errorCode: string | null;
+  argsHash: string;
+  authInfo?: AuthInfo;
+}
+
+export interface BuildServerOptions {
+  transport: McpTransportKind;
+  resolveContext: (extra: { authInfo?: AuthInfo }) => ToolContext;
+  onToolCall?: (record: ToolCallRecord) => void;
+  log?: (message: string) => void;
+}
+
+export function buildMcpServer(opts: BuildServerOptions): Server {
+  const server = new Server({ name: "co-newbiz-mcp", version: "1.9.0" }, { capabilities: { tools: {} } });
+  const tools = toolsFor(opts.transport);
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: tools.map(toToolDefinition) }));
+
+  server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
+    const { name, arguments: args } = request.params;
+    const argsHash = hashArgs(args);
+    const scope = tools.find((t) => t.name === name)?.scope ?? null;
+    opts.log?.(`Tool called: ${name}`);
+    try {
+      const ctx = opts.resolveContext({ authInfo: extra.authInfo });
+      const result = await callTool(opts.transport, ctx, name, args ?? {});
+      const envelopeError = readEnvelopeError(result);
+      opts.onToolCall?.({ name, scope, ok: envelopeError === null, errorCode: envelopeError, argsHash, authInfo: extra.authInfo });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      const code = err instanceof MCPScopeError ? err.code : err instanceof MCPValidationError ? "invalid_arguments" : "tool_error";
+      opts.onToolCall?.({ name, scope, ok: false, errorCode: code, argsHash, authInfo: extra.authInfo });
+      opts.log?.(`Tool ${name} failed: ${code}`);
+      const message = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: "text", text: `Error (${code}): ${message}` }], isError: true };
+    }
+  });
+
+  return server;
+}
+
+function readEnvelopeError(result: unknown): string | null {
+  if (result && typeof result === "object" && "error" in result) {
+    const e = (result as { error: unknown }).error;
+    if (e && typeof e === "object" && "code" in e && typeof (e as { code: unknown }).code === "string") {
+      return (e as { code: string }).code;
+    }
+  }
+  return null;
+}

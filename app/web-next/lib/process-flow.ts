@@ -80,7 +80,8 @@ export const ADR_0151_MIGRATION_DATE = "2026-10-02";
  *    the project was pinned to when it entered the pipeline), falling back to
  *    md_project.created_at when it has no pin.
  */
-export const WAVE_F_PREDICATE_DATE = "2026-10-08";
+export { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
+import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 
 function opportunityGrandfathered(opp: { created_at: string | null }): boolean {
   return (opp.created_at ?? "") < WAVE_F_PREDICATE_DATE;

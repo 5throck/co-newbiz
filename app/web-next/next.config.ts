@@ -21,6 +21,20 @@ const nextConfig: NextConfig = {
   // the Tailscale IP, the LAN IP of this workstation, and the public domain
   // served through the Cloudflare tunnel to this dev server (7749).
   allowedDevOrigins: ["100.104.16.127", "192.168.0.44", "co-newbiz.bizknights.org"],
+  // ADR-0154: the OAuth consent and connected-apps screens must never be
+  // framed (clickjacking a consent "허용") and must not leak the query
+  // (client_id/state/PKCE challenge) through Referer.
+  async headers() {
+    const hardened = [
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+      { key: "Referrer-Policy", value: "no-referrer" },
+    ];
+    return [
+      { source: "/oauth/:path*", headers: hardened },
+      { source: "/settings/connected-apps", headers: hardened },
+    ];
+  },
 };
 
 export default nextConfig;
