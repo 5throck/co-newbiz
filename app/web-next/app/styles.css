@@ -45,9 +45,9 @@
   --border: rgba(16, 22, 34, 0.10);
   --border-subtle: rgba(16, 22, 34, 0.06);
   --border-bright: rgba(16, 22, 34, 0.16);
-  --accent: #3d66f5;
+  --accent: #3558e0;
   --accent-fg: #ffffff;
-  --primary-rgb: 61, 102, 245;
+  --primary-rgb: 53, 88, 224;
 
   /* theme-scoped interaction tokens (no hardcoded whites/blacks below) */
   --input-bg: rgba(16, 22, 34, 0.03);
@@ -61,10 +61,10 @@
 
   /* ── RAG grade colors (light-tuned) ── */
   --green-bg: hsla(152, 63%, 36%, 0.10);
-  --green-fg: #0c7a4b;
+  --green-fg: #0a6d43;
   --green-border: hsla(152, 63%, 36%, 0.28);
   --amber-bg: hsla(35, 90%, 45%, 0.12);
-  --amber-fg: #935c06;
+  --amber-fg: #7a4c05;
   --amber-border: hsla(35, 90%, 45%, 0.30);
   --red-bg: hsla(0, 72%, 46%, 0.09);
   --red-fg: #b32318;
@@ -1603,7 +1603,6 @@
     text-transform: uppercase;
     letter-spacing: 0.25em;
     color: var(--muted-fg);
-    opacity: 0.6;
   }
   .sidebar-user {
     padding: 0.75rem 1.25rem;
@@ -2312,7 +2311,7 @@ a.funnel-card:hover { border-color: var(--primary); }
 .stage-step { display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-full); background: var(--surface); font-size: var(--fs-caption); }
 .stage-step-complete { border-color: var(--green-border); background: var(--green-bg); color: var(--green-fg); }
 .stage-step-current { border-color: var(--primary); background: var(--primary-bg); color: var(--fg); font-weight: 700; }
-.stage-step-locked { color: var(--muted-fg); opacity: 0.7; }
+.stage-step-locked { color: var(--muted-fg); }
 .stage-step-terminated { border-color: var(--red-border); background: var(--red-bg); color: var(--red-fg); }
 .stage-step-id { font-weight: 800; font-variant-numeric: tabular-nums; }
 .stage-step-mark { font-weight: 800; }
@@ -3422,7 +3421,7 @@ a.stage-step:hover { background: var(--hover-bg); color: var(--fg); }
 a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus-visible,
 .inbox-row:focus-visible, .stage-stepper-compact summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .stage-step-current { color: var(--primary); background: var(--primary-bg); border-color: var(--primary-border); font-weight: 600; }
-.stage-step-skipped { opacity: 0.75; text-decoration: line-through; }
+.stage-step-skipped { color: var(--muted-fg); text-decoration: line-through; }
 .stage-step-num {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 1.4rem; height: 1.4rem; border-radius: var(--radius-full);
@@ -3457,6 +3456,8 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
   padding: 0.5rem 0.9rem; font-size: 0.875rem; color: var(--muted-fg); text-decoration: none;
   background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer;
 }
+/* The tablist holds only tabs (ARIA); the More menu button is its sibling in the flex row. */
+.stage-tabs-list { display: contents; }
 .stage-tab:hover { color: var(--fg); }
 .stage-tab-active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
 .stage-tab-more { position: relative; }

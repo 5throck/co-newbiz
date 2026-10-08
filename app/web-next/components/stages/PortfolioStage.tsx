@@ -71,7 +71,16 @@ function statusMeta(status: string | undefined) {
   return STATUS_META[status ?? ""] ?? { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
 }
 
-const EMPTY_FORM = { decision: "next_tranche_released", rationale: "", learning_capture: "", review_cycle: "" };
+const EMPTY_FORM = { decision: "next_tranche_released", rationale: "", learning_capture: "", review_cycle: "", record: "" };
+
+// ADR-0151: each non-kill transition carries its own dedicated record column;
+// the route answers 400 without it, so the form must collect it.
+const RECORD_FIELD: Record<string, { key: "tranche_condition" | "core_handoff" | "divest_plan"; label: string }> = {
+  next_tranche_released: { key: "tranche_condition", label: "차기 트랜치 조건 (tranche_condition — 필수)" },
+  held_evidence_incomplete: { key: "tranche_condition", label: "차기 트랜치 조건 (tranche_condition — 필수)" },
+  graduate_to_core: { key: "core_handoff", label: "핵심사업 인계 기록 (core_handoff — 필수)" },
+  reduce_or_divest: { key: "divest_plan", label: "매각/청산 계획 (divest_plan — 필수)" },
+};
 
 export function PortfolioStage({ projectId }: { projectId: string }) {
   const { me } = useAuth();
@@ -135,6 +144,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             rationale: form.rationale,
             learning_capture: form.learning_capture || undefined,
             review_cycle: form.review_cycle || undefined,
+            ...(recordField && form.record.trim() ? { [recordField.key]: form.record.trim() } : {}),
           });
           setNotice("전환 결정이 기록되었습니다 — 결정자는 venture-portfolio-IC(사람), 기록자는 세션 사용자로 남습니다. 장부는 추가 전용(append-only)입니다.");
           setForm({ ...EMPTY_FORM });
@@ -152,6 +162,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
   }
 
   const isKill = form.decision === "kill_with_learning_captured";
+  const recordField = RECORD_FIELD[form.decision];
   const rollup = view?.rollup;
 
   return (
@@ -419,6 +430,16 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                     onChange={(e) => setForm({ ...form, learning_capture: e.target.value })}
                     className="sizing-new-input w-full"
                     placeholder="플레이북으로 회수할 학습 내용 — 중단 결정에 필수입니다"
+                  />
+                </label>
+              )}
+              {recordField && (
+                <label className="text-[length:var(--fs-caption)] block mt-2">
+                  <span className="block mb-1">{recordField.label}</span>
+                  <input
+                    value={form.record}
+                    onChange={(e) => setForm({ ...form, record: e.target.value })}
+                    className="sizing-new-input w-full"
                   />
                 </label>
               )}

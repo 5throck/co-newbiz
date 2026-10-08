@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AuthProvider } from "../lib/auth-client.tsx";
 import { GlossaryProvider } from "../lib/glossary-provider.tsx";
@@ -9,6 +10,11 @@ import "./styles.css";
 // (AuthProvider > GlossaryProvider > routed content). react-router-dom's
 // <BrowserRouter> has no Next.js equivalent needed — the App Router itself
 // is the router.
+
+// WCAG 2.4.2 (axe document-title): every page needs a <title>. Pages inherit this default.
+export const metadata: Metadata = {
+  title: { default: "신규사업 검토 AI 플랫폼", template: "%s · 신규사업 검토" },
+};
 
 // Pre-paint theme restore: light is the default; a stored dark preference is
 // applied before first paint to avoid a flash. Keep in sync with

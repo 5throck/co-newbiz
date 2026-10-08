@@ -28,11 +28,12 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const formId = `gate-decision-${useId().replace(/:/g, "")}`;
-  const [form, setForm] = useState<{ gate: GateMetaId; decision: "go" | "hold" | "kill"; rationale: string; missing: string }>({
+  const [form, setForm] = useState<{ gate: GateMetaId; decision: "go" | "hold" | "kill"; rationale: string; missing: string; learning: string }>({
     gate: gates[0],
     decision: "go",
     rationale: "",
     missing: "",
+    learning: "",
   });
   // ADR-0118 — LLM 진행 브리프(제안). 권고·근거 초안만 제공하며 결정 select는
   // 건드리지 않는다. "근거에 반영"은 rationale 프리필일 뿐, 기록은 사람이다.
@@ -76,6 +77,9 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     }
   }
 
+  const killNeedsLearning = form.decision === "kill" && !form.learning.trim();
+  const canSubmit = !!form.rationale.trim() && !killNeedsLearning;
+
   const decisionOf = (gate: string): GateLatest | undefined => latest?.find((g) => g.gate === gate);
 
   async function record() {
@@ -87,8 +91,10 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
         decision: form.decision,
         rationale: form.rationale.trim(),
         missing_artifacts: form.decision === "hold" ? form.missing.split(/[\n,]/).map((s) => s.trim()).filter(Boolean) : undefined,
+        // ADR-0152: every KILL carries learning capture (the route answers 422 without it).
+        learning_capture: form.decision === "kill" ? form.learning.trim() : undefined,
       });
-      setForm((f) => ({ ...f, rationale: "", missing: "" }));
+      setForm((f) => ({ ...f, rationale: "", missing: "", learning: "" }));
       load();
       onRecorded?.(form.decision, form.gate);
     } catch (err) {
@@ -280,15 +286,27 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
               />
             </label>
           )}
+          {form.decision === "kill" && (
+            <label className="block mt-2 text-[length:var(--fs-caption)]">
+              <span className="block mb-1">학습 포착 * (KILL 필수 — 이 중단에서 얻은 교훈)</span>
+              <textarea
+                value={form.learning}
+                onChange={(e) => setForm({ ...form, learning: e.target.value })}
+                className="sizing-new-input w-full"
+                rows={2}
+                required
+              />
+            </label>
+          )}
           {primary && (
             <PrimaryAction
               form={formId}
               label={saving ? "기록 중..." : "결정 기록 (사람)"}
-              disabled={saving || !form.rationale.trim()}
-              disabledReason={saving ? "기록 중입니다." : "근거를 입력하면 결정을 기록할 수 있습니다."}
+              disabled={saving || !canSubmit}
+              disabledReason={saving ? "기록 중입니다." : killNeedsLearning ? "KILL에는 학습 포착이 필요합니다." : "근거를 입력하면 결정을 기록할 수 있습니다."}
             />
           )}
-          <button type="submit" className="btn-ghost btn-sm mt-2" disabled={saving || !form.rationale.trim()}>
+          <button type="submit" className="btn-ghost btn-sm mt-2" disabled={saving || !canSubmit}>
             {saving ? "기록 중..." : "결정"}
           </button>
         </form>

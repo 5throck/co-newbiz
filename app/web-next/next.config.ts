@@ -6,6 +6,9 @@ const appRoot = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(/*turbopackIgnore: true*/ appRoot, "..", "..");
 
 const nextConfig: NextConfig = {
+  // Wave C-1: the E2E harness builds into its own dist dir so it never touches
+  // the operator's dev (.next/dev) or production (.next) output.
+  distDir: process.env.CO_NEWBIZ_DIST_DIR ?? ".next",
   // db/client.ts imports "bun:sqlite" — a Bun-runtime builtin. Route
   // Handlers under app/api/** must not be bundled for the Edge runtime
   // (which has no bun:sqlite); this config keeps them on the Node/Bun

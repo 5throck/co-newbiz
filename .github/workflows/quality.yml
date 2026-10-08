@@ -79,3 +79,22 @@ jobs:
         with:
           name: lcov
           path: coverage/lcov.info
+
+  # Wave C-1: Playwright golden paths + axe gate (spec 2026-10-08-wave-c-e2e-proof-design).
+  # Offline by construction (LLM/DART env blanked by the harness). Hosted runs are
+  # blocked by billing for now; the job is verified locally with `bun run test:e2e`.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.x
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: app/web-next
+      - name: Install Chromium for Playwright
+        run: bunx --bun playwright-core install --with-deps chromium
+        working-directory: app/web-next
+      - run: bun run test:e2e

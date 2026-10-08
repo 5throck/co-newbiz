@@ -53,7 +53,8 @@ function StageTabsInner({ projectId }: { projectId: string }) {
     <StageRail current={[group.stage]} />
     <div className="stage-tabs-bar">
     <nav aria-label={`${group.stage} 화면`} className="stage-tabs-wrap">
-      <div className="stage-tabs" role="tablist" aria-label={`${group.stage} · ${group.name}`} ref={listRef} onKeyDown={onKeyDown}>
+      <div className="stage-tabs" ref={listRef} onKeyDown={onKeyDown}>
+        <div className="stage-tabs-list" role="tablist" aria-label={`${group.stage} · ${group.name}`}>
         {group.tabs.map((t, i) => {
           const active = i === activeIdx;
           return (
@@ -71,6 +72,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
             </Link>
           );
         })}
+        </div>
         {group.more.length > 0 && (
           <span className="stage-tab-more" role="presentation">
             <button
