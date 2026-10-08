@@ -20,35 +20,9 @@
 //                  D-2): the matrix is placeholder data, never better than C.
 //   grade     = the WORSE of hop grade and source cap.
 import type { Database } from "bun:sqlite";
+import { type DataConfidence, gradeDataConfidence } from "../../packages/core-scoring/src/data-confidence.ts";
 
-export type ConfidenceGrade = "A" | "B" | "C";
-/** Alias used by db/lib/rag-service.ts — the S1 sizing grade feeding the RAG data_confidence dimension. */
-export type DataConfidenceGrade = ConfidenceGrade;
-
-export interface DataConfidence {
-  grade: ConfidenceGrade;
-  chainHops: number;
-  basis: string;
-}
-
-/** Hop-band logic — identical cut lines to migration 0125's backfill SQL. */
-export function gradeFromHops(statisticalHops: number, minR2: number | null): ConfidenceGrade {
-  if (statisticalHops === 0) return "A";
-  if (statisticalHops === 1 && minR2 !== null && minR2 >= 0.6) return "B";
-  return "C";
-}
-
-/** Provenance cap: frozen-research = A, anything else (llm-estimate/unknown) = B. */
-export function provenanceCap(provenance: string | null | undefined): ConfidenceGrade {
-  return provenance === "frozen-research" ? "A" : "B";
-}
-
-const GRADE_WORSE: Record<ConfidenceGrade, number> = { A: 2, B: 1, C: 0 };
-
-/** The worse (lower) of two confidence grades. */
-export function worseGrade(a: ConfidenceGrade, b: ConfidenceGrade): ConfidenceGrade {
-  return GRADE_WORSE[a] <= GRADE_WORSE[b] ? a : b;
-}
+export * from "../../packages/core-scoring/src/data-confidence.ts";
 
 /**
  * Derive the data-confidence grade for one market-sizing analysis (by
@@ -73,15 +47,11 @@ export function deriveDataConfidence(
     )
     .get(industryId, industryId) as { c: number; stat: number | null; min_r2: number | null };
 
-  // Absent provenance caps at B (the SQL treats it as 'llm-estimate') —
-  // never guess A on unknown.
-  const cap: ConfidenceGrade = opts.synthesized ? "C" : provenanceCap(provenance);
-  const stat = hops.stat ?? 0;
-  const hopGrade = gradeFromHops(stat, hops.min_r2);
-  const grade = worseGrade(hopGrade, cap);
-  return {
-    grade,
+  return gradeDataConfidence({
     chainHops: hops.c,
-    basis: `proxy-chain hops=${stat} statistical / min r2 ${hops.min_r2 ?? "n/a"} -> hop grade ${hopGrade}; provenance ${provenance ?? "unknown"} -> cap ${cap}${opts.synthesized ? " (deterministic synthesis, not a real estimate)" : ""}`,
-  };
+    statisticalHops: hops.stat ?? 0,
+    minR2: hops.min_r2,
+    provenance,
+    synthesized: opts.synthesized,
+  });
 }

@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-08T14:40:28.823Z
+**Generated**: 2026-10-08T14:49:46.377Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -222,7 +222,7 @@
 | committee-deliberation.ts | 1.1.0 | scripts/co-newbiz/committee-deliberation.ts | N/A |
 | compile-tokens.ts | 1.2.0 | scripts/compile-tokens.ts | N/A |
 | contrast-check.ts | 1.0.0 | scripts/co-newbiz/contrast-check.ts | N/A |
-| convert.ts | 1.0.0 | scripts/co-newbiz/convert.ts | N/A |
+| convert.ts | 1.1.0 | scripts/co-newbiz/convert.ts | N/A |
 | coverage-baseline.ts | 1.0.0 | scripts/coverage-baseline.ts | N/A |
 | dart-collect.ts | 1.0.0 | scripts/co-newbiz/dart-collect.ts | N/A |
 | db-export.ts | 1.0.0 | scripts/co-newbiz/db-export.ts | N/A |
