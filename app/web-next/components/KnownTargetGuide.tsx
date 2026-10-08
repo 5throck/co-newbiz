@@ -38,7 +38,7 @@ export function KnownTargetGuide({ opportunityId }: { opportunityId: string }) {
       <ol className="sizing-note-list mt-2">
         {steps.map((s) => (
           <li key={s.id}>
-            <Link href={stepHref(opportunityId, s.id)} className="underline-offset-2 hover:underline">{s.id} {s.name}</Link>
+            <Link href={stepHref(opportunityId, s.id)} className="guide-link">{s.id} {s.name}</Link>
             {" — "}{s.status === "complete" ? "완료" : s.status === "current" ? "지금 진행" : "대기"}
           </li>
         ))}

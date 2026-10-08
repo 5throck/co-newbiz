@@ -77,13 +77,32 @@ interface SizingInsight {
  */
 function nextStepActions(o: OpportunityRow) {
   return (
-    <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}?tab=sketch`} title="상세 화면의 비즈니스 모델 검토 탭으로 이동합니다">
-      비즈니스 모델 검토
-    </Link>
+    <>
+      {/* R2-A item 5: every row advances ITS OWN opportunity — the header primary
+          acts on the deal you entered through, which is a different row. */}
+      {o.status === "identified" && (
+        <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}?focus=score`} title="이 기회의 매력도를 평가합니다 (평가하면 S3로 진행할 수 있습니다)">
+          매력도 평가<span className="sr-only"> — {o.name}</span>
+        </Link>
+      )}
+      {(o.status === "assessed" || o.status === "selected") && (
+        <Link className="btn-ghost btn-sm" href={`/deals/${encodeURIComponent(o.id)}/s3`} title="이 기회의 S3 시너지·전략적 적합성 화면으로 진행합니다">
+          S3로 진행<span className="sr-only"> — {o.name}</span>
+        </Link>
+      )}
+      <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}?tab=sketch`} title="상세 화면의 비즈니스 모델 검토 탭으로 이동합니다">
+        비즈니스 모델 검토
+      </Link>
+    </>
   );
 }
 
-export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: string }) {
+/**
+ * `startRegister` — land with the registration form open, scrolled into view and
+ * focused (R2-A item 7): "known_target" additionally moves the form to the top of the
+ * page; both focus the first field (the opportunity name).
+ */
+export function OpportunityFunnelStage({ opportunityId, startRegister }: { opportunityId?: string; startRegister?: "name" | "known_target" }) {
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
   const [rows, setRows] = useState<OpportunityRow[] | null>(null);
@@ -101,6 +120,8 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
   const [sortKey, setSortKey] = useState<"attractiveness" | "recent">("attractiveness");
   const [industryFilter, setIndustryFilter] = useState<string | "">("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  // Known-target entry (?known_target=1) moves the form to the top; any other open focuses the name field.
+  const [knownTargetMode, setKnownTargetMode] = useState(startRegister === "known_target");
   const [discoverNotice, setDiscoverNotice] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
 
@@ -112,7 +133,12 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
   // ?status= 딥링크는 유지 (?opportunity= 펼침은 상세 화면 분리로 폐지 — ADR-0127)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("known_target") === "1") setShowCreateForm(true);
+    if (params.get("known_target") === "1" || startRegister === "known_target") {
+      setKnownTargetMode(true);
+      setShowCreateForm(true);
+    } else if (params.get("new") === "1" || startRegister === "name") {
+      setShowCreateForm(true);
+    }
     const initial = params.get("status");
     if (initial && ["identified", "assessed", "selected", "dropped"].includes(initial)) {
       setStatusFilter(initial as OpportunityRow["status"]);
@@ -120,6 +146,19 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
   }, []);
 
   useEffect(load, [load]);
+
+  // R2-A item 7 / walkthrough F9: opening the form scrolls it into view and focuses its field
+  // (previously the form opened far below the fold with focus left on the button).
+  useEffect(() => {
+    if (!showCreateForm) return;
+    const t = setTimeout(() => {
+      const el = document.getElementById("opp-new-name");
+      if (!el) return;
+      el.scrollIntoView({ block: "center" });
+      el.focus();
+    }, 0);
+    return () => clearTimeout(t);
+  }, [showCreateForm]);
 
   useEffect(() => {
     api.get<{ insights: SizingInsight[] }>("/api/market-overview/insights").then((r) => setInsights(r.data.insights)).catch(() => setInsights([]));
@@ -224,12 +263,78 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
   const carrierRow = opportunityId ? rows?.find((r) => r.id === opportunityId || r.project_id === opportunityId) : undefined;
   const selectedInsight = insights?.find((s) => s.industry_name === selectedIndustry) ?? null;
 
+  const registerSection = (
+    <>
+      {canAct && (
+      <section aria-label="기회 수동 등록" className="market-section">
+        <SectionToolbar
+          title="기회 직접 등록"
+          icon="✍️"
+          actions={
+            <button type="button" className="btn-ghost whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
+              ＋ 기회 직접 등록
+            </button>
+          }
+        />
+        {showCreateForm && (
+          <form onSubmit={create} className="sizing-new-form mb-3">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">알려진 대상 기업을 입력하면 S6 대상 후보에 미리 등록됩니다 — S1~S4는 생략되지 않으며 순서대로 완료해야 합니다.</p>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-[length:var(--fs-caption)]">
+                <span className="block mb-1">기회명 *</span>
+                <input id="opp-new-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="sizing-new-input" />
+              </label>
+              <label className="text-[length:var(--fs-caption)]">
+                <span className="block mb-1">시장 범위</span>
+                <input value={form.market_scope} onChange={(e) => setForm({ ...form, market_scope: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
+              </label>
+              <label className="text-[length:var(--fs-caption)]">
+                <span className="block mb-1">알려진 대상 기업 (선택)</span>
+                <input id="opp-known-target" value={form.known_target} onChange={(e) => setForm({ ...form, known_target: e.target.value })} placeholder="인수 대상이 이미 정해진 경우" className="sizing-new-input sizing-new-input-sm" />
+              </label>
+              <label className="text-[length:var(--fs-caption)]">
+                <span className="block mb-1">S1 분석 산업</span>
+                <select value={form.industry_id} onChange={(e) => setForm({ ...form, industry_id: e.target.value })} className="sizing-new-input sizing-new-input-sm">
+                  <option value="">연결 안 함</option>
+                  {(insights ?? []).map((i) => (
+                    <option key={i.industry_id} value={i.industry_id}>{i.industry_name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-[length:var(--fs-caption)]">
+                <span className="block mb-1">가치사슬 노드</span>
+                <input value={form.value_chain_node} onChange={(e) => setForm({ ...form, value_chain_node: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
+              </label>
+              <label className="text-[length:var(--fs-caption)]">
+                <span className="block mb-1">매력도 (0-100)</span>
+                <input type="number" min={0} max={100} value={form.attractiveness_score} onChange={(e) => setForm({ ...form, attractiveness_score: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
+              </label>
+              <button type="submit" className="btn-ghost" disabled={busy || !form.name.trim()}>
+                {busy ? "등록 중..." : "등록"}
+              </button>
+              <button type="button" className="btn-ghost" onClick={() => setShowCreateForm(false)}>
+                취소
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+      )}
+    </>
+  );
+
   return (
     <>
       {confirmDialog}
+      {knownTargetMode && canAct && (
+        <div className="focus-banner" role="note">
+          <strong>알려진 대상으로 시작</strong> — 기회명과 알려진 대상 기업을 입력해 등록하면 대상이 S6 후보에 미리 등록되고, 안내(S1~S4)가 있는 화면으로 이동합니다.
+        </div>
+      )}
+      {knownTargetMode && registerSection}
       {opportunityId && (
         <PrimaryAction
-          label="스크리닝으로 승격 (S3)"
+          label={carrierRow ? `S3로: ${carrierRow.name}` : "스크리닝으로 승격 (S3)"}
           href={`/deals/${encodeURIComponent(opportunityId)}/s3`}
           disabled={!carrierRow || carrierRow.status === "dropped"}
           disabledReason={!carrierRow ? "승격할 기회(이 안건)를 먼저 선택하세요." : "제외된 기회는 승격할 수 없습니다."}
@@ -495,62 +600,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
       </section>
 
 
-      {/* ── 수동 등록 (표준 토글 인라인 폼 — ADR-0083) ── */}
-      {canAct && (
-      <section aria-label="기회 수동 등록" className="market-section">
-        <SectionToolbar
-          title="기회 직접 등록"
-          icon="✍️"
-          actions={
-            <button type="button" className="btn-ghost whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
-              ＋ 기회 직접 등록
-            </button>
-          }
-        />
-        {showCreateForm && (
-          <form onSubmit={create} className="sizing-new-form mb-3">
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">알려진 대상 기업을 입력하면 S6 대상 후보에 미리 등록됩니다 — S1~S4는 생략되지 않으며 순서대로 완료해야 합니다.</p>
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">기회명 *</span>
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="sizing-new-input" />
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">시장 범위</span>
-                <input value={form.market_scope} onChange={(e) => setForm({ ...form, market_scope: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">알려진 대상 기업 (선택)</span>
-                <input value={form.known_target} onChange={(e) => setForm({ ...form, known_target: e.target.value })} placeholder="인수 대상이 이미 정해진 경우" className="sizing-new-input sizing-new-input-sm" />
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">S1 분석 산업</span>
-                <select value={form.industry_id} onChange={(e) => setForm({ ...form, industry_id: e.target.value })} className="sizing-new-input sizing-new-input-sm">
-                  <option value="">연결 안 함</option>
-                  {(insights ?? []).map((i) => (
-                    <option key={i.industry_id} value={i.industry_id}>{i.industry_name}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">가치사슬 노드</span>
-                <input value={form.value_chain_node} onChange={(e) => setForm({ ...form, value_chain_node: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">매력도 (0-100)</span>
-                <input type="number" min={0} max={100} value={form.attractiveness_score} onChange={(e) => setForm({ ...form, attractiveness_score: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
-              </label>
-              <button type="submit" className="btn-ghost" disabled={busy || !form.name.trim()}>
-                {busy ? "등록 중..." : "등록"}
-              </button>
-              <button type="button" className="btn-ghost" onClick={() => setShowCreateForm(false)}>
-                취소
-              </button>
-            </div>
-          </form>
-        )}
-      </section>
-      )}
+      {!knownTargetMode && registerSection}
     </>
   );
 }

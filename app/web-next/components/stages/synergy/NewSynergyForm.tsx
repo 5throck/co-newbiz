@@ -1,17 +1,25 @@
 "use client";
 
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
+import Link from "next/link";
+import { profileHrefFor } from "./synergyFormat.ts";
 import type { SynergyStageState } from "./useSynergyList.ts";
 
 export function NewSynergyForm({ ctx }: { ctx: SynergyStageState }) {
-  const { canCurate, showNewForm, targets, targetSel, setTargetSel, oppSel, setOppSel, opps, setShowNewForm, creating, createAnalysis } = ctx;
+  const { canCurate, showNewForm, targets, targetSel, setTargetSel, oppSel, setOppSel, opps, setShowNewForm, creating, createAnalysis, opportunityId } = ctx;
+  const profileHref = profileHrefFor(opportunityId);
   return (
     <>{canCurate && showNewForm && (
         <div className="sizing-new-form mb-3">
           <div className="mb-2">
             <span className="text-label block mb-1">① 분석 대상 — 그룹/계열사 분석에서 프로파일을 만든 대상</span>
             {targets.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">그룹/계열사 분석 화면에서 회사를 등록·분석하면 여기에 표시됩니다.</p>
+              <div className="text-[length:var(--fs-body)]">
+                <p className="text-[color:var(--muted-fg)] mb-2">
+                  분석 대상이 없습니다. 순서는 <strong>① 그룹 등록 → ② 계열사 등록·프로파일 분석 → ③ 시너지 분석 시작</strong>입니다.
+                </p>
+                <Link href={profileHref} className="btn-ghost btn-sm">그룹·계열사 프로파일 등록 →</Link>
+              </div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {targets.map((t) => (
@@ -42,10 +50,21 @@ export function NewSynergyForm({ ctx }: { ctx: SynergyStageState }) {
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)}>취소</button>
-            <button type="button" className="btn-ghost" disabled={creating || !targetSel} onClick={() => void createAnalysis()}>
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={creating || !targetSel}
+              aria-describedby={!targetSel ? "synergy-start-reason" : undefined}
+              onClick={() => void createAnalysis()}
+            >
               {creating ? "분석 시작 중..." : "분석 시작"}
             </button>
           </div>
+          {!targetSel && (
+            <p id="synergy-start-reason" className="mt-2 mb-0 text-right text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              분석 대상(①)을 선택하면 시작할 수 있습니다. 대상이 없으면 <Link href={profileHref} className="guide-link">그룹·계열사 프로파일을 먼저 등록</Link>하세요.
+            </p>
+          )}
         </div>
       )}</>
   );

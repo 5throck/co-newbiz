@@ -9,7 +9,7 @@ import { api } from "../../../lib/api.ts";
 import { useConfirm } from "../../crud.tsx";
 import type { MarketOverview, IndustryDetail, KsicEntryView, LlmStatus, IndustryRow, ChainGraphNode, ChainGraphEdge } from "./types.ts";
 
-export function useMarketData({ industryId: industryIdProp, embedded }: { industryId?: string; embedded?: boolean }) {
+export function useMarketData({ industryId: industryIdProp, embedded, startNew }: { industryId?: string; embedded?: boolean; startNew?: boolean }) {
 
   const { me } = useAuth();
   const canCurate = canWriteBusiness(me?.role);
@@ -21,7 +21,7 @@ export function useMarketData({ industryId: industryIdProp, embedded }: { indust
   const [localIndustry, setLocalIndustry] = useState<string | null>(industryIdProp ?? null);
   const selectedIndustry = urlSync ? searchParams.get("industry") : localIndustry;
   const [error, setError] = useState<string | null>(null);
-  const [showNewForm, setShowNewForm] = useState(false);
+  const [showNewForm, setShowNewForm] = useState(!!startNew);
   const [newName, setNewName] = useState("");
   const [newCode, setNewCode] = useState("");
   const [ksicResults, setKsicResults] = useState<KsicEntryView[] | null>(null);

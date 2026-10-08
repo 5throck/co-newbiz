@@ -34,10 +34,10 @@ export function MarketReport({ detail, analysisId, analysisDate, onAddLinked }: 
   return (
     <>
       <div className="sizing-report-header">
-        <h2>
+        <h1>
           {detail.industry.name_ko} 시장 분석 리포트
           {detail.industry.ksic_code && <code className="dd-item-id ml-2">{detail.industry.ksic_code}</code>}
-        </h2>
+        </h1>
         <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
           방법론: systematic-market-sizing v1.1
           {manualResearch ? " · 연구문서 기반 수동 분석(분석가 확정)" : " · 8단계 파이프라인 산출"}

@@ -213,13 +213,20 @@ function DealsBoard() {
       <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 8 }}>
         <h1>검토/안건 보드</h1>
         <span className="ml-auto">
-          <PrimaryAction inline href="/market" label="＋ 새 검토 시작 (시장분석부터)" />
+          <PrimaryAction inline href="/market?new=1" label="＋ 새 검토 시작 (시장분석부터)" />
           <Link href="/opportunities?known_target=1" className="btn-ghost ml-2">알려진 대상으로 시작</Link>
         </span>
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
         모든 검토/안건을 퍼널 한 장으로 봅니다 — 기회(S1~S7)와 프로젝트(S8~S12), 진행 에이징까지.
       </p>
+      {/* R2-A item 8: every screen that has no sidebar entry is reachable from here. */}
+      <nav aria-label="관련 화면 바로가기" className="flex flex-wrap items-center gap-1 mb-3">
+        <span className="section-meta">바로가기:</span>
+        {SHORTCUTS.map(([href, label]) => (
+          <Link key={href} href={href} className="btn-ghost btn-sm">{label}</Link>
+        ))}
+      </nav>
 
       <SectionToolbar
         filters={
@@ -344,6 +351,16 @@ function projectStageHref(projectId: string, stage: string): string {
   const group = STAGE_TAB_GROUPS.find((g) => g.stage === stage);
   return `/projects/${projectId}${group?.tabs[0]?.seg ?? "/process"}`;
 }
+
+/** Entry points for routes that are not in the sidebar (orphan-route decision, design §3.6). */
+const SHORTCUTS: Array<[string, string]> = [
+  ["/projects", "프로젝트 목록"],
+  ["/portfolio-view", "포트폴리오 전체 뷰"],
+  ["/our-company", "그룹·계열사 프로파일"],
+  ["/companies", "회사 검색"],
+  ["/agents", "에이전트팀 질의"],
+  ["/onboarding", "시작하기 가이드"],
+];
 
 export default function DealsPage() {
   return (

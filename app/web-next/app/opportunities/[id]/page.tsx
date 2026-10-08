@@ -11,7 +11,9 @@ import { api } from "../../../lib/api.ts";
 import { useAuth } from "../../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { useConfirm } from "../../../components/crud.tsx";
-import { SectionToolbar } from "../../../components/layout.tsx";
+import { PageHeader, SectionToolbar } from "../../../components/layout.tsx";
+import { DealBreadcrumb } from "../../../components/DealBreadcrumb.tsx";
+import { StageRail } from "../../../components/StageFrame.tsx";
 import { ScenarioPremises, SketchCanvas } from "../../../components/SketchCanvas.tsx";
 import { ClosureModal } from "../../../components/ClosureModal.tsx";
 import { PromotionPanel } from "../../../components/PromotionPanel.tsx";
@@ -70,6 +72,15 @@ export function OpportunityDetail() {
       .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
   }, [id]);
   useEffect(() => { load(); }, [load]);
+  // R2-A item 7: the S2 row action "매력도 평가" lands with the score field focused.
+  const wantsScoreFocus = searchParams.get("focus") === "score";
+  const scoreReady = !!opp && opp.status === "identified" && canAct;
+  useEffect(() => {
+    if (!wantsScoreFocus || !scoreReady) return;
+    const el = document.getElementById("opp-score-input");
+    el?.scrollIntoView({ block: "center" });
+    el?.focus();
+  }, [wantsScoreFocus, scoreReady]);
   useEffect(() => {
     api.get<{ factors: OppFactors }>(`/api/opportunities/${encodeURIComponent(id)}/factors`)
       .then((r) => setFactors(r.data.factors))
@@ -181,8 +192,11 @@ export function OpportunityDetail() {
   return (
     <main>
       {confirmDialog}
+      <DealBreadcrumb dealId={id} stageId="S2" tail={[{ label: "기회 상세" }]} />
+      <PageHeader title={opp.name} />
+      <StageRail current={["S2"]} />
       <SectionToolbar
-        title={opp.name}
+        title="기회 상세"
         summary={
           <span className="flex items-center gap-1 flex-wrap">
             <span className="section-meta">S2 기회 발굴 · {STATUS_LABEL[opp.status]}</span>
@@ -195,7 +209,7 @@ export function OpportunityDetail() {
             {canAct && opp.status !== "dropped" && !opp.project_id && (
               <button type="button" className="btn-ghost btn-sm" onClick={() => setClosing(true)}>종료…</button>
             )}
-            <Link href="/opportunities" className="btn-ghost btn-sm">← 목록으로</Link>
+            <Link href={`/deals/${encodeURIComponent(id)}/s2`} className="btn-ghost btn-sm">← S2 목록으로</Link>
           </span>
         }
       />
@@ -225,7 +239,7 @@ export function OpportunityDetail() {
         {opp.rationale && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{opp.rationale}</p>}
         {canAct && opp.status === "identified" && (
           <div className="flex flex-wrap items-center gap-1">
-            <input type="number" min={0} max={100} aria-label="매력도" placeholder="매력도 0-100"
+            <input id="opp-score-input" type="number" min={0} max={100} aria-label="매력도" placeholder="매력도 0-100"
               value={attractDraft} onChange={(e) => setAttractDraft(e.target.value)}
               className="sizing-new-input sizing-new-input-sm" style={{ width: "7.5rem" }} />
             <button type="button" className="btn-ghost btn-sm" onClick={() => void evaluateAttractiveness()}>매력도 평가</button>
