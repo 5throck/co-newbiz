@@ -1,0 +1,24 @@
+case_id: pilot-006
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-006-orion-ligachem-bio.md
+deal_type: brownfield
+inputs_ref: fixtures/pilot-006.input.json
+expectations:
+  - stage: S6
+    gate: screening
+    function: antitrust_flags
+    expected: { combination_type: conglomerate, product_overlap: false, hhi_flag: none, certain_block: false }
+    citation: [{ doc: docs/pilots/pilot-006-orion-ligachem-bio.md, section: "2. Walkthrough Against `procedures/_shared/brownfield-pre-fs/schema.yaml` and `brownfield-fs/schema.yaml`" }]
+  - stage: S8
+    gate: fs
+    function: rag_dimensions
+    expected: { financial: not_graded }
+    note: The 80.1% unrealized gain reported later must not be used to infer a Financial grade (and is post-decision anyway).
+    citation: [{ doc: docs/pilots/pilot-006-orion-ligachem-bio.md, section: "4. Findings" }]
+  - stage: S8
+    gate: fs
+    function: review_findings
+    expected: { must_raise: [qoe_not_applicable_pre_revenue_rd_target, certification_step_shape_mismatch_clinical_pathway, value_chain_linkage_null_diversification_thesis], must_declare_could_not_verify: true }
+    citation:
+      - { doc: docs/pilots/pilot-006-orion-ligachem-bio.md, section: "3. Value-Chain-Linkage Analysis — A Genuinely Negative Finding" }
+      - { doc: docs/pilots/pilot-006-orion-ligachem-bio.md, section: "4. Findings" }

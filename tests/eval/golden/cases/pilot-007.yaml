@@ -1,0 +1,20 @@
+case_id: pilot-007
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-007-punggu-offshore-wind.md
+deal_type: greenfield
+inputs_ref: fixtures/pilot-007.input.json
+expectations:
+  - stage: S5
+    gate: screening
+    function: kill_criteria
+    expected: { hits: [], not_evaluable: [zero_site_clears_infrastructure_minimums] }
+    note: partner_dependency_unconfirmed_and_no_alternative is N/A (named consortium). Single-site case — no rejected alternatives to evaluate the infrastructure-minimum condition against.
+    citation: [{ doc: docs/pilots/pilot-007-punggu-offshore-wind.md, section: "2. Walkthrough Against `procedures/_shared/greenfield-screening/schema.yaml`" }]
+  - stage: S5
+    gate: screening
+    function: review_findings
+    expected: { must_raise: [consultation_boundary_admin_jurisdiction_not_legal_radius, eia_renotification_schedule_risk, marine_survey_fishing_liability], must_declare_could_not_verify: true }
+    citation:
+      - { doc: docs/pilots/pilot-007-punggu-offshore-wind.md, section: "2. Walkthrough Against `procedures/_shared/greenfield-screening/schema.yaml`" }
+      - { doc: docs/pilots/pilot-007-punggu-offshore-wind.md, section: "3. Permit-Pathway-Mapping (DAG) — A Real, Quantified Critical Path" }
+      - { doc: docs/pilots/pilot-007-punggu-offshore-wind.md, section: "4. Findings" }

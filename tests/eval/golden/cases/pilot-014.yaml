@@ -1,0 +1,20 @@
+case_id: pilot-014
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-014-c2y-university-techholdings.md
+deal_type: brownfield
+case_subtype: rbd
+inputs_ref: fixtures/pilot-014.input.json
+expectations:
+  - stage: S9
+    gate: dd
+    function: dd_tailoring
+    expected: { checklist: rbd-technology, required_items: [rbd-01, rbd-02, rbd-03, rbd-05, rbd-06], droppable_with_reason: [rbd-04] }
+    note: rbd-04 as worded (build/license/spin-off) does not fit an independently founded target; dropping it needs a stated reason, not silence.
+    citation: [{ doc: docs/pilots/pilot-014-c2y-university-techholdings.md, section: "2. Walkthrough Against `checklists/rbd-technology-checklist.yaml`" }]
+  - stage: S9
+    gate: dd
+    function: review_findings
+    expected: { must_raise: [joint_ip_ownership_from_co_research, government_relationship_formal_vs_informal_unclassified, minority_venture_investment_shape], must_declare_could_not_verify: true }
+    citation:
+      - { doc: docs/pilots/pilot-014-c2y-university-techholdings.md, section: "3. New Finding: R&BD Cases Are Not Always Structured as a Discrete \"Deal\"" }
+      - { doc: docs/pilots/pilot-014-c2y-university-techholdings.md, section: "4. Findings" }

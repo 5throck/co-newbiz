@@ -1,0 +1,411 @@
+{
+  "meta": {
+    "runId": "offline-baseline",
+    "date": "2026-10-08",
+    "sha": "6b024b5e"
+  },
+  "goldenVersion": "1.0.0",
+  "suites": [
+    {
+      "name": "rag",
+      "kind": "deterministic",
+      "cases": [
+        {
+          "caseId": "pilot-001",
+          "stage": "S9",
+          "fn": "rag_dimensions",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-001",
+          "stage": "S9",
+          "fn": "rag_overall",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-001",
+          "stage": "S9",
+          "fn": "confidence_cap",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-002",
+          "stage": "S9",
+          "fn": "rag_dimensions",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-002",
+          "stage": "S9",
+          "fn": "rag_overall",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-002",
+          "stage": "S9",
+          "fn": "confidence_cap",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-003",
+          "stage": "S11",
+          "fn": "rag_overall",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-004",
+          "stage": "S11",
+          "fn": "rag_overall",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-006",
+          "stage": "S8",
+          "fn": "rag_dimensions",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-008",
+          "stage": "S9",
+          "fn": "rag_dimensions",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-008",
+          "stage": "S9",
+          "fn": "rag_overall",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-009",
+          "stage": "S8",
+          "fn": "rag_dimensions",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-009",
+          "stage": "S8",
+          "fn": "rag_overall",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-010",
+          "stage": "S9",
+          "fn": "rag_dimensions",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-011",
+          "stage": "S8",
+          "fn": "rag_dimensions",
+          "score": 1,
+          "failures": []
+        }
+      ],
+      "couldNotEvaluate": [
+        {
+          "caseId": "pilot-010",
+          "fn": "rag_overall",
+          "reason": "expected red needs structured inputs (kill-criteria var or graded dimensions) the fixture lacks"
+        }
+      ],
+      "metrics": {}
+    },
+    {
+      "name": "kill",
+      "kind": "deterministic",
+      "cases": [
+        {
+          "caseId": "pilot-001",
+          "stage": "S7",
+          "fn": "kill_criteria",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-002",
+          "stage": "S7",
+          "fn": "kill_criteria",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-005",
+          "stage": "S5",
+          "fn": "kill_criteria",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-007",
+          "stage": "S5",
+          "fn": "kill_criteria",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-008",
+          "stage": "S7",
+          "fn": "kill_criteria",
+          "score": 0,
+          "failures": [
+            "unexpected hit preliminary_hhi_flags_certain_block (golden expects [])"
+          ]
+        },
+        {
+          "caseId": "pilot-009",
+          "stage": "S7",
+          "fn": "kill_criteria",
+          "score": 1,
+          "failures": []
+        },
+        {
+          "caseId": "pilot-010",
+          "stage": "S7",
+          "fn": "kill_criteria",
+          "score": 1,
+          "failures": []
+        }
+      ],
+      "couldNotEvaluate": [
+        {
+          "caseId": "pilot-005",
+          "fn": "kill_criteria.infrastructure_plan_not_finalized_at_site_announcement",
+          "reason": "predicate variable not supplied by the fixture (UNASSESSED)"
+        },
+        {
+          "caseId": "pilot-010",
+          "fn": "kill_criteria.preliminary_hhi_flags_certain_block",
+          "reason": "predicate variable not supplied by the fixture (UNASSESSED)"
+        }
+      ],
+      "metrics": {}
+    },
+    {
+      "name": "antitrust",
+      "kind": "deterministic",
+      "cases": [
+        {
+          "caseId": "pilot-008",
+          "stage": "S6",
+          "fn": "antitrust_flags",
+          "score": 1,
+          "failures": []
+        }
+      ],
+      "couldNotEvaluate": [
+        {
+          "caseId": "pilot-001",
+          "fn": "antitrust_flags.jurisdictions",
+          "reason": "fixture has no `jurisdictions` list"
+        },
+        {
+          "caseId": "pilot-001",
+          "fn": "antitrust_flags.multi_jurisdiction",
+          "reason": "fixture has no `jurisdictions` list"
+        },
+        {
+          "caseId": "pilot-001",
+          "fn": "antitrust_flags.hhi_flag",
+          "reason": "fixture lacks the two merging parties' individual pre-deal shares"
+        },
+        {
+          "caseId": "pilot-001",
+          "fn": "antitrust_flags.filing_required",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-001",
+          "fn": "antitrust_flags.combination_type",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-001",
+          "fn": "antitrust_flags.product_overlap",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-001",
+          "fn": "antitrust_flags.certain_block",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-002",
+          "fn": "antitrust_flags.multi_jurisdiction",
+          "reason": "fixture has no `jurisdictions` list"
+        },
+        {
+          "caseId": "pilot-002",
+          "fn": "antitrust_flags.filing_required",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-002",
+          "fn": "antitrust_flags.combination_type",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-002",
+          "fn": "antitrust_flags.product_overlap",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-002",
+          "fn": "antitrust_flags.certain_block",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-003",
+          "fn": "antitrust_flags.product_overlap",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-004",
+          "fn": "antitrust_flags.product_overlap",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-006",
+          "fn": "antitrust_flags.hhi_flag",
+          "reason": "fixture lacks the two merging parties' individual pre-deal shares"
+        },
+        {
+          "caseId": "pilot-006",
+          "fn": "antitrust_flags.combination_type",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-006",
+          "fn": "antitrust_flags.product_overlap",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-006",
+          "fn": "antitrust_flags.certain_block",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-008",
+          "fn": "antitrust_flags.filing_required",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-008",
+          "fn": "antitrust_flags.combination_type",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-008",
+          "fn": "antitrust_flags.product_overlap",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-008",
+          "fn": "antitrust_flags.certain_block",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-009",
+          "fn": "antitrust_flags.hhi_flag",
+          "reason": "fixture lacks the two merging parties' individual pre-deal shares"
+        },
+        {
+          "caseId": "pilot-009",
+          "fn": "antitrust_flags.combination_type",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-009",
+          "fn": "antitrust_flags.product_overlap",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-009",
+          "fn": "antitrust_flags.certain_block",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-010",
+          "fn": "antitrust_flags.jurisdictions",
+          "reason": "fixture has no `jurisdictions` list"
+        },
+        {
+          "caseId": "pilot-010",
+          "fn": "antitrust_flags.hhi_flag",
+          "reason": "fixture lacks the two merging parties' individual pre-deal shares"
+        },
+        {
+          "caseId": "pilot-010",
+          "fn": "antitrust_flags.filing_required",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-010",
+          "fn": "antitrust_flags.combination_type",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-010",
+          "fn": "antitrust_flags.product_overlap",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-010",
+          "fn": "antitrust_flags.certain_block",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        },
+        {
+          "caseId": "pilot-010",
+          "fn": "antitrust_flags.relevant_markets",
+          "reason": "judgement/threshold input not in fixture; no deterministic engine to score"
+        }
+      ],
+      "metrics": {}
+    }
+  ],
+  "skipped": [
+    "review-ai2 (LLM suites skipped: pass --llm with CO_NEWBIZ_EVAL_LLM=1 and a configured provider)",
+    "stage-reco (LLM suites skipped: pass --llm with CO_NEWBIZ_EVAL_LLM=1 and a configured provider)",
+    "committee (LLM suites skipped: pass --llm with CO_NEWBIZ_EVAL_LLM=1 and a configured provider)",
+    "dd-tailor (LLM suites skipped: pass --llm with CO_NEWBIZ_EVAL_LLM=1 and a configured provider)",
+    "business-case (LLM suites skipped: pass --llm with CO_NEWBIZ_EVAL_LLM=1 and a configured provider)"
+  ],
+  "provider": {
+    "provider": "none (offline, deterministic suites only)",
+    "baseUrlHost": "-",
+    "model": "-"
+  },
+  "promptHashes": {
+    "review-ai2": "8650469afb562f54dd398aec8fa3f4b641a6ef7ff404d8a99a2a9da7f1208d5f",
+    "committee": "b71b296b8d6fe22de7b67ecb3d162b876d1933d72100f59c0da7e13738fb0c19",
+    "dd-tailor": "cf73892d80d39af2045d3c33ca8b9e709e235e7c1af3971f302f39ffa95ae10d",
+    "business-case": "45b1f093eb30e0753283a923a6921121c8e42223e43965c2e8b6a1e9005cc14e",
+    "stage-reco": "ca6961ad571c972a648401a626c91234c9ae2e8776c3b12de47d6445127d8e5b"
+  },
+  "repeat": 1,
+  "thresholdFailures": [],
+  "inventoryProblems": [],
+  "budgetStop": null,
+  "usage": {
+    "input": 0,
+    "output": 0,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "costUsd": 0,
+    "calls": 0
+  }
+}

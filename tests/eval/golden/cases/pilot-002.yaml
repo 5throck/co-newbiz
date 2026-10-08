@@ -1,0 +1,50 @@
+case_id: pilot-002
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-002-hanwha-impact-hsd-engine.md
+deal_type: brownfield
+inputs_ref: fixtures/pilot-002.input.json
+post_decision_inputs_ref: fixtures/pilot-002.post-decision.json
+expectations:
+  - stage: S6
+    gate: screening
+    function: antitrust_flags
+    expected: { filing_required: true, multi_jurisdiction: true, combination_type: vertical, product_overlap: false, certain_block: false }
+    citation:
+      - { doc: docs/pilots/pilot-002-hanwha-impact-hsd-engine.md, section: "1. Screening" }
+      - { doc: docs/pilots/pilot-002-hanwha-impact-hsd-engine.md, section: "4. DD — M&A Special Topics Checklist Walkthrough" }
+  - stage: S7
+    gate: screening
+    function: kill_criteria
+    expected: { hits: [] }
+    citation: [{ doc: docs/pilots/pilot-002-hanwha-impact-hsd-engine.md, section: "1. Screening" }]
+  - stage: S9
+    gate: dd
+    function: dd_tailoring
+    expected: { checklist: ma-special-topics, required_items: [ma-01, ma-02, ma-03, ma-04, ma-05, ma-06, ma-07, ma-08, ma-10, ma-11], droppable_with_reason: [ma-09, ma-12] }
+    note: ma-07/ma-08 must be kept and read to cover the retained seller-side supply relationship.
+    citation: [{ doc: docs/pilots/pilot-002-hanwha-impact-hsd-engine.md, section: "4. DD — M&A Special Topics Checklist Walkthrough" }]
+  - stage: S9
+    gate: dd
+    function: rag_dimensions
+    input_basis: post_decision
+    expected: { regulatory_permit: green, financial: not_graded, market: not_graded, data_confidence: not_graded, technical_execution: not_graded, risk: not_graded }
+    note: Financial must stay not_graded despite >9x operating-profit growth — no hurdle rate or capital structure is public.
+    citation: [{ doc: docs/pilots/pilot-002-hanwha-impact-hsd-engine.md, section: "5. Entity IC / Group IC" }]
+  - stage: S9
+    gate: dd
+    function: rag_overall
+    input_basis: post_decision
+    expected: { overall: not_graded, complete: false }
+    citation: [{ doc: docs/pilots/pilot-002-hanwha-impact-hsd-engine.md, section: "5. Entity IC / Group IC" }]
+  - stage: S9
+    gate: dd
+    function: confidence_cap
+    expected: { cap_applies: false, data_confidence: not_graded }
+    citation: [{ doc: docs/pilots/pilot-002-hanwha-impact-hsd-engine.md, section: "5. Entity IC / Group IC" }]
+  - stage: S9
+    gate: dd
+    function: review_findings
+    expected: { must_raise: [retained_seller_supplier_coc_exposure, financial_grade_not_inferable_without_hurdle], must_declare_could_not_verify: true }
+    citation:
+      - { doc: docs/pilots/pilot-002-hanwha-impact-hsd-engine.md, section: "6. Findings" }
+      - { doc: docs/pilots/pilot-002-hanwha-impact-hsd-engine.md, section: "4. DD — M&A Special Topics Checklist Walkthrough" }

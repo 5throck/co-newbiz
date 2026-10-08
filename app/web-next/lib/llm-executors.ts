@@ -68,7 +68,7 @@ export function makeLlmBusinessCaseExecutor(): BusinessCaseStepExecutor {
 
 // ── DD checklist tailoring ──────────────────────────────────────────────────
 
-function parseDrafts(raw: string): TailorItemDraft[] {
+export function parseDrafts(raw: string): TailorItemDraft[] {
   const jsonText = raw.replace(/```(?:json)?/g, "").trim();
   const start = jsonText.indexOf("[");
   const end = jsonText.lastIndexOf("]");

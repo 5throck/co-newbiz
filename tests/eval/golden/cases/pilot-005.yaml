@@ -1,0 +1,24 @@
+case_id: pilot-005
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-005-sk-hynix-yongin-cluster.md
+deal_type: greenfield
+inputs_ref: fixtures/pilot-005.input.json
+expectations:
+  - stage: S5
+    gate: screening
+    function: kill_criteria
+    expected:
+      hits: [infrastructure_plan_not_finalized_at_site_announcement]
+      not_evaluable: [zero_site_clears_infrastructure_minimums]
+    note: The infrastructure condition was added to greenfield-screening from this pilot's F-1; partner_dependency_unconfirmed_and_no_alternative is not hit (no partner dependency).
+    citation:
+      - { doc: docs/pilots/pilot-005-sk-hynix-yongin-cluster.md, section: "2. Walkthrough Against `procedures/_shared/greenfield-screening/schema.yaml`" }
+      - { doc: docs/pilots/pilot-005-sk-hynix-yongin-cluster.md, section: "5. Findings" }
+  - stage: S9
+    gate: dd
+    function: review_findings
+    expected: { must_raise: [inter_regional_water_rights_dispute, incentive_npv_not_computable_single_site, wacc_hurdle_not_user_supplied], must_declare_could_not_verify: true }
+    citation:
+      - { doc: docs/pilots/pilot-005-sk-hynix-yongin-cluster.md, section: "4. Walkthrough Against `procedures/_shared/greenfield-fs/schema.yaml` and `greenfield-dd/schema.yaml`" }
+      - { doc: docs/pilots/pilot-005-sk-hynix-yongin-cluster.md, section: "3. Walkthrough Against `procedures/_shared/greenfield-pre-fs/schema.yaml`" }
+      - { doc: docs/pilots/pilot-005-sk-hynix-yongin-cluster.md, section: "5. Findings" }

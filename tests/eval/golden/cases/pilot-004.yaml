@@ -1,0 +1,25 @@
+case_id: pilot-004
+golden_version: 1.0.0
+source_doc: docs/pilots/pilot-004-sk-group-capital-rebalancing.md
+deal_type: group_capital_allocation
+inputs_ref: fixtures/pilot-004.input.json
+expectations:
+  - stage: S11
+    gate: group_ic
+    function: review_findings
+    expected: { must_raise: [group_ranking_quantitative_inputs_not_public, intra_group_transaction_fair_trade_act_47], must_declare_could_not_verify: true }
+    note: The §47 screen applies but has no adverse public finding; the reviewer must say so rather than invent one.
+    citation:
+      - { doc: docs/pilots/pilot-004-sk-group-capital-rebalancing.md, section: "2. Walkthrough Against `procedures/_shared/group-investment-review/schema.yaml`" }
+      - { doc: docs/pilots/pilot-004-sk-group-capital-rebalancing.md, section: "3. What Public Data Cannot Supply (Explicit Gap)" }
+  - stage: S11
+    gate: group_ic
+    function: antitrust_flags
+    expected: { product_overlap: false }
+    citation: [{ doc: docs/pilots/pilot-004-sk-group-capital-rebalancing.md, section: "2. Walkthrough Against `procedures/_shared/group-investment-review/schema.yaml`" }]
+  - stage: S11
+    gate: group_ic
+    function: rag_overall
+    expected: { overall: not_graded, complete: false }
+    note: No per-unit IRR-over-hurdle or RAG-equivalent grade is public; a ranking or grade must not be fabricated.
+    citation: [{ doc: docs/pilots/pilot-004-sk-group-capital-rebalancing.md, section: "3. What Public Data Cannot Supply (Explicit Gap)" }]
