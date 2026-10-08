@@ -29,7 +29,7 @@ import {
   resolveExternalReference,
   CALIBRATION_TRIGGER_PCT,
 } from "./market-calibration.ts";
-import { SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
+import { GENERIC_SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
 import { systemMessage, promptAgent } from "./prompts.ts";
 
@@ -493,7 +493,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     .map((x) => ({ code: str(x.code).toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 24), label: str(x.label) }))
     .filter((x) => x.code.length > 0 && x.label.length > 0)
     .slice(0, 6); // 연결 드라이버(권역6×세그먼트) 상한 완화 — 24 고정 문제 해소 (사용자 지적)
-  const segs = segDefs.length >= 2 ? segDefs : [...SEGMENTS];
+  const segs = segDefs.length >= 2 ? segDefs : [...GENERIC_SEGMENTS];
   const POSITION_LABEL: Record<string, string> = { upstream: "상류(원자재·부품)", midstream: "중류(조립·가공)", downstream: "하류(완제품·수요처)" };
   // 경쟁 구조 (S1 competitive-intelligence) — LLM 추정, 공시 대조 전
   const compJson = await askJsonTracked(
@@ -1002,10 +1002,16 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   );
   stepSummaries.push({ step: 8, ...s8, pendingInputs: [] });
 
+  // Wave C-3 (D-2): offline or failed-LLM runs are deterministic placeholders.
+  // The stored data-confidence grade is the single source of truth and the
+  // report reads it, so a dummy matrix can never be graded like a real estimate.
+  const synthesized = !llmConfiguredAtStart || hadLlmFailure || stepSummaries.some((s) => s.source !== "llm");
+
   // ── Assemble the matrix and persist version 1 ──
   const matrix: SizingMatrix = {
     industryLabel: industry,
     provenance: "llm-estimate",
+    synthesized: synthesized || undefined,
     anchor: { sources: anchorSources, total: anchorTotal },
     segments: segs,
     regions,
@@ -1067,7 +1073,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   // Wave F-5 (migration 0125): the version carries its data-confidence grade
   // (proxy hop count x data source) so RAG data_confidence and the S1
   // completion predicate have a stored input.
-  const confidence = deriveDataConfidence(db, analysis.industry_id, matrix.provenance);
+  const confidence = deriveDataConfidence(db, analysis.industry_id, matrix.provenance, { synthesized });
   db.transaction(() => {
     db.run(
       `INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, changelog, created_by, created_at, data_confidence_grade, chain_hops, confidence_basis)

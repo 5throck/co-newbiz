@@ -9,8 +9,8 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
-import { latestGateDecisions } from "../../../../../lib/process-flow.ts";
-import { badRequest, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
+import { gateGoPrerequisiteGaps, latestGateDecisions, type GateId } from "../../../../../lib/process-flow.ts";
+import { badRequest, fail, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { route } from "../../../../../lib/route.ts";
 import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
@@ -81,6 +81,14 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const db = getDb();
   const opp = db.query("SELECT id, name FROM opportunity WHERE id = ?").get(id) as { id: string; name: string } | null;
   if (!opp) return notFound();
+  // Wave C-3 (pilot-009 D-4): GO needs the gate's stage prerequisites complete.
+  // HOLD/KILL stay allowed anytime. New writes only — existing rows are untouched.
+  if (body.decision === "go") {
+    const gaps = gateGoPrerequisiteGaps({ type: "opportunity", id }, body.gate as GateId);
+    if (gaps.length > 0) {
+      return fail(409, "gate_prerequisites_incomplete", `GO 불가 — ${body.gate} 진행의 선행 단계가 완료되지 않았습니다: ${gaps.join("; ")}. HOLD 또는 KILL은 언제든 기록할 수 있습니다.`);
+    }
+  }
 
   const nowTs = new Date().toISOString();
   const gid = ulid();

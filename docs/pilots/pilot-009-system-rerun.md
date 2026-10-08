@@ -68,3 +68,32 @@ The manual pilot (2026-08-20) said the structure-hypothesis step does not name t
 ## 6. Verdict
 
 **The run stopped early, and the stop was useful.** The system behaved correctly wherever data was missing. The S2 draft refused to invent a score. The S3 and S4 reviews declared what they could not verify, and no RAG grade was rendered. It also surfaced four High defects that the seeded C-1 scenarios cannot find, because those scenarios bypass S1–S7 with fixtures. One High defect and one Medium defect were fixed in this wave. The rest are listed above with severities. The engine-level S6–S8 expectations in the golden case remain covered by the deterministic eval suites. A UI-level re-run of S6–S8 for this pilot is blocked until D-3 and D-5 (and D-6 offline) are resolved.
+
+## 7. Re-run after C-3
+
+**Mode**: same as section 1. A production build on its own free port, a temporary SQLite DB, LLM, DART and web-research settings blank (no network call), public facts only, entered as the `analyst` through the browser. The only seeding was the two bootstrap accounts. Port 7749 was not touched.
+
+### 7.1 Defect disposition
+
+| ID | C-3 change | Observed in the re-run |
+|---|---|---|
+| D-2 | One source of truth. A deterministic-synthesis matrix (LLM off or failed) is stamped `synthesized` and graded **C** (`deriveDataConfidence`, F-5 rule). The report shows the stored grade, not a separate display value. An LLM estimate stays B, frozen research A. | The offline analysis stored C, and the report line read "데이터 신뢰도 등급 C (저장된 등급 — RAG 상한 기준) … cap C (deterministic synthesis, not a real estimate)". The old run stored B beside a "do not trust" banner. |
+| D-3 | `industry_id` on `POST /api/opportunities` and `PUT /api/opportunities/{id}`, validated against `md_industry`. The S2 registration form has an "S1 분석 산업" select, and each funnel row can be linked afterwards. | The hand-entered opportunity was linked to "온라인 리테일(전자상거래)", and the S1 predicate found the matrix. |
+| D-4 | Both gate-decision routes (and so the proposal-confirm path, which calls them) refuse GO with 409 `gate_prerequisites_incomplete`, naming the missing stages. HOLD and KILL stay allowed (KILL still needs learning capture). Existing rows are not touched. | Screening GO: 409 "S2 기회 발굴 미완료; S3 시너지·전략적 적합성 미완료". Pre-FS GO: 409 "S4 미완료". Target Screening GO: 409 "brownfield 트랙 결정 필요; S7 미완료". No `gate_decision` row was written. |
+| D-5 / 4.1 | "알려진 대상으로 시작" on the deal board. `POST /api/opportunities` accepts `known_target`, which puts the named target into the S6 Long List (marked `[알려진 대상]`, with a discovery source) and pre-defines a Target Universe of one candidate. No predicate is skipped. The opportunity page shows a guide that links S1–S4 with the target as context. No migration. | Target "이베이코리아" was pre-filled into S6. The guide listed S1 완료, S2 지금 진행, S3/S4 대기. |
+| D-6 | `PUT /api/market-overview/analyses/{id}/competitive` records the concentration summary and major players as a new analysis version. This is the field the S1 predicate reads. The competitive tab has a "경쟁 구조 직접 입력" form. | Naver 18%, Coupang 13%, eBay Korea 12% and SSG.com 3% were entered. The "경쟁 구조" requirement cleared. |
+| D-7 | The pipeline's fallback segments are industry-agnostic (주요/보조/기타 수요처). The heavy-industry set stays only for legacy matrices that carry no segments. | The segments read "주요 수요처 / 보조 수요처 / 기타 수요처". 건설/광산 no longer appears. |
+| D-9 | The S1 and S3 primary actions are labelled for what they do: "새 산업 분석 입력" and "새 시너지 평가 입력". | S1 shows "새 산업 분석 입력". |
+| D-10 | A bare "Not found." in the review panel is replaced by a message that points back to the deal board. | Copy change only. |
+
+Two more dead ends of the same kind as D-1 were found and fixed during the re-run. `/opportunities` showed "no review in progress" when no deal existed, so the S2 registration form was unreachable on a fresh install. `CarrierGate` now renders the S2 funnel inline in that case, and also for `?known_target=1`.
+
+### 7.2 How far it now gets
+
+**It still stops at S2, and this time the stop is legitimate.**
+
+- S1 is complete: market size and growth (from the synthesized matrix, flagged), competitive structure (public shares), value-chain structure, and a stored confidence grade (C).
+- S2 needs the opportunity attractiveness score (0–100). That is an internal judgement that the public record does not contain, and boundary #2 gives scoring to a person. With the LLM blank, the draft answers that a person must assess it.
+- S3 (synergy score, fit rationale, sourced capability list, `selected`) and S4 (five-criteria route scores, alternatives) are internal judgements too. The deal then reaches S6/S7 with the named target already in place, but candidate screening evidence and the Kill Criteria inputs remain for a person to enter.
+
+None of the stops is a product defect. Each is a missing non-public input or a human judgement. The synthesized S1 figures are not real market data (the banner says so and the grade is C). A person with the real S1 sources would replace them by re-analysing with an LLM configured or by seeding a researched matrix.

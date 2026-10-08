@@ -124,7 +124,10 @@ export function ReviewBuckets({
         setViews((v) => ({ ...v, [key]: r.data }));
         setError(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "검토 불러오기 실패");
+        // Wave C-3 (D-10): a bare "Not found." (direct URL without a real deal id)
+        // gets an actionable empty state instead.
+        const msg = e instanceof Error ? e.message : "";
+        setError(/^not found\.?$/i.test(msg.trim()) ? "이 검토/안건을 찾을 수 없습니다 — 검토/안건 보드에서 항목을 선택해 다시 들어오세요." : msg || "검토 불러오기 실패");
       }
     },
     [base, canRequest],

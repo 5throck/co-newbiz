@@ -27,10 +27,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const versions = db
     .query(
-      `SELECT version_no, payload, changelog, created_by, created_at
+      `SELECT version_no, payload, changelog, created_by, created_at, data_confidence_grade, confidence_basis
        FROM market_sizing_version WHERE analysis_id = ? ORDER BY version_no DESC`,
     )
-    .all(id) as Array<{ version_no: number; payload: string; changelog: string | null; created_by: string; created_at: string }>;
+    .all(id) as Array<{ version_no: number; payload: string; changelog: string | null; created_by: string; created_at: string; data_confidence_grade: string | null; confidence_basis: string | null }>;
   const versionsWithParsed = versions.map((v) => {
     try {
       return { ...v, payload: JSON.parse(v.payload) as unknown };

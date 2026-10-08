@@ -46,7 +46,7 @@ export function SynergyStage(props0: { opportunityId?: string; analysisId?: stri
       {!canCurate ? (
         <PrimaryAction label="시너지 분석 실행" disabled disabledReason="시너지 분석은 analyst 권한이 필요합니다." />
       ) : !showNewForm || !targetSel ? (
-        <PrimaryAction label="입력 완료하기" onClick={() => { setShowNewForm(true); setTimeout(() => document.querySelector(".sizing-new-form")?.scrollIntoView({ block: "center" }), 0); }} />
+        <PrimaryAction label="새 시너지 평가 입력" onClick={() => { setShowNewForm(true); setTimeout(() => document.querySelector(".sizing-new-form")?.scrollIntoView({ block: "center" }), 0); }} />
       ) : (
         <PrimaryAction label={creating ? "분석 시작 중..." : "시너지 분석 실행"} disabled={creating} disabledReason="분석을 시작하는 중입니다." onClick={() => void createAnalysis()} />
       )}

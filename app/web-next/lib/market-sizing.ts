@@ -12,6 +12,17 @@ export const SEGMENTS = [
   { code: "mining", label: "광산" },
   { code: "other", label: "기타(철거·리노베이션)" },
 ] as const;
+/**
+ * Industry-agnostic fallback segments (Wave C-3, pilot-009 D-7). Used by the
+ * pipeline when the LLM did not define industry segments (offline / failed).
+ * The heavy-industry SEGMENTS above stay only for legacy matrices that carry
+ * no `segments` of their own.
+ */
+export const GENERIC_SEGMENTS = [
+  { code: "primary_demand", label: "주요 수요처 (분석가 정의 필요)" },
+  { code: "secondary_demand", label: "보조 수요처 (분석가 정의 필요)" },
+  { code: "other_demand", label: "기타 수요처" },
+] as const;
 export type SegmentCode = (typeof SEGMENTS)[number]["code"];
 
 export interface AnchorSource {
@@ -159,6 +170,8 @@ export interface ExternalForecastGap {
 export interface SizingMatrix {
   industryLabel: string;
   provenance: "frozen-research" | "llm-estimate";
+  /** Wave C-3 (D-2): true when any pipeline step was filled by deterministic synthesis (LLM off/failed). Caps data confidence at C. */
+  synthesized?: boolean;
   anchor: { sources: AnchorSource[]; total: number };
   regions: MatrixRegion[];
   baseline2026: Record<string, Record<string, number>>; // $B

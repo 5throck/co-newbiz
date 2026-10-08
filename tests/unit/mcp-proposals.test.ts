@@ -81,6 +81,11 @@ beforeAll(async () => {
 
   oppId = ulid();
   db.run("INSERT INTO opportunity (id, name, status, created_by, created_at) VALUES (?,?,?,?,?)", [oppId, "Proposal opp", "selected", "alice", NOW]);
+  // Wave C-3 (D-4): a GO confirmation needs S1–S3 complete. A pre-Wave-F row keeps the legacy predicates.
+  db.run(
+    "UPDATE opportunity SET created_at = ?, market_size_krw_m = 1000, growth_rate = 0.05, value_chain_node = 'node', attractiveness_score = 60, synergy_score = 60, rationale = 'fit' WHERE id = ?",
+    ["2026-01-01T00:00:00.000Z", oppId],
+  );
   projectId = ulid();
   db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [projectId, "NP-M2-T", NOW]);
   db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, "alice", "lead", "test", NOW, "m2 test"]);

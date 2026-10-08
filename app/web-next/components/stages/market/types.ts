@@ -62,7 +62,7 @@ export interface IndustryDetail {
 }
 export interface AnalysisDetail {
   id: string; status: "in_progress" | "completed"; current_step: number; name_ko: string;
-  versions: Array<{ version_no: number; payload: { matrix?: SizingMatrix; stepSummaries?: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> } | null; changelog: string | null; created_by: string; created_at: string }>;
+  versions: Array<{ version_no: number; payload: { matrix?: SizingMatrix; stepSummaries?: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> } | null; changelog: string | null; created_by: string; created_at: string; data_confidence_grade?: string | null; confidence_basis?: string | null }>;
 }
 export interface LlmStatus { configured: boolean; provider: string | null; model: string | null }
 export interface KsicEntryView { code: string; name_ko: string; detail: string | null; profile: boolean }

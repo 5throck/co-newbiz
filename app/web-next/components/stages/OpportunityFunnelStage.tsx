@@ -25,6 +25,7 @@ interface OpportunityRow {
   project_id: string | null;
   name: string;
   market_scope: string | null;
+  industry_id: string | null;
   value_chain_node: string | null;
   market_size_krw_m: number | null;
   growth_rate: number | null;
@@ -48,6 +49,7 @@ const COLUMNS: Array<{ status: OpportunityRow["status"]; label: string }> = [
 // S1 시장분석 인사이트 — 기회 발굴·평가의 입력(market-sizing 5-B).
 interface SizingInsight {
   analysis_id: string;
+  industry_id: string;
   industry_name: string;
   completed_at: string | null;
   bottom_up_cagr_pct: number | null;
@@ -89,7 +91,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
   const [busy, setBusy] = useState(false);
   const [insights, setInsights] = useState<SizingInsight[] | null>(null);
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", market_scope: "", value_chain_node: "", attractiveness_score: "" });
+  const [form, setForm] = useState({ name: "", market_scope: "", value_chain_node: "", attractiveness_score: "", industry_id: "", known_target: "" });
 
   // KPI 클릭 = 상태 필터 (재클릭 해제)
   const [statusFilter, setStatusFilter] = useState<OpportunityRow["status"] | "">("");
@@ -110,6 +112,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
   // ?status= 딥링크는 유지 (?opportunity= 펼침은 상세 화면 분리로 폐지 — ADR-0127)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get("known_target") === "1") setShowCreateForm(true);
     const initial = params.get("status");
     if (initial && ["identified", "assessed", "selected", "dropped"].includes(initial)) {
       setStatusFilter(initial as OpportunityRow["status"]);
@@ -122,19 +125,38 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
     api.get<{ insights: SizingInsight[] }>("/api/market-overview/insights").then((r) => setInsights(r.data.insights)).catch(() => setInsights([]));
   }, []);
 
+  // Wave C-3 (D-3): link an existing opportunity to an analysed S1 industry
+  // (PUT industry_id) so the S1 predicate can find the market-sizing matrix.
+  async function linkIndustry(o: OpportunityRow, industryId: string) {
+    setError(null);
+    try {
+      await api.put(`/api/opportunities/${encodeURIComponent(o.id)}`, { industry_id: industryId });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "산업 연결 실패");
+    }
+  }
+
   async function create(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await api.post("/api/opportunities", {
+      const created = await api.post<{ id: string; known_target_id: string | null }>("/api/opportunities", {
         name: form.name,
         market_scope: form.market_scope || undefined,
         value_chain_node: form.value_chain_node || undefined,
         attractiveness_score: form.attractiveness_score ? Number(form.attractiveness_score) : undefined,
+        industry_id: form.industry_id || undefined,
+        known_target: form.known_target.trim() ? { company_name: form.known_target.trim() } : undefined,
       });
-      setForm({ name: "", market_scope: "", value_chain_node: "", attractiveness_score: "" });
+      setForm({ name: "", market_scope: "", value_chain_node: "", attractiveness_score: "", industry_id: "", known_target: "" });
       setShowCreateForm(false);
+      // 알려진 대상으로 시작한 경우 — 안내(S1~S4)가 있는 상세 화면으로 이동한다.
+      if (created.data.known_target_id) {
+        window.location.assign(`/opportunities/${encodeURIComponent(created.data.id)}`);
+        return;
+      }
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "등록 실패");
@@ -420,6 +442,22 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
                       {o.value_chain_node && <span className="text-[color:var(--muted-fg)]">{o.value_chain_node}</span>}
                       {!o.market_scope && !o.value_chain_node && "—"}
                     </span>
+                    {canAct && !o.project_id && insights && insights.length > 0 && (
+                      <label className="block text-[length:var(--fs-caption)] mt-1">
+                        <span className="mr-1">S1 분석 산업 연결</span>
+                        <select
+                          aria-label={`${o.name} S1 분석 산업 연결`}
+                          value={o.industry_id ?? ""}
+                          onChange={(e) => void linkIndustry(o, e.target.value)}
+                          className="sizing-new-input sizing-new-input-sm"
+                        >
+                          <option value="">연결 안 됨</option>
+                          {insights.map((i) => (
+                            <option key={i.industry_id} value={i.industry_id}>{i.industry_name}</option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                   </td>
                   <td className="tabular-nums">
                     {o.attractiveness_score ?? "—"}
@@ -471,6 +509,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
         />
         {showCreateForm && (
           <form onSubmit={create} className="sizing-new-form mb-3">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">알려진 대상 기업을 입력하면 S6 대상 후보에 미리 등록됩니다 — S1~S4는 생략되지 않으며 순서대로 완료해야 합니다.</p>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">기회명 *</span>
@@ -479,6 +518,19 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
               <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">시장 범위</span>
                 <input value={form.market_scope} onChange={(e) => setForm({ ...form, market_scope: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
+              </label>
+              <label className="text-[length:var(--fs-caption)]">
+                <span className="block mb-1">알려진 대상 기업 (선택)</span>
+                <input value={form.known_target} onChange={(e) => setForm({ ...form, known_target: e.target.value })} placeholder="인수 대상이 이미 정해진 경우" className="sizing-new-input sizing-new-input-sm" />
+              </label>
+              <label className="text-[length:var(--fs-caption)]">
+                <span className="block mb-1">S1 분석 산업</span>
+                <select value={form.industry_id} onChange={(e) => setForm({ ...form, industry_id: e.target.value })} className="sizing-new-input sizing-new-input-sm">
+                  <option value="">연결 안 함</option>
+                  {(insights ?? []).map((i) => (
+                    <option key={i.industry_id} value={i.industry_id}>{i.industry_name}</option>
+                  ))}
+                </select>
               </label>
               <label className="text-[length:var(--fs-caption)]">
                 <span className="block mb-1">가치사슬 노드</span>

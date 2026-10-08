@@ -1406,7 +1406,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       operationId: createOpportunity
-      summary: Register an opportunity (S2). Analyst+; audited.
+      summary: Register an opportunity (S2). Analyst+; audited. Optional industry_id links the analysed S1 industry; optional known_target {company_name} pre-fills an S6 candidate (S1-S4 still apply).
       tags:
         - Reference
       responses:
@@ -2556,6 +2556,48 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/market-overview/analyses/{id}/competitive:
+    put:
+      operationId: putMarketAnalysisCompetitive
+      summary: Record the S1 competitive structure (concentration summary plus major players) as a new analysis version (analyst+).
+      tags:
+        - Analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [structure, players]
+              properties:
+                structure:
+                  type: string
+                  description: Concentration summary.
+                players:
+                  type: array
+                  items:
+                    type: object
+                    required: [name]
+                    properties:
+                      name:
+                        type: string
+                      tier:
+                        type: string
+                        enum: [leader, challenger, niche]
+                      share_pct:
+                        type: number
+                      note:
+                        type: string
+                      evidence_ref:
+                        type: string
+      responses:
+        '201':
+          description: Version created; matrix.competitive is what the S1 predicate reads.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/market-overview/industry/{industryId}:
     get:
       operationId: getMarketIndustry
@@ -2881,7 +2923,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       operationId: recordOpportunityGateDecision
-      summary: Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited.
+      summary: Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited. GO is refused with 409 gate_prerequisites_incomplete until the gate's stage prerequisites are complete (HOLD/KILL always allowed).
       tags:
         - Reference
       parameters:

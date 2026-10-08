@@ -505,12 +505,12 @@ describe("HTTP: human_final only via the human gate POST; review routes", () => 
     const res = await nextRequest(`/api/projects/${pid}/gate-decisions`, {
       method: "POST",
       headers: { cookie: leadCookie },
-      body: JSON.stringify({ gate: "dd", decision: "go", rationale: "reviewed" }),
+      body: JSON.stringify({ gate: "dd", decision: "hold", missing_artifacts: ["DD checklist"], rationale: "reviewed" }),
     });
     expect(res.status).toBe(201);
     const rows = humanFinals(pid);
     expect(rows).toHaveLength(1);
-    expect(rows[0].result).toBe("go");
+    expect(rows[0].result).toBe("hold");
     expect(rows[0].reviewer_agent_or_user).toBe("lead-rv");
     expect(rows[0].artifact_key).toBe("gate:dd");
     expect(JSON.parse(rows[0].unverified_items_json).length).toBeGreaterThan(0);
@@ -523,7 +523,7 @@ describe("HTTP: human_final only via the human gate POST; review routes", () => 
     const res = await nextRequest(`/api/opportunities/${o}/gate-decisions`, {
       method: "POST",
       headers: { cookie: leadCookie },
-      body: JSON.stringify({ gate: "target_screening", decision: "go", rationale: "r" }),
+      body: JSON.stringify({ gate: "target_screening", decision: "hold", missing_artifacts: ["S7 shortlist"], rationale: "r" }),
     });
     expect(res.status).toBe(201);
     expect(count("review_stage")).toBe(before);

@@ -73,6 +73,14 @@ export function MarketReport({ detail, analysisId, analysisDate, onAddLinked }: 
               {llmUsed && <> (8단계 전체 LLM 요약 사용)</>}
             </p>
           )}
+          {/* Wave C-3 (D-2): the grade shown here IS the stored one (market_sizing_version.data_confidence_grade),
+              the same value the S1 predicate and the RAG data_confidence cap read. */}
+          {analysis?.versions[0]?.data_confidence_grade && (
+            <p className="market-section text-[length:var(--fs-caption)]" role="note" data-testid="data-confidence-grade">
+              <strong>데이터 신뢰도 등급 {analysis.versions[0].data_confidence_grade}</strong> (저장된 등급 — RAG 상한 기준)
+              {analysis.versions[0].confidence_basis && <> · {analysis.versions[0].confidence_basis}</>}
+            </p>
+          )}
           <SizingReport detail={detail} matrix={matrix} stepSummaries={stepSummaries} analysisId={analysisId} onAddLinked={onAddLinked} />
         </>
       )}
