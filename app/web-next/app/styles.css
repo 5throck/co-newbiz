@@ -1408,6 +1408,11 @@
     transform: none;
   }
   .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    white-space: nowrap;
     background: var(--hover-bg);
     border: 1px solid var(--border);
     color: var(--fg);
@@ -3593,7 +3598,21 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 .review-items > li { padding-top: 0.5rem; border-top: 1px solid var(--border); }
 .review-items > li:first-child { padding-top: 0; border-top: 0; }
 .review-dev { margin-top: 0.5rem; font-size: var(--fs-caption); color: var(--muted-fg); }
-.review-dev > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+.review-dev > summary {
+  cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;
+  padding: 0 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-md);
+  color: var(--fg); background: var(--hover-bg); list-style: none; width: fit-content;
+}
+.review-dev > summary::-webkit-details-marker { display: none; }
+.review-dev > summary::before {
+  content: ""; width: 0.45rem; height: 0.45rem; flex: none;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg); transition: transform 0.15s ease;
+}
+.review-dev[open] > summary::before { transform: rotate(45deg); }
+.review-dev > summary:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+.review-dev > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .review-dev > summary::before { transition: none; } }
 .review-dev ul { margin: 0.25rem 0; padding-left: 1.1rem; }
 .review-dev code { font-family: var(--font-mono); overflow-wrap: anywhere; }
 .review-dev-note { margin: 0.25rem 0; }

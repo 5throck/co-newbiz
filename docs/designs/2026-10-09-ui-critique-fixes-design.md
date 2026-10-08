@@ -44,3 +44,11 @@ Also fixed while verifying: the deal board's fourth column overflowed the conten
 ## Preview Verification
 
 Screenshots of `/inbox` (with a HOLD item), the deal board and S8 at 1920, 1280 and 390 px, light and dark, are in `docs/evidence/gui-review/critique-2026-10-09/`. They were taken on a private production build with a temp database and a free port (the operator's dev server was not touched). Checks run: `test:unit`, `test:e2e` (5 of 5), `typecheck`, web-next `tsc` (0 errors), `design:lint`, `contrast:check`, `generate-skill-graph`, `verify-scripts`, `audit.ts`.
+
+## Follow-up (2026-10-09): leftovers from the critique
+
+1. **Search button.** The icon stacked above the "Search" label because `.btn-ghost` was a plain block button. It is now `inline-flex` with centered items and a gap, so every ghost button with an icon (the deal board search and the others) renders icon and text on one line at the input height.
+2. **Developer-details disclosure.** The `details.review-dev` summary is now a bordered control with a chevron that rotates when open, a hover state, a `focus-visible` ring and a 44px target. It stays collapsed by default; the native `<details>`/`<summary>` keeps keyboard and screen-reader semantics. The chevron animation respects `prefers-reduced-motion`.
+3. **"S11 HOLD" card chip.** This was a display bug, not data: the card used the project's current stage and appended "HOLD" when any gate held, so a deal at S11 held at the FS gate read "S11 HOLD". The new `lib/deal-card-label.ts` (`buildCardChips`) returns two chips: the current stage ("S11") and a separate amber chip naming the holding gate(s) ("FS HOLD"). Covered by `tests/unit/deal-card-label.test.ts`.
+
+Evidence: `docs/evidence/gui-review/critique-2026-10-09/followup-*.png`. The "before" images are the original critique captures; the "after" images were taken on a private build with a temp database and a free port.
