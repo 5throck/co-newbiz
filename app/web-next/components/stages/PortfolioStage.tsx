@@ -9,6 +9,7 @@ import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
+import { PrimaryAction } from "../ui.tsx";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { useConfirm } from "../crud.tsx";
@@ -159,11 +160,14 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
       <StageFrame stageId="S12" heading="S12 사후 관리 — 포트폴리오 스코어카드 · 전환 결정">
         {/* Wave U-1 (design §3.5): home of the closure flow — preconditions are
             shown inside ClosureModal; the decision itself stays human-only. */}
+        <PrimaryAction
+          label="프로젝트 종료…"
+          onClick={() => setClosing(true)}
+          disabled={!canWriteProject(me?.role)}
+          disabledReason="프로젝트 종료는 analyst 권한이 필요합니다."
+        />
         {canWriteProject(me?.role) && (
-          <div className="mb-3 flex items-center gap-2">
-            <button type="button" className="btn-ghost" onClick={() => setClosing(true)}>프로젝트 종료…</button>
-            <span className="text-[0.875rem] text-[color:var(--muted-fg)]">종료 선결조건은 다음 창에서 확인합니다. 종료는 사람이 기록합니다.</span>
-          </div>
+          <p className="mb-3 text-[0.875rem] text-[color:var(--muted-fg)]">종료 선결조건은 다음 창에서 확인합니다. 종료는 사람이 기록합니다.</p>
         )}
         {closing && (
           <ClosureModal
@@ -194,7 +198,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             <span className="sizing-step-badge">📈</span> 스코어카드 트렌드 — 분기별 요약
           </h3>
           {(view?.trend.length ?? 0) > 0 ? (
-            <table className="data-table" aria-label="분기별 스코어카드 요약">
+            <div className="table-scroll"><table className="data-table" aria-label="분기별 스코어카드 요약">
               <caption className="sr-only">리뷰 주기별 측정 요약</caption>
               <thead>
                 <tr><th scope="col">리뷰 주기</th><th scope="col">측정 수</th><th scope="col">목표 달성</th><th scope="col">이탈</th><th scope="col">근거 부족</th></tr>
@@ -210,7 +214,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           ) : (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               아직 기록된 스코어카드 주기가 없습니다 — portfolio-venture-monitoring 절차의 분기 기록이 여기 표시됩니다.
@@ -225,7 +229,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             {rollup?.review_cycle && <span className="status-chip status-not-started ml-2">{rollup.review_cycle}</span>}
           </h3>
           {(rollup?.class_rollup.length ?? 0) > 0 && (
-            <table className="data-table" aria-label="벤처 클래스 롤업">
+            <div className="table-scroll"><table className="data-table" aria-label="벤처 클래스 롤업">
               <caption className="sr-only">클래스별 롤업 요약</caption>
               <thead>
                 <tr><th scope="col">클래스</th><th scope="col">벤처 수</th><th scope="col">측정</th><th scope="col">달성</th><th scope="col">이탈</th><th scope="col">근거 부족</th></tr>
@@ -242,13 +246,13 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
           {(["financial", "strategic"] as const).map((section) => (
             <div key={section} className="mt-2">
               <h4 className="text-[length:var(--fs-body)] mb-1">{section === "financial" ? "재무" : "전략"} 섹션</h4>
               {(rollup?.[section].length ?? 0) > 0 ? (
-                <table className="data-table" aria-label={`${section} 측정 상세`}>
+                <div className="table-scroll"><table className="data-table" aria-label={`${section} 측정 상세`}>
                   <caption className="sr-only">{section} 섹션 측정 상세</caption>
                   <thead>
                     <tr><th scope="col">측정</th><th scope="col">클래스</th><th scope="col">목표</th><th scope="col">실적</th><th scope="col">상태</th></tr>
@@ -267,7 +271,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                       );
                     })}
                   </tbody>
-                </table>
+                </table></div>
               ) : (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">해당 섹션의 측정 기록이 없습니다.</p>
               )}
@@ -348,7 +352,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             기록자(recorded_by)는 세션 사용자로 남습니다.
           </p>
           {(view?.decisions.history.length ?? 0) > 0 ? (
-            <table className="data-table" aria-label="전환 결정 이력">
+            <div className="table-scroll"><table className="data-table" aria-label="전환 결정 이력">
               <caption className="sr-only">전환 결정 이력 (추가 전용)</caption>
               <thead>
                 <tr><th scope="col">주기</th><th scope="col">결정</th><th scope="col">근거</th><th scope="col">결정일</th><th scope="col">기록자</th></tr>
@@ -370,7 +374,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           ) : (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 기록된 전환 결정이 없습니다.</p>
           )}
@@ -418,7 +422,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                   />
                 </label>
               )}
-              <button type="submit" className="btn-primary btn-sm mt-2" disabled={busy}>
+              <button type="submit" className="btn-ghost btn-sm mt-2" disabled={busy}>
                 {busy ? "기록 중..." : "결정 기록 (확인 필요)"}
               </button>
             </form>

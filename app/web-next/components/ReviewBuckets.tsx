@@ -12,6 +12,7 @@ import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
 import { TabNav } from "./TabNav.tsx";
+import { PrimaryAction } from "./ui.tsx";
 
 type ReviewGateId = Exclude<GateMetaId, "target_screening"> | "transition";
 
@@ -82,12 +83,15 @@ export function ReviewBuckets({
   entityId,
   gates,
   artifacts,
+  headerPrimary,
 }: {
   entityType: "opportunity" | "project";
   entityId: string;
   gates?: readonly string[];
   /** F-3/F-4: per-stage artifacts (stage:S#:N) alongside the gate proposals. */
   artifacts?: readonly ReviewArtifactTab[];
+  /** Wave U: make "request AI 2nd review" the screen's Primary Action (page header). */
+  headerPrimary?: boolean;
 }) {
   const { me } = useAuth();
   const canRequest = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
@@ -132,6 +136,14 @@ export function ReviewBuckets({
 
   if (tabs.length === 0) return null;
   const view = views[active];
+  const headerAction = headerPrimary ? (
+    <PrimaryAction
+      label={busy ? "요청 중…" : view?.ai_2nd?.current ? "AI 2차 검토 다시 요청" : "AI 2차 검토 요청"}
+      onClick={() => void requestAi2nd()}
+      disabled={!canRequest || busy || !view}
+      disabledReason={!canRequest ? "AI 2차 검토 요청은 analyst 권한이 필요합니다." : busy ? "요청 중입니다." : "AI 1차 검토를 불러오는 중입니다."}
+    />
+  ) : null;
   const activeParam = active.startsWith("gate:") ? { gate: active.slice(5) } : { artifact: active };
 
   async function requestAi2nd() {
@@ -174,6 +186,7 @@ export function ReviewBuckets({
 
   return (
     <section aria-label="3단계 검토" className="market-section sizing-step mt-3">
+      {headerAction}
       <h3 className="sizing-step-title text-[0.95rem]">3단계 검토 — 사람 판단 전 참고 자료</h3>
       <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
         검토 결과는 승인·통과 표시가 아닙니다. AI가 확인한 것, 확인하지 못한 것, 사람이 판단할 것을 나누어 보여줄 뿐이며
@@ -245,7 +258,7 @@ export function ReviewBuckets({
               })}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {canRequest && (
+              {canRequest && !headerPrimary && (
                 <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void requestAi2nd()}>
                   {busy ? "요청 중…" : view.ai_2nd?.current ? "AI 2차 검토 다시 요청" : "AI 2차 검토 요청"}
                 </button>

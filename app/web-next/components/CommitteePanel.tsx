@@ -14,6 +14,7 @@ import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness } from "../lib/project-write-access.ts";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
+import { PrimaryAction } from "./ui.tsx";
 
 interface SessionPosition {
   positionId: string;
@@ -86,6 +87,7 @@ export function CommitteePanel({
   briefMd,
   beforeConvene,
   conveneLabel,
+  headerPrimary,
 }: {
   opportunityId: string;
   committeeKey: string;
@@ -101,6 +103,8 @@ export function CommitteePanel({
    * 소집하지 않는다. */
   beforeConvene?: () => Promise<string | undefined>;
   conveneLabel?: string;
+  /** Wave U: render the convene action as the screen's Primary Action in the page header. */
+  headerPrimary?: boolean;
 }) {
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
@@ -268,9 +272,18 @@ export function CommitteePanel({
               {gates.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </label>
-          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void convene()}>
-            {busy ? "처리 중..." : conveneLabel ?? "위원회 소집"}
-          </button>
+          {headerPrimary ? (
+            <PrimaryAction
+              label={busy ? "처리 중..." : conveneLabel ?? "위원회 소집"}
+              disabled={busy}
+              disabledReason="처리 중입니다 — 완료될 때까지 기다려 주세요."
+              onClick={() => void convene()}
+            />
+          ) : (
+            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void convene()}>
+              {busy ? "처리 중..." : conveneLabel ?? "위원회 소집"}
+            </button>
+          )}
         </div>
       )}
 

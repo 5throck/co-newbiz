@@ -4,7 +4,9 @@
 // registry and the screen patterns. No new dependencies; thin React over the
 // existing vocabulary. ADR-0119 governs the button/chip semantics.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import Link from "next/link";
 
 /* ── Button — btn-primary (ONE per screen/section) / btn-ghost / btn-danger ── */
 
@@ -30,6 +32,73 @@ export function Button({
   );
 }
 
+/* ── PrimaryAction — the ONE filled action of a screen (Wave U design §5) ──
+   StageFrame renders <PrimarySlot/> in the page header (top right); a screen
+   declares its primary action with <PrimaryAction/> from anywhere in its body
+   (it keeps access to local state) and the button is portalled into the slot.
+   A disabled primary always shows its reason as text beside the button. */
+
+let primarySlotEl: HTMLElement | null = null;
+const primarySlotListeners = new Set<() => void>();
+function setPrimarySlot(el: HTMLElement | null) {
+  if (primarySlotEl === el) return;
+  primarySlotEl = el;
+  primarySlotListeners.forEach((l) => l());
+}
+function subscribePrimarySlot(l: () => void) {
+  primarySlotListeners.add(l);
+  return () => { primarySlotListeners.delete(l); };
+}
+
+/** Header slot for the screen's primary action. Rendered once by StageFrame. */
+export function PrimarySlot() {
+  return <div ref={setPrimarySlot} className="primary-slot" />;
+}
+
+export interface PrimaryActionProps {
+  label: string;
+  /** Button handler (mutually exclusive with href). */
+  onClick?: () => void;
+  /** Navigation target (renders a link styled as the primary button). */
+  href?: string;
+  /** Submit the form with this id from the header (button form attribute). */
+  form?: string;
+  disabled?: boolean;
+  /** Required whenever disabled: shown as text beside the button, not only as a tooltip. */
+  disabledReason?: string;
+  /** Render in place instead of the header slot (screens without StageFrame). */
+  inline?: boolean;
+}
+
+export function PrimaryAction({ label, onClick, href, form, disabled, disabledReason, inline }: PrimaryActionProps) {
+  const slot = useSyncExternalStore(subscribePrimarySlot, () => primarySlotEl, () => null);
+  const reasonId = useId();
+  const blocked = !!disabled;
+  const control = href && !blocked ? (
+    <Link href={href} className="btn-primary">{label}</Link>
+  ) : (
+    <button
+      type={form && !blocked ? "submit" : "button"}
+      form={form}
+      className="btn-primary"
+      disabled={blocked}
+      aria-describedby={blocked && disabledReason ? reasonId : undefined}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+  const node = (
+    <>
+      {blocked && disabledReason && <span id={reasonId} className="primary-reason">{disabledReason}</span>}
+      {control}
+    </>
+  );
+  if (inline) return <span className="primary-inline">{node}</span>;
+  if (!slot) return null;
+  return createPortal(node, slot);
+}
+
 /* ── ParamTable — label / value / unit / source in separate columns (Wave U-2, design §6) ── */
 
 export interface ParamRow {
@@ -39,7 +108,23 @@ export interface ParamRow {
   source?: ReactNode;
 }
 
-export function ParamTable({ rows, caption, labelHeader = "항목" }: { rows: ParamRow[]; caption?: string; labelHeader?: string }) {
+export function ParamTable({
+  rows,
+  caption,
+  labelHeader = "항목",
+  valueAlign = "end",
+}: {
+  rows: ParamRow[];
+  caption?: string;
+  labelHeader?: string;
+  /** "end" for numbers (right-aligned, tabular); "start" for text facts. */
+  valueAlign?: "end" | "start";
+}) {
+  // Unit and source columns only appear when at least one row carries them, so
+  // plain fact tables (label + value) do not show empty columns.
+  const hasUnit = rows.some((r) => r.unit);
+  const hasSource = rows.some((r) => r.source);
+  const valueCls = `param-value${valueAlign === "start" ? " param-value-start" : ""}`;
   return (
     <div className="table-scroll">
       <table className="param-table">
@@ -47,18 +132,18 @@ export function ParamTable({ rows, caption, labelHeader = "항목" }: { rows: Pa
         <thead>
           <tr>
             <th scope="col" className="param-label">{labelHeader}</th>
-            <th scope="col" className="param-value">값</th>
-            <th scope="col" className="param-unit">단위</th>
-            <th scope="col" className="param-source">출처</th>
+            <th scope="col" className={valueCls}>값</th>
+            {hasUnit && <th scope="col" className="param-unit">단위</th>}
+            {hasSource && <th scope="col" className="param-source">출처</th>}
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.label}>
               <th scope="row" className="param-label">{r.label}</th>
-              <td className="param-value">{r.value}</td>
-              <td className="param-unit">{r.unit ?? ""}</td>
-              <td className="param-source">{r.source}</td>
+              <td className={valueCls}>{r.value}</td>
+              {hasUnit && <td className="param-unit">{r.unit ?? ""}</td>}
+              {hasSource && <td className="param-source">{r.source}</td>}
             </tr>
           ))}
         </tbody>

@@ -20,6 +20,7 @@ import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { SectionToolbar } from "../layout.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../PromotionPanel.tsx";
+import { PrimaryAction } from "../ui.tsx";
 import {
   HELD_STATUS_CHIP, HELD_STATUS_LABEL, RESOLUTION_LABEL,
   type CapabilityGapRow, type GapResolution,
@@ -160,11 +161,14 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
   if (!selected) {
     return (
-      <p role="status" aria-live="polite">
-        {error
-          ? <span role="alert" className="text-[color:var(--red-fg)]">{error}</span>
-          : "불러오는 중..."}
-      </p>
+      <>
+        <PrimaryAction label="타당성 검토 실행" disabled disabledReason="평가할 기회를 불러오면 실행할 수 있습니다." />
+        <p role="status" aria-live="polite">
+          {error
+            ? <span role="alert" className="text-[color:var(--red-fg)]">{error}</span>
+            : "불러오는 중..."}
+        </p>
+      </>
     );
   }
 
@@ -186,7 +190,13 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             </span>
           }
         />
-        <form onSubmit={save} className="sizing-new-form">
+        <PrimaryAction
+          form="greenfield-eval-form"
+          label="타당성 검토 실행"
+          disabled={!canAct || busy || entryStrategy.trim() === ""}
+          disabledReason={!canAct ? "평가 기록은 analyst 권한이 필요합니다." : busy ? "저장 중입니다." : "진출전략을 입력하면 실행할 수 있습니다."}
+        />
+        <form id="greenfield-eval-form" onSubmit={save} className="sizing-new-form">
           <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {/* 1. 진출전략 */}
           <h3 className="text-[length:var(--fs-body)] mb-2">1️⃣ 진출전략 (Build / Partner / Hire / Invest 결정)</h3>
@@ -323,7 +333,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
           <input aria-label="평가 근거" placeholder="평가 근거 (S1 시장분석·S3 적합성 판단 인용, 선택)" value={rationale} onChange={(e) => setRationale(e.target.value)} className="sizing-new-input mb-3" style={{ width: "100%" }} />
 
-          {canAct && <button type="submit" className="btn-primary" disabled={busy}>저장</button>}
+          {canAct && <button type="submit" className="btn-ghost" disabled={busy}>저장</button>}
           </fieldset>
         </form>
       </section>

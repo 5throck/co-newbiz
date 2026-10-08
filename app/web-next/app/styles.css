@@ -2930,7 +2930,9 @@ a.funnel-card:hover { border-color: var(--primary); }
 
 /* ── P2 Report 데이터 표현 표준 (ADR-0088) ── */
 /* 넓은 표 눌림 방지 래퍼 — 4열 이상·장문 셀 표는 반드시 이 래퍼 안에 둔다. */
-.table-scroll { overflow-x: auto; }
+/* position: relative keeps absolutely positioned descendants (e.g. .sr-only header text) inside the scroll box. */
+.table-scroll { position: relative; overflow-x: auto; max-width: 100%; min-width: 0; }
+main li { overflow-wrap: anywhere; }
 /* 표 셀의 한국어 어간 분리 금지(keep-all) — 긴 영문 토큰은 단어 경계에서만 개행 */
 .data-table th, .data-table td { word-break: keep-all; overflow-wrap: break-word; }
 .report-table { min-width: 48rem; }
@@ -3180,6 +3182,31 @@ a.funnel-card:hover { border-color: var(--primary); }
 .wf-longlist { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.5rem 0.6rem; margin-bottom: 0.5rem; border: 1px dashed var(--border); border-radius: var(--radius-md); }
 .wf-longlist-note { font-size: var(--fs-caption); color: var(--muted-fg); }
 
+/* 단계 헤더 — h1 왼쪽, 화면의 유일한 Primary Action(PrimaryAction) 오른쪽.
+   비활성 사유는 버튼 옆 텍스트로 항상 노출한다(툴팁만 쓰지 않는다). */
+.stage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.stage-head h1 { margin-bottom: 0; }
+.primary-slot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.primary-reason {
+  font-size: var(--fs-caption);
+  color: var(--muted-fg);
+  text-align: right;
+}
+.primary-inline { display: inline-flex; align-items: center; gap: var(--space-2); }
+
 /* 페이지 헤더 행 — h1과 보조 액션(뒤로 가기 등)을 한 줄에 배치 */
 .page-header-row {
   display: flex;
@@ -3421,6 +3448,9 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 
 /* Layer 3-free stage tabs (replaces ProjectSubNav). */
 .stage-tabs-wrap { margin-bottom: 1rem; }
+.stage-tabs-bar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-3); }
+.stage-tabs-bar > .stage-tabs-wrap { flex: 1 1 24rem; min-width: 0; }
+.stage-tabs-bar > .primary-slot { margin-bottom: 1rem; }
 .stage-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--border); align-items: flex-end; }
 .stage-tab {
   display: inline-flex; align-items: center; gap: 0.25rem; min-height: 44px;
@@ -3497,11 +3527,20 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 .param-table td { height: 40px; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); vertical-align: middle; }
 .param-table .param-label { width: 40%; text-align: left; }
 .param-table .param-value { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.param-table .param-value.param-value-start, .param-table th.param-value-start { text-align: left; font-weight: 400; white-space: normal; font-variant-numeric: normal; }
 .param-table .param-unit { width: 4rem; text-align: left; color: var(--muted-fg); font-size: var(--fs-caption); }
 .param-table .param-source { text-align: left; font-size: var(--fs-caption); color: var(--muted-fg); }
 @media (max-width: 640px) {
-  .param-table .param-unit { width: auto; }
-  .param-table td, .param-table th { padding: var(--space-2); }
+  /* Design §6.6 — each row becomes a stacked card: label on top, value and unit large, source below.
+     The header row stays in the accessibility tree but is visually hidden. */
+  .param-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .param-table, .param-table tbody, .param-table tr, .param-table th.param-label, .param-table td { display: block; width: auto; }
+  .param-table tr { padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+  .param-table th.param-label { border: 0; padding: 0 0 var(--space-1); }
+  .param-table td { height: auto; border: 0; padding: 0; text-align: left; }
+  .param-table td.param-value { display: inline; font-size: 1.125rem; white-space: normal; }
+  .param-table td.param-unit { display: inline; margin-left: var(--space-1); color: var(--muted-fg); }
+  .param-table td.param-source { padding-top: var(--space-1); }
 }
 .page-header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .action-reason { font-size: var(--fs-caption); color: var(--muted-fg); }

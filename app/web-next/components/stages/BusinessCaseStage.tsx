@@ -17,6 +17,7 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { TargetCheckPanel } from "../TargetCheckPanel.tsx";
 import { StageFrame } from "../StageFrame.tsx";
+import { PrimaryAction } from "../ui.tsx";
 import { TabNav } from "../TabNav.tsx";
 import { WaccPanel } from "../wacc/WaccPanel.tsx";
 import { ParamsPanel } from "../business-case/ParamsPanel.tsx";
@@ -306,6 +307,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 <>
       <StageTabs projectId={projectId} />
       <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S8")} />
+      <PrimaryAction
+        label={busy ? "계산 중..." : "밸류에이션 재계산"}
+        onClick={() => void generate()}
+        disabled={!canAct || busy}
+        disabledReason={!canAct ? "재계산은 analyst 권한이 필요합니다." : "계산 중입니다 — 완료되면 결과가 갱신됩니다."}
+      />
       <StageFrame stageId="S8" heading="S8 사업성 분석 — 이중 관점 밸류에이션 비교">
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
         같은 시나리오를 <b>시장 기반(진행 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.
@@ -355,7 +362,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             <span className="text-[color:var(--muted-fg)]">({data?.target_selection?.selectedBy})</span>
           </p>
         )}
-        <table className="data-table">
+        <div className="table-scroll"><table className="data-table">
           <thead>
             <tr>
               <th scope="col">대상</th>
@@ -395,7 +402,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               );
             })}
           </tbody>
-        </table>
+        </table></div>
         {data?.engines_mixed && (
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
             * 비교된 케이스가 서로 다른 계산 엔진에서 산출되었으므로 순위는 유의하여 해석하세요.
@@ -429,7 +436,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {/* 두 관점의 의미 */}
       <section className="market-section sizing-step mb-3" aria-label="두 관점의 의미">
         <h3 className="sizing-step-title">두 관점의 의미</h3>
-        <table className="data-table">
+        <div className="table-scroll"><table className="data-table">
           <thead><tr><th scope="col">관점</th><th scope="col">성장률 근거</th><th scope="col">변동성(sigma) 근거</th><th scope="col">쓰임</th></tr></thead>
           <tbody>
             <tr>
@@ -445,7 +452,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               <td>&quot;과거 실적이 지속되면&quot; 관점의 비교 근거</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
           <b className="text-[color:var(--warning)]">진행 판정(채택 요건·킬 크라이테리아·RECOMMENDED)은 시장 기반 값을 사용합니다.</b>{" "}
           과거 기반은 비교용이며, 둘의 차이가 클수록 성장 가정의 불확실성이 크다는 신호입니다.
@@ -454,7 +461,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {canAct && (
         <div className="mb-3">
-          <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void generate()}>
+          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void generate()}>
             {busy ? "생성 중..." : "이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)"}
           </button>
         </div>
@@ -548,7 +555,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 이 시나리오의 케이스가 없습니다 — 자동 생성을 실행하세요.
               </p>
             ) : (
-              <table className="data-table">
+              <div className="table-scroll"><table className="data-table">
                 <thead>
                   <tr>
                     <th scope="col">관점</th>
@@ -629,7 +636,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     </tr>
                   )}
                 </tbody>
-              </table>
+              </table></div>
             )}
             {(cases[0]?.simulations?.[0]?.note) && (
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" title="재현 근거 (동일 시드로 재계산해도 같은 결과)">{cases[0].simulations[0].note}</p>

@@ -9,7 +9,7 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../../../../lib/api.ts";
-import { Button, PageState } from "../../../../components/ui.tsx";
+import { Button, PageState, PrimaryAction } from "../../../../components/ui.tsx";
 import { ReviewBuckets } from "../../../../components/ReviewBuckets.tsx";
 
 type Payload = Record<string, unknown>;
@@ -154,9 +154,22 @@ export default function ProposalConfirmPage() {
 
   return (
     <main aria-labelledby="proposal-heading">
-      <h1 id="proposal-heading" ref={headingRef} tabIndex={-1}>
-        결정 제안 확인
-      </h1>
+      <div className="page-header-row">
+        <h1 id="proposal-heading" ref={headingRef} tabIndex={-1}>
+          결정 제안 확인
+        </h1>
+        {pending && (
+          <span className="ml-auto">
+            <PrimaryAction
+              inline
+              label="결정 확정"
+              onClick={() => void confirm()}
+              disabled={busy || !view?.confirm_nonce}
+              disabledReason={busy ? "처리 중입니다." : "확정용 확인값을 불러오는 중입니다 — 잠시 후 다시 시도하세요."}
+            />
+          </span>
+        )}
+      </div>
       <p className="objective">
         에이전트는 결정을 제안할 수만 있습니다. 아래 내용을 직접 확인한 뒤, 본인의 판단으로 확정하거나 거절하세요.
       </p>
@@ -272,9 +285,6 @@ export default function ProposalConfirmPage() {
               <h2 id="decide-heading">사람의 판단</h2>
               <p>확정하면 현재 로그인한 본인 계정으로 결정이 기록됩니다. 해당 결정 권한이 없으면 확정되지 않습니다.</p>
               <div className="flex gap-2">
-                <Button variant="primary" onClick={() => void confirm()} disabled={busy || !view?.confirm_nonce}>
-                  결정 확정
-                </Button>
                 <Button onClick={() => setEditing((v) => !v)} disabled={busy} aria-pressed={editing}>
                   {editing ? "수정 닫기" : "수정"}
                 </Button>

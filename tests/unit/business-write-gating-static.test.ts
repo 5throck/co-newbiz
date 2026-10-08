@@ -9,7 +9,7 @@
  * component where canAct/canCurate was defined.
  */
 import { test, expect } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const WEB = join(import.meta.dirname, "../../app/web-next");
@@ -28,13 +28,35 @@ const FILES = [
   "app/brownfield/targets/[targetId]/page.tsx",
 ];
 
+// Wave U-3 decomposed the largest stages into sibling directories behind a re-export
+// shim; the audit must cover the implementation files, not only the shim.
+const SPLIT_DIRS: Record<string, string> = {
+  "components/stages/BrownfieldStage.tsx": "components/stages/brownfield",
+  "components/stages/RouteDecisionStage.tsx": "components/stages/route-decision",
+  "components/stages/OurCompanyStage.tsx": "components/stages/our-company",
+  "components/stages/SynergyStage.tsx": "components/stages/synergy",
+  "components/stages/MarketAnalysisStage.tsx": "components/stages/market",
+  "app/brownfield/targets/[targetId]/page.tsx": "components/brownfield-target",
+};
+
+/** Sources that implement a screen: the file itself plus its split directory (if any). */
+function sourcesOf(f: string): Array<{ name: string; src: string }> {
+  const out = [{ name: f, src: readFileSync(join(WEB, f), "utf-8") }];
+  const dir = SPLIT_DIRS[f];
+  if (dir && existsSync(join(WEB, dir))) {
+    for (const n of readdirSync(join(WEB, dir)).sort()) out.push({ name: `${dir}/${n}`, src: readFileSync(join(WEB, dir, n), "utf-8") });
+  }
+  return out;
+}
+const joinedSource = (f: string) => sourcesOf(f).map((x) => x.src).join("\n");
+
 // Admin role granting write access: `role === "admin"` followed by `||` within a short window.
 const ADMIN_OR = /role\s*===\s*"admin"[^\n;]{0,40}\|\|/;
 const ADMIN_OR_LEFT = /\|\|[^\n;]{0,40}role\s*===\s*"admin"/;
 
 for (const f of FILES) {
   test(`${f} gates writes with canWriteBusiness and has no admin-inclusive predicate`, () => {
-    const src = readFileSync(join(WEB, f), "utf-8");
+    const src = joinedSource(f);
     // import from the project-write-access module (relative or alias form)
     expect(src).toMatch(/import \{[^}]*\bcanWriteBusiness\b[^}]*\} from "[^"]*\/lib\/project-write-access(\.ts)?"/);
     expect(src).toMatch(/canWriteBusiness\(me\?\.role\)/);
@@ -50,7 +72,9 @@ for (const f of FILES) {
 
 test("brownfield target page guards the company-sync auto-fire effect with !canAct", () => {
   // Viewers previously fired the auto-sync POST on page load and got swallowed 403s.
-  const src = readFileSync(join(WEB, "app/brownfield/targets/[targetId]/page.tsx"), "utf-8");
+  const host = sourcesOf("app/brownfield/targets/[targetId]/page.tsx").find((x) => x.src.includes("/sync`"));
+  expect(host).toBeDefined();
+  const src = host!.src;
   const idx = src.indexOf("/sync`");
   expect(idx).toBeGreaterThan(-1);
   const window = src.slice(Math.max(0, idx - 800), idx);
@@ -60,8 +84,9 @@ test("brownfield target page guards the company-sync auto-fire effect with !canA
 test("OurCompanyStage member-role select is disabled without write access (!canAct)", () => {
   // The member-role <select> fires updateMemberRole (PATCH /api/our-company/groups/{id}/members).
   // The section defining/calling updateMemberRole must gate it with !canAct within 5 lines.
-  const src = readFileSync(join(WEB, "components/stages/OurCompanyStage.tsx"), "utf-8");
-  const lines = src.split("\n");
+  const host = sourcesOf("components/stages/OurCompanyStage.tsx").find((x) => x.src.includes("updateMemberRole(m.id"));
+  expect(host).toBeDefined();
+  const lines = host!.src.split("\n");
   const idx = lines.findIndex((l) => l.includes("updateMemberRole(m.id"));
   expect(idx).toBeGreaterThan(-1);
   const around = lines.slice(Math.max(0, idx - 5), idx + 6).join("\n");
@@ -77,7 +102,7 @@ test("SynergyStage and MarketAnalysisStage gate list/report write controls with 
     "components/stages/SynergyStage.tsx",
     "components/stages/MarketAnalysisStage.tsx",
   ]) {
-    const src = readFileSync(join(WEB, f), "utf-8");
+    const src = joinedSource(f);
     const count = (src.match(/canCurate/g) ?? []).length;
     expect(count).toBeGreaterThanOrEqual(6);
   }

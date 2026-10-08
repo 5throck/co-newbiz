@@ -18,6 +18,7 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
+import { PrimaryAction } from "../ui.tsx";
 
 interface OpportunityRow {
   id: string;
@@ -198,11 +199,20 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
     return list;
   }, [rows, sortKey, industryFilter]);
 
+  const carrierRow = opportunityId ? rows?.find((r) => r.id === opportunityId || r.project_id === opportunityId) : undefined;
   const selectedInsight = insights?.find((s) => s.industry_name === selectedIndustry) ?? null;
 
   return (
     <>
       {confirmDialog}
+      {opportunityId && (
+        <PrimaryAction
+          label="스크리닝으로 승격 (S3)"
+          href={`/deals/${encodeURIComponent(opportunityId)}/s3`}
+          disabled={!carrierRow || carrierRow.status === "dropped"}
+          disabledReason={!carrierRow ? "승격할 기회(이 안건)를 먼저 선택하세요." : "제외된 기회는 승격할 수 없습니다."}
+        />
+      )}
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       {opportunityId && <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S2")} />}
 
@@ -344,7 +354,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
           actions={
             <>
             {canAct && (
-            <button type="button" className="btn-primary btn-sm whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
+            <button type="button" className="btn-ghost btn-sm whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
               ＋ 기회 등록
             </button>
             )}
@@ -374,7 +384,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
             {statusFilter ? "필터 조건에 맞는 기회가 없습니다." : "등록된 기회가 없습니다 — 분석된 산업에서 기회 발굴을 시작하세요."}
           </p>
         ) : (
-          <table className="data-table list-table" aria-label="기회 퍼널 목록">
+          <div className="table-scroll"><table className="data-table list-table" aria-label="기회 퍼널 목록">
             <caption className="sr-only">기회 퍼널 목록</caption>
             <thead>
               <tr>
@@ -442,7 +452,7 @@ export function OpportunityFunnelStage({ opportunityId }: { opportunityId?: stri
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </section>
 

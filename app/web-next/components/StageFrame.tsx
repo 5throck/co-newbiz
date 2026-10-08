@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { GATE_LABEL, STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
 import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
+import { PrimarySlot } from "./ui.tsx";
 
 /** 단계 → 담당 화면 라우트. 캐리어(project id)가 있으면 /deals/{id}/sN 탭으로,
     없으면 플랫 라우트(캐리어 리다이렉트 스텁 — 2026-10-02 route-cleanup design
@@ -59,9 +60,12 @@ export function StageFrame({
   const stepperOwnedByTabs = (usePathname() ?? "").startsWith("/projects/");
   return (
     <>
-      <h1>
-        {heading ?? `${stage.id} ${ids.length > 1 ? `· ${STAGE_META.find((s) => s.id === ids[1])!.name}` : stage.name}`}
-      </h1>
+      <div className="stage-head">
+        <h1>
+          {heading ?? `${stage.id} ${ids.length > 1 ? `· ${STAGE_META.find((s) => s.id === ids[1])!.name}` : stage.name}`}
+        </h1>
+        {!stepperOwnedByTabs && <PrimarySlot />}
+      </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">{stage.objective}</p>
       {!stepperOwnedByTabs && <StageRail current={ids} track={track} />}
       <StageHandoffStrip primary={primary} projectId={projectId} track={track} />

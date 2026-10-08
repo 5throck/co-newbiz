@@ -1,6 +1,6 @@
 ---
 title: Wave U — UX Overhaul (2-layer IA, pending-decisions inbox, readability, component decomposition)
-status: approved
+status: implemented
 date: 2026-10-08
 owner: ux-designer-agent
 contributors: frontend-engineer (implementation), design-system-agent (design:lint), platform-lead (inbox API review)

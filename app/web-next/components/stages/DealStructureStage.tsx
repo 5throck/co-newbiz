@@ -14,6 +14,7 @@ import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
+import { PrimaryAction } from "../ui.tsx";
 import { TabNav } from "../TabNav.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
@@ -117,6 +118,13 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   }, [projectId]);
   useEffect(() => { load(); }, [load]);
 
+  /** Records the drafted structure hypothesis (the S10 header Primary Action). */
+  function saveStructure() {
+    if (!newHyp.rationale.trim()) { setError("근거(rationale)는 필수입니다."); return; }
+    void post({ action: "hypothesize", ...newHyp, vehicle: newHyp.vehicle || null, asset_or_stock: newHyp.asset_or_stock || null, stake_type: newHyp.stake_type || null, instrument_mix: newHyp.instrument_mix || null });
+    setNewHyp({ vehicle: "", asset_or_stock: "", stake_type: "", instrument_mix: "", tax_structure_note: "", liability_isolation_note: "", financing_leverage_note: "", exit_structure_note: "", rationale: "" });
+  }
+
   async function generateReco() {
     if (recoLoading) return;
     setRecoLoading(true); setRecoError(null);
@@ -186,6 +194,12 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
 <>
       <StageTabs projectId={projectId} />
       <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S10")} />
+      <PrimaryAction
+        label={busy ? "저장 중..." : "투자구조 저장"}
+        onClick={saveStructure}
+        disabled={!canAct || busy || !newHyp.rationale.trim()}
+        disabledReason={!canAct ? "투자구조 저장은 analyst 권한이 필요합니다." : busy ? "저장 중입니다." : "투자구조 가설 탭에서 근거(필수)를 입력하면 저장할 수 있습니다."}
+      />
       <StageFrame stageId="S10" heading="S10 투자구조 설계 — 비히클·4축 검토·자금조달">
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
           비히클(SPC 포함)과 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
@@ -359,11 +373,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 type="button"
                 className="btn-ghost btn-sm mt-1"
                 disabled={busy}
-                onClick={() => {
-                  if (!newHyp.rationale.trim()) { setError("근거(rationale)는 필수입니다."); return; }
-                  void post({ action: "hypothesize", ...newHyp, vehicle: newHyp.vehicle || null, asset_or_stock: newHyp.asset_or_stock || null, stake_type: newHyp.stake_type || null, instrument_mix: newHyp.instrument_mix || null });
-                  setNewHyp({ vehicle: "", asset_or_stock: "", stake_type: "", instrument_mix: "", tax_structure_note: "", liability_isolation_note: "", financing_leverage_note: "", exit_structure_note: "", rationale: "" });
-                }}
+                onClick={saveStructure}
               >
                 가설 기록
               </button>

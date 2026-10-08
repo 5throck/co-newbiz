@@ -209,7 +209,7 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
             </div>
           </div>
           <label className="grid gap-1 text-sm">근거 (필수)<textarea className="form-input" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="시장 조사 결과 포획률 상향 — 출처/근거를 기재하세요" /></label>
-          <button className="btn-primary justify-self-start" type="submit">파라미터 확정</button>
+          <button className="btn-ghost justify-self-start" type="submit">파라미터 확정</button>
           <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">확정된 값은 사용자 등급(user) 가정으로 기록됩니다. 시나리오 비교 탭의 재생성을 실행하면 새 파라미터로 다시 시뮬레이션됩니다.</p>
         </form>
       </section>
@@ -223,14 +223,19 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
           </p>
         ) : (
           <>
-            <dl className="grid gap-2 md:grid-cols-3 text-sm mb-2">
-              <div><dt className="text-[color:var(--muted-fg)]">반복 수</dt><dd className="font-semibold tabular-nums">{(snapshot.iterations ?? 0).toLocaleString()}</dd></div>
-              <div><dt className="text-[color:var(--muted-fg)]">회수 기간</dt><dd className="font-semibold">{snapshot.horizon_years}년</dd></div>
-              <div>
-                <dt className="text-[color:var(--muted-fg)]">할인율 / 적용 주체</dt>
-                <dd className="font-semibold">{snapshot.discount_rate ? `${pct(snapshot.discount_rate.value)} · ${snapshot.discount_rate.subject}` : "—"} <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">({snapshot.discount_rate?.source ?? ""})</span></dd>
-              </div>
-            </dl>
+            <ParamTable
+              caption="시뮬레이션 실행 조건"
+              labelHeader="조건"
+              rows={[
+                { label: "반복 수", value: (snapshot.iterations ?? 0).toLocaleString(), unit: "회" },
+                { label: "회수 기간", value: String(snapshot.horizon_years), unit: "년" },
+                {
+                  label: "할인율",
+                  value: snapshot.discount_rate ? pct(snapshot.discount_rate.value) : "—",
+                  source: snapshot.discount_rate ? `${snapshot.discount_rate.subject} · ${snapshot.discount_rate.source ?? ""}` : undefined,
+                },
+              ]}
+            />
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               모델: {latestSnapshot!.name} {latestSnapshot!.adopted ? "· 채택됨" : latestSnapshot!.recommended ? "· RECOMMENDED" : ""}
             </p>
