@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
-import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { useConfirm } from "../../components/crud.tsx";
+import { ClosureModal } from "../../components/ClosureModal.tsx";
 
 // 프로젝트 (/projects) — S8~S12(사업성 분석·DD·투심·포트폴리오)로 이어지는
 // 프로젝트 키 화면군의 진입점. 승격된 프로젝트는 이전까지 /opportunities의
@@ -29,101 +28,6 @@ const TRACK_LABEL: Record<string, string> = { greenfield: "그린필드", brownf
 
 function fmtDate(iso: string): string {
   return iso.slice(0, 10);
-}
-
-// 종료/보관 다이얼로그 — crud.tsx ConfirmDialog와 동일 프리미티브
-// (modal-backdrop/modal-panel + useModalFocus)에 사유 입력을 얹은 형태.
-// closeProject는 closure_reason을 필수로 요구하므로 비어 있으면 제출할 수 없다.
-function CloseDialog({
-  target,
-  onClose,
-  onDone,
-}: {
-  target: { id: string; name: string };
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const [status, setStatus] = useState<"closed" | "archived">("closed");
-  const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { panelRef, onKeyDown } = useModalFocus(onClose);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!reason.trim() || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await api.patch(`/api/projects/${target.id}/close`, { status, closure_reason: reason.trim() });
-      onDone();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "종료/보관 처리 실패");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return createPortal(
-    <div className="modal-backdrop" onClick={onClose} role="presentation" onKeyDown={onKeyDown}>
-      <div
-        ref={panelRef}
-        className="modal-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="project-close-title"
-        style={{ maxWidth: "26rem", width: "100%" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-head">
-          <h2 id="project-close-title" style={{ fontSize: "0.95rem" }}>
-            프로젝트 종료/보관 — {target.name}
-          </h2>
-        </div>
-        <form onSubmit={submit} aria-label="프로젝트 종료/보관">
-          <div className="flex flex-wrap items-end gap-2 mt-2">
-            <label className="text-[0.78rem]">
-              <span className="block mb-1">상태</span>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as "closed" | "archived")}
-                className="sizing-new-input sizing-new-input-sm"
-              >
-                <option value="closed">마감 (closed)</option>
-                <option value="archived">보관 (archived)</option>
-              </select>
-            </label>
-            <label className="text-[0.78rem] flex-1" style={{ minWidth: "12rem" }}>
-              <span className="block mb-1">사유 *</span>
-              <input
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="예: closeout 패키지 완료, 잠정 보류"
-                required
-                autoFocus
-                className="sizing-new-input"
-              />
-            </label>
-            <button type="submit" className="btn-ghost btn-sm" disabled={busy || !reason.trim()}>
-              저장
-            </button>
-            <button type="button" className="btn-ghost btn-sm" onClick={onClose}>
-              취소
-            </button>
-          </div>
-        </form>
-        <p className="text-[0.78rem] text-[color:var(--muted-fg)] mt-2 mb-0">
-          종료/보관된 프로젝트는 기본 목록에서 제외됩니다. 진행 판정(KILL)과는 별개의 운영자 상태입니다.
-        </p>
-        {error && (
-          <p role="alert" className="text-[color:var(--red-fg)] text-[0.82rem] mt-2 mb-0">
-            {error}
-          </p>
-        )}
-      </div>
-    </div>,
-    document.body,
-  );
 }
 
 export function ProjectsView() {
@@ -242,10 +146,10 @@ export function ProjectsView() {
                           <button
                             type="button"
                             className="btn-ghost btn-sm"
-                            title="이 프로젝트를 마감 또는 보관 상태로 전환합니다"
+                            title="유형과 전제조건을 확인하고 이 프로젝트를 종료합니다"
                             onClick={() => setClosing({ id: p.id, name: p.project_name ?? p.project_no })}
                           >
-                            종료/보관
+                            종료…
                           </button>
                           <button
                             type="button"
@@ -266,8 +170,10 @@ export function ProjectsView() {
         </div>
       )}
       {closing && (
-        <CloseDialog
-          target={closing}
+        <ClosureModal
+          entity="project"
+          entityId={closing.id}
+          entityName={closing.name}
           onClose={() => setClosing(null)}
           onDone={() => {
             setClosing(null);

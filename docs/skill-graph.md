@@ -305,6 +305,8 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0149` | adr | — | — | — |
 | `adr:0150` | adr | — | — | — |
 | `adr:0151` | adr | — | — | — |
+| `adr:0152` | adr | — | — | — |
+| `adr:0153` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |

@@ -6,7 +6,7 @@ import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { getSystemMode } from "../../../../../../db/lib/system-mode.ts";
 import { recordDealArchive } from "../../../../lib/deal-archive.ts";
 import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../lib/envelope.ts";
+import { badRequest, fail, forbidden, notFound, ok } from "../../../../lib/envelope.ts";
 
 const STATUSES = new Set(["identified", "assessed", "selected", "dropped"]);
 
@@ -41,6 +41,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     status?: string; rationale?: string;
   } | null;
   if (!body) return badRequest("invalid_request", "body required.");
+  if (body.status === "dropped") {
+    return fail(409, "typed_closure_required", "기회 제외(dropped)는 POST /api/opportunities/[id]/close에서 closureType·사유·학습 포착과 함께 수행해야 합니다 (ADR-0152).");
+  }
   if (body.status && !STATUSES.has(body.status)) {
     return badRequest("invalid_request", `status must be one of ${[...STATUSES].join("|")}.`);
   }

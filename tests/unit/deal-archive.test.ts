@@ -71,13 +71,20 @@ function count(table: string, where = "1=1", ...bind: unknown[]): number {
 
 describe("deal_archive lifecycle", () => {
   test("closing writes an archived manifest with the market version freeze", async () => {
+    // ADR-0152: archive follows a typed closure.
+    const closeRes = await nextRequest(`/api/projects/${projId}/close`, {
+      method: "POST",
+      headers: { cookie: memberCookie },
+      body: JSON.stringify({ closureType: "withdrawn", closureReason: "철회 사유 테스트 — 20자 이상 필요", learningCapture: "학습 포착 테스트" }),
+    });
+    expect(closeRes.status).toBe(200);
     const res = await nextRequest(`/api/projects/${projId}/close`, {
       method: "PATCH",
       headers: { cookie: memberCookie },
       body: JSON.stringify({ status: "archived", closure_reason: "보관 사유 테스트" }),
     });
     expect(res.status).toBe(200);
-    const manifest = db.query("SELECT * FROM deal_archive WHERE project_id = ? AND kind = 'archived'").get(projId) as
+    const manifest = db.query("SELECT * FROM deal_archive WHERE project_id = ? AND kind = 'archived' AND status_at_archive = 'archived'").get(projId) as
       | { status_at_archive: string; market_freeze_json: string; member_user_ids_json: string; reason: string | null }
       | undefined;
     expect(manifest).toBeTruthy();

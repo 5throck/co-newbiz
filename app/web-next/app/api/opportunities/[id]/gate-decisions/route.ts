@@ -10,7 +10,7 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { latestGateDecisions } from "../../../../../lib/process-flow.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { badRequest, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { route } from "../../../../../lib/route.ts";
 
 // Gate placement (2026-09-12): the opportunity is the S1–S7 carrier, so only
@@ -57,7 +57,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     gate?: string; decision?: string; rationale?: string; missing_artifacts?: string[];
     // ADR-0097 back-compat: optional provenance link to the committee
     // deliberation that proposed this decision (0066 nullable column).
-    gate_evaluation_id?: string;
+    gate_evaluation_id?: string; learning_capture?: string;
   } | null;
   if (!body?.gate || !GATES.has(body.gate)) {
     return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")} — fs/dd/entity_ic/group_ic are project-carrier (S8–S12) gates and belong on /api/projects/[id]/gate-decisions.`);
@@ -71,6 +71,11 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const missing = (body.missing_artifacts ?? []).map((m) => m.trim()).filter(Boolean);
   if (body.decision === "hold" && missing.length === 0) {
     return badRequest("hold_requires_artifacts", "HOLD 결정에는 missing_artifacts(미완료 산출물 목록)가 필요합니다.");
+  }
+  // ADR-0152 — every KILL carries learning capture (422 when absent).
+  const learningCapture = body.learning_capture?.trim() || null;
+  if (body.decision === "kill" && !learningCapture) {
+    return unprocessable("learning_capture_required", "KILL 결정에는 learning_capture(학습 포착)가 필요합니다 — 중단 사유에서 얻은 교훈이 회수되어야 합니다 (ADR-0152).");
   }
   const db = getDb();
   const opp = db.query("SELECT id, name FROM opportunity WHERE id = ?").get(id) as { id: string; name: string } | null;
@@ -101,10 +106,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     }
   }
   db.run(
-    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id, learning_capture)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
     [gid, "opportunity", id, body.gate, body.decision, rationale,
-      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId],
+      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId, body.decision === "kill" ? learningCapture : null],
   );
   appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
   return ok({ id: gid, gate: body.gate, decision: body.decision }, 201);

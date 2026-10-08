@@ -10,7 +10,7 @@ import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { latestGateDecisions } from "../../../../../lib/process-flow.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { badRequest, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 
 const GATES = new Set(["fs", "dd", "entity_ic", "group_ic"]);
 const DECISIONS = new Set(["go", "hold", "kill"]);
@@ -49,7 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
     gate?: string; decision?: string; rationale?: string; missing_artifacts?: string[];
-    gate_evaluation_id?: string;
+    gate_evaluation_id?: string; learning_capture?: string;
   } | null;
   if (!body?.gate || !GATES.has(body.gate)) {
     return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")}.`);
@@ -62,6 +62,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const missing = (body.missing_artifacts ?? []).map((m) => m.trim()).filter(Boolean);
   if (body.decision === "hold" && missing.length === 0) {
     return badRequest("hold_requires_artifacts", "HOLD 결정에는 missing_artifacts(미완료 산출물 목록)가 필요합니다.");
+  }
+  // ADR-0152 — every KILL carries learning capture (422 when absent).
+  const learningCapture = body.learning_capture?.trim() || null;
+  if (body.decision === "kill" && !learningCapture) {
+    return unprocessable("learning_capture_required", "KILL 결정에는 learning_capture(학습 포착)가 필요합니다 — 중단 사유에서 얻은 교훈이 회수되어야 합니다 (ADR-0152).");
   }
   const db = getDb();
   const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
@@ -85,10 +90,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const nowTs = new Date().toISOString();
   const gid = ulid();
   db.run(
-    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id, learning_capture)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
     [gid, "project", id, body.gate, body.decision, rationale,
-      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId],
+      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId, body.decision === "kill" ? learningCapture : null],
   );
   appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
   return ok({ id: gid, gate: body.gate, decision: body.decision }, 201);

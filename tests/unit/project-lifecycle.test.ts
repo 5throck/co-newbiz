@@ -68,7 +68,14 @@ describe("project lifecycle closure (Wave B1)", () => {
   });
 
   test("closeProject records lifecycle state and hides project from default list", async () => {
-    const res = await nextRequest(`/api/projects/${projectId}/close`, { headers: { cookie: leadCookie }, method: "PATCH", body: JSON.stringify({ closure_reason: "Completed closeout package" }) });
+    // ADR-0152: a bare PATCH 'closed' is refused — closure is typed (POST).
+    const legacy = await nextRequest(`/api/projects/${projectId}/close`, { headers: { cookie: leadCookie }, method: "PATCH", body: JSON.stringify({ closure_reason: "Completed closeout package" }) });
+    expect(legacy.status).toBe(409);
+    const res = await nextRequest(`/api/projects/${projectId}/close`, {
+      headers: { cookie: leadCookie },
+      method: "POST",
+      body: JSON.stringify({ closureType: "withdrawn", closureReason: "Completed closeout package", learningCapture: "Lesson recorded for the test" }),
+    });
     expect(res.status).toBe(200);
     const row = db.query("SELECT status, closed_at, closure_reason FROM md_project WHERE id = ?").get(projectId) as { status: string; closed_at: string | null; closure_reason: string | null };
     expect(row.status).toBe("closed");

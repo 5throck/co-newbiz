@@ -136,7 +136,7 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: "record_gate_decision",
     description: "Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited.",
-    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, gate: { type: "string", enum: ["screening","pre_fs","fs","dd","entity_ic","group_ic"] }, decision: { type: "string", enum: ["go","hold","kill"] }, rationale: { type: "string" }, missing_artifacts: { type: "array", items: { type: "string" } } }, required: ["opportunityId", "gate", "decision", "rationale"] },
+    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, gate: { type: "string", enum: ["screening","pre_fs","fs","dd","entity_ic","group_ic"] }, decision: { type: "string", enum: ["go","hold","kill"] }, rationale: { type: "string" }, missing_artifacts: { type: "array", items: { type: "string" } }, learning_capture: { type: "string", description: "Required by the API when decision is kill (ADR-0152)" } }, required: ["opportunityId", "gate", "decision", "rationale"] },
   },
   {
     name: "create_route_decision",
@@ -253,6 +253,7 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
         gate: args.gate as string, decision: args.decision as string,
         rationale: args.rationale as string,
         missing_artifacts: args.missing_artifacts as string[] | undefined,
+        learning_capture: args.learning_capture as string | undefined,
       });
     }
     case "create_route_decision": {

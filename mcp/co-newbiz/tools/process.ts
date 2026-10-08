@@ -47,7 +47,7 @@ export async function listGateDecisions(opportunityId: string) {
 }
 
 export async function recordGateDecision(opportunityId: string, body: {
-  gate: string; decision: string; rationale: string; missing_artifacts?: string[];
+  gate: string; decision: string; rationale: string; missing_artifacts?: string[]; learning_capture?: string;
 }) {
   return rest.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/gate-decisions`, body);
 }

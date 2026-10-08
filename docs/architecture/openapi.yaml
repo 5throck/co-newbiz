@@ -5157,9 +5157,9 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /api/projects/{id}/close:
-    patch:
-      operationId: closeProject
-      summary: Close or archive a project workspace. Lead only; audited.
+    post:
+      operationId: closeProjectTyped
+      summary: Typed, precondition-enforced project closure (ADR-0152). Body closureType, basisId?, closureReason, learningCapture?. 409 names the missing record; agents are rejected. Lead only; audited.
       tags:
         - Projects
       parameters:
@@ -5179,6 +5179,94 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    patch:
+      operationId: closeProject
+      summary: Archive a closed project (retention step after a typed closure; a bare 'closed' transition is refused with 409). Lead only; audited.
+      tags:
+        - Projects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/projects/{id}/close/preconditions:
+    get:
+      operationId: getProjectClosePreconditions
+      summary: Per-closure-type precondition status ({satisfied, missing[]}) for the closure modal (ADR-0152). Read-only.
+      tags:
+        - Projects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/close:
+    get:
+      operationId: getOpportunityClosePreconditions
+      summary: Per-closure-type precondition status for an opportunity (ADR-0152). Read-only.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: closeOpportunity
+      summary: Typed opportunity closure (dropped / withdrawn / killed_at_gate) with reason and learning capture (ADR-0152). Analyst+; agents rejected; audited.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/projects/{id}/wacc:
     get:
       operationId: getProjectWacc
