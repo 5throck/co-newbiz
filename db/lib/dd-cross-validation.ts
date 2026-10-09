@@ -151,11 +151,11 @@ export interface DdCrossValidationReport {
 const SQL_CERT_COC =
   "SELECT id FROM certification WHERE project_id = ? AND (transferable_on_coc IS NOT NULL OR transferability_basis IS NOT NULL)";
 const SQL_ANTITRUST = "SELECT id FROM antitrust_finding WHERE project_id = ?";
-const SQL_LEGAL_DD = "SELECT id, description FROM dd_finding WHERE project_id = ? AND category = 'legal'";
+const SQL_LEGAL_DD = "SELECT id, description FROM dd_finding WHERE project_id = ? AND target_id IS NULL AND category = 'legal'";
 const SQL_LIVE_DIMENSION_INPUT =
   "SELECT id FROM dimension_input WHERE project_id = ? AND superseded_by IS NULL LIMIT 1";
 const SQL_RBD_FINDINGS =
-  "SELECT id, rbd_source FROM dd_finding WHERE project_id = ? AND rbd_source IS NOT NULL";
+  "SELECT id, rbd_source FROM dd_finding WHERE project_id = ? AND target_id IS NULL AND rbd_source IS NOT NULL";
 const SQL_LIVE_SKIPS =
   "SELECT rule_key FROM compliance_check WHERE project_id = ? AND gate = ? AND result = 'not_applicable' AND invalidated_at IS NULL AND rule_key LIKE 'ma-validator-%'";
 

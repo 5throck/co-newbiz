@@ -5223,13 +5223,19 @@ paths:
   /api/projects/{id}/waivers:
     get:
       operationId: listProjectWaivers
-      summary: Waiver list for the project with date-authoritative effective status (ADR-0036) plus the governance-doc reference list.
+      summary: Waiver list for the project with date-authoritative effective status (ADR-0036) plus the governance-doc reference list. Scoped to one DD scope by the optional target_id (ADR-0157).
       tags:
         - Reference
       parameters:
         - name: id
           in: path
           required: true
+          schema:
+            type: string
+        - name: target_id
+          in: query
+          required: false
+          description: "ADR-0157: an OPENED comparison target. Omitted = the selected target (or legacy single subject) the dd gate judges. A target whose DD was never opened is 409 (DD가 열리지 않은 대상입니다)."
           schema:
             type: string
       responses:
@@ -5239,6 +5245,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
     post:
       operationId: requestProjectWaiver
       summary: File a waiver request (S9 dd-waiver-review); expires_at is mandatory and must be future — indefinite/past dates are refused (ADR-0036). Analyst+.
@@ -5271,6 +5279,7 @@ paths:
                 approver_role: { type: string }
                 expires_at: { type: string, format: date-time }
                 approved_by: { type: string }
+                target_id: { type: string, description: "ADR-0157: an opened comparison target; a waiver applies to exactly one DD scope. Omitted = the selected-target scope." }
       responses:
         '201':
           $ref: '#/components/responses/Created'
@@ -5282,6 +5291,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/projects/{id}/waivers/{waiverId}:
     patch:
@@ -5433,7 +5444,7 @@ paths:
   /api/projects/{id}/dd:
     get:
       operationId: getProjectDdWorkspace
-      summary: S9 DD workspace aggregate — standard items with live state, custom items with provenance, findings, and completion (ADR-0099).
+      summary: S9 DD workspace aggregate — standard items with live state, custom items with provenance, findings, and completion (ADR-0099). Adds targets[] (one comparison summary per shortlisted target) and scope_target_id / selected_target_id (ADR-0157).
       tags:
         - Analysis
       parameters:
@@ -5442,26 +5453,10 @@ paths:
           required: true
           schema:
             type: string
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/projects/{id}/dd-checklist/state:
-    put:
-      operationId: putProjectDdChecklistState
-      summary: Upsert a judgment (pass/fail/pending/waived) on an applied checklist item; proposed-only items are 404 (analyst+).
-      tags:
-        - Analysis
-      parameters:
-        - name: id
-          in: path
-          required: true
+        - name: target_id
+          in: query
+          required: false
+          description: "ADR-0157: an OPENED comparison target. Omitted = the selected target (or legacy single subject) the dd gate judges. A target whose DD was never opened is 409 (DD가 열리지 않은 대상입니다)."
           schema:
             type: string
       responses:
@@ -5475,11 +5470,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
-  /api/projects/{id}/dd-checklist/tailor:
+  /api/projects/{id}/dd/targets:
     post:
-      operationId: tailorProjectDdChecklist
-      summary: Run the deterministic S9 DD checklist tailoring chain — proposes 5-10 industry-tailored items per domain, PROPOSED-only (ADR-0099 §2/§6).
+      operationId: openProjectDdTarget
+      summary: Open DD on a shortlisted, non-selected brownfield target as comparison evidence (ADR-0157). Human web session only — bearer/agent/MCP identities are 403; rationale required; idempotent on (project, target); audited. The selected target stays the only gate subject.
       tags:
         - Analysis
       parameters:
@@ -5488,6 +5485,56 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_id, rationale]
+              properties:
+                target_id: { type: string, description: "A shortlisted brownfield_target of the project's source opportunity, other than the selected target." }
+                rationale: { type: string, maxLength: 4000 }
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/dd/findings:
+    post:
+      operationId: recordProjectDdFinding
+      summary: Record one dd_finding (S9 조사내역). The optional target_id scopes it to an opened comparison target (409 when DD was never opened there); omitted = the selected-target scope (ADR-0157). Analyst+.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category, description]
+              properties:
+                category: { type: string, maxLength: 64, description: "Free text except `rbd`, which needs rbd_source and is not accepted here." }
+                description: { type: string }
+                value_impact: { type: integer, nullable: true, description: "KRW millions." }
+                assumption_key: { type: string }
+                evidence_ref: { type: string }
+                target_id: { type: string }
       responses:
         '201':
           $ref: '#/components/responses/Created'
@@ -5499,6 +5546,84 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/projects/{id}/dd-checklist/state:
+    put:
+      operationId: putProjectDdChecklistState
+      summary: Upsert a judgment (pass/fail/pending/waived) on an applied checklist item; proposed-only items are 404 (analyst+). Body target_id (ADR-0157) scopes it to an opened comparison target; a waiver must belong to the same scope.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [checklist_id, item_id, status]
+              properties:
+                checklist_id: { type: string }
+                item_id: { type: string }
+                status: { type: string, enum: [pending, pass, fail, na, waived] }
+                note: { type: string }
+                evidence_ref: { type: string }
+                waiver_id: { type: string }
+                target_id: { type: string, description: "ADR-0157: an opened comparison target; omitted = the selected-target scope the gate judges." }
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/projects/{id}/dd-checklist/tailor:
+    post:
+      operationId: tailorProjectDdChecklist
+      summary: Run the deterministic S9 DD checklist tailoring chain — proposes 5-10 industry-tailored items per domain, PROPOSED-only (ADR-0099 §2/§6). Body target_id (ADR-0157) scopes the proposals to an opened comparison target.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                domains: { type: array, items: { type: string, enum: [commercial, technical, legal] } }
+                target_id: { type: string }
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/projects/{id}/dd-checklist/tailor/{itemId}/review:
     put:

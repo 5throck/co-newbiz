@@ -25,11 +25,12 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   const db = getDb();
   const history = db
     .query(
-      `SELECT id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at
-       FROM gate_decision WHERE entity_type = 'project' AND entity_id = ?
-       ORDER BY decided_at DESC`,
+      `SELECT g.id, g.gate, g.decision, g.rationale, g.missing_artifacts_json, g.decided_by, g.decided_at, s.stale_at, s.stale_reason
+       FROM gate_decision g LEFT JOIN gate_decision_stale s ON s.decision_id = g.id
+       WHERE g.entity_type = 'project' AND g.entity_id = ?
+       ORDER BY g.decided_at DESC`,
     )
-    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; decided_by: string; decided_at: string }>;
+    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; decided_by: string; decided_at: string; stale_at: string | null; stale_reason: string | null }>;
   // Latest decision per gate — same helper as the process engine, so the
   // tie-breaking rule cannot drift between surfaces.
   const latestMap = latestGateDecisions("project", id);

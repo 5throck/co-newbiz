@@ -147,6 +147,8 @@ export interface IssueWaiverOptions {
   /** Approve immediately (status active) instead of leaving it pending. */
   approvedBy?: string;
   approvedAt?: string;
+  /** ADR-0157: DD scope — NULL/omitted = the selected/legacy scope; an opened comparison target id otherwise. */
+  targetId?: string | null;
   now: string;
 }
 
@@ -164,7 +166,7 @@ export function issueWaiver(db: Database, options: IssueWaiverOptions): string {
   const id = ulid();
   const approved = options.approvedBy !== undefined;
   db.run(
-    "INSERT INTO waiver (id, project_id, governance_doc_id, clause_ref, reason, requested_by, approver_role, approved_by, approved_at, expires_at, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+    "INSERT INTO waiver (id, project_id, governance_doc_id, clause_ref, reason, requested_by, approver_role, approved_by, approved_at, expires_at, status, created_at, target_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
     [
       id,
       options.projectId,
@@ -178,6 +180,7 @@ export function issueWaiver(db: Database, options: IssueWaiverOptions): string {
       options.expiresAt,
       approved ? "active" : "pending",
       options.now,
+      options.targetId ?? null,
     ],
   );
   return id;
@@ -192,7 +195,9 @@ export interface ActiveWaiver {
  * A waiver unblocks a rule only when ALL of: status='active',
  * approved_at NOT NULL, and expires_at strictly in the future. The date
  * comparison is authoritative — a status column can be stale, an expiry
- * date cannot (ADR-0036).
+ * date cannot (ADR-0036). ADR-0157: only a waiver on the selected/legacy DD
+ * scope (target_id IS NULL) can unblock a gate rule — a waiver recorded on a
+ * comparison target never applies to the selected target.
  */
 export function findActiveWaiver(
   db: Database,
@@ -200,7 +205,7 @@ export function findActiveWaiver(
 ): ActiveWaiver | null {
   const row = db
     .query(
-      "SELECT id, expires_at FROM waiver WHERE project_id = ? AND governance_doc_id = ? AND clause_ref = ? AND status = 'active' AND approved_at IS NOT NULL AND expires_at > ? ORDER BY expires_at DESC LIMIT 1",
+      "SELECT id, expires_at FROM waiver WHERE project_id = ? AND governance_doc_id = ? AND clause_ref = ? AND status = 'active' AND approved_at IS NOT NULL AND expires_at > ? AND target_id IS NULL ORDER BY expires_at DESC LIMIT 1",
     )
     .get(options.projectId, options.governanceDocId, options.clauseRef, options.now) as ActiveWaiver | undefined;
   return row ?? null;
@@ -244,6 +249,8 @@ export interface WaiverRow {
   expires_at: string;
   status: string;
   created_at: string;
+  /** ADR-0157: NULL = selected/legacy DD scope. */
+  target_id: string | null;
 }
 
 export interface WaiverView extends WaiverRow {
@@ -255,10 +262,13 @@ export interface WaiverView extends WaiverRow {
   effective_status: "pending" | "active" | "expired" | "rejected" | "revoked";
 }
 
-export function listProjectWaivers(db: Database, options: { projectId: string; now: string }): WaiverView[] {
-  const rows = db
-    .query("SELECT * FROM waiver WHERE project_id = ? ORDER BY created_at DESC, id DESC")
-    .all(options.projectId) as WaiverRow[];
+export function listProjectWaivers(db: Database, options: { projectId: string; now: string; targetId?: string | null }): WaiverView[] {
+  // targetId undefined = every scope (admin/legacy callers); null = the selected/legacy scope; id = one comparison target.
+  const rows = (
+    options.targetId === undefined
+      ? db.query("SELECT * FROM waiver WHERE project_id = ? ORDER BY created_at DESC, id DESC").all(options.projectId)
+      : db.query("SELECT * FROM waiver WHERE project_id = ? AND target_id IS ? ORDER BY created_at DESC, id DESC").all(options.projectId, options.targetId)
+  ) as WaiverRow[];
   return rows.map((row) => {
     const dateExpired = row.expires_at <= options.now;
     const effective: WaiverView["effective_status"] =

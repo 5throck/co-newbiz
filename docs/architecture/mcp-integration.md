@@ -70,7 +70,7 @@ The shared registry (`mcp/co-newbiz/registry.ts`) now advertises one tool set on
 | Group | Tools |
 |---|---|
 | Stage writes and generation | `tools/stage-tools.ts` (market analysis, opportunity, synergy, capability, route draft, greenfield, candidates, screening, business case, DD records, deal structure, charter, establishment, PMI planning drafts, monitoring brief) |
-| Proposals (scope `propose`) | `propose_gate_decision`, `propose_route_decision`, `propose_case_adoption`, `propose_target_selection`, `propose_transition_decision`, `propose_approval` (subjects `charter_baseline`, `dd_checklist_judgment`, `four_axis_completion`); `get_proposal_status`, `list_my_proposals` |
+| Proposals (scope `propose`) | `propose_gate_decision`, `propose_route_decision`, `propose_case_adoption`, `propose_target_selection`, `propose_transition_decision`, `propose_approval` (subjects `charter_baseline`, `dd_checklist_judgment`, `four_axis_completion`, `dd_target_open`); `get_proposal_status`, `list_my_proposals` |
 | Review | `request_review` (AI 1st), `request_ai_second_review`, `get_review_buckets` |
 | Deprecated aliases | `record_gate_decision` and `create_route_decision` create proposals and return the confirm URL on both transports; removed in the next release |
 

@@ -86,6 +86,8 @@ const transitionPayload = z
  *  - charter_baseline      (S11, POST charter/confirm — ADR-0104 C3)
  *  - dd_checklist_judgment (S9,  PUT  dd-checklist/state — ADR-0099)
  *  - four_axis_completion  (S10, POST deal-structure complete_four_axis — ADR-0045)
+ *  - dd_target_open        (S9,  POST dd/targets — ADR-0157: a SUGGESTION to open comparison DD on
+ *                           another shortlisted target; the person who confirms is the one who opens it)
  * An agent acting through a delegated token must not create those rows, so the
  * human performs the approval from the confirm page.
  */
@@ -103,6 +105,7 @@ const approvalPayload = z.discriminatedUnion("subject", [
     })
     .strict(),
   z.object({ subject: z.literal("four_axis_completion"), hypothesis_id: text, artifact_ref: text }).strict(),
+  z.object({ subject: z.literal("dd_target_open"), target_id: text, rationale: text }).strict(),
 ]);
 
 const SCHEMAS: Record<ProposalKind, z.ZodType<Record<string, unknown>>> = {
@@ -138,7 +141,7 @@ export function stageFor(kind: ProposalKind, payload: Record<string, unknown>): 
     case "transition_decision":
       return "S12";
     case "approval":
-      return payload.subject === "dd_checklist_judgment" ? "S9" : payload.subject === "four_axis_completion" ? "S10" : "S11";
+      return payload.subject === "dd_checklist_judgment" || payload.subject === "dd_target_open" ? "S9" : payload.subject === "four_axis_completion" ? "S10" : "S11";
     case "gate_decision": {
       const gate = String(payload.gate);
       if (gate === "screening") return "S3";
@@ -179,6 +182,9 @@ export function targetFor(kind: ProposalKind, entityType: ProposalEntityType, en
       if (subject === "dd_checklist_judgment") {
         return { pattern: "dd-state", method: "PUT", path: `/api/projects/${id}/dd-checklist/state`, body: rest };
       }
+      if (subject === "dd_target_open") {
+        return { pattern: "dd-target-open", method: "POST", path: `/api/projects/${id}/dd/targets`, body: rest };
+      }
       if (subject === "four_axis_completion") {
         return { pattern: "deal-structure", method: "POST", path: `/api/projects/${id}/deal-structure`, body: { action: "complete_four_axis", ...rest } };
       }
@@ -200,6 +206,7 @@ interface DecisionModule {
 // have no proposal kind and no loader.
 const LOADERS: Record<string, () => Promise<DecisionModule>> = {
   "dd-state": () => import("../app/api/projects/[id]/dd-checklist/state/route.ts"),
+  "dd-target-open": () => import("../app/api/projects/[id]/dd/targets/route.ts"),
   "deal-structure": () => import("../app/api/projects/[id]/deal-structure/route.ts"),
   "opportunity-gate": () => import("../app/api/opportunities/[id]/gate-decisions/route.ts"),
   "project-gate": () => import("../app/api/projects/[id]/gate-decisions/route.ts"),

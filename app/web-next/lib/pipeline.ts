@@ -327,8 +327,8 @@ const PROJECT_RULES: Rule[] = [
     // every item lands 'proposed'; approval is the human boundary decision.
     key: "tailor_dd_checklist:S9",
     kind: "automatable",
-    when: ({ entity }) => count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ?", entity.id) === 0,
-    signature: ({ entity }) => `${count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ?", entity.id)}`,
+    when: ({ entity }) => count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ? AND target_id IS NULL", entity.id) === 0,
+    signature: ({ entity }) => `${count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ? AND target_id IS NULL", entity.id)}`,
     run: async ({ entity, actor }) => {
       await tailorDdChecklist(entity.id, { actor, source: "system" });
     },

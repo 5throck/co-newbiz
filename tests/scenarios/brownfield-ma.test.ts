@@ -183,6 +183,82 @@ describe("brownfield M&A S1 to S12", () => {
     await recordGate(s.page, app, `/projects/${P}/business-case`, null, "go", "채택 사례의 NPV/BEP가 투자 기준을 충족함");
   }, 60_000);
 
+  test("ADR-0157: open DD on a second shortlisted target, judge an item, the S9 gate still judges the selected target", async () => {
+    seedSecondTarget(app);
+    const processSnapshot = () =>
+      s.page.evaluate(async (url) => {
+        const body = (await (await fetch(url)).json()) as { data: { currentStage: string; completedStages: string[]; blockers: string[] } };
+        return JSON.stringify({ stage: body.data.currentStage, done: body.data.completedStages, blockers: body.data.blockers });
+      }, `/api/projects/${P}/process`);
+    const gateScopeRows = () =>
+      app.readDb((d) => (d.query("SELECT COUNT(*) c FROM project_checklist_item_state WHERE project_id=? AND target_id IS NULL").get(P) as { c: number }).c);
+    try {
+      await visit(s.page, app, `/projects/${P}/dd`);
+      const selector = s.page.getByRole("group", { name: "DD 대상 선택" });
+      await selector.waitFor({ state: "visible" });
+      const processBefore = await processSnapshot();
+      const gateRowsBefore = gateScopeRows();
+
+      // A listed-but-unopened target offers no checklist, only 'DD 열기'.
+      await selector.getByRole("button", { name: /레인보우로보틱스 E2E/ }).click();
+      await see(s.page, "DD가 열리지 않은 대상입니다");
+      await s.page.getByRole("button", { name: "DD 열기", exact: true }).click();
+      const dialog = s.page.getByRole("dialog");
+      await dialog.waitFor({ state: "visible" });
+      axe.push(await axeScan(s.page, "dialog: DD 열기 (rationale required)"));
+      expect(await dialog.getByRole("button", { name: "DD 열기", exact: true }).isDisabled()).toBe(true); // no rationale yet
+      await dialog.getByLabel(/DD를 여는 근거/).fill("1순위 대상과 같은 체크리스트로 위험 수준을 직접 비교하기 위함");
+      const opened = s.page.waitForResponse((r) => r.request().method() === "POST" && /\/dd\/targets$/.test(r.url()));
+      await dialog.getByRole("button", { name: "DD 열기", exact: true }).click();
+      expect((await opened).status()).toBe(201);
+
+      // Comparison scope: banner, judgement recorded on the opened target only.
+      await see(s.page, "비교 근거 — 게이트 판정에 반영되지 않습니다");
+      const judged = s.page.waitForResponse((r) => r.request().method() === "PUT" && /dd-checklist\/state$/.test(r.url()));
+      await s.page.locator('table button[title="충족 판정"]').first().click();
+      expect((await judged).status()).toBe(200);
+      const finding = await s.page.evaluate(async (url) => {
+        const csrf = document.cookie.match(/co_newbiz_csrf=([^;]+)/)?.[1] ?? "";
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+          body: JSON.stringify({ target_id: "e2e-target-b", category: "commercial", description: "비교 대상 고객 집중도 위험", value_impact: -800 }),
+        });
+        return res.status;
+      }, `/api/projects/${P}/dd/findings`);
+      expect(finding).toBe(201);
+      axe.push(await axeScan(s.page, "stage page: S9 DD workspace with target selector (comparison scope)"));
+
+      // Back on the selected target: comparison table, no PASS stamp, gate subject named.
+      await s.page.getByRole("group", { name: "DD 대상 선택" }).getByRole("button", { name: /S1-S12 데모 대상회사/ }).click();
+      const table = s.page.getByRole("table", { name: "대상별 DD 비교 근거" });
+      await table.waitFor({ state: "visible" });
+      const section = s.page.getByRole("region", { name: "비교 근거" });
+      expect(await section.innerText()).not.toMatch(/PASS/i);
+      expect(await table.getByRole("row").count()).toBe(3); // header + selected + opened comparison target
+      await see(s.page, "게이트 판정 대상: S1-S12 데모 대상회사");
+      axe.push(await axeScan(s.page, "stage page: S9 comparison table"));
+
+      // Persistence + isolation: the other target's DD never touched the gate scope.
+      expect(gateScopeRows()).toBe(gateRowsBefore);
+      expect(await processSnapshot()).toBe(processBefore);
+      const open = app.readDb((d) => d.query("SELECT opened_by, rationale, source FROM dd_target_open WHERE project_id=? AND target_id='e2e-target-b'").get(P)) as { opened_by: string; rationale: string; source: string };
+      expect(open).toMatchObject({ opened_by: "analyst", source: "manual" });
+      expect(open.rationale).toContain("직접 비교");
+      const other = app.readDb((d) => d.query("SELECT COUNT(*) c FROM project_checklist_item_state WHERE project_id=? AND target_id='e2e-target-b' AND status='pass'").get(P)) as { c: number };
+      expect(other.c).toBe(1);
+      const audited = app.readDb((d) => d.query("SELECT COUNT(*) c FROM audit_log WHERE action='dd_target_opened'").get()) as { c: number };
+      expect(audited.c).toBe(1);
+    } finally {
+      app.writeDb((d) => {
+        d.run("DELETE FROM project_checklist_item_state WHERE target_id='e2e-target-b'");
+        d.run("DELETE FROM dd_finding WHERE target_id='e2e-target-b'");
+        d.run("DELETE FROM dd_target_open WHERE target_id='e2e-target-b'");
+      });
+      removeSecondTarget(app);
+    }
+  }, 120_000);
+
   test("S9 judge the M&A sub-track checklists in the DD workspace, then DD gate GO", async () => {
     await visit(s.page, app, `/projects/${P}/dd`);
     for (const tab of ["M&A 6대 검증", "M&A 특수 주제"]) {

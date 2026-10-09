@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.5.0";
+export const GUIDE_SPEC_VERSION = "2.6.0";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -381,7 +381,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S9",
     "name": "실사·검증",
-    "objective": "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, greenfield는 실현가능성 검증)",
+    "objective": "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 Short List 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)",
     "applicableTracks": [
       "greenfield",
       "brownfield"

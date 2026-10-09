@@ -10,6 +10,7 @@ import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { tailorDdChecklist, DD_TAILOR_STAGE, DD_DOMAINS, type DdDomain } from "../../../../../../lib/dd-checklist-tailor.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { scopeOrResponse } from "../../../../../../lib/dd-target-http.ts";
 
 // Idempotency contract: if a non-failed tailoring run for this project's S9
 // stage already exists, the EXISTING run is returned with 200 and
@@ -23,7 +24,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
 
-  const body = (await request.json().catch(() => null)) as { domains?: string[] } | null;
+  const body = (await request.json().catch(() => null)) as { domains?: string[]; target_id?: string } | null;
+  // ADR-0157: tailoring for an opened comparison target writes proposals scoped to it.
+  const scope = scopeOrResponse(id, body?.target_id);
+  if ("response" in scope) return scope.response;
   let domains: DdDomain[] = [...DD_DOMAINS];
   if (body?.domains?.length) {
     if (!body.domains.every((d) => (DD_DOMAINS as readonly string[]).includes(d))) {
@@ -39,12 +43,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
        ORDER BY started_at DESC LIMIT 1`,
     )
     .get(id, DD_TAILOR_STAGE) as { id: string } | undefined;
-  if (existing) {
+  // After an S8 re-selection (ADR-0157) the old run's proposals were stamped to the former
+  // target; the newly selected scope has none, so it may be tailored afresh.
+  const reselected = !!getDb().query("SELECT 1 FROM dd_target_open WHERE project_id = ? AND source = 'reselection' LIMIT 1").get(id);
+  const scopeHasProposals = !!getDb().query("SELECT 1 FROM project_checklist_item_custom WHERE project_id = ? AND target_id IS NULL LIMIT 1").get(id);
+  if (scope.targetId === null && existing && !(reselected && !scopeHasProposals)) {
     return ok({ runId: existing.id, alreadyRun: true, domains }, 200);
+  }
+  if (scope.targetId !== null) {
+    const proposed = getDb()
+      .query("SELECT 1 FROM project_checklist_item_custom WHERE project_id = ? AND target_id = ? LIMIT 1")
+      .get(id, scope.targetId);
+    if (proposed) return ok({ runId: null, alreadyRun: true, domains, target_id: scope.targetId }, 200);
   }
 
   try {
-    const result = await tailorDdChecklist(id, { actor: ctx.userId, domains, source: "web" });
+    const result = await tailorDdChecklist(id, { actor: ctx.userId, domains, source: "web", targetId: scope.targetId });
     if (result.status === "failed") {
       return badRequest("tailor_failed", `일부 활동이 실패했습니다 — run ${result.processRunId} 상태를 확인하세요.`);
     }

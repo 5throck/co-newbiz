@@ -10,6 +10,7 @@ import { issueWaiver, listProjectWaivers } from "../../../../../../../db/lib/com
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { scopeOrResponse } from "../../../../../lib/dd-target-http.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -17,7 +18,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
 if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
-  const waivers = listProjectWaivers(db, { projectId: id, now: new Date().toISOString() });
+  // ADR-0157: ?target_id= selects a comparison target; omitted = the selected/legacy scope.
+  const scope = scopeOrResponse(id, new URL(request.url).searchParams.get("target_id"));
+  if ("response" in scope) return scope.response;
+  const waivers = listProjectWaivers(db, { projectId: id, now: new Date().toISOString(), targetId: scope.targetId });
   // Reference list for the request form's doc select — policy documents are
   // not MNPI; the admin console stays the full management surface.
   const governanceDocs = db
@@ -40,7 +44,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     governance_doc_id?: string; clause_ref?: string; reason?: string;
     approver_role?: string; expires_at?: string; approved_by?: string;
     dd_item?: { checklist_id?: string; item_id?: string };
+    target_id?: string;
   } | null;
+  const scope = scopeOrResponse(id, body?.target_id);
+  if ("response" in scope) return scope.response;
 
   const governanceDocId = body?.governance_doc_id?.trim();
   const ddItemId = body?.dd_item?.item_id?.trim();
@@ -67,9 +74,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // refuse and let the operator revoke the old one first.
   const dupe = db
     .query(
-      "SELECT id FROM waiver WHERE project_id = ? AND governance_doc_id = ? AND clause_ref = ? AND status = 'active' AND expires_at > ?",
+      "SELECT id FROM waiver WHERE project_id = ? AND governance_doc_id = ? AND clause_ref = ? AND status = 'active' AND expires_at > ? AND target_id IS ?",
     )
-    .get(id, governanceDocId, clauseRef, now);
+    .get(id, governanceDocId, clauseRef, now, scope.targetId);
   if (dupe) {
     return badRequest("duplicate_active", `동일 조항의 활성 waiver(${dupe.id})가 이미 존재합니다 — 철회 후 재요청하세요.`);
   }
@@ -85,6 +92,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       approverRole,
       expiresAt,
       approvedBy,
+      targetId: scope.targetId,
       now,
     });
   } catch (err) {

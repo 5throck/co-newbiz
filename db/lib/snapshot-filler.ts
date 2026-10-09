@@ -366,7 +366,7 @@ function maxCreatedAt(rows: Array<{ created_at: string }>): string | null {
 
 function fillTrlVar(db: Database, projectId: string): SnapshotWrite {
   const rows = db
-    .query("SELECT trl_grade, created_at FROM dd_finding WHERE project_id = ? AND trl_grade IS NOT NULL")
+    .query("SELECT trl_grade, created_at FROM dd_finding WHERE project_id = ? AND target_id IS NULL AND trl_grade IS NOT NULL")
     .all(projectId) as unknown as Array<{ trl_grade: string; created_at: string }>;
   if (rows.length === 0) return missing("tech.trl_grade");
   // TRL MIN across dd_finding — least mature finding wins (D-M-TE-8).
@@ -382,7 +382,7 @@ function fillTrlVar(db: Database, projectId: string): SnapshotWrite {
 
 function fillIpVar(db: Database, projectId: string): SnapshotWrite {
   const rows = db
-    .query("SELECT ip_ownership_status, created_at FROM dd_finding WHERE project_id = ? AND ip_ownership_status IS NOT NULL")
+    .query("SELECT ip_ownership_status, created_at FROM dd_finding WHERE project_id = ? AND target_id IS NULL AND ip_ownership_status IS NOT NULL")
     .all(projectId) as unknown as Array<{ ip_ownership_status: string; created_at: string }>;
   if (rows.length === 0) return missing("tech.ip_ownership_status");
   // Worst per the total order: disputed > licensed_in > jointly_owned >

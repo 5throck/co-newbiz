@@ -13,6 +13,7 @@ import { appendAudit } from "../../../db/lib/access-control.ts";
 import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
 import { resolveOrCreateCompany } from "./brownfield-targets.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
+import { applyDdReselection, selectedTargetId } from "./dd-target.ts";
 
 /** Typed not-found error (D5): routes map this to HTTP 404 via instanceof
  *  instead of matching on message prefixes, so rewording a lib message can
@@ -134,6 +135,7 @@ export function selectTarget(projectId: string, targetId: string, rationale: str
   if (!rationale?.trim()) throw new Error("rationale is mandatory for a target selection record (ADR-0053)");
   if (rationale.length > 4000) throw new Error("선정 근거는 4,000자 이내여야 합니다.");
   const now = new Date().toISOString();
+  const previousTargetId = selectedTargetId(projectId, db);
   db.transaction(() => {
     db.run(
       `INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
@@ -142,6 +144,9 @@ export function selectTarget(projectId: string, targetId: string, rationale: str
     );
     const companyId = resolveOrCreateCompany(db, target.company_name, target.dart_corp_code);
     db.run("UPDATE md_project SET company_id = ? WHERE id = ?", [companyId, projectId]);
+    // ADR-0157: re-selection A to B keeps every per-target DD row, re-points the
+    // gate scope to B and marks an existing dd gate decision stale — same transaction.
+    applyDdReselection(db, projectId, previousTargetId, targetId, selectedBy, now);
   })();
   appendAudit(db, { actor: selectedBy, action: "s8_target_selected", target: `${projectId}:${targetId}`, now });
   return { targetId, rationale: rationale.trim(), selectedBy, selectedAt: now };

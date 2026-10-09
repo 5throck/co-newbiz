@@ -38,10 +38,12 @@ const STATUS_META: Record<WaiverRow["effective_status"], { icon: string; label: 
 export interface WaiverPrefill { clause: string; reason?: string; checklist_id?: string; item_id?: string }
 
 /** The waiver request form - shared by the panel and the per-row dialog on S9. Layout wraps (auto-fit), never overlaps. */
-export function WaiverRequestForm({ projectId, docs, prefill, onDone, onCancel }: {
+export function WaiverRequestForm({ projectId, docs, prefill, targetId, onDone, onCancel }: {
   projectId: string;
   docs: GovernanceDocRef[];
   prefill?: WaiverPrefill | null;
+  /** ADR-0157: an opened comparison target; omitted = the selected-target scope the gate judges. */
+  targetId?: string | null;
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -63,6 +65,7 @@ export function WaiverRequestForm({ projectId, docs, prefill, onDone, onCancel }
           : undefined,
         approver_role: form.approverRole,
         expires_at: form.expiresAt ? new Date(form.expiresAt).toISOString() : "",
+        target_id: targetId ?? undefined,
       });
       onDone();
     } catch (e) {
@@ -112,7 +115,7 @@ export function WaiverRequestForm({ projectId, docs, prefill, onDone, onCancel }
   );
 }
 
-export function WaiverPanel({ projectId, prefill, onRequested }: { projectId: string; prefill?: WaiverPrefill | null; onRequested?: () => void }) {
+export function WaiverPanel({ projectId, prefill, onRequested, targetId }: { projectId: string; prefill?: WaiverPrefill | null; onRequested?: () => void; targetId?: string | null }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
@@ -127,10 +130,10 @@ export function WaiverPanel({ projectId, prefill, onRequested }: { projectId: st
   const basePath = `/api/projects/${encodeURIComponent(projectId)}/waivers`;
 
   const load = useCallback(() => {
-    api.get<{ waivers: WaiverRow[]; governanceDocs: GovernanceDocRef[] }>(basePath)
+    api.get<{ waivers: WaiverRow[]; governanceDocs: GovernanceDocRef[] }>(targetId ? `${basePath}?target_id=${encodeURIComponent(targetId)}` : basePath)
       .then((r) => { setWaivers(r.data.waivers); setDocs(r.data.governanceDocs); })
       .catch((e) => setError(e instanceof Error ? e.message : "waiver 목록 불러오기 실패"));
-  }, [basePath]);
+  }, [basePath, targetId]);
   useEffect(() => { load(); }, [load]);
 
   const decide = (id: string, decision: "approve" | "reject" | "revoke") => {
@@ -173,6 +176,7 @@ export function WaiverPanel({ projectId, prefill, onRequested }: { projectId: st
           projectId={projectId}
           docs={docs}
           prefill={prefill}
+          targetId={targetId}
           onDone={() => { setShowForm(false); load(); onRequested?.(); }}
           onCancel={() => setShowForm(false)}
         />

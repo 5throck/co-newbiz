@@ -61,7 +61,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const findings = db
     .query(
       `SELECT id, category, description, value_impact, assumption_key, evidence_ref, created_at
-       FROM dd_finding WHERE project_id = ? ORDER BY created_at DESC, id LIMIT ?`,
+       FROM dd_finding WHERE project_id = ? AND target_id IS NULL ORDER BY created_at DESC, id LIMIT ?`,
     )
     .all(id, TOP_FINDINGS) as unknown as FindingRow[];
 

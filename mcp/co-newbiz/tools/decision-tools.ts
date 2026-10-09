@@ -190,15 +190,15 @@ const PROPOSE: RegistryTool[] = [
   }),
   defineTool({
     name: "propose_approval",
-    description: `Propose a human approval that stamps a human_final review: charter_baseline (S11), dd_checklist_judgment (S9, needs checklist_id, item_id, status), or four_axis_completion (S10, needs hypothesis_id, artifact_ref). ${PROPOSE_NOTE}`,
+    description: `Propose a human approval that stamps a human_final review: charter_baseline (S11), dd_checklist_judgment (S9, needs checklist_id, item_id, status), four_axis_completion (S10, needs hypothesis_id, artifact_ref), or dd_target_open (S9, ADR-0157: SUGGEST comparison DD on another shortlisted target — needs target_id and a rationale; only the person who confirms it opens DD, no tool does). ${PROPOSE_NOTE}`,
     scope: "propose", kind: "propose", stageActivities: ["charter-baseline"],
     stageArtifacts: ["stage:S9:1", "stage:S10:1", "stage:S11:3"], routes: ["POST /api/proposals"],
     inputSchema: {
       type: "object",
       properties: {
         projectId: projectIdProp,
-        subject: { type: "string", enum: ["charter_baseline", "dd_checklist_judgment", "four_axis_completion"] },
-        details: { type: "object", description: "Subject fields: dd_checklist_judgment {checklist_id, item_id, status, note?, evidence_ref?, waiver_id?}; four_axis_completion {hypothesis_id, artifact_ref}." },
+        subject: { type: "string", enum: ["charter_baseline", "dd_checklist_judgment", "four_axis_completion", "dd_target_open"] },
+        details: { type: "object", description: "Subject fields: dd_checklist_judgment {checklist_id, item_id, status, note?, evidence_ref?, waiver_id?}; four_axis_completion {hypothesis_id, artifact_ref}; dd_target_open {target_id, rationale}." },
         rationale: { type: "string" },
         evidence_refs: evidenceProp,
       },

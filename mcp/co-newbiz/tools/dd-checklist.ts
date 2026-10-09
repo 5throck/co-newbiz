@@ -21,9 +21,19 @@ export interface DdWorkspaceEnvelope {
     custom: Array<Record<string, unknown>>;
   }>;
   findings: Array<Record<string, unknown>>;
-  completion: { total: number; pending: number; mandatoryUnmet: number };
+  completion: { total: number; pending: number; unassessed?: number; mandatoryUnmet: number };
+  /** ADR-0157: the scope described (null = selected/legacy), the gate's target, and one summary per shortlisted target. */
+  scope_target_id?: string | null;
+  selected_target_id?: string | null;
+  targets?: Array<Record<string, unknown>>;
 }
 
-export async function getProjectDdWorkspace(port: RestPort, projectId: string) {
-  return port.get<DdWorkspaceEnvelope>(`/api/projects/${encodeURIComponent(projectId)}/dd`);
+/**
+ * `targetId` (ADR-0157) selects an OPENED comparison target; omitted = the
+ * selected target the dd gate judges. No tool opens DD — an agent may only
+ * suggest a target through propose_approval; a person opens it in the web app.
+ */
+export async function getProjectDdWorkspace(port: RestPort, projectId: string, targetId?: string) {
+  const qs = targetId ? `?target_id=${encodeURIComponent(targetId)}` : "";
+  return port.get<DdWorkspaceEnvelope>(`/api/projects/${encodeURIComponent(projectId)}/dd${qs}`);
 }
