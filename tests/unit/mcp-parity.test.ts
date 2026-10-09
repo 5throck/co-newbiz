@@ -161,6 +161,9 @@ const GATE_STEPS = (ids: Ids, track: Track): Array<{ entityType: "opportunity" |
 ];
 
 const rationale = (gate: string) => `Parity scenario: the ${gate} gate criteria are met.`;
+/** R2-E: an IC GO over open gaps needs a gap_rationale (server-enforced on the REST path). */
+const gapRationale = (gate: string) =>
+  gate === "entity_ic" || gate === "group_ic" ? "Parity scenario: the committee accepts the open gaps with this rationale." : undefined;
 const transitionBody = () => ({
   review_cycle: currentReviewCycle(),
   decision: "graduate_to_core",
@@ -187,7 +190,7 @@ async function runScenario(track: Track, path: Path): Promise<RunResult> {
 
   // REST path: the human calls the decision routes directly.
   const restDecide = async (g: ReturnType<typeof GATE_STEPS>[number]) => {
-    const r = await json(await nextRequest(gatePath(g.entityType, g.entityId), { method: "POST", ...human, body: JSON.stringify({ gate: g.gate, decision: "go", rationale: rationale(g.gate) }) }));
+    const r = await json(await nextRequest(gatePath(g.entityType, g.entityId), { method: "POST", ...human, body: JSON.stringify({ gate: g.gate, decision: "go", rationale: rationale(g.gate), gap_rationale: gapRationale(g.gate) }) }));
     expect(r.status, `${g.gate}: ${JSON.stringify(r.body.error)}`).toBe(201);
   };
   const restTransition = async () => {
@@ -241,7 +244,7 @@ async function runScenario(track: Track, path: Path): Promise<RunResult> {
 
   for (const g of GATE_STEPS(ids, track)) {
     if (path === "rest") await restDecide(g);
-    else await proposeThenConfirm("propose_gate_decision", { entityId: g.entityId, gate: g.gate, decision: "go", rationale: rationale(g.gate) });
+    else await proposeThenConfirm("propose_gate_decision", { entityId: g.entityId, gate: g.gate, decision: "go", rationale: rationale(g.gate), gap_rationale: gapRationale(g.gate) });
     trace.push(snapshot(`gate:${g.gate}`, ids));
   }
 

@@ -41,6 +41,24 @@ describe("brownfield M&A S1 to S12", () => {
     expect(row.decided_by).toBe("analyst");
   }, 60_000);
 
+  test("S8 shows the legacy unassigned-model notice (R2-E item 1)", async () => {
+    // A pre-ADR-0143 brownfield carries business_case_model rows with target_id
+    // NULL; the stage must say so instead of a bare "Business Case가 필요합니다".
+    app.writeDb((d) =>
+      d.run(
+        "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, inputs_json) VALUES (?,?,?,?,?,?,?,?)",
+        ["bc-legacy-e2e", P, "valuation", "ADR-0143 이전 레거시 모델", 5, "analyst", new Date().toISOString(), "{}"],
+      ),
+    );
+    try {
+      await visit(s.page, app, `/projects/${P}/business-case`);
+      await see(s.page, "대상 미지정 모델 1건");
+      await see(s.page, "재생성이 필요합니다");
+    } finally {
+      app.writeDb((d) => d.run("DELETE FROM business_case_model WHERE id = 'bc-legacy-e2e'"));
+    }
+  }, 60_000);
+
   test("S8 FS gate GO", async () => {
     await recordGate(s.page, app, `/projects/${P}/business-case`, null, "go", "채택 사례의 NPV/BEP가 투자 기준을 충족함");
   }, 60_000);

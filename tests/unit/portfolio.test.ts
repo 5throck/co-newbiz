@@ -215,7 +215,7 @@ beforeAll(async () => {
     for (const gate of ["entity_ic", "group_ic"]) {
       const res = await req(`/api/projects/${pid}/gate-decisions`, {
         method: "POST", headers: { cookie: analystCookie },
-        body: JSON.stringify({ gate, decision: "go", rationale: "S12 도달을 위한 IC 승인 기록 (테스트)" }),
+        body: JSON.stringify({ gate, decision: "go", rationale: "S12 도달을 위한 IC 승인 기록 (테스트)", gap_rationale: "테스트: 미충족 산출물 예외 근거" }),
       });
       expect(res.status).toBe(201);
     }

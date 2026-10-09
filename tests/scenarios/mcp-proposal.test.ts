@@ -52,7 +52,7 @@ describe("MCP decision proposal confirmed on /proposals/{id}/confirm", () => {
 
     const result = await client.callTool({
       name: "propose_gate_decision",
-      arguments: { entityId: P, gate: "entity_ic", decision: "go", rationale: "Entity IC 제안: DD와 투자구조가 승인 기준을 충족함", evidence_refs: ["dd:summary"] },
+      arguments: { entityId: P, gate: "entity_ic", decision: "go", rationale: "Entity IC 제안: DD와 투자구조가 승인 기준을 충족함", gap_rationale: "E2E: 미충족 산출물을 인지하고 예외로 진행함", evidence_refs: ["dd:summary"] },
     });
     const text = (result.content as Array<{ type: string; text: string }>)[0].text;
     const body = JSON.parse(text) as { data: { proposal_id: string; status: string; confirm_url: string } };

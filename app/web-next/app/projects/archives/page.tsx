@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../../../lib/api.ts";
 import { useConfirm } from "../../../components/crud.tsx";
+import { closureTypeLabel } from "../../../lib/labels.ts";
 
 interface ArchiveProjectRow {
   id: string;
@@ -17,6 +18,7 @@ interface ArchiveProjectRow {
   status: "open" | "closed" | "archived";
   closed_at?: string | null;
   closure_reason?: string | null;
+  closure_type?: string | null;
   is_lead?: boolean;
 }
 
@@ -122,6 +124,7 @@ export function ProjectArchivesView() {
                   <th className="text-left">프로젝트명</th>
                   <th className="text-left">상태</th>
                   <th className="text-left">종료일</th>
+                  <th className="text-left">마감 유형</th>
                   <th className="text-left">사유</th>
                   <th className="text-left">바로가기</th>
                 </tr>
@@ -137,6 +140,7 @@ export function ProjectArchivesView() {
                       </span>
                     </td>
                     <td>{fmtDate(p.closed_at ?? null)}</td>
+                    <td>{closureTypeLabel(p.closure_type)}</td>
                     <td>{p.closure_reason ?? "—"}</td>
                     <td>
                       <div className="flex gap-2 flex-wrap">

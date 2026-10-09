@@ -47,7 +47,11 @@ describe("stage tabs", () => {
     const s8 = groupForSegment("/business-case")!;
     const all = [...s8.tabs, ...s8.more];
     expect(all[activeTabIndex(s8, "/business-case", "target-costing")].label).toBe("타겟코스팅");
-    expect(all[activeTabIndex(s8, "/business-case", "scenarios")].label).toBe("분석");
+    // R2-E: the default analysis view (no ?tab=) highlights the 시나리오 비교 stage tab.
+    expect(all[activeTabIndex(s8, "/business-case", null)].label).toBe("시나리오 비교");
+    expect(all[activeTabIndex(s8, "/business-case", "targets")].label).toBe("대상 비교·선정");
+    expect(all[activeTabIndex(s8, "/business-case", "decision")].label).toBe("결정");
+    expect(all[activeTabIndex(s8, "/business-case", "overview")].label).toBe("설명·생성·권고");
     expect(tabHref("p1", { seg: "/business-case", query: "target-costing", label: "x" })).toBe("/projects/p1/business-case?tab=target-costing");
   });
 });

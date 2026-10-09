@@ -7,7 +7,7 @@
 // never "approve", and the server rejects agent identities. Unmet
 // preconditions keep submit disabled with the reason stated in text, and link
 // to the place where the missing record is created.
-import { CLOSURE_RECORD_LABEL, closureRecordLabel, localizeMessage } from "../lib/labels.ts";
+import { CLOSURE_RECORD_LABEL, CLOSURE_TYPE_LABEL, closureRecordLabel, localizeMessage } from "../lib/labels.ts";
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -36,24 +36,24 @@ interface TypePreconditions {
 
 const TYPE_LABEL: Record<ClosureType, { name: string; hint: string }> = {
   killed_at_gate: {
-    name: "게이트 KILL로 종료",
+    name: CLOSURE_TYPE_LABEL.killed_at_gate,
     hint: "게이트에서 사람이 기록한 KILL 결정과 학습 포착이 있어야 합니다.",
   },
   withdrawn: {
-    name: "철회",
+    name: CLOSURE_TYPE_LABEL.withdrawn,
     hint: "기록된 근거가 없을 때의 탈출 경로입니다. 사유 20자 이상과 학습 포착이 필요합니다.",
   },
   graduated_to_core: {
-    name: "핵심사업 편입",
+    name: CLOSURE_TYPE_LABEL.graduated_to_core,
     hint: "S12 전환 결정 graduate_to_core와 인계 기록(core_handoff)이 있어야 합니다.",
   },
-  divested: { name: "매각/청산", hint: "S12 전환 결정 reduce_or_divest와 처분 계획(divest_plan)이 있어야 합니다." },
+  divested: { name: CLOSURE_TYPE_LABEL.divested, hint: "S12 전환 결정 reduce_or_divest와 처분 계획(divest_plan)이 있어야 합니다." },
   killed_with_learning: {
-    name: "중단(학습 포착)",
+    name: CLOSURE_TYPE_LABEL.killed_with_learning,
     hint: "S12 전환 결정 kill_with_learning_captured와 학습 포착 기록이 있어야 합니다.",
   },
   dropped: {
-    name: "제외",
+    name: CLOSURE_TYPE_LABEL.dropped,
     hint: "S1~S3 단계에서 게이트 결정이 아직 없는 기회에만 사용합니다. 사유와 학습 포착이 필요합니다.",
   },
 };

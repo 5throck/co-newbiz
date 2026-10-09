@@ -5242,6 +5242,7 @@ paths:
     post:
       operationId: requestProjectWaiver
       summary: File a waiver request (S9 dd-waiver-review); expires_at is mandatory and must be future — indefinite/past dates are refused (ADR-0036). Analyst+.
+      description: "R2-E (2026-10-09): `dd_item` may replace a hand-built clause string for per-row requests — the route derives `clause_ref` (`{checklist_id} {item_id}`) and a default `reason` from the item, so the client sends the item identity without reshaping."
       tags:
         - Reference
       parameters:
@@ -5250,6 +5251,26 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [governance_doc_id, approver_role, expires_at]
+              properties:
+                governance_doc_id: { type: string }
+                clause_ref: { type: string, description: "Required unless dd_item is present (the route derives it)." }
+                reason: { type: string, description: "Optional in dd_item mode — a default reason naming the item is derived server-side." }
+                dd_item:
+                  type: object
+                  properties:
+                    checklist_id: { type: string }
+                    item_id: { type: string }
+                  description: "The DD checklist item being waived; clause_ref and default reason derive from it."
+                approver_role: { type: string }
+                expires_at: { type: string, format: date-time }
+                approved_by: { type: string }
       responses:
         '201':
           $ref: '#/components/responses/Created'

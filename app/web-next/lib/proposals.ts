@@ -29,6 +29,9 @@ const gatePayload = z
     gate: z.enum([...OPPORTUNITY_GATES, ...PROJECT_GATES]),
     decision: z.enum(["go", "hold", "kill"]),
     rationale: text,
+    // R2-E: carried verbatim into the executed project gate-decisions route —
+    // required there for an entity_ic/group_ic GO over open gaps.
+    gap_rationale: optText,
     missing_artifacts: z.array(text).optional(),
     learning_capture: optText,
     gate_evaluation_id: optText,

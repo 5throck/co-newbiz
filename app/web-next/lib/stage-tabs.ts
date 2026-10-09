@@ -29,12 +29,16 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     stage: "S8", name: "사업성 분석",
     tabs: [
       { seg: "", label: "요약" },
-      { seg: "/business-case", label: "분석" },
+      { seg: "/business-case", label: "시나리오 비교" },
+      { seg: "/business-case", query: "targets", label: "대상 비교·선정" },
       { seg: "/wacc", label: "WACC" },
       { seg: "/financial-analysis", label: "재무분석" },
     ],
     more: [
+      { seg: "/business-case", query: "overview", label: "설명·생성·권고" },
+      { seg: "/business-case", query: "params", label: "파라미터·스냅샷" },
       { seg: "/business-case", query: "target-costing", label: "타겟코스팅" },
+      { seg: "/business-case", query: "decision", label: "결정" },
       { seg: "/risk-heatmap", label: "리스크 히트맵" },
     ],
   },

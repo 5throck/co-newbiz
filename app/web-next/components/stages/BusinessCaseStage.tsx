@@ -25,6 +25,7 @@ import { TargetCostingPanel } from "../business-case/TargetCostingPanel.tsx";
 import { FinancialAnalysisPanel } from "../FinancialAnalysisPanel.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access.ts";
+import { countLegacyUnassignedModels } from "../../lib/business-case-legacy.ts";
 
 // S8 사업성 분석 — 이중 관점 밸류에이션 비교 (ADR-0117; approved mockup
 // docs/designs/mockups/2026-09-11-dual-view-valuation-ui-mockup_ko.html).
@@ -309,6 +310,11 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
   const hasHistorical = (data?.cases ?? []).some((c) => c.variant === "historical");
 
+  // R2-E — legacy (pre-ADR-0143) unassigned models: visible only on a
+  // shortlist-scoped project, where target_id NULL models cannot satisfy the
+  // per-target S8 predicate. Detection only; the human regenerates.
+  const legacyUnassignedCount = countLegacyUnassignedModels(data?.cases ?? [], targets);
+
   return (
 <>
       <StageTabs projectId={projectId} />
@@ -326,6 +332,23 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         </p>
       )}
 
+      {/* R2-E — ADR-0143 이전 대상 미지정 모델 고지. 경고 토큰 + 텍스트(색만이 아님),
+          재생성 액션이 1차 액션. 기존 모델은 절대 자동 삭제·이전하지 않는다. */}
+      {legacyUnassignedCount > 0 && (
+        <div className="legacy-model-notice" role="status">
+          <span className="status-chip status-amber" aria-hidden="true">⚠ 주의</span>
+          <p className="legacy-model-notice-text">
+            ADR-0143 이전에 생성된 <b>대상 미지정 모델 {legacyUnassignedCount}건</b>이 있습니다 — 대상별 분석을 위해 재생성이 필요합니다.
+            기존 모델은 보존되며 자동 삭제되지 않습니다.
+          </p>
+          {canAct && (
+            <button type="button" className="btn-premium btn-sm" disabled={busy} onClick={() => void generate()}>
+              {busy ? "재생성 중..." : "대상별 재생성"}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Content first: the compact, non-dismissible review strip sits above the analysis tabs and expands on demand. */}
       <ReviewBuckets entityType="project" entityId={projectId} gates={["fs"]} artifacts={stageArtifactTabs("S8")} />
 
@@ -340,6 +363,15 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         </div>
       )}
 
+      {/* R2-E IA decision (2026-10-09): ONE tab row per surface. The project page keeps
+          only the stage-level tabs (StageTabs); the analysis sub-tabs live there as
+          ?tab= entries. The embedded deal tab has no StageTabs row, so it keeps this TabNav. */}
+      {!embedded && (
+        <p className="sr-only" id="s8-analysis-tabs-note">
+          S8 분석 탭(대상 비교·설명·시나리오·파라미터·타겟코스팅·결정)은 위 단계 탭 행에서 선택합니다.
+        </p>
+      )}
+      {embedded && (
       <TabNav
         className="mb-3"
         label="S8 사업성 분석 화면"
@@ -351,13 +383,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           { key: "scenarios", label: "시나리오 비교" },
           { key: "params", label: "파라미터·스냅샷" },
           { key: "target-costing", label: "타겟코스팅" },
-          // WACC and 재무분석 are tabs of the stage row on project pages (StageTabs); only the embedded
-          // deal tab has no such row, so they stay here for it - one place per surface.
-          ...(embedded ? [{ key: "wacc", label: "WACC" }, { key: "financial-analysis", label: "재무분석" }] : []),
+          { key: "wacc", label: "WACC" },
+          { key: "financial-analysis", label: "재무분석" },
           { key: "decision", label: "결정" },
         ]}
       />
-
+      )}
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
       {tab === "params" && <ParamsPanel projectId={projectId} />}
@@ -366,6 +397,11 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {tab === "financial-analysis" && <FinancialAnalysisPanel projectId={projectId} />}
 
       {/* ── ADR-0143 대상 비교·선정 (brownfield) — 권고 ≠ 선정, 선정은 사람 ── */}
+      {tab === "targets" && targets.length === 0 && (
+        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)] mb-3" role="note">
+          대상 축이 없는 프로젝트(greenfield)입니다 — 대상 비교·선정은 brownfield(Short List) 프로젝트에만 적용됩니다. 시나리오 비교 탭을 이용하세요.
+        </p>
+      )}
       {tab === "targets" && targets.length > 0 && (
       <section className="market-section sizing-step mb-3" aria-label="Short List 대상 비교·선정">
         <h3 className="sizing-step-title">Short List 대상 비교·선정 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">(Short List 대상 전체)</span><DevRef refs="flow.spec S8 subjectScope: shortlist · ADR-0143" /></h3>

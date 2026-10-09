@@ -1,0 +1,28 @@
+// Legacy business-case detection (UX round 2, R2-E).
+// ADR-0143 (flow.spec v2.5.0) made brownfield S8 per-target (subjectScope:
+// shortlist); projects promoted before it carry business_case_model rows with
+// target_id NULL. The S8 predicate needs per-target market_forward models, so
+// those legacy models do not count — yet the screen only said "Business
+// Case가 필요합니다" with no hint why. This helper counts them so the screen
+// can say so. Detection only: never migrate, backfill or auto-delete legacy
+// rows (a human regenerates through the existing generate action).
+// Pure function — no db import — so the unit test needs no fixture project.
+
+export interface LegacyCaseProbe {
+  target_id: string | null;
+}
+
+/** True when the project is shortlist-scoped (ADR-0143 brownfield): the S8 business-case response exposes target comparison rows. */
+export function isShortlistScoped(targets: readonly unknown[]): boolean {
+  return targets.length > 0;
+}
+
+/**
+ * Count pre-ADR-0143 models (target_id NULL) on a shortlist-scoped project.
+ * Returns 0 for greenfield (no target axis) — there NULL is the correct value,
+ * not a legacy leftover.
+ */
+export function countLegacyUnassignedModels(cases: readonly LegacyCaseProbe[], targets: readonly unknown[]): number {
+  if (!isShortlistScoped(targets)) return 0;
+  return cases.filter((c) => c.target_id === null).length;
+}

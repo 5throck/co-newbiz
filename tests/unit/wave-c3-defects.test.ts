@@ -104,7 +104,9 @@ describe("D-4 gate GO requires stage prerequisites", () => {
     for (const gate of ["fs", "dd", "entity_ic", "group_ic"]) {
       const member = db.query("SELECT 1 FROM project_member WHERE project_id = ? AND user_id = 'c3-analyst'").get(demo.projectId);
       if (!member) db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [demo.projectId, "c3-analyst", "lead", "test", NOW, "c3"]);
-      expect((await projGate(demo.projectId, { gate, decision: "go" })).status).toBe(201);
+      // R2-E: IC GO over open gaps carries the exception rationale (server-enforced).
+      const gap = gate === "entity_ic" || gate === "group_ic" ? { gap_rationale: "c3: gaps accepted with this rationale" } : {};
+      expect((await projGate(demo.projectId, { gate, decision: "go", ...gap })).status).toBe(201);
     }
   });
 

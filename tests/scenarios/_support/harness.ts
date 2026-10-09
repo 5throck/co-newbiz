@@ -38,6 +38,7 @@ export interface TestApp {
   analystId: string;
   analystPassword: string;
   readDb<T>(fn: (db: Database) => T): T;
+  writeDb(fn: (db: Database) => void): void;
   stop(): Promise<void>;
   log(): string;
 }
@@ -251,6 +252,14 @@ export async function startApp(name: string, opts: StartOptions = {}): Promise<T
         return fn(ro);
       } finally {
         ro.close();
+      }
+    },
+    writeDb: (fn: (d: Database) => void): void => {
+      const rw = new Database(dbPath);
+      try {
+        fn(rw);
+      } finally {
+        rw.close();
       }
     },
     log: () => logChunks.join(""),

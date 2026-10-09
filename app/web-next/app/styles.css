@@ -3653,6 +3653,16 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 }
 .moved-notice-text { flex: 1 1 auto; }
 
+/* Legacy-model notice (R2-E): pre-ADR-0143 unassigned business-case models on a
+   shortlist-scoped project. Warning tokens; text carries the meaning, never color alone. */
+.legacy-model-notice {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);
+  margin: 0 0 var(--space-3); padding: 0.6rem 0.8rem;
+  border: 1px solid var(--amber-border); border-left: 3px solid var(--warning); border-radius: var(--radius-lg);
+  background: var(--warning-bg); color: var(--fg); font-size: var(--fs-caption);
+}
+.legacy-model-notice-text { flex: 1 1 16rem; margin: 0; }
+
 /* Known-target landing banner (R2-A item 7). */
 .focus-banner {
   margin: 0 0 var(--space-3); padding: 0.6rem 0.8rem;
