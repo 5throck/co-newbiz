@@ -33,14 +33,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (ctx.role === "viewer") return forbidden("role_required", "waiver 요청은 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
+  // R2-E (2026-10-09): the S9 per-row dialog may send the checklist item it is
+  // waiving instead of a hand-built clause string — the route derives clause_ref
+  // from the item itself so no client-side reshaping is needed.
   const body = (await request.json().catch(() => null)) as {
     governance_doc_id?: string; clause_ref?: string; reason?: string;
     approver_role?: string; expires_at?: string; approved_by?: string;
+    dd_item?: { checklist_id?: string; item_id?: string };
   } | null;
 
   const governanceDocId = body?.governance_doc_id?.trim();
-  const clauseRef = body?.clause_ref?.trim();
-  const reason = body?.reason?.trim();
+  const ddItemId = body?.dd_item?.item_id?.trim();
+  const ddChecklistId = body?.dd_item?.checklist_id?.trim();
+  const clauseRef = body?.clause_ref?.trim() ?? (ddItemId && ddChecklistId ? `${ddChecklistId} ${ddItemId}` : undefined);
+  const reason = body?.reason?.trim() || (ddItemId ? `DD 항목 ${ddChecklistId} ${ddItemId} 면제 요청` : undefined);
   const approverRole = body?.approver_role?.trim();
   const expiresAt = body?.expires_at?.trim();
   if (!governanceDocId || !clauseRef || !reason || !approverRole || !expiresAt) {

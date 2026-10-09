@@ -47,6 +47,22 @@ export function closureRecordLabel(record: string): string {
   return CLOSURE_RECORD_LABEL[base]?.label ?? record;
 }
 
+/** Closure type (ADR-0152, md_project.closure_type / deal_archive) → Korean
+ * name. Same wording as ClosureModal TYPE_LABEL — the archive list and the
+ * modal must not drift (R2-E finding 11). Unknown keys fall through. */
+export const CLOSURE_TYPE_LABEL: Record<string, string> = {
+  killed_at_gate: "게이트 KILL로 종료",
+  withdrawn: "철회",
+  graduated_to_core: "핵심사업 편입",
+  divested: "매각/청산",
+  killed_with_learning: "중단(학습 포착)",
+  dropped: "제외",
+};
+
+export function closureTypeLabel(closureType: string | null | undefined): string {
+  return (closureType && CLOSURE_TYPE_LABEL[closureType]) || "—";
+}
+
 /** Known English system messages → Korean. Unknown text passes through unchanged. */
 const MESSAGE_RULES: Array<[RegExp, string]> = [
   [/LLM provider is not configured[^.]*\.?/i, "AI 모델이 연결되어 있지 않아 이 기능을 실행할 수 없습니다. 관리자에게 AI 모델 설정을 요청하거나, 값을 직접 입력하세요."],

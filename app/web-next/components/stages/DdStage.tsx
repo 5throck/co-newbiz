@@ -470,7 +470,7 @@ function WaiverDialog({ dlg, projectId, busy, onLink, onClose, onRequested }: {
           </ul>
         )}
         <h4 className="text-[length:var(--fs-body)] mb-1">새 waiver 요청</h4>
-        <WaiverRequestForm projectId={projectId} docs={dlg.docs} prefill={{ clause: `${dlg.checklistId} ${dlg.itemId}` }} onDone={onRequested} onCancel={onClose} />
+        <WaiverRequestForm projectId={projectId} docs={dlg.docs} prefill={{ clause: `${dlg.checklistId} ${dlg.itemId}`, checklist_id: dlg.checklistId, item_id: dlg.itemId }} onDone={onRequested} onCancel={onClose} />
       </div>
     </div>
   );

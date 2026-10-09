@@ -74,6 +74,7 @@ export function IndustryTable({ ctx }: { ctx: MarketAnalysisStageState }) {
                             disabled={pinBusyId === ind.id}
                             className={ind.pinned ? "text-[color:var(--amber-fg)]" : "text-[color:var(--muted-fg)] hover:text-[color:var(--amber-fg)]"}
                             title={ind.pinned ? "핵심 산업 고정 해제" : "핵심 산업으로 고정 — '핵심만 보기'에서 최상위로 표시됩니다"}
+                            aria-label={ind.pinned ? `중요 표시 해제: ${ind.name_ko}` : `중요 표시: ${ind.name_ko}`}
                             aria-pressed={Boolean(ind.pinned)}
                             onClick={() => void togglePin(ind)}
                           >

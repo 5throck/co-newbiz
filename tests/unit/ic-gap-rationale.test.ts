@@ -7,7 +7,9 @@
  * decision (existing gate_decision.rationale column, no migration) and the IC package
  * returns it parsed. Proves: (a) the package lists what a GO is missing; (b) a GO with a
  * typed rationale persists it and the gaps; (c) the IC package and the gate history show it;
- * (d) a GO without the rationale still records (never blocked) and carries no override;
+ * (d) R2-E: a GO over open gaps WITHOUT the rationale is refused server-side
+ *     (422 ic_gap_rationale_required) — the API and the UI (lib/ic-gap-override.ts)
+ *     now agree, and the refusal names the gaps; a GO without gaps needs none;
  * (e) a client cannot forge the gap list; (f) the compose/parse pair round-trips.
  */
 
@@ -185,15 +187,27 @@ describe("R2-B item 3 - IC GO warning rationale", () => {
     expect(icGoGapItems(projectId)).toEqual(data.gates.go_gaps);
   });
 
-  test("(d) a GO without a rationale is still recorded - the human is never blocked", async () => {
+  test("(d1) a GO over open gaps without gap_rationale is refused server-side, naming the gaps", async () => {
     const res = await req(`/api/projects/${projectId}/gate-decisions`, {
       method: "POST", headers: { cookie: analystCookie },
       body: JSON.stringify({ gate: "entity_ic", decision: "go", rationale: "근거 없이 갭 경고 없는 GO" }),
     });
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe("ic_gap_rationale_required");
+    expect(body.error.message).toContain("Business Case");
+    // Nothing was recorded.
+    expect(db.query("SELECT id FROM gate_decision WHERE gate = 'entity_ic' AND entity_id = ?").all(projectId).length).toBe(0);
+  });
+
+  test("(d2) a GO over no gaps needs no gap_rationale and records without an override", async () => {
+    // A non-IC gate is outside the GO-gap contract entirely.
+    const res = await req(`/api/projects/${projectId}/gate-decisions`, {
+      method: "POST", headers: { cookie: analystCookie },
+      body: JSON.stringify({ gate: "fs", decision: "go", rationale: "갭 계약 밖 게이트" }),
+    });
     expect(res.status).toBe(201);
     expect((await res.json()).data.gap_override).toBeNull();
-    const row = db.query("SELECT rationale FROM gate_decision WHERE gate = 'entity_ic' AND entity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1").get(projectId) as { rationale: string };
-    expect(row.rationale).toBe("근거 없이 갭 경고 없는 GO");
   });
 
   test("(b)(e) a GO with the typed rationale stores it with server-derived gaps (client cannot forge them)", async () => {

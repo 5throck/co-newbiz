@@ -35,7 +35,7 @@ const STATUS_META: Record<WaiverRow["effective_status"], { icon: string; label: 
   revoked: { icon: "✕", label: "철회", cls: "status-red" },
 };
 
-export interface WaiverPrefill { clause: string; reason?: string }
+export interface WaiverPrefill { clause: string; reason?: string; checklist_id?: string; item_id?: string }
 
 /** The waiver request form - shared by the panel and the per-row dialog on S9. Layout wraps (auto-fit), never overlaps. */
 export function WaiverRequestForm({ projectId, docs, prefill, onDone, onCancel }: {
@@ -48,14 +48,19 @@ export function WaiverRequestForm({ projectId, docs, prefill, onDone, onCancel }
   const [form, setForm] = useState({ doc: "", clause: prefill?.clause ?? "", reason: prefill?.reason ?? "", approverRole: "process-governance-manager", expiresAt: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const missing = [!form.doc && "규정 문서", !form.clause.trim() && "조항", !form.reason.trim() && "사유", !form.expiresAt && "만료일"].filter(Boolean) as string[];
+  // dd_item 요청(행 prefll 아님, R2-E)에서는 조항이 서버 파생이고 사유도 서버 기본값이 있어 필수가 아니다.
+  const ddMode = Boolean(prefill?.checklist_id && prefill?.item_id);
+  const missing = [!form.doc && "규정 문서", !ddMode && !form.clause.trim() && "조항", !ddMode && !form.reason.trim() && "사유", !form.expiresAt && "만료일"].filter(Boolean) as string[];
   const submit = async () => {
     setSaving(true); setError(null);
     try {
       await api.post(`/api/projects/${encodeURIComponent(projectId)}/waivers`, {
         governance_doc_id: form.doc,
-        clause_ref: form.clause,
+        clause_ref: ddMode ? undefined : form.clause,
         reason: form.reason,
+        dd_item: ddMode
+          ? { checklist_id: prefill!.checklist_id!, item_id: prefill!.item_id! }
+          : undefined,
         approver_role: form.approverRole,
         expires_at: form.expiresAt ? new Date(form.expiresAt).toISOString() : "",
       });

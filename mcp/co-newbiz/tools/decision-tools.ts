@@ -45,6 +45,7 @@ const gateArgs = z.object({
   gate: requiredString,
   decision: requiredString,
   rationale: requiredString,
+  gap_rationale: optString,
   missing_artifacts: z.array(z.string()).optional(),
   learning_capture: optString,
   gate_evaluation_id: optString,
@@ -68,7 +69,8 @@ const gateProps = {
   gate: { type: "string", enum: ["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"] },
   decision: { type: "string", enum: ["go", "hold", "kill"] },
   rationale: { type: "string" },
-  missing_artifacts: { type: "array", items: { type: "string" }, description: "Required when decision is hold." },
+  gap_rationale: { type: "string", description: "Required for an entity_ic/group_ic GO when open IC gaps exist; stored with the decision." },
+  missing_artifacts: { type: "array", items: { type: "string", }, description: "Required when decision is hold." },
   learning_capture: { type: "string", description: "Required when decision is kill (ADR-0152)." },
   gate_evaluation_id: { type: "string" },
   evidence_refs: evidenceProp,
@@ -103,6 +105,7 @@ type RouteInput = z.output<typeof routeArgs>;
 const proposeGate = (port: RestPort, a: GateInput) =>
   createProposal(port, "gate_decision", a.entityId, {
     gate: a.gate, decision: a.decision, rationale: a.rationale,
+    gap_rationale: a.gap_rationale,
     missing_artifacts: a.missing_artifacts, learning_capture: a.learning_capture, gate_evaluation_id: a.gate_evaluation_id,
   }, a.rationale, a.evidence_refs);
 

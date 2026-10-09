@@ -100,9 +100,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // R2-B item 3 - an IC GO with missing artifacts is never blocked (boundary #2: the human decides).
   // When the screen collected an override rationale, the gaps are re-derived here (never trusted from the
   // client) and stored with the decision text so the IC package can show them.
+  // R2-E (2026-10-09) - the API now enforces what the screen already required: an IC GO recorded
+  // while gaps are open carries a non-empty gap_rationale. The rationale IS the human's
+  // acknowledgement, not a blocker; a GO with no open gaps needs none. Existing rows are
+  // grandfathered (write-time check only, nothing re-read or rewritten).
   const gapRationale = body.gap_rationale?.trim();
-  const gapOverride = body.decision === "go" && (IC_GAP_GATES as readonly string[]).includes(body.gate) && gapRationale
-    ? (() => { const items = icGoGapItems(id, ctx.userId); return items.length > 0 ? { items, rationale: gapRationale } : null; })()
+  const icGo = body.decision === "go" && (IC_GAP_GATES as readonly string[]).includes(body.gate);
+  const openGaps = icGo ? icGoGapItems(id, ctx.userId) : [];
+  if (icGo && openGaps.length > 0 && !gapRationale) {
+    return unprocessable(
+      "ic_gap_rationale_required",
+      `누락 산출물이 있는 상태의 ${body.gate} GO에는 예외 근거(gap_rationale)가 필요합니다 — 누락: ${openGaps.join("; ")}. 근거는 결정 기록과 함께 저장되어 IC 패키지에 남습니다.`,
+    );
+  }
+  const gapOverride = icGo && gapRationale && openGaps.length > 0
+    ? { items: openGaps, rationale: gapRationale }
     : null;
   const storedRationale = composeRationale(rationale, gapOverride);
   const nowTs = new Date().toISOString();
