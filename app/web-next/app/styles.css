@@ -3687,7 +3687,17 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 .waiver-grid > label { min-width: 0; }
 /* S9 checklist row actions wrap; below 640px each row becomes a card (no clipped buttons). */
 .dd-actions { flex-wrap: wrap; }
-.dd-nowaive { max-width: 22rem; }
+.dd-nowaive { display: inline-block; max-width: 100%; }
+/* All three DD tables (technical / legal / commercial) share one fixed column grid so a long
+   item text wraps in its own column instead of squeezing judgement, evidence and waiver. */
+@media (min-width: 641px) {
+  .dd-table { table-layout: fixed; width: 100%; min-width: 48rem; }
+  .dd-table .dd-col-item { width: auto; min-width: 14rem; }
+  .dd-table .dd-col-req { width: 4.5rem; }
+  .dd-table .dd-col-judge { width: 9.5rem; }
+  .dd-table .dd-col-act { width: 20rem; }
+  .dd-table td { overflow-wrap: anywhere; vertical-align: top; }
+}
 @media (max-width: 640px) {
   .dd-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .dd-table, .dd-table tbody, .dd-table tr, .dd-table td { display: block; width: 100%; }

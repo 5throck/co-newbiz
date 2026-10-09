@@ -80,11 +80,16 @@ All additive, query/body optional; old payloads byte-identical:
 
 - New shared `components/TargetSelector.tsx`: the FilterChip pattern already
   used on the WACC panel (rounded-full border chips) — one chip per shortlisted
-  target plus a "프로젝트 기준" chip; `aria-pressed`/`aria-current` on the
+  target (historical: a "프로젝트 기준" chip, removed by the amendment below); `aria-pressed`/`aria-current` on the
   active chip, group labeled "분석 대상 선택". Rendered only when the project
   has ≥2 shortlisted targets (single-target and greenfield projects see no
   change).
 - Default selection: the target bound on `md_project.company_id`, else rank-1.
+
+> **Amendment 2026-10-09** (design `2026-10-09-ui-units-targets-dd-design`): the "프로젝트 기준" chip
+> is no longer shown on multi-target brownfield projects. The default is the S8-selected (bound)
+> target, which keeps the `게이트 기준` marker and maps to the project-level scope (no `target_id`),
+> so gate semantics are unchanged. Chips use the shared `FilterChip`.
 - **WaccPanel** and **FinancialAnalysisPanel** fetch `/targets` and scope all
   reads/writes with the selected chip. In per-target mode the WACC panel hides
   the project-level "WACC 적용 주체" decision (REQ-W4 belongs to the gate) and

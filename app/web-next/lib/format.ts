@@ -20,3 +20,11 @@ export function formatBp(value: number | null | undefined): string {
   if (value === null || value === undefined) return "-";
   return `${(value / 100).toFixed(0)}%`;
 }
+
+/** Unit label for raw KRW-millions columns (npv_krw_m etc.); put it in the column header. */
+export const KRW_MILLIONS_UNIT = "백만 원";
+
+/** Full-precision KRW-millions number for table cells whose header carries KRW_MILLIONS_UNIT. */
+export function formatKrwMillionsPlain(value: number): string {
+  return Math.round(value).toLocaleString("ko-KR");
+}

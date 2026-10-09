@@ -66,3 +66,7 @@ criteria, snapshot filling and S10/S11.
 - Risk accepted: an analyst could confirm a per-target WACC and mistake it
   for the gate figure; the UI labels per-target sessions and hides the
   project-level subject decision inside them.
+
+## Amendment 2026-10-09
+
+The project-level selector chip is removed on multi-target brownfield projects. The default chip is the S8-selected target (bound on `md_project.company_id`), else the first shortlisted target; the bound target keeps the `게이트 기준` marker and uses the project-level scope, so decision 2 (gate semantics) is unchanged. See design 2026-10-09-ui-units-targets-dd.

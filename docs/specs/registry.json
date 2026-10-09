@@ -786,6 +786,15 @@
       "meeting_ref": "memory/meeting-2026-10-09-ui-critique.md"
     },
     {
+      "id": "2026-10-09-ui-units-targets-dd-design",
+      "title": "ui units targets dd design",
+      "file": "docs/designs/2026-10-09-ui-units-targets-dd-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-09",
+      "last_updated": "2026-10-09"
+    },
+    {
       "id": "2026-10-09-ux-r2-design",
       "title": "ux r2 design",
       "file": "docs/designs/2026-10-09-ux-r2-design.md",
