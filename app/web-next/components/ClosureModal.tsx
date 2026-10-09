@@ -7,7 +7,7 @@
 // never "approve", and the server rejects agent identities. Unmet
 // preconditions keep submit disabled with the reason stated in text, and link
 // to the place where the missing record is created.
-import { CLOSURE_RECORD_LABEL, closureRecordLabel } from "../lib/labels.ts";
+import { CLOSURE_RECORD_LABEL, closureRecordLabel, localizeMessage } from "../lib/labels.ts";
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -212,7 +212,7 @@ export function ClosureModal({
                               const link = recordLink(entity, entityId, m.record);
                               return (
                                 <li key={m.record}>
-                                  <span className="font-semibold">누락: {closureRecordLabel(m.record)}</span> — {CLOSURE_RECORD_LABEL[m.record]?.message ?? m.message}{" "}
+                                  <span className="font-semibold">누락: {closureRecordLabel(m.record)}</span> — {CLOSURE_RECORD_LABEL[m.record]?.message ?? localizeMessage(m.message)}{" "}
                                   {link && (
                                     <Link href={link.href} className="text-[color:var(--accent)] underline">
                                       {link.label}
