@@ -214,7 +214,7 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
     try {
       const res = await api.post<{ inserted: Array<{ name: string }>; source: string }>("/api/opportunities/discover", { industry });
       load();
-      setDiscoverNotice(`기회 ${res.data.inserted.length}건이 발굴되었습니다 (${res.data.source === "llm" ? "LLM" : "결정론 합성"}${res.data.inserted.length ? `: ${res.data.inserted.map((o) => o.name).join(", ")}` : ""}). 기회/위험 요인도 자동 도출되었습니다.`);
+      setDiscoverNotice(`기회 ${res.data.inserted.length}건이 발굴되었습니다 (${res.data.source === "llm" ? "AI" : "결정론 합성"}${res.data.inserted.length ? `: ${res.data.inserted.map((o) => o.name).join(", ")}` : ""}). 기회/위험 요인도 자동 도출되었습니다.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "기회 발굴 실패");
     } finally {

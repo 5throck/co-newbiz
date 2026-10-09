@@ -31,7 +31,7 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                       <td className="text-[length:var(--fs-body)] col-text">{a.risk}</td>
                       <td className="col-type">
                         <span className={`status-chip ${a.origin === "human" ? "status-in-progress" : "status-not-started"}`}>
-                          {a.origin === "human" ? "사람 추가" : "LLM 추천"}
+                          {a.origin === "human" ? "사람 추가" : "AI 추천"}
                         </span>
                       </td>
                     </tr>

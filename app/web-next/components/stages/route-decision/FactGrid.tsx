@@ -56,7 +56,7 @@ export function FactGrid({ ctx, selected }: { ctx: RouteDecisionStageState; sele
                 AI 서술 초안
                 {reco && (
                   <span className="status-chip status-not-started">
-                    {reco.source === "llm" ? `제안 · LLM${reco.provider ? ` · ${reco.provider}` : ""}` : "제안 · 결정론 폴백"}
+                    {reco.source === "llm" ? `제안 · AI${reco.provider ? ` · ${reco.provider}` : ""}` : "제안 · 결정론 폴백"}
                   </span>
                 )}
                 {canAct && reco && (
@@ -69,7 +69,7 @@ export function FactGrid({ ctx, selected }: { ctx: RouteDecisionStageState; sele
               {canAct && !reco && !recoLoading && !recoError && (
                 <div className="flex flex-wrap items-center gap-2 mb-0">
                   <button type="button" className="btn-ghost" onClick={() => void generateRecommendation()}>
-                    ▶ LLM 추천 생성
+                    ▶ AI 추천 생성
                   </button>
                   <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">권장 트랙·라우트·5기준 채점 초안(점수+근거)과 결정 근거 서술 초안을 작성해 채움을 돕습니다.</span>
                 </div>

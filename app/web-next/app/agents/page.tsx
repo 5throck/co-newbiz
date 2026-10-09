@@ -103,7 +103,7 @@ export function AgentsView() {
                 {result.mode === "chain" ? "에이전트 체인" : `${result.agentKey} 배정`}
               </span>
               {result.task && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{result.task}</span>}
-              {result.classifiedBy && <span className="status-chip status-not-started">{result.classifiedBy === "llm" ? "PM LLM 분류" : "규칙 분류"}</span>}
+              {result.classifiedBy && <span className="status-chip status-not-started">{result.classifiedBy === "llm" ? "PM AI 분류" : "규칙 분류"}</span>}
               <span className="status-chip status-amber">제안 전용</span>
             </div>
             {result.steps && result.steps.length > 0 && (
@@ -119,7 +119,7 @@ export function AgentsView() {
                       <td>{s.agentKey}</td>
                       <td>{s.purpose}</td>
                       <td className="text-[length:var(--fs-caption)]">{s.summary}</td>
-                      <td>{s.source === "llm" ? "LLM" : "결정론"}</td>
+                      <td>{s.source === "llm" ? "AI" : "결정론"}</td>
                     </tr>
                   ))}
                 </tbody>

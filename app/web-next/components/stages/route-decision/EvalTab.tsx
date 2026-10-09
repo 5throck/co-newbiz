@@ -223,7 +223,7 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
             <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">판정 규칙 보기 (참고용 — 이 딜과 무관한 고정 규칙)</summary>
             <div className="mt-2">
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-                LLM이 아니라 이미 시스템에 기록된 S1~S3 데이터를 아래 고정 규칙으로 채점하는 방식입니다.
+                AI가 아니라 이미 시스템에 기록된 S1~S3 데이터를 아래 고정 규칙으로 채점하는 방식입니다.
                 신호별로 Greenfield/Brownfield 방향과 가중치(1~3)를 매기고, 트랙별 가중치 합을 100점 만점 비율로 환산해
                 한쪽이 60점 이상이면 그 트랙을 추천하며, 그렇지 않으면 &quot;중립(신호 부족)&quot;으로 표시합니다. 위 &quot;신호별
                 근거&quot; 표가 바로 이 규칙을 이 딜에 적용한 결과입니다.

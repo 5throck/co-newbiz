@@ -31,7 +31,7 @@ export function TargetAiProfileTab({ ctx, t }: { ctx: TargetDetailViewState; t: 
                 </div>
 
                 {companyProfile.status === "in_progress" ? (
-                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">DART·웹 리서치·LLM 분석 진행 중 — 완료되면 자동으로 갱신됩니다.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">DART·웹 리서치·AI 분석 진행 중 — 완료되면 자동으로 갱신됩니다.</p>
                 ) : companyProfile.status === "failed" ? (
                   <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">분석 실패 — {companyProfile.error ?? "사유 없음"}</p>
                 ) : companyProfile.status === "not_started" || !companyProfile.profile ? (
@@ -40,7 +40,7 @@ export function TargetAiProfileTab({ ctx, t }: { ctx: TargetDetailViewState; t: 
                   <div className="text-[0.88rem]">
                     {companyProfile.profile.swot && (
                       <p className="sizing-note-list mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]" role="note">
-                        ⚠ 기회·위협은 LLM 추정 — 분석가 확정 전까지 인용 시 검증 필요 표기를 유지하세요.
+                        ⚠ 기회·위협은 AI 추정 — 분석가 확정 전까지 인용 시 검증 필요 표기를 유지하세요.
                       </p>
                     )}
                     <div className="chart-pair">

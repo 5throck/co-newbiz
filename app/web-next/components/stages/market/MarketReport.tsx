@@ -69,15 +69,15 @@ export function MarketReport({ detail, analysisId, analysisDate, onAddLinked }: 
               로봇 리포트 사고 — 경고 없이 $1B/-10000%가 실제 값처럼 보였음). */}
           {stepSummaries && !llmUsed && (
             <p className="market-section text-[length:var(--fs-caption)] text-[color:var(--red-fg)] font-semibold" role="alert" style={{ border: "1px solid var(--red-border, currentColor)", borderRadius: "0.5rem", padding: "0.6rem 0.8rem" }}>
-              ⚠️ 이 버전은 {stepSummaries.every((s) => s.source !== "llm") ? "전체" : "일부"} 단계가 LLM 미구성/실패로 결정론 합성(더미) 값으로 채워졌습니다 —
-              시장 규모·성장률 등 수치를 신뢰하지 마세요. LLM 구성을 확인한 뒤 재분석하세요.
+              ⚠️ 이 버전은 {stepSummaries.every((s) => s.source !== "llm") ? "전체" : "일부"} 단계가 AI 미설정/실패로 결정론 합성(더미) 값으로 채워졌습니다 —
+              시장 규모·성장률 등 수치를 신뢰하지 마세요. AI 설정을 확인한 뒤 재분석하세요.
             </p>
           )}
           {matrix.provenance === "llm-estimate" && (
             <p className="market-section sizing-note-list text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]" role="note">
-              이 매트릭스는 파이프라인 LLM이 생성한 추정치입니다 — 수치는 앵커 삼각검증(2단계)과
+              이 매트릭스는 파이프라인 AI가 생성한 추정치입니다 — 수치는 앵커 삼각검증(2단계)과
               기업 공시 교차검증(6단계)을 거친 동결 매트릭스가 아니며, 정식 인용 전 분석가 확정이 필요합니다.
-              {llmUsed && <> (8단계 전체 LLM 요약 사용)</>}
+              {llmUsed && <> (8단계 전체 AI 요약 사용)</>}
             </p>
           )}
           {/* Wave C-3 (D-2): the grade shown here IS the stored one (market_sizing_version.data_confidence_grade),

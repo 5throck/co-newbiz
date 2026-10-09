@@ -120,8 +120,8 @@ export function IndustryListSection({ ctx }: { ctx: MarketAnalysisStageState }) 
               KSIC 코드는 선택 — 산업명 또는 코드로 검색한 뒤 목록에서 선택하거나 직접 입력하세요(미지정 시 "—" 표시). 업종 프로필이 있는 코드는 표기됩니다.
               systematic-market-sizing 8단계 파이프라인이 순서대로 실행되며, 완료 전까지는 목록에 "분석 중"으로 표시됩니다.
               {llmStatus && (llmStatus.configured
-                ? <> LLM 요약 사용: <strong>{llmStatus.provider} / {llmStatus.model}</strong></>
-                : <> LLM 미구성(CO_NEWBIZ_LLM_* 환경변수) — <strong>결정론 합성</strong>으로 분석됩니다.</>)}
+                ? <> AI 요약 사용: <strong>{llmStatus.provider} / {llmStatus.model}</strong></>
+                : <> AI 미설정 — 필요한 환경변수가 설정되지 않아 <strong>결정론 합성</strong>으로 분석됩니다.</>)}
             </p>
           </form>
         )}

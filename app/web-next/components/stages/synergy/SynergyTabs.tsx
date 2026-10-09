@@ -141,7 +141,7 @@ export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: Sy
                         )}
                         <td>
                           <span className={`status-chip ${s.origin === "human" ? "status-in-progress" : "status-not-started"}`} title={s.editedBy ? `${s.editedBy}가 수정 (${s.editedAt?.slice(0, 10) ?? ""})` : undefined}>
-                            {s.origin === "human" ? "사람 추가" : s.editedBy ? "LLM 제안 · 사람 수정" : "LLM 추천"}
+                            {s.origin === "human" ? "사람 추가" : s.editedBy ? "AI 추천 · 사람 수정" : "AI 추천"}
                           </span>
                         </td>
                         {canCurate && (

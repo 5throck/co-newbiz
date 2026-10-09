@@ -14,7 +14,9 @@ import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envel
 // Idempotency contract: if a non-failed generation run for this project's S8
 // stage already exists, the EXISTING run is returned with 200 and
 // alreadyRun: true instead of duplicating a 12-activity chain. A FAILED run
-// does not block a retry.
+// does not block a retry. `{ regenerate: true }` bypasses the guard and
+// starts a NEW run — used by the "대상별 재생성" action (e.g. after ADR-0143
+// to produce per-target models); still analyst+ and proposals-only (boundary #2).
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
@@ -23,15 +25,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
 
-  const existing = getDb()
-    .query(
-      `SELECT id FROM process_run
-       WHERE entity_type = 'project' AND entity_id = ? AND stage = 's8_business_case_generation' AND status != 'failed'
-       ORDER BY started_at DESC LIMIT 1`,
-    )
-    .get(id) as { id: string } | undefined;
-  if (existing) {
-    return ok({ runId: existing.id, alreadyRun: true }, 200);
+  let regenerate = false;
+  try {
+    const body = (await request.json()) as { regenerate?: unknown };
+    regenerate = body?.regenerate === true;
+  } catch {
+    // empty body — ordinary generate path
+  }
+
+  if (!regenerate) {
+    const existing = getDb()
+      .query(
+        `SELECT id FROM process_run
+         WHERE entity_type = 'project' AND entity_id = ? AND stage = 's8_business_case_generation' AND status != 'failed'
+         ORDER BY started_at DESC LIMIT 1`,
+      )
+      .get(id) as { id: string } | undefined;
+    if (existing) {
+      return ok({ runId: existing.id, alreadyRun: true }, 200);
+    }
   }
 
   try {

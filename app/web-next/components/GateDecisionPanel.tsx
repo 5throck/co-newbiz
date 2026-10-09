@@ -291,10 +291,10 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
 
       {/* ADR-0118 — LLM 진행 브리프(제안): 권고·근거 초안 제공, 기록은 사람 */}
       {canRecord && (
-        <div className="mt-3 border border-[color:var(--border)] rounded-lg px-3 py-2" aria-label="LLM 진행 브리프">
+        <div className="mt-3 border border-[color:var(--border)] rounded-lg px-3 py-2" aria-label="AI 진행 브리프">
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className="btn-ghost btn-sm" disabled={briefLoading} onClick={() => void generateBrief()}>
-              {briefLoading ? "생성 중..." : briefData ? "재생성" : "🤖 LLM 브리프 생성"}
+              {briefLoading ? "생성 중..." : briefData ? "재생성" : "🤖 AI 브리프 생성"}
             </button>
             <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               {form.gate} 진행 기준 — 제안은 결정 select를 바꾸지 않으며, 기록은 사람이 합니다 (경계 #2)
@@ -339,7 +339,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
             </>
           )}
           {!briefData && !briefLoading && !briefError && (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">LLM이 진행 산출물을 근거로 권고와 근거 초안을 작성해 줍니다 — 기록은 사람의 몫입니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">AI가 진행 산출물을 근거로 권고와 근거 초안을 작성해 줍니다 — 기록은 사람의 몫입니다.</p>
           )}
         </div>
       )}

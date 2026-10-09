@@ -15,7 +15,7 @@ export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
             </div>
             <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               실시간 웹 검색으로 근거를 찾고, 그 근거에 등장하는 회사만 후보로 제안합니다 (근거 없는
-              회사명은 만들지 않습니다). 검색을 쓸 수 없으면 LLM 자체 지식 기반 미검증 제안으로 대체됩니다.
+              회사명은 만들지 않습니다). 검색을 쓸 수 없으면 AI 자체 지식 기반 미검증 제안으로 대체됩니다.
               등록은 항목별 "Long List에 등록" 클릭으로만 이뤄집니다.
             </p>
             {webBusy && webProposals === null ? (
@@ -103,7 +103,7 @@ export function UniverseEditModal({ ctx }: { ctx: BrownfieldStageState }) {
                 선정 기준·최소 후보 수는 사람이 정한 값을 그대로 둔다. */}
             <div className="sizing-grade-card mb-3">
               <h4 className="text-[length:var(--fs-caption)] mb-2">
-                정의 초안 생성 <span className="status-chip status-amber">제안 · LLM</span>
+                정의 초안 생성 <span className="status-chip status-amber">제안 · AI</span>
               </h4>
               <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 S1 시장분석 + S3 필요 역량 산출물을 근거로 정의 문구 초안을 제안합니다. "적용"은 아래 <b>정의</b> 입력만 채웁니다 —
@@ -119,7 +119,7 @@ export function UniverseEditModal({ ctx }: { ctx: BrownfieldStageState }) {
                   <div>
                     <p className="mb-1 text-[length:var(--fs-caption)]">
                       <span className={`status-chip mr-1 ${uniRecoApplied ? "status-green" : "status-amber"}`}>{uniRecoApplied ? "적용됨" : "제안"}</span>
-                      {uniReco.source === "llm" ? "LLM" : "결정론"}
+                      {uniReco.source === "llm" ? "AI" : "결정론"}
                     </p>
                     <ul className="sizing-note-list mb-2">
                       {uniReco.criteria.industry && <li>산업: {uniReco.criteria.industry}</li>}

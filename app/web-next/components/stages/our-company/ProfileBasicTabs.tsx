@@ -46,7 +46,7 @@ export function ProfileSwotTab({ ctx, profile }: { ctx: OurCompanyStageState; pr
               <div className="text-[0.88rem]">
                 {profile.swot && (
                   <p className="sizing-note-list mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]" role="note">
-                    ⚠ 기회·위협은 LLM 추정 — 분석가 확정 전까지 인용 시 검증 필요 표기를 유지하세요.
+                    ⚠ 기회·위협은 AI 추정 — 분석가 확정 전까지 인용 시 검증 필요 표기를 유지하세요.
                   </p>
                 )}
                 <div className="chart-pair">

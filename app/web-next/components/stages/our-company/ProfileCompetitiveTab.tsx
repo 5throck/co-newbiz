@@ -21,7 +21,7 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                   </div>
                   {(competitors ?? []).filter((c) => c.status === "confirmed").length === 0 ? (
                     <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
-                      아직 확정된 경쟁사가 없습니다 — 아래 AI 제안을 수용하거나 직접 등록하세요.
+                      아직 확정된 경쟁사가 없습니다 — 아래 AI 추천을 수용하거나 직접 등록하세요.
                     </p>
                   ) : (
                     <div className="table-scroll">
@@ -51,7 +51,7 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                                 <td className="col-text text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                                   {editing ? <input value={editingCompetitor.note} onChange={(e) => setEditingCompetitor({ ...editingCompetitor, note: e.target.value })} className="sizing-new-input" style={{ width: "100%" }} placeholder="경쟁 관계" /> : (c.note || "—")}
                                 </td>
-                                <td>{c.discovery_source === "ai_proposal" ? <span className="status-chip status-in-progress">AI 제안 수용</span> : <span className="status-chip status-not-started">수작업</span>}</td>
+                                <td>{c.discovery_source === "ai_proposal" ? <span className="status-chip status-in-progress">AI 추천 수용</span> : <span className="status-chip status-not-started">수작업</span>}</td>
                                 <td>{meta ? <span className={`status-chip ${meta.chip}`} title={String(c.crosscheck_verdict)}>{meta.label}</span> : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">—</span>}</td>
                                 <td>
                                   {editing ? (
@@ -94,10 +94,10 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                   )}
                 </div>
 
-                {/* ② AI 제안 — 최신 프로필 분석의 경쟁사 후보. 수용은 사람(경계 #2) */}
+                {/* ② AI 추천 — 최신 프로필 분석의 경쟁사 후보. 수용은 사람(경계 #2) */}
                 <div className="market-section mb-3">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <h4 className="text-[0.9rem] font-semibold m-0">AI 제안</h4>
+                    <h4 className="text-[0.9rem] font-semibold m-0">AI 추천</h4>
                     <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">최신 프로필 분석 기준 — 제안 전용, 수용은 사람</span>
                     {canAct && (
                     <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void runCompetitorWebSearch()}>
@@ -200,7 +200,7 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                       <p className="mt-2 mb-2">{profile.competitive.positioning || "—"}</p>
                       {profile.competitive.competitors.length > 0 && (
                         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-                          이 분석에서 제안된 경쟁사 {profile.competitive.competitors.length}건 — 위 "AI 제안"에서 수용 여부를 결정하세요.
+                          이 분석에서 제안된 경쟁사 {profile.competitive.competitors.length}건 — 위 "AI 추천"에서 수용 여부를 결정하세요.
                         </p>
                       )}
                     {profile.competitive.crossCheck && (
@@ -253,8 +253,8 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                       {profile.competitive.crossCheck
                         ? profile.competitive.crossCheck.status === "cross_checked"
                           ? "공시·리서치 원문 대조 완료 — 판정은 자동 대조 결과이며 분석가 확인 전까지 참고용입니다."
-                          : "웹 리서치 기반 LLM 추정 — DART 원문 대조 불가(위 비고 참조)."
-                        : "LLM 추정 (웹 리서치 발췌 기반) — 공시·리서치 원문 대조 전입니다."}
+                          : "웹 리서치 기반 AI 추정 — DART 원문 대조 불가(위 비고 참조)."
+                        : "AI 추정 (웹 리서치 발췌 기반) — 공시·리서치 원문 대조 전입니다."}
                     </p>
                   </>
                 ) : (

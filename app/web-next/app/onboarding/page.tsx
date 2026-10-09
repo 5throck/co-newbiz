@@ -15,7 +15,7 @@ export default function OnboardingPage() {
   return (
     <main>
       <h1>시작하기 <span className="status-chip status-gray">빈 워크스페이스 가이드</span></h1>
-      <p className="objective">첫 신규사업 검토까지 4단계 — LLM이 각 단계의 초안을 제안하고, 모든 결정은 사람이 기록합니다 (경계 #2).</p>
+      <p className="objective">첫 신규사업 검토까지 4단계 — AI가 각 단계의 초안을 제안하고, 모든 결정은 사람이 기록합니다 (경계 #2).</p>
       <section className="market-section" aria-label="온보딩 단계">
         {STEPS.map((s) => (
           <div key={s.n} className="market-section" style={{ marginBottom: 10 }}>
