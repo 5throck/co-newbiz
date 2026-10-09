@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * source-adapters.ts — the pluggable data-source adapter framework
  * (design: docs/designs/2026-09-09-source-adapter-framework-design.md).
@@ -32,7 +32,7 @@ export interface SeriesDescriptor {
   adapter: "dart" | "ecos" | "krx" | "kosis" | "opendata" | "law";
   title: string;
   unitCode: string;
-  periodType: "year" | "quarter" | "month";
+  periodType: "year" | "quarter" | "month" | "day";
   /** KOSIS orgId + tblId pair for the stats API call */
   orgId?: string;
   tblId?: string;
@@ -50,6 +50,8 @@ export interface SeriesDescriptor {
   itemCode?: string;
   /** KRX (k-krx): stock short code for daily trading lookup */
   ticker?: string;
+  /** KRX (k-krx): listing market of a stock series (service family selector) */
+  market?: "kospi" | "kosdaq" | "konex";
   /** Seed entries ship unverified; flip after a live-API confirmation */
   _verified?: boolean;
 }
@@ -79,12 +81,22 @@ export interface SourceAdapter {
   kind: "observations" | "catalog";
   /** Disabled when the credential is absent — the CLI reports and exits 2. */
   isEnabled(): boolean;
-  /** Series catalog for observation adapters; [] for catalog-only adapters. */
+  /** Series catalog for observation adapters with MONTH grain (KOSIS/ECOS). */
   listSeries(): Promise<SeriesDescriptor[]>;
-  /** Build the raw observation fetcher for one series (argument is a period key such as YYYY-MM). */
+  /**
+   * Day-grain collection hook (KRX). Iterates one month's trading days from a
+   * single API call per (series × month); the caller upserts a day period per
+   * row and runs ensure_fresh per day. Absent = month-grain adapter.
+   */
+  listDailyRows?(ctx: { seriesId: string; sourceId: string }, month: string): Promise<KrxDailyRow[]>;
+  /**
+   * Build the raw observation fetcher for one series (argument is a period key
+   * such as YYYY-MM). Month-grain adapters (KOSIS/ECOS) honor it; day-grain
+   * series (KRX) collect through listDailyRows instead.
+   */
   fetcher(ctx: { seriesId: string; sourceId: string }): Fetcher;
-  /** Catalog upserts for catalog adapters; [] otherwise. */
-  listCatalog?(opts: { all?: boolean }): Promise<CatalogUpsert[]>;
+  /** Catalog upserts for catalog-kind adapters (dart/law/opendata). */
+  listCatalog?(opts: { all: boolean }): Promise<CatalogUpsert[]>;
 }
 
 // ── HTTP helper (SSRF-guarded) ──────────────────────────────────────────────
@@ -339,12 +351,125 @@ const ecosAdapter: SourceAdapter = {
 
 const KRX_BASE = "https://data-dbg.krx.co.kr/svc/apis";
 
-/** Seed series — the market/index series needed for beta regression and
- *  price-trend analysis. Ticker codes (단축코드 ISIN) are resolved at fetch
- *  time via the stock master service. Extend freely with new items. */
-const KRX_SEED_SERIES: SeriesDescriptor[] = [];
+/**
+ * KRX daily-close series for beta regression (k-krx skill, ADR-0115).
+ *
+ * seriesId conventions:
+ *   krx:index:<CODE>:close      — market index daily close (CODE: KOSPI|KOSDAQ),
+ *                                 served by the idx/ daily-quote services.
+ *   krx:stock:<companyId>:close — a listed company's daily close. The key is
+ *                                 md_company.id (NOT the KRX short code):
+ *                                 md_company has no ISIN/short-code column and
+ *                                 a schema change would need an ADR, so the
+ *                                 resolved KRX 단축코드 lives in the ticker
+ *                                 registry below and in the code cache
+ *                                 (db/data/krx-stock-code-cache.json, written
+ *                                 by beta-series.ts). This keeps the WACC
+ *                                 beta-series API resolvable from a project
+ *                                 row alone.
+ *
+ * ⚠ Per-service request PARAMETER and output FIELD names ship UNVERIFIED: the
+ * k-krx skill publishes the API IDs and the AUTH_KEY transport (verified
+ * 2026-09-11), but field names live in each service's 개발 명세서 behind a
+ * portal login, and the workspace key had no services approved at
+ * implementation time (2026-10-09 — every service call returned 401
+ * Unauthorized API Call), so they could not be confirmed live. They follow
+ * the documented openapi.krx.co.kr examples; on first approved use, confirm
+ * against the spec and update KRX_FIELD/params maps if the API disagrees.
+ */
+export const KRX_SEED_SERIES: SeriesDescriptor[] = [
+  {
+    seriesId: "krx:index:KOSPI:close",
+    adapter: "krx",
+    title: "코스피 지수 일별종가 — idx/kospi_dd_trd (params unverified — k-krx 개발 명세서)",
+    unitCode: "index",
+    periodType: "day",
+    _verified: false,
+  },
+  {
+    seriesId: "krx:index:KOSDAQ:close",
+    adapter: "krx",
+    title: "코스닥 지수 일별종가 — idx/kosdaq_dd_trd (params unverified — k-krx 개발 명세서)",
+    unitCode: "index",
+    periodType: "day",
+    _verified: false,
+  },
+];
 
-interface KrxFetchResult { value: number; contentHash: string; raw: string }
+/**
+ * Runtime registry for per-deal company series (krx:stock:<companyId>:close).
+ * The static seeds cannot carry them (company ids are project data), so
+ * beta-series.ts registers each company's descriptor — including the resolved
+ * KRX 단축코드 as ticker — before collecting. The adapter's fetcher and the
+ * daily-row listing resolve through this registry first, then the seeds.
+ */
+const KRX_DYNAMIC_SERIES = new Map<string, SeriesDescriptor>();
+
+/** Register a per-deal KRX company series descriptor for this process. */
+export function registerKrxSeries(series: SeriesDescriptor): void {
+  KRX_DYNAMIC_SERIES.set(series.seriesId, series);
+}
+
+/** Build the daily-close series descriptor for a listed company. */
+export function krxStockSeries(companyId: string, ticker: string, companyName: string, market: "kospi" | "kosdaq"): SeriesDescriptor {
+  return {
+    seriesId: `krx:stock:${companyId}:close`,
+    adapter: "krx",
+    ticker,
+    market,
+    title: `${companyName} 일별종가 — KRX 단축코드 ${ticker} (params unverified — k-krx 개발 명세서)`,
+    unitCode: "krw",
+    periodType: "day",
+    _verified: false,
+  };
+}
+
+/** One trading day's close from a KRX daily service payload row. */
+export interface KrxDailyRow {
+  /** ISO date (YYYY-MM-DD), from the row's BAS_DD. */
+  date: string;
+  value: number;
+  raw: string;
+}
+
+/** Output FIELD names per service family — see the unverified note above. */
+interface KrxFieldMap {
+  /** date field (BAS_DD = 기준일자). */
+  date: string;
+  /** close-price/index field. */
+  close: string;
+  /** instrument-name filter field (idx services). */
+  name?: string;
+}
+
+const KRX_INDEX_FIELDS: Record<string, KrxFieldMap> = {
+  KOSPI: { date: "BAS_DD", close: "IDX_CLPRC", name: "IDX_NM" },
+  KOSDAQ: { date: "BAS_DD", close: "IDX_CLPRC", name: "IDX_NM" },
+};
+
+/** KOSPI/KOSDAQ index row match — the idx services return multiple series per day. */
+const KRX_INDEX_NAME_MATCH: Record<string, string> = {
+  KOSPI: "코스피",
+  KOSDAQ: "코스닥",
+};
+
+const KRX_STOCK_FIELDS: KrxFieldMap = { date: "BAS_DD", close: "TDD_CLPRC" };
+
+/** Request PARAMETER names per service — see the unverified note above. */
+const KRX_PARAMS = {
+  bgnDd: "bgnDd",
+  endDd: "endDd",
+};
+
+/** Stock-master lookup result (단축코드 resolution). */
+export interface KrxStockMasterRow {
+  /** KRX 단축코드 (6-digit code, e.g. 058050 for 샘) — example only. */
+  shortCode: string;
+  isin: string | null;
+  nameKo: string;
+  /** KOSPI | KOSDAQ | KONEX — decides the daily-trading service family. */
+  market: "KOSPI" | "KOSDAQ" | "KONEX";
+}
 
 async function krxGetJson(url: string, apiKey: string): Promise<unknown> {
   const res = await fetch(url, {
@@ -356,6 +481,77 @@ async function krxGetJson(url: string, apiKey: string): Promise<unknown> {
   const trimmed = text.trimStart();
   if (trimmed.startsWith("<")) throw new Error(`KRX API non-JSON response: ${trimmed.slice(0, 120)}`);
   return JSON.parse(text);
+}
+
+/** KRX error envelope (k-krx skill §Error Handling) — respCode without data. */
+function krxRequireRows(payload: unknown, service: string): Array<Record<string, string>> {
+  const env = payload as { respCode?: string; respMsg?: string; OutBlock_1?: Array<Record<string, string>> };
+  if (env.respCode && !env.OutBlock_1) {
+    throw new Error(
+      `KRX ${service} error ${env.respCode}: ${env.respMsg}` +
+        (env.respCode === "401" ? " — key valid but service not approved/expired (k-krx skill: re-apply via 마이페이지 → API 사용 신청)" : ""),
+    );
+  }
+  return env.OutBlock_1 ?? [];
+}
+
+function krxServiceFor(series: SeriesDescriptor): { path: string; indexCode: string | null } {
+  if (series.seriesId.startsWith("krx:index:")) {
+    const code = series.seriesId.split(":")[2];
+    if (code === "KOSDAQ") return { path: "idx/kosdaq_dd_trd", indexCode: "KOSDAQ" };
+    return { path: "idx/kospi_dd_trd", indexCode: "KOSPI" };
+  }
+  // Stock series: the listing market selects the service family — stk for
+  // KOSPI listings, ksq for KOSDAQ (KONEX/knx is out of scope for beta).
+  const stockMarket = series.market ?? "kospi";
+  return { path: stockMarket === "kospi" ? "sto/stk_bydd_trd" : "sto/ksq_bydd_trd", indexCode: null };
+}
+
+/**
+ * Fetch one month's daily rows for a KRX series — ONE API call per
+ * (series × month), reused across the month's trading days. This is the
+ * collection unit both newbiz.ts fetch (day-grain series) and
+ * beta-series.ts consume; the per-day Fetcher closures read from it.
+ */
+export async function listKrxDailyRows(seriesId: string, month: string): Promise<KrxDailyRow[]> {
+  loadPipelineKeys();
+  const apiKey = process.env.KRX_API_KEY;
+  if (!apiKey) throw new Error("KRX_API_KEY is not set — the krx adapter is disabled until configured.");
+  const series = KRX_DYNAMIC_SERIES.get(seriesId) ?? KRX_SEED_SERIES.find((s) => s.seriesId === seriesId);
+  if (!series) throw new Error(`krx: unknown series '${seriesId}'`);
+  const { path, indexCode } = krxServiceFor(series);
+  const [y, m] = month.split("-").map(Number);
+  if (!y || !m) throw new Error(`krx: month must be YYYY-MM (got '${month}')`);
+  const from = `${y}${String(m).padStart(2, "0")}01`;
+  const to = `${y}${String(m).padStart(2, "0")}${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
+  const params = new URLSearchParams({ [KRX_PARAMS.bgnDd]: from, [KRX_PARAMS.endDd]: to });
+  const payload = await krxGetJson(`${KRX_BASE}/${path}.json?${params.toString()}`, apiKey);
+  const rows = krxRequireRows(payload, path);
+  const isIndex = indexCode !== null;
+  const fields = isIndex ? KRX_INDEX_FIELDS[indexCode] : KRX_STOCK_FIELDS;
+  const matched = rows.filter((r) => {
+    if (isIndex && fields.name) {
+      const nm = r[fields.name] ?? "";
+      return nm.includes(KRX_INDEX_NAME_MATCH[indexCode]);
+    }
+    if (!isIndex) return series.ticker ? r.ISU_SRT_CD === series.ticker : true;
+    return true;
+  });
+  const out: KrxDailyRow[] = [];
+  for (const r of matched) {
+    const dateRaw = r[fields.date] ?? "";
+    const closeRaw = r[fields.close] ?? "";
+    const date = dateRaw.replaceAll("/", "-").replaceAll(".", "-");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || closeRaw === "") continue;
+    const value = Number(closeRaw.replaceAll(",", ""));
+    if (!Number.isFinite(value) || value <= 0) continue;
+    out.push({ date, value, raw: JSON.stringify(r) });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function krxResolveSeries(seriesId: string): SeriesDescriptor | undefined {
+  return KRX_DYNAMIC_SERIES.get(seriesId) ?? KRX_SEED_SERIES.find((s) => s.seriesId === seriesId);
 }
 
 const krxAdapter: SourceAdapter = {
@@ -370,27 +566,21 @@ const krxAdapter: SourceAdapter = {
   async listSeries() {
     return KRX_SEED_SERIES;
   },
+  async listDailyRows(ctx, month) {
+    return listKrxDailyRows(ctx.seriesId, month);
+  },
   fetcher(ctx) {
-    const series = KRX_SEED_SERIES.find((s) => s.seriesId === ctx.seriesId);
+    const series = krxResolveSeries(ctx.seriesId);
     if (!series) {
       throw new Error(`krx: unknown series '${ctx.seriesId}' — fetch --list shows the seeded catalog.`);
     }
-    const apiKey = requireKey("KRX_API_KEY");
-    return async (periodKey: string) => {
-      // periodKey is YYYY-MM for monthly grain; KRX daily services take YYYYMMDD.
-      const [y, m] = periodKey.split("-").map(Number);
-      const lastDay = new Date(y, m, 0).getDate();
-      const from = `${y}${String(m).padStart(2, "0")}01`;
-      const to = `${y}${String(m).padStart(2, "0")}${String(lastDay).padStart(2, "0")}`;
-      const url = `${KRX_BASE}/sto/stk_bydd_trd.json?bosdd=${from}&basdd=${to}`;
-      const payload = await krxGetJson(url, apiKey) as { OutBlock_1?: Array<{ ISU_SRT_CD?: string; TDD_CLPRC?: string }> };
-      const rows = payload.OutBlock_1 ?? [];
-      const match = rows.find((r) => r.ISU_SRT_CD === series.ticker);
-      if (!match?.TDD_CLPRC) throw new Error(`krx: no close price for ${series.ticker}@${periodKey}`);
-      const value = Number(match.TDD_CLPRC);
-      if (!Number.isFinite(value)) throw new Error(`krx: non-numeric close price '${match.TDD_CLPRC}' for ${series.ticker}@${periodKey}`);
-      const raw = JSON.stringify(match);
-      return { value, contentHash: await hash(raw), raw };
+    requireKey("KRX_API_KEY");
+    return async (_periodKey: string) => {
+      // Day-grain series never run the monthly Fetcher contract — newbiz fetch
+      // and beta-series.ts collect through the adapter's listDailyRows hook
+      // (listKrxDailyRows). A monthly call here means a day-grain series was
+      // misconfigured; fail loudly rather than return a wrong grain.
+      throw new Error(`krx: series '${ctx.seriesId}' is day-grain — collect via listKrxDailyRows, not the monthly fetch loop.`);
     };
   },
 };

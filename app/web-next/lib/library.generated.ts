@@ -590,6 +590,20 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "lang": "en"
   },
   {
+    "id": "rb-beta-series-ko",
+    "category": "runbook",
+    "title": "런북 — KRX 베타 시계열 수집(수동, KRX 승인 대기)",
+    "file": "docs/runbooks/beta-series-collection_ko.md",
+    "lang": "ko"
+  },
+  {
+    "id": "rb-beta-series",
+    "category": "runbook",
+    "title": "Runbook — KRX Beta Series Collection (Manual, KRX Approval Pending)",
+    "file": "docs/runbooks/beta-series-collection.md",
+    "lang": "en"
+  },
+  {
     "id": "rb-deployment-ko",
     "category": "runbook",
     "title": "런북 — 배포",
@@ -1637,6 +1651,22 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "docs/runbooks/rag-host-scheduler.md",
     "lang": "en",
     "content": "---\nlang: en\ncounterpart: rag-host-scheduler_ko.md\n---\n\n# Runbook — RAG Staleness Recompute (Host Scheduler Handoff)\n\nOwner: infra-automation-engineer. Audience: operators. Wave F-5 (design `2026-10-08-wave-f-process-closure` §5).\n\n## What and why\n\nThe web app recomputes the proposed RAG grade lazily: on gate-brief generation for the IC gates and on every IC-package read (`db/lib/rag-service.ts` `recomputeRag`). A project nobody opens therefore keeps an old proposal. The production container has **no scheduler by design**; the staleness pass is a host-level job.\n\n## The job\n\n```\nbun scripts/co-newbiz/rag.ts --stale [--db-path <path>]\n```\n\nWalks every project and calls `recomputeRag(..., \"stale_read\")`. It is idempotent: an unchanged input set (stage gate, S1 data-confidence grade, carried dimension grades, IRR margin) writes nothing and reports `unchanged`. Output is JSON, one entry per project (`assessed | unchanged | nothing_to_assess | error`). The run is attributed to `cli:watch-cycle` (a label, not an account — agents have no accounts).\n\n## Suggested cadence\n\nDaily (e.g. 06:00 local) via launchd (macOS) or a systemd timer. Hysteresis holds a grade at least 7 days, so a more frequent cadence adds no information.\n\n## Acceptance\n\n1. Run once manually against a copy of the database; confirm no `error` entries.\n2. Run twice; the second run reports only `unchanged`/`nothing_to_assess`.\n3. Confirm no `gate_decision`, `approval`, or `venture_transition_decision` row was written (the job proposes grades only).\n\n## Boundaries\n\nThe grade is a proposal. Data confidence caps it (an unverified LLM estimate never reads Green; a two-statistical-hop chain reads Red). An incomplete assessment produces no overall grade and the UI shows \"not graded\".\n"
+  },
+  "rb-beta-series-ko": {
+    "id": "rb-beta-series-ko",
+    "category": "runbook",
+    "title": "런북 — KRX 베타 시계열 수집(수동, KRX 승인 대기)",
+    "file": "docs/runbooks/beta-series-collection_ko.md",
+    "lang": "ko",
+    "content": "---\nlang: ko\nlang_reason: source-material\ncounterpart: beta-series-collection.md\n---\n\n**대상**: 운영자, 딜 분석가\n**책임**: backend-engineer\n**화면**: /projects/[id]/wacc\n\n## 목적\n\n일별종가 시계열(코스피/코스닥 지수 + 주식회사/대상사 종가)은 WACC 베타 회귀 패널의 \"수집 데이터 불러오기\" 액션에 쓰입니다. `scripts/co-newbiz/beta-series.ts`로 수집하며 `newbiz fetch`와 같은 ensure_fresh 경로로 `fact_market_observation`에 적재됩니다.\n\n## 스케줄링 스토리\n\n로컬에서는 호스트 스케줄러가 돌지 않으므로 수집은 **수동**입니다(호스트 cron 확보 전까지 — 같은 패턴은 [rag-host-scheduler.md](rag-host-scheduler.md) 참고). 매월 한 번 이상 실행하세요. ensure_fresh 덕에 재실행은 캐시 히트라 과잉 수집은 API 할당량만 소모합니다.\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id>            # 최근 약 13개월\nbun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10\n```\n\n단축코드가 자동 해석되지 않으면 `--ticker 회사명=058050`으로 지정할 수 있습니다. 해석된 단축코드는 `db/data/krx-stock-code-cache.json`에 캐시됩니다.\n\n## 전제: KRX 서비스 승인\n\nKRX 데이터 마켓플레이스 키에 6개 서비스(idx/kospi_dd_trd 등 6개)의 승인이 필요합니다. 미승인 상태에서는 모든 호출이 `respCode 401 — Unauthorized API Call`이고 스크립트는 관측 0건으로 종료합니다(재신청: 포털 마이페이지 → API 사용 신청). 승인 후 재실행하세요.\n"
+  },
+  "rb-beta-series": {
+    "id": "rb-beta-series",
+    "category": "runbook",
+    "title": "Runbook — KRX Beta Series Collection (Manual, KRX Approval Pending)",
+    "file": "docs/runbooks/beta-series-collection.md",
+    "lang": "en",
+    "content": "---\nlang: en\ncounterpart: beta-series-collection_ko.md\n---\n\n**Audience**: operators, deal analysts\n**Owner**: backend-engineer\n**Screens**: /projects/[id]/wacc\n\n## Purpose\n\nDaily-close time series (KOSPI/KOSDAQ index + subject/target company closes) feed the WACC beta regression panel (\"수집 데이터 불러오기\"). Series are collected with `scripts/co-newbiz/beta-series.ts` into `fact_market_observation` via the same ensure_fresh path as `newbiz fetch`.\n\n## Scheduling story\n\nThere is no host scheduler running locally — collection is **manual** until a\nhost cron exists (see [rag-host-scheduler.md](rag-host-scheduler.md) for the\nsame pattern). Run monthly, or more often; ensure_fresh makes reruns cache-hit,\nso over-collecting costs API quota, not correctness.\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id>            # last ~13 months\nbun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10\nbun scripts/co-newbiz/beta-series.ts --project <id> --ticker 회사명=058050   # pin an unresolved short code\n```\n\n## Prerequisite: KRX service approval\n\nThe KRX Data Marketplace key must have the six services approved\n(idx/kospi_dd_trd, idx/kosdaq_dd_trd, sto/stk_bydd_trd, sto/ksq_bydd_trd, sto/stk_isu_base_info, sto/ksq_isu_base_info —\nre-apply via portal 마이페이지 → API 사용 신청).\nUntil then every call returns `respCode 401 — Unauthorized API Call` and the\nscript exits 1 with 0 observations. Re-apply, wait for approval, and rerun;\nresolved 단축코드 are cached in `db/data/krx-stock-code-cache.json`.\n"
   },
   "rb-deployment-ko": {
     "id": "rb-deployment-ko",

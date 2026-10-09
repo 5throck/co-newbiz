@@ -16,6 +16,7 @@ import { RoicWaterfallChart } from "../RoicWaterfallChart.tsx";
 import { BetaPanel, type PeerRow } from "./BetaPanel.tsx";
 import { DerivationTable } from "./DerivationTable.tsx";
 import { api } from "../../lib/api.ts";
+import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import {
@@ -172,6 +173,10 @@ function formatComponentValue(key: string, v: number): string {
 export function WaccPanel({ projectId }: { projectId: string }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
+  // ADR-0156: per-target sessions. null = project-level (the fs-gate view);
+  // a target id scopes GET/POST/suggestions to that target's own runs.
+  const [targets, setTargets] = useState<AnalysisTarget[]>([]);
+  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [view, setView] = useState<View | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -184,12 +189,18 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   // ── 참조값 (ADR-0116 Phase 4; 제안일 뿐 — 확정은 사람) ──
   interface Sugg { key: string; value: number | null; as_of?: string; anchor_ref?: string; source_label?: string; reason?: string }
   const [sugg, setSugg] = useState<{ subject: { name_ko: string | null } | null; suggestions: Sugg[]; missing?: string[] } | null>(null);
+  const targetQuery = selectedTarget ? `?target_id=${encodeURIComponent(selectedTarget)}` : "";
   const loadSugg = useCallback(() => {
-    api.get<{ subject: { name_ko: string | null } | null; suggestions: Sugg[] }>(`/api/projects/${encodeURIComponent(projectId)}/wacc/suggestions`)
-      .then((r) => setSugg(r.data))
+    api.get<{ subject: { name_ko: string | null } | null; suggestions: Sugg[] }>(`/api/projects/${encodeURIComponent(projectId)}/wacc/suggestions${targetQuery}`)
+      .then((r) => setSugg(r.data)) // 제안은 선택 대상(기본: 게이트 기준 회사)을 따라 갱신 — 확정은 사람
       .catch(() => setSugg(null));
-  }, [projectId]);
+  }, [projectId, targetQuery]);
   useEffect(() => { loadSugg(); }, [loadSugg]);
+  useEffect(() => {
+    api.get<{ targets: AnalysisTarget[] }>(`/api/projects/${encodeURIComponent(projectId)}/targets`)
+      .then((r) => setTargets(r.data.targets ?? []))
+      .catch(() => setTargets([]));
+  }, [projectId]);
   const applyRef = useCallback((key: string, e: Sugg) => {
     // ECOS reference values are percent numbers (3.788 = 3.788%); the session
     // inputs take ratios (0.03788) — convert on apply.
@@ -233,7 +244,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const [rationale, setRationale] = useState("");
 
   const load = useCallback(() => {
-    api.get<View>(`/api/projects/${encodeURIComponent(projectId)}/wacc`)
+    api.get<View>(`/api/projects/${encodeURIComponent(projectId)}/wacc${targetQuery}`)
       .then((r) => {
         setView(r.data);
         setDirectWacc(String(r.data.wacc.value));
@@ -242,7 +253,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         setError(null);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "WACC 정보를 불러오지 못했습니다."));
-  }, [projectId]);
+  }, [projectId, targetQuery]);
   useEffect(() => { load(); }, [load]);
 
   const taxN = nOr(taxRate.value);
@@ -410,6 +421,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
           mode: "capm",
           rationale,
           components,
+          target_id: selectedTarget ?? undefined,
         },
       );
       const mismatchNote = res.data.computed_mismatch && res.data.wacc_computed != null
@@ -437,10 +449,10 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         hurdle_irr: directHurdle.trim() ? Number(directHurdle) : undefined,
         mode: "direct",
         rationale: directRationale,
-        subject: subject || undefined,
-        subject_rationale: subject ? subjectRationale : undefined,
+        subject: selectedTarget ? undefined : subject || undefined,
+        subject_rationale: selectedTarget ? undefined : subject ? subjectRationale : undefined,
+        target_id: selectedTarget ?? undefined,
       });
-      setMessage(`저장 완료 — run ${res.data.run_id}`);
       setSubject("");
       setSubjectRationale("");
       load();
@@ -451,6 +463,17 @@ export function WaccPanel({ projectId }: { projectId: string }) {
 
   return (
     <>
+        {targets.length > 1 && (
+          <section className="market-section sizing-step" aria-label="분석 대상 선택">
+            <h3 className="sizing-step-title">분석 대상</h3>
+            <TargetSelector targets={targets} selected={selectedTarget} onSelect={(id) => { setSelectedTarget(id); }} />
+            {selectedTarget && (
+              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                개별 대상 세션 — 이 값은 fs 게이트 산정(프로젝트 기준)과 별도로 기록되며, 게이트 확정은 "프로젝트 기준"에서만 가능합니다.
+              </p>
+            )}
+          </section>
+        )}
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>}
         {message && <p className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)]">✓ {message}</p>}
 
@@ -618,21 +641,29 @@ export function WaccPanel({ projectId }: { projectId: string }) {
           )}
           {mode === "direct" ? (
             <form className="sizing-step grid gap-3 mt-0 rounded-tl-none" style={{ maxWidth: 460 }} onSubmit={submitDirect}>
-              <h3 className="sizing-step-title">직접 입력</h3>
+              <h3 className="sizing-step-title">직접 입력{selectedTarget ? " — 개별 대상" : ""}</h3>
               <label className="grid gap-1 text-sm">WACC (비율)<input className="form-input" value={directWacc} onChange={(e) => setDirectWacc(e.target.value)} placeholder="0.095" /></label>
               <label className="grid gap-1 text-sm">요구수익률(Hurdle IRR, 선택)<input className="form-input" value={directHurdle} onChange={(e) => setDirectHurdle(e.target.value)} placeholder="0.15" /></label>
               <label className="grid gap-1 text-sm">근거/승인 메모<textarea className="form-input" value={directRationale} onChange={(e) => setDirectRationale(e.target.value)} placeholder="Treasury 확인, IC 가이드라인 등" /></label>
-              <label className="grid gap-1 text-sm">
-                WACC 적용 주체 (선택 — 미확정 시 트랙 기본값)
-                <select className="form-input" value={subject} onChange={(e) => setSubject(e.target.value as typeof subject)}>
-                  <option value="">트랙 기본값 따름</option>
-                  <option value="promoter">투자주체 (promoter) — 자체 추진</option>
-                  <option value="target">대상기업 (target) — 인수·지분참여</option>
-                  <option value="project_newco">신설법인 (project_newco)</option>
-                </select>
-              </label>
-              {subject && (
-                <label className="grid gap-1 text-sm">주체 근거 (필수)<textarea className="form-input" value={subjectRationale} onChange={(e) => setSubjectRationale(e.target.value)} placeholder="현금흐름 리스크가 대상기업에 귀속 — 유사업종 베타 재레버링 근거 등" /></label>
+              {selectedTarget ? (
+                <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                  WACC 적용 주체는 프로젝트 수준 결정(REQ-W4) — "프로젝트 기준" 화면에서만 확정할 수 있습니다.
+                </p>
+              ) : (
+                <>
+                  <label className="grid gap-1 text-sm">
+                    WACC 적용 주체 (선택 — 미확정 시 트랙 기본값)
+                    <select className="form-input" value={subject} onChange={(e) => setSubject(e.target.value as typeof subject)}>
+                      <option value="">트랙 기본값 따름</option>
+                      <option value="promoter">투자주체 (promoter) — 자체 추진</option>
+                      <option value="target">대상기업 (target) — 인수·지분참여</option>
+                      <option value="project_newco">신설법인 (project_newco)</option>
+                    </select>
+                  </label>
+                  {subject && (
+                    <label className="grid gap-1 text-sm">주체 근거 (필수)<textarea className="form-input" value={subjectRationale} onChange={(e) => setSubjectRationale(e.target.value)} placeholder="현금흐름 리스크가 대상기업에 귀속 — 유사업종 베타 재레버링 근거 등" /></label>
+                  )}
+                </>
               )}
               <button className="primary-button justify-self-start" type="submit">이 값으로 확정</button>
               <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">확정하면 이 값이 사람이 확인한 최종 값(출처 등급 user)으로 기록됩니다. 저장 시 최신 run을 복사한 새 run_input 스냅샷과 assumption(wacc/hurdle_irr) 행이 함께 생성됩니다.</p>
@@ -650,6 +681,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
               {/* ② 베타 추정 */}
               <h3 className="sizing-step-title mt-6"><span className="sizing-step-badge">2</span>베타 추정 <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">— 시장 평균 대비 변동성까지 함께 산출합니다</span></h3>
               <BetaPanel
+                projectId={projectId}
                 betaTab={betaTab}
                 onBetaTab={setBetaTab}
                 peers={peers}

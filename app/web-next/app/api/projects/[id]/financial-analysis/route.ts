@@ -6,7 +6,7 @@
 // hidden by default.
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
-import { notFound, ok } from "../../../../../lib/envelope.ts";
+import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -20,6 +20,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     | { company_id: string | null; track: string | null; subject_company_rationale: string | null }
     | undefined;
 
+  // ADR-0156: ?target_id= views a shortlisted target's own financials; the
+  // project-level view (no param) keeps returning the ADR-0116 bound subject.
+  const targetId = new URL(request.url).searchParams.get("target_id");
+  let viewCompanyId = p?.company_id ?? null;
+  let perTarget: { target_id: string; name: string; role: string } | null = null;
+  if (targetId) {
+    const { listProjectAnalysisTargets } = await import("../../../../../../../db/lib/wacc.ts");
+    const t = listProjectAnalysisTargets(db, id).find((x) => x.targetId === targetId);
+    if (!t || !t.companyId) return badRequest("invalid_request", "target_id는 Short List에 오른 대상(분석 가능한 회사)이어야 합니다.");
+    viewCompanyId = t.companyId;
+    perTarget = { target_id: t.targetId, name: t.name, role: "target" };
+  }
+
   let company: {
     id: string;
     name_ko: string;
@@ -30,8 +43,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     metrics: { revenue_latest: number | null; revenue_growth: number | null; operating_margin: number | null; debt_ratio: number | null; roe: number | null };
   } | null = null;
 
-  if (p?.company_id) {
-    const c = db.query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE id = ?").get(p.company_id) as
+  if (viewCompanyId) {
+    const c = db.query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE id = ?").get(viewCompanyId) as
       | { id: string; name_ko: string; dart_corp_code: string | null }
       | undefined;
     if (c) {
@@ -69,8 +82,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         id: c.id,
         name_ko: c.name_ko,
         dart_corp_code: c.dart_corp_code,
-        role: p.track === "brownfield" ? "target" : "candidate",
-        rationale: p.subject_company_rationale ?? "",
+        role: p?.track === "brownfield" ? "target" : "candidate",
+        rationale: p?.subject_company_rationale ?? "",
         latest_sync_at:
           (db.query("SELECT MAX(created_at) AS at FROM fact_financial WHERE company_id = ?").get(c.id) as { at: string | null }).at ?? null,
         metrics: {
@@ -84,7 +97,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
   }
 
-  return ok({ project: { id: project.id, project_no: project.project_no, track: p?.track ?? null }, company }, 200, {
+  return ok({ project: { id: project.id, project_no: project.project_no, track: p?.track ?? null }, company, target: perTarget }, 200, {
     linked: company !== null,
   });
 }

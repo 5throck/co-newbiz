@@ -6082,6 +6082,48 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/wacc/beta-series:
+    get:
+      operationId: getProjectWaccBetaSeries
+      summary: Collected KRX beta inputs for the regression panel — subject-company daily closes aligned by date with the KOSPI index. Read-only; collection runs through scripts/co-newbiz/beta-series.ts.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/targets:
+    get:
+      operationId: listProjectAnalysisTargets
+      summary: Shortlisted analysis targets for per-target WACC/financial views (ADR-0156), with company binding state.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/projects/{id}/reports/compose:
     post:
       operationId: composeProjectReport

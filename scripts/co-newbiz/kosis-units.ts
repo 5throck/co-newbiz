@@ -1,4 +1,4 @@
-// @version 1.0.1
+// @version 1.0.2
 /**
  * kosis-units.ts — explicit mapping from KOSIS unit strings to md_unit rows.
  *
@@ -25,6 +25,7 @@ export const KOSIS_UNITS: Record<string, KosisUnitMapping> = {
   "조원": { unitCode: "krw_1t", dimension: "krw", siCoefficient: 1e12 },
   "백만원": { unitCode: "krw_1m", dimension: "krw", siCoefficient: 1e6 },
   "%": { unitCode: "percent", dimension: "ratio", siCoefficient: 0.01 },
+  "원": { unitCode: "krw", dimension: "krw", siCoefficient: 1 },
   "지수": { unitCode: "index", dimension: "index", siCoefficient: 1 },
   "2020=100": { unitCode: "index", dimension: "index", siCoefficient: 1 },
   "톤": { unitCode: "ton", dimension: "mass", siCoefficient: 1000 },

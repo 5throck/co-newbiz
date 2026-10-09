@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
+import TargetSelector, { type AnalysisTarget } from "./TargetSelector.tsx";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteProject } from "../lib/project-write-access.ts";
 
@@ -20,7 +21,7 @@ interface CompanySummary {
   latest_sync_at: string | null;
   metrics: { revenue_latest: number | null; revenue_growth: number | null; operating_margin: number | null; debt_ratio: number | null; roe: number | null };
 }
-interface View { project: { id: string; project_no: string; track: string | null }; company: CompanySummary | null }
+interface View { project: { id: string; project_no: string; track: string | null }; company: CompanySummary | null; target: { target_id: string; name: string; role: string } | null }
 interface CompanyRow { id: string; name_ko: string; dart_corp_code: string | null; fact_years: number }
 
 const pct = (v: number | null): string => (v === null ? "N/A" : `${(v * 100).toFixed(1)}%`);
@@ -32,18 +33,27 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
   const [view, setView] = useState<View | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // ADR-0156: per-target selector (read-only financial view per shortlisted target).
+  const [targets, setTargets] = useState<AnalysisTarget[]>([]);
+  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
 
   const [q, setQ] = useState("");
   const [results, setResults] = useState<CompanyRow[] | null>(null);
   const [rationale, setRationale] = useState("");
   const [linking, setLinking] = useState(false);
 
+  const targetQuery = selectedTarget ? `?target_id=${encodeURIComponent(selectedTarget)}` : "";
   const load = useCallback(() => {
-    api.get<View>(`/api/projects/${encodeURIComponent(projectId)}/financial-analysis`)
+    api.get<View>(`/api/projects/${encodeURIComponent(projectId)}/financial-analysis${targetQuery}`)
       .then((r) => { setView(r.data); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "재무분석 데이터를 불러오지 못했습니다."));
-  }, [projectId]);
+      .catch((e) => setError(e instanceof Error ? e.message : "재무분석 개별 대상 재무 데이터를 불러오지 못했습니다."));
+  }, [projectId, targetQuery]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    api.get<{ targets: AnalysisTarget[] }>(`/api/projects/${encodeURIComponent(projectId)}/targets`)
+      .then((r) => setTargets(r.data.targets ?? []))
+      .catch(() => setTargets([]));
+  }, [projectId]);
 
   async function search() {
     try {
@@ -84,6 +94,16 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
         <p>불러오는 중...</p>
       ) : (
         <>
+          {targets.length > 1 && (
+            <section className="market-section sizing-step">
+              <h3 className="sizing-step-title">분석 대상</h3>
+              <TargetSelector targets={targets} selected={selectedTarget} onSelect={setSelectedTarget} />
+              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-1">
+                개별 대상 보기는 읽기 전용입니다 — 게이트에 들어가는 대상 회사 연결은 "프로젝트 기준"에서 수행하세요.
+              </p>
+              {view.target && <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">보기: {view.target.name} (개별 대상, 읽기 전용)</p>}
+            </section>
+          )}
           {company ? (
             <section className="market-section sizing-step">
               <h3 className="sizing-step-title">연결된 대상 회사 <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">{roleChip}</span></h3>
@@ -117,7 +137,7 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
             </section>
           )}
 
-          {canAct && (
+          {canAct && !selectedTarget && (
             <section className="market-section sizing-step mt-3">
               <h3 className="sizing-step-title">대상 회사 연결/변경</h3>
               <div className="grid gap-2 md:grid-cols-[1fr_auto] items-end">

@@ -5,7 +5,7 @@
 // (b) 시계열 회귀: 붙여넣은 price/index 시계열 → OLS β·R²·연율화 변동성(자산 vs 시장)
 // 승인된 UI 목업(docs/designs/mockups/2026-09-10-wacc-capm-ui-mockup_ko.html) 기준.
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { EChart } from "../EChart.tsx";
 import {
@@ -26,6 +26,7 @@ const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
 const num = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "—");
 
 export function BetaPanel({
+  projectId,
   betaTab,
   onBetaTab,
   peers,
@@ -39,6 +40,8 @@ export function BetaPanel({
   observedDe,
   onObservedDe,
 }: {
+  /** WACC 베타 시계열 수집 데이터 조회 대상 프로젝트 — "수집 데이터 불러오기" 액션용. */
+  projectId: string;
   betaTab: "peer" | "regression";
   onBetaTab: (t: "peer" | "regression") => void;
   peers: PeerRow[];
@@ -103,6 +106,40 @@ export function BetaPanel({
   };
 
   const volMax = regression ? Math.max(regression.annualVolAsset, regression.annualVolMarket) : 1;
+
+  // 수집 데이터 불러오기 — GET /api/projects/[id]/wacc/beta-series 의 정렬된
+  // date/price/index 행을 붙여넣기 상자에 채운다. 붙여넣기 입력은 그대로 유지.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const collectedRowCount = useMemo(() => {
+    try {
+      return parseSeriesInput(regressionText).length;
+    } catch {
+      return 0;
+    }
+  }, [regressionText]);
+  const [insufficientRows, setInsufficientRows] = useState(false);
+  const loadCollectedSeries = async () => {
+    setLoading(true);
+    setLoadError(null);
+    setInsufficientRows(false);
+    try {
+      const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/wacc/beta-series`);
+      const body = (await res.json().catch(() => null)) as { ok?: boolean; error?: { message?: string }; data?: { rows?: Array<{ date: string; price: number; index: number }> } } | null;
+      if (!res.ok || !body?.ok || !body.data) {
+        setLoadError(body?.error?.message ?? "수집 데이터를 불러오지 못했습니다.");
+        return;
+      }
+      const rows = body.data.rows ?? [];
+      const csv = rows.map((r) => `${r.date},${r.price},${r.index}`).join("\n");
+      onRegressionText(csv);
+      setInsufficientRows(rows.length < 63);
+    } catch {
+      setLoadError("수집 데이터를 불러오지 못했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div>
@@ -173,7 +210,16 @@ export function BetaPanel({
               placeholder={"date,price,index\n2026-09-10,68400,3421.8\n2026-09-09,67900,3405.2\n…"}
               onChange={(e) => onRegressionText(e.target.value)} />
             <button type="button" className="ghost-button" onClick={onRunRegression}>↻ 회귀 실행</button>
+            <button type="button" className="ghost-button" disabled={loading} onClick={() => void loadCollectedSeries()}>
+              {loading ? "불러오는 중…" : "수집 데이터 불러오기"}
+            </button>
           </div>
+          {loadError && <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">✕ {loadError}</p>}
+          {insufficientRows && collectedRowCount < 63 && (
+            <p role="status" className="text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))] text-[length:var(--fs-caption)] mt-2">
+              시계열 회귀에는 최소 약 3개월(거래일 63개) 데이터가 필요합니다 — 현재 {collectedRowCount}건
+            </p>
+          )}
           {regressionError && <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">✕ {regressionError}</p>}
           {regression && (
             <>

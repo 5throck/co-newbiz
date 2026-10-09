@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.19.0
+// @version 1.20.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -108,19 +108,30 @@ import {
 
 const [command, ...args] = process.argv.slice(2);
 
-/** Upsert md_period for a YYYY-MM key (monthly granularity — A1 KOSIS mapping). */
+/**
+ * Upsert md_period for a YYYY-MM (month) or YYYY-MM-DD (day) key — the day
+ * grain is new with the KRX beta series (ADR-0115), where start=end=the date.
+ */
 function upsertPeriod(db: ReturnType<typeof getDb>, periodKey: string): string {
+  const isDay = /^\d{4}-\d{2}-\d{2}$/.test(periodKey);
   const [y, m] = periodKey.split("-").map(Number);
-  const startDate = `${periodKey}-01`;
-  const endDate = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+  const startDate = isDay ? periodKey : `${periodKey}-01`;
+  const endDate = isDay ? periodKey : new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+  const periodType = isDay ? "day" : "month";
   const found = db
-    .query("SELECT id FROM md_period WHERE period_type='month' AND start_date=? AND end_date=?")
-    .get(startDate, endDate) as { id: string } | undefined;
+    .query("SELECT id FROM md_period WHERE period_type=? AND start_date=? AND end_date=?")
+    .get(periodType, startDate, endDate) as { id: string } | undefined;
   if (found) return found.id;
   const id = ulid();
   db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
-    [id, "month", startDate, endDate, y, new Date().toISOString()]);
+    [id, periodType, startDate, endDate, y, new Date().toISOString()]);
   return id;
+}
+
+/** SHA-256 content hash for a raw KRX row — ensure_fresh's change probe. */
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 function resolveMonthlyPeriods(fromArg: string | undefined, toArg: string | undefined): string[] {
@@ -155,7 +166,7 @@ function resolveMonthlyPeriods(fromArg: string | undefined, toArg: string | unde
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], wacc:derivation --project <id> [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
+  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|ecos|krx|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], wacc:derivation --project <id> [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
 }
 
 switch (command) {
@@ -600,7 +611,7 @@ switch (command) {
     const adapter = SOURCE_ADAPTERS[source];
     const db = getDb();
     // md_source registration: every used adapter is a known source with a grade.
-    const GRADE: Record<string, string> = { dart: "A", ecos: "A", kosis: "A", law: "A", opendata: "B" };
+    const GRADE: Record<string, string> = { dart: "A", ecos: "A", krx: "A", kosis: "A", law: "A", opendata: "B" };
     const registerSource = () => {
       if (!db.query("SELECT id FROM md_source WHERE code = ?").get(source)) {
         db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)",
@@ -654,6 +665,34 @@ switch (command) {
           return id;
         })();
         const sourceId = (db.query("SELECT id FROM md_source WHERE code = ?").get(source) as { id: string }).id;
+        // Day-grain series (KRX): one API call per (series × month) through
+        // the adapter's listDailyRows hook; ensure_fresh runs per trading day.
+        if (adapter.listDailyRows && s.periodType === "day") {
+          for (const month of resolveMonthlyPeriods(fromArg, toArg)) {
+            let rows: Awaited<ReturnType<NonNullable<typeof adapter.listDailyRows>>> = [];
+            try {
+              rows = await adapter.listDailyRows({ seriesId: s.seriesId, sourceId }, month);
+            } catch (err) {
+              failures++;
+              console.error(`  isolated failure ${s.seriesId}@${month}: ${err instanceof Error ? err.message : err}`);
+              continue;
+            }
+            for (const row of rows) {
+              try {
+                const periodId = upsertPeriod(db, row.date);
+                const r = await ensureFresh({
+                  seriesId: s.seriesId, periodId, unitId, sourceId,
+                  fetcher: async () => ({ value: row.value, contentHash: await sha256Hex(row.raw), raw: row.raw }),
+                });
+                console.log(`${s.seriesId}@${row.date}: ${r.changeType ?? "cached"} (rev ${r.revisionNo})`);
+              } catch (err) {
+                failures++;
+                console.error(`  isolated failure ${s.seriesId}@${row.date}: ${err instanceof Error ? err.message : err}`);
+              }
+            }
+          }
+          continue;
+        }
         let rawFetcher: (periodKey: string) => Promise<{ value: number; contentHash: string; raw: string }>;
         try {
           rawFetcher = adapter.fetcher({ seriesId: s.seriesId, sourceId });
