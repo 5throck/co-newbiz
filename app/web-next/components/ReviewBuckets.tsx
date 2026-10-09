@@ -12,6 +12,7 @@ import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
+import { localizeMessage } from "../lib/labels.ts";
 import { BUCKET_TITLE, bucketCounts, citationLabel, gateDisplayName, localizeItem } from "../lib/review/review-display.ts";
 import { TabNav } from "./TabNav.tsx";
 import { PrimaryAction } from "./ui.tsx";
@@ -285,7 +286,7 @@ export function ReviewBuckets({
                 <li key={s.id}>
                   <span className="font-semibold">{originOf(s)}</span>
                   {s.author_domain ? ` — 작성 도메인 ${s.author_domain}` : ""}
-                  {!s.performed && <span title="Not performed"> — 수행되지 않음: {s.not_performed_reason}</span>}
+                  {!s.performed && <span title="수행되지 않음"> — 수행되지 않음: {s.not_performed_reason ? localizeMessage(s.not_performed_reason) : null}</span>}
                   {!s.current && <span> — 이전 산출물 기준의 결과입니다. 산출물이 바뀌었습니다.</span>}
                 </li>
               ))}

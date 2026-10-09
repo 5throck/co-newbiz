@@ -40,7 +40,11 @@ export const CLOSURE_RECORD_LABEL: Record<string, { label: string; message: stri
 };
 
 export function closureRecordLabel(record: string): string {
-  return CLOSURE_RECORD_LABEL[record]?.label ?? record;
+  const hit = CLOSURE_RECORD_LABEL[record];
+  if (hit) return hit.label;
+  // parameterized keys (e.g. `venture_transition_decision(reduce_or_divest)`) fall back to their base record
+  const base = record.replace(/\(.*\)$/, "");
+  return CLOSURE_RECORD_LABEL[base]?.label ?? record;
 }
 
 /** Known English system messages → Korean. Unknown text passes through unchanged. */
@@ -52,7 +56,12 @@ const MESSAGE_RULES: Array<[RegExp, string]> = [
 
 export function localizeMessage(message: string): string {
   for (const [re, ko] of MESSAGE_RULES) if (re.test(message)) return ko;
-  return localizeRequirement(message);
+  return localizeRequirement(message)
+    // closure.repository.ts의 영어 전제조건 문구 → 한글 (레코드 키는 라벨 맵이 처리)
+    .replace(/The latest S12 transition decision must be '([a-z_]+)'\.?/g, (_m, key) => {
+      const names: Record<string, string> = { graduate_to_core: "코어 사업 전환", reduce_or_divest: "축소·매각", kill_with_learning_captured: "중단 — 학습 내용 회수" };
+      return `최신 S12 전환 결정이 '${names[key] ?? key}'(으)로 기록되어 있어야 합니다.`;
+    });
 }
 
 /** Stage requirement text coming from the process spec: keep the meaning, drop set notation. */

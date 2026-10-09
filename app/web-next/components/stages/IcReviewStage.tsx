@@ -83,6 +83,10 @@ const RAG_META: Record<string, { icon: string; cls: string }> = {
   red: { icon: "✕", cls: "status-red" },
 };
 
+// 데이터 신뢰도 등급(green/amber/red)의 한글 라벨 — 원문 등급은 개발자 세부정보 성격으로 괄호에 병기한다.
+const CAP_LABEL: Record<string, string> = { green: "높음", amber: "중간", red: "낮음" };
+const capLabel = (cap: string) => (CAP_LABEL[cap] ? `${CAP_LABEL[cap]} (${cap})` : cap);
+
 export function IcReviewStage({ projectId }: { projectId: string }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
@@ -274,7 +278,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               </span>
               {pkg.rag.confidence_cap && (
                 <span className="status-chip status-not-started ml-1" title={pkg.rag.confidence_note ?? ""}>
-                  신뢰도 상한 {pkg.rag.confidence_cap}
+                  신뢰도 상한 {capLabel(pkg.rag.confidence_cap)}
                 </span>
               )}
               {pkg.rag.rationale && (
@@ -291,7 +295,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               </span>
               {pkg?.rag.confidence_cap && (
                 <span className="status-chip status-not-started ml-1" title={pkg.rag.confidence_note ?? ""}>
-                  신뢰도 상한 {pkg.rag.confidence_cap}
+                  신뢰도 상한 {capLabel(pkg.rag.confidence_cap)}
                 </span>
               )}
               <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
