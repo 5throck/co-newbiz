@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
 import TargetSelector, { type AnalysisTarget } from "./TargetSelector.tsx";
+import { resolveTargetScope } from "../lib/target-default.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteProject } from "../lib/project-write-access.ts";
 
@@ -35,7 +36,10 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
   const [message, setMessage] = useState<string | null>(null);
   // ADR-0156: per-target selector (read-only financial view per shortlisted target).
   const [targets, setTargets] = useState<AnalysisTarget[]>([]);
-  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
+  const [chosenTarget, setChosenTarget] = useState<string | null>(null);
+  // Default = S8-selected (gate-bound) target, else the first shortlisted; the bound target uses the project-level view.
+  const targetScope = resolveTargetScope(targets, chosenTarget);
+  const selectedTarget = targetScope.scopeId;
 
   const [q, setQ] = useState("");
   const [results, setResults] = useState<CompanyRow[] | null>(null);
@@ -97,10 +101,11 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
           {targets.length > 1 && (
             <section className="market-section sizing-step">
               <h3 className="sizing-step-title">분석 대상</h3>
-              <TargetSelector targets={targets} selected={selectedTarget} onSelect={setSelectedTarget} />
+              <TargetSelector targets={targets} selected={targetScope.activeId} onSelect={setChosenTarget} />
               <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-1">
-                개별 대상 보기는 읽기 전용입니다 — 게이트에 들어가는 대상 회사 연결은 "프로젝트 기준"에서 수행하세요.
+                개별 대상 보기는 읽기 전용입니다 — 게이트에 들어가는 대상 회사 연결은 "게이트 기준" 표시가 붙은 S8 선정 대상에서 수행하세요.
               </p>
+              {targetScope.noGateBasis && <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]" data-testid="no-gate-basis-note">S8 대상 선정 전입니다 — 선정 후 선정 대상이 게이트 기준으로 표시됩니다.</p>}
               {view.target && <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">보기: {view.target.name} (개별 대상, 읽기 전용)</p>}
             </section>
           )}

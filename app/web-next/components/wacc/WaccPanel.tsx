@@ -17,6 +17,7 @@ import { BetaPanel, type PeerRow } from "./BetaPanel.tsx";
 import { DerivationTable } from "./DerivationTable.tsx";
 import { api } from "../../lib/api.ts";
 import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
+import { resolveTargetScope } from "../../lib/target-default.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import {
@@ -176,7 +177,11 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   // ADR-0156: per-target sessions. null = project-level (the fs-gate view);
   // a target id scopes GET/POST/suggestions to that target's own runs.
   const [targets, setTargets] = useState<AnalysisTarget[]>([]);
-  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
+  const [chosenTarget, setChosenTarget] = useState<string | null>(null);
+  // Default = S8-selected (gate-bound) target, else the first shortlisted; the bound target maps to
+  // the project-level scope (no target_id), so the gate figure stays reachable (ADR-0156 §2).
+  const targetScope = resolveTargetScope(targets, chosenTarget);
+  const selectedTarget = targetScope.scopeId;
   const [view, setView] = useState<View | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -466,10 +471,15 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         {targets.length > 1 && (
           <section className="market-section sizing-step" aria-label="분석 대상 선택">
             <h3 className="sizing-step-title">분석 대상</h3>
-            <TargetSelector targets={targets} selected={selectedTarget} onSelect={(id) => { setSelectedTarget(id); }} />
+            <TargetSelector targets={targets} selected={targetScope.activeId} onSelect={setChosenTarget} />
             {selectedTarget && (
               <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-                개별 대상 세션 — 이 값은 fs 게이트 산정(프로젝트 기준)과 별도로 기록되며, 게이트 확정은 "프로젝트 기준"에서만 가능합니다.
+                개별 대상 세션 — 이 값은 fs 게이트 산정과 별도로 기록되며, 게이트 확정은 "게이트 기준" 표시가 붙은 S8 선정 대상에서만 가능합니다.
+              </p>
+            )}
+            {targetScope.noGateBasis && (
+              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]" data-testid="no-gate-basis-note">
+                S8 대상 선정 전입니다 — 대상 선정 후 선정 대상의 기록이 게이트 기준으로 표시됩니다.
               </p>
             )}
           </section>
@@ -647,7 +657,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
               <label className="grid gap-1 text-sm">근거/승인 메모<textarea className="form-input" value={directRationale} onChange={(e) => setDirectRationale(e.target.value)} placeholder="Treasury 확인, IC 가이드라인 등" /></label>
               {selectedTarget ? (
                 <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-                  WACC 적용 주체는 프로젝트 수준 결정(REQ-W4) — "프로젝트 기준" 화면에서만 확정할 수 있습니다.
+                  WACC 적용 주체는 프로젝트 수준 결정(REQ-W4) — "게이트 기준" S8 선정 대상 화면에서만 확정할 수 있습니다.
                 </p>
               ) : (
                 <>

@@ -8,6 +8,8 @@
 
 import Link from "next/link";
 import { DevRef } from "../ui.tsx";
+import TargetSelector from "../TargetSelector.tsx";
+import { KRW_MILLIONS_UNIT, formatKrwMillionsPlain } from "../../lib/format.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
@@ -108,9 +110,8 @@ const SCEN_LABEL: Record<string, string> = { base: "기본(Base)", upside: "상�
 const ENGINE_LABEL: Record<string, string> = { "python-sim-engine": "Python 엔진", "ts-fallback": "TS 대체 엔진", mixed: "혼합" };
 const VARIANT_LABEL: Record<string, string> = { market_forward: "시장 기반", historical: "과거 기반" };
 
-function fmt(n: number): string {
-  return Math.round(n).toLocaleString("ko-KR");
-}
+const fmt = formatKrwMillionsPlain;
+const UnitNote = () => <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT})</span>;
 function pct1(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
@@ -497,9 +498,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             <tr>
               <th scope="col">대상</th>
               <th scope="col" className="num">S7 순위</th>
-              <th scope="col" className="num">Base NPV p05</th>
-              <th scope="col" className="num">Base NPV p50</th>
-              <th scope="col" className="num">IRR</th>
+              <th scope="col" className="num">Base NPV p05<UnitNote /></th>
+              <th scope="col" className="num">Base NPV p50<UnitNote /></th>
+              <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
               <th scope="col" className="num">케이스</th>
               <th scope="col">계산 엔진</th>
               <th scope="col"></th>
@@ -654,19 +655,15 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {/* 시나리오별 이중 관점 비교 — brownfield는 유효 대상 필터의 케이스만 */}
       {tab === "scenarios" && (
       <>
-      {targets.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1 mt-3 mb-1" role="group" aria-label="분석 대상 필터">
-          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mr-1">분석 대상:</span>
-          {targets.map((t) => (
-            <button
-              key={t.targetId}
-              type="button"
-              className={t.targetId === effectiveTargetFilter ? "btn-ghost btn-sm" : "btn-ghost btn-sm"}
-              onClick={() => setTargetFilter(t.targetId)}
-            >
-              {t.companyName}{data?.target_selection?.targetId === t.targetId ? " ✓" : ""}
-            </button>
-          ))}
+      {targets.length > 1 && (
+        <div className="mt-3 mb-1 flex flex-wrap items-center gap-2">
+          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">분석 대상:</span>
+          <TargetSelector
+            targets={targets.map((t) => ({ targetId: t.targetId, name: t.companyName, companyId: t.targetId, isBound: data?.target_selection?.targetId === t.targetId }))}
+            selected={effectiveTargetFilter}
+            onSelect={setTargetFilter}
+            ariaLabel="분석 대상 필터"
+          />
         </div>
       )}
       {SCENARIOS.map((s) => {
@@ -691,11 +688,11 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     <th scope="col">관점</th>
                     <th scope="col">성장률 <span className="text-[color:var(--muted-fg)]">(출처)</span></th>
                     <th scope="col">변동성 sigma <span className="text-[color:var(--muted-fg)]">(출처)</span></th>
-                    <th scope="col" className="num">NPV p05</th>
-                    <th scope="col" className="num">NPV p50</th>
-                    <th scope="col" className="num">NPV p95</th>
-                    <th scope="col" className="num">IRR</th>
-                    <th scope="col" className="num">p50 차이</th>
+                    <th scope="col" className="num">NPV p05<UnitNote /></th>
+                    <th scope="col" className="num">NPV p50<UnitNote /></th>
+                    <th scope="col" className="num">NPV p95<UnitNote /></th>
+                    <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
+                    <th scope="col" className="num">p50 차이<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT}, 시장 기반 대비 %)</span></th>
                     <th scope="col"></th>
                   </tr>
                 </thead>

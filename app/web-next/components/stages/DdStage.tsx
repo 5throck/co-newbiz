@@ -287,6 +287,31 @@ export function DdStage({ projectId }: { projectId: string }) {
       <GateDecisionJump gate="dd" />
       <ReviewBuckets entityType="project" entityId={projectId} gates={["dd"]} artifacts={stageArtifactTabs("S9")} />
       <StageFrame stageId="S9" heading="S9 실사·검증 — DD 체크리스트 판정">
+        {data && (
+          <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="dd-subject-header">
+            {targets.length === 0 ? (
+              <p className="text-[length:var(--fs-body)]">
+                <strong>실사 대상:</strong> 지정된 대상 회사가 없습니다 — Green Field이거나 Short List 대상이 없는 프로젝트라 프로젝트 기준으로 실사합니다.
+              </p>
+            ) : !selectedTarget ? (
+              <p className="text-[length:var(--fs-body)]">
+                <strong>실사 대상:</strong> 아직 선정되지 않음 — S8에서 대상을 선정하면 선정 대상이 여기에 표시되고 게이트 기준이 됩니다.
+              </p>
+            ) : (
+              <>
+                <p className="text-[length:var(--fs-body)]">
+                  <strong>실사 대상:</strong> <strong data-testid="dd-subject-name">{(viewSummary ?? selectedTarget).name}</strong>
+                </p>
+                {viewSummary && viewSummary.target_id !== selectedTarget.target_id ? (
+                  <span className="status-chip status-amber">비교 근거</span>
+                ) : (
+                  <span className="status-chip status-green">✓ S8 선정 대상 · 게이트 기준</span>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           적용 체크리스트의 모든 항목이 판정되고 필수 미충족이 0건이어야 S9이 완료됩니다 (flow.spec v2.0.0).
           {data && (
@@ -310,7 +335,6 @@ export function DdStage({ projectId }: { projectId: string }) {
               targets={selectorTargets}
               selected={viewTarget ?? selectedTarget.target_id}
               onSelect={chooseTarget}
-              projectLabel={null}
               boundLabel="선정 대상"
               ariaLabel="DD 대상 선택"
             />
@@ -409,10 +433,10 @@ export function DdStage({ projectId }: { projectId: string }) {
               <caption className="sr-only">{domain.title} 체크리스트 판정</caption>
               <thead>
                 <tr>
-                  <th scope="col">항목</th>
-                  <th scope="col">필수</th>
-                  <th scope="col">판정</th>
-                  {canAct && <th scope="col">판정 기록</th>}
+                  <th scope="col" className="dd-col-item">항목</th>
+                  <th scope="col" className="dd-col-req">필수</th>
+                  <th scope="col" className="dd-col-judge">판정</th>
+                  {canAct && <th scope="col" className="dd-col-act">판정 기록</th>}
                 </tr>
               </thead>
               <tbody>

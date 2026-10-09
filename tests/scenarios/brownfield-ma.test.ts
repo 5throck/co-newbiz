@@ -87,11 +87,14 @@ describe("brownfield M&A S1 to S12", () => {
     seedSecondTarget(app);
     await visit(s.page, app, `/projects/${P}/wacc`);
     await see(s.page, "분석 대상");
+    // No project-level chip; the S8-selected (gate basis) target is the pressed default.
+    await expect(s.page.getByRole("button", { name: "프로젝트 기준" }).count()).resolves.toBe(0);
+    await expect(s.page.getByRole("button", { name: /게이트 기준/ }).getAttribute("aria-pressed")).resolves.toBe("true");
     const chip = s.page.getByRole("button", { name: /레인보우로보틱스 E2E/ });
     await chip.click();
     await see(s.page, "개별 대상 세션"); // per-target scope note — the GET refetches with target_id
     const scoped = s.page.waitForResponse((r) => r.request().method() === "GET" && /target_id=/.test(r.url()));
-    await s.page.getByRole("button", { name: "프로젝트 기준" }).click();
+    await s.page.getByRole("button", { name: /게이트 기준/ }).click();
     await scoped;
     await seeNot(s.page, "개별 대상 세션");
     axe.push(await axeScan(s.page, "wacc target selector"));
@@ -104,8 +107,8 @@ describe("brownfield M&A S1 to S12", () => {
     await see(s.page, "레인보우로보틱스 E2E");
     await see(s.page, "매출액 (최근 연도)"); // metrics card rendered from fact_financial
     await see(s.page, "개별 대상 보기는 읽기 전용입니다");
-    // Back to the project-level binding (게이트 기준).
-    await s.page.getByRole("button", { name: "프로젝트 기준" }).click();
+    // Back to the gate-basis target (project-level binding).
+    await s.page.getByRole("button", { name: /게이트 기준/ }).click();
     await see(s.page, "S1-S12 데모 대상회사");
     removeSecondTarget(app);
   }, 60_000);
