@@ -97,7 +97,7 @@ export function OpportunityDetail() {
     try {
       const res = await api.post<{ factors: OppFactors; failed?: boolean; error?: string }>(`/api/opportunities/${encodeURIComponent(id)}/factors`, {});
       setFactors(res.data.factors);
-      if (res.data.failed) setError(res.data.error ?? "LLM 호출 실패 — 이전 요인을 유지합니다.");
+      if (res.data.failed) setError(res.data.error ?? "AI 호출 실패 — 이전 요인을 유지합니다.");
     } catch (err) { setError(err instanceof Error ? err.message : "요인 자동 도출 실패"); }
     finally { setFactorBusy(false); }
   }
@@ -151,7 +151,7 @@ export function OpportunityDetail() {
     try {
       const res = await api.post<SketchView & { version_no?: number; failed?: boolean; error?: string }>(`/api/opportunities/${encodeURIComponent(id)}/sketch`, force ? { force: true } : {});
       setSketchView({ sketch: res.data.sketch, source: res.data.source, created_at: res.data.created_at, versions: [] });
-      if (res.data.failed) setError(res.data.error ?? "LLM 호출 실패 — 이전 스케치를 유지합니다.");
+      if (res.data.failed) setError(res.data.error ?? "AI 호출 실패 — 이전 스케치를 유지합니다.");
       // 버전 목록 재조회 — 새 버전이 이력에 반영되도록
       const r = await api.get<SketchView>(`/api/opportunities/${encodeURIComponent(id)}/sketch`);
       setSketchView(r.data);
@@ -244,7 +244,7 @@ export function OpportunityDetail() {
               className="sizing-new-input sizing-new-input-sm" style={{ width: "7.5rem" }} />
             <button type="button" className="btn-ghost btn-sm" onClick={() => void evaluateAttractiveness()}>매력도 평가</button>
             <button type="button" className="btn-ghost btn-sm" disabled={attractBusy} onClick={() => void generateAttractDraft()}>
-              {attractBusy ? "초안 생성 중..." : "LLM 초안"}
+              {attractBusy ? "초안 생성 중..." : "AI 초안"}
             </button>
             {attractReco && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{attractReco.recommendation.rationale_draft.slice(0, 160) || "초안 없음"}</span>}
           </div>
@@ -378,7 +378,7 @@ export function OpportunityDetail() {
               </p>
             )}
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-              {viewingVersion === null && `현재 버전 · ${sketchView.source === "llm" ? "LLM" : "결정론 합성"} · ${sketchView.created_at?.slice(0, 10) ?? ""}`}
+              {viewingVersion === null && `현재 버전 · ${sketchView.source === "llm" ? "AI" : "결정론 합성"} · ${sketchView.created_at?.slice(0, 10) ?? ""}`}
             </p>
             <SketchCanvas sketch={(viewingVersion !== null ? versionSketch : sketchView.sketch) as unknown as Record<string, unknown>} />
           </>
@@ -395,7 +395,7 @@ export function OpportunityDetail() {
                 {sketchView!.versions.map((v) => (
                   <tr key={v.version_no}>
                     <td className="tabular-nums">v{v.version_no}</td>
-                    <td>{v.source === "llm" ? "LLM" : "결정론 합성"}</td>
+                    <td>{v.source === "llm" ? "AI" : "결정론 합성"}</td>
                     <td className="tabular-nums">{v.created_at.slice(0, 10)}</td>
                     <td><button type="button" className="btn-ghost btn-sm" onClick={() => void openVersion(v.version_no)}>열람</button></td>
                   </tr>

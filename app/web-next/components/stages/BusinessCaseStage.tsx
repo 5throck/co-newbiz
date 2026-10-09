@@ -209,11 +209,22 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
   useEffect(() => { load(); }, [load]);
 
-  async function generate() {
+  // regenerate=true — "대상별 재생성": bypasses the already-run guard and
+  // starts a NEW generation run (per-target models, ADR-0143). The ordinary
+  // path keeps the idempotency guard and surfaces alreadyRun instead of
+  // silently doing nothing.
+  async function generate(regenerate = false) {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const r = await api.post<{ runId: string }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/generate`);
+      const r = await api.post<{ runId: string; alreadyRun?: boolean }>(
+        `/api/projects/${encodeURIComponent(projectId)}/business-case/generate`,
+        regenerate ? { regenerate: true } : {},
+      );
+      if (r.data.alreadyRun) {
+        setError("이미 생성된 실행이 있습니다 — 새로 생성하려면 '대상별 재생성'을 사용하세요.");
+        return;
+      }
       const status = await api.get<{ runId: string; status: string; activities: ActivityRow[] }>(
         `/api/projects/${encodeURIComponent(projectId)}/business-case/generate/${encodeURIComponent(r.data.runId)}`,
       );
@@ -342,7 +353,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             기존 모델은 보존되며 자동 삭제되지 않습니다.
           </p>
           {canAct && (
-            <button type="button" className="btn-premium btn-sm" disabled={busy} onClick={() => void generate()}>
+            <button type="button" className="btn-premium btn-sm" disabled={busy} onClick={() => void generate(true)}>
               {busy ? "재생성 중..." : "대상별 재생성"}
             </button>
           )}
@@ -354,8 +365,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {canAct && tab !== "decision" && (
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void generate()}>
-            {busy ? "계산 중..." : "밸류에이션 재계산"}
+          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void generate(true)}>
+            {busy ? "계산 중..." : "밸류에이션 재계산 (재생성)"}
           </button>
           <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             {busy ? "계산 중입니다 - 완료되면 결과가 갱신됩니다." : "결정 기록은 위쪽 '결정 기록 (사람)' 또는 '결정' 탭에서 합니다."}
@@ -536,8 +547,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {/* ── LLM 채택 권고 (결정 지원) — ADR-0118: 제안은 LLM, 채택은 사람 ── */}
       {canAct && (
-        <section className="market-section sizing-step mt-3" aria-label="LLM 채택 권고">
-          <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 채택 권고 (제안)</h3>
+        <section className="market-section sizing-step mt-3" aria-label="AI 추천 채택 권고">
+          <h3 className="sizing-step-title text-[0.9rem]">🤖 AI 추천 채택 권고</h3>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
             원칙 (경계 #2): 채택은 사람이 합니다 — 이 화면의 케이스들과 킬 크라이테리아 상태에서 만든 제안이며, ★ 권고안(결정론)와 별개 제안입니다.
           </p>

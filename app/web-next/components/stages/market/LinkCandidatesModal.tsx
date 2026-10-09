@@ -52,7 +52,7 @@ export function LinkCandidatesModal({ ctx }: { ctx: MarketAnalysisStageState }) 
                             {c.industry_id ? "분석 가능" : "미등록 — 자동 등록"}
                           </span>
                           {c.locked && <span className="control-chip status-green" title="이미 등록된 연계 산업 — 재분석 시 자동 반영, 해제 불가">등록됨 · 고정</span>}
-                          {c.source === "proxy" && <span className="status-chip status-not-started" title="LLM 1차 제안 — 검증 전 가설입니다.">제안 (검증 전)</span>}
+                          {c.source === "proxy" && <span className="status-chip status-not-started" title="AI 1차 추천 — 검증 전 가설입니다.">제안 (검증 전)</span>}
                           {c.source === "link" && <span className="status-chip status-green">연계 근거</span>}
                           {c.source === "analysis" && <span className="status-chip status-not-started">과거 분석</span>}
                           {c.note && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{c.note}</span>}

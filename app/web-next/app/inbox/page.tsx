@@ -143,7 +143,7 @@ export default function InboxPage() {
               </dl>
               {selected.aiDraft && (
                 <p className="inbox-ai-draft">
-                  <strong>AI 제안(초안)</strong> — 제안일 뿐 결정이 아닙니다. {selected.aiDraft}
+                  <strong>AI 추천(초안)</strong> — 제안일 뿐 결정이 아닙니다. {selected.aiDraft}
                 </p>
               )}
               {showReview ? (

@@ -59,6 +59,50 @@ describe("brownfield M&A S1 to S12", () => {
     }
   }, 60_000);
 
+  test("S8 대상별 재생성 bypasses the already-run guard and creates per-target models (R2-F)", async () => {
+    // Legacy NULL-target model + a DONE s8_business_case_generation run: the
+    // idempotency guard used to return that run and the regeneration button
+    // was a silent no-op. regenerate:true must start a NEW run whose models
+    // carry variant=market_forward and a non-null target_id.
+    app.writeDb((d) => {
+      d.run(
+        "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, inputs_json) VALUES (?,?,?,?,?,?,?,?)",
+        ["bc-legacy-e2e-rg", P, "valuation", "ADR-0143 이전 레거시 모델", 5, "analyst", new Date().toISOString(), "{}"],
+      );
+      d.run(
+        "INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        ["e2e-s8-gen-done", "project", P, P, "e2e", "s8_business_case_generation", "done", "web", "analyst", new Date().toISOString(), new Date().toISOString(), "{}"],
+      );
+    });
+    try {
+      await visit(s.page, app, `/projects/${P}/business-case`);
+      await see(s.page, "대상별 재생성");
+      const done = s.page.waitForResponse((r) => r.request().method() === "POST" && /business-case\/generate$/.test(r.url()));
+      await s.page.locator("button", { hasText: "대상별 재생성" }).first().click();
+      const res = await done;
+      expect(res.status()).toBe(201);
+      // New run recorded, not the pre-existing done run.
+      const run = app.readDb((d) =>
+        d.query("SELECT id FROM process_run WHERE project_id=? AND stage='s8_business_case_generation' AND id != 'e2e-s8-gen-done' ORDER BY started_at DESC LIMIT 1").get(P),
+      ) as { id: string } | undefined;
+      expect(run?.id).toBeTruthy();
+      // New per-target market_forward models exist (seeded demo model + new ones).
+      const perTarget = app.readDb((d) =>
+        d.query("SELECT COUNT(*) c FROM business_case_model WHERE project_id=? AND target_id IS NOT NULL AND variant='market_forward'").get(P),
+      ) as { c: number };
+      expect(perTarget.c).toBeGreaterThanOrEqual(2);
+      // The UI refetches and shows the refreshed per-target case list.
+      await see(s.page, "시장 기반");
+    } finally {
+      app.writeDb((d) => {
+        d.run("DELETE FROM business_case_model WHERE id = 'bc-legacy-e2e-rg'");
+        d.run("DELETE FROM agent_run WHERE process_run_id IN (SELECT id FROM process_run WHERE project_id=? AND stage='s8_business_case_generation')", [P]);
+        d.run("DELETE FROM activity_run WHERE process_run_id IN (SELECT id FROM process_run WHERE project_id=? AND stage='s8_business_case_generation')", [P]);
+        d.run("DELETE FROM process_run WHERE project_id=? AND stage='s8_business_case_generation'", [P]);
+      });
+    }
+  }, 180_000);
+
   test("S8 FS gate GO", async () => {
     await recordGate(s.page, app, `/projects/${P}/business-case`, null, "go", "채택 사례의 NPV/BEP가 투자 기준을 충족함");
   }, 60_000);

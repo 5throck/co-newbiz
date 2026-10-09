@@ -19,7 +19,7 @@ import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 
 // S11 투자심사·실행 — IC 패키지 열람 + Entity/Group IC 진행 기록 + 설립 실행
-// 5단계 진행 화면 (ADR-0100 §3). 경계 #2: RAG 등급은 'AI 제안'으로만 표시되고
+// 5단계 진행 화면 (ADR-0100 §3). 경계 #2: RAG 등급은 'AI 추천'으로만 표시되고
 // (승인 도장 없음), 진행 GO/HOLD/KILL 기록과 설립 단계 완료 기록은 사람의
 // 행위다. 이 화면은 패키지를 읽어오는 GET만 자동화하고, 쓰기는 명시적 P4
 // 확인(useConfirm)을 거친 analyst+ 행위다.
@@ -274,7 +274,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                 {RAG_META[pkg.rag.grade]?.icon ?? "?"} {pkg.rag.grade.toUpperCase()}
               </span>
               <span className="status-chip status-amber ml-2" title="경계 #2 — 이 등급은 AI 분석이 제안한 값이며, IC 승인 기록이 아닙니다">
-                ⚠ AI 제안 (승인 아님)
+                ⚠ AI 추천 (승인 아님)
               </span>
               {pkg.rag.confidence_cap && (
                 <span className="status-chip status-not-started ml-1" title={pkg.rag.confidence_note ?? ""}>
@@ -291,7 +291,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             <p className="text-[length:var(--fs-caption)]">
               <span className="status-chip status-not-started">○ 미산정 (not graded)</span>
               <span className="status-chip status-amber ml-2" title="경계 #2 — 이 평가는 AI 분석이 제안한 값이며, IC 승인 기록이 아닙니다">
-                ⚠ AI 제안 (승인 아님)
+                ⚠ AI 추천 (승인 아님)
               </span>
               {pkg?.rag.confidence_cap && (
                 <span className="status-chip status-not-started ml-1" title={pkg.rag.confidence_note ?? ""}>

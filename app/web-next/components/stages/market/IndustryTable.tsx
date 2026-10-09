@@ -149,12 +149,12 @@ export function IndustryTable({ ctx }: { ctx: MarketAnalysisStageState }) {
                       ) : stale ? (
                         <span className="status-chip status-amber" title="분석일이 90일을 지났습니다 — 재분석로 최신화하세요.">업데이트 권장 (v{a?.latest_version ?? 1})</span>
                       ) : a?.status === "completed" && a.data_quality === "all_synthesis" ? (
-                        // ADR-0131 후속 — 최신 완료 버전의 모든 단계가 LLM 미구성/실패로
+                        // ADR-0131 후속 — 최신 완료 버전의 모든 단계가 AI 미설정/실패로
                         // 결정론 합성값으로 채워졌다. 수치를 전혀 신뢰할 수 없으므로
                         // "분석 완료"와 시각적으로 구별되는 경고 상태로 표시한다.
-                        <span className="status-chip status-red" title="이 버전은 전체 단계가 LLM 미구성/실패로 합성(더미) 값입니다 — 수치를 신뢰하지 말고 재분석하세요.">분석 완료 (v{a.latest_version ?? 1}) — 합성 데이터</span>
+                        <span className="status-chip status-red" title="이 버전은 전체 단계가 AI 미설정/실패로 합성(더미) 값입니다 — 수치를 신뢰하지 말고 재분석하세요.">분석 완료 (v{a.latest_version ?? 1}) — 합성 데이터</span>
                       ) : a?.status === "completed" && a.data_quality === "partial_synthesis" ? (
-                        <span className="status-chip status-amber" title="이 버전은 일부 단계가 LLM 미구성/실패로 합성(더미) 값입니다 — 리포트에서 어느 단계인지 확인 후 필요시 재분석하세요.">분석 완료 (v{a.latest_version ?? 1}) — 일부 합성</span>
+                        <span className="status-chip status-amber" title="이 버전은 일부 단계가 AI 미설정/실패로 합성(더미) 값입니다 — 리포트에서 어느 단계인지 확인 후 필요시 재분석하세요.">분석 완료 (v{a.latest_version ?? 1}) — 일부 합성</span>
                       ) : a?.status === "completed" ? (
                         <span className="status-chip status-green">분석 완료 (v{a.latest_version ?? 1})</span>
                       ) : a?.status === "failed" && a.error_message && (a.error_message.startsWith("선행 분석 실패") || a.error_message.startsWith("루트 재분석") || a.error_message.startsWith("선행 분석 장기")) ? (

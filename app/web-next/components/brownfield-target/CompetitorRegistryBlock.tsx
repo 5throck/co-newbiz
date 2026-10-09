@@ -52,18 +52,18 @@ export function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <h4 className="text-[0.88rem] font-semibold m-0">확정 경쟁사</h4>
         <span className="status-chip status-green">{confirmed.length}건</span>
-        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">AI 제안 수용 또는 수작업 등록으로만 생긴다</span>
+        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">AI 추천 수용 또는 수작업 등록으로만 생긴다</span>
         <DevRef refs="ADR-0142" />
       </div>
       {error && <p role="alert" className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{error}</p>}
       {confirmed.length === 0 ? (
-        <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아래 AI 제안을 수용하거나 직접 등록하세요.</p>
+        <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아래 AI 추천을 수용하거나 직접 등록하세요.</p>
       ) : (
         <ul className="sizing-note-list mb-2">
           {confirmed.map((c) => (
             <li key={c.id}>
               <b>{c.name}</b> — {c.note || "—"}{" "}
-              <span className={`status-chip ml-1 ${c.discovery_source === "ai_proposal" ? "status-in-progress" : "status-not-started"}`}>{c.discovery_source === "ai_proposal" ? "AI 제안 수용" : "수작업"}</span>
+              <span className={`status-chip ml-1 ${c.discovery_source === "ai_proposal" ? "status-in-progress" : "status-not-started"}`}>{c.discovery_source === "ai_proposal" ? "AI 추천 수용" : "수작업"}</span>
               {excluding?.id === c.id ? (
                 <span className="actions-row ml-2">
                   <input value={excluding.reason} onChange={(e) => setExcluding({ ...excluding, reason: e.target.value })} className="sizing-new-input" style={{ width: "10rem" }} placeholder="제외 사유 *" aria-label="제외 사유" />
@@ -91,7 +91,7 @@ export function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
       )}
       {openProposals.length > 0 && (
         <div className="mb-2">
-          <p className="text-[length:var(--fs-caption)] font-semibold mb-1">AI 제안 (미확정) {openProposals.length}건</p>
+          <p className="text-[length:var(--fs-caption)] font-semibold mb-1">AI 추천 (미확정) {openProposals.length}건</p>
           <ul className="sizing-note-list mb-0">
             {openProposals.map((p) => (
               <li key={p.name}>

@@ -40,7 +40,7 @@ export function SizingOverviewTab({ ctx }: { ctx: SizingReportState }) {
             </div>
           </div>
           <ul className="sizing-note-list mt-3">
-            <li>분석 방법: systematic-market-sizing v1.1 — {matrix.provenance === "frozen-research" ? "연구문서 기반 수동 분석(분석가 확정)" : "8단계 파이프라인 산출(LLM 추정 포함, 분석가 확정 전)"}</li>
+            <li>분석 방법: systematic-market-sizing v1.1 — {matrix.provenance === "frozen-research" ? "연구문서 기반 수동 분석(분석가 확정)" : "8단계 파이프라인 산출(AI 추정 포함, 분석가 확정 전)"}</li>
             <li>세그먼트: {segmentsOf(matrix).map((x) => x.label).join(" / ")} — 권역 {matrix.regions.length}개</li>
             <li>시나리오: 비관/기본/낙관 CAGR 밴드 — 세부는 <strong>성장성</strong> 탭</li>
             <li>경쟁 구조 — 세부는 <strong>경쟁 구조</strong> 탭 · 기회/위험 요인 — <strong>정성 분석</strong> 탭</li>

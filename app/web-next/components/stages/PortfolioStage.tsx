@@ -301,8 +301,8 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
 
         {/* ── LLM 모니터링 브리프 (결정 지원) — ADR-0118: 초안은 LLM, 전환 결정은 사람 ── */}
         {canAct && (
-          <section className="market-section sizing-step mt-3" aria-label="LLM 모니터링 브리프">
-            <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 모니터링 브리프 (초안)</h3>
+          <section className="market-section sizing-step mt-3" aria-label="AI 모니터링 브리프">
+            <h3 className="sizing-step-title text-[0.9rem]">🤖 AI 모니터링 브리프 (초안)</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 전환 결정은 사람(venture-portfolio-IC)이 기록합니다 — 스코어카드·시너지 인증·핵심인재·전환 이력에서 만든 <b>초안</b>입니다.
             </p>

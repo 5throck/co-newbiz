@@ -104,7 +104,7 @@ export function SynergyResult(props0: {
                 <summary className="cursor-pointer text-[length:var(--fs-body)]">파이프라인 단계별 노트 ({p.stepSummaries.length}단계)</summary>
                 <ol className="mt-3 space-y-2 text-[length:var(--fs-body)]">
                   {p.stepSummaries.map((s) => (
-                    <li key={s.step}><strong>{s.step}. {s.title}</strong> <span className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"}`}>{s.source === "llm" ? "LLM" : "시스템"}</span><br />{s.summary}</li>
+                    <li key={s.step}><strong>{s.step}. {s.title}</strong> <span className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"}`}>{s.source === "llm" ? "AI" : "시스템"}</span><br />{s.summary}</li>
                   ))}
                 </ol>
               </details>

@@ -97,7 +97,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   const formRef = useRef<HTMLDetailsElement | null>(null);
   const [newHyp, setNewHyp] = useState({ vehicle: "", asset_or_stock: "", stake_type: "", instrument_mix: "", tax_structure_note: "", liability_isolation_note: "", financing_leverage_note: "", exit_structure_note: "", rationale: "" });
   const [newEntry, setNewEntry] = useState<{ kind: "source" | "use"; name: string; amount_krw_m: string; note: string }>({ kind: "source", name: "", amount_krw_m: "", note: "" });
-  // ADR-0118 — S10 검토/안건구조 LLM 추천(제안). 가설 등록은 사람의 행위다.
+  // ADR-0118 — S10 검토/안건구조 AI 추천(제안). 가설 등록은 사람의 행위다.
   interface DealStructureReco {
     source: "llm" | "synthesis";
     provider: string | null;
@@ -228,23 +228,23 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
           active={tab}
           onSelect={setTab}
           tabs={[
-            ...(canAct ? [{ key: "reco", label: "LLM 추천" }] : []),
+            ...(canAct ? [{ key: "reco", label: "AI 추천" }] : []),
             { key: "hypotheses", label: "투자구조 가설", count: data?.hypotheses.length },
             { key: "financing", label: "자금조달 계획" },
           ]}
         />
 
-        {/* ── LLM 검토/안건구조 추천 (결정 지원) — ADR-0118: 제안은 LLM, 가설 등록은 사람 ── */}
+        {/* ── AI 추천 검토/안건구조 (결정 지원) — ADR-0118: 제안은 LLM, 가설 등록은 사람 ── */}
         {tab === "reco" && canAct && (
-          <section className="market-section sizing-step mb-3" aria-label="LLM 검토/안건구조 추천">
-            <h3 className="sizing-step-title text-[0.9rem]">🤖 LLM 검토/안건구조 추천 (제안)</h3>
+          <section className="market-section sizing-step mb-3" aria-label="AI 추천 검토/안건구조">
+            <h3 className="sizing-step-title text-[0.9rem]">🤖 AI 추천 검토/안건구조 (제안)</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 가설 등록·4축 확정은 사람이 합니다 — S8 채택 BC·S9 발견사항·WACC·현재 상태에서 만든 제안입니다.
             </p>
             {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
             {!reco && !recoLoading && !recoError && (
               <div className="flex flex-wrap items-center gap-2 mb-0">
-                <button type="button" className="btn-ghost" onClick={() => void generateReco()}>▶ LLM 추천 생성</button>
+                <button type="button" className="btn-ghost" onClick={() => void generateReco()}>▶ AI 추천 생성</button>
                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">비히클·지분·수단과 4축 노트·구조 근거 초안을 작성해 가설 등록을 돕습니다.</span>
               </div>
             )}
@@ -253,7 +253,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
               <>
                 <p className="mb-1 flex flex-wrap items-center gap-1">
                   <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
-                    {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                    {reco.source === "llm" ? `AI 추천${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
                   </span>
                   {reco.recommendation.vehicle && <span className="status-chip status-amber">{VEHICLE_LABEL[reco.recommendation.vehicle] ?? reco.recommendation.vehicle}</span>}
                   {reco.recommendation.stake_type && <span className="status-chip status-not-started">지분: {STAKE_LABEL[reco.recommendation.stake_type] ?? reco.recommendation.stake_type}</span>}
@@ -279,7 +279,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 <button
                   type="button"
                   className="btn-ghost btn-sm"
-                  onClick={() => confirm("LLM 추천을 가설 폼에 반영할까요?", applyReco, {
+                  onClick={() => confirm("AI 추천을 가설 폼에 반영할까요?", applyReco, {
                     body: "'새 투자구조 가설 기록' 폼에 초안을 채웁니다 — 검토·수정 후 사람이 등록합니다.",
                     confirmLabel: "반영",
                   })}

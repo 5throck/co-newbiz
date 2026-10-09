@@ -289,7 +289,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           {/* ── LLM 투자비 항목 추천 — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
           <div className="sizing-grade-card mb-3">
             <h4 className="text-[length:var(--fs-caption)] mb-2">
-              투자비 항목 추천 <span className="status-chip status-amber">제안 · LLM</span>
+              투자비 항목 추천 <span className="status-chip status-amber">제안 · AI</span>
             </h4>
             <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               진출전략·필요 역량 해소 방식을 근거로 검토할 만한 인건비/운영비/설비투자/수익 항목명을 제안합니다.

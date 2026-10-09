@@ -281,11 +281,11 @@ export default function ProposalConfirmPage() {
 
           {view?.rag && (
             <section aria-labelledby="rag-heading">
-              <h2 id="rag-heading">AI 제안 RAG 등급</h2>
+              <h2 id="rag-heading">AI 추천 RAG 등급</h2>
               {view.rag.status === "graded" && view.rag.overall ? (
                 <p>
                   <span className={`status-chip ${RAG_CLASS[view.rag.overall.grade]}`}>{RAG_TEXT[view.rag.overall.grade]}</span>{" "}
-                  {view.rag.overall.rationale} (AI 제안이며 승인이 아닙니다. 데이터 신뢰도가 등급 상한을 정합니다.)
+                  {view.rag.overall.rationale} (AI 추천이며 승인이 아닙니다. 데이터 신뢰도가 등급 상한을 정합니다.)
                 </p>
               ) : (
                 <p>아직 종합 등급이 산출되지 않았습니다 (등급 없음).</p>
