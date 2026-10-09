@@ -1065,7 +1065,7 @@ export function recommendedFromDb(projectId: string): Scenario | null {
     .query(
       `SELECT v.scenario, v.npv_krw_m FROM valuation_simulation v
        JOIN business_case_model m ON m.id = v.model_id
-       WHERE v.project_id = ? AND v.percentile = 'p05' AND m.target_id IS NULL
+       WHERE v.project_id = ? AND v.percentile = 'p05' AND m.target_id IS NULL AND m.archived_at IS NULL
          AND COALESCE(m.variant, 'market_forward') = 'market_forward'`,
     )
     .all(projectId) as Array<{ scenario: string; npv_krw_m: number }>;
@@ -1137,7 +1137,7 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
   );
   const counts = new Map(
     (db
-      .query("SELECT target_id, COUNT(*) AS n FROM business_case_model WHERE project_id = ? AND target_id IS NOT NULL GROUP BY target_id")
+      .query("SELECT target_id, COUNT(*) AS n FROM business_case_model WHERE project_id = ? AND target_id IS NOT NULL AND archived_at IS NULL GROUP BY target_id")
       .all(projectId) as Array<{ target_id: string; n: number }>).map((r) => [r.target_id, r.n]),
   );
   // Latest gate-primary model per target that carries a BASE-scenario
@@ -1148,7 +1148,7 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
   for (const m of db
     .query(
       `SELECT m.id, m.target_id FROM business_case_model m
-       WHERE m.project_id = ? AND m.target_id IS NOT NULL AND COALESCE(m.variant, 'market_forward') = 'market_forward'
+       WHERE m.project_id = ? AND m.archived_at IS NULL AND m.target_id IS NOT NULL AND COALESCE(m.variant, 'market_forward') = 'market_forward'
          AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario = 'base')
        ORDER BY m.created_at DESC, m.id DESC`,
     )

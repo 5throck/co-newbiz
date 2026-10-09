@@ -454,7 +454,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
         const model = db
           .query(
             `SELECT m.id, m.inputs_json FROM business_case_model m
-             WHERE m.project_id = ? AND m.target_id = ? AND COALESCE(m.variant, 'market_forward') = 'market_forward'
+             WHERE m.project_id = ? AND m.archived_at IS NULL AND m.target_id = ? AND COALESCE(m.variant, 'market_forward') = 'market_forward'
                AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario = 'base' AND v.percentile = 'p50')
              ORDER BY m.created_at DESC, m.id DESC LIMIT 1`,
           )
@@ -505,7 +505,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     const model = db
       .query(
         `SELECT id, kind, inputs_json FROM business_case_model
-         WHERE project_id = ? AND COALESCE(variant, 'market_forward') = 'market_forward'
+         WHERE project_id = ? AND archived_at IS NULL AND COALESCE(variant, 'market_forward') = 'market_forward'
          ORDER BY created_at DESC LIMIT 1`,
       )
       .get(project.id) as { id: string; kind: string; inputs_json: string | null } | undefined;

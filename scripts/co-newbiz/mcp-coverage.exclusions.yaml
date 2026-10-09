@@ -58,6 +58,10 @@ exclusions:
     kind: route
     route: "POST /api/projects/{}/business-case/adopt"
     reason: Case adoption executes from the confirm page (propose_case_adoption).
+  - id: legacy-model-cleanup
+    kind: route
+    route: "POST /api/projects/{}/business-case/legacy-cleanup"
+    reason: Legacy model cleanup (delete or archive pre-ADR-0143 models) is a human-only click (ADR-0158).
   - id: target-selection
     kind: route
     route: "POST /api/projects/{}/target-selection"

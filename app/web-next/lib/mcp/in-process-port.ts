@@ -139,6 +139,7 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   { method: "POST", pattern: "/api/projects/:id/gate-decisions" },
   { method: "POST", pattern: "/api/opportunities/:id/route-decision" },
   { method: "POST", pattern: "/api/projects/:id/business-case/adopt" },
+  { method: "POST", pattern: "/api/projects/:id/business-case/legacy-cleanup" },
   { method: "POST", pattern: "/api/projects/:id/target-selection" },
   { method: "POST", pattern: "/api/projects/:id/transition-decision" },
   { method: "POST", pattern: "/api/projects/:id/charter/confirm" },

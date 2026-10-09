@@ -78,8 +78,17 @@ interface TargetComparisonRow {
   recommended: boolean;
   engine: "python-sim-engine" | "ts-fallback" | "mixed" | null;
 }
+interface LegacyModelRow {
+  id: string;
+  name: string;
+  scenario: string | null;
+  variant: "market_forward" | "historical";
+  created_at: string;
+  referenced: boolean;
+}
 interface CasesResponse {
   cases: CaseView[];
+  legacy_models?: LegacyModelRow[];
   recommended_scenario: string | null;
   adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null;
   target_selection: { targetId: string; rationale: string; selectedBy: string; selectedAt: string } | null;
@@ -276,9 +285,11 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     }
   }
 
-  function remove(modelId: string) {
+  function remove(c: CaseView) {
+    const modelId = c.id;
+    const targetLabel = c.target_name ?? "대상 미지정";
     confirm(
-      "Business Case 삭제",
+      `Business Case 삭제 — 대상: ${targetLabel}`,
       () => {
         void (async () => {
           setBusy(true);
@@ -292,7 +303,30 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           }
         })();
       },
-      { body: "라인·시뮬레이션 행을 포함해 삭제합니다.", confirmLabel: "삭제" },
+      { body: `대상: ${targetLabel} · ${c.scenario ? `${SCEN_LABEL[c.scenario] ?? c.scenario} · ` : ""}${VARIANT_LABEL[c.variant] ?? c.variant}. 선택한 대상의 모델이 맞는지 확인하세요. 라인·시뮬레이션 행을 포함해 삭제합니다.`, confirmLabel: "삭제" },
+    );
+  }
+
+  // ADR-0158 — 예전(대상 미지정) 모델 정리: 미참조는 삭제, 참조된 모델(채택·게이트 근거)은 보관.
+  function cleanupLegacy(models: LegacyModelRow[], all: boolean) {
+    const toArchive = models.filter((m) => m.referenced).length;
+    const toDelete = models.length - toArchive;
+    confirm(
+      all ? `예전 모델 ${models.length}건 정리` : `예전 모델 정리 — ${models[0]?.name ?? ""}`,
+      () => {
+        void (async () => {
+          setBusy(true); setError(null);
+          try {
+            await api.post(`/api/projects/${encodeURIComponent(projectId)}/business-case/legacy-cleanup`, { model_ids: models.map((m) => m.id) });
+            load();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "예전 모델 정리 실패");
+          } finally {
+            setBusy(false);
+          }
+        })();
+      },
+      { body: `미참조 ${toDelete}건은 삭제(감사 기록 포함), 채택·게이트 근거로 참조된 ${toArchive}건은 삭제하지 않고 보관합니다. 대상이 지정된 모델은 건드리지 않습니다.`, confirmLabel: "정리" },
     );
   }
 
@@ -325,6 +359,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   // shortlist-scoped project, where target_id NULL models cannot satisfy the
   // per-target S8 predicate. Detection only; the human regenerates.
   const legacyUnassignedCount = countLegacyUnassignedModels(data?.cases ?? [], targets);
+  const legacyModels = data?.legacy_models ?? [];
 
   return (
 <>
@@ -350,12 +385,44 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           <span className="status-chip status-amber" aria-hidden="true">⚠ 주의</span>
           <p className="legacy-model-notice-text">
             ADR-0143 이전에 생성된 <b>대상 미지정 모델 {legacyUnassignedCount}건</b>이 있습니다 — 대상별 분석을 위해 재생성이 필요합니다.
-            기존 모델은 보존되며 자동 삭제되지 않습니다.
+            자동으로 삭제되지 않으며, 아래 목록에서 사람이 직접 정리합니다.
           </p>
           {canAct && (
             <button type="button" className="btn-premium btn-sm" disabled={busy} onClick={() => void generate(true)}>
               {busy ? "재생성 중..." : "대상별 재생성"}
             </button>
+          )}
+          {legacyModels.length > 0 && (
+            <div className="legacy-model-list">
+              <table className="data-table" aria-label="예전 모델 목록">
+                <caption className="sr-only">대상 미지정 예전 모델 — 참조 여부와 정리 방식</caption>
+                <thead>
+                  <tr><th scope="col">모델</th><th scope="col">시나리오 · 관점</th><th scope="col">생성일</th><th scope="col">참조</th>{canAct && <th scope="col">정리</th>}</tr>
+                </thead>
+                <tbody>
+                  {legacyModels.map((m) => (
+                    <tr key={m.id}>
+                      <td>{m.name}</td>
+                      <td>{m.scenario ? `${SCEN_LABEL[m.scenario] ?? m.scenario} · ` : ""}{VARIANT_LABEL[m.variant] ?? m.variant}</td>
+                      <td className="tabular-nums">{m.created_at.slice(0, 10)}</td>
+                      <td>{m.referenced ? <span className="status-chip status-amber">참조됨 — 보관</span> : <span className="status-chip status-not-started">미참조 — 삭제</span>}</td>
+                      {canAct && (
+                        <td>
+                          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => cleanupLegacy([m], false)} aria-label={`예전 모델 정리 — ${m.name}`}>
+                            예전 모델 정리
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {canAct && (
+                <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => cleanupLegacy(legacyModels, true)}>
+                  예전 모델 정리 (전체 {legacyModels.length}건)
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -683,7 +750,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                                 </button>
                               )}
                               <button type="button" className="btn-ghost btn-sm" onClick={() => startEdit(c)}>라인</button>
-                              <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => remove(c.id)}>삭제</button>
+                              <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => remove(c)} aria-label={`삭제 — 대상: ${c.target_name ?? "대상 미지정"}`}>삭제</button>
                             </div>
                           )}
                         </td>

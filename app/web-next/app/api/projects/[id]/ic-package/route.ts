@@ -14,7 +14,7 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { readRagView, recomputeRag } from "../../../../../../../db/lib/rag-service.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
-import { latestAdoption, listBusinessCases, type BusinessCaseView } from "../../../../../lib/business-case.ts";
+import { findAdoptedCase, latestAdoption, listBusinessCases, type BusinessCaseView } from "../../../../../lib/business-case.ts";
 import { establishmentProgress, listEstablishmentSteps } from "../../../../../lib/establishment.ts";
 import { icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override.ts";
 import { latestGateDecisions, latestRouteDecision, type GateId, type GateVerdict } from "../../../../../lib/process-flow.ts";
@@ -38,8 +38,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   // Business case — the human ADOPTED case only feeds the committees; when
   // nothing is adopted yet the package says so rather than substituting a case.
-  const { cases, adoption } = listBusinessCases(id);
-  const adoptedCase: BusinessCaseView | null = cases.find((c) => c.adopted) ?? null;
+  const list = listBusinessCases(id);
+  const { cases, adoption } = list;
+  // ADR-0158: an archived legacy model that a human adopted still resolves here.
+  const adoptedCase: BusinessCaseView | null = findAdoptedCase(list);
 
   // Committee deliberation refs (ADR-0104) — sessions convened for this
   // project give the IC the deliberation provenance (minutes are one GET away).

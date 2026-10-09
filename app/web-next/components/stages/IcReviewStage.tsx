@@ -25,7 +25,7 @@ import { canWriteProject } from "../../lib/project-write-access.ts";
 // 확인(useConfirm)을 거친 analyst+ 행위다.
 
 interface SimRow { scenario: string; percentile: string; npv_krw_m: number; irr: number | null; note: string | null }
-interface AdoptedCase { id: string; name: string; kind: string; scenario: string | null; simulations: SimRow[] }
+interface AdoptedCase { id: string; name: string; kind: string; scenario: string | null; archived_at?: string | null; simulations: SimRow[] }
 interface IcPackage {
   project: { id: string; project_no: string };
   business_case: { adopted: AdoptedCase | null; adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null; note?: string };
@@ -216,6 +216,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               <p className="text-[length:var(--fs-caption)]">
                 {pkg.business_case.adopted.name}
                 <span className="status-chip status-green ml-2">✓ 채택됨</span>
+                {pkg.business_case.adopted.archived_at && (
+                  <span className="status-chip status-not-started ml-1" title={`보관일 ${pkg.business_case.adopted.archived_at.slice(0, 10)}`}>보관됨</span>
+                )}
                 {pkg.business_case.adopted.scenario && (
                   <span className="status-chip status-not-started ml-1">시나리오: {pkg.business_case.adopted.scenario}</span>
                 )}

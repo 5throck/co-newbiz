@@ -55,8 +55,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
 
   // 매니페스트 (flow.spec S10 inputs + 자기 단계 상태)
   const adoption = latestAdoption(id);
-  const { cases } = listBusinessCases(id);
-  const adoptedCase = adoption ? cases.find((c) => c.id === adoption.modelId) : undefined;
+  const { cases, archived } = listBusinessCases(id);
+  const adoptedCase = adoption ? [...cases, ...archived].find((c) => c.id === adoption.modelId) : undefined;
   const findings = db
     .query("SELECT category, description, value_impact FROM dd_finding WHERE project_id = ? AND target_id IS NULL ORDER BY created_at DESC LIMIT 6")
     .all(id) as Array<{ category: string; description: string; value_impact: string | null }>;

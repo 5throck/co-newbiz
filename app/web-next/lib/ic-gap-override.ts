@@ -7,7 +7,7 @@
 // gate_decision.rationale text behind a stable marker and is parsed on read.
 import { getDb } from "../../../db/client.ts";
 import { readRagView, recomputeRag } from "../../../db/lib/rag-service.ts";
-import { listBusinessCases } from "./business-case.ts";
+import { findAdoptedCase, listBusinessCases } from "./business-case.ts";
 import { establishmentProgress } from "./establishment.ts";
 
 export const IC_GAP_GATES = ["entity_ic", "group_ic"] as const;
@@ -22,7 +22,7 @@ export interface GapOverride {
 export function icGoGapItems(projectId: string, actor?: string): string[] {
   const db = getDb();
   const gaps: string[] = [];
-  if (!listBusinessCases(projectId).cases.some((c) => c.adopted)) gaps.push("채택된 Business Case 없음 (S8)");
+  if (!findAdoptedCase(listBusinessCases(projectId))) gaps.push("채택된 Business Case 없음 (S8)");
   if (actor) {
     try { recomputeRag(db, projectId, "ic_package", { actor }); } catch { /* the read below reports not graded */ }
   }
